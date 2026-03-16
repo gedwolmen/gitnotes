@@ -1,6 +1,8 @@
 use dioxus::prelude::*;
 use dioxus_router::prelude::*;
-use gn_github::{DeviceCodeResponse, GitHubClient, GitHubOAuthDeviceClient, GitHubRepository};
+use gn_github::{
+    DeviceCodeResponse, FileContent, GitHubClient, GitHubOAuthDeviceClient, GitHubRepository,
+};
 
 #[derive(Clone, Debug, PartialEq, Routable)]
 enum Route {
@@ -284,10 +286,34 @@ fn Files() -> Element {
 
 #[component]
 fn Viewer() -> Element {
+    let auth_token = use_context::<Signal<Option<String>>>();
+    let document = use_resource(move || {
+        let token = auth_token.read().clone();
+        async move { load_current_file(token).await }
+    });
+
+    let content = match &*document.read() {
+        Some(Ok(file)) => rsx! {
+            div {
+                p { "Path: {file.path}" }
+                p { "SHA: {file.sha}" }
+                pre { "{file.content}" }
+            }
+        },
+        Some(Err(err)) => rsx! {
+            p { class: "error", "Failed to load file: {err}" }
+            p { "Set GITNOTES_FILE_PATH and repository env vars, then authenticate." }
+        },
+        None => rsx! {
+            p { "Loading file content..." }
+        },
+    };
+
     rsx! {
         section {
             h2 { "Viewer" }
             p { "Read mode for Org, Neorg, and Markdown documents." }
+            {content}
         }
     }
 }
@@ -335,4 +361,27 @@ async fn load_note_files(session_token: Option<String>) -> Result<Vec<String>, S
         .map_err(|err| err.to_string())?;
 
     Ok(GitHubClient::filter_note_blob_paths(&tree.tree))
+}
+
+async fn load_current_file(session_token: Option<String>) -> Result<FileContent, String> {
+    let token = match session_token {
+        Some(value) if !value.trim().is_empty() => value,
+        _ => std::env::var("GITNOTES_GITHUB_TOKEN").map_err(|_| {
+            "missing auth token (login first or set GITNOTES_GITHUB_TOKEN)".to_owned()
+        })?,
+    };
+
+    let owner = std::env::var("GITNOTES_REPO_OWNER")
+        .map_err(|_| "missing GITNOTES_REPO_OWNER".to_owned())?;
+    let repo =
+        std::env::var("GITNOTES_REPO_NAME").map_err(|_| "missing GITNOTES_REPO_NAME".to_owned())?;
+    let git_ref = std::env::var("GITNOTES_REPO_REF").unwrap_or_else(|_| "main".to_owned());
+    let path =
+        std::env::var("GITNOTES_FILE_PATH").map_err(|_| "missing GITNOTES_FILE_PATH".to_owned())?;
+
+    let client = GitHubClient::new(token).map_err(|err| err.to_string())?;
+    client
+        .file_content(owner.as_str(), repo.as_str(), path.as_str(), git_ref.as_str())
+        .await
+        .map_err(|err| err.to_string())
 }

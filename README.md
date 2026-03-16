@@ -51,6 +51,7 @@ To load note files in the `Files` route (tree API filtering), set:
 export GITNOTES_REPO_OWNER="<github-owner>"
 export GITNOTES_REPO_NAME="<github-repo>"
 export GITNOTES_REPO_REF="main"   # optional, defaults to main
+export GITNOTES_FILE_PATH="notes/today.md"
 ```
 
 ## Current Status
