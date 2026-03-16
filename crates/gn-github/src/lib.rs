@@ -5,6 +5,7 @@ use reqwest::header::{ACCEPT, AUTHORIZATION, HeaderMap, HeaderValue, USER_AGENT}
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio::time::{Duration, Instant, sleep};
+use tracing::{debug, warn};
 
 const GITHUB_API_BASE: &str = "https://api.github.com";
 const API_VERSION: &str = "2022-11-28";
@@ -28,6 +29,14 @@ pub enum GitHubClientError {
     Conflict,
     #[error("github api error status {status}: {message}")]
     ApiStatus { status: u16, message: String },
+    #[error("request cannot be cloned for retry")]
+    NonCloneableRequest,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Conditional<T> {
+    NotModified,
+    Modified(T),
 }
 
 #[derive(Debug, Error)]
@@ -217,8 +226,8 @@ impl GitHubClient {
 
     pub async fn user_profile(&self) -> Result<UserProfile, GitHubClientError> {
         let url = format!("{GITHUB_API_BASE}/user");
-        let profile =
-            self.http.get(url).send().await?.error_for_status()?.json::<UserProfile>().await?;
+        let response = self.send_with_retry(self.http.get(url), "GET /user").await?;
+        let profile = response.error_for_status()?.json::<UserProfile>().await?;
 
         Ok(profile)
     }
@@ -228,24 +237,39 @@ impl GitHubClient {
         page: u32,
         per_page: u32,
     ) -> Result<Vec<GitHubRepository>, GitHubClientError> {
-        let url = format!("{GITHUB_API_BASE}/user/repos");
-        let repos = self
-            .http
-            .get(url)
-            .query(&[
-                ("type", "all"),
-                ("sort", "updated"),
-                ("direction", "desc"),
-                ("page", &page.to_string()),
-                ("per_page", &per_page.to_string()),
-            ])
-            .send()
-            .await?
-            .error_for_status()?
-            .json::<Vec<GitHubRepository>>()
-            .await?;
+        match self.list_user_repositories_with_etag(page, per_page, None).await? {
+            Conditional::Modified(repos) => Ok(repos),
+            Conditional::NotModified => Ok(Vec::new()),
+        }
+    }
 
-        Ok(repos)
+    pub async fn list_user_repositories_with_etag(
+        &self,
+        page: u32,
+        per_page: u32,
+        etag: Option<&str>,
+    ) -> Result<Conditional<Vec<GitHubRepository>>, GitHubClientError> {
+        let url = format!("{GITHUB_API_BASE}/user/repos");
+        let mut request = self.http.get(url).query(&[
+            ("type", "all"),
+            ("sort", "updated"),
+            ("direction", "desc"),
+            ("page", &page.to_string()),
+            ("per_page", &per_page.to_string()),
+        ]);
+
+        if let Some(value) = etag {
+            request = request.header("If-None-Match", value);
+        }
+
+        let response = self.send_with_retry(request, "GET /user/repos").await?;
+        if response.status() == reqwest::StatusCode::NOT_MODIFIED {
+            return Ok(Conditional::NotModified);
+        }
+
+        let repos = response.error_for_status()?.json::<Vec<GitHubRepository>>().await?;
+
+        Ok(Conditional::Modified(repos))
     }
 
     pub async fn list_all_user_repositories(
@@ -278,15 +302,10 @@ impl GitHubClient {
         git_ref: &str,
     ) -> Result<GitTreeResponse, GitHubClientError> {
         let url = format!("{GITHUB_API_BASE}/repos/{owner}/{repo}/git/trees/{git_ref}");
-        let tree = self
-            .http
-            .get(url)
-            .query(&[("recursive", "1")])
-            .send()
-            .await?
-            .error_for_status()?
-            .json::<GitTreeResponse>()
-            .await?;
+        let request = self.http.get(url).query(&[("recursive", "1")]);
+        let response =
+            self.send_with_retry(request, "GET /repos/:owner/:repo/git/trees/:ref").await?;
+        let tree = response.error_for_status()?.json::<GitTreeResponse>().await?;
 
         Ok(tree)
     }
@@ -329,15 +348,10 @@ impl GitHubClient {
         git_ref: &str,
     ) -> Result<FileContent, GitHubClientError> {
         let url = format!("{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}");
-        let response = self
-            .http
-            .get(url)
-            .query(&[("ref", git_ref)])
-            .send()
-            .await?
-            .error_for_status()?
-            .json::<ContentsResponse>()
-            .await?;
+        let request = self.http.get(url).query(&[("ref", git_ref)]);
+        let response =
+            self.send_with_retry(request, "GET /repos/:owner/:repo/contents/:path").await?;
+        let response = response.error_for_status()?.json::<ContentsResponse>().await?;
 
         let raw =
             decode_content_payload(response.encoding.as_deref(), response.content.as_deref())?;
@@ -362,7 +376,12 @@ impl GitHubClient {
             committer: input.committer,
         };
 
-        let response = self.http.put(url).json(&payload).send().await?;
+        let response = self
+            .send_with_retry(
+                self.http.put(url).json(&payload),
+                "PUT /repos/:owner/:repo/contents/:path",
+            )
+            .await?;
 
         let status = response.status();
         if status == reqwest::StatusCode::CONFLICT {
@@ -377,6 +396,78 @@ impl GitHubClient {
         let response = response.json::<UpsertFileResponse>().await?;
 
         Ok(response)
+    }
+
+    async fn send_with_retry(
+        &self,
+        request: reqwest::RequestBuilder,
+        operation: &str,
+    ) -> Result<reqwest::Response, GitHubClientError> {
+        let mut attempt = 0_u8;
+        let mut backoff = Duration::from_millis(250);
+
+        loop {
+            attempt += 1;
+            let Some(next) = request.try_clone() else {
+                return Err(GitHubClientError::NonCloneableRequest);
+            };
+
+            debug!(operation, attempt, "sending github api request");
+            let response = next.send().await?;
+            let status = response.status();
+            self.handle_rate_limit_headers(&response, operation).await;
+
+            if status == reqwest::StatusCode::UNAUTHORIZED
+                || status == reqwest::StatusCode::FORBIDDEN
+                || status == reqwest::StatusCode::NOT_FOUND
+                || status == reqwest::StatusCode::UNPROCESSABLE_ENTITY
+                || status == reqwest::StatusCode::CONFLICT
+                || status == reqwest::StatusCode::NOT_MODIFIED
+                || status.is_success()
+            {
+                return Ok(response);
+            }
+
+            if (status.is_server_error() || status == reqwest::StatusCode::TOO_MANY_REQUESTS)
+                && attempt < 4
+            {
+                warn!(operation, attempt, ?status, "retrying github api request with backoff");
+                sleep(backoff).await;
+                backoff *= 2;
+                continue;
+            }
+
+            let message = response.text().await.unwrap_or_default();
+            return Err(GitHubClientError::ApiStatus { status: status.as_u16(), message });
+        }
+    }
+
+    async fn handle_rate_limit_headers(&self, response: &reqwest::Response, operation: &str) {
+        let remaining = response
+            .headers()
+            .get("x-ratelimit-remaining")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|s| s.parse::<u32>().ok());
+
+        let reset = response
+            .headers()
+            .get("x-ratelimit-reset")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|s| s.parse::<u64>().ok());
+
+        if matches!(remaining, Some(0)) {
+            warn!(operation, "github primary rate limit reached");
+            if let Some(reset_epoch) = reset {
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_secs())
+                    .unwrap_or(0);
+                if reset_epoch > now {
+                    let wait_secs = (reset_epoch - now).min(3);
+                    sleep(Duration::from_secs(wait_secs)).await;
+                }
+            }
+        }
     }
 }
 
