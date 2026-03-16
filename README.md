@@ -45,6 +45,14 @@ To run login via GitHub Device Flow in-app, set your OAuth app client id:
 export GITNOTES_GITHUB_CLIENT_ID="<github-oauth-app-client-id>"
 ```
 
+To load note files in the `Files` route (tree API filtering), set:
+
+```bash
+export GITNOTES_REPO_OWNER="<github-owner>"
+export GITNOTES_REPO_NAME="<github-repo>"
+export GITNOTES_REPO_REF="main"   # optional, defaults to main
+```
+
 ## Current Status
 
 This repository now includes the foundation scaffold:

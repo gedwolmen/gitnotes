@@ -247,10 +247,37 @@ fn Repos() -> Element {
 
 #[component]
 fn Files() -> Element {
+    let auth_token = use_context::<Signal<Option<String>>>();
+    let files = use_resource(move || {
+        let token = auth_token.read().clone();
+        async move { load_note_files(token).await }
+    });
+
+    let content = match &*files.read() {
+        Some(Ok(items)) if items.is_empty() => rsx! {
+            p { "No .org/.norg/.md files found in this repository tree." }
+        },
+        Some(Ok(items)) => rsx! {
+            ul {
+                for path in items {
+                    li { key: "{path}", "{path}" }
+                }
+            }
+        },
+        Some(Err(err)) => rsx! {
+            p { class: "error", "Failed to load file tree: {err}" }
+            p { "Set GITNOTES_REPO_OWNER and GITNOTES_REPO_NAME, then authenticate." }
+        },
+        None => rsx! {
+            p { "Loading repository tree..." }
+        },
+    };
+
     rsx! {
         section {
             h2 { "File Browser" }
-            p { "This screen will show filtered .org, .norg, and .md files." }
+            p { "Filtered .org, .norg, and .md files from GitHub tree API." }
+            {content}
         }
     }
 }
@@ -285,4 +312,27 @@ async fn load_repositories(session_token: Option<String>) -> Result<Vec<GitHubRe
 
     let client = GitHubClient::new(token).map_err(|err| err.to_string())?;
     client.list_user_repositories(1, 50).await.map_err(|err| err.to_string())
+}
+
+async fn load_note_files(session_token: Option<String>) -> Result<Vec<String>, String> {
+    let token = match session_token {
+        Some(value) if !value.trim().is_empty() => value,
+        _ => std::env::var("GITNOTES_GITHUB_TOKEN").map_err(|_| {
+            "missing auth token (login first or set GITNOTES_GITHUB_TOKEN)".to_owned()
+        })?,
+    };
+
+    let owner = std::env::var("GITNOTES_REPO_OWNER")
+        .map_err(|_| "missing GITNOTES_REPO_OWNER".to_owned())?;
+    let repo =
+        std::env::var("GITNOTES_REPO_NAME").map_err(|_| "missing GITNOTES_REPO_NAME".to_owned())?;
+    let git_ref = std::env::var("GITNOTES_REPO_REF").unwrap_or_else(|_| "main".to_owned());
+
+    let client = GitHubClient::new(token).map_err(|err| err.to_string())?;
+    let tree = client
+        .repository_tree(owner.as_str(), repo.as_str(), git_ref.as_str())
+        .await
+        .map_err(|err| err.to_string())?;
+
+    Ok(GitHubClient::filter_note_blob_paths(&tree.tree))
 }
