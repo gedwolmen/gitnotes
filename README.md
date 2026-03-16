@@ -54,6 +54,12 @@ export GITNOTES_FILE_PATH="notes/today.md"
 
 Select a repository in the `Repos` route using the `Use` button; Files/Viewer use that session selection.
 
+Current UI capabilities in this PR slice:
+
+- Repos: full pagination load, search filter, refresh, selected repo persistence.
+- Files: breadcrumb-style folder navigation, format badges, file sizes, new markdown file creation.
+- Viewer: selected file display + commit message input + save to GitHub.
+
 Viewer route now includes a basic `Save to GitHub` action using the contents API update path.
 
 ## Current Status

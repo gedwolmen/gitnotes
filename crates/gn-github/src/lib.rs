@@ -86,6 +86,13 @@ pub struct GitTreeEntry {
     pub url: String,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct NoteBlob {
+    pub path: String,
+    pub size: Option<u64>,
+    pub format: DocumentFormat,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct UserProfile {
     pub login: String,
@@ -300,6 +307,20 @@ impl GitHubClient {
             .collect()
     }
 
+    pub fn filter_note_blobs(entries: &[GitTreeEntry]) -> Vec<NoteBlob> {
+        entries
+            .iter()
+            .filter(|entry| entry.kind == "blob")
+            .filter_map(|entry| {
+                DocumentFormat::from_path(entry.path.as_str()).map(|format| NoteBlob {
+                    path: entry.path.clone(),
+                    size: entry.size,
+                    format,
+                })
+            })
+            .collect()
+    }
+
     pub async fn file_content(
         &self,
         owner: &str,
@@ -499,6 +520,33 @@ mod tests {
 
         let filtered = GitHubClient::filter_note_blob_paths(&entries);
         assert_eq!(filtered, vec!["notes/day1.md", "notes/day2.org"]);
+    }
+
+    #[test]
+    fn filters_note_blobs_with_format_and_size() {
+        let entries = vec![
+            GitTreeEntry {
+                path: "notes/day1.md".to_owned(),
+                mode: "100644".to_owned(),
+                kind: "blob".to_owned(),
+                sha: "1".to_owned(),
+                size: Some(123),
+                url: "u1".to_owned(),
+            },
+            GitTreeEntry {
+                path: "assets/logo.png".to_owned(),
+                mode: "100644".to_owned(),
+                kind: "blob".to_owned(),
+                sha: "2".to_owned(),
+                size: Some(999),
+                url: "u2".to_owned(),
+            },
+        ];
+
+        let filtered = GitHubClient::filter_note_blobs(&entries);
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].path, "notes/day1.md");
+        assert_eq!(filtered[0].size, Some(123));
     }
 
     #[test]

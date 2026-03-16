@@ -1,9 +1,14 @@
 use dioxus::prelude::*;
 use dioxus_router::prelude::*;
+use gn_core::DocumentFormat;
 use gn_github::{
     DeviceCodeResponse, FileContent, GitHubClient, GitHubOAuthDeviceClient, GitHubRepository,
-    UpsertFileInput, UserProfile,
+    NoteBlob, UpsertFileInput, UserProfile,
 };
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::PathBuf;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Clone, Debug, PartialEq, Routable)]
 enum Route {
@@ -30,6 +35,7 @@ fn main() {
 fn App() -> Element {
     use_context_provider(|| Signal::new(None::<String>));
     use_context_provider(|| Signal::new(None::<RepositorySelection>));
+    use_context_provider(|| Signal::new(None::<String>));
 
     rsx! {
         div { class: "app-shell",
@@ -53,7 +59,7 @@ fn App() -> Element {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 struct RepositorySelection {
     owner: String,
     repo: String,
@@ -218,7 +224,17 @@ fn Login() -> Element {
 fn Repos() -> Element {
     let auth_token = use_context::<Signal<Option<String>>>();
     let selected_repo = use_context::<Signal<Option<RepositorySelection>>>();
+    let mut search = use_signal(String::new);
     let refresh_nonce = use_signal(|| 0_u32);
+
+    {
+        let mut selected_repo = selected_repo;
+        use_effect(move || {
+            if selected_repo.read().is_none() {
+                selected_repo.set(load_saved_selection());
+            }
+        });
+    }
 
     let repos = use_resource(move || {
         let token = auth_token.read().clone();
@@ -226,20 +242,36 @@ fn Repos() -> Element {
         async move { load_repositories(token, nonce).await }
     });
 
+    let current_query = search.read().to_lowercase();
     let repos_state = repos.read().clone();
     let content = match repos_state {
         Some(Ok(items)) if items.is_empty() => rsx! {
             p { "No repositories found for this account." }
         },
         Some(Ok(items)) => {
+            let filtered: Vec<GitHubRepository> = items
+                .into_iter()
+                .filter(|repo| {
+                    if current_query.is_empty() {
+                        return true;
+                    }
+                    repo.full_name.to_lowercase().contains(current_query.as_str())
+                        || repo.name.to_lowercase().contains(current_query.as_str())
+                })
+                .collect();
+
             let mut selected_repo = selected_repo;
             rsx! {
                 ul {
-                    for repo in items {
+                    for repo in filtered {
                         li { key: "{repo.id}",
                             strong { "{repo.full_name}" }
                             " "
                             span { "(default: {repo.default_branch})" }
+                            " "
+                            span { if repo.private { "[private]" } else { "[public]" } }
+                            " "
+                            span { "updated: {repo.pushed_at:?}" }
                             " "
                             button {
                                 onclick: move |_| {
@@ -247,7 +279,9 @@ fn Repos() -> Element {
                                     let owner = parts.next().unwrap_or_default().to_owned();
                                     let name = parts.next().unwrap_or_default().to_owned();
                                     if !owner.is_empty() && !name.is_empty() {
-                                        selected_repo.set(Some(RepositorySelection { owner, repo: name }));
+                                        let selection = RepositorySelection { owner, repo: name };
+                                        save_selection(&selection);
+                                        selected_repo.set(Some(selection));
                                     }
                                 },
                                 "Use"
@@ -271,12 +305,22 @@ fn Repos() -> Element {
             h2 { "Repositories" }
             p { "Authenticated repository listing from GitHub API." }
             p { "Loads all pages (pagination) from GitHub." }
+            input {
+                placeholder: "Search repositories",
+                value: "{search}",
+                oninput: move |evt| {
+                    search.set(evt.value());
+                }
+            }
             button {
                 onclick: move |_| {
                     let mut nonce = refresh_nonce;
                     nonce += 1;
                 },
                 "Refresh"
+            }
+            if let Some(current) = selected_repo.read().as_ref() {
+                p { "Selected: {current.owner}/{current.repo}" }
             }
             {content}
         }
@@ -287,23 +331,97 @@ fn Repos() -> Element {
 fn Files() -> Element {
     let auth_token = use_context::<Signal<Option<String>>>();
     let selected_repo = use_context::<Signal<Option<RepositorySelection>>>();
+    let mut selected_file = use_context::<Signal<Option<String>>>();
+    let current_dir = use_signal(String::new);
+    let refresh_nonce = use_signal(|| 0_u32);
+    let create_status = use_signal(|| None::<String>);
     let files = use_resource(move || {
         let token = auth_token.read().clone();
         let selection = selected_repo.read().clone();
-        async move { load_note_files(token, selection).await }
+        let nonce = *refresh_nonce.read();
+        async move { load_note_files(token, selection, nonce).await }
     });
 
-    let content = match &*files.read() {
+    let state = files.read().clone();
+    let content = match state {
         Some(Ok(items)) if items.is_empty() => rsx! {
             p { "No .org/.norg/.md files found in this repository tree." }
         },
-        Some(Ok(items)) => rsx! {
-            ul {
-                for path in items {
-                    li { key: "{path}", "{path}" }
+        Some(Ok(items)) => {
+            let current = current_dir.read().clone();
+            let folders = immediate_folders(&items, current.as_str());
+            let files_here = immediate_files(&items, current.as_str());
+            let mut current_dir = current_dir;
+            let token_for_create = auth_token.read().clone();
+            let repo_for_create = selected_repo.read().clone();
+            let dir_for_create = current_dir.read().clone();
+            let mut create_status = create_status;
+            let on_create = move |_| {
+                let token = token_for_create.clone();
+                let repo = repo_for_create.clone();
+                let dir = dir_for_create.clone();
+                spawn(async move {
+                    create_status.set(Some("Creating note file...".to_owned()));
+                    match create_new_markdown_file(token, repo, dir.as_str()).await {
+                        Ok(path) => create_status.set(Some(format!("Created {path}"))),
+                        Err(err) => create_status.set(Some(format!("Create failed: {err}"))),
+                    }
+                });
+            };
+
+            rsx! {
+                div {
+                    p { "Breadcrumb: /{current}" }
+                    button {
+                        onclick: move |_| {
+                            current_dir.set(String::new());
+                        },
+                        "Root"
+                    }
+                    " "
+                    button {
+                        onclick: move |_| {
+                            let mut nonce = refresh_nonce;
+                            nonce += 1;
+                        },
+                        "Refresh"
+                    }
+                    " "
+                    button { onclick: on_create, "New .md File" }
+                    if let Some(status) = create_status.read().as_ref() {
+                        p { "{status}" }
+                    }
+
+                    h3 { "Folders" }
+                    ul {
+                        for folder in folders {
+                            li { key: "dir-{folder}",
+                                button {
+                                    onclick: move |_| {
+                                        current_dir.set(folder.clone());
+                                    },
+                                    "{folder}"
+                                }
+                            }
+                        }
+                    }
+
+                    h3 { "Files" }
+                    ul {
+                        for file in files_here {
+                            li { key: "file-{file.path}",
+                                button {
+                                    onclick: move |_| {
+                                        selected_file.set(Some(file.path.clone()));
+                                    },
+                                    "{file_badge(&file.format)} {file.path} ({human_size(file.size)})"
+                                }
+                            }
+                        }
+                    }
                 }
             }
-        },
+        }
         Some(Err(err)) => rsx! {
             p { class: "error", "Failed to load file tree: {err}" }
             p { "Select a repository in Repos route, then authenticate." }
@@ -317,6 +435,7 @@ fn Files() -> Element {
         section {
             h2 { "File Browser" }
             p { "Filtered .org, .norg, and .md files from GitHub tree API." }
+            p { "Tap a file to select it for Viewer route." }
             {content}
         }
     }
@@ -326,11 +445,14 @@ fn Files() -> Element {
 fn Viewer() -> Element {
     let auth_token = use_context::<Signal<Option<String>>>();
     let selected_repo = use_context::<Signal<Option<RepositorySelection>>>();
+    let selected_file = use_context::<Signal<Option<String>>>();
     let save_status = use_signal(|| None::<String>);
+    let mut commit_message = use_signal(String::new);
     let document = use_resource(move || {
         let token = auth_token.read().clone();
         let selection = selected_repo.read().clone();
-        async move { load_current_file(token, selection).await }
+        let file_path = selected_file.read().clone();
+        async move { load_current_file(token, selection, file_path).await }
     });
 
     let content = match &*document.read() {
@@ -338,14 +460,27 @@ fn Viewer() -> Element {
             let current = file.clone();
             let token_for_save = auth_token.read().clone();
             let selection_for_save = selected_repo.read().clone();
+            let file_for_save = selected_file.read().clone();
+            let save_message = {
+                let current_text = commit_message.read().clone();
+                if current_text.trim().is_empty() {
+                    format!("Update {} from gitnotes", file.path)
+                } else {
+                    current_text
+                }
+            };
             let mut save_status = save_status;
             let on_save = move |_| {
                 let token = token_for_save.clone();
                 let selection = selection_for_save.clone();
+                let selected = file_for_save.clone();
                 let file = current.clone();
+                let message = save_message.clone();
                 spawn(async move {
                     save_status.set(Some("Saving file to GitHub...".to_owned()));
-                    let result = save_current_file(token, selection, &file).await;
+                    let result =
+                        save_current_file(token, selection, selected, &file, message.as_str())
+                            .await;
                     match result {
                         Ok(commit_sha) => {
                             save_status
@@ -362,6 +497,13 @@ fn Viewer() -> Element {
                 div {
                     p { "Path: {file.path}" }
                     p { "SHA: {file.sha}" }
+                    input {
+                        placeholder: "Commit message",
+                        value: "{commit_message}",
+                        oninput: move |evt| {
+                            commit_message.set(evt.value());
+                        }
+                    }
                     pre { "{file.content}" }
                     button { onclick: on_save, "Save to GitHub" }
                 }
@@ -452,7 +594,8 @@ async fn load_repositories(
 async fn load_note_files(
     session_token: Option<String>,
     selected_repo: Option<RepositorySelection>,
-) -> Result<Vec<String>, String> {
+    _refresh_nonce: u32,
+) -> Result<Vec<NoteBlob>, String> {
     let token = match session_token {
         Some(value) if !value.trim().is_empty() => value,
         _ => std::env::var("GITNOTES_GITHUB_TOKEN").map_err(|_| {
@@ -469,12 +612,13 @@ async fn load_note_files(
         .await
         .map_err(|err| err.to_string())?;
 
-    Ok(GitHubClient::filter_note_blob_paths(&tree.tree))
+    Ok(GitHubClient::filter_note_blobs(&tree.tree))
 }
 
 async fn load_current_file(
     session_token: Option<String>,
     selected_repo: Option<RepositorySelection>,
+    selected_file: Option<String>,
 ) -> Result<FileContent, String> {
     let token = match session_token {
         Some(value) if !value.trim().is_empty() => value,
@@ -485,8 +629,9 @@ async fn load_current_file(
 
     let selection = selected_repo.ok_or_else(|| "no selected repository in session".to_owned())?;
     let git_ref = std::env::var("GITNOTES_REPO_REF").unwrap_or_else(|_| "main".to_owned());
-    let path =
-        std::env::var("GITNOTES_FILE_PATH").map_err(|_| "missing GITNOTES_FILE_PATH".to_owned())?;
+    let path = selected_file
+        .or_else(|| std::env::var("GITNOTES_FILE_PATH").ok())
+        .ok_or_else(|| "missing selected file (tap one in Files route)".to_owned())?;
 
     let client = GitHubClient::new(token).map_err(|err| err.to_string())?;
     client
@@ -503,7 +648,9 @@ async fn load_current_file(
 async fn save_current_file(
     session_token: Option<String>,
     selected_repo: Option<RepositorySelection>,
+    selected_file: Option<String>,
     file: &FileContent,
+    commit_message: &str,
 ) -> Result<String, String> {
     let token = match session_token {
         Some(value) if !value.trim().is_empty() => value,
@@ -516,12 +663,13 @@ async fn save_current_file(
     let git_ref = std::env::var("GITNOTES_REPO_REF").unwrap_or_else(|_| "main".to_owned());
 
     let client = GitHubClient::new(token).map_err(|err| err.to_string())?;
+    let target_path = selected_file.unwrap_or_else(|| file.path.clone());
     let response = client
         .upsert_file(UpsertFileInput {
             owner: selection.owner.as_str(),
             repo: selection.repo.as_str(),
-            path: file.path.as_str(),
-            message: &format!("Update {} from gitnotes", file.path),
+            path: target_path.as_str(),
+            message: commit_message,
             content: file.content.as_str(),
             sha: Some(file.sha.as_str()),
             branch: Some(git_ref.as_str()),
@@ -543,4 +691,124 @@ async fn load_user_profile(session_token: Option<String>) -> Result<UserProfile,
 
     let client = GitHubClient::new(token).map_err(|err| err.to_string())?;
     client.user_profile().await.map_err(|err| err.to_string())
+}
+
+async fn create_new_markdown_file(
+    session_token: Option<String>,
+    selected_repo: Option<RepositorySelection>,
+    current_dir: &str,
+) -> Result<String, String> {
+    let token = match session_token {
+        Some(value) if !value.trim().is_empty() => value,
+        _ => std::env::var("GITNOTES_GITHUB_TOKEN").map_err(|_| {
+            "missing auth token (login first or set GITNOTES_GITHUB_TOKEN)".to_owned()
+        })?,
+    };
+
+    let selection = selected_repo.ok_or_else(|| "no selected repository in session".to_owned())?;
+    let git_ref = std::env::var("GITNOTES_REPO_REF").unwrap_or_else(|_| "main".to_owned());
+    let file_name = format!("note-{}.md", unix_ts());
+    let path =
+        if current_dir.is_empty() { file_name } else { format!("{current_dir}/{file_name}") };
+
+    let client = GitHubClient::new(token).map_err(|err| err.to_string())?;
+    client
+        .upsert_file(UpsertFileInput {
+            owner: selection.owner.as_str(),
+            repo: selection.repo.as_str(),
+            path: path.as_str(),
+            message: &format!("Create {path} from gitnotes"),
+            content: "# New Note\n\nCreated by gitnotes.\n",
+            sha: None,
+            branch: Some(git_ref.as_str()),
+            committer: None,
+        })
+        .await
+        .map_err(|err| err.to_string())?;
+
+    Ok(path)
+}
+
+fn session_file_path() -> PathBuf {
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_owned());
+    PathBuf::from(home).join(".gitnotes-session.json")
+}
+
+fn load_saved_selection() -> Option<RepositorySelection> {
+    let path = session_file_path();
+    let raw = fs::read_to_string(path).ok()?;
+    serde_json::from_str::<RepositorySelection>(raw.as_str()).ok()
+}
+
+fn save_selection(selection: &RepositorySelection) {
+    let path = session_file_path();
+    if let Ok(serialized) = serde_json::to_string(selection) {
+        let _ = fs::write(path, serialized);
+    }
+}
+
+fn immediate_folders(items: &[NoteBlob], current_dir: &str) -> Vec<String> {
+    let mut folders = Vec::<String>::new();
+    for item in items {
+        if let Some(rest) = strip_prefix_dir(item.path.as_str(), current_dir)
+            && let Some((first, _)) = rest.split_once('/')
+        {
+            let candidate = if current_dir.is_empty() {
+                first.to_owned()
+            } else {
+                format!("{current_dir}/{first}")
+            };
+            if !folders.iter().any(|f| f == candidate.as_str()) {
+                folders.push(candidate);
+            }
+        }
+    }
+    folders.sort();
+    folders
+}
+
+fn immediate_files(items: &[NoteBlob], current_dir: &str) -> Vec<NoteBlob> {
+    let mut files = Vec::<NoteBlob>::new();
+    for item in items {
+        if let Some(rest) = strip_prefix_dir(item.path.as_str(), current_dir)
+            && !rest.contains('/')
+        {
+            files.push(item.clone());
+        }
+    }
+    files.sort_by(|a, b| a.path.cmp(&b.path));
+    files
+}
+
+fn strip_prefix_dir<'a>(path: &'a str, current_dir: &str) -> Option<&'a str> {
+    if current_dir.is_empty() {
+        return Some(path);
+    }
+    let prefix = format!("{current_dir}/");
+    path.strip_prefix(prefix.as_str())
+}
+
+fn file_badge(format: &DocumentFormat) -> &'static str {
+    match format {
+        DocumentFormat::Org => "[ORG]",
+        DocumentFormat::Neorg => "[NORG]",
+        DocumentFormat::Markdown => "[MD]",
+    }
+}
+
+fn human_size(size: Option<u64>) -> String {
+    let Some(bytes) = size else {
+        return "unknown".to_owned();
+    };
+    if bytes >= 1024 * 1024 {
+        return format!("{:.1} MB", bytes as f64 / (1024.0 * 1024.0));
+    }
+    if bytes >= 1024 {
+        return format!("{:.1} KB", bytes as f64 / 1024.0);
+    }
+    format!("{bytes} B")
+}
+
+fn unix_ts() -> u64 {
+    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
 }
