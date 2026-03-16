@@ -103,6 +103,14 @@ struct RecentFileEntry {
     opened_at_unix: i64,
 }
 
+#[derive(Clone, Debug)]
+struct FavoriteFileEntry {
+    owner: String,
+    repo: String,
+    path: String,
+    format: DocumentFormat,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 struct AppSettings {
     theme: String,
@@ -459,6 +467,7 @@ fn Files() -> Element {
     let current_dir = use_signal(String::new);
     let mut refresh_nonce = use_signal(|| 0_u32);
     let recent_history_nonce = use_signal(|| 0_u32);
+    let favorites_nonce = use_signal(|| 0_u32);
     let create_status = use_signal(|| None::<String>);
     let show_create_form = use_signal(|| false);
     let mut create_name = use_signal(String::new);
@@ -476,6 +485,10 @@ fn Files() -> Element {
     let recent_history = use_resource(move || {
         let nonce = *recent_history_nonce.read();
         async move { load_recent_file_history(nonce).await }
+    });
+    let favorites = use_resource(move || {
+        let nonce = *favorites_nonce.read();
+        async move { load_favorites(nonce).await }
     });
 
     let state = files.read().clone();
@@ -505,6 +518,8 @@ fn Files() -> Element {
             let file_format_for_create = create_format.read().clone();
             let mut recent_history_nonce = recent_history_nonce;
             let recent_state = recent_history.read().clone();
+            let mut favorites_nonce = favorites_nonce;
+            let favorites_state = favorites.read().clone();
             let nav_for_create = navigator;
             let repo_for_create_on_create = repo_for_create.clone();
             let on_create = move |_| {
@@ -748,6 +763,23 @@ fn Files() -> Element {
                                 let format_for_open = file.format;
                                 let label_path = file.path;
                                 let label_size = file.size;
+                                let is_favorite = selected_repo_for_history
+                                    .read()
+                                    .as_ref()
+                                    .map(|selection| {
+                                        favorites_state
+                                            .as_ref()
+                                            .and_then(|result| result.as_ref().ok())
+                                            .map(|items| {
+                                                items.iter().any(|fav| {
+                                                    fav.owner == selection.owner
+                                                        && fav.repo == selection.repo
+                                                        && fav.path == label_path
+                                                })
+                                            })
+                                            .unwrap_or(false)
+                                    })
+                                    .unwrap_or(false);
                                 rsx! {
                                     li { key: "file-{label_path}",
                                         button {
@@ -795,6 +827,30 @@ fn Files() -> Element {
                                         " "
                                         button {
                                             onclick: move |_| {
+                                                if let Some(selection) = selected_repo_for_history.read().as_ref() {
+                                                    if is_favorite {
+                                                        let _ = remove_favorite(
+                                                            selection.owner.as_str(),
+                                                            selection.repo.as_str(),
+                                                            label_path.as_str(),
+                                                        );
+                                                    } else {
+                                                        let _ = add_favorite(
+                                                            selection.owner.as_str(),
+                                                            selection.repo.as_str(),
+                                                            label_path.as_str(),
+                                                            &format_for_open,
+                                                        );
+                                                    }
+                                                    let next = *favorites_nonce.read() + 1;
+                                                    favorites_nonce.set(next);
+                                                }
+                                            },
+                                            if is_favorite { "Unstar" } else { "Star" }
+                                        }
+                                        " "
+                                        button {
+                                            onclick: move |_| {
                                                 action_file.set(Some(path_for_delete.clone()));
                                                 action_kind.set(Some(FileActionKind::Delete));
                                                 action_input.set(String::new());
@@ -804,6 +860,35 @@ fn Files() -> Element {
                                     }
                                 }
                             }
+                        }
+                    }
+
+                    h3 { "Favorites" }
+                    {
+                        match favorites_state {
+                            Some(Ok(entries)) if entries.is_empty() => rsx! { p { "No favorites yet." } },
+                            Some(Ok(entries)) => rsx! {
+                                ul {
+                                    for entry in entries {
+                                        li { key: "fav-{entry.owner}-{entry.repo}-{entry.path}",
+                                            button {
+                                                onclick: move |_| {
+                                                    selected_repo_signal.set(Some(RepositorySelection {
+                                                        owner: entry.owner.clone(),
+                                                        repo: entry.repo.clone(),
+                                                    }));
+                                                    selected_file.set(Some(entry.path.clone()));
+                                                    open_viewer_in_edit.set(false);
+                                                    navigator.push(Route::Viewer {});
+                                                },
+                                                "{file_badge(&entry.format)} {entry.path} ({entry.owner}/{entry.repo})"
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            Some(Err(err)) => rsx! { p { class: "error", "Favorites error: {err}" } },
+                            None => rsx! { p { "Loading favorites..." } },
                         }
                     }
 
@@ -1606,6 +1691,10 @@ async fn load_recent_file_history(_nonce: u32) -> AppResult<Vec<RecentFileEntry>
     recent_file_history(20)
 }
 
+async fn load_favorites(_nonce: u32) -> AppResult<Vec<FavoriteFileEntry>> {
+    favorite_file_list()
+}
+
 fn history_db_path() -> PathBuf {
     let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_owned());
     PathBuf::from(home).join(".gitnotes-history.db")
@@ -1680,7 +1769,69 @@ fn history_connection() -> AppResult<Connection> {
             [],
         )
         .map_err(|err| err.to_string())?;
+    connection
+        .execute(
+            "CREATE TABLE IF NOT EXISTS favorites (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                owner TEXT NOT NULL,
+                repo TEXT NOT NULL,
+                path TEXT NOT NULL,
+                format TEXT NOT NULL,
+                UNIQUE(owner, repo, path)
+            )",
+            [],
+        )
+        .map_err(|err| err.to_string())?;
     Ok(connection)
+}
+
+fn add_favorite(owner: &str, repo: &str, path: &str, format: &DocumentFormat) -> AppResult<()> {
+    let connection = history_connection()?;
+    connection
+        .execute(
+            "INSERT OR REPLACE INTO favorites (owner, repo, path, format) VALUES (?1, ?2, ?3, ?4)",
+            params![owner, repo, path, format_to_code(format)],
+        )
+        .map_err(|err| err.to_string())?;
+    Ok(())
+}
+
+fn remove_favorite(owner: &str, repo: &str, path: &str) -> AppResult<()> {
+    let connection = history_connection()?;
+    connection
+        .execute(
+            "DELETE FROM favorites WHERE owner = ?1 AND repo = ?2 AND path = ?3",
+            params![owner, repo, path],
+        )
+        .map_err(|err| err.to_string())?;
+    Ok(())
+}
+
+fn favorite_file_list() -> AppResult<Vec<FavoriteFileEntry>> {
+    let connection = history_connection()?;
+    let mut stmt = connection
+        .prepare("SELECT owner, repo, path, format FROM favorites ORDER BY owner, repo, path")
+        .map_err(|err| err.to_string())?;
+
+    let rows = stmt
+        .query_map([], |row| {
+            let format_code: String = row.get(3)?;
+            let format =
+                parse_note_format(format_code.as_str()).unwrap_or(DocumentFormat::Markdown);
+            Ok(FavoriteFileEntry {
+                owner: row.get(0)?,
+                repo: row.get(1)?,
+                path: row.get(2)?,
+                format,
+            })
+        })
+        .map_err(|err| err.to_string())?;
+
+    let mut entries = Vec::new();
+    for row in rows {
+        entries.push(row.map_err(|err| err.to_string())?);
+    }
+    Ok(entries)
 }
 
 fn record_recent_file_open(
