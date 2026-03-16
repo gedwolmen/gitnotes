@@ -4,9 +4,13 @@ use reqwest::Client;
 use reqwest::header::{ACCEPT, AUTHORIZATION, HeaderMap, HeaderValue, USER_AGENT};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use tokio::time::{Duration, Instant, sleep};
 
 const GITHUB_API_BASE: &str = "https://api.github.com";
 const API_VERSION: &str = "2022-11-28";
+const DEVICE_CODE_URL: &str = "https://github.com/login/device/code";
+const ACCESS_TOKEN_URL: &str = "https://github.com/login/oauth/access_token";
+const DEVICE_GRANT_TYPE: &str = "urn:ietf:params:oauth:grant-type:device_code";
 
 #[derive(Debug, Error)]
 pub enum GitHubClientError {
@@ -22,9 +26,31 @@ pub enum GitHubClientError {
     NonUtf8Content,
 }
 
+#[derive(Debug, Error)]
+pub enum DeviceFlowError {
+    #[error("client id cannot be empty")]
+    EmptyClientId,
+    #[error("request failed: {0}")]
+    RequestFailed(#[from] reqwest::Error),
+    #[error("device code expired")]
+    ExpiredToken,
+    #[error("authorization denied by user")]
+    AccessDenied,
+    #[error("authentication timed out")]
+    Timeout,
+    #[error("oauth error: {code} - {description}")]
+    OAuth { code: String, description: String },
+}
+
 #[derive(Clone, Debug)]
 pub struct GitHubClient {
     token: String,
+    http: Client,
+}
+
+#[derive(Clone, Debug)]
+pub struct GitHubOAuthDeviceClient {
+    client_id: String,
     http: Client,
 }
 
@@ -61,6 +87,22 @@ pub struct UserProfile {
     pub login: String,
     pub name: Option<String>,
     pub avatar_url: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct DeviceCodeResponse {
+    pub device_code: String,
+    pub user_code: String,
+    pub verification_uri: String,
+    pub expires_in: u64,
+    pub interval: u64,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct AccessTokenResponse {
+    pub access_token: String,
+    pub token_type: String,
+    pub scope: String,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -113,6 +155,15 @@ struct ContentsResponse {
     pub path: String,
     pub encoding: Option<String>,
     pub content: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct DevicePollResponse {
+    access_token: Option<String>,
+    token_type: Option<String>,
+    scope: Option<String>,
+    error: Option<String>,
+    error_description: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -300,6 +351,88 @@ impl GitHubClient {
     }
 }
 
+impl GitHubOAuthDeviceClient {
+    pub fn new(client_id: impl Into<String>) -> Result<Self, DeviceFlowError> {
+        let client_id = client_id.into();
+        if client_id.trim().is_empty() {
+            return Err(DeviceFlowError::EmptyClientId);
+        }
+
+        let http = Client::builder().build()?;
+        Ok(Self { client_id, http })
+    }
+
+    pub async fn request_device_code(
+        &self,
+        scope: &str,
+    ) -> Result<DeviceCodeResponse, DeviceFlowError> {
+        let response = self
+            .http
+            .post(DEVICE_CODE_URL)
+            .header(ACCEPT, "application/json")
+            .form(&[("client_id", self.client_id.as_str()), ("scope", scope)])
+            .send()
+            .await?
+            .error_for_status()?
+            .json::<DeviceCodeResponse>()
+            .await?;
+
+        Ok(response)
+    }
+
+    pub async fn poll_access_token(
+        &self,
+        device_code: &str,
+        interval_seconds: u64,
+        expires_in_seconds: u64,
+    ) -> Result<AccessTokenResponse, DeviceFlowError> {
+        let mut interval = Duration::from_secs(interval_seconds.max(1));
+        let deadline = Instant::now() + Duration::from_secs(expires_in_seconds.saturating_sub(1));
+
+        loop {
+            if Instant::now() >= deadline {
+                return Err(DeviceFlowError::Timeout);
+            }
+
+            sleep(interval).await;
+            let poll_response = self
+                .http
+                .post(ACCESS_TOKEN_URL)
+                .header(ACCEPT, "application/json")
+                .form(&[
+                    ("client_id", self.client_id.as_str()),
+                    ("device_code", device_code),
+                    ("grant_type", DEVICE_GRANT_TYPE),
+                ])
+                .send()
+                .await?
+                .error_for_status()?
+                .json::<DevicePollResponse>()
+                .await?;
+
+            match poll_response.error.as_deref() {
+                None => {
+                    return Ok(AccessTokenResponse {
+                        access_token: poll_response.access_token.unwrap_or_default(),
+                        token_type: poll_response.token_type.unwrap_or_else(|| "bearer".to_owned()),
+                        scope: poll_response.scope.unwrap_or_default(),
+                    });
+                }
+                Some("authorization_pending") => {}
+                Some("slow_down") => interval += Duration::from_secs(5),
+                Some("expired_token") => return Err(DeviceFlowError::ExpiredToken),
+                Some("access_denied") => return Err(DeviceFlowError::AccessDenied),
+                Some(code) => {
+                    return Err(DeviceFlowError::OAuth {
+                        code: code.to_owned(),
+                        description: poll_response.error_description.unwrap_or_default(),
+                    });
+                }
+            }
+        }
+    }
+}
+
 fn decode_content_payload(
     encoding: Option<&str>,
     content: Option<&str>,
@@ -315,7 +448,10 @@ fn decode_content_payload(
 
 #[cfg(test)]
 mod tests {
-    use crate::{GitHubClient, GitTreeEntry, decode_content_payload};
+    use crate::{
+        DeviceFlowError, DevicePollResponse, GitHubClient, GitHubOAuthDeviceClient, GitTreeEntry,
+        decode_content_payload,
+    };
 
     #[test]
     fn filters_supported_extensions() {
@@ -363,5 +499,21 @@ mod tests {
             .expect("must decode");
 
         assert_eq!(decoded, b"Hello, World!");
+    }
+
+    #[test]
+    fn oauth_device_client_rejects_empty_client_id() {
+        let result = GitHubOAuthDeviceClient::new(" ");
+        assert!(matches!(result, Err(DeviceFlowError::EmptyClientId)));
+    }
+
+    #[test]
+    fn parses_oauth_poll_error_shape() {
+        let payload = r#"{"error":"slow_down","error_description":"slow down"}"#;
+        let parsed: DevicePollResponse =
+            serde_json::from_str(payload).expect("device poll error should parse");
+
+        assert_eq!(parsed.error.as_deref(), Some("slow_down"));
+        assert_eq!(parsed.error_description.as_deref(), Some("slow down"));
     }
 }

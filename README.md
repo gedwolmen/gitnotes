@@ -48,3 +48,4 @@ This repository now includes the foundation scaffold:
 - parser and GitHub integration crates ready for implementation
 - CI pipeline for format, lint, test, and check
 - repository route wired to fetch authenticated GitHub repositories
+- OAuth Device Flow primitives implemented in `gn-github` (`request_device_code`, `poll_access_token`)
