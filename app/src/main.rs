@@ -29,6 +29,7 @@ fn main() {
 #[component]
 fn App() -> Element {
     use_context_provider(|| Signal::new(None::<String>));
+    use_context_provider(|| Signal::new(None::<RepositorySelection>));
 
     rsx! {
         div { class: "app-shell",
@@ -50,6 +51,12 @@ fn App() -> Element {
             Router::<Route> {}
         }
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct RepositorySelection {
+    owner: String,
+    repo: String,
 }
 
 #[component]
@@ -210,26 +217,46 @@ fn Login() -> Element {
 #[component]
 fn Repos() -> Element {
     let auth_token = use_context::<Signal<Option<String>>>();
+    let selected_repo = use_context::<Signal<Option<RepositorySelection>>>();
+    let refresh_nonce = use_signal(|| 0_u32);
+
     let repos = use_resource(move || {
         let token = auth_token.read().clone();
-        async move { load_repositories(token).await }
+        let nonce = *refresh_nonce.read();
+        async move { load_repositories(token, nonce).await }
     });
 
-    let content = match &*repos.read() {
+    let repos_state = repos.read().clone();
+    let content = match repos_state {
         Some(Ok(items)) if items.is_empty() => rsx! {
             p { "No repositories found for this account." }
         },
-        Some(Ok(items)) => rsx! {
-            ul {
-                for repo in items {
-                    li { key: "{repo.id}",
-                        strong { "{repo.full_name}" }
-                        " "
-                        span { "(default: {repo.default_branch})" }
+        Some(Ok(items)) => {
+            let mut selected_repo = selected_repo;
+            rsx! {
+                ul {
+                    for repo in items {
+                        li { key: "{repo.id}",
+                            strong { "{repo.full_name}" }
+                            " "
+                            span { "(default: {repo.default_branch})" }
+                            " "
+                            button {
+                                onclick: move |_| {
+                                    let mut parts = repo.full_name.split('/');
+                                    let owner = parts.next().unwrap_or_default().to_owned();
+                                    let name = parts.next().unwrap_or_default().to_owned();
+                                    if !owner.is_empty() && !name.is_empty() {
+                                        selected_repo.set(Some(RepositorySelection { owner, repo: name }));
+                                    }
+                                },
+                                "Use"
+                            }
+                        }
                     }
                 }
             }
-        },
+        }
         Some(Err(err)) => rsx! {
             p { class: "error", "Failed to load repositories: {err}" }
             p { "Authenticate via Login route, or set GITNOTES_GITHUB_TOKEN in your environment." }
@@ -243,6 +270,14 @@ fn Repos() -> Element {
         section {
             h2 { "Repositories" }
             p { "Authenticated repository listing from GitHub API." }
+            p { "Loads all pages (pagination) from GitHub." }
+            button {
+                onclick: move |_| {
+                    let mut nonce = refresh_nonce;
+                    nonce += 1;
+                },
+                "Refresh"
+            }
             {content}
         }
     }
@@ -251,9 +286,11 @@ fn Repos() -> Element {
 #[component]
 fn Files() -> Element {
     let auth_token = use_context::<Signal<Option<String>>>();
+    let selected_repo = use_context::<Signal<Option<RepositorySelection>>>();
     let files = use_resource(move || {
         let token = auth_token.read().clone();
-        async move { load_note_files(token).await }
+        let selection = selected_repo.read().clone();
+        async move { load_note_files(token, selection).await }
     });
 
     let content = match &*files.read() {
@@ -269,7 +306,7 @@ fn Files() -> Element {
         },
         Some(Err(err)) => rsx! {
             p { class: "error", "Failed to load file tree: {err}" }
-            p { "Set GITNOTES_REPO_OWNER and GITNOTES_REPO_NAME, then authenticate." }
+            p { "Select a repository in Repos route, then authenticate." }
         },
         None => rsx! {
             p { "Loading repository tree..." }
@@ -288,23 +325,27 @@ fn Files() -> Element {
 #[component]
 fn Viewer() -> Element {
     let auth_token = use_context::<Signal<Option<String>>>();
+    let selected_repo = use_context::<Signal<Option<RepositorySelection>>>();
     let save_status = use_signal(|| None::<String>);
     let document = use_resource(move || {
         let token = auth_token.read().clone();
-        async move { load_current_file(token).await }
+        let selection = selected_repo.read().clone();
+        async move { load_current_file(token, selection).await }
     });
 
     let content = match &*document.read() {
         Some(Ok(file)) => {
             let current = file.clone();
             let token_for_save = auth_token.read().clone();
+            let selection_for_save = selected_repo.read().clone();
             let mut save_status = save_status;
             let on_save = move |_| {
                 let token = token_for_save.clone();
+                let selection = selection_for_save.clone();
                 let file = current.clone();
                 spawn(async move {
                     save_status.set(Some("Saving file to GitHub...".to_owned()));
-                    let result = save_current_file(token, &file).await;
+                    let result = save_current_file(token, selection, &file).await;
                     match result {
                         Ok(commit_sha) => {
                             save_status
@@ -328,7 +369,7 @@ fn Viewer() -> Element {
         }
         Some(Err(err)) => rsx! {
             p { class: "error", "Failed to load file: {err}" }
-            p { "Set GITNOTES_FILE_PATH and repository env vars, then authenticate." }
+            p { "Set GITNOTES_FILE_PATH, select repository, then authenticate." }
         },
         None => rsx! {
             p { "Loading file content..." }
@@ -393,7 +434,10 @@ fn Settings() -> Element {
     }
 }
 
-async fn load_repositories(session_token: Option<String>) -> Result<Vec<GitHubRepository>, String> {
+async fn load_repositories(
+    session_token: Option<String>,
+    _refresh_nonce: u32,
+) -> Result<Vec<GitHubRepository>, String> {
     let token = match session_token {
         Some(value) if !value.trim().is_empty() => value,
         _ => std::env::var("GITNOTES_GITHUB_TOKEN").map_err(|_| {
@@ -402,10 +446,13 @@ async fn load_repositories(session_token: Option<String>) -> Result<Vec<GitHubRe
     };
 
     let client = GitHubClient::new(token).map_err(|err| err.to_string())?;
-    client.list_user_repositories(1, 50).await.map_err(|err| err.to_string())
+    client.list_all_user_repositories().await.map_err(|err| err.to_string())
 }
 
-async fn load_note_files(session_token: Option<String>) -> Result<Vec<String>, String> {
+async fn load_note_files(
+    session_token: Option<String>,
+    selected_repo: Option<RepositorySelection>,
+) -> Result<Vec<String>, String> {
     let token = match session_token {
         Some(value) if !value.trim().is_empty() => value,
         _ => std::env::var("GITNOTES_GITHUB_TOKEN").map_err(|_| {
@@ -413,22 +460,22 @@ async fn load_note_files(session_token: Option<String>) -> Result<Vec<String>, S
         })?,
     };
 
-    let owner = std::env::var("GITNOTES_REPO_OWNER")
-        .map_err(|_| "missing GITNOTES_REPO_OWNER".to_owned())?;
-    let repo =
-        std::env::var("GITNOTES_REPO_NAME").map_err(|_| "missing GITNOTES_REPO_NAME".to_owned())?;
+    let selection = selected_repo.ok_or_else(|| "no selected repository in session".to_owned())?;
     let git_ref = std::env::var("GITNOTES_REPO_REF").unwrap_or_else(|_| "main".to_owned());
 
     let client = GitHubClient::new(token).map_err(|err| err.to_string())?;
     let tree = client
-        .repository_tree(owner.as_str(), repo.as_str(), git_ref.as_str())
+        .repository_tree(selection.owner.as_str(), selection.repo.as_str(), git_ref.as_str())
         .await
         .map_err(|err| err.to_string())?;
 
     Ok(GitHubClient::filter_note_blob_paths(&tree.tree))
 }
 
-async fn load_current_file(session_token: Option<String>) -> Result<FileContent, String> {
+async fn load_current_file(
+    session_token: Option<String>,
+    selected_repo: Option<RepositorySelection>,
+) -> Result<FileContent, String> {
     let token = match session_token {
         Some(value) if !value.trim().is_empty() => value,
         _ => std::env::var("GITNOTES_GITHUB_TOKEN").map_err(|_| {
@@ -436,23 +483,26 @@ async fn load_current_file(session_token: Option<String>) -> Result<FileContent,
         })?,
     };
 
-    let owner = std::env::var("GITNOTES_REPO_OWNER")
-        .map_err(|_| "missing GITNOTES_REPO_OWNER".to_owned())?;
-    let repo =
-        std::env::var("GITNOTES_REPO_NAME").map_err(|_| "missing GITNOTES_REPO_NAME".to_owned())?;
+    let selection = selected_repo.ok_or_else(|| "no selected repository in session".to_owned())?;
     let git_ref = std::env::var("GITNOTES_REPO_REF").unwrap_or_else(|_| "main".to_owned());
     let path =
         std::env::var("GITNOTES_FILE_PATH").map_err(|_| "missing GITNOTES_FILE_PATH".to_owned())?;
 
     let client = GitHubClient::new(token).map_err(|err| err.to_string())?;
     client
-        .file_content(owner.as_str(), repo.as_str(), path.as_str(), git_ref.as_str())
+        .file_content(
+            selection.owner.as_str(),
+            selection.repo.as_str(),
+            path.as_str(),
+            git_ref.as_str(),
+        )
         .await
         .map_err(|err| err.to_string())
 }
 
 async fn save_current_file(
     session_token: Option<String>,
+    selected_repo: Option<RepositorySelection>,
     file: &FileContent,
 ) -> Result<String, String> {
     let token = match session_token {
@@ -462,17 +512,14 @@ async fn save_current_file(
         })?,
     };
 
-    let owner = std::env::var("GITNOTES_REPO_OWNER")
-        .map_err(|_| "missing GITNOTES_REPO_OWNER".to_owned())?;
-    let repo =
-        std::env::var("GITNOTES_REPO_NAME").map_err(|_| "missing GITNOTES_REPO_NAME".to_owned())?;
+    let selection = selected_repo.ok_or_else(|| "no selected repository in session".to_owned())?;
     let git_ref = std::env::var("GITNOTES_REPO_REF").unwrap_or_else(|_| "main".to_owned());
 
     let client = GitHubClient::new(token).map_err(|err| err.to_string())?;
     let response = client
         .upsert_file(UpsertFileInput {
-            owner: owner.as_str(),
-            repo: repo.as_str(),
+            owner: selection.owner.as_str(),
+            repo: selection.repo.as_str(),
             path: file.path.as_str(),
             message: &format!("Update {} from gitnotes", file.path),
             content: file.content.as_str(),

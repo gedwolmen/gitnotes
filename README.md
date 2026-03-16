@@ -48,11 +48,11 @@ export GITNOTES_GITHUB_CLIENT_ID="<github-oauth-app-client-id>"
 To load note files in the `Files` route (tree API filtering), set:
 
 ```bash
-export GITNOTES_REPO_OWNER="<github-owner>"
-export GITNOTES_REPO_NAME="<github-repo>"
 export GITNOTES_REPO_REF="main"   # optional, defaults to main
 export GITNOTES_FILE_PATH="notes/today.md"
 ```
+
+Select a repository in the `Repos` route using the `Use` button; Files/Viewer use that session selection.
 
 Viewer route now includes a basic `Save to GitHub` action using the contents API update path.
 
