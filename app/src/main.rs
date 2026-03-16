@@ -8,9 +8,11 @@ use gn_github::{
 };
 use gn_parser::parse as parse_document;
 use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd, html};
+use rusqlite::{Connection, params};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Clone, Debug, PartialEq, Routable)]
 enum Route {
@@ -89,6 +91,15 @@ struct RepositorySelection {
 struct RepositoryLoadResult {
     repositories: Vec<GitHubRepository>,
     rate_limit: Option<RateLimitInfo>,
+}
+
+#[derive(Clone, Debug)]
+struct RecentFileEntry {
+    owner: String,
+    repo: String,
+    path: String,
+    format: DocumentFormat,
+    opened_at_unix: i64,
 }
 
 #[component]
@@ -399,6 +410,7 @@ fn Files() -> Element {
     let navigator = use_navigator();
     let current_dir = use_signal(String::new);
     let refresh_nonce = use_signal(|| 0_u32);
+    let recent_history_nonce = use_signal(|| 0_u32);
     let create_status = use_signal(|| None::<String>);
     let show_create_form = use_signal(|| false);
     let mut create_name = use_signal(String::new);
@@ -408,6 +420,10 @@ fn Files() -> Element {
         let selection = selected_repo.read().clone();
         let nonce = *refresh_nonce.read();
         async move { load_note_files(token, selection, nonce).await }
+    });
+    let recent_history = use_resource(move || {
+        let nonce = *recent_history_nonce.read();
+        async move { load_recent_file_history(nonce).await }
     });
 
     let state = files.read().clone();
@@ -425,14 +441,19 @@ fn Files() -> Element {
             let dir_for_create = current_dir.read().clone();
             let mut create_status = create_status;
             let mut selected_file = selected_file;
+            let mut selected_repo_signal = selected_repo;
+            let selected_repo_for_history = selected_repo;
             let mut open_viewer_in_edit = open_viewer_in_edit;
             let mut show_create_form = show_create_form;
             let file_name_for_create = create_name.read().clone();
             let file_format_for_create = create_format.read().clone();
+            let mut recent_history_nonce = recent_history_nonce;
+            let recent_state = recent_history.read().clone();
             let nav_for_create = navigator;
+            let repo_for_create_on_create = repo_for_create.clone();
             let on_create = move |_| {
                 let token = token_for_create.clone();
-                let repo = repo_for_create.clone();
+                let repo = repo_for_create_on_create.clone();
                 let dir = dir_for_create.clone();
                 let file_name = file_name_for_create.clone();
                 let format = file_format_for_create.clone();
@@ -444,6 +465,8 @@ fn Files() -> Element {
                     };
 
                     create_status.set(Some("Creating file...".to_owned()));
+                    let format_for_history = parsed_format;
+                    let repo_for_history = repo.clone();
                     match create_new_note_file(
                         token,
                         repo,
@@ -454,6 +477,16 @@ fn Files() -> Element {
                     .await
                     {
                         Ok(path) => {
+                            if let Some(selection) = repo_for_history.as_ref() {
+                                let _ = record_recent_file_open(
+                                    selection.owner.as_str(),
+                                    selection.repo.as_str(),
+                                    path.as_str(),
+                                    &format_for_history,
+                                );
+                            }
+                            let next = *recent_history_nonce.read() + 1;
+                            recent_history_nonce.set(next);
                             selected_file.set(Some(path.clone()));
                             open_viewer_in_edit.set(true);
                             show_create_form.set(false);
@@ -539,10 +572,49 @@ fn Files() -> Element {
                                 button {
                                     onclick: move |_| {
                                         selected_file.set(Some(file.path.clone()));
+                                        if let Some(selection) = selected_repo_for_history.read().as_ref() {
+                                            let _ = record_recent_file_open(
+                                                selection.owner.as_str(),
+                                                selection.repo.as_str(),
+                                                file.path.as_str(),
+                                                &file.format,
+                                            );
+                                        }
+                                        let next = *recent_history_nonce.read() + 1;
+                                        recent_history_nonce.set(next);
                                     },
                                     "{file_badge(&file.format)} {file.path} ({human_size(file.size)})"
                                 }
                             }
+                        }
+                    }
+
+                    h3 { "Recently Opened" }
+                    {
+                        match recent_state {
+                            Some(Ok(entries)) if entries.is_empty() => rsx! { p { "No recent files yet." } },
+                            Some(Ok(entries)) => rsx! {
+                                ul {
+                                    for entry in entries {
+                                        li { key: "recent-{entry.owner}-{entry.repo}-{entry.path}",
+                                            button {
+                                                onclick: move |_| {
+                                                    selected_repo_signal.set(Some(RepositorySelection {
+                                                        owner: entry.owner.clone(),
+                                                        repo: entry.repo.clone(),
+                                                    }));
+                                                    selected_file.set(Some(entry.path.clone()));
+                                                    open_viewer_in_edit.set(false);
+                                                    navigator.push(Route::Viewer {});
+                                                },
+                                                "{file_badge(&entry.format)} {entry.path} ({entry.owner}/{entry.repo}) - {format_recent_opened_at(entry.opened_at_unix)}"
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            Some(Err(err)) => rsx! { p { class: "error", "Recent history error: {err}" } },
+                            None => rsx! { p { "Loading recent history..." } },
                         }
                     }
                 }
@@ -723,6 +795,7 @@ fn Viewer() -> Element {
 #[component]
 fn Settings() -> Element {
     let mut auth_token = use_context::<Signal<Option<String>>>();
+    let history_status = use_signal(|| None::<String>);
     let profile = use_resource(move || {
         let token = auth_token.read().clone();
         async move { load_user_profile(token).await }
@@ -732,6 +805,11 @@ fn Settings() -> Element {
     let logout = move |_| {
         let _ = clear_token_secure();
         auth_token.set(None);
+    };
+    let mut history_status_signal = history_status;
+    let clear_history = move |_| match clear_recent_file_history() {
+        Ok(_) => history_status_signal.set(Some("Recent history cleared".to_owned())),
+        Err(err) => history_status_signal.set(Some(format!("Failed to clear history: {err}"))),
     };
 
     let profile_block = match &*profile.read() {
@@ -762,6 +840,10 @@ fn Settings() -> Element {
                 {profile_block}
             } else {
                 p { "Authentication: not active" }
+            }
+            button { onclick: clear_history, "Clear Recent History" }
+            if let Some(status) = history_status.read().as_ref() {
+                p { "{status}" }
             }
         }
     }
@@ -1021,6 +1103,124 @@ fn markdown_headings(content: &str) -> Vec<String> {
     headings
 }
 
+async fn load_recent_file_history(_nonce: u32) -> AppResult<Vec<RecentFileEntry>> {
+    recent_file_history(20)
+}
+
+fn history_db_path() -> PathBuf {
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_owned());
+    PathBuf::from(home).join(".gitnotes-history.db")
+}
+
+fn history_connection() -> AppResult<Connection> {
+    let connection = Connection::open(history_db_path()).map_err(|err| err.to_string())?;
+    connection
+        .execute(
+            "CREATE TABLE IF NOT EXISTS recent_files (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                owner TEXT NOT NULL,
+                repo TEXT NOT NULL,
+                path TEXT NOT NULL,
+                format TEXT NOT NULL,
+                opened_at_unix INTEGER NOT NULL,
+                UNIQUE(owner, repo, path)
+            )",
+            [],
+        )
+        .map_err(|err| err.to_string())?;
+    Ok(connection)
+}
+
+fn record_recent_file_open(
+    owner: &str,
+    repo: &str,
+    path: &str,
+    format: &DocumentFormat,
+) -> AppResult<()> {
+    let connection = history_connection()?;
+    let format_code = format_to_code(format);
+    let opened_at_unix = unix_ts();
+    connection
+        .execute(
+            "DELETE FROM recent_files WHERE owner = ?1 AND repo = ?2 AND path = ?3",
+            params![owner, repo, path],
+        )
+        .map_err(|err| err.to_string())?;
+    connection
+        .execute(
+            "INSERT INTO recent_files (owner, repo, path, format, opened_at_unix) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![owner, repo, path, format_code, opened_at_unix],
+        )
+        .map_err(|err| err.to_string())?;
+    connection
+        .execute(
+            "DELETE FROM recent_files
+             WHERE id NOT IN (
+                SELECT id FROM recent_files
+                ORDER BY opened_at_unix DESC
+                LIMIT 20
+             )",
+            [],
+        )
+        .map_err(|err| err.to_string())?;
+    Ok(())
+}
+
+fn recent_file_history(limit: usize) -> AppResult<Vec<RecentFileEntry>> {
+    let connection = history_connection()?;
+    let mut stmt = connection
+        .prepare(
+            "SELECT owner, repo, path, format, opened_at_unix
+             FROM recent_files
+             ORDER BY opened_at_unix DESC
+             LIMIT ?1",
+        )
+        .map_err(|err| err.to_string())?;
+
+    let rows = stmt
+        .query_map(params![limit as i64], |row| {
+            let format_code: String = row.get(3)?;
+            let format =
+                parse_note_format(format_code.as_str()).unwrap_or(DocumentFormat::Markdown);
+            Ok(RecentFileEntry {
+                owner: row.get(0)?,
+                repo: row.get(1)?,
+                path: row.get(2)?,
+                format,
+                opened_at_unix: row.get(4)?,
+            })
+        })
+        .map_err(|err| err.to_string())?;
+
+    let mut entries = Vec::new();
+    for row in rows {
+        entries.push(row.map_err(|err| err.to_string())?);
+    }
+    Ok(entries)
+}
+
+fn clear_recent_file_history() -> AppResult<()> {
+    let connection = history_connection()?;
+    connection.execute("DELETE FROM recent_files", []).map_err(|err| err.to_string())?;
+    Ok(())
+}
+
+fn format_to_code(format: &DocumentFormat) -> &'static str {
+    match format {
+        DocumentFormat::Markdown => "md",
+        DocumentFormat::Org => "org",
+        DocumentFormat::Neorg => "norg",
+    }
+}
+
+fn format_recent_opened_at(opened_at_unix: i64) -> String {
+    if let Some(dt) = chrono::DateTime::from_timestamp(opened_at_unix, 0) {
+        dt.with_timezone(&chrono::Local).format("%Y-%m-%d %H:%M").to_string()
+    } else {
+        "unknown time".to_owned()
+    }
+}
+
 fn session_file_path() -> PathBuf {
     let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_owned());
     PathBuf::from(home).join(".gitnotes-session.json")
@@ -1099,4 +1299,11 @@ fn human_size(size: Option<u64>) -> String {
         return format!("{:.1} KB", bytes as f64 / 1024.0);
     }
     format!("{bytes} B")
+}
+
+fn unix_ts() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs() as i64)
+        .unwrap_or(0)
 }
