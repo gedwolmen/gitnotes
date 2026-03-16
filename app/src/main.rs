@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use dioxus_router::prelude::*;
 use gn_github::{
     DeviceCodeResponse, FileContent, GitHubClient, GitHubOAuthDeviceClient, GitHubRepository,
-    UpsertFileInput,
+    UpsertFileInput, UserProfile,
 };
 
 #[derive(Clone, Debug, PartialEq, Routable)]
@@ -349,10 +349,46 @@ fn Viewer() -> Element {
 
 #[component]
 fn Settings() -> Element {
+    let mut auth_token = use_context::<Signal<Option<String>>>();
+    let profile = use_resource(move || {
+        let token = auth_token.read().clone();
+        async move { load_user_profile(token).await }
+    });
+
+    let is_authenticated = auth_token.read().is_some();
+    let logout = move |_| {
+        auth_token.set(None);
+    };
+
+    let profile_block = match &*profile.read() {
+        Some(Ok(p)) => rsx! {
+            div {
+                p { "User: {p.login}" }
+                if let Some(name) = &p.name {
+                    p { "Name: {name}" }
+                }
+                p { "Avatar: {p.avatar_url}" }
+            }
+        },
+        Some(Err(err)) => rsx! {
+            p { class: "error", "Profile load failed: {err}" }
+        },
+        None => rsx! {
+            p { "Loading profile..." }
+        },
+    };
+
     rsx! {
         section {
             h2 { "Settings" }
             p { "Theme, caching, and account controls will live here." }
+            if is_authenticated {
+                p { "Authentication: active" }
+                button { onclick: logout, "Logout" }
+                {profile_block}
+            } else {
+                p { "Authentication: not active" }
+            }
         }
     }
 }
@@ -448,4 +484,16 @@ async fn save_current_file(
         .map_err(|err| err.to_string())?;
 
     Ok(response.commit.sha)
+}
+
+async fn load_user_profile(session_token: Option<String>) -> Result<UserProfile, String> {
+    let token = match session_token {
+        Some(value) if !value.trim().is_empty() => value,
+        _ => std::env::var("GITNOTES_GITHUB_TOKEN").map_err(|_| {
+            "missing auth token (login first or set GITNOTES_GITHUB_TOKEN)".to_owned()
+        })?,
+    };
+
+    let client = GitHubClient::new(token).map_err(|err| err.to_string())?;
+    client.user_profile().await.map_err(|err| err.to_string())
 }
