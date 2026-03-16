@@ -44,9 +44,10 @@ type AppResult<T> = Result<T, String>;
 #[component]
 fn App() -> Element {
     let auth_token = use_context_provider(|| Signal::new(None::<String>));
-    use_context_provider(|| Signal::new(None::<RepositorySelection>));
+    let mut selected_repo = use_context_provider(|| Signal::new(None::<RepositorySelection>));
     use_context_provider(|| Signal::new(None::<String>));
     use_context_provider(|| Signal::new(false));
+    let recent_repos = use_context_provider(|| Signal::new(load_recent_repos()));
     let settings = use_context_provider(|| Signal::new(load_settings().unwrap_or_default()));
 
     {
@@ -60,10 +61,43 @@ fn App() -> Element {
         });
     }
 
+    {
+        let mut recent_repos = recent_repos;
+        let selected_repo = selected_repo;
+        use_effect(move || {
+            if let Some(current) = selected_repo.read().clone() {
+                remember_recent_repo(&current);
+                recent_repos.set(load_recent_repos());
+            }
+        });
+    }
+
+    let selected_repo_label = selected_repo
+        .read()
+        .as_ref()
+        .map(|r| format!("{}/{}", r.owner, r.repo))
+        .unwrap_or_else(|| "none".to_owned());
+
     rsx! {
         div { class: "app-shell {theme_class(settings.read().theme.as_str())}",
             h1 { "gitnotes" }
             p { "Mobile-first notes app for .org, .norg, and .md backed by GitHub." }
+            p { "Current repo: {selected_repo_label}" }
+            select {
+                value: "{selected_repo_label}",
+                oninput: move |evt| {
+                    if let Some(selection) = parse_repo_selection(evt.value().as_str()) {
+                        selected_repo.set(Some(selection));
+                    }
+                },
+                option { value: "none", "Select recent repo" }
+                for repo in recent_repos.read().iter() {
+                    option {
+                        value: "{repo.owner}/{repo.repo}",
+                        "{repo.owner}/{repo.repo}"
+                    }
+                }
+            }
             nav { class: "top-nav",
                 Link { to: Route::Home {}, "Home" }
                 " | "
@@ -1940,6 +1974,37 @@ fn save_selection(selection: &RepositorySelection) {
     if let Ok(serialized) = serde_json::to_string(selection) {
         let _ = fs::write(path, serialized);
     }
+}
+
+fn repo_history_file_path() -> PathBuf {
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_owned());
+    PathBuf::from(home).join(".gitnotes-recent-repos.json")
+}
+
+fn load_recent_repos() -> Vec<RepositorySelection> {
+    let path = repo_history_file_path();
+    let Ok(raw) = fs::read_to_string(path) else {
+        return Vec::new();
+    };
+    serde_json::from_str::<Vec<RepositorySelection>>(raw.as_str()).unwrap_or_default()
+}
+
+fn remember_recent_repo(selection: &RepositorySelection) {
+    let mut repos = load_recent_repos();
+    repos.retain(|repo| repo.owner != selection.owner || repo.repo != selection.repo);
+    repos.insert(0, selection.clone());
+    repos.truncate(10);
+    if let Ok(serialized) = serde_json::to_string(&repos) {
+        let _ = fs::write(repo_history_file_path(), serialized);
+    }
+}
+
+fn parse_repo_selection(value: &str) -> Option<RepositorySelection> {
+    let (owner, repo) = value.split_once('/')?;
+    if owner.is_empty() || repo.is_empty() {
+        return None;
+    }
+    Some(RepositorySelection { owner: owner.to_owned(), repo: repo.to_owned() })
 }
 
 fn immediate_folders(items: &[NoteBlob], current_dir: &str) -> Vec<String> {
