@@ -36,6 +36,18 @@ fn main() {
             std::env::var("RUST_LOG").unwrap_or_else(|_| "app=info,gn_github=info".to_owned()),
         )
         .try_init();
+    std::panic::set_hook(Box::new(|panic_info| {
+        let report = format!(
+            "panic: {}\nlocation: {}\nbacktrace:\n{}\n",
+            panic_info,
+            panic_info
+                .location()
+                .map(|loc| format!("{}:{}", loc.file(), loc.line()))
+                .unwrap_or_else(|| "unknown".to_owned()),
+            std::backtrace::Backtrace::force_capture()
+        );
+        let _ = append_error_log(report.as_str());
+    }));
     launch(App);
 }
 
@@ -169,6 +181,7 @@ struct AppSettings {
     line_wrapping: bool,
     show_line_numbers: bool,
     auto_save_interval_seconds: u64,
+    crash_reporting_opt_in: bool,
 }
 
 impl Default for AppSettings {
@@ -182,6 +195,7 @@ impl Default for AppSettings {
             line_wrapping: true,
             show_line_numbers: false,
             auto_save_interval_seconds: 0,
+            crash_reporting_opt_in: false,
         }
     }
 }
@@ -218,8 +232,27 @@ fn Home() -> Element {
 
 #[component]
 fn ErrorBanner(message: String) -> Element {
+    {
+        let message = message.clone();
+        use_effect(move || {
+            let _ = append_error_log(format!("error: {message}\n").as_str());
+        });
+    }
+
+    let report_message = message.clone();
+    let report_bug = move |_| {
+        let report = format!(
+            "gitnotes bug report\nmessage: {report_message}\ntime: {}\n",
+            format_recent_opened_at(unix_ts())
+        );
+        let _ = append_error_log(report.as_str());
+    };
+
     rsx! {
-        p { class: "error", "Error: {message}" }
+        div {
+            p { class: "error", "Error: {message}" }
+            button { onclick: report_bug, "Report Bug" }
+        }
     }
 }
 
@@ -1058,9 +1091,15 @@ fn Viewer() -> Element {
 
     let content = match &*document.read() {
         Some(Ok(file)) => {
-            let frontmatter = parse_document(file.path.as_str(), file.content.as_str())
-                .ok()
-                .and_then(|doc| doc.frontmatter);
+            let frontmatter = match parse_document(file.path.as_str(), file.content.as_str()) {
+                Ok(doc) => doc.frontmatter,
+                Err(err) => {
+                    let _ = append_error_log(
+                        format!("parser failure for {}: {err}\n", file.path).as_str(),
+                    );
+                    None
+                }
+            };
             let current = file.clone();
             let token_for_save = auth_token.read().clone();
             let selection_for_save = selected_repo.read().clone();
@@ -1434,6 +1473,19 @@ fn Settings() -> Element {
                         settings.with_mut(|s| s.auto_save_interval_seconds = value);
                         let _ = save_settings(settings.read().clone());
                     }
+                }
+            }
+
+            h3 { "Diagnostics" }
+            button {
+                onclick: move |_| {
+                    settings.with_mut(|s| s.crash_reporting_opt_in = !s.crash_reporting_opt_in);
+                    let _ = save_settings(settings.read().clone());
+                },
+                if settings.read().crash_reporting_opt_in {
+                    "Crash Reporting Opt-in: On"
+                } else {
+                    "Crash Reporting Opt-in: Off"
                 }
             }
 
@@ -1984,6 +2036,11 @@ fn settings_file_path() -> PathBuf {
     PathBuf::from(home).join(".gitnotes-settings.json")
 }
 
+fn error_log_file_path() -> PathBuf {
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_owned());
+    PathBuf::from(home).join(".gitnotes-errors.log")
+}
+
 fn load_settings() -> Option<AppSettings> {
     let raw = fs::read_to_string(settings_file_path()).ok()?;
     serde_json::from_str::<AppSettings>(raw.as_str()).ok()
@@ -1992,6 +2049,17 @@ fn load_settings() -> Option<AppSettings> {
 fn save_settings(settings: AppSettings) -> AppResult<()> {
     let serialized = serde_json::to_string_pretty(&settings).map_err(|err| err.to_string())?;
     fs::write(settings_file_path(), serialized).map_err(|err| err.to_string())
+}
+
+fn append_error_log(entry: &str) -> AppResult<()> {
+    use std::io::Write;
+
+    let mut file = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(error_log_file_path())
+        .map_err(|err| err.to_string())?;
+    file.write_all(entry.as_bytes()).map_err(|err| err.to_string())
 }
 
 fn theme_class(theme: &str) -> &'static str {
