@@ -403,9 +403,21 @@ fn Repos() -> Element {
         Some(Err(err)) => rsx! {
             ErrorBanner { message: format!("Failed to load repositories: {err}") }
             p { "Authenticate via Login route, or set GITNOTES_GITHUB_TOKEN in your environment." }
+            button {
+                onclick: move |_| {
+                    let mut nonce = refresh_nonce;
+                    nonce += 1;
+                },
+                "Retry"
+            }
         },
         None => rsx! {
             p { "Loading repositories..." }
+            ul {
+                li { "Loading repository 1..." }
+                li { "Loading repository 2..." }
+                li { "Loading repository 3..." }
+            }
         },
     };
 
@@ -829,9 +841,20 @@ fn Files() -> Element {
         Some(Err(err)) => rsx! {
             ErrorBanner { message: format!("Failed to load file tree: {err}") }
             p { "Select a repository in Repos route, then authenticate." }
+            button {
+                onclick: move |_| {
+                    let next = *refresh_nonce.read() + 1;
+                    refresh_nonce.set(next);
+                },
+                "Retry"
+            }
         },
         None => rsx! {
             p { "Loading repository tree..." }
+            ul {
+                li { "Loading folder structure..." }
+                li { "Loading notes index..." }
+            }
         },
     };
 
@@ -853,6 +876,7 @@ fn Viewer() -> Element {
     let settings = use_context::<Signal<AppSettings>>();
     let mut open_viewer_in_edit = use_context::<Signal<bool>>();
     let save_status = use_signal(|| None::<String>);
+    let mut refresh_nonce = use_signal(|| 0_u32);
     let mut commit_message = use_signal(String::new);
     let mut edit_mode =
         use_signal(|| *open_viewer_in_edit.read() || settings.read().default_editor_mode == "edit");
@@ -871,7 +895,8 @@ fn Viewer() -> Element {
         let token = auth_token.read().clone();
         let selection = selected_repo.read().clone();
         let file_path = selected_file.read().clone();
-        async move { load_current_file(token, selection, file_path).await }
+        let nonce = *refresh_nonce.read();
+        async move { load_current_file(token, selection, file_path, nonce).await }
     });
 
     let content = match &*document.read() {
@@ -994,9 +1019,17 @@ fn Viewer() -> Element {
         Some(Err(err)) => rsx! {
             ErrorBanner { message: format!("Failed to load file: {err}") }
             p { "Set GITNOTES_FILE_PATH, select repository, then authenticate." }
+            button {
+                onclick: move |_| {
+                    let next = *refresh_nonce.read() + 1;
+                    refresh_nonce.set(next);
+                },
+                "Retry"
+            }
         },
         None => rsx! {
-            p { "Loading file content..." }
+            p { "Rendering document..." }
+            p { "[spinner]" }
         },
     };
 
@@ -1004,6 +1037,13 @@ fn Viewer() -> Element {
         section {
             h2 { "Viewer" }
             p { "Read mode for Org, Neorg, and Markdown documents." }
+            button {
+                onclick: move |_| {
+                    let next = *refresh_nonce.read() + 1;
+                    refresh_nonce.set(next);
+                },
+                "Refresh"
+            }
             if let Some(status) = save_status.read().as_ref() {
                 p { "{status}" }
             }
@@ -1207,6 +1247,7 @@ async fn load_current_file(
     session_token: Option<String>,
     selected_repo: Option<RepositorySelection>,
     selected_file: Option<String>,
+    _refresh_nonce: u32,
 ) -> AppResult<FileContent> {
     let token = match session_token {
         Some(value) if !value.trim().is_empty() => value,
