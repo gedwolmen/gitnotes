@@ -69,6 +69,8 @@ pub mod neorg {
 mod tests {
     use crate::parse;
     use gn_core::DocumentFormat;
+    use std::fs;
+    use std::path::PathBuf;
 
     #[test]
     fn parses_supported_formats() {
@@ -88,5 +90,19 @@ mod tests {
         let md = parse("notes/readme.md", source).expect("markdown with gfm should parse");
         assert_eq!(md.format, DocumentFormat::Markdown);
         assert_eq!(md.source, source);
+    }
+
+    #[test]
+    fn snapshots_markdown_fixture() {
+        let source = load_fixture("markdown/basic.md");
+        let doc = parse("fixtures/basic.md", source.as_str()).expect("fixture should parse");
+
+        insta::assert_snapshot!(format!("{doc:#?}"));
+    }
+
+    fn load_fixture(relative: &str) -> String {
+        let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let fixture = manifest_dir.join("../../tests/fixtures").join(relative);
+        fs::read_to_string(fixture).expect("fixture file should exist")
     }
 }

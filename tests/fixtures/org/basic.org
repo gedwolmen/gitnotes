@@ -1,0 +1,6 @@
+* TODO Sample heading :work:
+SCHEDULED: <2026-03-16 Mon>
+
+- [ ] Sample checkbox item
+
+Some /italic/ and *bold* text.

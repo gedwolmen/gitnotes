@@ -7,3 +7,6 @@ edition = "2024"
 gn-core = { path = "../gn-core" }
 pulldown-cmark = { workspace = true }
 thiserror = { workspace = true }
+
+[dev-dependencies]
+insta = { workspace = true }

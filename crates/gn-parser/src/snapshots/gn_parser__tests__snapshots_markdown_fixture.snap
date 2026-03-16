@@ -1,0 +1,8 @@
+---
+source: crates/gn-parser/src/lib.rs
+expression: "format!(\"{doc:#?}\")"
+---
+ParsedDocument {
+    format: Markdown,
+    source: "# Sample Title\n\nThis is a **sample** markdown fixture.\n\n- [x] done task\n- [ ] open task\n\n| col1 | col2 |\n| ---- | ---- |\n|  a   |  b   |\n",
+}
