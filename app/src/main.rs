@@ -448,6 +448,8 @@ fn Viewer() -> Element {
     let selected_file = use_context::<Signal<Option<String>>>();
     let save_status = use_signal(|| None::<String>);
     let mut commit_message = use_signal(String::new);
+    let mut edit_mode = use_signal(|| false);
+    let mut draft_content = use_signal(String::new);
     let document = use_resource(move || {
         let token = auth_token.read().clone();
         let selection = selected_repo.read().clone();
@@ -461,6 +463,8 @@ fn Viewer() -> Element {
             let token_for_save = auth_token.read().clone();
             let selection_for_save = selected_repo.read().clone();
             let file_for_save = selected_file.read().clone();
+            let edit_mode_for_ui = *edit_mode.read();
+            let draft_snapshot = draft_content.read().clone();
             let save_message = {
                 let current_text = commit_message.read().clone();
                 if current_text.trim().is_empty() {
@@ -476,11 +480,22 @@ fn Viewer() -> Element {
                 let selected = file_for_save.clone();
                 let file = current.clone();
                 let message = save_message.clone();
+                let content = if draft_snapshot.is_empty() {
+                    file.content.clone()
+                } else {
+                    draft_snapshot.clone()
+                };
                 spawn(async move {
                     save_status.set(Some("Saving file to GitHub...".to_owned()));
-                    let result =
-                        save_current_file(token, selection, selected, &file, message.as_str())
-                            .await;
+                    let result = save_current_file(
+                        token,
+                        selection,
+                        selected,
+                        &file,
+                        content.as_str(),
+                        message.as_str(),
+                    )
+                    .await;
                     match result {
                         Ok(commit_sha) => {
                             save_status
@@ -497,6 +512,12 @@ fn Viewer() -> Element {
                 div {
                     p { "Path: {file.path}" }
                     p { "SHA: {file.sha}" }
+                    button {
+                        onclick: move |_| {
+                            edit_mode.set(!edit_mode_for_ui);
+                        },
+                        if edit_mode_for_ui { "Switch to View" } else { "Switch to Edit" }
+                    }
                     input {
                         placeholder: "Commit message",
                         value: "{commit_message}",
@@ -504,7 +525,28 @@ fn Viewer() -> Element {
                             commit_message.set(evt.value());
                         }
                     }
-                    pre { "{file.content}" }
+                    if edit_mode_for_ui {
+                        textarea {
+                            rows: "20",
+                            cols: "120",
+                            value: if draft_content.read().is_empty() {
+                                file.content.clone()
+                            } else {
+                                draft_content.read().clone()
+                            },
+                            oninput: move |evt| {
+                                draft_content.set(evt.value());
+                            }
+                        }
+                        button {
+                            onclick: move |_| {
+                                draft_content.set(String::new());
+                            },
+                            "Reset Draft"
+                        }
+                    } else {
+                        pre { "{file.content}" }
+                    }
                     button { onclick: on_save, "Save to GitHub" }
                 }
             }
@@ -650,6 +692,7 @@ async fn save_current_file(
     selected_repo: Option<RepositorySelection>,
     selected_file: Option<String>,
     file: &FileContent,
+    content: &str,
     commit_message: &str,
 ) -> Result<String, String> {
     let token = match session_token {
@@ -670,7 +713,7 @@ async fn save_current_file(
             repo: selection.repo.as_str(),
             path: target_path.as_str(),
             message: commit_message,
-            content: file.content.as_str(),
+            content,
             sha: Some(file.sha.as_str()),
             branch: Some(git_ref.as_str()),
             committer: None,
