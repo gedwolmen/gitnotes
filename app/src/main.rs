@@ -11,7 +11,6 @@ use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd, html};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Clone, Debug, PartialEq, Routable)]
 enum Route {
@@ -45,6 +44,7 @@ fn App() -> Element {
     let auth_token = use_context_provider(|| Signal::new(None::<String>));
     use_context_provider(|| Signal::new(None::<RepositorySelection>));
     use_context_provider(|| Signal::new(None::<String>));
+    use_context_provider(|| Signal::new(false));
 
     {
         let mut auth_token = auth_token;
@@ -394,10 +394,15 @@ fn Repos() -> Element {
 fn Files() -> Element {
     let auth_token = use_context::<Signal<Option<String>>>();
     let selected_repo = use_context::<Signal<Option<RepositorySelection>>>();
-    let mut selected_file = use_context::<Signal<Option<String>>>();
+    let selected_file = use_context::<Signal<Option<String>>>();
+    let open_viewer_in_edit = use_context::<Signal<bool>>();
+    let navigator = use_navigator();
     let current_dir = use_signal(String::new);
     let refresh_nonce = use_signal(|| 0_u32);
     let create_status = use_signal(|| None::<String>);
+    let show_create_form = use_signal(|| false);
+    let mut create_name = use_signal(String::new);
+    let mut create_format = use_signal(|| "md".to_owned());
     let files = use_resource(move || {
         let token = auth_token.read().clone();
         let selection = selected_repo.read().clone();
@@ -419,53 +424,45 @@ fn Files() -> Element {
             let repo_for_create = selected_repo.read().clone();
             let dir_for_create = current_dir.read().clone();
             let mut create_status = create_status;
-            let token_for_create_md = token_for_create.clone();
-            let repo_for_create_md = repo_for_create.clone();
-            let dir_for_create_md = dir_for_create.clone();
-            let on_create_md = move |_| {
-                let token = token_for_create_md.clone();
-                let repo = repo_for_create_md.clone();
-                let dir = dir_for_create_md.clone();
+            let mut selected_file = selected_file;
+            let mut open_viewer_in_edit = open_viewer_in_edit;
+            let mut show_create_form = show_create_form;
+            let file_name_for_create = create_name.read().clone();
+            let file_format_for_create = create_format.read().clone();
+            let nav_for_create = navigator;
+            let on_create = move |_| {
+                let token = token_for_create.clone();
+                let repo = repo_for_create.clone();
+                let dir = dir_for_create.clone();
+                let file_name = file_name_for_create.clone();
+                let format = file_format_for_create.clone();
                 spawn(async move {
-                    create_status.set(Some("Creating .md note file...".to_owned()));
-                    match create_new_note_file(token, repo, dir.as_str(), DocumentFormat::Markdown)
-                        .await
+                    let Some(parsed_format) = parse_note_format(format.as_str()) else {
+                        create_status
+                            .set(Some("Create failed: invalid format selected".to_owned()));
+                        return;
+                    };
+
+                    create_status.set(Some("Creating file...".to_owned()));
+                    match create_new_note_file(
+                        token,
+                        repo,
+                        dir.as_str(),
+                        file_name.as_str(),
+                        parsed_format,
+                    )
+                    .await
                     {
-                        Ok(path) => create_status.set(Some(format!("Created {path}"))),
-                        Err(err) => create_status.set(Some(format!("Create failed: {err}"))),
-                    }
-                });
-            };
-            let token_for_create_org = token_for_create.clone();
-            let repo_for_create_org = repo_for_create.clone();
-            let dir_for_create_org = dir_for_create.clone();
-            let on_create_org = move |_| {
-                let token = token_for_create_org.clone();
-                let repo = repo_for_create_org.clone();
-                let dir = dir_for_create_org.clone();
-                spawn(async move {
-                    create_status.set(Some("Creating .org note file...".to_owned()));
-                    match create_new_note_file(token, repo, dir.as_str(), DocumentFormat::Org).await
-                    {
-                        Ok(path) => create_status.set(Some(format!("Created {path}"))),
-                        Err(err) => create_status.set(Some(format!("Create failed: {err}"))),
-                    }
-                });
-            };
-            let token_for_create_norg = token_for_create;
-            let repo_for_create_norg = repo_for_create;
-            let dir_for_create_norg = dir_for_create;
-            let on_create_norg = move |_| {
-                let token = token_for_create_norg.clone();
-                let repo = repo_for_create_norg.clone();
-                let dir = dir_for_create_norg.clone();
-                spawn(async move {
-                    create_status.set(Some("Creating .norg note file...".to_owned()));
-                    match create_new_note_file(token, repo, dir.as_str(), DocumentFormat::Neorg)
-                        .await
-                    {
-                        Ok(path) => create_status.set(Some(format!("Created {path}"))),
-                        Err(err) => create_status.set(Some(format!("Create failed: {err}"))),
+                        Ok(path) => {
+                            selected_file.set(Some(path.clone()));
+                            open_viewer_in_edit.set(true);
+                            show_create_form.set(false);
+                            create_status.set(Some(format!("Created {path}")));
+                            nav_for_create.push(Route::Viewer {});
+                        }
+                        Err(err) => {
+                            create_status.set(Some(format!("Create failed: {err}")));
+                        }
                     }
                 });
             };
@@ -488,13 +485,37 @@ fn Files() -> Element {
                         "Refresh"
                     }
                     " "
-                    button { onclick: on_create_md, "New .md File" }
-                    " "
-                    button { onclick: on_create_org, "New .org File" }
-                    " "
-                    button { onclick: on_create_norg, "New .norg File" }
+                    button {
+                        onclick: move |_| {
+                            let next = !*show_create_form.read();
+                            show_create_form.set(next);
+                        },
+                        "New File"
+                    }
                     if let Some(status) = create_status.read().as_ref() {
                         p { "{status}" }
+                    }
+                    if *show_create_form.read() {
+                        div {
+                            h4 { "Create File" }
+                            input {
+                                placeholder: "File name (no extension)",
+                                value: "{create_name}",
+                                oninput: move |evt| {
+                                    create_name.set(evt.value());
+                                }
+                            }
+                            select {
+                                value: "{create_format}",
+                                oninput: move |evt| {
+                                    create_format.set(evt.value());
+                                },
+                                option { value: "md", ".md" }
+                                option { value: "org", ".org" }
+                                option { value: "norg", ".norg" }
+                            }
+                            button { onclick: on_create, "Create" }
+                        }
                     }
 
                     h3 { "Folders" }
@@ -551,10 +572,21 @@ fn Viewer() -> Element {
     let auth_token = use_context::<Signal<Option<String>>>();
     let selected_repo = use_context::<Signal<Option<RepositorySelection>>>();
     let selected_file = use_context::<Signal<Option<String>>>();
+    let mut open_viewer_in_edit = use_context::<Signal<bool>>();
     let save_status = use_signal(|| None::<String>);
     let mut commit_message = use_signal(String::new);
-    let mut edit_mode = use_signal(|| false);
+    let mut edit_mode = use_signal(|| *open_viewer_in_edit.read());
     let mut draft_content = use_signal(String::new);
+
+    {
+        let mut edit_mode = edit_mode;
+        use_effect(move || {
+            if *open_viewer_in_edit.read() {
+                edit_mode.set(true);
+                open_viewer_in_edit.set(false);
+            }
+        });
+    }
     let document = use_resource(move || {
         let token = auth_token.read().clone();
         let selection = selected_repo.read().clone();
@@ -859,6 +891,7 @@ async fn create_new_note_file(
     session_token: Option<String>,
     selected_repo: Option<RepositorySelection>,
     current_dir: &str,
+    file_name: &str,
     format: DocumentFormat,
 ) -> AppResult<String> {
     let token = match session_token {
@@ -870,12 +903,13 @@ async fn create_new_note_file(
 
     let selection = selected_repo.ok_or_else(|| "no selected repository in session".to_owned())?;
     let git_ref = std::env::var("GITNOTES_REPO_REF").unwrap_or_else(|_| "main".to_owned());
+    let validated_name = validate_new_file_name(file_name)?;
     let extension = match format {
         DocumentFormat::Markdown => "md",
         DocumentFormat::Org => "org",
         DocumentFormat::Neorg => "norg",
     };
-    let file_name = format!("note-{}.{}", unix_ts(), extension);
+    let file_name = format!("{validated_name}.{extension}");
     let path =
         if current_dir.is_empty() { file_name } else { format!("{current_dir}/{file_name}") };
     let content = template_for_format(&format);
@@ -914,10 +948,40 @@ fn markdown_to_html(content: &str) -> String {
 
 fn template_for_format(format: &DocumentFormat) -> &'static str {
     match format {
-        DocumentFormat::Markdown => "# New Note\n\nCreated by gitnotes.\n",
-        DocumentFormat::Org => "* New Note\n\nCreated by gitnotes.\n",
-        DocumentFormat::Neorg => "= New Note\n\nCreated by gitnotes.\n",
+        DocumentFormat::Markdown => {
+            "---\ntitle: New Note\ntags: []\n---\n\n# New Note\n\nCreated by gitnotes.\n"
+        }
+        DocumentFormat::Org => "#+TITLE: New Note\n\n* New Note\n\nCreated by gitnotes.\n",
+        DocumentFormat::Neorg => {
+            "@document.meta\ntitle: New Note\ndescription:\n@end\n\n* New Note\n\nCreated by gitnotes.\n"
+        }
     }
+}
+
+fn parse_note_format(value: &str) -> Option<DocumentFormat> {
+    match value {
+        "md" => Some(DocumentFormat::Markdown),
+        "org" => Some(DocumentFormat::Org),
+        "norg" => Some(DocumentFormat::Neorg),
+        _ => None,
+    }
+}
+
+fn validate_new_file_name(input: &str) -> AppResult<String> {
+    let trimmed = input.trim();
+    if trimmed.is_empty() {
+        return Err("file name is required".to_owned());
+    }
+    if trimmed.contains('/') || trimmed.contains('\\') {
+        return Err("file name must not include path separators".to_owned());
+    }
+    if trimmed.contains('.') {
+        return Err("file name must not include extension".to_owned());
+    }
+    if !trimmed.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '-' || ch == '_') {
+        return Err("file name can only include letters, numbers, '-' and '_'".to_owned());
+    }
+    Ok(trimmed.to_owned())
 }
 
 fn markdown_headings(content: &str) -> Vec<String> {
@@ -1035,8 +1099,4 @@ fn human_size(size: Option<u64>) -> String {
         return format!("{:.1} KB", bytes as f64 / 1024.0);
     }
     format!("{bytes} B")
-}
-
-fn unix_ts() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
 }
