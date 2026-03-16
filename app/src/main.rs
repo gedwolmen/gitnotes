@@ -147,6 +147,13 @@ struct FavoriteFileEntry {
     format: DocumentFormat,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct MarkdownHeading {
+    level: u8,
+    text: String,
+    id: String,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 struct AppSettings {
     theme: String,
@@ -213,8 +220,9 @@ fn ErrorBanner(message: String) -> Element {
 
 #[component]
 fn MarkdownPreview(content: String) -> Element {
-    let html_content = markdown_to_html(content.as_str());
     let headings = markdown_headings(content.as_str());
+    let mut active_heading = use_signal(|| None::<String>);
+    let html_content = markdown_to_html(content.as_str(), &headings);
 
     rsx! {
         div {
@@ -222,7 +230,29 @@ fn MarkdownPreview(content: String) -> Element {
                 h4 { "Table of Contents" }
                 ul {
                     for heading in headings {
-                        li { "{heading}" }
+                        {
+                            let heading_id_for_click = heading.id.clone();
+                            let heading_id_for_link = heading.id.clone();
+                            let heading_text = heading.text;
+                            let heading_level = heading.level;
+                            let is_active = active_heading.read().as_deref() == Some(heading_id_for_click.as_str());
+                            rsx! {
+                                li {
+                                    button {
+                                        onclick: move |_| {
+                                            active_heading.set(Some(heading_id_for_click.clone()));
+                                        },
+                                        if is_active {
+                                            "-> [{heading_level}] {heading_text}"
+                                        } else {
+                                            "   [{heading_level}] {heading_text}"
+                                        }
+                                    }
+                                    " "
+                                    a { href: "#{heading_id_for_link}", "Jump" }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1617,7 +1647,7 @@ async fn copy_then_delete_note_file(
     Ok(())
 }
 
-fn markdown_to_html(content: &str) -> String {
+fn markdown_to_html(content: &str, headings: &[MarkdownHeading]) -> String {
     let mut options = Options::empty();
     options.insert(Options::ENABLE_TABLES);
     options.insert(Options::ENABLE_TASKLISTS);
@@ -1625,10 +1655,11 @@ fn markdown_to_html(content: &str) -> String {
     options.insert(Options::ENABLE_STRIKETHROUGH);
     options.insert(Options::ENABLE_HEADING_ATTRIBUTES);
 
-    let parser = Parser::new_ext(content, options);
+    let with_inline_toc = apply_inline_toc(content, headings);
+    let parser = Parser::new_ext(with_inline_toc.as_str(), options);
     let mut html_output = String::new();
     html::push_html(&mut html_output, parser);
-    html_output
+    attach_heading_ids(html_output, headings)
 }
 
 fn template_for_format(format: &DocumentFormat) -> &'static str {
@@ -1687,7 +1718,7 @@ fn extension_for_path(path: &str) -> Option<&str> {
     name.rsplit_once('.').map(|(_, ext)| ext)
 }
 
-fn markdown_headings(content: &str) -> Vec<String> {
+fn markdown_headings(content: &str) -> Vec<MarkdownHeading> {
     let mut options = Options::empty();
     options.insert(Options::ENABLE_TABLES);
     options.insert(Options::ENABLE_TASKLISTS);
@@ -1699,17 +1730,23 @@ fn markdown_headings(content: &str) -> Vec<String> {
     let mut headings = Vec::new();
     let mut in_heading = false;
     let mut current = String::new();
+    let mut level = 1_u8;
 
     for event in parser {
         match event {
-            Event::Start(Tag::Heading { .. }) => {
+            Event::Start(Tag::Heading { level: heading_level, .. }) => {
                 in_heading = true;
+                level = heading_level as u8;
                 current.clear();
             }
             Event::End(TagEnd::Heading(_)) => {
                 let trimmed = current.trim();
                 if !trimmed.is_empty() {
-                    headings.push(trimmed.to_owned());
+                    headings.push(MarkdownHeading {
+                        level,
+                        text: trimmed.to_owned(),
+                        id: heading_id(trimmed),
+                    });
                 }
                 in_heading = false;
                 current.clear();
@@ -1722,6 +1759,51 @@ fn markdown_headings(content: &str) -> Vec<String> {
     }
 
     headings
+}
+
+fn heading_id(text: &str) -> String {
+    let mut out = String::new();
+    for ch in text.chars() {
+        if ch.is_ascii_alphanumeric() {
+            out.push(ch.to_ascii_lowercase());
+        } else if (ch.is_ascii_whitespace() || ch == '-' || ch == '_') && !out.ends_with('-') {
+            out.push('-');
+        }
+    }
+    out.trim_matches('-').to_owned()
+}
+
+fn apply_inline_toc(content: &str, headings: &[MarkdownHeading]) -> String {
+    if !content.contains("[TOC]") {
+        return content.to_owned();
+    }
+
+    let mut toc = String::new();
+    for heading in headings {
+        let indent = "  ".repeat(heading.level.saturating_sub(1) as usize);
+        toc.push_str(format!("{indent}- [{}](#{})\n", heading.text, heading.id).as_str());
+    }
+    content.replace("[TOC]", toc.as_str())
+}
+
+fn attach_heading_ids(mut html_output: String, headings: &[MarkdownHeading]) -> String {
+    for heading in headings {
+        let open_tag = format!("<h{}>", heading.level);
+        let replacement = format!("<h{} id=\"{}\">", heading.level, heading.id);
+        html_output = replace_first(&html_output, open_tag.as_str(), replacement.as_str());
+    }
+    html_output
+}
+
+fn replace_first(haystack: &str, needle: &str, replacement: &str) -> String {
+    if let Some(index) = haystack.find(needle) {
+        let mut out = String::new();
+        out.push_str(&haystack[..index]);
+        out.push_str(replacement);
+        out.push_str(&haystack[index + needle.len()..]);
+        return out;
+    }
+    haystack.to_owned()
 }
 
 async fn load_recent_file_history(_nonce: u32) -> AppResult<Vec<RecentFileEntry>> {

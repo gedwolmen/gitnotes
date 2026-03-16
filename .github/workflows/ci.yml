@@ -22,6 +22,9 @@ jobs:
         with:
           components: rustfmt
 
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+
       - name: cargo fmt
         run: cargo fmt --all -- --check
 
@@ -77,3 +80,39 @@ jobs:
 
       - name: cargo check
         run: cargo check --workspace
+
+  ios-check:
+    name: iOS Check
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+
+      - name: cargo check core crates for iOS
+        run: cargo check -p gn-core -p gn-parser -p gn-github --target aarch64-apple-ios
+
+  android-check:
+    name: Android Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+
+      - name: cargo check core crates for Android
+        run: cargo check -p gn-core -p gn-parser -p gn-github --target aarch64-linux-android
