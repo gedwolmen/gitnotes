@@ -7,7 +7,7 @@ use gn_github::{
     store_token_secure,
 };
 use gn_parser::parse as parse_document;
-use pulldown_cmark::{Options, Parser, html};
+use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd, html};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
@@ -124,10 +124,19 @@ fn ErrorBanner(message: String) -> Element {
 #[component]
 fn MarkdownPreview(content: String) -> Element {
     let html_content = markdown_to_html(content.as_str());
+    let headings = markdown_headings(content.as_str());
 
     rsx! {
         div {
-            dangerous_inner_html: "{html_content}"
+            if !headings.is_empty() {
+                h4 { "Table of Contents" }
+                ul {
+                    for heading in headings {
+                        li { "{heading}" }
+                    }
+                }
+            }
+            div { dangerous_inner_html: "{html_content}" }
         }
     }
 }
@@ -852,6 +861,43 @@ fn markdown_to_html(content: &str) -> String {
     let mut html_output = String::new();
     html::push_html(&mut html_output, parser);
     html_output
+}
+
+fn markdown_headings(content: &str) -> Vec<String> {
+    let mut options = Options::empty();
+    options.insert(Options::ENABLE_TABLES);
+    options.insert(Options::ENABLE_TASKLISTS);
+    options.insert(Options::ENABLE_FOOTNOTES);
+    options.insert(Options::ENABLE_STRIKETHROUGH);
+    options.insert(Options::ENABLE_HEADING_ATTRIBUTES);
+
+    let parser = Parser::new_ext(content, options);
+    let mut headings = Vec::new();
+    let mut in_heading = false;
+    let mut current = String::new();
+
+    for event in parser {
+        match event {
+            Event::Start(Tag::Heading { .. }) => {
+                in_heading = true;
+                current.clear();
+            }
+            Event::End(TagEnd::Heading(_)) => {
+                let trimmed = current.trim();
+                if !trimmed.is_empty() {
+                    headings.push(trimmed.to_owned());
+                }
+                in_heading = false;
+                current.clear();
+            }
+            Event::Text(text) if in_heading => {
+                current.push_str(text.as_ref());
+            }
+            _ => {}
+        }
+    }
+
+    headings
 }
 
 fn session_file_path() -> PathBuf {
