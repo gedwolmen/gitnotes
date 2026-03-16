@@ -33,6 +33,12 @@ cargo check --workspace
 cargo run -p app
 ```
 
+To load repositories from GitHub in the `Repos` route, set a token:
+
+```bash
+export GITNOTES_GITHUB_TOKEN="<github-token-with-repo-scope>"
+```
+
 ## Current Status
 
 This repository now includes the foundation scaffold:
@@ -41,3 +47,4 @@ This repository now includes the foundation scaffold:
 - Dioxus route skeleton (`/`, `/repos`, `/files`, `/viewer`, `/settings`)
 - parser and GitHub integration crates ready for implementation
 - CI pipeline for format, lint, test, and check
+- repository route wired to fetch authenticated GitHub repositories
