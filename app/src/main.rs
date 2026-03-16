@@ -419,13 +419,51 @@ fn Files() -> Element {
             let repo_for_create = selected_repo.read().clone();
             let dir_for_create = current_dir.read().clone();
             let mut create_status = create_status;
-            let on_create = move |_| {
-                let token = token_for_create.clone();
-                let repo = repo_for_create.clone();
-                let dir = dir_for_create.clone();
+            let token_for_create_md = token_for_create.clone();
+            let repo_for_create_md = repo_for_create.clone();
+            let dir_for_create_md = dir_for_create.clone();
+            let on_create_md = move |_| {
+                let token = token_for_create_md.clone();
+                let repo = repo_for_create_md.clone();
+                let dir = dir_for_create_md.clone();
                 spawn(async move {
-                    create_status.set(Some("Creating note file...".to_owned()));
-                    match create_new_markdown_file(token, repo, dir.as_str()).await {
+                    create_status.set(Some("Creating .md note file...".to_owned()));
+                    match create_new_note_file(token, repo, dir.as_str(), DocumentFormat::Markdown)
+                        .await
+                    {
+                        Ok(path) => create_status.set(Some(format!("Created {path}"))),
+                        Err(err) => create_status.set(Some(format!("Create failed: {err}"))),
+                    }
+                });
+            };
+            let token_for_create_org = token_for_create.clone();
+            let repo_for_create_org = repo_for_create.clone();
+            let dir_for_create_org = dir_for_create.clone();
+            let on_create_org = move |_| {
+                let token = token_for_create_org.clone();
+                let repo = repo_for_create_org.clone();
+                let dir = dir_for_create_org.clone();
+                spawn(async move {
+                    create_status.set(Some("Creating .org note file...".to_owned()));
+                    match create_new_note_file(token, repo, dir.as_str(), DocumentFormat::Org).await
+                    {
+                        Ok(path) => create_status.set(Some(format!("Created {path}"))),
+                        Err(err) => create_status.set(Some(format!("Create failed: {err}"))),
+                    }
+                });
+            };
+            let token_for_create_norg = token_for_create;
+            let repo_for_create_norg = repo_for_create;
+            let dir_for_create_norg = dir_for_create;
+            let on_create_norg = move |_| {
+                let token = token_for_create_norg.clone();
+                let repo = repo_for_create_norg.clone();
+                let dir = dir_for_create_norg.clone();
+                spawn(async move {
+                    create_status.set(Some("Creating .norg note file...".to_owned()));
+                    match create_new_note_file(token, repo, dir.as_str(), DocumentFormat::Neorg)
+                        .await
+                    {
                         Ok(path) => create_status.set(Some(format!("Created {path}"))),
                         Err(err) => create_status.set(Some(format!("Create failed: {err}"))),
                     }
@@ -450,7 +488,11 @@ fn Files() -> Element {
                         "Refresh"
                     }
                     " "
-                    button { onclick: on_create, "New .md File" }
+                    button { onclick: on_create_md, "New .md File" }
+                    " "
+                    button { onclick: on_create_org, "New .org File" }
+                    " "
+                    button { onclick: on_create_norg, "New .norg File" }
                     if let Some(status) = create_status.read().as_ref() {
                         p { "{status}" }
                     }
@@ -813,10 +855,11 @@ async fn load_user_profile(session_token: Option<String>) -> AppResult<UserProfi
     client.user_profile().await.map_err(|err| err.to_string())
 }
 
-async fn create_new_markdown_file(
+async fn create_new_note_file(
     session_token: Option<String>,
     selected_repo: Option<RepositorySelection>,
     current_dir: &str,
+    format: DocumentFormat,
 ) -> AppResult<String> {
     let token = match session_token {
         Some(value) if !value.trim().is_empty() => value,
@@ -827,9 +870,15 @@ async fn create_new_markdown_file(
 
     let selection = selected_repo.ok_or_else(|| "no selected repository in session".to_owned())?;
     let git_ref = std::env::var("GITNOTES_REPO_REF").unwrap_or_else(|_| "main".to_owned());
-    let file_name = format!("note-{}.md", unix_ts());
+    let extension = match format {
+        DocumentFormat::Markdown => "md",
+        DocumentFormat::Org => "org",
+        DocumentFormat::Neorg => "norg",
+    };
+    let file_name = format!("note-{}.{}", unix_ts(), extension);
     let path =
         if current_dir.is_empty() { file_name } else { format!("{current_dir}/{file_name}") };
+    let content = template_for_format(&format);
 
     let client = GitHubClient::new(token).map_err(|err| err.to_string())?;
     client
@@ -838,7 +887,7 @@ async fn create_new_markdown_file(
             repo: selection.repo.as_str(),
             path: path.as_str(),
             message: &format!("Create {path} from gitnotes"),
-            content: "# New Note\n\nCreated by gitnotes.\n",
+            content,
             sha: None,
             branch: Some(git_ref.as_str()),
             committer: None,
@@ -861,6 +910,14 @@ fn markdown_to_html(content: &str) -> String {
     let mut html_output = String::new();
     html::push_html(&mut html_output, parser);
     html_output
+}
+
+fn template_for_format(format: &DocumentFormat) -> &'static str {
+    match format {
+        DocumentFormat::Markdown => "# New Note\n\nCreated by gitnotes.\n",
+        DocumentFormat::Org => "* New Note\n\nCreated by gitnotes.\n",
+        DocumentFormat::Neorg => "= New Note\n\nCreated by gitnotes.\n",
+    }
 }
 
 fn markdown_headings(content: &str) -> Vec<String> {
