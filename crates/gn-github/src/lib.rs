@@ -1,5 +1,6 @@
 use base64::Engine;
 use gn_core::DocumentFormat;
+use keyring::Entry;
 use reqwest::Client;
 use reqwest::header::{ACCEPT, AUTHORIZATION, HeaderMap, HeaderValue, USER_AGENT};
 use serde::{Deserialize, Serialize};
@@ -12,6 +13,8 @@ const API_VERSION: &str = "2022-11-28";
 const DEVICE_CODE_URL: &str = "https://github.com/login/device/code";
 const ACCESS_TOKEN_URL: &str = "https://github.com/login/oauth/access_token";
 const DEVICE_GRANT_TYPE: &str = "urn:ietf:params:oauth:grant-type:device_code";
+const TOKEN_SERVICE: &str = "gitnotes";
+const TOKEN_ACCOUNT: &str = "github-token";
 
 #[derive(Debug, Error)]
 pub enum GitHubClientError {
@@ -57,6 +60,12 @@ pub enum DeviceFlowError {
     OAuth { code: String, description: String },
 }
 
+#[derive(Debug, Error)]
+pub enum TokenStorageError {
+    #[error("secure keyring operation failed: {0}")]
+    Keyring(#[from] keyring::Error),
+}
+
 #[derive(Clone, Debug)]
 pub struct GitHubClient {
     token: String,
@@ -67,6 +76,29 @@ pub struct GitHubClient {
 pub struct GitHubOAuthDeviceClient {
     client_id: String,
     http: Client,
+}
+
+pub fn store_token_secure(token: &str) -> Result<(), TokenStorageError> {
+    let entry = Entry::new(TOKEN_SERVICE, TOKEN_ACCOUNT)?;
+    entry.set_password(token)?;
+    Ok(())
+}
+
+pub fn load_token_secure() -> Result<Option<String>, TokenStorageError> {
+    let entry = Entry::new(TOKEN_SERVICE, TOKEN_ACCOUNT)?;
+    match entry.get_password() {
+        Ok(token) => Ok(Some(token)),
+        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(err) => Err(TokenStorageError::Keyring(err)),
+    }
+}
+
+pub fn clear_token_secure() -> Result<(), TokenStorageError> {
+    let entry = Entry::new(TOKEN_SERVICE, TOKEN_ACCOUNT)?;
+    match entry.delete_credential() {
+        Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
+        Err(err) => Err(TokenStorageError::Keyring(err)),
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]

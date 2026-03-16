@@ -3,7 +3,8 @@ use dioxus_router::prelude::*;
 use gn_core::DocumentFormat;
 use gn_github::{
     DeviceCodeResponse, FileContent, GitHubClient, GitHubOAuthDeviceClient, GitHubRepository,
-    NoteBlob, UpsertFileInput, UserProfile,
+    NoteBlob, UpsertFileInput, UserProfile, clear_token_secure, load_token_secure,
+    store_token_secure,
 };
 use gn_parser::parse as parse_document;
 use serde::{Deserialize, Serialize};
@@ -40,9 +41,20 @@ type AppResult<T> = Result<T, String>;
 
 #[component]
 fn App() -> Element {
-    use_context_provider(|| Signal::new(None::<String>));
+    let auth_token = use_context_provider(|| Signal::new(None::<String>));
     use_context_provider(|| Signal::new(None::<RepositorySelection>));
     use_context_provider(|| Signal::new(None::<String>));
+
+    {
+        let mut auth_token = auth_token;
+        use_effect(move || {
+            if auth_token.read().is_none()
+                && let Ok(Some(token)) = load_token_secure()
+            {
+                auth_token.set(Some(token));
+            }
+        });
+    }
 
     rsx! {
         div { class: "app-shell",
@@ -193,7 +205,11 @@ fn Login() -> Element {
                     .await
                 {
                     Ok(token) => {
-                        auth_token.set(Some(token.access_token));
+                        let access_token = token.access_token;
+                        if let Err(err) = store_token_secure(access_token.as_str()) {
+                            auth_error.set(Some(format!("token store failed: {err}")));
+                        }
+                        auth_token.set(Some(access_token));
                         auth_status.set("Authenticated".to_owned());
                         auth_error.set(None);
                     }
@@ -603,6 +619,7 @@ fn Settings() -> Element {
 
     let is_authenticated = auth_token.read().is_some();
     let logout = move |_| {
+        let _ = clear_token_secure();
         auth_token.set(None);
     };
 

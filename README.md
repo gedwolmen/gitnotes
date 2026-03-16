@@ -60,6 +60,12 @@ Current UI capabilities in this PR slice:
 - Files: breadcrumb-style folder navigation, format badges, file sizes, new markdown file creation.
 - Viewer: selected file display + commit message input + save to GitHub + markdown frontmatter display.
 
+Auth token handling:
+
+- GitHub token is persisted via OS keyring APIs (`keyring` crate) on login.
+- App attempts secure token restore on startup.
+- Logout clears token from secure storage.
+
 Viewer route now includes a basic `Save to GitHub` action using the contents API update path.
 
 ## Current Status
