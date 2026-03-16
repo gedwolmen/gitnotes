@@ -5,4 +5,5 @@ edition = "2024"
 
 [dependencies]
 gn-core = { path = "../gn-core" }
+pulldown-cmark = { workspace = true }
 thiserror = { workspace = true }

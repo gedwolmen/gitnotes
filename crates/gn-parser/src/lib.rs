@@ -30,8 +30,19 @@ pub fn parse(path: &str, content: &str) -> Result<ParsedDocument, ParseError> {
 pub mod markdown {
     use crate::{ParseError, ParsedDocument};
     use gn_core::DocumentFormat;
+    use pulldown_cmark::{Options, Parser};
 
     pub fn parse(content: &str) -> Result<ParsedDocument, ParseError> {
+        let mut options = Options::empty();
+        options.insert(Options::ENABLE_TABLES);
+        options.insert(Options::ENABLE_TASKLISTS);
+        options.insert(Options::ENABLE_FOOTNOTES);
+        options.insert(Options::ENABLE_STRIKETHROUGH);
+        options.insert(Options::ENABLE_HEADING_ATTRIBUTES);
+
+        let parser = Parser::new_ext(content, options);
+        for _ in parser {}
+
         Ok(ParsedDocument { format: DocumentFormat::Markdown, source: content.to_owned() })
     }
 }
@@ -69,5 +80,13 @@ mod tests {
 
         let norg = parse("notes/today.norg", "* heading").expect("norg should parse");
         assert_eq!(norg.format, DocumentFormat::Neorg);
+    }
+
+    #[test]
+    fn parses_markdown_gfm_features() {
+        let source = "# Title\n\n- [x] done\n\n| a | b |\n|---|---|\n| 1 | 2 |\n";
+        let md = parse("notes/readme.md", source).expect("markdown with gfm should parse");
+        assert_eq!(md.format, DocumentFormat::Markdown);
+        assert_eq!(md.source, source);
     }
 }
