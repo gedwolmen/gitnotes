@@ -5,6 +5,7 @@ use gn_github::{
     DeviceCodeResponse, FileContent, GitHubClient, GitHubOAuthDeviceClient, GitHubRepository,
     NoteBlob, UpsertFileInput, UserProfile,
 };
+use gn_parser::parse as parse_document;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
@@ -472,6 +473,9 @@ fn Viewer() -> Element {
 
     let content = match &*document.read() {
         Some(Ok(file)) => {
+            let frontmatter = parse_document(file.path.as_str(), file.content.as_str())
+                .ok()
+                .and_then(|doc| doc.frontmatter);
             let current = file.clone();
             let token_for_save = auth_token.read().clone();
             let selection_for_save = selected_repo.read().clone();
@@ -525,6 +529,10 @@ fn Viewer() -> Element {
                 div {
                     p { "Path: {file.path}" }
                     p { "SHA: {file.sha}" }
+                    if let Some(meta) = frontmatter {
+                        h4 { "Frontmatter" }
+                        pre { "{meta}" }
+                    }
                     button {
                         onclick: move |_| {
                             edit_mode.set(!edit_mode_for_ui);

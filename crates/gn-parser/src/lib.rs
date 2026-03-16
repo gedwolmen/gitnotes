@@ -15,6 +15,7 @@ pub type ParseResult<T> = Result<T, ParseError>;
 pub struct ParsedDocument {
     pub format: DocumentFormat,
     pub source: String,
+    pub frontmatter: Option<String>,
 }
 
 pub fn parse(path: &str, content: &str) -> ParseResult<ParsedDocument> {
@@ -45,7 +46,30 @@ pub mod markdown {
         let parser = Parser::new_ext(content, options);
         for _ in parser {}
 
-        Ok(ParsedDocument { format: DocumentFormat::Markdown, source: content.to_owned() })
+        let frontmatter = extract_frontmatter(content);
+
+        Ok(ParsedDocument {
+            format: DocumentFormat::Markdown,
+            source: content.to_owned(),
+            frontmatter,
+        })
+    }
+
+    fn extract_frontmatter(content: &str) -> Option<String> {
+        let mut lines = content.lines();
+        if lines.next()? != "---" {
+            return None;
+        }
+
+        let mut block = Vec::new();
+        for line in lines {
+            if line == "---" {
+                return Some(block.join("\n"));
+            }
+            block.push(line.to_owned());
+        }
+
+        None
     }
 }
 
@@ -54,7 +78,11 @@ pub mod org {
     use gn_core::DocumentFormat;
 
     pub fn parse(content: &str) -> ParseResult<ParsedDocument> {
-        Ok(ParsedDocument { format: DocumentFormat::Org, source: content.to_owned() })
+        Ok(ParsedDocument {
+            format: DocumentFormat::Org,
+            source: content.to_owned(),
+            frontmatter: None,
+        })
     }
 }
 
@@ -63,7 +91,11 @@ pub mod neorg {
     use gn_core::DocumentFormat;
 
     pub fn parse(content: &str) -> ParseResult<ParsedDocument> {
-        Ok(ParsedDocument { format: DocumentFormat::Neorg, source: content.to_owned() })
+        Ok(ParsedDocument {
+            format: DocumentFormat::Neorg,
+            source: content.to_owned(),
+            frontmatter: None,
+        })
     }
 }
 
@@ -92,6 +124,14 @@ mod tests {
         let md = parse("notes/readme.md", source).expect("markdown with gfm should parse");
         assert_eq!(md.format, DocumentFormat::Markdown);
         assert_eq!(md.source, source);
+        assert!(md.frontmatter.is_none());
+    }
+
+    #[test]
+    fn extracts_markdown_frontmatter_block() {
+        let source = "---\ntitle: Notes\nauthor: Vid\n---\n\n# Hello\n";
+        let md = parse("notes/readme.md", source).expect("markdown with frontmatter should parse");
+        assert_eq!(md.frontmatter.as_deref(), Some("title: Notes\nauthor: Vid"));
     }
 
     #[test]

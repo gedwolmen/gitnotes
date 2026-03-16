@@ -58,7 +58,7 @@ Current UI capabilities in this PR slice:
 
 - Repos: full pagination load, search filter, refresh, selected repo persistence.
 - Files: breadcrumb-style folder navigation, format badges, file sizes, new markdown file creation.
-- Viewer: selected file display + commit message input + save to GitHub.
+- Viewer: selected file display + commit message input + save to GitHub + markdown frontmatter display.
 
 Viewer route now includes a basic `Save to GitHub` action using the contents API update path.
 
