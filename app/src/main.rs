@@ -47,6 +47,7 @@ fn App() -> Element {
     use_context_provider(|| Signal::new(None::<RepositorySelection>));
     use_context_provider(|| Signal::new(None::<String>));
     use_context_provider(|| Signal::new(false));
+    let settings = use_context_provider(|| Signal::new(load_settings().unwrap_or_default()));
 
     {
         let mut auth_token = auth_token;
@@ -60,7 +61,7 @@ fn App() -> Element {
     }
 
     rsx! {
-        div { class: "app-shell",
+        div { class: "app-shell {theme_class(settings.read().theme.as_str())}",
             h1 { "gitnotes" }
             p { "Mobile-first notes app for .org, .norg, and .md backed by GitHub." }
             nav { class: "top-nav",
@@ -100,6 +101,33 @@ struct RecentFileEntry {
     path: String,
     format: DocumentFormat,
     opened_at_unix: i64,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+struct AppSettings {
+    theme: String,
+    default_editor_mode: String,
+    default_new_file_format: String,
+    font_size: String,
+    font_family: String,
+    line_wrapping: bool,
+    show_line_numbers: bool,
+    auto_save_interval_seconds: u64,
+}
+
+impl Default for AppSettings {
+    fn default() -> Self {
+        Self {
+            theme: "system".to_owned(),
+            default_editor_mode: "view".to_owned(),
+            default_new_file_format: "md".to_owned(),
+            font_size: "medium".to_owned(),
+            font_family: "monospace".to_owned(),
+            line_wrapping: true,
+            show_line_numbers: false,
+            auto_save_interval_seconds: 0,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -412,6 +440,7 @@ fn Repos() -> Element {
 fn Files() -> Element {
     let auth_token = use_context::<Signal<Option<String>>>();
     let selected_repo = use_context::<Signal<Option<RepositorySelection>>>();
+    let settings = use_context::<Signal<AppSettings>>();
     let selected_file = use_context::<Signal<Option<String>>>();
     let open_viewer_in_edit = use_context::<Signal<bool>>();
     let navigator = use_navigator();
@@ -421,7 +450,7 @@ fn Files() -> Element {
     let create_status = use_signal(|| None::<String>);
     let show_create_form = use_signal(|| false);
     let mut create_name = use_signal(String::new);
-    let mut create_format = use_signal(|| "md".to_owned());
+    let mut create_format = use_signal(|| settings.read().default_new_file_format.clone());
     let action_file = use_signal(|| None::<String>);
     let action_kind = use_signal(|| None::<FileActionKind>);
     let action_input = use_signal(String::new);
@@ -821,10 +850,12 @@ fn Viewer() -> Element {
     let auth_token = use_context::<Signal<Option<String>>>();
     let selected_repo = use_context::<Signal<Option<RepositorySelection>>>();
     let selected_file = use_context::<Signal<Option<String>>>();
+    let settings = use_context::<Signal<AppSettings>>();
     let mut open_viewer_in_edit = use_context::<Signal<bool>>();
     let save_status = use_signal(|| None::<String>);
     let mut commit_message = use_signal(String::new);
-    let mut edit_mode = use_signal(|| *open_viewer_in_edit.read());
+    let mut edit_mode =
+        use_signal(|| *open_viewer_in_edit.read() || settings.read().default_editor_mode == "edit");
     let mut draft_content = use_signal(String::new);
 
     {
@@ -854,6 +885,12 @@ fn Viewer() -> Element {
             let file_for_save = selected_file.read().clone();
             let edit_mode_for_ui = *edit_mode.read();
             let draft_snapshot = draft_content.read().clone();
+            let viewer_style = viewer_text_style(
+                settings.read().font_size.as_str(),
+                settings.read().font_family.as_str(),
+            );
+            let should_wrap = settings.read().line_wrapping;
+            let show_line_numbers = settings.read().show_line_numbers;
             let save_message = {
                 let current_text = commit_message.read().clone();
                 if current_text.trim().is_empty() {
@@ -922,6 +959,8 @@ fn Viewer() -> Element {
                         textarea {
                             rows: "20",
                             cols: "120",
+                            style: "{viewer_style}",
+                            wrap: if should_wrap { "soft" } else { "off" },
                             value: if draft_content.read().is_empty() {
                                 file.content.clone()
                             } else {
@@ -941,7 +980,11 @@ fn Viewer() -> Element {
                         if file.path.ends_with(".md") {
                             MarkdownPreview { content: file.content.clone() }
                         } else {
-                            pre { "{file.content}" }
+                            if show_line_numbers {
+                                pre { style: "{viewer_style}", "{with_line_numbers(file.content.as_str())}" }
+                            } else {
+                                pre { style: "{viewer_style}", "{file.content}" }
+                            }
                         }
                     }
                     button { onclick: on_save, "Save to GitHub" }
@@ -972,6 +1015,7 @@ fn Viewer() -> Element {
 #[component]
 fn Settings() -> Element {
     let mut auth_token = use_context::<Signal<Option<String>>>();
+    let mut settings = use_context::<Signal<AppSettings>>();
     let history_status = use_signal(|| None::<String>);
     let profile = use_resource(move || {
         let token = auth_token.read().clone();
@@ -988,6 +1032,7 @@ fn Settings() -> Element {
         Ok(_) => history_status_signal.set(Some("Recent history cleared".to_owned())),
         Err(err) => history_status_signal.set(Some(format!("Failed to clear history: {err}"))),
     };
+    let cache_size = local_cache_size_bytes();
 
     let profile_block = match &*profile.read() {
         Some(Ok(p)) => rsx! {
@@ -1010,7 +1055,95 @@ fn Settings() -> Element {
     rsx! {
         section {
             h2 { "Settings" }
-            p { "Theme, caching, and account controls will live here." }
+
+            h3 { "Appearance" }
+            p { "Theme" }
+            select {
+                value: "{settings.read().theme}",
+                oninput: move |evt| {
+                    settings.with_mut(|s| s.theme = evt.value());
+                    let _ = save_settings(settings.read().clone());
+                },
+                option { value: "system", "System" }
+                option { value: "light", "Light" }
+                option { value: "dark", "Dark" }
+            }
+            p { "Font Size" }
+            select {
+                value: "{settings.read().font_size}",
+                oninput: move |evt| {
+                    settings.with_mut(|s| s.font_size = evt.value());
+                    let _ = save_settings(settings.read().clone());
+                },
+                option { value: "small", "Small" }
+                option { value: "medium", "Medium" }
+                option { value: "large", "Large" }
+                option { value: "xlarge", "Extra Large" }
+            }
+            p { "Font Family" }
+            select {
+                value: "{settings.read().font_family}",
+                oninput: move |evt| {
+                    settings.with_mut(|s| s.font_family = evt.value());
+                    let _ = save_settings(settings.read().clone());
+                },
+                option { value: "monospace", "Monospace" }
+                option { value: "proportional", "Proportional" }
+            }
+            button {
+                onclick: move |_| {
+                    settings.with_mut(|s| s.line_wrapping = !s.line_wrapping);
+                    let _ = save_settings(settings.read().clone());
+                },
+                if settings.read().line_wrapping { "Line Wrapping: On" } else { "Line Wrapping: Off" }
+            }
+            " "
+            button {
+                onclick: move |_| {
+                    settings.with_mut(|s| s.show_line_numbers = !s.show_line_numbers);
+                    let _ = save_settings(settings.read().clone());
+                },
+                if settings.read().show_line_numbers { "Line Numbers: On" } else { "Line Numbers: Off" }
+            }
+
+            h3 { "Editing" }
+            p { "Default Editor Mode" }
+            select {
+                value: "{settings.read().default_editor_mode}",
+                oninput: move |evt| {
+                    settings.with_mut(|s| s.default_editor_mode = evt.value());
+                    let _ = save_settings(settings.read().clone());
+                },
+                option { value: "view", "View" }
+                option { value: "edit", "Edit" }
+            }
+            p { "Default New File Format" }
+            select {
+                value: "{settings.read().default_new_file_format}",
+                oninput: move |evt| {
+                    settings.with_mut(|s| s.default_new_file_format = evt.value());
+                    let _ = save_settings(settings.read().clone());
+                },
+                option { value: "org", ".org" }
+                option { value: "norg", ".norg" }
+                option { value: "md", ".md" }
+            }
+            p { "Auto-save Interval (seconds, 0 disables)" }
+            input {
+                value: "{settings.read().auto_save_interval_seconds}",
+                oninput: move |evt| {
+                    if let Ok(value) = evt.value().parse::<u64>() {
+                        settings.with_mut(|s| s.auto_save_interval_seconds = value);
+                        let _ = save_settings(settings.read().clone());
+                    }
+                }
+            }
+
+            h3 { "Cache" }
+            p { "Cache Size: {human_size(Some(cache_size))}" }
+            button { onclick: clear_history, "Clear Recent History" }
+
+            h3 { "Account" }
             if is_authenticated {
                 p { "Authentication: active" }
                 button { onclick: logout, "Logout" }
@@ -1018,7 +1151,10 @@ fn Settings() -> Element {
             } else {
                 p { "Authentication: not active" }
             }
-            button { onclick: clear_history, "Clear Recent History" }
+
+            h3 { "About" }
+            p { "Version: 0.1.0" }
+            p { "Licenses: MIT (workspace package license)" }
             if let Some(status) = history_status.read().as_ref() {
                 p { "{status}" }
             }
@@ -1432,6 +1568,59 @@ async fn load_recent_file_history(_nonce: u32) -> AppResult<Vec<RecentFileEntry>
 fn history_db_path() -> PathBuf {
     let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_owned());
     PathBuf::from(home).join(".gitnotes-history.db")
+}
+
+fn settings_file_path() -> PathBuf {
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_owned());
+    PathBuf::from(home).join(".gitnotes-settings.json")
+}
+
+fn load_settings() -> Option<AppSettings> {
+    let raw = fs::read_to_string(settings_file_path()).ok()?;
+    serde_json::from_str::<AppSettings>(raw.as_str()).ok()
+}
+
+fn save_settings(settings: AppSettings) -> AppResult<()> {
+    let serialized = serde_json::to_string_pretty(&settings).map_err(|err| err.to_string())?;
+    fs::write(settings_file_path(), serialized).map_err(|err| err.to_string())
+}
+
+fn theme_class(theme: &str) -> &'static str {
+    match theme {
+        "light" => "theme-light",
+        "dark" => "theme-dark",
+        _ => "theme-system",
+    }
+}
+
+fn viewer_text_style(font_size: &str, font_family: &str) -> String {
+    let size = match font_size {
+        "small" => "12px",
+        "large" => "18px",
+        "xlarge" => "22px",
+        _ => "15px",
+    };
+    let family = if font_family == "proportional" {
+        "ui-serif, Georgia, serif"
+    } else {
+        "ui-monospace, SFMono-Regular, Menlo, monospace"
+    };
+    format!("font-size: {size}; font-family: {family};")
+}
+
+fn with_line_numbers(content: &str) -> String {
+    content
+        .lines()
+        .enumerate()
+        .map(|(index, line)| format!("{:4} | {line}", index + 1))
+        .collect::<Vec<String>>()
+        .join("\n")
+}
+
+fn local_cache_size_bytes() -> u64 {
+    let history_size = fs::metadata(history_db_path()).map(|m| m.len()).unwrap_or(0);
+    let session_size = fs::metadata(session_file_path()).map(|m| m.len()).unwrap_or(0);
+    history_size + session_size
 }
 
 fn history_connection() -> AppResult<Connection> {
