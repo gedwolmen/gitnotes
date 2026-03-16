@@ -1,0 +1,8 @@
+[package]
+name = "gn-parser"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+gn-core = { path = "../gn-core" }
+thiserror = { workspace = true }

@@ -1,0 +1,10 @@
+[application]
+name = "gitnotes"
+
+[web.app]
+title = "gitnotes"
+
+[web.watcher]
+reload_html = true
+watch_path = ["src"]
+index_on_404 = true
