@@ -39,6 +39,12 @@ To load repositories from GitHub in the `Repos` route, set a token:
 export GITNOTES_GITHUB_TOKEN="<github-token-with-repo-scope>"
 ```
 
+To run login via GitHub Device Flow in-app, set your OAuth app client id:
+
+```bash
+export GITNOTES_GITHUB_CLIENT_ID="<github-oauth-app-client-id>"
+```
+
 ## Current Status
 
 This repository now includes the foundation scaffold:
