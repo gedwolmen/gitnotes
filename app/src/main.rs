@@ -79,7 +79,9 @@ fn App() -> Element {
         .unwrap_or_else(|| "none".to_owned());
 
     rsx! {
-        div { class: "app-shell {theme_class(settings.read().theme.as_str())}",
+        div {
+            class: "app-shell {theme_class(settings.read().theme.as_str())}",
+            style: "{app_theme_style(settings.read().theme.as_str())}",
             h1 { "gitnotes" }
             p { "Mobile-first notes app for .org, .norg, and .md backed by GitHub." }
             p { "Current repo: {selected_repo_label}" }
@@ -1032,6 +1034,7 @@ fn Viewer() -> Element {
             let viewer_style = viewer_text_style(
                 settings.read().font_size.as_str(),
                 settings.read().font_family.as_str(),
+                settings.read().theme.as_str(),
             );
             let should_wrap = settings.read().line_wrapping;
             let show_line_numbers = settings.read().show_line_numbers;
@@ -1757,7 +1760,38 @@ fn theme_class(theme: &str) -> &'static str {
     }
 }
 
-fn viewer_text_style(font_size: &str, font_family: &str) -> String {
+fn effective_theme(theme: &str) -> &'static str {
+    match theme {
+        "dark" => "dark",
+        "light" => "light",
+        _ => system_theme_preference(),
+    }
+}
+
+fn system_theme_preference() -> &'static str {
+    if let Ok(value) = std::env::var("GITNOTES_SYSTEM_THEME") {
+        return if value.eq_ignore_ascii_case("dark") { "dark" } else { "light" };
+    }
+
+    if let Ok(colorfgbg) = std::env::var("COLORFGBG")
+        && let Some(bg_raw) = colorfgbg.split(';').next_back()
+        && let Ok(bg) = bg_raw.parse::<u8>()
+    {
+        return if bg <= 7 { "dark" } else { "light" };
+    }
+
+    "light"
+}
+
+fn app_theme_style(theme: &str) -> String {
+    if effective_theme(theme) == "dark" {
+        "background: #0f1115; color: #e8eaf0; min-height: 100vh;".to_owned()
+    } else {
+        "background: #f8fafc; color: #1f2937; min-height: 100vh;".to_owned()
+    }
+}
+
+fn viewer_text_style(font_size: &str, font_family: &str, theme: &str) -> String {
     let size = match font_size {
         "small" => "12px",
         "large" => "18px",
@@ -1769,7 +1803,12 @@ fn viewer_text_style(font_size: &str, font_family: &str) -> String {
     } else {
         "ui-monospace, SFMono-Regular, Menlo, monospace"
     };
-    format!("font-size: {size}; font-family: {family};")
+    let (fg, bg) = if effective_theme(theme) == "dark" {
+        ("#e8eaf0", "#171a21")
+    } else {
+        ("#111827", "#ffffff")
+    };
+    format!("font-size: {size}; font-family: {family}; color: {fg}; background: {bg};")
 }
 
 fn with_line_numbers(content: &str) -> String {
