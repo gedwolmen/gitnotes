@@ -24,6 +24,10 @@ pub enum GitHubClientError {
     DecodeFailed(#[from] base64::DecodeError),
     #[error("file content is not utf-8")]
     NonUtf8Content,
+    #[error("github file update conflict (409): remote file changed")]
+    Conflict,
+    #[error("github api error status {status}: {message}")]
+    ApiStatus { status: u16, message: String },
 }
 
 #[derive(Debug, Error)]
@@ -337,15 +341,19 @@ impl GitHubClient {
             committer: input.committer,
         };
 
-        let response = self
-            .http
-            .put(url)
-            .json(&payload)
-            .send()
-            .await?
-            .error_for_status()?
-            .json::<UpsertFileResponse>()
-            .await?;
+        let response = self.http.put(url).json(&payload).send().await?;
+
+        let status = response.status();
+        if status == reqwest::StatusCode::CONFLICT {
+            return Err(GitHubClientError::Conflict);
+        }
+
+        if !status.is_success() {
+            let message = response.text().await.unwrap_or_default();
+            return Err(GitHubClientError::ApiStatus { status: status.as_u16(), message });
+        }
+
+        let response = response.json::<UpsertFileResponse>().await?;
 
         Ok(response)
     }
