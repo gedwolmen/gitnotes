@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 use dioxus_router::prelude::*;
 use gn_github::{
     DeviceCodeResponse, FileContent, GitHubClient, GitHubOAuthDeviceClient, GitHubRepository,
+    UpsertFileInput,
 };
 
 #[derive(Clone, Debug, PartialEq, Routable)]
@@ -287,19 +288,44 @@ fn Files() -> Element {
 #[component]
 fn Viewer() -> Element {
     let auth_token = use_context::<Signal<Option<String>>>();
+    let save_status = use_signal(|| None::<String>);
     let document = use_resource(move || {
         let token = auth_token.read().clone();
         async move { load_current_file(token).await }
     });
 
     let content = match &*document.read() {
-        Some(Ok(file)) => rsx! {
-            div {
-                p { "Path: {file.path}" }
-                p { "SHA: {file.sha}" }
-                pre { "{file.content}" }
+        Some(Ok(file)) => {
+            let current = file.clone();
+            let token_for_save = auth_token.read().clone();
+            let mut save_status = save_status;
+            let on_save = move |_| {
+                let token = token_for_save.clone();
+                let file = current.clone();
+                spawn(async move {
+                    save_status.set(Some("Saving file to GitHub...".to_owned()));
+                    let result = save_current_file(token, &file).await;
+                    match result {
+                        Ok(commit_sha) => {
+                            save_status
+                                .set(Some(format!("Saved successfully. Commit: {commit_sha}")));
+                        }
+                        Err(err) => {
+                            save_status.set(Some(format!("Save failed: {err}")));
+                        }
+                    }
+                });
+            };
+
+            rsx! {
+                div {
+                    p { "Path: {file.path}" }
+                    p { "SHA: {file.sha}" }
+                    pre { "{file.content}" }
+                    button { onclick: on_save, "Save to GitHub" }
+                }
             }
-        },
+        }
         Some(Err(err)) => rsx! {
             p { class: "error", "Failed to load file: {err}" }
             p { "Set GITNOTES_FILE_PATH and repository env vars, then authenticate." }
@@ -313,6 +339,9 @@ fn Viewer() -> Element {
         section {
             h2 { "Viewer" }
             p { "Read mode for Org, Neorg, and Markdown documents." }
+            if let Some(status) = save_status.read().as_ref() {
+                p { "{status}" }
+            }
             {content}
         }
     }
@@ -384,4 +413,39 @@ async fn load_current_file(session_token: Option<String>) -> Result<FileContent,
         .file_content(owner.as_str(), repo.as_str(), path.as_str(), git_ref.as_str())
         .await
         .map_err(|err| err.to_string())
+}
+
+async fn save_current_file(
+    session_token: Option<String>,
+    file: &FileContent,
+) -> Result<String, String> {
+    let token = match session_token {
+        Some(value) if !value.trim().is_empty() => value,
+        _ => std::env::var("GITNOTES_GITHUB_TOKEN").map_err(|_| {
+            "missing auth token (login first or set GITNOTES_GITHUB_TOKEN)".to_owned()
+        })?,
+    };
+
+    let owner = std::env::var("GITNOTES_REPO_OWNER")
+        .map_err(|_| "missing GITNOTES_REPO_OWNER".to_owned())?;
+    let repo =
+        std::env::var("GITNOTES_REPO_NAME").map_err(|_| "missing GITNOTES_REPO_NAME".to_owned())?;
+    let git_ref = std::env::var("GITNOTES_REPO_REF").unwrap_or_else(|_| "main".to_owned());
+
+    let client = GitHubClient::new(token).map_err(|err| err.to_string())?;
+    let response = client
+        .upsert_file(UpsertFileInput {
+            owner: owner.as_str(),
+            repo: repo.as_str(),
+            path: file.path.as_str(),
+            message: &format!("Update {} from gitnotes", file.path),
+            content: file.content.as_str(),
+            sha: Some(file.sha.as_str()),
+            branch: Some(git_ref.as_str()),
+            committer: None,
+        })
+        .await
+        .map_err(|err| err.to_string())?;
+
+    Ok(response.commit.sha)
 }

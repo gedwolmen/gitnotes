@@ -54,6 +54,8 @@ export GITNOTES_REPO_REF="main"   # optional, defaults to main
 export GITNOTES_FILE_PATH="notes/today.md"
 ```
 
+Viewer route now includes a basic `Save to GitHub` action using the contents API update path.
+
 ## Current Status
 
 This repository now includes the foundation scaffold:
