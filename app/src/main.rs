@@ -2,9 +2,9 @@ use dioxus::prelude::*;
 use dioxus_router::prelude::*;
 use gn_core::DocumentFormat;
 use gn_github::{
-    DeleteFileInput, DeviceCodeResponse, FileContent, GitHubClient, GitHubOAuthDeviceClient,
-    GitHubRepository, NoteBlob, RateLimitInfo, UpsertFileInput, UserProfile, clear_token_secure,
-    load_token_secure, store_token_secure,
+    DeleteFileInput, DeviceCodeResponse, FileContent, GitHubClient, GitHubClientError,
+    GitHubOAuthDeviceClient, GitHubRepository, NoteBlob, RateLimitInfo, UpsertFileInput,
+    UserProfile, clear_token_secure, load_token_secure, store_token_secure,
 };
 use gn_parser::parse as parse_document;
 use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd, html};
@@ -40,6 +40,11 @@ fn main() {
 }
 
 type AppResult<T> = Result<T, String>;
+
+enum SaveResult {
+    Saved(String),
+    Conflict(FileContent),
+}
 
 #[component]
 fn App() -> Element {
@@ -1027,6 +1032,7 @@ fn Viewer() -> Element {
     let settings = use_context::<Signal<AppSettings>>();
     let mut open_viewer_in_edit = use_context::<Signal<bool>>();
     let save_status = use_signal(|| None::<String>);
+    let conflict_remote = use_signal(|| None::<FileContent>);
     let mut refresh_nonce = use_signal(|| 0_u32);
     let mut commit_message = use_signal(String::new);
     let mut edit_mode =
@@ -1076,17 +1082,25 @@ fn Viewer() -> Element {
                     current_text
                 }
             };
+            let mut conflict_remote = conflict_remote;
+            let mut refresh_nonce = refresh_nonce;
             let mut save_status = save_status;
+            let token_for_save_click = token_for_save.clone();
+            let selection_for_save_click = selection_for_save.clone();
+            let file_for_save_click = file_for_save.clone();
+            let current_for_save = current.clone();
+            let save_message_for_save = save_message.clone();
+            let draft_snapshot_for_save = draft_snapshot.clone();
             let on_save = move |_| {
-                let token = token_for_save.clone();
-                let selection = selection_for_save.clone();
-                let selected = file_for_save.clone();
-                let file = current.clone();
-                let message = save_message.clone();
-                let content = if draft_snapshot.is_empty() {
+                let token = token_for_save_click.clone();
+                let selection = selection_for_save_click.clone();
+                let selected = file_for_save_click.clone();
+                let file = current_for_save.clone();
+                let message = save_message_for_save.clone();
+                let content = if draft_snapshot_for_save.is_empty() {
                     file.content.clone()
                 } else {
-                    draft_snapshot.clone()
+                    draft_snapshot_for_save.clone()
                 };
                 spawn(async move {
                     save_status.set(Some("Saving file to GitHub...".to_owned()));
@@ -1100,15 +1114,86 @@ fn Viewer() -> Element {
                     )
                     .await;
                     match result {
-                        Ok(commit_sha) => {
+                        Ok(SaveResult::Saved(commit_sha)) => {
+                            conflict_remote.set(None);
                             save_status
                                 .set(Some(format!("Saved successfully. Commit: {commit_sha}")));
+                            let next = *refresh_nonce.read() + 1;
+                            refresh_nonce.set(next);
+                        }
+                        Ok(SaveResult::Conflict(remote)) => {
+                            conflict_remote.set(Some(remote.clone()));
+                            save_status.set(Some(
+                                "Conflict detected (409). Choose keep-local or keep-remote."
+                                    .to_owned(),
+                            ));
                         }
                         Err(err) => {
                             save_status.set(Some(format!("Save failed: {err}")));
                         }
                     }
                 });
+            };
+
+            let mut draft_content_for_conflict = draft_content;
+            let file_for_force = current.clone();
+            let token_for_force = token_for_save.clone();
+            let selection_for_force = selection_for_save.clone();
+            let selected_for_force = file_for_save.clone();
+            let message_for_force = save_message.clone();
+            let draft_snapshot_for_force = draft_snapshot.clone();
+            let keep_local = move |_| {
+                let token = token_for_force.clone();
+                let selection = selection_for_force.clone();
+                let selected = selected_for_force.clone();
+                let base_file = file_for_force.clone();
+                let message = message_for_force.clone();
+                let content = if draft_snapshot_for_force.is_empty() {
+                    base_file.content.clone()
+                } else {
+                    draft_snapshot_for_force.clone()
+                };
+                let remote = conflict_remote.read().clone();
+                spawn(async move {
+                    let Some(remote_file) = remote else {
+                        return;
+                    };
+                    save_status.set(Some("Overwriting remote with local content...".to_owned()));
+                    match force_save_current_file(
+                        token,
+                        selection,
+                        selected,
+                        &base_file,
+                        content.as_str(),
+                        message.as_str(),
+                        remote_file.sha.as_str(),
+                    )
+                    .await
+                    {
+                        Ok(commit_sha) => {
+                            conflict_remote.set(None);
+                            save_status
+                                .set(Some(format!("Saved successfully. Commit: {commit_sha}")));
+                            let next = *refresh_nonce.read() + 1;
+                            refresh_nonce.set(next);
+                        }
+                        Err(err) => save_status.set(Some(format!("Force save failed: {err}"))),
+                    }
+                });
+            };
+
+            let keep_remote = move |_| {
+                if let Some(remote) = conflict_remote.read().as_ref() {
+                    draft_content_for_conflict.set(remote.content.clone());
+                }
+                conflict_remote.set(None);
+                save_status.set(Some("Loaded remote content into draft".to_owned()));
+            };
+
+            let unsaved_changes = if draft_content.read().is_empty() {
+                false
+            } else {
+                draft_content.read().as_str() != file.content.as_str()
             };
 
             rsx! {
@@ -1131,6 +1216,9 @@ fn Viewer() -> Element {
                         oninput: move |evt| {
                             commit_message.set(evt.value());
                         }
+                    }
+                    if unsaved_changes {
+                        p { class: "warning", "Unsaved changes" }
                     }
                     if edit_mode_for_ui {
                         textarea {
@@ -1165,6 +1253,15 @@ fn Viewer() -> Element {
                         }
                     }
                     button { onclick: on_save, "Save to GitHub" }
+                    if let Some(remote) = conflict_remote.read().as_ref() {
+                        div {
+                            h4 { "Conflict Resolution" }
+                            p { "Remote SHA: {remote.sha}" }
+                            button { onclick: keep_local, "Keep Local (Overwrite Remote)" }
+                            " "
+                            button { onclick: keep_remote, "Keep Remote (Load Remote)" }
+                        }
+                    }
                 }
             }
         }
@@ -1433,7 +1530,7 @@ async fn save_current_file(
     file: &FileContent,
     content: &str,
     commit_message: &str,
-) -> AppResult<String> {
+) -> AppResult<SaveResult> {
     let token = match session_token {
         Some(value) if !value.trim().is_empty() => value,
         _ => std::env::var("GITNOTES_GITHUB_TOKEN").map_err(|_| {
@@ -1454,6 +1551,60 @@ async fn save_current_file(
             message: commit_message,
             content,
             sha: Some(file.sha.as_str()),
+            branch: Some(git_ref.as_str()),
+            committer: None,
+        })
+        .await;
+
+    let response = match response {
+        Ok(value) => value,
+        Err(GitHubClientError::Conflict) => {
+            let remote = client
+                .file_content(
+                    selection.owner.as_str(),
+                    selection.repo.as_str(),
+                    target_path.as_str(),
+                    git_ref.as_str(),
+                )
+                .await
+                .map_err(|err| err.to_string())?;
+            return Ok(SaveResult::Conflict(remote));
+        }
+        Err(err) => return Err(err.to_string()),
+    };
+
+    Ok(SaveResult::Saved(response.commit.sha))
+}
+
+async fn force_save_current_file(
+    session_token: Option<String>,
+    selected_repo: Option<RepositorySelection>,
+    selected_file: Option<String>,
+    file: &FileContent,
+    content: &str,
+    commit_message: &str,
+    remote_sha: &str,
+) -> AppResult<String> {
+    let token = match session_token {
+        Some(value) if !value.trim().is_empty() => value,
+        _ => std::env::var("GITNOTES_GITHUB_TOKEN").map_err(|_| {
+            "missing auth token (login first or set GITNOTES_GITHUB_TOKEN)".to_owned()
+        })?,
+    };
+
+    let selection = selected_repo.ok_or_else(|| "no selected repository in session".to_owned())?;
+    let git_ref = std::env::var("GITNOTES_REPO_REF").unwrap_or_else(|_| "main".to_owned());
+
+    let client = GitHubClient::new(token).map_err(|err| err.to_string())?;
+    let target_path = selected_file.unwrap_or_else(|| file.path.clone());
+    let response = client
+        .upsert_file(UpsertFileInput {
+            owner: selection.owner.as_str(),
+            repo: selection.repo.as_str(),
+            path: target_path.as_str(),
+            message: commit_message,
+            content,
+            sha: Some(remote_sha),
             branch: Some(git_ref.as_str()),
             committer: None,
         })
