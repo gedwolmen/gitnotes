@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+anyhow = { workspace = true }
 dioxus = { workspace = true, features = ["desktop"] }
 dioxus-router = { workspace = true }
 gn-core = { path = "../crates/gn-core" }

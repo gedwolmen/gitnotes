@@ -9,13 +9,15 @@ pub enum ParseError {
     NotImplemented(DocumentFormat),
 }
 
+pub type ParseResult<T> = Result<T, ParseError>;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ParsedDocument {
     pub format: DocumentFormat,
     pub source: String,
 }
 
-pub fn parse(path: &str, content: &str) -> Result<ParsedDocument, ParseError> {
+pub fn parse(path: &str, content: &str) -> ParseResult<ParsedDocument> {
     let Some(format) = DocumentFormat::from_path(path) else {
         return Err(ParseError::UnsupportedFormat(path.to_owned()));
     };
@@ -28,11 +30,11 @@ pub fn parse(path: &str, content: &str) -> Result<ParsedDocument, ParseError> {
 }
 
 pub mod markdown {
-    use crate::{ParseError, ParsedDocument};
+    use crate::{ParseResult, ParsedDocument};
     use gn_core::DocumentFormat;
     use pulldown_cmark::{Options, Parser};
 
-    pub fn parse(content: &str) -> Result<ParsedDocument, ParseError> {
+    pub fn parse(content: &str) -> ParseResult<ParsedDocument> {
         let mut options = Options::empty();
         options.insert(Options::ENABLE_TABLES);
         options.insert(Options::ENABLE_TASKLISTS);
@@ -48,19 +50,19 @@ pub mod markdown {
 }
 
 pub mod org {
-    use crate::{ParseError, ParsedDocument};
+    use crate::{ParseResult, ParsedDocument};
     use gn_core::DocumentFormat;
 
-    pub fn parse(content: &str) -> Result<ParsedDocument, ParseError> {
+    pub fn parse(content: &str) -> ParseResult<ParsedDocument> {
         Ok(ParsedDocument { format: DocumentFormat::Org, source: content.to_owned() })
     }
 }
 
 pub mod neorg {
-    use crate::{ParseError, ParsedDocument};
+    use crate::{ParseResult, ParsedDocument};
     use gn_core::DocumentFormat;
 
-    pub fn parse(content: &str) -> Result<ParsedDocument, ParseError> {
+    pub fn parse(content: &str) -> ParseResult<ParsedDocument> {
         Ok(ParsedDocument { format: DocumentFormat::Neorg, source: content.to_owned() })
     }
 }

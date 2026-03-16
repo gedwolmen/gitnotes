@@ -27,9 +27,15 @@ enum Route {
 }
 
 fn main() {
-    tracing_subscriber::fmt::init();
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(
+            std::env::var("RUST_LOG").unwrap_or_else(|_| "app=info,gn_github=info".to_owned()),
+        )
+        .try_init();
     launch(App);
 }
+
+type AppResult<T> = Result<T, String>;
 
 #[component]
 fn App() -> Element {
@@ -85,6 +91,13 @@ fn Home() -> Element {
                 li { "Viewer and editor routes are ready for implementation." }
             }
         }
+    }
+}
+
+#[component]
+fn ErrorBanner(message: String) -> Element {
+    rsx! {
+        p { class: "error", "Error: {message}" }
     }
 }
 
@@ -292,7 +305,7 @@ fn Repos() -> Element {
             }
         }
         Some(Err(err)) => rsx! {
-            p { class: "error", "Failed to load repositories: {err}" }
+            ErrorBanner { message: format!("Failed to load repositories: {err}") }
             p { "Authenticate via Login route, or set GITNOTES_GITHUB_TOKEN in your environment." }
         },
         None => rsx! {
@@ -423,7 +436,7 @@ fn Files() -> Element {
             }
         }
         Some(Err(err)) => rsx! {
-            p { class: "error", "Failed to load file tree: {err}" }
+            ErrorBanner { message: format!("Failed to load file tree: {err}") }
             p { "Select a repository in Repos route, then authenticate." }
         },
         None => rsx! {
@@ -552,7 +565,7 @@ fn Viewer() -> Element {
             }
         }
         Some(Err(err)) => rsx! {
-            p { class: "error", "Failed to load file: {err}" }
+            ErrorBanner { message: format!("Failed to load file: {err}") }
             p { "Set GITNOTES_FILE_PATH, select repository, then authenticate." }
         },
         None => rsx! {
@@ -596,7 +609,7 @@ fn Settings() -> Element {
             }
         },
         Some(Err(err)) => rsx! {
-            p { class: "error", "Profile load failed: {err}" }
+            ErrorBanner { message: format!("Profile load failed: {err}") }
         },
         None => rsx! {
             p { "Loading profile..." }
@@ -621,7 +634,7 @@ fn Settings() -> Element {
 async fn load_repositories(
     session_token: Option<String>,
     _refresh_nonce: u32,
-) -> Result<Vec<GitHubRepository>, String> {
+) -> AppResult<Vec<GitHubRepository>> {
     let token = match session_token {
         Some(value) if !value.trim().is_empty() => value,
         _ => std::env::var("GITNOTES_GITHUB_TOKEN").map_err(|_| {
@@ -637,7 +650,7 @@ async fn load_note_files(
     session_token: Option<String>,
     selected_repo: Option<RepositorySelection>,
     _refresh_nonce: u32,
-) -> Result<Vec<NoteBlob>, String> {
+) -> AppResult<Vec<NoteBlob>> {
     let token = match session_token {
         Some(value) if !value.trim().is_empty() => value,
         _ => std::env::var("GITNOTES_GITHUB_TOKEN").map_err(|_| {
@@ -661,7 +674,7 @@ async fn load_current_file(
     session_token: Option<String>,
     selected_repo: Option<RepositorySelection>,
     selected_file: Option<String>,
-) -> Result<FileContent, String> {
+) -> AppResult<FileContent> {
     let token = match session_token {
         Some(value) if !value.trim().is_empty() => value,
         _ => std::env::var("GITNOTES_GITHUB_TOKEN").map_err(|_| {
@@ -694,7 +707,7 @@ async fn save_current_file(
     file: &FileContent,
     content: &str,
     commit_message: &str,
-) -> Result<String, String> {
+) -> AppResult<String> {
     let token = match session_token {
         Some(value) if !value.trim().is_empty() => value,
         _ => std::env::var("GITNOTES_GITHUB_TOKEN").map_err(|_| {
@@ -724,7 +737,7 @@ async fn save_current_file(
     Ok(response.commit.sha)
 }
 
-async fn load_user_profile(session_token: Option<String>) -> Result<UserProfile, String> {
+async fn load_user_profile(session_token: Option<String>) -> AppResult<UserProfile> {
     let token = match session_token {
         Some(value) if !value.trim().is_empty() => value,
         _ => std::env::var("GITNOTES_GITHUB_TOKEN").map_err(|_| {
@@ -740,7 +753,7 @@ async fn create_new_markdown_file(
     session_token: Option<String>,
     selected_repo: Option<RepositorySelection>,
     current_dir: &str,
-) -> Result<String, String> {
+) -> AppResult<String> {
     let token = match session_token {
         Some(value) if !value.trim().is_empty() => value,
         _ => std::env::var("GITNOTES_GITHUB_TOKEN").map_err(|_| {

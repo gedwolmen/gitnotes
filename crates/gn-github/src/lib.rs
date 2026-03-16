@@ -33,6 +33,8 @@ pub enum GitHubClientError {
     NonCloneableRequest,
 }
 
+pub type GitHubResult<T> = Result<T, GitHubClientError>;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Conditional<T> {
     NotModified,
@@ -199,7 +201,7 @@ struct UpsertFileRequest<'a> {
 }
 
 impl GitHubClient {
-    pub fn new(token: impl Into<String>) -> Result<Self, GitHubClientError> {
+    pub fn new(token: impl Into<String>) -> GitHubResult<Self> {
         let token = token.into();
         if token.trim().is_empty() {
             return Err(GitHubClientError::EmptyToken);
@@ -215,7 +217,7 @@ impl GitHubClient {
         self.token.len()
     }
 
-    fn build_headers(token: &str) -> Result<HeaderMap, GitHubClientError> {
+    fn build_headers(token: &str) -> GitHubResult<HeaderMap> {
         let mut headers = HeaderMap::new();
         headers.insert(ACCEPT, HeaderValue::from_static("application/vnd.github+json"));
         headers.insert(USER_AGENT, HeaderValue::from_static("gitnotes/0.1"));
@@ -224,7 +226,7 @@ impl GitHubClient {
         Ok(headers)
     }
 
-    pub async fn user_profile(&self) -> Result<UserProfile, GitHubClientError> {
+    pub async fn user_profile(&self) -> GitHubResult<UserProfile> {
         let url = format!("{GITHUB_API_BASE}/user");
         let response = self.send_with_retry(self.http.get(url), "GET /user").await?;
         let profile = response.error_for_status()?.json::<UserProfile>().await?;
@@ -236,7 +238,7 @@ impl GitHubClient {
         &self,
         page: u32,
         per_page: u32,
-    ) -> Result<Vec<GitHubRepository>, GitHubClientError> {
+    ) -> GitHubResult<Vec<GitHubRepository>> {
         match self.list_user_repositories_with_etag(page, per_page, None).await? {
             Conditional::Modified(repos) => Ok(repos),
             Conditional::NotModified => Ok(Vec::new()),
@@ -248,7 +250,7 @@ impl GitHubClient {
         page: u32,
         per_page: u32,
         etag: Option<&str>,
-    ) -> Result<Conditional<Vec<GitHubRepository>>, GitHubClientError> {
+    ) -> GitHubResult<Conditional<Vec<GitHubRepository>>> {
         let url = format!("{GITHUB_API_BASE}/user/repos");
         let mut request = self.http.get(url).query(&[
             ("type", "all"),
@@ -272,9 +274,7 @@ impl GitHubClient {
         Ok(Conditional::Modified(repos))
     }
 
-    pub async fn list_all_user_repositories(
-        &self,
-    ) -> Result<Vec<GitHubRepository>, GitHubClientError> {
+    pub async fn list_all_user_repositories(&self) -> GitHubResult<Vec<GitHubRepository>> {
         let mut page = 1;
         let mut all = Vec::new();
 
@@ -300,7 +300,7 @@ impl GitHubClient {
         owner: &str,
         repo: &str,
         git_ref: &str,
-    ) -> Result<GitTreeResponse, GitHubClientError> {
+    ) -> GitHubResult<GitTreeResponse> {
         let url = format!("{GITHUB_API_BASE}/repos/{owner}/{repo}/git/trees/{git_ref}");
         let request = self.http.get(url).query(&[("recursive", "1")]);
         let response =
@@ -346,7 +346,7 @@ impl GitHubClient {
         repo: &str,
         path: &str,
         git_ref: &str,
-    ) -> Result<FileContent, GitHubClientError> {
+    ) -> GitHubResult<FileContent> {
         let url = format!("{GITHUB_API_BASE}/repos/{owner}/{repo}/contents/{path}");
         let request = self.http.get(url).query(&[("ref", git_ref)]);
         let response =
@@ -363,7 +363,7 @@ impl GitHubClient {
     pub async fn upsert_file(
         &self,
         input: UpsertFileInput<'_>,
-    ) -> Result<UpsertFileResponse, GitHubClientError> {
+    ) -> GitHubResult<UpsertFileResponse> {
         let url = format!(
             "{GITHUB_API_BASE}/repos/{}/{}/contents/{}",
             input.owner, input.repo, input.path
@@ -402,7 +402,7 @@ impl GitHubClient {
         &self,
         request: reqwest::RequestBuilder,
         operation: &str,
-    ) -> Result<reqwest::Response, GitHubClientError> {
+    ) -> GitHubResult<reqwest::Response> {
         let mut attempt = 0_u8;
         let mut backoff = Duration::from_millis(250);
 
