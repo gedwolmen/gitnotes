@@ -1195,6 +1195,11 @@ fn Viewer() -> Element {
             } else {
                 draft_content.read().as_str() != file.content.as_str()
             };
+            let local_preview = if draft_content.read().is_empty() {
+                file.content.clone()
+            } else {
+                draft_content.read().clone()
+            };
 
             rsx! {
                 div {
@@ -1257,6 +1262,10 @@ fn Viewer() -> Element {
                         div {
                             h4 { "Conflict Resolution" }
                             p { "Remote SHA: {remote.sha}" }
+                            h5 { "Local Draft" }
+                            pre { "{local_preview}" }
+                            h5 { "Remote Version" }
+                            pre { "{remote.content}" }
                             button { onclick: keep_local, "Keep Local (Overwrite Remote)" }
                             " "
                             button { onclick: keep_remote, "Keep Remote (Load Remote)" }
