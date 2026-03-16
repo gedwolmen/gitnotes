@@ -33,6 +33,7 @@ dependencies = [
  "gn-core",
  "gn-github",
  "gn-parser",
+ "pulldown-cmark",
  "serde",
  "serde_json",
  "tracing-subscriber",

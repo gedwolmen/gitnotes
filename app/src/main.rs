@@ -7,6 +7,7 @@ use gn_github::{
     store_token_secure,
 };
 use gn_parser::parse as parse_document;
+use pulldown_cmark::{Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
@@ -90,6 +91,14 @@ struct RepositoryLoadResult {
     rate_limit: Option<RateLimitInfo>,
 }
 
+#[derive(Clone, Debug)]
+enum MarkdownBlock {
+    Heading { level: u8, text: String },
+    Paragraph(String),
+    ListItem(String),
+    Code(String),
+}
+
 #[component]
 fn Home() -> Element {
     let auth_token = use_context::<Signal<Option<String>>>();
@@ -117,6 +126,34 @@ fn Home() -> Element {
 fn ErrorBanner(message: String) -> Element {
     rsx! {
         p { class: "error", "Error: {message}" }
+    }
+}
+
+#[component]
+fn MarkdownPreview(content: String) -> Element {
+    let blocks = markdown_blocks(content.as_str());
+
+    rsx! {
+        div {
+            for block in blocks {
+                match block {
+                    MarkdownBlock::Heading { level, text } => rsx! {
+                        if level == 1 {
+                            h1 { "{text}" }
+                        } else if level == 2 {
+                            h2 { "{text}" }
+                        } else if level == 3 {
+                            h3 { "{text}" }
+                        } else {
+                            h4 { "{text}" }
+                        }
+                    },
+                    MarkdownBlock::Paragraph(text) => rsx! { p { "{text}" } },
+                    MarkdownBlock::ListItem(text) => rsx! { p { "- {text}" } },
+                    MarkdownBlock::Code(text) => rsx! { pre { "{text}" } },
+                }
+            }
+        }
     }
 }
 
@@ -594,7 +631,11 @@ fn Viewer() -> Element {
                             "Reset Draft"
                         }
                     } else {
-                        pre { "{file.content}" }
+                        if file.path.ends_with(".md") {
+                            MarkdownPreview { content: file.content.clone() }
+                        } else {
+                            pre { "{file.content}" }
+                        }
                     }
                     button { onclick: on_save, "Save to GitHub" }
                 }
@@ -822,6 +863,102 @@ async fn create_new_markdown_file(
         .map_err(|err| err.to_string())?;
 
     Ok(path)
+}
+
+fn markdown_blocks(content: &str) -> Vec<MarkdownBlock> {
+    let mut options = Options::empty();
+    options.insert(Options::ENABLE_TABLES);
+    options.insert(Options::ENABLE_TASKLISTS);
+    options.insert(Options::ENABLE_FOOTNOTES);
+    options.insert(Options::ENABLE_STRIKETHROUGH);
+
+    let parser = Parser::new_ext(content, options);
+    let mut blocks = Vec::<MarkdownBlock>::new();
+    let mut current_text = String::new();
+    let mut current_heading: Option<u8> = None;
+    let mut in_item = false;
+    let mut in_code = false;
+
+    for event in parser {
+        match event {
+            Event::Start(Tag::Heading { level, .. }) => {
+                current_text.clear();
+                current_heading = Some(heading_level_to_u8(level));
+            }
+            Event::End(TagEnd::Heading { .. }) => {
+                if let Some(level) = current_heading.take() {
+                    let text = current_text.trim().to_owned();
+                    if !text.is_empty() {
+                        blocks.push(MarkdownBlock::Heading { level, text });
+                    }
+                }
+                current_text.clear();
+            }
+            Event::Start(Tag::Paragraph) => {
+                current_text.clear();
+            }
+            Event::End(TagEnd::Paragraph) => {
+                let text = current_text.trim().to_owned();
+                if !text.is_empty() {
+                    blocks.push(MarkdownBlock::Paragraph(text));
+                }
+                current_text.clear();
+            }
+            Event::Start(Tag::Item) => {
+                in_item = true;
+                current_text.clear();
+            }
+            Event::End(TagEnd::Item) => {
+                let text = current_text.trim().to_owned();
+                if !text.is_empty() {
+                    blocks.push(MarkdownBlock::ListItem(text));
+                }
+                in_item = false;
+                current_text.clear();
+            }
+            Event::Start(Tag::CodeBlock(_)) => {
+                in_code = true;
+                current_text.clear();
+            }
+            Event::End(TagEnd::CodeBlock) => {
+                let text = current_text.trim().to_owned();
+                if !text.is_empty() {
+                    blocks.push(MarkdownBlock::Code(text));
+                }
+                in_code = false;
+                current_text.clear();
+            }
+            Event::Text(text) => {
+                current_text.push_str(text.as_ref());
+            }
+            Event::Code(text) => {
+                current_text.push('`');
+                current_text.push_str(text.as_ref());
+                current_text.push('`');
+            }
+            Event::SoftBreak | Event::HardBreak => {
+                current_text.push('\n');
+            }
+            _ => {
+                if in_item || in_code || current_heading.is_some() {
+                    continue;
+                }
+            }
+        }
+    }
+
+    blocks
+}
+
+fn heading_level_to_u8(level: HeadingLevel) -> u8 {
+    match level {
+        HeadingLevel::H1 => 1,
+        HeadingLevel::H2 => 2,
+        HeadingLevel::H3 => 3,
+        HeadingLevel::H4 => 4,
+        HeadingLevel::H5 => 5,
+        HeadingLevel::H6 => 6,
+    }
 }
 
 fn session_file_path() -> PathBuf {
