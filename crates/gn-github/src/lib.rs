@@ -4,6 +4,7 @@ use keyring::Entry;
 use reqwest::Client;
 use reqwest::header::{ACCEPT, AUTHORIZATION, HeaderMap, HeaderValue, USER_AGENT};
 use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex};
 use thiserror::Error;
 use tokio::time::{Duration, Instant, sleep};
 use tracing::{debug, warn};
@@ -70,6 +71,13 @@ pub enum TokenStorageError {
 pub struct GitHubClient {
     token: String,
     http: Client,
+    rate_limit: Arc<Mutex<Option<RateLimitInfo>>>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RateLimitInfo {
+    pub remaining: u32,
+    pub reset_epoch: Option<u64>,
 }
 
 #[derive(Clone, Debug)]
@@ -242,11 +250,15 @@ impl GitHubClient {
         let headers = Self::build_headers(&token)?;
         let http = Client::builder().default_headers(headers).build()?;
 
-        Ok(Self { token, http })
+        Ok(Self { token, http, rate_limit: Arc::new(Mutex::new(None)) })
     }
 
     pub fn token_len(&self) -> usize {
         self.token.len()
+    }
+
+    pub fn last_rate_limit_info(&self) -> Option<RateLimitInfo> {
+        self.rate_limit.lock().ok().and_then(|guard| guard.clone())
     }
 
     fn build_headers(token: &str) -> GitHubResult<HeaderMap> {
@@ -486,6 +498,12 @@ impl GitHubClient {
             .get("x-ratelimit-reset")
             .and_then(|v| v.to_str().ok())
             .and_then(|s| s.parse::<u64>().ok());
+
+        if let Some(remaining_value) = remaining
+            && let Ok(mut guard) = self.rate_limit.lock()
+        {
+            *guard = Some(RateLimitInfo { remaining: remaining_value, reset_epoch: reset });
+        }
 
         if matches!(remaining, Some(0)) {
             warn!(operation, "github primary rate limit reached");

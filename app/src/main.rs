@@ -3,7 +3,7 @@ use dioxus_router::prelude::*;
 use gn_core::DocumentFormat;
 use gn_github::{
     DeviceCodeResponse, FileContent, GitHubClient, GitHubOAuthDeviceClient, GitHubRepository,
-    NoteBlob, UpsertFileInput, UserProfile, clear_token_secure, load_token_secure,
+    NoteBlob, RateLimitInfo, UpsertFileInput, UserProfile, clear_token_secure, load_token_secure,
     store_token_secure,
 };
 use gn_parser::parse as parse_document;
@@ -82,6 +82,12 @@ fn App() -> Element {
 struct RepositorySelection {
     owner: String,
     repo: String,
+}
+
+#[derive(Clone, Debug)]
+struct RepositoryLoadResult {
+    repositories: Vec<GitHubRepository>,
+    rate_limit: Option<RateLimitInfo>,
 }
 
 #[component]
@@ -275,11 +281,12 @@ fn Repos() -> Element {
     let current_query = search.read().to_lowercase();
     let repos_state = repos.read().clone();
     let content = match repos_state {
-        Some(Ok(items)) if items.is_empty() => rsx! {
+        Some(Ok(result)) if result.repositories.is_empty() => rsx! {
             p { "No repositories found for this account." }
         },
-        Some(Ok(items)) => {
-            let filtered: Vec<GitHubRepository> = items
+        Some(Ok(result)) => {
+            let filtered: Vec<GitHubRepository> = result
+                .repositories
                 .into_iter()
                 .filter(|repo| {
                     if current_query.is_empty() {
@@ -292,6 +299,11 @@ fn Repos() -> Element {
 
             let mut selected_repo = selected_repo;
             rsx! {
+                if let Some(rate) = result.rate_limit {
+                    if rate.remaining < 500 {
+                        p { class: "warning", "GitHub rate limit low: {rate.remaining} requests remaining." }
+                    }
+                }
                 ul {
                     for repo in filtered {
                         li { key: "{repo.id}",
@@ -659,7 +671,7 @@ fn Settings() -> Element {
 async fn load_repositories(
     session_token: Option<String>,
     _refresh_nonce: u32,
-) -> AppResult<Vec<GitHubRepository>> {
+) -> AppResult<RepositoryLoadResult> {
     let token = match session_token {
         Some(value) if !value.trim().is_empty() => value,
         _ => std::env::var("GITNOTES_GITHUB_TOKEN").map_err(|_| {
@@ -668,7 +680,9 @@ async fn load_repositories(
     };
 
     let client = GitHubClient::new(token).map_err(|err| err.to_string())?;
-    client.list_all_user_repositories().await.map_err(|err| err.to_string())
+    let repositories = client.list_all_user_repositories().await.map_err(|err| err.to_string())?;
+    let rate_limit = client.last_rate_limit_info();
+    Ok(RepositoryLoadResult { repositories, rate_limit })
 }
 
 async fn load_note_files(
