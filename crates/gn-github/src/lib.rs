@@ -192,6 +192,17 @@ pub struct UpsertFileInput<'a> {
     pub committer: Option<CommitAuthor>,
 }
 
+#[derive(Clone, Debug)]
+pub struct DeleteFileInput<'a> {
+    pub owner: &'a str,
+    pub repo: &'a str,
+    pub path: &'a str,
+    pub message: &'a str,
+    pub sha: &'a str,
+    pub branch: Option<&'a str>,
+    pub committer: Option<CommitAuthor>,
+}
+
 #[derive(Clone, Debug, Deserialize)]
 pub struct UpsertFileResponse {
     pub content: UpsertedContent,
@@ -234,6 +245,16 @@ struct UpsertFileRequest<'a> {
     pub content: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sha: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub branch: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub committer: Option<CommitAuthor>,
+}
+
+#[derive(Debug, Serialize)]
+struct DeleteFileRequest<'a> {
+    pub message: &'a str,
+    pub sha: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub branch: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -424,6 +445,43 @@ impl GitHubClient {
             .send_with_retry(
                 self.http.put(url).json(&payload),
                 "PUT /repos/:owner/:repo/contents/:path",
+            )
+            .await?;
+
+        let status = response.status();
+        if status == reqwest::StatusCode::CONFLICT {
+            return Err(GitHubClientError::Conflict);
+        }
+
+        if !status.is_success() {
+            let message = response.text().await.unwrap_or_default();
+            return Err(GitHubClientError::ApiStatus { status: status.as_u16(), message });
+        }
+
+        let response = response.json::<UpsertFileResponse>().await?;
+
+        Ok(response)
+    }
+
+    pub async fn delete_file(
+        &self,
+        input: DeleteFileInput<'_>,
+    ) -> GitHubResult<UpsertFileResponse> {
+        let url = format!(
+            "{GITHUB_API_BASE}/repos/{}/{}/contents/{}",
+            input.owner, input.repo, input.path
+        );
+        let payload = DeleteFileRequest {
+            message: input.message,
+            sha: input.sha,
+            branch: input.branch,
+            committer: input.committer,
+        };
+
+        let response = self
+            .send_with_retry(
+                self.http.delete(url).json(&payload),
+                "DELETE /repos/:owner/:repo/contents/:path",
             )
             .await?;
 

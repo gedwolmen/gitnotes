@@ -2,9 +2,9 @@ use dioxus::prelude::*;
 use dioxus_router::prelude::*;
 use gn_core::DocumentFormat;
 use gn_github::{
-    DeviceCodeResponse, FileContent, GitHubClient, GitHubOAuthDeviceClient, GitHubRepository,
-    NoteBlob, RateLimitInfo, UpsertFileInput, UserProfile, clear_token_secure, load_token_secure,
-    store_token_secure,
+    DeleteFileInput, DeviceCodeResponse, FileContent, GitHubClient, GitHubOAuthDeviceClient,
+    GitHubRepository, NoteBlob, RateLimitInfo, UpsertFileInput, UserProfile, clear_token_secure,
+    load_token_secure, store_token_secure,
 };
 use gn_parser::parse as parse_document;
 use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd, html};
@@ -100,6 +100,13 @@ struct RecentFileEntry {
     path: String,
     format: DocumentFormat,
     opened_at_unix: i64,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum FileActionKind {
+    Delete,
+    Rename,
+    Move,
 }
 
 #[component]
@@ -409,12 +416,16 @@ fn Files() -> Element {
     let open_viewer_in_edit = use_context::<Signal<bool>>();
     let navigator = use_navigator();
     let current_dir = use_signal(String::new);
-    let refresh_nonce = use_signal(|| 0_u32);
+    let mut refresh_nonce = use_signal(|| 0_u32);
     let recent_history_nonce = use_signal(|| 0_u32);
     let create_status = use_signal(|| None::<String>);
     let show_create_form = use_signal(|| false);
     let mut create_name = use_signal(String::new);
     let mut create_format = use_signal(|| "md".to_owned());
+    let action_file = use_signal(|| None::<String>);
+    let action_kind = use_signal(|| None::<FileActionKind>);
+    let action_input = use_signal(String::new);
+    let action_status = use_signal(|| None::<String>);
     let files = use_resource(move || {
         let token = auth_token.read().clone();
         let selection = selected_repo.read().clone();
@@ -445,6 +456,10 @@ fn Files() -> Element {
             let selected_repo_for_history = selected_repo;
             let mut open_viewer_in_edit = open_viewer_in_edit;
             let mut show_create_form = show_create_form;
+            let mut action_file = action_file;
+            let mut action_kind = action_kind;
+            let mut action_status = action_status;
+            let mut action_input = action_input;
             let file_name_for_create = create_name.read().clone();
             let file_format_for_create = create_format.read().clone();
             let mut recent_history_nonce = recent_history_nonce;
@@ -500,6 +515,81 @@ fn Files() -> Element {
                 });
             };
 
+            let token_for_actions = auth_token.read().clone();
+            let repo_for_actions = selected_repo.read().clone();
+            let on_confirm_action = move |_| {
+                let token = token_for_actions.clone();
+                let repo = repo_for_actions.clone();
+                let target_file = action_file.read().clone();
+                let kind = *action_kind.read();
+                let input = action_input.read().clone();
+                spawn(async move {
+                    let Some(path) = target_file else {
+                        action_status.set(Some("No file selected for action".to_owned()));
+                        return;
+                    };
+                    let Some(kind_value) = kind else {
+                        action_status.set(Some("No action selected".to_owned()));
+                        return;
+                    };
+
+                    match kind_value {
+                        FileActionKind::Delete => {
+                            action_status.set(Some(format!("Deleting {path}...")));
+                            match delete_note_file(token, repo, path.as_str()).await {
+                                Ok(()) => {
+                                    action_status.set(Some(format!("Deleted {path}")));
+                                    action_file.set(None);
+                                    action_kind.set(None);
+                                    action_input.set(String::new());
+                                    if selected_file.read().as_deref() == Some(path.as_str()) {
+                                        selected_file.set(None);
+                                    }
+                                    let next = *refresh_nonce.read() + 1;
+                                    refresh_nonce.set(next);
+                                }
+                                Err(err) => {
+                                    action_status.set(Some(format!("Delete failed: {err}")))
+                                }
+                            }
+                        }
+                        FileActionKind::Rename => {
+                            action_status.set(Some(format!("Renaming {path}...")));
+                            match rename_note_file(token, repo, path.as_str(), input.as_str()).await
+                            {
+                                Ok(new_path) => {
+                                    action_status.set(Some(format!("Renamed to {new_path}")));
+                                    action_file.set(None);
+                                    action_kind.set(None);
+                                    action_input.set(String::new());
+                                    selected_file.set(Some(new_path));
+                                    let next = *refresh_nonce.read() + 1;
+                                    refresh_nonce.set(next);
+                                }
+                                Err(err) => {
+                                    action_status.set(Some(format!("Rename failed: {err}")))
+                                }
+                            }
+                        }
+                        FileActionKind::Move => {
+                            action_status.set(Some(format!("Moving {path}...")));
+                            match move_note_file(token, repo, path.as_str(), input.as_str()).await {
+                                Ok(new_path) => {
+                                    action_status.set(Some(format!("Moved to {new_path}")));
+                                    action_file.set(None);
+                                    action_kind.set(None);
+                                    action_input.set(String::new());
+                                    selected_file.set(Some(new_path));
+                                    let next = *refresh_nonce.read() + 1;
+                                    refresh_nonce.set(next);
+                                }
+                                Err(err) => action_status.set(Some(format!("Move failed: {err}"))),
+                            }
+                        }
+                    }
+                });
+            };
+
             rsx! {
                 div {
                     p { "Breadcrumb: /{current}" }
@@ -528,6 +618,9 @@ fn Files() -> Element {
                     if let Some(status) = create_status.read().as_ref() {
                         p { "{status}" }
                     }
+                    if let Some(status) = action_status.read().as_ref() {
+                        p { "{status}" }
+                    }
                     if *show_create_form.read() {
                         div {
                             h4 { "Create File" }
@@ -551,6 +644,44 @@ fn Files() -> Element {
                         }
                     }
 
+                    if let Some(target) = action_file.read().as_ref() {
+                        div {
+                            h4 { "File Action: {target}" }
+                            {
+                                match *action_kind.read() {
+                                    Some(FileActionKind::Delete) => rsx! {
+                                        p { "Confirm delete this file from GitHub?" }
+                                    },
+                                    Some(FileActionKind::Rename) => rsx! {
+                                        p { "Enter new file name (no extension):" }
+                                        input {
+                                            value: "{action_input}",
+                                            oninput: move |evt| action_input.set(evt.value()),
+                                        }
+                                    },
+                                    Some(FileActionKind::Move) => rsx! {
+                                        p { "Enter destination folder path (empty for root):" }
+                                        input {
+                                            value: "{action_input}",
+                                            oninput: move |evt| action_input.set(evt.value()),
+                                        }
+                                    },
+                                    None => rsx! { p { "No action selected." } },
+                                }
+                            }
+                            button { onclick: on_confirm_action, "Confirm" }
+                            " "
+                            button {
+                                onclick: move |_| {
+                                    action_file.set(None);
+                                    action_kind.set(None);
+                                    action_input.set(String::new());
+                                },
+                                "Cancel"
+                            }
+                        }
+                    }
+
                     h3 { "Folders" }
                     ul {
                         for folder in folders {
@@ -568,22 +699,68 @@ fn Files() -> Element {
                     h3 { "Files" }
                     ul {
                         for file in files_here {
-                            li { key: "file-{file.path}",
-                                button {
-                                    onclick: move |_| {
-                                        selected_file.set(Some(file.path.clone()));
-                                        if let Some(selection) = selected_repo_for_history.read().as_ref() {
-                                            let _ = record_recent_file_open(
-                                                selection.owner.as_str(),
-                                                selection.repo.as_str(),
-                                                file.path.as_str(),
-                                                &file.format,
-                                            );
+                            {
+                                let path_for_open = file.path.clone();
+                                let path_for_rename = file.path.clone();
+                                let path_for_move = file.path.clone();
+                                let path_for_delete = file.path.clone();
+                                let format_for_open = file.format;
+                                let label_path = file.path;
+                                let label_size = file.size;
+                                rsx! {
+                                    li { key: "file-{label_path}",
+                                        button {
+                                            onclick: move |_| {
+                                                selected_file.set(Some(path_for_open.clone()));
+                                                if let Some(selection) = selected_repo_for_history.read().as_ref() {
+                                                    let _ = record_recent_file_open(
+                                                        selection.owner.as_str(),
+                                                        selection.repo.as_str(),
+                                                        path_for_open.as_str(),
+                                                        &format_for_open,
+                                                    );
+                                                }
+                                                let next = *recent_history_nonce.read() + 1;
+                                                recent_history_nonce.set(next);
+                                            },
+                                            "{file_badge(&format_for_open)} {label_path} ({human_size(label_size)})"
                                         }
-                                        let next = *recent_history_nonce.read() + 1;
-                                        recent_history_nonce.set(next);
-                                    },
-                                    "{file_badge(&file.format)} {file.path} ({human_size(file.size)})"
+                                        " "
+                                        button {
+                                            onclick: move |_| {
+                                                action_file.set(Some(path_for_rename.clone()));
+                                                action_kind.set(Some(FileActionKind::Rename));
+                                                action_input.set(
+                                                    basename_without_ext(path_for_rename.as_str())
+                                                        .unwrap_or_default()
+                                                        .to_owned(),
+                                                );
+                                            },
+                                            "Rename"
+                                        }
+                                        " "
+                                        button {
+                                            onclick: move |_| {
+                                                action_file.set(Some(path_for_move.clone()));
+                                                action_kind.set(Some(FileActionKind::Move));
+                                                action_input.set(
+                                                    parent_dir(path_for_move.as_str())
+                                                        .unwrap_or_default()
+                                                        .to_owned(),
+                                                );
+                                            },
+                                            "Move"
+                                        }
+                                        " "
+                                        button {
+                                            onclick: move |_| {
+                                                action_file.set(Some(path_for_delete.clone()));
+                                                action_kind.set(Some(FileActionKind::Delete));
+                                                action_input.set(String::new());
+                                            },
+                                            "Delete"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1014,6 +1191,133 @@ async fn create_new_note_file(
     Ok(path)
 }
 
+async fn delete_note_file(
+    session_token: Option<String>,
+    selected_repo: Option<RepositorySelection>,
+    path: &str,
+) -> AppResult<()> {
+    let token = match session_token {
+        Some(value) if !value.trim().is_empty() => value,
+        _ => std::env::var("GITNOTES_GITHUB_TOKEN").map_err(|_| {
+            "missing auth token (login first or set GITNOTES_GITHUB_TOKEN)".to_owned()
+        })?,
+    };
+
+    let selection = selected_repo.ok_or_else(|| "no selected repository in session".to_owned())?;
+    let git_ref = std::env::var("GITNOTES_REPO_REF").unwrap_or_else(|_| "main".to_owned());
+
+    let client = GitHubClient::new(token).map_err(|err| err.to_string())?;
+    let file = client
+        .file_content(selection.owner.as_str(), selection.repo.as_str(), path, git_ref.as_str())
+        .await
+        .map_err(|err| err.to_string())?;
+
+    client
+        .delete_file(DeleteFileInput {
+            owner: selection.owner.as_str(),
+            repo: selection.repo.as_str(),
+            path,
+            message: &format!("Delete {path} from gitnotes"),
+            sha: file.sha.as_str(),
+            branch: Some(git_ref.as_str()),
+            committer: None,
+        })
+        .await
+        .map_err(|err| err.to_string())?;
+
+    Ok(())
+}
+
+async fn rename_note_file(
+    session_token: Option<String>,
+    selected_repo: Option<RepositorySelection>,
+    old_path: &str,
+    new_name: &str,
+) -> AppResult<String> {
+    let base_name = validate_new_file_name(new_name)?;
+    let extension = extension_for_path(old_path)
+        .ok_or_else(|| "cannot rename file with unknown extension".to_owned())?;
+    let parent = parent_dir(old_path).unwrap_or_default();
+    let new_path = if parent.is_empty() {
+        format!("{base_name}.{extension}")
+    } else {
+        format!("{parent}/{base_name}.{extension}")
+    };
+    copy_then_delete_note_file(session_token, selected_repo, old_path, new_path.as_str()).await?;
+    Ok(new_path)
+}
+
+async fn move_note_file(
+    session_token: Option<String>,
+    selected_repo: Option<RepositorySelection>,
+    old_path: &str,
+    destination_dir: &str,
+) -> AppResult<String> {
+    let file_name = file_name_with_extension(old_path)
+        .ok_or_else(|| "cannot move file with invalid path".to_owned())?;
+    let cleaned = destination_dir.trim().trim_matches('/');
+    let new_path =
+        if cleaned.is_empty() { file_name.to_owned() } else { format!("{cleaned}/{file_name}") };
+    copy_then_delete_note_file(session_token, selected_repo, old_path, new_path.as_str()).await?;
+    Ok(new_path)
+}
+
+async fn copy_then_delete_note_file(
+    session_token: Option<String>,
+    selected_repo: Option<RepositorySelection>,
+    old_path: &str,
+    new_path: &str,
+) -> AppResult<()> {
+    if old_path == new_path {
+        return Err("source and destination path are the same".to_owned());
+    }
+
+    let token = match session_token {
+        Some(value) if !value.trim().is_empty() => value,
+        _ => std::env::var("GITNOTES_GITHUB_TOKEN").map_err(|_| {
+            "missing auth token (login first or set GITNOTES_GITHUB_TOKEN)".to_owned()
+        })?,
+    };
+
+    let selection = selected_repo.ok_or_else(|| "no selected repository in session".to_owned())?;
+    let git_ref = std::env::var("GITNOTES_REPO_REF").unwrap_or_else(|_| "main".to_owned());
+    let client = GitHubClient::new(token).map_err(|err| err.to_string())?;
+
+    let file = client
+        .file_content(selection.owner.as_str(), selection.repo.as_str(), old_path, git_ref.as_str())
+        .await
+        .map_err(|err| err.to_string())?;
+
+    client
+        .upsert_file(UpsertFileInput {
+            owner: selection.owner.as_str(),
+            repo: selection.repo.as_str(),
+            path: new_path,
+            message: &format!("Move {old_path} to {new_path} from gitnotes"),
+            content: file.content.as_str(),
+            sha: None,
+            branch: Some(git_ref.as_str()),
+            committer: None,
+        })
+        .await
+        .map_err(|err| err.to_string())?;
+
+    client
+        .delete_file(DeleteFileInput {
+            owner: selection.owner.as_str(),
+            repo: selection.repo.as_str(),
+            path: old_path,
+            message: &format!("Delete {old_path} after move to {new_path} from gitnotes"),
+            sha: file.sha.as_str(),
+            branch: Some(git_ref.as_str()),
+            committer: None,
+        })
+        .await
+        .map_err(|err| err.to_string())?;
+
+    Ok(())
+}
+
 fn markdown_to_html(content: &str) -> String {
     let mut options = Options::empty();
     options.insert(Options::ENABLE_TABLES);
@@ -1064,6 +1368,24 @@ fn validate_new_file_name(input: &str) -> AppResult<String> {
         return Err("file name can only include letters, numbers, '-' and '_'".to_owned());
     }
     Ok(trimmed.to_owned())
+}
+
+fn parent_dir(path: &str) -> Option<&str> {
+    path.rsplit_once('/').map(|(parent, _)| parent)
+}
+
+fn file_name_with_extension(path: &str) -> Option<&str> {
+    path.rsplit('/').next().filter(|name| !name.is_empty())
+}
+
+fn basename_without_ext(path: &str) -> Option<&str> {
+    let name = file_name_with_extension(path)?;
+    name.rsplit_once('.').map(|(base, _)| base)
+}
+
+fn extension_for_path(path: &str) -> Option<&str> {
+    let name = file_name_with_extension(path)?;
+    name.rsplit_once('.').map(|(_, ext)| ext)
 }
 
 fn markdown_headings(content: &str) -> Vec<String> {
