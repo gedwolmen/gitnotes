@@ -1,7 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Note, NoteCreateInput, NoteUpdateInput, createNote, updateNote } from '../models/Note';
+import { GitRepository } from './GitService';
 
 const NOTES_STORAGE_KEY = '@gitnotes:notes';
+const REPOS_STORAGE_KEY = '@gitnotes:repos';
 
 export class StorageService {
   static async getAllNotes(): Promise<Note[]> {
@@ -93,5 +95,40 @@ export class StorageService {
       console.error('Error clearing notes:', error);
       throw error;
     }
+  }
+
+  static async getSavedRepositories(): Promise<GitRepository[]> {
+    try {
+      const jsonValue = await AsyncStorage.getItem(REPOS_STORAGE_KEY);
+      if (jsonValue === null) return [];
+      return JSON.parse(jsonValue);
+    } catch (error) {
+      console.error('Error reading repositories from storage:', error);
+      return [];
+    }
+  }
+
+  static async saveRepositories(repos: GitRepository[]): Promise<void> {
+    try {
+      const jsonValue = JSON.stringify(repos);
+      await AsyncStorage.setItem(REPOS_STORAGE_KEY, jsonValue);
+    } catch (error) {
+      console.error('Error saving repositories to storage:', error);
+      throw error;
+    }
+  }
+
+  static async addRepository(repo: GitRepository): Promise<void> {
+    const repos = await this.getSavedRepositories();
+    if (!repos.find((r) => r.path === repo.path)) {
+      repos.push(repo);
+      await this.saveRepositories(repos);
+    }
+  }
+
+  static async removeRepository(path: string): Promise<void> {
+    const repos = await this.getSavedRepositories();
+    const filtered = repos.filter(r => r.path !== path);
+    await this.saveRepositories(filtered);
   }
 }

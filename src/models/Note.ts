@@ -2,43 +2,12 @@ export interface Note {
   id: string;
   title: string;
   content: string;
-  tags: string[];
   createdAt: number;
   updatedAt: number;
-  // Local Git context
+  tags: string[];
   repo?: string;
   branch?: string;
   commit?: string;
-  // GitHub integration
-  github?: {
-    owner?: string;
-    repo?: string;
-    issueNumber?: number;
-    milestoneNumber?: number;
-    pullRequestNumber?: number;
-    htmlUrl?: string;
-  };
-}
-
-export interface NoteCreateInput {
-  title: string;
-  content: string;
-  tags?: string[];
-  repo?: string;
-  branch?: string;
-  commit?: string;
-  github?: Note['github'];
-}
-
-export interface NoteUpdateInput {
-  id: string;
-  title?: string;
-  content?: string;
-  tags?: string[];
-  repo?: string;
-  branch?: string;
-  commit?: string;
-  github?: Note['github'];
 }
 
 export interface NoteCreateInput {

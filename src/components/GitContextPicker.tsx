@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, FlatList, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { GitRepository, GitBranch, GitCommit, GitService } from '../services/GitService';
 import { useTheme } from '../contexts/ThemeContext';
@@ -30,6 +30,9 @@ export default function GitContextPicker({
   const [showRepoModal, setShowRepoModal] = useState(false);
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [showCommitModal, setShowCommitModal] = useState(false);
+  const [newRepoInput, setNewRepoInput] = useState('');
+  const [newBranchInput, setNewBranchInput] = useState('');
+  const [newCommitInput, setNewCommitInput] = useState('');
 
   const { colors, isDark } = useTheme();
 
@@ -79,16 +82,61 @@ export default function GitContextPicker({
     onCommitChange(undefined);
   };
 
+  const handleAddRepo = async () => {
+    if (!newRepoInput.trim()) return;
+    setIsLoading(true);
+    await GitService.addRepository(newRepoInput.trim());
+    setNewRepoInput('');
+    await loadRepositories();
+    setIsLoading(false);
+  };
+
+  const handleAddBranch = () => {
+    if (!newBranchInput.trim()) return;
+    HapticService.selection();
+    onBranchChange(newBranchInput.trim());
+    setNewBranchInput('');
+    setShowBranchModal(false);
+  };
+
+  const handleAddCommit = () => {
+    if (!newCommitInput.trim()) return;
+    HapticService.selection();
+    onCommitChange(newCommitInput.trim());
+    setNewCommitInput('');
+    setShowCommitModal(false);
+  };
+
   const renderRepoModal = () => (
     <Modal visible={showRepoModal} transparent animationType="slide">
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[styles.modalContent, { backgroundColor: colors.surface }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>Select Repository</Text>
             <TouchableOpacity onPress={() => setShowRepoModal(false)}>
               <Ionicons name="close" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
+          
+          <View style={[styles.inputContainer, { borderBottomColor: colors.border }]}>
+            <TextInput
+              style={[styles.textInput, { color: colors.text, borderColor: colors.border }]}
+              placeholder="github.com/owner/repo"
+              placeholderTextColor={colors.textSecondary}
+              value={newRepoInput}
+              onChangeText={setNewRepoInput}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <TouchableOpacity 
+              style={[styles.addButton, { backgroundColor: colors.primary }]}
+              onPress={handleAddRepo}
+              disabled={!newRepoInput.trim()}
+            >
+              <Text style={styles.addButtonText}>Add</Text>
+            </TouchableOpacity>
+          </View>
+
           {isLoading ? (
             <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
           ) : repositories.length === 0 ? (
@@ -117,7 +165,7 @@ export default function GitContextPicker({
               )}
             />
           )}
-        </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
@@ -125,13 +173,33 @@ export default function GitContextPicker({
   const renderBranchModal = () => (
     <Modal visible={showBranchModal} transparent animationType="slide">
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[styles.modalContent, { backgroundColor: colors.surface }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>Select Branch</Text>
             <TouchableOpacity onPress={() => setShowBranchModal(false)}>
               <Ionicons name="close" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
+          
+          <View style={[styles.inputContainer, { borderBottomColor: colors.border }]}>
+            <TextInput
+              style={[styles.textInput, { color: colors.text, borderColor: colors.border }]}
+              placeholder="main, develop, feature/xyz"
+              placeholderTextColor={colors.textSecondary}
+              value={newBranchInput}
+              onChangeText={setNewBranchInput}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <TouchableOpacity 
+              style={[styles.addButton, { backgroundColor: colors.primary }]}
+              onPress={handleAddBranch}
+              disabled={!newBranchInput.trim()}
+            >
+              <Text style={styles.addButtonText}>Use</Text>
+            </TouchableOpacity>
+          </View>
+
           {isLoading ? (
             <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
           ) : (
@@ -161,7 +229,7 @@ export default function GitContextPicker({
               )}
             />
           )}
-        </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
@@ -169,13 +237,33 @@ export default function GitContextPicker({
   const renderCommitModal = () => (
     <Modal visible={showCommitModal} transparent animationType="slide">
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[styles.modalContent, { backgroundColor: colors.surface }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>Select Commit</Text>
             <TouchableOpacity onPress={() => setShowCommitModal(false)}>
               <Ionicons name="close" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
+
+          <View style={[styles.inputContainer, { borderBottomColor: colors.border }]}>
+            <TextInput
+              style={[styles.textInput, { color: colors.text, borderColor: colors.border }]}
+              placeholder="Commit hash (e.g. 4b825dc)"
+              placeholderTextColor={colors.textSecondary}
+              value={newCommitInput}
+              onChangeText={setNewCommitInput}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <TouchableOpacity 
+              style={[styles.addButton, { backgroundColor: colors.primary }]}
+              onPress={handleAddCommit}
+              disabled={!newCommitInput.trim()}
+            >
+              <Text style={styles.addButtonText}>Use</Text>
+            </TouchableOpacity>
+          </View>
+
           {isLoading ? (
             <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
           ) : commits.length === 0 ? (
@@ -203,7 +291,7 @@ export default function GitContextPicker({
               )}
             />
           )}
-        </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
@@ -385,5 +473,31 @@ const styles = StyleSheet.create({
   },
   commitMessage: {
     fontSize: 15,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    padding: 16,
+    borderBottomWidth: 1,
+    alignItems: 'center',
+  },
+  textInput: {
+    flex: 1,
+    height: 40,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    marginRight: 12,
+  },
+  addButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
   },
 });
