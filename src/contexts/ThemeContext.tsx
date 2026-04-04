@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
+import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type ThemeMode = 'light' | 'dark' | 'system';
@@ -51,7 +52,7 @@ interface ThemeProviderProps {
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const [theme, setThemeState] = useState<ThemeMode>('system');
-  const [isDark, setIsDark] = useState(false);
+  const systemColorScheme = useColorScheme();
 
   const loadTheme = useCallback(async () => {
     try {
@@ -68,32 +69,28 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     loadTheme();
   }, [loadTheme]);
 
-  useEffect(() => {
-    if (theme === 'system') {
-      const mediaQuery = window.matchMedia?.('(prefers-color-scheme: dark)') || { matches: false };
-      setIsDark(mediaQuery.matches);
-    } else {
-      setIsDark(theme === 'dark');
-    }
-  }, [theme]);
+  const isDark = theme === 'system' ? systemColorScheme === 'dark' : theme === 'dark';
 
-  const setTheme = async (newTheme: ThemeMode) => {
+  const setTheme = useCallback(async (newTheme: ThemeMode) => {
     try {
       setThemeState(newTheme);
       await AsyncStorage.setItem(THEME_STORAGE_KEY, newTheme);
     } catch (error) {
       console.error('Error saving theme:', error);
     }
-  };
+  }, []);
 
   const colors = isDark ? darkColors : lightColors;
 
-  const value: ThemeContextType = {
-    theme,
-    isDark,
-    setTheme,
-    colors,
-  };
+  // Memoize context value to prevent unnecessary re-renders caused by object identity changes
+  const value: ThemeContextType = useMemo(() => {
+    return {
+      theme,
+      isDark,
+      setTheme,
+      colors,
+    };
+  }, [theme, isDark, setTheme, colors]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
