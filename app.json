@@ -36,6 +36,12 @@
         "projectId": "gitnotes-app"
       }
     },
-    "owner": "vidwadeseram"
+    "owner": "vidwadeseram",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/gitnotes-app"
+    }
   }
 }
