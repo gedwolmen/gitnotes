@@ -33,5 +33,11 @@
     "@types/react-native": "^0.72.8",
     "typescript": "^5.9.3"
   },
+  "resolutions": {
+    "markdown-it": "^14.0.0"
+  },
+  "overrides": {
+    "markdown-it": "^14.0.0"
+  },
   "private": true
 }
