@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface TagInputProps {
   tags: string[];
@@ -17,6 +18,7 @@ export default function TagInput({
 }: TagInputProps) {
   const [inputValue, setInputValue] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const { colors, isDark } = useTheme();
 
   const handleAddTag = useCallback(
     (tag: string) => {
@@ -54,28 +56,28 @@ export default function TagInput({
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { borderTopColor: colors.border }]}>
       <View style={styles.tagsContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tagsScrollView}>
           {tags.map((tag) => (
-            <View key={tag} style={styles.tag}>
-              <Text style={styles.tagText}>{tag}</Text>
+            <View key={tag} style={[styles.tag, { backgroundColor: colors.primary + '20' }]}>
+              <Text style={[styles.tagText, { color: colors.primary }]}>{tag}</Text>
               <TouchableOpacity onPress={() => handleRemoveTag(tag)} style={styles.removeButton}>
-                <Ionicons name="close-circle" size={16} color="#666" />
+                <Ionicons name="close-circle" size={16} color={colors.primary} />
               </TouchableOpacity>
             </View>
           ))}
         </ScrollView>
       </View>
 
-      <View style={styles.inputContainer}>
+      <View style={[styles.inputContainer, { backgroundColor: colors.surface }]}>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { color: colors.text }]}
           value={inputValue}
           onChangeText={handleInputChange}
           onSubmitEditing={handleSubmitEditing}
           placeholder={tags.length === 0 ? 'Add tags...' : 'Add more tags...'}
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.textSecondary}
           autoCapitalize="none"
           autoCorrect={false}
           returnKeyType="done"
@@ -83,22 +85,22 @@ export default function TagInput({
       </View>
 
       {showSuggestions && filteredSuggestions.length > 0 && (
-        <View style={styles.suggestionsContainer}>
+        <View style={[styles.suggestionsContainer, { backgroundColor: colors.surface }]}>
           {filteredSuggestions.slice(0, 5).map((suggestion) => (
             <TouchableOpacity
               key={suggestion}
               style={styles.suggestionItem}
               onPress={() => handleAddTag(suggestion)}
             >
-              <Ionicons name="add-circle-outline" size={16} color="#007AFF" />
-              <Text style={styles.suggestionText}>{suggestion}</Text>
+              <Ionicons name="add-circle-outline" size={16} color={colors.primary} />
+              <Text style={[styles.suggestionText, { color: colors.text }]}>{suggestion}</Text>
             </TouchableOpacity>
           ))}
         </View>
       )}
 
       {tags.length >= maxTags && (
-        <Text style={styles.limitText}>Maximum {maxTags} tags reached</Text>
+        <Text style={[styles.limitText, { color: colors.error }]}>Maximum {maxTags} tags reached</Text>
       )}
     </View>
   );
@@ -107,7 +109,6 @@ export default function TagInput({
 const styles = StyleSheet.create({
   container: {
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
     paddingTop: 8,
   },
   tagsContainer: {
@@ -119,7 +120,6 @@ const styles = StyleSheet.create({
   tag: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#e8f0fe',
     borderRadius: 16,
     paddingVertical: 4,
     paddingLeft: 12,
@@ -128,7 +128,6 @@ const styles = StyleSheet.create({
   },
   tagText: {
     fontSize: 14,
-    color: '#1a73e8',
     marginRight: 4,
   },
   removeButton: {
@@ -137,7 +136,6 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
     borderRadius: 8,
     paddingHorizontal: 12,
     height: 40,
@@ -145,11 +143,9 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 15,
-    color: '#333',
   },
   suggestionsContainer: {
     marginTop: 8,
-    backgroundColor: '#f9f9f9',
     borderRadius: 8,
     padding: 8,
   },
@@ -161,12 +157,10 @@ const styles = StyleSheet.create({
   },
   suggestionText: {
     fontSize: 14,
-    color: '#333',
     marginLeft: 8,
   },
   limitText: {
     fontSize: 12,
-    color: '#999',
     marginTop: 4,
     textAlign: 'center',
   },

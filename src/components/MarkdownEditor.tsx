@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { View, TextInput, StyleSheet, TouchableOpacity, Text, ScrollView } from 'react-native';
 import Markdown from 'react-native-markdown-display';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface MarkdownEditorProps {
   content: string;
@@ -10,6 +11,7 @@ interface MarkdownEditorProps {
 
 export default function MarkdownEditor({ content, onContentChange, placeholder = 'Start writing...' }: MarkdownEditorProps) {
   const [isPreview, setIsPreview] = useState(false);
+  const { colors, isDark } = useTheme();
 
   const togglePreview = useCallback(() => {
     setIsPreview((prev) => !prev);
@@ -19,65 +21,70 @@ export default function MarkdownEditor({ content, onContentChange, placeholder =
     body: {
       fontSize: 16,
       lineHeight: 24,
-      color: '#333',
+      color: colors.text,
     },
     heading1: {
       fontSize: 28,
       fontWeight: 'bold' as const,
       marginBottom: 12,
-      color: '#1a1a1a',
+      color: colors.text,
     },
     heading2: {
       fontSize: 24,
       fontWeight: 'bold' as const,
       marginBottom: 10,
-      color: '#1a1a1a',
+      color: colors.text,
     },
     heading3: {
       fontSize: 20,
       fontWeight: '600' as const,
       marginBottom: 8,
-      color: '#1a1a1a',
+      color: colors.text,
     },
     paragraph: {
       marginBottom: 12,
     },
     code_inline: {
-      backgroundColor: '#f0f0f0',
+      backgroundColor: isDark ? '#2c2c2e' : '#f0f0f0',
       paddingHorizontal: 4,
       borderRadius: 4,
       fontFamily: 'monospace',
       fontSize: 14,
+      color: colors.text,
     },
     code_block: {
-      backgroundColor: '#f5f5f5',
+      backgroundColor: isDark ? '#2c2c2e' : '#f5f5f5',
       padding: 12,
       borderRadius: 8,
       fontFamily: 'monospace',
       fontSize: 14,
       marginVertical: 8,
+      color: colors.text,
     },
     fence: {
-      backgroundColor: '#f5f5f5',
+      backgroundColor: isDark ? '#2c2c2e' : '#f5f5f5',
       padding: 12,
       borderRadius: 8,
       fontFamily: 'monospace',
       fontSize: 14,
       marginVertical: 8,
+      color: colors.text,
     },
     blockquote: {
-      backgroundColor: '#f0f8ff',
+      backgroundColor: isDark ? '#1c2833' : '#f0f8ff',
       borderLeftWidth: 4,
-      borderLeftColor: '#007AFF',
+      borderLeftColor: colors.primary,
       paddingLeft: 12,
       paddingVertical: 8,
       marginVertical: 8,
+      color: colors.text,
     },
     link: {
-      color: '#007AFF',
+      color: colors.primary,
     },
     list_item: {
       marginBottom: 4,
+      color: colors.text,
     },
     bullet_list: {
       marginBottom: 12,
@@ -86,7 +93,7 @@ export default function MarkdownEditor({ content, onContentChange, placeholder =
       marginBottom: 12,
     },
     hr: {
-      backgroundColor: '#e0e0e0',
+      backgroundColor: colors.border,
       height: 1,
       marginVertical: 16,
     },
@@ -94,9 +101,9 @@ export default function MarkdownEditor({ content, onContentChange, placeholder =
 
   return (
     <View style={styles.container}>
-      <View style={styles.toolbar}>
-        <TouchableOpacity onPress={togglePreview} style={styles.previewToggle}>
-          <Text style={styles.previewToggleText}>{isPreview ? 'Edit' : 'Preview'}</Text>
+      <View style={[styles.toolbar, { borderBottomColor: colors.border }]}>
+        <TouchableOpacity onPress={togglePreview} style={[styles.previewToggle, { backgroundColor: isDark ? '#2c2c2e' : '#f0f0f0' }]}>
+          <Text style={[styles.previewToggleText, { color: colors.primary }]}>{isPreview ? 'Edit' : 'Preview'}</Text>
         </TouchableOpacity>
       </View>
 
@@ -105,16 +112,16 @@ export default function MarkdownEditor({ content, onContentChange, placeholder =
           {content.trim() ? (
             <Markdown style={markdownStyles}>{content}</Markdown>
           ) : (
-            <Text style={styles.emptyPreview}>Nothing to preview</Text>
+            <Text style={[styles.emptyPreview, { color: colors.textSecondary }]}>Nothing to preview</Text>
           )}
         </ScrollView>
       ) : (
         <TextInput
-          style={styles.editor}
+          style={[styles.editor, { color: colors.text }]}
           value={content}
           onChangeText={onContentChange}
           placeholder={placeholder}
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.textSecondary}
           multiline
           textAlignVertical="top"
         />
@@ -133,17 +140,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   previewToggle: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: '#f0f0f0',
     borderRadius: 6,
   },
   previewToggleText: {
     fontSize: 14,
-    color: '#007AFF',
     fontWeight: '500',
   },
   editor: {
@@ -151,7 +155,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     padding: 16,
     lineHeight: 24,
-    color: '#333',
   },
   previewContainer: {
     flex: 1,
@@ -159,7 +162,6 @@ const styles = StyleSheet.create({
   },
   emptyPreview: {
     fontSize: 16,
-    color: '#999',
     fontStyle: 'italic',
   },
 });
