@@ -33,8 +33,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "your-project-id-here"
+        "projectId": "gitnotes-app"
       }
-    }
+    },
+    "owner": "vidwadeseram"
   }
 }
