@@ -18,7 +18,9 @@ import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/types';
 import MarkdownEditor from '../components/MarkdownEditor';
 import GitContextPicker from '../components/GitContextPicker';
+import GitHubPicker from '../components/GitHubPicker';
 import { HapticService } from '../utils/haptics';
+import { Note } from '../models/Note';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'NoteEditor'>;
 type NoteEditorRouteProp = RouteProp<RootStackParamList, 'NoteEditor'>;
@@ -36,6 +38,7 @@ export default function NoteEditorScreen() {
   const [repo, setRepo] = useState<string | undefined>();
   const [branch, setBranch] = useState<string | undefined>();
   const [commit, setCommit] = useState<string | undefined>();
+  const [github, setGithub] = useState<Note['github'] | undefined>();
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
@@ -48,6 +51,7 @@ export default function NoteEditorScreen() {
         setRepo(existingNote.repo);
         setBranch(existingNote.branch);
         setCommit(existingNote.commit);
+        setGithub(existingNote.github);
       }
     }
   }, [noteId, getNoteById]);
@@ -96,6 +100,7 @@ export default function NoteEditorScreen() {
           repo,
           branch,
           commit,
+          github,
         });
       } else {
         await createNote({
@@ -104,6 +109,7 @@ export default function NoteEditorScreen() {
           repo,
           branch,
           commit,
+          github,
         });
       }
       navigation.goBack();
@@ -114,7 +120,7 @@ export default function NoteEditorScreen() {
     } finally {
       setIsSaving(false);
     }
-  }, [title, content, repo, branch, commit, noteId, createNote, updateNote, navigation]);
+  }, [title, content, repo, branch, commit, github, noteId, createNote, updateNote, navigation]);
 
   const handleCancel = useCallback(() => {
     if (hasChanges && (title.trim() || content.trim())) {
@@ -187,6 +193,8 @@ export default function NoteEditorScreen() {
           onBranchChange={handleBranchChange}
           onCommitChange={handleCommitChange}
         />
+
+        <GitHubPicker value={github} onChange={setGithub} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
