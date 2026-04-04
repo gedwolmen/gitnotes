@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Switch, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNotes } from '../contexts/NoteContext';
+import { HapticService } from '../utils/haptics';
 
 type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -10,10 +11,12 @@ export default function SettingsScreen() {
   const { clearAllNotes } = useNotes();
 
   const handleThemeChange = (newTheme: ThemeMode) => {
+    HapticService.selection();
     setTheme(newTheme);
   };
 
   const clearData = () => {
+    HapticService.warning();
     Alert.alert(
       'Clear All Data',
       'Are you sure you want to clear all notes? This action cannot be undone.',
@@ -25,8 +28,10 @@ export default function SettingsScreen() {
           onPress: async () => {
             const success = await clearAllNotes();
             if (success) {
+              HapticService.success();
               Alert.alert('Success', 'All notes have been cleared.');
             } else {
+              HapticService.error();
               Alert.alert('Error', 'Failed to clear notes.');
             }
           }
@@ -53,6 +58,7 @@ export default function SettingsScreen() {
         <TouchableOpacity
           style={[styles.settingItem, { borderBottomColor: colors.border }]}
           onPress={() => handleThemeChange('system')}
+          onPressIn={() => HapticService.light()}
         >
           <Text style={[styles.settingLabel, { color: colors.text }]}>Use System Theme</Text>
           <View style={styles.settingRight}>
