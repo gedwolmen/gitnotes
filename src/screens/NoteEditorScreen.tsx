@@ -18,6 +18,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/types';
 import MarkdownEditor from '../components/MarkdownEditor';
 import GitContextPicker from '../components/GitContextPicker';
+import { HapticService } from '../utils/haptics';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'NoteEditor'>;
 type NoteEditorRouteProp = RouteProp<RootStackParamList, 'NoteEditor'>;
@@ -106,7 +107,9 @@ export default function NoteEditorScreen() {
         });
       }
       navigation.goBack();
+      HapticService.success();
     } catch (error) {
+      HapticService.error();
       Alert.alert('Error', 'Failed to save note. Please try again.');
     } finally {
       setIsSaving(false);

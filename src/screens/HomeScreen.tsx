@@ -9,21 +9,23 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useNotes } from '../contexts/NoteContext';
 import TemplateSelector from '../components/TemplateSelector';
 import { NoteTemplate } from '../services/TemplateService';
+import { HapticService } from '../utils/haptics';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
-  const { notes, getNoteById } = useNotes();
+  const { notes } = useNotes();
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
 
   const handleCreateNote = useCallback(() => {
+    HapticService.medium();
     setShowTemplateSelector(true);
   }, []);
 
   const handleTemplateSelect = useCallback(
-    (template: NoteTemplate) => {
+    (_template: NoteTemplate) => {
       setShowTemplateSelector(false);
       navigation.navigate('NoteEditor', {});
     },
@@ -51,6 +53,7 @@ export default function HomeScreen() {
       <TouchableOpacity
         style={[styles.button, { backgroundColor: colors.primary }]}
         onPress={handleCreateNote}
+        activeOpacity={0.7}
       >
         <Ionicons name="add" size={24} color="#fff" />
         <Text style={styles.buttonText}>Create New Note</Text>

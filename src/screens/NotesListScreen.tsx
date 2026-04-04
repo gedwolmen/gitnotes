@@ -9,6 +9,7 @@ import { RootStackParamList } from '../navigation/types';
 import { Note } from '../models/Note';
 import NoteCard from '../components/NoteCard';
 import SearchBar from '../components/SearchBar';
+import { HapticService } from '../utils/haptics';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -35,8 +36,10 @@ export default function NotesListScreen() {
             text: 'Delete',
             style: 'destructive',
             onPress: async () => {
+              HapticService.heavy();
               const success = await deleteNote(note.id);
               if (!success) {
+                HapticService.error();
                 Alert.alert('Error', 'Failed to delete note');
               }
             },
