@@ -27,20 +27,22 @@ export default function NotesListScreen() {
 
   const handleNoteLongPress = useCallback(
     (note: Note) => {
+      HapticService.medium();
       Alert.alert(
         'Delete Note',
         `Are you sure you want to delete "${note.title || 'Untitled'}"?`,
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: 'Cancel', style: 'cancel', onPress: () => HapticService.light() },
           {
             text: 'Delete',
             style: 'destructive',
             onPress: async () => {
-              HapticService.heavy();
               const success = await deleteNote(note.id);
               if (!success) {
                 HapticService.error();
                 Alert.alert('Error', 'Failed to delete note');
+              } else {
+                HapticService.success();
               }
             },
           },
