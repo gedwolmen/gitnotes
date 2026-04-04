@@ -18,7 +18,7 @@ export default function TagInput({
 }: TagInputProps) {
   const [inputValue, setInputValue] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
 
   const handleAddTag = useCallback(
     (tag: string) => {
