@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { Note, NoteCreateInput, NoteUpdateInput, sortNotesByUpdated, filterNotesBySearch } from '../models/Note';
 import { StorageService } from '../services/StorageService';
 
@@ -123,7 +123,8 @@ export function NoteProvider({ children }: NoteProviderProps) {
 
   const filteredNotes = searchQuery ? filterNotesBySearch(notes, searchQuery) : notes;
 
-  const value: NoteContextType = {
+  // Memoize the context value to preserve object identity across renders
+  const value: NoteContextType = useMemo(() => ({
     notes,
     isLoading,
     error,
@@ -137,7 +138,7 @@ export function NoteProvider({ children }: NoteProviderProps) {
     getNoteById,
     refreshNotes,
     clearError,
-  };
+  }), [notes, isLoading, error, searchQuery, setSearchQuery, filteredNotes, createNote, updateNote, deleteNote, clearAllNotes, getNoteById, refreshNotes, clearError]);
 
   return <NoteContext.Provider value={value}>{children}</NoteContext.Provider>;
 }
