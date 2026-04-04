@@ -1,0 +1,173 @@
+import React, { useState, useCallback } from 'react';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+
+interface TagInputProps {
+  tags: string[];
+  onTagsChange: (tags: string[]) => void;
+  suggestions?: string[];
+  maxTags?: number;
+}
+
+export default function TagInput({
+  tags,
+  onTagsChange,
+  suggestions = [],
+  maxTags = 10,
+}: TagInputProps) {
+  const [inputValue, setInputValue] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const handleAddTag = useCallback(
+    (tag: string) => {
+      const trimmedTag = tag.trim().toLowerCase();
+      if (trimmedTag && !tags.includes(trimmedTag) && tags.length < maxTags) {
+        onTagsChange([...tags, trimmedTag]);
+      }
+      setInputValue('');
+      setShowSuggestions(false);
+    },
+    [tags, onTagsChange, maxTags]
+  );
+
+  const handleRemoveTag = useCallback(
+    (tagToRemove: string) => {
+      onTagsChange(tags.filter((tag) => tag !== tagToRemove));
+    },
+    [tags, onTagsChange]
+  );
+
+  const handleInputChange = useCallback((text: string) => {
+    setInputValue(text);
+    setShowSuggestions(text.length > 0);
+  }, []);
+
+  const handleSubmitEditing = useCallback(() => {
+    if (inputValue.trim()) {
+      handleAddTag(inputValue);
+    }
+  }, [inputValue, handleAddTag]);
+
+  const filteredSuggestions = suggestions.filter(
+    (suggestion) =>
+      suggestion.toLowerCase().includes(inputValue.toLowerCase()) && !tags.includes(suggestion)
+  );
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.tagsContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tagsScrollView}>
+          {tags.map((tag) => (
+            <View key={tag} style={styles.tag}>
+              <Text style={styles.tagText}>{tag}</Text>
+              <TouchableOpacity onPress={() => handleRemoveTag(tag)} style={styles.removeButton}>
+                <Ionicons name="close-circle" size={16} color="#666" />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </ScrollView>
+      </View>
+
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          value={inputValue}
+          onChangeText={handleInputChange}
+          onSubmitEditing={handleSubmitEditing}
+          placeholder={tags.length === 0 ? 'Add tags...' : 'Add more tags...'}
+          placeholderTextColor="#999"
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="done"
+        />
+      </View>
+
+      {showSuggestions && filteredSuggestions.length > 0 && (
+        <View style={styles.suggestionsContainer}>
+          {filteredSuggestions.slice(0, 5).map((suggestion) => (
+            <TouchableOpacity
+              key={suggestion}
+              style={styles.suggestionItem}
+              onPress={() => handleAddTag(suggestion)}
+            >
+              <Ionicons name="add-circle-outline" size={16} color="#007AFF" />
+              <Text style={styles.suggestionText}>{suggestion}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      {tags.length >= maxTags && (
+        <Text style={styles.limitText}>Maximum {maxTags} tags reached</Text>
+      )}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    paddingTop: 8,
+  },
+  tagsContainer: {
+    marginBottom: 8,
+  },
+  tagsScrollView: {
+    flexGrow: 0,
+  },
+  tag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e8f0fe',
+    borderRadius: 16,
+    paddingVertical: 4,
+    paddingLeft: 12,
+    paddingRight: 4,
+    marginRight: 8,
+  },
+  tagText: {
+    fontSize: 14,
+    color: '#1a73e8',
+    marginRight: 4,
+  },
+  removeButton: {
+    padding: 2,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    height: 40,
+  },
+  input: {
+    flex: 1,
+    fontSize: 15,
+    color: '#333',
+  },
+  suggestionsContainer: {
+    marginTop: 8,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    padding: 8,
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+  },
+  suggestionText: {
+    fontSize: 14,
+    color: '#333',
+    marginLeft: 8,
+  },
+  limitText: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+});
