@@ -135,6 +135,37 @@ A note-taking mobile application built with Expo/React Native that integrates wi
 - ✅ Builds for iOS and Android
 - ⏳ Published to app stores (requires manual EAS project setup)
 
+### Milestone 7: GitJournal Feature Parity 🗓 PLANNED
+**Goal**: Implement essential features to match GitJournal capabilities
+
+**Tasks**:
+- [ ] Implement real Git sync with pull/push (#191)
+- [ ] Add folder/hierarchy organization (#192)
+- [ ] Add multiple view modes (Grid, Card, Journal) (#193)
+- [ ] Add checklist/todo support (#194)
+- [ ] Add wiki links and backlinks (#195)
+- [ ] Add note sharing functionality (#196)
+- [ ] Add image support with captions (#197)
+- [ ] Add undo/redo in editor (#198)
+- [ ] Add note pinning feature (#199)
+- [ ] Add onboarding flow for first-time users (#204)
+
+---
+
+### Milestone 8: Neorg (.norg) Support 🗓 PLANNED
+**Goal**: Full support for the Neorg file format
+
+**Tasks**:
+- [ ] Add Neorg (.norg) file format support (#190)
+- [ ] Implement Neorg document metadata parser (#205)
+- [ ] Implement Neorg heading and list parser (#206)
+- [ ] Implement Neorg inline markup parser (#207)
+- [ ] Implement Neorg link parser (#208)
+- [ ] Implement Neorg code block parser (#209)
+- [ ] Implement Neorg checklist and task status parsing (#211)
+- [ ] Build Neorg-to-React Native Renderer (#212)
+- [ ] Add .norg file support to Git Service and Storage (#213)
+
 ---
 
 ## Technical Debt & Issues
