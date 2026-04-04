@@ -2,7 +2,28 @@
 
 A React Native app built with Expo for managing development notes with Git integration.
 
+## Features
+
+- ✅ Create and organize development notes
+- ✅ Link notes to Git repositories and commits
+- ✅ Tag notes for easy organization
+- ✅ Search and filter functionality
+- ✅ Dark mode support
+- ✅ Haptic feedback for enhanced UX
+- ✅ Markdown rendering support
+- ✅ Comprehensive error handling
+- ✅ Loading states for async operations
+
 ## Getting Started
+
+### Prerequisites
+
+- Node.js 22.x or higher
+- npm or yarn
+- Expo CLI
+- iOS Simulator (for iOS development) or Android Emulator (for Android development)
+
+### Installation
 
 1. Install dependencies:
    ```bash
@@ -27,7 +48,7 @@ gitnotes/
 ├── src/
 │   ├── navigation/            # Navigation configuration
 │   ├── screens/               # Screen components
-│   ├── contexts/              # React contexts
+│   ├── contexts/             # React contexts
 │   ├── components/            # Reusable components
 │   ├── models/                # TypeScript models
 │   ├── services/             # API and storage services
@@ -35,21 +56,72 @@ gitnotes/
 └── assets/                   # Images and fonts
 ```
 
-## Features
-
-- 📝 Create and organize development notes
-- 🔄 Link notes to Git repositories and commits
-- 🏷️ Tag notes for easy organization
-- 🔍 Search and filter functionality
-- 🌙 Dark mode support
-
 ## Development
 
 Built with:
 - Expo SDK 55
-- React Native 0.84
-- TypeScript
+- React Native 0.83.4
+- TypeScript 5.9.3
 - React Navigation v7
+
+## Security
+
+This project addresses the following security vulnerabilities:
+- ✅ **markdown-it (GHSA-6vfc-qv3f-vr6c)**: Fixed by forcing markdown-it v14.1.1 using npm overrides
+
+## Deployment
+
+### Prerequisites for Production Deployment
+
+1. Apple Developer Account (for iOS/TestFlight)
+2. Google Play Console Account (for Android/Play Store)
+
+### Build for Production
+
+1. **Configure EAS credentials** (first time only):
+   ```bash
+   eas login
+   eas build:configure
+   ```
+
+2. **Build for iOS**:
+   ```bash
+   eas build --platform ios --profile production
+   ```
+
+3. **Build for Android**:
+   ```bash
+   eas build --platform android --profile production
+   ```
+
+4. **Submit to TestFlight** (requires Apple Developer account):
+   ```bash
+   eas submit --platform ios --profile production
+   ```
+
+5. **Submit to Play Store** (requires Google Play Console account):
+   ```bash
+   eas submit --platform android --profile production
+   ```
+
+### EAS Configuration
+
+The project includes an `eas.json` configuration file with three build profiles:
+
+- **development**: For testing during development
+- **preview**: For internal distribution
+- **production**: For App Store and Play Store submission
+
+## Testing
+
+Run TypeScript type checking:
+```bash
+npm run ts:check
+```
+
+## Contributing
+
+This project uses atomic commits following the Sisyphus workflow. Each commit represents a single, focused change.
 
 ## License
 
