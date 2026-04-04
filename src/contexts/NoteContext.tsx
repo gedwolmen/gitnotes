@@ -1,0 +1,153 @@
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { Note, NoteCreateInput, NoteUpdateInput, sortNotesByUpdated, filterNotesBySearch } from '../models/Note';
+import { StorageService } from '../services/StorageService';
+
+interface NoteContextType {
+  notes: Note[];
+  isLoading: boolean;
+  error: string | null;
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  filteredNotes: Note[];
+  createNote: (input: NoteCreateInput) => Promise<Note | null>;
+  updateNote: (input: NoteUpdateInput) => Promise<Note | null>;
+  deleteNote: (id: string) => Promise<boolean>;
+  clearAllNotes: () => Promise<boolean>;
+  getNoteById: (id: string) => Note | undefined;
+  refreshNotes: () => Promise<void>;
+  clearError: () => void;
+}
+
+const NoteContext = createContext<NoteContextType | undefined>(undefined);
+
+interface NoteProviderProps {
+  children: ReactNode;
+}
+
+export function NoteProvider({ children }: NoteProviderProps) {
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const loadNotes = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const loadedNotes = await StorageService.getAllNotes();
+      setNotes(sortNotesByUpdated(loadedNotes));
+    } catch (err) {
+      setError('Failed to load notes');
+      console.error('Error loading notes:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadNotes();
+  }, [loadNotes]);
+
+  const createNote = useCallback(async (input: NoteCreateInput): Promise<Note | null> => {
+    try {
+      setError(null);
+      const newNote = await StorageService.createNote(input);
+      setNotes((prev) => sortNotesByUpdated([...prev, newNote]));
+      return newNote;
+    } catch (err) {
+      setError('Failed to create note');
+      console.error('Error creating note:', err);
+      return null;
+    }
+  }, []);
+
+  const updateNote = useCallback(async (input: NoteUpdateInput): Promise<Note | null> => {
+    try {
+      setError(null);
+      const updatedNote = await StorageService.updateNote(input);
+      if (updatedNote) {
+        setNotes((prev) =>
+          sortNotesByUpdated(prev.map((note) => (note.id === updatedNote.id ? updatedNote : note)))
+        );
+      }
+      return updatedNote;
+    } catch (err) {
+      setError('Failed to update note');
+      console.error('Error updating note:', err);
+      return null;
+    }
+  }, []);
+
+  const deleteNote = useCallback(async (id: string): Promise<boolean> => {
+    try {
+      setError(null);
+      const success = await StorageService.deleteNote(id);
+      if (success) {
+        setNotes((prev) => prev.filter((note) => note.id !== id));
+      }
+      return success;
+    } catch (err) {
+      setError('Failed to delete note');
+      console.error('Error deleting note:', err);
+      return false;
+    }
+  }, []);
+
+  const clearAllNotes = useCallback(async (): Promise<boolean> => {
+    try {
+      setError(null);
+      await StorageService.clearAllNotes();
+      setNotes([]);
+      return true;
+    } catch (err) {
+      setError('Failed to clear notes');
+      console.error('Error clearing notes:', err);
+      return false;
+    }
+  }, []);
+
+  const getNoteById = useCallback(
+    (id: string): Note | undefined => {
+      return notes.find((note) => note.id === id);
+    },
+    [notes]
+  );
+
+  const refreshNotes = useCallback(async () => {
+    await loadNotes();
+  }, [loadNotes]);
+
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
+  const filteredNotes = searchQuery ? filterNotesBySearch(notes, searchQuery) : notes;
+
+  const value: NoteContextType = {
+    notes,
+    isLoading,
+    error,
+    searchQuery,
+    setSearchQuery,
+    filteredNotes,
+    createNote,
+    updateNote,
+    deleteNote,
+    clearAllNotes,
+    getNoteById,
+    refreshNotes,
+    clearError,
+  };
+
+  return <NoteContext.Provider value={value}>{children}</NoteContext.Provider>;
+}
+
+export function useNotes(): NoteContextType {
+  const context = useContext(NoteContext);
+  if (context === undefined) {
+    throw new Error('useNotes must be used within a NoteProvider');
+  }
+  return context;
+}
+
+export { NoteContext };
