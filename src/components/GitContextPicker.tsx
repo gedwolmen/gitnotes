@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Modal, FlatList, ActivityIndi
 import { Ionicons } from '@expo/vector-icons';
 import { GitRepository, GitBranch, GitCommit, GitService } from '../services/GitService';
 import { useTheme } from '../contexts/ThemeContext';
+import { HapticService } from '../utils/haptics';
 
 interface GitContextPickerProps {
   repo?: string;
@@ -105,6 +106,7 @@ export default function GitContextPicker({
                 <TouchableOpacity
                   style={[styles.listItem, { borderBottomColor: colors.border }]}
                   onPress={() => {
+                    HapticService.selection();
                     onRepoChange(item.path);
                     setShowRepoModal(false);
                   }}
@@ -137,18 +139,19 @@ export default function GitContextPicker({
               data={branches}
               keyExtractor={(item) => item.name}
               renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.listItem,
-                    { borderBottomColor: colors.border },
-                    item.isCurrent && { backgroundColor: isDark ? '#2c2c2e' : '#f8f8f8' }
-                  ]}
-                  onPress={() => {
-                    onBranchChange(item.name);
-                    setShowBranchModal(false);
-                  }}
-                >
-                  <Ionicons
+<TouchableOpacity
+                    style={[
+                      styles.listItem,
+                      { borderBottomColor: colors.border },
+                      item.isCurrent && { backgroundColor: isDark ? '#2c2c2e' : '#f8f8f8' }
+                    ]}
+                    onPress={() => {
+                      HapticService.selection();
+                      onBranchChange(item.name);
+                      setShowBranchModal(false);
+                    }}
+                  >
+                    <Ionicons
                     name={item.isCurrent ? 'checkmark-circle' : 'git-branch'}
                     size={20}
                     color={item.isCurrent ? '#34C759' : colors.textSecondary}
@@ -187,6 +190,7 @@ export default function GitContextPicker({
                 <TouchableOpacity
                   style={[styles.commitItem, { borderBottomColor: colors.border }]}
                   onPress={() => {
+                    HapticService.selection();
                     onCommitChange(item.hash);
                     setShowCommitModal(false);
                   }}
