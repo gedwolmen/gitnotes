@@ -32,16 +32,7 @@
     },
     "plugins": [
       "expo-font",
-      "expo-sharing",
-      [
-        "expo-auth-session",
-        {
-          "github": {
-            "clientId": "YOUR_GITHUB_CLIENT_ID",
-            "redirectUrl": "gitnotes://oauth/github"
-          }
-        }
-      ]
+      "expo-sharing"
     ],
     "extra": {
       "eas": {
