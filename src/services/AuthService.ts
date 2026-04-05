@@ -1,6 +1,5 @@
 import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Linking from 'expo-linking';
 
 const GITHUB_CLIENT_ID = 'YOUR_GITHUB_CLIENT_ID';
 const GITHUB_CLIENT_SECRET = 'YOUR_GITHUB_CLIENT_SECRET';
@@ -23,44 +22,49 @@ export interface AuthState {
 
 export class AuthService {
   private static getRedirectUri(): string {
-    return Linking.createURL('oauth/github');
+    return 'gitnotes://oauth/github';
   }
 
   private static getAuthUrl(): string {
     const redirectUri = this.getRedirectUri();
-    return `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo,user`;
+    return `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo,user&response_type=code`;
   }
 
   static async loginWithBrowser(): Promise<AuthState> {
     try {
       const redirectUri = this.getRedirectUri();
       const authUrl = this.getAuthUrl();
+      
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
 
-      const result = await WebBrowser.openAuthSessionAsync(
-        authUrl,
-        redirectUri
-      );
-
-      if (result.type === 'success' && result.url) {
-        const url = new URL(result.url);
-        const code = url.searchParams.get('code');
+      if (result.type === 'success') {
+        const returnUrl = result.url;
         
-        if (code) {
-          const token = await this.exchangeCodeForToken(code);
+        if (returnUrl && returnUrl.includes('code=')) {
+          const urlObj = new URL(returnUrl);
+          const code = urlObj.searchParams.get('code');
           
-          if (token) {
-            await this.storeToken(token);
-            const user = await this.getUser(token);
+          if (code) {
+            const token = await this.exchangeCodeForToken(code);
             
-            return {
-              isAuthenticated: true,
-              user,
-              token,
-            };
+            if (token) {
+              await this.storeToken(token);
+              const user = await this.getUser(token);
+              
+              await WebBrowser.dismissBrowser();
+              
+              return {
+                isAuthenticated: true,
+                user,
+                token,
+              };
+            }
           }
         }
       }
 
+      await WebBrowser.dismissBrowser();
+      
       return {
         isAuthenticated: false,
         user: null,
@@ -68,6 +72,7 @@ export class AuthService {
       };
     } catch (error) {
       console.error('[AuthService] Login with browser failed:', error);
+      await WebBrowser.dismissBrowser().catch(() => {});
       return {
         isAuthenticated: false,
         user: null,

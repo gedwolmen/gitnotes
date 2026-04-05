@@ -16,14 +16,16 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.gitnotes.app"
+      "bundleIdentifier": "com.gitnotes.app",
+      "scheme": "gitnotes"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.gitnotes.app"
+      "package": "com.gitnotes.app",
+      "scheme": "gitnotes"
     },
     "web": {
       "favicon": "./assets/favicon.png"
