@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { NoteProvider } from './src/contexts/NoteContext';
 import { ThemeProvider } from './src/contexts/ThemeContext';
 import { FolderProvider } from './src/contexts/FolderContext';
+import { ViewModeProvider } from './src/contexts/ViewModeContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import { OnboardingService } from './src/services/OnboardingService';
@@ -49,8 +50,10 @@ export default function App() {
     <ThemeProvider>
       <FolderProvider>
         <NoteProvider>
-          <StatusBar style="auto" />
-          <AppNavigator />
+          <ViewModeProvider>
+            <StatusBar style="auto" />
+            <AppNavigator />
+          </ViewModeProvider>
         </NoteProvider>
       </FolderProvider>
     </ThemeProvider>

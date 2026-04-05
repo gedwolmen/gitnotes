@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, Alert, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNotes } from '../contexts/NoteContext';
 import { useFolders } from '../contexts/FolderContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useViewMode } from '../contexts/ViewModeContext';
 import { RootStackParamList } from '../navigation/types';
 import { Note } from '../models/Note';
 import { Folder } from '../models/Folder';
@@ -17,6 +18,7 @@ import FolderBreadcrumb from '../components/FolderBreadcrumb';
 import FolderTreeView from '../components/FolderTreeView';
 import { HapticService } from '../utils/haptics';
 import { filterNotesByFolder } from '../models/Note';
+import { ViewMode, VIEW_MODE_LABELS, VIEW_MODE_ICONS } from '../utils/viewModes';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -25,9 +27,11 @@ export default function NotesListScreen() {
   const { colors } = useTheme();
   const { filteredNotes, isLoading, searchQuery, setSearchQuery, deleteNote, togglePin, error } = useNotes();
   const { folders } = useFolders();
+  const { viewMode, setViewMode } = useViewMode();
   
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [showFolderTree, setShowFolderTree] = useState(false);
+  const [showViewModePicker, setShowViewModePicker] = useState(false);
 
   const selectedFolder = useMemo(
     () => folders.find((f) => f.id === selectedFolderId) || null,
@@ -100,6 +104,20 @@ export default function NotesListScreen() {
     setShowFolderTree(!showFolderTree);
   }, [showFolderTree]);
 
+  const handleViewModeChange = useCallback(
+    (mode: ViewMode) => {
+      HapticService.selection();
+      setViewMode(mode);
+      setShowViewModePicker(false);
+    },
+    [setViewMode]
+  );
+
+  const toggleViewModePicker = useCallback(() => {
+    HapticService.light();
+    setShowViewModePicker(!showViewModePicker);
+  }, [showViewModePicker]);
+
   const renderNote = useCallback(
     ({ item }: { item: Note }) => (
       <NoteCard note={item} onPress={handleNotePress} onLongPress={handleNoteLongPress} />
@@ -107,7 +125,80 @@ export default function NotesListScreen() {
     [handleNotePress, handleNoteLongPress]
   );
 
+  const renderGridNote = useCallback(
+    ({ item }: { item: Note }) => (
+      <View style={styles.gridItem}>
+        <NoteCard note={item} onPress={handleNotePress} onLongPress={handleNoteLongPress} />
+      </View>
+    ),
+    [handleNotePress, handleNoteLongPress]
+  );
+
+  const renderCardNote = useCallback(
+    ({ item }: { item: Note }) => (
+      <View style={styles.cardItem}>
+        <NoteCard note={item} onPress={handleNotePress} onLongPress={handleNoteLongPress} />
+      </View>
+    ),
+    [handleNotePress, handleNoteLongPress]
+  );
+
+  const renderJournalNote = useCallback(
+    ({ item }: { item: Note }) => {
+      const noteDate = item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : 'Unknown date';
+      return (
+        <View style={styles.journalItem}>
+          <Text style={[styles.journalDate, { color: colors.textSecondary }]}>{noteDate}</Text>
+          <NoteCard note={item} onPress={handleNotePress} onLongPress={handleNoteLongPress} />
+        </View>
+      );
+    },
+    [handleNotePress, handleNoteLongPress, colors]
+  );
+
   const keyExtractor = useCallback((item: Note) => item.id, []);
+
+  const getListLayout = useCallback(() => {
+    switch (viewMode) {
+      case 'grid':
+        return { numColumns: 2, columnWrapperStyle: styles.gridRow };
+      case 'card':
+        return { numColumns: 1, columnWrapperStyle: undefined };
+      case 'journal':
+        return { numColumns: 1, columnWrapperStyle: undefined };
+      case 'list':
+      default:
+        return { numColumns: 1, columnWrapperStyle: undefined };
+    }
+  }, [viewMode]);
+
+  const getRenderItem = useCallback(() => {
+    switch (viewMode) {
+      case 'grid':
+        return renderGridNote;
+      case 'card':
+        return renderCardNote;
+      case 'journal':
+        return renderJournalNote;
+      case 'list':
+      default:
+        return renderNote;
+    }
+  }, [viewMode, renderNote, renderGridNote, renderCardNote, renderJournalNote]);
+
+  const getListContentStyle = useCallback(() => {
+    switch (viewMode) {
+      case 'grid':
+        return styles.gridContent;
+      case 'card':
+        return styles.cardContent;
+      case 'journal':
+        return styles.journalContent;
+      case 'list':
+      default:
+        return styles.listContent;
+    }
+  }, [viewMode]);
 
   if (isLoading) {
     return (
@@ -135,7 +226,46 @@ export default function NotesListScreen() {
             color={showFolderTree ? colors.primary : colors.textSecondary}
           />
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.folderButton, { backgroundColor: colors.surface }]}
+          onPress={toggleViewModePicker}
+        >
+          <Ionicons
+            name={VIEW_MODE_ICONS[viewMode] as any}
+            size={20}
+            color={colors.primary}
+          />
+        </TouchableOpacity>
       </View>
+
+      {showViewModePicker && (
+        <View style={[styles.viewModePicker, { backgroundColor: colors.surface }]}>
+          {(Object.keys(VIEW_MODE_LABELS) as ViewMode[]).map((mode) => (
+            <TouchableOpacity
+              key={mode}
+              style={[
+                styles.viewModeOption,
+                viewMode === mode && { backgroundColor: colors.primary + '20' },
+              ]}
+              onPress={() => handleViewModeChange(mode)}
+            >
+              <Ionicons
+                name={VIEW_MODE_ICONS[mode] as any}
+                size={20}
+                color={viewMode === mode ? colors.primary : colors.textSecondary}
+              />
+              <Text
+                style={[
+                  styles.viewModeLabel,
+                  { color: viewMode === mode ? colors.primary : colors.text },
+                ]}
+              >
+                {VIEW_MODE_LABELS[mode]}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
       {error && (
         <View style={[styles.errorContainer, { backgroundColor: colors.error + '20', borderLeftColor: colors.error }]}>
@@ -163,9 +293,10 @@ export default function NotesListScreen() {
 
           <FlatList
             data={notesInFolder}
-            renderItem={renderNote}
+            renderItem={getRenderItem()}
             keyExtractor={keyExtractor}
-            contentContainerStyle={styles.listContent}
+            {...getListLayout()}
+            contentContainerStyle={getListContentStyle()}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Ionicons
@@ -209,6 +340,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  viewModePicker: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 10,
+    padding: 4,
+  },
+  viewModeOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  viewModeLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -223,6 +375,36 @@ const styles = StyleSheet.create({
   listContent: {
     padding: 16,
     paddingTop: 8,
+  },
+  gridRow: {
+    justifyContent: 'space-between',
+  },
+  gridContent: {
+    padding: 12,
+    paddingTop: 8,
+  },
+  gridItem: {
+    width: '48%',
+    marginBottom: 12,
+  },
+  cardContent: {
+    padding: 16,
+    paddingTop: 8,
+  },
+  cardItem: {
+    marginBottom: 12,
+  },
+  journalContent: {
+    padding: 16,
+    paddingTop: 8,
+  },
+  journalItem: {
+    marginBottom: 8,
+  },
+  journalDate: {
+    fontSize: 12,
+    marginBottom: 4,
+    marginLeft: 4,
   },
   errorContainer: {
     padding: 12,
