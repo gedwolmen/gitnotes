@@ -12,13 +12,17 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useNotes } from '../contexts/NoteContext';
+import { useFolders } from '../contexts/FolderContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/types';
 import MarkdownEditor from '../components/MarkdownEditor';
 import GitContextPicker from '../components/GitContextPicker';
+import FolderSelectionDialog from '../components/FolderSelectionDialog';
 import { HapticService } from '../utils/haptics';
+import { Folder } from '../models/Folder';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'NoteEditor'>;
 type NoteEditorRouteProp = RouteProp<RootStackParamList, 'NoteEditor'>;
@@ -28,6 +32,7 @@ export default function NoteEditorScreen() {
   const route = useRoute<NoteEditorRouteProp>();
   const { colors } = useTheme();
   const { noteId } = route.params || {};
+  const { folders } = useFolders();
 
   const { getNoteById, createNote, updateNote } = useNotes();
 
@@ -36,8 +41,10 @@ export default function NoteEditorScreen() {
   const [repo, setRepo] = useState<string | undefined>();
   const [branch, setBranch] = useState<string | undefined>();
   const [commit, setCommit] = useState<string | undefined>();
+  const [folderPath, setFolderPath] = useState<string | undefined>();
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [showFolderPicker, setShowFolderPicker] = useState(false);
 
   useEffect(() => {
     if (noteId) {
@@ -48,9 +55,14 @@ export default function NoteEditorScreen() {
         setRepo(existingNote.repo);
         setBranch(existingNote.branch);
         setCommit(existingNote.commit);
+        setFolderPath(existingNote.folderPath);
       }
     }
   }, [noteId, getNoteById]);
+
+  const selectedFolder: Folder | null = folderPath
+    ? folders.find((f) => f.path === folderPath) || null
+    : null;
 
   const handleTitleChange = useCallback((text: string) => {
     setTitle(text);
@@ -80,6 +92,12 @@ export default function NoteEditorScreen() {
     setHasChanges(true);
   }, []);
 
+  const handleFolderSelect = useCallback((folder: Folder | null) => {
+    setFolderPath(folder?.path);
+    setHasChanges(true);
+    setShowFolderPicker(false);
+  }, []);
+
   const handleSave = useCallback(async () => {
     if (!title.trim() && !content.trim()) {
       Alert.alert('Empty Note', 'Please add a title or content before saving.');
@@ -96,6 +114,7 @@ export default function NoteEditorScreen() {
           repo,
           branch,
           commit,
+          folderPath,
         });
       } else {
         await createNote({
@@ -104,6 +123,7 @@ export default function NoteEditorScreen() {
           repo,
           branch,
           commit,
+          folderPath,
         });
       }
       navigation.goBack();
@@ -114,7 +134,7 @@ export default function NoteEditorScreen() {
     } finally {
       setIsSaving(false);
     }
-  }, [title, content, repo, branch, commit, noteId, createNote, updateNote, navigation]);
+  }, [title, content, repo, branch, commit, folderPath, noteId, createNote, updateNote, navigation]);
 
   const handleCancel = useCallback(() => {
     if (hasChanges && (title.trim() || content.trim())) {
@@ -173,6 +193,26 @@ export default function NoteEditorScreen() {
           returnKeyType="next"
         />
 
+        <TouchableOpacity
+          style={[styles.folderSelector, { borderBottomColor: colors.border }]}
+          onPress={() => setShowFolderPicker(true)}
+        >
+          <Ionicons
+            name="folder"
+            size={20}
+            color={folderPath ? colors.primary : colors.textSecondary}
+          />
+          <Text
+            style={[
+              styles.folderSelectorText,
+              { color: folderPath ? colors.text : colors.textSecondary },
+            ]}
+          >
+            {selectedFolder ? selectedFolder.name : 'No folder selected'}
+          </Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
+
         <MarkdownEditor
           content={content}
           onContentChange={handleContentChange}
@@ -188,6 +228,13 @@ export default function NoteEditorScreen() {
           onCommitChange={handleCommitChange}
         />
       </ScrollView>
+
+      <FolderSelectionDialog
+        visible={showFolderPicker}
+        selectedFolderId={selectedFolder?.id || null}
+        onSelect={handleFolderSelect}
+        onClose={() => setShowFolderPicker(false)}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -225,5 +272,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     padding: 16,
     borderBottomWidth: 1,
+  },
+  folderSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    gap: 12,
+  },
+  folderSelectorText: {
+    flex: 1,
+    fontSize: 16,
   },
 });
