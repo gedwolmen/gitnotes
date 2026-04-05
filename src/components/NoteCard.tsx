@@ -53,9 +53,16 @@ export default function NoteCard({ note, onPress, onLongPress }: NoteCardProps) 
         )}
       </View>
 
-      {note.repo && (
+      {(note.folderPath || note.repo) && (
         <View style={[styles.repoContainer, { borderTopColor: colors.border }]}>
-          <Text style={[styles.repoText, { color: colors.textSecondary }]}>📁 {note.repo}</Text>
+          {note.folderPath && note.folderPath !== '/' && (
+            <Text style={[styles.repoText, { color: colors.textSecondary }]}>
+              📂 {note.folderPath.split('/').pop()}
+            </Text>
+          )}
+          {note.repo && (
+            <Text style={[styles.repoText, { color: colors.textSecondary }]}>📁 {note.repo}</Text>
+          )}
           {note.branch && (
             <Text style={[styles.branchText, { color: colors.primary }]}>🌿 {note.branch}</Text>
           )}
