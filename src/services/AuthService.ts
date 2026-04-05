@@ -81,7 +81,7 @@ export class AuthService {
     }
   }
 
-  private static async exchangeCodeForToken(code: string): Promise<string | null> {
+  static async exchangeCodeForToken(code: string): Promise<string | null> {
     try {
       const response = await fetch('https://github.com/login/oauth/access_token', {
         method: 'POST',
@@ -104,7 +104,7 @@ export class AuthService {
     }
   }
 
-  private static async storeToken(token: string): Promise<void> {
+  static async storeToken(token: string): Promise<void> {
     try {
       await AsyncStorage.setItem(TOKEN_KEY, token);
     } catch (error) {
