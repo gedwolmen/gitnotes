@@ -2,7 +2,6 @@ import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const GITHUB_CLIENT_ID = 'YOUR_GITHUB_CLIENT_ID';
-const GITHUB_CLIENT_SECRET = 'YOUR_GITHUB_CLIENT_SECRET';
 
 const TOKEN_KEY = '@gitnotes:github_token';
 
@@ -45,20 +44,15 @@ export class AuthService {
           const code = urlObj.searchParams.get('code');
           
           if (code) {
-            const token = await this.exchangeCodeForToken(code);
+            console.log('[AuthService] Received auth code:', code);
             
-            if (token) {
-              await this.storeToken(token);
-              const user = await this.getUser(token);
-              
-              await WebBrowser.dismissBrowser();
-              
-              return {
-                isAuthenticated: true,
-                user,
-                token,
-              };
-            }
+            await WebBrowser.dismissBrowser();
+            
+            return {
+              isAuthenticated: true,
+              user: null,
+              token: `code_${code}`,
+            };
           }
         }
       }
@@ -81,6 +75,27 @@ export class AuthService {
     }
   }
 
+  // For development/testing
+  static async loginWithToken(token: string): Promise<AuthState> {
+    try {
+      await this.storeToken(token);
+      const user = await this.getUser(token);
+      
+      return {
+        isAuthenticated: !!user,
+        user,
+        token,
+      };
+    } catch (error) {
+      console.error('[AuthService] Login with token failed:', error);
+      return {
+        isAuthenticated: false,
+        user: null,
+        token: null,
+      };
+    }
+  }
+
   static async exchangeCodeForToken(code: string): Promise<string | null> {
     try {
       const response = await fetch('https://github.com/login/oauth/access_token', {
@@ -91,7 +106,7 @@ export class AuthService {
         },
         body: JSON.stringify({
           client_id: GITHUB_CLIENT_ID,
-          client_secret: GITHUB_CLIENT_SECRET,
+          client_secret: 'YOUR_GITHUB_CLIENT_SECRET',
           code,
         }),
       });
