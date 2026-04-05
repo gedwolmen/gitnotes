@@ -8,6 +8,7 @@ export interface Note {
   repo?: string;
   branch?: string;
   commit?: string;
+  folderPath?: string; // Path like "/personal/ideas" or "/" for root
 }
 
 export interface NoteCreateInput {
@@ -17,6 +18,7 @@ export interface NoteCreateInput {
   repo?: string;
   branch?: string;
   commit?: string;
+  folderPath?: string;
 }
 
 export interface NoteUpdateInput {
@@ -27,6 +29,7 @@ export interface NoteUpdateInput {
   repo?: string;
   branch?: string;
   commit?: string;
+  folderPath?: string;
 }
 
 export function createNote(input: NoteCreateInput): Note {
@@ -41,6 +44,7 @@ export function createNote(input: NoteCreateInput): Note {
     repo: input.repo,
     branch: input.branch,
     commit: input.commit,
+    folderPath: input.folderPath,
   };
 }
 
@@ -53,6 +57,7 @@ export function updateNote(existing: Note, input: Partial<NoteCreateInput>): Not
     repo: input.repo ?? existing.repo,
     branch: input.branch ?? existing.branch,
     commit: input.commit ?? existing.commit,
+    folderPath: input.folderPath ?? existing.folderPath,
     updatedAt: Date.now(),
   };
 }
@@ -74,4 +79,16 @@ export function filterNotesBySearch(notes: Note[], searchQuery: string): Note[] 
       note.content.toLowerCase().includes(query) ||
       note.tags.some((tag) => tag.toLowerCase().includes(query))
   );
+}
+
+export function filterNotesByFolder(notes: Note[], folderPath: string | null): Note[] {
+  if (folderPath === null || folderPath === undefined) return notes;
+  return notes.filter(note => note.folderPath === folderPath);
+}
+
+export function getNotesInFolderAndSubfolders(notes: Note[], folderPath: string): Note[] {
+  return notes.filter(note => {
+    if (!note.folderPath) return folderPath === '/';
+    return note.folderPath === folderPath || note.folderPath.startsWith(folderPath + '/');
+  });
 }
