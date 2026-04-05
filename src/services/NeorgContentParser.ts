@@ -6,6 +6,7 @@ export class NeorgContentParser {
       const lines = content.split('\n');
       const blocks: NeorgContentBlock[] = [];
       let currentList: NeorgListItem[] | null = null;
+      let currentCodeBlock: { language?: string; lines: string[] } | null = null;
       
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
@@ -16,6 +17,33 @@ export class NeorgContentParser {
             blocks.push({ type: 'list', listItems: currentList });
             currentList = null;
           }
+          if (currentCodeBlock) {
+            this.finalizeCodeBlock(currentCodeBlock, blocks);
+            currentCodeBlock = null;
+          }
+          continue;
+        }
+        
+        // Check for code block start/end
+        const codeBlockInfo = this.parseCodeBlockLine(line, i === 0);
+        if (codeBlockInfo) {
+          if (codeBlockInfo.isOpen) {
+            // Start new code block
+            currentCodeBlock = {
+              language: codeBlockInfo.language,
+              lines: []
+            };
+          } else if (currentCodeBlock && codeBlockInfo.isClose) {
+            // Close current code block
+            this.finalizeCodeBlock(currentCodeBlock, blocks);
+            currentCodeBlock = null;
+          }
+          continue;
+        }
+        
+        // If inside a code block, add content
+        if (currentCodeBlock) {
+          currentCodeBlock.lines.push(line);
           continue;
         }
         
@@ -48,6 +76,10 @@ export class NeorgContentParser {
       
       if (currentList) {
         blocks.push({ type: 'list', listItems: currentList });
+      }
+      
+      if (currentCodeBlock) {
+        this.finalizeCodeBlock(currentCodeBlock, blocks);
       }
       
       return { success: true, blocks };
@@ -142,6 +174,29 @@ export class NeorgContentParser {
   static headingToMarkdown(heading: NeorgHeading): string {
     const prefix = '#'.repeat(heading.level);
     return `${prefix} ${heading.text}`;
+  }
+
+  static parseCodeBlockLine(line: string, isFirst: boolean): { isOpen: boolean; isClose: boolean; language?: string } | null {
+    const openMatch = line.match(/^```(\w*)$/);
+    if (openMatch) {
+      return { isOpen: true, isClose: false, language: openMatch[1] || undefined };
+    }
+    
+    if (line.trim() === '```') {
+      return { isOpen: false, isClose: true };
+    }
+    
+    return null;
+  }
+
+  static finalizeCodeBlock(codeBlock: { language?: string; lines: string[] }, blocks: NeorgContentBlock[]): void {
+    blocks.push({
+      type: 'code',
+      code: {
+        language: codeBlock.language,
+        content: codeBlock.lines.join('\n'),
+      },
+    });
   }
 
   static listToMarkdown(items: NeorgListItem[]): string {
