@@ -22,6 +22,7 @@ import MarkdownEditor from '../components/MarkdownEditor';
 import GitContextPicker from '../components/GitContextPicker';
 import FolderSelectionDialog from '../components/FolderSelectionDialog';
 import { HapticService } from '../utils/haptics';
+import { useUndo } from '../utils/useUndo';
 import { Folder } from '../models/Folder';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'NoteEditor'>;
@@ -37,7 +38,7 @@ export default function NoteEditorScreen() {
   const { getNoteById, createNote, updateNote } = useNotes();
 
   const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
+  const { state: content, setState: setContent, undo, redo, canUndo, canRedo } = useUndo('');
   const [repo, setRepo] = useState<string | undefined>();
   const [branch, setBranch] = useState<string | undefined>();
   const [commit, setCommit] = useState<string | undefined>();
@@ -58,7 +59,7 @@ export default function NoteEditorScreen() {
         setFolderPath(existingNote.folderPath);
       }
     }
-  }, [noteId, getNoteById]);
+  }, [noteId, getNoteById, setContent]);
 
   const selectedFolder: Folder | null = folderPath
     ? folders.find((f) => f.path === folderPath) || null
@@ -72,7 +73,7 @@ export default function NoteEditorScreen() {
   const handleContentChange = useCallback((text: string) => {
     setContent(text);
     setHasChanges(true);
-  }, []);
+  }, [setContent]);
 
   const handleRepoChange = useCallback((newRepo: string | undefined) => {
     setRepo(newRepo);
@@ -155,22 +156,58 @@ export default function NoteEditorScreen() {
     }
   }, [hasChanges, title, content, navigation]);
 
+  const handleUndo = useCallback(() => {
+    if (canUndo) {
+      HapticService.light();
+      undo();
+      setHasChanges(true);
+    }
+  }, [canUndo, undo]);
+
+  const handleRedo = useCallback(() => {
+    if (canRedo) {
+      HapticService.light();
+      redo();
+      setHasChanges(true);
+    }
+  }, [canRedo, redo]);
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={[styles.container, { backgroundColor: colors.surface }]}
     >
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={handleCancel} disabled={isSaving}>
-          <Text style={[styles.headerButton, { color: colors.primary }]}>Cancel</Text>
-        </TouchableOpacity>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity onPress={handleCancel} disabled={isSaving} style={styles.headerButton}>
+            <Text style={[styles.headerButtonText, { color: colors.primary }]}>Cancel</Text>
+          </TouchableOpacity>
+          {(canUndo || canRedo) && (
+            <View style={styles.undoRedoContainer}>
+              <TouchableOpacity onPress={handleUndo} disabled={!canUndo} style={styles.undoRedoButton}>
+                <Ionicons 
+                  name="arrow-undo" 
+                  size={20} 
+                  color={canUndo ? colors.primary : colors.textSecondary} 
+                />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleRedo} disabled={!canRedo} style={styles.undoRedoButton}>
+                <Ionicons 
+                  name="arrow-redo" 
+                  size={20} 
+                  color={canRedo ? colors.primary : colors.textSecondary} 
+                />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
         <Text style={[styles.headerTitle, { color: colors.text }]}>
           {noteId ? 'Edit Note' : 'New Note'}
         </Text>
         <TouchableOpacity onPress={handleSave} disabled={isSaving}>
           <Text
             style={[
-              styles.headerButton,
+              styles.headerButtonText,
               styles.saveButton,
               { color: colors.primary },
               isSaving && styles.disabledButton,
@@ -251,12 +288,28 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  headerButton: {
+    padding: 4,
+  },
+  headerButtonText: {
+    fontSize: 16,
+  },
+  undoRedoContainer: {
+    flexDirection: 'row',
+    marginLeft: 16,
+    gap: 8,
+  },
+  undoRedoButton: {
+    padding: 4,
+  },
   headerTitle: {
     fontSize: 16,
     fontWeight: '600',
-  },
-  headerButton: {
-    fontSize: 16,
   },
   saveButton: {
     fontWeight: '600',
