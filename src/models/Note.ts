@@ -1,3 +1,5 @@
+export type NoteFormat = 'markdown' | 'neorg';
+
 export interface Note {
   id: string;
   title: string;
@@ -10,6 +12,7 @@ export interface Note {
   commit?: string;
   folderPath?: string;
   isPinned?: boolean;
+  format?: NoteFormat;
 }
 
 export interface NoteCreateInput {
@@ -21,6 +24,7 @@ export interface NoteCreateInput {
   commit?: string;
   folderPath?: string;
   isPinned?: boolean;
+  format?: NoteFormat;
 }
 
 export interface NoteUpdateInput {
@@ -33,6 +37,7 @@ export interface NoteUpdateInput {
   commit?: string;
   folderPath?: string;
   isPinned?: boolean;
+  format?: NoteFormat;
 }
 
 export function createNote(input: NoteCreateInput): Note {
@@ -49,6 +54,7 @@ export function createNote(input: NoteCreateInput): Note {
     commit: input.commit,
     folderPath: input.folderPath,
     isPinned: input.isPinned || false,
+    format: input.format || 'markdown',
   };
 }
 
@@ -63,6 +69,7 @@ export function updateNote(existing: Note, input: Partial<NoteCreateInput>): Not
     commit: input.commit ?? existing.commit,
     folderPath: input.folderPath ?? existing.folderPath,
     isPinned: input.isPinned ?? existing.isPinned,
+    format: input.format ?? existing.format,
     updatedAt: Date.now(),
   };
 }
@@ -107,4 +114,21 @@ export function getNotesInFolderAndSubfolders(notes: Note[], folderPath: string)
     if (!note.folderPath) return folderPath === '/';
     return note.folderPath === folderPath || note.folderPath.startsWith(folderPath + '/');
   });
+}
+
+export function getNoteFileExtension(format?: NoteFormat): string {
+  return format === 'neorg' ? '.norg' : '.md';
+}
+
+export function isNeorgNote(note: Note): boolean {
+  return note.format === 'neorg';
+}
+
+export function getSupportedFileExtensions(): string[] {
+  return ['.md', '.norg'];
+}
+
+export function isSupportedFileExtension(filename: string): boolean {
+  const ext = filename.toLowerCase().slice(filename.lastIndexOf('.'));
+  return getSupportedFileExtensions().includes(ext);
 }
