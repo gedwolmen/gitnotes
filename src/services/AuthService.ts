@@ -1,7 +1,7 @@
 import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const GITHUB_CLIENT_ID = 'YOUR_GITHUB_CLIENT_ID';
+const GITHUB_CLIENT_ID = '';
 
 const TOKEN_KEY = '@gitnotes:github_token';
 

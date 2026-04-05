@@ -284,34 +284,18 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
           ) : (
-            <>
-              <TouchableOpacity
-                style={[styles.settingItem, { borderBottomColor: colors.border }]}
-                onPress={handleGitHubLogin}
-                disabled={isAuthLoading}
-              >
-                <View style={styles.settingLeft}>
-                  <Ionicons name="logo-github" size={20} color={colors.text} />
-                  <Text style={[styles.settingLabel, { color: colors.text, marginLeft: 12 }]}>
-                    {isAuthLoading ? 'Signing in...' : 'Sign in with GitHub'}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.settingItem, { borderBottomColor: colors.border }]}
-                onPress={() => setShowTokenModal(true)}
-              >
-                <View style={styles.settingLeft}>
-                  <Ionicons name="key-outline" size={20} color={colors.text} />
-                  <Text style={[styles.settingLabel, { color: colors.text, marginLeft: 12 }]}>
-                    Use Personal Access Token
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </>
+            <TouchableOpacity
+              style={[styles.settingItem, { borderBottomColor: colors.border }]}
+              onPress={() => setShowTokenModal(true)}
+            >
+              <View style={styles.settingLeft}>
+                <Ionicons name="key-outline" size={20} color={colors.text} />
+                <Text style={[styles.settingLabel, { color: colors.text, marginLeft: 12 }]}>
+                  Sign in with GitHub Token
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
           )}
         </View>
 
