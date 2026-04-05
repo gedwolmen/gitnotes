@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, Switch, ScrollView, TouchableOpacity, Alert, FlatList, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Switch, ScrollView, TouchableOpacity, Alert, FlatList, Image, ActivityIndicator, TextInput, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
@@ -22,14 +22,62 @@ export default function SettingsScreen() {
     token: null,
   });
   const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [showTokenModal, setShowTokenModal] = useState(false);
+  const [tokenInput, setTokenInput] = useState('');
 
   useEffect(() => {
     checkAuthState();
-  }, []);
+  }, [checkAuthState]);
 
-  const checkAuthState = async () => {
+  const handleManualTokenLogin = async () => {
+    if (!tokenInput.trim()) {
+      Alert.alert('Error', 'Please enter a valid token');
+      return;
+    }
+    
+    setIsAuthLoading(true);
+    const result = await AuthService.loginWithToken(tokenInput.trim());
+    setAuthState(result);
+    setIsAuthLoading(false);
+    setShowTokenModal(false);
+    setTokenInput('');
+    
+    if (result.isAuthenticated) {
+      HapticService.success();
+      Alert.alert('Success', `Welcome, ${result.user?.name || result.user?.login}!`);
+    } else {
+      Alert.alert('Error', 'Invalid token. Please check and try again.');
+    }
+  };
+
+const checkAuthState = useCallback(async () => {
     const state = await AuthService.checkAuthState();
     setAuthState(state);
+  }, []);
+
+  useEffect(() => {
+    checkAuthState();
+  }, [checkAuthState]);
+
+  const handleManualTokenLogin = async () => {
+    if (!tokenInput.trim()) {
+      Alert.alert('Error', 'Please enter a valid token');
+      return;
+    }
+    
+    setIsAuthLoading(true);
+    const result = await AuthService.loginWithToken(tokenInput.trim());
+    setAuthState(result);
+    setIsAuthLoading(false);
+    setShowTokenModal(false);
+    setTokenInput('');
+    
+    if (result.isAuthenticated) {
+      HapticService.success();
+      Alert.alert('Success', `Welcome, ${result.user?.name || result.user?.login}!`);
+    } else {
+      Alert.alert('Error', 'Invalid token. Please check and try again.');
+    }
   };
 
   const handleGitHubLogin = async () => {
