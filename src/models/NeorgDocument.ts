@@ -3,21 +3,23 @@
  * 
  * Represents the metadata block in a .norg file:
  * @document.meta
- * title: Note Title
- * description: A description
- * author: Author Name
- * categories: [tag1, tag2]
- * created: 2021-09-05
- * version: 0.1
+ * title: Example Note
+ * description: A short description
+ * authors: [Your Name]
+ * categories: [notes, work]
+ * created: 2021-09-05T12:34:56+0000
+ * updated: 2021-09-06T10:00:00+0000
+ * version: 9
  * @end
  */
 
 export interface NeorgMetadata {
   title?: string;
   description?: string;
-  author?: string;
+  authors?: string[];
   categories?: string[];
-  created?: string; // ISO date string
+  created?: string;
+  updated?: string;
   version?: string;
   [key: string]: string | string[] | undefined;
 }

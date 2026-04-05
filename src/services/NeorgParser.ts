@@ -67,7 +67,7 @@ export class NeorgParser {
       if (!key|| !value) continue;
       
       const parsedValue = this.parseValue(value);
-      const standardFields = ['title', 'description', 'author', 'categories', 'created', 'version'];
+      const standardFields = ['title', 'description', 'authors', 'categories', 'created', 'updated', 'version'];
       
       if (standardFields.includes(key)) {
         metadata[key] = parsedValue;
@@ -98,9 +98,15 @@ export class NeorgParser {
     tags: string[];
     content: string;
     createdAt?: number;
+    updatedAt?: number;
+    author?: string;
   } {
     const createdAt = metadata.created 
       ? new Date(metadata.created).getTime()
+      : undefined;
+    
+    const updatedAt = metadata.updated
+      ? new Date(metadata.updated).getTime()
       : undefined;
     
     return {
@@ -108,6 +114,8 @@ export class NeorgParser {
       tags: metadata.categories || [],
       content: metadata.description || '',
       createdAt,
+      updatedAt,
+      author: metadata.authors?.[0],
     };
   }
 }
