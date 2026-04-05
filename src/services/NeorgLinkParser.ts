@@ -8,9 +8,10 @@ export class NeorgLinkParser {
 
   static parseLinks(text: string): LinkParseResult {
     const links: NeorgLink[] = [];
-    let match;
-
-    while ((match = this.linkPattern.exec(text)) !== null) {
+    this.linkPattern.lastIndex = 0;
+    let match: RegExpExecArray | null = this.linkPattern.exec(text);
+    
+    while (match !== null) {
       const fullMatch = match[0];
       const linkContent = match[1];
       const displayText = match[2];
@@ -19,6 +20,7 @@ export class NeorgLinkParser {
       if (link) {
         links.push(link);
       }
+      match = this.linkPattern.exec(text);
     }
 
     return {

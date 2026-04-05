@@ -27,16 +27,18 @@ export class NeorgInlineParser {
     }> = [];
 
     for (const { type, pattern } of this.markupPatterns) {
-      let match;
       const regex = new RegExp(pattern.source, pattern.flags);
+      regex.lastIndex = 0;
+      let match: RegExpExecArray | null = regex.exec(text);
       
-      while ((match = regex.exec(text)) !== null) {
+      while (match !== null) {
         matches.push({
           type,
           start: match.index,
           end: regex.lastIndex,
           content: match[1],
         });
+        match = regex.exec(text);
       }
     }
 

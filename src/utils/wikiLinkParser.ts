@@ -15,9 +15,10 @@ const WIKI_LINK_REGEX = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
 
 export function parseWikiLinks(content: string): WikiLink[] {
   const links: WikiLink[] = [];
-  let match: RegExpExecArray | null;
-
-  while ((match = WIKI_LINK_REGEX.exec(content)) !== null) {
+  WIKI_LINK_REGEX.lastIndex = 0;
+  let match: RegExpExecArray | null = WIKI_LINK_REGEX.exec(content);
+  
+  while (match !== null) {
     const target = match[1].trim();
     const displayText = match[2]?.trim() || target;
 
@@ -30,6 +31,7 @@ export function parseWikiLinks(content: string): WikiLink[] {
         end: match.index + match[0].length,
       },
     });
+    match = WIKI_LINK_REGEX.exec(content);
   }
 
   return links;
