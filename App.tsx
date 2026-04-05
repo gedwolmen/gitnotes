@@ -8,6 +8,7 @@ import { NoteProvider } from './src/contexts/NoteContext';
 import { ThemeProvider } from './src/contexts/ThemeContext';
 import { FolderProvider } from './src/contexts/FolderContext';
 import { ViewModeProvider } from './src/contexts/ViewModeContext';
+import { AuthProvider } from './src/contexts/AuthContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import { OnboardingService } from './src/services/OnboardingService';
@@ -83,14 +84,16 @@ export default function App() {
 
   return (
     <ThemeProvider>
-      <FolderProvider>
-        <NoteProvider>
-          <ViewModeProvider>
-            <StatusBar style="auto" />
-            <AppNavigator />
-          </ViewModeProvider>
-        </NoteProvider>
-      </FolderProvider>
+      <AuthProvider>
+        <FolderProvider>
+          <NoteProvider>
+            <ViewModeProvider>
+              <StatusBar style="auto" />
+              <AppNavigator />
+            </ViewModeProvider>
+          </NoteProvider>
+        </FolderProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

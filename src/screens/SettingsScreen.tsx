@@ -4,9 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNotes } from '../contexts/NoteContext';
+import { useAuth } from '../contexts/AuthContext';
 import { GitService, GitRepository } from '../services/GitService';
 import { OnboardingService } from '../services/OnboardingService';
-import { AuthService, AuthState } from '../services/AuthService';
+import { AuthService } from '../services/AuthService';
 import { HapticService } from '../utils/haptics';
 
 type ThemeMode = 'light' | 'dark' | 'system';
@@ -14,38 +15,25 @@ type ThemeMode = 'light' | 'dark' | 'system';
 export default function SettingsScreen() {
   const { theme, isDark, colors, setTheme } = useTheme();
   const { clearAllNotes } = useNotes();
+  const { authState, refreshAuth, isLoading: authLoading } = useAuth();
   const [repositories, setRepositories] = useState<GitRepository[]>([]);
   const [showRepos, setShowRepos] = useState(false);
-  const [authState, setAuthState] = useState<AuthState>({
-    isAuthenticated: false,
-    user: null,
-    token: null,
-  });
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [tokenInput, setTokenInput] = useState('');
-
-  const checkAuthState = useCallback(async () => {
-    const state = await AuthService.checkAuthState();
-    setAuthState(state);
-  }, []);
-
-  useEffect(() => {
-    checkAuthState();
-  }, [checkAuthState]);
 
   const handleGitHubLogin = useCallback(async () => {
     setIsAuthLoading(true);
     HapticService.light();
     const result = await AuthService.loginWithBrowser();
-    setAuthState(result);
+    await refreshAuth();
     setIsAuthLoading(false);
     
     if (result.isAuthenticated) {
       HapticService.success();
       Alert.alert('Success', `Welcome, ${result.user?.name || result.user?.login}!`);
     }
-  }, []);
+  }, [refreshAuth]);
 
   const handleManualTokenLogin = useCallback(async () => {
     if (!tokenInput.trim()) {
@@ -55,7 +43,7 @@ export default function SettingsScreen() {
     
     setIsAuthLoading(true);
     const result = await AuthService.loginWithToken(tokenInput.trim());
-    setAuthState(result);
+    await refreshAuth();
     setIsAuthLoading(false);
     setShowTokenModal(false);
     setTokenInput('');
@@ -66,7 +54,7 @@ export default function SettingsScreen() {
     } else {
       Alert.alert('Error', 'Invalid token. Please check and try again.');
     }
-  }, [tokenInput]);
+  }, [tokenInput, refreshAuth]);
 
   const handleGitHubLogout = useCallback(async () => {
     HapticService.warning();
@@ -80,11 +68,7 @@ export default function SettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             await AuthService.logout();
-            setAuthState({
-              isAuthenticated: false,
-              user: null,
-              token: null,
-            });
+            await refreshAuth();
             HapticService.success();
           },
         },

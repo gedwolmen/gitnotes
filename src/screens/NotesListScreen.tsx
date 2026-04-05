@@ -308,6 +308,7 @@ export default function NotesListScreen() {
             data={notesInFolder}
             renderItem={getRenderItem()}
             keyExtractor={keyExtractor}
+            key={`${viewMode}-${notesInFolder.length}`}
             {...getListLayout()}
             contentContainerStyle={getListContentStyle()}
             ListEmptyComponent={
