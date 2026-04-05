@@ -25,14 +25,6 @@ export default function HomeScreen() {
     setShowTemplateSelector(true);
   }, []);
 
-  const handleTemplateSelect = useCallback(
-    (_template: NoteTemplate) => {
-      setShowTemplateSelector(false);
-      navigation.navigate('NoteEditor', {});
-    },
-    [navigation]
-  );
-
   const handleBlankNote = useCallback(() => {
     navigation.navigate('NoteEditor', {});
   }, [navigation]);
@@ -42,13 +34,6 @@ export default function HomeScreen() {
     setShowTemplateSelector(false);
     navigation.navigate('NoteEditor', {});
   }, [navigation]);
-
-  const handleNotePress = useCallback(
-    (noteId: string) => {
-      navigation.navigate('NoteEditor', { noteId });
-    },
-    [navigation]
-  );
 
   const handleTemplateSelectorClose = useCallback(() => {
     setShowTemplateSelector(false);

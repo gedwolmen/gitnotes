@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { Note } from '../models/Note';
 import { useTheme } from '../contexts/ThemeContext';
+import { getChecklistProgress, hasChecklists } from '../utils/checklist';
 
 interface NoteCardProps {
   note: Note;
@@ -13,6 +14,11 @@ interface NoteCardProps {
 
 export default function NoteCard({ note, onPress, onLongPress }: NoteCardProps) {
   const { colors } = useTheme();
+  
+  const checklistProgress = useMemo(() => {
+    if (!hasChecklists(note.content)) return null;
+    return getChecklistProgress(note.content);
+  }, [note.content]);
 
   return (
     <TouchableOpacity
@@ -37,6 +43,19 @@ export default function NoteCard({ note, onPress, onLongPress }: NoteCardProps) 
           {note.content || 'No content'}
         </Text>
       </View>
+
+      {checklistProgress && checklistProgress.total > 0 && (
+        <View style={styles.checklistContainer}>
+          <Ionicons
+            name={checklistProgress.completed === checklistProgress.total ? 'checkmark-circle' : 'radio-button-off'}
+            size={14}
+            color={checklistProgress.completed === checklistProgress.total ? colors.primary : colors.textSecondary}
+          />
+          <Text style={[styles.checklistText, { color: colors.textSecondary }]}>
+            {checklistProgress.completed}/{checklistProgress.total} tasks
+          </Text>
+        </View>
+      )}
 
       <View style={styles.footer}>
         <Text style={[styles.date, { color: colors.textSecondary }]}>
@@ -116,6 +135,16 @@ const styles = StyleSheet.create({
   content: {
     fontSize: 14,
     lineHeight: 20,
+  },
+  checklistContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: 8,
+    gap: 6,
+  },
+  checklistText: {
+    fontSize: 12,
   },
   footer: {
     flexDirection: 'row',

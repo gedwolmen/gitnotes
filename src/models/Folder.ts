@@ -52,7 +52,7 @@ export function updateFolder(existing: Folder, input: Partial<FolderCreateInput>
 }
 
 function generateFolderId(): string {
-  return `folder-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return `folder-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 }
 
 export function getFolderDepth(folder: Folder): number {

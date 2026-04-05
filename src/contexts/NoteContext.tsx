@@ -165,7 +165,7 @@ export function NoteProvider({ children }: NoteProviderProps) {
     togglePin,
     refreshNotes,
     clearError,
-  }), [notes, isLoading, error, searchQuery, filteredNotes, createNote, updateNote, deleteNote, clearAllNotes, getNoteById, togglePin, refreshNotes, clearError]);
+  }), [notes, isLoading, error, searchQuery, createNote, updateNote, deleteNote, clearAllNotes, getNoteById, togglePin, refreshNotes, clearError]);
 
   return <NoteContext.Provider value={value}>{children}</NoteContext.Provider>;
 }
