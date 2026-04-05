@@ -1,8 +1,11 @@
-import React from 'react';
-import { View, Text, StyleSheet, Switch, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, Switch, ScrollView, TouchableOpacity, Alert, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNotes } from '../contexts/NoteContext';
+import { GitService, GitRepository } from '../services/GitService';
+import { OnboardingService } from '../services/OnboardingService';
 import { HapticService } from '../utils/haptics';
 
 type ThemeMode = 'light' | 'dark' | 'system';
@@ -10,6 +13,59 @@ type ThemeMode = 'light' | 'dark' | 'system';
 export default function SettingsScreen() {
   const { theme, isDark, colors, setTheme } = useTheme();
   const { clearAllNotes } = useNotes();
+  const [repositories, setRepositories] = useState<GitRepository[]>([]);
+  const [showRepos, setShowRepos] = useState(false);
+
+  const loadRepositories = useCallback(async () => {
+    const repos = await GitService.getRepositories();
+    setRepositories(repos);
+  }, []);
+
+  const handleToggleRepos = useCallback(async () => {
+    if (!showRepos) {
+      await loadRepositories();
+    }
+    setShowRepos(!showRepos);
+  }, [showRepos, loadRepositories]);
+
+  const handleRemoveRepo = useCallback((repo: GitRepository) => {
+    HapticService.warning();
+    Alert.alert(
+      'Remove Repository',
+      `Are you sure you want to remove "${repo.name}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            await GitService.removeRepository(repo.path);
+            HapticService.success();
+            await loadRepositories();
+          },
+        },
+      ]
+    );
+  }, [loadRepositories]);
+
+  const handleResetOnboarding = useCallback(() => {
+    HapticService.warning();
+    Alert.alert(
+      'Reset Onboarding',
+      'This will show the onboarding screen on next app launch.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          onPress: async () => {
+            await OnboardingService.resetOnboarding();
+            HapticService.success();
+            Alert.alert('Success', 'Onboarding will show on next launch.');
+          },
+        },
+      ]
+    );
+  }, []);
 
   const handleThemeChange = (newTheme: ThemeMode) => {
     HapticService.selection();
@@ -40,6 +96,18 @@ export default function SettingsScreen() {
       ]
     );
   };
+
+  const renderRepoItem = ({ item }: { item: GitRepository }) => (
+    <View style={[styles.repoItem, { borderBottomColor: colors.border }]}>
+      <View style={styles.repoInfo}>
+        <Ionicons name="folder" size={20} color={colors.primary} />
+        <Text style={[styles.repoName, { color: colors.text }]}>{item.name}</Text>
+      </View>
+      <TouchableOpacity onPress={() => handleRemoveRepo(item)}>
+        <Ionicons name="trash-outline" size={20} color={colors.error} />
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
@@ -72,6 +140,38 @@ export default function SettingsScreen() {
       </View>
 
       <View style={[styles.section, { backgroundColor: colors.surface }]}>
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Git Repositories</Text>
+        
+        <TouchableOpacity
+          style={[styles.settingItem, { borderBottomColor: colors.border }]}
+          onPress={handleToggleRepos}
+        >
+          <View style={styles.settingLeft}>
+            <Ionicons name="code-slash" size={20} color={colors.text} />
+            <Text style={[styles.settingLabel, { color: colors.text, marginLeft: 12 }]}>Manage Repositories</Text>
+          </View>
+          <Ionicons name={showRepos ? 'chevron-up' : 'chevron-down'} size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
+
+        {showRepos && (
+          <View style={[styles.repoList, { backgroundColor: colors.background }]}>
+            {repositories.length === 0 ? (
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                No repositories added yet.
+              </Text>
+            ) : (
+              <FlatList
+                data={repositories}
+                keyExtractor={(item) => item.id}
+                renderItem={renderRepoItem}
+                scrollEnabled={false}
+              />
+            )}
+          </View>
+        )}
+      </View>
+
+      <View style={[styles.section, { backgroundColor: colors.surface }]}>
         <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Data</Text>
         
         <TouchableOpacity
@@ -79,6 +179,13 @@ export default function SettingsScreen() {
           onPress={clearData}
         >
           <Text style={[styles.settingLabel, { color: colors.error }]}>Clear All Notes</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.settingItem, { borderBottomColor: colors.border }]}
+          onPress={handleResetOnboarding}
+        >
+          <Text style={[styles.settingLabel, { color: colors.text }]}>Reset Onboarding</Text>
         </TouchableOpacity>
       </View>
 
@@ -134,5 +241,35 @@ const styles = StyleSheet.create({
   settingRight: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  settingLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  repoList: {
+    padding: 12,
+    marginTop: 8,
+    marginBottom: 8,
+    borderRadius: 8,
+  },
+  repoItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  repoInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  repoName: {
+    fontSize: 16,
+    marginLeft: 12,
+  },
+  emptyText: {
+    fontSize: 14,
+    textAlign: 'center',
+    padding: 12,
   },
 });
