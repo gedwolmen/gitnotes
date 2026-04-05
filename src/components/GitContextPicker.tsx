@@ -85,10 +85,29 @@ export default function GitContextPicker({
   const handleAddRepo = async () => {
     if (!newRepoInput.trim()) return;
     setIsLoading(true);
-    await GitService.addRepository(newRepoInput.trim());
-    setNewRepoInput('');
-    await loadRepositories();
-    setIsLoading(false);
+    try {
+      await GitService.addRepository(newRepoInput.trim());
+      setNewRepoInput('');
+      await loadRepositories();
+    } catch (error) {
+      console.error('Failed to add repository:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRemoveRepo = async (repoId: string) => {
+    try {
+      await GitService.removeRepository(repoId);
+      await loadRepositories();
+      if (repo === repoId) {
+        onRepoChange(undefined);
+        onBranchChange(undefined);
+        onCommitChange(undefined);
+      }
+    } catch (error) {
+      console.error('Failed to remove repository:', error);
+    }
   };
 
   const handleAddBranch = () => {
@@ -151,17 +170,25 @@ export default function GitContextPicker({
               data={repositories}
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[styles.listItem, { borderBottomColor: colors.border }]}
-                  onPress={() => {
-                    HapticService.selection();
-                    onRepoChange(item.path);
-                    setShowRepoModal(false);
-                  }}
-                >
-                  <Ionicons name="folder" size={20} color={colors.primary} />
-                  <Text style={[styles.listItemText, { color: colors.text }]}>{item.name}</Text>
-                </TouchableOpacity>
+                <View style={[styles.repoItemContainer, { borderBottomColor: colors.border }]}>
+                  <TouchableOpacity
+                    style={styles.repoItem}
+                    onPress={() => {
+                      HapticService.selection();
+                      onRepoChange(item.path);
+                      setShowRepoModal(false);
+                    }}
+                  >
+                    <Ionicons name="folder" size={20} color={colors.primary} />
+                    <Text style={[styles.listItemText, { color: colors.text }]}>{item.name}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.removeButton}
+                    onPress={() => handleRemoveRepo(item.id)}
+                  >
+                    <Ionicons name="trash-outline" size={18} color={colors.error} />
+                  </TouchableOpacity>
+                </View>
               )}
             />
           )}
@@ -499,5 +526,19 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
     fontSize: 14,
+  },
+  repoItemContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+  },
+  repoItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  removeButton: {
+    padding: 16,
   },
 });

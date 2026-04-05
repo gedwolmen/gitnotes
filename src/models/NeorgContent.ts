@@ -17,6 +17,10 @@ export interface NeorgContentBlock {
   heading?: NeorgHeading;
   listItems?: NeorgListItem[];
   text?: string;
+  code?: {
+    language?: string;
+    content: string;
+  };
 }
 
 export interface NeorgContentParseResult {
