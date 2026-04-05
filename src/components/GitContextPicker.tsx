@@ -46,17 +46,55 @@ export default function GitContextPicker({
   const loadBranches = useCallback(async () => {
     if (!repo) return;
     setIsLoading(true);
-    const branchList = await GitService.getBranches(repo);
-    setBranches(branchList);
-    setIsLoading(false);
+    try {
+      const branchList = await GitService.getBranches(repo);
+      setBranches(branchList);
+    } catch (error) {
+      console.error('Failed to load branches:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [repo]);
+
+  const handleRefreshBranches = useCallback(async () => {
+    if (!repo) return;
+    setIsLoading(true);
+    try {
+      await GitService.clearCache();
+      const branchList = await GitService.getBranches(repo);
+      setBranches(branchList);
+    } catch (error) {
+      console.error('Failed to refresh branches:', error);
+    } finally {
+      setIsLoading(false);
+    }
   }, [repo]);
 
   const loadCommits = useCallback(async () => {
     if (!repo) return;
     setIsLoading(true);
-    const commitList = await GitService.getCommits(repo, branch);
-    setCommits(commitList);
-    setIsLoading(false);
+    try {
+      const commitList = await GitService.getCommits(repo, branch);
+      setCommits(commitList);
+    } catch (error) {
+      console.error('Failed to load commits:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [repo, branch]);
+
+  const handleRefreshCommits = useCallback(async () => {
+    if (!repo) return;
+    setIsLoading(true);
+    try {
+      await GitService.clearCache();
+      const commitList = await GitService.getCommits(repo, branch);
+      setCommits(commitList);
+    } catch (error) {
+      console.error('Failed to refresh commits:', error);
+    } finally {
+      setIsLoading(false);
+    }
   }, [repo, branch]);
 
   const handleRepoPress = () => {
@@ -202,7 +240,12 @@ export default function GitContextPicker({
       <View style={styles.modalOverlay}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[styles.modalContent, { backgroundColor: colors.surface }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Select Branch</Text>
+            <View style={styles.modalHeaderLeft}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Select Branch</Text>
+              <TouchableOpacity onPress={handleRefreshBranches} style={styles.refreshButton}>
+                <Ionicons name="refresh" size={20} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
             <TouchableOpacity onPress={() => setShowBranchModal(false)}>
               <Ionicons name="close" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
@@ -266,7 +309,12 @@ export default function GitContextPicker({
       <View style={styles.modalOverlay}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[styles.modalContent, { backgroundColor: colors.surface }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Select Commit</Text>
+            <View style={styles.modalHeaderLeft}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Select Commit</Text>
+              <TouchableOpacity onPress={handleRefreshCommits} style={styles.refreshButton}>
+                <Ionicons name="refresh" size={20} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
             <TouchableOpacity onPress={() => setShowCommitModal(false)}>
               <Ionicons name="close" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
@@ -540,5 +588,13 @@ const styles = StyleSheet.create({
   },
   removeButton: {
     padding: 16,
+  },
+  modalHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  refreshButton: {
+    marginLeft: 12,
+    padding: 4,
   },
 });

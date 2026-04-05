@@ -24,24 +24,20 @@ export class NeorgContentParser {
           continue;
         }
         
-        // Check for code block start/end
         const codeBlockInfo = this.parseCodeBlockLine(line, i === 0);
         if (codeBlockInfo) {
           if (codeBlockInfo.isOpen) {
-            // Start new code block
             currentCodeBlock = {
               language: codeBlockInfo.language,
               lines: []
             };
           } else if (currentCodeBlock && codeBlockInfo.isClose) {
-            // Close current code block
             this.finalizeCodeBlock(currentCodeBlock, blocks);
             currentCodeBlock = null;
           }
           continue;
         }
         
-        // If inside a code block, add content
         if (currentCodeBlock) {
           currentCodeBlock.lines.push(line);
           continue;
@@ -222,9 +218,17 @@ export class NeorgContentParser {
           return block.listItems ? this.listToMarkdown(block.listItems) : '';
         case 'paragraph':
           return block.text || '';
+        case 'code':
+          return block.code ? this.codeToMarkdown(block.code) : '';
         default:
           return '';
       }
     }).join('\n\n');
+  }
+
+  private static codeToMarkdown(code: { language?: string; content: string }): string {
+    const language = code.language || '';
+    const content = code.content.trim();
+    return `\`\`\`${language}\n${content}\n\`\`\``;
   }
 }
