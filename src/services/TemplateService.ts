@@ -227,21 +227,44 @@ GET / POST / PUT / DELETE
 ];
 
 export class TemplateService {
-  static getAllTemplates(): NoteTemplate[] {
-    return NOTE_TEMPLATES;
+  // Optional dynamic loader hook. In real deployments this could fetch templates
+  // from a server, plugin registry, or local storage. Falls back to NOTE_TEMPLATES.
+  static async loadTemplatesFromRemote(): Promise<NoteTemplate[] | null> {
+    // Placeholder for future remote loading logic
+    return null;
   }
 
-  static getTemplateById(id: string): NoteTemplate | undefined {
-    return NOTE_TEMPLATES.find((template) => template.id === id);
+  static async getTemplates(): Promise<NoteTemplate[]> {
+    try {
+      const dynamic = await this.loadTemplatesFromRemote();
+      if (Array.isArray(dynamic) && dynamic.length > 0) {
+        return dynamic;
+      }
+      return NOTE_TEMPLATES;
+    } catch (error) {
+      console.error('[TemplateService] Failed to load templates:', error);
+      return NOTE_TEMPLATES;
+    }
   }
 
-  static getTemplatesByTag(tag: string): NoteTemplate[] {
-    return NOTE_TEMPLATES.filter((template) => template.tags.includes(tag));
+  static async getAllTemplates(): Promise<NoteTemplate[]> {
+    return this.getTemplates();
   }
 
-  static searchTemplates(query: string): NoteTemplate[] {
+  static async getTemplateById(id: string): Promise<NoteTemplate | undefined> {
+    const templates = await this.getTemplates();
+    return templates.find((template) => template.id === id);
+  }
+
+  static async getTemplatesByTag(tag: string): Promise<NoteTemplate[]> {
+    const templates = await this.getTemplates();
+    return templates.filter((template) => template.tags.includes(tag));
+  }
+
+  static async searchTemplates(query: string): Promise<NoteTemplate[]> {
+    const templates = await this.getTemplates();
     const lowerQuery = query.toLowerCase();
-    return NOTE_TEMPLATES.filter(
+    return templates.filter(
       (template) =>
         template.name.toLowerCase().includes(lowerQuery) ||
         template.description.toLowerCase().includes(lowerQuery) ||

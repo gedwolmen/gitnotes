@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,7 +16,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { notes } = useNotes();
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
 
@@ -32,10 +33,36 @@ export default function HomeScreen() {
     [navigation]
   );
 
+  const handleBlankNote = useCallback(() => {
+    navigation.navigate('NoteEditor', {});
+  }, [navigation]);
+
+  // When a template is selected from the modal, close it and go to a new note editor
+  const templateSelectedNavigate = useCallback((_template: NoteTemplate) => {
+    setShowTemplateSelector(false);
+    navigation.navigate('NoteEditor', {});
+  }, [navigation]);
+
+  const handleNotePress = useCallback(
+    (noteId: string) => {
+      navigation.navigate('NoteEditor', { noteId });
+    },
+    [navigation]
+  );
+
+  const handleTemplateSelectorClose = useCallback(() => {
+    setShowTemplateSelector(false);
+  }, []);
+
+  const openNote = useCallback(
+    (id: string) => () => navigation.navigate('NoteEditor', { noteId: id }),
+    [navigation]
+  );
+
   const recentNotes = notes.slice(0, 3);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <Text style={[styles.title, { color: colors.text }]}>GitNotes</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
         Your development notes, organized.
@@ -55,13 +82,13 @@ export default function HomeScreen() {
         onPress={handleCreateNote}
         activeOpacity={0.7}
       >
-        <Ionicons name="add" size={24} color="#fff" />
-        <Text style={styles.buttonText}>Create New Note</Text>
+        <Ionicons name="add" size={24} color={isDark ? colors.text : colors.surface} />
+        <Text style={[styles.buttonText, { color: isDark ? colors.text : colors.surface }]}>Create New Note</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={[styles.secondaryButton, { borderColor: colors.primary }]}
-        onPress={() => navigation.navigate('NoteEditor', {})}
+        onPress={handleBlankNote}
       >
         <Ionicons name="document-outline" size={20} color={colors.primary} />
         <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>
@@ -78,7 +105,7 @@ export default function HomeScreen() {
             <TouchableOpacity
               key={note.id}
               style={[styles.recentNote, { backgroundColor: colors.surface }]}
-              onPress={() => navigation.navigate('NoteEditor', { noteId: note.id })}
+              onPress={openNote(note.id)}
             >
               <View style={styles.recentNoteContent}>
                 <Text style={[styles.recentNoteTitle, { color: colors.text }]} numberOfLines={1}>
@@ -90,7 +117,7 @@ export default function HomeScreen() {
               </View>
               {note.repo && (
                 <View style={styles.gitIndicator}>
-                  <Ionicons name="code-slash" size={14} color="#666" />
+                  <Ionicons name="code-slash" size={14} color={colors.textSecondary} />
                 </View>
               )}
             </TouchableOpacity>
@@ -100,10 +127,10 @@ export default function HomeScreen() {
 
       <TemplateSelector
         visible={showTemplateSelector}
-        onClose={() => setShowTemplateSelector(false)}
-        onSelect={handleTemplateSelect}
+        onClose={handleTemplateSelectorClose}
+        onSelect={templateSelectedNavigate}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

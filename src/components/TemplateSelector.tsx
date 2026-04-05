@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { ActivityIndicator } from 'react-native';
 import { NoteTemplate, TemplateService } from '../services/TemplateService';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -18,42 +19,65 @@ interface TemplateSelectorProps {
   onSelect: (template: NoteTemplate) => void;
 }
 
+// Sub-component for a single template item to avoid per-item inline handlers
+interface TemplateListItemProps {
+  item: NoteTemplate;
+  onSelect: (template: NoteTemplate) => void;
+  colors: any;
+  isDark: boolean;
+}
+
+const TemplateListItem = ({ item, onSelect, colors, isDark }: TemplateListItemProps) => {
+  const onPressItem = useCallback(() => onSelect(item), [onSelect, item]);
+  return (
+    <TouchableOpacity style={[styles.templateItem, { backgroundColor: colors.surface, shadowColor: colors.text }]} onPress={onPressItem}>
+      <View style={[styles.templateIcon, { backgroundColor: colors.primary + '20' }]}>
+        <Ionicons name={item.icon as any} size={24} color={colors.primary} />
+      </View>
+      <View style={styles.templateInfo}>
+        <Text style={[styles.templateName, { color: colors.text }]}>{item.name}</Text>
+        <Text style={[styles.templateDescription, { color: colors.textSecondary }]}>{item.description}</Text>
+        <View style={styles.templateTags}>
+          {item.tags.map((tag) => (
+            <View key={tag} style={[styles.tagChip, { backgroundColor: isDark ? '#2c2c2e' : '#f0f0f0' }]}>
+              <Text style={[styles.tagChipText, { color: colors.textSecondary }]}>{tag}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+      <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+    </TouchableOpacity>
+  );
+};
+
 export default function TemplateSelector({ visible, onClose, onSelect }: TemplateSelectorProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [templates, setTemplates] = useState<NoteTemplate[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const { colors, isDark } = useTheme();
-  
-  const templates = searchQuery
-    ? TemplateService.searchTemplates(searchQuery)
-    : TemplateService.getAllTemplates();
 
-  const handleTemplateSelect = useCallback((item: NoteTemplate) => {
-    onSelect(item);
-  }, [onSelect]);
+  const loadTemplates = useCallback(async () => {
+    setIsLoading(true);
+    const results = searchQuery
+      ? await TemplateService.searchTemplates(searchQuery)
+      : await TemplateService.getAllTemplates();
+    setTemplates(results);
+    setIsLoading(false);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (visible) {
+      loadTemplates();
+    }
+  }, [visible, loadTemplates]);
+
+  // (No extra handling required here; selection flows through TemplateListItem -> onSelect)
 
   const renderTemplate = useCallback(
     ({ item }: { item: NoteTemplate }) => (
-      <TouchableOpacity 
-        style={[styles.templateItem, { backgroundColor: colors.surface, shadowColor: colors.text }]} 
-        onPress={() => handleTemplateSelect(item)}
-      >
-        <View style={[styles.templateIcon, { backgroundColor: colors.primary + '20' }]}>
-          <Ionicons name={item.icon as any} size={24} color={colors.primary} />
-        </View>
-        <View style={styles.templateInfo}>
-          <Text style={[styles.templateName, { color: colors.text }]}>{item.name}</Text>
-          <Text style={[styles.templateDescription, { color: colors.textSecondary }]}>{item.description}</Text>
-          <View style={styles.templateTags}>
-            {item.tags.map((tag) => (
-              <View key={tag} style={[styles.tagChip, { backgroundColor: isDark ? '#2c2c2e' : '#f0f0f0' }]}>
-                <Text style={[styles.tagChipText, { color: colors.textSecondary }]}>{tag}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-      </TouchableOpacity>
+      <TemplateListItem item={item} onSelect={onSelect} colors={colors} isDark={isDark} />
     ),
-    [colors, isDark, handleTemplateSelect]
+    [colors, isDark, onSelect]
   );
 
   return (
@@ -85,9 +109,15 @@ export default function TemplateSelector({ visible, onClose, onSelect }: Templat
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No templates found</Text>
-            </View>
+            isLoading ? (
+              <View style={styles.emptyState}>
+                <ActivityIndicator size="large" color={colors.primary} />
+              </View>
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No templates found</Text>
+              </View>
+            )
           }
         />
       </View>
