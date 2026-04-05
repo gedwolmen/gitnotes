@@ -7,7 +7,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "ts:check": "tsc --noEmit"
+    "ts:check": "tsc --noEmit",
+    "test": "jest"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",
