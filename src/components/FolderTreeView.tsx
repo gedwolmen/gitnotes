@@ -28,49 +28,46 @@ interface FolderItemProps {
   folder: Folder;
   allFolders: Folder[];
   level: number;
-  isExpanded: boolean;
-  isSelected: boolean;
-  onToggle: () => void;
-  onSelect: () => void;
-  onLongPress?: () => void;
-  hasChildren: boolean;
+  selectedFolderId: string | null;
+  expandedFolders: Set<string>;
+  onToggle: (folderId: string) => void;
+  onSelect: (folder: Folder) => void;
+  onLongPress?: (folder: Folder) => void;
   colors: any;
-  isDark: boolean;
 }
 
 const FolderItem = ({
   folder,
   allFolders,
   level,
-  isExpanded,
-  isSelected,
+  selectedFolderId,
+  expandedFolders,
   onToggle,
   onSelect,
   onLongPress,
-  hasChildren,
   colors,
-  isDark,
 }: FolderItemProps) => {
-  const [localExpanded, setLocalExpanded] = useState(isExpanded);
+  const isExpanded = expandedFolders.has(folder.id);
+  const isSelected = selectedFolderId === folder.id;
   
   const childFolders = useMemo(
     () => allFolders.filter((f) => f.parentId === folder.id),
     [allFolders, folder.id]
   );
+  const hasChildren = childFolders.length > 0;
 
   const handleToggle = useCallback(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setLocalExpanded(!localExpanded);
-    onToggle();
-  }, [localExpanded, onToggle]);
+    onToggle(folder.id);
+  }, [folder.id, onToggle]);
 
   const handleSelect = useCallback(() => {
-    onSelect();
-  }, [onSelect]);
+    onSelect(folder);
+  }, [folder, onSelect]);
 
   const handleLongPress = useCallback(() => {
-    onLongPress?.();
-  }, [onLongPress]);
+    onLongPress?.(folder);
+  }, [folder, onLongPress]);
 
   return (
     <View>
@@ -81,14 +78,14 @@ const FolderItem = ({
           { paddingLeft: 16 + level * 20 },
         ]}
         onPress={handleSelect}
-        onLongPress={handleLongPress}
+        onLongPress={onLongPress ? handleLongPress : undefined}
         activeOpacity={0.7}
       >
         <View style={styles.folderContent}>
           {hasChildren ? (
             <TouchableOpacity onPress={handleToggle} style={styles.chevronContainer}>
               <Ionicons
-                name={localExpanded ? 'chevron-down' : 'chevron-forward'}
+                name={isExpanded ? 'chevron-down' : 'chevron-forward'}
                 size={16}
                 color={colors.textSecondary}
               />
@@ -97,7 +94,7 @@ const FolderItem = ({
             <View style={styles.chevronContainer} />
           )}
           <Ionicons
-            name={localExpanded ? 'folder-open' : 'folder'}
+            name={isExpanded ? 'folder-open' : 'folder'}
             size={20}
             color={isSelected ? colors.primary : colors.textSecondary}
             style={styles.folderIcon}
@@ -114,7 +111,7 @@ const FolderItem = ({
         </View>
       </TouchableOpacity>
 
-      {localExpanded && childFolders.length > 0 && (
+      {isExpanded && hasChildren && (
         <View style={styles.childrenContainer}>
           {childFolders.map((child) => (
             <FolderItem
@@ -122,13 +119,12 @@ const FolderItem = ({
               folder={child}
               allFolders={allFolders}
               level={level + 1}
-              isExpanded={false}
-              isSelected={false}
-              onToggle={() => {}}
-              onSelect={() => {}}
-              hasChildren={allFolders.some((f) => f.parentId === child.id)}
+              selectedFolderId={selectedFolderId}
+              expandedFolders={expandedFolders}
+              onToggle={onToggle}
+              onSelect={onSelect}
+              onLongPress={onLongPress}
               colors={colors}
-              isDark={isDark}
             />
           ))}
         </View>
@@ -144,7 +140,7 @@ export default function FolderTreeView({
   onLongPressFolder,
   showRoot = true,
 }: FolderTreeViewProps) {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
 
   const rootFolders = useMemo(
@@ -214,14 +210,12 @@ export default function FolderTreeView({
           folder={folder}
           allFolders={folders}
           level={0}
-          isExpanded={expandedFolders.has(folder.id)}
-          isSelected={selectedFolderId === folder.id}
-          onToggle={() => handleToggle(folder.id)}
-          onSelect={() => handleSelectFolder(folder)}
-          onLongPress={onLongPressFolder ? () => onLongPressFolder(folder) : undefined}
-          hasChildren={folders.some((f) => f.parentId === folder.id)}
+          selectedFolderId={selectedFolderId}
+          expandedFolders={expandedFolders}
+          onToggle={handleToggle}
+          onSelect={handleSelectFolder}
+          onLongPress={onLongPressFolder}
           colors={colors}
-          isDark={isDark}
         />
       ))}
 
