@@ -29,7 +29,17 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      "expo-sharing",
+      [
+        "expo-auth-session",
+        {
+          "github": {
+            "clientId": "YOUR_GITHUB_CLIENT_ID",
+            "redirectUrl": "gitnotes://oauth/github"
+          }
+        }
+      ]
     ],
     "extra": {
       "eas": {

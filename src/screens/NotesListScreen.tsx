@@ -19,6 +19,7 @@ import FolderTreeView from '../components/FolderTreeView';
 import { HapticService } from '../utils/haptics';
 import { filterNotesByFolder } from '../models/Note';
 import { ViewMode, VIEW_MODE_LABELS, VIEW_MODE_ICONS } from '../utils/viewModes';
+import { ShareService } from '../services/ShareService';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -59,6 +60,18 @@ export default function NotesListScreen() {
         `What would you like to do with "${note.title || 'Untitled'}"?`,
         [
           { text: 'Cancel', style: 'cancel', onPress: () => HapticService.light() },
+          {
+            text: 'Share',
+            onPress: async () => {
+              const success = await ShareService.shareAsMarkdown(note);
+              if (success) {
+                HapticService.success();
+              } else {
+                HapticService.error();
+                Alert.alert('Error', 'Failed to share note');
+              }
+            },
+          },
           {
             text: pinAction,
             onPress: async () => {

@@ -1,11 +1,12 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Switch, ScrollView, TouchableOpacity, Alert, FlatList } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, StyleSheet, Switch, ScrollView, TouchableOpacity, Alert, FlatList, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNotes } from '../contexts/NoteContext';
 import { GitService, GitRepository } from '../services/GitService';
 import { OnboardingService } from '../services/OnboardingService';
+import { AuthService, AuthState } from '../services/AuthService';
 import { HapticService } from '../utils/haptics';
 
 type ThemeMode = 'light' | 'dark' | 'system';
@@ -15,6 +16,58 @@ export default function SettingsScreen() {
   const { clearAllNotes } = useNotes();
   const [repositories, setRepositories] = useState<GitRepository[]>([]);
   const [showRepos, setShowRepos] = useState(false);
+  const [authState, setAuthState] = useState<AuthState>({
+    isAuthenticated: false,
+    user: null,
+    token: null,
+  });
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+
+  useEffect(() => {
+    checkAuthState();
+  }, []);
+
+  const checkAuthState = async () => {
+    const state = await AuthService.checkAuthState();
+    setAuthState(state);
+  };
+
+  const handleGitHubLogin = async () => {
+    setIsAuthLoading(true);
+    HapticService.light();
+    const result = await AuthService.loginWithBrowser();
+    setAuthState(result);
+    setIsAuthLoading(false);
+    
+    if (result.isAuthenticated) {
+      HapticService.success();
+      Alert.alert('Success', `Welcome, ${result.user?.name || result.user?.login}!`);
+    }
+  };
+
+  const handleGitHubLogout = async () => {
+    HapticService.warning();
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out of GitHub?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            await AuthService.logout();
+            setAuthState({
+              isAuthenticated: false,
+              user: null,
+              token: null,
+            });
+            HapticService.success();
+          },
+        },
+      ]
+    );
+  };
 
   const loadRepositories = useCallback(async () => {
     const repos = await GitService.getRepositories();
@@ -137,6 +190,48 @@ export default function SettingsScreen() {
             </Text>
           </View>
         </TouchableOpacity>
+      </View>
+
+      <View style={[styles.section, { backgroundColor: colors.surface }]}>
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>GitHub Account</Text>
+        
+        {authState.isAuthenticated ? (
+          <View style={[styles.settingItem, { borderBottomColor: colors.border }]}>
+            <View style={styles.authUserContainer}>
+              {authState.user?.avatar_url && (
+                <Image
+                  source={{ uri: authState.user.avatar_url }}
+                  style={styles.avatar}
+                />
+              )}
+              <View style={styles.authUserInfo}>
+                <Text style={[styles.settingLabel, { color: colors.text }]}>
+                  {authState.user?.name || authState.user?.login}
+                </Text>
+                <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
+                  @{authState.user?.login}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity onPress={handleGitHubLogout}>
+              <Text style={[styles.signOutText, { color: colors.error }]}>Sign Out</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={[styles.settingItem, { borderBottomColor: colors.border }]}
+            onPress={handleGitHubLogin}
+            disabled={isAuthLoading}
+          >
+            <View style={styles.settingLeft}>
+              <Ionicons name="logo-github" size={20} color={colors.text} />
+              <Text style={[styles.settingLabel, { color: colors.text, marginLeft: 12 }]}>
+                {isAuthLoading ? 'Signing in...' : 'Sign in with GitHub'}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={[styles.section, { backgroundColor: colors.surface }]}>
@@ -271,5 +366,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     padding: 12,
+  },
+  authUserContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  authUserInfo: {
+    flexDirection: 'column',
+  },
+  signOutText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
