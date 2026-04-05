@@ -38,11 +38,9 @@ export class GitService {
 
   static async getRepositories(): Promise<GitRepository[]> {
     try {
-      // Cast to any to avoid circular type resolution issues between modules
-      return await (StorageService as any).getSavedRepositories();
+      return await StorageService.getSavedRepositories();
     } catch (error) {
       console.error('[GitService] Failed to get repositories:', error);
-      // Propagate the error so consumers can handle rejection appropriately
       throw error;
     }
   }
@@ -56,7 +54,7 @@ export class GitService {
         path: path,
       };
 
-      await (StorageService as any).addRepository(repo);
+      await StorageService.addRepository(repo);
       return repo;
     } catch (error) {
       console.error('[GitService] Failed to add repository:', error);
@@ -66,7 +64,7 @@ export class GitService {
 
   static async removeRepository(path: string): Promise<void> {
     try {
-      await (StorageService as any).removeRepository(path);
+      await StorageService.removeRepository(path);
     } catch (error) {
       console.error('[GitService] Failed to remove repository:', error);
       throw new Error(`Failed to remove repository: ${error instanceof Error ? error.message : String(error)}`);

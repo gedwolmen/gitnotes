@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { Note } from '../models/Note';
 import { useTheme } from '../contexts/ThemeContext';
@@ -23,6 +24,11 @@ export default function NoteCard({ note, onPress, onLongPress }: NoteCardProps) 
       onLongPress={() => onLongPress?.(note)}
       activeOpacity={0.7}
     >
+      {note.isPinned && (
+        <View style={[styles.pinIndicator, { backgroundColor: colors.primary }]}>
+          <Ionicons name="pin" size={12} color="#fff" />
+        </View>
+      )}
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
           {note.title || 'Untitled Note'}
@@ -88,6 +94,16 @@ const styles = StyleSheet.create({
         elevation: 3,
       },
     }),
+  },
+  pinIndicator: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     marginBottom: 12,

@@ -23,7 +23,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 export default function NotesListScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
-  const { filteredNotes, isLoading, searchQuery, setSearchQuery, deleteNote, error } = useNotes();
+  const { filteredNotes, isLoading, searchQuery, setSearchQuery, deleteNote, togglePin, error } = useNotes();
   const { folders } = useFolders();
   
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -49,11 +49,24 @@ export default function NotesListScreen() {
   const handleNoteLongPress = useCallback(
     (note: Note) => {
       HapticService.medium();
+      const pinAction = note.isPinned ? 'Unpin Note' : 'Pin Note';
       Alert.alert(
-        'Delete Note',
-        `Are you sure you want to delete "${note.title || 'Untitled'}"?`,
+        'Note Actions',
+        `What would you like to do with "${note.title || 'Untitled'}"?`,
         [
           { text: 'Cancel', style: 'cancel', onPress: () => HapticService.light() },
+          {
+            text: pinAction,
+            onPress: async () => {
+              const success = await togglePin(note.id);
+              if (success) {
+                HapticService.success();
+              } else {
+                HapticService.error();
+                Alert.alert('Error', 'Failed to update pin status');
+              }
+            },
+          },
           {
             text: 'Delete',
             style: 'destructive',
@@ -70,7 +83,7 @@ export default function NotesListScreen() {
         ]
       );
     },
-    [deleteNote]
+    [deleteNote, togglePin]
   );
 
   const handleSelectFolder = useCallback(

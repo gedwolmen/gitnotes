@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
-import { Note, NoteCreateInput, NoteUpdateInput, sortNotesByUpdated, filterNotesBySearch } from '../models/Note';
+import { Note, NoteCreateInput, NoteUpdateInput, sortNotesWithPinnedFirst, filterNotesBySearch } from '../models/Note';
 import { StorageService } from '../services/StorageService';
 
 interface NoteContextType {
@@ -14,6 +14,7 @@ interface NoteContextType {
   deleteNote: (id: string) => Promise<boolean>;
   clearAllNotes: () => Promise<boolean>;
   getNoteById: (id: string) => Note | undefined;
+  togglePin: (id: string) => Promise<boolean>;
   refreshNotes: () => Promise<void>;
   clearError: () => void;
 }
@@ -35,7 +36,7 @@ export function NoteProvider({ children }: NoteProviderProps) {
       setIsLoading(true);
       setError(null);
       const loadedNotes = await StorageService.getAllNotes();
-      setNotes(sortNotesByUpdated(loadedNotes));
+      setNotes(sortNotesWithPinnedFirst(loadedNotes));
     } catch (err) {
       setError('Failed to load notes');
       console.error('Error loading notes:', err);
@@ -52,7 +53,7 @@ export function NoteProvider({ children }: NoteProviderProps) {
     try {
       setError(null);
       const newNote = await StorageService.createNote(input);
-      setNotes((prev) => sortNotesByUpdated([...prev, newNote]));
+      setNotes((prev) => sortNotesWithPinnedFirst([...prev, newNote]));
       return newNote;
     } catch (err) {
       setError('Failed to create note');
@@ -67,7 +68,7 @@ export function NoteProvider({ children }: NoteProviderProps) {
       const updatedNote = await StorageService.updateNote(input);
       if (updatedNote) {
         setNotes((prev) =>
-          sortNotesByUpdated(prev.map((note) => (note.id === updatedNote.id ? updatedNote : note)))
+          sortNotesWithPinnedFirst(prev.map((note) => (note.id === updatedNote.id ? updatedNote : note)))
         );
       }
       return updatedNote;
@@ -113,6 +114,31 @@ export function NoteProvider({ children }: NoteProviderProps) {
     [notes]
   );
 
+  const togglePin = useCallback(async (id: string): Promise<boolean> => {
+    try {
+      setError(null);
+      const note = notes.find((n) => n.id === id);
+      if (!note) return false;
+      
+      const updatedNote = await StorageService.updateNote({
+        id,
+        isPinned: !note.isPinned,
+      });
+      
+      if (updatedNote) {
+        setNotes((prev) =>
+          sortNotesWithPinnedFirst(prev.map((n) => (n.id === id ? updatedNote : n)))
+        );
+        return true;
+      }
+      return false;
+    } catch (err) {
+      setError('Failed to toggle pin');
+      console.error('Error toggling pin:', err);
+      return false;
+    }
+  }, [notes]);
+
   const refreshNotes = useCallback(async () => {
     await loadNotes();
   }, [loadNotes]);
@@ -136,9 +162,10 @@ export function NoteProvider({ children }: NoteProviderProps) {
     deleteNote,
     clearAllNotes,
     getNoteById,
+    togglePin,
     refreshNotes,
     clearError,
-  }), [notes, isLoading, error, searchQuery, filteredNotes, createNote, updateNote, deleteNote, clearAllNotes, getNoteById, refreshNotes, clearError]);
+  }), [notes, isLoading, error, searchQuery, filteredNotes, createNote, updateNote, deleteNote, clearAllNotes, getNoteById, togglePin, refreshNotes, clearError]);
 
   return <NoteContext.Provider value={value}>{children}</NoteContext.Provider>;
 }

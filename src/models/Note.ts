@@ -8,7 +8,8 @@ export interface Note {
   repo?: string;
   branch?: string;
   commit?: string;
-  folderPath?: string; // Path like "/personal/ideas" or "/" for root
+  folderPath?: string;
+  isPinned?: boolean;
 }
 
 export interface NoteCreateInput {
@@ -19,6 +20,7 @@ export interface NoteCreateInput {
   branch?: string;
   commit?: string;
   folderPath?: string;
+  isPinned?: boolean;
 }
 
 export interface NoteUpdateInput {
@@ -30,6 +32,7 @@ export interface NoteUpdateInput {
   branch?: string;
   commit?: string;
   folderPath?: string;
+  isPinned?: boolean;
 }
 
 export function createNote(input: NoteCreateInput): Note {
@@ -45,6 +48,7 @@ export function createNote(input: NoteCreateInput): Note {
     branch: input.branch,
     commit: input.commit,
     folderPath: input.folderPath,
+    isPinned: input.isPinned || false,
   };
 }
 
@@ -58,6 +62,7 @@ export function updateNote(existing: Note, input: Partial<NoteCreateInput>): Not
     branch: input.branch ?? existing.branch,
     commit: input.commit ?? existing.commit,
     folderPath: input.folderPath ?? existing.folderPath,
+    isPinned: input.isPinned ?? existing.isPinned,
     updatedAt: Date.now(),
   };
 }
@@ -68,6 +73,17 @@ function generateId(): string {
 
 export function sortNotesByUpdated(notes: Note[]): Note[] {
   return [...notes].sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+export function sortNotesWithPinnedFirst(notes: Note[]): Note[] {
+  return [...notes].sort((a, b) => {
+    const aPinned = a.isPinned ? 1 : 0;
+    const bPinned = b.isPinned ? 1 : 0;
+    if (aPinned !== bPinned) {
+      return bPinned - aPinned;
+    }
+    return b.updatedAt - a.updatedAt;
+  });
 }
 
 export function filterNotesBySearch(notes: Note[], searchQuery: string): Note[] {
