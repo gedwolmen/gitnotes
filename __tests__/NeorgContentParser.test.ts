@@ -193,4 +193,153 @@ console.log(instance.greet());
       expect(markdown).toBe('# Title\n\n```python\nprint("hello")\n```\n\nSome text');
     });
   });
+
+  describe('Checklist Tests', () => {
+    test('should parse checklist with unchecked items', () => {
+      const input = '- [ ] First item\n- [ ] Second item';
+      const result = NeorgContentParser.parseContent(input);
+      
+      expect(result.success).toBe(true);
+      expect(result.blocks).toHaveLength(1);
+      
+      const checklistBlock = result.blocks?.find(block => block.type === 'checklist');
+      expect(checklistBlock).toBeTruthy();
+      expect(checklistBlock.checklistItems).toHaveLength(2);
+      
+      expect(checklistBlock.checklistItems?.[0].text).toBe('First item');
+      expect(checklistBlock.checklistItems?.[0].checked).toBe(false);
+      expect(checklistBlock.checklistItems?.[0].indentLevel).toBe(0);
+      
+      expect(checklistBlock.checklistItems?.[1].text).toBe('Second item');
+      expect(checklistBlock.checklistItems?.[1].checked).toBe(false);
+      expect(checklistBlock.checklistItems?.[1].indentLevel).toBe(0);
+    });
+
+    test('should parse checklist with checked items', () => {
+      const input = '- [x] Completed item\n- [ ] Pending item';
+      const result = NeorgContentParser.parseContent(input);
+      
+      expect(result.success).toBe(true);
+      expect(result.blocks).toHaveLength(1);
+      
+      const checklistBlock = result.blocks?.[0];
+      expect(checklistBlock?.type).toBe('checklist');
+      expect(checklistBlock.checklistItems).toHaveLength(2);
+      
+      expect(checklistBlock.checklistItems?.[0].text).toBe('Completed item');
+      expect(checklistBlock.checklistItems?.[0].checked).toBe(true);
+      
+      expect(checklistBlock.checklistItems?.[1].text).toBe('Pending item');
+      expect(checklistBlock.checklistItems?.[1].checked).toBe(false);
+    });
+
+    test('should parse nested checklist items', () => {
+      const input = '- [ ] Main item\n  - [ ] Sub item 1\n  - [x] Sub item 2';
+      const result = NeorgContentParser.parseContent(input);
+      
+      expect(result.success).toBe(true);
+      expect(result.blocks).toHaveLength(1);
+      
+      const checklistBlock = result.blocks?.[0];
+      expect(checklistBlock?.type).toBe('checklist');
+      expect(checklistBlock.checklistItems).toHaveLength(3);
+      
+      expect(checklistBlock.checklistItems?.[0].text).toBe('Main item');
+      expect(checklistBlock.checklistItems?.[0].checked).toBe(false);
+      expect(checklistBlock.checklistItems?.[0].indentLevel).toBe(0);
+      
+      expect(checklistBlock.checklistItems?.[1].text).toBe('Sub item 1');
+      expect(checklistBlock.checklistItems?.[1].checked).toBe(false);
+      expect(checklistBlock.checklistItems?.[1].indentLevel).toBe(1);
+      
+      expect(checklistBlock.checklistItems?.[2].text).toBe('Sub item 2');
+      expect(checklistBlock.checklistItems?.[2].checked).toBe(true);
+      expect(checklistBlock.checklistItems?.[2].indentLevel).toBe(1);
+    });
+
+    test('should handle checklist mixed with other content', () => {
+      const input = `# Todo List
+
+- [ ] Complete project
+- [ ] Write documentation
+
+Some notes here
+
+- [x] Already done`;
+      
+      const result = NeorgContentParser.parseContent(input);
+      
+      expect(result.success).toBe(true);
+      expect(result.blocks).toHaveLength(3);
+      
+      expect(result.blocks?.[0].type).toBe('heading');
+      expect(result.blocks?.[1].type).toBe('checklist');
+      expect(result.blocks?.[2].type).toBe('paragraph');
+      
+      const firstChecklist = result.blocks?.[1] as any;
+      expect(firstChecklist.checklistItems).toHaveLength(2);
+      expect(firstChecklist.checklistItems[0].text).toBe('Complete project');
+      expect(firstChecklist.checklistItems[1].text).toBe('Write documentation');
+    });
+
+    test('should convert checklist to markdown', () => {
+      const checklistItems = [
+        { text: 'Task 1', checked: false, indentLevel: 0 },
+        { text: 'Task 2', checked: true, indentLevel: 0 },
+        { text: 'Subtask', checked: false, indentLevel: 1 }
+      ];
+      
+      const markdown = NeorgContentParser.checklistToMarkdown(checklistItems);
+      expect(markdown).toBe('- [ ] Task 1\n- [x] Task 2\n  - [ ] Subtask');
+    });
+
+    test('should handle empty checklist content', () => {
+      const input = '- [ ] \n- [x] ';
+      const result = NeorgContentParser.parseContent(input);
+      
+      expect(result.success).toBe(true);
+      expect(result.blocks).toHaveLength(1);
+      
+      const checklistBlock = result.blocks?.[0];
+      expect(checklistBlock?.type).toBe('checklist');
+      expect(checklistBlock.checklistItems).toHaveLength(2);
+      
+      expect(checklistBlock.checklistItems?.[0].text).toBe('');
+      expect(checklistBlock.checklistItems?.[0].checked).toBe(false);
+      
+      expect(checklistBlock.checklistItems?.[1].text).toBe('');
+      expect(checklistBlock.checklistItems?.[1].checked).toBe(true);
+    });
+
+    test('should handle mixed content with checklists and other block types', () => {
+      const input = `# Heading
+
+- [ ] First checklist item
+Some paragraph
+
+\`\`\`python
+print("code")
+\`\`\`
+
+- [x] Second checklist item`;
+      
+      const result = NeorgContentParser.parseContent(input);
+      
+      expect(result.success).toBe(true);
+      expect(result.blocks).toHaveLength(4);
+      
+      expect(result.blocks?.[0].type).toBe('heading');
+      expect(result.blocks?.[1].type).toBe('checklist');
+      expect(result.blocks?.[2].type).toBe('paragraph');
+      expect(result.blocks?.[3].type).toBe('code');
+      
+      const firstChecklist = result.blocks?.[1] as any;
+      expect(firstChecklist.checklistItems[0].text).toBe('First checklist item');
+      expect(firstChecklist.checklistItems[0].checked).toBe(false);
+      
+      const secondChecklist = result.blocks?.[3] as any;
+      expect(secondChecklist.checklistItems[0].text).toBe('Second checklist item');
+      expect(secondChecklist.checklistItems[0].checked).toBe(true);
+    });
+  });
 });
