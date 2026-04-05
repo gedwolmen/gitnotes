@@ -10,9 +10,10 @@ interface NoteCardProps {
   note: Note;
   onPress: (note: Note) => void;
   onLongPress?: (note: Note) => void;
+  compact?: boolean;
 }
 
-export default function NoteCard({ note, onPress, onLongPress }: NoteCardProps) {
+export default function NoteCard({ note, onPress, onLongPress, compact = false }: NoteCardProps) {
   const { colors } = useTheme();
   
   const checklistProgress = useMemo(() => {
@@ -24,7 +25,8 @@ export default function NoteCard({ note, onPress, onLongPress }: NoteCardProps) 
     <TouchableOpacity
       style={[
         styles.card, 
-        { backgroundColor: colors.card, shadowColor: colors.text }
+        { backgroundColor: colors.card, shadowColor: colors.text },
+        compact && styles.cardCompact
       ]}
       onPress={() => onPress(note)}
       onLongPress={() => onLongPress?.(note)}
@@ -36,15 +38,17 @@ export default function NoteCard({ note, onPress, onLongPress }: NoteCardProps) 
         </View>
       )}
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
+        <Text style={[styles.title, { color: colors.text }, compact && styles.titleCompact]} numberOfLines={compact ? 1 : 2}>
           {note.title || 'Untitled Note'}
         </Text>
-        <Text style={[styles.content, { color: colors.textSecondary }]} numberOfLines={2}>
-          {note.content || 'No content'}
-        </Text>
+        {!compact && (
+          <Text style={[styles.content, { color: colors.textSecondary }]} numberOfLines={2}>
+            {note.content || 'No content'}
+          </Text>
+        )}
       </View>
 
-      {checklistProgress && checklistProgress.total > 0 && (
+      {!compact && checklistProgress && checklistProgress.total > 0 && (
         <View style={styles.checklistContainer}>
           <Ionicons
             name={checklistProgress.completed === checklistProgress.total ? 'checkmark-circle' : 'radio-button-off'}
@@ -59,10 +63,10 @@ export default function NoteCard({ note, onPress, onLongPress }: NoteCardProps) 
 
       <View style={styles.footer}>
         <Text style={[styles.date, { color: colors.textSecondary }]}>
-          {format(new Date(note.updatedAt), 'MMM d, yyyy')}
+          {format(new Date(note.updatedAt), compact ? 'MMM d' : 'MMM d, yyyy')}
         </Text>
         
-        {note.tags && note.tags.length > 0 && (
+        {!compact && note.tags && note.tags.length > 0 && (
           <View style={styles.tagsContainer}>
             {note.tags.slice(0, 3).map((tag) => (
               <View key={tag} style={[styles.tag, { backgroundColor: colors.primary + '20' }]}>
@@ -78,7 +82,7 @@ export default function NoteCard({ note, onPress, onLongPress }: NoteCardProps) 
         )}
       </View>
 
-      {(note.folderPath || note.repo) && (
+      {!compact && (note.folderPath || note.repo) && (
         <View style={[styles.repoContainer, { borderTopColor: colors.border }]}>
           {note.folderPath && note.folderPath !== '/' && (
             <Text style={[styles.repoText, { color: colors.textSecondary }]}>
@@ -114,6 +118,11 @@ const styles = StyleSheet.create({
       },
     }),
   },
+  cardCompact: {
+    padding: 12,
+    marginVertical: 4,
+    marginHorizontal: 0,
+  },
   pinIndicator: {
     position: 'absolute',
     top: 8,
@@ -131,6 +140,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 4,
+  },
+  titleCompact: {
+    fontSize: 14,
+    marginBottom: 0,
   },
   content: {
     fontSize: 14,

@@ -12,10 +12,17 @@ export interface NeorgListItem {
   children?: NeorgListItem[];
 }
 
+export interface NeorgChecklistItem {
+  text: string;
+  checked: boolean;
+  indentLevel: number;
+}
+
 export interface NeorgContentBlock {
-  type: 'heading' | 'list' | 'paragraph' | 'code';
+  type: 'heading' | 'list' | 'paragraph' | 'code' | 'checklist';
   heading?: NeorgHeading;
   listItems?: NeorgListItem[];
+  checklistItems?: NeorgChecklistItem[];
   text?: string;
   code?: {
     language?: string;

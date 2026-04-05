@@ -1,4 +1,4 @@
-import { NeorgHeading, NeorgListItem, NeorgContentBlock, NeorgContentParseResult } from '../models/NeorgContent';
+import { NeorgHeading, NeorgListItem, NeorgContentBlock, NeorgChecklistItem, NeorgContentParseResult } from '../models/NeorgContent';
 
 export class NeorgContentParser {
   static parseContent(content: string): NeorgContentParseResult {
@@ -7,6 +7,7 @@ export class NeorgContentParser {
       const blocks: NeorgContentBlock[] = [];
       let currentList: NeorgListItem[] | null = null;
       let currentCodeBlock: { language?: string; lines: string[] } | null = null;
+      let currentChecklist: NeorgChecklistItem[] | null = null;
       
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
@@ -16,6 +17,10 @@ export class NeorgContentParser {
           if (currentList) {
             blocks.push({ type: 'list', listItems: currentList });
             currentList = null;
+          }
+          if (currentChecklist) {
+            blocks.push({ type: 'checklist', checklistItems: currentChecklist });
+            currentChecklist = null;
           }
           if (currentCodeBlock) {
             this.finalizeCodeBlock(currentCodeBlock, blocks);
@@ -43,11 +48,24 @@ export class NeorgContentParser {
           continue;
         }
         
+        const checklistItem = this.parseChecklistItem(line);
+        if (checklistItem) {
+          if (!currentChecklist) {
+            currentChecklist = [];
+          }
+          currentChecklist.push(checklistItem);
+          continue;
+        }
+        
         const heading = this.parseHeading(line);
         if (heading) {
           if (currentList) {
             blocks.push({ type: 'list', listItems: currentList });
             currentList = null;
+          }
+          if (currentChecklist) {
+            blocks.push({ type: 'checklist', checklistItems: currentChecklist });
+            currentChecklist = null;
           }
           blocks.push({ type: 'heading', heading });
           continue;
@@ -67,11 +85,20 @@ export class NeorgContentParser {
           currentList = null;
         }
         
+        if (currentChecklist) {
+          blocks.push({ type: 'checklist', checklistItems: currentChecklist });
+          currentChecklist = null;
+        }
+        
         blocks.push({ type: 'paragraph', text: trimmed });
       }
       
       if (currentList) {
         blocks.push({ type: 'list', listItems: currentList });
+      }
+      
+      if (currentChecklist) {
+        blocks.push({ type: 'checklist', checklistItems: currentChecklist });
       }
       
       if (currentCodeBlock) {
@@ -167,6 +194,36 @@ export class NeorgContentParser {
     return null;
   }
 
+  static parseChecklistItem(line: string): NeorgChecklistItem | null {
+    const trimmed = line;
+    const indentMatch = trimmed.match(/^(\s*)(.*)$/);
+    if (!indentMatch) return null;
+    
+    const spaces = indentMatch[1];
+    const indentLevel = Math.floor(spaces.length / 2);
+    const content = indentMatch[2];
+    
+    const uncheckedMatch = content.match(/^\[ \]\s+(.+)$/);
+    if (uncheckedMatch) {
+      return {
+        text: uncheckedMatch[1].trim(),
+        checked: false,
+        indentLevel,
+      };
+    }
+    
+    const checkedMatch = content.match(/^\[x\]\s+(.+)$/);
+    if (checkedMatch) {
+      return {
+        text: checkedMatch[1].trim(),
+        checked: true,
+        indentLevel,
+      };
+    }
+    
+    return null;
+  }
+
   static headingToMarkdown(heading: NeorgHeading): string {
     const prefix = '#'.repeat(heading.level);
     return `${prefix} ${heading.text}`;
@@ -209,6 +266,14 @@ export class NeorgContentParser {
     }).join('\n');
   }
 
+  static checklistToMarkdown(items: NeorgChecklistItem[]): string {
+    return items.map(item => {
+      const indent = '  '.repeat(item.indentLevel);
+      const checkbox = item.checked ? '[x]' : '[ ]';
+      return `${indent}- ${checkbox} ${item.text}`;
+    }).join('\n');
+  }
+
   static contentToMarkdown(blocks: NeorgContentBlock[]): string {
     return blocks.map(block => {
       switch (block.type) {
@@ -220,6 +285,8 @@ export class NeorgContentParser {
           return block.text || '';
         case 'code':
           return block.code ? this.codeToMarkdown(block.code) : '';
+        case 'checklist':
+          return block.checklistItems ? this.checklistToMarkdown(block.checklistItems) : '';
         default:
           return '';
       }

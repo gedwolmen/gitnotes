@@ -128,7 +128,7 @@ export default function NotesListScreen() {
   const renderGridNote = useCallback(
     ({ item }: { item: Note }) => (
       <View style={styles.gridItem}>
-        <NoteCard note={item} onPress={handleNotePress} onLongPress={handleNoteLongPress} />
+        <NoteCard note={item} onPress={handleNotePress} onLongPress={handleNoteLongPress} compact />
       </View>
     ),
     [handleNotePress, handleNoteLongPress]
