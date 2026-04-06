@@ -2,8 +2,11 @@ import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const GITHUB_CLIENT_ID = process.env.EXPO_PUBLIC_GITHUB_CLIENT_ID || '';
+const GITHUB_CLIENT_SECRET = process.env.EXPO_PUBLIC_GITHUB_CLIENT_SECRET || '';
 
 const TOKEN_KEY = '@gitnotes:github_token';
+
+const REDIRECT_URI = 'gitnotes://oauth/github';
 
 export interface GitHubUser {
   id: number;
@@ -20,79 +23,42 @@ export interface AuthState {
 }
 
 export class AuthService {
-  private static getRedirectUri(): string {
-    return 'gitnotes://oauth/github';
-  }
+  static async loginWithGitHub(): Promise<AuthState> {
+    if (!GITHUB_CLIENT_ID) {
+      throw new Error('GitHub Client ID is not configured. Add EXPO_PUBLIC_GITHUB_CLIENT_ID to your .env file.');
+    }
 
-  private static getAuthUrl(): string {
-    const redirectUri = this.getRedirectUri();
-    return `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=repo,user&response_type=code`;
-  }
-
-  static async loginWithBrowser(): Promise<AuthState> {
     try {
-      const redirectUri = this.getRedirectUri();
-      const authUrl = this.getAuthUrl();
-      
-      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+      const params = new URLSearchParams({
+        client_id: GITHUB_CLIENT_ID,
+        redirect_uri: REDIRECT_URI,
+        scope: 'repo read:user',
+      });
+      const authUrl = `https://github.com/login/oauth/authorize?${params.toString()}`;
 
-      if (result.type === 'success') {
-        const returnUrl = result.url;
-        
-        if (returnUrl && returnUrl.includes('code=')) {
-          const urlObj = new URL(returnUrl);
-          const code = urlObj.searchParams.get('code');
-          
-          if (code) {
-            console.log('[AuthService] Received auth code:', code);
-            
-            await WebBrowser.dismissBrowser();
-            
-            return {
-              isAuthenticated: true,
-              user: null,
-              token: `code_${code}`,
-            };
-          }
-        }
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, REDIRECT_URI);
+
+      if (result.type !== 'success' || !result.url) {
+        return { isAuthenticated: false, user: null, token: null };
       }
 
-      await WebBrowser.dismissBrowser();
-      
-      return {
-        isAuthenticated: false,
-        user: null,
-        token: null,
-      };
-    } catch (error) {
-      console.error('[AuthService] Login with browser failed:', error);
-      await WebBrowser.dismissBrowser().catch(() => {});
-      return {
-        isAuthenticated: false,
-        user: null,
-        token: null,
-      };
-    }
-  }
+      const code = new URL(result.url).searchParams.get('code');
+      if (!code) {
+        return { isAuthenticated: false, user: null, token: null };
+      }
 
-  // For development/testing
-  static async loginWithToken(token: string): Promise<AuthState> {
-    try {
+      const token = await this.exchangeCodeForToken(code);
+      if (!token) {
+        return { isAuthenticated: false, user: null, token: null };
+      }
+
       await this.storeToken(token);
       const user = await this.getUser(token);
-      
-      return {
-        isAuthenticated: !!user,
-        user,
-        token,
-      };
+      return { isAuthenticated: !!user, user, token };
     } catch (error) {
-      console.error('[AuthService] Login with token failed:', error);
-      return {
-        isAuthenticated: false,
-        user: null,
-        token: null,
-      };
+      console.error('[AuthService] GitHub login failed:', error);
+      await WebBrowser.dismissBrowser().catch(() => {});
+      return { isAuthenticated: false, user: null, token: null };
     }
   }
 
@@ -101,21 +67,32 @@ export class AuthService {
       const response = await fetch('https://github.com/login/oauth/access_token', {
         method: 'POST',
         headers: {
-          'Accept': 'application/json',
+          Accept: 'application/json',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           client_id: GITHUB_CLIENT_ID,
-          client_secret: 'YOUR_GITHUB_CLIENT_SECRET',
+          client_secret: GITHUB_CLIENT_SECRET,
           code,
+          redirect_uri: REDIRECT_URI,
         }),
       });
-
       const data = await response.json();
       return data.access_token || null;
     } catch (error) {
       console.error('[AuthService] Token exchange failed:', error);
       return null;
+    }
+  }
+
+  static async loginWithToken(token: string): Promise<AuthState> {
+    try {
+      await this.storeToken(token);
+      const user = await this.getUser(token);
+      return { isAuthenticated: !!user, user, token };
+    } catch (error) {
+      console.error('[AuthService] Login with token failed:', error);
+      return { isAuthenticated: false, user: null, token: null };
     }
   }
 
@@ -148,15 +125,11 @@ export class AuthService {
     try {
       const response = await fetch('https://api.github.com/user', {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/vnd.github.v3+json',
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/vnd.github.v3+json',
         },
       });
-
-      if (!response.ok) {
-        return null;
-      }
-
+      if (!response.ok) return null;
       return await response.json();
     } catch (error) {
       console.error('[AuthService] Failed to get user:', error);
@@ -166,28 +139,15 @@ export class AuthService {
 
   static async checkAuthState(): Promise<AuthState> {
     const token = await this.getToken();
-    
-    if (!token) {
-      return {
-        isAuthenticated: false,
-        user: null,
-        token: null,
-      };
-    }
-
+    if (!token) return { isAuthenticated: false, user: null, token: null };
     const user = await this.getUser(token);
-    
-    return {
-      isAuthenticated: !!user,
-      user,
-      token,
-    };
+    return { isAuthenticated: !!user, user, token };
   }
 
   static getAuthorizationHeader(token: string): Record<string, string> {
     return {
-      'Authorization': `Bearer ${token}`,
-      'Accept': 'application/vnd.github.v3+json',
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.github.v3+json',
     };
   }
 }

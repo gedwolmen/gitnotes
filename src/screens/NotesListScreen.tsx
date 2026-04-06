@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, Alert, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, Alert, TouchableOpacity, ScrollView, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -20,6 +20,7 @@ import { HapticService } from '../utils/haptics';
 import { filterNotesByFolder } from '../models/Note';
 import { ViewMode, VIEW_MODE_LABELS, VIEW_MODE_ICONS } from '../utils/viewModes';
 import { ShareService } from '../services/ShareService';
+import { GitService, GitRepository } from '../services/GitService';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -33,6 +34,27 @@ export default function NotesListScreen() {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [showFolderTree, setShowFolderTree] = useState(false);
   const [showViewModePicker, setShowViewModePicker] = useState(false);
+  const [selectedRepo, setSelectedRepo] = useState<string | null>(null);
+  const [repositories, setRepositories] = useState<GitRepository[]>([]);
+  const [showRepoPicker, setShowRepoPicker] = useState(false);
+  const [isLoadingRepos, setIsLoadingRepos] = useState(false);
+
+  const loadRepositories = useCallback(async () => {
+    setIsLoadingRepos(true);
+    const repos = await GitService.getRepositories();
+    setRepositories(repos);
+    setIsLoadingRepos(false);
+  }, []);
+
+  const handleOpenRepoPicker = useCallback(async () => {
+    await loadRepositories();
+    setShowRepoPicker(true);
+  }, [loadRepositories]);
+
+  const handleSelectRepo = useCallback((repoPath: string | null) => {
+    setSelectedRepo(repoPath);
+    setShowRepoPicker(false);
+  }, []);
 
   const selectedFolder = useMemo(
     () => folders.find((f) => f.id === selectedFolderId) || null,
@@ -249,7 +271,60 @@ export default function NotesListScreen() {
             color={colors.primary}
           />
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.folderButton, { backgroundColor: colors.surface }]}
+          onPress={handleOpenRepoPicker}
+        >
+          <Ionicons
+            name="code-slash"
+            size={20}
+            color={selectedRepo ? colors.primary : colors.textSecondary}
+          />
+        </TouchableOpacity>
       </View>
+
+      {showRepoPicker && (
+        <Modal visible={showRepoPicker} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+              <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>Select Repository</Text>
+                <TouchableOpacity onPress={() => setShowRepoPicker(false)}>
+                  <Ionicons name="close" size={24} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+              {isLoadingRepos ? (
+                <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
+              ) : repositories.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Text style={[styles.emptyText, { color: colors.text }]}>No repositories found</Text>
+                  <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+                    Add repositories in Settings
+                  </Text>
+                </View>
+              ) : (
+                <FlatList
+                  data={[{ path: null, name: 'All Repositories', id: '__all__' }, ...repositories]}
+                  keyExtractor={(item) => item.id}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={[styles.repoItem, { borderBottomColor: colors.border }]}
+                      onPress={() => handleSelectRepo(item.id === '__all__' ? null : item.path)}
+                    >
+                      <Ionicons 
+                        name={item.id === '__all__' ? 'folder' : (selectedRepo === item.path ? 'checkmark-circle' : 'folder')} 
+                        size={20} 
+                        color={item.id === '__all__' ? colors.textSecondary : colors.primary} 
+                      />
+                      <Text style={[styles.repoItemText, { color: colors.text }]}>{item.name}</Text>
+                    </TouchableOpacity>
+                  )}
+                />
+              )}
+            </View>
+          </View>
+        </Modal>
+      )}
 
       {showViewModePicker && (
         <View style={[styles.viewModePicker, { backgroundColor: colors.surface }]}>
@@ -445,5 +520,43 @@ const styles = StyleSheet.create({
   emptySubtext: {
     fontSize: 14,
     textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    maxHeight: '60%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  loader: {
+    padding: 40,
+  },
+  emptyState: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  repoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+  },
+  repoItemText: {
+    fontSize: 16,
+    marginLeft: 12,
   },
 });

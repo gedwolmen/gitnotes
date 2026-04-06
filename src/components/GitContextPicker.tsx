@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, FlatList, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { GitRepository, GitBranch, GitCommit, GitService } from '../services/GitService';
 import { useTheme } from '../contexts/ThemeContext';
@@ -167,70 +168,72 @@ export default function GitContextPicker({
   const renderRepoModal = () => (
     <Modal visible={showRepoModal} transparent animationType="slide">
       <View style={styles.modalOverlay}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Select Repository</Text>
-            <TouchableOpacity onPress={() => setShowRepoModal(false)}>
-              <Ionicons name="close" size={24} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={[styles.inputContainer, { borderBottomColor: colors.border }]}>
-            <TextInput
-              style={[styles.textInput, { color: colors.text, borderColor: colors.border }]}
-              placeholder="github.com/owner/repo"
-              placeholderTextColor={colors.textSecondary}
-              value={newRepoInput}
-              onChangeText={setNewRepoInput}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            <TouchableOpacity 
-              style={[styles.addButton, { backgroundColor: colors.primary }]}
-              onPress={handleAddRepo}
-              disabled={!newRepoInput.trim()}
-            >
-              <Text style={styles.addButtonText}>Add</Text>
-            </TouchableOpacity>
-          </View>
-
-          {isLoading ? (
-            <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
-          ) : repositories.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={[styles.emptyText, { color: colors.text }]}>No repositories found</Text>
-              <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-                Connect a GitHub repository to link notes to your code
-              </Text>
+        <SafeAreaView style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalKeyboardView}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Select Repository</Text>
+              <TouchableOpacity onPress={() => setShowRepoModal(false)}>
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
             </View>
-          ) : (
-            <FlatList
-              data={repositories}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <View style={[styles.repoItemContainer, { borderBottomColor: colors.border }]}>
-                  <TouchableOpacity
-                    style={styles.repoItem}
-                    onPress={() => {
-                      HapticService.selection();
-                      onRepoChange(item.path);
-                      setShowRepoModal(false);
-                    }}
-                  >
-                    <Ionicons name="folder" size={20} color={colors.primary} />
-                    <Text style={[styles.listItemText, { color: colors.text }]}>{item.name}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.removeButton}
-                    onPress={() => handleRemoveRepo(item.id)}
-                  >
-                    <Ionicons name="trash-outline" size={18} color={colors.error} />
-                  </TouchableOpacity>
-                </View>
-              )}
-            />
-          )}
-        </KeyboardAvoidingView>
+            
+            <View style={[styles.inputContainer, { borderBottomColor: colors.border }]}>
+              <TextInput
+                style={[styles.textInput, { color: colors.text, borderColor: colors.border }]}
+                placeholder="github.com/owner/repo"
+                placeholderTextColor={colors.textSecondary}
+                value={newRepoInput}
+                onChangeText={setNewRepoInput}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <TouchableOpacity 
+                style={[styles.addButton, { backgroundColor: colors.primary }]}
+                onPress={handleAddRepo}
+                disabled={!newRepoInput.trim()}
+              >
+                <Text style={styles.addButtonText}>Add</Text>
+              </TouchableOpacity>
+            </View>
+
+            {isLoading ? (
+              <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
+            ) : repositories.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={[styles.emptyText, { color: colors.text }]}>No repositories found</Text>
+                <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+                  Connect a GitHub repository to link notes to your code
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={repositories}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <View style={[styles.repoItemContainer, { borderBottomColor: colors.border }]}>
+                    <TouchableOpacity
+                      style={styles.repoItem}
+                      onPress={() => {
+                        HapticService.selection();
+                        onRepoChange(item.path);
+                        setShowRepoModal(false);
+                      }}
+                    >
+                      <Ionicons name="folder" size={20} color={colors.primary} />
+                      <Text style={[styles.listItemText, { color: colors.text }]}>{item.name}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.removeButton}
+                      onPress={() => handleRemoveRepo(item.id)}
+                    >
+                      <Ionicons name="trash-outline" size={18} color={colors.error} />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              />
+            )}
+          </KeyboardAvoidingView>
+        </SafeAreaView>
       </View>
     </Modal>
   );
@@ -238,46 +241,47 @@ export default function GitContextPicker({
   const renderBranchModal = () => (
     <Modal visible={showBranchModal} transparent animationType="slide">
       <View style={styles.modalOverlay}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-            <View style={styles.modalHeaderLeft}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Select Branch</Text>
-              <TouchableOpacity onPress={handleRefreshBranches} style={styles.refreshButton}>
-                <Ionicons name="refresh" size={20} color={colors.primary} />
+        <SafeAreaView style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalKeyboardView}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <View style={styles.modalHeaderLeft}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>Select Branch</Text>
+                <TouchableOpacity onPress={handleRefreshBranches} style={styles.refreshButton}>
+                  <Ionicons name="refresh" size={20} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity onPress={() => setShowBranchModal(false)}>
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
-            <TouchableOpacity onPress={() => setShowBranchModal(false)}>
-              <Ionicons name="close" size={24} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={[styles.inputContainer, { borderBottomColor: colors.border }]}>
-            <TextInput
-              style={[styles.textInput, { color: colors.text, borderColor: colors.border }]}
-              placeholder="main, develop, feature/xyz"
-              placeholderTextColor={colors.textSecondary}
-              value={newBranchInput}
-              onChangeText={setNewBranchInput}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            <TouchableOpacity 
-              style={[styles.addButton, { backgroundColor: colors.primary }]}
-              onPress={handleAddBranch}
-              disabled={!newBranchInput.trim()}
-            >
-              <Text style={styles.addButtonText}>Use</Text>
-            </TouchableOpacity>
-          </View>
+            
+            <View style={[styles.inputContainer, { borderBottomColor: colors.border }]}>
+              <TextInput
+                style={[styles.textInput, { color: colors.text, borderColor: colors.border }]}
+                placeholder="main, develop, feature/xyz"
+                placeholderTextColor={colors.textSecondary}
+                value={newBranchInput}
+                onChangeText={setNewBranchInput}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <TouchableOpacity 
+                style={[styles.addButton, { backgroundColor: colors.primary }]}
+                onPress={handleAddBranch}
+                disabled={!newBranchInput.trim()}
+              >
+                <Text style={styles.addButtonText}>Use</Text>
+              </TouchableOpacity>
+            </View>
 
-          {isLoading ? (
-            <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
-          ) : (
-            <FlatList
-              data={branches}
-              keyExtractor={(item) => item.name}
-              renderItem={({ item }) => (
-<TouchableOpacity
+            {isLoading ? (
+              <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
+            ) : (
+              <FlatList
+                data={branches}
+                keyExtractor={(item) => item.name}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
                     style={[
                       styles.listItem,
                       { borderBottomColor: colors.border },
@@ -290,16 +294,17 @@ export default function GitContextPicker({
                     }}
                   >
                     <Ionicons
-                    name={item.isCurrent ? 'checkmark-circle' : 'git-branch'}
-                    size={20}
-                    color={item.isCurrent ? '#34C759' : colors.textSecondary}
-                  />
-                  <Text style={[styles.listItemText, { color: colors.text }]}>{item.name}</Text>
-                </TouchableOpacity>
-              )}
-            />
-          )}
-        </KeyboardAvoidingView>
+                      name={item.isCurrent ? 'checkmark-circle' : 'git-branch'}
+                      size={20}
+                      color={item.isCurrent ? '#34C759' : colors.textSecondary}
+                    />
+                    <Text style={[styles.listItemText, { color: colors.text }]}>{item.name}</Text>
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+          </KeyboardAvoidingView>
+        </SafeAreaView>
       </View>
     </Modal>
   );
@@ -307,66 +312,68 @@ export default function GitContextPicker({
   const renderCommitModal = () => (
     <Modal visible={showCommitModal} transparent animationType="slide">
       <View style={styles.modalOverlay}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-            <View style={styles.modalHeaderLeft}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Select Commit</Text>
-              <TouchableOpacity onPress={handleRefreshCommits} style={styles.refreshButton}>
-                <Ionicons name="refresh" size={20} color={colors.primary} />
+        <SafeAreaView style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalKeyboardView}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <View style={styles.modalHeaderLeft}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>Select Commit</Text>
+                <TouchableOpacity onPress={handleRefreshCommits} style={styles.refreshButton}>
+                  <Ionicons name="refresh" size={20} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity onPress={() => setShowCommitModal(false)}>
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
-            <TouchableOpacity onPress={() => setShowCommitModal(false)}>
-              <Ionicons name="close" size={24} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
 
-          <View style={[styles.inputContainer, { borderBottomColor: colors.border }]}>
-            <TextInput
-              style={[styles.textInput, { color: colors.text, borderColor: colors.border }]}
-              placeholder="Commit hash (e.g. 4b825dc)"
-              placeholderTextColor={colors.textSecondary}
-              value={newCommitInput}
-              onChangeText={setNewCommitInput}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            <TouchableOpacity 
-              style={[styles.addButton, { backgroundColor: colors.primary }]}
-              onPress={handleAddCommit}
-              disabled={!newCommitInput.trim()}
-            >
-              <Text style={styles.addButtonText}>Use</Text>
-            </TouchableOpacity>
-          </View>
-
-          {isLoading ? (
-            <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
-          ) : commits.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={[styles.emptyText, { color: colors.text }]}>No commits found</Text>
+            <View style={[styles.inputContainer, { borderBottomColor: colors.border }]}>
+              <TextInput
+                style={[styles.textInput, { color: colors.text, borderColor: colors.border }]}
+                placeholder="Commit hash (e.g. 4b825dc)"
+                placeholderTextColor={colors.textSecondary}
+                value={newCommitInput}
+                onChangeText={setNewCommitInput}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <TouchableOpacity 
+                style={[styles.addButton, { backgroundColor: colors.primary }]}
+                onPress={handleAddCommit}
+                disabled={!newCommitInput.trim()}
+              >
+                <Text style={styles.addButtonText}>Use</Text>
+              </TouchableOpacity>
             </View>
-          ) : (
-            <FlatList
-              data={commits}
-              keyExtractor={(item) => item.hash}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[styles.commitItem, { borderBottomColor: colors.border }]}
-                  onPress={() => {
-                    HapticService.selection();
-                    onCommitChange(item.hash);
-                    setShowCommitModal(false);
-                  }}
-                >
-                  <Text style={[styles.commitHash, { color: colors.primary }]}>{item.shortHash}</Text>
-                  <Text style={[styles.commitMessage, { color: colors.text }]} numberOfLines={1}>
-                    {item.message}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            />
-          )}
-        </KeyboardAvoidingView>
+
+            {isLoading ? (
+              <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
+            ) : commits.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={[styles.emptyText, { color: colors.text }]}>No commits found</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={commits}
+                keyExtractor={(item) => item.hash}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={[styles.commitItem, { borderBottomColor: colors.border }]}
+                    onPress={() => {
+                      HapticService.selection();
+                      onCommitChange(item.hash);
+                      setShowCommitModal(false);
+                    }}
+                  >
+                    <Text style={[styles.commitHash, { color: colors.primary }]}>{item.shortHash}</Text>
+                    <Text style={[styles.commitMessage, { color: colors.text }]} numberOfLines={1}>
+                      {item.message}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+          </KeyboardAvoidingView>
+        </SafeAreaView>
       </View>
     </Modal>
   );
@@ -497,8 +504,10 @@ const styles = StyleSheet.create({
   modalContent: {
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    maxHeight: '60%',
-    paddingBottom: 34,
+    maxHeight: '90%',
+  },
+  modalKeyboardView: {
+    flex: 1,
   },
   modalHeader: {
     flexDirection: 'row',

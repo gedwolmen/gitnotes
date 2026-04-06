@@ -1,7 +1,6 @@
 import 'react-native-gesture-handler';
 import React, { useState, useEffect, useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 
 import { NoteProvider } from './src/contexts/NoteContext';
@@ -12,7 +11,9 @@ import { AuthProvider } from './src/contexts/AuthContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import { OnboardingService } from './src/services/OnboardingService';
-import { AuthService } from './src/services/AuthService';
+
+// Required for expo-web-browser OAuth redirect handling on iOS
+WebBrowser.maybeCompleteAuthSession();
 
 export default function App() {
   const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
@@ -22,41 +23,9 @@ export default function App() {
     setShowOnboarding(!completed);
   }, []);
 
-  const handleUrl = useCallback(async (url: string) => {
-    if (url && url.includes('oauth/github')) {
-      const codeMatch = url.match(/code=([^&]+)/);
-      if (codeMatch && codeMatch[1]) {
-        const code = codeMatch[1];
-        const token = await AuthService.exchangeCodeForToken(code);
-        if (token) {
-          await AuthService.storeToken(token);
-        }
-      }
-    }
-  }, []);
-
   useEffect(() => {
     checkOnboarding();
-    
-    const getInitialURL = async () => {
-      const initialURL = await Linking.getInitialURL();
-      if (initialURL) {
-        handleUrl(initialURL);
-      }
-    };
-    
-    getInitialURL();
-    
-    const subscription = Linking.addEventListener('url', (event) => {
-      handleUrl(event.url);
-    });
-    
-    WebBrowser.maybeCompleteAuthSession();
-
-    return () => {
-      subscription.remove();
-    };
-  }, [checkOnboarding, handleUrl]);
+  }, [checkOnboarding]);
 
   const handleOnboardingComplete = useCallback(() => {
     setShowOnboarding(false);

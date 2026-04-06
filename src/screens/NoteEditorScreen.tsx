@@ -13,6 +13,7 @@ import {
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import Markdown from 'react-native-markdown-display';
 
 import { useNotes } from '../contexts/NoteContext';
 import { useFolders } from '../contexts/FolderContext';
@@ -31,7 +32,7 @@ type NoteEditorRouteProp = RouteProp<RootStackParamList, 'NoteEditor'>;
 export default function NoteEditorScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<NoteEditorRouteProp>();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { noteId } = route.params || {};
   const { folders } = useFolders();
 
@@ -46,6 +47,9 @@ export default function NoteEditorScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [showFolderPicker, setShowFolderPicker] = useState(false);
+
+  // Existing notes open in preview mode; new notes open in edit mode
+  const [isEditing, setIsEditing] = useState(!noteId);
 
   useEffect(() => {
     if (noteId) {
@@ -117,6 +121,9 @@ export default function NoteEditorScreen() {
           commit,
           folderPath,
         });
+        setHasChanges(false);
+        setIsEditing(false);
+        HapticService.success();
       } else {
         await createNote({
           title: title.trim(),
@@ -126,9 +133,9 @@ export default function NoteEditorScreen() {
           commit,
           folderPath,
         });
+        HapticService.success();
+        navigation.goBack();
       }
-      navigation.goBack();
-      HapticService.success();
     } catch (error) {
       HapticService.error();
       Alert.alert('Error', 'Failed to save note. Please try again.');
@@ -137,7 +144,7 @@ export default function NoteEditorScreen() {
     }
   }, [title, content, repo, branch, commit, folderPath, noteId, createNote, updateNote, navigation]);
 
-  const handleCancel = useCallback(() => {
+  const handleCancelEdit = useCallback(() => {
     if (hasChanges && (title.trim() || content.trim())) {
       Alert.alert(
         'Discard Changes?',
@@ -147,14 +154,33 @@ export default function NoteEditorScreen() {
           {
             text: 'Discard',
             style: 'destructive',
-            onPress: () => navigation.goBack(),
+            onPress: () => {
+              if (noteId) {
+                // Reload original content and go back to preview
+                const existingNote = getNoteById(noteId);
+                if (existingNote) {
+                  setTitle(existingNote.title);
+                  setContent(existingNote.content);
+                  setRepo(existingNote.repo);
+                  setBranch(existingNote.branch);
+                  setCommit(existingNote.commit);
+                  setFolderPath(existingNote.folderPath);
+                }
+                setHasChanges(false);
+                setIsEditing(false);
+              } else {
+                navigation.goBack();
+              }
+            },
           },
         ]
       );
+    } else if (noteId) {
+      setIsEditing(false);
     } else {
       navigation.goBack();
     }
-  }, [hasChanges, title, content, navigation]);
+  }, [hasChanges, title, content, noteId, navigation, getNoteById, setContent]);
 
   const handleUndo = useCallback(() => {
     if (canUndo) {
@@ -172,31 +198,113 @@ export default function NoteEditorScreen() {
     }
   }, [canRedo, redo]);
 
+  const markdownStyles = {
+    body: { fontSize: 16, lineHeight: 24, color: colors.text },
+    heading1: { fontSize: 28, fontWeight: 'bold' as const, marginBottom: 12, marginTop: 8, color: colors.text },
+    heading2: { fontSize: 22, fontWeight: 'bold' as const, marginBottom: 10, marginTop: 8, color: colors.text },
+    heading3: { fontSize: 18, fontWeight: '600' as const, marginBottom: 8, marginTop: 6, color: colors.text },
+    paragraph: { marginBottom: 12 },
+    code_inline: {
+      backgroundColor: isDark ? '#2c2c2e' : '#f0f0f0',
+      paddingHorizontal: 4,
+      borderRadius: 4,
+      fontFamily: 'monospace',
+      fontSize: 14,
+      color: colors.text,
+    },
+    code_block: {
+      backgroundColor: isDark ? '#2c2c2e' : '#f5f5f5',
+      padding: 12,
+      borderRadius: 8,
+      fontFamily: 'monospace',
+      fontSize: 14,
+      marginVertical: 8,
+      color: colors.text,
+    },
+    fence: {
+      backgroundColor: isDark ? '#2c2c2e' : '#f5f5f5',
+      padding: 12,
+      borderRadius: 8,
+      fontFamily: 'monospace',
+      fontSize: 14,
+      marginVertical: 8,
+      color: colors.text,
+    },
+    blockquote: {
+      backgroundColor: isDark ? '#1c2833' : '#f0f8ff',
+      borderLeftWidth: 4,
+      borderLeftColor: colors.primary,
+      paddingLeft: 12,
+      paddingVertical: 8,
+      marginVertical: 8,
+    },
+    link: { color: colors.primary },
+    list_item: { marginBottom: 4, color: colors.text },
+    bullet_list: { marginBottom: 12 },
+    ordered_list: { marginBottom: 12 },
+    hr: { backgroundColor: colors.border, height: 1, marginVertical: 16 },
+    strong: { color: colors.text },
+    em: { color: colors.text },
+  };
+
+  // ── PREVIEW MODE ──────────────────────────────────────────────
+  if (!isEditing) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
+            <Ionicons name="arrow-back" size={24} color={colors.primary} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
+            {title || 'Untitled'}
+          </Text>
+          <TouchableOpacity
+            onPress={() => { HapticService.light(); setIsEditing(true); }}
+            style={styles.iconButton}
+          >
+            <Ionicons name="pencil" size={22} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.previewContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {title ? (
+            <Text style={[styles.previewTitle, { color: colors.text }]}>{title}</Text>
+          ) : null}
+
+          {content.trim() ? (
+            <Markdown style={markdownStyles}>{content}</Markdown>
+          ) : (
+            <Text style={[styles.emptyPreview, { color: colors.textSecondary }]}>
+              No content — tap the pencil to start writing.
+            </Text>
+          )}
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // ── EDIT MODE ─────────────────────────────────────────────────
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={[styles.container, { backgroundColor: colors.surface }]}
     >
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
         <View style={styles.headerLeft}>
-          <TouchableOpacity onPress={handleCancel} disabled={isSaving} style={styles.headerButton}>
+          <TouchableOpacity onPress={handleCancelEdit} disabled={isSaving} style={styles.headerTextButton}>
             <Text style={[styles.headerButtonText, { color: colors.primary }]}>Cancel</Text>
           </TouchableOpacity>
           {(canUndo || canRedo) && (
             <View style={styles.undoRedoContainer}>
-              <TouchableOpacity onPress={handleUndo} disabled={!canUndo} style={styles.undoRedoButton}>
-                <Ionicons 
-                  name="arrow-undo" 
-                  size={20} 
-                  color={canUndo ? colors.primary : colors.textSecondary} 
-                />
+              <TouchableOpacity onPress={handleUndo} disabled={!canUndo} style={styles.iconButton}>
+                <Ionicons name="arrow-undo" size={20} color={canUndo ? colors.primary : colors.textSecondary} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleRedo} disabled={!canRedo} style={styles.undoRedoButton}>
-                <Ionicons 
-                  name="arrow-redo" 
-                  size={20} 
-                  color={canRedo ? colors.primary : colors.textSecondary} 
-                />
+              <TouchableOpacity onPress={handleRedo} disabled={!canRedo} style={styles.iconButton}>
+                <Ionicons name="arrow-redo" size={20} color={canRedo ? colors.primary : colors.textSecondary} />
               </TouchableOpacity>
             </View>
           )}
@@ -204,16 +312,16 @@ export default function NoteEditorScreen() {
         <Text style={[styles.headerTitle, { color: colors.text }]}>
           {noteId ? 'Edit Note' : 'New Note'}
         </Text>
-        <TouchableOpacity onPress={handleSave} disabled={isSaving}>
+        <TouchableOpacity onPress={handleSave} disabled={isSaving} style={styles.headerTextButton}>
           <Text
             style={[
               styles.headerButtonText,
-              styles.saveButton,
+              styles.saveButtonText,
               { color: colors.primary },
               isSaving && styles.disabledButton,
             ]}
           >
-            {isSaving ? 'Saving...' : 'Save'}
+            {isSaving ? 'Saving…' : 'Save'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -253,7 +361,7 @@ export default function NoteEditorScreen() {
         <MarkdownEditor
           content={content}
           onContentChange={handleContentChange}
-          placeholder="Start writing your note (supports markdown)..."
+          placeholder="Start writing your note (supports markdown)…"
         />
 
         <GitContextPicker
@@ -284,7 +392,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
     paddingVertical: 12,
     borderBottomWidth: 1,
   },
@@ -293,25 +401,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
-  headerButton: {
-    padding: 4,
+  iconButton: {
+    padding: 8,
+  },
+  headerTextButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   headerButtonText: {
     fontSize: 16,
   },
   undoRedoContainer: {
     flexDirection: 'row',
-    marginLeft: 16,
-    gap: 8,
-  },
-  undoRedoButton: {
-    padding: 4,
+    marginLeft: 8,
   },
   headerTitle: {
     fontSize: 16,
     fontWeight: '600',
+    flex: 1,
+    textAlign: 'center',
   },
-  saveButton: {
+  saveButtonText: {
     fontWeight: '600',
   },
   disabledButton: {
@@ -320,6 +430,23 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  // Preview mode
+  previewContent: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  previewTitle: {
+    fontSize: 26,
+    fontWeight: '700',
+    marginBottom: 16,
+    lineHeight: 32,
+  },
+  emptyPreview: {
+    fontSize: 16,
+    fontStyle: 'italic',
+    marginTop: 8,
+  },
+  // Edit mode
   titleInput: {
     fontSize: 24,
     fontWeight: '600',

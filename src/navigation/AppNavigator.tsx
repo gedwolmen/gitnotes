@@ -45,7 +45,7 @@ export default function AppNavigator() {
           <Stack.Screen 
             name="NoteEditor" 
             component={NoteEditorScreen}
-            options={{ title: 'Edit Note' }}
+            options={{ headerShown: false }}
           />
         </Stack.Navigator>
       </NavigationContainer>

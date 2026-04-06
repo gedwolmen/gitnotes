@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, Switch, ScrollView, TouchableOpacity, Alert, FlatList, Image, TextInput, Modal } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, Switch, ScrollView, TouchableOpacity, Alert, FlatList, Image, TextInput, Modal, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
@@ -15,7 +15,7 @@ type ThemeMode = 'light' | 'dark' | 'system';
 export default function SettingsScreen() {
   const { theme, isDark, colors, setTheme } = useTheme();
   const { clearAllNotes } = useNotes();
-  const { authState, refreshAuth, isLoading: authLoading } = useAuth();
+  const { authState, refreshAuth } = useAuth();
   const [repositories, setRepositories] = useState<GitRepository[]>([]);
   const [showRepos, setShowRepos] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
@@ -25,13 +25,20 @@ export default function SettingsScreen() {
   const handleGitHubLogin = useCallback(async () => {
     setIsAuthLoading(true);
     HapticService.light();
-    const result = await AuthService.loginWithBrowser();
-    await refreshAuth();
-    setIsAuthLoading(false);
-    
-    if (result.isAuthenticated) {
-      HapticService.success();
-      Alert.alert('Success', `Welcome, ${result.user?.name || result.user?.login}!`);
+    try {
+      const result = await AuthService.loginWithGitHub();
+      await refreshAuth();
+      if (result.isAuthenticated) {
+        HapticService.success();
+        Alert.alert('Success', `Welcome, ${result.user?.name || result.user?.login}!`);
+      } else {
+        Alert.alert('Sign-in cancelled', 'GitHub sign-in was not completed.');
+      }
+    } catch (error: any) {
+      HapticService.error();
+      Alert.alert('Error', error.message || 'Failed to sign in with GitHub.');
+    } finally {
+      setIsAuthLoading(false);
     }
   }, [refreshAuth]);
 
@@ -182,9 +189,19 @@ export default function SettingsScreen() {
           
           <View style={styles.modalBody}>
             <Text style={[styles.modalDescription, { color: colors.textSecondary }]}>
-              Enter your GitHub Personal Access Token to authenticate. 
-              Generate one at: github.com/settings/tokens
+              Enter a GitHub Personal Access Token with{' '}
+              <Text style={{ fontWeight: '600' }}>repo</Text> and{' '}
+              <Text style={{ fontWeight: '600' }}>read:user</Text> scopes.
             </Text>
+            <TouchableOpacity
+              onPress={() => Linking.openURL('https://github.com/settings/tokens/new?scopes=repo,read:user&description=GitNotes')}
+              style={styles.generateTokenLink}
+            >
+              <Ionicons name="open-outline" size={14} color={colors.primary} />
+              <Text style={[styles.generateTokenLinkText, { color: colors.primary }]}>
+                Generate token on GitHub
+              </Text>
+            </TouchableOpacity>
             
             <TextInput
               style={[styles.tokenInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
@@ -268,18 +285,34 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
           ) : (
-            <TouchableOpacity
-              style={[styles.settingItem, { borderBottomColor: colors.border }]}
-              onPress={() => setShowTokenModal(true)}
-            >
-              <View style={styles.settingLeft}>
-                <Ionicons name="key-outline" size={20} color={colors.text} />
-                <Text style={[styles.settingLabel, { color: colors.text, marginLeft: 12 }]}>
-                  Sign in with GitHub Token
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                style={[styles.settingItem, { borderBottomColor: colors.border }]}
+                onPress={handleGitHubLogin}
+                disabled={isAuthLoading}
+              >
+                <View style={styles.settingLeft}>
+                  <Ionicons name="logo-github" size={20} color={colors.text} />
+                  <Text style={[styles.settingLabel, { color: colors.text, marginLeft: 12 }]}>
+                    {isAuthLoading ? 'Signing in…' : 'Sign in with GitHub'}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.settingItem, { borderBottomColor: colors.border }]}
+                onPress={() => setShowTokenModal(true)}
+              >
+                <View style={styles.settingLeft}>
+                  <Ionicons name="key-outline" size={20} color={colors.text} />
+                  <Text style={[styles.settingLabel, { color: colors.text, marginLeft: 12 }]}>
+                    Use Personal Access Token
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </>
           )}
         </View>
 
@@ -375,6 +408,8 @@ const styles = StyleSheet.create({
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalContent: { borderTopLeftRadius: 16, borderTopRightRadius: 16, maxHeight: '60%', paddingBottom: 34 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1 },
+  generateTokenLink: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 16 },
+  generateTokenLinkText: { fontSize: 14, fontWeight: '500' },
   modalTitle: { fontSize: 18, fontWeight: '600' },
   modalBody: { padding: 16 },
   modalDescription: { fontSize: 14, marginBottom: 16, lineHeight: 20 },
