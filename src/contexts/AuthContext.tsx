@@ -1,10 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AuthService, AuthState } from '../services/AuthService';
+import { GitHubService } from '../services/GitHubService';
 
 interface AuthContextType {
   authState: AuthState;
   isLoading: boolean;
   refreshAuth: () => Promise<void>;
+  setToken: (token: string) => Promise<boolean>;
+  clearToken: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,12 +29,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setAuthState(state);
   };
 
+  const setToken = async (token: string): Promise<boolean> => {
+    setIsLoading(true);
+    const state = await AuthService.setToken(token);
+    setAuthState(state);
+    if (state.isAuthenticated) {
+      await GitHubService.setToken(token);
+    }
+    setIsLoading(false);
+    return state.isAuthenticated;
+  };
+
+  const clearToken = async () => {
+    await AuthService.clearToken();
+    await GitHubService.clearToken();
+    setAuthState({ isAuthenticated: false, user: null, token: null });
+  };
+
   useEffect(() => {
     refreshAuth().finally(() => setIsLoading(false));
   }, []);
 
   return (
-    <AuthContext.Provider value={{ authState, isLoading, refreshAuth }}>
+    <AuthContext.Provider value={{ authState, isLoading, refreshAuth, setToken, clearToken }}>
       {children}
     </AuthContext.Provider>
   );

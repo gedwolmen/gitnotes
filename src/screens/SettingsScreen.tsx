@@ -1,5 +1,19 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Switch, ScrollView, TouchableOpacity, Alert, FlatList, Image, TextInput, Modal, Linking } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Switch,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  FlatList,
+  Image,
+  Modal,
+  TextInput,
+  ActivityIndicator,
+  Linking,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
@@ -7,7 +21,6 @@ import { useNotes } from '../contexts/NoteContext';
 import { useAuth } from '../contexts/AuthContext';
 import { GitService, GitRepository } from '../services/GitService';
 import { OnboardingService } from '../services/OnboardingService';
-import { AuthService } from '../services/AuthService';
 import { HapticService } from '../utils/haptics';
 
 type ThemeMode = 'light' | 'dark' | 'system';
@@ -15,73 +28,51 @@ type ThemeMode = 'light' | 'dark' | 'system';
 export default function SettingsScreen() {
   const { theme, isDark, colors, setTheme } = useTheme();
   const { clearAllNotes } = useNotes();
-  const { authState, refreshAuth } = useAuth();
+  const { authState, setToken, clearToken } = useAuth();
   const [repositories, setRepositories] = useState<GitRepository[]>([]);
   const [showRepos, setShowRepos] = useState(false);
-  const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [tokenInput, setTokenInput] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [tokenError, setTokenError] = useState<string | null>(null);
 
-  const handleGitHubLogin = useCallback(async () => {
-    setIsAuthLoading(true);
-    HapticService.light();
-    try {
-      const result = await AuthService.loginWithGitHub();
-      await refreshAuth();
-      if (result.isAuthenticated) {
-        HapticService.success();
-        Alert.alert('Success', `Welcome, ${result.user?.name || result.user?.login}!`);
-      } else {
-        Alert.alert('Sign-in cancelled', 'GitHub sign-in was not completed.');
-      }
-    } catch (error: any) {
-      HapticService.error();
-      Alert.alert('Error', error.message || 'Failed to sign in with GitHub.');
-    } finally {
-      setIsAuthLoading(false);
-    }
-  }, [refreshAuth]);
-
-  const handleManualTokenLogin = useCallback(async () => {
+  const handleSaveToken = useCallback(async () => {
     if (!tokenInput.trim()) {
-      Alert.alert('Error', 'Please enter a valid token');
+      setTokenError('Please enter a token');
       return;
     }
-    
-    setIsAuthLoading(true);
-    const result = await AuthService.loginWithToken(tokenInput.trim());
-    await refreshAuth();
-    setIsAuthLoading(false);
-    setShowTokenModal(false);
-    setTokenInput('');
-    
-    if (result.isAuthenticated) {
+    setIsVerifying(true);
+    setTokenError(null);
+    const success = await setToken(tokenInput.trim());
+    setIsVerifying(false);
+    if (success) {
       HapticService.success();
-      Alert.alert('Success', `Welcome, ${result.user?.name || result.user?.login}!`);
+      setShowTokenModal(false);
+      setTokenInput('');
     } else {
-      Alert.alert('Error', 'Invalid token. Please check and try again.');
+      HapticService.error();
+      setTokenError('Invalid token. Please check and try again.');
     }
-  }, [tokenInput, refreshAuth]);
+  }, [tokenInput, setToken]);
 
-  const handleGitHubLogout = useCallback(async () => {
+  const handleRemoveToken = useCallback(() => {
     HapticService.warning();
     Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out of GitHub?',
+      'Remove GitHub Token',
+      'This will disconnect your GitHub account. Continue?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Sign Out',
+          text: 'Remove',
           style: 'destructive',
           onPress: async () => {
-            await AuthService.logout();
-            await refreshAuth();
+            await clearToken();
             HapticService.success();
           },
         },
       ]
     );
-  }, []);
+  }, [clearToken]);
 
   const loadRepositories = useCallback(async () => {
     const repos = await GitService.getRepositories();
@@ -146,9 +137,9 @@ export default function SettingsScreen() {
       'Are you sure you want to clear all notes? This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Clear', 
-          style: 'destructive', 
+        {
+          text: 'Clear',
+          style: 'destructive',
           onPress: async () => {
             const success = await clearAllNotes();
             if (success) {
@@ -158,7 +149,7 @@ export default function SettingsScreen() {
               HapticService.error();
               Alert.alert('Error', 'Failed to clear notes.');
             }
-          }
+          },
         },
       ]
     );
@@ -176,65 +167,12 @@ export default function SettingsScreen() {
     </View>
   );
 
-  const renderTokenModal = () => (
-    <Modal visible={showTokenModal} transparent animationType="slide">
-      <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Enter GitHub Token</Text>
-            <TouchableOpacity onPress={() => setShowTokenModal(false)}>
-              <Ionicons name="close" size={24} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.modalBody}>
-            <Text style={[styles.modalDescription, { color: colors.textSecondary }]}>
-              Enter a GitHub Personal Access Token with{' '}
-              <Text style={{ fontWeight: '600' }}>repo</Text> and{' '}
-              <Text style={{ fontWeight: '600' }}>read:user</Text> scopes.
-            </Text>
-            <TouchableOpacity
-              onPress={() => Linking.openURL('https://github.com/settings/tokens/new?scopes=repo,read:user&description=GitNotes')}
-              style={styles.generateTokenLink}
-            >
-              <Ionicons name="open-outline" size={14} color={colors.primary} />
-              <Text style={[styles.generateTokenLinkText, { color: colors.primary }]}>
-                Generate token on GitHub
-              </Text>
-            </TouchableOpacity>
-            
-            <TextInput
-              style={[styles.tokenInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
-              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-              placeholderTextColor={colors.textSecondary}
-              value={tokenInput}
-              onChangeText={setTokenInput}
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            
-            <TouchableOpacity 
-              style={[styles.modalButton, { backgroundColor: colors.primary }]}
-              onPress={handleManualTokenLogin}
-              disabled={isAuthLoading}
-            >
-              <Text style={styles.modalButtonText}>
-                {isAuthLoading ? 'Verifying...' : 'Sign In'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <ScrollView style={styles.scrollContent}>
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Appearance</Text>
-          
+
           <View style={[styles.settingItem, { borderBottomColor: colors.border }]}>
             <Text style={[styles.settingLabel, { color: colors.text }]}>Dark Mode</Text>
             <Switch
@@ -261,40 +199,33 @@ export default function SettingsScreen() {
 
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>GitHub Account</Text>
-          
+
           {authState.isAuthenticated ? (
-            <View style={[styles.settingItem, { borderBottomColor: colors.border }]}>
-              <View style={styles.authUserContainer}>
-                {authState.user?.avatar_url && (
-                  <Image
-                    source={{ uri: authState.user.avatar_url }}
-                    style={styles.avatar}
-                  />
-                )}
-                <View style={styles.authUserInfo}>
-                  <Text style={[styles.settingLabel, { color: colors.text }]}>
-                    {authState.user?.name || authState.user?.login}
-                  </Text>
-                  <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
-                    @{authState.user?.login}
-                  </Text>
+            <>
+              <View style={[styles.settingItem, { borderBottomColor: colors.border }]}>
+                <View style={styles.authUserContainer}>
+                  {authState.user?.avatar_url && (
+                    <Image source={{ uri: authState.user.avatar_url }} style={styles.avatar} />
+                  )}
+                  <View>
+                    <Text style={[styles.settingLabel, { color: colors.text }]}>
+                      {authState.user?.name || authState.user?.login}
+                    </Text>
+                    <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
+                      @{authState.user?.login}
+                    </Text>
+                  </View>
                 </View>
               </View>
-              <TouchableOpacity onPress={handleGitHubLogout}>
-                <Text style={[styles.signOutText, { color: colors.error }]}>Sign Out</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <>
+
               <TouchableOpacity
                 style={[styles.settingItem, { borderBottomColor: colors.border }]}
-                onPress={handleGitHubLogin}
-                disabled={isAuthLoading}
+                onPress={() => { setTokenInput(''); setTokenError(null); setShowTokenModal(true); }}
               >
                 <View style={styles.settingLeft}>
-                  <Ionicons name="logo-github" size={20} color={colors.text} />
+                  <Ionicons name="key-outline" size={20} color={colors.text} />
                   <Text style={[styles.settingLabel, { color: colors.text, marginLeft: 12 }]}>
-                    {isAuthLoading ? 'Signing in…' : 'Sign in with GitHub'}
+                    Change Token
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
@@ -302,23 +233,30 @@ export default function SettingsScreen() {
 
               <TouchableOpacity
                 style={[styles.settingItem, { borderBottomColor: colors.border }]}
-                onPress={() => setShowTokenModal(true)}
+                onPress={handleRemoveToken}
               >
-                <View style={styles.settingLeft}>
-                  <Ionicons name="key-outline" size={20} color={colors.text} />
-                  <Text style={[styles.settingLabel, { color: colors.text, marginLeft: 12 }]}>
-                    Use Personal Access Token
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+                <Text style={[styles.settingLabel, { color: colors.error }]}>Remove GitHub Account</Text>
               </TouchableOpacity>
             </>
+          ) : (
+            <TouchableOpacity
+              style={[styles.settingItem, { borderBottomColor: colors.border }]}
+              onPress={() => { setTokenInput(''); setTokenError(null); setShowTokenModal(true); }}
+            >
+              <View style={styles.settingLeft}>
+                <Ionicons name="logo-github" size={20} color={colors.text} />
+                <Text style={[styles.settingLabel, { color: colors.text, marginLeft: 12 }]}>
+                  Connect GitHub
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
           )}
         </View>
 
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Git Repositories</Text>
-          
+
           <TouchableOpacity
             style={[styles.settingItem, { borderBottomColor: colors.border }]}
             onPress={handleToggleRepos}
@@ -350,7 +288,7 @@ export default function SettingsScreen() {
 
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Data</Text>
-          
+
           <TouchableOpacity
             style={[styles.settingItem, { borderBottomColor: colors.border }]}
             onPress={clearData}
@@ -368,20 +306,85 @@ export default function SettingsScreen() {
 
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>About</Text>
-          
+
           <View style={[styles.settingItem, { borderBottomColor: colors.border }]}>
             <Text style={[styles.settingLabel, { color: colors.text }]}>Version</Text>
             <Text style={[styles.settingValue, { color: colors.textSecondary }]}>1.0.0</Text>
           </View>
-          
+
           <View style={[styles.settingItem, { borderBottomColor: colors.border }]}>
             <Text style={[styles.settingLabel, { color: colors.text }]}>Build</Text>
             <Text style={[styles.settingValue, { color: colors.textSecondary }]}>2026.04.05</Text>
           </View>
         </View>
       </ScrollView>
-      
-      {renderTokenModal()}
+
+      <Modal visible={showTokenModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                {authState.isAuthenticated ? 'Change Token' : 'Connect GitHub'}
+              </Text>
+              <TouchableOpacity onPress={() => setShowTokenModal(false)}>
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalBody}>
+              <Text style={[styles.modalDescription, { color: colors.textSecondary }]}>
+                Enter a Personal Access Token with{' '}
+                <Text style={{ fontWeight: '600' }}>repo</Text> and{' '}
+                <Text style={{ fontWeight: '600' }}>read:user</Text> scopes.
+              </Text>
+
+              <TouchableOpacity
+                style={styles.generateLink}
+                onPress={() => Linking.openURL('https://github.com/settings/tokens/new?scopes=repo,read:user&description=GitNotes')}
+              >
+                <Ionicons name="open-outline" size={14} color={colors.primary} />
+                <Text style={[styles.generateLinkText, { color: colors.primary }]}>
+                  Generate token on GitHub
+                </Text>
+              </TouchableOpacity>
+
+              <TextInput
+                style={[
+                  styles.tokenInput,
+                  {
+                    color: colors.text,
+                    borderColor: tokenError ? '#FF3B30' : colors.border,
+                    backgroundColor: colors.background,
+                  },
+                ]}
+                placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                placeholderTextColor={colors.textSecondary}
+                value={tokenInput}
+                onChangeText={(t) => { setTokenInput(t); setTokenError(null); }}
+                secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+
+              {tokenError ? (
+                <Text style={styles.errorText}>{tokenError}</Text>
+              ) : null}
+
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.primary }]}
+                onPress={handleSaveToken}
+                disabled={isVerifying}
+              >
+                {isVerifying ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.modalButtonText}>Save Token</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -401,19 +404,18 @@ const styles = StyleSheet.create({
   repoInfo: { flexDirection: 'row', alignItems: 'center' },
   repoName: { fontSize: 16, marginLeft: 12 },
   emptyText: { fontSize: 14, textAlign: 'center', padding: 12 },
-  authUserContainer: { flexDirection: 'row', alignItems: 'center' },
-  avatar: { width: 40, height: 40, borderRadius: 20, marginRight: 12 },
-  authUserInfo: { flexDirection: 'column' },
-  signOutText: { fontSize: 14, fontWeight: '500' },
+  authUserContainer: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  avatar: { width: 40, height: 40, borderRadius: 20 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { borderTopLeftRadius: 16, borderTopRightRadius: 16, maxHeight: '60%', paddingBottom: 34 },
+  modalContent: { borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 34 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1 },
-  generateTokenLink: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 16 },
-  generateTokenLinkText: { fontSize: 14, fontWeight: '500' },
   modalTitle: { fontSize: 18, fontWeight: '600' },
   modalBody: { padding: 16 },
-  modalDescription: { fontSize: 14, marginBottom: 16, lineHeight: 20 },
-  tokenInput: { height: 50, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, marginBottom: 16, fontSize: 14 },
-  modalButton: { paddingVertical: 14, borderRadius: 8, alignItems: 'center' },
+  modalDescription: { fontSize: 14, marginBottom: 12, lineHeight: 20 },
+  generateLink: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 16 },
+  generateLinkText: { fontSize: 14, fontWeight: '500' },
+  tokenInput: { height: 50, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, marginBottom: 8, fontSize: 14 },
+  errorText: { color: '#FF3B30', fontSize: 13, marginBottom: 12 },
+  modalButton: { paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginTop: 8 },
   modalButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
 });

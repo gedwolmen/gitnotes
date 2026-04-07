@@ -21,10 +21,12 @@ import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/types';
 import MarkdownEditor from '../components/MarkdownEditor';
 import GitContextPicker from '../components/GitContextPicker';
+import GitHubPicker from '../components/GitHubPicker';
 import FolderSelectionDialog from '../components/FolderSelectionDialog';
 import { HapticService } from '../utils/haptics';
 import { useUndo } from '../utils/useUndo';
 import { Folder } from '../models/Folder';
+import { NoteGitHubLink } from '../models/Note';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'NoteEditor'>;
 type NoteEditorRouteProp = RouteProp<RootStackParamList, 'NoteEditor'>;
@@ -44,6 +46,7 @@ export default function NoteEditorScreen() {
   const [branch, setBranch] = useState<string | undefined>();
   const [commit, setCommit] = useState<string | undefined>();
   const [folderPath, setFolderPath] = useState<string | undefined>();
+  const [github, setGithub] = useState<NoteGitHubLink | undefined>();
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [showFolderPicker, setShowFolderPicker] = useState(false);
@@ -61,6 +64,7 @@ export default function NoteEditorScreen() {
         setBranch(existingNote.branch);
         setCommit(existingNote.commit);
         setFolderPath(existingNote.folderPath);
+        setGithub(existingNote.github);
       }
     }
   }, [noteId, getNoteById, setContent]);
@@ -372,6 +376,8 @@ export default function NoteEditorScreen() {
           onBranchChange={handleBranchChange}
           onCommitChange={handleCommitChange}
         />
+
+        <GitHubPicker value={github} onChange={setGithub} />
       </ScrollView>
 
       <FolderSelectionDialog

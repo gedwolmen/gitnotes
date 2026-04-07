@@ -1,5 +1,13 @@
 export type NoteFormat = 'markdown' | 'neorg';
 
+export interface NoteGitHubLink {
+  owner: string;
+  repo: string;
+  issueNumber?: number;
+  milestoneNumber?: number;
+  htmlUrl?: string;
+}
+
 export interface Note {
   id: string;
   title: string;
@@ -13,6 +21,7 @@ export interface Note {
   folderPath?: string;
   isPinned?: boolean;
   format?: NoteFormat;
+  github?: NoteGitHubLink;
 }
 
 export interface NoteCreateInput {
