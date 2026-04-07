@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useGitHubAuth } from '../contexts/GitHubAuthContext';
 import { GitHubService, GitHubRepository, GitHubIssue, GitHubMilestone } from '../services/GitHubService';
 import { useTheme } from '../contexts/ThemeContext';
 import { HapticService } from '../utils/haptics';
@@ -20,25 +19,27 @@ interface GitHubPickerProps {
   onChange: (github: Note['github'] | undefined) => void;
 }
 
-export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
-  const { user } = useGitHubAuth();
-  const { colors } = useTheme();
+type LinkType = 'issue' | 'milestone' | null;
 
+export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
+  const { colors, isDark } = useTheme();
+
+  const [isExpanded, setIsExpanded] = useState(false);
   const [repositories, setRepositories] = useState<GitHubRepository[]>([]);
   const [issues, setIssues] = useState<GitHubIssue[]>([]);
   const [milestones, setMilestones] = useState<GitHubMilestone[]>([]);
   const [selectedRepo, setSelectedRepo] = useState<GitHubRepository | null>(null);
+  const [linkType, setLinkType] = useState<LinkType>(null);
+  const [loading, setLoading] = useState(false);
+
   const [showRepoModal, setShowRepoModal] = useState(false);
   const [showIssueModal, setShowIssueModal] = useState(false);
   const [showMilestoneModal, setShowMilestoneModal] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
 
   const loadRepositories = useCallback(async () => {
     setLoading(true);
     try {
-      const repos = await GitHubService.getRepositories();
-      setRepositories(repos);
+      setRepositories(await GitHubService.getRepositories());
     } catch {
       setRepositories([]);
     } finally {
@@ -68,20 +69,23 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
   }, [showRepoModal, loadRepositories]);
 
   useEffect(() => {
-    if (selectedRepo && showIssueModal) loadIssues(selectedRepo.owner.login, selectedRepo.name);
-  }, [selectedRepo, showIssueModal, loadIssues]);
+    if (selectedRepo && (showIssueModal || showMilestoneModal)) {
+      loadIssues(selectedRepo.owner.login, selectedRepo.name);
+    }
+  }, [selectedRepo, showIssueModal, showMilestoneModal, loadIssues]);
 
   const handleRepoSelect = (repo: GitHubRepository) => {
     HapticService.selection();
     setSelectedRepo(repo);
+    setLinkType(null);
+    onChange(undefined);
     setShowRepoModal(false);
-    setShowIssueModal(true);
   };
 
-  const handleIssueSelect = (issue: GitHubIssue | null) => {
+  const handleIssueSelect = (issue: GitHubIssue) => {
     HapticService.selection();
     setShowIssueModal(false);
-    if (issue && selectedRepo) {
+    if (selectedRepo) {
       onChange({
         owner: selectedRepo.owner.login,
         repo: selectedRepo.name,
@@ -91,10 +95,10 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
     }
   };
 
-  const handleMilestoneSelect = (milestone: GitHubMilestone | null) => {
+  const handleMilestoneSelect = (milestone: GitHubMilestone) => {
     HapticService.selection();
     setShowMilestoneModal(false);
-    if (milestone && selectedRepo) {
+    if (selectedRepo) {
       onChange({
         owner: selectedRepo.owner.login,
         repo: selectedRepo.name,
@@ -108,71 +112,155 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
     HapticService.light();
     onChange(undefined);
     setSelectedRepo(null);
+    setLinkType(null);
   };
+
+  const handleLinkTypeSelect = (type: LinkType) => {
+    HapticService.selection();
+    setLinkType(type);
+    onChange(undefined);
+    if (type === 'issue') setShowIssueModal(true);
+    else if (type === 'milestone') setShowMilestoneModal(true);
+  };
+
+  const linkTypeLabel = value?.issueNumber
+    ? `Issue #${value.issueNumber}`
+    : value?.milestoneNumber
+    ? `Milestone #${value.milestoneNumber}`
+    : null;
+
+  const repoLabel = selectedRepo?.full_name ?? (value ? `${value.owner}/${value.repo}` : null);
 
   return (
     <View style={[styles.container, { borderTopColor: colors.border }]}>
-      <TouchableOpacity style={styles.header} onPress={() => setIsExpanded(!isExpanded)}>
+      {/* Header toggle */}
+      <TouchableOpacity
+        style={styles.header}
+        onPress={() => setIsExpanded(!isExpanded)}
+      >
         <View style={styles.headerLeft}>
           <Ionicons name="logo-github" size={18} color={colors.textSecondary} />
-          <Text style={[styles.headerText, { color: colors.textSecondary }]}>GitHub Integration</Text>
-          {user && (
-            <Text style={[styles.userInfo, { color: colors.text }]}>@{user.login}</Text>
+          <Text style={[styles.headerText, { color: colors.textSecondary }]}>GitHub</Text>
+          {repoLabel && (
+            <Text style={[styles.headerBadge, { color: colors.primary }]} numberOfLines={1}>
+              {linkTypeLabel ? `${repoLabel} · ${linkTypeLabel}` : repoLabel}
+            </Text>
           )}
         </View>
-        <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={20} color={colors.textSecondary} />
+        <Ionicons
+          name={isExpanded ? 'chevron-up' : 'chevron-down'}
+          size={20}
+          color={colors.textSecondary}
+        />
       </TouchableOpacity>
 
       {isExpanded && (
-        <View style={styles.content}>
-          {value ? (
-            <View>
-              <View style={[styles.selectedInfo, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                {value.issueNumber && (
-                  <Text style={[styles.selectedText, { color: colors.text }]}>
-                    Issue #{value.issueNumber} in {value.owner}/{value.repo}
+        <View style={[styles.content, { backgroundColor: isDark ? colors.background : '#fafafa' }]}>
+          {/* Repository selector */}
+          <View style={styles.selectorRow}>
+            <Text style={[styles.selectorLabel, { color: colors.textSecondary }]}>Repository</Text>
+            <TouchableOpacity
+              style={[styles.selectorValue, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={() => setShowRepoModal(true)}
+            >
+              <Text
+                style={repoLabel
+                  ? [styles.valueText, { color: colors.text }]
+                  : [styles.placeholderText, { color: colors.textSecondary }]}
+                numberOfLines={1}
+              >
+                {repoLabel ?? 'Select repository'}
+              </Text>
+              <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Link type: Issue or Milestone */}
+          {selectedRepo && (
+            <View style={styles.selectorRow}>
+              <Text style={[styles.selectorLabel, { color: colors.textSecondary }]}>Link to</Text>
+              <View style={styles.linkTypeRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.linkTypeButton,
+                    { borderColor: colors.border },
+                    (linkType === 'issue' || value?.issueNumber) && { borderColor: colors.primary, backgroundColor: colors.primary + '15' },
+                  ]}
+                  onPress={() => handleLinkTypeSelect('issue')}
+                >
+                  <Ionicons
+                    name="alert-circle-outline"
+                    size={16}
+                    color={(linkType === 'issue' || value?.issueNumber) ? colors.primary : colors.textSecondary}
+                  />
+                  <Text
+                    style={[
+                      styles.linkTypeText,
+                      { color: (linkType === 'issue' || value?.issueNumber) ? colors.primary : colors.textSecondary },
+                    ]}
+                  >
+                    Issue
                   </Text>
-                )}
-                {value.milestoneNumber && (
-                  <Text style={[styles.selectedText, { color: colors.text }]}>
-                    Milestone #{value.milestoneNumber} in {value.owner}/{value.repo}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.linkTypeButton,
+                    { borderColor: colors.border },
+                    (linkType === 'milestone' || value?.milestoneNumber) && { borderColor: colors.primary, backgroundColor: colors.primary + '15' },
+                  ]}
+                  onPress={() => handleLinkTypeSelect('milestone')}
+                >
+                  <Ionicons
+                    name="flag-outline"
+                    size={16}
+                    color={(linkType === 'milestone' || value?.milestoneNumber) ? colors.primary : colors.textSecondary}
+                  />
+                  <Text
+                    style={[
+                      styles.linkTypeText,
+                      { color: (linkType === 'milestone' || value?.milestoneNumber) ? colors.primary : colors.textSecondary },
+                    ]}
+                  >
+                    Milestone
                   </Text>
-                )}
-                {value.htmlUrl && (
-                  <Text style={[styles.urlText, { color: colors.primary }]} numberOfLines={1}>
-                    {value.htmlUrl}
-                  </Text>
-                )}
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity style={styles.clearButton} onPress={handleClear}>
-                <Ionicons name="close-circle" size={16} color={colors.error} />
-                <Text style={[styles.clearButtonText, { color: colors.error }]}>Clear GitHub Link</Text>
+            </View>
+          )}
+
+          {/* Selected link display */}
+          {value && linkTypeLabel && (
+            <View style={styles.selectorRow}>
+              <Text style={[styles.selectorLabel, { color: colors.textSecondary }]}>
+                {value.issueNumber ? 'Issue' : 'Milestone'}
+              </Text>
+              <TouchableOpacity
+                style={[styles.selectorValue, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                onPress={() => value.issueNumber ? setShowIssueModal(true) : setShowMilestoneModal(true)}
+              >
+                <Text style={[styles.valueText, { color: colors.text }]} numberOfLines={1}>
+                  {linkTypeLabel}
+                </Text>
+                <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
-          ) : (
-            <View>
-              <TouchableOpacity
-                style={[styles.optionButton, { backgroundColor: colors.primary }]}
-                onPress={() => setShowRepoModal(true)}
-              >
-                <Ionicons name="list-outline" size={20} color="#fff" />
-                <Text style={styles.optionButtonText}>Link to Issue</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.optionButton, { borderColor: colors.primary, borderWidth: 1 }]}
-                onPress={() => setShowMilestoneModal(true)}
-              >
-                <Ionicons name="flag-outline" size={20} color={colors.primary} />
-                <Text style={[styles.optionButtonText, { color: colors.primary }]}>Link to Milestone</Text>
-              </TouchableOpacity>
-            </View>
+          )}
+
+          {/* Clear */}
+          {(selectedRepo || value) && (
+            <TouchableOpacity style={styles.clearButton} onPress={handleClear}>
+              <Ionicons name="close-circle-outline" size={16} color={colors.error} />
+              <Text style={[styles.clearText, { color: colors.error }]}>Clear GitHub Link</Text>
+            </TouchableOpacity>
           )}
         </View>
       )}
 
+      {/* Repo modal */}
       <Modal visible={showRepoModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+          <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
             <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>Select Repository</Text>
               <TouchableOpacity onPress={() => setShowRepoModal(false)}>
@@ -182,8 +270,8 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
             {loading ? (
               <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
             ) : repositories.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={[styles.emptyText, { color: colors.text }]}>No repositories found</Text>
+              <View style={styles.empty}>
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No repositories found</Text>
               </View>
             ) : (
               <FlatList
@@ -191,18 +279,21 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={({ item }) => (
                   <TouchableOpacity
-                    style={[styles.repoItem, { borderBottomColor: colors.border }]}
+                    style={[styles.listItem, { borderBottomColor: colors.border }]}
                     onPress={() => handleRepoSelect(item)}
                   >
-                    <Ionicons name="git-branch" size={20} color={colors.primary} />
-                    <View style={styles.repoInfo}>
-                      <Text style={[styles.repoName, { color: colors.text }]}>{item.full_name}</Text>
+                    <Ionicons name="git-branch-outline" size={18} color={colors.primary} />
+                    <View style={styles.listItemInfo}>
+                      <Text style={[styles.listItemTitle, { color: colors.text }]}>{item.full_name}</Text>
                       {item.description ? (
-                        <Text style={[styles.repoDesc, { color: colors.textSecondary }]} numberOfLines={1}>
+                        <Text style={[styles.listItemSub, { color: colors.textSecondary }]} numberOfLines={1}>
                           {item.description}
                         </Text>
                       ) : null}
                     </View>
+                    {item.private && (
+                      <Ionicons name="lock-closed-outline" size={14} color={colors.textSecondary} />
+                    )}
                   </TouchableOpacity>
                 )}
               />
@@ -211,9 +302,10 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
         </View>
       </Modal>
 
+      {/* Issue modal */}
       <Modal visible={showIssueModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+          <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
             <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>Select Issue</Text>
               <TouchableOpacity onPress={() => setShowIssueModal(false)}>
@@ -222,16 +314,20 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
             </View>
             {loading ? (
               <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
+            ) : issues.length === 0 ? (
+              <View style={styles.empty}>
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No open issues found</Text>
+              </View>
             ) : (
               <FlatList
                 data={issues}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={({ item }) => (
                   <TouchableOpacity
-                    style={[styles.issueItem, { borderBottomColor: colors.border }]}
+                    style={[styles.listItem, { borderBottomColor: colors.border }]}
                     onPress={() => handleIssueSelect(item)}
                   >
-                    <Ionicons name="alert-circle" size={16} color={item.state === 'open' ? '#28a745' : '#cb2431'} />
+                    <Ionicons name="alert-circle" size={16} color="#28a745" />
                     <Text style={[styles.issueNumber, { color: colors.textSecondary }]}>#{item.number}</Text>
                     <Text style={[styles.issueTitle, { color: colors.text }]} numberOfLines={1}>
                       {item.title}
@@ -244,9 +340,10 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
         </View>
       </Modal>
 
+      {/* Milestone modal */}
       <Modal visible={showMilestoneModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+          <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
             <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>Select Milestone</Text>
               <TouchableOpacity onPress={() => setShowMilestoneModal(false)}>
@@ -255,20 +352,24 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
             </View>
             {loading ? (
               <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
+            ) : milestones.length === 0 ? (
+              <View style={styles.empty}>
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No open milestones found</Text>
+              </View>
             ) : (
               <FlatList
                 data={milestones}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={({ item }) => (
                   <TouchableOpacity
-                    style={[styles.milestoneItem, { borderBottomColor: colors.border }]}
+                    style={[styles.listItem, { borderBottomColor: colors.border }]}
                     onPress={() => handleMilestoneSelect(item)}
                   >
                     <Ionicons name="flag" size={16} color={colors.primary} />
-                    <Text style={[styles.milestoneTitle, { color: colors.text }]} numberOfLines={1}>
+                    <Text style={[styles.listItemTitle, { color: colors.text, flex: 1 }]} numberOfLines={1}>
                       {item.title}
                     </Text>
-                    <Text style={[styles.milestoneStat, { color: colors.textSecondary }]}>
+                    <Text style={[styles.listItemSub, { color: colors.textSecondary }]}>
                       {item.open_issues} open
                     </Text>
                   </TouchableOpacity>
@@ -302,27 +403,56 @@ const styles = StyleSheet.create({
   headerText: {
     fontSize: 14,
   },
-  userInfo: {
+  headerBadge: {
     fontSize: 12,
     fontWeight: '600',
+    flex: 1,
   },
   content: {
     paddingHorizontal: 16,
     paddingBottom: 12,
-    gap: 8,
   },
-  selectedInfo: {
-    padding: 12,
+  selectorRow: {
+    marginBottom: 10,
+  },
+  selectorLabel: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  selectorValue: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderRadius: 8,
     borderWidth: 1,
-    marginBottom: 8,
-    gap: 4,
   },
-  selectedText: {
+  valueText: {
+    fontSize: 15,
+    flex: 1,
+  },
+  placeholderText: {
+    fontSize: 15,
+    flex: 1,
+  },
+  linkTypeRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  linkTypeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 6,
+  },
+  linkTypeText: {
     fontSize: 14,
-  },
-  urlText: {
-    fontSize: 12,
+    fontWeight: '500',
   },
   clearButton: {
     flexDirection: 'row',
@@ -330,30 +460,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 8,
     gap: 4,
+    marginTop: 2,
   },
-  clearButtonText: {
+  clearText: {
     fontSize: 14,
-  },
-  optionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-    gap: 8,
-  },
-  optionButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
-  modalContent: {
+  modalSheet: {
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     maxHeight: '70%',
@@ -372,59 +489,38 @@ const styles = StyleSheet.create({
   loader: {
     padding: 40,
   },
-  emptyState: {
+  empty: {
     padding: 40,
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: 15,
   },
-  repoItem: {
+  listItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    gap: 12,
+    gap: 10,
   },
-  repoInfo: {
+  listItemInfo: {
     flex: 1,
   },
-  repoName: {
+  listItemTitle: {
     fontSize: 15,
     fontWeight: '500',
   },
-  repoDesc: {
+  listItemSub: {
     fontSize: 13,
     marginTop: 2,
-  },
-  issueItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    gap: 8,
   },
   issueNumber: {
     fontSize: 13,
     fontFamily: 'monospace',
-    minWidth: 40,
+    minWidth: 36,
   },
   issueTitle: {
     flex: 1,
     fontSize: 14,
-  },
-  milestoneItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    gap: 8,
-  },
-  milestoneTitle: {
-    flex: 1,
-    fontSize: 15,
-  },
-  milestoneStat: {
-    fontSize: 12,
   },
 });
