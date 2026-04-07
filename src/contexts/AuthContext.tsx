@@ -47,7 +47,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   useEffect(() => {
-    refreshAuth().finally(() => setIsLoading(false));
+    refreshAuth()
+      .then(() => GitHubService.initialize())
+      .finally(() => setIsLoading(false));
   }, []);
 
   return (

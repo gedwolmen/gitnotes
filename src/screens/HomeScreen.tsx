@@ -1,6 +1,5 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -47,7 +46,7 @@ export default function HomeScreen() {
   const recentNotes = notes.slice(0, 3);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Text style={[styles.title, { color: colors.text }]}>GitNotes</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
         Your development notes, organized.
@@ -115,7 +114,7 @@ export default function HomeScreen() {
         onClose={handleTemplateSelectorClose}
         onSelect={templateSelectedNavigate}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

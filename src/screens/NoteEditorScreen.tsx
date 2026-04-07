@@ -180,6 +180,8 @@ export default function NoteEditorScreen() {
                   setBranch(existingNote.branch);
                   setCommit(existingNote.commit);
                   setFolderPath(existingNote.folderPath);
+                  setGithub(existingNote.github);
+                  setNoteFormat(existingNote.format ?? 'markdown');
                 }
                 setHasChanges(false);
                 setIsEditing(false);
@@ -270,9 +272,7 @@ export default function NoteEditorScreen() {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
             <Ionicons name="arrow-back" size={24} color={colors.primary} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
-            {title || 'Untitled'}
-          </Text>
+          <View style={styles.flex} />
           <TouchableOpacity
             onPress={() => { HapticService.light(); setIsEditing(true); }}
             style={styles.iconButton}

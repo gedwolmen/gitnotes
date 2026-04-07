@@ -31,7 +31,6 @@ export default function GitContextPicker({
   const [showRepoModal, setShowRepoModal] = useState(false);
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [showCommitModal, setShowCommitModal] = useState(false);
-  const [newRepoInput, setNewRepoInput] = useState('');
   const [newBranchInput, setNewBranchInput] = useState('');
   const [newCommitInput, setNewCommitInput] = useState('');
 
@@ -121,34 +120,6 @@ export default function GitContextPicker({
     onCommitChange(undefined);
   };
 
-  const handleAddRepo = async () => {
-    if (!newRepoInput.trim()) return;
-    setIsLoading(true);
-    try {
-      await GitService.addRepository(newRepoInput.trim());
-      setNewRepoInput('');
-      await loadRepositories();
-    } catch (error) {
-      console.error('Failed to add repository:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRemoveRepo = async (repoId: string) => {
-    try {
-      await GitService.removeRepository(repoId);
-      await loadRepositories();
-      if (repo === repoId) {
-        onRepoChange(undefined);
-        onBranchChange(undefined);
-        onCommitChange(undefined);
-      }
-    } catch (error) {
-      console.error('Failed to remove repository:', error);
-    }
-  };
-
   const handleAddBranch = () => {
     if (!newBranchInput.trim()) return;
     HapticService.selection();
@@ -169,70 +140,41 @@ export default function GitContextPicker({
     <Modal visible={showRepoModal} transparent animationType="slide">
       <View style={styles.modalOverlay}>
         <SafeAreaView style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalKeyboardView}>
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Select Repository</Text>
-              <TouchableOpacity onPress={() => setShowRepoModal(false)}>
-                <Ionicons name="close" size={24} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-            
-            <View style={[styles.inputContainer, { borderBottomColor: colors.border }]}>
-              <TextInput
-                style={[styles.textInput, { color: colors.text, borderColor: colors.border }]}
-                placeholder="github.com/owner/repo"
-                placeholderTextColor={colors.textSecondary}
-                value={newRepoInput}
-                onChangeText={setNewRepoInput}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              <TouchableOpacity 
-                style={[styles.addButton, { backgroundColor: colors.primary }]}
-                onPress={handleAddRepo}
-                disabled={!newRepoInput.trim()}
-              >
-                <Text style={styles.addButtonText}>Add</Text>
-              </TouchableOpacity>
-            </View>
+          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Select Repository</Text>
+            <TouchableOpacity onPress={() => setShowRepoModal(false)}>
+              <Ionicons name="close" size={24} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
 
-            {isLoading ? (
-              <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
-            ) : repositories.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={[styles.emptyText, { color: colors.text }]}>No repositories found</Text>
-                <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-                  Connect a GitHub repository to link notes to your code
-                </Text>
-              </View>
-            ) : (
-              <FlatList
-                data={repositories}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }) => (
-                  <View style={[styles.repoItemContainer, { borderBottomColor: colors.border }]}>
-                    <TouchableOpacity
-                      style={styles.repoItem}
-                      onPress={() => {
-                        HapticService.selection();
-                        onRepoChange(item.path);
-                        setShowRepoModal(false);
-                      }}
-                    >
-                      <Ionicons name="folder" size={20} color={colors.primary} />
-                      <Text style={[styles.listItemText, { color: colors.text }]}>{item.name}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.removeButton}
-                      onPress={() => handleRemoveRepo(item.id)}
-                    >
-                      <Ionicons name="trash-outline" size={18} color={colors.error} />
-                    </TouchableOpacity>
-                  </View>
-                )}
-              />
-            )}
-          </KeyboardAvoidingView>
+          {isLoading ? (
+            <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
+          ) : repositories.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={[styles.emptyText, { color: colors.text }]}>No repositories added yet</Text>
+              <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+                Add repositories in Settings
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={repositories}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.listItem, { borderBottomColor: colors.border }]}
+                  onPress={() => {
+                    HapticService.selection();
+                    onRepoChange(item.path);
+                    setShowRepoModal(false);
+                  }}
+                >
+                  <Ionicons name="folder" size={20} color={colors.primary} />
+                  <Text style={[styles.listItemText, { color: colors.text }]}>{item.name}</Text>
+                </TouchableOpacity>
+              )}
+            />
+          )}
         </SafeAreaView>
       </View>
     </Modal>
@@ -583,20 +525,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
     fontSize: 14,
-  },
-  repoItemContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-  },
-  repoItem: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-  },
-  removeButton: {
-    padding: 16,
   },
   modalHeaderLeft: {
     flexDirection: 'row',

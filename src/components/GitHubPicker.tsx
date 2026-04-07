@@ -7,6 +7,7 @@ import {
   Modal,
   FlatList,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { GitHubService, GitHubRepository, GitHubIssue, GitHubMilestone } from '../services/GitHubService';
@@ -235,15 +236,25 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
               <Text style={[styles.selectorLabel, { color: colors.textSecondary }]}>
                 {value.issueNumber ? 'Issue' : 'Milestone'}
               </Text>
-              <TouchableOpacity
-                style={[styles.selectorValue, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                onPress={() => value.issueNumber ? setShowIssueModal(true) : setShowMilestoneModal(true)}
-              >
-                <Text style={[styles.valueText, { color: colors.text }]} numberOfLines={1}>
-                  {linkTypeLabel}
-                </Text>
-                <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
-              </TouchableOpacity>
+              <View style={styles.linkValueRow}>
+                <TouchableOpacity
+                  style={[styles.selectorValue, styles.linkValueFlex, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  onPress={() => value.issueNumber ? setShowIssueModal(true) : setShowMilestoneModal(true)}
+                >
+                  <Text style={[styles.valueText, { color: colors.text }]} numberOfLines={1}>
+                    {linkTypeLabel}
+                  </Text>
+                  <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+                {value.htmlUrl ? (
+                  <TouchableOpacity
+                    style={[styles.openButton, { borderColor: colors.border, backgroundColor: colors.surface }]}
+                    onPress={() => Linking.openURL(value.htmlUrl!)}
+                  >
+                    <Ionicons name="open-outline" size={18} color={colors.primary} />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
             </View>
           )}
 
@@ -464,6 +475,20 @@ const styles = StyleSheet.create({
   },
   clearText: {
     fontSize: 14,
+  },
+  linkValueRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  linkValueFlex: {
+    flex: 1,
+  },
+  openButton: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalOverlay: {
     flex: 1,
