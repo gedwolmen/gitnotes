@@ -184,7 +184,7 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
                   style={[
                     styles.linkTypeButton,
                     { borderColor: colors.border },
-                    (linkType === 'issue' || value?.issueNumber) ? { borderColor: colors.primary, backgroundColor: colors.primary + '15' } : undefined,
+                    (linkType === 'issue' || !!value?.issueNumber) ? { borderColor: colors.primary, backgroundColor: colors.primary + '15' } : undefined,
                   ]}
                   onPress={() => handleLinkTypeSelect('issue')}
                 >
@@ -207,7 +207,7 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
                   style={[
                     styles.linkTypeButton,
                     { borderColor: colors.border },
-                    (linkType === 'milestone' || value?.milestoneNumber) ? { borderColor: colors.primary, backgroundColor: colors.primary + '15' } : undefined,
+                    (linkType === 'milestone' || !!value?.milestoneNumber) ? { borderColor: colors.primary, backgroundColor: colors.primary + '15' } : undefined,
                   ]}
                   onPress={() => handleLinkTypeSelect('milestone')}
                 >

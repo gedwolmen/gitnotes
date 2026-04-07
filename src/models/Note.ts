@@ -1,4 +1,4 @@
-export type NoteFormat = 'markdown' | 'neorg';
+export type NoteFormat = 'markdown' | 'neorg' | 'org';
 
 export interface NoteGitHubLink {
   owner: string;
@@ -126,7 +126,11 @@ export function getNotesInFolderAndSubfolders(notes: Note[], folderPath: string)
 }
 
 export function getNoteFileExtension(format?: NoteFormat): string {
-  return format === 'neorg' ? '.norg' : '.md';
+  switch (format) {
+    case 'neorg': return '.norg';
+    case 'org': return '.org';
+    default: return '.md';
+  }
 }
 
 export function isNeorgNote(note: Note): boolean {
@@ -134,7 +138,7 @@ export function isNeorgNote(note: Note): boolean {
 }
 
 export function getSupportedFileExtensions(): string[] {
-  return ['.md', '.norg'];
+  return ['.md', '.norg', '.org'];
 }
 
 export function isSupportedFileExtension(filename: string): boolean {

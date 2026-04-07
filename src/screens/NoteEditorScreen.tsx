@@ -14,6 +14,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import Markdown from 'react-native-markdown-display';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useNotes } from '../contexts/NoteContext';
 import { useFolders } from '../contexts/FolderContext';
@@ -26,7 +27,13 @@ import FolderSelectionDialog from '../components/FolderSelectionDialog';
 import { HapticService } from '../utils/haptics';
 import { useUndo } from '../utils/useUndo';
 import { Folder } from '../models/Folder';
-import { NoteGitHubLink } from '../models/Note';
+import { NoteFormat, NoteGitHubLink } from '../models/Note';
+
+const FORMAT_OPTIONS: { label: string; value: NoteFormat }[] = [
+  { label: '.md', value: 'markdown' },
+  { label: '.norg', value: 'neorg' },
+  { label: '.org', value: 'org' },
+];
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'NoteEditor'>;
 type NoteEditorRouteProp = RouteProp<RootStackParamList, 'NoteEditor'>;
@@ -47,6 +54,7 @@ export default function NoteEditorScreen() {
   const [commit, setCommit] = useState<string | undefined>();
   const [folderPath, setFolderPath] = useState<string | undefined>();
   const [github, setGithub] = useState<NoteGitHubLink | undefined>();
+  const [noteFormat, setNoteFormat] = useState<NoteFormat>('markdown');
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [showFolderPicker, setShowFolderPicker] = useState(false);
@@ -65,6 +73,7 @@ export default function NoteEditorScreen() {
         setCommit(existingNote.commit);
         setFolderPath(existingNote.folderPath);
         setGithub(existingNote.github);
+        setNoteFormat(existingNote.format ?? 'markdown');
       }
     }
   }, [noteId, getNoteById, setContent]);
@@ -124,6 +133,7 @@ export default function NoteEditorScreen() {
           branch,
           commit,
           folderPath,
+          format: noteFormat,
         });
         setHasChanges(false);
         setIsEditing(false);
@@ -136,6 +146,7 @@ export default function NoteEditorScreen() {
           branch,
           commit,
           folderPath,
+          format: noteFormat,
         });
         HapticService.success();
         navigation.goBack();
@@ -254,7 +265,7 @@ export default function NoteEditorScreen() {
   // ── PREVIEW MODE ──────────────────────────────────────────────
   if (!isEditing) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
             <Ionicons name="arrow-back" size={24} color={colors.primary} />
@@ -287,15 +298,16 @@ export default function NoteEditorScreen() {
             </Text>
           )}
         </ScrollView>
-      </View>
+      </SafeAreaView>
     );
   }
 
   // ── EDIT MODE ─────────────────────────────────────────────────
   return (
+    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.surface }]}>
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={[styles.container, { backgroundColor: colors.surface }]}
+      style={styles.flex}
     >
       <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
         <View style={styles.headerLeft}>
@@ -362,6 +374,29 @@ export default function NoteEditorScreen() {
           <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
 
+        {/* Format selector */}
+        <View style={[styles.formatRow, { borderBottomColor: colors.border }]}>
+          <Ionicons name="document-outline" size={18} color={colors.textSecondary} />
+          <Text style={[styles.formatRowLabel, { color: colors.textSecondary }]}>Format</Text>
+          <View style={styles.formatOptions}>
+            {FORMAT_OPTIONS.map(({ label, value }) => (
+              <TouchableOpacity
+                key={value}
+                style={[
+                  styles.formatChip,
+                  { borderColor: colors.border },
+                  noteFormat === value && { borderColor: colors.primary, backgroundColor: colors.primary + '18' },
+                ]}
+                onPress={() => { setNoteFormat(value); setHasChanges(true); HapticService.selection(); }}
+              >
+                <Text style={[styles.formatChipText, { color: noteFormat === value ? colors.primary : colors.textSecondary }]}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
         <MarkdownEditor
           content={content}
           onContentChange={handleContentChange}
@@ -387,11 +422,15 @@ export default function NoteEditorScreen() {
         onClose={() => setShowFolderPicker(false)}
       />
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  flex: {
     flex: 1,
   },
   header: {
@@ -470,5 +509,33 @@ const styles = StyleSheet.create({
   folderSelectorText: {
     flex: 1,
     fontSize: 16,
+  },
+  formatRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    gap: 8,
+  },
+  formatRowLabel: {
+    fontSize: 14,
+    marginRight: 4,
+  },
+  formatOptions: {
+    flexDirection: 'row',
+    gap: 8,
+    flex: 1,
+  },
+  formatChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  formatChipText: {
+    fontSize: 13,
+    fontWeight: '500',
+    fontFamily: 'monospace',
   },
 });
