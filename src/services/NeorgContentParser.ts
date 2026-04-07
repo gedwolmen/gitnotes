@@ -13,7 +13,15 @@ export class NeorgContentParser {
         const line = lines[i];
         const trimmed = line.trim();
         
+        // Handle empty lines
         if (!trimmed) {
+          // Inside code blocks, empty lines are part of the code content
+          if (currentCodeBlock) {
+            currentCodeBlock.lines.push(line);
+            continue;
+          }
+          
+          // Outside code blocks, empty lines finalize lists and checklists
           if (currentList) {
             blocks.push({ type: 'list', listItems: currentList });
             currentList = null;
@@ -22,16 +30,12 @@ export class NeorgContentParser {
             blocks.push({ type: 'checklist', checklistItems: currentChecklist });
             currentChecklist = null;
           }
-          if (currentCodeBlock) {
-            this.finalizeCodeBlock(currentCodeBlock, blocks);
-            currentCodeBlock = null;
-          }
           continue;
         }
         
         const codeBlockInfo = this.parseCodeBlockLine(line, i === 0);
         if (codeBlockInfo) {
-          if (codeBlockInfo.isOpen) {
+          if (!currentCodeBlock && codeBlockInfo.isOpen) {
             currentCodeBlock = {
               language: codeBlockInfo.language,
               lines: []
@@ -101,8 +105,10 @@ export class NeorgContentParser {
         blocks.push({ type: 'checklist', checklistItems: currentChecklist });
       }
       
+      // Unclosed code blocks should be treated as paragraph, not code
       if (currentCodeBlock) {
-        this.finalizeCodeBlock(currentCodeBlock, blocks);
+        const codeText = currentCodeBlock.lines.join('\n');
+        blocks.push({ type: 'paragraph', text: `\`\`\`${currentCodeBlock.language || ''}\n${codeText}` });
       }
       
       return { success: true, blocks };
@@ -115,13 +121,22 @@ export class NeorgContentParser {
   }
 
   static parseHeading(line: string): NeorgHeading | null {
-    const match = line.match(/^(\*{1,6})\s+(.+)$/);
-    if (!match) return null;
+    // Support both Neorg (* heading) and Markdown (# heading) formats
+    const neorgMatch = line.match(/^(\*{1,6})\s+(.+)$/);
+    if (neorgMatch) {
+      const level = neorgMatch[1].length;
+      const text = neorgMatch[2].trim();
+      return { level, text };
+    }
     
-    const level = match[1].length;
-    const text = match[2].trim();
+    const markdownMatch = line.match(/^(#{1,6})\s+(.+)$/);
+    if (markdownMatch) {
+      const level = markdownMatch[1].length;
+      const text = markdownMatch[2].trim();
+      return { level, text };
+    }
     
-    return { level, text };
+    return null;
   }
 
   static parseListItem(line: string): NeorgListItem | null {
@@ -202,23 +217,35 @@ export class NeorgContentParser {
     const spaces = indentMatch[1];
     const indentLevel = Math.floor(spaces.length / 2);
     const content = indentMatch[2];
-    
-    const uncheckedMatch = content.match(/^\[ \]\s+(.+)$/);
-    if (uncheckedMatch) {
+
+    // Markdown format: - [ ] or - [x] (check BEFORE Neorg to handle empty content)
+    const markdownUncheckedMatch = content.match(/^-\s*\[\s\]\s*(.*)$/);
+    if (markdownUncheckedMatch) {
       return {
-        text: uncheckedMatch[1].trim(),
+        text: markdownUncheckedMatch[1].trim(),
         checked: false,
         indentLevel,
       };
     }
-    
-    const checkedMatch = content.match(/^\[x\]\s+(.+)$/);
-    if (checkedMatch) {
+
+    const markdownCheckedMatch = content.match(/^-\s*\[x\]\s*(.*)$/);
+    if (markdownCheckedMatch) {
       return {
-        text: checkedMatch[1].trim(),
+        text: markdownCheckedMatch[1].trim(),
         checked: true,
         indentLevel,
       };
+    }
+
+    // Neorg format: ( ) or (x)
+    if (/^\(\s\)\s+/.test(content)) {
+      const text = content.replace(/^\(\s\)\s+/, '').trim();
+      return { text, checked: false, indentLevel };
+    }
+
+    if (/^\(x\)\s+/.test(content)) {
+      const text = content.replace(/^\(x\)\s+/, '').trim();
+      return { text, checked: true, indentLevel };
     }
     
     return null;
@@ -230,13 +257,22 @@ export class NeorgContentParser {
   }
 
   static parseCodeBlockLine(line: string, isFirst: boolean): { isOpen: boolean; isClose: boolean; language?: string } | null {
+    const trimmed = line.trim();
+    
+    // Both opening and closing code blocks use ```
+    // Return isOpen: true when it could be an opening (has optional language)
+    // Return isClose: true when it could be a closing (just ```)
+    // The caller uses context (whether we're in a code block) to decide
+    
+    // Match ``` with optional language
     const openMatch = line.match(/^```(\w*)$/);
     if (openMatch) {
-      return { isOpen: true, isClose: false, language: openMatch[1] || undefined };
-    }
-    
-    if (line.trim() === '```') {
-      return { isOpen: false, isClose: true };
+      const hasLanguage = openMatch[1] && openMatch[1].length > 0;
+      return { 
+        isOpen: true, 
+        isClose: !hasLanguage, // Only ``` can close, ```lang can only open
+        language: hasLanguage ? openMatch[1] : undefined 
+      };
     }
     
     return null;
