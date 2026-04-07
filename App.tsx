@@ -8,6 +8,7 @@ import { FolderProvider } from './src/contexts/FolderContext';
 import { ViewModeProvider } from './src/contexts/ViewModeContext';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { GitHubAuthProvider } from './src/contexts/GitHubAuthContext';
+import { GitSyncProvider } from './src/contexts/GitSyncContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import { OnboardingService } from './src/services/OnboardingService';
@@ -52,14 +53,16 @@ export default function App() {
     <ThemeProvider>
       <AuthProvider>
         <GitHubAuthProvider>
-          <FolderProvider>
-            <NoteProvider>
-              <ViewModeProvider>
-                <StatusBar style="auto" />
-                <AppNavigator />
-              </ViewModeProvider>
-            </NoteProvider>
-          </FolderProvider>
+          <GitSyncProvider>
+            <FolderProvider>
+              <NoteProvider>
+                <ViewModeProvider>
+                  <StatusBar style="auto" />
+                  <AppNavigator />
+                </ViewModeProvider>
+              </NoteProvider>
+            </FolderProvider>
+          </GitSyncProvider>
         </GitHubAuthProvider>
       </AuthProvider>
     </ThemeProvider>
