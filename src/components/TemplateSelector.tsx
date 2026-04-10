@@ -24,13 +24,12 @@ interface TemplateListItemProps {
   item: NoteTemplate;
   onSelect: (template: NoteTemplate) => void;
   colors: any;
-  isDark: boolean;
 }
 
-const TemplateListItem = ({ item, onSelect, colors, isDark }: TemplateListItemProps) => {
+const TemplateListItem = ({ item, onSelect, colors }: TemplateListItemProps) => {
   const onPressItem = useCallback(() => onSelect(item), [onSelect, item]);
   return (
-    <TouchableOpacity style={[styles.templateItem, { backgroundColor: colors.surface, shadowColor: colors.text }]} onPress={onPressItem}>
+    <TouchableOpacity style={[styles.templateItem, { backgroundColor: colors.card, shadowColor: colors.shadow }]} onPress={onPressItem}>
       <View style={[styles.templateIcon, { backgroundColor: colors.primary + '20' }]}>
         <Ionicons name={item.icon as any} size={24} color={colors.primary} />
       </View>
@@ -39,7 +38,7 @@ const TemplateListItem = ({ item, onSelect, colors, isDark }: TemplateListItemPr
         <Text style={[styles.templateDescription, { color: colors.textSecondary }]}>{item.description}</Text>
         <View style={styles.templateTags}>
           {item.tags.map((tag) => (
-            <View key={tag} style={[styles.tagChip, { backgroundColor: isDark ? '#2c2c2e' : '#f0f0f0' }]}>
+            <View key={tag} style={[styles.tagChip, { backgroundColor: colors.surfaceSecondary }]}>
               <Text style={[styles.tagChipText, { color: colors.textSecondary }]}>{tag}</Text>
             </View>
           ))}
@@ -54,7 +53,7 @@ export default function TemplateSelector({ visible, onClose, onSelect }: Templat
   const [searchQuery, setSearchQuery] = useState('');
   const [templates, setTemplates] = useState<NoteTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
 
   const loadTemplates = useCallback(async () => {
     setIsLoading(true);
@@ -75,9 +74,9 @@ export default function TemplateSelector({ visible, onClose, onSelect }: Templat
 
   const renderTemplate = useCallback(
     ({ item }: { item: NoteTemplate }) => (
-      <TemplateListItem item={item} onSelect={onSelect} colors={colors} isDark={isDark} />
+      <TemplateListItem item={item} onSelect={onSelect} colors={colors} />
     ),
-    [colors, isDark, onSelect]
+    [colors, onSelect]
   );
 
   return (
@@ -91,7 +90,7 @@ export default function TemplateSelector({ visible, onClose, onSelect }: Templat
         </View>
 
         <View style={[styles.searchContainer, { backgroundColor: colors.surface }]}>
-          <View style={[styles.searchInputContainer, { backgroundColor: isDark ? '#2c2c2e' : '#f0f0f0' }]}>
+          <View style={[styles.searchInputContainer, { backgroundColor: colors.surfaceSecondary }]}>
             <Ionicons name="search" size={20} color={colors.textSecondary} />
             <TextInput
               style={[styles.searchInput, { color: colors.text }]}

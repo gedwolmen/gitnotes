@@ -28,7 +28,6 @@ export default function MarkdownEditor({ content, onContentChange, placeholder =
 
 const styles = StyleSheet.create({
   editor: {
-    flex: 1,
     fontSize: 16,
     padding: 16,
     lineHeight: 24,

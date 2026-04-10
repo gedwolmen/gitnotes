@@ -7,8 +7,9 @@ import {
   Modal,
   TextInput,
   Alert,
+  Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Folder } from '../models/Folder';
 import { useTheme } from '../contexts/ThemeContext';
@@ -20,6 +21,7 @@ interface FolderSelectionDialogProps {
   selectedFolderId: string | null;
   onSelect: (folder: Folder | null) => void;
   onClose: () => void;
+  additionalFolders?: Folder[];
 }
 
 export default function FolderSelectionDialog({
@@ -27,12 +29,30 @@ export default function FolderSelectionDialog({
   selectedFolderId,
   onSelect,
   onClose,
+  additionalFolders = [],
 }: FolderSelectionDialogProps) {
-  const { colors, isDark } = useTheme();
-  const { folders, createFolder } = useFolders();
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const { folders: localFolders, createFolder } = useFolders();
   const [isCreating, setIsCreating] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [selectedParentId, setSelectedParentId] = useState<string | null>(null);
+
+  const folders = useMemo(
+    () => {
+      const mergedByPath = new Map<string, Folder>();
+      localFolders.forEach((folder) => {
+        mergedByPath.set(folder.path, folder);
+      });
+      additionalFolders.forEach((folder) => {
+        if (!mergedByPath.has(folder.path)) {
+          mergedByPath.set(folder.path, folder);
+        }
+      });
+      return Array.from(mergedByPath.values()).sort((a, b) => a.name.localeCompare(b.name));
+    },
+    [localFolders, additionalFolders]
+  );
 
   const rootFolders = useMemo(
     () => folders.filter((f) => f.parentId === null),
@@ -129,26 +149,43 @@ export default function FolderSelectionDialog({
   );
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={onClose}>
-            <Text style={[styles.headerButton, { color: colors.primary }]}>Cancel</Text>
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Select Folder</Text>
-          <TouchableOpacity onPress={toggleCreateMode}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+    >
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}> 
+          <View style={styles.headerSide}>
+            <TouchableOpacity onPress={onClose} hitSlop={8} style={styles.headerActionButton}>
+              <Text style={[styles.headerButton, { color: colors.primary }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+          <Text
+            style={[
+              styles.headerTitle,
+              { color: colors.text, paddingTop: Platform.OS === 'android' ? Math.max(insets.top * 0.2, 0) : 0 },
+            ]}
+            numberOfLines={1}
+          >
+            Select Folder
+          </Text>
+          <View style={styles.headerSide}>
+            <TouchableOpacity onPress={toggleCreateMode} hitSlop={8} style={styles.headerActionButton}>
             <Ionicons
               name={isCreating ? 'close' : 'add'}
               size={24}
               color={colors.primary}
             />
-          </TouchableOpacity>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {isCreating && (
           <View style={[styles.createContainer, { backgroundColor: colors.surface }]}>
             <TextInput
-              style={[styles.input, { backgroundColor: isDark ? '#2c2c2e' : '#f0f0f0', color: colors.text }]}
+              style={[styles.input, { backgroundColor: colors.surfaceSecondary, color: colors.text }]}
               placeholder="Folder name"
               placeholderTextColor={colors.textSecondary}
               value={newFolderName}
@@ -216,15 +253,25 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
+    minHeight: 56,
+  },
+  headerSide: {
+    width: 72,
+    justifyContent: 'center',
+  },
+  headerActionButton: {
+    minHeight: 32,
+    justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
+    flex: 1,
+    textAlign: 'center',
   },
   headerButton: {
     fontSize: 16,

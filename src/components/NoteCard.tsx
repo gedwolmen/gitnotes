@@ -2,7 +2,41 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
-import { Note } from '../models/Note';
+import { Note, NoteFormat } from '../models/Note';
+import { useResponsive } from '../hooks/useResponsive';
+
+function stripPreview(content: string, noteFormat?: NoteFormat): string {
+  let text = content;
+  const trimmed = text.trimStart();
+  // Strip YAML front-matter
+  if (trimmed.startsWith('---\n')) {
+    const close = trimmed.indexOf('\n---', 3);
+    if (close !== -1) text = trimmed.slice(close + 4);
+  }
+  // Strip neorg @document.meta block
+  if (noteFormat === 'neorg' && text.trimStart().startsWith('@document.meta')) {
+    const lines = text.split('\n');
+    const endIdx = lines.findIndex((l, i) => i > 0 && l.trim() === '@end');
+    if (endIdx !== -1) text = lines.slice(endIdx + 1).join('\n');
+  }
+  // Strip org #+KEY: headers
+  if (noteFormat === 'org') {
+    const lines = text.split('\n');
+    let i = 0;
+    while (i < lines.length && /^\s*#\+[A-Za-z0-9_]+:/.test(lines[i])) i++;
+    text = lines.slice(i).join('\n');
+  }
+  return text
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/^\*{1,6}\s+/gm, '')
+    .replace(/\*{1,2}([^*\n]+)\*{1,2}/g, '$1')
+    .replace(/_{1,2}([^_\n]+)_{1,2}/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/`[^`]+`/g, '')
+    .replace(/^>\s*/gm, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 import { useTheme } from '../contexts/ThemeContext';
 import { getChecklistProgress, hasChecklists } from '../utils/checklist';
 
@@ -11,10 +45,12 @@ interface NoteCardProps {
   onPress: (note: Note) => void;
   onLongPress?: (note: Note) => void;
   compact?: boolean;
+  highlighted?: boolean;
 }
 
-export default function NoteCard({ note, onPress, onLongPress, compact = false }: NoteCardProps) {
-  const { colors } = useTheme();
+export default function NoteCard({ note, onPress, onLongPress, compact = false, highlighted = false }: NoteCardProps) {
+  const { colors, isDark } = useTheme();
+  const { isTablet } = useResponsive();
   
   const checklistProgress = useMemo(() => {
     if (!hasChecklists(note.content)) return null;
@@ -24,9 +60,15 @@ export default function NoteCard({ note, onPress, onLongPress, compact = false }
   return (
     <TouchableOpacity
       style={[
-        styles.card, 
-        { backgroundColor: colors.card, shadowColor: colors.text },
-        compact && styles.cardCompact
+        styles.card,
+        {
+          backgroundColor: colors.card,
+          shadowColor: colors.shadow,
+          shadowOpacity: isDark ? 0 : 0.1,
+        },
+        compact && styles.cardCompact,
+        isTablet && styles.cardTablet,
+        highlighted && { borderWidth: 2, borderColor: colors.primary },
       ]}
       onPress={() => onPress(note)}
       onLongPress={() => onLongPress?.(note)}
@@ -43,7 +85,7 @@ export default function NoteCard({ note, onPress, onLongPress, compact = false }
         </Text>
         {!compact && (
           <Text style={[styles.content, { color: colors.textSecondary }]} numberOfLines={2}>
-            {note.content || 'No content'}
+            {stripPreview(note.content, note.format) || 'No content'}
           </Text>
         )}
       </View>
@@ -200,5 +242,8 @@ const styles = StyleSheet.create({
   },
   branchText: {
     fontSize: 12,
+  },
+  cardTablet: {
+    marginHorizontal: 4,
   },
 });

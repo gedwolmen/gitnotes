@@ -8,13 +8,13 @@ interface NeorgRendererProps {
 }
 
 export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
 
-  const renderHeading = (heading: NeorgHeading) => {
+  const renderHeading = (heading: NeorgHeading, blockIndex: number) => {
     const fontSize = 32 - (heading.level - 1) * 4;
     return (
       <Text
-        key={`heading-${heading.text}`}
+        key={`heading-${blockIndex}`}
         style={[
           styles.heading,
           { fontSize, color: colors.text, marginTop: heading.level === 1 ? 16 : 12 },
@@ -25,18 +25,16 @@ export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
     );
   };
 
-  const renderListItem = (item: NeorgListItem, index: number) => {
+  const renderListItem = (item: NeorgListItem, blockIndex: number, itemIndex: number) => {
     const indent = item.indentLevel * 16;
     let prefix = '- ';
-    
     if (item.type === 'ordered') {
-      prefix = `${index + 1}. `;
+      prefix = `${itemIndex + 1}. `;
     } else if (item.type === 'task') {
       prefix = item.status === 'done' ? '[x] ' : '[ ] ';
     }
-
     return (
-      <View key={`list-${index}`} style={[styles.listItem, { marginLeft: indent }]}>
+      <View key={`list-${blockIndex}-${itemIndex}`} style={[styles.listItem, { marginLeft: indent }]}>
         <Text style={[styles.listText, { color: colors.text }]}>
           {prefix}{item.text}
         </Text>
@@ -44,10 +42,10 @@ export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
     );
   };
 
-  const renderChecklistItem = (item: NeorgChecklistItem, index: number) => {
+  const renderChecklistItem = (item: NeorgChecklistItem, blockIndex: number, itemIndex: number) => {
     const indent = item.indentLevel * 16;
     return (
-      <View key={`check-${index}`} style={[styles.listItem, { marginLeft: indent }]}>
+      <View key={`check-${blockIndex}-${itemIndex}`} style={[styles.listItem, { marginLeft: indent }]}>
         <Text style={[styles.listText, { color: colors.text }]}>
           {item.checked ? '✓' : '○'} {item.text}
         </Text>
@@ -55,14 +53,14 @@ export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
     );
   };
 
-  const renderParagraph = (text: string) => (
-    <Text key={`para-${text.slice(0, 10)}`} style={[styles.paragraph, { color: colors.text }]}>
+  const renderParagraph = (text: string, blockIndex: number) => (
+    <Text key={`para-${blockIndex}`} style={[styles.paragraph, { color: colors.text }]}>
       {text}
     </Text>
   );
 
-  const renderCodeBlock = (code: { language?: string; content: string }) => (
-    <View key={`code-${code.content.slice(0, 10)}`} style={[styles.codeBlock, { backgroundColor: isDark ? '#2c2c2e' : '#f0f0f0' }]}>
+  const renderCodeBlock = (code: { language?: string; content: string }, blockIndex: number) => (
+    <View key={`code-${blockIndex}`} style={[styles.codeBlock, { backgroundColor: colors.surfaceSecondary }]}>
       {code.language && (
         <Text style={[styles.codeLanguage, { color: colors.textSecondary }]}>{code.language}</Text>
       )}
@@ -70,18 +68,71 @@ export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
     </View>
   );
 
+  const renderTable = (block: NeorgContentBlock, blockIndex: number) => {
+    if (!block.tableRows || block.tableRows.length === 0) return null;
+    return (
+      <View key={`table-${blockIndex}`} style={[styles.tableContainer, { borderColor: colors.border }]}>
+        {block.tableRows.map((row, rowIdx) => {
+          const isHeader = block.isHeaderRow?.[rowIdx] || rowIdx === 0;
+          return (
+            <View
+              key={`tr-${blockIndex}-${rowIdx}`}
+              style={[
+                styles.tableRow,
+                { borderBottomColor: colors.border },
+                isHeader && { backgroundColor: colors.surfaceSecondary },
+              ]}
+            >
+              {row.cells.map((cell, cellIdx) => (
+                <Text
+                  key={`tc-${blockIndex}-${rowIdx}-${cellIdx}`}
+                  style={[
+                    styles.tableCell,
+                    { color: colors.text },
+                    isHeader && styles.tableHeaderCell,
+                  ]}
+                >
+                  {cell}
+                </Text>
+              ))}
+            </View>
+          );
+        })}
+      </View>
+    );
+  };
+
+  const renderQuote = (text: string, blockIndex: number) => (
+    <View
+      key={`quote-${blockIndex}`}
+      style={[styles.quoteBlock, { backgroundColor: colors.primary + '15', borderLeftColor: colors.primary }]}
+    >
+      <Text style={[styles.quoteText, { color: colors.text }]}>{text}</Text>
+    </View>
+  );
+
+  const renderDivider = (blockIndex: number) => (
+    <View key={`hr-${blockIndex}`} style={[styles.divider, { backgroundColor: colors.border }]} />
+  );
+
   const renderBlock = (block: NeorgContentBlock, index: number) => {
     switch (block.type) {
       case 'heading':
-        return block.heading ? renderHeading(block.heading) : null;
+        return block.heading ? renderHeading(block.heading, index) : null;
       case 'list':
-        return block.listItems?.map((item, i) => renderListItem(item, i));
+        return block.listItems?.map((item, i) => renderListItem(item, index, i));
       case 'checklist':
-        return block.checklistItems?.map((item, i) => renderChecklistItem(item, i));
+        return block.checklistItems?.map((item, i) => renderChecklistItem(item, index, i));
       case 'paragraph':
-        return block.text ? renderParagraph(block.text) : null;
+        return block.text ? renderParagraph(block.text, index) : null;
       case 'code':
-        return block.code ? renderCodeBlock(block.code) : null;
+        return block.code ? renderCodeBlock(block.code, index) : null;
+      case 'table':
+        return renderTable(block, index);
+      case 'quote':
+        return block.text ? renderQuote(block.text, index) : null;
+      case 'divider':
+        return renderDivider(index);
       default:
         return null;
     }
@@ -96,7 +147,6 @@ export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     padding: 16,
   },
   heading: {
@@ -129,5 +179,40 @@ const styles = StyleSheet.create({
   codeContent: {
     fontFamily: 'monospace',
     fontSize: 14,
+  },
+  tableContainer: {
+    borderWidth: 1,
+    borderRadius: 6,
+    marginVertical: 8,
+    overflow: 'hidden',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  tableCell: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  tableHeaderCell: {
+    fontWeight: '600',
+  },
+  quoteBlock: {
+    borderLeftWidth: 4,
+    paddingLeft: 12,
+    paddingVertical: 8,
+    marginVertical: 8,
+  },
+  quoteText: {
+    fontSize: 16,
+    lineHeight: 24,
+    fontStyle: 'italic',
+  },
+  divider: {
+    height: 1,
+    marginVertical: 16,
   },
 });

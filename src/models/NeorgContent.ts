@@ -18,8 +18,12 @@ export interface NeorgChecklistItem {
   indentLevel: number;
 }
 
+export interface NeorgTableRow {
+  cells: string[];
+}
+
 export interface NeorgContentBlock {
-  type: 'heading' | 'list' | 'paragraph' | 'code' | 'checklist';
+  type: 'heading' | 'list' | 'paragraph' | 'code' | 'checklist' | 'table' | 'quote' | 'divider';
   heading?: NeorgHeading;
   listItems?: NeorgListItem[];
   checklistItems?: NeorgChecklistItem[];
@@ -28,6 +32,8 @@ export interface NeorgContentBlock {
     language?: string;
     content: string;
   };
+  tableRows?: NeorgTableRow[];
+  isHeaderRow?: boolean[];
 }
 
 export interface NeorgContentParseResult {

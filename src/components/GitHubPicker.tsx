@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,15 @@ import {
   Modal,
   FlatList,
   ActivityIndicator,
+  TextInput,
   Linking,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { GitHubService, GitHubRepository, GitHubIssue, GitHubMilestone } from '../services/GitHubService';
+import { GitHubService, GitHubRepository, GitHubIssue, GitHubMilestone, GitHubPullRequest } from '../services/GitHubService';
 import { useTheme } from '../contexts/ThemeContext';
 import { HapticService } from '../utils/haptics';
 import { Note } from '../models/Note';
@@ -20,7 +25,42 @@ interface GitHubPickerProps {
   onChange: (github: Note['github'] | undefined) => void;
 }
 
-type LinkType = 'issue' | 'milestone' | null;
+type LinkType = 'issue' | 'milestone' | 'pr' | null;
+
+interface BottomSheetProps {
+  visible: boolean;
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}
+
+function BottomSheet({ visible, title, onClose, children }: BottomSheetProps) {
+  const { colors } = useTheme();
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.modalRoot}
+      >
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={styles.modalBackdrop} />
+        </TouchableWithoutFeedback>
+        <SafeAreaView
+          edges={['bottom']}
+          style={[styles.sheet, { backgroundColor: colors.surface }]}
+        >
+          <View style={[styles.sheetHeader, { borderBottomColor: colors.border }]}>
+            <Text style={[styles.sheetTitle, { color: colors.text }]}>{title}</Text>
+            <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close" size={24} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+          {children}
+        </SafeAreaView>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
 
 export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
   const { colors, isDark } = useTheme();
@@ -29,6 +69,7 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
   const [repositories, setRepositories] = useState<GitHubRepository[]>([]);
   const [issues, setIssues] = useState<GitHubIssue[]>([]);
   const [milestones, setMilestones] = useState<GitHubMilestone[]>([]);
+  const [pullRequests, setPullRequests] = useState<GitHubPullRequest[]>([]);
   const [selectedRepo, setSelectedRepo] = useState<GitHubRepository | null>(null);
   const [linkType, setLinkType] = useState<LinkType>(null);
   const [loading, setLoading] = useState(false);
@@ -36,8 +77,48 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
   const [showRepoModal, setShowRepoModal] = useState(false);
   const [showIssueModal, setShowIssueModal] = useState(false);
   const [showMilestoneModal, setShowMilestoneModal] = useState(false);
+  const [showPrModal, setShowPrModal] = useState(false);
 
-  const loadRepositories = useCallback(async () => {
+  const [repoSearch, setRepoSearch] = useState('');
+  const [issueSearch, setIssueSearch] = useState('');
+  const [prSearch, setPrSearch] = useState('');
+
+  const filteredPrs = useMemo(
+    () =>
+      pullRequests.filter(
+        (pr) =>
+          !prSearch.trim() ||
+          pr.title.toLowerCase().includes(prSearch.toLowerCase()) ||
+          String(pr.number).includes(prSearch)
+      ),
+    [pullRequests, prSearch]
+  );
+
+  const filteredRepos = useMemo(
+    () =>
+      repositories.filter(
+        (r) =>
+          !repoSearch.trim() ||
+          r.full_name.toLowerCase().includes(repoSearch.toLowerCase()) ||
+          (r.description ?? '').toLowerCase().includes(repoSearch.toLowerCase())
+      ),
+    [repositories, repoSearch]
+  );
+
+  const filteredIssues = useMemo(
+    () =>
+      issues.filter(
+        (i) =>
+          !issueSearch.trim() ||
+          i.title.toLowerCase().includes(issueSearch.toLowerCase()) ||
+          String(i.number).includes(issueSearch)
+      ),
+    [issues, issueSearch]
+  );
+
+  const openRepoModal = useCallback(async () => {
+    setRepoSearch('');
+    setShowRepoModal(true);
     setLoading(true);
     try {
       setRepositories(await GitHubService.getRepositories());
@@ -48,12 +129,15 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
     }
   }, []);
 
-  const loadIssues = useCallback(async (owner: string, repo: string) => {
+  const openIssueModal = useCallback(async () => {
+    if (!selectedRepo) return;
+    setIssueSearch('');
+    setShowIssueModal(true);
     setLoading(true);
     try {
       const [issuesData, milestonesData] = await Promise.all([
-        GitHubService.getIssues(owner, repo),
-        GitHubService.getMilestones(owner, repo),
+        GitHubService.getIssues(selectedRepo.owner.login, selectedRepo.name),
+        GitHubService.getMilestones(selectedRepo.owner.login, selectedRepo.name),
       ]);
       setIssues(issuesData);
       setMilestones(milestonesData);
@@ -63,17 +147,27 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedRepo]);
 
-  useEffect(() => {
-    if (showRepoModal) loadRepositories();
-  }, [showRepoModal, loadRepositories]);
-
-  useEffect(() => {
-    if (selectedRepo && (showIssueModal || showMilestoneModal)) {
-      loadIssues(selectedRepo.owner.login, selectedRepo.name);
+  const openMilestoneModal = useCallback(async () => {
+    if (!selectedRepo) return;
+    setShowMilestoneModal(true);
+    if (milestones.length === 0) {
+      setLoading(true);
+      try {
+        const [issuesData, milestonesData] = await Promise.all([
+          GitHubService.getIssues(selectedRepo.owner.login, selectedRepo.name),
+          GitHubService.getMilestones(selectedRepo.owner.login, selectedRepo.name),
+        ]);
+        setIssues(issuesData);
+        setMilestones(milestonesData);
+      } catch {
+        setMilestones([]);
+      } finally {
+        setLoading(false);
+      }
     }
-  }, [selectedRepo, showIssueModal, showMilestoneModal, loadIssues]);
+  }, [selectedRepo, milestones.length]);
 
   const handleRepoSelect = (repo: GitHubRepository) => {
     HapticService.selection();
@@ -86,6 +180,7 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
   const handleIssueSelect = (issue: GitHubIssue) => {
     HapticService.selection();
     setShowIssueModal(false);
+    setLinkType('issue');
     if (selectedRepo) {
       onChange({
         owner: selectedRepo.owner.login,
@@ -99,6 +194,7 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
   const handleMilestoneSelect = (milestone: GitHubMilestone) => {
     HapticService.selection();
     setShowMilestoneModal(false);
+    setLinkType('milestone');
     if (selectedRepo) {
       onChange({
         owner: selectedRepo.owner.login,
@@ -120,8 +216,8 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
     HapticService.selection();
     setLinkType(type);
     onChange(undefined);
-    if (type === 'issue') setShowIssueModal(true);
-    else if (type === 'milestone') setShowMilestoneModal(true);
+    if (type === 'issue') openIssueModal();
+    else if (type === 'milestone') openMilestoneModal();
   };
 
   const linkTypeLabel = value?.issueNumber
@@ -134,11 +230,7 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
 
   return (
     <View style={[styles.container, { borderTopColor: colors.border }]}>
-      {/* Header toggle */}
-      <TouchableOpacity
-        style={styles.header}
-        onPress={() => setIsExpanded(!isExpanded)}
-      >
+      <TouchableOpacity style={styles.header} onPress={() => setIsExpanded(!isExpanded)}>
         <View style={styles.headerLeft}>
           <Ionicons name="logo-github" size={18} color={colors.textSecondary} />
           <Text style={[styles.headerText, { color: colors.textSecondary }]}>GitHub</Text>
@@ -148,21 +240,17 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
             </Text>
           )}
         </View>
-        <Ionicons
-          name={isExpanded ? 'chevron-up' : 'chevron-down'}
-          size={20}
-          color={colors.textSecondary}
-        />
+        <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={20} color={colors.textSecondary} />
       </TouchableOpacity>
 
       {isExpanded && (
         <View style={[styles.content, { backgroundColor: isDark ? colors.background : '#fafafa' }]}>
-          {/* Repository selector */}
+          {/* Repository */}
           <View style={styles.selectorRow}>
             <Text style={[styles.selectorLabel, { color: colors.textSecondary }]}>Repository</Text>
             <TouchableOpacity
               style={[styles.selectorValue, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              onPress={() => setShowRepoModal(true)}
+              onPress={openRepoModal}
             >
               <Text
                 style={repoLabel
@@ -176,7 +264,7 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
             </TouchableOpacity>
           </View>
 
-          {/* Link type: Issue or Milestone */}
+          {/* Link type */}
           {selectedRepo && (
             <View style={styles.selectorRow}>
               <Text style={[styles.selectorLabel, { color: colors.textSecondary }]}>Link to</Text>
@@ -185,7 +273,7 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
                   style={[
                     styles.linkTypeButton,
                     { borderColor: colors.border },
-                    (linkType === 'issue' || !!value?.issueNumber) ? { borderColor: colors.primary, backgroundColor: colors.primary + '15' } : undefined,
+                    (linkType === 'issue' || !!value?.issueNumber) && { borderColor: colors.primary, backgroundColor: colors.primary + '15' },
                   ]}
                   onPress={() => handleLinkTypeSelect('issue')}
                 >
@@ -194,12 +282,7 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
                     size={16}
                     color={(linkType === 'issue' || value?.issueNumber) ? colors.primary : colors.textSecondary}
                   />
-                  <Text
-                    style={[
-                      styles.linkTypeText,
-                      { color: (linkType === 'issue' || value?.issueNumber) ? colors.primary : colors.textSecondary },
-                    ]}
-                  >
+                  <Text style={[styles.linkTypeText, { color: (linkType === 'issue' || value?.issueNumber) ? colors.primary : colors.textSecondary }]}>
                     Issue
                   </Text>
                 </TouchableOpacity>
@@ -208,7 +291,7 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
                   style={[
                     styles.linkTypeButton,
                     { borderColor: colors.border },
-                    (linkType === 'milestone' || !!value?.milestoneNumber) ? { borderColor: colors.primary, backgroundColor: colors.primary + '15' } : undefined,
+                    (linkType === 'milestone' || !!value?.milestoneNumber) && { borderColor: colors.primary, backgroundColor: colors.primary + '15' },
                   ]}
                   onPress={() => handleLinkTypeSelect('milestone')}
                 >
@@ -217,12 +300,7 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
                     size={16}
                     color={(linkType === 'milestone' || value?.milestoneNumber) ? colors.primary : colors.textSecondary}
                   />
-                  <Text
-                    style={[
-                      styles.linkTypeText,
-                      { color: (linkType === 'milestone' || value?.milestoneNumber) ? colors.primary : colors.textSecondary },
-                    ]}
-                  >
+                  <Text style={[styles.linkTypeText, { color: (linkType === 'milestone' || value?.milestoneNumber) ? colors.primary : colors.textSecondary }]}>
                     Milestone
                   </Text>
                 </TouchableOpacity>
@@ -230,7 +308,7 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
             </View>
           )}
 
-          {/* Selected link display */}
+          {/* Selected link */}
           {value && linkTypeLabel && (
             <View style={styles.selectorRow}>
               <Text style={[styles.selectorLabel, { color: colors.textSecondary }]}>
@@ -239,11 +317,9 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
               <View style={styles.linkValueRow}>
                 <TouchableOpacity
                   style={[styles.selectorValue, styles.linkValueFlex, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                  onPress={() => value.issueNumber ? setShowIssueModal(true) : setShowMilestoneModal(true)}
+                  onPress={() => value.issueNumber ? openIssueModal() : openMilestoneModal()}
                 >
-                  <Text style={[styles.valueText, { color: colors.text }]} numberOfLines={1}>
-                    {linkTypeLabel}
-                  </Text>
+                  <Text style={[styles.valueText, { color: colors.text }]} numberOfLines={1}>{linkTypeLabel}</Text>
                   <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
                 </TouchableOpacity>
                 {value.htmlUrl ? (
@@ -258,7 +334,6 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
             </View>
           )}
 
-          {/* Clear */}
           {(selectedRepo || value) && (
             <TouchableOpacity style={styles.clearButton} onPress={handleClear}>
               <Ionicons name="close-circle-outline" size={16} color={colors.error} />
@@ -269,127 +344,132 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
       )}
 
       {/* Repo modal */}
-      <Modal visible={showRepoModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Select Repository</Text>
-              <TouchableOpacity onPress={() => setShowRepoModal(false)}>
-                <Ionicons name="close" size={24} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-            {loading ? (
-              <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
-            ) : repositories.length === 0 ? (
-              <View style={styles.empty}>
-                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No repositories found</Text>
-              </View>
-            ) : (
-              <FlatList
-                data={repositories}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={[styles.listItem, { borderBottomColor: colors.border }]}
-                    onPress={() => handleRepoSelect(item)}
-                  >
-                    <Ionicons name="git-branch-outline" size={18} color={colors.primary} />
-                    <View style={styles.listItemInfo}>
-                      <Text style={[styles.listItemTitle, { color: colors.text }]}>{item.full_name}</Text>
-                      {item.description ? (
-                        <Text style={[styles.listItemSub, { color: colors.textSecondary }]} numberOfLines={1}>
-                          {item.description}
-                        </Text>
-                      ) : null}
-                    </View>
-                    {item.private && (
-                      <Ionicons name="lock-closed-outline" size={14} color={colors.textSecondary} />
-                    )}
-                  </TouchableOpacity>
-                )}
-              />
-            )}
-          </View>
+      <BottomSheet visible={showRepoModal} title="Select Repository" onClose={() => setShowRepoModal(false)}>
+        <View style={[styles.searchRow, { borderBottomColor: colors.border }]}>
+          <Ionicons name="search" size={16} color={colors.textSecondary} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.text }]}
+            placeholder="Search repositories…"
+            placeholderTextColor={colors.textSecondary}
+            value={repoSearch}
+            onChangeText={setRepoSearch}
+            autoCorrect={false}
+            autoCapitalize="none"
+          />
+          {repoSearch.length > 0 && (
+            <TouchableOpacity onPress={() => setRepoSearch('')}>
+              <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
+            </TouchableOpacity>
+          )}
         </View>
-      </Modal>
+        {loading ? (
+          <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
+        ) : filteredRepos.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              {repositories.length === 0 ? 'No repositories found' : 'No matches'}
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredRepos}
+            keyExtractor={(item) => item.id.toString()}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[styles.listItem, { borderBottomColor: colors.border }]}
+                onPress={() => handleRepoSelect(item)}
+              >
+                <Ionicons name="git-branch-outline" size={18} color={colors.primary} />
+                <View style={styles.listItemInfo}>
+                  <Text style={[styles.listItemTitle, { color: colors.text }]}>{item.full_name}</Text>
+                  {item.description ? (
+                    <Text style={[styles.listItemSub, { color: colors.textSecondary }]} numberOfLines={1}>
+                      {item.description}
+                    </Text>
+                  ) : null}
+                </View>
+                {item.private && (
+                  <Ionicons name="lock-closed-outline" size={14} color={colors.textSecondary} />
+                )}
+              </TouchableOpacity>
+            )}
+          />
+        )}
+      </BottomSheet>
 
       {/* Issue modal */}
-      <Modal visible={showIssueModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Select Issue</Text>
-              <TouchableOpacity onPress={() => setShowIssueModal(false)}>
-                <Ionicons name="close" size={24} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-            {loading ? (
-              <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
-            ) : issues.length === 0 ? (
-              <View style={styles.empty}>
-                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No open issues found</Text>
-              </View>
-            ) : (
-              <FlatList
-                data={issues}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={[styles.listItem, { borderBottomColor: colors.border }]}
-                    onPress={() => handleIssueSelect(item)}
-                  >
-                    <Ionicons name="alert-circle" size={16} color="#28a745" />
-                    <Text style={[styles.issueNumber, { color: colors.textSecondary }]}>#{item.number}</Text>
-                    <Text style={[styles.issueTitle, { color: colors.text }]} numberOfLines={1}>
-                      {item.title}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              />
-            )}
-          </View>
+      <BottomSheet visible={showIssueModal} title="Select Issue" onClose={() => setShowIssueModal(false)}>
+        <View style={[styles.searchRow, { borderBottomColor: colors.border }]}>
+          <Ionicons name="search" size={16} color={colors.textSecondary} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.text }]}
+            placeholder="Search issues…"
+            placeholderTextColor={colors.textSecondary}
+            value={issueSearch}
+            onChangeText={setIssueSearch}
+            autoCorrect={false}
+            autoCapitalize="none"
+          />
+          {issueSearch.length > 0 && (
+            <TouchableOpacity onPress={() => setIssueSearch('')}>
+              <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
+            </TouchableOpacity>
+          )}
         </View>
-      </Modal>
+        {loading ? (
+          <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
+        ) : filteredIssues.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              {issues.length === 0 ? 'No open issues found' : 'No matches'}
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredIssues}
+            keyExtractor={(item) => item.id.toString()}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[styles.listItem, { borderBottomColor: colors.border }]}
+                onPress={() => handleIssueSelect(item)}
+              >
+                <Ionicons name="alert-circle" size={16} color="#28a745" />
+                <Text style={[styles.issueNumber, { color: colors.textSecondary }]}>#{item.number}</Text>
+                <Text style={[styles.issueTitle, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
+              </TouchableOpacity>
+            )}
+          />
+        )}
+      </BottomSheet>
 
       {/* Milestone modal */}
-      <Modal visible={showMilestoneModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Select Milestone</Text>
-              <TouchableOpacity onPress={() => setShowMilestoneModal(false)}>
-                <Ionicons name="close" size={24} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-            {loading ? (
-              <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
-            ) : milestones.length === 0 ? (
-              <View style={styles.empty}>
-                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No open milestones found</Text>
-              </View>
-            ) : (
-              <FlatList
-                data={milestones}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={[styles.listItem, { borderBottomColor: colors.border }]}
-                    onPress={() => handleMilestoneSelect(item)}
-                  >
-                    <Ionicons name="flag" size={16} color={colors.primary} />
-                    <Text style={[styles.listItemTitle, { color: colors.text, flex: 1 }]} numberOfLines={1}>
-                      {item.title}
-                    </Text>
-                    <Text style={[styles.listItemSub, { color: colors.textSecondary }]}>
-                      {item.open_issues} open
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              />
-            )}
+      <BottomSheet visible={showMilestoneModal} title="Select Milestone" onClose={() => setShowMilestoneModal(false)}>
+        {loading ? (
+          <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
+        ) : milestones.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No open milestones found</Text>
           </View>
-        </View>
-      </Modal>
+        ) : (
+          <FlatList
+            data={milestones}
+            keyExtractor={(item) => item.id.toString()}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[styles.listItem, { borderBottomColor: colors.border }]}
+                onPress={() => handleMilestoneSelect(item)}
+              >
+                <Ionicons name="flag" size={16} color={colors.primary} />
+                <Text style={[styles.listItemTitle, { color: colors.text, flex: 1 }]} numberOfLines={1}>{item.title}</Text>
+                <Text style={[styles.listItemSub, { color: colors.textSecondary }]}>{item.open_issues} open</Text>
+              </TouchableOpacity>
+            )}
+          />
+        )}
+      </BottomSheet>
     </View>
   );
 }
@@ -465,17 +545,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  clearButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    gap: 4,
-    marginTop: 2,
-  },
-  clearText: {
-    fontSize: 14,
-  },
   linkValueRow: {
     flexDirection: 'row',
     gap: 8,
@@ -490,31 +559,64 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalOverlay: {
+  clearButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    gap: 4,
+    marginTop: 2,
+  },
+  clearText: {
+    fontSize: 14,
+  },
+  // Modal
+  modalRoot: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
-  modalSheet: {
+  modalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  sheet: {
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    maxHeight: '70%',
+    maxHeight: '85%',
   },
-  modalHeader: {
+  sheetHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     borderBottomWidth: 1,
   },
-  modalTitle: {
-    fontSize: 18,
+  sheetTitle: {
+    fontSize: 17,
     fontWeight: '600',
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    paddingVertical: 4,
   },
   loader: {
     padding: 40,
   },
-  empty: {
+  emptyState: {
     padding: 40,
     alignItems: 'center',
   },
@@ -524,8 +626,9 @@ const styles = StyleSheet.create({
   listItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     gap: 10,
   },
   listItemInfo: {

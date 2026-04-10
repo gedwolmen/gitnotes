@@ -1,0 +1,425 @@
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { Modal, View, StyleSheet, TouchableOpacity, Text, ScrollView, TextInput } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import {
+  Canvas as SkiaCanvas,
+  Path,
+  Rect,
+  Oval,
+  RoundedRect,
+  Fill,
+  Group,
+  Skia,
+  useCanvasRef,
+} from '@shopify/react-native-skia';
+import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
+
+interface CanvasModalProps {
+  visible: boolean;
+  onSave: (base64Uri: string) => void;
+  onClose: () => void;
+}
+
+type Point = { x: number; y: number };
+
+interface DrawStroke {
+  id: string;
+  tool: 'pen' | 'highlighter' | 'eraser';
+  color: string;
+  width: number;
+  points: Point[];
+}
+
+interface DrawShape {
+  id: string;
+  shape: 'line' | 'rect' | 'roundRect' | 'ellipse' | 'diamond' | 'arrow';
+  color: string;
+  fillColor?: string;
+  width: number;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
+type DrawElement = DrawStroke | DrawShape;
+
+const COLORS = ['#000000', '#FFFFFF', '#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#007AFF', '#5856D6', '#AF52DE', '#FF2D55'];
+const TOOLS = [
+  { key: 'pen', label: '✏️' },
+  { key: 'highlighter', label: '🖊' },
+  { key: 'eraser', label: '🧹' },
+  { key: 'line', label: '╱' },
+  { key: 'arrow', label: '→' },
+  { key: 'rect', label: '□' },
+  { key: 'roundRect', label: '⬜' },
+  { key: 'ellipse', label: '○' },
+  { key: 'diamond', label: '◇' },
+];
+
+function uid(): string {
+  return `dm-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+}
+
+function buildStrokePath(points: Point[]) {
+  if (points.length === 0) return null;
+  const p = Skia.Path.Make();
+  p.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length; i++) {
+    p.lineTo(points[i].x, points[i].y);
+  }
+  return p;
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function buildArrowPath(x1: number, y1: number, x2: number, y2: number, sw: number) {
+  const p = Skia.Path.Make();
+  p.moveTo(x1, y1);
+  p.lineTo(x2, y2);
+  const ang = Math.atan2(y2 - y1, x2 - x1);
+  const hl = Math.max(12, sw * 4);
+  p.moveTo(x2, y2);
+  p.lineTo(x2 - hl * Math.cos(ang - 0.4), y2 - hl * Math.sin(ang - 0.4));
+  p.moveTo(x2, y2);
+  p.lineTo(x2 - hl * Math.cos(ang + 0.4), y2 - hl * Math.sin(ang + 0.4));
+  return p;
+}
+
+function buildDiamondPath(x1: number, y1: number, x2: number, y2: number) {
+  const cx = (x1 + x2) / 2;
+  const cy = (y1 + y2) / 2;
+  const p = Skia.Path.Make();
+  p.moveTo(cx, y1);
+  p.lineTo(x2, cy);
+  p.lineTo(cx, y2);
+  p.lineTo(x1, cy);
+  p.close();
+  return p;
+}
+
+function buildLinePath(x1: number, y1: number, x2: number, y2: number) {
+  const p = Skia.Path.Make();
+  p.moveTo(x1, y1);
+  p.lineTo(x2, y2);
+  return p;
+}
+
+export default function CanvasModal({ visible, onSave, onClose }: CanvasModalProps) {
+  const canvasRef = useCanvasRef();
+  const [elements, setElements] = useState<DrawElement[]>([]);
+  const [history, setHistory] = useState<string[]>([]);
+  const [tool, setTool] = useState('pen');
+  const [color, setColor] = useState('#000000');
+  const [size, setSize] = useState(3);
+  const [filled, setFilled] = useState(false);
+  const isDrawingRef = useRef(false);
+
+  const [canvasSize, setCanvasSize] = useState<{ width: number; height: number } | null>(null);
+
+  const saveHistory = useCallback(() => {
+    setHistory((prev) => {
+      const next = [...prev, JSON.stringify(elements)];
+      return next.length > 20 ? next.slice(-20) : next;
+    });
+  }, [elements]);
+
+  const undo = useCallback(() => {
+    setHistory((prev) => {
+      if (prev.length === 0) return prev;
+      const last = prev[prev.length - 1];
+      setElements(JSON.parse(last));
+      return prev.slice(0, -1);
+    });
+  }, []);
+
+  const clearAll = useCallback(() => {
+    saveHistory();
+    setElements([]);
+  }, [saveHistory]);
+
+  const panGesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .runOnJS(true)
+        .onStart((e) => {
+          const pt = { x: e.x, y: e.y };
+          isDrawingRef.current = true;
+          saveHistory();
+
+          if (tool === 'pen' || tool === 'highlighter' || tool === 'eraser') {
+            const stroke: DrawStroke = {
+              id: uid(),
+              tool: tool === 'eraser' ? 'eraser' : tool === 'highlighter' ? 'highlighter' : 'pen',
+              color: tool === 'eraser' ? '#FFFFFF' : color,
+              width: tool === 'eraser' ? size * 3 : tool === 'highlighter' ? size * 5 : size,
+              points: [pt],
+            };
+            setElements((prev) => [...prev, stroke]);
+          } else {
+            const shape: DrawShape = {
+              id: uid(),
+              shape: tool as DrawShape['shape'],
+              color,
+              fillColor: filled ? color : undefined,
+              width: size,
+              x1: pt.x,
+              y1: pt.y,
+              x2: pt.x,
+              y2: pt.y,
+            };
+            setElements((prev) => [...prev, shape]);
+          }
+        })
+        .onChange((e) => {
+          if (!isDrawingRef.current) return;
+          const pt = { x: e.x, y: e.y };
+
+          setElements((prev) => {
+            const clone = [...prev];
+            const last = clone[clone.length - 1];
+            if (!last) return clone;
+
+            if ('points' in last) {
+              clone[clone.length - 1] = { ...last, points: [...last.points, pt] };
+            } else if ('shape' in last) {
+              clone[clone.length - 1] = { ...last, x2: pt.x, y2: pt.y };
+            }
+            return clone;
+          });
+        })
+        .onEnd(() => {
+          isDrawingRef.current = false;
+        }),
+    [tool, color, size, filled, saveHistory],
+  );
+
+  const handleSave = useCallback(() => {
+    const image = canvasRef.current?.makeImageSnapshot();
+    if (image) {
+      const base64 = image.encodeToBase64();
+      onSave(`data:image/png;base64,${base64}`);
+    }
+    setElements([]);
+    setHistory([]);
+    setTool('pen');
+    setColor('#000000');
+    setSize(3);
+    setFilled(false);
+  }, [canvasRef, onSave]);
+
+  const handleClose = useCallback(() => {
+    setElements([]);
+    setHistory([]);
+    onClose();
+  }, [onClose]);
+
+  const renderElement = (el: DrawElement, idx: number) => {
+    if ('points' in el) {
+      const path = buildStrokePath(el.points);
+      if (!path) return null;
+      const strokeColor = el.tool === 'highlighter' ? hexToRgba(el.color, 0.3) : el.color;
+
+      return (
+        <Group key={el.id ?? idx}>
+          <Path path={path} color={strokeColor} style="stroke" strokeWidth={el.width} strokeCap="round" strokeJoin="round" />
+        </Group>
+      );
+    }
+
+    if ('shape' in el) {
+      const { x1, y1, x2, y2, shape, color: sColor, fillColor, width: sw } = el;
+      const minX = Math.min(x1, x2);
+      const minY = Math.min(y1, y2);
+      const w = Math.abs(x2 - x1);
+      const h = Math.abs(y2 - y1);
+
+      if (shape === 'line') {
+        return <Path key={el.id ?? idx} path={buildLinePath(x1, y1, x2, y2)} style="stroke" strokeWidth={sw} color={sColor} />;
+      }
+      if (shape === 'arrow') {
+        return <Path key={el.id ?? idx} path={buildArrowPath(x1, y1, x2, y2, sw)} style="stroke" strokeWidth={sw} color={sColor} />;
+      }
+      if (shape === 'rect') {
+        return (
+          <Group key={el.id ?? idx}>
+            {fillColor && <Rect x={minX} y={minY} width={w} height={h} color={fillColor} />}
+            <Rect x={minX} y={minY} width={w} height={h} style="stroke" strokeWidth={sw} color={sColor} />
+          </Group>
+        );
+      }
+      if (shape === 'roundRect') {
+        return (
+          <Group key={el.id ?? idx}>
+            {fillColor && <RoundedRect x={minX} y={minY} width={w} height={h} r={10} color={fillColor} />}
+            <RoundedRect x={minX} y={minY} width={w} height={h} r={10} style="stroke" strokeWidth={sw} color={sColor} />
+          </Group>
+        );
+      }
+      if (shape === 'ellipse') {
+        return (
+          <Group key={el.id ?? idx}>
+            {fillColor && <Oval x={minX} y={minY} width={w} height={h} color={fillColor} />}
+            <Oval x={minX} y={minY} width={w} height={h} style="stroke" strokeWidth={sw} color={sColor} />
+          </Group>
+        );
+      }
+      if (shape === 'diamond') {
+        const dp = buildDiamondPath(x1, y1, x2, y2);
+        return (
+          <Group key={el.id ?? idx}>
+            {fillColor && <Path path={dp} color={fillColor} />}
+            <Path path={dp} style="stroke" strokeWidth={sw} color={sColor} />
+          </Group>
+        );
+      }
+    }
+
+    return null;
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaView edges={['top', 'bottom']} style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={handleClose} style={styles.headerBtn}>
+            <Ionicons name="close" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Canvas</Text>
+          <TouchableOpacity onPress={handleSave} style={styles.saveBtn}>
+            <Text style={styles.saveBtnText}>Save</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.toolbar}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {TOOLS.map(({ key, label }) => (
+              <TouchableOpacity
+                key={key}
+                style={[styles.toolBtn, tool === key && styles.toolBtnActive]}
+                onPress={() => setTool(key)}
+              >
+                <Text style={styles.toolBtnLabel}>{label}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity style={[styles.toolBtn, filled && styles.toolBtnActive]} onPress={() => setFilled(!filled)}>
+              <Text style={styles.toolBtnLabel}>{filled ? '▣' : '□'}</Text>
+            </TouchableOpacity>
+            <View style={styles.separator} />
+            <TouchableOpacity style={styles.toolBtn} onPress={undo}>
+              <Text style={styles.toolBtnLabel}>↩</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.toolBtn} onPress={clearAll}>
+              <Text style={styles.toolBtnLabel}>🗑</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+
+        <View style={styles.controls}>
+          {COLORS.map((c) => (
+            <TouchableOpacity
+              key={c}
+              style={[styles.swatch, { backgroundColor: c }, color === c && styles.swatchActive]}
+              onPress={() => setColor(c)}
+            />
+          ))}
+          <TextInput
+            style={styles.sizeInput}
+            value={String(size)}
+            onChangeText={(v) => setSize(Math.max(1, Math.min(36, parseInt(v, 10) || 1)))}
+            keyboardType="number-pad"
+            maxLength={2}
+          />
+        </View>
+
+        <View
+          style={styles.canvasPane}
+          onLayout={(e) => {
+            const { width, height } = e.nativeEvent.layout;
+            setCanvasSize((prev) => {
+              if (prev && prev.width === width && prev.height === height) return prev;
+              return { width, height };
+            });
+          }}
+        >
+          {canvasSize && (
+            <GestureDetector gesture={panGesture}>
+              <SkiaCanvas ref={canvasRef} style={{ width: canvasSize.width, height: canvasSize.height }}>
+                <Fill color="white" />
+                {elements.map(renderElement)}
+              </SkiaCanvas>
+            </GestureDetector>
+          )}
+        </View>
+      </SafeAreaView>
+      </GestureHandlerRootView>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#1c1c1e' },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#3a3a3c',
+  },
+  headerTitle: { fontSize: 17, fontWeight: '600', color: '#fff' },
+  headerBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  saveBtn: { backgroundColor: '#007AFF', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 6 },
+  saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+  toolbar: {
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#3a3a3c',
+  },
+  toolBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#3a3a3c',
+    borderRadius: 6,
+    marginRight: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toolBtnActive: { backgroundColor: '#002a6e', borderColor: '#007AFF' },
+  toolBtnLabel: { fontSize: 16, color: '#fff' },
+  separator: { width: 1, height: 28, backgroundColor: '#3a3a3c', marginHorizontal: 4 },
+  controls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#3a3a3c',
+    gap: 4,
+  },
+  swatch: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: 'transparent' },
+  swatchActive: { borderColor: '#fff', transform: [{ scale: 1.2 }] },
+  sizeInput: {
+    width: 36,
+    height: 28,
+    borderWidth: 1,
+    borderColor: '#3a3a3c',
+    borderRadius: 4,
+    textAlign: 'center',
+    fontSize: 13,
+    color: '#fff',
+    marginLeft: 8,
+    backgroundColor: '#2c2c2e',
+  },
+  canvasPane: { flex: 1, overflow: 'hidden', backgroundColor: '#fff' },
+});
