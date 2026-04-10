@@ -37,37 +37,50 @@ export class NeorgContentParser {
         }
       };
 
+      let pendingParagraphLines: string[] = [];
+
+      const flushParagraph = () => {
+        if (pendingParagraphLines.length > 0) {
+          const joined = pendingParagraphLines.join(' ');
+          const cleanText = joined.replace(/\s*\{[a-z0-9_.:]+\}\s*/g, ' ').trim();
+          if (cleanText) {
+            blocks.push({ type: 'paragraph', text: cleanText });
+          }
+          pendingParagraphLines = [];
+        }
+      };
+
+      const flushAll = () => {
+        flushParagraph();
+        flushList();
+        flushChecklist();
+        flushTable();
+      };
+
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         const trimmed = line.trim();
 
-        // ── Org drawer skipping (:PROPERTIES: ... :END:, :LOGBOOK: ... :END:) ──
         if (/^:\s*(PROPERTIES|LOGBOOK|END)\s*:\s*$/.test(trimmed)) {
           if (trimmed.includes(':END:')) {
             inOrgDrawer = false;
           } else {
-            flushList();
-            flushChecklist();
-            flushTable();
+            flushAll();
             inOrgDrawer = true;
           }
           continue;
         }
         if (inOrgDrawer) continue;
 
-        // ── Org block begin: #+BEGIN_SRC, #+BEGIN_QUOTE, #+BEGIN_ABSTRACT ──
         const orgBlockBegin = trimmed.match(/^#\+BEGIN_(\w+)\s*(.*)$/i);
         if (orgBlockBegin) {
-          flushList();
-          flushChecklist();
-          flushTable();
+          flushAll();
           orgBlockType = orgBlockBegin[1].toUpperCase();
           orgBlockLines = [];
           inOrgBlock = true;
           continue;
         }
 
-        // ── Org block end: #+END_SRC, #+END_QUOTE, etc. ──
         if (inOrgBlock && /^#\+END_\w+\s*$/i.test(trimmed)) {
           if (orgBlockType === 'QUOTE' || orgBlockType === 'ABSTRACT') {
             blocks.push({ type: 'quote', text: orgBlockLines.join('\n').trim() });
@@ -86,36 +99,28 @@ export class NeorgContentParser {
           continue;
         }
 
-        // ── Skip org metadata lines ──
         if (/^(SCHEDULED|DEADLINE|CLOSED)\s*:/i.test(trimmed)) continue;
         if (/^#\+(NAME|TBLFM|RESULTS|ATTR|CAPTION|OPTIONS|STARTUP|PROPERTY|SEQ_TODO|TAGS|LANGUAGE|EMAIL|AUTHOR|DATE|SETUPFILE|INCLUDE|MACRO|LINK)\s*:/i.test(trimmed)) continue;
         if (/^#\+LINK\s*:/i.test(trimmed)) continue;
 
-        // ── Skip org clock lines ──
         if (/^CLOCK\s*:/i.test(trimmed)) continue;
         if (/^-\s+State\s+"/i.test(trimmed)) continue;
 
-        // ── Skip norg standalone tags {tag} on otherwise empty lines ──
         if (/^\{[a-z0-9_.:]+\}$/.test(trimmed)) continue;
+        if (/^(\s*\{[a-z0-9_.:]+\}\s*)+$/.test(trimmed)) continue;
 
-        // ── Handle empty lines ──
         if (!trimmed) {
           if (currentCodeBlock) {
             currentCodeBlock.lines.push(line);
             continue;
           }
-          flushList();
-          flushChecklist();
-          flushTable();
+          flushAll();
           continue;
         }
 
-        // ── Norg code/raw/embed block: =code[.lang], =raw, =embed.* ──
         const norgBlockMatch = trimmed.match(/^=(code|raw|embed(?:\.\w+)?)\s*$/);
         if (norgBlockMatch && !currentCodeBlock) {
-          flushList();
-          flushChecklist();
-          flushTable();
+          flushAll();
           currentCodeBlock = {
             language: norgBlockMatch[1].startsWith('code') && norgBlockMatch[1].includes('.')
               ? norgBlockMatch[1].split('.')[1]
@@ -125,28 +130,9 @@ export class NeorgContentParser {
           continue;
         }
 
-        // ── Norg block close: single = on its own line ──
         if (trimmed === '=' && currentCodeBlock) {
           this.finalizeCodeBlock(currentCodeBlock, blocks);
           currentCodeBlock = null;
-          continue;
-        }
-
-        // ── Markdown code block: ``` ──
-        const mdCodeMatch = line.match(/^```(\w*)$/);
-        if (mdCodeMatch) {
-          if (!currentCodeBlock) {
-            flushList();
-            flushChecklist();
-            flushTable();
-            currentCodeBlock = {
-              language: mdCodeMatch[1] || undefined,
-              lines: [],
-            };
-          } else {
-            this.finalizeCodeBlock(currentCodeBlock, blocks);
-            currentCodeBlock = null;
-          }
           continue;
         }
 
@@ -155,21 +141,24 @@ export class NeorgContentParser {
           continue;
         }
 
-        // ── Horizontal rule: --- ──
+        const mdCodeMatch = line.match(/^```(\w*)$/);
+        if (mdCodeMatch) {
+          flushAll();
+          currentCodeBlock = {
+            language: mdCodeMatch[1] || undefined,
+            lines: [],
+          };
+          continue;
+        }
+
         if (/^-{3,}\s*$/.test(trimmed)) {
-          flushList();
-          flushChecklist();
-          flushTable();
+          flushAll();
           blocks.push({ type: 'divider' });
           continue;
         }
 
-        // ── Norg .quote/.aside/.footnote blocks ──
         if (/^\.(quote|aside|footnote)\s*$/.test(trimmed)) {
-          flushList();
-          flushChecklist();
-          flushTable();
-          // Skip the opening marker; collect until .end
+          flushAll();
           let collected: string[] = [];
           for (let j = i + 1; j < lines.length; j++) {
             if (/^\.end\s*$/.test(lines[j].trim())) {
@@ -184,15 +173,14 @@ export class NeorgContentParser {
           continue;
         }
 
-        // ── Table rows: | col | col | ──
         if (/^\|.+\|\s*$/.test(trimmed)) {
-          // Skip separator rows like |---+---+---|
           if (/^\|[\s\-+:]+\|\s*$/.test(trimmed)) {
             if (currentTableRows) {
               tableHasHeader.push(true);
             }
             continue;
           }
+          flushParagraph();
           flushList();
           flushChecklist();
           const cells = trimmed.split('|').filter((_, idx, arr) => idx > 0 && idx < arr.length - 1).map(c => c.trim());
@@ -204,52 +192,42 @@ export class NeorgContentParser {
           continue;
         }
 
-        // ── Checklist items ──
         const checklistItem = this.parseChecklistItem(line);
         if (checklistItem) {
+          flushParagraph();
           flushList();
           if (!currentChecklist) currentChecklist = [];
           currentChecklist.push(checklistItem);
           continue;
         }
 
-        // ── Headings ──
         const heading = this.parseHeading(line);
         if (heading) {
-          flushList();
-          flushChecklist();
-          flushTable();
+          flushAll();
           blocks.push({ type: 'heading', heading });
           continue;
         }
 
-        // ── List items ──
         const listItem = this.parseListItem(line);
         if (listItem) {
+          flushParagraph();
           flushChecklist();
           if (!currentList) currentList = [];
           currentList.push(listItem);
           continue;
         }
 
-        // ── Not a list/checklist item — flush pending collections ──
         flushList();
         flushChecklist();
         flushTable();
 
-        let cleanText = trimmed.replace(/\s*\{[a-z0-9_.:]+\}\s*/g, ' ').trim();
-        if (cleanText) {
-          blocks.push({ type: 'paragraph', text: cleanText });
-        }
+        pendingParagraphLines.push(trimmed);
       }
 
-      flushList();
-      flushChecklist();
-      flushTable();
+      flushAll();
 
       if (currentCodeBlock) {
-        const codeText = currentCodeBlock.lines.join('\n');
-        blocks.push({ type: 'paragraph', text: codeText });
+        this.finalizeCodeBlock(currentCodeBlock, blocks);
       }
 
       return { success: true, blocks };
