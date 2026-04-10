@@ -1,10 +1,12 @@
 import { NeorgLink, LinkType, LinkParseResult } from '../models/NeorgLink';
+import { CANVAS_LINK_PREFIX } from '../models/Canvas';
 
 export class NeorgLinkParser {
   private static linkPattern = /\{([^}]+)\}(?:\[([^\]]+)\])?/g;
   private static headingPattern = /^\*(.+)$/;
   private static filePattern = /^:(.+):$/;
   private static urlPattern = /^(https?:\/\/.+)$/i;
+  private static canvasPattern = /^canvas:(.+)$/;
 
   static parseLinks(text: string): LinkParseResult {
     const links: NeorgLink[] = [];
@@ -65,6 +67,16 @@ export class NeorgLinkParser {
       };
     }
 
+    const canvasMatch = content.match(this.canvasPattern);
+    if (canvasMatch) {
+      return {
+        type: 'canvas',
+        target: content.trim(),
+        displayText,
+        original,
+      };
+    }
+
     return {
       type: 'url',
       target: content.trim(),
@@ -83,6 +95,8 @@ export class NeorgLinkParser {
         return `[${display}](${link.target})`;
       case 'url':
         return `[${display}](${link.target})`;
+      case 'canvas':
+        return `[${display}](canvas:${link.target})`;
       case 'anchor':
         return `[${display}](#${link.target})`;
       default:
@@ -119,6 +133,13 @@ export class NeorgLinkParser {
           target: link.target,
           displayText,
           action: 'openFile',
+        };
+      case 'canvas':
+        return {
+          type: 'canvas',
+          target: link.target,
+          displayText,
+          action: 'navigate',
         };
       case 'anchor':
         return {

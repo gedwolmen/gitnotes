@@ -22,6 +22,12 @@ export interface GitCommit {
   date: string;
 }
 
+export interface GitRepositoryFolder {
+  name: string;
+  path: string;
+  parentPath: string | null;
+}
+
 const DEFAULT_REPOS_ROOT = process.env.GIT_REPOS_ROOT_DEFAULT || './repos';
 const GITHUB_API_BASE = 'https://api.github.com';
 const CACHE_PREFIX = '@gitnotes:github_cache_';
@@ -29,6 +35,15 @@ const CACHE_PREFIX = '@gitnotes:github_cache_';
 interface CacheEntry<T> {
   data: T;
   timestamp: number;
+}
+
+interface GitHubTreeEntry {
+  path: string;
+  type: 'tree' | 'blob' | string;
+}
+
+interface GitHubTreeResponse {
+  tree?: GitHubTreeEntry[];
 }
 
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -208,6 +223,45 @@ export class GitService {
         date: new Date().toISOString().split('T')[0],
       },
     ];
+  }
+
+  static async getRepositoryFolders(repoPath: string, branch?: string): Promise<GitRepositoryFolder[]> {
+    const branchKey = branch || 'HEAD';
+    const cacheKey = `repo_folders_${repoPath.replace(/[^a-zA-Z0-9]/g, '_')}_${branchKey.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+    const cached = await this.getCachedData<GitRepositoryFolder[]>(cacheKey);
+    if (cached) return cached;
+
+    const repoInfo = this.parseRepoPath(repoPath);
+    if (!repoInfo) {
+      return [];
+    }
+
+    const treeRef = encodeURIComponent(branchKey);
+    const url = `${GITHUB_API_BASE}/repos/${repoInfo.owner}/${repoInfo.repo}/git/trees/${treeRef}?recursive=1`;
+    const treeResponse = await this.fetchFromGitHub<GitHubTreeResponse>(url);
+
+    if (!treeResponse?.tree) {
+      return [];
+    }
+
+    const folders = treeResponse.tree
+      .filter((entry) => entry.type === 'tree' && Boolean(entry.path))
+      .map((entry) => {
+        const cleanPath = entry.path.replace(/^\/+/, '').replace(/\/+$/, '');
+        const lastSlashIndex = cleanPath.lastIndexOf('/');
+        const parentPath = lastSlashIndex >= 0 ? cleanPath.substring(0, lastSlashIndex) : null;
+
+        return {
+          name: lastSlashIndex >= 0 ? cleanPath.substring(lastSlashIndex + 1) : cleanPath,
+          path: cleanPath,
+          parentPath,
+        };
+      })
+      .sort((a, b) => a.path.localeCompare(b.path));
+
+    await this.setCachedData(cacheKey, folders);
+    return folders;
   }
 
   static async isGitRepository(path: string): Promise<boolean> {

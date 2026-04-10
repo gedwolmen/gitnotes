@@ -3,6 +3,30 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const TOKEN_KEY = '@gitnotes:github_token';
 const USER_KEY = '@gitnotes:github_user';
 
+function decodeBase64(base64: string): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  let result = '';
+  let i = 0;
+  base64 = base64.replace(/[^A-Za-z0-9+/]/g, '');
+  while (i < base64.length) {
+    const c1 = chars.indexOf(base64[i++]);
+    const c2 = chars.indexOf(base64[i++]);
+    const c3 = chars.indexOf(base64[i++]);
+    const c4 = chars.indexOf(base64[i++]);
+    const b1 = (c1 << 2) | (c2 >> 4);
+    const b2 = ((c2 & 15) << 4) | (c3 >> 2);
+    const b3 = ((c3 & 3) << 6) | c4;
+    result += String.fromCharCode(b1);
+    if (c3 !== 64 && base64[i - 2] !== '=') result += String.fromCharCode(b2);
+    if (c4 !== 64 && base64[i - 1] !== '=') result += String.fromCharCode(b3);
+  }
+  try {
+    return decodeURIComponent(escape(result));
+  } catch {
+    return result;
+  }
+}
+
 export interface GitHubUser {
   login: string;
   id: number;
@@ -46,6 +70,33 @@ export interface GitHubMilestone {
   open_issues: number;
   closed_issues: number;
   due_on: string | null;
+}
+
+export interface GitHubPullRequest {
+  id: number;
+  number: number;
+  title: string;
+  state: 'open' | 'closed';
+  html_url: string;
+  user: { login: string };
+  draft: boolean;
+  created_at: string;
+}
+
+export interface GitHubContent {
+  name: string;
+  path: string;
+  type: 'file' | 'dir' | 'symlink' | 'submodule';
+  size: number;
+  download_url: string | null;
+  content?: string;
+  encoding?: string;
+  sha?: string;
+}
+
+export interface GitHubFileCommit {
+  content: { sha: string } | null;
+  commit: { sha: string };
 }
 
 class GitHubServiceClass {
@@ -129,6 +180,18 @@ class GitHubServiceClass {
     }
   }
 
+  async getPullRequests(owner: string, repo: string): Promise<GitHubPullRequest[]> {
+    try {
+      const data = await this.fetchWithAuth(
+        `https://api.github.com/repos/${owner}/${repo}/pulls?state=open&per_page=50`
+      );
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      console.error('[GitHubService] Failed to get pull requests:', error);
+      return [];
+    }
+  }
+
   async getMilestones(owner: string, repo: string): Promise<GitHubMilestone[]> {
     try {
       const data = await this.fetchWithAuth(
@@ -141,13 +204,206 @@ class GitHubServiceClass {
     }
   }
 
-  private async fetchWithAuth(url: string): Promise<any> {
+  async getRepoContents(owner: string, repo: string, path: string = '', ref?: string): Promise<GitHubContent[]> {
+    try {
+      const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+      let url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
+      if (ref) url += `?ref=${encodeURIComponent(ref)}`;
+      const data = await this.fetchWithAuth(url);
+      if (Array.isArray(data)) {
+        return data;
+      }
+      return [data];
+    } catch (error) {
+      console.error('[GitHubService] Failed to get repo contents:', error);
+      return [];
+    }
+  }
+
+  async getFileContent(owner: string, repo: string, path: string, ref?: string): Promise<string | null> {
+    try {
+      const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+      let url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
+      if (ref) url += `?ref=${encodeURIComponent(ref)}`;
+      const data = await this.fetchWithAuth(url);
+      if (data.type === 'file' && data.content) {
+        const base64 = data.content.replace(/\n/g, '');
+        return decodeBase64(base64);
+      }
+      return null;
+    } catch (error) {
+      console.error('[GitHubService] Failed to get file content:', error);
+      return null;
+    }
+  }
+
+  async getFileSha(owner: string, repo: string, path: string, ref?: string): Promise<string | null> {
+    try {
+      const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+      let url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
+      if (ref) url += `?ref=${encodeURIComponent(ref)}`;
+      const data = await this.fetchWithAuth(url);
+      return data.sha || null;
+    } catch {
+      return null;
+    }
+  }
+
+  async createFile(
+    owner: string,
+    repo: string,
+    path: string,
+    content: string,
+    message: string,
+    branch: string = 'main',
+  ): Promise<GitHubFileCommit | null> {
+    try {
+      const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
+      const encoder = new TextEncoder();
+      const bytes = encoder.encode(content);
+      let binary = '';
+      bytes.forEach((b) => { binary += String.fromCharCode(b); });
+      const base64Content = btoa(binary);
+      return await this.fetchWithAuth(url, {
+        method: 'PUT',
+        body: JSON.stringify({
+          message,
+          content: base64Content,
+          branch,
+        }),
+      });
+    } catch (error) {
+      console.error('[GitHubService] Failed to create file:', error);
+      return null;
+    }
+  }
+
+  async uploadBinaryFile(
+    owner: string,
+    repo: string,
+    path: string,
+    base64Content: string,
+    message: string,
+    branch: string = 'main',
+  ): Promise<GitHubFileCommit | null> {
+    try {
+      const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
+
+      const existingSha = await this.getFileSha(owner, repo, path, branch);
+
+      const body: Record<string, string> = {
+        message,
+        content: base64Content,
+        branch,
+      };
+      if (existingSha) {
+        body.sha = existingSha;
+      }
+
+      return await this.fetchWithAuth(url, {
+        method: 'PUT',
+        body: JSON.stringify(body),
+      });
+    } catch (error) {
+      console.error('[GitHubService] Failed to upload binary file:', error);
+      return null;
+    }
+  }
+
+  async deleteFile(
+    owner: string,
+    repo: string,
+    path: string,
+    message: string,
+    sha: string,
+    branch: string = 'main',
+  ): Promise<GitHubFileCommit | null> {
+    try {
+      const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
+      return await this.fetchWithAuth(url, {
+        method: 'DELETE',
+        body: JSON.stringify({ message, sha, branch }),
+      });
+    } catch (error) {
+      console.error('[GitHubService] Failed to delete file:', error);
+      return null;
+    }
+  }
+
+  async createFolder(
+    owner: string,
+    repo: string,
+    folderPath: string,
+    branch: string = 'main',
+  ): Promise<GitHubFileCommit | null> {
+    const keepPath = folderPath ? `${folderPath}/.gitkeep` : '.gitkeep';
+    return this.createFile(owner, repo, keepPath, '', `Create folder ${folderPath || '/'}`, branch);
+  }
+
+  async updateFile(
+    owner: string,
+    repo: string,
+    path: string,
+    content: string,
+    message: string,
+    branch: string = 'main',
+  ): Promise<GitHubFileCommit | null> {
+    try {
+      const sha = await this.getFileSha(owner, repo, path, branch);
+      if (!sha) {
+        return this.createFile(owner, repo, path, content, message, branch);
+      }
+
+      const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
+      const encoder = new TextEncoder();
+      const bytes = encoder.encode(content);
+      let binary = '';
+      bytes.forEach((b) => { binary += String.fromCharCode(b); });
+      const base64Content = btoa(binary);
+      return await this.fetchWithAuth(url, {
+        method: 'PUT',
+        body: JSON.stringify({
+          message,
+          content: base64Content,
+          sha,
+          branch,
+        }),
+      });
+    } catch (error) {
+      console.error('[GitHubService] Failed to update file:', error);
+      return null;
+    }
+  }
+
+  async moveFile(
+    owner: string,
+    repo: string,
+    oldPath: string,
+    newPath: string,
+    content: string,
+    message: string,
+    oldSha: string,
+    branch: string = 'main',
+  ): Promise<boolean> {
+    const createResult = await this.createFile(owner, repo, newPath, content, message, branch);
+    if (!createResult) return false;
+    await this.deleteFile(owner, repo, oldPath, message, oldSha, branch);
+    return true;
+  }
+
+  private async fetchWithAuth(url: string, options?: RequestInit): Promise<any> {
     if (!this.token) throw new Error('GitHub token is not configured');
 
     const response = await fetch(url, {
+      ...options,
       headers: {
         Authorization: `Bearer ${this.token}`,
         Accept: 'application/vnd.github.v3+json',
+        ...options?.headers,
       },
     });
 

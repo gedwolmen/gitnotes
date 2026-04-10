@@ -3,14 +3,19 @@ import { File, Paths } from 'expo-file-system';
 import { Platform } from 'react-native';
 import { Note } from '../models/Note';
 
-export type ShareFormat = 'text' | 'markdown';
+export type ShareFormat = 'text' | 'markdown' | 'org' | 'neorg';
 
 export interface ShareOptions {
   format: ShareFormat;
   includeMetadata?: boolean;
 }
 
-const MARKDOWN_EXTENSION = '.md';
+const FORMAT_EXTENSION: Record<ShareFormat, string> = {
+  text: '.txt',
+  markdown: '.md',
+  org: '.org',
+  neorg: '.norg',
+};
 
 export class ShareService {
   static async isShareAvailable(): Promise<boolean> {
@@ -49,6 +54,48 @@ export class ShareService {
     return content;
   }
 
+  static generateOrg(note: Note, includeMetadata = true): string {
+    let content = '';
+
+    if (includeMetadata) {
+      content += `#+TITLE: ${note.title || 'Untitled Note'}\n`;
+      content += `#+DATE: ${new Date(note.updatedAt || Date.now()).toISOString()}\n`;
+      if (note.tags && note.tags.length > 0) {
+        content += `#+FILETAGS: :${note.tags.join(':')}:\n`;
+      }
+      if (note.folderPath) {
+        content += `#+FOLDER: ${note.folderPath}\n`;
+      }
+      if (note.repo) {
+        content += `#+REPO: ${note.repo}\n`;
+      }
+      if (note.branch) {
+        content += `#+BRANCH: ${note.branch}\n`;
+      }
+      content += '\n';
+    }
+
+    content += note.content || '';
+    return content;
+  }
+
+  static generateNeorg(note: Note, includeMetadata = true): string {
+    let content = '';
+
+    if (includeMetadata) {
+      content += '@document.meta\n';
+      content += `title: ${note.title || 'Untitled Note'}\n`;
+      content += `updated: ${new Date(note.updatedAt || Date.now()).toISOString()}\n`;
+      if (note.tags && note.tags.length > 0) {
+        content += `categories: [${note.tags.join(', ')}]\n`;
+      }
+      content += '@end\n\n';
+    }
+
+    content += note.content || '';
+    return content;
+  }
+
   static generatePlainText(note: Note, includeMetadata = true): string {
     let content = '';
 
@@ -82,20 +129,32 @@ export class ShareService {
   static generateFilename(note: Note, format: ShareFormat): string {
     const title = note.title?.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase() || 'untitled-note';
     const timestamp = new Date().getTime();
-    return `${title}-${timestamp}${format === 'markdown' ? MARKDOWN_EXTENSION : '.txt'}`;
+    return `${title}-${timestamp}${FORMAT_EXTENSION[format]}`;
   }
 
   private static getMimeType(format: ShareFormat): string {
-    return format === 'markdown' ? 'text/markdown' : 'text/plain';
+    if (format === 'markdown') return 'text/markdown';
+    return 'text/plain';
+  }
+
+  private static generateContent(note: Note, format: ShareFormat, includeMetadata: boolean): string {
+    switch (format) {
+      case 'markdown':
+        return this.generateMarkdown(note, includeMetadata);
+      case 'org':
+        return this.generateOrg(note, includeMetadata);
+      case 'neorg':
+        return this.generateNeorg(note, includeMetadata);
+      default:
+        return this.generatePlainText(note, includeMetadata);
+    }
   }
 
   static async shareNote(note: Note, options: ShareOptions): Promise<boolean> {
     try {
       const { format, includeMetadata = true } = options;
 
-      const content = format === 'markdown'
-        ? this.generateMarkdown(note, includeMetadata)
-        : this.generatePlainText(note, includeMetadata);
+      const content = this.generateContent(note, format, includeMetadata);
 
       const filename = this.generateFilename(note, format);
       const mimeType = this.getMimeType(format);
@@ -143,15 +202,11 @@ export class ShareService {
       }
 
       for (const note of notes) {
-        if (format === 'markdown') {
-          combinedContent += this.generateMarkdown(note, includeMetadata);
-        } else {
-          combinedContent += this.generatePlainText(note, includeMetadata);
-        }
+        combinedContent += this.generateContent(note, format, includeMetadata);
         combinedContent += '\n\n---\n\n';
       }
 
-      const filename = `gitnotes-export-${new Date().getTime()}${format === 'markdown' ? MARKDOWN_EXTENSION : '.txt'}`;
+      const filename = `gitnotes-export-${new Date().getTime()}${FORMAT_EXTENSION[format]}`;
       const mimeType = this.getMimeType(format);
 
       if (Platform.OS === 'web') {
@@ -183,6 +238,17 @@ export class ShareService {
 
   static async shareAsMarkdown(note: Note): Promise<boolean> {
     return this.shareNote(note, { format: 'markdown', includeMetadata: true });
+  }
+
+  static async shareByNoteFormat(note: Note): Promise<boolean> {
+    const noteFormat = note.format ?? 'markdown';
+    if (noteFormat === 'org') {
+      return this.shareNote(note, { format: 'org', includeMetadata: true });
+    }
+    if (noteFormat === 'neorg') {
+      return this.shareNote(note, { format: 'neorg', includeMetadata: true });
+    }
+    return this.shareAsMarkdown(note);
   }
 }
 
