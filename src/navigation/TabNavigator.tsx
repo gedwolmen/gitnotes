@@ -1,48 +1,176 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+} from 'react-native';
+import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import HomeScreen from '../screens/HomeScreen';
 import NotesListScreen from '../screens/NotesListScreen';
+import ExploreScreen from '../screens/ExploreScreen';
+import TodoListScreen from '../screens/TodoListScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import { BottomTabParamList } from './types';
+import { useResponsive } from '../hooks/useResponsive';
+import { useTheme } from '../contexts/ThemeContext';
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 
+const TAB_ICONS: Record<string, { focused: string; outline: string; label: string }> = {
+  HomeTab: { focused: 'home', outline: 'home-outline', label: 'Home' },
+  NotesTab: { focused: 'document-text', outline: 'document-text-outline', label: 'Notes' },
+  ExploreTab: { focused: 'compass', outline: 'compass-outline', label: 'Explore' },
+  TodosTab: { focused: 'checkbox', outline: 'checkbox-outline', label: 'Todos' },
+  SettingsTab: { focused: 'settings', outline: 'settings-outline', label: 'Settings' },
+};
+
+function TabletRail({ state, navigation }: BottomTabBarProps) {
+  const { colors, isDark } = useTheme();
+
+  return (
+    <SafeAreaView edges={['top', 'bottom']} style={railStyles.container}>
+      <View
+        style={[
+          railStyles.rail,
+          {
+            backgroundColor: isDark ? '#1c1c1e' : '#f8f8f8',
+            borderRightColor: colors.border,
+          },
+        ]}
+      >
+        {state.routes.map((route, index) => {
+          const isFocused = state.index === index;
+          const config = TAB_ICONS[route.name];
+          if (!config) return null;
+
+          const onPress = () => {
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
+
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(route.name);
+            }
+          };
+
+          const onLongPress = () => {
+            navigation.emit({
+              type: 'tabLongPress',
+              target: route.key,
+            });
+          };
+
+          return (
+            <TouchableOpacity
+              key={route.key}
+              accessibilityRole="button"
+              accessibilityState={isFocused ? { selected: true } : {}}
+              accessibilityLabel={config.label}
+              style={[
+                railStyles.tab,
+                isFocused && {
+                  backgroundColor: colors.primary + '18',
+                  borderRadius: 12,
+                },
+              ]}
+              onPress={onPress}
+              onLongPress={onLongPress}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={(isFocused ? config.focused : config.outline) as any}
+                size={24}
+                color={isFocused ? colors.primary : colors.textSecondary}
+              />
+              <Text
+                style={[
+                  railStyles.label,
+                  { color: isFocused ? colors.primary : colors.textSecondary },
+                ]}
+                numberOfLines={1}
+              >
+                {config.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const railStyles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+  },
+  rail: {
+    width: 80,
+    flex: 1,
+    borderRightWidth: StyleSheet.hairlineWidth,
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
+  tab: {
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+    marginHorizontal: 6,
+    marginVertical: 2,
+  },
+  label: {
+    fontSize: 10,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+});
+
 export default function TabNavigator() {
+  const { isTablet } = useResponsive();
+
   return (
     <Tab.Navigator
+      tabBar={isTablet ? (props) => <TabletRail {...props} /> : undefined}
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
-          let iconName: keyof typeof Ionicons.glyphMap = 'home';
-
-          if (route.name === 'HomeTab') {
-            iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'NotesTab') {
-            iconName = focused ? 'document-text' : 'document-text-outline';
-          } else if (route.name === 'SettingsTab') {
-            iconName = focused ? 'settings' : 'settings-outline';
-          }
-
-          return <Ionicons name={iconName} size={size} color={color} />;
+          const config = TAB_ICONS[route.name];
+          if (!config) return null;
+          const iconName = focused ? config.focused : config.outline;
+          return <Ionicons name={iconName as any} size={size} color={color} />;
         },
         tabBarActiveTintColor: '#007AFF',
         tabBarInactiveTintColor: 'gray',
-        headerShown: true,
+        headerShown: false,
       })}
     >
-      <Tab.Screen 
-        name="HomeTab" 
+      <Tab.Screen
+        name="HomeTab"
         component={HomeScreen}
         options={{ title: 'Home' }}
       />
-      <Tab.Screen 
-        name="NotesTab" 
+      <Tab.Screen
+        name="NotesTab"
         component={NotesListScreen}
         options={{ title: 'Notes' }}
       />
-      <Tab.Screen 
-        name="SettingsTab" 
+      <Tab.Screen
+        name="ExploreTab"
+        component={ExploreScreen}
+        options={{ title: 'Explore' }}
+      />
+      <Tab.Screen
+        name="TodosTab"
+        component={TodoListScreen}
+        options={{ title: 'Todos' }}
+      />
+      <Tab.Screen
+        name="SettingsTab"
         component={SettingsScreen}
         options={{ title: 'Settings' }}
       />

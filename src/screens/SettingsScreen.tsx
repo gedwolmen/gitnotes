@@ -12,24 +12,34 @@ import {
   TextInput,
   ActivityIndicator,
   Linking,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNotes } from '../contexts/NoteContext';
 import { useAuth } from '../contexts/AuthContext';
-import { GitService, GitRepository } from '../services/GitService';
+import { useRepos } from '../contexts/RepoContext';
+import { GitRepository } from '../services/GitService';
+import { GitHubService, GitHubRepository } from '../services/GitHubService';
+import { RepoFileSyncService } from '../services/RepoFileSyncService';
 import { OnboardingService } from '../services/OnboardingService';
 import { HapticService } from '../utils/haptics';
+import SearchBar from '../components/SearchBar';
+import { useResponsive } from '../hooks/useResponsive';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function SettingsScreen() {
   const { theme, isDark, colors, setTheme } = useTheme();
-  const { clearAllNotes } = useNotes();
+  const { isTablet, maxContentWidth } = useResponsive();
+  const { clearAllNotes, refreshNotes } = useNotes();
   const { authState, setToken, clearToken } = useAuth();
-
-  // Repos
-  const [repositories, setRepositories] = useState<GitRepository[]>([]);
-  const [newRepoInput, setNewRepoInput] = useState('');
+  const { repositories, addRepository: addRepo, removeRepository: removeRepo } = useRepos();
+  const [showRepoPickerModal, setShowRepoPickerModal] = useState(false);
+  const [githubRepos, setGithubRepos] = useState<GitHubRepository[]>([]);
+  const [isLoadingGithubRepos, setIsLoadingGithubRepos] = useState(false);
+  const [manualRepoInput, setManualRepoInput] = useState('');
   const [isAddingRepo, setIsAddingRepo] = useState(false);
+  const [repoSearchQuery, setRepoSearchQuery] = useState('');
 
   // GitHub token modal
   const [showTokenModal, setShowTokenModal] = useState(false);
@@ -37,31 +47,91 @@ export default function SettingsScreen() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [tokenError, setTokenError] = useState<string | null>(null);
 
-  const loadRepositories = useCallback(async () => {
-    const repos = await GitService.getRepositories();
-    setRepositories(repos);
+  const [syncingRepo, setSyncingRepo] = useState<string | null>(null);
+
+  const handleSyncRepo = useCallback(async (repo: GitRepository) => {
+    if (!GitHubService.isAuthenticated()) {
+      Alert.alert('GitHub Required', 'Please connect your GitHub account in Settings to sync repository files.');
+      return;
+    }
+    setSyncingRepo(repo.path);
+    try {
+      const result = await RepoFileSyncService.syncRepoFiles(repo.path);
+      HapticService.success();
+      if (result.created > 0) {
+        await refreshNotes();
+        Alert.alert('Sync Complete', `Imported ${result.created} notes from ${repo.name}.`);
+      } else if (result.skipped > 0) {
+        Alert.alert('Sync Complete', `All ${result.total} files were already imported or skipped.`);
+      } else if (result.errors.length > 0) {
+        Alert.alert('Sync Issues', `Encountered ${result.errors.length} errors. ${result.errors.slice(0, 3).join('\n')}`);
+      } else {
+        Alert.alert('No Files Found', 'No .md, .norg, .org, or .pdf files found in this repository.');
+      }
+    } catch (error) {
+      HapticService.error();
+      Alert.alert('Sync Failed', error instanceof Error ? error.message : 'Failed to sync repository files.');
+    } finally {
+      setSyncingRepo(null);
+    }
+  }, [refreshNotes]);
+
+  const openRepoPicker = useCallback(async () => {
+    setRepoSearchQuery('');
+    setShowRepoPickerModal(true);
+    if (authState.isAuthenticated && GitHubService.isAuthenticated()) {
+      setIsLoadingGithubRepos(true);
+      try {
+        const repos = await GitHubService.getRepositories();
+        setGithubRepos(repos);
+      } catch {
+        setGithubRepos([]);
+      } finally {
+        setIsLoadingGithubRepos(false);
+      }
+    }
+  }, [authState.isAuthenticated]);
+
+  const closeRepoPicker = useCallback(() => {
+    setShowRepoPickerModal(false);
+    setRepoSearchQuery('');
   }, []);
 
-  useEffect(() => {
-    loadRepositories();
-  }, [loadRepositories]);
-
-  const handleAddRepo = useCallback(async () => {
-    const val = newRepoInput.trim();
-    if (!val) return;
+  const handleSelectGithubRepo = useCallback(async (ghRepo: GitHubRepository) => {
+    const alreadyAdded = repositories.some((r) => r.path === ghRepo.full_name);
+    if (alreadyAdded) {
+      setShowRepoPickerModal(false);
+      return;
+    }
     setIsAddingRepo(true);
     try {
-      await GitService.addRepository(val);
-      setNewRepoInput('');
-      await loadRepositories();
+      await addRepo(ghRepo.full_name, ghRepo.name);
       HapticService.success();
+      setShowRepoPickerModal(false);
     } catch {
       HapticService.error();
       Alert.alert('Error', 'Failed to add repository.');
     } finally {
       setIsAddingRepo(false);
     }
-  }, [newRepoInput, loadRepositories]);
+  }, [repositories, addRepo]);
+
+  const handleAddManualRepo = useCallback(async () => {
+    const val = manualRepoInput.trim();
+    if (!val) return;
+    setIsAddingRepo(true);
+    try {
+      await addRepo(val);
+      setManualRepoInput('');
+      HapticService.success();
+      setShowRepoPickerModal(false);
+    } catch {
+      HapticService.error();
+      Alert.alert('Error', 'Failed to add repository.');
+    } finally {
+      setIsAddingRepo(false);
+    }
+  }, [manualRepoInput, addRepo]);
 
   const handleRemoveRepo = useCallback((repo: GitRepository) => {
     HapticService.warning();
@@ -74,14 +144,13 @@ export default function SettingsScreen() {
           text: 'Remove',
           style: 'destructive',
           onPress: async () => {
-            await GitService.removeRepository(repo.path);
+            await removeRepo(repo.path);
             HapticService.success();
-            await loadRepositories();
           },
         },
       ]
     );
-  }, [loadRepositories]);
+  }, [removeRepo]);
 
   const handleSaveToken = useCallback(async () => {
     if (!tokenInput.trim()) { setTokenError('Please enter a token'); return; }
@@ -144,7 +213,10 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }, isTablet && { maxWidth: maxContentWidth, alignSelf: 'center', width: '100%' }]}>
+      <View style={styles.header}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Settings</Text>
+      </View>
       <ScrollView style={styles.scrollContent} keyboardShouldPersistTaps="handled">
 
         {/* ── Appearance ── */}
@@ -229,53 +301,46 @@ export default function SettingsScreen() {
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Repositories</Text>
 
-          {/* Add repo input */}
-          <View style={[styles.addRepoRow, { borderBottomColor: colors.border, borderBottomWidth: 1 }]}>
-            <TextInput
-              style={[styles.repoInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
-              placeholder="github.com/owner/repo"
-              placeholderTextColor={colors.textSecondary}
-              value={newRepoInput}
-              onChangeText={setNewRepoInput}
-              autoCapitalize="none"
-              autoCorrect={false}
-              returnKeyType="done"
-              onSubmitEditing={handleAddRepo}
-            />
-            <TouchableOpacity
-              style={[styles.addRepoButton, { backgroundColor: colors.primary }, (!newRepoInput.trim() || isAddingRepo) && styles.disabledButton]}
-              onPress={handleAddRepo}
-              disabled={!newRepoInput.trim() || isAddingRepo}
-            >
-              {isAddingRepo
-                ? <ActivityIndicator size="small" color="#fff" />
-                : <Ionicons name="add" size={20} color="#fff" />
-              }
-            </TouchableOpacity>
-          </View>
-
           {repositories.length === 0 ? (
             <View style={styles.emptyRepos}>
               <Ionicons name="code-slash-outline" size={32} color={colors.textSecondary} />
               <Text style={[styles.emptyReposText, { color: colors.textSecondary }]}>
                 No repositories added yet
               </Text>
-              <Text style={[styles.emptyReposSub, { color: colors.textSecondary }]}>
-                Add a repo above using owner/repo format
-              </Text>
             </View>
           ) : (
             repositories.map((repo) => (
               <View key={repo.id} style={[styles.repoItem, { borderBottomColor: colors.border }]}>
                 <Ionicons name="git-branch-outline" size={18} color={colors.primary} />
-                <Text style={[styles.repoName, { color: colors.text }]} numberOfLines={1}>{repo.name}</Text>
-                <Text style={[styles.repoPath, { color: colors.textSecondary }]} numberOfLines={1}>{repo.path}</Text>
+                <View style={styles.repoInfo}>
+                  <Text style={[styles.repoName, { color: colors.text }]} numberOfLines={1}>{repo.name}</Text>
+                  <Text style={[styles.repoPath, { color: colors.textSecondary }]} numberOfLines={1}>{repo.path}</Text>
+                </View>
+                {syncingRepo === repo.path ? (
+                  <ActivityIndicator size="small" color={colors.primary} style={styles.syncSpinner} />
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => handleSyncRepo(repo)}
+                    style={styles.syncButton}
+                    disabled={!!syncingRepo}
+                  >
+                    <Ionicons name="cloud-download-outline" size={18} color={colors.primary} />
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity onPress={() => handleRemoveRepo(repo)} style={styles.removeButton}>
                   <Ionicons name="trash-outline" size={18} color={colors.error} />
                 </TouchableOpacity>
               </View>
             ))
           )}
+
+          <TouchableOpacity
+            style={[styles.addRepoButton, { borderColor: colors.primary }]}
+            onPress={openRepoPicker}
+          >
+            <Ionicons name="add" size={20} color={colors.primary} />
+            <Text style={[styles.addRepoButtonText, { color: colors.primary }]}>Add Repository</Text>
+          </TouchableOpacity>
         </View>
 
         {/* ── Data ── */}
@@ -312,6 +377,107 @@ export default function SettingsScreen() {
 
         <View style={styles.bottomPad} />
       </ScrollView>
+
+      {/* Repo picker modal */}
+      <Modal visible={showRepoPickerModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Add Repository</Text>
+              <TouchableOpacity onPress={closeRepoPicker}>
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView keyboardShouldPersistTaps="handled">
+              {/* Manual entry */}
+              <View style={[styles.manualRepoRow, { borderBottomColor: colors.border }]}>
+                <TextInput
+                  style={[styles.manualRepoInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+                  placeholder="owner/repo"
+                  placeholderTextColor={colors.textSecondary}
+                  value={manualRepoInput}
+                  onChangeText={setManualRepoInput}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="done"
+                  onSubmitEditing={handleAddManualRepo}
+                />
+                <TouchableOpacity
+                  style={[styles.manualAddBtn, { backgroundColor: colors.primary }, (!manualRepoInput.trim() || isAddingRepo) && styles.disabledButton]}
+                  onPress={handleAddManualRepo}
+                  disabled={!manualRepoInput.trim() || isAddingRepo}
+                >
+                  {isAddingRepo
+                    ? <ActivityIndicator size="small" color="#fff" />
+                    : <Text style={styles.manualAddBtnText}>Add</Text>
+                  }
+                </TouchableOpacity>
+              </View>
+
+              {/* GitHub repos list */}
+              {authState.isAuthenticated && (
+                <>
+                  <View style={styles.repoSearchContainer}>
+                    <SearchBar
+                      value={repoSearchQuery}
+                      onChangeText={setRepoSearchQuery}
+                      placeholder="Search repositories..."
+                    />
+                  </View>
+                  <Text style={[styles.pickerSectionLabel, { color: colors.textSecondary, borderBottomColor: colors.border }]}>
+                    Your GitHub Repositories
+                  </Text>
+                  {isLoadingGithubRepos ? (
+                    <ActivityIndicator size="large" color={colors.primary} style={{ padding: 32 }} />
+                  ) : (() => {
+                    const filteredRepos = repoSearchQuery
+                      ? githubRepos.filter((r) =>
+                          r.full_name.toLowerCase().includes(repoSearchQuery.toLowerCase()) ||
+                          r.description?.toLowerCase().includes(repoSearchQuery.toLowerCase())
+                        )
+                      : githubRepos;
+                    return filteredRepos.length === 0 ? (
+                      <Text style={[styles.pickerEmpty, { color: colors.textSecondary }]}>
+                        {repoSearchQuery ? 'No matching repositories' : 'No repositories found'}
+                      </Text>
+                    ) : (
+                      filteredRepos.map((ghRepo) => {
+                        const alreadyAdded = repositories.some((r) => r.path === ghRepo.full_name);
+                        return (
+                          <TouchableOpacity
+                            key={ghRepo.id}
+                            style={[styles.pickerItem, { borderBottomColor: colors.border }, alreadyAdded && { opacity: 0.4 }]}
+                            onPress={() => handleSelectGithubRepo(ghRepo)}
+                            disabled={alreadyAdded}
+                          >
+                            <Ionicons
+                              name={ghRepo.private ? 'lock-closed-outline' : 'git-branch-outline'}
+                              size={18}
+                              color={colors.primary}
+                            />
+                            <View style={styles.pickerItemInfo}>
+                              <Text style={[styles.pickerItemName, { color: colors.text }]}>{ghRepo.full_name}</Text>
+                              {ghRepo.description ? (
+                                <Text style={[styles.pickerItemDesc, { color: colors.textSecondary }]} numberOfLines={1}>
+                                  {ghRepo.description}
+                                </Text>
+                              ) : null}
+                            </View>
+                            {alreadyAdded && (
+                              <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+                            )}
+                          </TouchableOpacity>
+                        );
+                      })
+                    );
+                  })()}
+                </>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {/* GitHub token modal */}
       <Modal visible={showTokenModal} transparent animationType="slide">
@@ -362,12 +528,23 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  header: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: '700',
+  },
   scrollContent: { flex: 1 },
   section: { marginTop: 20, paddingHorizontal: 16, borderRadius: 12, marginHorizontal: 16 },
   sectionTitle: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', paddingTop: 14, paddingBottom: 8, letterSpacing: 0.5 },
@@ -378,20 +555,34 @@ const styles = StyleSheet.create({
   authUserRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: { width: 40, height: 40, borderRadius: 20 },
   // Repos
-  addRepoRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, gap: 8 },
-  repoInput: { flex: 1, height: 40, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, fontSize: 14 },
-  addRepoButton: { width: 40, height: 40, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  addRepoButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderTopWidth: StyleSheet.hairlineWidth, gap: 6 },
+  addRepoButtonText: { fontSize: 15, fontWeight: '600' },
   disabledButton: { opacity: 0.4 },
   emptyRepos: { paddingVertical: 24, alignItems: 'center', gap: 6 },
   emptyReposText: { fontSize: 15, fontWeight: '500' },
   emptyReposSub: { fontSize: 13, textAlign: 'center' },
   repoItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, gap: 10 },
-  repoName: { fontSize: 15, fontWeight: '500', flex: 1 },
-  repoPath: { fontSize: 12, flex: 1 },
+  repoName: { fontSize: 15, fontWeight: '500' },
+  repoPath: { fontSize: 12 },
+  repoInfo: { flex: 1 },
+  syncButton: { padding: 8 },
+  syncSpinner: { marginHorizontal: 8 },
   removeButton: { padding: 4 },
+  repoSearchContainer: { paddingHorizontal: 16, paddingVertical: 8 },
+  // Repo picker modal
+  manualRepoRow: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, gap: 8 },
+  manualRepoInput: { flex: 1, height: 40, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, fontSize: 14 },
+  manualAddBtn: { paddingHorizontal: 16, height: 40, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  manualAddBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+  pickerSectionLabel: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth },
+  pickerEmpty: { padding: 24, textAlign: 'center', fontSize: 14 },
+  pickerItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth, gap: 12 },
+  pickerItemInfo: { flex: 1 },
+  pickerItemName: { fontSize: 15, fontWeight: '500' },
+  pickerItemDesc: { fontSize: 13, marginTop: 2 },
   // Token modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalSheet: { borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 34 },
+  modalSheet: { borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 34, maxHeight: SCREEN_HEIGHT * 0.75 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1 },
   modalTitle: { fontSize: 18, fontWeight: '600' },
   modalBody: { padding: 16 },

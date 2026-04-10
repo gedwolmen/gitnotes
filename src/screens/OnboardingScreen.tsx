@@ -92,11 +92,11 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
   const isTokenStep = currentStep === TOKEN_STEP;
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <View style={styles.header}>
           <TouchableOpacity onPress={handleSkip}>
             <Text style={[styles.skipButton, { color: colors.textSecondary }]}>Skip</Text>
@@ -188,8 +188,8 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
             )}
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 

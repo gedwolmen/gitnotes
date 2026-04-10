@@ -7,6 +7,8 @@ import { LinkingOptions } from '@react-navigation/native';
 
 import TabNavigator from './TabNavigator';
 import NoteEditorScreen from '../screens/NoteEditorScreen';
+import CanvasEditorScreen from '../screens/CanvasEditorScreen';
+import CanvasListScreen from '../screens/CanvasListScreen';
 import { RootStackParamList } from './types';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -20,10 +22,13 @@ const linking: LinkingOptions<RootStackParamList> = {
         screens: {
           HomeTab: 'home',
           NotesTab: 'notes',
+          ExploreTab: 'explore',
           SettingsTab: 'settings',
         },
       },
       NoteEditor: 'note/:noteId',
+      CanvasEditor: 'canvas/:canvasId',
+      CanvasList: 'canvases',
     },
   },
 };
@@ -45,6 +50,16 @@ export default function AppNavigator() {
           <Stack.Screen 
             name="NoteEditor" 
             component={NoteEditorScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="CanvasEditor" 
+            component={CanvasEditorScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="CanvasList" 
+            component={CanvasListScreen}
             options={{ headerShown: false }}
           />
         </Stack.Navigator>

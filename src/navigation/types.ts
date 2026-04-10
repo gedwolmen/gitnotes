@@ -1,12 +1,16 @@
 export type RootStackParamList = {
   MainTabs: undefined;
-  NoteEditor: { noteId?: string };
+  NoteEditor: { noteId?: string; format?: 'markdown' | 'neorg' | 'org'; initialTitle?: string; initialContent?: string; repo?: string; branch?: string; folderPath?: string };
   NoteViewer: { noteId: string };
+  CanvasEditor: { canvasId?: string; canvasWidth?: number; canvasHeight?: number; canvasTitle?: string };
+  CanvasList: undefined;
 };
 
 export type BottomTabParamList = {
   HomeTab: undefined;
   NotesTab: undefined;
+  ExploreTab: undefined;
+  TodosTab: undefined;
   SettingsTab: undefined;
 };
 

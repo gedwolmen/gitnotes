@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,59 +8,126 @@ import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../navigation/types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNotes } from '../contexts/NoteContext';
+import { NoteFormat } from '../models/Note';
+import { HapticService } from '../utils/haptics';
 import TemplateSelector from '../components/TemplateSelector';
 import { NoteTemplate } from '../services/TemplateService';
-import { HapticService } from '../utils/haptics';
+import { useResponsive } from '../hooks/useResponsive';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type EditableNoteFormat = Exclude<NoteFormat, 'pdf'>;
+
+const FORMAT_OPTIONS: { label: string; value: EditableNoteFormat; ext: string }[] = [
+  { label: 'Markdown', value: 'markdown', ext: '.md' },
+  { label: 'Org Mode', value: 'org', ext: '.org' },
+  { label: 'Neorg', value: 'neorg', ext: '.norg' },
+];
+
+function stripFormatting(content: string, format?: NoteFormat): string {
+  const stripTopMetadata = (raw: string): string => {
+    if (format === 'neorg') {
+      const trimmed = raw.trimStart();
+      if (!trimmed.startsWith('@document.meta')) return raw;
+      const lines = raw.split('\n');
+      if (!lines[0]?.trim().startsWith('@document.meta')) return raw;
+      const endIndex = lines.findIndex((line, idx) => idx > 0 && line.trim() === '@end');
+      if (endIndex === -1) return raw;
+      return lines.slice(endIndex + 1).join('\n').trimStart();
+    }
+
+    if (format === 'org') {
+      const lines = raw.split('\n');
+      let i = 0;
+      while (i < lines.length && /^\s*#\+[A-Za-z0-9_]+:\s*.*$/.test(lines[i])) {
+        i++;
+      }
+      while (i < lines.length && lines[i].trim() === '') {
+        i++;
+      }
+      return i > 0 ? lines.slice(i).join('\n') : raw;
+    }
+
+    const trimmed = raw.trimStart();
+    if (!trimmed.startsWith('---\n')) return raw;
+    const lines = trimmed.split('\n');
+    if (lines[0] !== '---') return raw;
+    const closingIndex = lines.findIndex((line, idx) => idx > 0 && line.trim() === '---');
+    if (closingIndex === -1) return raw;
+    return lines.slice(closingIndex + 1).join('\n').trimStart();
+  };
+
+  const normalized = stripTopMetadata(content);
+
+  return normalized
+    // Remove markdown headings
+    .replace(/^#{1,6}\s+/gm, '')
+    // Remove bold/italic
+    .replace(/\*{1,2}([^*]+)\*{1,2}/g, '$1')
+    .replace(/_{1,2}([^_]+)_{1,2}/g, '$1')
+    // Remove org headings
+    .replace(/^\*{1,6}\s+/gm, '')
+    // Remove neorg headings
+    .replace(/^\*{1,6}\s+/gm, '')
+    // Remove markdown links
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    // Remove code blocks
+    .replace(/`{1,3}[^`]*`{1,3}/g, '')
+    // Remove blockquotes
+    .replace(/^>\s*/gm, '')
+    // Collapse whitespace/newlines
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors, isDark } = useTheme();
   const { notes } = useNotes();
+  const { isTablet, maxContentWidth } = useResponsive();
+  const [showFormatPicker, setShowFormatPicker] = useState(false);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
 
   const handleCreateNote = useCallback(() => {
     HapticService.medium();
+    setShowFormatPicker(true);
+  }, []);
+
+  const handleSelectFormat = useCallback((format: EditableNoteFormat) => {
+    setShowFormatPicker(false);
+    navigation.navigate('NoteEditor', { format });
+  }, [navigation]);
+
+  const handleFormatPickerClose = useCallback(() => {
+    setShowFormatPicker(false);
+  }, []);
+
+  const handleOpenTemplates = useCallback(() => {
+    HapticService.medium();
     setShowTemplateSelector(true);
   }, []);
 
-  const handleBlankNote = useCallback(() => {
-    navigation.navigate('NoteEditor', {});
-  }, [navigation]);
-
-  // When a template is selected from the modal, close it and go to a new note editor
-  const templateSelectedNavigate = useCallback((_template: NoteTemplate) => {
+  const handleTemplateSelect = useCallback((template: NoteTemplate) => {
     setShowTemplateSelector(false);
-    navigation.navigate('NoteEditor', {});
+    navigation.navigate('NoteEditor', {
+      initialTitle: template.title ?? '',
+      initialContent: template.content,
+    });
   }, [navigation]);
-
-  const handleTemplateSelectorClose = useCallback(() => {
-    setShowTemplateSelector(false);
-  }, []);
 
   const openNote = useCallback(
     (id: string) => () => navigation.navigate('NoteEditor', { noteId: id }),
     [navigation]
   );
 
-  const recentNotes = notes.slice(0, 3);
+  const recentNotes = notes.slice(0, isTablet ? 6 : 3);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.title, { color: colors.text }]}>GitNotes</Text>
+    <SafeAreaView edges={['top']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <ScrollView style={styles.container} contentContainerStyle={[styles.content, isTablet && { maxWidth: maxContentWidth, alignSelf: 'center', width: '100%' }]} showsVerticalScrollIndicator={false}>
+      <Text style={[styles.title, { color: colors.text }, isTablet && styles.titleTablet]}>GitNotes</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
         Your development notes, organized.
       </Text>
-
-      <View style={[styles.statsContainer, { backgroundColor: colors.surface }]}>
-        <View style={styles.statItem}>
-          <Ionicons name="document-text" size={20} color={colors.primary} />
-          <Text style={[styles.statsText, { color: colors.text }]}>
-            {notes.length} note{notes.length !== 1 ? 's' : ''}
-          </Text>
-        </View>
-      </View>
 
       <TouchableOpacity
         style={[styles.button, { backgroundColor: colors.primary }]}
@@ -72,12 +140,18 @@ export default function HomeScreen() {
 
       <TouchableOpacity
         style={[styles.secondaryButton, { borderColor: colors.primary }]}
-        onPress={handleBlankNote}
+        onPress={handleOpenTemplates}
       >
-        <Ionicons name="document-outline" size={20} color={colors.primary} />
-        <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>
-          Blank Note
-        </Text>
+        <Ionicons name="copy-outline" size={20} color={colors.primary} />
+        <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>From Template</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.secondaryButton, { borderColor: colors.primary }]}
+        onPress={() => navigation.navigate('CanvasList')}
+      >
+        <Ionicons name="easel-outline" size={20} color={colors.primary} />
+        <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>Canvases</Text>
       </TouchableOpacity>
 
       {recentNotes.length > 0 && (
@@ -85,10 +159,11 @@ export default function HomeScreen() {
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
             Recent Notes
           </Text>
-          {recentNotes.map((note) => (
+          <View style={isTablet ? styles.recentGrid : undefined}>
+            {recentNotes.map((note) => (
             <TouchableOpacity
               key={note.id}
-              style={[styles.recentNote, { backgroundColor: colors.surface }]}
+              style={[styles.recentNote, { backgroundColor: colors.surface }, isTablet && styles.recentNoteTablet]}
               onPress={openNote(note.id)}
             >
               <View style={styles.recentNoteContent}>
@@ -96,7 +171,7 @@ export default function HomeScreen() {
                   {note.title || 'Untitled'}
                 </Text>
                 <Text style={[styles.recentNotePreview, { color: colors.textSecondary }]} numberOfLines={1}>
-                  {note.content.substring(0, 50)}...
+                  {stripFormatting(note.content, note.format).substring(0, 60) || 'No content'}
                 </Text>
               </View>
               {note.repo && (
@@ -105,22 +180,64 @@ export default function HomeScreen() {
                 </View>
               )}
             </TouchableOpacity>
-          ))}
+            ))}
+            </View>
         </View>
       )}
 
+      {/* Format picker modal */}
+      <Modal
+        visible={showFormatPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={handleFormatPickerClose}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={handleFormatPickerClose}
+        >
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Choose Note Format</Text>
+            {FORMAT_OPTIONS.map((option) => (
+              <TouchableOpacity
+                key={option.value}
+                style={[styles.formatOption, { borderColor: colors.border }]}
+                onPress={() => handleSelectFormat(option.value)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.formatLabel, { color: colors.text }]}>{option.label}</Text>
+                <Text style={[styles.formatExt, { color: colors.textSecondary }]}>{option.ext}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={[styles.cancelButton, { borderColor: colors.border }]}
+              onPress={handleFormatPickerClose}
+            >
+              <Text style={[styles.cancelText, { color: colors.textSecondary }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       <TemplateSelector
         visible={showTemplateSelector}
-        onClose={handleTemplateSelectorClose}
-        onSelect={templateSelectedNavigate}
+        onClose={() => setShowTemplateSelector(false)}
+        onSelect={handleTemplateSelect}
       />
-    </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   container: {
     flex: 1,
+  },
+  content: {
     padding: 20,
   },
   title: {
@@ -134,21 +251,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 20,
   },
-  statsContainer: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginBottom: 24,
-    alignItems: 'center',
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statsText: {
-    fontSize: 14,
-    marginLeft: 8,
-  },
   button: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -158,7 +260,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   buttonText: {
-    color: '#fff',
     fontSize: 18,
     fontWeight: '600',
     marginLeft: 8,
@@ -206,5 +307,64 @@ const styles = StyleSheet.create({
   },
   gitIndicator: {
     marginLeft: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    width: '100%',
+    borderRadius: 16,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  formatOption: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 10,
+  },
+  formatLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  formatExt: {
+    fontSize: 14,
+    fontFamily: 'monospace',
+  },
+  cancelButton: {
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginTop: 4,
+    alignItems: 'center',
+  },
+  cancelText: {
+    fontSize: 15,
+  },
+  titleTablet: {
+    fontSize: 40,
+    marginBottom: 16,
+  },
+  recentGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  recentNoteTablet: {
+    width: '48%',
+    marginHorizontal: 0,
   },
 });

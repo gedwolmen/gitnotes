@@ -1,4 +1,10 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, {
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+  useRef,
+} from "react";
 import {
   View,
   Text,
@@ -9,202 +15,494 @@ import {
   TouchableOpacity,
   Modal,
   ScrollView,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+  RefreshControl,
+} from "react-native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { Ionicons } from "@expo/vector-icons";
+import { Swipeable } from "react-native-gesture-handler";
 
-import { useNotes } from '../contexts/NoteContext';
-import { useFolders } from '../contexts/FolderContext';
-import { useTheme } from '../contexts/ThemeContext';
-import { useViewMode } from '../contexts/ViewModeContext';
-import { RootStackParamList } from '../navigation/types';
-import { Note, NoteFormat, filterNotesByFolder } from '../models/Note';
-import { Folder } from '../models/Folder';
-import { GitRepository, GitBranch, GitService } from '../services/GitService';
-import NoteCard from '../components/NoteCard';
-import SearchBar from '../components/SearchBar';
-import FolderBreadcrumb from '../components/FolderBreadcrumb';
-import FolderTreeView from '../components/FolderTreeView';
-import { HapticService } from '../utils/haptics';
-import { ViewMode, VIEW_MODE_LABELS, VIEW_MODE_ICONS } from '../utils/viewModes';
-import { ShareService } from '../services/ShareService';
+import { useNotes } from "../contexts/NoteContext";
+import { useTheme } from "../contexts/ThemeContext";
+import { useViewMode } from "../contexts/ViewModeContext";
+import { useAuth } from "../contexts/AuthContext";
+import { useRepos } from "../contexts/RepoContext";
+import { RootStackParamList } from "../navigation/types";
+import { Note, NoteFormat } from "../models/Note";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { GitRepository, GitBranch, GitService } from "../services/GitService";
+import { GitHubService } from "../services/GitHubService";
+import { RepoFileSyncService } from "../services/RepoFileSyncService";
+import NoteCard from "../components/NoteCard";
+import SearchBar from "../components/SearchBar";
+import RepoFileBrowser, { parseRepoPath } from "../components/RepoFileBrowser";
+import { HapticService } from "../utils/haptics";
+import {
+  ViewMode,
+  VIEW_MODE_LABELS,
+  VIEW_MODE_ICONS,
+} from "../utils/viewModes";
+import { ShareService } from "../services/ShareService";
+import { useResponsive } from "../hooks/useResponsive";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const FORMAT_LABELS: Record<NoteFormat, string> = {
-  markdown: '.md',
-  neorg: '.norg',
-  org: '.org',
+  markdown: ".md",
+  neorg: ".norg",
+  org: ".org",
+  pdf: ".pdf",
 };
 
 export default function NotesListScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
-  const { filteredNotes, isLoading, searchQuery, setSearchQuery, deleteNote, togglePin, error } = useNotes();
-  const { folders } = useFolders();
+  const { authState } = useAuth();
+  const {
+    notes,
+    filteredNotes,
+    isLoading,
+    searchQuery,
+    setSearchQuery,
+    deleteNote,
+    refreshNotes,
+    togglePin,
+    error,
+  } = useNotes();
   const { viewMode, setViewMode } = useViewMode();
+  const { isTablet, columns, maxContentWidth } = useResponsive();
+  const { repositories } = useRepos();
+  const listRef = useRef<FlatList<Note>>(null);
 
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-  const [showFolderTree, setShowFolderTree] = useState(false);
+  useEffect(() => {
+    if (authState.token) {
+      GitHubService.setToken(authState.token);
+    }
+  }, [authState.token]);
+
   const [showViewModePicker, setShowViewModePicker] = useState(false);
+  const [isPullRefreshing, setIsPullRefreshing] = useState(false);
+  const [currentSearchMatchIndex, setCurrentSearchMatchIndex] = useState(0);
 
   // Filters
   const [showFilterModal, setShowFilterModal] = useState(false);
-  const [repositories, setRepositories] = useState<GitRepository[]>([]);
   const [branches, setBranches] = useState<GitBranch[]>([]);
   const [selectedRepo, setSelectedRepo] = useState<GitRepository | null>(null);
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
   const [selectedFormat, setSelectedFormat] = useState<NoteFormat | null>(null);
-  const [loadingBranches, setLoadingBranches] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   useEffect(() => {
-    GitService.getRepositories().then(setRepositories);
-  }, []);
-
-  useEffect(() => {
-    if (!selectedRepo) { setBranches([]); return; }
-    setLoadingBranches(true);
-    GitService.getBranches(selectedRepo.path)
-      .then(setBranches)
-      .finally(() => setLoadingBranches(false));
+    if (!selectedRepo) {
+      setBranches([]);
+      return;
+    }
+    GitService.getBranches(selectedRepo.path).then(setBranches);
   }, [selectedRepo]);
 
-  const activeFilterCount = (selectedRepo ? 1 : 0) + (selectedBranch ? 1 : 0) + (selectedFormat ? 1 : 0);
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    notes.forEach((note) => {
+      note.tags?.forEach((tag) => {
+        tagSet.add(tag);
+      });
+    });
+    return Array.from(tagSet).sort();
+  }, [notes]);
 
-  const selectedFolder = useMemo(
-    () => folders.find((f) => f.id === selectedFolderId) || null,
-    [folders, selectedFolderId]
-  );
+  const activeFilterCount =
+    (selectedFormat ? 1 : 0) + (selectedTags.length > 0 ? 1 : 0);
 
-  const notesInFolder = useMemo(
-    () => filterNotesByFolder(filteredNotes, selectedFolderId),
-    [filteredNotes, selectedFolderId]
+  const repoInfo = useMemo(
+    () => (selectedRepo ? parseRepoPath(selectedRepo.path) : null),
+    [selectedRepo],
   );
 
   const displayNotes = useMemo(() => {
-    let result = notesInFolder;
-    if (selectedRepo) result = result.filter(n => n.repo === selectedRepo.path);
-    if (selectedBranch) result = result.filter(n => n.branch === selectedBranch);
-    if (selectedFormat) result = result.filter(n => (n.format ?? 'markdown') === selectedFormat);
+    let result = filteredNotes;
+    if (!selectedRepo) return result;
+    result = result.filter((n: Note) => n.repo === selectedRepo.path);
+    if (selectedBranch)
+      result = result.filter((n: Note) => n.branch === selectedBranch);
+    if (selectedFormat)
+      result = result.filter(
+        (n: Note) => (n.format ?? "markdown") === selectedFormat,
+      );
+    if (selectedTags.length > 0)
+      result = result.filter((n: Note) =>
+        selectedTags.every((tag) => n.tags?.includes(tag)),
+      );
     return result;
-  }, [notesInFolder, selectedRepo, selectedBranch, selectedFormat]);
+  }, [
+    filteredNotes,
+    selectedRepo,
+    selectedBranch,
+    selectedFormat,
+    selectedTags,
+  ]);
+
+  const hasActiveSearch = searchQuery.trim().length > 0;
+  const searchMatchCount = hasActiveSearch ? displayNotes.length : 0;
+
+  useEffect(() => {
+    if (!hasActiveSearch || searchMatchCount === 0) {
+      setCurrentSearchMatchIndex(0);
+      return;
+    }
+
+    setCurrentSearchMatchIndex((previous) => {
+      if (previous >= searchMatchCount) return searchMatchCount - 1;
+      return previous;
+    });
+  }, [hasActiveSearch, searchMatchCount]);
 
   const handleClearFilters = useCallback(() => {
     setSelectedRepo(null);
     setSelectedBranch(null);
     setSelectedFormat(null);
+    setSelectedTags([]);
   }, []);
 
-  const handleNotePress = useCallback((note: Note) => {
-    navigation.navigate('NoteEditor', { noteId: note.id });
-  }, [navigation]);
+  const handleNotePress = useCallback(
+    (note: Note) => {
+      navigation.navigate("NoteEditor", { noteId: note.id });
+    },
+    [navigation],
+  );
 
-  const handleNoteLongPress = useCallback((note: Note) => {
-    HapticService.medium();
-    Alert.alert(
-      'Note Actions',
-      `"${note.title || 'Untitled'}"`,
-      [
-        { text: 'Cancel', style: 'cancel' },
+  const handleNoteLongPress = useCallback(
+    (note: Note) => {
+      HapticService.medium();
+      const actions: any[] = [
+        { text: "Cancel", style: "cancel" as const },
         {
-          text: 'Share',
+          text: "Share",
           onPress: async () => {
-            const success = await ShareService.shareAsMarkdown(note);
-            if (!success) Alert.alert('Error', 'Failed to share note');
+            const success = await ShareService.shareByNoteFormat(note);
+            if (!success) Alert.alert("Error", "Failed to share note");
           },
         },
-        {
-          text: note.isPinned ? 'Unpin' : 'Pin',
-          onPress: async () => {
-            if (!(await togglePin(note.id))) Alert.alert('Error', 'Failed to update pin status');
-          },
+      ];
+      actions.push({
+        text: note.isPinned ? "Unpin" : "Pin",
+        onPress: async () => {
+          if (!(await togglePin(note.id)))
+            Alert.alert("Error", "Failed to update pin status");
         },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            if (!(await deleteNote(note.id))) Alert.alert('Error', 'Failed to delete note');
-          },
+      });
+      actions.push({
+        text: "Delete",
+        style: "destructive" as const,
+        onPress: async () => {
+          if (!(await deleteNote(note.id)))
+            Alert.alert("Error", "Failed to delete note");
         },
-      ]
-    );
-  }, [deleteNote, togglePin]);
+      });
+      Alert.alert("Note Actions", `"${note.title || "Untitled"}"`, actions);
+    },
+    [deleteNote, togglePin],
+  );
 
-  const handleSelectFolder = useCallback((folder: Folder | null) => {
+  const handleViewModeChange = useCallback(
+    (mode: ViewMode) => {
+      HapticService.selection();
+      setViewMode(mode);
+      setShowViewModePicker(false);
+    },
+    [setViewMode],
+  );
+
+  const handleRepoFilePress = useCallback(
+    (filePath: string) => {
+      const note = notes.find(
+        (n: Note) => n.repo === selectedRepo?.path && n.filePath === filePath,
+      );
+      if (note) {
+        navigation.navigate("NoteEditor", { noteId: note.id });
+      }
+    },
+    [notes, selectedRepo, navigation],
+  );
+
+  const handleCreateNoteInFolder = useCallback(
+    (folderPath: string) => {
+      navigation.navigate("NoteEditor", {
+        format: "markdown",
+        initialTitle: "",
+        initialContent: "",
+        repo: selectedRepo?.path,
+        branch: selectedBranch ?? undefined,
+        folderPath: folderPath || undefined,
+      });
+    },
+    [navigation, selectedRepo, selectedBranch],
+  );
+
+  const handleDeleteFromSwipe = useCallback(
+    (note: Note) => {
+      Alert.alert("Delete Note", `Delete "${note.title || "Untitled"}"?`, [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            if (!(await deleteNote(note.id))) {
+              Alert.alert("Error", "Failed to delete note");
+              return;
+            }
+            HapticService.success();
+          },
+        },
+      ]);
+    },
+    [deleteNote],
+  );
+
+  const scrollToSearchMatch = useCallback(
+    (targetIndex: number) => {
+      if (searchMatchCount === 0) return;
+
+      const boundedIndex =
+        ((targetIndex % searchMatchCount) + searchMatchCount) %
+        searchMatchCount;
+      setCurrentSearchMatchIndex(boundedIndex);
+      listRef.current?.scrollToIndex({
+        index: boundedIndex,
+        animated: true,
+        viewPosition: 0.4,
+      });
+    },
+    [searchMatchCount],
+  );
+
+  const handleSearchNavigate = useCallback(
+    (step: -1 | 1) => {
+      if (searchMatchCount === 0) return;
+      scrollToSearchMatch(currentSearchMatchIndex + step);
+    },
+    [currentSearchMatchIndex, scrollToSearchMatch, searchMatchCount],
+  );
+
+  const handleScrollToIndexFailed = useCallback(
+    ({ index }: { index: number }) => {
+      setTimeout(() => {
+        listRef.current?.scrollToIndex({
+          index,
+          animated: true,
+          viewPosition: 0.4,
+        });
+      }, 120);
+    },
+    [],
+  );
+
+  const handlePullToRefresh = useCallback(async () => {
+    if (isPullRefreshing) return;
+
+    setIsPullRefreshing(true);
     HapticService.light();
-    setSelectedFolderId(folder?.id || null);
-    setShowFolderTree(false);
-  }, []);
 
-  const handleViewModeChange = useCallback((mode: ViewMode) => {
-    HapticService.selection();
-    setViewMode(mode);
-    setShowViewModePicker(false);
-  }, [setViewMode]);
+    try {
+      const repoPaths = new Set<string>();
+      repositories.forEach((repo) => {
+        repoPaths.add(repo.path);
+      });
+      notes.forEach((note) => {
+        if (note.repo) repoPaths.add(note.repo);
+      });
 
-  const renderNote = useCallback(({ item }: { item: Note }) => (
-    <NoteCard note={item} onPress={handleNotePress} onLongPress={handleNoteLongPress} />
-  ), [handleNotePress, handleNoteLongPress]);
+      if (repoPaths.size === 0) {
+        await refreshNotes();
+        HapticService.selection();
+        return;
+      }
 
-  const renderGridNote = useCallback(({ item }: { item: Note }) => (
-    <View style={styles.gridItem}>
-      <NoteCard note={item} onPress={handleNotePress} onLongPress={handleNoteLongPress} compact />
-    </View>
-  ), [handleNotePress, handleNoteLongPress]);
+      let successCount = 0;
+      let failureCount = 0;
+      const allErrors: string[] = [];
 
-  const renderCardNote = useCallback(({ item }: { item: Note }) => (
-    <View style={styles.cardItem}>
-      <NoteCard note={item} onPress={handleNotePress} onLongPress={handleNoteLongPress} />
-    </View>
-  ), [handleNotePress, handleNoteLongPress]);
+      for (const repoPath of repoPaths) {
+        try {
+          const result = await RepoFileSyncService.syncRepoFiles(repoPath);
 
-  const renderJournalNote = useCallback(({ item }: { item: Note }) => (
-    <View style={styles.journalItem}>
-      <Text style={[styles.journalDate, { color: colors.textSecondary }]}>
-        {item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : ''}
-      </Text>
-      <NoteCard note={item} onPress={handleNotePress} onLongPress={handleNoteLongPress} />
-    </View>
-  ), [handleNotePress, handleNoteLongPress, colors]);
+          if (result.errors.length > 0) {
+            failureCount += 1;
+            allErrors.push(...result.errors);
+          } else {
+            successCount += 1;
+          }
+        } catch {
+          failureCount += 1;
+        }
+      }
+
+      await refreshNotes();
+
+      if (failureCount > 0) {
+        HapticService.warning();
+        const errorDetail =
+          allErrors.length > 0 ? `\n\n${allErrors.slice(0, 3).join("\n")}` : "";
+        Alert.alert(
+          "Sync Complete",
+          `Synced ${successCount} repositories, ${failureCount} failed.${errorDetail}`,
+        );
+      } else {
+        HapticService.success();
+      }
+    } catch (pullError) {
+      HapticService.error();
+      Alert.alert(
+        "Sync Failed",
+        pullError instanceof Error
+          ? pullError.message
+          : "Failed to sync repositories",
+      );
+    } finally {
+      setIsPullRefreshing(false);
+    }
+  }, [isPullRefreshing, notes, refreshNotes, repositories]);
+
+  const renderSwipeActions = useCallback(
+    (note: Note) => (
+      <View style={styles.swipeActionTrack}>
+        <TouchableOpacity
+          style={[styles.swipeAction, { backgroundColor: colors.error }]}
+          onPress={() => handleDeleteFromSwipe(note)}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="trash-outline" size={20} color="#fff" />
+          <Text style={styles.swipeActionText}>Delete</Text>
+        </TouchableOpacity>
+      </View>
+    ),
+    [colors.error, handleDeleteFromSwipe],
+  );
+
+  const renderSwipeableNote = useCallback(
+    (note: Note, index: number, compact = false) => (
+      <Swipeable
+        overshootRight={false}
+        rightThreshold={40}
+        renderRightActions={() => renderSwipeActions(note)}
+      >
+        <NoteCard
+          note={note}
+          onPress={handleNotePress}
+          onLongPress={handleNoteLongPress}
+          compact={compact}
+          highlighted={hasActiveSearch && index === currentSearchMatchIndex}
+        />
+      </Swipeable>
+    ),
+    [
+      currentSearchMatchIndex,
+      handleNoteLongPress,
+      handleNotePress,
+      hasActiveSearch,
+      renderSwipeActions,
+    ],
+  );
+
+  const renderNote = useCallback(
+    ({ item, index }: { item: Note; index: number }) =>
+      renderSwipeableNote(item, index),
+    [renderSwipeableNote],
+  );
+
+  const renderGridNote = useCallback(
+    ({ item, index }: { item: Note; index: number }) => (
+      <View style={[styles.gridItem, isTablet && styles.gridItemTablet]}>
+        {renderSwipeableNote(item, index, true)}
+      </View>
+    ),
+    [renderSwipeableNote, isTablet],
+  );
+
+  const renderCardNote = useCallback(
+    ({ item, index }: { item: Note; index: number }) => (
+      <View style={styles.cardItem}>{renderSwipeableNote(item, index)}</View>
+    ),
+    [renderSwipeableNote],
+  );
+
+  const renderJournalNote = useCallback(
+    ({ item, index }: { item: Note; index: number }) => (
+      <View style={styles.journalItem}>
+        <Text style={[styles.journalDate, { color: colors.textSecondary }]}>
+          {item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : ""}
+        </Text>
+        {renderSwipeableNote(item, index)}
+      </View>
+    ),
+    [colors.textSecondary, renderSwipeableNote],
+  );
 
   const keyExtractor = useCallback((item: Note) => item.id, []);
 
   const getListLayout = useCallback(() => {
-    if (viewMode === 'grid') return { numColumns: 2, columnWrapperStyle: styles.gridRow };
+    if (viewMode === "grid")
+      return {
+        numColumns: isTablet ? columns : 2,
+        columnWrapperStyle: styles.gridRow,
+      };
     return { numColumns: 1, columnWrapperStyle: undefined };
-  }, [viewMode]);
+  }, [viewMode, isTablet, columns]);
 
   const getRenderItem = useCallback(() => {
     switch (viewMode) {
-      case 'grid': return renderGridNote;
-      case 'card': return renderCardNote;
-      case 'journal': return renderJournalNote;
-      default: return renderNote;
+      case "grid":
+        return renderGridNote;
+      case "card":
+        return renderCardNote;
+      case "journal":
+        return renderJournalNote;
+      default:
+        return renderNote;
     }
   }, [viewMode, renderNote, renderGridNote, renderCardNote, renderJournalNote]);
 
   const getListContentStyle = useCallback(() => {
     switch (viewMode) {
-      case 'grid': return styles.gridContent;
-      case 'card': return styles.cardContent;
-      case 'journal': return styles.journalContent;
-      default: return styles.listContent;
+      case "grid":
+        return styles.gridContent;
+      case "card":
+        return styles.cardContent;
+      case "journal":
+        return styles.journalContent;
+      default:
+        return styles.listContent;
     }
   }, [viewMode]);
 
   if (isLoading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+      <View
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: colors.background },
+        ]}
+      >
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-
-      {/* ── Search + action buttons ── */}
+    <SafeAreaView
+      edges={['top']}
+      style={[
+        styles.container,
+        { backgroundColor: colors.background },
+        isTablet && {
+          maxWidth: maxContentWidth,
+          alignSelf: "center",
+          width: "100%",
+        },
+      ]}
+    >
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Notes</Text>
+      </View>
       <View style={styles.topBar}>
         <SearchBar
           value={searchQuery}
@@ -214,226 +512,538 @@ export default function NotesListScreen() {
         />
         <TouchableOpacity
           style={[styles.iconBtn, { backgroundColor: colors.surface }]}
-          onPress={() => { HapticService.light(); setShowFolderTree(!showFolderTree); }}
+          onPress={() => {
+            HapticService.light();
+            setShowViewModePicker(!showViewModePicker);
+          }}
         >
           <Ionicons
-            name={showFolderTree ? 'folder-open' : 'folder'}
+            name={VIEW_MODE_ICONS[viewMode] as any}
             size={20}
-            color={showFolderTree ? colors.primary : colors.textSecondary}
+            color={colors.primary}
           />
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.iconBtn, { backgroundColor: colors.surface }]}
-          onPress={() => { HapticService.light(); setShowViewModePicker(!showViewModePicker); }}
+          style={[
+            styles.iconBtn,
+            {
+              backgroundColor:
+                activeFilterCount > 0 ? colors.primary + "20" : colors.surface,
+            },
+          ]}
+          onPress={() => {
+            HapticService.light();
+            setShowFilterModal(true);
+          }}
         >
-          <Ionicons name={VIEW_MODE_ICONS[viewMode] as any} size={20} color={colors.primary} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.iconBtn, { backgroundColor: activeFilterCount > 0 ? colors.primary + '20' : colors.surface }]}
-          onPress={() => { HapticService.light(); setShowFilterModal(true); }}
-        >
-          <Ionicons name="options-outline" size={20} color={activeFilterCount > 0 ? colors.primary : colors.textSecondary} />
+          <Ionicons
+            name="options-outline"
+            size={20}
+            color={
+              activeFilterCount > 0 ? colors.primary : colors.textSecondary
+            }
+          />
           {activeFilterCount > 0 && (
-            <View style={[styles.filterBadge, { backgroundColor: colors.primary }]}>
+            <View
+              style={[styles.filterBadge, { backgroundColor: colors.primary }]}
+            >
               <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
             </View>
           )}
         </TouchableOpacity>
       </View>
 
-      {/* ── View mode picker ── */}
-      {showViewModePicker && (
-        <View style={[styles.viewModePicker, { backgroundColor: colors.surface }]}>
-          {(Object.keys(VIEW_MODE_LABELS) as ViewMode[]).map((mode) => (
-            <TouchableOpacity
-              key={mode}
-              style={[styles.viewModeOption, viewMode === mode && { backgroundColor: colors.primary + '20' }]}
-              onPress={() => handleViewModeChange(mode)}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.chipRow}
+        contentContainerStyle={styles.chipContent}
+      >
+        <TouchableOpacity
+          style={[
+            styles.chip,
+            {
+              borderColor: !selectedRepo
+                ? colors.primary
+                : colors.border + "60",
+            },
+            !selectedRepo && { backgroundColor: colors.primary + "15" },
+          ]}
+          onPress={() => {
+            HapticService.selection();
+            setSelectedRepo(null);
+            setSelectedBranch(null);
+          }}
+        >
+          <Ionicons
+            name="home-outline"
+            size={13}
+            color={!selectedRepo ? colors.primary : colors.textSecondary}
+          />
+          <Text
+            style={[
+              styles.chipText,
+              { color: !selectedRepo ? colors.primary : colors.text },
+            ]}
+          >
+            All Notes
+          </Text>
+        </TouchableOpacity>
+        {repositories.map((repo) => (
+          <TouchableOpacity
+            key={repo.id}
+            style={[
+              styles.chip,
+              {
+                borderColor:
+                  selectedRepo?.id === repo.id
+                    ? colors.primary
+                    : colors.border + "60",
+              },
+              selectedRepo?.id === repo.id && {
+                backgroundColor: colors.primary + "15",
+              },
+            ]}
+            onPress={() => {
+              HapticService.selection();
+              setSelectedRepo(repo);
+              setSelectedBranch(null);
+            }}
+          >
+            <Ionicons
+              name="git-branch-outline"
+              size={13}
+              color={
+                selectedRepo?.id === repo.id
+                  ? colors.primary
+                  : colors.textSecondary
+              }
+            />
+            <Text
+              style={[
+                styles.chipText,
+                {
+                  color:
+                    selectedRepo?.id === repo.id ? colors.primary : colors.text,
+                },
+              ]}
             >
-              <Ionicons name={VIEW_MODE_ICONS[mode] as any} size={20} color={viewMode === mode ? colors.primary : colors.textSecondary} />
-              <Text style={[styles.viewModeLabel, { color: viewMode === mode ? colors.primary : colors.text }]}>
-                {VIEW_MODE_LABELS[mode]}
-              </Text>
+              {repo.name}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {hasActiveSearch && (
+        <View
+          style={[
+            styles.searchNavigatorRow,
+            { backgroundColor: colors.surface },
+          ]}
+        >
+          <Text
+            style={[
+              styles.searchNavigatorCount,
+              { color: colors.textSecondary },
+            ]}
+          >
+            {searchMatchCount > 0
+              ? `${currentSearchMatchIndex + 1}/${searchMatchCount}`
+              : "0/0"}
+          </Text>
+          <View style={styles.searchNavigatorActions}>
+            <TouchableOpacity
+              style={[
+                styles.searchNavButton,
+                {
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                },
+              ]}
+              onPress={() => handleSearchNavigate(-1)}
+              disabled={searchMatchCount === 0}
+            >
+              <Ionicons
+                name="chevron-up"
+                size={18}
+                color={
+                  searchMatchCount === 0 ? colors.textSecondary : colors.text
+                }
+              />
             </TouchableOpacity>
-          ))}
+            <TouchableOpacity
+              style={[
+                styles.searchNavButton,
+                {
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                },
+              ]}
+              onPress={() => handleSearchNavigate(1)}
+              disabled={searchMatchCount === 0}
+            >
+              <Ionicons
+                name="chevron-down"
+                size={18}
+                color={
+                  searchMatchCount === 0 ? colors.textSecondary : colors.text
+                }
+              />
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
-      {/* ── Active filter chips ── */}
-      {activeFilterCount > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow} contentContainerStyle={styles.chipContent}>
-          {selectedRepo && (
-            <TouchableOpacity
-              style={[styles.chip, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}
-              onPress={() => { setSelectedRepo(null); setSelectedBranch(null); }}
-            >
-              <Ionicons name="git-branch-outline" size={12} color={colors.primary} />
-              <Text style={[styles.chipText, { color: colors.primary }]}>{selectedRepo.name}</Text>
-              <Ionicons name="close" size={12} color={colors.primary} />
-            </TouchableOpacity>
-          )}
-          {selectedBranch && (
-            <TouchableOpacity
-              style={[styles.chip, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}
-              onPress={() => setSelectedBranch(null)}
-            >
-              <Ionicons name="git-branch" size={12} color={colors.primary} />
-              <Text style={[styles.chipText, { color: colors.primary }]}>{selectedBranch}</Text>
-              <Ionicons name="close" size={12} color={colors.primary} />
-            </TouchableOpacity>
-          )}
-          {selectedFormat && (
-            <TouchableOpacity
-              style={[styles.chip, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}
-              onPress={() => setSelectedFormat(null)}
-            >
-              <Ionicons name="document-outline" size={12} color={colors.primary} />
-              <Text style={[styles.chipText, { color: colors.primary }]}>{FORMAT_LABELS[selectedFormat]}</Text>
-              <Ionicons name="close" size={12} color={colors.primary} />
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            style={[styles.chip, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            onPress={handleClearFilters}
+      <Modal
+        visible={showViewModePicker && !selectedRepo}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowViewModePicker(false)}
+      >
+        <TouchableOpacity
+          style={styles.viewModeBackdrop}
+          activeOpacity={1}
+          onPress={() => setShowViewModePicker(false)}
+        >
+          <View style={[styles.viewModeSheet, { backgroundColor: colors.background }]}>
+            <View style={[styles.viewModeHandle, { backgroundColor: colors.border + '40' }]} />
+            <Text style={[styles.viewModeSheetTitle, { color: colors.textSecondary }]}>View Mode</Text>
+            <View style={styles.viewModeSheetOptions}>
+              {(Object.keys(VIEW_MODE_LABELS) as ViewMode[]).map((mode) => (
+                <TouchableOpacity
+                  key={mode}
+                  style={[
+                    styles.viewModeSheetOption,
+                    viewMode === mode && { backgroundColor: colors.primary + "15" },
+                  ]}
+                  onPress={() => handleViewModeChange(mode)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={VIEW_MODE_ICONS[mode] as any}
+                    size={22}
+                    color={viewMode === mode ? colors.primary : colors.textSecondary}
+                  />
+                  <Text
+                    style={[
+                      styles.viewModeSheetLabel,
+                      { color: viewMode === mode ? colors.primary : colors.text },
+                    ]}
+                  >
+                    {VIEW_MODE_LABELS[mode]}
+                  </Text>
+                  {viewMode === mode && (
+                    <Ionicons name="checkmark" size={18} color={colors.primary} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {activeFilterCount > 0 && !selectedRepo && (
+        <View style={styles.activeFilterWrap}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipContent}
           >
-            <Text style={[styles.chipText, { color: colors.textSecondary }]}>Clear all</Text>
-          </TouchableOpacity>
-        </ScrollView>
+            {selectedFormat && (
+              <TouchableOpacity
+                style={[
+                  styles.chip,
+                  {
+                    borderColor: colors.primary,
+                    backgroundColor: colors.primary + "15",
+                  },
+                ]}
+                onPress={() => setSelectedFormat(null)}
+              >
+                <Ionicons
+                  name="document-outline"
+                  size={12}
+                  color={colors.primary}
+                />
+                <Text style={[styles.chipText, { color: colors.primary }]}>
+                  {FORMAT_LABELS[selectedFormat]}
+                </Text>
+                <Ionicons name="close" size={12} color={colors.primary} />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={[styles.chip, { borderColor: colors.border + "60" }]}
+              onPress={() => {
+                setSelectedFormat(null);
+                setSelectedTags([]);
+              }}
+            >
+              <Text style={[styles.chipText, { color: colors.textSecondary }]}>
+                Clear all
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
       )}
 
       {error && (
-        <View style={[styles.errorBanner, { backgroundColor: colors.error + '20', borderLeftColor: colors.error }]}>
-          <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+        <View
+          style={[
+            styles.errorBanner,
+            {
+              backgroundColor: colors.error + "20",
+              borderLeftColor: colors.error,
+            },
+          ]}
+        >
+          <Text style={[styles.errorText, { color: colors.error }]}>
+            {error}
+          </Text>
         </View>
       )}
 
-      {showFolderTree ? (
-        <View style={[styles.folderTreeContainer, { backgroundColor: colors.surface }]}>
-          <FolderTreeView folders={folders} selectedFolderId={selectedFolderId} onSelectFolder={handleSelectFolder} />
-        </View>
-      ) : (
-        <>
-          {selectedFolder && (
-            <FolderBreadcrumb folders={folders} currentFolder={selectedFolder} onNavigateToFolder={handleSelectFolder} />
-          )}
-          <FlatList
-            data={displayNotes}
-            renderItem={getRenderItem()}
-            keyExtractor={keyExtractor}
-            key={`${viewMode}-${displayNotes.length}`}
-            {...getListLayout()}
-            contentContainerStyle={getListContentStyle()}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Ionicons
-                  name={selectedFolderId ? 'folder-open-outline' : 'document-text-outline'}
-                  size={48}
-                  color={colors.textSecondary}
-                />
-                <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                  {searchQuery || activeFilterCount > 0 ? 'No matching notes' : selectedFolderId ? 'No notes in this folder' : 'No notes yet'}
-                </Text>
-                <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-                  {searchQuery || activeFilterCount > 0 ? 'Try adjusting your search or filters' : 'Create your first note to get started'}
-                </Text>
-              </View>
-            }
+      {selectedRepo ? (
+        repoInfo ? (
+          <RepoFileBrowser
+            owner={repoInfo.owner}
+            repo={repoInfo.repo}
+            branch={selectedBranch ?? undefined}
+            onFilePress={handleRepoFilePress}
+            onCreateNoteInFolder={handleCreateNoteInFolder}
+            key={selectedRepo.id}
           />
-        </>
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Ionicons
+              name="alert-circle-outline"
+              size={48}
+              color={colors.textSecondary}
+            />
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>
+              Invalid Repository
+            </Text>
+            <Text
+              style={[styles.emptySubtext, { color: colors.textSecondary }]}
+            >
+              Check the repo path in Settings
+            </Text>
+          </View>
+        )
+      ) : (
+        <FlatList
+          ref={listRef}
+          data={displayNotes}
+          renderItem={getRenderItem()}
+          keyExtractor={keyExtractor}
+          key={`${viewMode}-${displayNotes.length}`}
+          onScrollToIndexFailed={handleScrollToIndexFailed}
+          {...getListLayout()}
+          contentContainerStyle={getListContentStyle()}
+          refreshControl={
+            <RefreshControl
+              refreshing={isPullRefreshing}
+              onRefresh={handlePullToRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons
+                name="document-text-outline"
+                size={48}
+                color={colors.textSecondary}
+              />
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                {searchQuery || activeFilterCount > 0
+                  ? "No matching notes"
+                  : "No notes yet"}
+              </Text>
+              <Text
+                style={[styles.emptySubtext, { color: colors.textSecondary }]}
+              >
+                {searchQuery || activeFilterCount > 0
+                  ? "Try adjusting your search or filters"
+                  : "Create your first note to get started"}
+              </Text>
+            </View>
+          }
+        />
       )}
 
       {/* ── Filter modal ── */}
       <Modal visible={showFilterModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Filter Notes</Text>
+          <View
+            style={[styles.modalSheet, { backgroundColor: colors.surface }]}
+          >
+            <View
+              style={[styles.modalHeader, { borderBottomColor: colors.border }]}
+            >
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                Filter Notes
+              </Text>
               <View style={styles.modalHeaderRight}>
                 {activeFilterCount > 0 && (
-                  <TouchableOpacity onPress={handleClearFilters} style={styles.clearFiltersBtn}>
-                    <Text style={[styles.clearFiltersText, { color: colors.primary }]}>Clear</Text>
+                  <TouchableOpacity
+                    onPress={handleClearFilters}
+                    style={styles.clearFiltersBtn}
+                  >
+                    <Text
+                      style={[
+                        styles.clearFiltersText,
+                        { color: colors.primary },
+                      ]}
+                    >
+                      Clear
+                    </Text>
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity onPress={() => setShowFilterModal(false)}>
-                  <Ionicons name="close" size={24} color={colors.textSecondary} />
+                  <Ionicons
+                    name="close"
+                    size={24}
+                    color={colors.textSecondary}
+                  />
                 </TouchableOpacity>
               </View>
             </View>
 
             <ScrollView style={styles.filterBody}>
-              {/* Repository */}
-              <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Repository</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterChipRow}>
-                <TouchableOpacity
-                  style={[styles.filterChip, { borderColor: colors.border }, !selectedRepo && { borderColor: colors.primary, backgroundColor: colors.primary + '15' }]}
-                  onPress={() => { setSelectedRepo(null); setSelectedBranch(null); }}
-                >
-                  <Text style={[styles.filterChipText, { color: !selectedRepo ? colors.primary : colors.text }]}>All</Text>
-                </TouchableOpacity>
-                {repositories.map((repo) => (
-                  <TouchableOpacity
-                    key={repo.id}
-                    style={[styles.filterChip, { borderColor: colors.border }, selectedRepo?.id === repo.id && { borderColor: colors.primary, backgroundColor: colors.primary + '15' }]}
-                    onPress={() => { HapticService.selection(); setSelectedRepo(repo); setSelectedBranch(null); }}
-                  >
-                    <Ionicons name="git-branch-outline" size={13} color={selectedRepo?.id === repo.id ? colors.primary : colors.textSecondary} />
-                    <Text style={[styles.filterChipText, { color: selectedRepo?.id === repo.id ? colors.primary : colors.text }]}>{repo.name}</Text>
-                  </TouchableOpacity>
-                ))}
-                {repositories.length === 0 && (
-                  <Text style={[styles.filterChipText, { color: colors.textSecondary, marginLeft: 4 }]}>No repos — add in Settings</Text>
-                )}
-              </ScrollView>
-
-              {/* Branch */}
-              {selectedRepo && (
-                <>
-                  <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Branch</Text>
-                  {loadingBranches ? (
-                    <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 8 }} />
-                  ) : (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterChipRow}>
-                      <TouchableOpacity
-                        style={[styles.filterChip, { borderColor: colors.border }, !selectedBranch && { borderColor: colors.primary, backgroundColor: colors.primary + '15' }]}
-                        onPress={() => setSelectedBranch(null)}
-                      >
-                        <Text style={[styles.filterChipText, { color: !selectedBranch ? colors.primary : colors.text }]}>All</Text>
-                      </TouchableOpacity>
-                      {branches.map((branch) => (
-                        <TouchableOpacity
-                          key={branch.name}
-                          style={[styles.filterChip, { borderColor: colors.border }, selectedBranch === branch.name && { borderColor: colors.primary, backgroundColor: colors.primary + '15' }]}
-                          onPress={() => { HapticService.selection(); setSelectedBranch(branch.name); }}
-                        >
-                          <Ionicons name="git-branch" size={13} color={selectedBranch === branch.name ? colors.primary : colors.textSecondary} />
-                          <Text style={[styles.filterChipText, { color: selectedBranch === branch.name ? colors.primary : colors.text }]}>{branch.name}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  )}
-                </>
-              )}
-
               {/* Format / Type */}
-              <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>Note Type</Text>
+              <Text
+                style={[styles.filterLabel, { color: colors.textSecondary }]}
+              >
+                Note Type
+              </Text>
               <View style={styles.filterChipRowWrap}>
                 <TouchableOpacity
-                  style={[styles.filterChip, { borderColor: colors.border }, !selectedFormat && { borderColor: colors.primary, backgroundColor: colors.primary + '15' }]}
+                  style={[
+                    styles.filterChip,
+                    { borderColor: colors.border },
+                    !selectedFormat && {
+                      borderColor: colors.primary,
+                      backgroundColor: colors.primary + "15",
+                    },
+                  ]}
                   onPress={() => setSelectedFormat(null)}
                 >
-                  <Text style={[styles.filterChipText, { color: !selectedFormat ? colors.primary : colors.text }]}>All</Text>
-                </TouchableOpacity>
-                {(Object.entries(FORMAT_LABELS) as [NoteFormat, string][]).map(([fmt, label]) => (
-                  <TouchableOpacity
-                    key={fmt}
-                    style={[styles.filterChip, { borderColor: colors.border }, selectedFormat === fmt && { borderColor: colors.primary, backgroundColor: colors.primary + '15' }]}
-                    onPress={() => { HapticService.selection(); setSelectedFormat(fmt); }}
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      { color: !selectedFormat ? colors.primary : colors.text },
+                    ]}
                   >
-                    <Ionicons name="document-text-outline" size={13} color={selectedFormat === fmt ? colors.primary : colors.textSecondary} />
-                    <Text style={[styles.filterChipText, { color: selectedFormat === fmt ? colors.primary : colors.text }]}>{label}</Text>
-                  </TouchableOpacity>
-                ))}
+                    All
+                  </Text>
+                </TouchableOpacity>
+                {(Object.entries(FORMAT_LABELS) as [NoteFormat, string][]).map(
+                  ([fmt, label]) => (
+                    <TouchableOpacity
+                      key={fmt}
+                      style={[
+                        styles.filterChip,
+                        { borderColor: colors.border },
+                        selectedFormat === fmt && {
+                          borderColor: colors.primary,
+                          backgroundColor: colors.primary + "15",
+                        },
+                      ]}
+                      onPress={() => {
+                        HapticService.selection();
+                        setSelectedFormat(fmt);
+                      }}
+                    >
+                      <Ionicons
+                        name="document-text-outline"
+                        size={13}
+                        color={
+                          selectedFormat === fmt
+                            ? colors.primary
+                            : colors.textSecondary
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.filterChipText,
+                          {
+                            color:
+                              selectedFormat === fmt
+                                ? colors.primary
+                                : colors.text,
+                          },
+                        ]}
+                      >
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  ),
+                )}
               </View>
+
+              {/* Tags */}
+              {allTags.length > 0 && (
+                <>
+                  <Text
+                    style={[
+                      styles.filterLabel,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    Tags
+                  </Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.filterChipRow}
+                  >
+                    {allTags.map((tag) => {
+                      const isSelected = selectedTags.includes(tag);
+                      return (
+                        <TouchableOpacity
+                          key={tag}
+                          style={[
+                            styles.filterChip,
+                            { borderColor: colors.border },
+                            isSelected && {
+                              borderColor: colors.primary,
+                              backgroundColor: colors.primary + "15",
+                            },
+                          ]}
+                          onPress={() => {
+                            HapticService.selection();
+                            setSelectedTags((prev) =>
+                              isSelected
+                                ? prev.filter((t) => t !== tag)
+                                : [...prev, tag],
+                            );
+                          }}
+                        >
+                          <Ionicons
+                            name="pricetag-outline"
+                            size={13}
+                            color={
+                              isSelected ? colors.primary : colors.textSecondary
+                            }
+                          />
+                          <Text
+                            style={[
+                              styles.filterChipText,
+                              {
+                                color: isSelected
+                                  ? colors.primary
+                                  : colors.text,
+                              },
+                            ]}
+                          >
+                            {tag}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </>
+              )}
 
               <View style={{ height: 24 }} />
             </ScrollView>
@@ -443,74 +1053,137 @@ export default function NotesListScreen() {
               onPress={() => setShowFilterModal(false)}
             >
               <Text style={styles.applyButtonText}>
-                {activeFilterCount > 0 ? `Show ${displayNotes.length} notes` : 'Done'}
+                {activeFilterCount > 0
+                  ? `Show ${displayNotes.length} notes`
+                  : "Done"}
               </Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  header: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: "700",
+  },
   topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 8,
     gap: 8,
+  },
+  searchNavigatorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginHorizontal: 12,
+    marginBottom: 4,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  searchNavigatorCount: {
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  searchNavigatorActions: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  searchNavButton: {
+    width: 34,
+    height: 30,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
   },
   searchBar: { flex: 1 },
   iconBtn: {
     width: 44,
     height: 44,
     borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   filterBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: 6,
     right: 6,
     width: 14,
     height: 14,
     borderRadius: 7,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
-  filterBadgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
-  viewModePicker: {
-    flexDirection: 'row',
-    marginHorizontal: 12,
-    marginBottom: 4,
-    borderRadius: 10,
-    padding: 4,
-  },
-  viewModeOption: {
+  filterBadgeText: { color: "#fff", fontSize: 9, fontWeight: "700" },
+  viewModeBackdrop: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 4,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.4)',
   },
-  viewModeLabel: { fontSize: 12, fontWeight: '500' },
-  chipRow: { maxHeight: 40, marginHorizontal: 12, marginBottom: 4 },
-  chipContent: { gap: 6, paddingRight: 8 },
-  chip: {
+  viewModeSheet: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: 32,
+  },
+  viewModeHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 10,
+    marginBottom: 8,
+  },
+  viewModeSheetTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  viewModeSheetOptions: {
+    paddingHorizontal: 12,
+  },
+  viewModeSheetOption: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 10,
+    gap: 12,
+  },
+  viewModeSheetLabel: {
+    fontSize: 16,
+    flex: 1,
+  },
+  chipRow: { marginHorizontal: 12, marginBottom: 4, minHeight: 50, maxHeight: 50 },
+  activeFilterWrap: { marginHorizontal: 12, marginTop: 4, marginBottom: 4 },
+  chipContent: { gap: 6, paddingTop: 6, paddingBottom: 8, paddingRight: 8 },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 32,
     paddingHorizontal: 10,
-    paddingVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
     gap: 4,
+    backgroundColor: "transparent",
   },
-  chipText: { fontSize: 12, fontWeight: '500' },
+  chipText: { fontSize: 12, fontWeight: "500" },
   errorBanner: {
     marginHorizontal: 12,
     marginBottom: 4,
@@ -519,34 +1192,86 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
   },
   errorText: { fontSize: 13 },
-  folderTreeContainer: { flex: 1, marginHorizontal: 12, marginTop: 4, borderRadius: 12 },
-  listContent: { padding: 12, paddingTop: 4 },
-  gridRow: { justifyContent: 'space-between' },
-  gridContent: { padding: 12, paddingTop: 4 },
-  gridItem: { width: '48%', marginBottom: 12 },
-  cardContent: { padding: 12, paddingTop: 4 },
+  listContent: { padding: 12, paddingTop: 4, paddingBottom: 100 },
+  gridRow: { justifyContent: "space-between" },
+  gridContent: { padding: 12, paddingTop: 4, paddingBottom: 100 },
+  gridItem: { width: "48%", marginBottom: 12 },
+  gridItemTablet: { width: "31%", marginBottom: 12 },
+  cardContent: { padding: 12, paddingTop: 4, paddingBottom: 100 },
   cardItem: { marginBottom: 12 },
-  journalContent: { padding: 12, paddingTop: 4 },
+  journalContent: { padding: 12, paddingTop: 4, paddingBottom: 100 },
   journalItem: { marginBottom: 8 },
   journalDate: { fontSize: 12, marginBottom: 4, marginLeft: 4 },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 60 },
-  emptyTitle: { fontSize: 17, fontWeight: '600', marginTop: 16, marginBottom: 6 },
-  emptySubtext: { fontSize: 14, textAlign: 'center' },
+  swipeActionTrack: {
+    width: 80,
+    marginVertical: 8,
+  },
+  swipeAction: {
+    flex: 1,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  swipeActionText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 60,
+  },
+  emptyTitle: {
+    fontSize: 17,
+    fontWeight: "600",
+    marginTop: 16,
+    marginBottom: 6,
+  },
+  emptySubtext: { fontSize: 14, textAlign: "center" },
   // Filter modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalSheet: { borderTopLeftRadius: 16, borderTopRightRadius: 16, maxHeight: '80%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: StyleSheet.hairlineWidth },
-  modalTitle: { fontSize: 18, fontWeight: '600' },
-  modalHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  modalSheet: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    maxHeight: "80%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  modalTitle: { fontSize: 18, fontWeight: "600" },
+  modalHeaderRight: { flexDirection: "row", alignItems: "center", gap: 12 },
   clearFiltersBtn: { paddingHorizontal: 4 },
-  clearFiltersText: { fontSize: 15, fontWeight: '500' },
+  clearFiltersText: { fontSize: 15, fontWeight: "500" },
   filterBody: { padding: 16 },
-  filterLabel: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10, marginTop: 4 },
+  filterLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 10,
+    marginTop: 4,
+  },
   filterChipRow: { marginBottom: 16 },
-  filterChipRowWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
+  filterChipRowWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 16,
+  },
   filterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
@@ -559,7 +1284,7 @@ const styles = StyleSheet.create({
     margin: 16,
     paddingVertical: 14,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
-  applyButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  applyButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
 });
