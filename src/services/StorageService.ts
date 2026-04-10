@@ -2,6 +2,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Note, NoteCreateInput, NoteUpdateInput, createNote, updateNote } from '../models/Note';
 import { Folder, FolderCreateInput, createFolder, updateFolder } from '../models/Folder';
 import { GitRepository } from './GitService';
+import { Todo, TodoCreateInput, TodoUpdateInput, createTodoItem, applyTodoUpdate } from '../models/Todo';
+import { Canvas, CanvasCreateInput, CanvasUpdateInput, createCanvas, updateCanvas, sortCanvasesByUpdated } from '../models/Canvas';
+
+const TODOS_STORAGE_KEY = '@gitnotes:todos';
+const CANVASES_STORAGE_KEY = '@gitnotes:canvases';
 
 const NOTES_STORAGE_KEY = '@gitnotes:notes';
 const REPOS_STORAGE_KEY = '@gitnotes:repos';
@@ -214,5 +219,88 @@ export class StorageService {
       console.error('Error clearing folders:', error);
       throw error;
     }
+  }
+
+  // ── Todo operations ──────────────────────────────────────────
+  static async getAllTodos(): Promise<Todo[]> {
+    try {
+      const json = await AsyncStorage.getItem(TODOS_STORAGE_KEY);
+      return json ? JSON.parse(json) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  static async saveAllTodos(todos: Todo[]): Promise<void> {
+    await AsyncStorage.setItem(TODOS_STORAGE_KEY, JSON.stringify(todos));
+  }
+
+  static async createTodo(input: TodoCreateInput): Promise<Todo> {
+    const todos = await this.getAllTodos();
+    const todo = createTodoItem(input);
+    todos.unshift(todo);
+    await this.saveAllTodos(todos);
+    return todo;
+  }
+
+  static async updateTodo(input: TodoUpdateInput): Promise<Todo | null> {
+    const todos = await this.getAllTodos();
+    const idx = todos.findIndex((t) => t.id === input.id);
+    if (idx === -1) return null;
+    todos[idx] = applyTodoUpdate(todos[idx], input);
+    await this.saveAllTodos(todos);
+    return todos[idx];
+  }
+
+  static async deleteTodo(id: string): Promise<boolean> {
+    const todos = await this.getAllTodos();
+    const filtered = todos.filter((t) => t.id !== id);
+    if (filtered.length === todos.length) return false;
+    await this.saveAllTodos(filtered);
+    return true;
+  }
+
+  // ── Canvas operations ─────────────────────────────────────────
+  static async getAllCanvases(): Promise<Canvas[]> {
+    try {
+      const json = await AsyncStorage.getItem(CANVASES_STORAGE_KEY);
+      return json ? JSON.parse(json) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  static async saveAllCanvases(canvases: Canvas[]): Promise<void> {
+    await AsyncStorage.setItem(CANVASES_STORAGE_KEY, JSON.stringify(canvases));
+  }
+
+  static async getCanvasById(id: string): Promise<Canvas | null> {
+    const canvases = await this.getAllCanvases();
+    return canvases.find((c) => c.id === id) || null;
+  }
+
+  static async createCanvas(input: CanvasCreateInput): Promise<Canvas> {
+    const canvases = await this.getAllCanvases();
+    const newCanvas = createCanvas(input);
+    canvases.push(newCanvas);
+    await this.saveAllCanvases(canvases);
+    return newCanvas;
+  }
+
+  static async updateCanvas(input: CanvasUpdateInput): Promise<Canvas | null> {
+    const canvases = await this.getAllCanvases();
+    const idx = canvases.findIndex((c) => c.id === input.id);
+    if (idx === -1) return null;
+    canvases[idx] = updateCanvas(canvases[idx], input);
+    await this.saveAllCanvases(canvases);
+    return canvases[idx];
+  }
+
+  static async deleteCanvas(id: string): Promise<boolean> {
+    const canvases = await this.getAllCanvases();
+    const filtered = canvases.filter((c) => c.id !== id);
+    if (filtered.length === canvases.length) return false;
+    await this.saveAllCanvases(filtered);
+    return true;
   }
 }

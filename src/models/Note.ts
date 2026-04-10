@@ -1,11 +1,15 @@
-export type NoteFormat = 'markdown' | 'neorg' | 'org';
+import { Attachment } from './Attachment';
+
+export type NoteFormat = 'markdown' | 'neorg' | 'org' | 'pdf';
 
 export interface NoteGitHubLink {
   owner: string;
   repo: string;
   issueNumber?: number;
   milestoneNumber?: number;
+  prNumber?: number;
   htmlUrl?: string;
+  title?: string;
 }
 
 export interface Note {
@@ -19,9 +23,11 @@ export interface Note {
   branch?: string;
   commit?: string;
   folderPath?: string;
+  filePath?: string;
   isPinned?: boolean;
   format?: NoteFormat;
   github?: NoteGitHubLink;
+  attachments?: Attachment[];
 }
 
 export interface NoteCreateInput {
@@ -32,8 +38,10 @@ export interface NoteCreateInput {
   branch?: string;
   commit?: string;
   folderPath?: string;
+  filePath?: string;
   isPinned?: boolean;
   format?: NoteFormat;
+  attachments?: Attachment[];
 }
 
 export interface NoteUpdateInput {
@@ -45,8 +53,10 @@ export interface NoteUpdateInput {
   branch?: string;
   commit?: string;
   folderPath?: string;
+  filePath?: string;
   isPinned?: boolean;
   format?: NoteFormat;
+  attachments?: Attachment[];
 }
 
 export function createNote(input: NoteCreateInput): Note {
@@ -62,8 +72,10 @@ export function createNote(input: NoteCreateInput): Note {
     branch: input.branch,
     commit: input.commit,
     folderPath: input.folderPath,
+    filePath: input.filePath,
     isPinned: input.isPinned || false,
     format: input.format || 'markdown',
+    attachments: input.attachments || [],
   };
 }
 
@@ -77,8 +89,10 @@ export function updateNote(existing: Note, input: Partial<NoteCreateInput>): Not
     branch: input.branch ?? existing.branch,
     commit: input.commit ?? existing.commit,
     folderPath: input.folderPath ?? existing.folderPath,
+    filePath: input.filePath ?? existing.filePath,
     isPinned: input.isPinned ?? existing.isPinned,
     format: input.format ?? existing.format,
+    attachments: input.attachments ?? existing.attachments,
     updatedAt: Date.now(),
   };
 }
@@ -115,7 +129,20 @@ export function filterNotesBySearch(notes: Note[], searchQuery: string): Note[] 
 
 export function filterNotesByFolder(notes: Note[], folderPath: string | null): Note[] {
   if (folderPath === null || folderPath === undefined) return notes;
-  return notes.filter(note => note.folderPath === folderPath);
+
+  const normalize = (value: string): string => {
+    const trimmed = value.trim();
+    if (!trimmed) return '/';
+    const withoutTrailingSlash = trimmed.replace(/\/+$/, '');
+    if (!withoutTrailingSlash) return '/';
+    return withoutTrailingSlash.startsWith('/') ? withoutTrailingSlash : `/${withoutTrailingSlash}`;
+  };
+
+  const targetPath = normalize(folderPath);
+  return notes.filter((note) => {
+    if (!note.folderPath) return false;
+    return normalize(note.folderPath) === targetPath;
+  });
 }
 
 export function getNotesInFolderAndSubfolders(notes: Note[], folderPath: string): Note[] {
@@ -129,6 +156,7 @@ export function getNoteFileExtension(format?: NoteFormat): string {
   switch (format) {
     case 'neorg': return '.norg';
     case 'org': return '.org';
+    case 'pdf': return '.pdf';
     default: return '.md';
   }
 }
@@ -138,10 +166,17 @@ export function isNeorgNote(note: Note): boolean {
 }
 
 export function getSupportedFileExtensions(): string[] {
-  return ['.md', '.norg', '.org'];
+  return ['.md', '.norg', '.org', '.pdf'];
 }
 
 export function isSupportedFileExtension(filename: string): boolean {
   const ext = filename.toLowerCase().slice(filename.lastIndexOf('.'));
   return getSupportedFileExtensions().includes(ext);
+}
+
+export function deriveFolderPath(filePath: string | undefined): string | undefined {
+  if (!filePath) return undefined;
+  const lastSlash = filePath.lastIndexOf('/');
+  if (lastSlash <= 0) return undefined;
+  return filePath.substring(0, lastSlash);
 }

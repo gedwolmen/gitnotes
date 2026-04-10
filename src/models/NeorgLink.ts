@@ -2,7 +2,8 @@ export type LinkType =
   | 'heading'
   | 'file'
   | 'url'
-  | 'anchor';
+  | 'anchor'
+  | 'canvas';
 
 export interface NeorgLink {
   type: LinkType;
