@@ -11,11 +11,13 @@ interface ThemeContextType {
   colors: {
     background: string;
     surface: string;
+    surfaceSecondary: string;
     text: string;
     textSecondary: string;
     primary: string;
     border: string;
     card: string;
+    shadow: string;
     error: string;
   };
 }
@@ -25,24 +27,28 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 const THEME_STORAGE_KEY = '@gitnotes:theme';
 
 const lightColors = {
-  background: '#f5f5f5',
+  background: '#f2f2f7',
   surface: '#ffffff',
-  text: '#1a1a1a',
-  textSecondary: '#666666',
+  surfaceSecondary: '#f2f2f7',
+  text: '#1c1c1e',
+  textSecondary: '#6e6e73',
   primary: '#007AFF',
-  border: '#e0e0e0',
+  border: '#c6c6c8',
   card: '#ffffff',
-  error: '#dc3545',
+  shadow: '#000000',
+  error: '#ff3b30',
 };
 
 const darkColors = {
-  background: '#121212',
-  surface: '#1e1e1e',
-  text: '#ffffff',
-  textSecondary: '#a0a0a0',
+  background: '#000000',
+  surface: '#1c1c1e',
+  surfaceSecondary: '#2c2c2e',
+  text: '#f2f2f7',
+  textSecondary: '#8e8e93',
   primary: '#0a84ff',
-  border: '#333333',
-  card: '#1e1e1e',
+  border: '#38383a',
+  card: '#2c2c2e',
+  shadow: '#000000',
   error: '#ff453a',
 };
 
