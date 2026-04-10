@@ -10,6 +10,21 @@ interface NeorgRendererProps {
 export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
   const { colors } = useTheme();
 
+  const cleanInline = (text: string): string => {
+    return text
+      .replace(/\{([^}]+)\}(?:\[([^\]]+)\])?/g, (_, target, label) => label || target)
+      .replace(/\[\[([^\]]+)\]\[([^\]]+)\]\]/g, '$2')
+      .replace(/\[\[([^\]]+)\]\]/g, '$1')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      .replace(/\/([^/]+)\//g, '$1')
+      .replace(/_([^_]+)_/g, '$1')
+      .replace(/-([^-\s][^-]*)-/g, '$1')
+      .replace(/\^([^^]+)\^/g, '$1')
+      .replace(/,([^,]+),/g, '$1');
+  };
+
   const renderHeading = (heading: NeorgHeading, blockIndex: number) => {
     const fontSize = 32 - (heading.level - 1) * 4;
     return (
@@ -20,7 +35,7 @@ export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
           { fontSize, color: colors.text, marginTop: heading.level === 1 ? 16 : 12 },
         ]}
       >
-        {heading.text}
+        {cleanInline(heading.text)}
       </Text>
     );
   };
@@ -36,7 +51,7 @@ export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
     return (
       <View key={`list-${blockIndex}-${itemIndex}`} style={[styles.listItem, { marginLeft: indent }]}>
         <Text style={[styles.listText, { color: colors.text }]}>
-          {prefix}{item.text}
+          {prefix}{cleanInline(item.text)}
         </Text>
       </View>
     );
@@ -47,7 +62,7 @@ export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
     return (
       <View key={`check-${blockIndex}-${itemIndex}`} style={[styles.listItem, { marginLeft: indent }]}>
         <Text style={[styles.listText, { color: colors.text }]}>
-          {item.checked ? '✓' : '○'} {item.text}
+          {item.checked ? '✓' : '○'} {cleanInline(item.text)}
         </Text>
       </View>
     );
@@ -55,7 +70,7 @@ export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
 
   const renderParagraph = (text: string, blockIndex: number) => (
     <Text key={`para-${blockIndex}`} style={[styles.paragraph, { color: colors.text }]}>
-      {text}
+      {cleanInline(text)}
     </Text>
   );
 
@@ -92,7 +107,7 @@ export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
                     isHeader && styles.tableHeaderCell,
                   ]}
                 >
-                  {cell}
+                  {cleanInline(cell)}
                 </Text>
               ))}
             </View>
@@ -107,7 +122,7 @@ export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
       key={`quote-${blockIndex}`}
       style={[styles.quoteBlock, { backgroundColor: colors.primary + '15', borderLeftColor: colors.primary }]}
     >
-      <Text style={[styles.quoteText, { color: colors.text }]}>{text}</Text>
+      <Text style={[styles.quoteText, { color: colors.text }]}>{cleanInline(text)}</Text>
     </View>
   );
 

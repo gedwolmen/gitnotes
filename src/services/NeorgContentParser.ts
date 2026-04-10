@@ -110,20 +110,22 @@ export class NeorgContentParser {
           continue;
         }
 
-        // ── Norg code block: =code or =code.lang ──
-        const norgCodeMatch = trimmed.match(/^=code(?:\.(\w+))?\s*$/);
-        if (norgCodeMatch && !currentCodeBlock) {
+        // ── Norg code/raw/embed block: =code[.lang], =raw, =embed.* ──
+        const norgBlockMatch = trimmed.match(/^=(code|raw|embed(?:\.\w+)?)\s*$/);
+        if (norgBlockMatch && !currentCodeBlock) {
           flushList();
           flushChecklist();
           flushTable();
           currentCodeBlock = {
-            language: norgCodeMatch[1] || undefined,
+            language: norgBlockMatch[1].startsWith('code') && norgBlockMatch[1].includes('.')
+              ? norgBlockMatch[1].split('.')[1]
+              : undefined,
             lines: [],
           };
           continue;
         }
 
-        // ── Norg code block close: single = on its own line ──
+        // ── Norg block close: single = on its own line ──
         if (trimmed === '=' && currentCodeBlock) {
           this.finalizeCodeBlock(currentCodeBlock, blocks);
           currentCodeBlock = null;
@@ -235,7 +237,10 @@ export class NeorgContentParser {
         flushChecklist();
         flushTable();
 
-        blocks.push({ type: 'paragraph', text: trimmed });
+        let cleanText = trimmed.replace(/\s*\{[a-z0-9_.:]+\}\s*/g, ' ').trim();
+        if (cleanText) {
+          blocks.push({ type: 'paragraph', text: cleanText });
+        }
       }
 
       flushList();
