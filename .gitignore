@@ -78,6 +78,13 @@ Pods/
 dist/
 web-build/
 
+# Native folders (managed by expo prebuild)
+android/
+ios/
+
+# Web build output
+dist_web/
+
 # Testing
 coverage/
 

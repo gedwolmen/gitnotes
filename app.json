@@ -17,7 +17,11 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.gitnotes.app",
-      "scheme": "gitnotes"
+      "scheme": "gitnotes",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "GitNotes needs access to your photo library to attach images to notes.",
+        "NSMicrophoneUsageDescription": "GitNotes needs access to your microphone for voice-to-text note input."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -32,7 +36,18 @@
     },
     "plugins": [
       "expo-font",
-      "expo-sharing"
+      "expo-sharing",
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#007AFF"
+        }
+      ],
+      "expo-image-picker",
+      "@react-native-community/datetimepicker",
+      "expo-speech-recognition"
     ],
     "extra": {
       "eas": {
