@@ -513,20 +513,12 @@ export default function NoteEditorScreen() {
         const isJson = /\.json(\?|$)/i.test(src);
         const pngUri = isJson ? src.split('?')[0].replace(/\.json$/i, '.png') : src;
         return (
-          <TouchableOpacity
+          <Image
             key={node.key}
-            activeOpacity={0.85}
-            onPress={() => handleEditCanvasJson(src)}
-          >
-            <Image
-              source={{ uri: pngUri }}
-              resizeMode="contain"
-              style={{ width: '100%', height: 240, borderRadius: 6, backgroundColor: '#fff' }}
-            />
-            <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 4 }}>
-              Tap to edit drawing
-            </Text>
-          </TouchableOpacity>
+            source={{ uri: pngUri }}
+            resizeMode="contain"
+            style={{ width: '100%', height: 240, borderRadius: 6, backgroundColor: '#fff' }}
+          />
         );
       }
       return (
