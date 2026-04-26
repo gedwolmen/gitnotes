@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Modal, View, StyleSheet, TouchableOpacity, Text, ScrollView, TextInput, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Modal, View, StyleSheet, TouchableOpacity, Text, ScrollView, TextInput, Alert, Platform, StatusBar } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import {
   Canvas as SkiaCanvas,
@@ -124,6 +124,7 @@ function buildLinePath(x1: number, y1: number, x2: number, y2: number) {
 }
 
 export default function CanvasModal({ visible, onSave, onClose, editJsonUri }: CanvasModalProps) {
+  const insets = useSafeAreaInsets();
   const canvasRef = useCanvasRef();
   const [elements, setElements] = useState<DrawElement[]>([]);
   const [history, setHistory] = useState<string[]>([]);
@@ -371,9 +372,23 @@ export default function CanvasModal({ visible, onSave, onClose, editJsonUri }: C
   };
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      onRequestClose={handleClose}
+      presentationStyle="fullScreen"
+      statusBarTranslucent
+    >
       <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaView edges={['top', 'bottom']} style={styles.container}>
+      <View
+        style={[
+          styles.container,
+          {
+            paddingTop: Math.max(insets.top, Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0),
+            paddingBottom: insets.bottom,
+          },
+        ]}
+      >
         <View style={styles.header}>
           <TouchableOpacity onPress={handleClose} style={styles.headerBtn}>
             <Ionicons name="close" size={24} color="#fff" />
@@ -444,7 +459,7 @@ export default function CanvasModal({ visible, onSave, onClose, editJsonUri }: C
             </GestureDetector>
           )}
         </View>
-      </SafeAreaView>
+      </View>
       </GestureHandlerRootView>
     </Modal>
   );

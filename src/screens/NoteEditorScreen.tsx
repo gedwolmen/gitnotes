@@ -19,6 +19,8 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Speech from 'expo-speech';
 import { Ionicons } from '@expo/vector-icons';
 import Markdown from 'react-native-markdown-display';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const MarkdownIt = require('markdown-it');
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useNotes } from '../contexts/NoteContext';
@@ -496,6 +498,12 @@ export default function NoteEditorScreen() {
 
   const markdownStyles = useMemo(() => getMarkdownStyles(colors, isDark), [colors, isDark]);
 
+  const markdownItInstance = useMemo(() => {
+    const md = MarkdownIt({ typographer: true, linkify: true });
+    md.validateLink = (url: string) => /^(https?:|file:|data:|mailto:|tel:)/i.test(url) || !/^[a-z][a-z0-9+.-]*:/i.test(url);
+    return md;
+  }, []);
+
   const markdownRules = useMemo(() => ({
     image: (node: any) => {
       const src: string = node.attributes?.src ?? '';
@@ -752,7 +760,7 @@ export default function NoteEditorScreen() {
           >
             {previewContent.trim() ? (
               noteFormat === 'markdown' ? (
-                <Markdown style={markdownStyles} rules={markdownRules}>{previewContent}</Markdown>
+                <Markdown style={markdownStyles} rules={markdownRules} markdownit={markdownItInstance}>{previewContent}</Markdown>
               ) : parsedStructuredContent ? (
                 <NeorgRenderer blocks={parsedStructuredContent} />
               ) : (
@@ -887,7 +895,7 @@ export default function NoteEditorScreen() {
       <Text style={[styles.livePreviewLabel, { color: colors.textSecondary }]}>Preview</Text>
       {previewContent.trim() ? (
         noteFormat === 'markdown' ? (
-          <Markdown style={markdownStyles} rules={markdownRules}>{previewContent}</Markdown>
+          <Markdown style={markdownStyles} rules={markdownRules} markdownit={markdownItInstance}>{previewContent}</Markdown>
         ) : parsedStructuredContent ? (
           <NeorgRenderer blocks={parsedStructuredContent} />
         ) : (
