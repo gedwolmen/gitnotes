@@ -158,9 +158,11 @@ export default function NoteEditorScreen() {
       return;
     }
     let cancelled = false;
+    console.log('[NoteEditor] fetching repo folders', { repo, branch });
     GitService.getRepositoryFolders(repo, branch)
       .then((entries) => {
         if (cancelled) return;
+        console.log('[NoteEditor] repo folders count:', entries.length);
         const mapped: Folder[] = entries.map((e) => ({
           id: `repo:${e.path}`,
           name: e.name,
@@ -171,7 +173,8 @@ export default function NoteEditorScreen() {
         }));
         setRepoFolders(mapped);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.warn('[NoteEditor] repo folders fetch failed:', err);
         if (!cancelled) setRepoFolders([]);
       });
     return () => { cancelled = true; };
