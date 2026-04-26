@@ -17,6 +17,8 @@ import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-g
 import * as FileSystem from 'expo-file-system/legacy';
 
 export interface CanvasSavePayload {
+  uri: string;
+  name: string;
   jsonUri: string;
   jsonName: string;
   width?: number;
@@ -237,7 +239,13 @@ export default function CanvasModal({ visible, onSave, onClose, editJsonUri }: C
   );
 
   const handleSave = useCallback(async () => {
+    const image = canvasRef.current?.makeImageSnapshot();
+    if (!image) {
+      Alert.alert('Error', 'Canvas not ready.');
+      return;
+    }
     try {
+      const base64 = image.encodeToBase64();
       const dir = `${FileSystem.documentDirectory}canvas-drawings/`;
       const dirInfo = await FileSystem.getInfoAsync(dir);
       if (!dirInfo.exists) {
@@ -253,25 +261,30 @@ export default function CanvasModal({ visible, onSave, onClose, editJsonUri }: C
         baseName = `canvas-${Date.now()}`;
       }
 
+      const name = `${baseName}.png`;
       const jsonName = `${baseName}.json`;
+      const uri = `${dir}${name}`;
       const jsonUri = `${dir}${jsonName}`;
-      const sceneWidth = canvasSize?.width ?? 800;
-      const sceneHeight = canvasSize?.height ?? 600;
 
+      await FileSystem.writeAsStringAsync(uri, base64, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
       const json = JSON.stringify({
         version: 1,
-        width: sceneWidth,
-        height: sceneHeight,
+        width: image.width(),
+        height: image.height(),
         elements,
       });
       await FileSystem.writeAsStringAsync(jsonUri, json);
 
-      const info = await FileSystem.getInfoAsync(jsonUri);
+      const info = await FileSystem.getInfoAsync(uri);
       onSave({
+        uri,
+        name,
         jsonUri,
         jsonName,
-        width: sceneWidth,
-        height: sceneHeight,
+        width: image.width(),
+        height: image.height(),
         size: info.exists && 'size' in info ? (info as { size?: number }).size : undefined,
       });
     } catch (err) {
@@ -285,7 +298,7 @@ export default function CanvasModal({ visible, onSave, onClose, editJsonUri }: C
     setColor('#000000');
     setSize(3);
     setFilled(false);
-  }, [onSave, editJsonUri, elements, canvasSize]);
+  }, [canvasRef, onSave, editJsonUri, elements]);
 
   const handleClose = useCallback(() => {
     setElements([]);

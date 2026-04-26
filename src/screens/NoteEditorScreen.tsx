@@ -33,7 +33,6 @@ import PdfViewer from '../components/PdfViewer';
 import TagInput from '../components/TagInput';
 import VoiceInputModal from '../components/VoiceInputModal';
 import CanvasModal, { CanvasSavePayload } from '../components/CanvasModal';
-import InlineCanvasFilePreview from '../components/InlineCanvasFilePreview';
 import FolderSelectionDialog from '../components/FolderSelectionDialog';
 import { useFolders } from '../contexts/FolderContext';
 import { useRepos } from '../contexts/RepoContext';
@@ -385,22 +384,35 @@ export default function NoteEditorScreen() {
   }, [content, setContent]);
 
   const handleCanvasSave = useCallback((payload: CanvasSavePayload) => {
+    const pngAttachment = createAttachment({
+      uri: payload.uri,
+      type: 'image',
+      name: payload.name,
+      mimeType: 'image/png',
+      size: payload.size,
+      width: payload.width,
+      height: payload.height,
+    });
     const jsonAttachment = createAttachment({
       uri: payload.jsonUri,
       type: 'file',
       name: payload.jsonName,
       mimeType: 'application/json',
-      size: payload.size,
-      width: payload.width,
-      height: payload.height,
     });
     if (canvasEditJsonUri) {
-      const cleanOld = canvasEditJsonUri.split('?')[0];
-      const cacheBust = `${payload.jsonUri}?v=${Date.now()}`;
-      setContent(content.split(cleanOld).join(cacheBust));
+      const cleanOldJson = canvasEditJsonUri.split('?')[0];
+      const cleanOldPng = cleanOldJson.replace(/\.json$/i, '.png');
+      const cacheBustPng = `${payload.uri}?v=${Date.now()}`;
+      let next = content;
+      if (next.includes(cleanOldPng)) {
+        next = next.split(cleanOldPng).join(cacheBustPng);
+      } else if (next.includes(cleanOldJson)) {
+        next = next.split(cleanOldJson).join(cacheBustPng);
+      }
+      setContent(next);
     } else {
-      setAttachments(prev => [...prev, jsonAttachment]);
-      const linkMarkdown = `\n![${payload.jsonName}](${payload.jsonUri})\n`;
+      setAttachments(prev => [...prev, pngAttachment, jsonAttachment]);
+      const linkMarkdown = `\n![${payload.name}](${payload.uri})\n`;
       setContent(content + linkMarkdown);
     }
     setHasChanges(true);
@@ -490,13 +502,23 @@ export default function NoteEditorScreen() {
       const alt: string = node.attributes?.alt ?? '';
       const isCanvas = /canvas-drawings\/canvas-/.test(src) || /^canvas-/.test(alt);
       if (isCanvas) {
-        const cleanSrc = src.split('?')[0].replace(/\.png$/i, '.json');
+        const isJson = /\.json(\?|$)/i.test(src);
+        const pngUri = isJson ? src.split('?')[0].replace(/\.json$/i, '.png') : src;
         return (
-          <InlineCanvasFilePreview
+          <TouchableOpacity
             key={node.key}
-            jsonUri={cleanSrc}
-            onEdit={handleEditCanvasJson}
-          />
+            activeOpacity={0.85}
+            onPress={() => handleEditCanvasJson(src)}
+          >
+            <Image
+              source={{ uri: pngUri }}
+              resizeMode="contain"
+              style={{ width: '100%', height: 240, borderRadius: 6, backgroundColor: '#fff' }}
+            />
+            <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 4 }}>
+              Tap to edit drawing
+            </Text>
+          </TouchableOpacity>
         );
       }
       return (
