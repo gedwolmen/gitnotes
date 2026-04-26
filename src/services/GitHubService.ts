@@ -311,29 +311,38 @@ class GitHubServiceClass {
     message: string,
     branch: string = 'main',
   ): Promise<GitHubFileCommit | null> {
-    try {
-      const encodedPath = path.split('/').map(encodeURIComponent).join('/');
-      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
+    const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
 
-      const existingSha = await this.getFileSha(owner, repo, path, branch);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const existingSha = await this.getFileSha(owner, repo, path, branch);
+        const body: Record<string, string> = {
+          message,
+          content: base64Content,
+          branch,
+        };
+        if (existingSha) body.sha = existingSha;
 
-      const body: Record<string, string> = {
-        message,
-        content: base64Content,
-        branch,
-      };
-      if (existingSha) {
-        body.sha = existingSha;
+        return await this.fetchWithAuth(url, {
+          method: 'PUT',
+          body: JSON.stringify(body),
+        });
+      } catch (error) {
+        const status = (error as { status?: number })?.status;
+        if (status === 409 && attempt < 2) {
+          continue;
+        }
+        if (status === 422) {
+          return { content: { sha: '' }, commit: { sha: '' } } as GitHubFileCommit;
+        }
+        if (attempt === 2) {
+          console.warn('[GitHubService] Failed to upload binary file:', error);
+          return null;
+        }
       }
-
-      return await this.fetchWithAuth(url, {
-        method: 'PUT',
-        body: JSON.stringify(body),
-      });
-    } catch (error) {
-      console.warn('[GitHubService] Failed to upload binary file:', error);
-      return null;
     }
+    return null;
   }
 
   async deleteFile(
@@ -375,32 +384,40 @@ class GitHubServiceClass {
     message: string,
     branch: string = 'main',
   ): Promise<GitHubFileCommit | null> {
-    try {
-      const sha = await this.getFileSha(owner, repo, path, branch);
-      if (!sha) {
-        return this.createFile(owner, repo, path, content, message, branch);
-      }
+    const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
+    const encoder = new TextEncoder();
+    const bytes = encoder.encode(content);
+    let binary = '';
+    bytes.forEach((b) => { binary += String.fromCharCode(b); });
+    const base64Content = btoa(binary);
 
-      const encodedPath = path.split('/').map(encodeURIComponent).join('/');
-      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
-      const encoder = new TextEncoder();
-      const bytes = encoder.encode(content);
-      let binary = '';
-      bytes.forEach((b) => { binary += String.fromCharCode(b); });
-      const base64Content = btoa(binary);
-      return await this.fetchWithAuth(url, {
-        method: 'PUT',
-        body: JSON.stringify({
-          message,
-          content: base64Content,
-          sha,
-          branch,
-        }),
-      });
-    } catch (error) {
-      console.warn('[GitHubService] Failed to update file:', error);
-      return null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const sha = await this.getFileSha(owner, repo, path, branch);
+        if (!sha) {
+          return this.createFile(owner, repo, path, content, message, branch);
+        }
+
+        return await this.fetchWithAuth(url, {
+          method: 'PUT',
+          body: JSON.stringify({ message, content: base64Content, sha, branch }),
+        });
+      } catch (error) {
+        const status = (error as { status?: number })?.status;
+        if (status === 409 && attempt < 2) {
+          continue;
+        }
+        if (status === 422) {
+          return { content: { sha: '' }, commit: { sha: '' } } as GitHubFileCommit;
+        }
+        if (attempt === 2) {
+          console.warn('[GitHubService] Failed to update file:', error);
+          return null;
+        }
+      }
     }
+    return null;
   }
 
   async moveFile(
