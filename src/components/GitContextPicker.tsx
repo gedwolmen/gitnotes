@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { GitRepository, GitBranch, GitCommit, GitService } from '../services/GitService';
+import { GitBranch, GitCommit, GitService } from '../services/GitService';
 import { useRepos } from '../contexts/RepoContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { HapticService } from '../utils/haptics';
@@ -188,6 +188,8 @@ export default function GitContextPicker({
         >
           {repo
             ? `${repo.split('/').pop()}${branch ? ` · ${branch}` : ''}`
+            : repositories.length === 0
+            ? 'None'
             : 'Select repository'}
         </Text>
         <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />

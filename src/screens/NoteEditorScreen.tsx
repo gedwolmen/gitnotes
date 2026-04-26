@@ -32,6 +32,11 @@ import PdfViewer from '../components/PdfViewer';
 import TagInput from '../components/TagInput';
 import VoiceInputModal from '../components/VoiceInputModal';
 import CanvasModal from '../components/CanvasModal';
+import FolderSelectionDialog from '../components/FolderSelectionDialog';
+import { useFolders } from '../contexts/FolderContext';
+import { useRepos } from '../contexts/RepoContext';
+import { Folder } from '../models/Folder';
+import { GitService } from '../services/GitService';
 import { HapticService } from '../utils/haptics';
 import { useUndo } from '../utils/useUndo';
 import { NoteFormat, NoteGitHubLink } from '../models/Note';
@@ -101,7 +106,76 @@ export default function NoteEditorScreen() {
   const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [showCanvasModal, setShowCanvasModal] = useState(false);
   const [showCanvasPicker, setShowCanvasPicker] = useState(false);
+  const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+
+  const { folders } = useFolders();
+  const { repositories } = useRepos();
+  const [repoFolders, setRepoFolders] = useState<Folder[]>([]);
+
+  const allFolders = useMemo(() => {
+    const merged = new Map<string, Folder>();
+    folders.forEach((f) => merged.set(f.path, f));
+    repoFolders.forEach((f) => { if (!merged.has(f.path)) merged.set(f.path, f); });
+    return Array.from(merged.values());
+  }, [folders, repoFolders]);
+
+  const selectedFolderId = useMemo(
+    () => (folderPath ? allFolders.find((f) => f.path === folderPath)?.id ?? null : null),
+    [allFolders, folderPath]
+  );
+
+  const handleFolderSelect = useCallback((folder: Folder | null) => {
+    setFolderPath(folder?.path);
+    setHasChanges(true);
+  }, []);
+
+  // Auto-default repo to first repository for new notes
+  useEffect(() => {
+    if (!noteId && !repo && repositories.length > 0) {
+      setRepo(repositories[0].path);
+    }
+  }, [noteId, repo, repositories]);
+
+  // Auto-default branch when repo selected but branch missing
+  useEffect(() => {
+    if (!repo || branch) return;
+    let cancelled = false;
+    GitService.getBranches(repo)
+      .then((bs) => {
+        if (cancelled || bs.length === 0) return;
+        const current = bs.find((b) => b.isCurrent) ?? bs[0];
+        setBranch(current.name);
+      })
+      .catch(() => { /* ignore */ });
+    return () => { cancelled = true; };
+  }, [repo, branch]);
+
+  // Fetch folders that exist in the selected repo/branch
+  useEffect(() => {
+    if (!repo) {
+      setRepoFolders([]);
+      return;
+    }
+    let cancelled = false;
+    GitService.getRepositoryFolders(repo, branch)
+      .then((entries) => {
+        if (cancelled) return;
+        const mapped: Folder[] = entries.map((e) => ({
+          id: `repo:${e.path}`,
+          name: e.name,
+          path: `/${e.path}`,
+          parentId: e.parentPath ? `repo:${e.parentPath}` : null,
+          createdAt: 0,
+          updatedAt: 0,
+        }));
+        setRepoFolders(mapped);
+      })
+      .catch(() => {
+        if (!cancelled) setRepoFolders([]);
+      });
+    return () => { cancelled = true; };
+  }, [repo, branch]);
 
   const resolvePdfUrl = useCallback((value: string): string => {
     const trimmed = value.trim();
@@ -612,6 +686,17 @@ export default function NoteEditorScreen() {
       contentContainerStyle={styles.editorContent}
       keyboardShouldPersistTaps="handled"
     >
+      <View style={styles.gitContextContainer}>
+        <GitContextPicker
+          repo={repo}
+          branch={branch}
+          commit={commit}
+          onRepoChange={handleRepoChange}
+          onBranchChange={handleBranchChange}
+          onCommitChange={handleCommitChange}
+        />
+      </View>
+
       <TextInput
         style={[styles.titleInput, { color: colors.text, borderBottomColor: colors.border }]}
         placeholder="Note Title"
@@ -623,23 +708,28 @@ export default function NoteEditorScreen() {
         returnKeyType="next"
       />
 
-      <View
-        style={[styles.folderSelector, { borderBottomColor: colors.border }]}
+      <TouchableOpacity
+        style={[styles.folderSelector, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}
+        onPress={() => { HapticService.light(); setShowFolderDialog(true); }}
+        activeOpacity={0.7}
       >
         <Ionicons
           name="folder-outline"
-          size={20}
+          size={18}
           color={folderPath ? colors.primary : colors.textSecondary}
         />
+        <Text style={[styles.folderSelectorLabel, { color: colors.textSecondary }]}>Folder</Text>
         <Text
           style={[
             styles.folderSelectorText,
             { color: folderPath ? colors.text : colors.textSecondary },
           ]}
+          numberOfLines={1}
         >
-          {folderPath || 'No folder'}
+          {folderPath || 'None'}
         </Text>
-      </View>
+        <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+      </TouchableOpacity>
 
       {/* Format selector */}
       <View style={[styles.formatRow, { borderBottomColor: colors.border }]}>
@@ -671,17 +761,6 @@ export default function NoteEditorScreen() {
         onContentChange={handleContentChange}
         placeholder={editorPlaceholder}
       />
-
-      <View style={styles.gitContextContainer}>
-        <GitContextPicker
-          repo={repo}
-          branch={branch}
-          commit={commit}
-          onRepoChange={handleRepoChange}
-          onBranchChange={handleBranchChange}
-          onCommitChange={handleCommitChange}
-        />
-      </View>
     </ScrollView>
   );
 
@@ -807,6 +886,14 @@ export default function NoteEditorScreen() {
       canvases={canvases}
       onSelect={handleLinkCanvas}
       onClose={() => setShowCanvasPicker(false)}
+    />
+
+    <FolderSelectionDialog
+      visible={showFolderDialog}
+      selectedFolderId={selectedFolderId}
+      onSelect={handleFolderSelect}
+      onClose={() => setShowFolderDialog(false)}
+      additionalFolders={repoFolders}
     />
     </SafeAreaView>
   );
@@ -1009,14 +1096,23 @@ const styles = StyleSheet.create({
   folderSelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    gap: 12,
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 10,
+  },
+  folderSelectorLabel: {
+    fontSize: 13,
+    fontWeight: '500',
   },
   folderSelectorText: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
+    textAlign: 'right',
   },
   formatRow: {
     flexDirection: 'row',

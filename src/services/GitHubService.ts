@@ -215,7 +215,9 @@ class GitHubServiceClass {
       }
       return [data];
     } catch (error) {
-      console.warn('[GitHubService] Failed to get repo contents:', error);
+      if (!isNotFound(error)) {
+        console.warn('[GitHubService] Failed to get repo contents:', error);
+      }
       return [];
     }
   }
@@ -235,7 +237,9 @@ class GitHubServiceClass {
         sha: item.sha,
       }));
     } catch (error) {
-      console.warn('[GitHubService] Failed to get tree:', error);
+      if (!isNotFound(error)) {
+        console.warn('[GitHubService] Failed to get tree:', error);
+      }
       return [];
     }
   }
@@ -428,11 +432,17 @@ class GitHubServiceClass {
     });
 
     if (!response.ok) {
-      throw new Error(`GitHub API error: ${response.status}`);
+      const err = new Error(`GitHub API error: ${response.status}`) as Error & { status?: number };
+      err.status = response.status;
+      throw err;
     }
 
     return response.json();
   }
+}
+
+function isNotFound(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && (error as { status?: number }).status === 404;
 }
 
 export const GitHubService = new GitHubServiceClass();

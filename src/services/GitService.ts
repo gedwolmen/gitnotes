@@ -139,7 +139,9 @@ export class GitService {
       });
       
       if (!response.ok) {
-        console.warn(`[GitService] GitHub API error: ${response.status}`);
+        if (response.status !== 404) {
+          console.warn(`[GitService] GitHub API error: ${response.status}`);
+        }
         return null;
       }
       
