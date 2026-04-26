@@ -31,7 +31,7 @@ import NeorgRenderer from '../components/NeorgRenderer';
 import PdfViewer from '../components/PdfViewer';
 import TagInput from '../components/TagInput';
 import VoiceInputModal from '../components/VoiceInputModal';
-import CanvasModal from '../components/CanvasModal';
+import CanvasModal, { CanvasSavePayload } from '../components/CanvasModal';
 import FolderSelectionDialog from '../components/FolderSelectionDialog';
 import { useFolders } from '../contexts/FolderContext';
 import { useRepos } from '../contexts/RepoContext';
@@ -158,11 +158,9 @@ export default function NoteEditorScreen() {
       return;
     }
     let cancelled = false;
-    console.log('[NoteEditor] fetching repo folders', { repo, branch });
     GitService.getRepositoryFolders(repo, branch)
       .then((entries) => {
         if (cancelled) return;
-        console.log('[NoteEditor] repo folders count:', entries.length);
         const mapped: Folder[] = entries.map((e) => ({
           id: `repo:${e.path}`,
           name: e.name,
@@ -173,8 +171,7 @@ export default function NoteEditorScreen() {
         }));
         setRepoFolders(mapped);
       })
-      .catch((err) => {
-        console.warn('[NoteEditor] repo folders fetch failed:', err);
+      .catch(() => {
         if (!cancelled) setRepoFolders([]);
       });
     return () => { cancelled = true; };
@@ -384,8 +381,18 @@ export default function NoteEditorScreen() {
     setShowVoiceModal(false);
   }, [content, setContent]);
 
-  const handleCanvasSave = useCallback((base64Uri: string) => {
-    const imageMarkdown = `\n![canvas-drawing](${base64Uri})\n`;
+  const handleCanvasSave = useCallback((payload: CanvasSavePayload) => {
+    const newAttachment = createAttachment({
+      uri: payload.uri,
+      type: 'image',
+      name: payload.name,
+      mimeType: 'image/png',
+      size: payload.size,
+      width: payload.width,
+      height: payload.height,
+    });
+    setAttachments(prev => [...prev, newAttachment]);
+    const imageMarkdown = `\n![${payload.name}](${payload.uri})\n`;
     setContent(content + imageMarkdown);
     setHasChanges(true);
     setShowCanvasModal(false);

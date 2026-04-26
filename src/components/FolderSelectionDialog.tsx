@@ -8,6 +8,7 @@ import {
   TextInput,
   Alert,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -203,7 +204,11 @@ export default function FolderSelectionDialog({
           </View>
         )}
 
-        <View style={styles.listContainer}>
+        <ScrollView
+          style={styles.listContainer}
+          contentContainerStyle={styles.listContent}
+          keyboardShouldPersistTaps="handled"
+        >
           <TouchableOpacity
             style={[
               styles.folderItem,
@@ -241,7 +246,7 @@ export default function FolderSelectionDialog({
               </Text>
             </View>
           )}
-        </View>
+        </ScrollView>
       </SafeAreaView>
     </Modal>
   );
@@ -300,7 +305,10 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     flex: 1,
+  },
+  listContent: {
     paddingTop: 8,
+    paddingBottom: 24,
   },
   folderItem: {
     flexDirection: 'row',

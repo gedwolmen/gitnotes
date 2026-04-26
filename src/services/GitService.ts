@@ -241,18 +241,14 @@ export class GitService {
     }
 
     let tree: { path: string; type: 'blob' | 'tree'; sha: string }[] = [];
-    const authed = GitHubService.isAuthenticated();
-    console.log('[GitService] getRepositoryFolders', { repoInfo, branchKey, authed });
-    if (authed) {
+    if (GitHubService.isAuthenticated()) {
       tree = await GitHubService.getTreeRecursive(repoInfo.owner, repoInfo.repo, branchKey);
-      console.log('[GitService] authed tree entries:', tree.length);
     }
     if (tree.length === 0) {
       const treeRef = encodeURIComponent(branchKey);
       const url = `${GITHUB_API_BASE}/repos/${repoInfo.owner}/${repoInfo.repo}/git/trees/${treeRef}?recursive=1`;
       const treeResponse = await this.fetchFromGitHub<GitHubTreeResponse>(url);
       tree = (treeResponse?.tree ?? []) as { path: string; type: 'blob' | 'tree'; sha: string }[];
-      console.log('[GitService] anon tree entries:', tree.length);
     }
 
     if (tree.length === 0) {
