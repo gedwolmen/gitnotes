@@ -315,8 +315,8 @@ class GitHubServiceClass {
     const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
 
     for (let attempt = 0; attempt < 3; attempt++) {
+      const existingSha = await this.getFileSha(owner, repo, path, branch);
       try {
-        const existingSha = await this.getFileSha(owner, repo, path, branch);
         const body: Record<string, string> = {
           message,
           content: base64Content,
@@ -333,8 +333,8 @@ class GitHubServiceClass {
         if (status === 409 && attempt < 2) {
           continue;
         }
-        if (status === 422) {
-          return { content: { sha: '' }, commit: { sha: '' } } as GitHubFileCommit;
+        if (status === 422 && existingSha) {
+          return { content: { sha: existingSha }, commit: { sha: '' } } as GitHubFileCommit;
         }
         if (attempt === 2) {
           console.warn('[GitHubService] Failed to upload binary file:', error);
