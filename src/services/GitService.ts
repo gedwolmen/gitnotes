@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StorageService } from './StorageService';
+import { GitHubService } from './GitHubService';
 
 export interface GitRepository {
   id: string;
@@ -232,22 +233,29 @@ export class GitService {
     const cacheKey = `repo_folders_${repoPath.replace(/[^a-zA-Z0-9]/g, '_')}_${branchKey.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
     const cached = await this.getCachedData<GitRepositoryFolder[]>(cacheKey);
-    if (cached) return cached;
+    if (cached && cached.length > 0) return cached;
 
     const repoInfo = this.parseRepoPath(repoPath);
     if (!repoInfo) {
       return [];
     }
 
-    const treeRef = encodeURIComponent(branchKey);
-    const url = `${GITHUB_API_BASE}/repos/${repoInfo.owner}/${repoInfo.repo}/git/trees/${treeRef}?recursive=1`;
-    const treeResponse = await this.fetchFromGitHub<GitHubTreeResponse>(url);
+    let tree: { path: string; type: 'blob' | 'tree'; sha: string }[] = [];
+    if (GitHubService.isAuthenticated()) {
+      tree = await GitHubService.getTreeRecursive(repoInfo.owner, repoInfo.repo, branchKey);
+    }
+    if (tree.length === 0) {
+      const treeRef = encodeURIComponent(branchKey);
+      const url = `${GITHUB_API_BASE}/repos/${repoInfo.owner}/${repoInfo.repo}/git/trees/${treeRef}?recursive=1`;
+      const treeResponse = await this.fetchFromGitHub<GitHubTreeResponse>(url);
+      tree = (treeResponse?.tree ?? []) as { path: string; type: 'blob' | 'tree'; sha: string }[];
+    }
 
-    if (!treeResponse?.tree) {
+    if (tree.length === 0) {
       return [];
     }
 
-    const folders = treeResponse.tree
+    const folders = tree
       .filter((entry) => entry.type === 'tree' && Boolean(entry.path))
       .map((entry) => {
         const cleanPath = entry.path.replace(/^\/+/, '').replace(/\/+$/, '');
