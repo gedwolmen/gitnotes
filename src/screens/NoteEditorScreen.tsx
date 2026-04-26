@@ -11,6 +11,7 @@ import {
   ScrollView,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  Image,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -32,6 +33,7 @@ import PdfViewer from '../components/PdfViewer';
 import TagInput from '../components/TagInput';
 import VoiceInputModal from '../components/VoiceInputModal';
 import CanvasModal, { CanvasSavePayload } from '../components/CanvasModal';
+import InlineCanvasFilePreview from '../components/InlineCanvasFilePreview';
 import FolderSelectionDialog from '../components/FolderSelectionDialog';
 import { useFolders } from '../contexts/FolderContext';
 import { useRepos } from '../contexts/RepoContext';
@@ -105,6 +107,7 @@ export default function NoteEditorScreen() {
   const [tags, setTags] = useState<string[]>([]);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [showCanvasModal, setShowCanvasModal] = useState(false);
+  const [canvasEditJsonUri, setCanvasEditJsonUri] = useState<string | undefined>(undefined);
   const [showCanvasPicker, setShowCanvasPicker] = useState(false);
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -382,21 +385,50 @@ export default function NoteEditorScreen() {
   }, [content, setContent]);
 
   const handleCanvasSave = useCallback((payload: CanvasSavePayload) => {
-    const newAttachment = createAttachment({
-      uri: payload.uri,
-      type: 'image',
-      name: payload.name,
-      mimeType: 'image/png',
+    const jsonAttachment = createAttachment({
+      uri: payload.jsonUri,
+      type: 'file',
+      name: payload.jsonName,
+      mimeType: 'application/json',
       size: payload.size,
       width: payload.width,
       height: payload.height,
     });
-    setAttachments(prev => [...prev, newAttachment]);
-    const imageMarkdown = `\n![${payload.name}](${payload.uri})\n`;
-    setContent(content + imageMarkdown);
+    if (canvasEditJsonUri) {
+      const cleanOld = canvasEditJsonUri.split('?')[0];
+      const cacheBust = `${payload.jsonUri}?v=${Date.now()}`;
+      setContent(content.split(cleanOld).join(cacheBust));
+    } else {
+      setAttachments(prev => [...prev, jsonAttachment]);
+      const linkMarkdown = `\n![${payload.jsonName}](${payload.jsonUri})\n`;
+      setContent(content + linkMarkdown);
+    }
     setHasChanges(true);
     setShowCanvasModal(false);
-  }, [content, setContent]);
+    setCanvasEditJsonUri(undefined);
+  }, [content, setContent, canvasEditJsonUri]);
+
+  const handleEditCanvasJson = useCallback((src: string) => {
+    const clean = src.split('?')[0];
+    const jsonUri = clean.replace(/\.png$/i, '.json');
+    setCanvasEditJsonUri(jsonUri);
+    setShowCanvasModal(true);
+  }, []);
+
+  const canvasJsonRefs = useMemo(() => {
+    const re = /!\[[^\]]*\]\((file:[^)]+\/canvas-drawings\/canvas-[^)]+\.(?:json|png))\)/g;
+    const out: string[] = [];
+    const seen = new Set<string>();
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(content)) !== null) {
+      const clean = m[1].split('?')[0].replace(/\.png$/i, '.json');
+      if (!seen.has(clean)) {
+        seen.add(clean);
+        out.push(clean);
+      }
+    }
+    return out;
+  }, [content]);
 
   const handleLinkCanvas = useCallback((canvasId: string, canvasTitle: string) => {
     const link = canvasToLink({ id: canvasId } as any);
@@ -451,6 +483,32 @@ export default function NoteEditorScreen() {
   }, [content, setContent]);
 
   const markdownStyles = useMemo(() => getMarkdownStyles(colors, isDark), [colors, isDark]);
+
+  const markdownRules = useMemo(() => ({
+    image: (node: any) => {
+      const src: string = node.attributes?.src ?? '';
+      const alt: string = node.attributes?.alt ?? '';
+      const isCanvas = /canvas-drawings\/canvas-/.test(src) || /^canvas-/.test(alt);
+      if (isCanvas) {
+        const cleanSrc = src.split('?')[0].replace(/\.png$/i, '.json');
+        return (
+          <InlineCanvasFilePreview
+            key={node.key}
+            jsonUri={cleanSrc}
+            onEdit={handleEditCanvasJson}
+          />
+        );
+      }
+      return (
+        <Image
+          key={node.key}
+          source={{ uri: src }}
+          resizeMode="contain"
+          style={{ width: '100%', height: 240, borderRadius: 6, backgroundColor: colors.surfaceSecondary }}
+        />
+      );
+    },
+  }), [colors, handleEditCanvasJson]);
 
   const previewContent = (() => {
     const stripTopMetadata = (raw: string, format: NoteFormat): string => {
@@ -672,7 +730,7 @@ export default function NoteEditorScreen() {
           >
             {previewContent.trim() ? (
               noteFormat === 'markdown' ? (
-                <Markdown style={markdownStyles}>{previewContent}</Markdown>
+                <Markdown style={markdownStyles} rules={markdownRules}>{previewContent}</Markdown>
               ) : parsedStructuredContent ? (
                 <NeorgRenderer blocks={parsedStructuredContent} />
               ) : (
@@ -766,6 +824,30 @@ export default function NoteEditorScreen() {
 
       <TagInput tags={tags} onTagsChange={handleTagsChange} />
 
+      {canvasJsonRefs.length > 0 && (
+        <View style={styles.canvasChipsRow}>
+          <Text style={[styles.canvasChipsLabel, { color: colors.textSecondary }]}>Canvases</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.canvasChipsScroll}>
+            {canvasJsonRefs.map((uri, i) => {
+              return (
+                <TouchableOpacity
+                  key={uri}
+                  style={[styles.canvasChip, { borderColor: colors.border, backgroundColor: colors.surfaceSecondary }]}
+                  onPress={() => handleEditCanvasJson(uri)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="brush-outline" size={14} color={colors.primary} />
+                  <Text style={[styles.canvasChipText, { color: colors.text }]} numberOfLines={1}>
+                    {`Canvas ${i + 1}`}
+                  </Text>
+                  <Ionicons name="pencil" size={12} color={colors.textSecondary} />
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
       <MarkdownEditor
         content={content}
         onContentChange={handleContentChange}
@@ -783,7 +865,7 @@ export default function NoteEditorScreen() {
       <Text style={[styles.livePreviewLabel, { color: colors.textSecondary }]}>Preview</Text>
       {previewContent.trim() ? (
         noteFormat === 'markdown' ? (
-          <Markdown style={markdownStyles}>{previewContent}</Markdown>
+          <Markdown style={markdownStyles} rules={markdownRules}>{previewContent}</Markdown>
         ) : parsedStructuredContent ? (
           <NeorgRenderer blocks={parsedStructuredContent} />
         ) : (
@@ -888,7 +970,11 @@ export default function NoteEditorScreen() {
     <CanvasModal
       visible={showCanvasModal}
       onSave={handleCanvasSave}
-      onClose={() => setShowCanvasModal(false)}
+      onClose={() => {
+        setShowCanvasModal(false);
+        setCanvasEditJsonUri(undefined);
+      }}
+      editJsonUri={canvasEditJsonUri}
     />
 
     <CanvasPickerModal
@@ -1173,5 +1259,36 @@ const styles = StyleSheet.create({
   },
   sideBySidePreview: {
     flex: 1,
+  },
+  canvasChipsRow: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  canvasChipsLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  canvasChipsScroll: {
+    gap: 8,
+    paddingRight: 16,
+  },
+  canvasChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginRight: 8,
+  },
+  canvasChipText: {
+    fontSize: 13,
+    fontWeight: '500',
+    maxWidth: 120,
   },
 });

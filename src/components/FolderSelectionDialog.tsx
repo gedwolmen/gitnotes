@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -38,6 +38,7 @@ export default function FolderSelectionDialog({
   const [isCreating, setIsCreating] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [selectedParentId, setSelectedParentId] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
 
   const folders = useMemo(
     () => {
@@ -60,12 +61,61 @@ export default function FolderSelectionDialog({
     [folders]
   );
 
+  const childrenByParent = useMemo(() => {
+    const map = new Map<string, Folder[]>();
+    folders.forEach((f) => {
+      const key = f.parentId ?? '__root__';
+      const arr = map.get(key);
+      if (arr) arr.push(f);
+      else map.set(key, [f]);
+    });
+    return map;
+  }, [folders]);
+
   const getChildFolders = useCallback(
     (parentId: string | null): Folder[] => {
-      return folders.filter((f) => f.parentId === parentId);
+      return childrenByParent.get(parentId ?? '__root__') ?? [];
     },
-    [folders]
+    [childrenByParent]
   );
+
+  useEffect(() => {
+    if (!visible) return;
+    if (!selectedFolderId) return;
+    const byId = new Map(folders.map((f) => [f.id, f]));
+    const ancestors = new Set<string>();
+    let cur = byId.get(selectedFolderId);
+    while (cur && cur.parentId) {
+      ancestors.add(cur.parentId);
+      cur = byId.get(cur.parentId);
+    }
+    if (ancestors.size === 0) return;
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      ancestors.forEach((id) => next.add(id));
+      return next;
+    });
+  }, [visible, selectedFolderId, folders]);
+
+  const toggleExpand = useCallback((id: string) => {
+    HapticService.light();
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const expandAll = useCallback(() => {
+    HapticService.light();
+    setExpanded(new Set(folders.filter((f) => getChildFolders(f.id).length > 0).map((f) => f.id)));
+  }, [folders, getChildFolders]);
+
+  const collapseAll = useCallback(() => {
+    HapticService.light();
+    setExpanded(new Set());
+  }, []);
 
   const handleSelect = useCallback(
     (folder: Folder | null) => {
@@ -113,40 +163,67 @@ export default function FolderSelectionDialog({
   const renderFolderItem = useCallback(
     (folder: Folder, level: number = 0): React.ReactElement => {
       const children = getChildFolders(folder.id);
+      const hasChildren = children.length > 0;
       const isSelected = selectedFolderId === folder.id;
+      const isExpanded = expanded.has(folder.id);
 
       return (
         <View key={folder.id}>
-          <TouchableOpacity
+          <View
             style={[
-              styles.folderItem,
+              styles.folderRow,
               { backgroundColor: isSelected ? colors.primary + '20' : 'transparent' },
-              { paddingLeft: 16 + level * 16 },
+              { paddingLeft: 8 + level * 16 },
             ]}
-            onPress={() => handleSelect(folder)}
-            activeOpacity={0.7}
           >
-            <Ionicons
-              name="folder"
-              size={20}
-              color={isSelected ? colors.primary : colors.textSecondary}
-              style={styles.folderIcon}
-            />
-            <Text
-              style={[
-                styles.folderName,
-                { color: isSelected ? colors.primary : colors.text },
-              ]}
-              numberOfLines={1}
+            <TouchableOpacity
+              onPress={() => hasChildren && toggleExpand(folder.id)}
+              hitSlop={8}
+              style={styles.chevronButton}
+              activeOpacity={hasChildren ? 0.6 : 1}
             >
-              {folder.name}
-            </Text>
-          </TouchableOpacity>
-          {children.map((child) => renderFolderItem(child, level + 1))}
+              {hasChildren ? (
+                <Ionicons
+                  name={isExpanded ? 'chevron-down' : 'chevron-forward'}
+                  size={16}
+                  color={colors.textSecondary}
+                />
+              ) : (
+                <View style={styles.chevronSpacer} />
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.folderRowMain}
+              onPress={() => handleSelect(folder)}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={hasChildren && isExpanded ? 'folder-open' : 'folder'}
+                size={20}
+                color={isSelected ? colors.primary : colors.textSecondary}
+                style={styles.folderIcon}
+              />
+              <Text
+                style={[
+                  styles.folderName,
+                  { color: isSelected ? colors.primary : colors.text },
+                ]}
+                numberOfLines={1}
+              >
+                {folder.name}
+              </Text>
+              {hasChildren && (
+                <Text style={[styles.childCount, { color: colors.textSecondary }]}>
+                  {children.length}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+          {isExpanded && children.map((child) => renderFolderItem(child, level + 1))}
         </View>
       );
     },
-    [getChildFolders, selectedFolderId, colors, handleSelect]
+    [getChildFolders, selectedFolderId, colors, handleSelect, expanded, toggleExpand]
   );
 
   return (
@@ -233,6 +310,19 @@ export default function FolderSelectionDialog({
             </Text>
           </TouchableOpacity>
 
+          {rootFolders.length > 0 && (
+            <View style={styles.treeActionsRow}>
+              <TouchableOpacity onPress={expandAll} hitSlop={6} style={styles.treeActionBtn}>
+                <Ionicons name="chevron-down" size={12} color={colors.primary} />
+                <Text style={[styles.treeActionText, { color: colors.primary }]}>Expand all</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={collapseAll} hitSlop={6} style={styles.treeActionBtn}>
+                <Ionicons name="chevron-forward" size={12} color={colors.primary} />
+                <Text style={[styles.treeActionText, { color: colors.primary }]}>Collapse all</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {rootFolders.map((folder) => renderFolderItem(folder))}
 
           {folders.length === 0 && (
@@ -317,12 +407,52 @@ const styles = StyleSheet.create({
     paddingLeft: 16,
     paddingRight: 16,
   },
+  folderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: 16,
+  },
+  folderRowMain: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  chevronButton: {
+    width: 28,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chevronSpacer: {
+    width: 16,
+    height: 16,
+  },
   folderIcon: {
     marginRight: 12,
   },
   folderName: {
     fontSize: 16,
     flex: 1,
+  },
+  childCount: {
+    fontSize: 12,
+    marginLeft: 8,
+  },
+  treeActionsRow: {
+    flexDirection: 'row',
+    gap: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+  },
+  treeActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  treeActionText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
   emptyContainer: {
     flex: 1,

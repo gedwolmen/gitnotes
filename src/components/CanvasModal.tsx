@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Modal, View, StyleSheet, TouchableOpacity, Text, ScrollView, TextInput } from 'react-native';
+import { Modal, View, StyleSheet, TouchableOpacity, Text, ScrollView, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -14,11 +14,21 @@ import {
   useCanvasRef,
 } from '@shopify/react-native-skia';
 import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
+import * as FileSystem from 'expo-file-system/legacy';
+
+export interface CanvasSavePayload {
+  jsonUri: string;
+  jsonName: string;
+  width?: number;
+  height?: number;
+  size?: number;
+}
 
 interface CanvasModalProps {
   visible: boolean;
-  onSave: (base64Uri: string) => void;
+  onSave: (payload: CanvasSavePayload) => void;
   onClose: () => void;
+  editJsonUri?: string;
 }
 
 type Point = { x: number; y: number };
@@ -111,7 +121,7 @@ function buildLinePath(x1: number, y1: number, x2: number, y2: number) {
   return p;
 }
 
-export default function CanvasModal({ visible, onSave, onClose }: CanvasModalProps) {
+export default function CanvasModal({ visible, onSave, onClose, editJsonUri }: CanvasModalProps) {
   const canvasRef = useCanvasRef();
   const [elements, setElements] = useState<DrawElement[]>([]);
   const [history, setHistory] = useState<string[]>([]);
@@ -120,6 +130,32 @@ export default function CanvasModal({ visible, onSave, onClose }: CanvasModalPro
   const [size, setSize] = useState(3);
   const [filled, setFilled] = useState(false);
   const isDrawingRef = useRef(false);
+
+  React.useEffect(() => {
+    if (!visible) return;
+    if (!editJsonUri) {
+      setElements([]);
+      setHistory([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const raw = await FileSystem.readAsStringAsync(editJsonUri);
+        const parsed = JSON.parse(raw);
+        if (cancelled) return;
+        if (Array.isArray(parsed?.elements)) {
+          setElements(parsed.elements as DrawElement[]);
+        } else if (Array.isArray(parsed)) {
+          setElements(parsed as DrawElement[]);
+        }
+        setHistory([]);
+      } catch (err) {
+        console.warn('Canvas load error:', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [visible, editJsonUri]);
 
   const [canvasSize, setCanvasSize] = useState<{ width: number; height: number } | null>(null);
 
@@ -200,11 +236,48 @@ export default function CanvasModal({ visible, onSave, onClose }: CanvasModalPro
     [tool, color, size, filled, saveHistory],
   );
 
-  const handleSave = useCallback(() => {
-    const image = canvasRef.current?.makeImageSnapshot();
-    if (image) {
-      const base64 = image.encodeToBase64();
-      onSave(`data:image/png;base64,${base64}`);
+  const handleSave = useCallback(async () => {
+    try {
+      const dir = `${FileSystem.documentDirectory}canvas-drawings/`;
+      const dirInfo = await FileSystem.getInfoAsync(dir);
+      if (!dirInfo.exists) {
+        await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+      }
+
+      let baseName: string;
+      if (editJsonUri) {
+        const lastSlash = editJsonUri.lastIndexOf('/');
+        const file = editJsonUri.slice(lastSlash + 1);
+        baseName = file.replace(/\.json$/i, '');
+      } else {
+        baseName = `canvas-${Date.now()}`;
+      }
+
+      const jsonName = `${baseName}.json`;
+      const jsonUri = `${dir}${jsonName}`;
+      const sceneWidth = canvasSize?.width ?? 800;
+      const sceneHeight = canvasSize?.height ?? 600;
+
+      const json = JSON.stringify({
+        version: 1,
+        width: sceneWidth,
+        height: sceneHeight,
+        elements,
+      });
+      await FileSystem.writeAsStringAsync(jsonUri, json);
+
+      const info = await FileSystem.getInfoAsync(jsonUri);
+      onSave({
+        jsonUri,
+        jsonName,
+        width: sceneWidth,
+        height: sceneHeight,
+        size: info.exists && 'size' in info ? (info as { size?: number }).size : undefined,
+      });
+    } catch (err) {
+      console.error('Canvas save error:', err);
+      Alert.alert('Error', 'Failed to save drawing.');
+      return;
     }
     setElements([]);
     setHistory([]);
@@ -212,7 +285,7 @@ export default function CanvasModal({ visible, onSave, onClose }: CanvasModalPro
     setColor('#000000');
     setSize(3);
     setFilled(false);
-  }, [canvasRef, onSave]);
+  }, [onSave, editJsonUri, elements, canvasSize]);
 
   const handleClose = useCallback(() => {
     setElements([]);
