@@ -23,6 +23,17 @@
         "buildType": "apk"
       }
     },
+    "device-build": {
+      "distribution": "internal",
+      "ios": {
+        "simulator": false,
+        "resourceClass": "m1-medium"
+      },
+      "android": {
+        "buildType": "apk"
+      },
+      "withoutCredentials": true
+    },
     "production": {
       "ios": {
         "resourceClass": "m1-medium"

@@ -104,9 +104,16 @@ export default function NoteCard({ note, onPress, onLongPress, compact = false, 
       )}
 
       <View style={styles.footer}>
-        <Text style={[styles.date, { color: colors.textSecondary }]}>
-          {format(new Date(note.updatedAt), compact ? 'MMM d' : 'MMM d, yyyy')}
-        </Text>
+        <View style={styles.footerLeft}>
+          <Text style={[styles.date, { color: colors.textSecondary }]}>
+            {format(new Date(note.updatedAt), compact ? 'MMM d' : 'MMM d, yyyy')}
+          </Text>
+          <View style={[styles.formatBadge, { backgroundColor: colors.primary + '18' }]}>
+            <Text style={[styles.formatBadgeText, { color: colors.primary }]}>
+              {(note.format ?? 'markdown') === 'markdown' ? '.md' : (note.format ?? 'markdown') === 'neorg' ? '.norg' : (note.format ?? 'markdown') === 'org' ? '.org' : (note.format ?? 'markdown') === 'pdf' ? '.pdf' : '.md'}
+            </Text>
+          </View>
+        </View>
         
         {!compact && note.tags && note.tags.length > 0 && (
           <View style={styles.tagsContainer}>
@@ -206,6 +213,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 8,
+  },
+  footerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  formatBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  formatBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    fontFamily: 'monospace',
   },
   date: {
     fontSize: 12,

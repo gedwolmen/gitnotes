@@ -13,6 +13,7 @@ import {
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
+import * as Speech from 'expo-speech';
 import { Ionicons } from '@expo/vector-icons';
 import Markdown from 'react-native-markdown-display';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -38,6 +39,7 @@ import { NeorgContentParser } from '../services/NeorgContentParser';
 import { canvasToLink } from '../models/Canvas';
 import { useResponsive } from '../hooks/useResponsive';
 import { syncNoteToGitHub } from '../services/NoteGitHubSyncService';
+import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 
 const FORMAT_OPTIONS: { label: string; value: NoteFormat }[] = [
   { label: '.md', value: 'markdown' },
@@ -88,6 +90,7 @@ export default function NoteEditorScreen() {
   const [pdfLoadError, setPdfLoadError] = useState<{ uri: string; message: string } | null>(null);
 
   const [isEditing, setIsEditing] = useState(!noteId);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const isPdfNote = noteFormat === 'pdf';
 
   const [tags, setTags] = useState<string[]>([]);
@@ -207,17 +210,20 @@ export default function NoteEditorScreen() {
       }
 
       if (repo && content.trim()) {
-        const syncResult = await syncNoteToGitHub({
+        const syncParams = {
           repo,
           branch,
           filePath: folderPath ? `${folderPath}/${slugifyLocal(title.trim())}${getExtensionForFormat(noteFormat)}` : undefined,
           title: title.trim(),
           content: content.trim(),
           format: noteFormat,
-        });
+        };
+
+        const syncResult = await syncNoteToGitHub(syncParams);
 
         if (!syncResult.success) {
-          console.warn('[NoteEditor] GitHub sync failed:', syncResult.error);
+          console.warn('[NoteEditor] GitHub sync failed, queueing:', syncResult.error);
+          await NoteSyncQueueService.enqueueNoteUpsert(syncParams);
         }
       }
     } catch (error) {
@@ -468,6 +474,42 @@ export default function NoteEditorScreen() {
     return parsed.blocks;
   })();
 
+  const speakableContent = useMemo(() => {
+    return previewContent
+      .replace(/```[\s\S]*?```/g, '')
+      .replace(/`[^`]*`/g, '')
+      .replace(/!\[[^\]]*\]\([^)]+\)/g, '')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/^#{1,6}\s+/gm, '')
+      .replace(/[*_~]{1,2}([^*_~]+)[*_~]{1,2}/g, '$1')
+      .replace(/^\s*[-*+]\s+/gm, '')
+      .replace(/^\s*\d+\.\s+/gm, '')
+      .replace(/\n{2,}/g, '. ')
+      .trim();
+  }, [previewContent]);
+
+  const handleToggleSpeak = useCallback(async () => {
+    if (isSpeaking) {
+      await Speech.stop();
+      setIsSpeaking(false);
+      return;
+    }
+    if (!speakableContent) return;
+    HapticService.light();
+    setIsSpeaking(true);
+    Speech.speak(speakableContent, {
+      onDone: () => setIsSpeaking(false),
+      onStopped: () => setIsSpeaking(false),
+      onError: () => setIsSpeaking(false),
+    });
+  }, [isSpeaking, speakableContent]);
+
+  useEffect(() => {
+    return () => {
+      Speech.stop();
+    };
+  }, []);
+
   const editorPlaceholder = (() => {
     switch (noteFormat) {
       case 'org':
@@ -488,6 +530,15 @@ export default function NoteEditorScreen() {
             <Ionicons name="arrow-back" size={24} color={colors.primary} />
           </TouchableOpacity>
           <View style={styles.flex} />
+          {!isPdfNote && speakableContent ? (
+            <TouchableOpacity onPress={handleToggleSpeak} style={styles.iconButton}>
+              <Ionicons
+                name={isSpeaking ? 'stop-circle' : 'volume-high'}
+                size={22}
+                color={colors.primary}
+              />
+            </TouchableOpacity>
+          ) : null}
           {!isPdfNote && (
             <TouchableOpacity
               onPress={() => { HapticService.light(); setIsEditing(true); }}

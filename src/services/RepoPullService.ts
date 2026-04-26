@@ -40,49 +40,98 @@ async function fetchDirectoryFiles(
   return results;
 }
 
+const NOTE_EXTS = ['md', 'markdown', 'norg', 'org', 'txt'] as const;
+
+function noteFormatFromExt(ext: string): 'markdown' | 'neorg' | 'org' {
+  if (ext === 'norg') return 'neorg';
+  if (ext === 'org') return 'org';
+  return 'markdown';
+}
+
+const FILE_FETCH_CONCURRENCY = 8;
+
+async function fetchInBatches<T, R>(
+  items: T[],
+  fn: (item: T) => Promise<R>,
+  concurrency: number,
+): Promise<R[]> {
+  const out: R[] = [];
+  for (let i = 0; i < items.length; i += concurrency) {
+    const batch = items.slice(i, i + concurrency);
+    const batchOut = await Promise.all(batch.map(fn));
+    out.push(...batchOut);
+  }
+  return out;
+}
+
 async function pullNotesFromRepo(
   owner: string,
   repo: string,
   repoPath: string,
   branch: string,
 ): Promise<number> {
-  let pulled = 0;
   try {
-    const files = await fetchDirectoryFiles(owner, repo, 'notes', branch);
-    const localNotes = await StorageService.getAllNotes();
+    const tree = await GitHubService.getTreeRecursive(owner, repo, branch);
+    const noteBlobs = tree.filter((item) => {
+      if (item.type !== 'blob') return false;
+      if (!item.path.startsWith('notes/')) return false;
+      if (item.path.startsWith('notes/images/')) return false;
+      const ext = item.path.split('.').pop()?.toLowerCase();
+      return NOTE_EXTS.includes(ext as (typeof NOTE_EXTS)[number]);
+    });
 
-    for (const file of files) {
-      const ext = file.path.split('.').pop()?.toLowerCase();
-      if (!['md', 'norg', 'org', 'txt'].includes(ext ?? '')) continue;
+    if (noteBlobs.length === 0) return 0;
 
-      const existing = localNotes.find((n) => n.filePath === file.path);
-      const titleFromPath = file.path
+    const fetched = await fetchInBatches(
+      noteBlobs,
+      async (blob) => {
+        const content = await GitHubService.getFileContent(owner, repo, blob.path, branch);
+        return content === null ? null : { path: blob.path, content };
+      },
+      FILE_FETCH_CONCURRENCY,
+    );
+
+    const allNotes = await StorageService.getAllNotes();
+    let pulled = 0;
+
+    for (const item of fetched) {
+      if (!item) continue;
+      const ext = item.path.split('.').pop()?.toLowerCase() ?? 'md';
+      const titleFromPath = item.path
         .replace(/^notes\//, '')
         .replace(/\.[^.]+$/, '')
-        .replace(/-/g, ' ');
+        .replace(/[-_/]/g, ' ');
 
-      if (existing) {
-        await StorageService.updateNote({ id: existing.id, content: file.content });
-        pulled++;
+      const existingIdx = allNotes.findIndex(
+        (n) => n.repo === repoPath && n.filePath === item.path,
+      );
+      if (existingIdx !== -1) {
+        allNotes[existingIdx] = {
+          ...allNotes[existingIdx],
+          content: item.content,
+          updatedAt: Date.now(),
+        };
       } else {
-        const newNote = createNote({
-          title: titleFromPath,
-          content: file.content,
-          repo: repoPath,
-          branch,
-          filePath: file.path,
-          format: ext === 'norg' ? 'neorg' : ext === 'org' ? 'org' : 'markdown',
-        });
-        const allNotes = await StorageService.getAllNotes();
-        allNotes.push(newNote);
-        await StorageService.saveAllNotes(allNotes);
-        pulled++;
+        allNotes.push(
+          createNote({
+            title: titleFromPath,
+            content: item.content,
+            repo: repoPath,
+            branch,
+            filePath: item.path,
+            format: noteFormatFromExt(ext),
+          }),
+        );
       }
+      pulled++;
     }
+
+    await StorageService.saveAllNotes(allNotes);
+    return pulled;
   } catch {
     console.warn(`[RepoPullService] Failed to pull notes from ${owner}/${repo}`);
+    return 0;
   }
-  return pulled;
 }
 
 async function pullCanvasesFromRepo(

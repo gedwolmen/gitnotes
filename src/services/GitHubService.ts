@@ -220,6 +220,26 @@ class GitHubServiceClass {
     }
   }
 
+  async getTreeRecursive(
+    owner: string,
+    repo: string,
+    ref: string,
+  ): Promise<{ path: string; type: 'blob' | 'tree'; sha: string }[]> {
+    try {
+      const url = `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`;
+      const data = await this.fetchWithAuth(url);
+      if (!Array.isArray(data?.tree)) return [];
+      return data.tree.map((item: any) => ({
+        path: item.path,
+        type: item.type,
+        sha: item.sha,
+      }));
+    } catch (error) {
+      console.error('[GitHubService] Failed to get tree:', error);
+      return [];
+    }
+  }
+
   async getFileContent(owner: string, repo: string, path: string, ref?: string): Promise<string | null> {
     try {
       const encodedPath = path.split('/').map(encodeURIComponent).join('/');

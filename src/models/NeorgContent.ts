@@ -7,9 +7,15 @@ export interface NeorgHeading {
 export interface NeorgListItem {
   type: 'unordered' | 'ordered' | 'task';
   text: string;
-  status?: 'todo' | 'done' | 'important' | 'uncertain';
+  status?: 'todo' | 'done' | 'important' | 'uncertain' | 'in-progress' | 'urgent' | 'cancelled' | 'on-hold' | 'recurring';
   indentLevel: number;
   children?: NeorgListItem[];
+}
+
+export interface NeorgDefinitionItem {
+  term: string;
+  definition: string;
+  indentLevel: number;
 }
 
 export interface NeorgChecklistItem {
@@ -23,10 +29,11 @@ export interface NeorgTableRow {
 }
 
 export interface NeorgContentBlock {
-  type: 'heading' | 'list' | 'paragraph' | 'code' | 'checklist' | 'table' | 'quote' | 'divider';
+  type: 'heading' | 'list' | 'paragraph' | 'code' | 'checklist' | 'table' | 'quote' | 'divider' | 'definition';
   heading?: NeorgHeading;
   listItems?: NeorgListItem[];
   checklistItems?: NeorgChecklistItem[];
+  definitionItems?: NeorgDefinitionItem[];
   text?: string;
   code?: {
     language?: string;

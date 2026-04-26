@@ -32,7 +32,8 @@ import { Note, NoteFormat } from "../models/Note";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { GitRepository, GitBranch, GitService } from "../services/GitService";
 import { GitHubService } from "../services/GitHubService";
-import { RepoFileSyncService } from "../services/RepoFileSyncService";
+import { NoteSyncQueueService } from "../services/NoteSyncQueueService";
+import { pullAllFromRepos } from "../services/RepoPullService";
 import NoteCard from "../components/NoteCard";
 import SearchBar from "../components/SearchBar";
 import RepoFileBrowser, { parseRepoPath } from "../components/RepoFileBrowser";
@@ -68,6 +69,7 @@ export default function NotesListScreen() {
     refreshNotes,
     togglePin,
     error,
+    createNote,
   } = useNotes();
   const { viewMode, setViewMode } = useViewMode();
   const { isTablet, columns, maxContentWidth } = useResponsive();
@@ -83,6 +85,37 @@ export default function NotesListScreen() {
   const [showViewModePicker, setShowViewModePicker] = useState(false);
   const [isPullRefreshing, setIsPullRefreshing] = useState(false);
   const [currentSearchMatchIndex, setCurrentSearchMatchIndex] = useState(0);
+  const [pendingSync, setPendingSync] = useState(0);
+  const [isManualSyncing, setIsManualSyncing] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = () => {
+      NoteSyncQueueService.pendingCount().then((n) => {
+        if (!cancelled) setPendingSync(n);
+      });
+    };
+    refresh();
+    const unsub = NoteSyncQueueService.subscribe(refresh);
+    return () => {
+      cancelled = true;
+      unsub();
+    };
+  }, []);
+
+  const handleManualSync = useCallback(async () => {
+    if (isManualSyncing) return;
+    HapticService.light();
+    setIsManualSyncing(true);
+    try {
+      const result = await NoteSyncQueueService.drain();
+      if (result.succeeded > 0) {
+        await refreshNotes();
+      }
+    } finally {
+      setIsManualSyncing(false);
+    }
+  }, [isManualSyncing, refreshNotes]);
 
   // Filters
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -111,7 +144,7 @@ export default function NotesListScreen() {
   }, [notes]);
 
   const activeFilterCount =
-    (selectedFormat ? 1 : 0) + (selectedTags.length > 0 ? 1 : 0);
+    (selectedRepo ? 1 : 0) + (selectedFormat ? 1 : 0) + (selectedTags.length > 0 ? 1 : 0);
 
   const repoInfo = useMemo(
     () => (selectedRepo ? parseRepoPath(selectedRepo.path) : null),
@@ -213,15 +246,50 @@ export default function NotesListScreen() {
   );
 
   const handleRepoFilePress = useCallback(
-    (filePath: string) => {
-      const note = notes.find(
+    async (filePath: string) => {
+      const existing = notes.find(
         (n: Note) => n.repo === selectedRepo?.path && n.filePath === filePath,
       );
-      if (note) {
-        navigation.navigate("NoteEditor", { noteId: note.id });
+      if (existing) {
+        navigation.navigate("NoteEditor", { noteId: existing.id });
+        return;
+      }
+      if (!selectedRepo || !repoInfo) return;
+
+      const branch = selectedBranch ?? "main";
+      const content = await GitHubService.getFileContent(
+        repoInfo.owner,
+        repoInfo.repo,
+        filePath,
+        branch,
+      );
+      if (content === null) {
+        Alert.alert("Failed to load", "Could not fetch file from GitHub.");
+        return;
+      }
+
+      const ext = filePath.split(".").pop()?.toLowerCase() ?? "md";
+      const format: NoteFormat =
+        ext === "norg" ? "neorg" : ext === "org" ? "org" : "markdown";
+      const titleFromPath = filePath
+        .replace(/\.[^.]+$/, "")
+        .split("/")
+        .pop()
+        ?.replace(/[-_]/g, " ") ?? filePath;
+
+      const created = await createNote({
+        title: titleFromPath,
+        content,
+        repo: selectedRepo.path,
+        branch,
+        filePath,
+        format,
+      });
+      if (created) {
+        navigation.navigate("NoteEditor", { noteId: created.id });
       }
     },
-    [notes, selectedRepo, navigation],
+    [notes, selectedRepo, selectedBranch, repoInfo, createNote, navigation],
   );
 
   const handleCreateNoteInFolder = useCallback(
@@ -302,65 +370,27 @@ export default function NotesListScreen() {
     setIsPullRefreshing(true);
     HapticService.light();
 
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Sync timed out")), 60000),
+    );
+
     try {
-      const repoPaths = new Set<string>();
-      repositories.forEach((repo) => {
-        repoPaths.add(repo.path);
-      });
-      notes.forEach((note) => {
-        if (note.repo) repoPaths.add(note.repo);
-      });
-
-      if (repoPaths.size === 0) {
-        await refreshNotes();
-        HapticService.selection();
-        return;
-      }
-
-      let successCount = 0;
-      let failureCount = 0;
-      const allErrors: string[] = [];
-
-      for (const repoPath of repoPaths) {
-        try {
-          const result = await RepoFileSyncService.syncRepoFiles(repoPath);
-
-          if (result.errors.length > 0) {
-            failureCount += 1;
-            allErrors.push(...result.errors);
-          } else {
-            successCount += 1;
-          }
-        } catch {
-          failureCount += 1;
-        }
-      }
-
+      await Promise.race([
+        (async () => {
+          await NoteSyncQueueService.drain();
+          await pullAllFromRepos();
+        })(),
+        timeout,
+      ]);
       await refreshNotes();
-
-      if (failureCount > 0) {
-        HapticService.warning();
-        const errorDetail =
-          allErrors.length > 0 ? `\n\n${allErrors.slice(0, 3).join("\n")}` : "";
-        Alert.alert(
-          "Sync Complete",
-          `Synced ${successCount} repositories, ${failureCount} failed.${errorDetail}`,
-        );
-      } else {
-        HapticService.success();
-      }
+      HapticService.success();
     } catch (pullError) {
-      HapticService.error();
-      Alert.alert(
-        "Sync Failed",
-        pullError instanceof Error
-          ? pullError.message
-          : "Failed to sync repositories",
-      );
+      HapticService.warning();
+      console.warn("[Sync] pull-refresh failed:", pullError);
     } finally {
       setIsPullRefreshing(false);
     }
-  }, [isPullRefreshing, notes, refreshNotes, repositories]);
+  }, [isPullRefreshing, refreshNotes]);
 
   const renderSwipeActions = useCallback(
     (note: Note) => (
@@ -548,6 +578,34 @@ export default function NotesListScreen() {
               style={[styles.filterBadge, { backgroundColor: colors.primary }]}
             >
               <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.iconBtn,
+            {
+              backgroundColor:
+                pendingSync > 0 ? colors.primary + "20" : colors.surface,
+            },
+          ]}
+          onPress={handleManualSync}
+          disabled={isManualSyncing}
+        >
+          {isManualSyncing ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <Ionicons
+              name={pendingSync > 0 ? "cloud-upload" : "cloud-done"}
+              size={20}
+              color={pendingSync > 0 ? colors.primary : colors.textSecondary}
+            />
+          )}
+          {pendingSync > 0 && (
+            <View
+              style={[styles.filterBadge, { backgroundColor: colors.primary }]}
+            >
+              <Text style={styles.filterBadgeText}>{pendingSync}</Text>
             </View>
           )}
         </TouchableOpacity>
@@ -909,7 +967,90 @@ export default function NotesListScreen() {
               </View>
             </View>
 
-            <ScrollView style={styles.filterBody}>
+            <ScrollView style={styles.filterBody} contentContainerStyle={styles.filterBodyContent}>
+              {/* Repository */}
+              {repositories.length > 0 && (
+                <>
+                  <Text
+                    style={[styles.filterLabel, { color: colors.textSecondary }]}
+                  >
+                    Repository
+                  </Text>
+                  <View style={styles.filterChipRowWrap}>
+                    <TouchableOpacity
+                      style={[
+                        styles.filterChip,
+                        { borderColor: colors.border },
+                        !selectedRepo && {
+                          borderColor: colors.primary,
+                          backgroundColor: colors.primary + "15",
+                        },
+                      ]}
+                      onPress={() => {
+                        HapticService.selection();
+                        setSelectedRepo(null);
+                        setSelectedBranch(null);
+                      }}
+                    >
+                      <Ionicons
+                        name="home-outline"
+                        size={13}
+                        color={!selectedRepo ? colors.primary : colors.textSecondary}
+                      />
+                      <Text
+                        style={[
+                          styles.filterChipText,
+                          { color: !selectedRepo ? colors.primary : colors.text },
+                        ]}
+                      >
+                        All
+                      </Text>
+                    </TouchableOpacity>
+                    {repositories.map((repo) => (
+                      <TouchableOpacity
+                        key={repo.id}
+                        style={[
+                          styles.filterChip,
+                          { borderColor: colors.border },
+                          selectedRepo?.id === repo.id && {
+                            borderColor: colors.primary,
+                            backgroundColor: colors.primary + "15",
+                          },
+                        ]}
+                        onPress={() => {
+                          HapticService.selection();
+                          setSelectedRepo(repo);
+                          setSelectedBranch(null);
+                        }}
+                      >
+                        <Ionicons
+                          name="git-branch-outline"
+                          size={13}
+                          color={
+                            selectedRepo?.id === repo.id
+                              ? colors.primary
+                              : colors.textSecondary
+                          }
+                        />
+                        <Text
+                          style={[
+                            styles.filterChipText,
+                            {
+                              color:
+                                selectedRepo?.id === repo.id
+                                  ? colors.primary
+                                  : colors.text,
+                            },
+                          ]}
+                        >
+                          {repo.name}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </>
+              )}
+
               {/* Format / Type */}
               <Text
                 style={[styles.filterLabel, { color: colors.textSecondary }]}
@@ -1241,6 +1382,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     maxHeight: "80%",
+    paddingBottom: 32,
   },
   modalHeader: {
     flexDirection: "row",
@@ -1254,6 +1396,7 @@ const styles = StyleSheet.create({
   clearFiltersBtn: { paddingHorizontal: 4 },
   clearFiltersText: { fontSize: 15, fontWeight: "500" },
   filterBody: { padding: 16 },
+  filterBodyContent: { paddingBottom: 16 },
   filterLabel: {
     fontSize: 12,
     fontWeight: "600",

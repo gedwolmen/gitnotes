@@ -1,6 +1,6 @@
 import { GitHubService } from './GitHubService';
 import { NoteFormat } from '../models/Note';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 export interface NoteGitHubSyncResult {
   success: boolean;

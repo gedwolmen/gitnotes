@@ -36,7 +36,6 @@
     },
     "plugins": [
       "expo-font",
-      "expo-sharing",
       "expo-web-browser",
       [
         "expo-notifications",
@@ -46,20 +45,16 @@
         }
       ],
       "expo-image-picker",
-      "@react-native-community/datetimepicker",
-      "expo-speech-recognition"
+      "@react-native-community/datetimepicker"
     ],
-    "extra": {
-      "eas": {
-        "projectId": "gitnotes-app"
-      }
-    },
-    "owner": "vidwadeseram",
+    "owner": "vidwa",
     "runtimeVersion": {
       "policy": "appVersion"
     },
-    "updates": {
-      "url": "https://u.expo.dev/gitnotes-app"
+    "extra": {
+      "eas": {
+        "projectId": "af214cbc-3668-4913-9ea4-7227bc068a96"
+      }
     }
   }
 }

@@ -1,4 +1,4 @@
-import { NeorgHeading, NeorgListItem, NeorgContentBlock, NeorgChecklistItem, NeorgContentParseResult, NeorgTableRow } from '../models/NeorgContent';
+import { NeorgHeading, NeorgListItem, NeorgContentBlock, NeorgChecklistItem, NeorgContentParseResult, NeorgTableRow, NeorgDefinitionItem } from '../models/NeorgContent';
 
 export class NeorgContentParser {
   static parseContent(content: string): NeorgContentParseResult {
@@ -9,6 +9,7 @@ export class NeorgContentParser {
       let currentCodeBlock: { language?: string; lines: string[] } | null = null;
       let currentChecklist: NeorgChecklistItem[] | null = null;
       let currentTableRows: NeorgTableRow[] | null = null;
+      let currentDefinitions: NeorgDefinitionItem[] | null = null;
       let tableHasHeader: boolean[] = [];
       let inOrgDrawer = false;
       let inOrgBlock = false;
@@ -37,14 +38,20 @@ export class NeorgContentParser {
         }
       };
 
+      const flushDefinitions = () => {
+        if (currentDefinitions) {
+          blocks.push({ type: 'definition', definitionItems: currentDefinitions });
+          currentDefinitions = null;
+        }
+      };
+
       let pendingParagraphLines: string[] = [];
 
       const flushParagraph = () => {
         if (pendingParagraphLines.length > 0) {
-          const joined = pendingParagraphLines.join(' ');
-          const cleanText = joined.replace(/\s*\{[a-z0-9_.:]+\}\s*/g, ' ').trim();
-          if (cleanText) {
-            blocks.push({ type: 'paragraph', text: cleanText });
+          const joined = pendingParagraphLines.join(' ').trim();
+          if (joined) {
+            blocks.push({ type: 'paragraph', text: joined });
           }
           pendingParagraphLines = [];
         }
@@ -55,6 +62,7 @@ export class NeorgContentParser {
         flushList();
         flushChecklist();
         flushTable();
+        flushDefinitions();
       };
 
       for (let i = 0; i < lines.length; i++) {
@@ -105,9 +113,6 @@ export class NeorgContentParser {
 
         if (/^CLOCK\s*:/i.test(trimmed)) continue;
         if (/^-\s+State\s+"/i.test(trimmed)) continue;
-
-        if (/^\{[a-z0-9_.:]+\}$/.test(trimmed)) continue;
-        if (/^(\s*\{[a-z0-9_.:]+\}\s*)+$/.test(trimmed)) continue;
 
         if (!trimmed) {
           if (currentCodeBlock) {
@@ -196,6 +201,7 @@ export class NeorgContentParser {
         if (checklistItem) {
           flushParagraph();
           flushList();
+          flushDefinitions();
           if (!currentChecklist) currentChecklist = [];
           currentChecklist.push(checklistItem);
           continue;
@@ -212,8 +218,19 @@ export class NeorgContentParser {
         if (listItem) {
           flushParagraph();
           flushChecklist();
+          flushDefinitions();
           if (!currentList) currentList = [];
           currentList.push(listItem);
+          continue;
+        }
+
+        const definitionItem = this.parseDefinitionItem(line);
+        if (definitionItem) {
+          flushParagraph();
+          flushList();
+          flushChecklist();
+          if (!currentDefinitions) currentDefinitions = [];
+          currentDefinitions.push(definitionItem);
           continue;
         }
 
@@ -240,8 +257,7 @@ export class NeorgContentParser {
   }
 
   static parseHeading(line: string): NeorgHeading | null {
-    // Org/Neorg: * heading (with optional TODO keyword, priority, trailing tags)
-    const starMatch = line.match(/^(\*{1,6})\s+(.+)$/);
+    const starMatch = line.match(/^(\*{1,7})\s+(.+)$/);
     if (starMatch) {
       const level = starMatch[1].length;
       let text = starMatch[2].trim();
@@ -295,11 +311,12 @@ export class NeorgContentParser {
       return { type: 'ordered', text: numericMatch[2].trim(), indentLevel };
     }
 
-    // Norg task: ( ) item, (x) item, (!) item, (?) item
-    const taskMatch = content.match(/^\(([ x!?])\)\s+(.+)$/);
+    // Norg task: ( ) item, (x) item, (!) item, (?) item, (~) in-progress, (u) urgent, (-) cancelled, (_) on-hold, (+) recurring
+    const taskMatch = content.match(/^\(([ x!?~u\-_+])\)\s+(.+)$/);
     if (taskMatch) {
-      const statusMap: Record<string, 'todo' | 'done' | 'important' | 'uncertain'> = {
+      const statusMap: Record<string, 'todo' | 'done' | 'important' | 'uncertain' | 'in-progress' | 'urgent' | 'cancelled' | 'on-hold' | 'recurring'> = {
         ' ': 'todo', 'x': 'done', '!': 'important', '?': 'uncertain',
+        '~': 'in-progress', 'u': 'urgent', '-': 'cancelled', '_': 'on-hold', '+': 'recurring',
       };
       return { type: 'task', text: taskMatch[2].trim(), status: statusMap[taskMatch[1]] || 'todo', indentLevel };
     }
@@ -324,6 +341,24 @@ export class NeorgContentParser {
     const checkedMatch = content.match(/^-\s*\[x\]\s*(.*)$/i);
     if (checkedMatch) {
       return { text: checkedMatch[1].trim(), checked: true, indentLevel };
+    }
+
+    return null;
+  }
+
+  static parseDefinitionItem(line: string): NeorgDefinitionItem | null {
+    const indentMatch = line.match(/^(\s*)(.*)$/);
+    if (!indentMatch) return null;
+
+    const spaces = indentMatch[1];
+    const indentLevel = Math.floor(spaces.length / 2);
+    const content = indentMatch[2];
+
+    // Neorg definition: $ Term
+    //   Definition text
+    const defMatch = content.match(/^\$\s+(.+)$/);
+    if (defMatch) {
+      return { term: defMatch[1].trim(), definition: '', indentLevel };
     }
 
     return null;
@@ -369,6 +404,9 @@ export class NeorgContentParser {
         case 'table': return block.tableRows ? this.tableToMarkdown(block.tableRows) : '';
         case 'quote': return block.text ? `> ${block.text.replace(/\n/g, '\n> ')}` : '';
         case 'divider': return '---';
+        case 'definition': return block.definitionItems
+          ? block.definitionItems.map(d => `**${d.term}**: ${d.definition}`).join('\n')
+          : '';
         default: return '';
       }
     }).join('\n\n');

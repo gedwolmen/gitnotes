@@ -293,6 +293,8 @@ export default function GitContextPicker({
             data={filteredRepos}
             keyExtractor={(item) => item.id}
             keyboardShouldPersistTaps="handled"
+            style={styles.list}
+            contentContainerStyle={styles.listContent}
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={[styles.listItem, { borderBottomColor: colors.border }]}
@@ -351,6 +353,8 @@ export default function GitContextPicker({
             data={branches}
             keyExtractor={(item) => item.name}
             keyboardShouldPersistTaps="handled"
+            style={styles.list}
+            contentContainerStyle={styles.listContent}
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={[
@@ -416,6 +420,8 @@ export default function GitContextPicker({
             data={commits}
             keyExtractor={(item) => item.hash}
             keyboardShouldPersistTaps="handled"
+            style={styles.list}
+            contentContainerStyle={styles.listContent}
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={[styles.commitItem, { borderBottomColor: colors.border }]}
@@ -506,8 +512,15 @@ const styles = StyleSheet.create({
   sheet: {
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
+    flex: 1,
     maxHeight: '85%',
     paddingBottom: 8,
+  },
+  list: {
+    flex: 1,
+  },
+  listContent: {
+    paddingBottom: 16,
   },
   sheetHeader: {
     flexDirection: 'row',

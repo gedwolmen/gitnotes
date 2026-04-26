@@ -375,6 +375,8 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
             data={filteredRepos}
             keyExtractor={(item) => item.id.toString()}
             keyboardShouldPersistTaps="handled"
+            style={styles.list}
+            contentContainerStyle={styles.listContent}
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={[styles.listItem, { borderBottomColor: colors.border }]}
@@ -430,6 +432,8 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
             data={filteredIssues}
             keyExtractor={(item) => item.id.toString()}
             keyboardShouldPersistTaps="handled"
+            style={styles.list}
+            contentContainerStyle={styles.listContent}
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={[styles.listItem, { borderBottomColor: colors.border }]}
@@ -457,6 +461,8 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
             data={milestones}
             keyExtractor={(item) => item.id.toString()}
             keyboardShouldPersistTaps="handled"
+            style={styles.list}
+            contentContainerStyle={styles.listContent}
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={[styles.listItem, { borderBottomColor: colors.border }]}
@@ -586,7 +592,15 @@ const styles = StyleSheet.create({
   sheet: {
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
+    flex: 1,
     maxHeight: '85%',
+    paddingBottom: 8,
+  },
+  list: {
+    flex: 1,
+  },
+  listContent: {
+    paddingBottom: 16,
   },
   sheetHeader: {
     flexDirection: 'row',
