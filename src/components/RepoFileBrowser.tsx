@@ -94,6 +94,7 @@ export default function RepoFileBrowser({
   const [currentPath, setCurrentPath] = useState('');
   const [items, setItems] = useState<RepoFileItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [browseMode, setBrowseMode] = useState<'folder' | 'all'>('folder');
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
@@ -112,6 +113,31 @@ export default function RepoFileBrowser({
   const loadContents = useCallback(async () => {
     setIsLoading(true);
     try {
+      const noteExts = ['.md', '.markdown', '.norg', '.org', '.pdf'];
+
+      if (browseMode === 'all') {
+        const ref = branch || 'main';
+        const tree = await GitHubService.getTreeRecursive(owner, repo, ref);
+        const files: RepoFileItem[] = tree
+          .filter((entry) => entry.type === 'blob')
+          .map((entry) => entry.path)
+          .filter((p) => {
+            const lower = p.toLowerCase();
+            const dot = lower.lastIndexOf('.');
+            if (dot < 0) return false;
+            return noteExts.includes(lower.slice(dot));
+          })
+          .filter((p) => !p.startsWith('notes/images/') && !p.includes('/.git/'))
+          .map((p) => ({
+            name: p.slice(p.lastIndexOf('/') + 1) || p,
+            path: p,
+            type: 'file' as const,
+          }))
+          .sort((a, b) => a.path.localeCompare(b.path));
+        setItems(files);
+        return;
+      }
+
       const contents = await GitHubService.getRepoContents(owner, repo, currentPath, branch);
       const filtered = contents
         .filter((item: GitHubContent) => {
@@ -119,7 +145,7 @@ export default function RepoFileBrowser({
           if (item.type !== 'file' && item.type !== 'dir') return false;
           if (item.type === 'file') {
             const ext = item.name.toLowerCase().slice(item.name.lastIndexOf('.'));
-            return ['.md', '.markdown', '.norg', '.org', '.pdf'].includes(ext);
+            return noteExts.includes(ext);
           }
           return true;
         })
@@ -138,7 +164,7 @@ export default function RepoFileBrowser({
     } finally {
       setIsLoading(false);
     }
-  }, [owner, repo, currentPath, branch]);
+  }, [owner, repo, currentPath, branch, browseMode]);
 
   useEffect(() => {
     loadContents();
@@ -331,36 +357,59 @@ export default function RepoFileBrowser({
     );
   }, [colors, navigateToFolder, onFilePress, handleFolderLongPress]);
 
-  const renderBreadcrumb = useCallback(() => (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={fileStyles.breadcrumb} contentContainerStyle={fileStyles.breadcrumbContent}>
-      <TouchableOpacity onPress={() => navigateToBreadcrumb(-1)}>
-        <Text style={[fileStyles.crumb, { color: !currentPath ? colors.primary : colors.textSecondary }]}>
-          {repo}
-        </Text>
-      </TouchableOpacity>
-      {pathParts.map((part, i) => (
-        <View key={`crumb-${part}`} style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Text style={[fileStyles.crumbSep, { color: colors.textSecondary }]}> / </Text>
-          <TouchableOpacity onPress={() => navigateToBreadcrumb(i)}>
-            <Text style={[fileStyles.crumb, { color: i === pathParts.length - 1 ? colors.primary : colors.textSecondary }]}>
-              {part}
-            </Text>
-          </TouchableOpacity>
+  const renderBreadcrumb = useCallback(() => {
+    if (browseMode === 'all') {
+      return (
+        <View style={fileStyles.breadcrumbContent}>
+          <Text style={[fileStyles.crumb, { color: colors.primary }]}>{repo} · All notes</Text>
         </View>
-      ))}
-    </ScrollView>
-  ), [colors, repo, currentPath, pathParts, navigateToBreadcrumb]);
+      );
+    }
+    return (
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={fileStyles.breadcrumb} contentContainerStyle={fileStyles.breadcrumbContent}>
+        <TouchableOpacity onPress={() => navigateToBreadcrumb(-1)}>
+          <Text style={[fileStyles.crumb, { color: !currentPath ? colors.primary : colors.textSecondary }]}>
+            {repo}
+          </Text>
+        </TouchableOpacity>
+        {pathParts.map((part, i) => (
+          <View key={`crumb-${part}`} style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={[fileStyles.crumbSep, { color: colors.textSecondary }]}> / </Text>
+            <TouchableOpacity onPress={() => navigateToBreadcrumb(i)}>
+              <Text style={[fileStyles.crumb, { color: i === pathParts.length - 1 ? colors.primary : colors.textSecondary }]}>
+                {part}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+      </ScrollView>
+    );
+  }, [colors, repo, currentPath, pathParts, navigateToBreadcrumb, browseMode]);
 
   return (
     <View style={fileStyles.container}>
       <View style={[fileStyles.header, { borderBottomColor: colors.border }]}>
         {renderBreadcrumb()}
         <View style={fileStyles.headerActions}>
-          {currentPath ? (
+          {currentPath && browseMode === 'folder' ? (
             <TouchableOpacity style={fileStyles.headerBtn} onPress={navigateUp}>
               <Ionicons name="arrow-back" size={20} color={colors.primary} />
             </TouchableOpacity>
           ) : null}
+          <TouchableOpacity
+            style={fileStyles.headerBtn}
+            onPress={() => {
+              HapticService.light();
+              setBrowseMode((m) => (m === 'folder' ? 'all' : 'folder'));
+              setCurrentPath('');
+            }}
+          >
+            <Ionicons
+              name={browseMode === 'all' ? 'list' : 'folder'}
+              size={20}
+              color={browseMode === 'all' ? colors.primary : colors.textSecondary}
+            />
+          </TouchableOpacity>
           <TouchableOpacity
             style={fileStyles.headerBtn}
             onPress={() => { HapticService.light(); onCreateNoteInFolder(currentPath); }}
