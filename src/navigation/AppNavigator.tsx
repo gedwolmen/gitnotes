@@ -9,6 +9,10 @@ import TabNavigator from './TabNavigator';
 import NoteEditorScreen from '../screens/NoteEditorScreen';
 import CanvasEditorScreen from '../screens/CanvasEditorScreen';
 import CanvasListScreen from '../screens/CanvasListScreen';
+import PdfViewerScreen from '../screens/PdfViewerScreen';
+import FileViewerScreen from '../screens/FileViewerScreen';
+import ImageViewerScreen from '../screens/ImageViewerScreen';
+import VideoViewerScreen from '../screens/VideoViewerScreen';
 import { RootStackParamList } from './types';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -57,9 +61,29 @@ export default function AppNavigator() {
             component={CanvasEditorScreen}
             options={{ headerShown: false }}
           />
-          <Stack.Screen 
-            name="CanvasList" 
+          <Stack.Screen
+            name="CanvasList"
             component={CanvasListScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="PdfViewer"
+            component={PdfViewerScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="FileViewer"
+            component={FileViewerScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="ImageViewer"
+            component={ImageViewerScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="VideoViewer"
+            component={VideoViewerScreen}
             options={{ headerShown: false }}
           />
         </Stack.Navigator>

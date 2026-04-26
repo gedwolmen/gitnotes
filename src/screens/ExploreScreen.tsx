@@ -11,17 +11,34 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useRepos } from '../contexts/RepoContext';
 import { GitRepository } from '../services/GitService';
 import { HapticService } from '../utils/haptics';
 import { parseRepoPath } from '../components/RepoFileBrowser';
-import RepoFileTree from '../components/RepoFileTree';
+import RepoFileTree, { TreeNode } from '../components/RepoFileTree';
+import { RootStackParamList } from '../navigation/types';
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'heic', 'heif', 'svg']);
+const VIDEO_EXTS = new Set(['mp4', 'mov', 'm4v', 'webm']);
+
+function classifyFile(name: string): 'pdf' | 'image' | 'video' | 'text' {
+  const ext = name.toLowerCase().split('.').pop() ?? '';
+  if (ext === 'pdf') return 'pdf';
+  if (IMAGE_EXTS.has(ext)) return 'image';
+  if (VIDEO_EXTS.has(ext)) return 'video';
+  return 'text';
+}
 
 type ExploreView = 'repoList' | 'repoDetail' | 'fileTree';
 
 export default function ExploreScreen() {
+  const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
   const { repositories: repos, refreshRepos } = useRepos();
   const [view, setView] = useState<ExploreView>('repoList');
@@ -237,6 +254,26 @@ export default function ExploreScreen() {
             owner={repoInfo.owner}
             repo={repoInfo.repo}
             branch={selectedRepo?.branch}
+            onFilePress={(node: TreeNode) => {
+              const kind = classifyFile(node.name);
+              const params = {
+                owner: repoInfo.owner,
+                repo: repoInfo.repo,
+                branch: selectedRepo?.branch,
+                path: node.path,
+                title: node.name,
+                size: node.size,
+              };
+              if (kind === 'pdf') {
+                navigation.navigate('PdfViewer', params);
+              } else if (kind === 'image') {
+                navigation.navigate('ImageViewer', params);
+              } else if (kind === 'video') {
+                navigation.navigate('VideoViewer', params);
+              } else {
+                navigation.navigate('FileViewer', params);
+              }
+            }}
           />
         </ScrollView>
       </SafeAreaView>

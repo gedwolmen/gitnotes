@@ -117,7 +117,7 @@ class GitHubServiceClass {
         }
       }
     } catch (error) {
-      console.error('[GitHubService] Failed to initialize:', error);
+      console.warn('[GitHubService] Failed to initialize:', error);
     }
   }
 
@@ -163,7 +163,7 @@ class GitHubServiceClass {
       );
       return Array.isArray(data) ? data : [];
     } catch (error) {
-      console.error('[GitHubService] Failed to get repositories:', error);
+      console.warn('[GitHubService] Failed to get repositories:', error);
       return [];
     }
   }
@@ -175,7 +175,7 @@ class GitHubServiceClass {
       );
       return Array.isArray(data) ? data : [];
     } catch (error) {
-      console.error('[GitHubService] Failed to get issues:', error);
+      console.warn('[GitHubService] Failed to get issues:', error);
       return [];
     }
   }
@@ -187,7 +187,7 @@ class GitHubServiceClass {
       );
       return Array.isArray(data) ? data : [];
     } catch (error) {
-      console.error('[GitHubService] Failed to get pull requests:', error);
+      console.warn('[GitHubService] Failed to get pull requests:', error);
       return [];
     }
   }
@@ -199,7 +199,7 @@ class GitHubServiceClass {
       );
       return Array.isArray(data) ? data : [];
     } catch (error) {
-      console.error('[GitHubService] Failed to get milestones:', error);
+      console.warn('[GitHubService] Failed to get milestones:', error);
       return [];
     }
   }
@@ -215,7 +215,7 @@ class GitHubServiceClass {
       }
       return [data];
     } catch (error) {
-      console.error('[GitHubService] Failed to get repo contents:', error);
+      console.warn('[GitHubService] Failed to get repo contents:', error);
       return [];
     }
   }
@@ -235,7 +235,7 @@ class GitHubServiceClass {
         sha: item.sha,
       }));
     } catch (error) {
-      console.error('[GitHubService] Failed to get tree:', error);
+      console.warn('[GitHubService] Failed to get tree:', error);
       return [];
     }
   }
@@ -252,7 +252,7 @@ class GitHubServiceClass {
       }
       return null;
     } catch (error) {
-      console.error('[GitHubService] Failed to get file content:', error);
+      console.warn('[GitHubService] Failed to get file content:', error);
       return null;
     }
   }
@@ -294,7 +294,7 @@ class GitHubServiceClass {
         }),
       });
     } catch (error) {
-      console.error('[GitHubService] Failed to create file:', error);
+      console.warn('[GitHubService] Failed to create file:', error);
       return null;
     }
   }
@@ -327,7 +327,7 @@ class GitHubServiceClass {
         body: JSON.stringify(body),
       });
     } catch (error) {
-      console.error('[GitHubService] Failed to upload binary file:', error);
+      console.warn('[GitHubService] Failed to upload binary file:', error);
       return null;
     }
   }
@@ -348,7 +348,7 @@ class GitHubServiceClass {
         body: JSON.stringify({ message, sha, branch }),
       });
     } catch (error) {
-      console.error('[GitHubService] Failed to delete file:', error);
+      console.warn('[GitHubService] Failed to delete file:', error);
       return null;
     }
   }
@@ -394,7 +394,7 @@ class GitHubServiceClass {
         }),
       });
     } catch (error) {
-      console.error('[GitHubService] Failed to update file:', error);
+      console.warn('[GitHubService] Failed to update file:', error);
       return null;
     }
   }

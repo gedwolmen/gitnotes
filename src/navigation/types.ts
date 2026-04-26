@@ -2,6 +2,10 @@ export type RootStackParamList = {
   MainTabs: undefined;
   NoteEditor: { noteId?: string; format?: 'markdown' | 'neorg' | 'org'; initialTitle?: string; initialContent?: string; repo?: string; branch?: string; folderPath?: string };
   NoteViewer: { noteId: string };
+  PdfViewer: { owner: string; repo: string; branch?: string; path: string; title?: string };
+  FileViewer: { owner: string; repo: string; branch?: string; path: string; title?: string; size?: number };
+  ImageViewer: { owner: string; repo: string; branch?: string; path: string; title?: string; size?: number };
+  VideoViewer: { owner: string; repo: string; branch?: string; path: string; title?: string; size?: number };
   CanvasEditor: { canvasId?: string; canvasWidth?: number; canvasHeight?: number; canvasTitle?: string };
   CanvasList: undefined;
 };

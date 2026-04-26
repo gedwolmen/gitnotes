@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   Platform,
   Alert,
   ScrollView,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -40,6 +42,8 @@ import { canvasToLink } from '../models/Canvas';
 import { useResponsive } from '../hooks/useResponsive';
 import { syncNoteToGitHub } from '../services/NoteGitHubSyncService';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
+import { PositionMemoryService } from '../services/PositionMemoryService';
+import { getMarkdownStyles } from '../utils/preview';
 
 const FORMAT_OPTIONS: { label: string; value: NoteFormat }[] = [
   { label: '.md', value: 'markdown' },
@@ -362,54 +366,7 @@ export default function NoteEditorScreen() {
     }
   }, [content, setContent]);
 
-  const markdownStyles = {
-    body: { fontSize: 16, lineHeight: 24, color: colors.text, marginTop: 0 },
-    heading1: { fontSize: 28, fontWeight: 'bold' as const, marginBottom: 12, marginTop: 8, color: colors.text },
-    heading2: { fontSize: 22, fontWeight: 'bold' as const, marginBottom: 10, marginTop: 8, color: colors.text },
-    heading3: { fontSize: 18, fontWeight: '600' as const, marginBottom: 8, marginTop: 6, color: colors.text },
-    paragraph: { marginBottom: 12 },
-    code_inline: {
-      backgroundColor: isDark ? '#2c2c2e' : '#f0f0f0',
-      paddingHorizontal: 4,
-      borderRadius: 4,
-      fontFamily: 'monospace',
-      fontSize: 14,
-      color: colors.text,
-    },
-    code_block: {
-      backgroundColor: isDark ? '#2c2c2e' : '#f5f5f5',
-      padding: 12,
-      borderRadius: 8,
-      fontFamily: 'monospace',
-      fontSize: 14,
-      marginVertical: 8,
-      color: colors.text,
-    },
-    fence: {
-      backgroundColor: isDark ? '#2c2c2e' : '#f5f5f5',
-      padding: 12,
-      borderRadius: 8,
-      fontFamily: 'monospace',
-      fontSize: 14,
-      marginVertical: 8,
-      color: colors.text,
-    },
-    blockquote: {
-      backgroundColor: colors.primary + '15',
-      borderLeftWidth: 4,
-      borderLeftColor: colors.primary,
-      paddingLeft: 12,
-      paddingVertical: 8,
-      marginVertical: 8,
-    },
-    link: { color: colors.primary },
-    list_item: { marginBottom: 4, color: colors.text },
-    bullet_list: { marginBottom: 12 },
-    ordered_list: { marginBottom: 12 },
-    hr: { backgroundColor: colors.border, height: 1, marginVertical: 16 },
-    strong: { color: colors.text },
-    em: { color: colors.text },
-  };
+  const markdownStyles = useMemo(() => getMarkdownStyles(colors, isDark), [colors, isDark]);
 
   const previewContent = (() => {
     const stripTopMetadata = (raw: string, format: NoteFormat): string => {
@@ -510,6 +467,55 @@ export default function NoteEditorScreen() {
     };
   }, []);
 
+  const previewScrollRef = useRef<ScrollView>(null);
+  const targetScrollYRef = useRef<number | null>(null);
+  const restoredScrollRef = useRef(false);
+  const lastScrollYRef = useRef(0);
+  const saveScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!noteId) return;
+    let cancelled = false;
+    PositionMemoryService.load(PositionMemoryService.noteKey(noteId)).then((y) => {
+      if (!cancelled) targetScrollYRef.current = y ?? 0;
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [noteId]);
+
+  useEffect(() => {
+    return () => {
+      if (saveScrollTimeoutRef.current) clearTimeout(saveScrollTimeoutRef.current);
+      if (noteId && lastScrollYRef.current > 0) {
+        PositionMemoryService.save(PositionMemoryService.noteKey(noteId), lastScrollYRef.current);
+      }
+    };
+  }, [noteId]);
+
+  const handlePreviewScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const y = event.nativeEvent.contentOffset.y;
+      lastScrollYRef.current = y;
+      if (!noteId) return;
+      if (saveScrollTimeoutRef.current) clearTimeout(saveScrollTimeoutRef.current);
+      saveScrollTimeoutRef.current = setTimeout(() => {
+        PositionMemoryService.save(PositionMemoryService.noteKey(noteId), y);
+      }, 400);
+    },
+    [noteId],
+  );
+
+  const handlePreviewContentSizeChange = useCallback(() => {
+    if (restoredScrollRef.current) return;
+    const target = targetScrollYRef.current;
+    if (target == null) return;
+    if (target > 0) {
+      previewScrollRef.current?.scrollTo({ y: target, animated: false });
+    }
+    restoredScrollRef.current = true;
+  }, []);
+
   const editorPlaceholder = (() => {
     switch (noteFormat) {
       case 'org':
@@ -571,10 +577,14 @@ export default function NoteEditorScreen() {
           </View>
         ) : (
           <ScrollView
+            ref={previewScrollRef}
             style={styles.scrollView}
             contentContainerStyle={styles.previewContent}
             showsVerticalScrollIndicator={false}
             contentInsetAdjustmentBehavior="automatic"
+            onScroll={handlePreviewScroll}
+            scrollEventThrottle={200}
+            onContentSizeChange={handlePreviewContentSizeChange}
           >
             {previewContent.trim() ? (
               noteFormat === 'markdown' ? (

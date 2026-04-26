@@ -34,6 +34,7 @@ import { GitRepository, GitBranch, GitService } from "../services/GitService";
 import { GitHubService } from "../services/GitHubService";
 import { NoteSyncQueueService } from "../services/NoteSyncQueueService";
 import { pullAllFromRepos } from "../services/RepoPullService";
+import ContextMenu from "../components/ContextMenu";
 import NoteCard from "../components/NoteCard";
 import SearchBar from "../components/SearchBar";
 import RepoFileBrowser, { parseRepoPath } from "../components/RepoFileBrowser";
@@ -198,42 +199,32 @@ export default function NotesListScreen() {
 
   const handleNotePress = useCallback(
     (note: Note) => {
+      if (note.format === "pdf" && note.repo && note.filePath) {
+        const info = parseRepoPath(note.repo);
+        if (info) {
+          navigation.navigate("PdfViewer", {
+            owner: info.owner,
+            repo: info.repo,
+            branch: note.branch,
+            path: note.filePath,
+            title: note.title,
+          });
+          return;
+        }
+      }
       navigation.navigate("NoteEditor", { noteId: note.id });
     },
     [navigation],
   );
 
+  const [longPressedNote, setLongPressedNote] = useState<Note | null>(null);
+
   const handleNoteLongPress = useCallback(
     (note: Note) => {
       HapticService.medium();
-      const actions: any[] = [
-        { text: "Cancel", style: "cancel" as const },
-        {
-          text: "Share",
-          onPress: async () => {
-            const success = await ShareService.shareByNoteFormat(note);
-            if (!success) Alert.alert("Error", "Failed to share note");
-          },
-        },
-      ];
-      actions.push({
-        text: note.isPinned ? "Unpin" : "Pin",
-        onPress: async () => {
-          if (!(await togglePin(note.id)))
-            Alert.alert("Error", "Failed to update pin status");
-        },
-      });
-      actions.push({
-        text: "Delete",
-        style: "destructive" as const,
-        onPress: async () => {
-          if (!(await deleteNote(note.id)))
-            Alert.alert("Error", "Failed to delete note");
-        },
-      });
-      Alert.alert("Note Actions", `"${note.title || "Untitled"}"`, actions);
+      setLongPressedNote(note);
     },
-    [deleteNote, togglePin],
+    [],
   );
 
   const handleViewModeChange = useCallback(
@@ -247,6 +238,20 @@ export default function NotesListScreen() {
 
   const handleRepoFilePress = useCallback(
     async (filePath: string) => {
+      const ext = filePath.split(".").pop()?.toLowerCase() ?? "";
+
+      if (ext === "pdf") {
+        if (!selectedRepo || !repoInfo) return;
+        navigation.navigate("PdfViewer", {
+          owner: repoInfo.owner,
+          repo: repoInfo.repo,
+          branch: selectedBranch ?? undefined,
+          path: filePath,
+          title: filePath.split("/").pop(),
+        });
+        return;
+      }
+
       const existing = notes.find(
         (n: Note) => n.repo === selectedRepo?.path && n.filePath === filePath,
       );
@@ -268,9 +273,9 @@ export default function NotesListScreen() {
         return;
       }
 
-      const ext = filePath.split(".").pop()?.toLowerCase() ?? "md";
+      const fileExt = ext || "md";
       const format: NoteFormat =
-        ext === "norg" ? "neorg" : ext === "org" ? "org" : "markdown";
+        fileExt === "norg" ? "neorg" : fileExt === "org" ? "org" : "markdown";
       const titleFromPath = filePath
         .replace(/\.[^.]+$/, "")
         .split("/")
@@ -1202,6 +1207,60 @@ export default function NotesListScreen() {
           </View>
         </View>
       </Modal>
+
+      <ContextMenu
+        visible={longPressedNote !== null}
+        onClose={() => setLongPressedNote(null)}
+        title={longPressedNote?.title || "Untitled"}
+        subtitle={longPressedNote?.filePath ?? undefined}
+        headerIcon={longPressedNote?.format === "pdf" ? "document" : "document-text"}
+        sections={
+          longPressedNote
+            ? [
+                {
+                  items: [
+                    {
+                      icon: "eye-outline",
+                      label: "Open",
+                      onPress: () => handleNotePress(longPressedNote),
+                    },
+                    {
+                      icon: longPressedNote.isPinned ? "pin" : "pin-outline",
+                      label: longPressedNote.isPinned ? "Unpin" : "Pin",
+                      onPress: async () => {
+                        if (!(await togglePin(longPressedNote.id))) {
+                          Alert.alert("Error", "Failed to update pin status");
+                        }
+                      },
+                    },
+                    {
+                      icon: "share-outline",
+                      label: "Share",
+                      onPress: async () => {
+                        const ok = await ShareService.shareByNoteFormat(longPressedNote);
+                        if (!ok) Alert.alert("Error", "Failed to share note");
+                      },
+                    },
+                  ],
+                },
+                {
+                  items: [
+                    {
+                      icon: "trash-outline",
+                      label: "Delete",
+                      destructive: true,
+                      onPress: async () => {
+                        if (!(await deleteNote(longPressedNote.id))) {
+                          Alert.alert("Error", "Failed to delete note");
+                        }
+                      },
+                    },
+                  ],
+                },
+              ]
+            : []
+        }
+      />
     </SafeAreaView>
   );
 }

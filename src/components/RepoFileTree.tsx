@@ -18,23 +18,25 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { GitHubService, GitHubContent } from '../services/GitHubService';
 import { HapticService } from '../utils/haptics';
+import ContextMenu from './ContextMenu';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-interface TreeNode {
+export interface TreeNode {
   name: string;
   path: string;
   type: 'file' | 'dir';
   sha?: string;
+  size?: number;
 }
 
 interface RepoFileTreeProps {
   owner: string;
   repo: string;
   branch?: string;
-  onFilePress?: (filePath: string) => void;
+  onFilePress?: (node: TreeNode) => void;
 }
 
 interface TreeItemProps {
@@ -43,7 +45,7 @@ interface TreeItemProps {
   repo: string;
   branch?: string;
   level: number;
-  onFilePress?: (filePath: string) => void;
+  onFilePress?: (node: TreeNode) => void;
   onRefresh?: () => void;
 }
 
@@ -88,6 +90,7 @@ async function fetchChildren(
       path: item.path,
       type: item.type as 'file' | 'dir',
       sha: item.sha,
+      size: item.size,
     }))
     .sort((a: TreeNode, b: TreeNode) => {
       if (a.type !== b.type) return a.type === 'dir' ? -1 : 1;
@@ -293,47 +296,16 @@ function MoveDialog({ visible, node, owner, repo, branch, onClose, onMove }: Mov
   );
 }
 
-interface ContextMenuProps {
-  visible: boolean;
-  node: TreeNode | null;
-  onClose: () => void;
-  onRename: () => void;
-  onMove: () => void;
-  onDelete: () => void;
-}
-
-function ContextMenu({ visible, node, onClose, onRename, onMove, onDelete }: ContextMenuProps) {
-  const { colors } = useTheme();
-
-  if (!node) return null;
-
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <TouchableOpacity style={contextStyles.overlay} onPress={onClose} activeOpacity={1}>
-        <View style={[contextStyles.menu, { backgroundColor: colors.surface }]}>
-          <View style={[contextStyles.menuHeader, { borderBottomColor: colors.border }]}>
-            <Ionicons name={node.type === 'dir' ? 'folder' : 'document'} size={16} color={colors.textSecondary} />
-            <Text style={[contextStyles.menuHeaderTitle, { color: colors.text }]} numberOfLines={1}>
-              {node.name}
-            </Text>
-          </View>
-          <TouchableOpacity style={contextStyles.menuItem} onPress={() => { onClose(); onRename(); }}>
-            <Ionicons name="create-outline" size={20} color={colors.primary} />
-            <Text style={[contextStyles.menuItemText, { color: colors.text }]}>Rename</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={contextStyles.menuItem} onPress={() => { onClose(); onMove(); }}>
-            <Ionicons name="move-outline" size={20} color={colors.primary} />
-            <Text style={[contextStyles.menuItemText, { color: colors.text }]}>Move</Text>
-          </TouchableOpacity>
-          <View style={[contextStyles.menuDivider, { backgroundColor: colors.border }]} />
-          <TouchableOpacity style={contextStyles.menuItem} onPress={() => { onClose(); onDelete(); }}>
-            <Ionicons name="trash-outline" size={20} color={colors.error} />
-            <Text style={[contextStyles.menuItemText, { color: colors.error }]}>Delete</Text>
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
-    </Modal>
-  );
+function formatBytes(bytes?: number): string {
+  if (!bytes || bytes <= 0) return '—';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let v = bytes;
+  let u = 0;
+  while (v >= 1024 && u < units.length - 1) {
+    v /= 1024;
+    u++;
+  }
+  return `${v.toFixed(v >= 10 ? 0 : 1)} ${units[u]}`;
 }
 
 function TreeItem({ node, owner, repo, branch, level, onFilePress, onRefresh }: TreeItemProps) {
@@ -374,9 +346,9 @@ function TreeItem({ node, owner, repo, branch, level, onFilePress, onRefresh }: 
   const handleFilePress = useCallback(() => {
     if (!isDir) {
       HapticService.light();
-      onFilePress?.(node.path);
+      onFilePress?.(node);
     }
-  }, [isDir, onFilePress, node.path]);
+  }, [isDir, onFilePress, node]);
 
   const handleLongPress = useCallback(() => {
     HapticService.medium();
@@ -530,9 +502,16 @@ function TreeItem({ node, owner, repo, branch, level, onFilePress, onRefresh }: 
           <ActivityIndicator size="small" color={colors.primary} style={treeStyles.opIndicator} />
         )}
         {!isDir && (
-          <Text style={[treeStyles.ext, { color: colors.textSecondary }]}>
-            {node.name.split('.').pop()}
-          </Text>
+          <View style={treeStyles.fileMetaRow}>
+            {node.size != null ? (
+              <Text style={[treeStyles.size, { color: colors.textSecondary }]}>
+                {formatBytes(node.size)}
+              </Text>
+            ) : null}
+            <Text style={[treeStyles.ext, { color: colors.textSecondary }]}>
+              {node.name.split('.').pop()}
+            </Text>
+          </View>
         )}
       </TouchableOpacity>
 
@@ -551,11 +530,63 @@ function TreeItem({ node, owner, repo, branch, level, onFilePress, onRefresh }: 
 
       <ContextMenu
         visible={showContextMenu}
-        node={node}
         onClose={() => setShowContextMenu(false)}
-        onRename={() => setShowRename(true)}
-        onMove={() => setShowMove(true)}
-        onDelete={handleDelete}
+        title={node.name}
+        subtitle={node.path}
+        headerIcon={isDir ? 'folder' : 'document'}
+        sections={[
+          {
+            items: [
+              ...(!isDir
+                ? [
+                    {
+                      icon: 'eye-outline' as const,
+                      label: 'View',
+                      onPress: () => onFilePress?.(node),
+                    },
+                  ]
+                : []),
+              {
+                icon: 'information-circle-outline' as const,
+                label: 'Details',
+                onPress: () => {
+                  Alert.alert(
+                    node.name,
+                    [
+                      `Type: ${node.type}`,
+                      `Path: ${node.path}`,
+                      !isDir ? `Size: ${formatBytes(node.size)}` : null,
+                      node.sha ? `SHA: ${node.sha.slice(0, 10)}` : null,
+                      `Branch: ${branch || 'main'}`,
+                    ]
+                      .filter(Boolean)
+                      .join('\n'),
+                  );
+                },
+              },
+              {
+                icon: 'create-outline' as const,
+                label: 'Rename',
+                onPress: () => setShowRename(true),
+              },
+              {
+                icon: 'move-outline' as const,
+                label: 'Move',
+                onPress: () => setShowMove(true),
+              },
+            ],
+          },
+          {
+            items: [
+              {
+                icon: 'trash-outline' as const,
+                label: 'Delete',
+                destructive: true,
+                onPress: handleDelete,
+              },
+            ],
+          },
+        ]}
       />
 
       <RenameDialog
@@ -749,6 +780,14 @@ const treeStyles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     textTransform: 'uppercase',
+  },
+  fileMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  size: {
+    fontSize: 11,
   },
   opIndicator: {
     marginHorizontal: 4,

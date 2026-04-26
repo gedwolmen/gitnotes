@@ -8,7 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../navigation/types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNotes } from '../contexts/NoteContext';
-import { NoteFormat } from '../models/Note';
+import { Note, NoteFormat } from '../models/Note';
+import { parseRepoPath } from '../components/RepoFileBrowser';
 import { HapticService } from '../utils/haptics';
 import TemplateSelector from '../components/TemplateSelector';
 import { NoteTemplate } from '../services/TemplateService';
@@ -114,12 +115,29 @@ export default function HomeScreen() {
     });
   }, [navigation]);
 
-  const openNote = useCallback(
-    (id: string) => () => navigation.navigate('NoteEditor', { noteId: id }),
+  const openItem = useCallback(
+    (note: Note) => () => {
+      if (note.format === 'pdf' && note.repo && note.filePath) {
+        const info = parseRepoPath(note.repo);
+        if (info) {
+          navigation.navigate('PdfViewer', {
+            owner: info.owner,
+            repo: info.repo,
+            branch: note.branch,
+            path: note.filePath,
+            title: note.title,
+          });
+          return;
+        }
+      }
+      navigation.navigate('NoteEditor', { noteId: note.id });
+    },
     [navigation]
   );
 
-  const recentNotes = notes.slice(0, isTablet ? 6 : 3);
+  const recentLimit = isTablet ? 6 : 3;
+  const recentNotes = notes.filter((n) => n.format !== 'pdf').slice(0, recentLimit);
+  const recentDocuments = notes.filter((n) => n.format === 'pdf').slice(0, recentLimit);
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -164,7 +182,7 @@ export default function HomeScreen() {
             <TouchableOpacity
               key={note.id}
               style={[styles.recentNote, { backgroundColor: colors.surface }, isTablet && styles.recentNoteTablet]}
-              onPress={openNote(note.id)}
+              onPress={openItem(note)}
             >
               <View style={styles.recentNoteContent}>
                 <Text style={[styles.recentNoteTitle, { color: colors.text }]} numberOfLines={1}>
@@ -182,6 +200,38 @@ export default function HomeScreen() {
             </TouchableOpacity>
             ))}
             </View>
+        </View>
+      )}
+
+      {recentDocuments.length > 0 && (
+        <View style={styles.recentSection}>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+            Recent Documents
+          </Text>
+          <View style={isTablet ? styles.recentGrid : undefined}>
+            {recentDocuments.map((note) => (
+            <TouchableOpacity
+              key={note.id}
+              style={[styles.recentNote, { backgroundColor: colors.surface }, isTablet && styles.recentNoteTablet]}
+              onPress={openItem(note)}
+            >
+              <Ionicons name="document-text" size={22} color={colors.primary} style={{ marginRight: 12 }} />
+              <View style={styles.recentNoteContent}>
+                <Text style={[styles.recentNoteTitle, { color: colors.text }]} numberOfLines={1}>
+                  {note.title || (note.filePath ?? 'Document').split('/').pop()}
+                </Text>
+                <Text style={[styles.recentNotePreview, { color: colors.textSecondary }]} numberOfLines={1}>
+                  {note.filePath ?? 'PDF'}
+                </Text>
+              </View>
+              {note.repo && (
+                <View style={styles.gitIndicator}>
+                  <Ionicons name="code-slash" size={14} color={colors.textSecondary} />
+                </View>
+              )}
+            </TouchableOpacity>
+            ))}
+          </View>
         </View>
       )}
 
