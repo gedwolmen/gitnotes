@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { formatChecklistProgress } from '../utils/checklist';
+import { Surface } from './neumorphic';
 
 interface ChecklistProgressProps {
   total: number;
@@ -23,22 +24,16 @@ export default function ChecklistProgress({
   return (
     <View style={styles.container}>
       <View style={styles.progressRow}>
-        <View
-          style={[
-            styles.progressBar,
-            { backgroundColor: colors.border },
-          ]}
-        >
+        <Surface elevation="subtle" radius="pill" inset style={styles.progressBar}>
           <View
-            style={[
-              styles.progressFill,
-              {
-                backgroundColor: completed === total ? colors.primary : colors.primary + '80',
-                width: `${percentage}%`,
-              },
-            ]}
+            style={{
+              height: '100%',
+              borderRadius: 999,
+              backgroundColor: completed === total ? colors.accent : colors.accentMuted,
+              width: `${percentage}%`,
+            }}
           />
-        </View>
+        </Surface>
         <Text style={[styles.progressText, { color: colors.textSecondary }]}>
           {showPercentage
             ? formatChecklistProgress({ total, completed })
@@ -60,13 +55,8 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     flex: 1,
-    height: 4,
-    borderRadius: 2,
+    height: 8,
     overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 2,
   },
   progressText: {
     fontSize: 12,

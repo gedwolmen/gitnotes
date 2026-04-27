@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { SyncStatus } from '../contexts/GitSyncContext';
+import { Surface } from './neumorphic';
 
 interface SyncIndicatorProps {
   status: SyncStatus;
@@ -29,42 +30,46 @@ export default function SyncIndicator({ status, pendingChanges = 0, onSyncPress 
   };
 
   const getColor = (): string => {
-    if (status === 'error') return '#FF3B30';
-    if (status === 'pulling' || status === 'pushing' || status === 'merging') return colors.primary;
+    if (status === 'error') return colors.error;
+    if (status === 'pulling' || status === 'pushing' || status === 'merging') return colors.accent;
     return colors.textSecondary;
   };
 
   const isSyncing = status === 'pulling' || status === 'pushing' || status === 'merging';
 
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={onSyncPress}
       disabled={isSyncing || !onSyncPress}
-      style={styles.container}
       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
     >
-      <View style={styles.iconContainer}>
-        {isSyncing ? (
-          <ActivityIndicator size="small" color={colors.primary} />
-        ) : (
-          <Ionicons name={getIcon()} size={20} color={getColor()} />
-        )}
+      <Surface elevation="subtle" radius="pill" style={styles.container}>
+        <View style={styles.iconContainer}>
+          {isSyncing ? (
+            <ActivityIndicator size="small" color={colors.accent} />
+          ) : (
+            <Ionicons name={getIcon()} size={18} color={getColor()} />
+          )}
 
-        {pendingChanges > 0 && (
-          <View style={[styles.badge, { backgroundColor: colors.primary }]}>
-            {pendingChanges > 9 ? (
-              <Ionicons name="ellipsis-horizontal" size={8} color="#FFF" />
-            ) : null}
-          </View>
-        )}
-      </View>
-    </TouchableOpacity>
+          {pendingChanges > 0 && (
+            <View style={[styles.badge, { backgroundColor: colors.accent }]}>
+              {pendingChanges > 9 ? (
+                <Ionicons name="ellipsis-horizontal" size={8} color="#FFF" />
+              ) : null}
+            </View>
+          )}
+        </View>
+      </Surface>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 4,
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   iconContainer: {
     position: 'relative',
@@ -73,11 +78,11 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: 'absolute',
-    top: -4,
-    right: -4,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
+    top: -6,
+    right: -6,
+    minWidth: 14,
+    height: 14,
+    borderRadius: 7,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 2,

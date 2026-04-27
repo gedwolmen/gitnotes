@@ -1,8 +1,9 @@
 import React, { useCallback } from 'react';
-import { TouchableOpacity, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { HapticService } from '../utils/haptics';
+import { Surface } from './neumorphic';
 
 interface InteractiveCheckboxProps {
   checked: boolean;
@@ -17,7 +18,7 @@ export default function InteractiveCheckbox({
   size = 22,
   disabled = false,
 }: InteractiveCheckboxProps) {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
 
   const handlePress = useCallback(() => {
     if (!disabled) {
@@ -27,44 +28,37 @@ export default function InteractiveCheckbox({
   }, [disabled, onToggle]);
 
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={handlePress}
       disabled={disabled}
-      activeOpacity={0.7}
-      style={[styles.container, { width: size + 4, height: size + 4 }]}
+      style={[styles.container, { width: size + 6, height: size + 6, opacity: disabled ? 0.5 : 1 }]}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
     >
-      <View
-        style={[
-          styles.checkbox,
-          {
-            width: size,
-            height: size,
-            borderRadius: size / 4,
-            backgroundColor: checked ? colors.primary : 'transparent',
-            borderColor: checked ? colors.primary : colors.textSecondary,
-          },
-        ]}
+      <Surface
+        elevation="subtle"
+        radius="sm"
+        inset={checked}
+        style={{
+          width: size,
+          height: size,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
       >
         {checked && (
           <Ionicons
             name="checkmark"
-            size={size - 4}
-            color={isDark ? '#000' : '#fff'}
+            size={size - 6}
+            color={colors.accent}
           />
         )}
-      </View>
-    </TouchableOpacity>
+      </Surface>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkbox: {
-    borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
