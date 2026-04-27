@@ -28,10 +28,10 @@ export const NEUMORPHIC_LIGHT: Palette = {
   accentMuted: '#A8B3E5',
   error: '#E07A7A',
   background: '#E0E5EC',
-  surfaceSecondary: '#E0E5EC',
+  surfaceSecondary: '#D6DCE5',
   primary: '#7B8CDE',
-  border: '#A3B1C6',
-  card: '#E0E5EC',
+  border: '#C4CBD7',
+  card: '#EAEEF4',
 };
 
 export const NEUMORPHIC_DARK: Palette = {
@@ -45,10 +45,10 @@ export const NEUMORPHIC_DARK: Palette = {
   accentMuted: '#5A6BB5',
   error: '#E07A7A',
   background: '#2A2D3A',
-  surfaceSecondary: '#2A2D3A',
+  surfaceSecondary: '#323645',
   primary: '#8B9BE8',
   border: '#1F2129',
-  card: '#2A2D3A',
+  card: '#323645',
 };
 
 export const FLAT_LIGHT: Palette = {

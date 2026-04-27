@@ -24,6 +24,7 @@ import { HapticService } from '../utils/haptics';
 import { useResponsive } from '../hooks/useResponsive';
 import GitContextPicker from '../components/GitContextPicker';
 import { syncTodoToGitHub } from '../services/TodoGitHubSyncService';
+import { NIconButton } from '../components/neumorphic';
 
 function formatDeadline(timestamp: number): string {
   const date = new Date(timestamp);
@@ -366,19 +367,21 @@ export default function TodoListScreen() {
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Todos</Text>
         <View style={styles.headerActions}>
-          <TouchableOpacity
+          <NIconButton
+            size="sm"
+            active={filterCompleted}
             onPress={() => setFilterCompleted(!filterCompleted)}
-            style={styles.filterButton}
+            accessibilityLabel="Toggle completed filter"
           >
             <Ionicons
               name={filterCompleted ? 'eye-off' : 'eye'}
-              size={22}
-              color={filterCompleted ? colors.primary : colors.textSecondary}
+              size={18}
+              color={filterCompleted ? colors.accent : colors.textSecondary}
             />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setShowAddModal(true)} style={styles.addButton}>
-            <Ionicons name="add" size={28} color={colors.primary} />
-          </TouchableOpacity>
+          </NIconButton>
+          <NIconButton size="md" onPress={() => setShowAddModal(true)} accessibilityLabel="Add todo">
+            <Ionicons name="add" size={24} color={colors.accent} />
+          </NIconButton>
         </View>
       </View>
 
