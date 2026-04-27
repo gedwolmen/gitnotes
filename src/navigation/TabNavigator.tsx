@@ -18,6 +18,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 import { BottomTabParamList } from './types';
 import { useResponsive } from '../hooks/useResponsive';
 import { useTheme } from '../contexts/ThemeContext';
+import { NTabBar } from '../components/neumorphic';
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 
@@ -133,10 +134,18 @@ const railStyles = StyleSheet.create({
 
 export default function TabNavigator() {
   const { isTablet } = useResponsive();
+  const { style } = useTheme();
+  const useNeumorphicBar = !isTablet && style === 'neumorphic';
 
   return (
     <Tab.Navigator
-      tabBar={isTablet ? (props) => <TabletRail {...props} /> : undefined}
+      tabBar={
+        isTablet
+          ? (props) => <TabletRail {...props} />
+          : useNeumorphicBar
+            ? (props) => <NTabBar {...props} />
+            : undefined
+      }
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           const config = TAB_ICONS[route.name];

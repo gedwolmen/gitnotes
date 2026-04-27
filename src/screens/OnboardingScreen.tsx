@@ -3,8 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
-  TextInput,
   ActivityIndicator,
   Linking,
   KeyboardAvoidingView,
@@ -16,6 +14,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { OnboardingService } from '../services/OnboardingService';
 import { AuthService } from '../services/AuthService';
 import { GitHubService } from '../services/GitHubService';
+import { NButton, NInput, Surface } from '../components/neumorphic';
 
 interface OnboardingScreenProps {
   onComplete: () => void;
@@ -45,7 +44,6 @@ const INFO_STEPS = [
   },
 ];
 
-// Token step is the last step (index INFO_STEPS.length)
 const TOKEN_STEP = INFO_STEPS.length;
 const TOTAL_STEPS = INFO_STEPS.length + 1;
 
@@ -65,7 +63,6 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
     if (currentStep < TOKEN_STEP) {
       setCurrentStep(currentStep + 1);
     } else {
-      // Token step — save token if provided, then finish
       if (token.trim()) {
         setIsVerifying(true);
         setTokenError(null);
@@ -98,48 +95,37 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleSkip}>
-            <Text style={[styles.skipButton, { color: colors.textSecondary }]}>Skip</Text>
-          </TouchableOpacity>
+          <NButton variant="ghost" label="Skip" onPress={handleSkip} />
         </View>
 
         {isTokenStep ? (
           <View style={styles.content}>
-            <View style={[styles.iconContainer, { backgroundColor: colors.primary + '20' }]}>
-              <Ionicons name="logo-github" size={80} color={colors.primary} />
-            </View>
+            <Surface elevation="raised" radius="pill" style={styles.iconContainer}>
+              <Ionicons name="logo-github" size={72} color={colors.accent} />
+            </Surface>
 
             <Text style={[styles.title, { color: colors.text }]}>Connect GitHub</Text>
             <Text style={[styles.description, { color: colors.textSecondary }]}>
               Enter a Personal Access Token to link your notes to GitHub issues and milestones. You can skip this and add it later in Settings.
             </Text>
 
-            <TouchableOpacity
-              style={styles.generateLink}
+            <NButton
+              variant="ghost"
               onPress={() => Linking.openURL('https://github.com/settings/tokens/new?scopes=repo,read:user&description=GitNotes')}
-            >
-              <Ionicons name="open-outline" size={14} color={colors.primary} />
-              <Text style={[styles.generateLinkText, { color: colors.primary }]}>
-                Generate token on GitHub
-              </Text>
-            </TouchableOpacity>
+              leadingIcon={<Ionicons name="open-outline" size={14} color={colors.accent} />}
+              label="Generate token on GitHub"
+              textStyle={{ color: colors.accent, fontSize: 14, fontWeight: '500' }}
+              style={{ marginBottom: 16 }}
+            />
 
-            <TextInput
-              style={[
-                styles.tokenInput,
-                {
-                  color: colors.text,
-                  borderColor: tokenError ? '#FF3B30' : colors.border,
-                  backgroundColor: colors.surface,
-                },
-              ]}
+            <NInput
               placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-              placeholderTextColor={colors.textSecondary}
               value={token}
               onChangeText={(t) => { setToken(t); setTokenError(null); }}
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
+              containerStyle={{ width: '100%' }}
             />
 
             {tokenError ? (
@@ -148,9 +134,9 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
           </View>
         ) : (
           <View style={styles.content}>
-            <View style={[styles.iconContainer, { backgroundColor: colors.primary + '20' }]}>
-              <Ionicons name={INFO_STEPS[currentStep].icon} size={80} color={colors.primary} />
-            </View>
+            <Surface elevation="raised" radius="pill" style={styles.iconContainer}>
+              <Ionicons name={INFO_STEPS[currentStep].icon} size={72} color={colors.accent} />
+            </Surface>
             <Text style={[styles.title, { color: colors.text }]}>{INFO_STEPS[currentStep].title}</Text>
             <Text style={[styles.description, { color: colors.textSecondary }]}>
               {INFO_STEPS[currentStep].description}
@@ -161,32 +147,37 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
         <View style={styles.footer}>
           <View style={styles.dots}>
             {Array.from({ length: TOTAL_STEPS }).map((_, index) => (
-              <View
+              <Surface
                 key={index}
-                style={[
-                  styles.dot,
-                  { backgroundColor: index === currentStep ? colors.primary : colors.border },
-                ]}
-              />
+                elevation="subtle"
+                radius="pill"
+                inset={index === currentStep}
+                style={{
+                  width: 14,
+                  height: 14,
+                  marginHorizontal: 4,
+                  backgroundColor: index === currentStep ? colors.accent : colors.surface,
+                }}
+              >
+                <View />
+              </Surface>
             ))}
           </View>
 
-          <TouchableOpacity
-            style={[styles.nextButton, { backgroundColor: colors.primary }]}
+          <NButton
+            variant="primary"
+            fullWidth
             onPress={handleNext}
             disabled={isVerifying}
-          >
-            {isVerifying ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <>
-                <Text style={styles.nextButtonText}>
-                  {isTokenStep ? (token.trim() ? 'Connect' : 'Skip for Now') : currentStep === TOKEN_STEP - 1 ? 'Next' : 'Next'}
-                </Text>
-                <Ionicons name="arrow-forward" size={20} color="#fff" />
-              </>
-            )}
-          </TouchableOpacity>
+            label={isVerifying ? '' : isTokenStep ? (token.trim() ? 'Connect' : 'Skip for Now') : 'Next'}
+            trailingIcon={
+              isVerifying ? (
+                <ActivityIndicator color={colors.accent} />
+              ) : (
+                <Ionicons name="arrow-forward" size={20} color={colors.accent} />
+              )
+            }
+          />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -194,62 +185,36 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   header: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     paddingHorizontal: 20,
     paddingTop: 10,
   },
-  skipButton: {
-    fontSize: 16,
-    padding: 8,
-  },
   content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 40,
+    gap: 16,
   },
   iconContainer: {
     width: 140,
     height: 140,
-    borderRadius: 70,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 24,
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 16,
   },
   description: {
     fontSize: 16,
     textAlign: 'center',
     lineHeight: 24,
-    marginBottom: 24,
-  },
-  generateLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 16,
-  },
-  generateLinkText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  tokenInput: {
-    width: '100%',
-    height: 50,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    fontSize: 14,
   },
   errorText: {
     color: '#FF3B30',
@@ -264,25 +229,6 @@ const styles = StyleSheet.create({
   dots: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: 30,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginHorizontal: 4,
-  },
-  nextButton: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 16,
-    borderRadius: 12,
-    gap: 8,
-  },
-  nextButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+    marginBottom: 24,
   },
 });
