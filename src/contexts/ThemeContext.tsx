@@ -1,56 +1,38 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  Palette,
+  ThemeStyle,
+  resolveColors,
+  RADII,
+  SPACING,
+  TYPE,
+} from '../theme/tokens';
 
 type ThemeMode = 'light' | 'dark' | 'system';
+
+export interface Tokens {
+  colors: Palette;
+  radii: typeof RADII;
+  spacing: typeof SPACING;
+  type: typeof TYPE;
+}
 
 interface ThemeContextType {
   theme: ThemeMode;
   isDark: boolean;
+  style: ThemeStyle;
   setTheme: (theme: ThemeMode) => void;
-  colors: {
-    background: string;
-    surface: string;
-    surfaceSecondary: string;
-    text: string;
-    textSecondary: string;
-    primary: string;
-    border: string;
-    card: string;
-    shadow: string;
-    error: string;
-  };
+  setStyle: (style: ThemeStyle) => void;
+  colors: Palette;
+  tokens: Tokens;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const THEME_STORAGE_KEY = '@gitnotes:theme';
-
-const lightColors = {
-  background: '#f2f2f7',
-  surface: '#ffffff',
-  surfaceSecondary: '#f2f2f7',
-  text: '#1c1c1e',
-  textSecondary: '#6e6e73',
-  primary: '#007AFF',
-  border: '#c6c6c8',
-  card: '#ffffff',
-  shadow: '#000000',
-  error: '#ff3b30',
-};
-
-const darkColors = {
-  background: '#000000',
-  surface: '#1c1c1e',
-  surfaceSecondary: '#2c2c2e',
-  text: '#f2f2f7',
-  textSecondary: '#8e8e93',
-  primary: '#0a84ff',
-  border: '#38383a',
-  card: '#2c2c2e',
-  shadow: '#000000',
-  error: '#ff453a',
-};
+const STYLE_STORAGE_KEY = '@gitnotes:style';
 
 interface ThemeProviderProps {
   children: ReactNode;
@@ -58,22 +40,29 @@ interface ThemeProviderProps {
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const [theme, setThemeState] = useState<ThemeMode>('system');
+  const [style, setStyleState] = useState<ThemeStyle>('neumorphic');
   const systemColorScheme = useColorScheme();
 
-  const loadTheme = useCallback(async () => {
+  const loadPersisted = useCallback(async () => {
     try {
-      const savedTheme = await AsyncStorage.getItem(THEME_STORAGE_KEY);
+      const [savedTheme, savedStyle] = await Promise.all([
+        AsyncStorage.getItem(THEME_STORAGE_KEY),
+        AsyncStorage.getItem(STYLE_STORAGE_KEY),
+      ]);
       if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
         setThemeState(savedTheme as ThemeMode);
       }
+      if (savedStyle === 'neumorphic' || savedStyle === 'flat') {
+        setStyleState(savedStyle);
+      }
     } catch (error) {
-      console.error('Error loading theme:', error);
+      console.error('Error loading theme preferences:', error);
     }
   }, []);
 
   useEffect(() => {
-    loadTheme();
-  }, [loadTheme]);
+    loadPersisted();
+  }, [loadPersisted]);
 
   const isDark = useMemo(() => {
     if (theme === 'system') {
@@ -91,17 +80,26 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     }
   }, []);
 
-  const colors = isDark ? darkColors : lightColors;
+  const setStyle = useCallback(async (newStyle: ThemeStyle) => {
+    try {
+      setStyleState(newStyle);
+      await AsyncStorage.setItem(STYLE_STORAGE_KEY, newStyle);
+    } catch (error) {
+      console.error('Error saving style:', error);
+    }
+  }, []);
 
-  // Memoize context value to prevent unnecessary re-renders caused by object identity changes
-  const value: ThemeContextType = useMemo(() => {
-    return {
-      theme,
-      isDark,
-      setTheme,
-      colors,
-    };
-  }, [theme, isDark, setTheme, colors]);
+  const colors = useMemo(() => resolveColors(style, isDark), [style, isDark]);
+
+  const tokens: Tokens = useMemo(
+    () => ({ colors, radii: RADII, spacing: SPACING, type: TYPE }),
+    [colors],
+  );
+
+  const value: ThemeContextType = useMemo(
+    () => ({ theme, isDark, style, setTheme, setStyle, colors, tokens }),
+    [theme, isDark, style, setTheme, setStyle, colors, tokens],
+  );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
@@ -112,6 +110,10 @@ export function useTheme(): ThemeContextType {
     throw new Error('useTheme must be used within a ThemeProvider');
   }
   return context;
+}
+
+export function useTokens(): Tokens {
+  return useTheme().tokens;
 }
 
 export { ThemeContext };
