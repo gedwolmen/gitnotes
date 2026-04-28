@@ -141,18 +141,23 @@ export class NeorgContentParser {
           continue;
         }
 
-        if (currentCodeBlock) {
-          currentCodeBlock.lines.push(line);
+        const mdCodeMatch = line.match(/^```(\w*)$/);
+        if (mdCodeMatch) {
+          if (currentCodeBlock) {
+            this.finalizeCodeBlock(currentCodeBlock, blocks);
+            currentCodeBlock = null;
+          } else {
+            flushAll();
+            currentCodeBlock = {
+              language: mdCodeMatch[1] || undefined,
+              lines: [],
+            };
+          }
           continue;
         }
 
-        const mdCodeMatch = line.match(/^```(\w*)$/);
-        if (mdCodeMatch) {
-          flushAll();
-          currentCodeBlock = {
-            language: mdCodeMatch[1] || undefined,
-            lines: [],
-          };
+        if (currentCodeBlock) {
+          currentCodeBlock.lines.push(line);
           continue;
         }
 
@@ -244,7 +249,9 @@ export class NeorgContentParser {
       flushAll();
 
       if (currentCodeBlock) {
-        this.finalizeCodeBlock(currentCodeBlock, blocks);
+        const fence = '```' + (currentCodeBlock.language ?? '');
+        const text = [fence, ...currentCodeBlock.lines].join('\n');
+        blocks.push({ type: 'paragraph', text });
       }
 
       return { success: true, blocks };
