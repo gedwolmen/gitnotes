@@ -12,7 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Swipeable } from 'react-native-gesture-handler';
+import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format, isToday, isTomorrow, isPast } from 'date-fns';
@@ -271,7 +271,7 @@ export default function TodoListScreen() {
       const isOverdue = item.dueDate ? isPast(new Date(item.dueDate)) && !item.completed : false;
 
       return (
-        <Swipeable renderRightActions={renderRightActions} overshootRight={false}>
+        <ReanimatedSwipeable renderRightActions={renderRightActions} overshootRight={false}>
           <TouchableOpacity
             style={[
               styles.todoItem,
@@ -347,7 +347,7 @@ export default function TodoListScreen() {
 
             <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
-        </Swipeable>
+        </ReanimatedSwipeable>
       );
     },
     [colors, handleToggleTodo, handleDeleteTodo, openEditModal]
