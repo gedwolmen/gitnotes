@@ -157,14 +157,24 @@ class GitHubServiceClass {
   }
 
   async getRepositories(): Promise<GitHubRepository[]> {
+    const all: GitHubRepository[] = [];
+    const params = new URLSearchParams({
+      sort: 'updated',
+      per_page: '100',
+      visibility: 'all',
+      affiliation: 'owner,collaborator,organization_member',
+    });
+    let url: string | null = `https://api.github.com/user/repos?${params.toString()}`;
     try {
-      const data = await this.fetchWithAuth(
-        'https://api.github.com/user/repos?sort=updated&per_page=100'
-      );
-      return Array.isArray(data) ? data : [];
+      while (url) {
+        const { data, nextUrl } = await this.fetchWithAuthPaginated(url);
+        if (Array.isArray(data)) all.push(...data);
+        url = nextUrl;
+      }
+      return all;
     } catch (error) {
       console.warn('[GitHubService] Failed to get repositories:', error);
-      return [];
+      return all;
     }
   }
 
@@ -443,7 +453,8 @@ class GitHubServiceClass {
       ...options,
       headers: {
         Authorization: `Bearer ${this.token}`,
-        Accept: 'application/vnd.github.v3+json',
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
         ...options?.headers,
       },
     });
@@ -456,6 +467,40 @@ class GitHubServiceClass {
 
     return response.json();
   }
+
+  private async fetchWithAuthPaginated(
+    url: string,
+    options?: RequestInit,
+  ): Promise<{ data: any; nextUrl: string | null }> {
+    if (!this.token) throw new Error('GitHub token is not configured');
+
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        ...options?.headers,
+      },
+    });
+
+    if (!response.ok) {
+      const err = new Error(`GitHub API error: ${response.status}`) as Error & { status?: number };
+      err.status = response.status;
+      throw err;
+    }
+
+    const data = await response.json();
+    const linkHeader = response.headers.get('Link');
+    const nextUrl = parseNextLink(linkHeader);
+    return { data, nextUrl };
+  }
+}
+
+function parseNextLink(linkHeader: string | null): string | null {
+  if (!linkHeader) return null;
+  const match = linkHeader.match(/<([^>]+)>;\s*rel="next"/);
+  return match ? match[1] : null;
 }
 
 function isNotFound(error: unknown): boolean {

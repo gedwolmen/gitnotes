@@ -36,7 +36,6 @@ import {
   CanvasStroke,
   CanvasShape,
   CanvasText,
-  CanvasChart,
   DEFAULT_SCENE,
   slugifyCanvasTitle,
 } from '../models/Canvas';
@@ -119,7 +118,7 @@ function buildLinePath(x1: number, y1: number, x2: number, y2: number): SkPath {
 export default function CanvasEditorScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteType>();
-  const { canvasId, canvasWidth, canvasHeight, canvasTitle } = route.params;
+  const { canvasId, canvasWidth, canvasTitle } = route.params;
   const { getCanvasById, createCanvas, updateCanvas } = useCanvases();
 
   const cw = canvasWidth ?? Dimensions.get('window').width;
@@ -130,7 +129,7 @@ export default function CanvasEditorScreen() {
   const [elements, setElements] = useState<CanvasElement[]>(
     existingCanvas?.scene?.elements ?? DEFAULT_SCENE.elements,
   );
-  const [history, setHistory] = useState<string[]>([]);
+  const [, setHistory] = useState<string[]>([]);
   const [tool, setTool] = useState('pen');
   const [color, setColor] = useState('#000000');
   const [size, setSize] = useState(3);
@@ -392,26 +391,6 @@ export default function CanvasEditorScreen() {
   const composedGesture = useMemo(
     () => Gesture.Simultaneous(panGesture, pinchGesture, twoFingerPan),
     [panGesture, pinchGesture, twoFingerPan],
-  );
-
-  const addChart = useCallback(
-    (chartType: 'bar' | 'line' | 'pie') => {
-      saveHistory();
-      const el: CanvasChart = {
-        type: 'chart',
-        id: uid(),
-        chartType,
-        title: 'Chart',
-        labels: ['A', 'B', 'C', 'D'],
-        values: [30, 50, 20, 80],
-        x: 40,
-        y: 40,
-        width: 200,
-        height: 150,
-      };
-      setElements((prev) => [...prev, el]);
-    },
-    [saveHistory],
   );
 
   const saveCanvas = useCallback(async () => {

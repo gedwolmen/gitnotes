@@ -16,7 +16,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.gitnotes.app",
+      "bundleIdentifier": "com.vidwadeseram.gitnotes",
       "scheme": "gitnotes",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "GitNotes needs access to your photo library to attach images to notes.",

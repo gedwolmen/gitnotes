@@ -33,7 +33,7 @@ const CANVAS_PRESETS = [
 
 export default function CanvasListScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const { filteredCanvases, searchQuery, setSearchQuery, deleteCanvas, refreshCanvases } = useCanvases();
   const [showSizePicker, setShowSizePicker] = useState(false);
   const [customW, setCustomW] = useState('800');

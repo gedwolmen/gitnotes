@@ -17,10 +17,10 @@ import {
   ScrollView,
   RefreshControl,
 } from "react-native";
-import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
-import { Swipeable } from "react-native-gesture-handler";
+import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 
 import { useNotes } from "../contexts/NoteContext";
 import { useTheme } from "../contexts/ThemeContext";
@@ -30,7 +30,7 @@ import { useRepos } from "../contexts/RepoContext";
 import { RootStackParamList } from "../navigation/types";
 import { Note, NoteFormat } from "../models/Note";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { GitRepository, GitBranch, GitService } from "../services/GitService";
+import { GitRepository } from "../services/GitService";
 import { GitHubService } from "../services/GitHubService";
 import { NoteSyncQueueService } from "../services/NoteSyncQueueService";
 import { pullAllFromRepos } from "../services/RepoPullService";
@@ -121,19 +121,10 @@ export default function NotesListScreen() {
 
   // Filters
   const [showFilterModal, setShowFilterModal] = useState(false);
-  const [branches, setBranches] = useState<GitBranch[]>([]);
   const [selectedRepo, setSelectedRepo] = useState<GitRepository | null>(null);
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
   const [selectedFormat, setSelectedFormat] = useState<NoteFormat | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-
-  useEffect(() => {
-    if (!selectedRepo) {
-      setBranches([]);
-      return;
-    }
-    GitService.getBranches(selectedRepo.path).then(setBranches);
-  }, [selectedRepo]);
 
   const allTags = useMemo(() => {
     const tagSet = new Set<string>();
@@ -416,7 +407,7 @@ export default function NotesListScreen() {
 
   const renderSwipeableNote = useCallback(
     (note: Note, index: number, compact = false) => (
-      <Swipeable
+      <ReanimatedSwipeable
         overshootRight={false}
         rightThreshold={40}
         renderRightActions={() => renderSwipeActions(note)}
@@ -428,7 +419,7 @@ export default function NotesListScreen() {
           compact={compact}
           highlighted={hasActiveSearch && index === currentSearchMatchIndex}
         />
-      </Swipeable>
+      </ReanimatedSwipeable>
     ),
     [
       currentSearchMatchIndex,
