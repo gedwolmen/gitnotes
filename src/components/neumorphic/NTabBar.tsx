@@ -22,9 +22,9 @@ export function NTabBar({ state, navigation }: BottomTabBarProps) {
     <View
       style={{
         backgroundColor: colors.bg,
-        paddingHorizontal: spacing[4],
-        paddingBottom: insets.bottom + spacing[2],
-        paddingTop: spacing[2],
+        paddingHorizontal: spacing[6],
+        paddingBottom: insets.bottom + spacing[3],
+        paddingTop: spacing[4],
       }}
     >
       <Surface
@@ -35,7 +35,7 @@ export function NTabBar({ state, navigation }: BottomTabBarProps) {
           alignItems: 'center',
           justifyContent: 'space-around',
           paddingVertical: spacing[2],
-          paddingHorizontal: spacing[2],
+          paddingHorizontal: spacing[3],
         }}
       >
         {state.routes.map((route, index) => {
