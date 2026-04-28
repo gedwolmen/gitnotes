@@ -56,7 +56,10 @@ export function Surface(props: SurfaceProps) {
       testID={testID}
       style={[baseStyle, elevationStyles.outer as ViewStyle, style]}
     >
-      <View style={[StyleSheet.absoluteFill, { borderRadius }, elevationStyles.inner as ViewStyle]} pointerEvents="none" />
+      <View
+        pointerEvents="none"
+        style={[StyleSheet.absoluteFill, { borderRadius }, elevationStyles.inner as ViewStyle]}
+      />
       {showOverlays && androidOverlays && (
         <AndroidShadowOverlays
           offset={androidOverlays.offset}
@@ -67,7 +70,7 @@ export function Surface(props: SurfaceProps) {
           radius={borderRadius}
         />
       )}
-      <View style={{ borderRadius, overflow: 'hidden' }}>{children}</View>
+      {children}
     </View>
   );
 }
