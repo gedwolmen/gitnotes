@@ -20,12 +20,8 @@ export function NTabBar({ state, navigation }: BottomTabBarProps) {
 
   return (
     <View
-      pointerEvents="box-none"
       style={{
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        bottom: 0,
+        backgroundColor: colors.bg,
         paddingHorizontal: spacing[4],
         paddingBottom: insets.bottom + spacing[2],
         paddingTop: spacing[2],
