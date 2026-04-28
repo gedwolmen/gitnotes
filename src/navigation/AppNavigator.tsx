@@ -13,6 +13,7 @@ import PdfViewerScreen from '../screens/PdfViewerScreen';
 import FileViewerScreen from '../screens/FileViewerScreen';
 import ImageViewerScreen from '../screens/ImageViewerScreen';
 import VideoViewerScreen from '../screens/VideoViewerScreen';
+import NeumorphicGallery from '../screens/__dev__/NeumorphicGallery';
 import { RootStackParamList } from './types';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -33,6 +34,7 @@ const linking: LinkingOptions<RootStackParamList> = {
       NoteEditor: 'note/:noteId',
       CanvasEditor: 'canvas/:canvasId',
       CanvasList: 'canvases',
+      NeumorphicGallery: '__dev__/neumorphic',
     },
   },
 };
@@ -86,6 +88,13 @@ export default function AppNavigator() {
             component={VideoViewerScreen}
             options={{ headerShown: false }}
           />
+          {__DEV__ && (
+            <Stack.Screen
+              name="NeumorphicGallery"
+              component={NeumorphicGallery}
+              options={{ headerShown: true, title: 'Neumorphic Gallery' }}
+            />
+          )}
         </Stack.Navigator>
       </NavigationContainer>
     </GestureHandlerRootView>

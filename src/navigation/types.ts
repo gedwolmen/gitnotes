@@ -8,6 +8,7 @@ export type RootStackParamList = {
   VideoViewer: { owner: string; repo: string; branch?: string; path: string; title?: string; size?: number };
   CanvasEditor: { canvasId?: string; canvasWidth?: number; canvasHeight?: number; canvasTitle?: string };
   CanvasList: undefined;
+  NeumorphicGallery: undefined;
 };
 
 export type BottomTabParamList = {

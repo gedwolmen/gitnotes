@@ -19,6 +19,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/types';
 import { Canvas } from '../models/Canvas';
 import SearchBar from '../components/SearchBar';
+import { NScreenHeader, NIconButton } from '../components/neumorphic';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -150,16 +151,14 @@ export default function CanvasListScreen() {
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Canvases</Text>
-        <TouchableOpacity
-          style={[styles.createBtn, { backgroundColor: colors.primary }]}
-          onPress={handleCreate}
-        >
-          <Ionicons name="add" size={22} color="#fff" />
-          <Text style={styles.createBtnText}>New</Text>
-        </TouchableOpacity>
-      </View>
+      <NScreenHeader
+        title="Canvases"
+        actions={
+          <NIconButton size="sm" onPress={handleCreate} accessibilityLabel="New canvas">
+            <Ionicons name="add" size={20} color={colors.accent} />
+          </NIconButton>
+        }
+      />
 
       <View style={styles.searchBarContainer}>
         <SearchBar

@@ -1,7 +1,8 @@
 import React from 'react';
-import { TouchableOpacity, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
+import { NIconButton } from './neumorphic';
 
 interface UndoRedoControlsProps {
   canUndo: boolean;
@@ -22,31 +23,31 @@ export default function UndoRedoControls({
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity
+      <NIconButton
+        size="sm"
         onPress={onUndo}
         disabled={!canUndo || disabled}
-        style={[styles.button, (!canUndo || disabled) && styles.buttonDisabled]}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        accessibilityLabel="Undo"
       >
         <Ionicons
           name="arrow-undo"
-          size={22}
+          size={18}
           color={(!canUndo || disabled) ? colors.textSecondary : colors.text}
         />
-      </TouchableOpacity>
+      </NIconButton>
 
-      <TouchableOpacity
+      <NIconButton
+        size="sm"
         onPress={onRedo}
         disabled={!canRedo || disabled}
-        style={[styles.button, (!canRedo || disabled) && styles.buttonDisabled]}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        accessibilityLabel="Redo"
       >
         <Ionicons
           name="arrow-redo"
-          size={22}
+          size={18}
           color={(!canRedo || disabled) ? colors.textSecondary : colors.text}
         />
-      </TouchableOpacity>
+      </NIconButton>
     </View>
   );
 }
@@ -55,12 +56,6 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-  },
-  button: {
-    padding: 6,
-  },
-  buttonDisabled: {
-    opacity: 0.4,
+    gap: 8,
   },
 });

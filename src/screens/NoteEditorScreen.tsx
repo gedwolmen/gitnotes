@@ -52,6 +52,7 @@ import { syncNoteToGitHub } from '../services/NoteGitHubSyncService';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import { PositionMemoryService } from '../services/PositionMemoryService';
 import { getMarkdownStyles } from '../utils/preview';
+import { NIconButton } from '../components/neumorphic';
 
 const FORMAT_OPTIONS: { label: string; value: NoteFormat }[] = [
   { label: '.md', value: 'markdown' },
@@ -695,27 +696,28 @@ export default function NoteEditorScreen() {
   if (!isEditing) {
     return (
       <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
-            <Ionicons name="arrow-back" size={24} color={colors.primary} />
-          </TouchableOpacity>
+        <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface, gap: 8 }]}>
+          <NIconButton size="sm" onPress={() => navigation.goBack()} accessibilityLabel="Back">
+            <Ionicons name="arrow-back" size={20} color={colors.accent} />
+          </NIconButton>
           <View style={styles.flex} />
           {!isPdfNote && speakableContent ? (
-            <TouchableOpacity onPress={handleToggleSpeak} style={styles.iconButton}>
+            <NIconButton size="sm" onPress={handleToggleSpeak} accessibilityLabel="Read aloud">
               <Ionicons
                 name={isSpeaking ? 'stop-circle' : 'volume-high'}
-                size={22}
-                color={colors.primary}
+                size={18}
+                color={colors.accent}
               />
-            </TouchableOpacity>
+            </NIconButton>
           ) : null}
           {!isPdfNote && (
-            <TouchableOpacity
+            <NIconButton
+              size="sm"
               onPress={() => { HapticService.light(); setIsEditing(true); }}
-              style={styles.iconButton}
+              accessibilityLabel="Edit"
             >
-              <Ionicons name="pencil" size={22} color={colors.primary} />
-            </TouchableOpacity>
+              <Ionicons name="pencil" size={18} color={colors.accent} />
+            </NIconButton>
           )}
         </View>
 

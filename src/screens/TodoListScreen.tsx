@@ -24,6 +24,8 @@ import { HapticService } from '../utils/haptics';
 import { useResponsive } from '../hooks/useResponsive';
 import GitContextPicker from '../components/GitContextPicker';
 import { syncTodoToGitHub } from '../services/TodoGitHubSyncService';
+import { NIconButton, NScreenHeader } from '../components/neumorphic';
+import SearchBar from '../components/SearchBar';
 
 function formatDeadline(timestamp: number): string {
   const date = new Date(timestamp);
@@ -363,39 +365,35 @@ export default function TodoListScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }, isTablet && { maxWidth: maxContentWidth, alignSelf: 'center', width: '100%' }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Todos</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            onPress={() => setFilterCompleted(!filterCompleted)}
-            style={styles.filterButton}
-          >
-            <Ionicons
-              name={filterCompleted ? 'eye-off' : 'eye'}
-              size={22}
-              color={filterCompleted ? colors.primary : colors.textSecondary}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setShowAddModal(true)} style={styles.addButton}>
-            <Ionicons name="add" size={28} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <NScreenHeader
+        title="Todos"
+        actions={
+          <>
+            <NIconButton
+              size="sm"
+              active={filterCompleted}
+              onPress={() => setFilterCompleted(!filterCompleted)}
+              accessibilityLabel="Toggle completed filter"
+            >
+              <Ionicons
+                name={filterCompleted ? 'eye-off' : 'eye'}
+                size={18}
+                color={filterCompleted ? colors.accent : colors.textSecondary}
+              />
+            </NIconButton>
+            <NIconButton size="sm" onPress={() => setShowAddModal(true)} accessibilityLabel="Add todo">
+              <Ionicons name="add" size={20} color={colors.accent} />
+            </NIconButton>
+          </>
+        }
+      />
 
-      <View style={[styles.searchContainer, { borderBottomColor: colors.border }]}>
-        <Ionicons name="search" size={20} color={colors.textSecondary} />
-        <TextInput
-          style={[styles.searchInput, { color: colors.text }]}
-          placeholder="Search todos..."
-          placeholderTextColor={colors.textSecondary}
+      <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
+        <SearchBar
           value={searchQuery}
           onChangeText={setSearchQuery}
+          placeholder="Search todos..."
         />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
-        )}
       </View>
 
       <FlatList

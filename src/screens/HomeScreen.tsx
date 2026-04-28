@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -14,6 +14,7 @@ import { HapticService } from '../utils/haptics';
 import TemplateSelector from '../components/TemplateSelector';
 import { NoteTemplate } from '../services/TemplateService';
 import { useResponsive } from '../hooks/useResponsive';
+import { NButton, NCard, NModal, NGroup, NGroupRow, NScreenHeader } from '../components/neumorphic';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type EditableNoteFormat = Exclude<NoteFormat, 'pdf'>;
@@ -82,7 +83,7 @@ function stripFormatting(content: string, format?: NoteFormat): string {
 
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const { notes } = useNotes();
   const { isTablet, maxContentWidth } = useResponsive();
   const [showFormatPicker, setShowFormatPicker] = useState(false);
@@ -141,134 +142,93 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <NScreenHeader title="GitNotes" subtitle="Your development notes, organized." />
       <ScrollView style={styles.container} contentContainerStyle={[styles.content, isTablet && { maxWidth: maxContentWidth, alignSelf: 'center', width: '100%' }]} showsVerticalScrollIndicator={false}>
-      <Text style={[styles.title, { color: colors.text }, isTablet && styles.titleTablet]}>GitNotes</Text>
-      <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-        Your development notes, organized.
-      </Text>
-
-      <TouchableOpacity
-        style={[styles.button, { backgroundColor: colors.primary }]}
-        onPress={handleCreateNote}
-        activeOpacity={0.7}
-      >
-        <Ionicons name="add" size={24} color={isDark ? colors.text : colors.surface} />
-        <Text style={[styles.buttonText, { color: isDark ? colors.text : colors.surface }]}>Create New Note</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.secondaryButton, { borderColor: colors.primary }]}
-        onPress={handleOpenTemplates}
-      >
-        <Ionicons name="copy-outline" size={20} color={colors.primary} />
-        <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>From Template</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.secondaryButton, { borderColor: colors.primary }]}
-        onPress={() => navigation.navigate('CanvasList')}
-      >
-        <Ionicons name="easel-outline" size={20} color={colors.primary} />
-        <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>Canvases</Text>
-      </TouchableOpacity>
+      <View style={{ gap: 12, marginBottom: 24 }}>
+        <NButton
+          variant="primary"
+          fullWidth
+          onPress={handleCreateNote}
+          leadingIcon={<Ionicons name="add" size={22} color={colors.accent} />}
+          label="Create New Note"
+        />
+        <NButton
+          fullWidth
+          onPress={handleOpenTemplates}
+          leadingIcon={<Ionicons name="copy-outline" size={20} color={colors.text} />}
+          label="From Template"
+        />
+        <NButton
+          fullWidth
+          onPress={() => navigation.navigate('CanvasList')}
+          leadingIcon={<Ionicons name="easel-outline" size={20} color={colors.text} />}
+          label="Canvases"
+        />
+      </View>
 
       {recentNotes.length > 0 && (
-        <View style={styles.recentSection}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-            Recent Notes
-          </Text>
-          <View style={isTablet ? styles.recentGrid : undefined}>
+        <View style={{ marginTop: 8, marginBottom: 16 }}>
+          <NGroup title="Recent Notes">
             {recentNotes.map((note) => (
-            <TouchableOpacity
-              key={note.id}
-              style={[styles.recentNote, { backgroundColor: colors.surface }, isTablet && styles.recentNoteTablet]}
-              onPress={openItem(note)}
-            >
-              <View style={styles.recentNoteContent}>
+              <NGroupRow
+                key={note.id}
+                onPress={openItem(note)}
+                trailing={note.repo ? <Ionicons name="code-slash" size={14} color={colors.textSecondary} /> : undefined}
+              >
                 <Text style={[styles.recentNoteTitle, { color: colors.text }]} numberOfLines={1}>
                   {note.title || 'Untitled'}
                 </Text>
                 <Text style={[styles.recentNotePreview, { color: colors.textSecondary }]} numberOfLines={1}>
                   {stripFormatting(note.content, note.format).substring(0, 60) || 'No content'}
                 </Text>
-              </View>
-              {note.repo && (
-                <View style={styles.gitIndicator}>
-                  <Ionicons name="code-slash" size={14} color={colors.textSecondary} />
-                </View>
-              )}
-            </TouchableOpacity>
+              </NGroupRow>
             ))}
-            </View>
+          </NGroup>
         </View>
       )}
 
       {recentDocuments.length > 0 && (
-        <View style={styles.recentSection}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-            Recent Documents
-          </Text>
-          <View style={isTablet ? styles.recentGrid : undefined}>
+        <View style={{ marginTop: 8 }}>
+          <NGroup title="Recent Documents">
             {recentDocuments.map((note) => (
-            <TouchableOpacity
-              key={note.id}
-              style={[styles.recentNote, { backgroundColor: colors.surface }, isTablet && styles.recentNoteTablet]}
-              onPress={openItem(note)}
-            >
-              <Ionicons name="document-text" size={22} color={colors.primary} style={{ marginRight: 12 }} />
-              <View style={styles.recentNoteContent}>
+              <NGroupRow
+                key={note.id}
+                onPress={openItem(note)}
+                leading={<Ionicons name="document-text" size={22} color={colors.accent} />}
+                trailing={note.repo ? <Ionicons name="code-slash" size={14} color={colors.textSecondary} /> : undefined}
+              >
                 <Text style={[styles.recentNoteTitle, { color: colors.text }]} numberOfLines={1}>
                   {note.title || (note.filePath ?? 'Document').split('/').pop()}
                 </Text>
                 <Text style={[styles.recentNotePreview, { color: colors.textSecondary }]} numberOfLines={1}>
                   {note.filePath ?? 'PDF'}
                 </Text>
-              </View>
-              {note.repo && (
-                <View style={styles.gitIndicator}>
-                  <Ionicons name="code-slash" size={14} color={colors.textSecondary} />
-                </View>
-              )}
-            </TouchableOpacity>
+              </NGroupRow>
             ))}
-          </View>
+          </NGroup>
         </View>
       )}
 
-      {/* Format picker modal */}
-      <Modal
-        visible={showFormatPicker}
-        transparent
-        animationType="fade"
-        onRequestClose={handleFormatPickerClose}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={handleFormatPickerClose}
-        >
-          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Choose Note Format</Text>
-            {FORMAT_OPTIONS.map((option) => (
-              <TouchableOpacity
-                key={option.value}
-                style={[styles.formatOption, { borderColor: colors.border }]}
-                onPress={() => handleSelectFormat(option.value)}
-                activeOpacity={0.7}
-              >
+      <NModal visible={showFormatPicker} onRequestClose={handleFormatPickerClose} fullWidth>
+        <Text style={[styles.modalTitle, { color: colors.text }]}>Choose Note Format</Text>
+        <View style={{ gap: 10 }}>
+          {FORMAT_OPTIONS.map((option) => (
+            <NCard
+              key={option.value}
+              onPress={() => handleSelectFormat(option.value)}
+              padding={14}
+            >
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Text style={[styles.formatLabel, { color: colors.text }]}>{option.label}</Text>
                 <Text style={[styles.formatExt, { color: colors.textSecondary }]}>{option.ext}</Text>
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              style={[styles.cancelButton, { borderColor: colors.border }]}
-              onPress={handleFormatPickerClose}
-            >
-              <Text style={[styles.cancelText, { color: colors.textSecondary }]}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+              </View>
+            </NCard>
+          ))}
+        </View>
+        <View style={{ marginTop: 12 }}>
+          <NButton variant="ghost" fullWidth label="Cancel" onPress={handleFormatPickerClose} />
+        </View>
+      </NModal>
 
       <TemplateSelector
         visible={showTemplateSelector}

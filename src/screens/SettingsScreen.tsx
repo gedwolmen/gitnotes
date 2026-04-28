@@ -1,9 +1,8 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  Switch,
   ScrollView,
   TouchableOpacity,
   Alert,
@@ -27,9 +26,10 @@ import { HapticService } from '../utils/haptics';
 import SearchBar from '../components/SearchBar';
 import { useResponsive } from '../hooks/useResponsive';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { NGroup, NGroupRow, NToggle, NScreenHeader } from '../components/neumorphic';
 
 export default function SettingsScreen() {
-  const { theme, isDark, colors, setTheme } = useTheme();
+  const { theme, colors, setTheme, style: uiStyle, setStyle } = useTheme();
   const { isTablet, maxContentWidth } = useResponsive();
   const { clearAllNotes, refreshNotes } = useNotes();
   const { authState, setToken, clearToken } = useAuth();
@@ -214,36 +214,41 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }, isTablet && { maxWidth: maxContentWidth, alignSelf: 'center', width: '100%' }]}>
-      <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Settings</Text>
-      </View>
-      <ScrollView style={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <NScreenHeader title="Settings" />
+      <ScrollView style={styles.scrollContent} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, gap: 20 }}>
 
-        {/* ── Appearance ── */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Appearance</Text>
-
-          <View style={[styles.settingItem, { borderBottomColor: colors.border }]}>
+        <NGroup title="Appearance" footer={uiStyle === 'neumorphic' ? 'Soft-UI shadows. Toggle off for the classic flat look.' : 'Classic flat look. Toggle on for neumorphic styling.'}>
+          <NGroupRow
+            trailing={
+              <NToggle
+                value={uiStyle === 'neumorphic'}
+                onValueChange={(v) => setStyle(v ? 'neumorphic' : 'flat')}
+              />
+            }
+          >
+            <Text style={[styles.settingLabel, { color: colors.text }]}>Neumorphic UI</Text>
+          </NGroupRow>
+          <NGroupRow
+            trailing={
+              <NToggle
+                value={theme === 'dark'}
+                onValueChange={(v) => setTheme(v ? 'dark' : 'light')}
+              />
+            }
+          >
             <Text style={[styles.settingLabel, { color: colors.text }]}>Dark Mode</Text>
-            <Switch
-              value={theme === 'dark'}
-              onValueChange={(value) => setTheme(value ? 'dark' : 'light')}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={isDark ? colors.primary : '#f4f3f4'}
-            />
-          </View>
-
-          <TouchableOpacity
-            style={[styles.settingItem, { borderBottomColor: colors.border }]}
+          </NGroupRow>
+          <NGroupRow
             onPress={() => setTheme('system')}
-            onPressIn={() => HapticService.light()}
+            trailing={
+              <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
+                {theme === 'system' ? 'Active' : 'Inactive'}
+              </Text>
+            }
           >
             <Text style={[styles.settingLabel, { color: colors.text }]}>Use System Theme</Text>
-            <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
-              {theme === 'system' ? 'Active' : 'Inactive'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+          </NGroupRow>
+        </NGroup>
 
         {/* ── GitHub Account ── */}
         <View style={[styles.section, { backgroundColor: colors.surface }]}>

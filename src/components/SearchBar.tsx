@@ -1,14 +1,15 @@
 import React from 'react';
-import { View, TextInput, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
+import { TouchableOpacity, ViewStyle, StyleProp } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
+import { NInput } from './neumorphic';
 
 interface SearchBarProps {
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
   onClear?: () => void;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }
 
 export default function SearchBar({
@@ -26,46 +27,22 @@ export default function SearchBar({
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }, style]}>
-      <Ionicons name="search" size={20} color={colors.textSecondary} style={styles.icon} />
-      <TextInput
-        style={[styles.input, { color: colors.text }]}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={colors.textSecondary}
-        returnKeyType="search"
-        autoCorrect={false}
-        autoCapitalize="none"
-      />
-      {value.length > 0 && (
-        <TouchableOpacity onPress={handleClear} style={styles.clearButton}>
-          <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
-      )}
-    </View>
+    <NInput
+      value={value}
+      onChangeText={onChangeText}
+      placeholder={placeholder}
+      returnKeyType="search"
+      autoCorrect={false}
+      autoCapitalize="none"
+      containerStyle={style}
+      leading={<Ionicons name="search" size={20} color={colors.textSecondary} />}
+      trailing={
+        value.length > 0 ? (
+          <TouchableOpacity onPress={handleClear} hitSlop={8}>
+            <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+        ) : undefined
+      }
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 44,
-    borderWidth: 1,
-  },
-  icon: {
-    marginRight: 8,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    paddingVertical: 0,
-  },
-  clearButton: {
-    marginLeft: 8,
-    padding: 4,
-  },
-});
