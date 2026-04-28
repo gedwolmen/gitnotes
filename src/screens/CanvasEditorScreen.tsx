@@ -28,6 +28,7 @@ import {
 } from '@shopify/react-native-skia';
 import type { SkPath } from '@shopify/react-native-skia';
 import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useCanvases } from '../contexts/CanvasContext';
 import {
   CanvasScene,
@@ -137,6 +138,35 @@ export default function CanvasEditorScreen() {
   const [textModalVisible, setTextModalVisible] = useState(false);
   const [textInput, setTextInput] = useState('');
   const [textPosition, setTextPosition] = useState<Point | null>(null);
+
+  const scale = useSharedValue(1);
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const savedScale = useSharedValue(1);
+  const savedTx = useSharedValue(0);
+  const savedTy = useSharedValue(0);
+
+  const setZoom = useCallback(
+    (next: number) => {
+      const clamped = Math.max(0.5, Math.min(4, next));
+      scale.value = withSpring(clamped, { mass: 0.5, damping: 14, stiffness: 200 });
+    },
+    [scale],
+  );
+
+  const resetView = useCallback(() => {
+    scale.value = withSpring(1, { mass: 0.5, damping: 14, stiffness: 200 });
+    translateX.value = withSpring(0, { mass: 0.5, damping: 14, stiffness: 200 });
+    translateY.value = withSpring(0, { mass: 0.5, damping: 14, stiffness: 200 });
+  }, [scale, translateX, translateY]);
+
+  const canvasAnimStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+      { scale: scale.value },
+    ],
+  }));
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [repo, setRepo] = useState<string | undefined>(existingCanvas?.repo);
   const [branch, setBranch] = useState<string | undefined>(existingCanvas?.branch);
@@ -223,6 +253,7 @@ export default function CanvasEditorScreen() {
   const panGesture = useMemo(
     () =>
       Gesture.Pan()
+        .maxPointers(1)
         .runOnJS(true)
         .onStart((e) => {
           const pt = { x: e.x, y: e.y };
@@ -324,6 +355,44 @@ export default function CanvasEditorScreen() {
     setElements((prev) => [...prev, el]);
     setTextModalVisible(false);
   }, [textPosition, textInput, color, saveHistory]);
+
+  const pinchGesture = useMemo(
+    () =>
+      Gesture.Pinch()
+        .onStart(() => {
+          'worklet';
+          savedScale.value = scale.value;
+        })
+        .onUpdate((e) => {
+          'worklet';
+          const next = savedScale.value * e.scale;
+          scale.value = Math.max(0.5, Math.min(4, next));
+        }),
+    [scale, savedScale],
+  );
+
+  const twoFingerPan = useMemo(
+    () =>
+      Gesture.Pan()
+        .minPointers(2)
+        .averageTouches(true)
+        .onStart(() => {
+          'worklet';
+          savedTx.value = translateX.value;
+          savedTy.value = translateY.value;
+        })
+        .onUpdate((e) => {
+          'worklet';
+          translateX.value = savedTx.value + e.translationX;
+          translateY.value = savedTy.value + e.translationY;
+        }),
+    [translateX, translateY, savedTx, savedTy],
+  );
+
+  const composedGesture = useMemo(
+    () => Gesture.Simultaneous(panGesture, pinchGesture, twoFingerPan),
+    [panGesture, pinchGesture, twoFingerPan],
+  );
 
   const addChart = useCallback(
     (chartType: 'bar' | 'line' | 'pie') => {
@@ -568,8 +637,14 @@ export default function CanvasEditorScreen() {
             <Text style={styles.toolBtnLabel}>🗑</Text>
           </TouchableOpacity>
           <View style={styles.separator} />
-          <TouchableOpacity style={styles.toolBtn} onPress={() => addChart('bar')}>
-            <Text style={styles.toolBtnLabel}>📊</Text>
+          <TouchableOpacity style={styles.toolBtn} onPress={() => setZoom(scale.value - 0.25)}>
+            <Text style={styles.toolBtnLabel}>−</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.toolBtn} onPress={() => setZoom(scale.value + 0.25)}>
+            <Text style={styles.toolBtnLabel}>+</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.toolBtn} onPress={resetView}>
+            <Text style={styles.toolBtnLabel}>⟲</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -613,11 +688,13 @@ export default function CanvasEditorScreen() {
         }}
       >
         {canvasSize && (
-          <GestureDetector gesture={panGesture}>
-            <Canvas style={{ width: canvasSize.width, height: canvasSize.height }}>
-              <Fill color="white" />
-              {elements.map(renderElement)}
-            </Canvas>
+          <GestureDetector gesture={composedGesture}>
+            <Animated.View style={[{ width: canvasSize.width, height: canvasSize.height }, canvasAnimStyle]}>
+              <Canvas style={{ width: canvasSize.width, height: canvasSize.height }}>
+                <Fill color="white" />
+                {elements.map(renderElement)}
+              </Canvas>
+            </Animated.View>
           </GestureDetector>
         )}
       </View>
