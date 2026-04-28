@@ -32,21 +32,27 @@ export function NGroup(props: NGroupProps) {
         </Text>
       )}
       <Surface elevation="raised" radius="lg" style={{ overflow: 'hidden' }}>
-        {items.map((child, idx) => (
-          <Fragment key={idx}>
-            {idx > 0 && (
-              <View
-                style={{
-                  height: 1,
-                  marginLeft: spacing[4],
-                  backgroundColor: colors.shadow,
-                  opacity: 0.18,
-                }}
-              />
-            )}
-            {child}
-          </Fragment>
-        ))}
+        {items.map((child, idx) => {
+          const childKey =
+            React.isValidElement(child) && child.key != null
+              ? `c-${child.key}`
+              : `i-${idx}`;
+          return (
+            <Fragment key={childKey}>
+              {idx > 0 && (
+                <View
+                  style={{
+                    height: 1,
+                    marginLeft: spacing[4],
+                    backgroundColor: colors.shadow,
+                    opacity: 0.18,
+                  }}
+                />
+              )}
+              {child}
+            </Fragment>
+          );
+        })}
       </Surface>
       {footer && (
         <Text
