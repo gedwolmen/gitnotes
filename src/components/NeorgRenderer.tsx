@@ -254,10 +254,9 @@ export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
       <View key={`table-${blockIndex}`} style={[styles.tableContainer, { borderColor: colors.border }]}>
         {block.tableRows.map((row, rowIdx) => {
           const isHeader = block.isHeaderRow?.[rowIdx] || rowIdx === 0;
-          const rowKey = `tr-${blockIndex}-${row.cells.join('-').slice(0, 32)}`;
           return (
             <View
-              key={rowKey}
+              key={`tr-${blockIndex}-${rowIdx}`}
               style={[
                 styles.tableRow,
                 { borderBottomColor: colors.border },
@@ -266,7 +265,7 @@ export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
             >
               {row.cells.map((cell, cellIdx) => (
                 <Text
-                  key={`tc-${cell.slice(0, 16)}`}
+                  key={`tc-${blockIndex}-${rowIdx}-${cellIdx}`}
                   style={[
                     styles.tableCell,
                     { color: colors.text },
