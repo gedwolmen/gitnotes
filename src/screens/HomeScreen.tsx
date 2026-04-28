@@ -14,7 +14,7 @@ import { HapticService } from '../utils/haptics';
 import TemplateSelector from '../components/TemplateSelector';
 import { NoteTemplate } from '../services/TemplateService';
 import { useResponsive } from '../hooks/useResponsive';
-import { NButton, NCard, NModal, NGroup, NGroupRow } from '../components/neumorphic';
+import { NButton, NCard, NModal, NGroup, NGroupRow, NScreenHeader } from '../components/neumorphic';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type EditableNoteFormat = Exclude<NoteFormat, 'pdf'>;
@@ -142,12 +142,8 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <NScreenHeader title="GitNotes" subtitle="Your development notes, organized." />
       <ScrollView style={styles.container} contentContainerStyle={[styles.content, isTablet && { maxWidth: maxContentWidth, alignSelf: 'center', width: '100%' }]} showsVerticalScrollIndicator={false}>
-      <Text style={[styles.title, { color: colors.text }, isTablet && styles.titleTablet]}>GitNotes</Text>
-      <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-        Your development notes, organized.
-      </Text>
-
       <View style={{ gap: 12, marginBottom: 24 }}>
         <NButton
           variant="primary"

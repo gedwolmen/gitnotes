@@ -17,3 +17,5 @@ export type { NToggleProps } from './NToggle';
 export { NModal } from './NModal';
 export type { NModalProps } from './NModal';
 export { NTabBar } from './NTabBar';
+export { NScreenHeader } from './NScreenHeader';
+export type { NScreenHeaderProps } from './NScreenHeader';

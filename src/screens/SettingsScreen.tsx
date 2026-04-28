@@ -26,7 +26,7 @@ import { HapticService } from '../utils/haptics';
 import SearchBar from '../components/SearchBar';
 import { useResponsive } from '../hooks/useResponsive';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { NGroup, NGroupRow, NToggle } from '../components/neumorphic';
+import { NGroup, NGroupRow, NToggle, NScreenHeader } from '../components/neumorphic';
 
 export default function SettingsScreen() {
   const { theme, colors, setTheme, style: uiStyle, setStyle } = useTheme();
@@ -214,9 +214,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }, isTablet && { maxWidth: maxContentWidth, alignSelf: 'center', width: '100%' }]}>
-      <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Settings</Text>
-      </View>
+      <NScreenHeader title="Settings" />
       <ScrollView style={styles.scrollContent} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, gap: 20 }}>
 
         <NGroup title="Appearance" footer={uiStyle === 'neumorphic' ? 'Soft-UI shadows. Toggle off for the classic flat look.' : 'Classic flat look. Toggle on for neumorphic styling.'}>

@@ -21,6 +21,8 @@ import { HapticService } from '../utils/haptics';
 import { parseRepoPath } from '../components/RepoFileBrowser';
 import RepoFileTree, { TreeNode } from '../components/RepoFileTree';
 import { RootStackParamList } from '../navigation/types';
+import { NScreenHeader } from '../components/neumorphic';
+import SearchBar from '../components/SearchBar';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -125,25 +127,13 @@ export default function ExploreScreen() {
   if (view === 'repoList') {
     return (
       <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-        <View style={[s.header, { borderBottomColor: colors.border + '40' }]}>
-          <Text style={[s.headerTitle, { color: colors.text }]}>Explore</Text>
-        </View>
-        <View style={[s.searchBar, { backgroundColor: colors.surface, borderColor: colors.border + '30' }]}>
-          <Ionicons name="search" size={16} color={colors.textSecondary} />
-          <TextInput
-            style={[s.searchInput, { color: colors.text }]}
-            placeholder="Search repositories…"
-            placeholderTextColor={colors.textSecondary}
+        <NScreenHeader title="Explore" />
+        <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
+          <SearchBar
             value={repoSearch}
             onChangeText={setRepoSearch}
-            autoCorrect={false}
-            autoCapitalize="none"
+            placeholder="Search repositories…"
           />
-          {repoSearch.length > 0 && (
-            <TouchableOpacity onPress={() => setRepoSearch('')}>
-              <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
-            </TouchableOpacity>
-          )}
         </View>
         {loadingRepos ? (
           <View style={s.loadingContainer}>
@@ -179,14 +169,7 @@ export default function ExploreScreen() {
 
     return (
       <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-        <View style={[s.header, { borderBottomColor: colors.border + '40' }]}>
-          <TouchableOpacity onPress={handleBack} style={s.headerBtn}>
-            <Ionicons name="arrow-back" size={22} color={colors.primary} />
-          </TouchableOpacity>
-          <Text style={[s.headerTitle, { color: colors.text }]} numberOfLines={1}>
-            {selectedRepo.name}
-          </Text>
-        </View>
+        <NScreenHeader title={selectedRepo.name} onBack={handleBack} />
 
         <View style={[s.detailCard, { backgroundColor: colors.surface, borderColor: colors.border + '30' }]}>
           <View style={s.detailTop}>
