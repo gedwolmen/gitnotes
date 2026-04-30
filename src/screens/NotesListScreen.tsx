@@ -124,6 +124,7 @@ export default function NotesListScreen() {
   const [selectedRepo, setSelectedRepo] = useState<GitRepository | null>(null);
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
   const [selectedFormat, setSelectedFormat] = useState<NoteFormat | null>(null);
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const allTags = useMemo(() => {
@@ -136,8 +137,21 @@ export default function NotesListScreen() {
     return Array.from(tagSet).sort();
   }, [notes]);
 
+  const allFolders = useMemo(() => {
+    const set = new Set<string>();
+    notes.forEach((note) => {
+      if (note.folderPath && note.folderPath.trim().length > 0) {
+        set.add(note.folderPath);
+      }
+    });
+    return Array.from(set).sort();
+  }, [notes]);
+
   const activeFilterCount =
-    (selectedRepo ? 1 : 0) + (selectedFormat ? 1 : 0) + (selectedTags.length > 0 ? 1 : 0);
+    (selectedRepo ? 1 : 0) +
+    (selectedFolder ? 1 : 0) +
+    (selectedFormat ? 1 : 0) +
+    (selectedTags.length > 0 ? 1 : 0);
 
   const repoInfo = useMemo(
     () => (selectedRepo ? parseRepoPath(selectedRepo.path) : null),
@@ -146,7 +160,19 @@ export default function NotesListScreen() {
 
   const displayNotes = useMemo(() => {
     let result = filteredNotes;
-    if (!selectedRepo) return result;
+    if (selectedFolder)
+      result = result.filter((n: Note) => n.folderPath === selectedFolder);
+    if (!selectedRepo) {
+      if (selectedFormat)
+        result = result.filter(
+          (n: Note) => (n.format ?? "markdown") === selectedFormat,
+        );
+      if (selectedTags.length > 0)
+        result = result.filter((n: Note) =>
+          selectedTags.every((tag) => n.tags?.includes(tag)),
+        );
+      return result;
+    }
     result = result.filter((n: Note) => n.repo === selectedRepo.path);
     if (selectedBranch)
       result = result.filter((n: Note) => n.branch === selectedBranch);
@@ -163,6 +189,7 @@ export default function NotesListScreen() {
     filteredNotes,
     selectedRepo,
     selectedBranch,
+    selectedFolder,
     selectedFormat,
     selectedTags,
   ]);
@@ -186,6 +213,7 @@ export default function NotesListScreen() {
     setSelectedRepo(null);
     setSelectedBranch(null);
     setSelectedFormat(null);
+    setSelectedFolder(null);
     setSelectedTags([]);
   }, []);
 
@@ -825,10 +853,33 @@ export default function NotesListScreen() {
                 <Ionicons name="close" size={12} color={colors.primary} />
               </TouchableOpacity>
             )}
+            {selectedFolder && (
+              <TouchableOpacity
+                style={[
+                  styles.chip,
+                  {
+                    borderColor: colors.primary,
+                    backgroundColor: colors.primary + "15",
+                  },
+                ]}
+                onPress={() => setSelectedFolder(null)}
+              >
+                <Ionicons
+                  name="folder-outline"
+                  size={12}
+                  color={colors.primary}
+                />
+                <Text style={[styles.chipText, { color: colors.primary }]}>
+                  {selectedFolder}
+                </Text>
+                <Ionicons name="close" size={12} color={colors.primary} />
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={[styles.chip, { borderColor: colors.border + "60" }]}
               onPress={() => {
                 setSelectedFormat(null);
+                setSelectedFolder(null);
                 setSelectedTags([]);
               }}
             >
@@ -1117,6 +1168,93 @@ export default function NotesListScreen() {
                   ),
                 )}
               </View>
+
+              {/* Folder */}
+              {allFolders.length > 0 && (
+                <>
+                  <Text
+                    style={[
+                      styles.filterLabel,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    Folder
+                  </Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.filterChipRow}
+                  >
+                    <TouchableOpacity
+                      style={[
+                        styles.filterChip,
+                        { borderColor: colors.border },
+                        !selectedFolder && {
+                          borderColor: colors.primary,
+                          backgroundColor: colors.primary + "15",
+                        },
+                      ]}
+                      onPress={() => setSelectedFolder(null)}
+                    >
+                      <Text
+                        style={[
+                          styles.filterChipText,
+                          {
+                            color: !selectedFolder
+                              ? colors.primary
+                              : colors.text,
+                          },
+                        ]}
+                      >
+                        All
+                      </Text>
+                    </TouchableOpacity>
+                    {allFolders.map((folder) => {
+                      const isSelected = selectedFolder === folder;
+                      return (
+                        <TouchableOpacity
+                          key={folder}
+                          style={[
+                            styles.filterChip,
+                            { borderColor: colors.border },
+                            isSelected && {
+                              borderColor: colors.primary,
+                              backgroundColor: colors.primary + "15",
+                            },
+                          ]}
+                          onPress={() => {
+                            HapticService.selection();
+                            setSelectedFolder(isSelected ? null : folder);
+                          }}
+                        >
+                          <Ionicons
+                            name="folder-outline"
+                            size={13}
+                            color={
+                              isSelected
+                                ? colors.primary
+                                : colors.textSecondary
+                            }
+                          />
+                          <Text
+                            style={[
+                              styles.filterChipText,
+                              {
+                                color: isSelected
+                                  ? colors.primary
+                                  : colors.text,
+                              },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {folder}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </>
+              )}
 
               {/* Tags */}
               {allTags.length > 0 && (
