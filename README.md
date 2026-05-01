@@ -22,7 +22,7 @@ A React Native app built with Expo for managing development notes with Git integ
 
 ### Prerequisites
 
-- Node.js 22.x or higher
+- Node.js ≥ 20.18
 - npm or yarn
 - Expo CLI
 - iOS Simulator (for iOS development) or Android Emulator (for Android development)
@@ -63,9 +63,9 @@ gitnotes/
 ## Development
 
 Built with:
-- Expo SDK 55
-- React Native 0.83.4
-- TypeScript 5.9.3
+- Expo SDK 54
+- React Native 0.81.5
+- TypeScript 5.6
 - React Navigation v7
 
 ## Security
