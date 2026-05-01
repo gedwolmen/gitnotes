@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../navigation/types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNotes } from '../contexts/NoteContext';
+import { useCanvases } from '../contexts/CanvasContext';
 import { Note, NoteFormat } from '../models/Note';
 import { parseRepoPath } from '../components/RepoFileBrowser';
 import { HapticService } from '../utils/haptics';
@@ -81,10 +82,24 @@ function stripFormatting(content: string, format?: NoteFormat): string {
     .trim();
 }
 
+function relativeTime(ms: number): string {
+  const diff = Date.now() - ms;
+  const sec = Math.floor(diff / 1000);
+  if (sec < 60) return 'just now';
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.floor(hr / 24);
+  if (day < 7) return `${day}d ago`;
+  return new Date(ms).toLocaleDateString();
+}
+
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
   const { notes } = useNotes();
+  const { canvases } = useCanvases();
   const { isTablet, maxContentWidth } = useResponsive();
   const [showFormatPicker, setShowFormatPicker] = useState(false);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
@@ -139,6 +154,7 @@ export default function HomeScreen() {
   const recentLimit = isTablet ? 6 : 3;
   const recentNotes = notes.filter((n) => n.format !== 'pdf').slice(0, recentLimit);
   const recentDocuments = notes.filter((n) => n.format === 'pdf').slice(0, recentLimit);
+  const recentCanvases = canvases.slice(0, recentLimit);
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -165,6 +181,32 @@ export default function HomeScreen() {
           label="Canvases"
         />
       </View>
+
+      {recentCanvases.length > 0 && (
+        <View style={{ marginTop: 8, marginBottom: 16 }}>
+          <NGroup title="Recent Canvases">
+            {recentCanvases.map((canvas) => (
+              <NGroupRow
+                key={canvas.id}
+                onPress={() => navigation.navigate('CanvasEditor', { canvasId: canvas.id })}
+                leading={<Ionicons name="easel-outline" size={20} color={colors.accent} />}
+                trailing={(
+                  <Text style={[styles.recentNotePreview, { color: colors.textSecondary }]} numberOfLines={1}>
+                    {relativeTime(canvas.updatedAt)}
+                  </Text>
+                )}
+              >
+                <Text style={[styles.recentNoteTitle, { color: colors.text }]} numberOfLines={1}>
+                  {canvas.title || 'Untitled Canvas'}
+                </Text>
+                <Text style={[styles.recentNotePreview, { color: colors.textSecondary }]} numberOfLines={1}>
+                  {canvas.scene?.elements?.length ?? 0} elements
+                </Text>
+              </NGroupRow>
+            ))}
+          </NGroup>
+        </View>
+      )}
 
       {recentNotes.length > 0 && (
         <View style={{ marginTop: 8, marginBottom: 16 }}>
