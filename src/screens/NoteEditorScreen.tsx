@@ -999,16 +999,6 @@ export default function NoteEditorScreen() {
       <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
         <View style={styles.headerLeft}>
           <Button variant="ghost" label="Cancel" onPress={handleCancelEdit} disabled={isSaving} textStyle={styles.headerButtonText} />
-          {(canUndo || canRedo) && (
-            <View style={styles.undoRedoContainer}>
-              <IconButton size="sm" onPress={handleUndo} disabled={!canUndo} accessibilityLabel="Undo">
-                <Ionicons name="arrow-undo" size={20} color={canUndo ? colors.primary : colors.textSecondary} />
-              </IconButton>
-              <IconButton size="sm" onPress={handleRedo} disabled={!canRedo} accessibilityLabel="Redo">
-                <Ionicons name="arrow-redo" size={20} color={canRedo ? colors.primary : colors.textSecondary} />
-              </IconButton>
-            </View>
-          )}
         </View>
         <Text style={[styles.headerTitle, { color: colors.text }]}>
           {noteId ? 'Edit Note' : 'New Note'}
@@ -1025,6 +1015,17 @@ export default function NoteEditorScreen() {
       </View>
 
       <View style={[styles.toolbar, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
+        {(canUndo || canRedo) && (
+          <>
+            <IconButton size="sm" onPress={handleUndo} disabled={!canUndo} accessibilityLabel="Undo">
+              <Ionicons name="arrow-undo" size={20} color={canUndo ? colors.primary : colors.textSecondary} />
+            </IconButton>
+            <IconButton size="sm" onPress={handleRedo} disabled={!canRedo} accessibilityLabel="Redo">
+              <Ionicons name="arrow-redo" size={20} color={canRedo ? colors.primary : colors.textSecondary} />
+            </IconButton>
+            <View style={{ width: 1, height: 20, backgroundColor: colors.border, marginHorizontal: 4 }} />
+          </>
+        )}
         <IconButton size="sm" onPress={() => setShowVoiceModal(true)} accessibilityLabel="Voice input">
           <Ionicons name="mic-outline" size={20} color={colors.primary} />
         </IconButton>
@@ -1202,10 +1203,6 @@ const styles = StyleSheet.create({
   },
   headerButtonText: {
     fontSize: 16,
-  },
-  undoRedoContainer: {
-    flexDirection: 'row',
-    marginLeft: 8,
   },
   headerTitle: {
     fontSize: 16,
