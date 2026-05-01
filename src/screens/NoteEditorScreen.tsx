@@ -11,8 +11,8 @@ import {
   ScrollView,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  Image,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
@@ -517,7 +517,8 @@ export default function NoteEditorScreen() {
           <Image
             key={node.key}
             source={{ uri: pngUri }}
-            resizeMode="contain"
+            contentFit="contain"
+            accessibilityLabel={alt || undefined}
             style={{ width: '100%', height: 240, borderRadius: 6, backgroundColor: '#fff' }}
           />
         );
@@ -526,7 +527,8 @@ export default function NoteEditorScreen() {
         <Image
           key={node.key}
           source={{ uri: src }}
-          resizeMode="contain"
+          contentFit="contain"
+          accessibilityLabel={alt || undefined}
           style={{ width: '100%', height: 240, borderRadius: 6, backgroundColor: colors.surfaceSecondary }}
         />
       );

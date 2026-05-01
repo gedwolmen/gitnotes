@@ -6,13 +6,13 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  Image,
   Modal,
   TextInput,
   ActivityIndicator,
   Linking,
   Dimensions,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNotes } from '../contexts/NoteContext';
