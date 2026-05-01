@@ -34,8 +34,7 @@ interface BottomSheetProps {
 }
 
 function BottomSheet({ visible, title, onClose, children }: BottomSheetProps) {
-  const { colors, isDark } = useTheme();
-  const sheetBg = isDark ? '#1C1C1E' : colors.surface;
+  const { colors } = useTheme();
   return (
     <Modal
       visible={visible}
@@ -49,7 +48,7 @@ function BottomSheet({ visible, title, onClose, children }: BottomSheetProps) {
       >
         <SafeAreaView
           edges={['top', 'bottom']}
-          style={[styles.sheet, { backgroundColor: sheetBg }]}
+          style={[styles.sheet, { backgroundColor: colors.elevated }]}
         >
           <View style={[styles.sheetHeader, { borderBottomColor: colors.border }]}>
             <Text style={[styles.sheetTitle, { color: colors.text }]}>{title}</Text>
@@ -246,7 +245,7 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
       </TouchableOpacity>
 
       {isExpanded && (
-        <View style={[styles.content, { backgroundColor: isDark ? colors.background : '#fafafa' }]}>
+        <View style={[styles.content, { backgroundColor: isDark ? colors.background : colors.surfaceSecondary }]}>
           {/* Repository */}
           <View style={styles.selectorRow}>
             <Text style={[styles.selectorLabel, { color: colors.textSecondary }]}>Repository</Text>

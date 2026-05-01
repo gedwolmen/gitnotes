@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { Modal as RNModal, Pressable, StyleSheet, useWindowDimensions, ViewStyle, StyleProp } from 'react-native';
+import { Modal as RNModal, Pressable, StyleSheet, View, useWindowDimensions, ViewStyle, StyleProp } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Surface } from './Surface';
 import { useTheme, useTokens } from '../../contexts/ThemeContext';
@@ -16,11 +16,10 @@ export interface ModalProps {
 export function Modal(props: ModalProps) {
   const { visible, onRequestClose, dismissOnBackdrop = true, contentStyle, children, fullWidth = false } = props;
   const { isDark } = useTheme();
-  const { spacing } = useTokens();
+  const { spacing, colors } = useTokens();
   const { height: viewportHeight, width: viewportWidth } = useWindowDimensions();
 
   const pad = spacing[5];
-  // Definite pixel sizes so percentage heights on Surface (via contentStyle) resolve.
   const slotHeight = Math.max(0, viewportHeight - pad * 2);
   const slotWidth = Math.max(0, viewportWidth - pad * 2);
 
@@ -57,9 +56,9 @@ export function Modal(props: ModalProps) {
           <Surface
             elevation="floating"
             radius="lg"
-            style={[{ padding: pad, maxHeight: slotHeight }, contentStyle]}
+            style={[{ padding: pad, maxHeight: slotHeight, backgroundColor: colors.elevated }, contentStyle]}
           >
-            {children}
+            <View>{children}</View>
           </Surface>
         </Pressable>
       </Pressable>

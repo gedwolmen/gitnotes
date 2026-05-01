@@ -15,6 +15,7 @@ export interface Palette {
   primary: string;
   border: string;
   card: string;
+  elevated: string;
 }
 
 // Neumorphic palette uses a near-pure white (light) / black (dark) surface
@@ -35,6 +36,7 @@ export const NEUMORPHIC_LIGHT: Palette = {
   primary: '#7B8CDE',
   border: '#D8D8D8',
   card: '#FFFFFF',
+  elevated: '#FFFFFF',
 };
 
 export const NEUMORPHIC_DARK: Palette = {
@@ -52,6 +54,7 @@ export const NEUMORPHIC_DARK: Palette = {
   primary: '#8B9BE8',
   border: '#262626',
   card: '#0A0A0A',
+  elevated: '#1C1C1E',
 };
 
 export const FLAT_LIGHT: Palette = {
@@ -69,6 +72,7 @@ export const FLAT_LIGHT: Palette = {
   primary: '#007AFF',
   border: '#c6c6c8',
   card: '#ffffff',
+  elevated: '#ffffff',
 };
 
 export const FLAT_DARK: Palette = {
@@ -86,6 +90,7 @@ export const FLAT_DARK: Palette = {
   primary: '#0a84ff',
   border: '#38383a',
   card: '#2c2c2e',
+  elevated: '#2c2c2e',
 };
 
 export const RADII = { sm: 12, md: 18, lg: 24, pill: 999 } as const;
