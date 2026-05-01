@@ -53,7 +53,8 @@ export default function TemplateSelector({ visible, onClose, onSelect }: Templat
   const [searchQuery, setSearchQuery] = useState('');
   const [templates, setTemplates] = useState<NoteTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
+  const containerBg = isDark ? '#1C1C1E' : colors.background;
 
   const loadTemplates = useCallback(async () => {
     setIsLoading(true);
@@ -86,15 +87,15 @@ export default function TemplateSelector({ visible, onClose, onSelect }: Templat
       fullWidth
       contentStyle={styles.modalContent}
     >
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+      <View style={[styles.container, { backgroundColor: containerBg }]}>
+        <View style={[styles.header, { backgroundColor: isDark ? '#252528' : colors.surface, borderBottomColor: colors.border }]}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Choose a Template</Text>
           <TouchableOpacity onPress={onClose}>
             <Ionicons name="close" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
-        <View style={[styles.searchContainer, { backgroundColor: colors.surface }]}>
+        <View style={[styles.searchContainer, { backgroundColor: isDark ? '#252528' : colors.surface }]}>
           <View style={[styles.searchInputContainer, { backgroundColor: colors.surfaceSecondary }]}>
             <Ionicons name="search" size={20} color={colors.textSecondary} />
             <TextInput
