@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
-exports[`NButton snapshots primary in light + dark: primary-dark 1`] = `
+exports[`Button snapshots primary in light + dark: primary-dark 1`] = `
 <View
   style={
     [
@@ -134,7 +134,7 @@ exports[`NButton snapshots primary in light + dark: primary-dark 1`] = `
 </View>
 `;
 
-exports[`NButton snapshots primary in light + dark: primary-light 1`] = `
+exports[`Button snapshots primary in light + dark: primary-light 1`] = `
 <View
   style={
     [

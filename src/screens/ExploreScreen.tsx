@@ -21,7 +21,7 @@ import { HapticService } from '../utils/haptics';
 import { parseRepoPath } from '../utils/gitPathParser';
 import RepoFileTree, { TreeNode } from '../components/RepoFileTree';
 import { RootStackParamList } from '../navigation/types';
-import { NScreenHeader } from '../components/neumorphic';
+import { ScreenHeader } from '../components/ui';
 import SearchBar from '../components/SearchBar';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -127,7 +127,7 @@ export default function ExploreScreen() {
   if (view === 'repoList') {
     return (
       <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-        <NScreenHeader title="Explore" />
+        <ScreenHeader title="Explore" />
         <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
           <SearchBar
             value={repoSearch}
@@ -169,7 +169,7 @@ export default function ExploreScreen() {
 
     return (
       <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-        <NScreenHeader title={selectedRepo.name} onBack={handleBack} />
+        <ScreenHeader title={selectedRepo.name} onBack={handleBack} />
 
         <View style={[s.detailCard, { backgroundColor: colors.surface, borderColor: colors.border + '30' }]}>
           <View style={s.detailTop}>

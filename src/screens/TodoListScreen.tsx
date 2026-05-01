@@ -24,7 +24,7 @@ import { HapticService } from '../utils/haptics';
 import { useResponsive } from '../hooks/useResponsive';
 import GitContextPicker from '../components/GitContextPicker';
 import { syncTodoToGitHub } from '../services/TodoGitHubSyncService';
-import { NIconButton, NScreenHeader } from '../components/neumorphic';
+import { IconButton, ScreenHeader } from '../components/ui';
 import SearchBar from '../components/SearchBar';
 
 function formatDeadline(timestamp: number): string {
@@ -366,11 +366,11 @@ export default function TodoListScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }, isTablet && { maxWidth: maxContentWidth, alignSelf: 'center', width: '100%' }]}>
-      <NScreenHeader
+      <ScreenHeader
         title="Todos"
         actions={
           <>
-            <NIconButton
+            <IconButton
               size="sm"
               active={filterCompleted}
               onPress={() => setFilterCompleted(!filterCompleted)}
@@ -381,10 +381,10 @@ export default function TodoListScreen() {
                 size={18}
                 color={filterCompleted ? colors.accent : colors.textSecondary}
               />
-            </NIconButton>
-            <NIconButton size="sm" onPress={() => setShowAddModal(true)} accessibilityLabel="Add todo">
+            </IconButton>
+            <IconButton size="sm" onPress={() => setShowAddModal(true)} accessibilityLabel="Add todo">
               <Ionicons name="add" size={20} color={colors.accent} />
-            </NIconButton>
+            </IconButton>
           </>
         }
       />

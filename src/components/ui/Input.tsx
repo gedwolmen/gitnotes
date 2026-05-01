@@ -3,7 +3,7 @@ import { StyleProp, TextInput, TextInputProps, TextStyle, View, ViewStyle } from
 import { Surface } from './Surface';
 import { useTokens } from '../../contexts/ThemeContext';
 
-export interface NInputProps extends Omit<TextInputProps, 'style'> {
+export interface InputProps extends Omit<TextInputProps, 'style'> {
   leading?: ReactNode;
   trailing?: ReactNode;
   containerStyle?: StyleProp<ViewStyle>;
@@ -11,7 +11,7 @@ export interface NInputProps extends Omit<TextInputProps, 'style'> {
   multilineMinHeight?: number;
 }
 
-export const NInput = forwardRef<TextInput, NInputProps>(function NInput(props, ref) {
+export const Input = forwardRef<TextInput, InputProps>(function Input(props, ref) {
   const {
     leading,
     trailing,

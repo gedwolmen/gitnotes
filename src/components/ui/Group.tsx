@@ -3,14 +3,14 @@ import { Pressable, StyleProp, Text, View, ViewStyle } from 'react-native';
 import { Surface } from './Surface';
 import { useTokens } from '../../contexts/ThemeContext';
 
-export interface NGroupProps {
+export interface GroupProps {
   title?: string;
   footer?: string;
   style?: StyleProp<ViewStyle>;
   children?: ReactNode;
 }
 
-export function NGroup(props: NGroupProps) {
+export function Group(props: GroupProps) {
   const { title, footer, style, children } = props;
   const { colors, spacing, type } = useTokens();
   const items = React.Children.toArray(children).filter(Boolean);
@@ -70,7 +70,7 @@ export function NGroup(props: NGroupProps) {
   );
 }
 
-export interface NGroupRowProps {
+export interface GroupRowProps {
   onPress?: () => void;
   onLongPress?: () => void;
   disabled?: boolean;
@@ -81,7 +81,7 @@ export interface NGroupRowProps {
   testID?: string;
 }
 
-export function NGroupRow(props: NGroupRowProps) {
+export function GroupRow(props: GroupRowProps) {
   const { onPress, onLongPress, disabled, leading, trailing, style, children, testID } = props;
   const { colors, spacing } = useTokens();
 

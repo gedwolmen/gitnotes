@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
-exports[`NGroup snapshots a 2-row group 1`] = `
+exports[`Group snapshots a 2-row group 1`] = `
 <View
   style={
     [

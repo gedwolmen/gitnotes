@@ -3,7 +3,7 @@ import { Pressable, StyleProp, Text, ViewStyle } from 'react-native';
 import { Surface } from './Surface';
 import { useTokens } from '../../contexts/ThemeContext';
 
-export interface NChipProps {
+export interface ChipProps {
   label?: string;
   active?: boolean;
   onPress?: () => void;
@@ -14,7 +14,7 @@ export interface NChipProps {
   children?: ReactNode;
 }
 
-export function NChip(props: NChipProps) {
+export function Chip(props: ChipProps) {
   const { label, active = false, onPress, onLongPress, leading, trailing, style, children } = props;
   const { colors, spacing, type } = useTokens();
 

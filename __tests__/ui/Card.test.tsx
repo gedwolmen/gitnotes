@@ -1,16 +1,16 @@
 import React from 'react';
 import { Text } from 'react-native';
 import { render, fireEvent } from '@testing-library/react-native';
-import { NCard } from '../../src/components/neumorphic/NCard';
+import { Card } from '../../src/components/ui/Card';
 import { TestThemeProvider } from './testThemeProvider';
 
-describe('NCard', () => {
+describe('Card', () => {
   it('renders children', () => {
     const { getByText } = render(
       <TestThemeProvider>
-        <NCard>
+        <Card>
           <Text>card body</Text>
-        </NCard>
+        </Card>
       </TestThemeProvider>,
     );
     expect(getByText('card body')).toBeTruthy();
@@ -20,9 +20,9 @@ describe('NCard', () => {
     const onPress = jest.fn();
     const { getByText } = render(
       <TestThemeProvider>
-        <NCard onPress={onPress}>
+        <Card onPress={onPress}>
           <Text>tap</Text>
-        </NCard>
+        </Card>
       </TestThemeProvider>,
     );
     fireEvent.press(getByText('tap'));
@@ -33,9 +33,9 @@ describe('NCard', () => {
     const onPress = jest.fn();
     const { getByText } = render(
       <TestThemeProvider>
-        <NCard onPress={onPress} disabled>
+        <Card onPress={onPress} disabled>
           <Text>nope</Text>
-        </NCard>
+        </Card>
       </TestThemeProvider>,
     );
     fireEvent.press(getByText('nope'));
@@ -45,9 +45,9 @@ describe('NCard', () => {
   it('snapshots non-interactive light', () => {
     const tree = render(
       <TestThemeProvider>
-        <NCard>
+        <Card>
           <Text>snap</Text>
-        </NCard>
+        </Card>
       </TestThemeProvider>,
     ).toJSON();
     expect(tree).toMatchSnapshot();

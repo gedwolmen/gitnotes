@@ -2,9 +2,9 @@ import React, { ReactNode } from 'react';
 import { Text, View, StyleProp, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTokens } from '../../contexts/ThemeContext';
-import { NIconButton } from './NIconButton';
+import { IconButton } from './IconButton';
 
-export interface NScreenHeaderProps {
+export interface ScreenHeaderProps {
   title: string;
   subtitle?: string;
   onBack?: () => void;
@@ -12,7 +12,7 @@ export interface NScreenHeaderProps {
   style?: StyleProp<ViewStyle>;
 }
 
-export function NScreenHeader(props: NScreenHeaderProps) {
+export function ScreenHeader(props: ScreenHeaderProps) {
   const { title, subtitle, onBack, actions, style } = props;
   const { colors, spacing, type } = useTokens();
 
@@ -31,9 +31,9 @@ export function NScreenHeader(props: NScreenHeaderProps) {
       ]}
     >
       {onBack && (
-        <NIconButton size="sm" onPress={onBack} accessibilityLabel="Back">
+        <IconButton size="sm" onPress={onBack} accessibilityLabel="Back">
           <Ionicons name="arrow-back" size={18} color={colors.accent} />
-        </NIconButton>
+        </IconButton>
       )}
       <View style={{ flex: 1 }}>
         <Text

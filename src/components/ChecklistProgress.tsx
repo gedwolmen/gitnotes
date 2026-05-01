@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 import { formatChecklistProgress } from '../utils/checklist';
-import { Surface } from './neumorphic';
+import { Surface } from './ui';
 
 interface ChecklistProgressProps {
   total: number;

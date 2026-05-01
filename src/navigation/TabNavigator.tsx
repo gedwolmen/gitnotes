@@ -18,7 +18,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 import { BottomTabParamList } from './types';
 import { useResponsive } from '../hooks/useResponsive';
 import { useTheme } from '../contexts/ThemeContext';
-import { NTabBar } from '../components/neumorphic';
+import { TabBar } from '../components/ui';
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 
@@ -145,7 +145,7 @@ export default function TabNavigator() {
         isTablet
           ? (props) => <TabletRail {...props} />
           : useNeumorphicBar
-            ? (props) => <NTabBar {...props} />
+            ? (props) => <TabBar {...props} />
             : undefined
       }
       screenOptions={({ route }) => ({

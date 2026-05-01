@@ -1,14 +1,14 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import { NToggle } from '../../src/components/neumorphic/NToggle';
+import { Toggle } from '../../src/components/ui/Toggle';
 import { TestThemeProvider } from './testThemeProvider';
 
-describe('NToggle', () => {
+describe('Toggle', () => {
   it('fires onValueChange when pressed', () => {
     const onValueChange = jest.fn();
     const { getByTestId } = render(
       <TestThemeProvider>
-        <NToggle value={false} onValueChange={onValueChange} testID="toggle" />
+        <Toggle value={false} onValueChange={onValueChange} testID="toggle" />
       </TestThemeProvider>,
     );
     fireEvent.press(getByTestId('toggle'));
@@ -19,7 +19,7 @@ describe('NToggle', () => {
     const onValueChange = jest.fn();
     const { getByTestId } = render(
       <TestThemeProvider>
-        <NToggle value={true} onValueChange={onValueChange} testID="toggle" />
+        <Toggle value={true} onValueChange={onValueChange} testID="toggle" />
       </TestThemeProvider>,
     );
     fireEvent.press(getByTestId('toggle'));
@@ -30,7 +30,7 @@ describe('NToggle', () => {
     expect(
       render(
         <TestThemeProvider>
-          <NToggle value={false} onValueChange={() => undefined} />
+          <Toggle value={false} onValueChange={() => undefined} />
         </TestThemeProvider>,
       ).toJSON(),
     ).toMatchSnapshot('toggle-off');
@@ -38,7 +38,7 @@ describe('NToggle', () => {
     expect(
       render(
         <TestThemeProvider>
-          <NToggle value={true} onValueChange={() => undefined} />
+          <Toggle value={true} onValueChange={() => undefined} />
         </TestThemeProvider>,
       ).toJSON(),
     ).toMatchSnapshot('toggle-on');

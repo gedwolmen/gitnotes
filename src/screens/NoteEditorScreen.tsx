@@ -56,7 +56,7 @@ import { syncNoteToGitHub } from '../services/NoteGitHubSyncService';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import { PositionMemoryService } from '../services/PositionMemoryService';
 import { getMarkdownStyles } from '../utils/preview';
-import { NIconButton, NModal } from '../components/neumorphic';
+import { IconButton, Modal } from '../components/ui';
 
 interface TocEntry {
   level: number;
@@ -820,32 +820,32 @@ export default function NoteEditorScreen() {
     return (
       <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface, gap: 8 }]}>
-          <NIconButton size="sm" onPress={() => navigation.goBack()} accessibilityLabel="Back">
+          <IconButton size="sm" onPress={() => navigation.goBack()} accessibilityLabel="Back">
             <Ionicons name="arrow-back" size={20} color={colors.accent} />
-          </NIconButton>
+          </IconButton>
           <View style={styles.flex} />
           {!isPdfNote && tocEntries.length > 0 ? (
-            <NIconButton size="sm" onPress={() => { HapticService.light(); setShowToc(true); }} accessibilityLabel="Table of contents">
+            <IconButton size="sm" onPress={() => { HapticService.light(); setShowToc(true); }} accessibilityLabel="Table of contents">
               <Ionicons name="list" size={18} color={colors.accent} />
-            </NIconButton>
+            </IconButton>
           ) : null}
           {!isPdfNote && speakableContent ? (
-            <NIconButton size="sm" onPress={handleToggleSpeak} accessibilityLabel="Read aloud">
+            <IconButton size="sm" onPress={handleToggleSpeak} accessibilityLabel="Read aloud">
               <Ionicons
                 name={isSpeaking ? 'stop-circle' : 'volume-high'}
                 size={18}
                 color={colors.accent}
               />
-            </NIconButton>
+            </IconButton>
           ) : null}
           {!isPdfNote && (
-            <NIconButton
+            <IconButton
               size="sm"
               onPress={() => { HapticService.light(); setIsEditing(true); }}
               accessibilityLabel="Edit"
             >
               <Ionicons name="pencil" size={18} color={colors.accent} />
-            </NIconButton>
+            </IconButton>
           )}
         </View>
 
@@ -895,7 +895,7 @@ export default function NoteEditorScreen() {
             )}
           </ScrollView>
         )}
-        <NModal visible={showToc} onRequestClose={() => setShowToc(false)} fullWidth>
+        <Modal visible={showToc} onRequestClose={() => setShowToc(false)} fullWidth>
           <Text style={[styles.tocTitle, { color: colors.text }]}>Table of contents</Text>
           {tocEntries.length === 0 ? (
             <Text style={{ color: colors.textSecondary }}>No headings in this note.</Text>
@@ -927,7 +927,7 @@ export default function NoteEditorScreen() {
           <TouchableOpacity onPress={() => setShowToc(false)} style={styles.tocClose}>
             <Text style={{ color: colors.primary, fontWeight: '600' }}>Close</Text>
           </TouchableOpacity>
-        </NModal>
+        </Modal>
       </SafeAreaView>
     );
   }
@@ -1106,18 +1106,18 @@ export default function NoteEditorScreen() {
       </View>
 
       <View style={[styles.toolbar, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
-        <NIconButton size="sm" onPress={() => setShowVoiceModal(true)} accessibilityLabel="Voice input">
+        <IconButton size="sm" onPress={() => setShowVoiceModal(true)} accessibilityLabel="Voice input">
           <Ionicons name="mic-outline" size={20} color={colors.primary} />
-        </NIconButton>
-        <NIconButton size="sm" onPress={() => setShowCanvasModal(true)} accessibilityLabel="Insert canvas">
+        </IconButton>
+        <IconButton size="sm" onPress={() => setShowCanvasModal(true)} accessibilityLabel="Insert canvas">
           <Ionicons name="brush-outline" size={20} color={colors.primary} />
-        </NIconButton>
-        <NIconButton size="sm" onPress={handlePickImage} accessibilityLabel="Insert image">
+        </IconButton>
+        <IconButton size="sm" onPress={handlePickImage} accessibilityLabel="Insert image">
           <Ionicons name="image-outline" size={20} color={colors.primary} />
-        </NIconButton>
-        <NIconButton size="sm" onPress={() => setShowCanvasPicker(true)} accessibilityLabel="Link existing canvas">
+        </IconButton>
+        <IconButton size="sm" onPress={() => setShowCanvasPicker(true)} accessibilityLabel="Link existing canvas">
           <Ionicons name="easel-outline" size={20} color={colors.primary} />
-        </NIconButton>
+        </IconButton>
       </View>
 
       {sideBySide ? (
@@ -1168,7 +1168,7 @@ export default function NoteEditorScreen() {
   );
 }
 
-import { Modal, FlatList } from 'react-native';
+import { Modal as RNModal, FlatList } from 'react-native';
 import { Canvas } from '../models/Canvas';
 
 interface CanvasPickerProps {
@@ -1198,7 +1198,7 @@ function CanvasPickerModal({ visible, canvases, onSelect, onClose }: CanvasPicke
   );
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <RNModal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView edges={['top', 'bottom']} style={[canvasPickerStyles.container, { backgroundColor: colors.background }]}>
         <View style={canvasPickerStyles.header}>
           <TouchableOpacity onPress={onClose} style={canvasPickerStyles.closeBtn}>
@@ -1220,7 +1220,7 @@ function CanvasPickerModal({ visible, canvases, onSelect, onClose }: CanvasPicke
           }
         />
       </SafeAreaView>
-    </Modal>
+    </RNModal>
   );
 }
 

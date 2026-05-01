@@ -5,14 +5,14 @@ import * as Haptics from 'expo-haptics';
 import { Surface } from './Surface';
 import { useTokens } from '../../contexts/ThemeContext';
 
-export type NIconButtonSize = 'sm' | 'md' | 'lg';
+export type IconButtonSize = 'sm' | 'md' | 'lg';
 
-const SIZE_MAP: Record<NIconButtonSize, number> = { sm: 36, md: 44, lg: 56 };
+const SIZE_MAP: Record<IconButtonSize, number> = { sm: 36, md: 44, lg: 56 };
 
-export interface NIconButtonProps {
+export interface IconButtonProps {
   onPress?: () => void;
   onLongPress?: () => void;
-  size?: NIconButtonSize;
+  size?: IconButtonSize;
   disabled?: boolean;
   active?: boolean;
   variant?: 'default' | 'primary';
@@ -22,7 +22,7 @@ export interface NIconButtonProps {
   children: ReactNode;
 }
 
-export function NIconButton(props: NIconButtonProps) {
+export function IconButton(props: IconButtonProps) {
   const {
     onPress,
     onLongPress,

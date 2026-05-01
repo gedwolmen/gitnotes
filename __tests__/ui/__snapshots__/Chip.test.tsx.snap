@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
-exports[`NChip snapshots inactive + active: chip-active 1`] = `
+exports[`Chip snapshots inactive + active: chip-active 1`] = `
 <View
   style={
     [
@@ -70,7 +70,7 @@ exports[`NChip snapshots inactive + active: chip-active 1`] = `
 </View>
 `;
 
-exports[`NChip snapshots inactive + active: chip-inactive 1`] = `
+exports[`Chip snapshots inactive + active: chip-inactive 1`] = `
 <View
   style={
     [

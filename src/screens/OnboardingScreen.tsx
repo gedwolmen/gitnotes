@@ -14,7 +14,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { OnboardingService } from '../services/OnboardingService';
 import { AuthService } from '../services/AuthService';
 import { GitHubService } from '../services/GitHubService';
-import { NButton, NInput, Surface } from '../components/neumorphic';
+import { Button, Input, Surface } from '../components/ui';
 
 interface OnboardingScreenProps {
   onComplete: () => void;
@@ -95,7 +95,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.header}>
-          <NButton variant="ghost" label="Skip" onPress={handleSkip} />
+          <Button variant="ghost" label="Skip" onPress={handleSkip} />
         </View>
 
         {isTokenStep ? (
@@ -109,7 +109,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
               Enter a Personal Access Token to link your notes to GitHub issues and milestones. You can skip this and add it later in Settings.
             </Text>
 
-            <NButton
+            <Button
               variant="ghost"
               onPress={() => Linking.openURL('https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens')}
               leadingIcon={<Ionicons name="help-circle-outline" size={14} color={colors.accent} />}
@@ -119,7 +119,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
               textStyle={{ color: colors.text, fontSize: 14, fontWeight: '500' }}
               style={{ marginBottom: 8 }}
             />
-            <NButton
+            <Button
               variant="ghost"
               onPress={() => Linking.openURL('https://github.com/settings/tokens/new?scopes=repo,read:user&description=GitNotes')}
               leadingIcon={<Ionicons name="open-outline" size={14} color={colors.accent} />}
@@ -128,7 +128,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
               style={{ marginBottom: 16 }}
             />
 
-            <NInput
+            <Input
               placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
               value={token}
               onChangeText={(t) => { setToken(t); setTokenError(null); }}
@@ -174,7 +174,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
             ))}
           </View>
 
-          <NButton
+          <Button
             variant="primary"
             fullWidth
             onPress={handleNext}

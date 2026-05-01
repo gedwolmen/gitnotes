@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text } from 'react-native';
 import { render } from '@testing-library/react-native';
-import { Surface } from '../../src/components/neumorphic/Surface';
+import { Surface } from '../../src/components/ui/Surface';
 import { TestThemeProvider } from './testThemeProvider';
 
 describe('Surface', () => {
