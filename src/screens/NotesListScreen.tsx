@@ -395,9 +395,10 @@ export default function NotesListScreen() {
     setIsPullRefreshing(true);
     HapticService.light();
 
-    const timeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Sync timed out")), 60000),
-    );
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const timeout = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error("Sync timed out")), 60000);
+    });
 
     try {
       await Promise.race([
@@ -413,6 +414,7 @@ export default function NotesListScreen() {
       HapticService.warning();
       console.warn("[Sync] pull-refresh failed:", pullError);
     } finally {
+      if (timeoutId !== null) clearTimeout(timeoutId);
       setIsPullRefreshing(false);
     }
   }, [isPullRefreshing, refreshNotes]);
