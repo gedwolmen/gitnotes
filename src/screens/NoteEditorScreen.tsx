@@ -198,9 +198,17 @@ export default function NoteEditorScreen() {
     return `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}?ref=${encodeURIComponent(ref)}`;
   }, []);
 
+  // Keep getNoteById in a ref so the load effect below depends only on
+  // noteId — otherwise external updates to the notes array (background
+  // pulls, other-note edits) re-fire it and clobber unsaved local edits.
+  const getNoteByIdRef = useRef(getNoteById);
+  useEffect(() => {
+    getNoteByIdRef.current = getNoteById;
+  }, [getNoteById]);
+
   useEffect(() => {
     if (noteId) {
-      const existingNote = getNoteById(noteId);
+      const existingNote = getNoteByIdRef.current(noteId);
       if (existingNote) {
         setTitle(existingNote.title);
         setContent(existingNote.content);
@@ -214,7 +222,7 @@ export default function NoteEditorScreen() {
         setAttachments(existingNote.attachments || []);
       }
     }
-  }, [noteId, getNoteById, setContent]);
+  }, [noteId, setContent]);
 
   const handleTitleChange = useCallback((text: string) => {
     setTitle(text);
