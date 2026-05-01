@@ -32,6 +32,7 @@ import type { SkPath } from '@shopify/react-native-skia';
 import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useCanvases } from '../contexts/CanvasContext';
+import { useTheme } from '../contexts/ThemeContext';
 import {
   CanvasScene,
   CanvasElement,
@@ -133,6 +134,8 @@ export default function CanvasEditorScreen() {
     return () => sub.remove();
   }, [navigation]);
   const { getCanvasById, createCanvas, updateCanvas } = useCanvases();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const cw = canvasWidth ?? Dimensions.get('window').width;
   const [canvasSize, setCanvasSize] = useState<{ width: number; height: number } | null>(null);
@@ -607,7 +610,13 @@ export default function CanvasEditorScreen() {
         >
           <Ionicons name="chevron-back" size={28} color="#007AFF" />
         </TouchableOpacity>
-        <TextInput style={styles.titleInput} value={title} onChangeText={setTitle} placeholder="Canvas Title" />
+        <TextInput
+          style={styles.titleInput}
+          value={title}
+          onChangeText={setTitle}
+          placeholder="Canvas Title"
+          placeholderTextColor={colors.textSecondary}
+        />
         <TouchableOpacity onPress={saveCanvas} style={styles.saveBtn}>
           <Text style={styles.saveBtnText}>Save</Text>
         </TouchableOpacity>
@@ -707,13 +716,14 @@ export default function CanvasEditorScreen() {
               onChangeText={setTextInput}
               autoFocus
               placeholder="Type here..."
+              placeholderTextColor={colors.textSecondary}
             />
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.modalBtn} onPress={() => setTextModalVisible(false)}>
-                <Text>Cancel</Text>
+                <Text style={{ color: colors.textSecondary }}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalBtn} onPress={addTextElement}>
-                <Text style={{ color: '#007AFF', fontWeight: '600' }}>Add</Text>
+                <Text style={{ color: colors.primary, fontWeight: '600' }}>Add</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -724,8 +734,10 @@ export default function CanvasEditorScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+type StyleColors = ReturnType<typeof useTheme>['colors'];
+
+const makeStyles = (colors: StyleColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   safeArea: { flex: 1 },
   header: {
     height: 52,
@@ -733,69 +745,76 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ddd',
+    borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
   },
   iconBtn: { padding: 8 },
-  iconText: { fontSize: 15, color: '#007AFF' },
+  iconText: { fontSize: 15, color: colors.primary },
   backBtn: { paddingVertical: 8, paddingHorizontal: 4, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   titleInput: {
     flex: 1,
     marginHorizontal: 8,
     height: 36,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
     borderRadius: 6,
     paddingHorizontal: 8,
     fontSize: 15,
+    color: colors.text,
+    backgroundColor: colors.surface,
   },
-  saveBtn: { backgroundColor: '#007AFF', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 6 },
+  saveBtn: { backgroundColor: colors.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 6 },
   saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
   toolbar: {
     paddingVertical: 6,
     paddingHorizontal: 4,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ddd',
+    borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
   },
   toolBtn: {
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
     borderRadius: 6,
     marginRight: 4,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  toolBtnActive: { backgroundColor: '#e0ecff', borderColor: '#007AFF' },
-  toolBtnLabel: { fontSize: 16 },
-  separator: { width: 1, height: 28, backgroundColor: '#ddd', marginHorizontal: 4 },
+  toolBtnActive: { backgroundColor: colors.primary + '22', borderColor: colors.primary },
+  toolBtnLabel: { fontSize: 16, color: colors.text },
+  separator: { width: 1, height: 28, backgroundColor: colors.border, marginHorizontal: 4 },
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 6,
     paddingHorizontal: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ddd',
+    borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
     gap: 4,
   },
-  swatch: { width: 22, height: 22, borderRadius: 11, borderWidth: 1, borderColor: '#ccc' },
-  swatchActive: { borderWidth: 2, borderColor: '#007AFF', transform: [{ scale: 1.15 }] },
+  swatch: { width: 22, height: 22, borderRadius: 11, borderWidth: 1, borderColor: colors.border },
+  swatchActive: { borderWidth: 2, borderColor: colors.primary, transform: [{ scale: 1.15 }] },
   sizeInput: {
     width: 36,
     height: 28,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
     borderRadius: 4,
     textAlign: 'center',
     fontSize: 13,
     marginLeft: 8,
+    color: colors.text,
+    backgroundColor: colors.surface,
   },
-  canvasPane: { flex: 1, overflow: 'hidden' },
+  canvasPane: { flex: 1, overflow: 'hidden', backgroundColor: '#FFFFFF' },
   gitContextContainer: { paddingHorizontal: 16, paddingVertical: 8 },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' },
-  modalCard: { width: 300, padding: 16, backgroundColor: '#fff', borderRadius: 12 },
-  modalTitle: { fontSize: 16, fontWeight: '600', marginBottom: 10 },
-  modalInput: { height: 40, borderWidth: 1, borderColor: '#ddd', borderRadius: 6, paddingHorizontal: 8, fontSize: 15 },
+  modalCard: { width: 300, padding: 16, backgroundColor: colors.surface, borderRadius: 12 },
+  modalTitle: { fontSize: 16, fontWeight: '600', marginBottom: 10, color: colors.text },
+  modalInput: { height: 40, borderWidth: 1, borderColor: colors.border, borderRadius: 6, paddingHorizontal: 8, fontSize: 15, color: colors.text },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 12, gap: 16 },
   modalBtn: { paddingVertical: 6, paddingHorizontal: 12 },
 });

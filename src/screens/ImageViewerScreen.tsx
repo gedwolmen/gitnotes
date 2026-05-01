@@ -5,9 +5,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Image,
   ScrollView,
 } from 'react-native';
+import { Image, ImageLoadEventData } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -74,13 +74,6 @@ export default function ImageViewerScreen() {
           return;
         }
         setLocalUri(result.uri);
-        Image.getSize(
-          result.uri,
-          (w, h) => {
-            if (!cancelledRef.current) setDimensions({ width: w, height: h });
-          },
-          () => undefined,
-        );
       } catch (e) {
         if (cancelledRef.current) return;
         setError(e instanceof Error ? e.message : 'Unknown error');
@@ -142,7 +135,13 @@ export default function ImageViewerScreen() {
           <Image
             source={{ uri: localUri }}
             style={styles.image}
-            resizeMode="contain"
+            contentFit="contain"
+            accessibilityLabel={title || fileName}
+            onLoad={(e: ImageLoadEventData) => {
+              if (!cancelledRef.current && e.source) {
+                setDimensions({ width: e.source.width, height: e.source.height });
+              }
+            }}
           />
         </ScrollView>
       )}

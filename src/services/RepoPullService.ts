@@ -3,19 +3,7 @@ import { StorageService } from './StorageService';
 import { createNote } from '../models/Note';
 import { createCanvas, updateCanvas, CanvasScene } from '../models/Canvas';
 import { createTodoItem, applyTodoUpdate } from '../models/Todo';
-
-function parseRepoPath(repoPath: string): { owner: string; repo: string } | null {
-  const cleaned = repoPath
-    .replace(/^https?:\/\/github\.com\//, '')
-    .replace(/^github\.com\//, '')
-    .replace(/\.git$/, '')
-    .trim();
-  const parts = cleaned.split('/');
-  if (parts.length >= 2) {
-    return { owner: parts[0], repo: parts[1] };
-  }
-  return null;
-}
+import { parseRepoPath } from '../utils/gitPathParser';
 
 async function fetchDirectoryFiles(
   owner: string,
@@ -151,7 +139,13 @@ async function pullCanvasesFromRepo(
   let pulled = 0;
   try {
     const files = await fetchDirectoryFiles(owner, repo, 'canvases', branch);
+    if (files.length === 0) return 0;
+
+    // Single read → mutate in memory → single write. Previous code re-read
+    // and re-wrote inside each iteration which lost interleaved edits when
+    // pulls ran in parallel (Promise.all in pullAllFromRepos).
     const allCanvases = await StorageService.getAllCanvases();
+    let dirty = false;
 
     for (const file of files) {
       if (!file.path.endsWith('.json')) continue;
@@ -163,22 +157,17 @@ async function pullCanvasesFromRepo(
         continue;
       }
 
-      const existing = allCanvases.find((c) => c.filePath === file.path);
       const titleFromPath = file.path
         .replace(/^canvases\//, '')
         .replace(/\.json$/, '')
         .replace(/-/g, ' ');
 
-      if (existing) {
-        // Skip the local mutation if the scene is bytewise unchanged. Avoids
-        // pushing an artificial updatedAt that would clobber cross-device LWW.
-        const sceneChanged = JSON.stringify(existing.scene) !== JSON.stringify(scene);
-        if (sceneChanged) {
-          const updated = updateCanvas(existing, { scene });
-          const idx = allCanvases.findIndex((c) => c.id === existing.id);
-          if (idx !== -1) {
-            allCanvases[idx] = updated;
-          }
+      const idx = allCanvases.findIndex((c) => c.filePath === file.path);
+      if (idx !== -1) {
+        const existing = allCanvases[idx];
+        if (JSON.stringify(existing.scene) !== JSON.stringify(scene)) {
+          allCanvases[idx] = updateCanvas(existing, { scene });
+          dirty = true;
           pulled++;
         }
       } else {
@@ -191,11 +180,12 @@ async function pullCanvasesFromRepo(
             filePath: file.path,
           }),
         );
+        dirty = true;
         pulled++;
       }
     }
 
-    if (pulled > 0) {
+    if (dirty) {
       await StorageService.saveAllCanvases(allCanvases);
     }
   } catch {
@@ -213,7 +203,10 @@ async function pullTodosFromRepo(
   let pulled = 0;
   try {
     const files = await fetchDirectoryFiles(owner, repo, 'todos', branch);
+    if (files.length === 0) return 0;
+
     const allTodos = await StorageService.getAllTodos();
+    let dirty = false;
 
     for (const file of files) {
       if (!file.path.endsWith('.json')) continue;
@@ -225,13 +218,14 @@ async function pullTodosFromRepo(
         continue;
       }
 
-      const existing = allTodos.find((t) => t.filePath === file.path);
       const titleFromPath = file.path
         .replace(/^todos\//, '')
         .replace(/\.json$/, '')
         .replace(/-/g, ' ');
 
-      if (existing) {
+      const idx = allTodos.findIndex((t) => t.filePath === file.path);
+      if (idx !== -1) {
+        const existing = allTodos[idx];
         const updated = applyTodoUpdate(existing, {
           text: data.text ?? existing.text,
           completed: data.completed ?? existing.completed,
@@ -240,10 +234,8 @@ async function pullTodosFromRepo(
           tags: data.tags ?? existing.tags,
           dueDate: data.dueDate ?? existing.dueDate,
         });
-        const idx = allTodos.findIndex((t) => t.id === existing.id);
-        if (idx !== -1) {
-          allTodos[idx] = updated;
-        }
+        allTodos[idx] = updated;
+        dirty = true;
         pulled++;
       } else {
         allTodos.push(
@@ -259,11 +251,12 @@ async function pullTodosFromRepo(
             filePath: file.path,
           }),
         );
+        dirty = true;
         pulled++;
       }
     }
 
-    if (pulled > 0) {
+    if (dirty) {
       await StorageService.saveAllTodos(allTodos);
     }
   } catch {
