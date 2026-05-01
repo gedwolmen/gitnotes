@@ -2,13 +2,19 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { Note, NoteCreateInput, NoteUpdateInput, sortNotesWithPinnedFirst, filterNotesBySearch } from '../models/Note';
 import { StorageService } from '../services/StorageService';
 
-interface NoteContextType {
+// Read-side state. Changes whenever notes/searchQuery/loading/error change.
+interface NotesData {
   notes: Note[];
   isLoading: boolean;
   error: string | null;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   filteredNotes: Note[];
+}
+
+// Write-side actions. Stable for the lifetime of the provider so consumers
+// that only need to mutate notes don't re-render on every notes-array change.
+interface NotesActions {
   createNote: (input: NoteCreateInput) => Promise<Note | null>;
   updateNote: (input: NoteUpdateInput) => Promise<Note | null>;
   deleteNote: (id: string) => Promise<boolean>;
@@ -19,7 +25,12 @@ interface NoteContextType {
   clearError: () => void;
 }
 
-const NoteContext = createContext<NoteContextType | undefined>(undefined);
+// Backwards-compatible shape. Existing consumers keep using useNotes()
+// without changes. New consumers can pull just data or just actions.
+type NoteContextType = NotesData & NotesActions;
+
+const NotesDataContext = createContext<NotesData | undefined>(undefined);
+const NotesActionsContext = createContext<NotesActions | undefined>(undefined);
 
 interface NoteProviderProps {
   children: ReactNode;
@@ -107,24 +118,29 @@ export function NoteProvider({ children }: NoteProviderProps) {
     }
   }, []);
 
+  // Read against the latest notes via a ref so this callback is stable
+  // even though the body needs the current array.
+  const notesRef = React.useRef(notes);
+  useEffect(() => {
+    notesRef.current = notes;
+  }, [notes]);
+
   const getNoteById = useCallback(
-    (id: string): Note | undefined => {
-      return notes.find((note) => note.id === id);
-    },
-    [notes]
+    (id: string): Note | undefined => notesRef.current.find((note) => note.id === id),
+    [],
   );
 
   const togglePin = useCallback(async (id: string): Promise<boolean> => {
     try {
       setError(null);
-      const note = notes.find((n) => n.id === id);
+      const note = notesRef.current.find((n) => n.id === id);
       if (!note) return false;
-      
+
       const updatedNote = await StorageService.updateNote({
         id,
         isPinned: !note.isPinned,
       });
-      
+
       if (updatedNote) {
         setNotes((prev) =>
           sortNotesWithPinnedFirst(prev.map((n) => (n.id === id ? updatedNote : n)))
@@ -137,7 +153,7 @@ export function NoteProvider({ children }: NoteProviderProps) {
       console.error('Error toggling pin:', err);
       return false;
     }
-  }, [notes]);
+  }, []);
 
   const refreshNotes = useCallback(async () => {
     await loadNotes();
@@ -147,35 +163,54 @@ export function NoteProvider({ children }: NoteProviderProps) {
     setError(null);
   }, []);
 
-  const filteredNotes = searchQuery ? filterNotesBySearch(notes, searchQuery) : notes;
+  const filteredNotes = useMemo(
+    () => (searchQuery ? filterNotesBySearch(notes, searchQuery) : notes),
+    [notes, searchQuery],
+  );
 
-  // Memoize the context value to preserve object identity across renders
-  const value: NoteContextType = useMemo(() => ({
-    notes,
-    isLoading,
-    error,
-    searchQuery,
-    setSearchQuery,
-    filteredNotes,
-    createNote,
-    updateNote,
-    deleteNote,
-    clearAllNotes,
-    getNoteById,
-    togglePin,
-    refreshNotes,
-    clearError,
-  }), [notes, isLoading, error, searchQuery, createNote, updateNote, deleteNote, clearAllNotes, getNoteById, togglePin, refreshNotes, clearError]);
+  const dataValue: NotesData = useMemo(
+    () => ({ notes, isLoading, error, searchQuery, setSearchQuery, filteredNotes }),
+    [notes, isLoading, error, searchQuery, filteredNotes],
+  );
 
-  return <NoteContext.Provider value={value}>{children}</NoteContext.Provider>;
+  const actionsValue: NotesActions = useMemo(
+    () => ({
+      createNote,
+      updateNote,
+      deleteNote,
+      clearAllNotes,
+      getNoteById,
+      togglePin,
+      refreshNotes,
+      clearError,
+    }),
+    [createNote, updateNote, deleteNote, clearAllNotes, getNoteById, togglePin, refreshNotes, clearError],
+  );
+
+  return (
+    <NotesActionsContext.Provider value={actionsValue}>
+      <NotesDataContext.Provider value={dataValue}>{children}</NotesDataContext.Provider>
+    </NotesActionsContext.Provider>
+  );
 }
 
+export function useNotesData(): NotesData {
+  const ctx = useContext(NotesDataContext);
+  if (!ctx) throw new Error('useNotesData must be used within a NoteProvider');
+  return ctx;
+}
+
+export function useNotesActions(): NotesActions {
+  const ctx = useContext(NotesActionsContext);
+  if (!ctx) throw new Error('useNotesActions must be used within a NoteProvider');
+  return ctx;
+}
+
+// Backwards-compat: returns the merged shape. Components using this still
+// re-render on every notes update; migrate to useNotesData / useNotesActions
+// where only one half is needed.
 export function useNotes(): NoteContextType {
-  const context = useContext(NoteContext);
-  if (context === undefined) {
-    throw new Error('useNotes must be used within a NoteProvider');
-  }
-  return context;
+  const data = useNotesData();
+  const actions = useNotesActions();
+  return useMemo(() => ({ ...data, ...actions }), [data, actions]);
 }
-
-export { NoteContext };
