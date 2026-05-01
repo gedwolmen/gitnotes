@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Todo, TodoCreateInput, TodoUpdateInput } from '../models/Todo';
 import { StorageService } from '../services/StorageService';
 import { NotificationService } from '../services/NotificationService';
@@ -18,6 +18,13 @@ const TodoContext = createContext<TodoContextValue | undefined>(undefined);
 export function TodoProvider({ children }: { children: React.ReactNode }) {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Stable ref so deleteTodo/toggleTodo callbacks don't churn on each todos
+  // mutation (which would cascade re-renders to every consumer).
+  const todosRef = useRef(todos);
+  useEffect(() => {
+    todosRef.current = todos;
+  }, [todos]);
 
   const loadTodos = useCallback(async () => {
     const loaded = await StorageService.getAllTodos();
@@ -60,7 +67,7 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
 
   const deleteTodo = useCallback(async (id: string): Promise<boolean> => {
     try {
-      const todo = todos.find((t) => t.id === id);
+      const todo = todosRef.current.find((t) => t.id === id);
       if (todo) await NotificationService.cancelAllForTodo(todo);
       const ok = await StorageService.deleteTodo(id);
       if (ok) setTodos((prev) => prev.filter((t) => t.id !== id));
@@ -68,10 +75,10 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
     } catch {
       return false;
     }
-  }, [todos]);
+  }, []);
 
   const toggleTodo = useCallback(async (id: string): Promise<boolean> => {
-    const todo = todos.find((t) => t.id === id);
+    const todo = todosRef.current.find((t) => t.id === id);
     if (!todo) return false;
     const updated = await StorageService.updateTodo({ id, completed: !todo.completed });
     if (!updated) return false;
@@ -87,14 +94,19 @@ export function TodoProvider({ children }: { children: React.ReactNode }) {
     }
     setTodos((prev) => prev.map((t) => (t.id === id ? updated : t)));
     return true;
-  }, [todos]);
+  }, []);
 
   const refreshTodos = useCallback(async () => {
     await loadTodos();
   }, [loadTodos]);
 
+  const value = useMemo(
+    () => ({ todos, isLoading, createTodo, updateTodo, deleteTodo, toggleTodo, refreshTodos }),
+    [todos, isLoading, createTodo, updateTodo, deleteTodo, toggleTodo, refreshTodos],
+  );
+
   return (
-    <TodoContext.Provider value={{ todos, isLoading, createTodo, updateTodo, deleteTodo, toggleTodo, refreshTodos }}>
+    <TodoContext.Provider value={value}>
       {children}
     </TodoContext.Provider>
   );
