@@ -106,12 +106,12 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
 
             <Text style={[styles.title, { color: colors.text }]}>Connect GitHub</Text>
             <Text style={[styles.description, { color: colors.textSecondary }]}>
-              Enter a Personal Access Token to link your notes to GitHub issues and milestones. You can skip this and add it later in Settings.
+              Enter a Fine-grained Personal Access Token to link your notes to GitHub repositories. Create one with read/write access to your chosen repositories. You can skip this and add it later in Settings.
             </Text>
 
             <Button
               variant="ghost"
-              onPress={() => Linking.openURL('https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens')}
+              onPress={() => Linking.openURL('https://docs.github.com/en/authentication/managing-fine-grained-personal-access-tokens')}
               leadingIcon={<Ionicons name="help-circle-outline" size={14} color={colors.accent} />}
               label="How to create a token"
               // colors.text not colors.accent for AA contrast on light bg;
@@ -121,7 +121,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
             />
             <Button
               variant="ghost"
-              onPress={() => Linking.openURL('https://github.com/settings/tokens/new?scopes=repo,read:user&description=GitNotes')}
+              onPress={() => Linking.openURL('https://github.com/settings/personal-access-tokens/new?description=GitNotes')}
               leadingIcon={<Ionicons name="open-outline" size={14} color={colors.accent} />}
               label="Open GitHub token settings"
               textStyle={{ color: colors.text, fontSize: 14, fontWeight: '500' }}
@@ -129,7 +129,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
             />
 
             <Input
-              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+              placeholder="github_pat_xxxxxxxxxxxxxxxxxxxx"
               value={token}
               onChangeText={(t) => { setToken(t); setTokenError(null); }}
               secureTextEntry

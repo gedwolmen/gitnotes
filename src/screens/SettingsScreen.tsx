@@ -560,19 +560,18 @@ export default function SettingsScreen() {
               contentContainerStyle={{ paddingBottom: 16 }}
             >
               <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
-                Personal Access Token with <Text style={{ fontWeight: '600' }}>repo</Text> and{' '}
-                <Text style={{ fontWeight: '600' }}>read:user</Text> scopes.
+                Fine-grained Personal Access Token with read/write access to your repositories.
               </Text>
               <TouchableOpacity
                 style={styles.generateLink}
-                onPress={() => Linking.openURL('https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens')}
+                onPress={() => Linking.openURL('https://docs.github.com/en/authentication/managing-fine-grained-personal-access-tokens')}
               >
                 <Ionicons name="help-circle-outline" size={14} color={colors.primary} />
                 <Text style={[styles.generateLinkText, { color: colors.primary }]}>How to create a token (GitHub docs)</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.generateLink}
-                onPress={() => Linking.openURL('https://github.com/settings/tokens/new?scopes=repo,read:user&description=GitNotes')}
+                onPress={() => Linking.openURL('https://github.com/settings/personal-access-tokens/new?description=GitNotes')}
               >
                 <Ionicons name="open-outline" size={14} color={colors.primary} />
                 <Text style={[styles.generateLinkText, { color: colors.primary }]}>Open GitHub token settings</Text>
@@ -580,7 +579,7 @@ export default function SettingsScreen() {
               <View style={[styles.tokenInputRow, { borderColor: tokenError ? '#FF3B30' : colors.border, backgroundColor: colors.background }]}>
                 <TextInput
                   style={[styles.tokenInputInner, { color: colors.text }]}
-                  placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                  placeholder="github_pat_xxxxxxxxxxxxxxxxxxxx"
                   placeholderTextColor={colors.textSecondary}
                   value={tokenInput}
                   onChangeText={(t) => { setTokenInput(t); setTokenError(null); }}
