@@ -111,16 +111,6 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
 
             <Button
               variant="ghost"
-              onPress={() => Linking.openURL('https://docs.github.com/en/authentication/managing-fine-grained-personal-access-tokens')}
-              leadingIcon={<Ionicons name="help-circle-outline" size={14} color={colors.accent} />}
-              label="How to create a token"
-              // colors.text not colors.accent for AA contrast on light bg;
-              // link affordance carried by the leading icon. (See #221.)
-              textStyle={{ color: colors.text, fontSize: 14, fontWeight: '500' }}
-              style={{ marginBottom: 8 }}
-            />
-            <Button
-              variant="ghost"
               onPress={() => Linking.openURL('https://github.com/settings/personal-access-tokens/new?description=GitNotes')}
               leadingIcon={<Ionicons name="open-outline" size={14} color={colors.accent} />}
               label="Open GitHub token settings"
