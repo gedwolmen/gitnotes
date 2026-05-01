@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Modal,
   FlatList,
   TextInput,
 } from 'react-native';
@@ -12,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator } from 'react-native';
 import { NoteTemplate, TemplateService } from '../services/TemplateService';
 import { useTheme } from '../contexts/ThemeContext';
+import { NModal } from './neumorphic';
 
 interface TemplateSelectorProps {
   visible: boolean;
@@ -80,7 +80,12 @@ export default function TemplateSelector({ visible, onClose, onSelect }: Templat
   );
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+    <NModal
+      visible={visible}
+      onRequestClose={onClose}
+      fullWidth
+      contentStyle={styles.modalContent}
+    >
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Choose a Template</Text>
@@ -120,11 +125,16 @@ export default function TemplateSelector({ visible, onClose, onSelect }: Templat
           }
         />
       </View>
-    </Modal>
+    </NModal>
   );
 }
 
 const styles = StyleSheet.create({
+  modalContent: {
+    padding: 0,
+    width: '100%',
+    height: '85%',
+  },
   container: {
     flex: 1,
   },

@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Modal,
   TextInput,
   Alert,
   Platform,
@@ -16,6 +15,7 @@ import { Folder } from '../models/Folder';
 import { useTheme } from '../contexts/ThemeContext';
 import { useFolders } from '../contexts/FolderContext';
 import { HapticService } from '../utils/haptics';
+import { NModal } from './neumorphic';
 
 interface FolderSelectionDialogProps {
   visible: boolean;
@@ -227,11 +227,11 @@ export default function FolderSelectionDialog({
   );
 
   return (
-    <Modal
+    <NModal
       visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
       onRequestClose={onClose}
+      fullWidth
+      contentStyle={styles.modalContent}
     >
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
         <View style={[styles.header, { borderBottomColor: colors.border }]}> 
@@ -338,11 +338,16 @@ export default function FolderSelectionDialog({
           )}
         </ScrollView>
       </SafeAreaView>
-    </Modal>
+    </NModal>
   );
 }
 
 const styles = StyleSheet.create({
+  modalContent: {
+    padding: 0,
+    width: '100%',
+    height: '90%',
+  },
   container: {
     flex: 1,
   },
