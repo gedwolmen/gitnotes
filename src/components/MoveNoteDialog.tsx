@@ -14,14 +14,16 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
-import { DraxView, DraxProvider } from 'react-native-drax';
 import { useTheme } from '../contexts/ThemeContext';
 import { GitHubService, GitHubContent } from '../services/GitHubService';
 import { HapticService } from '../utils/haptics';
 import { Note, deriveFolderPath } from '../models/Note';
 import { parseRepoPath } from '../utils/gitPathParser';
+import { DragDropBoundary, useDragDrop, useDropTarget } from './dragdrop/DragDropContext';
 
 interface MoveNoteDialogProps {
   visible: boolean;
@@ -35,6 +37,160 @@ interface ContentItem {
   path: string;
   type: 'file' | 'dir';
   sha?: string;
+}
+
+interface DraggableFileRowProps {
+  itemPath: string;
+  children: React.ReactNode;
+}
+
+function DraggableFileRow({ itemPath, children }: DraggableFileRowProps) {
+  const { startDrag, updateDrag, endDrag, cancelDrag } = useDragDrop();
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const scale = useSharedValue(1);
+  const dragActiveRef = useRef(false);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const resetPosition = useCallback(() => {
+    translateX.value = withSpring(0, { damping: 18, stiffness: 220 });
+    translateY.value = withSpring(0, { damping: 18, stiffness: 220 });
+    scale.value = withSpring(1, { damping: 18, stiffness: 220 });
+  }, [scale, translateX, translateY]);
+
+  const handleDragStart = useCallback((absoluteX: number, absoluteY: number) => {
+    dragActiveRef.current = true;
+    setIsDragging(true);
+    scale.value = withSpring(1.02, { damping: 18, stiffness: 220 });
+    HapticService.light();
+    startDrag(itemPath, { x: absoluteX, y: absoluteY });
+  }, [itemPath, scale, startDrag]);
+
+  const handleDragUpdate = useCallback((absoluteX: number, absoluteY: number) => {
+    if (!dragActiveRef.current) {
+      return;
+    }
+
+    updateDrag({ x: absoluteX, y: absoluteY });
+  }, [updateDrag]);
+
+  const finishDrag = useCallback((shouldDrop: boolean) => {
+    if (!dragActiveRef.current) {
+      return;
+    }
+
+    dragActiveRef.current = false;
+    setIsDragging(false);
+    if (shouldDrop) {
+      endDrag();
+    } else {
+      cancelDrag();
+    }
+  }, [cancelDrag, endDrag]);
+
+  const gesture = useMemo(() => Gesture.Pan()
+    .activateAfterLongPress(500)
+    .onStart((event) => {
+      runOnJS(handleDragStart)(event.absoluteX, event.absoluteY);
+    })
+    .onUpdate((event) => {
+      translateX.value = event.translationX;
+      translateY.value = event.translationY;
+      runOnJS(handleDragUpdate)(event.absoluteX, event.absoluteY);
+    })
+    .onEnd(() => {
+      runOnJS(finishDrag)(true);
+      translateX.value = withSpring(0, { damping: 18, stiffness: 220 });
+      translateY.value = withSpring(0, { damping: 18, stiffness: 220 });
+      scale.value = withSpring(1, { damping: 18, stiffness: 220 });
+    })
+    .onFinalize(() => {
+      runOnJS(finishDrag)(false);
+      translateX.value = withSpring(0, { damping: 18, stiffness: 220 });
+      translateY.value = withSpring(0, { damping: 18, stiffness: 220 });
+      scale.value = withSpring(1, { damping: 18, stiffness: 220 });
+    }), [finishDrag, handleDragStart, handleDragUpdate, scale, translateX, translateY]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+      { scale: scale.value },
+    ],
+    opacity: isDragging ? 0.92 : 1,
+    zIndex: isDragging ? 100 : 0,
+    elevation: isDragging ? 10 : 0,
+    shadowColor: '#000',
+    shadowOpacity: isDragging ? 0.18 : 0,
+    shadowRadius: isDragging ? 10 : 0,
+    shadowOffset: { width: 0, height: 6 },
+  }), [isDragging]);
+
+  useEffect(() => () => {
+    resetPosition();
+  }, [resetPosition]);
+
+  return (
+    <GestureDetector gesture={gesture}>
+      <Animated.View style={animatedStyle}>
+        {children}
+      </Animated.View>
+    </GestureDetector>
+  );
+}
+
+interface DirectoryDropRowProps {
+  itemPath: string;
+  onDrop: (dragPath: string, targetPath: string) => void;
+  highlightColor: string;
+  children: React.ReactNode;
+}
+
+function DirectoryDropRow({ itemPath, onDrop, highlightColor, children }: DirectoryDropRowProps) {
+  const { ref, onLayout, isActive } = useDropTarget({
+    onDrop: (dragPath) => {
+      if (dragPath !== itemPath) {
+        onDrop(dragPath, itemPath);
+      }
+    },
+  });
+
+  return (
+    <View
+      ref={ref}
+      onLayout={onLayout}
+      collapsable={false}
+      style={[exploreStyles.dropZone, isActive && { backgroundColor: highlightColor, borderRadius: 10 }]}
+    >
+      {children}
+    </View>
+  );
+}
+
+interface ListDropContainerProps {
+  targetPath: string;
+  onDrop: (dragPath: string, targetPath: string) => void;
+  highlightColor: string;
+  children: React.ReactNode;
+}
+
+function ListDropContainer({ targetPath, onDrop, highlightColor, children }: ListDropContainerProps) {
+  const { ref, onLayout, isActive } = useDropTarget({
+    onDrop: (dragPath) => {
+      onDrop(dragPath, targetPath);
+    },
+  });
+
+  return (
+    <View
+      ref={ref}
+      onLayout={onLayout}
+      collapsable={false}
+      style={[exploreStyles.listDropContainer, isActive && { backgroundColor: highlightColor }]}
+    >
+      {children}
+    </View>
+  );
 }
 
 export default function MoveNoteDialog({ visible, note, onClose, onMoved }: MoveNoteDialogProps) {
@@ -276,16 +432,10 @@ export default function MoveNoteDialog({ visible, note, onClose, onMoved }: Move
 
     if (isDir) {
       return (
-        <DraxView
-          style={exploreStyles.dropZone}
-          receptive
-          longPressDelay={500}
-          onReceiveDragDrop={({ dragged }) => {
-            const dragPath = dragged.payload as string | undefined;
-            if (dragPath && dragPath !== item.path) {
-              handleMoveItemToFolder(dragPath, item.path);
-            }
-          }}
+        <DirectoryDropRow
+          itemPath={item.path}
+          onDrop={handleMoveItemToFolder}
+          highlightColor={colors.primary + '12'}
         >
           <TouchableOpacity
             onPress={() => navigateToFolder(item.path)}
@@ -293,19 +443,14 @@ export default function MoveNoteDialog({ visible, note, onClose, onMoved }: Move
           >
             {itemContent}
           </TouchableOpacity>
-        </DraxView>
+        </DirectoryDropRow>
       );
     }
 
     return (
-      <DraxView
-        dragPayload={item.path}
-        longPressDelay={500}
-        draggingStyle={{ opacity: 0.6 }}
-        dragReleasedStyle={{ opacity: 0.6 }}
-      >
+      <DraggableFileRow itemPath={item.path}>
         {itemContent}
-      </DraxView>
+      </DraggableFileRow>
     );
   }, [colors, navigateToFolder, handleMoveItemToFolder, getFileIcon]);
 
@@ -313,7 +458,7 @@ export default function MoveNoteDialog({ visible, note, onClose, onMoved }: Move
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <DraxProvider>
+      <DragDropBoundary>
         <SafeAreaView style={[exploreStyles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
           <View style={[exploreStyles.header, { borderBottomColor: colors.border }]}>
             <TouchableOpacity onPress={onClose} style={exploreStyles.headerBtn}>
@@ -403,16 +548,10 @@ export default function MoveNoteDialog({ visible, note, onClose, onMoved }: Move
               <ActivityIndicator size="large" color={colors.primary} />
             </View>
           ) : (
-            <DraxView
-              receptive
-              style={{ flex: 1 }}
-              onReceiveDragDrop={({ dragged }) => {
-                const dragPath = dragged.payload as string | undefined;
-                if (dragPath) {
-                  const parentPath = currentPath.split('/').slice(0, -1).join('/');
-                  handleMoveItemToFolder(dragPath, parentPath);
-                }
-              }}
+            <ListDropContainer
+              targetPath={currentPath.split('/').slice(0, -1).join('/')}
+              onDrop={handleMoveItemToFolder}
+              highlightColor={colors.primary + '0D'}
             >
               <FlatList
                 data={contents}
@@ -428,10 +567,10 @@ export default function MoveNoteDialog({ visible, note, onClose, onMoved }: Move
                   </View>
                 }
               />
-            </DraxView>
+            </ListDropContainer>
           )}
         </SafeAreaView>
-      </DraxProvider>
+      </DragDropBoundary>
     </Modal>
   );
 }
@@ -523,6 +662,7 @@ const exploreStyles = StyleSheet.create({
   itemName: { fontSize: 15, flex: 1, fontWeight: '400' },
   itemMeta: { fontSize: 12, fontWeight: '500', textTransform: 'uppercase' },
   dropZone: { minHeight: 44 },
+  listDropContainer: { flex: 1 },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 40 },
   emptyList: { flexGrow: 1 },
   emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingTop: 40 },
