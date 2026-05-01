@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Modal, View, StyleSheet, TouchableOpacity, Text, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { NModal } from './neumorphic';
 
 let speechModule: {
   start: (opts: Record<string, unknown>) => Promise<void>;
@@ -156,7 +157,12 @@ export default function VoiceInputModal({ visible, onDone, onClose }: VoiceInput
 
   if (!speechModule) {
     return (
-      <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <NModal
+        visible={visible}
+        onRequestClose={onClose}
+        fullWidth
+        contentStyle={styles.modalContent}
+      >
         <SafeAreaView edges={['top', 'bottom']} style={styles.container}>
           <View style={styles.header}>
             <TouchableOpacity onPress={onClose} style={styles.headerBtn}>
@@ -170,12 +176,17 @@ export default function VoiceInputModal({ visible, onDone, onClose }: VoiceInput
             <Text style={styles.statusText}>Speech recognition not available on this device</Text>
           </View>
         </SafeAreaView>
-      </Modal>
+      </NModal>
     );
   }
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={handleCancel}>
+    <NModal
+      visible={visible}
+      onRequestClose={handleCancel}
+      fullWidth
+      contentStyle={styles.modalContent}
+    >
       <SafeAreaView edges={['top', 'bottom']} style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={handleCancel} style={styles.headerBtn}>
@@ -224,11 +235,16 @@ export default function VoiceInputModal({ visible, onDone, onClose }: VoiceInput
           </ScrollView>
         </View>
       </SafeAreaView>
-    </Modal>
+    </NModal>
   );
 }
 
 const styles = StyleSheet.create({
+  modalContent: {
+    padding: 0,
+    width: '100%',
+    height: '80%',
+  },
   container: { flex: 1, backgroundColor: '#1c1c1e' },
   header: {
     flexDirection: 'row',

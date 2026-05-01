@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
-  Modal,
   ScrollView,
   Alert,
   TextInput,
@@ -24,6 +23,7 @@ import { HapticService } from '../utils/haptics';
 import { Note, deriveFolderPath } from '../models/Note';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { DragDropBoundary, useDragDrop, useDropTarget } from './dragdrop/DragDropContext';
+import { NModal } from './neumorphic';
 
 interface MoveNoteDialogProps {
   visible: boolean;
@@ -457,7 +457,12 @@ export default function MoveNoteDialog({ visible, note, onClose, onMoved }: Move
   const fileName = note?.filePath?.split('/').pop() || 'note.md';
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <NModal
+      visible={visible}
+      onRequestClose={onClose}
+      fullWidth
+      contentStyle={exploreStyles.modalContent}
+    >
       <DragDropBoundary>
         <SafeAreaView style={[exploreStyles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
           <View style={[exploreStyles.header, { borderBottomColor: colors.border }]}>
@@ -571,11 +576,16 @@ export default function MoveNoteDialog({ visible, note, onClose, onMoved }: Move
           )}
         </SafeAreaView>
       </DragDropBoundary>
-    </Modal>
+    </NModal>
   );
 }
 
 const exploreStyles = StyleSheet.create({
+  modalContent: {
+    padding: 0,
+    width: '100%',
+    height: '90%',
+  },
   container: { flex: 1 },
   header: {
     flexDirection: 'row',

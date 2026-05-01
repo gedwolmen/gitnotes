@@ -4,13 +4,11 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Modal,
   FlatList,
   ActivityIndicator,
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  TouchableWithoutFeedback,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +16,7 @@ import { GitBranch, GitCommit, GitService } from '../services/GitService';
 import { useRepos } from '../contexts/RepoContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { HapticService } from '../utils/haptics';
+import { NModal } from './neumorphic';
 
 interface GitContextPickerProps {
   repo?: string;
@@ -38,14 +37,16 @@ interface BottomSheetProps {
 function BottomSheet({ visible, title, onClose, children }: BottomSheetProps) {
   const { colors } = useTheme();
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <NModal
+      visible={visible}
+      onRequestClose={onClose}
+      fullWidth
+      contentStyle={styles.modalContent}
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.modalRoot}
+        style={styles.sheetContainer}
       >
-        <TouchableWithoutFeedback onPress={onClose}>
-          <View style={styles.modalBackdrop} />
-        </TouchableWithoutFeedback>
         <SafeAreaView
           edges={['bottom']}
           style={[styles.sheet, { backgroundColor: colors.surface }]}
@@ -59,7 +60,7 @@ function BottomSheet({ visible, title, onClose, children }: BottomSheetProps) {
           {children}
         </SafeAreaView>
       </KeyboardAvoidingView>
-    </Modal>
+    </NModal>
   );
 }
 
@@ -196,14 +197,16 @@ export default function GitContextPicker({
       </TouchableOpacity>
 
       {/* Main context modal */}
-      <Modal visible={isExpanded} transparent animationType="slide" onRequestClose={closeContextModal}>
+      <NModal
+        visible={isExpanded}
+        onRequestClose={closeContextModal}
+        fullWidth
+        contentStyle={styles.modalContent}
+      >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.modalRoot}
+          style={styles.sheetContainer}
         >
-          <TouchableWithoutFeedback onPress={closeContextModal}>
-            <View style={styles.modalBackdrop} />
-          </TouchableWithoutFeedback>
           <SafeAreaView
             edges={['bottom']}
             style={[styles.sheet, { backgroundColor: colors.surface }]}
@@ -258,7 +261,7 @@ export default function GitContextPicker({
             </View>
           </SafeAreaView>
         </KeyboardAvoidingView>
-      </Modal>
+      </NModal>
 
       {/* Repo modal */}
       <BottomSheet visible={showRepoModal} title="Select Repository" onClose={() => setShowRepoModal(false)}>
@@ -498,24 +501,18 @@ const styles = StyleSheet.create({
   clearButtonText: {
     fontSize: 14,
   },
-  // Modal
-  modalRoot: {
-    flex: 1,
-    justifyContent: 'flex-end',
+  modalContent: {
+    padding: 0,
+    width: '100%',
+    height: '85%',
   },
-  modalBackdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+  sheetContainer: {
+    flex: 1,
   },
   sheet: {
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     flex: 1,
-    maxHeight: '85%',
     paddingBottom: 8,
   },
   list: {

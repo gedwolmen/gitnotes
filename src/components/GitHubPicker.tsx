@@ -4,14 +4,12 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Modal,
   FlatList,
   ActivityIndicator,
   TextInput,
   Linking,
   KeyboardAvoidingView,
   Platform,
-  TouchableWithoutFeedback,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +17,7 @@ import { GitHubService, GitHubRepository, GitHubIssue, GitHubMilestone, GitHubPu
 import { useTheme } from '../contexts/ThemeContext';
 import { HapticService } from '../utils/haptics';
 import { Note } from '../models/Note';
+import { NModal } from './neumorphic';
 
 interface GitHubPickerProps {
   value?: Note['github'];
@@ -37,14 +36,16 @@ interface BottomSheetProps {
 function BottomSheet({ visible, title, onClose, children }: BottomSheetProps) {
   const { colors } = useTheme();
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <NModal
+      visible={visible}
+      onRequestClose={onClose}
+      fullWidth
+      contentStyle={styles.modalContent}
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.modalRoot}
+        style={styles.sheetContainer}
       >
-        <TouchableWithoutFeedback onPress={onClose}>
-          <View style={styles.modalBackdrop} />
-        </TouchableWithoutFeedback>
         <SafeAreaView
           edges={['bottom']}
           style={[styles.sheet, { backgroundColor: colors.surface }]}
@@ -58,7 +59,7 @@ function BottomSheet({ visible, title, onClose, children }: BottomSheetProps) {
           {children}
         </SafeAreaView>
       </KeyboardAvoidingView>
-    </Modal>
+    </NModal>
   );
 }
 
@@ -576,24 +577,18 @@ const styles = StyleSheet.create({
   clearText: {
     fontSize: 14,
   },
-  // Modal
-  modalRoot: {
-    flex: 1,
-    justifyContent: 'flex-end',
+  modalContent: {
+    padding: 0,
+    width: '100%',
+    height: '85%',
   },
-  modalBackdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+  sheetContainer: {
+    flex: 1,
   },
   sheet: {
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     flex: 1,
-    maxHeight: '85%',
     paddingBottom: 8,
   },
   list: {
