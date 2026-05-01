@@ -9,9 +9,9 @@ import {
   UIManager,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { DraxView } from 'react-native-drax';
 import { Folder } from '../models/Folder';
 import { useTheme } from '../contexts/ThemeContext';
+import { DragDropBoundary, useDropTarget } from './dragdrop/DragDropContext';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -39,6 +39,28 @@ interface FolderItemProps {
   onDrop?: (noteId: string, folder: Folder) => void;
   isDragActive?: boolean;
   colors: any;
+}
+
+interface FolderDropZoneProps {
+  enabled: boolean;
+  onDrop: (noteId: string) => void;
+  highlightColor: string;
+  children: React.ReactNode;
+}
+
+function FolderDropZone({ enabled, onDrop, highlightColor, children }: FolderDropZoneProps) {
+  const { ref, onLayout, isActive } = useDropTarget({ enabled, onDrop });
+
+  return (
+    <View
+      ref={ref}
+      onLayout={onLayout}
+      collapsable={false}
+      style={[styles.dropZone, isActive && { backgroundColor: highlightColor, borderRadius: 10 }]}
+    >
+      {children}
+    </View>
+  );
 }
 
 const FolderItem = ({
@@ -125,17 +147,13 @@ const FolderItem = ({
   return (
     <View>
       {onDrop ? (
-        <DraxView
-          style={styles.dropZone}
-          receptive
-          onReceiveDragDrop={({ dragged }) => {
-            if (dragged.payload && typeof dragged.payload === 'string') {
-              handleDrop(dragged.payload as string);
-            }
-          }}
+        <FolderDropZone
+          enabled={Boolean(isDragActive ?? true)}
+          onDrop={handleDrop}
+          highlightColor={colors.primary + '12'}
         >
           {folderRow}
-        </DraxView>
+        </FolderDropZone>
       ) : (
         folderRow
       )}
@@ -164,7 +182,7 @@ const FolderItem = ({
   );
 };
 
-export default function FolderTreeView({
+function FolderTreeViewContent({
   folders,
   selectedFolderId,
   onSelectFolder,
@@ -247,17 +265,13 @@ export default function FolderTreeView({
     <View style={styles.container}>
       {showRoot && (
         onDropToFolder ? (
-          <DraxView
-            style={styles.dropZone}
-            receptive
-            onReceiveDragDrop={({ dragged }) => {
-              if (dragged.payload && typeof dragged.payload === 'string') {
-                handleDropToRoot(dragged.payload as string);
-              }
-            }}
+          <FolderDropZone
+            enabled={Boolean(isDragActive ?? true)}
+            onDrop={handleDropToRoot}
+            highlightColor={colors.primary + '12'}
           >
             {rootFolderRow}
-          </DraxView>
+          </FolderDropZone>
         ) : (
           rootFolderRow
         )
@@ -291,6 +305,14 @@ export default function FolderTreeView({
         </View>
       )}
     </View>
+  );
+}
+
+export default function FolderTreeView(props: FolderTreeViewProps) {
+  return (
+    <DragDropBoundary>
+      <FolderTreeViewContent {...props} />
+    </DragDropBoundary>
   );
 }
 
