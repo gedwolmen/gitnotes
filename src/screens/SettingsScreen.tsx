@@ -21,6 +21,9 @@ import { useRepos } from '../contexts/RepoContext';
 import { GitRepository } from '../services/GitService';
 import { GitHubService, GitHubRepository } from '../services/GitHubService';
 import { RepoFileSyncService } from '../services/RepoFileSyncService';
+import { pullFromSingleRepo } from '../services/RepoPullService';
+import { useCanvases } from '../contexts/CanvasContext';
+import { useTodos } from '../contexts/TodoContext';
 import { OnboardingService } from '../services/OnboardingService';
 import { HapticService } from '../utils/haptics';
 import SearchBar from '../components/SearchBar';
@@ -32,6 +35,8 @@ export default function SettingsScreen() {
   const { theme, colors, setTheme, style: uiStyle, setStyle } = useTheme();
   const { isTablet, maxContentWidth } = useResponsive();
   const { clearAllNotes, refreshNotes } = useNotes();
+  const { refreshCanvases } = useCanvases();
+  const { refreshTodos } = useTodos();
   const { authState, setToken, clearToken } = useAuth();
   const { repositories, addRepository: addRepo, removeRepository: removeRepo } = useRepos();
   const [showRepoPickerModal, setShowRepoPickerModal] = useState(false);
@@ -97,6 +102,27 @@ export default function SettingsScreen() {
     setRepoSearchQuery('');
   }, []);
 
+  // Kick off the initial pull for a freshly-added repo. Runs in the
+  // background; surfaces a single Alert with the count when it lands so
+  // the user can tell empty-repo from auth-failure.
+  const autoSyncAfterAdd = useCallback(async (repoPath: string, repoName: string) => {
+    if (!GitHubService.isAuthenticated()) return;
+    try {
+      const result = await pullFromSingleRepo(repoPath);
+      const total = result.notes + result.canvases + result.todos;
+      if (total > 0) {
+        await Promise.all([refreshNotes(), refreshCanvases(), refreshTodos()]);
+        HapticService.success();
+      }
+    } catch (err) {
+      console.warn('[Settings] auto-sync after add failed:', err);
+      Alert.alert(
+        'Auto-sync Failed',
+        `Couldn't pull existing files from ${repoName}. You can retry from the Sync button.`,
+      );
+    }
+  }, [refreshNotes, refreshCanvases, refreshTodos]);
+
   const handleSelectGithubRepo = useCallback(async (ghRepo: GitHubRepository) => {
     const alreadyAdded = repositories.some((r) => r.path === ghRepo.full_name);
     if (alreadyAdded) {
@@ -108,13 +134,14 @@ export default function SettingsScreen() {
       await addRepo(ghRepo.full_name, ghRepo.name);
       HapticService.success();
       setShowRepoPickerModal(false);
+      autoSyncAfterAdd(ghRepo.full_name, ghRepo.name);
     } catch {
       HapticService.error();
       Alert.alert('Error', 'Failed to add repository.');
     } finally {
       setIsAddingRepo(false);
     }
-  }, [repositories, addRepo]);
+  }, [repositories, addRepo, autoSyncAfterAdd]);
 
   const handleAddManualRepo = useCallback(async () => {
     const val = manualRepoInput.trim();
@@ -125,13 +152,14 @@ export default function SettingsScreen() {
       setManualRepoInput('');
       HapticService.success();
       setShowRepoPickerModal(false);
+      autoSyncAfterAdd(val, val);
     } catch {
       HapticService.error();
       Alert.alert('Error', 'Failed to add repository.');
     } finally {
       setIsAddingRepo(false);
     }
-  }, [manualRepoInput, addRepo]);
+  }, [manualRepoInput, addRepo, autoSyncAfterAdd]);
 
   const handleRemoveRepo = useCallback((repo: GitRepository) => {
     HapticService.warning();

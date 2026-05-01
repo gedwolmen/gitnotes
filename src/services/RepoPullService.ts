@@ -277,6 +277,32 @@ export interface PullResult {
   todos: number;
 }
 
+export async function pullFromSingleRepo(repoPath: string): Promise<PullResult> {
+  if (!GitHubService.isAuthenticated()) {
+    return { repos: 0, notes: 0, canvases: 0, todos: 0 };
+  }
+
+  const repos = await StorageService.getSavedRepositories();
+  const repo = repos.find((r) => r.path === repoPath);
+  if (!repo) {
+    return { repos: 0, notes: 0, canvases: 0, todos: 0 };
+  }
+
+  const repoInfo = parseRepoPath(repo.path);
+  if (!repoInfo) {
+    return { repos: 0, notes: 0, canvases: 0, todos: 0 };
+  }
+  const branch = repo.branch || 'main';
+
+  const [notes, canvases, todos] = await Promise.all([
+    pullNotesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch),
+    pullCanvasesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch),
+    pullTodosFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch),
+  ]);
+
+  return { repos: 1, notes, canvases, todos };
+}
+
 export async function pullAllFromRepos(): Promise<PullResult> {
   if (!GitHubService.isAuthenticated()) {
     return { repos: 0, notes: 0, canvases: 0, todos: 0 };
