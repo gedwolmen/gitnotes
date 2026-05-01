@@ -1364,10 +1364,33 @@ export default function NotesListScreen() {
                     },
                     {
                       icon: "share-outline",
-                      label: "Share",
+                      label: "Share / Save",
                       onPress: async () => {
                         const ok = await ShareService.shareByNoteFormat(longPressedNote);
                         if (!ok) Alert.alert("Error", "Failed to share note");
+                      },
+                    },
+                    {
+                      icon: "copy-outline",
+                      label: "Duplicate",
+                      onPress: async () => {
+                        const src = longPressedNote;
+                        const created = await createNote({
+                          title: `${src.title || 'Untitled'} (copy)`,
+                          content: src.content ?? '',
+                          tags: src.tags ? [...src.tags] : undefined,
+                          repo: src.repo,
+                          branch: src.branch,
+                          folderPath: src.folderPath,
+                          format: src.format,
+                          attachments: src.attachments ? [...src.attachments] : undefined,
+                        });
+                        if (created) {
+                          HapticService.success();
+                        } else {
+                          HapticService.error();
+                          Alert.alert("Error", "Failed to duplicate note");
+                        }
                       },
                     },
                   ],
