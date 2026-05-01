@@ -3,18 +3,16 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   FlatList,
   ActivityIndicator,
   Alert,
-  TextInput,
-  Modal,
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { GitHubService, GitHubContent } from '../services/GitHubService';
 import { HapticService } from '../utils/haptics';
+import { Group, GroupRow, IconButton, Modal, Input, Button } from './ui';
 
 interface RepoFileItem {
   name: string;
@@ -310,8 +308,7 @@ export default function RepoFileBrowser({
   const renderItem = useCallback(({ item }: { item: RepoFileItem }) => {
     const isDir = item.type === 'dir';
     return (
-      <TouchableOpacity
-        style={[fileStyles.item, { borderBottomColor: colors.border }]}
+      <GroupRow
         onPress={() => {
           if (isDir) {
             navigateToFolder(item.path);
@@ -320,18 +317,18 @@ export default function RepoFileBrowser({
             onFilePress(item.path);
           }
         }}
-        onLongPress={() => {
-          if (isDir) handleFolderLongPress(item);
-        }}
-        activeOpacity={0.7}
+        onLongPress={isDir ? () => handleFolderLongPress(item) : undefined}
+        leading={
+          <Ionicons
+            name={isDir ? 'folder' : 'document-text'}
+            size={22}
+            color={isDir ? '#FF9500' : colors.primary}
+          />
+        }
+        trailing={isDir ? <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} /> : undefined}
+        style={fileStyles.itemRow}
       >
-        <Ionicons
-          name={isDir ? 'folder' : 'document-text'}
-          size={22}
-          color={isDir ? '#FF9500' : colors.primary}
-          style={fileStyles.itemIcon}
-        />
-        <View style={fileStyles.itemText}>
+        <View>
           <Text style={[fileStyles.itemName, { color: colors.text }]} numberOfLines={1}>
             {item.name}
           </Text>
@@ -339,10 +336,7 @@ export default function RepoFileBrowser({
             {item.path}
           </Text>
         </View>
-        {isDir && (
-          <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-        )}
-      </TouchableOpacity>
+      </GroupRow>
     );
   }, [colors, navigateToFolder, onFilePress, handleFolderLongPress]);
 
@@ -356,19 +350,11 @@ export default function RepoFileBrowser({
     }
     return (
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={fileStyles.breadcrumb} contentContainerStyle={fileStyles.breadcrumbContent}>
-        <TouchableOpacity onPress={() => navigateToBreadcrumb(-1)}>
-          <Text style={[fileStyles.crumb, { color: !currentPath ? colors.primary : colors.textSecondary }]}>
-            {repo}
-          </Text>
-        </TouchableOpacity>
+        <Button variant="ghost" label={repo} onPress={() => navigateToBreadcrumb(-1)} textStyle={[fileStyles.crumb, { color: !currentPath ? colors.primary : colors.textSecondary }]} />
         {pathParts.map((part, i) => (
           <View key={`crumb-${part}`} style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={[fileStyles.crumbSep, { color: colors.textSecondary }]}> / </Text>
-            <TouchableOpacity onPress={() => navigateToBreadcrumb(i)}>
-              <Text style={[fileStyles.crumb, { color: i === pathParts.length - 1 ? colors.primary : colors.textSecondary }]}>
-                {part}
-              </Text>
-            </TouchableOpacity>
+            <Button variant="ghost" label={part} onPress={() => navigateToBreadcrumb(i)} textStyle={[fileStyles.crumb, { color: i === pathParts.length - 1 ? colors.primary : colors.textSecondary }]} />
           </View>
         ))}
       </ScrollView>
@@ -381,40 +367,42 @@ export default function RepoFileBrowser({
         {renderBreadcrumb()}
         <View style={fileStyles.headerActions}>
           {currentPath && browseMode === 'folder' ? (
-            <TouchableOpacity style={fileStyles.headerBtn} onPress={navigateUp}>
+            <IconButton size="sm" onPress={navigateUp} accessibilityLabel="Go back">
               <Ionicons name="arrow-back" size={20} color={colors.primary} />
-            </TouchableOpacity>
+            </IconButton>
           ) : null}
-          <TouchableOpacity
-            style={fileStyles.headerBtn}
+          <IconButton
+            size="sm"
             onPress={() => {
               HapticService.light();
               setBrowseMode((m) => (m === 'folder' ? 'all' : 'folder'));
               setCurrentPath('');
             }}
+            accessibilityLabel="Toggle browse mode"
           >
             <Ionicons
               name={browseMode === 'all' ? 'list' : 'folder'}
               size={20}
               color={browseMode === 'all' ? colors.primary : colors.textSecondary}
             />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={fileStyles.headerBtn}
+          </IconButton>
+          <IconButton
+            size="sm"
             onPress={() => { HapticService.light(); onCreateNoteInFolder(currentPath); }}
+            accessibilityLabel="Create note"
           >
             <Ionicons name="add" size={22} color={colors.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={fileStyles.headerBtn}
+          </IconButton>
+          <IconButton
+            size="sm"
             onPress={() => { HapticService.light(); setShowNewFolderModal(true); }}
+            accessibilityLabel="New folder"
           >
             <Ionicons name="folder-outline" size={20} color={colors.primary} />
-            <Ionicons name="add" size={12} color={colors.primary} style={fileStyles.badge} />
-          </TouchableOpacity>
-          <TouchableOpacity style={fileStyles.headerBtn} onPress={loadContents}>
+          </IconButton>
+          <IconButton size="sm" onPress={loadContents} accessibilityLabel="Refresh">
             <Ionicons name="refresh" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
+          </IconButton>
         </View>
       </View>
 
@@ -423,134 +411,93 @@ export default function RepoFileBrowser({
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
-        <FlatList
-          data={items}
-          keyExtractor={(item) => item.path}
-          renderItem={renderItem}
-          contentContainerStyle={items.length === 0 ? fileStyles.emptyList : fileStyles.listContent}
-          ListEmptyComponent={
-            <View style={fileStyles.emptyContainer}>
-              <Ionicons name="folder-open-outline" size={48} color={colors.textSecondary} />
-              <Text style={[fileStyles.emptyTitle, { color: colors.text }]}>Empty Folder</Text>
-              <Text style={[fileStyles.emptySub, { color: colors.textSecondary }]}>
-                Create a note or folder to get started
-              </Text>
-            </View>
-          }
-        />
+        <Group style={{ flex: 1 }}>
+          <FlatList
+            data={items}
+            keyExtractor={(item) => item.path}
+            renderItem={renderItem}
+            contentContainerStyle={items.length === 0 ? fileStyles.emptyList : fileStyles.listContent}
+            ListEmptyComponent={
+              <View style={fileStyles.emptyContainer}>
+                <Ionicons name="folder-open-outline" size={48} color={colors.textSecondary} />
+                <Text style={[fileStyles.emptyTitle, { color: colors.text }]}>Empty Folder</Text>
+                <Text style={[fileStyles.emptySub, { color: colors.textSecondary }]}>
+                  Create a note or folder to get started
+                </Text>
+              </View>
+            }
+          />
+        </Group>
       )}
 
-      <Modal visible={showNewFolderModal} transparent animationType="fade">
-        <View style={fileStyles.modalOverlay}>
-          <View style={[fileStyles.modalSheet, { backgroundColor: colors.surface }]}>
-            <Text style={[fileStyles.modalTitle, { color: colors.text }]}>New Folder</Text>
-            <TextInput
-              style={[fileStyles.modalInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
-              placeholder="Folder name"
-              placeholderTextColor={colors.textSecondary}
-              value={newFolderName}
-              onChangeText={setNewFolderName}
-              autoFocus
-              autoCapitalize="none"
-              autoCorrect={false}
-              returnKeyType="done"
-              onSubmitEditing={handleCreateFolder}
-            />
-            <View style={fileStyles.modalButtons}>
-              <TouchableOpacity
-                style={[fileStyles.modalBtn, { borderColor: colors.border }]}
-                onPress={() => { setShowNewFolderModal(false); setNewFolderName(''); }}
-              >
-                <Text style={[fileStyles.modalBtnText, { color: colors.textSecondary }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[fileStyles.modalBtn, { backgroundColor: colors.primary }]}
-                onPress={handleCreateFolder}
-                disabled={!newFolderName.trim() || isCreating}
-              >
-                {isCreating
-                  ? <ActivityIndicator size="small" color="#fff" />
-                  : <Text style={fileStyles.modalBtnPrimary}>Create</Text>
-                }
-              </TouchableOpacity>
-            </View>
-          </View>
+      <Modal visible={showNewFolderModal} onRequestClose={() => { setShowNewFolderModal(false); setNewFolderName(''); }}>
+        <Text style={[fileStyles.modalTitle, { color: colors.text }]}>New Folder</Text>
+        <Input
+          value={newFolderName}
+          onChangeText={setNewFolderName}
+          placeholder="Folder name"
+          autoFocus
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="done"
+          onSubmitEditing={handleCreateFolder}
+        />
+        <View style={fileStyles.modalButtons}>
+          <Button variant="secondary" label="Cancel" onPress={() => { setShowNewFolderModal(false); setNewFolderName(''); }} />
+          <Button variant="primary" label="Create" onPress={handleCreateFolder} disabled={!newFolderName.trim() || isCreating} />
         </View>
       </Modal>
 
-      <Modal visible={showMoveFolderDialog} animationType="slide" onRequestClose={() => setShowMoveFolderDialog(false)}>
-        <View style={[fileStyles.moveDialogContainer, { backgroundColor: colors.background }]}>
-          <View style={[fileStyles.moveDialogHeader, { borderBottomColor: colors.border }]}>
-            <TouchableOpacity onPress={() => { setShowMoveFolderDialog(false); setFolderToMove(null); }} style={fileStyles.headerBtn}>
-              <Text style={[fileStyles.headerBtnText, { color: colors.primary }]}>Cancel</Text>
-            </TouchableOpacity>
-            <Text style={[fileStyles.moveDialogTitle, { color: colors.text }]}>Move "{folderToMove?.name}"</Text>
-            <TouchableOpacity
-              onPress={handleMoveFolderConfirm}
-              disabled={isMovingFolder}
-              style={fileStyles.headerBtn}
-            >
-              {isMovingFolder
-                ? <ActivityIndicator size="small" color={colors.primary} />
-                : <Text style={[fileStyles.headerBtnText, { color: colors.primary, fontWeight: '600' }]}>Move</Text>
-              }
-            </TouchableOpacity>
-          </View>
-
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={fileStyles.breadcrumb} contentContainerStyle={fileStyles.breadcrumbContent}>
-            <TouchableOpacity onPress={() => navigateMoveDialogBreadcrumb(-1)}>
-              <Text style={[fileStyles.crumb, { color: !moveDialogPath ? colors.primary : colors.textSecondary }]}>
-                {repo}
-              </Text>
-            </TouchableOpacity>
-            {moveDialogPathParts.map((part, i) => (
-              <View key={`mc-${part}`} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={[fileStyles.crumbSep, { color: colors.textSecondary }]}> / </Text>
-                <TouchableOpacity onPress={() => navigateMoveDialogBreadcrumb(i)}>
-                  <Text style={[fileStyles.crumb, { color: i === moveDialogPathParts.length - 1 ? colors.primary : colors.textSecondary }]}>
-                    {part}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-          </ScrollView>
-
-          <View style={[fileStyles.moveDestination, { backgroundColor: colors.primary + '10', borderColor: colors.primary + '30' }]}>
-            <Ionicons name="folder-open-outline" size={18} color={colors.primary} />
-            <Text style={[fileStyles.moveDestText, { color: colors.primary }]}>
-              Move to: {moveDialogPath || '(root)'}
-            </Text>
-          </View>
-
-          {moveDialogLoading ? (
-            <View style={fileStyles.loading}>
-              <ActivityIndicator size="large" color={colors.primary} />
-            </View>
-          ) : (
-            <FlatList
-              data={moveDialogFolders}
-              keyExtractor={(item) => item.path}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[fileStyles.item, { borderBottomColor: colors.border }]}
-                  onPress={() => loadMoveDialogFolders(item.path)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="folder" size={22} color="#FF9500" style={fileStyles.itemIcon} />
-                  <Text style={[fileStyles.itemName, { color: colors.text }]} numberOfLines={1}>{item.name}</Text>
-                  <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-                </TouchableOpacity>
-              )}
-              contentContainerStyle={moveDialogFolders.length === 0 ? fileStyles.emptyList : undefined}
-              ListEmptyComponent={
-                <View style={fileStyles.emptyContainer}>
-                  <Ionicons name="folder-open-outline" size={40} color={colors.textSecondary} />
-                  <Text style={[fileStyles.emptySub, { color: colors.textSecondary }]}>No subfolders</Text>
-                </View>
-              }
-            />
-          )}
+      <Modal visible={showMoveFolderDialog} onRequestClose={() => setShowMoveFolderDialog(false)} fullWidth>
+        <View style={[fileStyles.moveDialogHeader, { borderBottomColor: colors.border }]}>
+          <Button variant="ghost" label="Cancel" onPress={() => { setShowMoveFolderDialog(false); setFolderToMove(null); }} />
+          <Text style={[fileStyles.moveDialogTitle, { color: colors.text }]}>Move "{folderToMove?.name}"</Text>
+          <Button variant="ghost" label="Move" onPress={handleMoveFolderConfirm} disabled={isMovingFolder} textStyle={{ fontWeight: '600' }} />
         </View>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={fileStyles.breadcrumb} contentContainerStyle={fileStyles.breadcrumbContent}>
+          <Button variant="ghost" label={repo} onPress={() => navigateMoveDialogBreadcrumb(-1)} textStyle={[fileStyles.crumb, { color: !moveDialogPath ? colors.primary : colors.textSecondary }]} />
+          {moveDialogPathParts.map((part, i) => (
+            <View key={`mc-${part}`} style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={[fileStyles.crumbSep, { color: colors.textSecondary }]}> / </Text>
+              <Button variant="ghost" label={part} onPress={() => navigateMoveDialogBreadcrumb(i)} textStyle={[fileStyles.crumb, { color: i === moveDialogPathParts.length - 1 ? colors.primary : colors.textSecondary }]} />
+            </View>
+          ))}
+        </ScrollView>
+
+        <View style={[fileStyles.moveDestination, { backgroundColor: colors.primary + '10', borderColor: colors.primary + '30' }]}>
+          <Ionicons name="folder-open-outline" size={18} color={colors.primary} />
+          <Text style={[fileStyles.moveDestText, { color: colors.primary }]}>
+            Move to: {moveDialogPath || '(root)'}
+          </Text>
+        </View>
+
+        {moveDialogLoading ? (
+          <View style={fileStyles.loading}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : (
+          <FlatList
+            data={moveDialogFolders}
+            keyExtractor={(item) => item.path}
+            renderItem={({ item }) => (
+              <GroupRow
+                onPress={() => loadMoveDialogFolders(item.path)}
+                leading={<Ionicons name="folder" size={22} color="#FF9500" />}
+                trailing={<Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />}
+              >
+                <Text style={[fileStyles.itemName, { color: colors.text }]} numberOfLines={1}>{item.name}</Text>
+              </GroupRow>
+            )}
+            contentContainerStyle={moveDialogFolders.length === 0 ? fileStyles.emptyList : undefined}
+            ListEmptyComponent={
+              <View style={fileStyles.emptyContainer}>
+                <Ionicons name="folder-open-outline" size={40} color={colors.textSecondary} />
+                <Text style={[fileStyles.emptySub, { color: colors.textSecondary }]}>No subfolders</Text>
+              </View>
+            }
+          />
+        )}
       </Modal>
     </View>
   );
@@ -571,17 +518,6 @@ const fileStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  headerBtn: {
-    padding: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerBtnText: { fontSize: 16 },
-  badge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-  },
   breadcrumb: {
     flex: 1,
   },
@@ -596,19 +532,7 @@ const fileStyles = StyleSheet.create({
   crumbSep: {
     fontSize: 14,
   },
-  item: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  itemIcon: {
-    marginRight: 12,
-  },
-  itemText: {
-    flex: 1,
-  },
+  itemRow: {},
   itemName: {
     fontSize: 16,
     fontWeight: '500',
@@ -645,66 +569,29 @@ const fileStyles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'center',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  modalSheet: {
-    width: '100%',
-    borderRadius: 16,
-    padding: 20,
-  },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 16,
   },
-  modalInput: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-    marginBottom: 16,
-  },
   modalButtons: {
     flexDirection: 'row',
     gap: 8,
+    marginTop: 16,
+    justifyContent: 'flex-end',
   },
-  modalBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  modalBtnText: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  modalBtnPrimary: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  moveDialogContainer: { flex: 1 },
   moveDialogHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingBottom: 12,
     borderBottomWidth: 1,
+    marginBottom: 8,
   },
   moveDialogTitle: { fontSize: 17, fontWeight: '600', flex: 1, textAlign: 'center' },
   moveDestination: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 16,
     marginTop: 12,
     marginBottom: 8,
     paddingHorizontal: 12,

@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   LayoutAnimation,
   Platform,
   UIManager,
@@ -12,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Folder } from '../models/Folder';
 import { useTheme } from '../contexts/ThemeContext';
 import { DragDropBoundary, useDropTarget } from './dragdrop/DragDropContext';
+import { Group, GroupRow, IconButton } from './ui';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -103,45 +103,44 @@ const FolderItem = ({
   }, [folder, onDrop]);
 
   const folderRow = (
-    <TouchableOpacity
-      style={[
-        styles.folderItem,
-        { backgroundColor: isSelected ? colors.primary + '20' : 'transparent' },
-        { paddingLeft: 16 + level * 20 },
-      ]}
+    <GroupRow
       onPress={handleSelect}
       onLongPress={onLongPress ? handleLongPress : undefined}
-      activeOpacity={0.7}
+      style={[
+        isSelected && { backgroundColor: colors.primary + '14' },
+        { paddingLeft: 16 + level * 20 },
+      ]}
+      leading={
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          {hasChildren ? (
+            <IconButton size="sm" onPress={handleToggle} accessibilityLabel={isExpanded ? 'Collapse' : 'Expand'}>
+              <Ionicons
+                name={isExpanded ? 'chevron-down' : 'chevron-forward'}
+                size={14}
+                color={colors.textSecondary}
+              />
+            </IconButton>
+          ) : (
+            <View style={{ width: 36 }} />
+          )}
+          <Ionicons
+            name={isExpanded ? 'folder-open' : 'folder'}
+            size={20}
+            color={isSelected ? colors.primary : colors.textSecondary}
+          />
+        </View>
+      }
     >
-      <View style={styles.folderContent}>
-        {hasChildren ? (
-          <TouchableOpacity onPress={handleToggle} style={styles.chevronContainer}>
-            <Ionicons
-              name={isExpanded ? 'chevron-down' : 'chevron-forward'}
-              size={16}
-              color={colors.textSecondary}
-            />
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.chevronContainer} />
-        )}
-        <Ionicons
-          name={isExpanded ? 'folder-open' : 'folder'}
-          size={20}
-          color={isSelected ? colors.primary : colors.textSecondary}
-          style={styles.folderIcon}
-        />
-        <Text
-          style={[
-            styles.folderName,
-            { color: isSelected ? colors.primary : colors.text },
-          ]}
-          numberOfLines={1}
-        >
-          {folder.name}
-        </Text>
-      </View>
-    </TouchableOpacity>
+      <Text
+        style={[
+          styles.folderName,
+          { color: isSelected ? colors.primary : colors.text },
+        ]}
+        numberOfLines={1}
+      >
+        {folder.name}
+      </Text>
+    </GroupRow>
   );
 
   return (
@@ -231,38 +230,37 @@ function FolderTreeViewContent({
   }, [onDropToFolder]);
 
   const rootFolderRow = (
-    <TouchableOpacity
+    <GroupRow
+      onPress={handleSelectRoot}
       style={[
-        styles.folderItem,
-        { backgroundColor: selectedFolderId === null ? colors.primary + '20' : 'transparent' },
+        selectedFolderId === null && { backgroundColor: colors.primary + '14' },
         { paddingLeft: 16 },
       ]}
-      onPress={handleSelectRoot}
-      activeOpacity={0.7}
+      leading={
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <View style={{ width: 36 }} />
+          <Ionicons
+            name="home"
+            size={20}
+            color={selectedFolderId === null ? colors.primary : colors.textSecondary}
+          />
+        </View>
+      }
     >
-      <View style={styles.folderContent}>
-        <View style={styles.chevronContainer} />
-        <Ionicons
-          name="home"
-          size={20}
-          color={selectedFolderId === null ? colors.primary : colors.textSecondary}
-          style={styles.folderIcon}
-        />
-        <Text
-          style={[
-            styles.folderName,
-            { color: selectedFolderId === null ? colors.primary : colors.text },
-          ]}
-          numberOfLines={1}
-        >
-          All Notes
-        </Text>
-      </View>
-    </TouchableOpacity>
+      <Text
+        style={[
+          styles.folderName,
+          { color: selectedFolderId === null ? colors.primary : colors.text },
+        ]}
+        numberOfLines={1}
+      >
+        All Notes
+      </Text>
+    </GroupRow>
   );
 
   return (
-    <View style={styles.container}>
+    <Group>
       {showRoot && (
         onDropToFolder ? (
           <FolderDropZone
@@ -304,7 +302,7 @@ function FolderTreeViewContent({
           </Text>
         </View>
       )}
-    </View>
+    </Group>
   );
 }
 
@@ -317,29 +315,8 @@ export default function FolderTreeView(props: FolderTreeViewProps) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   dropZone: {
     minHeight: 44,
-  },
-  folderItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingRight: 16,
-  },
-  folderContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  chevronContainer: {
-    width: 20,
-    alignItems: 'center',
-  },
-  folderIcon: {
-    marginHorizontal: 8,
   },
   folderName: {
     fontSize: 16,
