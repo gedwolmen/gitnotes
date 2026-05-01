@@ -16,7 +16,7 @@ const TAB_ICONS: Record<string, { focused: IoniconName; outline: IoniconName; la
   SettingsTab: { focused: 'settings', outline: 'settings-outline', label: 'Settings' },
 };
 
-export function NTabBar({ state, navigation }: BottomTabBarProps) {
+export function TabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const { colors, spacing } = useTokens();
 

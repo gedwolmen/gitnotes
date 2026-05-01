@@ -1,10 +1,10 @@
 import React, { ReactNode } from 'react';
-import { Modal, Pressable, StyleSheet, View, ViewStyle, StyleProp } from 'react-native';
+import { Modal as RNModal, Pressable, StyleSheet, View, ViewStyle, StyleProp } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Surface } from './Surface';
 import { useTheme, useTokens } from '../../contexts/ThemeContext';
 
-export interface NModalProps {
+export interface ModalProps {
   visible: boolean;
   onRequestClose: () => void;
   dismissOnBackdrop?: boolean;
@@ -13,13 +13,13 @@ export interface NModalProps {
   fullWidth?: boolean;
 }
 
-export function NModal(props: NModalProps) {
+export function Modal(props: ModalProps) {
   const { visible, onRequestClose, dismissOnBackdrop = true, contentStyle, children, fullWidth = false } = props;
   const { isDark } = useTheme();
   const { spacing } = useTokens();
 
   return (
-    <Modal
+    <RNModal
       visible={visible}
       transparent
       animationType="fade"
@@ -48,6 +48,6 @@ export function NModal(props: NModalProps) {
           </Surface>
         </Pressable>
       </Pressable>
-    </Modal>
+    </RNModal>
   );
 }

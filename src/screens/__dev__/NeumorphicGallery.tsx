@@ -1,7 +1,7 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Surface } from '../../components/neumorphic';
+import { Surface } from '../../components/ui';
 import { useTheme, useTokens } from '../../contexts/ThemeContext';
 import { ElevationTier } from '../../theme/elevation';
 import { Radius } from '../../theme/tokens';

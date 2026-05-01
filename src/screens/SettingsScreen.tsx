@@ -32,7 +32,7 @@ import { HapticService } from '../utils/haptics';
 import SearchBar from '../components/SearchBar';
 import { useResponsive } from '../hooks/useResponsive';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { NGroup, NGroupRow, NToggle, NScreenHeader } from '../components/neumorphic';
+import { Group, GroupRow, Toggle, ScreenHeader } from '../components/ui';
 
 export default function SettingsScreen() {
   const { theme, colors, setTheme, style: uiStyle, setStyle } = useTheme();
@@ -269,41 +269,41 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }, isTablet && { maxWidth: maxContentWidth, alignSelf: 'center', width: '100%' }]}>
-      <NScreenHeader title="Settings" />
+      <ScreenHeader title="Settings" />
       <ScrollView style={styles.scrollContent} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, gap: 20 }}>
 
-        <NGroup title="Appearance" footer={uiStyle === 'neumorphic' ? 'Soft-UI shadows. Toggle off for the classic flat look.' : 'Classic flat look. Toggle on for neumorphic styling.'}>
-          <NGroupRow
+        <Group title="Appearance" footer={uiStyle === 'neumorphic' ? 'Soft-UI shadows. Toggle off for the classic flat look.' : 'Classic flat look. Toggle on for neumorphic styling.'}>
+          <GroupRow
             trailing={
-              <NToggle
+              <Toggle
                 value={uiStyle === 'neumorphic'}
                 onValueChange={(v) => setStyle(v ? 'neumorphic' : 'flat')}
               />
             }
           >
             <Text style={[styles.settingLabel, { color: colors.text }]}>Neumorphic UI</Text>
-          </NGroupRow>
-          <NGroupRow
+          </GroupRow>
+          <GroupRow
             trailing={
-              <NToggle
+              <Toggle
                 value={theme === 'dark'}
                 onValueChange={(v) => setTheme(v ? 'dark' : 'light')}
               />
             }
           >
             <Text style={[styles.settingLabel, { color: colors.text }]}>Dark Mode</Text>
-          </NGroupRow>
-          <NGroupRow
+          </GroupRow>
+          <GroupRow
             onPress={() => setTheme('system')}
             trailing={
-              <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
+              <Text style={[styles.settingValue, { color: colors.textSecondary }]}> 
                 {theme === 'system' ? 'Active' : 'Inactive'}
               </Text>
             }
           >
             <Text style={[styles.settingLabel, { color: colors.text }]}>Use System Theme</Text>
-          </NGroupRow>
-        </NGroup>
+          </GroupRow>
+        </Group>
 
         {/* ── GitHub Account ── */}
         <View style={[styles.section, { backgroundColor: colors.surface }]}>

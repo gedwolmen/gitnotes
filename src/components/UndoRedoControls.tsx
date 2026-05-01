@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
-import { NIconButton } from './neumorphic';
+import { IconButton } from './ui';
 
 interface UndoRedoControlsProps {
   canUndo: boolean;
@@ -23,7 +23,7 @@ export default function UndoRedoControls({
 
   return (
     <View style={styles.container}>
-      <NIconButton
+      <IconButton
         size="sm"
         onPress={onUndo}
         disabled={!canUndo || disabled}
@@ -34,9 +34,9 @@ export default function UndoRedoControls({
           size={18}
           color={(!canUndo || disabled) ? colors.textSecondary : colors.text}
         />
-      </NIconButton>
+      </IconButton>
 
-      <NIconButton
+      <IconButton
         size="sm"
         onPress={onRedo}
         disabled={!canRedo || disabled}
@@ -47,7 +47,7 @@ export default function UndoRedoControls({
           size={18}
           color={(!canRedo || disabled) ? colors.textSecondary : colors.text}
         />
-      </NIconButton>
+      </IconButton>
     </View>
   );
 }

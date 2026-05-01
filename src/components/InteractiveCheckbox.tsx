@@ -3,7 +3,7 @@ import { Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { HapticService } from '../utils/haptics';
-import { Surface } from './neumorphic';
+import { Surface } from './ui';
 
 interface InteractiveCheckboxProps {
   checked: boolean;

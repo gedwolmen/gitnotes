@@ -38,7 +38,7 @@ import { pullAllFromRepos } from "../services/RepoPullService";
 import ContextMenu from "../components/ContextMenu";
 import NoteCard from "../components/NoteCard";
 import SearchBar from "../components/SearchBar";
-import { NScreenHeader } from "../components/neumorphic";
+import { ScreenHeader } from "../components/ui";
 import { parseRepoPath } from "../utils/gitPathParser";
 import { HapticService } from "../utils/haptics";
 import {
@@ -477,7 +477,7 @@ export default function NotesListScreen() {
         },
       ]}
     >
-      <NScreenHeader title="Notes" />
+      <ScreenHeader title="Notes" />
 
       <View style={styles.topBar}>
         <SearchBar

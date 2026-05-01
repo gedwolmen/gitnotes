@@ -5,13 +5,13 @@ import * as Haptics from 'expo-haptics';
 import { Surface } from './Surface';
 import { useTokens } from '../../contexts/ThemeContext';
 
-export type NButtonVariant = 'primary' | 'secondary' | 'ghost';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
 
-export interface NButtonProps {
+export interface ButtonProps {
   label?: string;
   onPress?: () => void;
   onLongPress?: () => void;
-  variant?: NButtonVariant;
+  variant?: ButtonVariant;
   disabled?: boolean;
   fullWidth?: boolean;
   leadingIcon?: ReactNode;
@@ -22,7 +22,7 @@ export interface NButtonProps {
   children?: ReactNode;
 }
 
-export function NButton(props: NButtonProps) {
+export function Button(props: ButtonProps) {
   const {
     label,
     onPress,

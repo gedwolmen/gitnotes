@@ -6,7 +6,7 @@ import { Surface } from './Surface';
 import { useTokens } from '../../contexts/ThemeContext';
 import { Radius } from '../../theme/tokens';
 
-export interface NCardProps {
+export interface CardProps {
   onPress?: () => void;
   onLongPress?: () => void;
   disabled?: boolean;
@@ -17,7 +17,7 @@ export interface NCardProps {
   children?: ReactNode;
 }
 
-export function NCard(props: NCardProps) {
+export function Card(props: CardProps) {
   const { onPress, onLongPress, disabled, radius = 'lg', padding, style, testID, children } = props;
   const { spacing } = useTokens();
   const [isPressed, setIsPressed] = useState(false);

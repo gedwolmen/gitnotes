@@ -16,7 +16,7 @@ import TemplateSelector from '../components/TemplateSelector';
 import { NoteTemplate } from '../services/TemplateService';
 import { NoteFormatPreferenceService } from '../services/NoteFormatPreferenceService';
 import { useResponsive } from '../hooks/useResponsive';
-import { NButton, NCard, NModal, NGroup, NGroupRow, NScreenHeader } from '../components/neumorphic';
+import { Button, Card, Modal, Group, GroupRow, ScreenHeader } from '../components/ui';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type EditableNoteFormat = Exclude<NoteFormat, 'pdf'>;
@@ -185,10 +185,10 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <NScreenHeader title="GitNotēs" subtitle="Your development notes, organized." />
+      <ScreenHeader title="GitNotēs" subtitle="Your development notes, organized." />
       <ScrollView style={styles.container} contentContainerStyle={[styles.content, isTablet && { maxWidth: maxContentWidth, alignSelf: 'center', width: '100%' }]} showsVerticalScrollIndicator={false}>
       <View style={{ gap: 12, marginBottom: 24 }}>
-        <NButton
+        <Button
           variant="primary"
           fullWidth
           onPress={handleCreateNote}
@@ -200,13 +200,13 @@ export default function HomeScreen() {
           leadingIcon={<Ionicons name="add" size={22} color={colors.accent} />}
           label="Create New Note"
         />
-        <NButton
+        <Button
           fullWidth
           onPress={handleOpenTemplates}
           leadingIcon={<Ionicons name="copy-outline" size={20} color={colors.text} />}
           label="From Template"
         />
-        <NButton
+        <Button
           fullWidth
           onPress={() => navigation.navigate('CanvasList')}
           leadingIcon={<Ionicons name="easel-outline" size={20} color={colors.text} />}
@@ -216,9 +216,9 @@ export default function HomeScreen() {
 
       {recentCanvases.length > 0 && (
         <View style={{ marginTop: 8, marginBottom: 16 }}>
-          <NGroup title="Recent Canvases">
+          <Group title="Recent Canvases">
             {recentCanvases.map((canvas) => (
-              <NGroupRow
+              <GroupRow
                 key={canvas.id}
                 onPress={() => navigation.navigate('CanvasEditor', { canvasId: canvas.id })}
                 leading={<Ionicons name="easel-outline" size={20} color={colors.accent} />}
@@ -234,17 +234,17 @@ export default function HomeScreen() {
                 <Text style={[styles.recentNotePreview, { color: colors.textSecondary }]} numberOfLines={1}>
                   {canvas.scene?.elements?.length ?? 0} elements
                 </Text>
-              </NGroupRow>
+              </GroupRow>
             ))}
-          </NGroup>
+          </Group>
         </View>
       )}
 
       {recentNotes.length > 0 && (
         <View style={{ marginTop: 8, marginBottom: 16 }}>
-          <NGroup title="Recent Notes">
+          <Group title="Recent Notes">
             {recentNotes.map((note) => (
-              <NGroupRow
+              <GroupRow
                 key={note.id}
                 onPress={openItem(note)}
                 trailing={note.repo ? <Ionicons name="code-slash" size={14} color={colors.textSecondary} /> : undefined}
@@ -255,17 +255,17 @@ export default function HomeScreen() {
                 <Text style={[styles.recentNotePreview, { color: colors.textSecondary }]} numberOfLines={1}>
                   {stripFormatting(note.content, note.format).substring(0, 60) || 'No content'}
                 </Text>
-              </NGroupRow>
+              </GroupRow>
             ))}
-          </NGroup>
+          </Group>
         </View>
       )}
 
       {recentDocuments.length > 0 && (
         <View style={{ marginTop: 8 }}>
-          <NGroup title="Recent Documents">
+          <Group title="Recent Documents">
             {recentDocuments.map((note) => (
-              <NGroupRow
+              <GroupRow
                 key={note.id}
                 onPress={openItem(note)}
                 leading={<Ionicons name="document-text" size={22} color={colors.accent} />}
@@ -277,17 +277,17 @@ export default function HomeScreen() {
                 <Text style={[styles.recentNotePreview, { color: colors.textSecondary }]} numberOfLines={1}>
                   {note.filePath ?? 'PDF'}
                 </Text>
-              </NGroupRow>
+              </GroupRow>
             ))}
-          </NGroup>
+          </Group>
         </View>
       )}
 
-      <NModal visible={showFormatPicker} onRequestClose={handleFormatPickerClose} fullWidth>
+      <Modal visible={showFormatPicker} onRequestClose={handleFormatPickerClose} fullWidth>
         <Text style={[styles.modalTitle, { color: colors.text }]}>Choose Note Format</Text>
         <View style={{ gap: 10 }}>
           {FORMAT_OPTIONS.map((option) => (
-            <NCard
+            <Card
               key={option.value}
               onPress={() => handleSelectFormat(option.value)}
               padding={14}
@@ -296,7 +296,7 @@ export default function HomeScreen() {
                 <Text style={[styles.formatLabel, { color: colors.text }]}>{option.label}</Text>
                 <Text style={[styles.formatExt, { color: colors.textSecondary }]}>{option.ext}</Text>
               </View>
-            </NCard>
+            </Card>
           ))}
         </View>
         <TouchableOpacity
@@ -313,9 +313,9 @@ export default function HomeScreen() {
           <Text style={[styles.rememberLabel, { color: colors.text }]}>Remember my choice</Text>
         </TouchableOpacity>
         <View style={{ marginTop: 12 }}>
-          <NButton variant="ghost" fullWidth label="Cancel" onPress={handleFormatPickerClose} />
+          <Button variant="ghost" fullWidth label="Cancel" onPress={handleFormatPickerClose} />
         </View>
-      </NModal>
+      </Modal>
 
       <TemplateSelector
         visible={showTemplateSelector}

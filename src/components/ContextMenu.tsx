@@ -2,7 +2,7 @@ import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
-import { NModal } from './neumorphic';
+import { Modal } from './ui';
 
 export interface ContextMenuItem {
   icon: keyof typeof Ionicons.glyphMap;
@@ -39,7 +39,7 @@ export default function ContextMenu({
   const groups: ContextMenuSection[] = sections ?? (items ? [{ items }] : []);
 
   return (
-    <NModal
+    <Modal
       visible={visible}
       onRequestClose={onClose}
       contentStyle={{ padding: 0, overflow: 'hidden', minWidth: 280 }}
@@ -103,7 +103,7 @@ export default function ContextMenu({
           ))}
         </View>
       ))}
-    </NModal>
+    </Modal>
   );
 }
 

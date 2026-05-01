@@ -5,7 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { Surface } from './Surface';
 import { useTokens } from '../../contexts/ThemeContext';
 
-export interface NToggleProps {
+export interface ToggleProps {
   value: boolean;
   onValueChange: (next: boolean) => void;
   disabled?: boolean;
@@ -16,7 +16,7 @@ const TRACK_WIDTH = 52;
 const TRACK_HEIGHT = 30;
 const THUMB = 22;
 
-export function NToggle(props: NToggleProps) {
+export function Toggle(props: ToggleProps) {
   const { value, onValueChange, disabled, testID } = props;
   const { colors } = useTokens();
   const offset = useSharedValue(value ? 1 : 0);

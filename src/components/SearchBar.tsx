@@ -2,7 +2,7 @@ import React from 'react';
 import { TouchableOpacity, ViewStyle, StyleProp } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
-import { NInput } from './neumorphic';
+import { Input } from './ui';
 
 interface SearchBarProps {
   value: string;
@@ -27,7 +27,7 @@ export default function SearchBar({
   };
 
   return (
-    <NInput
+    <Input
       value={value}
       onChangeText={onChangeText}
       placeholder={placeholder}
