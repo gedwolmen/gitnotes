@@ -342,9 +342,17 @@ export default function NoteEditorScreen() {
 
         const syncResult = await syncNoteToGitHub(syncParams);
 
+        if (syncResult.success && syncResult.filePath && savedNoteId) {
+          try {
+            await updateNote({ id: savedNoteId, filePath: syncResult.filePath });
+          } catch {
+            // best-effort; pull dedup handles stale state
+          }
+        }
+
         if (!syncResult.success) {
           console.warn('[NoteEditor] GitHub sync failed, queueing:', syncResult.error);
-          await NoteSyncQueueService.enqueueNoteUpsert(syncParams);
+          await NoteSyncQueueService.enqueueNoteUpsert(syncParams, savedNoteId);
         }
       }
     } catch (error) {

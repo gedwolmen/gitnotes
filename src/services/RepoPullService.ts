@@ -79,8 +79,28 @@ async function pullNotesFromRepo(
       FILE_FETCH_CONCURRENCY,
     );
 
-    const allNotes = await StorageService.getAllNotes();
+    let allNotes = await StorageService.getAllNotes();
     let pulled = 0;
+
+    const seen = new Set<string>();
+    const hadDupes = allNotes.some((n) => {
+      const key = n.repo && n.filePath ? `${n.repo}::${n.filePath}` : null;
+      if (!key) return false;
+      if (seen.has(key)) return true;
+      seen.add(key);
+      return false;
+    });
+
+    if (hadDupes) {
+      const seen2 = new Set<string>();
+      allNotes = allNotes.filter((n) => {
+        const key = n.repo && n.filePath ? `${n.repo}::${n.filePath}` : null;
+        if (!key) return true;
+        if (seen2.has(key)) return false;
+        seen2.add(key);
+        return true;
+      });
+    }
 
     for (const item of fetched) {
       if (!item) continue;
@@ -91,7 +111,9 @@ async function pullNotesFromRepo(
         .replace(/[-_/]/g, ' ');
 
       const existingIdx = allNotes.findIndex(
-        (n) => n.repo === repoPath && n.filePath === item.path,
+        (n) =>
+          (n.repo === repoPath && n.filePath === item.path) ||
+          (n.repo === repoPath && n.filePath == null && n.title === titleFromPath),
       );
       if (existingIdx !== -1) {
         const existing = allNotes[existingIdx];

@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { syncNoteToGitHub } from './NoteGitHubSyncService';
+import { StorageService } from './StorageService';
 import { NoteFormat } from '../models/Note';
 
 const QUEUE_KEY = '@gitnotes:sync_queue_v1';
@@ -20,6 +21,7 @@ export interface QueuedMutation {
   createdAt: number;
   attempts: number;
   lastError?: string;
+  localNoteId?: string;
   params: NoteUpsertParams;
 }
 
@@ -64,7 +66,7 @@ class NoteSyncQueueServiceClass {
     this.notify();
   }
 
-  async enqueueNoteUpsert(params: NoteUpsertParams): Promise<void> {
+  async enqueueNoteUpsert(params: NoteUpsertParams, localNoteId?: string): Promise<void> {
     const items = await this.getAll();
     const dedupeKey = (m: QueuedMutation) =>
       m.type === 'note.upsert' &&
@@ -79,6 +81,7 @@ class NoteSyncQueueServiceClass {
       type: 'note.upsert',
       createdAt: Date.now(),
       attempts: 0,
+      localNoteId,
       params,
     });
     await this.saveAll(filtered);
@@ -107,6 +110,16 @@ class NoteSyncQueueServiceClass {
         processedIds.add(item.id);
         const result = await syncNoteToGitHub(item.params);
         if (result.success) {
+          if (result.filePath && item.localNoteId) {
+            try {
+              await StorageService.updateNote({
+                id: item.localNoteId,
+                filePath: result.filePath,
+              });
+            } catch {
+              // best-effort; RepoPullService dedup-by-title handles stale state
+            }
+          }
           succeeded++;
           droppedIds.add(item.id);
           continue;
