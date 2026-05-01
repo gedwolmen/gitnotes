@@ -34,7 +34,8 @@ interface BottomSheetProps {
 }
 
 function BottomSheet({ visible, title, onClose, children }: BottomSheetProps) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
+  const sheetBg = isDark ? '#1C1C1E' : colors.surface;
   return (
     <Modal
       visible={visible}
@@ -47,8 +48,8 @@ function BottomSheet({ visible, title, onClose, children }: BottomSheetProps) {
         style={styles.sheetContainer}
       >
         <SafeAreaView
-          edges={['bottom']}
-          style={[styles.sheet, { backgroundColor: colors.surface }]}
+          edges={['top', 'bottom']}
+          style={[styles.sheet, { backgroundColor: sheetBg }]}
         >
           <View style={[styles.sheetHeader, { borderBottomColor: colors.border }]}>
             <Text style={[styles.sheetTitle, { color: colors.text }]}>{title}</Text>
