@@ -4,20 +4,55 @@ import { Folder, FolderCreateInput, createFolder, updateFolder } from '../models
 import { GitRepository } from './GitService';
 import { Todo, TodoCreateInput, TodoUpdateInput, createTodoItem, applyTodoUpdate } from '../models/Todo';
 import { Canvas, CanvasCreateInput, CanvasUpdateInput, createCanvas, updateCanvas, sortCanvasesByUpdated } from '../models/Canvas';
+import { NOTE_INDEX_KEY, noteKey, getBootValue } from './StorageBootstrap';
 
 const TODOS_STORAGE_KEY = '@gitnotes:todos';
 const CANVASES_STORAGE_KEY = '@gitnotes:canvases';
-
-const NOTES_STORAGE_KEY = '@gitnotes:notes';
+const LEGACY_NOTES_KEY = '@gitnotes:notes';
 const REPOS_STORAGE_KEY = '@gitnotes:repos';
 const FOLDERS_STORAGE_KEY = '@gitnotes:folders';
 
+let migrationDone = false;
+
+async function migrateFromBlob(): Promise<void> {
+  if (migrationDone) return;
+  migrationDone = true;
+
+  const indexRaw = await AsyncStorage.getItem(NOTE_INDEX_KEY);
+  if (indexRaw !== null) return;
+
+  const legacyRaw = getBootValue('@gitnotes:notes') ?? await AsyncStorage.getItem(LEGACY_NOTES_KEY);
+  if (!legacyRaw) return;
+
+  try {
+    const notes: Note[] = JSON.parse(legacyRaw);
+    if (!Array.isArray(notes) || notes.length === 0) return;
+
+    const pairs: [string, string][] = notes.map((n) => [noteKey(n.id), JSON.stringify(n)]);
+    await AsyncStorage.multiSet(pairs);
+    await AsyncStorage.setItem(NOTE_INDEX_KEY, JSON.stringify(notes.map((n) => n.id)));
+    await AsyncStorage.removeItem(LEGACY_NOTES_KEY);
+  } catch (e) {
+    console.error('Note blob migration failed:', e);
+  }
+}
+
 export class StorageService {
   static async getAllNotes(): Promise<Note[]> {
+    await migrateFromBlob();
     try {
-      const jsonValue = await AsyncStorage.getItem(NOTES_STORAGE_KEY);
-      if (jsonValue === null) return [];
-      const notes: Note[] = JSON.parse(jsonValue);
+      const indexRaw = await AsyncStorage.getItem(NOTE_INDEX_KEY);
+      if (!indexRaw) return [];
+      const ids: string[] = JSON.parse(indexRaw);
+      if (ids.length === 0) return [];
+
+      const pairs = await AsyncStorage.multiGet(ids.map(noteKey));
+      const notes: Note[] = [];
+      for (const [, raw] of pairs) {
+        if (raw) {
+          try { notes.push(JSON.parse(raw)); } catch { /* skip corrupt */ }
+        }
+      }
       return notes;
     } catch (error) {
       console.error('Error reading notes from storage:', error);
@@ -25,10 +60,16 @@ export class StorageService {
     }
   }
 
+  private static async saveNoteIndex(ids: string[]): Promise<void> {
+    await AsyncStorage.setItem(NOTE_INDEX_KEY, JSON.stringify(ids));
+  }
+
   static async saveAllNotes(notes: Note[]): Promise<void> {
+    await migrateFromBlob();
     try {
-      const jsonValue = JSON.stringify(notes);
-      await AsyncStorage.setItem(NOTES_STORAGE_KEY, jsonValue);
+      const pairs: [string, string][] = notes.map((n) => [noteKey(n.id), JSON.stringify(n)]);
+      await AsyncStorage.multiSet(pairs);
+      await this.saveNoteIndex(notes.map((n) => n.id));
     } catch (error) {
       console.error('Error saving notes to storage:', error);
       throw error;
@@ -36,9 +77,10 @@ export class StorageService {
   }
 
   static async getNoteById(id: string): Promise<Note | null> {
+    await migrateFromBlob();
     try {
-      const notes = await this.getAllNotes();
-      return notes.find((note) => note.id === id) || null;
+      const raw = await AsyncStorage.getItem(noteKey(id));
+      return raw ? JSON.parse(raw) : null;
     } catch (error) {
       console.error('Error getting note by id:', error);
       return null;
@@ -46,30 +88,37 @@ export class StorageService {
   }
 
   static async createNote(input: NoteCreateInput): Promise<Note> {
-    const notes = await this.getAllNotes();
+    await migrateFromBlob();
     const newNote = createNote(input);
-    notes.push(newNote);
-    await this.saveAllNotes(notes);
+    await AsyncStorage.setItem(noteKey(newNote.id), JSON.stringify(newNote));
+
+    const indexRaw = await AsyncStorage.getItem(NOTE_INDEX_KEY);
+    const ids: string[] = indexRaw ? JSON.parse(indexRaw) : [];
+    ids.push(newNote.id);
+    await this.saveNoteIndex(ids);
     return newNote;
   }
 
   static async updateNote(input: NoteUpdateInput): Promise<Note | null> {
-    const notes = await this.getAllNotes();
-    const index = notes.findIndex((note) => note.id === input.id);
-    if (index === -1) return null;
+    await migrateFromBlob();
+    const raw = await AsyncStorage.getItem(noteKey(input.id));
+    if (!raw) return null;
 
-    const updatedNote = updateNote(notes[index], input);
-    notes[index] = updatedNote;
-    await this.saveAllNotes(notes);
+    const existing: Note = JSON.parse(raw);
+    const updatedNote = updateNote(existing, input);
+    await AsyncStorage.setItem(noteKey(input.id), JSON.stringify(updatedNote));
     return updatedNote;
   }
 
   static async deleteNote(id: string): Promise<boolean> {
+    await migrateFromBlob();
     try {
-      const notes = await this.getAllNotes();
-      const filteredNotes = notes.filter((note) => note.id !== id);
-      if (filteredNotes.length === notes.length) return false;
-      await this.saveAllNotes(filteredNotes);
+      const indexRaw = await AsyncStorage.getItem(NOTE_INDEX_KEY);
+      const ids: string[] = indexRaw ? JSON.parse(indexRaw) : [];
+      if (!ids.includes(id)) return false;
+
+      await AsyncStorage.removeItem(noteKey(id));
+      await this.saveNoteIndex(ids.filter((i) => i !== id));
       return true;
     } catch (error) {
       console.error('Error deleting note:', error);
@@ -96,8 +145,15 @@ export class StorageService {
   }
 
   static async clearAllNotes(): Promise<void> {
+    await migrateFromBlob();
     try {
-      await AsyncStorage.removeItem(NOTES_STORAGE_KEY);
+      const indexRaw = await AsyncStorage.getItem(NOTE_INDEX_KEY);
+      if (indexRaw) {
+        const ids: string[] = JSON.parse(indexRaw);
+        await AsyncStorage.multiRemove(ids.map(noteKey));
+      }
+      await AsyncStorage.removeItem(NOTE_INDEX_KEY);
+      await AsyncStorage.removeItem(LEGACY_NOTES_KEY);
     } catch (error) {
       console.error('Error clearing notes:', error);
       throw error;
@@ -106,7 +162,8 @@ export class StorageService {
 
   static async getSavedRepositories(): Promise<GitRepository[]> {
     try {
-      const jsonValue = await AsyncStorage.getItem(REPOS_STORAGE_KEY);
+      const boot = getBootValue('@gitnotes:repos');
+      const jsonValue = boot ?? await AsyncStorage.getItem(REPOS_STORAGE_KEY);
       if (jsonValue === null) return [];
       return JSON.parse(jsonValue);
     } catch (error) {
@@ -139,10 +196,10 @@ export class StorageService {
     await this.saveRepositories(filtered);
   }
 
-  // Folder operations
   static async getAllFolders(): Promise<Folder[]> {
     try {
-      const jsonValue = await AsyncStorage.getItem(FOLDERS_STORAGE_KEY);
+      const boot = getBootValue('@gitnotes:folders');
+      const jsonValue = boot ?? await AsyncStorage.getItem(FOLDERS_STORAGE_KEY);
       if (jsonValue === null) return [];
       return JSON.parse(jsonValue);
     } catch (error) {
@@ -221,10 +278,10 @@ export class StorageService {
     }
   }
 
-  // ── Todo operations ──────────────────────────────────────────
   static async getAllTodos(): Promise<Todo[]> {
     try {
-      const json = await AsyncStorage.getItem(TODOS_STORAGE_KEY);
+      const boot = getBootValue('@gitnotes:todos');
+      const json = boot ?? await AsyncStorage.getItem(TODOS_STORAGE_KEY);
       return json ? JSON.parse(json) : [];
     } catch {
       return [];
@@ -265,10 +322,10 @@ export class StorageService {
     return true;
   }
 
-  // ── Canvas operations ─────────────────────────────────────────
   static async getAllCanvases(): Promise<Canvas[]> {
     try {
-      const json = await AsyncStorage.getItem(CANVASES_STORAGE_KEY);
+      const boot = getBootValue('@gitnotes:canvases');
+      const json = boot ?? await AsyncStorage.getItem(CANVASES_STORAGE_KEY);
       return json ? JSON.parse(json) : [];
     } catch {
       return [];

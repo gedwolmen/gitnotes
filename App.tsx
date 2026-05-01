@@ -23,12 +23,14 @@ import OnboardingScreen from './src/screens/OnboardingScreen';
 import { OnboardingService } from './src/services/OnboardingService';
 import { NotificationService } from './src/services/NotificationService';
 import { StartupSyncGate } from './src/components/StartupSyncGate';
+import { bootstrapStorage } from './src/services/StorageBootstrap';
 
 export default function App() {
   const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
   const systemColorScheme = useColorScheme();
 
   const checkOnboarding = useCallback(async () => {
+    await bootstrapStorage();
     const completed = await OnboardingService.isOnboardingCompleted();
     setShowOnboarding(!completed);
     await NotificationService.requestPermissions();
