@@ -89,16 +89,44 @@ export class GitService {
     }
   }
 
+  private static memCache = new Map<string, CacheEntry<unknown>>();
+  private static readonly MEM_CACHE_MAX = 64;
+
+  private static memCacheGet<T>(key: string): T | null {
+    const entry = this.memCache.get(key) as CacheEntry<T> | undefined;
+    if (!entry) return null;
+    if (Date.now() - entry.timestamp > CACHE_DURATION) {
+      this.memCache.delete(key);
+      return null;
+    }
+    // LRU touch: re-insert moves the key to the end of the iteration order.
+    this.memCache.delete(key);
+    this.memCache.set(key, entry);
+    return entry.data;
+  }
+
+  private static memCacheSet<T>(key: string, data: T): void {
+    this.memCache.set(key, { data, timestamp: Date.now() });
+    while (this.memCache.size > this.MEM_CACHE_MAX) {
+      const oldest = this.memCache.keys().next().value;
+      if (oldest === undefined) break;
+      this.memCache.delete(oldest);
+    }
+  }
+
   private static async getCachedData<T>(key: string): Promise<T | null> {
+    const memHit = this.memCacheGet<T>(key);
+    if (memHit !== null) return memHit;
     try {
       const cached = await AsyncStorage.getItem(CACHE_PREFIX + key);
       if (!cached) return null;
-      
+
       const entry: CacheEntry<T> = JSON.parse(cached);
       if (Date.now() - entry.timestamp > CACHE_DURATION) {
         await AsyncStorage.removeItem(CACHE_PREFIX + key);
         return null;
       }
+      this.memCacheSet(key, entry.data);
       return entry.data;
     } catch {
       return null;
@@ -106,6 +134,7 @@ export class GitService {
   }
 
   private static async setCachedData<T>(key: string, data: T): Promise<void> {
+    this.memCacheSet(key, data);
     try {
       const entry: CacheEntry<T> = {
         data,
