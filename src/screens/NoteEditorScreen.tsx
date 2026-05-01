@@ -546,6 +546,7 @@ export default function NoteEditorScreen() {
     return md;
   }, []);
 
+
   const previewContent = useMemo(() => {
     const stripTopMetadata = (raw: string, format: NoteFormat): string => {
       if (format === 'markdown') {
