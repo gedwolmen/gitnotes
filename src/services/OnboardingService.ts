@@ -1,11 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getBootValue } from './StorageBootstrap';
 
 const ONBOARDING_COMPLETED_KEY = '@gitnotes:onboarding_completed';
 
 export class OnboardingService {
   static async isOnboardingCompleted(): Promise<boolean> {
     try {
-      const value = await AsyncStorage.getItem(ONBOARDING_COMPLETED_KEY);
+      const value = getBootValue('@gitnotes:onboarding_completed') ?? await AsyncStorage.getItem(ONBOARDING_COMPLETED_KEY);
       return value === 'true';
     } catch (error) {
       console.error('Error checking onboarding status:', error);

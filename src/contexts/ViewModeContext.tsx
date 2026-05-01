@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getBootValue } from '../services/StorageBootstrap';
 import { ViewMode, ViewModePreference, DEFAULT_VIEW_MODE } from '../utils/viewModes';
 
 const VIEW_MODE_KEY = '@gitnotes:view_mode';
@@ -25,7 +26,7 @@ export function ViewModeProvider({ children }: ViewModeProviderProps) {
 
   const loadPreferences = useCallback(async () => {
     try {
-      const stored = await AsyncStorage.getItem(VIEW_MODE_KEY);
+      const stored = getBootValue('@gitnotes:viewMode') ?? await AsyncStorage.getItem(VIEW_MODE_KEY);
       if (stored) {
         setPreferences(JSON.parse(stored));
       }

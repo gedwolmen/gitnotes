@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getBootValue } from '../services/StorageBootstrap';
 import {
   Palette,
   ThemeStyle,
@@ -45,10 +46,8 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
   const loadPersisted = useCallback(async () => {
     try {
-      const [savedTheme, savedStyle] = await Promise.all([
-        AsyncStorage.getItem(THEME_STORAGE_KEY),
-        AsyncStorage.getItem(STYLE_STORAGE_KEY),
-      ]);
+      const savedTheme = getBootValue('@gitnotes:theme') ?? await AsyncStorage.getItem(THEME_STORAGE_KEY);
+      const savedStyle = getBootValue('@gitnotes:style') ?? await AsyncStorage.getItem(STYLE_STORAGE_KEY);
       if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
         setThemeState(savedTheme as ThemeMode);
       }
