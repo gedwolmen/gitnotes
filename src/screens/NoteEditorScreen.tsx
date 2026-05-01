@@ -11,8 +11,11 @@ import {
   ScrollView,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  Linking,
 } from 'react-native';
+
 import { Image } from 'expo-image';
+
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
@@ -35,6 +38,7 @@ import PdfViewer from '../components/PdfViewer';
 import TagInput from '../components/TagInput';
 import VoiceInputModal from '../components/VoiceInputModal';
 import CanvasModal, { CanvasSavePayload } from '../components/CanvasModal';
+import CanvasPreview from '../components/CanvasPreview';
 import FolderSelectionDialog from '../components/FolderSelectionDialog';
 import { useFolders } from '../contexts/FolderContext';
 import { useRepos } from '../contexts/RepoContext';
@@ -46,13 +50,40 @@ import { NoteFormat, NoteGitHubLink } from '../models/Note';
 import { Attachment, createAttachment } from '../models/Attachment';
 import { NeorgParser } from '../services/NeorgParser';
 import { NeorgContentParser } from '../services/NeorgContentParser';
-import { canvasToLink } from '../models/Canvas';
+import { canvasIdFromLink, canvasToLink, isCanvasLink } from '../models/Canvas';
 import { useResponsive } from '../hooks/useResponsive';
 import { syncNoteToGitHub } from '../services/NoteGitHubSyncService';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import { PositionMemoryService } from '../services/PositionMemoryService';
 import { getMarkdownStyles } from '../utils/preview';
-import { NIconButton } from '../components/neumorphic';
+import { NIconButton, NModal } from '../components/neumorphic';
+
+interface TocEntry {
+  level: number;
+  text: string;
+  lineIndex: number;
+}
+
+const APPROX_LINE_PX = 22;
+
+function extractTocFromMarkdown(content: string): TocEntry[] {
+  const out: TocEntry[] = [];
+  const lines = content.split('\n');
+  let inFence = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^\s*```/.test(line)) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
+    const m = line.match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
+    if (m) {
+      out.push({ level: m[1].length, text: m[2].trim(), lineIndex: i });
+    }
+  }
+  return out;
+}
 
 const FORMAT_OPTIONS: { label: string; value: NoteFormat }[] = [
   { label: '.md', value: 'markdown' },
@@ -198,9 +229,17 @@ export default function NoteEditorScreen() {
     return `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}?ref=${encodeURIComponent(ref)}`;
   }, []);
 
+  // Keep getNoteById in a ref so the load effect below depends only on
+  // noteId — otherwise external updates to the notes array (background
+  // pulls, other-note edits) re-fire it and clobber unsaved local edits.
+  const getNoteByIdRef = useRef(getNoteById);
+  useEffect(() => {
+    getNoteByIdRef.current = getNoteById;
+  }, [getNoteById]);
+
   useEffect(() => {
     if (noteId) {
-      const existingNote = getNoteById(noteId);
+      const existingNote = getNoteByIdRef.current(noteId);
       if (existingNote) {
         setTitle(existingNote.title);
         setContent(existingNote.content);
@@ -214,7 +253,7 @@ export default function NoteEditorScreen() {
         setAttachments(existingNote.attachments || []);
       }
     }
-  }, [noteId, getNoteById, setContent]);
+  }, [noteId, setContent]);
 
   const handleTitleChange = useCallback((text: string) => {
     setTitle(text);
@@ -446,7 +485,7 @@ export default function NoteEditorScreen() {
   }, [content]);
 
   const handleLinkCanvas = useCallback((canvasId: string, canvasTitle: string) => {
-    const link = canvasToLink({ id: canvasId } as any);
+    const link = canvasToLink({ id: canvasId });
     let linkText: string;
     if (noteFormat === 'neorg') {
       linkText = `\n{${link}}[${canvasTitle}]\n`;
@@ -501,41 +540,13 @@ export default function NoteEditorScreen() {
 
   const markdownItInstance = useMemo(() => {
     const md = MarkdownIt({ typographer: true, linkify: true });
-    md.validateLink = (url: string) => /^(https?:|file:|data:|mailto:|tel:)/i.test(url) || !/^[a-z][a-z0-9+.-]*:/i.test(url);
+    md.validateLink = (url: string) =>
+      /^(https?:|file:|data:|mailto:|tel:|canvas:|note:|#)/i.test(url) ||
+      !/^[a-z][a-z0-9+.-]*:/i.test(url);
     return md;
   }, []);
 
-  const markdownRules = useMemo(() => ({
-    image: (node: any) => {
-      const src: string = node.attributes?.src ?? '';
-      const alt: string = node.attributes?.alt ?? '';
-      const isCanvas = /canvas-drawings\/canvas-/.test(src) || /^canvas-/.test(alt);
-      if (isCanvas) {
-        const isJson = /\.json(\?|$)/i.test(src);
-        const pngUri = isJson ? src.split('?')[0].replace(/\.json$/i, '.png') : src;
-        return (
-          <Image
-            key={node.key}
-            source={{ uri: pngUri }}
-            contentFit="contain"
-            accessibilityLabel={alt || undefined}
-            style={{ width: '100%', height: 240, borderRadius: 6, backgroundColor: '#fff' }}
-          />
-        );
-      }
-      return (
-        <Image
-          key={node.key}
-          source={{ uri: src }}
-          contentFit="contain"
-          accessibilityLabel={alt || undefined}
-          style={{ width: '100%', height: 240, borderRadius: 6, backgroundColor: colors.surfaceSecondary }}
-        />
-      );
-    },
-  }), [colors, handleEditCanvasJson]);
-
-  const previewContent = (() => {
+  const previewContent = useMemo(() => {
     const stripTopMetadata = (raw: string, format: NoteFormat): string => {
       if (format === 'markdown') {
         const lines = raw.split('\n');
@@ -585,18 +596,94 @@ export default function NoteEditorScreen() {
     }
 
     return stripTopMetadata(content, 'org');
-  })();
+  }, [content, noteFormat]);
 
   const pdfViewerUri = useMemo(() => {
     return resolvePdfUrl(previewContent);
   }, [previewContent, resolvePdfUrl]);
 
-  const parsedStructuredContent = (() => {
+  const parsedStructuredContent = useMemo(() => {
     if (noteFormat === 'markdown' || noteFormat === 'pdf') return null;
     const parsed = NeorgContentParser.parseContent(previewContent);
     if (!parsed.success || !parsed.blocks || parsed.blocks.length === 0) return null;
     return parsed.blocks;
-  })();
+  }, [previewContent, noteFormat]);
+
+  const previewScrollRef = useRef<ScrollView>(null);
+
+  const markdownRules = useMemo(() => ({
+    image: (node: any) => {
+      const src: string = node.attributes?.src ?? '';
+      const alt: string = node.attributes?.alt ?? '';
+      const isCanvas = /canvas-drawings\/canvas-/.test(src) || /^canvas-/.test(alt);
+      if (isCanvas) {
+        const isJson = /\.json(\?|$)/i.test(src);
+        const pngUri = isJson ? src.split('?')[0].replace(/\.json$/i, '.png') : src;
+        return (
+          <Image
+            key={node.key}
+            source={{ uri: pngUri }}
+            contentFit="contain"
+            accessibilityLabel={alt || undefined}
+            style={{ width: '100%', height: 240, borderRadius: 6, backgroundColor: '#fff' }}
+          />
+        );
+      }
+      return (
+        <Image
+          key={node.key}
+          source={{ uri: src }}
+          contentFit="contain"
+          accessibilityLabel={alt || undefined}
+          style={{ width: '100%', height: 240, borderRadius: 6, backgroundColor: colors.surfaceSecondary }}
+        />
+      );
+    },
+    link: (node: any, children: any) => {
+      const href: string = node.attributes?.href ?? '';
+      if (isCanvasLink(href)) {
+        const id = canvasIdFromLink(href);
+        return <CanvasPreview key={node.key} canvasId={id} />;
+      }
+      const onPress = () => {
+        if (!href) return;
+        if (href.startsWith('note:')) {
+          const id = href.slice('note:'.length);
+          if (id) navigation.navigate('NoteEditor', { noteId: id });
+          return;
+        }
+        if (href.startsWith('#')) {
+          const slug = href.slice(1).toLowerCase();
+          const target = previewContent
+            .split('\n')
+            .findIndex((line) => {
+              const m = line.match(/^#{1,6}\s+(.+?)\s*#*\s*$/);
+              if (!m) return false;
+              const headingSlug = m[1]
+                .toLowerCase()
+                .trim()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-|-$/g, '');
+              return headingSlug === slug;
+            });
+          if (target >= 0) {
+            previewScrollRef.current?.scrollTo({ y: target * APPROX_LINE_PX, animated: true });
+          }
+          return;
+        }
+        Linking.openURL(href).catch(() => {});
+      };
+      return (
+        <Text
+          key={node.key}
+          style={{ color: colors.primary, textDecorationLine: 'underline' }}
+          onPress={onPress}
+        >
+          {children}
+        </Text>
+      );
+    },
+  }), [colors, navigation, previewContent]);
 
   const speakableContent = useMemo(() => {
     return previewContent
@@ -612,29 +699,50 @@ export default function NoteEditorScreen() {
       .trim();
   }, [previewContent]);
 
+  const isSpeakingRef = useRef(false);
+
   const handleToggleSpeak = useCallback(async () => {
     if (isSpeaking) {
       await Speech.stop();
+      isSpeakingRef.current = false;
       setIsSpeaking(false);
       return;
     }
     if (!speakableContent) return;
     HapticService.light();
+    isSpeakingRef.current = true;
     setIsSpeaking(true);
     Speech.speak(speakableContent, {
-      onDone: () => setIsSpeaking(false),
-      onStopped: () => setIsSpeaking(false),
-      onError: () => setIsSpeaking(false),
+      onDone: () => { isSpeakingRef.current = false; setIsSpeaking(false); },
+      onStopped: () => { isSpeakingRef.current = false; setIsSpeaking(false); },
+      onError: () => { isSpeakingRef.current = false; setIsSpeaking(false); },
     });
   }, [isSpeaking, speakableContent]);
 
   useEffect(() => {
     return () => {
-      Speech.stop();
+      // Only stop if this screen instance was the one speaking. Otherwise
+      // unmounting one editor would silence speech started by another.
+      if (isSpeakingRef.current) {
+        Speech.stop();
+      }
     };
   }, []);
 
-  const previewScrollRef = useRef<ScrollView>(null);
+  const [showToc, setShowToc] = useState(false);
+
+  const tocEntries = useMemo(() => {
+    if (noteFormat !== 'markdown') return [];
+    return extractTocFromMarkdown(previewContent);
+  }, [previewContent, noteFormat]);
+
+  const handleTocPress = useCallback((entry: TocEntry) => {
+    setShowToc(false);
+    const y = entry.lineIndex * APPROX_LINE_PX;
+    requestAnimationFrame(() => {
+      previewScrollRef.current?.scrollTo({ y, animated: true });
+    });
+  }, []);
   const targetScrollYRef = useRef<number | null>(null);
   const restoredScrollRef = useRef(false);
   const lastScrollYRef = useRef(0);
@@ -703,6 +811,11 @@ export default function NoteEditorScreen() {
             <Ionicons name="arrow-back" size={20} color={colors.accent} />
           </NIconButton>
           <View style={styles.flex} />
+          {!isPdfNote && tocEntries.length > 0 ? (
+            <NIconButton size="sm" onPress={() => { HapticService.light(); setShowToc(true); }} accessibilityLabel="Table of contents">
+              <Ionicons name="list" size={18} color={colors.accent} />
+            </NIconButton>
+          ) : null}
           {!isPdfNote && speakableContent ? (
             <NIconButton size="sm" onPress={handleToggleSpeak} accessibilityLabel="Read aloud">
               <Ionicons
@@ -769,6 +882,39 @@ export default function NoteEditorScreen() {
             )}
           </ScrollView>
         )}
+        <NModal visible={showToc} onRequestClose={() => setShowToc(false)} fullWidth>
+          <Text style={[styles.tocTitle, { color: colors.text }]}>Table of contents</Text>
+          {tocEntries.length === 0 ? (
+            <Text style={{ color: colors.textSecondary }}>No headings in this note.</Text>
+          ) : (
+            <ScrollView style={{ maxHeight: 360 }}>
+              {tocEntries.map((entry, idx) => (
+                <TouchableOpacity
+                  key={`${entry.lineIndex}-${idx}`}
+                  onPress={() => handleTocPress(entry)}
+                  style={[styles.tocRow, { paddingLeft: 8 + (entry.level - 1) * 14 }]}
+                >
+                  <Text
+                    style={[
+                      styles.tocText,
+                      {
+                        color: colors.text,
+                        fontWeight: entry.level <= 2 ? '600' : '400',
+                        fontSize: entry.level === 1 ? 16 : 14,
+                      },
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {entry.text}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+          <TouchableOpacity onPress={() => setShowToc(false)} style={styles.tocClose}>
+            <Text style={{ color: colors.primary, fontWeight: '600' }}>Close</Text>
+          </TouchableOpacity>
+        </NModal>
       </SafeAreaView>
     );
   }
@@ -947,30 +1093,18 @@ export default function NoteEditorScreen() {
       </View>
 
       <View style={[styles.toolbar, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
-        <TouchableOpacity
-          onPress={() => setShowVoiceModal(true)}
-          style={styles.toolbarButton}
-        >
-          <Ionicons name="mic-outline" size={22} color={colors.primary} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setShowCanvasModal(true)}
-          style={styles.toolbarButton}
-        >
-          <Ionicons name="brush-outline" size={22} color={colors.primary} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={handlePickImage}
-          style={styles.toolbarButton}
-        >
-          <Ionicons name="image-outline" size={22} color={colors.primary} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setShowCanvasPicker(true)}
-          style={styles.toolbarButton}
-        >
-          <Ionicons name="easel-outline" size={22} color={colors.primary} />
-        </TouchableOpacity>
+        <NIconButton size="sm" onPress={() => setShowVoiceModal(true)} accessibilityLabel="Voice input">
+          <Ionicons name="mic-outline" size={20} color={colors.primary} />
+        </NIconButton>
+        <NIconButton size="sm" onPress={() => setShowCanvasModal(true)} accessibilityLabel="Insert canvas">
+          <Ionicons name="brush-outline" size={20} color={colors.primary} />
+        </NIconButton>
+        <NIconButton size="sm" onPress={handlePickImage} accessibilityLabel="Insert image">
+          <Ionicons name="image-outline" size={20} color={colors.primary} />
+        </NIconButton>
+        <NIconButton size="sm" onPress={() => setShowCanvasPicker(true)} accessibilityLabel="Link existing canvas">
+          <Ionicons name="easel-outline" size={20} color={colors.primary} />
+        </NIconButton>
       </View>
 
       {sideBySide ? (
@@ -1191,6 +1325,10 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginTop: 8,
   },
+  tocTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
+  tocRow: { paddingVertical: 8 },
+  tocText: { fontSize: 14 },
+  tocClose: { paddingTop: 12, alignItems: 'flex-end' },
   structuredFallback: {
     fontSize: 16,
     lineHeight: 24,

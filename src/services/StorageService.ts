@@ -232,7 +232,12 @@ export class StorageService {
   }
 
   static async saveAllTodos(todos: Todo[]): Promise<void> {
-    await AsyncStorage.setItem(TODOS_STORAGE_KEY, JSON.stringify(todos));
+    try {
+      await AsyncStorage.setItem(TODOS_STORAGE_KEY, JSON.stringify(todos));
+    } catch (error) {
+      console.error('Error saving todos to storage:', error);
+      throw error;
+    }
   }
 
   static async createTodo(input: TodoCreateInput): Promise<Todo> {
@@ -271,7 +276,12 @@ export class StorageService {
   }
 
   static async saveAllCanvases(canvases: Canvas[]): Promise<void> {
-    await AsyncStorage.setItem(CANVASES_STORAGE_KEY, JSON.stringify(canvases));
+    try {
+      await AsyncStorage.setItem(CANVASES_STORAGE_KEY, JSON.stringify(canvases));
+    } catch (error) {
+      console.error('Error saving canvases to storage:', error);
+      throw error;
+    }
   }
 
   static async getCanvasById(id: string): Promise<Canvas | null> {

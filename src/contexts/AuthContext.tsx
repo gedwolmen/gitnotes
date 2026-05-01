@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { AuthService, AuthState } from '../services/AuthService';
 import { GitHubService } from '../services/GitHubService';
 
@@ -24,36 +24,57 @@ export function AuthProvider({ children }: AuthProviderProps) {
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  const refreshAuth = async () => {
+  const refreshAuth = useCallback(async () => {
     const state = await AuthService.checkAuthState();
     setAuthState(state);
-  };
+  }, []);
 
-  const setToken = async (token: string): Promise<boolean> => {
+  const setToken = useCallback(async (token: string): Promise<boolean> => {
     setIsLoading(true);
     const state = await AuthService.setToken(token);
-    setAuthState(state);
-    if (state.isAuthenticated) {
-      await GitHubService.setToken(token);
+    if (!state.isAuthenticated) {
+      // Validation failed — keep prior auth state untouched so a typo
+      // doesn't log the user out.
+      setIsLoading(false);
+      return false;
     }
+    // Pass the user we just validated so GitHubService doesn't re-hit /user.
+    // If the GitHubService write fails, roll AuthService back so the two
+    // services don't disagree about who's logged in.
+    const ghUser = await GitHubService.setToken(token, (state.user as unknown) as Parameters<typeof GitHubService.setToken>[1]);
+    if (!ghUser) {
+      await AuthService.clearToken();
+      setAuthState({ isAuthenticated: false, user: null, token: null });
+      setIsLoading(false);
+      return false;
+    }
+    setAuthState(state);
     setIsLoading(false);
-    return state.isAuthenticated;
-  };
+    return true;
+  }, []);
 
-  const clearToken = async () => {
+  const clearToken = useCallback(async () => {
     await AuthService.clearToken();
     await GitHubService.clearToken();
     setAuthState({ isAuthenticated: false, user: null, token: null });
-  };
+  }, []);
 
   useEffect(() => {
     refreshAuth()
       .then(() => GitHubService.initialize())
+      .catch((err) => {
+        console.warn('[AuthContext] auth bootstrap failed:', err);
+      })
       .finally(() => setIsLoading(false));
   }, []);
 
+  const value = useMemo(
+    () => ({ authState, isLoading, refreshAuth, setToken, clearToken }),
+    [authState, isLoading, refreshAuth, setToken, clearToken],
+  );
+
   return (
-    <AuthContext.Provider value={{ authState, isLoading, refreshAuth, setToken, clearToken }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
