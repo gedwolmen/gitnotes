@@ -16,6 +16,7 @@ export interface ButtonProps {
   fullWidth?: boolean;
   leadingIcon?: ReactNode;
   trailingIcon?: ReactNode;
+  iconAlign?: 'inline' | 'edge';
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
   testID?: string;
@@ -32,6 +33,7 @@ export function Button(props: ButtonProps) {
     fullWidth = false,
     leadingIcon,
     trailingIcon,
+    iconAlign = 'inline',
     style,
     textStyle,
     testID,
@@ -63,19 +65,21 @@ export function Button(props: ButtonProps) {
   const textColor = colors.text;
   const isGhost = variant === 'ghost';
 
+  const labelNode = label !== undefined && (
+    <Text
+      style={[
+        { color: textColor, fontSize: type.md, fontWeight: variant === 'primary' ? '600' : '500' },
+        textStyle,
+      ]}
+    >
+      {label}
+    </Text>
+  );
+
   const content = (
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[2] }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: iconAlign === 'edge' ? spacing[3] : spacing[2] }}>
       {leadingIcon}
-      {label !== undefined && (
-        <Text
-          style={[
-            { color: textColor, fontSize: type.md, fontWeight: variant === 'primary' ? '600' : '500' },
-            textStyle,
-          ]}
-        >
-          {label}
-        </Text>
-      )}
+      {labelNode}
       {children}
       {trailingIcon}
     </View>

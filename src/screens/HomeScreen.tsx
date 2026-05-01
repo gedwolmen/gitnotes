@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -187,31 +187,61 @@ export default function HomeScreen() {
     <SafeAreaView edges={['top']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <ScreenHeader title="GitNotēs" subtitle="Your development notes, organized." />
       <ScrollView style={styles.container} contentContainerStyle={[styles.content, isTablet && { maxWidth: maxContentWidth, alignSelf: 'center', width: '100%' }]} showsVerticalScrollIndicator={false}>
-      <View style={{ gap: 12, marginBottom: 24 }}>
-        <Button
-          variant="primary"
-          fullWidth
+      <View style={styles.bentoGrid}>
+        <Pressable
           onPress={handleCreateNote}
           onLongPress={() => {
             HapticService.medium();
             setPickerRemember(false);
             setShowFormatPicker(true);
           }}
-          leadingIcon={<Ionicons name="add" size={22} color={colors.accent} />}
-          label="Create New Note"
-        />
-        <Button
-          fullWidth
-          onPress={handleOpenTemplates}
-          leadingIcon={<Ionicons name="copy-outline" size={20} color={colors.text} />}
-          label="From Template"
-        />
-        <Button
-          fullWidth
-          onPress={() => navigation.navigate('CanvasList')}
-          leadingIcon={<Ionicons name="easel-outline" size={20} color={colors.text} />}
-          label="Canvases"
-        />
+          style={({ pressed }) => [
+            styles.bentoHero,
+            { backgroundColor: colors.primary, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
+          ]}
+        >
+          <Ionicons name="add" size={140} color="#FFFFFF" style={styles.bentoHeroDecor} />
+          <View style={styles.bentoHeroBadge}>
+            <Ionicons name="add" size={18} color={colors.primary} />
+          </View>
+          <View style={styles.bentoHeroContent}>
+            <Text style={styles.bentoHeroTitle}>Create New Note</Text>
+            <Text style={styles.bentoHeroSubtitle}>Start with a blank note</Text>
+          </View>
+        </Pressable>
+
+        <View style={styles.bentoRow}>
+          <Pressable
+            onPress={handleOpenTemplates}
+            style={({ pressed }) => [
+              styles.bentoTile,
+              { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
+            ]}
+          >
+            <View style={[styles.bentoTileBadge, { backgroundColor: colors.primary + '1F' }]}>
+              <Ionicons name="copy-outline" size={22} color={colors.primary} />
+            </View>
+            <View style={styles.bentoTileContent}>
+              <Text style={[styles.bentoTileTitle, { color: colors.text }]}>From Template</Text>
+              <Text style={[styles.bentoTileSubtitle, { color: colors.textSecondary }]}>Quick start</Text>
+            </View>
+          </Pressable>
+          <Pressable
+            onPress={() => navigation.navigate('CanvasList')}
+            style={({ pressed }) => [
+              styles.bentoTile,
+              { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
+            ]}
+          >
+            <View style={[styles.bentoTileBadge, { backgroundColor: colors.accent + '1F' }]}>
+              <Ionicons name="easel-outline" size={22} color={colors.accent} />
+            </View>
+            <View style={styles.bentoTileContent}>
+              <Text style={[styles.bentoTileTitle, { color: colors.text }]}>Canvases</Text>
+              <Text style={[styles.bentoTileSubtitle, { color: colors.textSecondary }]}>Visual notes</Text>
+            </View>
+          </Pressable>
+        </View>
       </View>
 
       {recentCanvases.length > 0 && (
@@ -336,6 +366,80 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
+  },
+  bentoGrid: {
+    gap: 12,
+    marginBottom: 24,
+  },
+  bentoHero: {
+    height: 160,
+    borderRadius: 24,
+    padding: 20,
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
+  },
+  bentoHeroDecor: {
+    position: 'absolute',
+    right: -28,
+    top: -28,
+    opacity: 0.18,
+  },
+  bentoHeroBadge: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bentoHeroContent: {
+    gap: 4,
+  },
+  bentoHeroTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
+  },
+  bentoHeroSubtitle: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#FFFFFF',
+    opacity: 0.78,
+  },
+  bentoRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  bentoTile: {
+    flex: 1,
+    height: 130,
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    justifyContent: 'space-between',
+  },
+  bentoTileBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bentoTileContent: {
+    gap: 2,
+  },
+  bentoTileTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  bentoTileSubtitle: {
+    fontSize: 12,
+    fontWeight: '500',
   },
   title: {
     fontSize: 32,
