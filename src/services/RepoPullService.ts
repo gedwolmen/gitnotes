@@ -151,7 +151,7 @@ async function pullCanvasesFromRepo(
   let pulled = 0;
   try {
     const files = await fetchDirectoryFiles(owner, repo, 'canvases', branch);
-    const localCanvases = await StorageService.getAllCanvases();
+    const allCanvases = await StorageService.getAllCanvases();
 
     for (const file of files) {
       if (!file.path.endsWith('.json')) continue;
@@ -163,7 +163,7 @@ async function pullCanvasesFromRepo(
         continue;
       }
 
-      const existing = localCanvases.find((c) => c.filePath === file.path);
+      const existing = allCanvases.find((c) => c.filePath === file.path);
       const titleFromPath = file.path
         .replace(/^canvases\//, '')
         .replace(/\.json$/, '')
@@ -175,27 +175,28 @@ async function pullCanvasesFromRepo(
         const sceneChanged = JSON.stringify(existing.scene) !== JSON.stringify(scene);
         if (sceneChanged) {
           const updated = updateCanvas(existing, { scene });
-          const allCanvases = await StorageService.getAllCanvases();
           const idx = allCanvases.findIndex((c) => c.id === existing.id);
           if (idx !== -1) {
             allCanvases[idx] = updated;
-            await StorageService.saveAllCanvases(allCanvases);
           }
           pulled++;
         }
       } else {
-        const newCanvas = createCanvas({
-          title: titleFromPath,
-          scene,
-          repo: repoPath,
-          branch,
-          filePath: file.path,
-        });
-        const allCanvases = await StorageService.getAllCanvases();
-        allCanvases.push(newCanvas);
-        await StorageService.saveAllCanvases(allCanvases);
+        allCanvases.push(
+          createCanvas({
+            title: titleFromPath,
+            scene,
+            repo: repoPath,
+            branch,
+            filePath: file.path,
+          }),
+        );
         pulled++;
       }
+    }
+
+    if (pulled > 0) {
+      await StorageService.saveAllCanvases(allCanvases);
     }
   } catch {
     console.warn(`[RepoPullService] Failed to pull canvases from ${owner}/${repo}`);
@@ -212,7 +213,7 @@ async function pullTodosFromRepo(
   let pulled = 0;
   try {
     const files = await fetchDirectoryFiles(owner, repo, 'todos', branch);
-    const localTodos = await StorageService.getAllTodos();
+    const allTodos = await StorageService.getAllTodos();
 
     for (const file of files) {
       if (!file.path.endsWith('.json')) continue;
@@ -224,7 +225,7 @@ async function pullTodosFromRepo(
         continue;
       }
 
-      const existing = localTodos.find((t) => t.filePath === file.path);
+      const existing = allTodos.find((t) => t.filePath === file.path);
       const titleFromPath = file.path
         .replace(/^todos\//, '')
         .replace(/\.json$/, '')
@@ -239,30 +240,31 @@ async function pullTodosFromRepo(
           tags: data.tags ?? existing.tags,
           dueDate: data.dueDate ?? existing.dueDate,
         });
-        const allTodos = await StorageService.getAllTodos();
         const idx = allTodos.findIndex((t) => t.id === existing.id);
         if (idx !== -1) {
           allTodos[idx] = updated;
-          await StorageService.saveAllTodos(allTodos);
         }
         pulled++;
       } else {
-        const newTodo = createTodoItem({
-          text: data.text ?? titleFromPath,
-          completed: data.completed ?? false,
-          priority: data.priority,
-          notes: data.notes,
-          tags: data.tags,
-          dueDate: data.dueDate,
-          repo: repoPath,
-          branch,
-          filePath: file.path,
-        });
-        const allTodos = await StorageService.getAllTodos();
-        allTodos.push(newTodo);
-        await StorageService.saveAllTodos(allTodos);
+        allTodos.push(
+          createTodoItem({
+            text: data.text ?? titleFromPath,
+            completed: data.completed ?? false,
+            priority: data.priority,
+            notes: data.notes,
+            tags: data.tags,
+            dueDate: data.dueDate,
+            repo: repoPath,
+            branch,
+            filePath: file.path,
+          }),
+        );
         pulled++;
       }
+    }
+
+    if (pulled > 0) {
+      await StorageService.saveAllTodos(allTodos);
     }
   } catch {
     console.warn(`[RepoPullService] Failed to pull todos from ${owner}/${repo}`);
