@@ -140,9 +140,15 @@ export default function NotesListScreen() {
   const allFolders = useMemo(() => {
     const set = new Set<string>();
     notes.forEach((note) => {
-      if (note.folderPath && note.folderPath.trim().length > 0) {
-        set.add(note.folderPath);
+      const fp = note.folderPath?.trim();
+      if (!fp) return;
+      const parts = fp.split('/').filter(Boolean);
+      let acc = '';
+      for (const seg of parts) {
+        acc = acc ? `${acc}/${seg}` : (fp.startsWith('/') ? `/${seg}` : seg);
+        set.add(acc);
       }
+      set.add(fp);
     });
     return Array.from(set).sort();
   }, [notes]);
@@ -160,8 +166,14 @@ export default function NotesListScreen() {
 
   const displayNotes = useMemo(() => {
     let result = filteredNotes;
-    if (selectedFolder)
-      result = result.filter((n: Note) => n.folderPath === selectedFolder);
+    if (selectedFolder) {
+      const sel = selectedFolder;
+      result = result.filter((n: Note) => {
+        const fp = n.folderPath;
+        if (!fp) return false;
+        return fp === sel || fp.startsWith(`${sel}/`);
+      });
+    }
     if (!selectedRepo) {
       if (selectedFormat)
         result = result.filter(
