@@ -12,6 +12,7 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
   Image,
+  Linking,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -35,6 +36,7 @@ import PdfViewer from '../components/PdfViewer';
 import TagInput from '../components/TagInput';
 import VoiceInputModal from '../components/VoiceInputModal';
 import CanvasModal, { CanvasSavePayload } from '../components/CanvasModal';
+import CanvasPreview from '../components/CanvasPreview';
 import FolderSelectionDialog from '../components/FolderSelectionDialog';
 import { useFolders } from '../contexts/FolderContext';
 import { useRepos } from '../contexts/RepoContext';
@@ -46,7 +48,7 @@ import { NoteFormat, NoteGitHubLink } from '../models/Note';
 import { Attachment, createAttachment } from '../models/Attachment';
 import { NeorgParser } from '../services/NeorgParser';
 import { NeorgContentParser } from '../services/NeorgContentParser';
-import { canvasToLink } from '../models/Canvas';
+import { canvasIdFromLink, canvasToLink, isCanvasLink } from '../models/Canvas';
 import { useResponsive } from '../hooks/useResponsive';
 import { syncNoteToGitHub } from '../services/NoteGitHubSyncService';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
@@ -501,7 +503,7 @@ export default function NoteEditorScreen() {
 
   const markdownItInstance = useMemo(() => {
     const md = MarkdownIt({ typographer: true, linkify: true });
-    md.validateLink = (url: string) => /^(https?:|file:|data:|mailto:|tel:)/i.test(url) || !/^[a-z][a-z0-9+.-]*:/i.test(url);
+    md.validateLink = (url: string) => /^(https?:|file:|data:|mailto:|tel:|canvas:)/i.test(url) || !/^[a-z][a-z0-9+.-]*:/i.test(url);
     return md;
   }, []);
 
@@ -531,7 +533,23 @@ export default function NoteEditorScreen() {
         />
       );
     },
-  }), [colors, handleEditCanvasJson]);
+    link: (node: any, children: any) => {
+      const href: string = node.attributes?.href ?? '';
+      if (isCanvasLink(href)) {
+        const id = canvasIdFromLink(href);
+        return <CanvasPreview key={node.key} canvasId={id} />;
+      }
+      return (
+        <Text
+          key={node.key}
+          style={{ color: colors.primary, textDecorationLine: 'underline' }}
+          onPress={() => href && Linking.openURL(href).catch(() => {})}
+        >
+          {children}
+        </Text>
+      );
+    },
+  }), [colors]);
 
   const previewContent = (() => {
     const stripTopMetadata = (raw: string, format: NoteFormat): string => {
