@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import http, { setAuthToken, clearAuthToken } from './http';
 
 const TOKEN_KEY = '@gitnotes:github_token';
 const USER_KEY = '@gitnotes:github_user';
@@ -159,6 +160,7 @@ class GitHubServiceClass {
     try {
       this.token = await AsyncStorage.getItem(TOKEN_KEY);
       if (!this.token) return;
+      setAuthToken(this.token);
       const userJson = await AsyncStorage.getItem(USER_KEY);
       if (userJson) {
         this.user = JSON.parse(userJson);
@@ -175,12 +177,11 @@ class GitHubServiceClass {
 
   async setToken(token: string, user?: GitHubUser | null): Promise<GitHubUser | null> {
     this.token = token;
-    // If the caller already validated the token + fetched the user
-    // (AuthContext does this via AuthService.setToken), trust it instead
-    // of round-tripping /user a second time.
+    setAuthToken(token);
     const resolvedUser = user === undefined ? await this.fetchUser() : user;
     if (!resolvedUser) {
       this.token = null;
+      clearAuthToken();
       return null;
     }
     this.user = resolvedUser;
@@ -192,6 +193,7 @@ class GitHubServiceClass {
   async clearToken(): Promise<void> {
     this.token = null;
     this.user = null;
+    clearAuthToken();
     await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
   }
 
@@ -205,7 +207,7 @@ class GitHubServiceClass {
 
   private async fetchUser(): Promise<GitHubUser | null> {
     try {
-      return await this.fetchWithAuth('https://api.github.com/user');
+      return await this.request<GitHubUser>('https://api.github.com/user');
     } catch {
       return null;
     }
@@ -222,7 +224,7 @@ class GitHubServiceClass {
     let url: string | null = `https://api.github.com/user/repos?${params.toString()}`;
     try {
       while (url) {
-        const { data, nextUrl } = await this.fetchWithAuthPaginated(url);
+        const { data, nextUrl } = await this.requestPaginated(url);
         if (Array.isArray(data)) all.push(...data);
         url = nextUrl;
       }
@@ -235,7 +237,7 @@ class GitHubServiceClass {
 
   async getIssues(owner: string, repo: string): Promise<GitHubIssue[]> {
     try {
-      const data = await this.fetchWithAuth(
+      const data = await this.request(
         `https://api.github.com/repos/${owner}/${repo}/issues?state=open&per_page=50`
       );
       return Array.isArray(data) ? data : [];
@@ -247,7 +249,7 @@ class GitHubServiceClass {
 
   async getPullRequests(owner: string, repo: string): Promise<GitHubPullRequest[]> {
     try {
-      const data = await this.fetchWithAuth(
+      const data = await this.request(
         `https://api.github.com/repos/${owner}/${repo}/pulls?state=open&per_page=50`
       );
       return Array.isArray(data) ? data : [];
@@ -259,7 +261,7 @@ class GitHubServiceClass {
 
   async getMilestones(owner: string, repo: string): Promise<GitHubMilestone[]> {
     try {
-      const data = await this.fetchWithAuth(
+      const data = await this.request(
         `https://api.github.com/repos/${owner}/${repo}/milestones?state=open&per_page=50`
       );
       return Array.isArray(data) ? data : [];
@@ -274,7 +276,7 @@ class GitHubServiceClass {
       const encodedPath = path.split('/').map(encodeURIComponent).join('/');
       let url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
       if (ref) url += `?ref=${encodeURIComponent(ref)}`;
-      const data = await this.fetchWithAuth(url);
+      const data = await this.request(url);
       if (Array.isArray(data)) {
         return data;
       }
@@ -294,7 +296,7 @@ class GitHubServiceClass {
   ): Promise<{ path: string; type: 'blob' | 'tree'; sha: string }[]> {
     try {
       const url = `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`;
-      const data = await this.fetchWithAuth(url);
+      const data = await this.request(url);
       if (!Array.isArray(data?.tree)) return [];
       return data.tree.map((item: any) => ({
         path: item.path,
@@ -314,7 +316,7 @@ class GitHubServiceClass {
       const encodedPath = path.split('/').map(encodeURIComponent).join('/');
       let url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
       if (ref) url += `?ref=${encodeURIComponent(ref)}`;
-      const data = await this.fetchWithAuth(url);
+      const data = await this.request(url);
       if (data.type === 'file' && data.content) {
         const base64 = data.content.replace(/\n/g, '');
         return decodeBase64(base64);
@@ -331,7 +333,7 @@ class GitHubServiceClass {
       const encodedPath = path.split('/').map(encodeURIComponent).join('/');
       let url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
       if (ref) url += `?ref=${encodeURIComponent(ref)}`;
-      const data = await this.fetchWithAuth(url);
+      const data = await this.request(url);
       return data.sha || null;
     } catch {
       return null;
@@ -354,13 +356,10 @@ class GitHubServiceClass {
       let binary = '';
       bytes.forEach((b) => { binary += String.fromCharCode(b); });
       const base64Content = btoa(binary);
-      return await this.fetchWithAuth(url, {
-        method: 'PUT',
-        body: JSON.stringify({
-          message,
-          content: base64Content,
-          branch,
-        }),
+      return await this.request(url, 'PUT', {
+        message,
+        content: base64Content,
+        branch,
       });
     } catch (error) {
       console.warn('[GitHubService] Failed to create file:', error);
@@ -389,10 +388,7 @@ class GitHubServiceClass {
         };
         if (existingSha) body.sha = existingSha;
 
-        return await this.fetchWithAuth(url, {
-          method: 'PUT',
-          body: JSON.stringify(body),
-        });
+        return await this.request(url, 'PUT', body);
       } catch (error) {
         const status = (error as { status?: number })?.status;
         if (status === 409 && attempt < 2) {
@@ -421,10 +417,7 @@ class GitHubServiceClass {
     try {
       const encodedPath = path.split('/').map(encodeURIComponent).join('/');
       const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
-      return await this.fetchWithAuth(url, {
-        method: 'DELETE',
-        body: JSON.stringify({ message, sha, branch }),
-      });
+      return await this.request(url, 'DELETE', { message, sha, branch });
     } catch (error) {
       console.warn('[GitHubService] Failed to delete file:', error);
       return null;
@@ -464,10 +457,7 @@ class GitHubServiceClass {
           return this.createFile(owner, repo, path, content, message, branch);
         }
 
-        return await this.fetchWithAuth(url, {
-          method: 'PUT',
-          body: JSON.stringify({ message, content: base64Content, sha, branch }),
-        });
+        return await this.request(url, 'PUT', { message, content: base64Content, sha, branch });
       } catch (error) {
         const status = (error as { status?: number })?.status;
         if (status === 409 && attempt < 2) {
@@ -501,58 +491,24 @@ class GitHubServiceClass {
     return true;
   }
 
-  private async fetchWithAuth(url: string, options?: RequestInit): Promise<any> {
+  private async request<T = any>(url: string, method: 'GET' | 'PUT' | 'DELETE' = 'GET', data?: any): Promise<T> {
     if (!this.token) throw new Error('GitHub token is not configured');
-
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        Authorization: `Bearer ${this.token}`,
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-        ...options?.headers,
-      },
-    });
-
-    if (!response.ok) {
-      const err = new Error(`GitHub API error: ${response.status}`) as Error & { status?: number };
-      err.status = response.status;
-      throw err;
-    }
-
-    return response.json();
+    const isFullUrl = url.startsWith('http');
+    const requestUrl = isFullUrl ? url : url;
+    const response = await http.request<T>({ url: requestUrl, method, data });
+    return response.data;
   }
 
-  private async fetchWithAuthPaginated(
-    url: string,
-    options?: RequestInit,
-  ): Promise<{ data: any; nextUrl: string | null }> {
+  private async requestPaginated(url: string): Promise<{ data: any; nextUrl: string | null }> {
     if (!this.token) throw new Error('GitHub token is not configured');
-
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        Authorization: `Bearer ${this.token}`,
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-        ...options?.headers,
-      },
-    });
-
-    if (!response.ok) {
-      const err = new Error(`GitHub API error: ${response.status}`) as Error & { status?: number };
-      err.status = response.status;
-      throw err;
-    }
-
-    const data = await response.json();
-    const linkHeader = response.headers.get('Link');
+    const response = await http.get(url);
+    const linkHeader = response.headers['link'] as string | null;
     const nextUrl = parseNextLink(linkHeader);
-    return { data, nextUrl };
+    return { data: response.data, nextUrl };
   }
 }
 
-function parseNextLink(linkHeader: string | null): string | null {
+function parseNextLink(linkHeader: string | null | undefined): string | null {
   if (!linkHeader) return null;
   const match = linkHeader.match(/<([^>]+)>;\s*rel="next"/);
   return match ? match[1] : null;
