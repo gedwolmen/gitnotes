@@ -112,7 +112,13 @@ export function sortNotesWithPinnedFirst(notes: Note[]): Note[] {
     if (aPinned !== bPinned) {
       return bPinned - aPinned;
     }
-    return b.updatedAt - a.updatedAt;
+    if (b.updatedAt !== a.updatedAt) {
+      return b.updatedAt - a.updatedAt;
+    }
+    if (b.createdAt !== a.createdAt) {
+      return b.createdAt - a.createdAt;
+    }
+    return b.id.localeCompare(a.id);
   });
 }
 

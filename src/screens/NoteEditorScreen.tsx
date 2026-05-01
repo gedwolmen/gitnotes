@@ -349,7 +349,13 @@ export default function NoteEditorScreen() {
 
         if (syncResult.success && syncResult.filePath && savedNoteId) {
           try {
-            await updateNote({ id: savedNoteId, filePath: syncResult.filePath });
+            await updateNote({
+              id: savedNoteId,
+              filePath: syncResult.filePath,
+              ...(syncResult.finalContent != null && syncResult.finalContent !== content.trim()
+                ? { content: syncResult.finalContent }
+                : {}),
+            });
           } catch {
             // best-effort; pull dedup handles stale state
           }

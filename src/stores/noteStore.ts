@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { create } from 'zustand';
 import { Note, NoteCreateInput, NoteUpdateInput, sortNotesWithPinnedFirst, filterNotesBySearch } from '../models/Note';
 import { StorageService } from '../services/StorageService';
@@ -158,7 +159,11 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
   clearError: () => set({ error: null }),
 }));
 
-export const useFilteredNotes = () =>
-  useNoteStore((state) =>
-    state.searchQuery ? filterNotesBySearch(state.notes, state.searchQuery) : state.notes
+export const useFilteredNotes = () => {
+  const notes = useNoteStore((s) => s.notes);
+  const searchQuery = useNoteStore((s) => s.searchQuery);
+  return useMemo(
+    () => (searchQuery ? filterNotesBySearch(notes, searchQuery) : notes),
+    [notes, searchQuery],
   );
+};

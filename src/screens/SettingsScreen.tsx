@@ -564,13 +564,6 @@ export default function SettingsScreen() {
               </Text>
               <TouchableOpacity
                 style={styles.generateLink}
-                onPress={() => Linking.openURL('https://docs.github.com/en/authentication/managing-fine-grained-personal-access-tokens')}
-              >
-                <Ionicons name="help-circle-outline" size={14} color={colors.primary} />
-                <Text style={[styles.generateLinkText, { color: colors.primary }]}>How to create a token (GitHub docs)</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.generateLink}
                 onPress={() => Linking.openURL('https://github.com/settings/personal-access-tokens/new?description=GitNotes')}
               >
                 <Ionicons name="open-outline" size={14} color={colors.primary} />

@@ -115,6 +115,9 @@ class NoteSyncQueueServiceClass {
               await StorageService.updateNote({
                 id: item.localNoteId,
                 filePath: result.filePath,
+                ...(result.finalContent != null && result.finalContent !== item.params.content
+                  ? { content: result.finalContent }
+                  : {}),
               });
             } catch {
               // best-effort; RepoPullService dedup-by-title handles stale state

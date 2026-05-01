@@ -6,6 +6,7 @@ import { parseRepoPath } from '../utils/gitPathParser';
 export interface NoteGitHubSyncResult {
   success: boolean;
   filePath?: string;
+  finalContent?: string;
   error?: string;
 }
 
@@ -197,7 +198,7 @@ export async function syncNoteToGitHub(params: {
     );
 
     if (result) {
-      return { success: true, filePath: targetPath };
+      return { success: true, filePath: targetPath, finalContent };
     }
     return { success: false, error: 'GitHub API returned no result' };
   } catch (error) {
