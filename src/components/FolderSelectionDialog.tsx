@@ -35,7 +35,8 @@ export default function FolderSelectionDialog({
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { folders: localFolders, createFolder } = useFolders();
-  const [isCreating, setIsCreating] = useState(false);
+  const [isCreateMode, setIsCreateMode] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [selectedParentId, setSelectedParentId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
@@ -133,7 +134,7 @@ export default function FolderSelectionDialog({
     }
 
     HapticService.medium();
-    setIsCreating(true);
+    setIsSubmitting(true);
     try {
       const folder = await createFolder({
         name: newFolderName.trim(),
@@ -142,23 +143,27 @@ export default function FolderSelectionDialog({
       if (folder) {
         setNewFolderName('');
         setSelectedParentId(null);
-        setIsCreating(false);
+        setIsCreateMode(false);
         HapticService.success();
+      } else {
+        Alert.alert('Error', 'Failed to create folder — please try again');
       }
     } catch (error) {
       HapticService.error();
       Alert.alert('Error', 'Failed to create folder');
+    } finally {
+      setIsSubmitting(false);
     }
   }, [newFolderName, selectedParentId, createFolder]);
 
   const toggleCreateMode = useCallback(() => {
     HapticService.light();
-    setIsCreating(!isCreating);
-    if (!isCreating) {
+    setIsCreateMode(!isCreateMode);
+    if (!isCreateMode) {
       setNewFolderName('');
       setSelectedParentId(null);
     }
-  }, [isCreating]);
+  }, [isCreateMode]);
 
   const renderFolderItem = useCallback(
     (folder: Folder, level: number = 0): React.ReactElement => {
@@ -249,10 +254,10 @@ export default function FolderSelectionDialog({
           >
             Select Folder
           </Text>
-          <View style={styles.headerSide}>
+          <View style={styles.headerSideRight}>
             <TouchableOpacity onPress={toggleCreateMode} hitSlop={8} style={styles.headerActionButton}>
             <Ionicons
-              name={isCreating ? 'close' : 'add'}
+              name={isCreateMode ? 'close' : 'add'}
               size={24}
               color={colors.primary}
             />
@@ -260,7 +265,7 @@ export default function FolderSelectionDialog({
           </View>
         </View>
 
-        {isCreating && (
+        {isCreateMode && (
           <View style={[styles.createContainer, { backgroundColor: colors.surface }]}>
             <TextInput
               style={[styles.input, { backgroundColor: colors.surfaceSecondary, color: colors.text }]}
@@ -274,9 +279,9 @@ export default function FolderSelectionDialog({
             <TouchableOpacity
               style={[styles.createButton, { backgroundColor: colors.primary }]}
               onPress={handleCreateFolder}
-              disabled={!newFolderName.trim()}
+              disabled={!newFolderName.trim() || isSubmitting}
             >
-              <Text style={styles.createButtonText}>Create</Text>
+              <Text style={styles.createButtonText}>{isSubmitting ? 'Creating…' : 'Create'}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -363,6 +368,11 @@ const styles = StyleSheet.create({
     width: 72,
     justifyContent: 'center',
   },
+  headerSideRight: {
+    width: 72,
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+  },
   headerActionButton: {
     minHeight: 32,
     justifyContent: 'center',
@@ -397,6 +407,7 @@ const styles = StyleSheet.create({
   createButtonText: {
     color: '#fff',
     fontWeight: '600',
+    fontSize: 16,
   },
   listContainer: {
     flex: 1,
