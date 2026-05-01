@@ -45,9 +45,9 @@ const linking: LinkingOptions<RootStackParamList> = {
 };
 
 export default function AppNavigator() {
-  const { theme } = useTheme();
-  
-  const navigationTheme = theme === 'dark' ? DarkTheme : DefaultTheme;
+  const { isDark } = useTheme();
+
+  const navigationTheme = isDark ? DarkTheme : DefaultTheme;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
