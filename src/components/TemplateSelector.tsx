@@ -86,15 +86,15 @@ export default function TemplateSelector({ visible, onClose, onSelect }: Templat
       fullWidth
       contentStyle={styles.modalContent}
     >
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+      <View style={[styles.container, { backgroundColor: colors.elevated }]}>
+        <View style={[styles.header, { backgroundColor: colors.elevated, borderBottomColor: colors.border }]}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Choose a Template</Text>
           <TouchableOpacity onPress={onClose}>
             <Ionicons name="close" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
-        <View style={[styles.searchContainer, { backgroundColor: colors.surface }]}>
+        <View style={[styles.searchContainer, { backgroundColor: colors.elevated }]}>
           <View style={[styles.searchInputContainer, { backgroundColor: colors.surfaceSecondary }]}>
             <Ionicons name="search" size={20} color={colors.textSecondary} />
             <TextInput
@@ -134,13 +134,9 @@ const styles = StyleSheet.create({
     padding: 0,
     width: '100%',
     height: '85%',
-    borderRadius: 24,
-    overflow: 'hidden',
   },
   container: {
     flex: 1,
-    borderRadius: 24,
-    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',
