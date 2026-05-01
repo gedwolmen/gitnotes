@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getBootValue } from '../services/StorageBootstrap';
-import { ViewMode, ViewModePreference, DEFAULT_VIEW_MODE } from '../utils/viewModes';
+import { ViewMode, ViewModePreference, DEFAULT_VIEW_MODE, normalizeViewMode } from '../utils/viewModes';
 
 const VIEW_MODE_KEY = '@gitnotes:view_mode';
 
@@ -28,7 +28,15 @@ export function ViewModeProvider({ children }: ViewModeProviderProps) {
     try {
       const stored = getBootValue('@gitnotes:viewMode') ?? await AsyncStorage.getItem(VIEW_MODE_KEY);
       if (stored) {
-        setPreferences(JSON.parse(stored));
+        const parsed = JSON.parse(stored) as ViewModePreference;
+        const perFolder: Record<string, ViewMode> = {};
+        for (const [k, v] of Object.entries(parsed.perFolder ?? {})) {
+          perFolder[k] = normalizeViewMode(v);
+        }
+        setPreferences({
+          global: normalizeViewMode(parsed.global),
+          perFolder,
+        });
       }
     } catch (error) {
       console.error('Failed to load view mode preferences:', error);

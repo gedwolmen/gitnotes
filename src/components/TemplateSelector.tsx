@@ -134,9 +134,13 @@ const styles = StyleSheet.create({
     padding: 0,
     width: '100%',
     height: '85%',
+    borderRadius: 24,
+    overflow: 'hidden',
   },
   container: {
     flex: 1,
+    borderRadius: 24,
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',

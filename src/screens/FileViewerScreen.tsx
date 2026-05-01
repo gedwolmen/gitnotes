@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import Markdown from 'react-native-marked';
+import { useMarkdown } from 'react-native-marked';
 
 import { RootStackParamList } from '../navigation/types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -55,6 +55,11 @@ function formatBytes(bytes?: number): string {
     unit++;
   }
   return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[unit]}`;
+}
+
+function MarkdownBody({ value, styles: mdStyles }: { value: string; styles: ReturnType<typeof getMarkdownStyles> }) {
+  const nodes = useMarkdown(value, { styles: mdStyles });
+  return <>{nodes.map((n, i) => <React.Fragment key={i}>{n}</React.Fragment>)}</>;
 }
 
 export default function FileViewerScreen() {
@@ -140,7 +145,7 @@ export default function FileViewerScreen() {
           showsVerticalScrollIndicator
         >
           {mode === 'markdown' ? (
-            <Markdown value={renderContent} styles={markdownStyles} />
+            <MarkdownBody value={renderContent} styles={markdownStyles} />
           ) : (mode === 'neorg' || mode === 'org') && parsedNeorg ? (
             <NeorgRenderer blocks={parsedNeorg} />
           ) : (

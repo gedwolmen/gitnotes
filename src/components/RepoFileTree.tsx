@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   LayoutAnimation,
   Platform,
+  Pressable,
   UIManager,
   Alert,
   ScrollView,
@@ -15,7 +16,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { GitHubService, GitHubContent } from '../services/GitHubService';
 import { HapticService } from '../utils/haptics';
 import ContextMenu from './ContextMenu';
-import { Group, GroupRow, IconButton, Modal, Input, Button } from './ui';
+import { Group, GroupRow, Modal, Input, Button } from './ui';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -453,21 +454,28 @@ function TreeItem({ node, owner, repo, branch, level, onFilePress, onRefresh }: 
         disabled={isOperating}
         style={{ paddingLeft: 16 + level * 20 }}
         leading={
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <View style={treeStyles.leading}>
             {isDir ? (
               loading ? (
-                <ActivityIndicator size="small" color={colors.textSecondary} style={treeStyles.loader} />
+                <View style={treeStyles.chevronSlot}>
+                  <ActivityIndicator size="small" color={colors.textSecondary} />
+                </View>
               ) : (
-                <IconButton size="sm" variant="ghost" onPress={handleToggle} accessibilityLabel={expanded ? 'Collapse' : 'Expand'}>
+                <Pressable
+                  onPress={handleToggle}
+                  hitSlop={8}
+                  style={treeStyles.chevronSlot}
+                  accessibilityLabel={expanded ? 'Collapse' : 'Expand'}
+                >
                   <Ionicons
                     name={expanded ? 'chevron-down' : 'chevron-forward'}
-                    size={14}
+                    size={16}
                     color={colors.textSecondary}
                   />
-                </IconButton>
+                </Pressable>
               )
             ) : (
-              <View style={{ width: 36 }} />
+              <View style={treeStyles.chevronSlot} />
             )}
             <Ionicons name={iconName} size={20} color={iconColor} />
           </View>
@@ -735,12 +743,23 @@ const treeStyles = StyleSheet.create({
     paddingVertical: 11,
     paddingRight: 16,
   },
-  loader: {
-    transform: [{ scale: 0.7 }],
+  leading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  chevronSlot: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   name: {
     fontSize: 15,
+    lineHeight: 20,
     flex: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   ext: {
     fontSize: 12,

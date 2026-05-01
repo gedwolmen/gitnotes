@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { Modal as RNModal, Pressable, StyleSheet, View, ViewStyle, StyleProp } from 'react-native';
+import { Modal as RNModal, Pressable, StyleSheet, useWindowDimensions, ViewStyle, StyleProp } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Surface } from './Surface';
 import { useTheme, useTokens } from '../../contexts/ThemeContext';
@@ -17,6 +17,12 @@ export function Modal(props: ModalProps) {
   const { visible, onRequestClose, dismissOnBackdrop = true, contentStyle, children, fullWidth = false } = props;
   const { isDark } = useTheme();
   const { spacing } = useTokens();
+  const { height: viewportHeight, width: viewportWidth } = useWindowDimensions();
+
+  const pad = spacing[5];
+  // Definite pixel sizes so percentage heights on Surface (via contentStyle) resolve.
+  const slotHeight = Math.max(0, viewportHeight - pad * 2);
+  const slotWidth = Math.max(0, viewportWidth - pad * 2);
 
   return (
     <RNModal
@@ -35,16 +41,25 @@ export function Modal(props: ModalProps) {
         onPress={dismissOnBackdrop ? onRequestClose : undefined}
         style={[
           StyleSheet.absoluteFill,
-          { backgroundColor: 'rgba(0,0,0,0.18)', alignItems: 'center', justifyContent: 'center', padding: spacing[5] },
+          { backgroundColor: 'rgba(0,0,0,0.18)', alignItems: 'center', justifyContent: 'center', padding: pad },
         ]}
       >
-        <Pressable onPress={() => undefined} style={{ width: fullWidth ? '100%' : 'auto', maxWidth: 480 }}>
+        <Pressable
+          onPress={() => undefined}
+          style={{
+            width: fullWidth ? slotWidth : undefined,
+            maxWidth: 480,
+            height: slotHeight,
+            alignItems: 'stretch',
+            justifyContent: 'center',
+          }}
+        >
           <Surface
             elevation="floating"
             radius="lg"
-            style={[{ padding: spacing[5] }, contentStyle]}
+            style={[{ padding: pad, maxHeight: slotHeight }, contentStyle]}
           >
-            <View>{children}</View>
+            {children}
           </Surface>
         </Pressable>
       </Pressable>

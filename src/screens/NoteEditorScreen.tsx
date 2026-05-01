@@ -21,7 +21,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import * as Speech from 'expo-speech';
 import { Ionicons } from '@expo/vector-icons';
-import Markdown from 'react-native-marked';
+import { useMarkdown, type RendererInterface } from 'react-native-marked';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useNotes } from '../contexts/NoteContext';
@@ -107,6 +107,11 @@ function getExtensionForFormat(format?: NoteFormat): string {
     case 'org': return '.org';
     default: return '.md';
   }
+}
+
+function MarkdownBody({ value, styles: mdStyles, renderer }: { value: string; styles: ReturnType<typeof getMarkdownStyles>; renderer?: RendererInterface }) {
+  const nodes = useMarkdown(value, { styles: mdStyles, renderer });
+  return <>{nodes.map((n, i) => <React.Fragment key={i}>{n}</React.Fragment>)}</>;
 }
 
 export default function NoteEditorScreen() {
@@ -808,7 +813,7 @@ export default function NoteEditorScreen() {
           >
             {previewContent.trim() ? (
               noteFormat === 'markdown' ? (
-                <Markdown value={previewContent} styles={markdownStyles} renderer={notePreviewRenderer} />
+                <MarkdownBody value={previewContent} styles={markdownStyles} renderer={notePreviewRenderer} />
               ) : parsedStructuredContent ? (
                 <NeorgRenderer blocks={parsedStructuredContent} />
               ) : (
@@ -976,7 +981,7 @@ export default function NoteEditorScreen() {
       <Text style={[styles.livePreviewLabel, { color: colors.textSecondary }]}>Preview</Text>
       {previewContent.trim() ? (
         noteFormat === 'markdown' ? (
-          <Markdown value={previewContent} styles={markdownStyles} renderer={notePreviewRenderer} />
+          <MarkdownBody value={previewContent} styles={markdownStyles} renderer={notePreviewRenderer} />
         ) : parsedStructuredContent ? (
           <NeorgRenderer blocks={parsedStructuredContent} />
         ) : (

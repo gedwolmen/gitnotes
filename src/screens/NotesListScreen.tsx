@@ -75,7 +75,7 @@ export default function NotesListScreen() {
     createNote,
   } = useNotes();
   const { viewMode, setViewMode } = useViewMode();
-  const { isTablet, columns, maxContentWidth } = useResponsive();
+  const { isTablet, maxContentWidth } = useResponsive();
   const { repositories } = useRepos();
   const listRef = useRef<FlashListRef<Note>>(null);
 
@@ -140,19 +140,28 @@ export default function NotesListScreen() {
 
   const allFolders = useMemo(() => {
     const set = new Set<string>();
-    notes.forEach((note) => {
-      const fp = note.folderPath?.trim();
-      if (!fp) return;
-      const parts = fp.split('/').filter(Boolean);
+    const scoped = selectedRepo
+      ? notes.filter((n) => n.repo === selectedRepo.path)
+      : notes;
+    const collect = (raw: string | undefined) => {
+      const trimmed = raw?.trim();
+      if (!trimmed) return;
+      const parts = trimmed.split('/').filter(Boolean);
       let acc = '';
       for (const seg of parts) {
-        acc = acc ? `${acc}/${seg}` : (fp.startsWith('/') ? `/${seg}` : seg);
+        acc = acc ? `${acc}/${seg}` : seg;
         set.add(acc);
       }
-      set.add(fp);
+    };
+    scoped.forEach((note) => {
+      collect(note.folderPath);
+      if (note.filePath) {
+        const idx = note.filePath.lastIndexOf('/');
+        if (idx > 0) collect(note.filePath.slice(0, idx));
+      }
     });
     return Array.from(set).sort();
-  }, [notes]);
+  }, [notes, selectedRepo]);
 
   const activeFilterCount =
     (selectedRepo ? 1 : 0) +
@@ -165,9 +174,13 @@ export default function NotesListScreen() {
     if (selectedFolder) {
       const sel = selectedFolder;
       result = result.filter((n: Note) => {
-        const fp = n.folderPath;
-        if (!fp) return false;
-        return fp === sel || fp.startsWith(`${sel}/`);
+        const candidates: string[] = [];
+        if (n.folderPath) candidates.push(n.folderPath);
+        if (n.filePath) {
+          const idx = n.filePath.lastIndexOf('/');
+          if (idx > 0) candidates.push(n.filePath.slice(0, idx));
+        }
+        return candidates.some((fp) => fp === sel || fp.startsWith(`${sel}/`));
       });
     }
     if (!selectedRepo) {
@@ -356,7 +369,7 @@ export default function NotesListScreen() {
   );
 
   const renderSwipeableNote = useCallback(
-    (note: Note, index: number, compact = false, variant: 'default' | 'card' = 'default') => (
+    (note: Note, index: number) => (
       <ReanimatedSwipeable
         overshootRight={false}
         rightThreshold={40}
@@ -366,8 +379,6 @@ export default function NotesListScreen() {
           note={note}
           onPress={handleNotePress}
           onLongPress={handleNoteLongPress}
-          compact={compact}
-          variant={variant}
           highlighted={hasActiveSearch && index === currentSearchMatchIndex}
         />
       </ReanimatedSwipeable>
@@ -387,22 +398,6 @@ export default function NotesListScreen() {
     [renderSwipeableNote],
   );
 
-  const renderGridNote = useCallback(
-    ({ item, index }: { item: Note; index: number }) => (
-      <View style={[styles.gridItem, isTablet && styles.gridItemTablet]}>
-        {renderSwipeableNote(item, index, true)}
-      </View>
-    ),
-    [renderSwipeableNote, isTablet],
-  );
-
-  const renderCardNote = useCallback(
-    ({ item, index }: { item: Note; index: number }) => (
-      <View style={styles.cardItem}>{renderSwipeableNote(item, index, false, 'card')}</View>
-    ),
-    [renderSwipeableNote],
-  );
-
   const renderJournalNote = useCallback(
     ({ item, index }: { item: Note; index: number }) => (
       <View style={styles.journalItem}>
@@ -417,39 +412,17 @@ export default function NotesListScreen() {
 
   const keyExtractor = useCallback((item: Note) => item.id, []);
 
-  const getListLayout = useCallback(() => {
-    if (viewMode === "grid")
-      return {
-        numColumns: isTablet ? columns : 2,
-        columnWrapperStyle: styles.gridRow,
-      };
-    return { numColumns: 1, columnWrapperStyle: undefined };
-  }, [viewMode, isTablet, columns]);
+  const getListLayout = useCallback(
+    () => ({ numColumns: 1, columnWrapperStyle: undefined as undefined }),
+    [],
+  );
 
   const getRenderItem = useCallback(() => {
-    switch (viewMode) {
-      case "grid":
-        return renderGridNote;
-      case "card":
-        return renderCardNote;
-      case "journal":
-        return renderJournalNote;
-      default:
-        return renderNote;
-    }
-  }, [viewMode, renderNote, renderGridNote, renderCardNote, renderJournalNote]);
+    return viewMode === 'journal' ? renderJournalNote : renderNote;
+  }, [viewMode, renderNote, renderJournalNote]);
 
   const getListContentStyle = useCallback(() => {
-    switch (viewMode) {
-      case "grid":
-        return styles.gridContent;
-      case "card":
-        return styles.cardContent;
-      case "journal":
-        return styles.journalContent;
-      default:
-        return styles.listContent;
-    }
+    return viewMode === 'journal' ? styles.journalContent : styles.listContent;
   }, [viewMode]);
 
   if (isLoading) {
@@ -800,11 +773,7 @@ export default function NotesListScreen() {
             )}
             <TouchableOpacity
               style={[styles.chip, { borderColor: colors.border + "60" }]}
-              onPress={() => {
-                setSelectedFormat(null);
-                setSelectedFolder(null);
-                setSelectedTags([]);
-              }}
+              onPress={handleClearFilters}
             >
               <Text style={[styles.chipText, { color: colors.textSecondary }]}>
                 Clear all
@@ -1440,12 +1409,6 @@ const styles = StyleSheet.create({
   },
   errorText: { fontSize: 13 },
   listContent: { padding: 12, paddingTop: 4, paddingBottom: 100 },
-  gridRow: { justifyContent: "flex-start", gap: 12 },
-  gridContent: { padding: 12, paddingTop: 4, paddingBottom: 100 },
-  gridItem: { width: "48%" },
-  gridItemTablet: { width: "31%" },
-  cardContent: { padding: 12, paddingTop: 4, paddingBottom: 100 },
-  cardItem: { marginBottom: 12 },
   journalContent: { padding: 12, paddingTop: 4, paddingBottom: 100 },
   journalItem: { marginBottom: 8 },
   journalDate: { fontSize: 12, marginBottom: 4, marginLeft: 4 },
