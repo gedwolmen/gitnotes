@@ -121,17 +121,20 @@ class GitHubServiceClass {
     }
   }
 
-  async setToken(token: string): Promise<GitHubUser | null> {
+  async setToken(token: string, user?: GitHubUser | null): Promise<GitHubUser | null> {
     this.token = token;
-    const user = await this.fetchUser();
-    if (!user) {
+    // If the caller already validated the token + fetched the user
+    // (AuthContext does this via AuthService.setToken), trust it instead
+    // of round-tripping /user a second time.
+    const resolvedUser = user === undefined ? await this.fetchUser() : user;
+    if (!resolvedUser) {
       this.token = null;
       return null;
     }
-    this.user = user;
+    this.user = resolvedUser;
     await AsyncStorage.setItem(TOKEN_KEY, token);
-    await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
-    return user;
+    await AsyncStorage.setItem(USER_KEY, JSON.stringify(resolvedUser));
+    return resolvedUser;
   }
 
   async clearToken(): Promise<void> {
