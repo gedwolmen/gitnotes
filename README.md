@@ -1,3 +1,7 @@
+<p align="center">
+<img width="200" height="200" alt="icon" align="center" src="https://github.com/user-attachments/assets/776e9654-0117-44c5-a85e-5a72e7f4ac9f" />
+</p>
+
 # GitNotes
 
 A React Native app built with Expo for managing development notes with Git integration.
