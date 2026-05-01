@@ -1,6 +1,7 @@
 import { GitHubService } from './GitHubService';
 import { StorageService } from './StorageService';
 import { NoteFormat } from '../models/Note';
+import { parseRepoPath } from '../utils/gitPathParser';
 
 export interface SyncResult {
   total: number;
@@ -38,19 +39,6 @@ function buildGitHubContentsApiUrl(owner: string, repo: string, path: string, br
   const encodedPath = encodeGitHubPath(path);
   const refQuery = branch ? `?ref=${encodeURIComponent(branch)}` : '';
   return `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}${refQuery}`;
-}
-
-function parseRepoPath(repoPath: string): { owner: string; repo: string } | null {
-  const cleaned = repoPath
-    .replace(/^https?:\/\/github\.com\//, '')
-    .replace(/^github\.com\//, '')
-    .replace(/\.git$/, '')
-    .trim();
-  const parts = cleaned.split('/');
-  if (parts.length >= 2) {
-    return { owner: parts[0], repo: parts[1] };
-  }
-  return null;
 }
 
 class RepoFileSyncServiceClass {

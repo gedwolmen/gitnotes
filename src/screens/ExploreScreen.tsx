@@ -18,7 +18,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useRepos } from '../contexts/RepoContext';
 import { GitRepository } from '../services/GitService';
 import { HapticService } from '../utils/haptics';
-import { parseRepoPath } from '../components/RepoFileBrowser';
+import { parseRepoPath } from '../utils/gitPathParser';
 import RepoFileTree, { TreeNode } from '../components/RepoFileTree';
 import { RootStackParamList } from '../navigation/types';
 import { NScreenHeader } from '../components/neumorphic';
