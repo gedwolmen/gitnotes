@@ -11,9 +11,11 @@ import {
   ScrollView,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  Image,
   Linking,
 } from 'react-native';
+
+import { Image } from 'expo-image';
+
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
@@ -538,53 +540,12 @@ export default function NoteEditorScreen() {
 
   const markdownItInstance = useMemo(() => {
     const md = MarkdownIt({ typographer: true, linkify: true });
-    md.validateLink = (url: string) => /^(https?:|file:|data:|mailto:|tel:|canvas:)/i.test(url) || !/^[a-z][a-z0-9+.-]*:/i.test(url);
+    md.validateLink = (url: string) =>
+      /^(https?:|file:|data:|mailto:|tel:|canvas:|note:|#)/i.test(url) ||
+      !/^[a-z][a-z0-9+.-]*:/i.test(url);
     return md;
   }, []);
 
-  const markdownRules = useMemo(() => ({
-    image: (node: any) => {
-      const src: string = node.attributes?.src ?? '';
-      const alt: string = node.attributes?.alt ?? '';
-      const isCanvas = /canvas-drawings\/canvas-/.test(src) || /^canvas-/.test(alt);
-      if (isCanvas) {
-        const isJson = /\.json(\?|$)/i.test(src);
-        const pngUri = isJson ? src.split('?')[0].replace(/\.json$/i, '.png') : src;
-        return (
-          <Image
-            key={node.key}
-            source={{ uri: pngUri }}
-            resizeMode="contain"
-            style={{ width: '100%', height: 240, borderRadius: 6, backgroundColor: '#fff' }}
-          />
-        );
-      }
-      return (
-        <Image
-          key={node.key}
-          source={{ uri: src }}
-          resizeMode="contain"
-          style={{ width: '100%', height: 240, borderRadius: 6, backgroundColor: colors.surfaceSecondary }}
-        />
-      );
-    },
-    link: (node: any, children: any) => {
-      const href: string = node.attributes?.href ?? '';
-      if (isCanvasLink(href)) {
-        const id = canvasIdFromLink(href);
-        return <CanvasPreview key={node.key} canvasId={id} />;
-      }
-      return (
-        <Text
-          key={node.key}
-          style={{ color: colors.primary, textDecorationLine: 'underline' }}
-          onPress={() => href && Linking.openURL(href).catch(() => {})}
-        >
-          {children}
-        </Text>
-      );
-    },
-  }), [colors]);
 
   const previewContent = useMemo(() => {
     const stripTopMetadata = (raw: string, format: NoteFormat): string => {
@@ -649,6 +610,82 @@ export default function NoteEditorScreen() {
     return parsed.blocks;
   }, [previewContent, noteFormat]);
 
+  const previewScrollRef = useRef<ScrollView>(null);
+
+  const markdownRules = useMemo(() => ({
+    image: (node: any) => {
+      const src: string = node.attributes?.src ?? '';
+      const alt: string = node.attributes?.alt ?? '';
+      const isCanvas = /canvas-drawings\/canvas-/.test(src) || /^canvas-/.test(alt);
+      if (isCanvas) {
+        const isJson = /\.json(\?|$)/i.test(src);
+        const pngUri = isJson ? src.split('?')[0].replace(/\.json$/i, '.png') : src;
+        return (
+          <Image
+            key={node.key}
+            source={{ uri: pngUri }}
+            contentFit="contain"
+            accessibilityLabel={alt || undefined}
+            style={{ width: '100%', height: 240, borderRadius: 6, backgroundColor: '#fff' }}
+          />
+        );
+      }
+      return (
+        <Image
+          key={node.key}
+          source={{ uri: src }}
+          contentFit="contain"
+          accessibilityLabel={alt || undefined}
+          style={{ width: '100%', height: 240, borderRadius: 6, backgroundColor: colors.surfaceSecondary }}
+        />
+      );
+    },
+    link: (node: any, children: any) => {
+      const href: string = node.attributes?.href ?? '';
+      if (isCanvasLink(href)) {
+        const id = canvasIdFromLink(href);
+        return <CanvasPreview key={node.key} canvasId={id} />;
+      }
+      const onPress = () => {
+        if (!href) return;
+        if (href.startsWith('note:')) {
+          const id = href.slice('note:'.length);
+          if (id) navigation.navigate('NoteEditor', { noteId: id });
+          return;
+        }
+        if (href.startsWith('#')) {
+          const slug = href.slice(1).toLowerCase();
+          const target = previewContent
+            .split('\n')
+            .findIndex((line) => {
+              const m = line.match(/^#{1,6}\s+(.+?)\s*#*\s*$/);
+              if (!m) return false;
+              const headingSlug = m[1]
+                .toLowerCase()
+                .trim()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-|-$/g, '');
+              return headingSlug === slug;
+            });
+          if (target >= 0) {
+            previewScrollRef.current?.scrollTo({ y: target * APPROX_LINE_PX, animated: true });
+          }
+          return;
+        }
+        Linking.openURL(href).catch(() => {});
+      };
+      return (
+        <Text
+          key={node.key}
+          style={{ color: colors.primary, textDecorationLine: 'underline' }}
+          onPress={onPress}
+        >
+          {children}
+        </Text>
+      );
+    },
+  }), [colors, navigation, previewContent]);
+
   const speakableContent = useMemo(() => {
     return previewContent
       .replace(/```[\s\S]*?```/g, '')
@@ -693,7 +730,6 @@ export default function NoteEditorScreen() {
     };
   }, []);
 
-  const previewScrollRef = useRef<ScrollView>(null);
   const [showToc, setShowToc] = useState(false);
 
   const tocEntries = useMemo(() => {
@@ -1058,30 +1094,18 @@ export default function NoteEditorScreen() {
       </View>
 
       <View style={[styles.toolbar, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
-        <TouchableOpacity
-          onPress={() => setShowVoiceModal(true)}
-          style={styles.toolbarButton}
-        >
-          <Ionicons name="mic-outline" size={22} color={colors.primary} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setShowCanvasModal(true)}
-          style={styles.toolbarButton}
-        >
-          <Ionicons name="brush-outline" size={22} color={colors.primary} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={handlePickImage}
-          style={styles.toolbarButton}
-        >
-          <Ionicons name="image-outline" size={22} color={colors.primary} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setShowCanvasPicker(true)}
-          style={styles.toolbarButton}
-        >
-          <Ionicons name="easel-outline" size={22} color={colors.primary} />
-        </TouchableOpacity>
+        <NIconButton size="sm" onPress={() => setShowVoiceModal(true)} accessibilityLabel="Voice input">
+          <Ionicons name="mic-outline" size={20} color={colors.primary} />
+        </NIconButton>
+        <NIconButton size="sm" onPress={() => setShowCanvasModal(true)} accessibilityLabel="Insert canvas">
+          <Ionicons name="brush-outline" size={20} color={colors.primary} />
+        </NIconButton>
+        <NIconButton size="sm" onPress={handlePickImage} accessibilityLabel="Insert image">
+          <Ionicons name="image-outline" size={20} color={colors.primary} />
+        </NIconButton>
+        <NIconButton size="sm" onPress={() => setShowCanvasPicker(true)} accessibilityLabel="Link existing canvas">
+          <Ionicons name="easel-outline" size={20} color={colors.primary} />
+        </NIconButton>
       </View>
 
       {sideBySide ? (

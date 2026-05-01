@@ -1,24 +1,12 @@
 import { GitHubService } from './GitHubService';
 import { NoteFormat } from '../models/Note';
 import * as FileSystem from 'expo-file-system/legacy';
+import { parseRepoPath } from '../utils/gitPathParser';
 
 export interface NoteGitHubSyncResult {
   success: boolean;
   filePath?: string;
   error?: string;
-}
-
-function parseRepoPath(repoPath: string): { owner: string; repo: string } | null {
-  const cleaned = repoPath
-    .replace(/^https?:\/\/github\.com\//, '')
-    .replace(/^github\.com\//, '')
-    .replace(/\.git$/, '')
-    .trim();
-  const parts = cleaned.split('/');
-  if (parts.length >= 2) {
-    return { owner: parts[0], repo: parts[1] };
-  }
-  return null;
 }
 
 function getExtension(format?: NoteFormat): string {
