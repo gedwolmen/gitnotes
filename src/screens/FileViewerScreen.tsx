@@ -59,7 +59,7 @@ function formatBytes(bytes?: number): string {
 
 function MarkdownBody({ value, styles: mdStyles }: { value: string; styles: ReturnType<typeof getMarkdownStyles> }) {
   const nodes = useMarkdown(value, { styles: mdStyles });
-  return <>{nodes.map((n, i) => <React.Fragment key={i}>{n}</React.Fragment>)}</>;
+  return <>{React.Children.toArray(nodes)}</>;
 }
 
 export default function FileViewerScreen() {

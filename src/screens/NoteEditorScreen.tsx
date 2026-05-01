@@ -111,7 +111,7 @@ function getExtensionForFormat(format?: NoteFormat): string {
 
 function MarkdownBody({ value, styles: mdStyles, renderer }: { value: string; styles: ReturnType<typeof getMarkdownStyles>; renderer?: RendererInterface }) {
   const nodes = useMarkdown(value, { styles: mdStyles, renderer });
-  return <>{nodes.map((n, i) => <React.Fragment key={i}>{n}</React.Fragment>)}</>;
+  return <>{React.Children.toArray(nodes)}</>;
 }
 
 export default function NoteEditorScreen() {
