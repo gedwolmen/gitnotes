@@ -1180,40 +1180,42 @@ export default function NotesListScreen() {
                   >
                     Folder
                   </Text>
-                  <ScrollView
+                  <FlatList
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     style={styles.filterChipRow}
-                  >
-                    <TouchableOpacity
-                      style={[
-                        styles.filterChip,
-                        { borderColor: colors.border },
-                        !selectedFolder && {
-                          borderColor: colors.primary,
-                          backgroundColor: colors.primary + "15",
-                        },
-                      ]}
-                      onPress={() => setSelectedFolder(null)}
-                    >
-                      <Text
+                    data={allFolders}
+                    keyExtractor={(folder) => folder}
+                    ListHeaderComponent={
+                      <TouchableOpacity
                         style={[
-                          styles.filterChipText,
-                          {
-                            color: !selectedFolder
-                              ? colors.primary
-                              : colors.text,
+                          styles.filterChip,
+                          { borderColor: colors.border },
+                          !selectedFolder && {
+                            borderColor: colors.primary,
+                            backgroundColor: colors.primary + "15",
                           },
                         ]}
+                        onPress={() => setSelectedFolder(null)}
                       >
-                        All
-                      </Text>
-                    </TouchableOpacity>
-                    {allFolders.map((folder) => {
+                        <Text
+                          style={[
+                            styles.filterChipText,
+                            {
+                              color: !selectedFolder
+                                ? colors.primary
+                                : colors.text,
+                            },
+                          ]}
+                        >
+                          All
+                        </Text>
+                      </TouchableOpacity>
+                    }
+                    renderItem={({ item: folder }) => {
                       const isSelected = selectedFolder === folder;
                       return (
                         <TouchableOpacity
-                          key={folder}
                           style={[
                             styles.filterChip,
                             { borderColor: colors.border },
@@ -1251,8 +1253,8 @@ export default function NotesListScreen() {
                           </Text>
                         </TouchableOpacity>
                       );
-                    })}
-                  </ScrollView>
+                    }}
+                  />
                 </>
               )}
 
@@ -1267,16 +1269,16 @@ export default function NotesListScreen() {
                   >
                     Tags
                   </Text>
-                  <ScrollView
+                  <FlatList
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     style={styles.filterChipRow}
-                  >
-                    {allTags.map((tag) => {
+                    data={allTags}
+                    keyExtractor={(tag) => tag}
+                    renderItem={({ item: tag }) => {
                       const isSelected = selectedTags.includes(tag);
                       return (
                         <TouchableOpacity
-                          key={tag}
                           style={[
                             styles.filterChip,
                             { borderColor: colors.border },
@@ -1315,8 +1317,8 @@ export default function NotesListScreen() {
                           </Text>
                         </TouchableOpacity>
                       );
-                    })}
-                  </ScrollView>
+                    }}
+                  />
                 </>
               )}
 
