@@ -17,6 +17,7 @@ import {
   ScrollView,
   RefreshControl,
 } from "react-native";
+import { FlashList, FlashListRef } from "@shopify/flash-list";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
@@ -76,7 +77,7 @@ export default function NotesListScreen() {
   const { viewMode, setViewMode } = useViewMode();
   const { isTablet, columns, maxContentWidth } = useResponsive();
   const { repositories } = useRepos();
-  const listRef = useRef<FlatList<Note>>(null);
+  const listRef = useRef<FlashListRef<Note>>(null);
 
   useEffect(() => {
     if (authState.token) {
@@ -306,19 +307,6 @@ export default function NotesListScreen() {
       scrollToSearchMatch(currentSearchMatchIndex + step);
     },
     [currentSearchMatchIndex, scrollToSearchMatch, searchMatchCount],
-  );
-
-  const handleScrollToIndexFailed = useCallback(
-    ({ index }: { index: number }) => {
-      setTimeout(() => {
-        listRef.current?.scrollToIndex({
-          index,
-          animated: true,
-          viewPosition: 0.4,
-        });
-      }, 120);
-    },
-    [],
   );
 
   const handlePullToRefresh = useCallback(async () => {
@@ -841,13 +829,12 @@ export default function NotesListScreen() {
         </View>
       )}
 
-      <FlatList
+      <FlashList
         ref={listRef}
         data={displayNotes}
         renderItem={getRenderItem()}
         keyExtractor={keyExtractor}
         key={viewMode}
-        onScrollToIndexFailed={handleScrollToIndexFailed}
         {...getListLayout()}
         contentContainerStyle={getListContentStyle()}
         refreshControl={
@@ -1090,7 +1077,7 @@ export default function NotesListScreen() {
                     showsHorizontalScrollIndicator={false}
                     style={styles.filterChipRow}
                     data={allFolders}
-                    keyExtractor={(folder) => folder}
+                    keyExtractor={(folder: string) => folder}
                     ListHeaderComponent={
                       <TouchableOpacity
                         style={[
@@ -1179,7 +1166,7 @@ export default function NotesListScreen() {
                     showsHorizontalScrollIndicator={false}
                     style={styles.filterChipRow}
                     data={allTags}
-                    keyExtractor={(tag) => tag}
+                    keyExtractor={(tag: string) => tag}
                     renderItem={({ item: tag }) => {
                       const isSelected = selectedTags.includes(tag);
                       return (
