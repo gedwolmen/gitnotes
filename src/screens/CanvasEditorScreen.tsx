@@ -30,7 +30,7 @@ import {
 } from '@shopify/react-native-skia';
 import type { SkPath } from '@shopify/react-native-skia';
 import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { runOnJS, useAnimatedStyle, useDerivedValue, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useCanvases } from '../contexts/CanvasContext';
 import { useTheme } from '../contexts/ThemeContext';
 import {
@@ -160,6 +160,8 @@ export default function CanvasEditorScreen() {
   const savedScale = useSharedValue(1);
   const savedTx = useSharedValue(0);
   const savedTy = useSharedValue(0);
+  const activeDrawingElement = useSharedValue<CanvasStroke | CanvasShape | null>(null);
+  const activeStrokePath = useSharedValue(Skia.Path.Make().setIsVolatile(true));
 
   const setZoom = useCallback(
     (next: number) => {
@@ -186,7 +188,6 @@ export default function CanvasEditorScreen() {
   const [repo, setRepo] = useState<string | undefined>(existingCanvas?.repo);
   const [branch, setBranch] = useState<string | undefined>(existingCanvas?.branch);
   const dragStartRef = useRef<Point | null>(null);
-  const isDrawingRef = useRef(false);
 
   const textFont = useMemo(
     () =>
@@ -265,38 +266,142 @@ export default function CanvasEditorScreen() {
     return el;
   }, []);
 
+  const startTextPlacement = useCallback((pt: Point) => {
+    setTextPosition(pt);
+    setTextInput('');
+    setTextModalVisible(true);
+  }, []);
+
+  const startSelection = useCallback((pt: Point) => {
+    dragStartRef.current = pt;
+    for (let i = elements.length - 1; i >= 0; i--) {
+      if (hitTest(elements[i], pt.x, pt.y)) {
+        setSelectedId(elements[i].id);
+        return;
+      }
+    }
+    setSelectedId(null);
+  }, [elements, hitTest]);
+
+  const updateSelection = useCallback((pt: Point) => {
+    if (!dragStartRef.current || !selectedId) return;
+    const dx = pt.x - dragStartRef.current.x;
+    const dy = pt.y - dragStartRef.current.y;
+    setElements((prev) => prev.map((el) => (el.id === selectedId ? moveElement(el, dx, dy) : el)));
+    dragStartRef.current = pt;
+  }, [moveElement, selectedId]);
+
+  const endSelection = useCallback(() => {
+    dragStartRef.current = null;
+  }, []);
+
+  const commitActiveDrawing = useCallback((element: CanvasStroke | CanvasShape | null) => {
+    if (element) {
+      setElements((prev) => [...prev, element]);
+    }
+  }, []);
+
+  const activeStrokeColor = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    if (!element || element.type !== 'stroke') return 'transparent';
+    return element.tool === 'highlighter' ? hexToRgba(element.color, 0.3) : element.color;
+  });
+  const activeStrokeWidth = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    return element?.type === 'stroke' ? element.width : 0;
+  });
+  const activeLinePath = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    if (!element || element.type !== 'shape' || element.shape !== 'line') return Skia.Path.Make();
+    return buildLinePath(element.x1, element.y1, element.x2, element.y2);
+  });
+  const activeArrowPath = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    if (!element || element.type !== 'shape' || element.shape !== 'arrow') return Skia.Path.Make();
+    return buildArrowPath(element.x1, element.y1, element.x2, element.y2, element.width);
+  });
+  const activeDiamondPath = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    if (!element || element.type !== 'shape' || element.shape !== 'diamond') return Skia.Path.Make();
+    return buildDiamondPath(element.x1, element.y1, element.x2, element.y2);
+  });
+  const activeShapeRect = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    if (
+      !element
+      || element.type !== 'shape'
+      || (element.shape !== 'rect' && element.shape !== 'roundRect' && element.shape !== 'ellipse')
+    ) {
+      return { x: 0, y: 0, width: 0, height: 0 };
+    }
+    return {
+      x: Math.min(element.x1, element.x2),
+      y: Math.min(element.y1, element.y2),
+      width: Math.abs(element.x2 - element.x1),
+      height: Math.abs(element.y2 - element.y1),
+    };
+  });
+  const activeShapeX = useDerivedValue(() => activeShapeRect.value.x);
+  const activeShapeY = useDerivedValue(() => activeShapeRect.value.y);
+  const activeShapeWidth = useDerivedValue(() => activeShapeRect.value.width);
+  const activeShapeHeight = useDerivedValue(() => activeShapeRect.value.height);
+  const activeShapeStrokeColor = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    return element?.type === 'shape' ? element.color : 'transparent';
+  });
+  const activeRectFillColor = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    return element?.type === 'shape' && element.shape === 'rect' ? element.fillColor ?? 'transparent' : 'transparent';
+  });
+  const activeRoundRectFillColor = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    return element?.type === 'shape' && element.shape === 'roundRect' ? element.fillColor ?? 'transparent' : 'transparent';
+  });
+  const activeEllipseFillColor = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    return element?.type === 'shape' && element.shape === 'ellipse' ? element.fillColor ?? 'transparent' : 'transparent';
+  });
+  const activeShapeStrokeWidth = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    return element?.type === 'shape' ? element.width : 0;
+  });
+  const activeRectStrokeWidth = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    return element?.type === 'shape' && element.shape === 'rect' ? element.width : 0;
+  });
+  const activeRoundRectStrokeWidth = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    return element?.type === 'shape' && element.shape === 'roundRect' ? element.width : 0;
+  });
+  const activeEllipseStrokeWidth = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    return element?.type === 'shape' && element.shape === 'ellipse' ? element.width : 0;
+  });
+
   const panGesture = useMemo(
     () =>
       Gesture.Pan()
         .maxPointers(1)
-        .runOnJS(true)
         .onStart((e) => {
+          'worklet';
           const pt = { x: e.x, y: e.y };
-          dragStartRef.current = pt;
 
           if (tool === 'text') {
-            setTextPosition(pt);
-            setTextInput('');
-            setTextModalVisible(true);
+            runOnJS(startTextPlacement)(pt);
             return;
           }
 
           if (tool === 'select') {
-            for (let i = elements.length - 1; i >= 0; i--) {
-              if (hitTest(elements[i], pt.x, pt.y)) {
-                setSelectedId(elements[i].id);
-                return;
-              }
-            }
-            setSelectedId(null);
+            runOnJS(startSelection)(pt);
             return;
           }
 
-          isDrawingRef.current = true;
-          saveHistory();
+          runOnJS(saveHistory)();
 
           if (tool === 'pen' || tool === 'highlighter' || tool === 'eraser') {
-            const stroke: CanvasStroke = {
+            activeStrokePath.value.rewind();
+            activeStrokePath.value.moveTo(pt.x, pt.y);
+            activeDrawingElement.value = {
               type: 'stroke',
               id: uid(),
               tool: tool === 'eraser' ? 'eraser' : tool === 'highlighter' ? 'highlighter' : 'pen',
@@ -304,9 +409,9 @@ export default function CanvasEditorScreen() {
               width: tool === 'eraser' ? size * 3 : tool === 'highlighter' ? size * 5 : size,
               points: [pt],
             };
-            setElements((prev) => [...prev, stroke]);
           } else {
-            const shape: CanvasShape = {
+            activeStrokePath.value.rewind();
+            activeDrawingElement.value = {
               type: 'shape',
               id: uid(),
               shape: tool as CanvasShape['shape'],
@@ -318,41 +423,40 @@ export default function CanvasEditorScreen() {
               x2: pt.x,
               y2: pt.y,
             };
-            setElements((prev) => [...prev, shape]);
           }
         })
         .onChange((e) => {
-          if (!dragStartRef.current) return;
+          'worklet';
           const pt = { x: e.x, y: e.y };
 
-          if (tool === 'select' && selectedId) {
-            const dx = pt.x - dragStartRef.current.x;
-            const dy = pt.y - dragStartRef.current.y;
-            setElements((prev) => prev.map((el) => (el.id === selectedId ? moveElement(el, dx, dy) : el)));
-            dragStartRef.current = pt;
+          if (tool === 'select') {
+            runOnJS(updateSelection)(pt);
             return;
           }
 
-          if (!isDrawingRef.current) return;
+          const active = activeDrawingElement.value;
+          if (!active) return;
 
-          setElements((prev) => {
-            const clone = [...prev];
-            const last = clone[clone.length - 1];
-            if (!last) return clone;
-
-            if (last.type === 'stroke') {
-              clone[clone.length - 1] = { ...last, points: [...last.points, pt] };
-            } else if (last.type === 'shape') {
-              clone[clone.length - 1] = { ...last, x2: pt.x, y2: pt.y };
-            }
-            return clone;
-          });
+          if (active.type === 'stroke') {
+            activeStrokePath.value.lineTo(pt.x, pt.y);
+            activeDrawingElement.value = { ...active, points: [...active.points, pt] };
+          } else {
+            activeDrawingElement.value = { ...active, x2: pt.x, y2: pt.y };
+          }
         })
         .onEnd(() => {
-          isDrawingRef.current = false;
-          dragStartRef.current = null;
+          'worklet';
+          if (tool === 'select') {
+            runOnJS(endSelection)();
+            return;
+          }
+
+          const completedElement = activeDrawingElement.value;
+          activeDrawingElement.value = null;
+          activeStrokePath.value.rewind();
+          runOnJS(commitActiveDrawing)(completedElement);
         }),
-    [tool, color, size, filled, elements, selectedId, hitTest, moveElement, saveHistory],
+    [tool, color, size, filled, saveHistory, startTextPlacement, startSelection, updateSelection, endSelection, commitActiveDrawing, activeDrawingElement, activeStrokePath],
   );
 
   const addTextElement = useCallback(() => {
@@ -700,6 +804,38 @@ export default function CanvasEditorScreen() {
               <Canvas style={{ width: canvasSize.width, height: canvasSize.height }}>
                 <Fill color="white" />
                 {elements.map(renderElement)}
+                <Path path={activeStrokePath} color={activeStrokeColor} style="stroke" strokeWidth={activeStrokeWidth} strokeCap="round" strokeJoin="round" />
+                <Path path={activeLinePath} color={activeShapeStrokeColor} style="stroke" strokeWidth={activeShapeStrokeWidth} />
+                <Path path={activeArrowPath} color={activeShapeStrokeColor} style="stroke" strokeWidth={activeShapeStrokeWidth} />
+                <Path path={activeDiamondPath} color={activeShapeStrokeColor} style="stroke" strokeWidth={activeShapeStrokeWidth} />
+                <Group>
+                  <Rect x={activeShapeX} y={activeShapeY} width={activeShapeWidth} height={activeShapeHeight} color={activeRectFillColor} />
+                  <Rect x={activeShapeX} y={activeShapeY} width={activeShapeWidth} height={activeShapeHeight} style="stroke" strokeWidth={activeRectStrokeWidth} color={activeShapeStrokeColor} />
+                </Group>
+                <Group>
+                  <RoundedRect
+                    x={activeShapeX}
+                    y={activeShapeY}
+                    width={activeShapeWidth}
+                    height={activeShapeHeight}
+                    r={10}
+                    color={activeRoundRectFillColor}
+                  />
+                  <RoundedRect
+                    x={activeShapeX}
+                    y={activeShapeY}
+                    width={activeShapeWidth}
+                    height={activeShapeHeight}
+                    r={10}
+                    style="stroke"
+                    strokeWidth={activeRoundRectStrokeWidth}
+                    color={activeShapeStrokeColor}
+                  />
+                </Group>
+                <Group>
+                  <Oval x={activeShapeX} y={activeShapeY} width={activeShapeWidth} height={activeShapeHeight} color={activeEllipseFillColor} />
+                  <Oval x={activeShapeX} y={activeShapeY} width={activeShapeWidth} height={activeShapeHeight} style="stroke" strokeWidth={activeEllipseStrokeWidth} color={activeShapeStrokeColor} />
+                </Group>
               </Canvas>
             </Animated.View>
           </GestureDetector>

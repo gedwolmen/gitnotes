@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Modal, View, StyleSheet, TouchableOpacity, Text, ScrollView, TextInput, Alert, Platform, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +15,7 @@ import {
 } from '@shopify/react-native-skia';
 import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as FileSystem from 'expo-file-system/legacy';
+import { runOnJS, useDerivedValue, useSharedValue } from 'react-native-reanimated';
 
 export interface CanvasSavePayload {
   uri: string;
@@ -132,7 +133,8 @@ export default function CanvasModal({ visible, onSave, onClose, editJsonUri }: C
   const [color, setColor] = useState('#000000');
   const [size, setSize] = useState(3);
   const [filled, setFilled] = useState(false);
-  const isDrawingRef = useRef(false);
+  const activeDrawingElement = useSharedValue<DrawElement | null>(null);
+  const activeStrokePath = useSharedValue(Skia.Path.Make().setIsVolatile(true));
 
   React.useEffect(() => {
     if (!visible) return;
@@ -183,26 +185,110 @@ export default function CanvasModal({ visible, onSave, onClose, editJsonUri }: C
     setElements([]);
   }, [saveHistory]);
 
+  const commitActiveDrawing = useCallback((element: DrawElement | null) => {
+    if (element) {
+      setElements((prev) => [...prev, element]);
+    }
+  }, []);
+
+  const activeStrokeColor = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    if (!element || !('points' in element)) return 'transparent';
+    return element.tool === 'highlighter' ? hexToRgba(element.color, 0.3) : element.color;
+  });
+  const activeStrokeWidth = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    return element && 'points' in element ? element.width : 0;
+  });
+  const activeLinePath = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    if (!element || !('shape' in element) || element.shape !== 'line') return Skia.Path.Make();
+    return buildLinePath(element.x1, element.y1, element.x2, element.y2);
+  });
+  const activeArrowPath = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    if (!element || !('shape' in element) || element.shape !== 'arrow') return Skia.Path.Make();
+    return buildArrowPath(element.x1, element.y1, element.x2, element.y2, element.width);
+  });
+  const activeDiamondPath = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    if (!element || !('shape' in element) || element.shape !== 'diamond') return Skia.Path.Make();
+    return buildDiamondPath(element.x1, element.y1, element.x2, element.y2);
+  });
+  const activeShapeRect = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    if (
+      !element
+      || !('shape' in element)
+      || (element.shape !== 'rect' && element.shape !== 'roundRect' && element.shape !== 'ellipse')
+    ) {
+      return { x: 0, y: 0, width: 0, height: 0 };
+    }
+    return {
+      x: Math.min(element.x1, element.x2),
+      y: Math.min(element.y1, element.y2),
+      width: Math.abs(element.x2 - element.x1),
+      height: Math.abs(element.y2 - element.y1),
+    };
+  });
+  const activeShapeX = useDerivedValue(() => activeShapeRect.value.x);
+  const activeShapeY = useDerivedValue(() => activeShapeRect.value.y);
+  const activeShapeWidth = useDerivedValue(() => activeShapeRect.value.width);
+  const activeShapeHeight = useDerivedValue(() => activeShapeRect.value.height);
+  const activeShapeStrokeColor = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    return element && 'shape' in element ? element.color : 'transparent';
+  });
+  const activeRectFillColor = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    return element && 'shape' in element && element.shape === 'rect' ? element.fillColor ?? 'transparent' : 'transparent';
+  });
+  const activeRoundRectFillColor = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    return element && 'shape' in element && element.shape === 'roundRect' ? element.fillColor ?? 'transparent' : 'transparent';
+  });
+  const activeEllipseFillColor = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    return element && 'shape' in element && element.shape === 'ellipse' ? element.fillColor ?? 'transparent' : 'transparent';
+  });
+  const activeShapeStrokeWidth = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    return element && 'shape' in element ? element.width : 0;
+  });
+  const activeRectStrokeWidth = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    return element && 'shape' in element && element.shape === 'rect' ? element.width : 0;
+  });
+  const activeRoundRectStrokeWidth = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    return element && 'shape' in element && element.shape === 'roundRect' ? element.width : 0;
+  });
+  const activeEllipseStrokeWidth = useDerivedValue(() => {
+    const element = activeDrawingElement.value;
+    return element && 'shape' in element && element.shape === 'ellipse' ? element.width : 0;
+  });
+
   const panGesture = useMemo(
     () =>
       Gesture.Pan()
-        .runOnJS(true)
         .onStart((e) => {
+          'worklet';
           const pt = { x: e.x, y: e.y };
-          isDrawingRef.current = true;
-          saveHistory();
+          runOnJS(saveHistory)();
 
           if (tool === 'pen' || tool === 'highlighter' || tool === 'eraser') {
-            const stroke: DrawStroke = {
+            activeStrokePath.value.rewind();
+            activeStrokePath.value.moveTo(pt.x, pt.y);
+            activeDrawingElement.value = {
               id: uid(),
               tool: tool === 'eraser' ? 'eraser' : tool === 'highlighter' ? 'highlighter' : 'pen',
               color: tool === 'eraser' ? '#FFFFFF' : color,
               width: tool === 'eraser' ? size * 3 : tool === 'highlighter' ? size * 5 : size,
               points: [pt],
             };
-            setElements((prev) => [...prev, stroke]);
           } else {
-            const shape: DrawShape = {
+            activeStrokePath.value.rewind();
+            activeDrawingElement.value = {
               id: uid(),
               shape: tool as DrawShape['shape'],
               color,
@@ -213,30 +299,29 @@ export default function CanvasModal({ visible, onSave, onClose, editJsonUri }: C
               x2: pt.x,
               y2: pt.y,
             };
-            setElements((prev) => [...prev, shape]);
           }
         })
         .onChange((e) => {
-          if (!isDrawingRef.current) return;
+          'worklet';
           const pt = { x: e.x, y: e.y };
+          const active = activeDrawingElement.value;
+          if (!active) return;
 
-          setElements((prev) => {
-            const clone = [...prev];
-            const last = clone[clone.length - 1];
-            if (!last) return clone;
-
-            if ('points' in last) {
-              clone[clone.length - 1] = { ...last, points: [...last.points, pt] };
-            } else if ('shape' in last) {
-              clone[clone.length - 1] = { ...last, x2: pt.x, y2: pt.y };
-            }
-            return clone;
-          });
+          if ('points' in active) {
+            activeStrokePath.value.lineTo(pt.x, pt.y);
+            activeDrawingElement.value = { ...active, points: [...active.points, pt] };
+          } else {
+            activeDrawingElement.value = { ...active, x2: pt.x, y2: pt.y };
+          }
         })
         .onEnd(() => {
-          isDrawingRef.current = false;
+          'worklet';
+          const completedElement = activeDrawingElement.value;
+          activeDrawingElement.value = null;
+          activeStrokePath.value.rewind();
+          runOnJS(commitActiveDrawing)(completedElement);
         }),
-    [tool, color, size, filled, saveHistory],
+    [tool, color, size, filled, saveHistory, commitActiveDrawing, activeDrawingElement, activeStrokePath],
   );
 
   const handleSave = useCallback(async () => {
@@ -455,6 +540,38 @@ export default function CanvasModal({ visible, onSave, onClose, editJsonUri }: C
               <SkiaCanvas ref={canvasRef} style={{ width: canvasSize.width, height: canvasSize.height }}>
                 <Fill color="white" />
                 {elements.map(renderElement)}
+                <Path path={activeStrokePath} color={activeStrokeColor} style="stroke" strokeWidth={activeStrokeWidth} strokeCap="round" strokeJoin="round" />
+                <Path path={activeLinePath} color={activeShapeStrokeColor} style="stroke" strokeWidth={activeShapeStrokeWidth} />
+                <Path path={activeArrowPath} color={activeShapeStrokeColor} style="stroke" strokeWidth={activeShapeStrokeWidth} />
+                <Path path={activeDiamondPath} color={activeShapeStrokeColor} style="stroke" strokeWidth={activeShapeStrokeWidth} />
+                <Group>
+                  <Rect x={activeShapeX} y={activeShapeY} width={activeShapeWidth} height={activeShapeHeight} color={activeRectFillColor} />
+                  <Rect x={activeShapeX} y={activeShapeY} width={activeShapeWidth} height={activeShapeHeight} style="stroke" strokeWidth={activeRectStrokeWidth} color={activeShapeStrokeColor} />
+                </Group>
+                <Group>
+                  <RoundedRect
+                    x={activeShapeX}
+                    y={activeShapeY}
+                    width={activeShapeWidth}
+                    height={activeShapeHeight}
+                    r={10}
+                    color={activeRoundRectFillColor}
+                  />
+                  <RoundedRect
+                    x={activeShapeX}
+                    y={activeShapeY}
+                    width={activeShapeWidth}
+                    height={activeShapeHeight}
+                    r={10}
+                    style="stroke"
+                    strokeWidth={activeRoundRectStrokeWidth}
+                    color={activeShapeStrokeColor}
+                  />
+                </Group>
+                <Group>
+                  <Oval x={activeShapeX} y={activeShapeY} width={activeShapeWidth} height={activeShapeHeight} color={activeEllipseFillColor} />
+                  <Oval x={activeShapeX} y={activeShapeY} width={activeShapeWidth} height={activeShapeHeight} style="stroke" strokeWidth={activeEllipseStrokeWidth} color={activeShapeStrokeColor} />
+                </Group>
               </SkiaCanvas>
             </GestureDetector>
           )}
