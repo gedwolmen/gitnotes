@@ -46,11 +46,14 @@ interface NoteCardProps {
   onLongPress?: (note: Note) => void;
   compact?: boolean;
   highlighted?: boolean;
+  variant?: 'default' | 'card';
 }
 
-function NoteCardImpl({ note, onPress, onLongPress, compact = false, highlighted = false }: NoteCardProps) {
+function NoteCardImpl({ note, onPress, onLongPress, compact = false, highlighted = false, variant = 'default' }: NoteCardProps) {
   const { colors, isDark } = useTheme();
   const { isTablet } = useResponsive();
+  const isCard = variant === 'card';
+  const showCompact = isCard ? false : compact;
   
   const checklistProgress = useMemo(() => {
     if (!hasChecklists(note.content)) return null;
@@ -66,7 +69,8 @@ function NoteCardImpl({ note, onPress, onLongPress, compact = false, highlighted
           shadowColor: colors.shadow,
           shadowOpacity: isDark ? 0 : 0.1,
         },
-        compact && styles.cardCompact,
+        showCompact && styles.cardCompact,
+        isCard && styles.cardVariant,
         isTablet && styles.cardTablet,
         highlighted && { borderWidth: 2, borderColor: colors.primary },
       ]}
@@ -80,17 +84,17 @@ function NoteCardImpl({ note, onPress, onLongPress, compact = false, highlighted
         </View>
       )}
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }, compact && styles.titleCompact]} numberOfLines={compact ? 1 : 2}>
+        <Text style={[styles.title, { color: colors.text }, showCompact && styles.titleCompact]} numberOfLines={showCompact ? 1 : 2}>
           {note.title || 'Untitled Note'}
         </Text>
-        {!compact && (
-          <Text style={[styles.content, { color: colors.textSecondary }]} numberOfLines={2}>
+        {!showCompact && (
+          <Text style={[styles.content, { color: colors.textSecondary }]} numberOfLines={isCard ? 3 : 2}>
             {stripPreview(note.content, note.format) || 'No content'}
           </Text>
         )}
       </View>
 
-      {!compact && checklistProgress && checklistProgress.total > 0 && (
+      {!showCompact && checklistProgress && checklistProgress.total > 0 && (
         <View style={styles.checklistContainer}>
           <Ionicons
             name={checklistProgress.completed === checklistProgress.total ? 'checkmark-circle' : 'radio-button-off'}
@@ -106,7 +110,7 @@ function NoteCardImpl({ note, onPress, onLongPress, compact = false, highlighted
       <View style={styles.footer}>
         <View style={styles.footerLeft}>
           <Text style={[styles.date, { color: colors.textSecondary }]}>
-            {format(new Date(note.updatedAt), compact ? 'MMM d' : 'MMM d, yyyy')}
+            {format(new Date(note.updatedAt), showCompact ? 'MMM d' : 'MMM d, yyyy')}
           </Text>
           <View style={[styles.formatBadge, { backgroundColor: colors.primary + '18' }]}>
             <Text style={[styles.formatBadgeText, { color: colors.primary }]}>
@@ -115,7 +119,7 @@ function NoteCardImpl({ note, onPress, onLongPress, compact = false, highlighted
           </View>
         </View>
         
-        {!compact && note.tags && note.tags.length > 0 && (
+        {!showCompact && note.tags && note.tags.length > 0 && (
           <View style={styles.tagsContainer}>
             {note.tags.slice(0, 3).map((tag) => (
               <View key={tag} style={[styles.tag, { backgroundColor: colors.primary + '20' }]}>
@@ -131,7 +135,7 @@ function NoteCardImpl({ note, onPress, onLongPress, compact = false, highlighted
         )}
       </View>
 
-      {!compact && (note.folderPath || note.repo) && (
+      {!showCompact && (note.folderPath || note.repo) && (
         <View style={[styles.repoContainer, { borderTopColor: colors.border }]}>
           {note.folderPath && note.folderPath !== '/' && (
             <Text style={[styles.repoText, { color: colors.textSecondary }]}>
@@ -173,6 +177,11 @@ const styles = StyleSheet.create({
   cardCompact: {
     padding: 12,
     marginVertical: 4,
+    marginHorizontal: 0,
+  },
+  cardVariant: {
+    padding: 20,
+    marginVertical: 6,
     marginHorizontal: 0,
   },
   pinIndicator: {
