@@ -458,7 +458,7 @@ function TreeItem({ node, owner, repo, branch, level, onFilePress, onRefresh }: 
               loading ? (
                 <ActivityIndicator size="small" color={colors.textSecondary} style={treeStyles.loader} />
               ) : (
-                <IconButton size="sm" onPress={handleToggle} accessibilityLabel={expanded ? 'Collapse' : 'Expand'}>
+                <IconButton size="sm" variant="ghost" onPress={handleToggle} accessibilityLabel={expanded ? 'Collapse' : 'Expand'}>
                   <Ionicons
                     name={expanded ? 'chevron-down' : 'chevron-forward'}
                     size={14}
