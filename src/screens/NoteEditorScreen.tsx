@@ -56,7 +56,7 @@ import { syncNoteToGitHub } from '../services/NoteGitHubSyncService';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import { PositionMemoryService } from '../services/PositionMemoryService';
 import { getMarkdownStyles } from '../utils/preview';
-import { IconButton, Modal } from '../components/ui';
+import { Button, IconButton, Modal } from '../components/ui';
 
 interface TocEntry {
   level: number;
@@ -1072,17 +1072,15 @@ export default function NoteEditorScreen() {
     >
       <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
         <View style={styles.headerLeft}>
-          <TouchableOpacity onPress={handleCancelEdit} disabled={isSaving} style={styles.headerTextButton}>
-            <Text style={[styles.headerButtonText, { color: colors.primary }]}>Cancel</Text>
-          </TouchableOpacity>
+          <Button variant="ghost" label="Cancel" onPress={handleCancelEdit} disabled={isSaving} textStyle={styles.headerButtonText} />
           {(canUndo || canRedo) && (
             <View style={styles.undoRedoContainer}>
-              <TouchableOpacity onPress={handleUndo} disabled={!canUndo} style={styles.iconButton}>
+              <IconButton size="sm" onPress={handleUndo} disabled={!canUndo} accessibilityLabel="Undo">
                 <Ionicons name="arrow-undo" size={20} color={canUndo ? colors.primary : colors.textSecondary} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleRedo} disabled={!canRedo} style={styles.iconButton}>
+              </IconButton>
+              <IconButton size="sm" onPress={handleRedo} disabled={!canRedo} accessibilityLabel="Redo">
                 <Ionicons name="arrow-redo" size={20} color={canRedo ? colors.primary : colors.textSecondary} />
-              </TouchableOpacity>
+              </IconButton>
             </View>
           )}
         </View>
@@ -1090,18 +1088,13 @@ export default function NoteEditorScreen() {
           {noteId ? 'Edit Note' : 'New Note'}
         </Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity onPress={handleSave} disabled={isSaving} style={styles.headerTextButton}>
-            <Text
-              style={[
-                styles.headerButtonText,
-                styles.saveButtonText,
-                { color: colors.primary },
-                isSaving && styles.disabledButton,
-              ]}
-            >
-              {isSaving ? 'Saving…' : 'Save'}
-            </Text>
-          </TouchableOpacity>
+          <Button
+            variant="ghost"
+            label={isSaving ? 'Saving…' : 'Save'}
+            onPress={handleSave}
+            disabled={isSaving}
+            textStyle={[styles.headerButtonText, styles.saveButtonText, isSaving && styles.disabledButton]}
+          />
         </View>
       </View>
 

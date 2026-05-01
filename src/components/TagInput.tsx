@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
+import { Chip, Input } from './ui';
 
 interface TagInputProps {
   tags: string[];
@@ -60,41 +61,40 @@ export default function TagInput({
       <View style={styles.tagsContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tagsScrollView}>
           {tags.map((tag) => (
-            <View key={tag} style={[styles.tag, { backgroundColor: colors.primary + '20' }]}>
-              <Text style={[styles.tagText, { color: colors.primary }]}>{tag}</Text>
-              <TouchableOpacity onPress={() => handleRemoveTag(tag)} style={styles.removeButton}>
-                <Ionicons name="close-circle" size={16} color={colors.primary} />
-              </TouchableOpacity>
-            </View>
+            <Chip
+              key={tag}
+              label={tag}
+              active
+              onLongPress={() => handleRemoveTag(tag)}
+              trailing={<Ionicons name="close-circle" size={16} color={colors.primary} />}
+              style={styles.tagChip}
+            />
           ))}
         </ScrollView>
       </View>
 
-      <View style={[styles.inputContainer, { backgroundColor: colors.surface }]}>
-        <TextInput
-          style={[styles.input, { color: colors.text }]}
-          value={inputValue}
-          onChangeText={handleInputChange}
-          onSubmitEditing={handleSubmitEditing}
-          placeholder={tags.length === 0 ? 'Add tags...' : 'Add more tags...'}
-          placeholderTextColor={colors.textSecondary}
-          autoCapitalize="none"
-          autoCorrect={false}
-          returnKeyType="done"
-        />
-      </View>
+      <Input
+        value={inputValue}
+        onChangeText={handleInputChange}
+        onSubmitEditing={handleSubmitEditing}
+        placeholder={tags.length === 0 ? 'Add tags...' : 'Add more tags...'}
+        placeholderTextColor={colors.textSecondary}
+        autoCapitalize="none"
+        autoCorrect={false}
+        returnKeyType="done"
+        containerStyle={{ backgroundColor: colors.surface }}
+      />
 
       {showSuggestions && filteredSuggestions.length > 0 && (
         <View style={[styles.suggestionsContainer, { backgroundColor: colors.surface }]}>
           {filteredSuggestions.slice(0, 5).map((suggestion) => (
-            <TouchableOpacity
+            <Chip
               key={suggestion}
-              style={styles.suggestionItem}
+              label={suggestion}
               onPress={() => handleAddTag(suggestion)}
-            >
-              <Ionicons name="add-circle-outline" size={16} color={colors.primary} />
-              <Text style={[styles.suggestionText, { color: colors.text }]}>{suggestion}</Text>
-            </TouchableOpacity>
+              leading={<Ionicons name="add-circle-outline" size={16} color={colors.primary} />}
+              style={styles.suggestionChip}
+            />
           ))}
         </View>
       )}
@@ -117,48 +117,18 @@ const styles = StyleSheet.create({
   tagsScrollView: {
     flexGrow: 0,
   },
-  tag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 16,
-    paddingVertical: 4,
-    paddingLeft: 12,
-    paddingRight: 4,
+  tagChip: {
     marginRight: 8,
-  },
-  tagText: {
-    fontSize: 14,
-    marginRight: 4,
-  },
-  removeButton: {
-    padding: 2,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    height: 40,
-  },
-  input: {
-    flex: 1,
-    fontSize: 15,
   },
   suggestionsContainer: {
     marginTop: 8,
     borderRadius: 8,
     padding: 8,
-  },
-  suggestionItem: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 8,
+    flexWrap: 'wrap',
+    gap: 8,
   },
-  suggestionText: {
-    fontSize: 14,
-    marginLeft: 8,
-  },
+  suggestionChip: {},
   limitText: {
     fontSize: 12,
     marginTop: 4,
