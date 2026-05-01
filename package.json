@@ -2,6 +2,9 @@
   "name": "gitnotes",
   "version": "1.0.0",
   "main": "expo/AppEntry.js",
+  "engines": {
+    "node": ">=20.18"
+  },
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
@@ -49,7 +52,12 @@
     "react-native-worklets": "0.5.1"
   },
   "devDependencies": {
+    "@babel/preset-env": "^7.29.3",
+    "@babel/preset-typescript": "^7.28.5",
+    "@types/jest": "^30.0.0",
     "@types/react": "~19.1.10",
+    "babel-jest": "^30.3.0",
+    "jest": "^30.3.0",
     "typescript": "^5.6.3"
   },
   "resolutions": {
