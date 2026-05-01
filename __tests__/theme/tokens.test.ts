@@ -40,9 +40,23 @@ describe('design constants', () => {
     expect(TYPE).toEqual({ xs: 12, sm: 14, md: 16, lg: 18, xl: 22, '2xl': 28 });
   });
 
-  it('keeps neumorphic surface equal to background (mono-tone rule)', () => {
-    expect(NEUMORPHIC_LIGHT.surface).toBe(NEUMORPHIC_LIGHT.bg);
-    expect(NEUMORPHIC_DARK.surface).toBe(NEUMORPHIC_DARK.bg);
+  it('keeps neumorphic surface and bg slightly distinct so soft shadows still read', () => {
+    expect(NEUMORPHIC_LIGHT.surface).not.toBe(NEUMORPHIC_LIGHT.bg);
+    expect(NEUMORPHIC_DARK.surface).not.toBe(NEUMORPHIC_DARK.bg);
+  });
+
+  it('keeps neumorphic palette neutral (no blue-tinted shadows or surfaces)', () => {
+    // Neutral grays decompose to channels within ±2 of each other.
+    const isNeutral = (hex: string): boolean => {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      return Math.max(r, g, b) - Math.min(r, g, b) <= 2;
+    };
+    for (const key of ['bg', 'surface', 'highlight', 'shadow', 'border'] as const) {
+      expect(isNeutral(NEUMORPHIC_LIGHT[key])).toBe(true);
+      expect(isNeutral(NEUMORPHIC_DARK[key])).toBe(true);
+    }
   });
 
   it('preserves the existing flat palette colors used today', () => {

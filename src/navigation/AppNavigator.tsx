@@ -20,7 +20,12 @@ import { useTheme } from '../contexts/ThemeContext';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const linking: LinkingOptions<RootStackParamList> = {
-  prefixes: ['gitnotes://', 'https://gitnotes.app'],
+  // Only the custom-scheme prefix is accepted until the gitnotes.app domain
+  // hosts an apple-app-site-association / .well-known/assetlinks.json with
+  // matching associatedDomains entitlement (iOS) + android:autoVerify intent
+  // filter (Android). Without that, another app on the same OS can register
+  // the same https:// pattern and hijack the link — see #266.
+  prefixes: ['gitnotes://'],
   config: {
     screens: {
       MainTabs: {
@@ -40,9 +45,9 @@ const linking: LinkingOptions<RootStackParamList> = {
 };
 
 export default function AppNavigator() {
-  const { theme } = useTheme();
-  
-  const navigationTheme = theme === 'dark' ? DarkTheme : DefaultTheme;
+  const { isDark } = useTheme();
+
+  const navigationTheme = isDark ? DarkTheme : DefaultTheme;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

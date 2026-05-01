@@ -1,7 +1,11 @@
+import type { Ionicons } from '@expo/vector-icons';
+
+export type NoteTemplateIcon = keyof typeof Ionicons.glyphMap;
+
 export interface NoteTemplate {
   id: string;
   name: string;
-  icon: string;
+  icon: NoteTemplateIcon;
   description: string;
   title?: string;
   content: string;

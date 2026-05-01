@@ -22,7 +22,9 @@ import { NTabBar } from '../components/neumorphic';
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 
-const TAB_ICONS: Record<string, { focused: string; outline: string; label: string }> = {
+type IoniconName = keyof typeof Ionicons.glyphMap;
+
+const TAB_ICONS: Record<string, { focused: IoniconName; outline: IoniconName; label: string }> = {
   HomeTab: { focused: 'home', outline: 'home-outline', label: 'Home' },
   NotesTab: { focused: 'document-text', outline: 'document-text-outline', label: 'Notes' },
   ExploreTab: { focused: 'compass', outline: 'compass-outline', label: 'Explore' },
@@ -86,7 +88,7 @@ function TabletRail({ state, navigation }: BottomTabBarProps) {
               activeOpacity={0.7}
             >
               <Ionicons
-                name={(isFocused ? config.focused : config.outline) as any}
+                name={isFocused ? config.focused : config.outline}
                 size={24}
                 color={isFocused ? colors.primary : colors.textSecondary}
               />
@@ -134,7 +136,7 @@ const railStyles = StyleSheet.create({
 
 export default function TabNavigator() {
   const { isTablet } = useResponsive();
-  const { style } = useTheme();
+  const { style, colors } = useTheme();
   const useNeumorphicBar = !isTablet && style === 'neumorphic';
 
   return (
@@ -151,10 +153,10 @@ export default function TabNavigator() {
           const config = TAB_ICONS[route.name];
           if (!config) return null;
           const iconName = focused ? config.focused : config.outline;
-          return <Ionicons name={iconName as any} size={size} color={color} />;
+          return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#007AFF',
-        tabBarInactiveTintColor: 'gray',
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSecondary,
         headerShown: false,
       })}
     >

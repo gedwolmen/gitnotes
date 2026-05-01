@@ -49,7 +49,9 @@ interface TreeItemProps {
   onRefresh?: () => void;
 }
 
-const FILE_ICON_MAP: Record<string, string> = {
+type IoniconName = keyof typeof Ionicons.glyphMap;
+
+const FILE_ICON_MAP: Record<string, IoniconName> = {
   md: 'document-text',
   markdown: 'document-text',
   norg: 'document-text',
@@ -71,7 +73,7 @@ const FILE_ICON_MAP: Record<string, string> = {
   toml: 'settings',
 };
 
-function getFileIcon(name: string): string {
+function getFileIcon(name: string): IoniconName {
   const ext = name.toLowerCase().split('.').pop() || '';
   return FILE_ICON_MAP[ext] || 'document';
 }
@@ -494,7 +496,7 @@ function TreeItem({ node, owner, repo, branch, level, onFilePress, onRefresh }: 
             <View style={treeStyles.chevronPlaceholder} />
           )}
         </View>
-        <Ionicons name={iconName as any} size={20} color={iconColor} style={treeStyles.icon} />
+        <Ionicons name={iconName} size={20} color={iconColor} style={treeStyles.icon} />
         <Text style={[treeStyles.name, { color: colors.text }]} numberOfLines={1}>
           {node.name}
         </Text>

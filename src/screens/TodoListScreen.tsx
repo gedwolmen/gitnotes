@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -54,6 +54,7 @@ export default function TodoListScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showReminderPicker, setShowReminderPicker] = useState(false);
+  const modalScrollRef = useRef<ScrollView>(null);
   const [filterCompleted, setFilterCompleted] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [todoRepo, setTodoRepo] = useState<string | undefined>(undefined);
@@ -417,7 +418,7 @@ export default function TodoListScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalBody}>
+            <ScrollView ref={modalScrollRef} style={styles.modalBody}>
               <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Todo Text *</Text>
               <TextInput
                 style={[styles.input, { color: colors.text, borderColor: colors.border }]}
@@ -539,7 +540,16 @@ export default function TodoListScreen() {
                   <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Remind me</Text>
                   <TouchableOpacity
                     style={[styles.reminderPickerButton, { borderColor: colors.border }]}
-                    onPress={() => setShowReminderPicker(!showReminderPicker)}
+                    onPress={() => {
+                      const next = !showReminderPicker;
+                      setShowReminderPicker(next);
+                      if (next) {
+                        // Wait for the options to mount before scrolling.
+                        requestAnimationFrame(() => {
+                          modalScrollRef.current?.scrollToEnd({ animated: true });
+                        });
+                      }
+                    }}
                   >
                     <Ionicons name="notifications-outline" size={16} color="#FF9500" />
                     <Text style={[styles.reminderPickerText, { color: colors.text }]}>

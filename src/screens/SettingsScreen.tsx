@@ -12,7 +12,10 @@ import {
   ActivityIndicator,
   Linking,
   Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNotes } from '../contexts/NoteContext';
@@ -21,6 +24,9 @@ import { useRepos } from '../contexts/RepoContext';
 import { GitRepository } from '../services/GitService';
 import { GitHubService, GitHubRepository } from '../services/GitHubService';
 import { RepoFileSyncService } from '../services/RepoFileSyncService';
+import { pullFromSingleRepo } from '../services/RepoPullService';
+import { useCanvases } from '../contexts/CanvasContext';
+import { useTodos } from '../contexts/TodoContext';
 import { OnboardingService } from '../services/OnboardingService';
 import { HapticService } from '../utils/haptics';
 import SearchBar from '../components/SearchBar';
@@ -32,6 +38,8 @@ export default function SettingsScreen() {
   const { theme, colors, setTheme, style: uiStyle, setStyle } = useTheme();
   const { isTablet, maxContentWidth } = useResponsive();
   const { clearAllNotes, refreshNotes } = useNotes();
+  const { refreshCanvases } = useCanvases();
+  const { refreshTodos } = useTodos();
   const { authState, setToken, clearToken } = useAuth();
   const { repositories, addRepository: addRepo, removeRepository: removeRepo } = useRepos();
   const [showRepoPickerModal, setShowRepoPickerModal] = useState(false);
@@ -46,6 +54,30 @@ export default function SettingsScreen() {
   const [tokenInput, setTokenInput] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [tokenError, setTokenError] = useState<string | null>(null);
+  const [tokenVisible, setTokenVisible] = useState(false);
+
+  const handlePasteToken = useCallback(async () => {
+    try {
+      const text = await Clipboard.getStringAsync();
+      if (text.trim()) {
+        setTokenInput(text.trim());
+        setTokenError(null);
+        HapticService.success();
+      }
+    } catch {
+      HapticService.error();
+    }
+  }, []);
+
+  const handleCopyToken = useCallback(async () => {
+    if (!tokenInput.trim()) return;
+    try {
+      await Clipboard.setStringAsync(tokenInput.trim());
+      HapticService.success();
+    } catch {
+      HapticService.error();
+    }
+  }, [tokenInput]);
 
   const [syncingRepo, setSyncingRepo] = useState<string | null>(null);
 
@@ -97,6 +129,27 @@ export default function SettingsScreen() {
     setRepoSearchQuery('');
   }, []);
 
+  // Kick off the initial pull for a freshly-added repo. Runs in the
+  // background; surfaces a single Alert with the count when it lands so
+  // the user can tell empty-repo from auth-failure.
+  const autoSyncAfterAdd = useCallback(async (repoPath: string, repoName: string) => {
+    if (!GitHubService.isAuthenticated()) return;
+    try {
+      const result = await pullFromSingleRepo(repoPath);
+      const total = result.notes + result.canvases + result.todos;
+      if (total > 0) {
+        await Promise.all([refreshNotes(), refreshCanvases(), refreshTodos()]);
+        HapticService.success();
+      }
+    } catch (err) {
+      console.warn('[Settings] auto-sync after add failed:', err);
+      Alert.alert(
+        'Auto-sync Failed',
+        `Couldn't pull existing files from ${repoName}. You can retry from the Sync button.`,
+      );
+    }
+  }, [refreshNotes, refreshCanvases, refreshTodos]);
+
   const handleSelectGithubRepo = useCallback(async (ghRepo: GitHubRepository) => {
     const alreadyAdded = repositories.some((r) => r.path === ghRepo.full_name);
     if (alreadyAdded) {
@@ -108,13 +161,14 @@ export default function SettingsScreen() {
       await addRepo(ghRepo.full_name, ghRepo.name);
       HapticService.success();
       setShowRepoPickerModal(false);
+      autoSyncAfterAdd(ghRepo.full_name, ghRepo.name);
     } catch {
       HapticService.error();
       Alert.alert('Error', 'Failed to add repository.');
     } finally {
       setIsAddingRepo(false);
     }
-  }, [repositories, addRepo]);
+  }, [repositories, addRepo, autoSyncAfterAdd]);
 
   const handleAddManualRepo = useCallback(async () => {
     const val = manualRepoInput.trim();
@@ -125,13 +179,14 @@ export default function SettingsScreen() {
       setManualRepoInput('');
       HapticService.success();
       setShowRepoPickerModal(false);
+      autoSyncAfterAdd(val, val);
     } catch {
       HapticService.error();
       Alert.alert('Error', 'Failed to add repository.');
     } finally {
       setIsAddingRepo(false);
     }
-  }, [manualRepoInput, addRepo]);
+  }, [manualRepoInput, addRepo, autoSyncAfterAdd]);
 
   const handleRemoveRepo = useCallback((repo: GitRepository) => {
     HapticService.warning();
@@ -486,17 +541,24 @@ export default function SettingsScreen() {
 
       {/* GitHub token modal */}
       <Modal visible={showTokenModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
           <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
             <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>
                 {authState.isAuthenticated ? 'Change Token' : 'Connect GitHub'}
               </Text>
-              <TouchableOpacity onPress={() => setShowTokenModal(false)}>
+              <TouchableOpacity onPress={() => { setShowTokenModal(false); setTokenVisible(false); }}>
                 <Ionicons name="close" size={24} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
-            <View style={styles.modalBody}>
+            <ScrollView
+              style={styles.modalBody}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={{ paddingBottom: 16 }}
+            >
               <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
                 Personal Access Token with <Text style={{ fontWeight: '600' }}>repo</Text> and{' '}
                 <Text style={{ fontWeight: '600' }}>read:user</Text> scopes.
@@ -506,25 +568,54 @@ export default function SettingsScreen() {
                 onPress={() => Linking.openURL('https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens')}
               >
                 <Ionicons name="help-circle-outline" size={14} color={colors.primary} />
-                <Text style={[styles.generateLinkText, { color: colors.primary }]}>Learn about access tokens</Text>
+                <Text style={[styles.generateLinkText, { color: colors.primary }]}>How to create a token (GitHub docs)</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.generateLink}
                 onPress={() => Linking.openURL('https://github.com/settings/tokens/new?scopes=repo,read:user&description=GitNotes')}
               >
                 <Ionicons name="open-outline" size={14} color={colors.primary} />
-                <Text style={[styles.generateLinkText, { color: colors.primary }]}>Generate token on GitHub</Text>
+                <Text style={[styles.generateLinkText, { color: colors.primary }]}>Open GitHub token settings</Text>
               </TouchableOpacity>
-              <TextInput
-                style={[styles.tokenInput, { color: colors.text, borderColor: tokenError ? '#FF3B30' : colors.border, backgroundColor: colors.background }]}
-                placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-                placeholderTextColor={colors.textSecondary}
-                value={tokenInput}
-                onChangeText={(t) => { setTokenInput(t); setTokenError(null); }}
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
+              <View style={[styles.tokenInputRow, { borderColor: tokenError ? '#FF3B30' : colors.border, backgroundColor: colors.background }]}>
+                <TextInput
+                  style={[styles.tokenInputInner, { color: colors.text }]}
+                  placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                  placeholderTextColor={colors.textSecondary}
+                  value={tokenInput}
+                  onChangeText={(t) => { setTokenInput(t); setTokenError(null); }}
+                  secureTextEntry={!tokenVisible}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <TouchableOpacity
+                  onPress={() => setTokenVisible((v) => !v)}
+                  style={styles.tokenIconBtn}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityLabel={tokenVisible ? 'Hide token' : 'Show token'}
+                >
+                  <Ionicons name={tokenVisible ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.tokenActionsRow}>
+                <TouchableOpacity
+                  style={[styles.tokenActionBtn, { borderColor: colors.border }]}
+                  onPress={handlePasteToken}
+                  accessibilityLabel="Paste token from clipboard"
+                >
+                  <Ionicons name="clipboard-outline" size={16} color={colors.primary} />
+                  <Text style={[styles.tokenActionLabel, { color: colors.primary }]}>Paste</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.tokenActionBtn, { borderColor: colors.border, opacity: tokenInput.trim() ? 1 : 0.4 }]}
+                  onPress={handleCopyToken}
+                  disabled={!tokenInput.trim()}
+                  accessibilityLabel="Copy token to clipboard"
+                >
+                  <Ionicons name="copy-outline" size={16} color={colors.primary} />
+                  <Text style={[styles.tokenActionLabel, { color: colors.primary }]}>Copy</Text>
+                </TouchableOpacity>
+              </View>
               {tokenError ? <Text style={styles.errorText}>{tokenError}</Text> : null}
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: colors.primary }]}
@@ -536,9 +627,9 @@ export default function SettingsScreen() {
                   : <Text style={styles.modalButtonText}>Save Token</Text>
                 }
               </TouchableOpacity>
-            </View>
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
@@ -602,6 +693,12 @@ const styles = StyleSheet.create({
   generateLink: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 16 },
   generateLinkText: { fontSize: 14, fontWeight: '500' },
   tokenInput: { height: 50, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, marginBottom: 8, fontSize: 14 },
+  tokenInputRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, marginBottom: 8, height: 50 },
+  tokenInputInner: { flex: 1, fontSize: 14, paddingVertical: 0 },
+  tokenIconBtn: { paddingHorizontal: 6, paddingVertical: 6, marginLeft: 4 },
+  tokenActionsRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+  tokenActionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, flex: 1, gap: 6 },
+  tokenActionLabel: { fontSize: 14, fontWeight: '600' },
   errorText: { color: '#FF3B30', fontSize: 13, marginBottom: 10 },
   modalButton: { paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginTop: 8 },
   modalButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },

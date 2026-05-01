@@ -19,8 +19,8 @@
       "bundleIdentifier": "com.xaventra.gitnotes",
       "scheme": "gitnotes",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "GitNotes needs access to your photo library to attach images to notes.",
-        "NSMicrophoneUsageDescription": "GitNotes needs access to your microphone for voice-to-text note input.",
+        "NSPhotoLibraryUsageDescription": "GitNotēs needs access to your photo library to attach images to notes.",
+        "NSMicrophoneUsageDescription": "GitNotēs needs access to your microphone for voice-to-text note input.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -31,6 +31,7 @@
       },
       "package": "com.gitnotes.app",
       "scheme": "gitnotes",
+      "allowBackup": false,
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ]
@@ -49,7 +50,8 @@
         }
       ],
       "expo-image-picker",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-secure-store"
     ],
     "owner": "vidwa",
     "runtimeVersion": {

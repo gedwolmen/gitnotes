@@ -36,6 +36,7 @@ export default function PdfViewerScreen() {
   const [localUri, setLocalUri] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const cancelledRef = useRef(false);
+  const downloadedUriRef = useRef<string | null>(null);
   const memoryKey = PositionMemoryService.pdfKey(owner, repo, branch, path);
   const [restoredY, setRestoredY] = useState<number | null>(null);
   const lastYRef = useRef(0);
@@ -103,6 +104,13 @@ export default function PdfViewerScreen() {
     setLocalUri(null);
     setError(null);
 
+    // Drop any prior download from a previous param tuple before starting a new one.
+    const previous = downloadedUriRef.current;
+    if (previous) {
+      downloadedUriRef.current = null;
+      FileSystem.deleteAsync(previous, { idempotent: true }).catch(() => undefined);
+    }
+
     (async () => {
       try {
         const ref = branch || 'main';
@@ -122,12 +130,19 @@ export default function PdfViewerScreen() {
         }
 
         const result = await FileSystem.downloadAsync(url, target, { headers });
-        if (cancelledRef.current) return;
+        if (cancelledRef.current) {
+          // Effect was cancelled while we were downloading. Drop the file.
+          FileSystem.deleteAsync(result.uri, { idempotent: true }).catch(() => undefined);
+          return;
+        }
 
         if (result.status !== 200) {
+          // Failed download — still drop whatever was written.
+          FileSystem.deleteAsync(result.uri, { idempotent: true }).catch(() => undefined);
           setError(`Download failed (HTTP ${result.status})`);
           return;
         }
+        downloadedUriRef.current = result.uri;
         setLocalUri(result.uri);
       } catch (e) {
         if (cancelledRef.current) return;
@@ -139,6 +154,16 @@ export default function PdfViewerScreen() {
       cancelledRef.current = true;
     };
   }, [owner, repo, branch, path, authState.token]);
+
+  useEffect(() => {
+    return () => {
+      const uri = downloadedUriRef.current;
+      if (uri) {
+        downloadedUriRef.current = null;
+        FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => undefined);
+      }
+    };
+  }, []);
 
   const handleOpenExternal = async () => {
     if (!localUri) return;
@@ -188,8 +213,14 @@ export default function PdfViewerScreen() {
         <WebView
           source={{ uri: localUri }}
           style={{ flex: 1, backgroundColor: colors.background }}
-          originWhitelist={['*']}
+          // Local file PDF — restrict origin to file:// (was '*'). The
+          // injected JS only needs to read scrollY and post a message
+          // back, no cross-origin file access required.
+          originWhitelist={['file://']}
           allowsInlineMediaPlayback
+          allowFileAccess
+          allowFileAccessFromFileURLs={false}
+          allowUniversalAccessFromFileURLs={false}
           injectedJavaScript={injectedJavaScript}
           onMessage={handleMessage}
         />

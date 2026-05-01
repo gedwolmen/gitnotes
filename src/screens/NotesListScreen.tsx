@@ -38,7 +38,7 @@ import ContextMenu from "../components/ContextMenu";
 import NoteCard from "../components/NoteCard";
 import SearchBar from "../components/SearchBar";
 import { NScreenHeader } from "../components/neumorphic";
-import RepoFileBrowser, { parseRepoPath } from "../components/RepoFileBrowser";
+import { parseRepoPath } from "../utils/gitPathParser";
 import { HapticService } from "../utils/haptics";
 import {
   ViewMode,
@@ -140,9 +140,15 @@ export default function NotesListScreen() {
   const allFolders = useMemo(() => {
     const set = new Set<string>();
     notes.forEach((note) => {
-      if (note.folderPath && note.folderPath.trim().length > 0) {
-        set.add(note.folderPath);
+      const fp = note.folderPath?.trim();
+      if (!fp) return;
+      const parts = fp.split('/').filter(Boolean);
+      let acc = '';
+      for (const seg of parts) {
+        acc = acc ? `${acc}/${seg}` : (fp.startsWith('/') ? `/${seg}` : seg);
+        set.add(acc);
       }
+      set.add(fp);
     });
     return Array.from(set).sort();
   }, [notes]);
@@ -153,15 +159,16 @@ export default function NotesListScreen() {
     (selectedFormat ? 1 : 0) +
     (selectedTags.length > 0 ? 1 : 0);
 
-  const repoInfo = useMemo(
-    () => (selectedRepo ? parseRepoPath(selectedRepo.path) : null),
-    [selectedRepo],
-  );
-
   const displayNotes = useMemo(() => {
     let result = filteredNotes;
-    if (selectedFolder)
-      result = result.filter((n: Note) => n.folderPath === selectedFolder);
+    if (selectedFolder) {
+      const sel = selectedFolder;
+      result = result.filter((n: Note) => {
+        const fp = n.folderPath;
+        if (!fp) return false;
+        return fp === sel || fp.startsWith(`${sel}/`);
+      });
+    }
     if (!selectedRepo) {
       if (selectedFormat)
         result = result.filter(
@@ -256,81 +263,6 @@ export default function NotesListScreen() {
     [setViewMode],
   );
 
-  const handleRepoFilePress = useCallback(
-    async (filePath: string) => {
-      const ext = filePath.split(".").pop()?.toLowerCase() ?? "";
-
-      if (ext === "pdf") {
-        if (!selectedRepo || !repoInfo) return;
-        navigation.navigate("PdfViewer", {
-          owner: repoInfo.owner,
-          repo: repoInfo.repo,
-          branch: selectedBranch ?? undefined,
-          path: filePath,
-          title: filePath.split("/").pop(),
-        });
-        return;
-      }
-
-      const existing = notes.find(
-        (n: Note) => n.repo === selectedRepo?.path && n.filePath === filePath,
-      );
-      if (existing) {
-        navigation.navigate("NoteEditor", { noteId: existing.id });
-        return;
-      }
-      if (!selectedRepo || !repoInfo) return;
-
-      const branch = selectedBranch ?? "main";
-      const content = await GitHubService.getFileContent(
-        repoInfo.owner,
-        repoInfo.repo,
-        filePath,
-        branch,
-      );
-      if (content === null) {
-        Alert.alert("Failed to load", "Could not fetch file from GitHub.");
-        return;
-      }
-
-      const fileExt = ext || "md";
-      const format: NoteFormat =
-        fileExt === "norg" ? "neorg" : fileExt === "org" ? "org" : "markdown";
-      const titleFromPath = filePath
-        .replace(/\.[^.]+$/, "")
-        .split("/")
-        .pop()
-        ?.replace(/[-_]/g, " ") ?? filePath;
-
-      const created = await createNote({
-        title: titleFromPath,
-        content,
-        repo: selectedRepo.path,
-        branch,
-        filePath,
-        format,
-      });
-      if (created) {
-        navigation.navigate("NoteEditor", { noteId: created.id });
-      }
-    },
-    [notes, selectedRepo, selectedBranch, repoInfo, createNote, navigation],
-  );
-
-  const handleCreateNoteInFolder = useCallback(
-    (folderPath: string) => {
-      navigation.navigate("NoteEditor", {
-        format: "markdown",
-        initialTitle: "",
-        initialContent: "",
-        repo: selectedRepo?.path,
-        branch: selectedBranch ?? undefined,
-        folderPath: folderPath || undefined,
-      });
-    },
-    [navigation, selectedRepo, selectedBranch],
-  );
-
   const handleDeleteFromSwipe = useCallback(
     (note: Note) => {
       Alert.alert("Delete Note", `Delete "${note.title || "Untitled"}"?`, [
@@ -395,9 +327,10 @@ export default function NotesListScreen() {
     setIsPullRefreshing(true);
     HapticService.light();
 
-    const timeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Sync timed out")), 60000),
-    );
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const timeout = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error("Sync timed out")), 60000);
+    });
 
     try {
       await Promise.race([
@@ -413,6 +346,7 @@ export default function NotesListScreen() {
       HapticService.warning();
       console.warn("[Sync] pull-refresh failed:", pullError);
     } finally {
+      if (timeoutId !== null) clearTimeout(timeoutId);
       setIsPullRefreshing(false);
     }
   }, [isPullRefreshing, refreshNotes]);
@@ -572,7 +506,7 @@ export default function NotesListScreen() {
           }}
         >
           <Ionicons
-            name={VIEW_MODE_ICONS[viewMode] as any}
+            name={VIEW_MODE_ICONS[viewMode]}
             size={20}
             color={colors.primary}
           />
@@ -777,7 +711,7 @@ export default function NotesListScreen() {
       )}
 
       <Modal
-        visible={showViewModePicker && !selectedRepo}
+        visible={showViewModePicker}
         transparent
         animationType="fade"
         onRequestClose={() => setShowViewModePicker(false)}
@@ -802,7 +736,7 @@ export default function NotesListScreen() {
                   activeOpacity={0.7}
                 >
                   <Ionicons
-                    name={VIEW_MODE_ICONS[mode] as any}
+                    name={VIEW_MODE_ICONS[mode]}
                     size={22}
                     color={viewMode === mode ? colors.primary : colors.textSecondary}
                   />
@@ -824,7 +758,7 @@ export default function NotesListScreen() {
         </TouchableOpacity>
       </Modal>
 
-      {activeFilterCount > 0 && !selectedRepo && (
+      {activeFilterCount > 0 && (
         <View style={styles.activeFilterWrap}>
           <ScrollView
             horizontal
@@ -907,74 +841,45 @@ export default function NotesListScreen() {
         </View>
       )}
 
-      {selectedRepo ? (
-        repoInfo ? (
-          <RepoFileBrowser
-            owner={repoInfo.owner}
-            repo={repoInfo.repo}
-            branch={selectedBranch ?? undefined}
-            onFilePress={handleRepoFilePress}
-            onCreateNoteInFolder={handleCreateNoteInFolder}
-            key={selectedRepo.id}
+      <FlatList
+        ref={listRef}
+        data={displayNotes}
+        renderItem={getRenderItem()}
+        keyExtractor={keyExtractor}
+        key={viewMode}
+        onScrollToIndexFailed={handleScrollToIndexFailed}
+        {...getListLayout()}
+        contentContainerStyle={getListContentStyle()}
+        refreshControl={
+          <RefreshControl
+            refreshing={isPullRefreshing}
+            onRefresh={handlePullToRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
           />
-        ) : (
+        }
+        ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons
-              name="alert-circle-outline"
+              name="document-text-outline"
               size={48}
               color={colors.textSecondary}
             />
             <Text style={[styles.emptyTitle, { color: colors.text }]}>
-              Invalid Repository
+              {searchQuery || activeFilterCount > 0
+                ? "No matching notes"
+                : "No notes yet"}
             </Text>
             <Text
               style={[styles.emptySubtext, { color: colors.textSecondary }]}
             >
-              Check the repo path in Settings
+              {searchQuery || activeFilterCount > 0
+                ? "Try adjusting your search or filters"
+                : "Create your first note to get started"}
             </Text>
           </View>
-        )
-      ) : (
-        <FlatList
-          ref={listRef}
-          data={displayNotes}
-          renderItem={getRenderItem()}
-          keyExtractor={keyExtractor}
-          key={`${viewMode}-${displayNotes.length}`}
-          onScrollToIndexFailed={handleScrollToIndexFailed}
-          {...getListLayout()}
-          contentContainerStyle={getListContentStyle()}
-          refreshControl={
-            <RefreshControl
-              refreshing={isPullRefreshing}
-              onRefresh={handlePullToRefresh}
-              tintColor={colors.primary}
-              colors={[colors.primary]}
-            />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons
-                name="document-text-outline"
-                size={48}
-                color={colors.textSecondary}
-              />
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                {searchQuery || activeFilterCount > 0
-                  ? "No matching notes"
-                  : "No notes yet"}
-              </Text>
-              <Text
-                style={[styles.emptySubtext, { color: colors.textSecondary }]}
-              >
-                {searchQuery || activeFilterCount > 0
-                  ? "Try adjusting your search or filters"
-                  : "Create your first note to get started"}
-              </Text>
-            </View>
-          }
-        />
-      )}
+        }
+      />
 
       {/* ── Filter modal ── */}
       <Modal visible={showFilterModal} transparent animationType="slide">
@@ -1180,40 +1085,42 @@ export default function NotesListScreen() {
                   >
                     Folder
                   </Text>
-                  <ScrollView
+                  <FlatList
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     style={styles.filterChipRow}
-                  >
-                    <TouchableOpacity
-                      style={[
-                        styles.filterChip,
-                        { borderColor: colors.border },
-                        !selectedFolder && {
-                          borderColor: colors.primary,
-                          backgroundColor: colors.primary + "15",
-                        },
-                      ]}
-                      onPress={() => setSelectedFolder(null)}
-                    >
-                      <Text
+                    data={allFolders}
+                    keyExtractor={(folder) => folder}
+                    ListHeaderComponent={
+                      <TouchableOpacity
                         style={[
-                          styles.filterChipText,
-                          {
-                            color: !selectedFolder
-                              ? colors.primary
-                              : colors.text,
+                          styles.filterChip,
+                          { borderColor: colors.border },
+                          !selectedFolder && {
+                            borderColor: colors.primary,
+                            backgroundColor: colors.primary + "15",
                           },
                         ]}
+                        onPress={() => setSelectedFolder(null)}
                       >
-                        All
-                      </Text>
-                    </TouchableOpacity>
-                    {allFolders.map((folder) => {
+                        <Text
+                          style={[
+                            styles.filterChipText,
+                            {
+                              color: !selectedFolder
+                                ? colors.primary
+                                : colors.text,
+                            },
+                          ]}
+                        >
+                          All
+                        </Text>
+                      </TouchableOpacity>
+                    }
+                    renderItem={({ item: folder }) => {
                       const isSelected = selectedFolder === folder;
                       return (
                         <TouchableOpacity
-                          key={folder}
                           style={[
                             styles.filterChip,
                             { borderColor: colors.border },
@@ -1251,8 +1158,8 @@ export default function NotesListScreen() {
                           </Text>
                         </TouchableOpacity>
                       );
-                    })}
-                  </ScrollView>
+                    }}
+                  />
                 </>
               )}
 
@@ -1267,16 +1174,16 @@ export default function NotesListScreen() {
                   >
                     Tags
                   </Text>
-                  <ScrollView
+                  <FlatList
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     style={styles.filterChipRow}
-                  >
-                    {allTags.map((tag) => {
+                    data={allTags}
+                    keyExtractor={(tag) => tag}
+                    renderItem={({ item: tag }) => {
                       const isSelected = selectedTags.includes(tag);
                       return (
                         <TouchableOpacity
-                          key={tag}
                           style={[
                             styles.filterChip,
                             { borderColor: colors.border },
@@ -1315,8 +1222,8 @@ export default function NotesListScreen() {
                           </Text>
                         </TouchableOpacity>
                       );
-                    })}
-                  </ScrollView>
+                    }}
+                  />
                 </>
               )}
 
@@ -1364,10 +1271,33 @@ export default function NotesListScreen() {
                     },
                     {
                       icon: "share-outline",
-                      label: "Share",
+                      label: "Share / Save",
                       onPress: async () => {
                         const ok = await ShareService.shareByNoteFormat(longPressedNote);
                         if (!ok) Alert.alert("Error", "Failed to share note");
+                      },
+                    },
+                    {
+                      icon: "copy-outline",
+                      label: "Duplicate",
+                      onPress: async () => {
+                        const src = longPressedNote;
+                        const created = await createNote({
+                          title: `${src.title || 'Untitled'} (copy)`,
+                          content: src.content ?? '',
+                          tags: src.tags ? [...src.tags] : undefined,
+                          repo: src.repo,
+                          branch: src.branch,
+                          folderPath: src.folderPath,
+                          format: src.format,
+                          attachments: src.attachments ? [...src.attachments] : undefined,
+                        });
+                        if (created) {
+                          HapticService.success();
+                        } else {
+                          HapticService.error();
+                          Alert.alert("Error", "Failed to duplicate note");
+                        }
                       },
                     },
                   ],

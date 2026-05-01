@@ -56,7 +56,11 @@ export function NButton(props: NButtonProps) {
     transform: [{ scale: scale.value }],
   }));
 
-  const textColor = variant === 'primary' ? colors.accent : colors.text;
+  // Primary button text uses colors.text, not colors.accent — accent on
+  // a light Surface fails WCAG AA body-text contrast (~3:1). The button's
+  // raised Surface + the accent-colored leading icon carry the "primary"
+  // affordance instead. (See #221.)
+  const textColor = colors.text;
   const isGhost = variant === 'ghost';
 
   const content = (

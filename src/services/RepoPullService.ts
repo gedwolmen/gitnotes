@@ -3,19 +3,7 @@ import { StorageService } from './StorageService';
 import { createNote } from '../models/Note';
 import { createCanvas, updateCanvas, CanvasScene } from '../models/Canvas';
 import { createTodoItem, applyTodoUpdate } from '../models/Todo';
-
-function parseRepoPath(repoPath: string): { owner: string; repo: string } | null {
-  const cleaned = repoPath
-    .replace(/^https?:\/\/github\.com\//, '')
-    .replace(/^github\.com\//, '')
-    .replace(/\.git$/, '')
-    .trim();
-  const parts = cleaned.split('/');
-  if (parts.length >= 2) {
-    return { owner: parts[0], repo: parts[1] };
-  }
-  return null;
-}
+import { parseRepoPath } from '../utils/gitPathParser';
 
 async function fetchDirectoryFiles(
   owner: string,
@@ -106,11 +94,19 @@ async function pullNotesFromRepo(
         (n) => n.repo === repoPath && n.filePath === item.path,
       );
       if (existingIdx !== -1) {
-        allNotes[existingIdx] = {
-          ...allNotes[existingIdx],
-          content: item.content,
-          updatedAt: Date.now(),
-        };
+        const existing = allNotes[existingIdx];
+        // Only mutate the local note if the remote content actually differs.
+        // Bumping updatedAt unconditionally clobbered cross-device LWW: a
+        // pure read on device B would defeat a real write on device A whose
+        // pull happened a moment later.
+        if (existing.content !== item.content) {
+          allNotes[existingIdx] = {
+            ...existing,
+            content: item.content,
+            updatedAt: Date.now(),
+          };
+          pulled++;
+        }
       } else {
         allNotes.push(
           createNote({
@@ -122,8 +118,8 @@ async function pullNotesFromRepo(
             format: noteFormatFromExt(ext),
           }),
         );
+        pulled++;
       }
-      pulled++;
     }
 
     await StorageService.saveAllNotes(allNotes);
@@ -143,7 +139,13 @@ async function pullCanvasesFromRepo(
   let pulled = 0;
   try {
     const files = await fetchDirectoryFiles(owner, repo, 'canvases', branch);
-    const localCanvases = await StorageService.getAllCanvases();
+    if (files.length === 0) return 0;
+
+    // Single read → mutate in memory → single write. Previous code re-read
+    // and re-wrote inside each iteration which lost interleaved edits when
+    // pulls ran in parallel (Promise.all in pullAllFromRepos).
+    const allCanvases = await StorageService.getAllCanvases();
+    let dirty = false;
 
     for (const file of files) {
       if (!file.path.endsWith('.json')) continue;
@@ -155,34 +157,36 @@ async function pullCanvasesFromRepo(
         continue;
       }
 
-      const existing = localCanvases.find((c) => c.filePath === file.path);
       const titleFromPath = file.path
         .replace(/^canvases\//, '')
         .replace(/\.json$/, '')
         .replace(/-/g, ' ');
 
-      if (existing) {
-        const updated = updateCanvas(existing, { scene });
-        const allCanvases = await StorageService.getAllCanvases();
-        const idx = allCanvases.findIndex((c) => c.id === existing.id);
-        if (idx !== -1) {
-          allCanvases[idx] = updated;
-          await StorageService.saveAllCanvases(allCanvases);
+      const idx = allCanvases.findIndex((c) => c.filePath === file.path);
+      if (idx !== -1) {
+        const existing = allCanvases[idx];
+        if (JSON.stringify(existing.scene) !== JSON.stringify(scene)) {
+          allCanvases[idx] = updateCanvas(existing, { scene });
+          dirty = true;
+          pulled++;
         }
-        pulled++;
       } else {
-        const newCanvas = createCanvas({
-          title: titleFromPath,
-          scene,
-          repo: repoPath,
-          branch,
-          filePath: file.path,
-        });
-        const allCanvases = await StorageService.getAllCanvases();
-        allCanvases.push(newCanvas);
-        await StorageService.saveAllCanvases(allCanvases);
+        allCanvases.push(
+          createCanvas({
+            title: titleFromPath,
+            scene,
+            repo: repoPath,
+            branch,
+            filePath: file.path,
+          }),
+        );
+        dirty = true;
         pulled++;
       }
+    }
+
+    if (dirty) {
+      await StorageService.saveAllCanvases(allCanvases);
     }
   } catch {
     console.warn(`[RepoPullService] Failed to pull canvases from ${owner}/${repo}`);
@@ -199,7 +203,10 @@ async function pullTodosFromRepo(
   let pulled = 0;
   try {
     const files = await fetchDirectoryFiles(owner, repo, 'todos', branch);
-    const localTodos = await StorageService.getAllTodos();
+    if (files.length === 0) return 0;
+
+    const allTodos = await StorageService.getAllTodos();
+    let dirty = false;
 
     for (const file of files) {
       if (!file.path.endsWith('.json')) continue;
@@ -211,13 +218,14 @@ async function pullTodosFromRepo(
         continue;
       }
 
-      const existing = localTodos.find((t) => t.filePath === file.path);
       const titleFromPath = file.path
         .replace(/^todos\//, '')
         .replace(/\.json$/, '')
         .replace(/-/g, ' ');
 
-      if (existing) {
+      const idx = allTodos.findIndex((t) => t.filePath === file.path);
+      if (idx !== -1) {
+        const existing = allTodos[idx];
         const updated = applyTodoUpdate(existing, {
           text: data.text ?? existing.text,
           completed: data.completed ?? existing.completed,
@@ -226,30 +234,30 @@ async function pullTodosFromRepo(
           tags: data.tags ?? existing.tags,
           dueDate: data.dueDate ?? existing.dueDate,
         });
-        const allTodos = await StorageService.getAllTodos();
-        const idx = allTodos.findIndex((t) => t.id === existing.id);
-        if (idx !== -1) {
-          allTodos[idx] = updated;
-          await StorageService.saveAllTodos(allTodos);
-        }
+        allTodos[idx] = updated;
+        dirty = true;
         pulled++;
       } else {
-        const newTodo = createTodoItem({
-          text: data.text ?? titleFromPath,
-          completed: data.completed ?? false,
-          priority: data.priority,
-          notes: data.notes,
-          tags: data.tags,
-          dueDate: data.dueDate,
-          repo: repoPath,
-          branch,
-          filePath: file.path,
-        });
-        const allTodos = await StorageService.getAllTodos();
-        allTodos.push(newTodo);
-        await StorageService.saveAllTodos(allTodos);
+        allTodos.push(
+          createTodoItem({
+            text: data.text ?? titleFromPath,
+            completed: data.completed ?? false,
+            priority: data.priority,
+            notes: data.notes,
+            tags: data.tags,
+            dueDate: data.dueDate,
+            repo: repoPath,
+            branch,
+            filePath: file.path,
+          }),
+        );
+        dirty = true;
         pulled++;
       }
+    }
+
+    if (dirty) {
+      await StorageService.saveAllTodos(allTodos);
     }
   } catch {
     console.warn(`[RepoPullService] Failed to pull todos from ${owner}/${repo}`);
@@ -262,6 +270,32 @@ export interface PullResult {
   notes: number;
   canvases: number;
   todos: number;
+}
+
+export async function pullFromSingleRepo(repoPath: string): Promise<PullResult> {
+  if (!GitHubService.isAuthenticated()) {
+    return { repos: 0, notes: 0, canvases: 0, todos: 0 };
+  }
+
+  const repos = await StorageService.getSavedRepositories();
+  const repo = repos.find((r) => r.path === repoPath);
+  if (!repo) {
+    return { repos: 0, notes: 0, canvases: 0, todos: 0 };
+  }
+
+  const repoInfo = parseRepoPath(repo.path);
+  if (!repoInfo) {
+    return { repos: 0, notes: 0, canvases: 0, todos: 0 };
+  }
+  const branch = repo.branch || 'main';
+
+  const [notes, canvases, todos] = await Promise.all([
+    pullNotesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch),
+    pullCanvasesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch),
+    pullTodosFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch),
+  ]);
+
+  return { repos: 1, notes, canvases, todos };
 }
 
 export async function pullAllFromRepos(): Promise<PullResult> {
