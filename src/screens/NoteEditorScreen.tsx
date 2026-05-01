@@ -610,25 +610,33 @@ export default function NoteEditorScreen() {
       .trim();
   }, [previewContent]);
 
+  const isSpeakingRef = useRef(false);
+
   const handleToggleSpeak = useCallback(async () => {
     if (isSpeaking) {
       await Speech.stop();
+      isSpeakingRef.current = false;
       setIsSpeaking(false);
       return;
     }
     if (!speakableContent) return;
     HapticService.light();
+    isSpeakingRef.current = true;
     setIsSpeaking(true);
     Speech.speak(speakableContent, {
-      onDone: () => setIsSpeaking(false),
-      onStopped: () => setIsSpeaking(false),
-      onError: () => setIsSpeaking(false),
+      onDone: () => { isSpeakingRef.current = false; setIsSpeaking(false); },
+      onStopped: () => { isSpeakingRef.current = false; setIsSpeaking(false); },
+      onError: () => { isSpeakingRef.current = false; setIsSpeaking(false); },
     });
   }, [isSpeaking, speakableContent]);
 
   useEffect(() => {
     return () => {
-      Speech.stop();
+      // Only stop if this screen instance was the one speaking. Otherwise
+      // unmounting one editor would silence speech started by another.
+      if (isSpeakingRef.current) {
+        Speech.stop();
+      }
     };
   }, []);
 
