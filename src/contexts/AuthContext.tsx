@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { AuthService, AuthState } from '../services/AuthService';
 import { GitHubService } from '../services/GitHubService';
 
@@ -24,12 +24,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  const refreshAuth = async () => {
+  const refreshAuth = useCallback(async () => {
     const state = await AuthService.checkAuthState();
     setAuthState(state);
-  };
+  }, []);
 
-  const setToken = async (token: string): Promise<boolean> => {
+  const setToken = useCallback(async (token: string): Promise<boolean> => {
     setIsLoading(true);
     const state = await AuthService.setToken(token);
     if (!state.isAuthenticated) {
@@ -51,13 +51,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setAuthState(state);
     setIsLoading(false);
     return true;
-  };
+  }, []);
 
-  const clearToken = async () => {
+  const clearToken = useCallback(async () => {
     await AuthService.clearToken();
     await GitHubService.clearToken();
     setAuthState({ isAuthenticated: false, user: null, token: null });
-  };
+  }, []);
 
   useEffect(() => {
     refreshAuth()
@@ -68,11 +68,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       .finally(() => setIsLoading(false));
   }, []);
 
-  return (
-    <AuthContext.Provider value={{ authState, isLoading, refreshAuth, setToken, clearToken }}>
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({ authState, isLoading, refreshAuth, setToken, clearToken }),
+    [authState, isLoading, refreshAuth, setToken, clearToken],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

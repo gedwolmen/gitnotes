@@ -48,7 +48,7 @@ interface NoteCardProps {
   highlighted?: boolean;
 }
 
-export default function NoteCard({ note, onPress, onLongPress, compact = false, highlighted = false }: NoteCardProps) {
+function NoteCardImpl({ note, onPress, onLongPress, compact = false, highlighted = false }: NoteCardProps) {
   const { colors, isDark } = useTheme();
   const { isTablet } = useResponsive();
   
@@ -149,6 +149,18 @@ export default function NoteCard({ note, onPress, onLongPress, compact = false, 
     </TouchableOpacity>
   );
 }
+
+const NoteCard = React.memo(NoteCardImpl, (prev, next) => {
+  return (
+    prev.note === next.note &&
+    prev.compact === next.compact &&
+    prev.highlighted === next.highlighted &&
+    prev.onPress === next.onPress &&
+    prev.onLongPress === next.onLongPress
+  );
+});
+
+export default NoteCard;
 
 const styles = StyleSheet.create({
   card: {
