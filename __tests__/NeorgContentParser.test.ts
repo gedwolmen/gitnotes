@@ -9,7 +9,7 @@ describe('NeorgContentParser - Code Block Tests', () => {
       expect(result.success).toBe(true);
       expect(result.blocks).toHaveLength(1);
       
-      const codeBlock = result.blocks?.find(block => block.type === 'code');
+      const codeBlock = result.blocks!.find(block => block.type === 'code')!;
       expect(codeBlock).toBeTruthy();
       expect(codeBlock.code?.language).toBe('js');
       expect(codeBlock.code?.content.trim()).toBe('console.log("hello");');
@@ -22,7 +22,7 @@ describe('NeorgContentParser - Code Block Tests', () => {
       expect(result.success).toBe(true);
       expect(result.blocks).toHaveLength(1);
       
-      const codeBlock = result.blocks?.find(block => block.type === 'code');
+      const codeBlock = result.blocks!.find(block => block.type === 'code')!;
       expect(codeBlock).toBeTruthy();
       expect(codeBlock.code?.language).toBeUndefined();
       expect(codeBlock.code?.content.trim()).toBe('console.log("hello");');
@@ -35,7 +35,7 @@ describe('NeorgContentParser - Code Block Tests', () => {
       expect(result.success).toBe(true);
       expect(result.blocks).toHaveLength(1);
       
-      const codeBlock = result.blocks?.find(block => block.type === 'code');
+      const codeBlock = result.blocks!.find(block => block.type === 'code')!;
       expect(codeBlock).toBeTruthy();
       expect(codeBlock.code?.language).toBe('python');
       expect(codeBlock.code?.content.trim()).toBe('def hello():\n    print("world")\n    return True');
@@ -62,7 +62,7 @@ Another paragraph`;
       expect(result.blocks?.[2].type).toBe('code');
       expect(result.blocks?.[3].type).toBe('paragraph');
       
-      const codeBlock = result.blocks?.[2];
+      const codeBlock = result.blocks![2]!;
       expect(codeBlock?.code?.language).toBe('js');
       expect(codeBlock?.code?.content.trim()).toBe('console.log("hello");');
     });
@@ -82,11 +82,11 @@ def world():
       expect(result.success).toBe(true);
       expect(result.blocks).toHaveLength(2);
       
-      const firstCodeBlock = result.blocks?.[0];
+      const firstCodeBlock = result.blocks![0];
       expect(firstCodeBlock?.type).toBe('code');
       expect(firstCodeBlock.code?.language).toBe('js');
       
-      const secondCodeBlock = result.blocks?.[1];
+      const secondCodeBlock = result.blocks![1];
       expect(secondCodeBlock?.type).toBe('code');
       expect(secondCodeBlock.code?.language).toBe('python');
     });
@@ -98,7 +98,7 @@ def world():
       expect(result.success).toBe(true);
       expect(result.blocks).toHaveLength(1);
       
-      const codeBlock = result.blocks?.find(block => block.type === 'code');
+      const codeBlock = result.blocks!.find(block => block.type === 'code');
       expect(codeBlock).toBeTruthy();
       expect(codeBlock!.code?.content).toBe('\nconsole.log("hello");\n');
     });
@@ -136,7 +136,7 @@ console.log(instance.greet());
       expect(result.success).toBe(true);
       expect(result.blocks).toHaveLength(1);
       
-      const codeBlock = result.blocks?.[0];
+      const codeBlock = result.blocks![0];
       expect(codeBlock?.type).toBe('code');
       expect(codeBlock.code?.language).toBe('javascript');
       expect(codeBlock.code?.content).toContain('class MyClass');
@@ -203,7 +203,7 @@ console.log(instance.greet());
       expect(result.success).toBe(true);
       expect(result.blocks).toHaveLength(1);
       
-      const checklistBlock = result.blocks?.find(block => block.type === 'checklist');
+      const checklistBlock = result.blocks!.find(block => block.type === 'checklist')!;
       expect(checklistBlock).toBeTruthy();
       expect(checklistBlock.checklistItems).toHaveLength(2);
       
@@ -223,7 +223,7 @@ console.log(instance.greet());
       expect(result.success).toBe(true);
       expect(result.blocks).toHaveLength(1);
       
-      const checklistBlock = result.blocks?.[0];
+      const checklistBlock = result.blocks![0];
       expect(checklistBlock?.type).toBe('checklist');
       expect(checklistBlock.checklistItems).toHaveLength(2);
       
@@ -241,7 +241,7 @@ console.log(instance.greet());
       expect(result.success).toBe(true);
       expect(result.blocks).toHaveLength(1);
       
-      const checklistBlock = result.blocks?.[0];
+      const checklistBlock = result.blocks![0];
       expect(checklistBlock?.type).toBe('checklist');
       expect(checklistBlock.checklistItems).toHaveLength(3);
       
@@ -307,7 +307,7 @@ Some notes here
       expect(result.success).toBe(true);
       expect(result.blocks).toHaveLength(1);
       
-      const checklistBlock = result.blocks?.[0];
+      const checklistBlock = result.blocks![0];
       expect(checklistBlock?.type).toBe('checklist');
       expect(checklistBlock.checklistItems).toHaveLength(2);
       
