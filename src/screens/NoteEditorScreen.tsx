@@ -54,7 +54,34 @@ import { syncNoteToGitHub } from '../services/NoteGitHubSyncService';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import { PositionMemoryService } from '../services/PositionMemoryService';
 import { getMarkdownStyles } from '../utils/preview';
-import { NIconButton } from '../components/neumorphic';
+import { NIconButton, NModal } from '../components/neumorphic';
+
+interface TocEntry {
+  level: number;
+  text: string;
+  lineIndex: number;
+}
+
+const APPROX_LINE_PX = 22;
+
+function extractTocFromMarkdown(content: string): TocEntry[] {
+  const out: TocEntry[] = [];
+  const lines = content.split('\n');
+  let inFence = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^\s*```/.test(line)) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
+    const m = line.match(/^(#{1,6})\s+(.+?)\s*#*\s*$/);
+    if (m) {
+      out.push({ level: m[1].length, text: m[2].trim(), lineIndex: i });
+    }
+  }
+  return out;
+}
 
 const FORMAT_OPTIONS: { label: string; value: NoteFormat }[] = [
   { label: '.md', value: 'markdown' },
@@ -659,6 +686,20 @@ export default function NoteEditorScreen() {
   }, []);
 
   const previewScrollRef = useRef<ScrollView>(null);
+  const [showToc, setShowToc] = useState(false);
+
+  const tocEntries = useMemo(() => {
+    if (noteFormat !== 'markdown') return [];
+    return extractTocFromMarkdown(previewContent);
+  }, [previewContent, noteFormat]);
+
+  const handleTocPress = useCallback((entry: TocEntry) => {
+    setShowToc(false);
+    const y = entry.lineIndex * APPROX_LINE_PX;
+    requestAnimationFrame(() => {
+      previewScrollRef.current?.scrollTo({ y, animated: true });
+    });
+  }, []);
   const targetScrollYRef = useRef<number | null>(null);
   const restoredScrollRef = useRef(false);
   const lastScrollYRef = useRef(0);
@@ -727,6 +768,11 @@ export default function NoteEditorScreen() {
             <Ionicons name="arrow-back" size={20} color={colors.accent} />
           </NIconButton>
           <View style={styles.flex} />
+          {!isPdfNote && tocEntries.length > 0 ? (
+            <NIconButton size="sm" onPress={() => { HapticService.light(); setShowToc(true); }} accessibilityLabel="Table of contents">
+              <Ionicons name="list" size={18} color={colors.accent} />
+            </NIconButton>
+          ) : null}
           {!isPdfNote && speakableContent ? (
             <NIconButton size="sm" onPress={handleToggleSpeak} accessibilityLabel="Read aloud">
               <Ionicons
@@ -793,6 +839,39 @@ export default function NoteEditorScreen() {
             )}
           </ScrollView>
         )}
+        <NModal visible={showToc} onRequestClose={() => setShowToc(false)} fullWidth>
+          <Text style={[styles.tocTitle, { color: colors.text }]}>Table of contents</Text>
+          {tocEntries.length === 0 ? (
+            <Text style={{ color: colors.textSecondary }}>No headings in this note.</Text>
+          ) : (
+            <ScrollView style={{ maxHeight: 360 }}>
+              {tocEntries.map((entry, idx) => (
+                <TouchableOpacity
+                  key={`${entry.lineIndex}-${idx}`}
+                  onPress={() => handleTocPress(entry)}
+                  style={[styles.tocRow, { paddingLeft: 8 + (entry.level - 1) * 14 }]}
+                >
+                  <Text
+                    style={[
+                      styles.tocText,
+                      {
+                        color: colors.text,
+                        fontWeight: entry.level <= 2 ? '600' : '400',
+                        fontSize: entry.level === 1 ? 16 : 14,
+                      },
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {entry.text}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+          <TouchableOpacity onPress={() => setShowToc(false)} style={styles.tocClose}>
+            <Text style={{ color: colors.primary, fontWeight: '600' }}>Close</Text>
+          </TouchableOpacity>
+        </NModal>
       </SafeAreaView>
     );
   }
@@ -1215,6 +1294,10 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginTop: 8,
   },
+  tocTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
+  tocRow: { paddingVertical: 8 },
+  tocText: { fontSize: 14 },
+  tocClose: { paddingTop: 12, alignItems: 'flex-end' },
   structuredFallback: {
     fontSize: 16,
     lineHeight: 24,
