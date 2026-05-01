@@ -586,7 +586,7 @@ export default function NoteEditorScreen() {
     },
   }), [colors]);
 
-  const previewContent = (() => {
+  const previewContent = useMemo(() => {
     const stripTopMetadata = (raw: string, format: NoteFormat): string => {
       if (format === 'markdown') {
         const lines = raw.split('\n');
@@ -636,18 +636,18 @@ export default function NoteEditorScreen() {
     }
 
     return stripTopMetadata(content, 'org');
-  })();
+  }, [content, noteFormat]);
 
   const pdfViewerUri = useMemo(() => {
     return resolvePdfUrl(previewContent);
   }, [previewContent, resolvePdfUrl]);
 
-  const parsedStructuredContent = (() => {
+  const parsedStructuredContent = useMemo(() => {
     if (noteFormat === 'markdown' || noteFormat === 'pdf') return null;
     const parsed = NeorgContentParser.parseContent(previewContent);
     if (!parsed.success || !parsed.blocks || parsed.blocks.length === 0) return null;
     return parsed.blocks;
-  })();
+  }, [previewContent, noteFormat]);
 
   const speakableContent = useMemo(() => {
     return previewContent
