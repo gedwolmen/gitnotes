@@ -140,6 +140,11 @@ Open advisories tracked in issues (see #222 for upstream Expo bumps for postcss 
    eas submit --platform android --profile production
    ```
 
+   This requires a `google-service-account.json` at the repo root (path
+   referenced from `eas.json`). The file is gitignored. See
+   [EAS docs](https://docs.expo.dev/submit/android/#creating-a-service-account)
+   for how to create one.
+
 ### EAS Configuration
 
 The project includes an `eas.json` configuration file with three build profiles:
