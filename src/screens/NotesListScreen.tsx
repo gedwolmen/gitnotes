@@ -356,7 +356,7 @@ export default function NotesListScreen() {
   );
 
   const renderSwipeableNote = useCallback(
-    (note: Note, index: number, compact = false) => (
+    (note: Note, index: number, compact = false, variant: 'default' | 'card' = 'default') => (
       <ReanimatedSwipeable
         overshootRight={false}
         rightThreshold={40}
@@ -367,6 +367,7 @@ export default function NotesListScreen() {
           onPress={handleNotePress}
           onLongPress={handleNoteLongPress}
           compact={compact}
+          variant={variant}
           highlighted={hasActiveSearch && index === currentSearchMatchIndex}
         />
       </ReanimatedSwipeable>
@@ -397,7 +398,7 @@ export default function NotesListScreen() {
 
   const renderCardNote = useCallback(
     ({ item, index }: { item: Note; index: number }) => (
-      <View style={styles.cardItem}>{renderSwipeableNote(item, index)}</View>
+      <View style={styles.cardItem}>{renderSwipeableNote(item, index, false, 'card')}</View>
     ),
     [renderSwipeableNote],
   );
@@ -1439,10 +1440,10 @@ const styles = StyleSheet.create({
   },
   errorText: { fontSize: 13 },
   listContent: { padding: 12, paddingTop: 4, paddingBottom: 100 },
-  gridRow: { justifyContent: "space-between" },
+  gridRow: { justifyContent: "flex-start", gap: 12 },
   gridContent: { padding: 12, paddingTop: 4, paddingBottom: 100 },
-  gridItem: { width: "48%", marginBottom: 12 },
-  gridItemTablet: { width: "31%", marginBottom: 12 },
+  gridItem: { width: "48%" },
+  gridItemTablet: { width: "31%" },
   cardContent: { padding: 12, paddingTop: 4, paddingBottom: 100 },
   cardItem: { marginBottom: 12 },
   journalContent: { padding: 12, paddingTop: 4, paddingBottom: 100 },
