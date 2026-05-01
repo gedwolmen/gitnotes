@@ -3,22 +3,19 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ActivityIndicator,
   LayoutAnimation,
   Platform,
   UIManager,
-  Modal,
-  TextInput,
   Alert,
   ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { GitHubService, GitHubContent } from '../services/GitHubService';
 import { HapticService } from '../utils/haptics';
 import ContextMenu from './ContextMenu';
+import { Group, GroupRow, IconButton, Modal, Input, Button } from './ui';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -110,7 +107,7 @@ interface RenameDialogProps {
 function RenameDialog({ visible, node, onClose, onRename }: RenameDialogProps) {
   const { colors } = useTheme();
   const [name, setName] = useState('');
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<any>(null);
 
   useEffect(() => {
     if (visible && node) {
@@ -140,37 +137,29 @@ function RenameDialog({ visible, node, onClose, onRename }: RenameDialogProps) {
   if (!node) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={dialogStyles.overlay}>
-        <View style={[dialogStyles.card, { backgroundColor: colors.surface }]}>
-          <Text style={[dialogStyles.title, { color: colors.text }]}>Rename</Text>
-          <Text style={[dialogStyles.subtitle, { color: colors.textSecondary }]}>
-            {node.name}
-          </Text>
-          <TextInput
-            ref={inputRef}
-            style={[dialogStyles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
-            value={name}
-            onChangeText={setName}
-            autoCapitalize="none"
-            autoCorrect={false}
-            selectTextOnFocus
-            returnKeyType="done"
-            onSubmitEditing={handleRename}
-          />
-          <View style={dialogStyles.buttons}>
-            <TouchableOpacity onPress={onClose} style={dialogStyles.button}>
-              <Text style={[dialogStyles.buttonText, { color: colors.textSecondary }]}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleRename}
-              style={[dialogStyles.button, dialogStyles.primaryButton, { backgroundColor: colors.primary }]}
-              disabled={!name.trim() || name.trim() === (node.type === 'file' ? node.name.replace(/\.[^.]+$/, '') : node.name)}
-            >
-              <Text style={[dialogStyles.buttonText, { color: '#fff' }]}>Rename</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+    <Modal visible={visible} onRequestClose={onClose}>
+      <Text style={[dialogStyles.title, { color: colors.text }]}>Rename</Text>
+      <Text style={[dialogStyles.subtitle, { color: colors.textSecondary }]}>
+        {node.name}
+      </Text>
+      <Input
+        ref={inputRef}
+        value={name}
+        onChangeText={setName}
+        autoCapitalize="none"
+        autoCorrect={false}
+        selectTextOnFocus
+        returnKeyType="done"
+        onSubmitEditing={handleRename}
+      />
+      <View style={dialogStyles.buttons}>
+        <Button variant="secondary" label="Cancel" onPress={onClose} />
+        <Button
+          variant="primary"
+          label="Rename"
+          onPress={handleRename}
+          disabled={!name.trim() || name.trim() === (node.type === 'file' ? node.name.replace(/\.[^.]+$/, '') : node.name)}
+        />
       </View>
     </Modal>
   );
@@ -192,7 +181,7 @@ function MoveDialog({ visible, node, owner, repo, branch, onClose, onMove }: Mov
   const [loading, setLoading] = useState(false);
   const [selectedPath, setSelectedPath] = useState('');
   const [customPath, setCustomPath] = useState('');
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<any>(null);
 
   useEffect(() => {
     if (visible && node) {
@@ -221,78 +210,65 @@ function MoveDialog({ visible, node, owner, repo, branch, onClose, onMove }: Mov
   if (!node) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={dialogStyles.overlay}>
-        <View style={[dialogStyles.card, { backgroundColor: colors.surface }, { maxHeight: '80%' }]}>
-          <Text style={[dialogStyles.title, { color: colors.text }]}>Move</Text>
-          <Text style={[dialogStyles.subtitle, { color: colors.textSecondary }]}>
-            {node.name}
-          </Text>
+    <Modal visible={visible} onRequestClose={onClose} contentStyle={{ maxHeight: '80%' }}>
+      <Text style={[dialogStyles.title, { color: colors.text }]}>Move</Text>
+      <Text style={[dialogStyles.subtitle, { color: colors.textSecondary }]}>
+        {node.name}
+      </Text>
 
-          <Text style={[dialogStyles.label, { color: colors.textSecondary }]}>Destination folder</Text>
+      <Text style={[dialogStyles.label, { color: colors.textSecondary }]}>Destination folder</Text>
 
-          {loading ? (
-            <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 12 }} />
-          ) : (
-            <ScrollView style={dialogStyles.folderList} keyboardShouldPersistTaps="handled">
-              <TouchableOpacity
-                style={[
-                  dialogStyles.folderItem,
-                  { borderColor: colors.border },
-                  selectedPath === '' && { backgroundColor: colors.primary + '15', borderColor: colors.primary },
-                ]}
-                onPress={() => { setSelectedPath(''); setCustomPath(''); }}
-              >
-                <Ionicons name="home-outline" size={16} color={selectedPath === '' ? colors.primary : colors.textSecondary} />
-                <Text style={[dialogStyles.folderItemText, { color: selectedPath === '' ? colors.primary : colors.text }]}>
-                  / (root)
-                </Text>
-              </TouchableOpacity>
-              {folders.map(folder => (
-                <TouchableOpacity
-                  key={folder.path}
-                  style={[
-                    dialogStyles.folderItem,
-                    { borderColor: colors.border },
-                    selectedPath === folder.path && { backgroundColor: colors.primary + '15', borderColor: colors.primary },
-                  ]}
-                  onPress={() => { setSelectedPath(folder.path); setCustomPath(''); }}
-                >
-                  <Ionicons name="folder-outline" size={16} color={selectedPath === folder.path ? colors.primary : '#FF9500'} />
-                  <Text style={[dialogStyles.folderItemText, { color: selectedPath === folder.path ? colors.primary : colors.text }]}>
-                    {folder.path}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          )}
-
-          <Text style={[dialogStyles.label, { color: colors.textSecondary, marginTop: 8 }]}>Or type a path</Text>
-          <TextInput
-            ref={inputRef}
-            style={[dialogStyles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
-            placeholder="e.g. notes/archive"
-            placeholderTextColor={colors.textSecondary}
-            value={customPath}
-            onChangeText={(text) => { setCustomPath(text); if (text) setSelectedPath(''); }}
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="done"
-          />
-
-          <View style={dialogStyles.buttons}>
-            <TouchableOpacity onPress={onClose} style={dialogStyles.button}>
-              <Text style={[dialogStyles.buttonText, { color: colors.textSecondary }]}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleMove}
-              style={[dialogStyles.button, dialogStyles.primaryButton, { backgroundColor: colors.primary }]}
-              disabled={!selectedPath && !customPath.trim()}
+      {loading ? (
+        <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 12 }} />
+      ) : (
+        <ScrollView style={dialogStyles.folderList} keyboardShouldPersistTaps="handled">
+          <GroupRow
+            onPress={() => { setSelectedPath(''); setCustomPath(''); }}
+            style={[
+              selectedPath === '' && { backgroundColor: colors.primary + '15' },
+            ]}
+            leading={<Ionicons name="home-outline" size={16} color={selectedPath === '' ? colors.primary : colors.textSecondary} />}
+          >
+            <Text style={[dialogStyles.folderItemText, { color: selectedPath === '' ? colors.primary : colors.text }]}>
+              / (root)
+            </Text>
+          </GroupRow>
+          {folders.map(folder => (
+            <GroupRow
+              key={folder.path}
+              onPress={() => { setSelectedPath(folder.path); setCustomPath(''); }}
+              style={[
+                selectedPath === folder.path && { backgroundColor: colors.primary + '15' },
+              ]}
+              leading={<Ionicons name="folder-outline" size={16} color={selectedPath === folder.path ? colors.primary : '#FF9500'} />}
             >
-              <Text style={[dialogStyles.buttonText, { color: '#fff' }]}>Move</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+              <Text style={[dialogStyles.folderItemText, { color: selectedPath === folder.path ? colors.primary : colors.text }]}>
+                {folder.path}
+              </Text>
+            </GroupRow>
+          ))}
+        </ScrollView>
+      )}
+
+      <Text style={[dialogStyles.label, { color: colors.textSecondary, marginTop: 8 }]}>Or type a path</Text>
+      <Input
+        ref={inputRef}
+        value={customPath}
+        onChangeText={(text) => { setCustomPath(text); if (text) setSelectedPath(''); }}
+        placeholder="e.g. notes/archive"
+        autoCapitalize="none"
+        autoCorrect={false}
+        returnKeyType="done"
+      />
+
+      <View style={dialogStyles.buttons}>
+        <Button variant="secondary" label="Cancel" onPress={onClose} />
+        <Button
+          variant="primary"
+          label="Move"
+          onPress={handleMove}
+          disabled={!selectedPath && !customPath.trim()}
+        />
       </View>
     </Modal>
   );
@@ -471,51 +447,55 @@ function TreeItem({ node, owner, repo, branch, level, onFilePress, onRefresh }: 
 
   return (
     <View>
-      <TouchableOpacity
-        style={[
-          treeStyles.row,
-          { paddingLeft: 16 + level * 20 },
-        ]}
+      <GroupRow
         onPress={isDir ? handleToggle : handleFilePress}
         onLongPress={handleLongPress}
-        activeOpacity={0.6}
         disabled={isOperating}
-      >
-        <View style={treeStyles.chevronSlot}>
-          {isDir ? (
-            loading ? (
-              <ActivityIndicator size="small" color={colors.textSecondary} style={treeStyles.loader} />
+        style={{ paddingLeft: 16 + level * 20 }}
+        leading={
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            {isDir ? (
+              loading ? (
+                <ActivityIndicator size="small" color={colors.textSecondary} style={treeStyles.loader} />
+              ) : (
+                <IconButton size="sm" onPress={handleToggle} accessibilityLabel={expanded ? 'Collapse' : 'Expand'}>
+                  <Ionicons
+                    name={expanded ? 'chevron-down' : 'chevron-forward'}
+                    size={14}
+                    color={colors.textSecondary}
+                  />
+                </IconButton>
+              )
             ) : (
-              <Ionicons
-                name={expanded ? 'chevron-down' : 'chevron-forward'}
-                size={16}
-                color={colors.textSecondary}
-              />
-            )
-          ) : (
-            <View style={treeStyles.chevronPlaceholder} />
-          )}
-        </View>
-        <Ionicons name={iconName} size={20} color={iconColor} style={treeStyles.icon} />
+              <View style={{ width: 36 }} />
+            )}
+            <Ionicons name={iconName} size={20} color={iconColor} />
+          </View>
+        }
+        trailing={
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {isOperating && (
+              <ActivityIndicator size="small" color={colors.primary} />
+            )}
+            {!isDir && (
+              <View style={treeStyles.fileMetaRow}>
+                {node.size != null ? (
+                  <Text style={[treeStyles.size, { color: colors.textSecondary }]}>
+                    {formatBytes(node.size)}
+                  </Text>
+                ) : null}
+                <Text style={[treeStyles.ext, { color: colors.textSecondary }]}>
+                  {node.name.split('.').pop()}
+                </Text>
+              </View>
+            )}
+          </View>
+        }
+      >
         <Text style={[treeStyles.name, { color: colors.text }]} numberOfLines={1}>
           {node.name}
         </Text>
-        {isOperating && (
-          <ActivityIndicator size="small" color={colors.primary} style={treeStyles.opIndicator} />
-        )}
-        {!isDir && (
-          <View style={treeStyles.fileMetaRow}>
-            {node.size != null ? (
-              <Text style={[treeStyles.size, { color: colors.textSecondary }]}>
-                {formatBytes(node.size)}
-              </Text>
-            ) : null}
-            <Text style={[treeStyles.ext, { color: colors.textSecondary }]}>
-              {node.name.split('.').pop()}
-            </Text>
-          </View>
-        )}
-      </TouchableOpacity>
+      </GroupRow>
 
       {expanded && children.map((child) => (
         <TreeItem
@@ -713,9 +693,7 @@ export default function RepoFileTree({ owner, repo, branch, onFilePress }: RepoF
       <View style={treeStyles.center}>
         <Ionicons name="alert-circle-outline" size={40} color={colors.textSecondary} />
         <Text style={[treeStyles.emptyText, { color: colors.text }]}>Failed to load</Text>
-        <TouchableOpacity onPress={loadRoot} style={[treeStyles.retryBtn, { borderColor: colors.border }]}>
-          <Text style={[treeStyles.retryText, { color: colors.primary }]}>Retry</Text>
-        </TouchableOpacity>
+        <Button variant="secondary" label="Retry" onPress={loadRoot} style={{ marginTop: 8 }} />
       </View>
     );
   }
@@ -733,7 +711,7 @@ export default function RepoFileTree({ owner, repo, branch, onFilePress }: RepoF
   }
 
   return (
-    <View style={treeStyles.container}>
+    <Group style={{ flex: 1 }}>
       {rootItems.map((item) => (
         <TreeItem
           key={item.path}
@@ -746,33 +724,19 @@ export default function RepoFileTree({ owner, repo, branch, onFilePress }: RepoF
           onRefresh={loadRoot}
         />
       ))}
-    </View>
+    </Group>
   );
 }
 
 const treeStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 11,
     paddingRight: 16,
   },
-  chevronSlot: {
-    width: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chevronPlaceholder: {
-    width: 16,
-  },
   loader: {
     transform: [{ scale: 0.7 }],
-  },
-  icon: {
-    marginHorizontal: 8,
   },
   name: {
     fontSize: 15,
@@ -790,9 +754,6 @@ const treeStyles = StyleSheet.create({
   },
   size: {
     fontSize: 11,
-  },
-  opIndicator: {
-    marginHorizontal: 4,
   },
   center: {
     flex: 1,
@@ -813,41 +774,17 @@ const treeStyles = StyleSheet.create({
   emptySub: {
     fontSize: 13,
   },
-  retryBtn: {
-    marginTop: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  retryText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
 });
 
 const dialogStyles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  card: {
-    width: '100%',
-    maxWidth: 400,
-    borderRadius: 16,
-    padding: 20,
-    gap: 8,
-  },
   title: {
     fontSize: 18,
     fontWeight: '700',
+    marginBottom: 4,
   },
   subtitle: {
     fontSize: 13,
-    marginBottom: 4,
+    marginBottom: 8,
   },
   label: {
     fontSize: 12,
@@ -855,92 +792,19 @@ const dialogStyles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginTop: 4,
-  },
-  input: {
-    height: 44,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    fontSize: 15,
+    marginBottom: 4,
   },
   buttons: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: 8,
-    marginTop: 8,
-  },
-  button: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-    minWidth: 70,
-    alignItems: 'center',
-  },
-  primaryButton: {
-  },
-  buttonText: {
-    fontSize: 15,
-    fontWeight: '600',
+    marginTop: 12,
   },
   folderList: {
     maxHeight: 200,
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 4,
-  },
-  folderItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 8,
-    marginVertical: 2,
   },
   folderItemText: {
     fontSize: 14,
   },
 });
 
-const contextStyles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  menu: {
-    width: '100%',
-    maxWidth: 300,
-    borderRadius: 14,
-    overflow: 'hidden',
-  },
-  menuHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: 8,
-  },
-  menuHeaderTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    flex: 1,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 12,
-  },
-  menuItemText: {
-    fontSize: 16,
-  },
-  menuDivider: {
-    height: StyleSheet.hairlineWidth,
-  },
-});
