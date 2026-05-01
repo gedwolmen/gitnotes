@@ -952,7 +952,7 @@ export default function NotesListScreen() {
           data={displayNotes}
           renderItem={getRenderItem()}
           keyExtractor={keyExtractor}
-          key={`${viewMode}-${displayNotes.length}`}
+          key={viewMode}
           onScrollToIndexFailed={handleScrollToIndexFailed}
           {...getListLayout()}
           contentContainerStyle={getListContentStyle()}
