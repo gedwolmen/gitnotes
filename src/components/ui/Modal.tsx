@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { Modal as RNModal, Pressable, StyleSheet, View, useWindowDimensions, ViewStyle, StyleProp } from 'react-native';
+import { Modal as RNModal, Pressable, StyleSheet, useWindowDimensions, ViewStyle, StyleProp } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Surface } from './Surface';
 import { useTheme, useTokens } from '../../contexts/ThemeContext';
@@ -58,7 +58,7 @@ export function Modal(props: ModalProps) {
             radius="lg"
             style={[{ padding: pad, maxHeight: slotHeight, backgroundColor: colors.elevated }, contentStyle]}
           >
-            <View>{children}</View>
+            {children}
           </Surface>
         </Pressable>
       </Pressable>
