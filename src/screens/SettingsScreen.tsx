@@ -565,10 +565,17 @@ export default function SettingsScreen() {
               </Text>
               <TouchableOpacity
                 style={styles.generateLink}
+                onPress={() => Linking.openURL('https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens')}
+              >
+                <Ionicons name="help-circle-outline" size={14} color={colors.primary} />
+                <Text style={[styles.generateLinkText, { color: colors.primary }]}>How to create a token (GitHub docs)</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.generateLink}
                 onPress={() => Linking.openURL('https://github.com/settings/tokens/new?scopes=repo,read:user&description=GitNotes')}
               >
                 <Ionicons name="open-outline" size={14} color={colors.primary} />
-                <Text style={[styles.generateLinkText, { color: colors.primary }]}>Generate token on GitHub</Text>
+                <Text style={[styles.generateLinkText, { color: colors.primary }]}>Open GitHub token settings</Text>
               </TouchableOpacity>
               <View style={[styles.tokenInputRow, { borderColor: tokenError ? '#FF3B30' : colors.border, backgroundColor: colors.background }]}>
                 <TextInput
