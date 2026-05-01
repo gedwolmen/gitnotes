@@ -6,7 +6,7 @@ configureReanimatedLogger({
   level: ReanimatedLogLevel.warn,
   strict: false,
 });
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, useColorScheme } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -26,6 +26,7 @@ import { StartupSyncGate } from './src/components/StartupSyncGate';
 
 export default function App() {
   const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
+  const systemColorScheme = useColorScheme();
 
   const checkOnboarding = useCallback(async () => {
     const completed = await OnboardingService.isOnboardingCompleted();
@@ -46,9 +47,10 @@ export default function App() {
   }, []);
 
   if (showOnboarding === null) {
+    const isDark = systemColorScheme === 'dark';
     return (
-      <View style={styles.loadingContainer}>
-        <StatusBar style="dark" />
+      <View style={[styles.loadingContainer, { backgroundColor: isDark ? '#000000' : '#ffffff' }]}>
+        <StatusBar style={isDark ? 'light' : 'dark'} />
       </View>
     );
   }
@@ -96,6 +98,5 @@ export default function App() {
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
-    backgroundColor: '#ffffff',
   },
 });

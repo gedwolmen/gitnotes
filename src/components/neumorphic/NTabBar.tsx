@@ -6,7 +6,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Surface } from './Surface';
 import { useTokens } from '../../contexts/ThemeContext';
 
-const TAB_ICONS: Record<string, { focused: string; outline: string; label: string }> = {
+type IoniconName = keyof typeof Ionicons.glyphMap;
+
+const TAB_ICONS: Record<string, { focused: IoniconName; outline: IoniconName; label: string }> = {
   HomeTab: { focused: 'home', outline: 'home-outline', label: 'Home' },
   NotesTab: { focused: 'document-text', outline: 'document-text-outline', label: 'Notes' },
   ExploreTab: { focused: 'compass', outline: 'compass-outline', label: 'Explore' },
@@ -80,7 +82,7 @@ export function NTabBar({ state, navigation }: BottomTabBarProps) {
                 }}
               >
                 <Ionicons
-                  name={(isFocused ? config.focused : config.outline) as any}
+                  name={isFocused ? config.focused : config.outline}
                   size={22}
                   color={isFocused ? colors.accent : colors.textSecondary}
                 />

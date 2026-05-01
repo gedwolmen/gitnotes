@@ -13,10 +13,14 @@ export function GitHubAuthProvider({ children }: { children: ReactNode }) {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    GitHubService.initialize().then(() => {
-      setUser(GitHubService.getUser());
-      setIsReady(true);
-    });
+    GitHubService.initialize()
+      .then(() => {
+        setUser(GitHubService.getUser());
+      })
+      .catch((err) => {
+        console.warn('[GitHubAuthContext] initialize failed:', err);
+      })
+      .finally(() => setIsReady(true));
   }, []);
 
   return (

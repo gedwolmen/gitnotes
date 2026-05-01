@@ -3,28 +3,80 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const TOKEN_KEY = '@gitnotes:github_token';
 const USER_KEY = '@gitnotes:github_user';
 
-function decodeBase64(base64: string): string {
+function base64ToBytes(base64: string): Uint8Array {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-  let result = '';
+  const cleaned = base64.replace(/[^A-Za-z0-9+/=]/g, '');
+  // Each 4 base64 chars → 3 bytes; padding "=" trims the tail.
+  let outLen = (cleaned.length / 4) * 3;
+  if (cleaned.endsWith('==')) outLen -= 2;
+  else if (cleaned.endsWith('=')) outLen -= 1;
+  const bytes = new Uint8Array(Math.max(0, outLen));
+  let bi = 0;
+  for (let i = 0; i < cleaned.length; i += 4) {
+    const c1 = chars.indexOf(cleaned[i]);
+    const c2 = chars.indexOf(cleaned[i + 1]);
+    const c3 = cleaned[i + 2] === '=' ? 64 : chars.indexOf(cleaned[i + 2]);
+    const c4 = cleaned[i + 3] === '=' ? 64 : chars.indexOf(cleaned[i + 3]);
+    if (c1 < 0 || c2 < 0) break;
+    bytes[bi++] = (c1 << 2) | (c2 >> 4);
+    if (c3 !== 64 && c3 >= 0) bytes[bi++] = ((c2 & 15) << 4) | (c3 >> 2);
+    if (c4 !== 64 && c4 >= 0) bytes[bi++] = ((c3 & 3) << 6) | c4;
+  }
+  return bytes.subarray(0, bi);
+}
+
+function decodeBase64(base64: string): string {
+  const bytes = base64ToBytes(base64);
+  // Prefer TextDecoder when available (Hermes / modern JSC). Falls back to
+  // a manual UTF-8 decoder so 4-byte sequences (emoji, supplementary plane)
+  // round-trip correctly. The previous implementation went through
+  // String.fromCharCode + escape/decodeURIComponent, which is deprecated
+  // and corrupts code points outside the BMP.
+  const TD: typeof TextDecoder | undefined = (globalThis as unknown as { TextDecoder?: typeof TextDecoder }).TextDecoder;
+  if (TD) {
+    try {
+      return new TD('utf-8').decode(bytes);
+    } catch {
+      // fall through to manual decoder
+    }
+  }
+  return utf8DecodeBytes(bytes);
+}
+
+function utf8DecodeBytes(bytes: Uint8Array): string {
+  let out = '';
   let i = 0;
-  base64 = base64.replace(/[^A-Za-z0-9+/]/g, '');
-  while (i < base64.length) {
-    const c1 = chars.indexOf(base64[i++]);
-    const c2 = chars.indexOf(base64[i++]);
-    const c3 = chars.indexOf(base64[i++]);
-    const c4 = chars.indexOf(base64[i++]);
-    const b1 = (c1 << 2) | (c2 >> 4);
-    const b2 = ((c2 & 15) << 4) | (c3 >> 2);
-    const b3 = ((c3 & 3) << 6) | c4;
-    result += String.fromCharCode(b1);
-    if (c3 !== 64 && base64[i - 2] !== '=') result += String.fromCharCode(b2);
-    if (c4 !== 64 && base64[i - 1] !== '=') result += String.fromCharCode(b3);
+  while (i < bytes.length) {
+    const b1 = bytes[i++];
+    if (b1 < 0x80) {
+      out += String.fromCharCode(b1);
+      continue;
+    }
+    if ((b1 & 0xe0) === 0xc0 && i < bytes.length) {
+      const b2 = bytes[i++];
+      out += String.fromCharCode(((b1 & 0x1f) << 6) | (b2 & 0x3f));
+      continue;
+    }
+    if ((b1 & 0xf0) === 0xe0 && i + 1 < bytes.length) {
+      const b2 = bytes[i++];
+      const b3 = bytes[i++];
+      out += String.fromCharCode(((b1 & 0x0f) << 12) | ((b2 & 0x3f) << 6) | (b3 & 0x3f));
+      continue;
+    }
+    if ((b1 & 0xf8) === 0xf0 && i + 2 < bytes.length) {
+      const b2 = bytes[i++];
+      const b3 = bytes[i++];
+      const b4 = bytes[i++];
+      const cp = ((b1 & 0x07) << 18) | ((b2 & 0x3f) << 12) | ((b3 & 0x3f) << 6) | (b4 & 0x3f);
+      // Encode astral code points as a surrogate pair.
+      const cpAdj = cp - 0x10000;
+      out += String.fromCharCode(0xd800 + (cpAdj >> 10), 0xdc00 + (cpAdj & 0x3ff));
+      continue;
+    }
+    // Invalid sequence — emit replacement character and advance one byte.
+    out += '�';
   }
-  try {
-    return decodeURIComponent(escape(result));
-  } catch {
-    return result;
-  }
+  return out;
 }
 
 export interface GitHubUser {
@@ -121,17 +173,20 @@ class GitHubServiceClass {
     }
   }
 
-  async setToken(token: string): Promise<GitHubUser | null> {
+  async setToken(token: string, user?: GitHubUser | null): Promise<GitHubUser | null> {
     this.token = token;
-    const user = await this.fetchUser();
-    if (!user) {
+    // If the caller already validated the token + fetched the user
+    // (AuthContext does this via AuthService.setToken), trust it instead
+    // of round-tripping /user a second time.
+    const resolvedUser = user === undefined ? await this.fetchUser() : user;
+    if (!resolvedUser) {
       this.token = null;
       return null;
     }
-    this.user = user;
+    this.user = resolvedUser;
     await AsyncStorage.setItem(TOKEN_KEY, token);
-    await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
-    return user;
+    await AsyncStorage.setItem(USER_KEY, JSON.stringify(resolvedUser));
+    return resolvedUser;
   }
 
   async clearToken(): Promise<void> {

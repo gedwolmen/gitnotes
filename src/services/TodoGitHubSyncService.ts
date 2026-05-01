@@ -1,23 +1,11 @@
 import { GitHubService } from './GitHubService';
 import { Todo } from '../models/Todo';
+import { parseRepoPath } from '../utils/gitPathParser';
 
 export interface TodoGitHubSyncResult {
   success: boolean;
   filePath?: string;
   error?: string;
-}
-
-function parseRepoPath(repoPath: string): { owner: string; repo: string } | null {
-  const cleaned = repoPath
-    .replace(/^https?:\/\/github\.com\//, '')
-    .replace(/^github\.com\//, '')
-    .replace(/\.git$/, '')
-    .trim();
-  const parts = cleaned.split('/');
-  if (parts.length >= 2) {
-    return { owner: parts[0], repo: parts[1] };
-  }
-  return null;
 }
 
 function serializeTodo(todo: Partial<Todo>): string {

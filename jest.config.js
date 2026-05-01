@@ -7,10 +7,14 @@ module.exports = {
   },
   testEnvironment: 'node',
   testMatch: [
-    '**/__tests__/**/*.{ts,tsx}',
+    '**/__tests__/**/*.test.{ts,tsx}',
     '**/?(*.)+(spec|test).{ts,tsx}',
   ],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+  setupFiles: ['<rootDir>/jest.setup.ts'],
+  transformIgnorePatterns: [
+    'node_modules/(?!(react-native|@react-native|@react-navigation|expo|@expo|react-native-reanimated|@shopify)/)',
+  ],
   collectCoverage: true,
   coveragePathIgnorePatterns: [
     '/node_modules/',
