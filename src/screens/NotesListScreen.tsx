@@ -17,6 +17,7 @@ import {
   ScrollView,
   RefreshControl,
 } from "react-native";
+import { FlashList, FlashListRef } from "@shopify/flash-list";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
@@ -38,7 +39,6 @@ import ContextMenu from "../components/ContextMenu";
 import NoteCard from "../components/NoteCard";
 import SearchBar from "../components/SearchBar";
 import { NScreenHeader } from "../components/neumorphic";
-import RepoFileBrowser from "../components/RepoFileBrowser";
 import { parseRepoPath } from "../utils/gitPathParser";
 import { HapticService } from "../utils/haptics";
 import {
@@ -77,7 +77,7 @@ export default function NotesListScreen() {
   const { viewMode, setViewMode } = useViewMode();
   const { isTablet, columns, maxContentWidth } = useResponsive();
   const { repositories } = useRepos();
-  const listRef = useRef<FlatList<Note>>(null);
+  const listRef = useRef<FlashListRef<Note>>(null);
 
   useEffect(() => {
     if (authState.token) {
@@ -159,11 +159,6 @@ export default function NotesListScreen() {
     (selectedFolder ? 1 : 0) +
     (selectedFormat ? 1 : 0) +
     (selectedTags.length > 0 ? 1 : 0);
-
-  const repoInfo = useMemo(
-    () => (selectedRepo ? parseRepoPath(selectedRepo.path) : null),
-    [selectedRepo],
-  );
 
   const displayNotes = useMemo(() => {
     let result = filteredNotes;
@@ -269,81 +264,6 @@ export default function NotesListScreen() {
     [setViewMode],
   );
 
-  const handleRepoFilePress = useCallback(
-    async (filePath: string) => {
-      const ext = filePath.split(".").pop()?.toLowerCase() ?? "";
-
-      if (ext === "pdf") {
-        if (!selectedRepo || !repoInfo) return;
-        navigation.navigate("PdfViewer", {
-          owner: repoInfo.owner,
-          repo: repoInfo.repo,
-          branch: selectedBranch ?? undefined,
-          path: filePath,
-          title: filePath.split("/").pop(),
-        });
-        return;
-      }
-
-      const existing = notes.find(
-        (n: Note) => n.repo === selectedRepo?.path && n.filePath === filePath,
-      );
-      if (existing) {
-        navigation.navigate("NoteEditor", { noteId: existing.id });
-        return;
-      }
-      if (!selectedRepo || !repoInfo) return;
-
-      const branch = selectedBranch ?? "main";
-      const content = await GitHubService.getFileContent(
-        repoInfo.owner,
-        repoInfo.repo,
-        filePath,
-        branch,
-      );
-      if (content === null) {
-        Alert.alert("Failed to load", "Could not fetch file from GitHub.");
-        return;
-      }
-
-      const fileExt = ext || "md";
-      const format: NoteFormat =
-        fileExt === "norg" ? "neorg" : fileExt === "org" ? "org" : "markdown";
-      const titleFromPath = filePath
-        .replace(/\.[^.]+$/, "")
-        .split("/")
-        .pop()
-        ?.replace(/[-_]/g, " ") ?? filePath;
-
-      const created = await createNote({
-        title: titleFromPath,
-        content,
-        repo: selectedRepo.path,
-        branch,
-        filePath,
-        format,
-      });
-      if (created) {
-        navigation.navigate("NoteEditor", { noteId: created.id });
-      }
-    },
-    [notes, selectedRepo, selectedBranch, repoInfo, createNote, navigation],
-  );
-
-  const handleCreateNoteInFolder = useCallback(
-    (folderPath: string) => {
-      navigation.navigate("NoteEditor", {
-        format: "markdown",
-        initialTitle: "",
-        initialContent: "",
-        repo: selectedRepo?.path,
-        branch: selectedBranch ?? undefined,
-        folderPath: folderPath || undefined,
-      });
-    },
-    [navigation, selectedRepo, selectedBranch],
-  );
-
   const handleDeleteFromSwipe = useCallback(
     (note: Note) => {
       Alert.alert("Delete Note", `Delete "${note.title || "Untitled"}"?`, [
@@ -387,19 +307,6 @@ export default function NotesListScreen() {
       scrollToSearchMatch(currentSearchMatchIndex + step);
     },
     [currentSearchMatchIndex, scrollToSearchMatch, searchMatchCount],
-  );
-
-  const handleScrollToIndexFailed = useCallback(
-    ({ index }: { index: number }) => {
-      setTimeout(() => {
-        listRef.current?.scrollToIndex({
-          index,
-          animated: true,
-          viewPosition: 0.4,
-        });
-      }, 120);
-    },
-    [],
   );
 
   const handlePullToRefresh = useCallback(async () => {
@@ -792,7 +699,7 @@ export default function NotesListScreen() {
       )}
 
       <Modal
-        visible={showViewModePicker && !selectedRepo}
+        visible={showViewModePicker}
         transparent
         animationType="fade"
         onRequestClose={() => setShowViewModePicker(false)}
@@ -839,7 +746,7 @@ export default function NotesListScreen() {
         </TouchableOpacity>
       </Modal>
 
-      {activeFilterCount > 0 && !selectedRepo && (
+      {activeFilterCount > 0 && (
         <View style={styles.activeFilterWrap}>
           <ScrollView
             horizontal
@@ -922,74 +829,44 @@ export default function NotesListScreen() {
         </View>
       )}
 
-      {selectedRepo ? (
-        repoInfo ? (
-          <RepoFileBrowser
-            owner={repoInfo.owner}
-            repo={repoInfo.repo}
-            branch={selectedBranch ?? undefined}
-            onFilePress={handleRepoFilePress}
-            onCreateNoteInFolder={handleCreateNoteInFolder}
-            key={selectedRepo.id}
+      <FlashList
+        ref={listRef}
+        data={displayNotes}
+        renderItem={getRenderItem()}
+        keyExtractor={keyExtractor}
+        key={viewMode}
+        {...getListLayout()}
+        contentContainerStyle={getListContentStyle()}
+        refreshControl={
+          <RefreshControl
+            refreshing={isPullRefreshing}
+            onRefresh={handlePullToRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
           />
-        ) : (
+        }
+        ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons
-              name="alert-circle-outline"
+              name="document-text-outline"
               size={48}
               color={colors.textSecondary}
             />
             <Text style={[styles.emptyTitle, { color: colors.text }]}>
-              Invalid Repository
+              {searchQuery || activeFilterCount > 0
+                ? "No matching notes"
+                : "No notes yet"}
             </Text>
             <Text
               style={[styles.emptySubtext, { color: colors.textSecondary }]}
             >
-              Check the repo path in Settings
+              {searchQuery || activeFilterCount > 0
+                ? "Try adjusting your search or filters"
+                : "Create your first note to get started"}
             </Text>
           </View>
-        )
-      ) : (
-        <FlatList
-          ref={listRef}
-          data={displayNotes}
-          renderItem={getRenderItem()}
-          keyExtractor={keyExtractor}
-          key={viewMode}
-          onScrollToIndexFailed={handleScrollToIndexFailed}
-          {...getListLayout()}
-          contentContainerStyle={getListContentStyle()}
-          refreshControl={
-            <RefreshControl
-              refreshing={isPullRefreshing}
-              onRefresh={handlePullToRefresh}
-              tintColor={colors.primary}
-              colors={[colors.primary]}
-            />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons
-                name="document-text-outline"
-                size={48}
-                color={colors.textSecondary}
-              />
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                {searchQuery || activeFilterCount > 0
-                  ? "No matching notes"
-                  : "No notes yet"}
-              </Text>
-              <Text
-                style={[styles.emptySubtext, { color: colors.textSecondary }]}
-              >
-                {searchQuery || activeFilterCount > 0
-                  ? "Try adjusting your search or filters"
-                  : "Create your first note to get started"}
-              </Text>
-            </View>
-          }
-        />
-      )}
+        }
+      />
 
       {/* ── Filter modal ── */}
       <Modal visible={showFilterModal} transparent animationType="slide">
@@ -1200,7 +1077,7 @@ export default function NotesListScreen() {
                     showsHorizontalScrollIndicator={false}
                     style={styles.filterChipRow}
                     data={allFolders}
-                    keyExtractor={(folder) => folder}
+                    keyExtractor={(folder: string) => folder}
                     ListHeaderComponent={
                       <TouchableOpacity
                         style={[
@@ -1289,7 +1166,7 @@ export default function NotesListScreen() {
                     showsHorizontalScrollIndicator={false}
                     style={styles.filterChipRow}
                     data={allTags}
-                    keyExtractor={(tag) => tag}
+                    keyExtractor={(tag: string) => tag}
                     renderItem={({ item: tag }) => {
                       const isSelected = selectedTags.includes(tag);
                       return (

@@ -179,14 +179,20 @@ export class GitService {
     const repoInfo = parseRepoPath(repoPath);
     
     if (repoInfo) {
-      // Try GitHub API
-      const url = `${GITHUB_API_BASE}/repos/${repoInfo.owner}/${repoInfo.repo}/branches`;
-      const branches = await this.fetchFromGitHub<Array<{ name: string }>>(url);
-      
+      // Try GitHub API. Branches list is alphabetical, so determining
+      // "current" requires the repo's default_branch, fetched in parallel.
+      const branchesUrl = `${GITHUB_API_BASE}/repos/${repoInfo.owner}/${repoInfo.repo}/branches`;
+      const repoUrl = `${GITHUB_API_BASE}/repos/${repoInfo.owner}/${repoInfo.repo}`;
+      const [branches, repoMeta] = await Promise.all([
+        this.fetchFromGitHub<Array<{ name: string }>>(branchesUrl),
+        this.fetchFromGitHub<{ default_branch?: string }>(repoUrl),
+      ]);
+
       if (branches) {
-        const result = branches.map((b, index) => ({
+        const defaultBranch = repoMeta?.default_branch;
+        const result = branches.map((b) => ({
           name: b.name,
-          isCurrent: index === 0,
+          isCurrent: defaultBranch ? b.name === defaultBranch : false,
         }));
         await this.setCachedData(cacheKey, result);
         return result;
@@ -288,15 +294,6 @@ export class GitService {
 
     await this.setCachedData(cacheKey, folders);
     return folders;
-  }
-
-  static async isGitRepository(path: string): Promise<boolean> {
-    try {
-      return false;
-    } catch (error) {
-      console.error('[GitService] Failed to validate repository:', error);
-      return false;
-    }
   }
 
   static async clearCache(): Promise<void> {
