@@ -136,7 +136,7 @@ const railStyles = StyleSheet.create({
 
 export default function TabNavigator() {
   const { isTablet } = useResponsive();
-  const { style } = useTheme();
+  const { style, colors } = useTheme();
   const useNeumorphicBar = !isTablet && style === 'neumorphic';
 
   return (
@@ -155,8 +155,8 @@ export default function TabNavigator() {
           const iconName = focused ? config.focused : config.outline;
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#007AFF',
-        tabBarInactiveTintColor: 'gray',
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSecondary,
         headerShown: false,
       })}
     >
