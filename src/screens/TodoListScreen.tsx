@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
   Alert,
   Modal,
@@ -11,6 +10,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { Ionicons } from '@expo/vector-icons';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -396,7 +396,7 @@ export default function TodoListScreen() {
         />
       </View>
 
-      <FlatList
+      <FlashList
         data={filteredTodos}
         renderItem={renderTodoItem}
         keyExtractor={(item) => item.id}
