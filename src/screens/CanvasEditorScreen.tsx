@@ -750,6 +750,7 @@ const makeStyles = (colors: StyleColors) => StyleSheet.create({
   },
   iconBtn: { padding: 8 },
   iconText: { fontSize: 15, color: colors.primary },
+  backBtn: { paddingVertical: 8, paddingHorizontal: 4, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   titleInput: {
     flex: 1,
     marginHorizontal: 8,
