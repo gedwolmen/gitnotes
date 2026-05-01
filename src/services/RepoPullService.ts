@@ -106,11 +106,19 @@ async function pullNotesFromRepo(
         (n) => n.repo === repoPath && n.filePath === item.path,
       );
       if (existingIdx !== -1) {
-        allNotes[existingIdx] = {
-          ...allNotes[existingIdx],
-          content: item.content,
-          updatedAt: Date.now(),
-        };
+        const existing = allNotes[existingIdx];
+        // Only mutate the local note if the remote content actually differs.
+        // Bumping updatedAt unconditionally clobbered cross-device LWW: a
+        // pure read on device B would defeat a real write on device A whose
+        // pull happened a moment later.
+        if (existing.content !== item.content) {
+          allNotes[existingIdx] = {
+            ...existing,
+            content: item.content,
+            updatedAt: Date.now(),
+          };
+          pulled++;
+        }
       } else {
         allNotes.push(
           createNote({
@@ -122,8 +130,8 @@ async function pullNotesFromRepo(
             format: noteFormatFromExt(ext),
           }),
         );
+        pulled++;
       }
-      pulled++;
     }
 
     await StorageService.saveAllNotes(allNotes);
@@ -162,14 +170,19 @@ async function pullCanvasesFromRepo(
         .replace(/-/g, ' ');
 
       if (existing) {
-        const updated = updateCanvas(existing, { scene });
-        const allCanvases = await StorageService.getAllCanvases();
-        const idx = allCanvases.findIndex((c) => c.id === existing.id);
-        if (idx !== -1) {
-          allCanvases[idx] = updated;
-          await StorageService.saveAllCanvases(allCanvases);
+        // Skip the local mutation if the scene is bytewise unchanged. Avoids
+        // pushing an artificial updatedAt that would clobber cross-device LWW.
+        const sceneChanged = JSON.stringify(existing.scene) !== JSON.stringify(scene);
+        if (sceneChanged) {
+          const updated = updateCanvas(existing, { scene });
+          const allCanvases = await StorageService.getAllCanvases();
+          const idx = allCanvases.findIndex((c) => c.id === existing.id);
+          if (idx !== -1) {
+            allCanvases[idx] = updated;
+            await StorageService.saveAllCanvases(allCanvases);
+          }
+          pulled++;
         }
-        pulled++;
       } else {
         const newCanvas = createCanvas({
           title: titleFromPath,
