@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
-import { Canvas, CanvasCreateInput, CanvasUpdateInput, sortCanvasesByUpdated, filterCanvasesBySearch } from '../models/Canvas';
-import { StorageService } from '../services/StorageService';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Canvas, CanvasCreateInput, CanvasUpdateInput, filterCanvasesBySearch } from '../models/Canvas';
+import { useCanvasStore } from '../stores/canvasStore';
 
 interface CanvasContextType {
   canvases: Canvas[];
@@ -17,128 +17,44 @@ interface CanvasContextType {
   clearError: () => void;
 }
 
-const CanvasContext = createContext<CanvasContextType | undefined>(undefined);
-
-interface CanvasProviderProps {
-  children: ReactNode;
-}
-
-export function CanvasProvider({ children }: CanvasProviderProps) {
-  const [canvases, setCanvases] = useState<Canvas[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const loadCanvases = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const loaded = await StorageService.getAllCanvases();
-      setCanvases(sortCanvasesByUpdated(loaded));
-    } catch (err) {
-      setError('Failed to load canvases');
-      console.error('Error loading canvases:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+export function CanvasProvider({ children }: { children: React.ReactNode }) {
+  const loadCanvases = useCanvasStore((s) => s.loadCanvases);
+  const needsLoad = useCanvasStore((s) => s.isLoading && s.canvases.length === 0);
 
   useEffect(() => {
-    loadCanvases();
-  }, [loadCanvases]);
+    if (needsLoad) loadCanvases();
+  }, [needsLoad, loadCanvases]);
 
-  const createCanvas = useCallback(async (input: CanvasCreateInput): Promise<Canvas | null> => {
-    try {
-      setError(null);
-      const newCanvas = await StorageService.createCanvas(input);
-      setCanvases((prev) => sortCanvasesByUpdated([...prev, newCanvas]));
-      return newCanvas;
-    } catch (err) {
-      setError('Failed to create canvas');
-      console.error('Error creating canvas:', err);
-      return null;
-    }
-  }, []);
+  return <>{children}</>;
+}
 
-  const updateCanvas = useCallback(async (input: CanvasUpdateInput): Promise<Canvas | null> => {
-    try {
-      setError(null);
-      const updated = await StorageService.updateCanvas(input);
-      if (updated) {
-        setCanvases((prev) =>
-          sortCanvasesByUpdated(prev.map((c) => (c.id === updated.id ? updated : c))),
-        );
-      }
-      return updated;
-    } catch (err) {
-      setError('Failed to update canvas');
-      console.error('Error updating canvas:', err);
-      return null;
-    }
-  }, []);
+export function useCanvases(): CanvasContextType {
+  const canvases = useCanvasStore((s) => s.canvases);
+  const isLoading = useCanvasStore((s) => s.isLoading);
+  const error = useCanvasStore((s) => s.error);
+  const createCanvas = useCanvasStore((s) => s.createCanvas);
+  const updateCanvas = useCanvasStore((s) => s.updateCanvas);
+  const deleteCanvas = useCanvasStore((s) => s.deleteCanvas);
+  const refreshCanvases = useCanvasStore((s) => s.refreshCanvases);
+  const clearError = useCanvasStore((s) => s.clearError);
 
-  const deleteCanvas = useCallback(async (id: string): Promise<boolean> => {
-    try {
-      setError(null);
-      const success = await StorageService.deleteCanvas(id);
-      if (success) {
-        setCanvases((prev) => prev.filter((c) => c.id !== id));
-      }
-      return success;
-    } catch (err) {
-      setError('Failed to delete canvas');
-      console.error('Error deleting canvas:', err);
-      return false;
-    }
-  }, []);
-
-  const getCanvasById = useCallback(
-    (id: string): Canvas | undefined => {
-      return canvases.find((c) => c.id === id);
-    },
-    [canvases],
-  );
-
-  const refreshCanvases = useCallback(async () => {
-    await loadCanvases();
-  }, [loadCanvases]);
-
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
-
+  const [searchQuery, setSearchQuery] = useState('');
   const filteredCanvases = useMemo(
     () => (searchQuery ? filterCanvasesBySearch(canvases, searchQuery) : canvases),
     [canvases, searchQuery],
   );
 
-  const value: CanvasContextType = useMemo(
-    () => ({
-      canvases,
-      isLoading,
-      error,
-      searchQuery,
-      setSearchQuery,
-      filteredCanvases,
-      createCanvas,
-      updateCanvas,
-      deleteCanvas,
-      getCanvasById,
-      refreshCanvases,
-      clearError,
-    }),
-    [canvases, isLoading, error, searchQuery, filteredCanvases, createCanvas, updateCanvas, deleteCanvas, getCanvasById, refreshCanvases, clearError],
+  const getCanvasById = useMemo(
+    () => (id: string) => canvases.find((c) => c.id === id),
+    [canvases],
   );
 
-  return <CanvasContext.Provider value={value}>{children}</CanvasContext.Provider>;
+  return useMemo(
+    () => ({
+      canvases, isLoading, error, searchQuery, setSearchQuery, filteredCanvases,
+      createCanvas, updateCanvas, deleteCanvas, getCanvasById, refreshCanvases, clearError,
+    }),
+    [canvases, isLoading, error, searchQuery, filteredCanvases,
+     createCanvas, updateCanvas, deleteCanvas, getCanvasById, refreshCanvases, clearError],
+  );
 }
-
-export function useCanvases(): CanvasContextType {
-  const context = useContext(CanvasContext);
-  if (context === undefined) {
-    throw new Error('useCanvases must be used within a CanvasProvider');
-  }
-  return context;
-}
-
-export { CanvasContext };
