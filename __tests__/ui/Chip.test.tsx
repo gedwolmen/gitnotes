@@ -1,14 +1,14 @@
 import React from 'react';
 import { Text } from 'react-native';
 import { render, fireEvent } from '@testing-library/react-native';
-import { NChip } from '../../src/components/neumorphic/NChip';
+import { Chip } from '../../src/components/ui/Chip';
 import { TestThemeProvider } from './testThemeProvider';
 
-describe('NChip', () => {
+describe('Chip', () => {
   it('renders a label', () => {
     const { getByText } = render(
       <TestThemeProvider>
-        <NChip label="React Native" />
+        <Chip label="React Native" />
       </TestThemeProvider>,
     );
     expect(getByText('React Native')).toBeTruthy();
@@ -18,7 +18,7 @@ describe('NChip', () => {
     const onPress = jest.fn();
     const { getByText } = render(
       <TestThemeProvider>
-        <NChip label="press" onPress={onPress} />
+        <Chip label="press" onPress={onPress} />
       </TestThemeProvider>,
     );
     fireEvent.press(getByText('press'));
@@ -28,7 +28,7 @@ describe('NChip', () => {
   it('renders the active state without crashing', () => {
     const { getByText } = render(
       <TestThemeProvider mode="light">
-        <NChip label="active" active />
+        <Chip label="active" active />
       </TestThemeProvider>,
     );
     expect(getByText('active')).toBeTruthy();
@@ -37,14 +37,14 @@ describe('NChip', () => {
   it('snapshots inactive + active', () => {
     const inactive = render(
       <TestThemeProvider>
-        <NChip label="tag" />
+        <Chip label="tag" />
       </TestThemeProvider>,
     ).toJSON();
     expect(inactive).toMatchSnapshot('chip-inactive');
 
     const active = render(
       <TestThemeProvider>
-        <NChip label="tag" active />
+        <Chip label="tag" active />
       </TestThemeProvider>,
     ).toJSON();
     expect(active).toMatchSnapshot('chip-active');
@@ -53,9 +53,9 @@ describe('NChip', () => {
   it('renders children alongside the label', () => {
     const { getByText } = render(
       <TestThemeProvider>
-        <NChip label="parent">
+        <Chip label="parent">
           <Text>child</Text>
-        </NChip>
+        </Chip>
       </TestThemeProvider>,
     );
     expect(getByText('parent')).toBeTruthy();

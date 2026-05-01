@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
-exports[`NCard snapshots non-interactive light 1`] = `
+exports[`Card snapshots non-interactive light 1`] = `
 <View
   style={
     [

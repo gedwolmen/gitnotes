@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
-exports[`NToggle snapshots both states: toggle-off 1`] = `
+exports[`Toggle snapshots both states: toggle-off 1`] = `
 <View
   accessibilityState={
     {
@@ -142,7 +142,7 @@ exports[`NToggle snapshots both states: toggle-off 1`] = `
 </View>
 `;
 
-exports[`NToggle snapshots both states: toggle-on 1`] = `
+exports[`Toggle snapshots both states: toggle-on 1`] = `
 <View
   accessibilityState={
     {

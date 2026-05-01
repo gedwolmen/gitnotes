@@ -1,14 +1,14 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import { NButton } from '../../src/components/neumorphic/NButton';
+import { Button } from '../../src/components/ui/Button';
 import { TestThemeProvider } from './testThemeProvider';
 
-describe('NButton', () => {
+describe('Button', () => {
   it('renders the label and fires onPress', () => {
     const onPress = jest.fn();
     const { getByText } = render(
       <TestThemeProvider>
-        <NButton label="Tap me" onPress={onPress} />
+        <Button label="Tap me" onPress={onPress} />
       </TestThemeProvider>,
     );
     fireEvent.press(getByText('Tap me'));
@@ -19,7 +19,7 @@ describe('NButton', () => {
     for (const variant of ['primary', 'secondary', 'ghost'] as const) {
       const { getByText } = render(
         <TestThemeProvider>
-          <NButton label={variant} variant={variant} />
+          <Button label={variant} variant={variant} />
         </TestThemeProvider>,
       );
       expect(getByText(variant)).toBeTruthy();
@@ -30,7 +30,7 @@ describe('NButton', () => {
     const onPress = jest.fn();
     const { getByText } = render(
       <TestThemeProvider>
-        <NButton label="No-go" onPress={onPress} disabled />
+        <Button label="No-go" onPress={onPress} disabled />
       </TestThemeProvider>,
     );
     fireEvent.press(getByText('No-go'));
@@ -40,14 +40,14 @@ describe('NButton', () => {
   it('snapshots primary in light + dark', () => {
     const light = render(
       <TestThemeProvider mode="light">
-        <NButton label="Save" variant="primary" />
+        <Button label="Save" variant="primary" />
       </TestThemeProvider>,
     ).toJSON();
     expect(light).toMatchSnapshot('primary-light');
 
     const dark = render(
       <TestThemeProvider mode="dark">
-        <NButton label="Save" variant="primary" />
+        <Button label="Save" variant="primary" />
       </TestThemeProvider>,
     ).toJSON();
     expect(dark).toMatchSnapshot('primary-dark');

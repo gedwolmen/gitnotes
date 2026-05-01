@@ -1,21 +1,21 @@
 import React from 'react';
 import { Text } from 'react-native';
 import { render, fireEvent } from '@testing-library/react-native';
-import { NGroup, NGroupRow } from '../../src/components/neumorphic/NGroup';
+import { Group, GroupRow } from '../../src/components/ui/Group';
 import { TestThemeProvider } from './testThemeProvider';
 
-describe('NGroup', () => {
+describe('Group', () => {
   it('renders title + children inside a single Surface', () => {
     const { getByText } = render(
       <TestThemeProvider>
-        <NGroup title="Settings">
-          <NGroupRow>
+        <Group title="Settings">
+          <GroupRow>
             <Text>Theme</Text>
-          </NGroupRow>
-          <NGroupRow>
+          </GroupRow>
+          <GroupRow>
             <Text>Account</Text>
-          </NGroupRow>
-        </NGroup>
+          </GroupRow>
+        </Group>
       </TestThemeProvider>,
     );
     expect(getByText('Settings')).toBeTruthy();
@@ -26,25 +26,25 @@ describe('NGroup', () => {
   it('renders footer below the surface', () => {
     const { getByText } = render(
       <TestThemeProvider>
-        <NGroup title="A" footer="below">
-          <NGroupRow>
+        <Group title="A" footer="below">
+          <GroupRow>
             <Text>row</Text>
-          </NGroupRow>
-        </NGroup>
+          </GroupRow>
+        </Group>
       </TestThemeProvider>,
     );
     expect(getByText('below')).toBeTruthy();
   });
 
-  it('NGroupRow fires onPress when interactive', () => {
+  it('GroupRow fires onPress when interactive', () => {
     const onPress = jest.fn();
     const { getByText } = render(
       <TestThemeProvider>
-        <NGroup>
-          <NGroupRow onPress={onPress}>
+        <Group>
+          <GroupRow onPress={onPress}>
             <Text>press</Text>
-          </NGroupRow>
-        </NGroup>
+          </GroupRow>
+        </Group>
       </TestThemeProvider>,
     );
     fireEvent.press(getByText('press'));
@@ -54,14 +54,14 @@ describe('NGroup', () => {
   it('snapshots a 2-row group', () => {
     const tree = render(
       <TestThemeProvider>
-        <NGroup title="A">
-          <NGroupRow>
+        <Group title="A">
+          <GroupRow>
             <Text>one</Text>
-          </NGroupRow>
-          <NGroupRow>
+          </GroupRow>
+          <GroupRow>
             <Text>two</Text>
-          </NGroupRow>
-        </NGroup>
+          </GroupRow>
+        </Group>
       </TestThemeProvider>,
     ).toJSON();
     expect(tree).toMatchSnapshot();
