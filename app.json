@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "GitNotes",
+    "name": "GitNotēs",
     "slug": "gitnotes",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -16,11 +16,12 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.vidwadeseram.gitnotes",
+      "bundleIdentifier": "com.xaventra.gitnotes",
       "scheme": "gitnotes",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "GitNotes needs access to your photo library to attach images to notes.",
-        "NSMicrophoneUsageDescription": "GitNotes needs access to your microphone for voice-to-text note input."
+        "NSMicrophoneUsageDescription": "GitNotes needs access to your microphone for voice-to-text note input.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -29,7 +30,10 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.gitnotes.app",
-      "scheme": "gitnotes"
+      "scheme": "gitnotes",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
