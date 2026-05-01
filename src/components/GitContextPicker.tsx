@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { GitBranch, GitCommit, GitService } from '../services/GitService';
+import { GitBranch, GitService } from '../services/GitService';
 import { useRepos } from '../contexts/RepoContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { HapticService } from '../utils/haptics';
@@ -27,30 +27,27 @@ interface GitContextPickerProps {
   onCommitChange: (commit: string | undefined) => void;
 }
 
-interface BottomSheetProps {
+interface SheetProps {
   visible: boolean;
   title: string;
   onClose: () => void;
   children: React.ReactNode;
 }
 
-function BottomSheet({ visible, title, onClose, children }: BottomSheetProps) {
+function ListSheet({ visible, title, onClose, children }: SheetProps) {
   const { colors } = useTheme();
   return (
     <Modal
       visible={visible}
       onRequestClose={onClose}
-      fullWidth
-      contentStyle={styles.modalContent}
+      bottomSheet
+      contentStyle={{ height: '85%' }}
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.sheetContainer}
       >
-        <SafeAreaView
-          edges={['bottom']}
-          style={[styles.sheet, { backgroundColor: colors.surface }]}
-        >
+        <SafeAreaView edges={['bottom']} style={styles.sheet}>
           <View style={[styles.sheetHeader, { borderBottomColor: colors.border }]}>
             <Text style={[styles.sheetTitle, { color: colors.text }]}>{title}</Text>
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -67,7 +64,6 @@ function BottomSheet({ visible, title, onClose, children }: BottomSheetProps) {
 export default function GitContextPicker({
   repo,
   branch,
-  commit,
   onRepoChange,
   onBranchChange,
   onCommitChange,
@@ -76,15 +72,12 @@ export default function GitContextPicker({
   const [isLoading, setIsLoading] = useState(false);
   const { repositories } = useRepos();
   const [branches, setBranches] = useState<GitBranch[]>([]);
-  const [commits, setCommits] = useState<GitCommit[]>([]);
 
   const [showRepoModal, setShowRepoModal] = useState(false);
   const [showBranchModal, setShowBranchModal] = useState(false);
-  const [showCommitModal, setShowCommitModal] = useState(false);
 
   const [repoSearch, setRepoSearch] = useState('');
   const [branchInput, setBranchInput] = useState('');
-  const [commitInput, setCommitInput] = useState('');
 
   const { colors } = useTheme();
 
@@ -133,34 +126,6 @@ export default function GitContextPicker({
     }
   }, [repo]);
 
-  const openCommitModal = useCallback(async () => {
-    if (!repo) return;
-    setCommitInput('');
-    setIsExpanded(false);
-    setShowCommitModal(true);
-    setIsLoading(true);
-    try {
-      setCommits(await GitService.getCommits(repo, branch));
-    } catch {
-      setCommits([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [repo, branch]);
-
-  const refreshCommits = useCallback(async () => {
-    if (!repo) return;
-    setIsLoading(true);
-    try {
-      await GitService.clearCache();
-      setCommits(await GitService.getCommits(repo, branch));
-    } catch {
-      setCommits([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [repo, branch]);
-
   const openContextModal = useCallback(() => {
     setIsExpanded(true);
   }, []);
@@ -196,75 +161,54 @@ export default function GitContextPicker({
         <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
       </TouchableOpacity>
 
-      {/* Main context modal */}
+      {/* Main context popup (bottom sheet) */}
       <Modal
         visible={isExpanded}
         onRequestClose={closeContextModal}
-        fullWidth
-        contentStyle={styles.modalContent}
+        bottomSheet
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.sheetContainer}
-        >
-          <SafeAreaView
-            edges={['bottom']}
-            style={[styles.sheet, { backgroundColor: colors.surface }]}
-          >
-            <View style={[styles.sheetHeader, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.sheetTitle, { color: colors.text }]}>Git Context</Text>
-              <TouchableOpacity onPress={closeContextModal} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Ionicons name="close" size={24} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.content}>
-              <TouchableOpacity style={styles.selector} onPress={openRepoModal}>
-                <Text style={[styles.selectorLabel, { color: colors.textSecondary }]}>Repository</Text>
+        <SafeAreaView edges={['bottom']} style={styles.sheet}>
+          <View style={[styles.sheetHeader, { borderBottomColor: colors.border }]}>
+            <Text style={[styles.sheetTitle, { color: colors.text }]}>Git Context</Text>
+            <TouchableOpacity onPress={closeContextModal} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close" size={24} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.content}>
+            <TouchableOpacity style={styles.selector} onPress={openRepoModal}>
+              <Text style={[styles.selectorLabel, { color: colors.textSecondary }]}>Repository</Text>
+              <View style={[styles.selectorValue, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Text style={repo ? [styles.valueText, { color: colors.text }] : [styles.placeholderText, { color: colors.textSecondary }]}>
+                  {repo || 'Select repository'}
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+              </View>
+            </TouchableOpacity>
+
+            {repo && (
+              <TouchableOpacity style={styles.selector} onPress={openBranchModal}>
+                <Text style={[styles.selectorLabel, { color: colors.textSecondary }]}>Branch</Text>
                 <View style={[styles.selectorValue, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                  <Text style={repo ? [styles.valueText, { color: colors.text }] : [styles.placeholderText, { color: colors.textSecondary }]}>
-                    {repo || 'Select repository'}
+                  <Text style={branch ? [styles.valueText, { color: colors.text }] : [styles.placeholderText, { color: colors.textSecondary }]}>
+                    {branch || 'Select branch'}
                   </Text>
                   <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
                 </View>
               </TouchableOpacity>
+            )}
 
-              {repo && (
-                <TouchableOpacity style={styles.selector} onPress={openBranchModal}>
-                  <Text style={[styles.selectorLabel, { color: colors.textSecondary }]}>Branch</Text>
-                  <View style={[styles.selectorValue, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    <Text style={branch ? [styles.valueText, { color: colors.text }] : [styles.placeholderText, { color: colors.textSecondary }]}>
-                      {branch || 'Select branch'}
-                    </Text>
-                    <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-                  </View>
-                </TouchableOpacity>
-              )}
-
-              {repo && branch && (
-                <TouchableOpacity style={styles.selector} onPress={openCommitModal}>
-                  <Text style={[styles.selectorLabel, { color: colors.textSecondary }]}>Commit</Text>
-                  <View style={[styles.selectorValue, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    <Text style={commit ? [styles.valueText, { color: colors.text }] : [styles.placeholderText, { color: colors.textSecondary }]}>
-                      {commit ? commit.substring(0, 7) : 'Select commit (optional)'}
-                    </Text>
-                    <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-                  </View>
-                </TouchableOpacity>
-              )}
-
-              {(repo || branch || commit) && (
-                <TouchableOpacity style={styles.clearButton} onPress={handleClearContext}>
-                  <Ionicons name="trash-outline" size={16} color={colors.error} />
-                  <Text style={[styles.clearButtonText, { color: colors.error }]}>Clear Git Context</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </SafeAreaView>
-        </KeyboardAvoidingView>
+            {(repo || branch) && (
+              <TouchableOpacity style={styles.clearButton} onPress={handleClearContext}>
+                <Ionicons name="trash-outline" size={16} color={colors.error} />
+                <Text style={[styles.clearButtonText, { color: colors.error }]}>Clear Git Context</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </SafeAreaView>
       </Modal>
 
       {/* Repo modal */}
-      <BottomSheet visible={showRepoModal} title="Select Repository" onClose={() => setShowRepoModal(false)}>
+      <ListSheet visible={showRepoModal} title="Select Repository" onClose={() => setShowRepoModal(false)}>
         <View style={[styles.searchRow, { borderBottomColor: colors.border }]}>
           <Ionicons name="search" size={16} color={colors.textSecondary} style={styles.searchIcon} />
           <TextInput
@@ -320,10 +264,10 @@ export default function GitContextPicker({
             )}
           />
         )}
-      </BottomSheet>
+      </ListSheet>
 
       {/* Branch modal */}
-      <BottomSheet visible={showBranchModal} title="Select Branch" onClose={() => setShowBranchModal(false)}>
+      <ListSheet visible={showBranchModal} title="Select Branch" onClose={() => setShowBranchModal(false)}>
         <View style={[styles.inputRow, { borderBottomColor: colors.border }]}>
           <TextInput
             style={[styles.textInput, { color: colors.text, borderColor: colors.border }]}
@@ -383,66 +327,7 @@ export default function GitContextPicker({
             )}
           />
         )}
-      </BottomSheet>
-
-      {/* Commit modal */}
-      <BottomSheet visible={showCommitModal} title="Select Commit" onClose={() => setShowCommitModal(false)}>
-        <View style={[styles.inputRow, { borderBottomColor: colors.border }]}>
-          <TextInput
-            style={[styles.textInput, { color: colors.text, borderColor: colors.border }]}
-            placeholder="Paste commit hash (e.g. 4b825dc)"
-            placeholderTextColor={colors.textSecondary}
-            value={commitInput}
-            onChangeText={setCommitInput}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          <TouchableOpacity
-            style={[styles.useButton, { backgroundColor: colors.primary }, !commitInput.trim() && styles.useButtonDisabled]}
-            onPress={() => {
-              if (!commitInput.trim()) return;
-              HapticService.selection();
-              onCommitChange(commitInput.trim());
-              setCommitInput('');
-              setShowCommitModal(false);
-            }}
-            disabled={!commitInput.trim()}
-          >
-            <Text style={styles.useButtonText}>Use</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={refreshCommits} style={styles.iconButton}>
-            <Ionicons name="refresh" size={20} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
-        {isLoading ? (
-          <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
-        ) : commits.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={[styles.emptyText, { color: colors.text }]}>No commits found</Text>
-          </View>
-        ) : (
-          <FlatList
-            data={commits}
-            keyExtractor={(item) => item.hash}
-            keyboardShouldPersistTaps="handled"
-            style={styles.list}
-            contentContainerStyle={styles.listContent}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[styles.commitItem, { borderBottomColor: colors.border }]}
-                onPress={() => {
-                  HapticService.selection();
-                  onCommitChange(item.hash);
-                  setShowCommitModal(false);
-                }}
-              >
-                <Text style={[styles.commitHash, { color: colors.primary }]}>{item.shortHash}</Text>
-                <Text style={[styles.commitMessage, { color: colors.text }]} numberOfLines={1}>{item.message}</Text>
-              </TouchableOpacity>
-            )}
-          />
-        )}
-      </BottomSheet>
+      </ListSheet>
     </View>
   );
 }

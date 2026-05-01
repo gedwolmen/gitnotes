@@ -11,10 +11,19 @@ export interface ModalProps {
   contentStyle?: StyleProp<ViewStyle>;
   children?: ReactNode;
   fullWidth?: boolean;
+  bottomSheet?: boolean;
 }
 
 export function Modal(props: ModalProps) {
-  const { visible, onRequestClose, dismissOnBackdrop = true, contentStyle, children, fullWidth = false } = props;
+  const {
+    visible,
+    onRequestClose,
+    dismissOnBackdrop = true,
+    contentStyle,
+    children,
+    fullWidth = false,
+    bottomSheet = false,
+  } = props;
   const { isDark } = useTheme();
   const { spacing, colors } = useTokens();
   const { height: viewportHeight, width: viewportWidth } = useWindowDimensions();
@@ -23,11 +32,32 @@ export function Modal(props: ModalProps) {
   const slotHeight = Math.max(0, viewportHeight - pad * 2);
   const slotWidth = Math.max(0, viewportWidth - pad * 2);
 
+  const surfaceStyle: ViewStyle = bottomSheet
+    ? {
+        backgroundColor: colors.elevated,
+        maxHeight: slotHeight,
+        overflow: 'hidden',
+        borderBottomLeftRadius: 0,
+        borderBottomRightRadius: 0,
+      }
+    : fullWidth
+    ? {
+        padding: pad,
+        maxHeight: slotHeight,
+        backgroundColor: colors.elevated,
+        overflow: 'hidden',
+      }
+    : {
+        padding: pad,
+        maxHeight: slotHeight,
+        backgroundColor: colors.elevated,
+      };
+
   return (
     <RNModal
       visible={visible}
       transparent
-      animationType="fade"
+      animationType={bottomSheet ? 'slide' : 'fade'}
       onRequestClose={onRequestClose}
       statusBarTranslucent
     >
@@ -40,23 +70,42 @@ export function Modal(props: ModalProps) {
         onPress={dismissOnBackdrop ? onRequestClose : undefined}
         style={[
           StyleSheet.absoluteFill,
-          { backgroundColor: 'rgba(0,0,0,0.18)', alignItems: 'center', justifyContent: 'center', padding: pad },
+          bottomSheet
+            ? {
+                backgroundColor: 'rgba(0,0,0,0.18)',
+                justifyContent: 'flex-end',
+                alignItems: 'stretch',
+              }
+            : {
+                backgroundColor: 'rgba(0,0,0,0.18)',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: pad,
+              },
         ]}
       >
         <Pressable
           onPress={() => undefined}
-          style={{
-            width: fullWidth ? slotWidth : undefined,
-            maxWidth: 480,
-            height: slotHeight,
-            alignItems: 'stretch',
-            justifyContent: 'center',
-          }}
+          style={
+            bottomSheet
+              ? {
+                  width: '100%',
+                  height: slotHeight,
+                  justifyContent: 'flex-end',
+                }
+              : {
+                  width: fullWidth ? slotWidth : undefined,
+                  maxWidth: 480,
+                  height: slotHeight,
+                  alignItems: 'stretch',
+                  justifyContent: 'center',
+                }
+          }
         >
           <Surface
             elevation="floating"
             radius="lg"
-            style={[{ padding: pad, maxHeight: slotHeight, backgroundColor: colors.elevated }, contentStyle]}
+            style={[surfaceStyle, contentStyle]}
           >
             {children}
           </Surface>
