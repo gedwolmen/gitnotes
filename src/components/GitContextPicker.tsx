@@ -16,7 +16,7 @@ import { GitBranch, GitCommit, GitService } from '../services/GitService';
 import { useRepos } from '../contexts/RepoContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { HapticService } from '../utils/haptics';
-import { NModal } from './neumorphic';
+import { Modal } from './ui';
 
 interface GitContextPickerProps {
   repo?: string;
@@ -37,7 +37,7 @@ interface BottomSheetProps {
 function BottomSheet({ visible, title, onClose, children }: BottomSheetProps) {
   const { colors } = useTheme();
   return (
-    <NModal
+    <Modal
       visible={visible}
       onRequestClose={onClose}
       fullWidth
@@ -60,7 +60,7 @@ function BottomSheet({ visible, title, onClose, children }: BottomSheetProps) {
           {children}
         </SafeAreaView>
       </KeyboardAvoidingView>
-    </NModal>
+    </Modal>
   );
 }
 
@@ -197,7 +197,7 @@ export default function GitContextPicker({
       </TouchableOpacity>
 
       {/* Main context modal */}
-      <NModal
+      <Modal
         visible={isExpanded}
         onRequestClose={closeContextModal}
         fullWidth
@@ -261,7 +261,7 @@ export default function GitContextPicker({
             </View>
           </SafeAreaView>
         </KeyboardAvoidingView>
-      </NModal>
+      </Modal>
 
       {/* Repo modal */}
       <BottomSheet visible={showRepoModal} title="Select Repository" onClose={() => setShowRepoModal(false)}>

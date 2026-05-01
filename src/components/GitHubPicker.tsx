@@ -17,7 +17,7 @@ import { GitHubService, GitHubRepository, GitHubIssue, GitHubMilestone, GitHubPu
 import { useTheme } from '../contexts/ThemeContext';
 import { HapticService } from '../utils/haptics';
 import { Note } from '../models/Note';
-import { NModal } from './neumorphic';
+import { Modal } from './ui';
 
 interface GitHubPickerProps {
   value?: Note['github'];
@@ -36,7 +36,7 @@ interface BottomSheetProps {
 function BottomSheet({ visible, title, onClose, children }: BottomSheetProps) {
   const { colors } = useTheme();
   return (
-    <NModal
+    <Modal
       visible={visible}
       onRequestClose={onClose}
       fullWidth
@@ -59,7 +59,7 @@ function BottomSheet({ visible, title, onClose, children }: BottomSheetProps) {
           {children}
         </SafeAreaView>
       </KeyboardAvoidingView>
-    </NModal>
+    </Modal>
   );
 }
 

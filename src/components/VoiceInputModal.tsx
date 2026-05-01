@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { NModal } from './neumorphic';
+import { Modal } from './ui';
 
 let speechModule: {
   start: (opts: Record<string, unknown>) => Promise<void>;
@@ -157,7 +157,7 @@ export default function VoiceInputModal({ visible, onDone, onClose }: VoiceInput
 
   if (!speechModule) {
     return (
-      <NModal
+      <Modal
         visible={visible}
         onRequestClose={onClose}
         fullWidth
@@ -176,12 +176,12 @@ export default function VoiceInputModal({ visible, onDone, onClose }: VoiceInput
             <Text style={styles.statusText}>Speech recognition not available on this device</Text>
           </View>
         </SafeAreaView>
-      </NModal>
+      </Modal>
     );
   }
 
   return (
-    <NModal
+    <Modal
       visible={visible}
       onRequestClose={handleCancel}
       fullWidth
@@ -235,7 +235,7 @@ export default function VoiceInputModal({ visible, onDone, onClose }: VoiceInput
           </ScrollView>
         </View>
       </SafeAreaView>
-    </NModal>
+    </Modal>
   );
 }
 

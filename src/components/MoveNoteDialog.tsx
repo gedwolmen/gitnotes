@@ -23,7 +23,7 @@ import { HapticService } from '../utils/haptics';
 import { Note, deriveFolderPath } from '../models/Note';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { DragDropBoundary, useDragDrop, useDropTarget } from './dragdrop/DragDropContext';
-import { NModal } from './neumorphic';
+import { Modal } from './ui';
 
 interface MoveNoteDialogProps {
   visible: boolean;
@@ -457,7 +457,7 @@ export default function MoveNoteDialog({ visible, note, onClose, onMoved }: Move
   const fileName = note?.filePath?.split('/').pop() || 'note.md';
 
   return (
-    <NModal
+    <Modal
       visible={visible}
       onRequestClose={onClose}
       fullWidth
@@ -576,7 +576,7 @@ export default function MoveNoteDialog({ visible, note, onClose, onMoved }: Move
           )}
         </SafeAreaView>
       </DragDropBoundary>
-    </NModal>
+    </Modal>
   );
 }
 

@@ -15,7 +15,7 @@ import { Folder } from '../models/Folder';
 import { useTheme } from '../contexts/ThemeContext';
 import { useFolders } from '../contexts/FolderContext';
 import { HapticService } from '../utils/haptics';
-import { NModal } from './neumorphic';
+import { Modal } from './ui';
 
 interface FolderSelectionDialogProps {
   visible: boolean;
@@ -227,7 +227,7 @@ export default function FolderSelectionDialog({
   );
 
   return (
-    <NModal
+    <Modal
       visible={visible}
       onRequestClose={onClose}
       fullWidth
@@ -338,7 +338,7 @@ export default function FolderSelectionDialog({
           )}
         </ScrollView>
       </SafeAreaView>
-    </NModal>
+    </Modal>
   );
 }
 

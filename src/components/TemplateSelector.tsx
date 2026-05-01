@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator } from 'react-native';
 import { NoteTemplate, TemplateService } from '../services/TemplateService';
 import { useTheme } from '../contexts/ThemeContext';
-import { NModal } from './neumorphic';
+import { Modal } from './ui';
 
 interface TemplateSelectorProps {
   visible: boolean;
@@ -80,7 +80,7 @@ export default function TemplateSelector({ visible, onClose, onSelect }: Templat
   );
 
   return (
-    <NModal
+    <Modal
       visible={visible}
       onRequestClose={onClose}
       fullWidth
@@ -125,7 +125,7 @@ export default function TemplateSelector({ visible, onClose, onSelect }: Templat
           }
         />
       </View>
-    </NModal>
+    </Modal>
   );
 }
 
