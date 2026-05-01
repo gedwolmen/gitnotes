@@ -42,7 +42,7 @@ exports[`NToggle snapshots both states: toggle-off 1`] = `
     style={
       [
         {
-          "backgroundColor": "#E0E5EC",
+          "backgroundColor": "#FFFFFF",
           "borderRadius": 999,
         },
         {
@@ -78,7 +78,7 @@ exports[`NToggle snapshots both states: toggle-off 1`] = `
             "borderRadius": 999,
           },
           {
-            "shadowColor": "#A3B1C6",
+            "shadowColor": "#BFBFBF",
             "shadowOffset": {
               "height": -2,
               "width": -2,
@@ -122,11 +122,11 @@ exports[`NToggle snapshots both states: toggle-off 1`] = `
       <View
         style={
           {
-            "backgroundColor": "#E0E5EC",
+            "backgroundColor": "#FFFFFF",
             "borderRadius": 11,
             "elevation": 2,
             "height": 22,
-            "shadowColor": "#A3B1C6",
+            "shadowColor": "#BFBFBF",
             "shadowOffset": {
               "height": 1,
               "width": 1,
@@ -184,7 +184,7 @@ exports[`NToggle snapshots both states: toggle-on 1`] = `
     style={
       [
         {
-          "backgroundColor": "#E0E5EC",
+          "backgroundColor": "#FFFFFF",
           "borderRadius": 999,
         },
         {
@@ -220,7 +220,7 @@ exports[`NToggle snapshots both states: toggle-on 1`] = `
             "borderRadius": 999,
           },
           {
-            "shadowColor": "#A3B1C6",
+            "shadowColor": "#BFBFBF",
             "shadowOffset": {
               "height": -2,
               "width": -2,
@@ -264,11 +264,11 @@ exports[`NToggle snapshots both states: toggle-on 1`] = `
       <View
         style={
           {
-            "backgroundColor": "#E0E5EC",
+            "backgroundColor": "#FFFFFF",
             "borderRadius": 11,
             "elevation": 2,
             "height": 22,
-            "shadowColor": "#A3B1C6",
+            "shadowColor": "#BFBFBF",
             "shadowOffset": {
               "height": 1,
               "width": 1,

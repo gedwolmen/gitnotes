@@ -53,11 +53,11 @@ exports[`NButton snapshots primary in light + dark: primary-dark 1`] = `
       style={
         [
           {
-            "backgroundColor": "#2A2D3A",
+            "backgroundColor": "#000000",
             "borderRadius": 18,
           },
           {
-            "shadowColor": "#1F2129",
+            "shadowColor": "#000000",
             "shadowOffset": {
               "height": 4,
               "width": 4,
@@ -93,7 +93,7 @@ exports[`NButton snapshots primary in light + dark: primary-dark 1`] = `
               "borderRadius": 18,
             },
             {
-              "shadowColor": "#353945",
+              "shadowColor": "#1F1F1F",
               "shadowOffset": {
                 "height": -4,
                 "width": -4,
@@ -118,7 +118,7 @@ exports[`NButton snapshots primary in light + dark: primary-dark 1`] = `
           style={
             [
               {
-                "color": "#8B9BE8",
+                "color": "#F2F2F7",
                 "fontSize": 16,
                 "fontWeight": "600",
               },
@@ -187,11 +187,11 @@ exports[`NButton snapshots primary in light + dark: primary-light 1`] = `
       style={
         [
           {
-            "backgroundColor": "#E0E5EC",
+            "backgroundColor": "#FFFFFF",
             "borderRadius": 18,
           },
           {
-            "shadowColor": "#A3B1C6",
+            "shadowColor": "#BFBFBF",
             "shadowOffset": {
               "height": 4,
               "width": 4,
@@ -252,7 +252,7 @@ exports[`NButton snapshots primary in light + dark: primary-light 1`] = `
           style={
             [
               {
-                "color": "#7B8CDE",
+                "color": "#1C1C1E",
                 "fontSize": 16,
                 "fontWeight": "600",
               },

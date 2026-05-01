@@ -5,7 +5,7 @@ exports[`NChip snapshots inactive + active: chip-active 1`] = `
   style={
     [
       {
-        "backgroundColor": "#E0E5EC",
+        "backgroundColor": "#FFFFFF",
         "borderRadius": 999,
       },
       {
@@ -45,7 +45,7 @@ exports[`NChip snapshots inactive + active: chip-active 1`] = `
           "borderRadius": 999,
         },
         {
-          "shadowColor": "#A3B1C6",
+          "shadowColor": "#BFBFBF",
           "shadowOffset": {
             "height": -2,
             "width": -2,
@@ -59,7 +59,7 @@ exports[`NChip snapshots inactive + active: chip-active 1`] = `
   <Text
     style={
       {
-        "color": "#7B8CDE",
+        "color": "#1C1C1E",
         "fontSize": 14,
         "fontWeight": "600",
       }
@@ -75,11 +75,11 @@ exports[`NChip snapshots inactive + active: chip-inactive 1`] = `
   style={
     [
       {
-        "backgroundColor": "#E0E5EC",
+        "backgroundColor": "#FFFFFF",
         "borderRadius": 999,
       },
       {
-        "shadowColor": "#A3B1C6",
+        "shadowColor": "#BFBFBF",
         "shadowOffset": {
           "height": 2,
           "width": 2,
@@ -129,7 +129,7 @@ exports[`NChip snapshots inactive + active: chip-inactive 1`] = `
   <Text
     style={
       {
-        "color": "#2D3142",
+        "color": "#1C1C1E",
         "fontSize": 14,
         "fontWeight": "500",
       }
