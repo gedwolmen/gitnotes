@@ -49,6 +49,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     refreshAuth()
       .then(() => GitHubService.initialize())
+      .catch((err) => {
+        console.warn('[AuthContext] auth bootstrap failed:', err);
+      })
       .finally(() => setIsLoading(false));
   }, []);
 
