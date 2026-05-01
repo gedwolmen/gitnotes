@@ -196,7 +196,7 @@ export class ShareService {
       let combinedContent = '';
 
       if (format === 'markdown') {
-        combinedContent += '# GitNotes Export\n\n';
+        combinedContent += '# GitNotēs Export\n\n';
         combinedContent += `Exported ${notes.length} notes on ${new Date().toLocaleDateString()}\n\n`;
         combinedContent += '---\n\n';
       }

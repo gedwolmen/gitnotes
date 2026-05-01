@@ -23,7 +23,7 @@ interface OnboardingScreenProps {
 
 const INFO_STEPS = [
   {
-    title: 'Welcome to GitNotes',
+    title: 'Welcome to GitNotēs',
     description: 'Your development notes, perfectly organized with Git integration.',
     icon: 'journal-outline' as const,
   },
