@@ -15,7 +15,7 @@ export interface IconButtonProps {
   size?: IconButtonSize;
   disabled?: boolean;
   active?: boolean;
-  variant?: 'default' | 'primary';
+  variant?: 'default' | 'primary' | 'ghost';
   style?: StyleProp<ViewStyle>;
   testID?: string;
   accessibilityLabel?: string;
@@ -43,8 +43,10 @@ export function IconButton(props: IconButtonProps) {
   const handlePressIn = useCallback(() => {
     scale.value = withSpring(0.94, { mass: 0.4, damping: 14, stiffness: 240 });
     setIsPressed(true);
-    Haptics.selectionAsync().catch(() => undefined);
-  }, [scale]);
+    if (variant !== 'ghost') {
+      Haptics.selectionAsync().catch(() => undefined);
+    }
+  }, [scale, variant]);
 
   const handlePressOut = useCallback(() => {
     scale.value = withSpring(1, { mass: 0.4, damping: 14, stiffness: 240 });
@@ -52,6 +54,36 @@ export function IconButton(props: IconButtonProps) {
   }, [scale]);
 
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  if (variant === 'ghost') {
+    return (
+      <Animated.View style={[{ opacity: disabled ? 0.5 : 1 }, animatedStyle]}>
+        <Pressable
+          testID={testID}
+          accessibilityLabel={accessibilityLabel}
+          accessibilityRole="button"
+          onPress={disabled ? undefined : onPress}
+          onLongPress={disabled ? undefined : onLongPress}
+          onPressIn={disabled ? undefined : handlePressIn}
+          onPressOut={disabled ? undefined : handlePressOut}
+          disabled={disabled}
+          hitSlop={4}
+          style={[
+            {
+              width: dim,
+              height: dim,
+              alignItems: 'center',
+              justifyContent: 'center',
+            },
+            style,
+          ]}
+        >
+          {children}
+        </Pressable>
+      </Animated.View>
+    );
+  }
+
   const inset = isPressed || active;
   const elevation = variant === 'primary' ? 'raised' : 'raised';
 
