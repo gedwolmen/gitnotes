@@ -185,7 +185,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <NScreenHeader title="GitNotes" subtitle="Your development notes, organized." />
+      <NScreenHeader title="GitNotēs" subtitle="Your development notes, organized." />
       <ScrollView style={styles.container} contentContainerStyle={[styles.content, isTablet && { maxWidth: maxContentWidth, alignSelf: 'center', width: '100%' }]} showsVerticalScrollIndicator={false}>
       <View style={{ gap: 12, marginBottom: 24 }}>
         <NButton
