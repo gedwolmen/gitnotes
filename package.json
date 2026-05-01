@@ -53,9 +53,9 @@
     "react-native-worklets": "0.5.1"
   },
   "devDependencies": {
+    "@babel/core": "^7.26.0",
     "@babel/preset-env": "^7.29.3",
     "@babel/preset-typescript": "^7.28.5",
-    "@testing-library/jest-native": "^5.4.3",
     "@testing-library/react-native": "^13.3.3",
     "@types/jest": "^30.0.0",
     "@types/react": "~19.1.10",
