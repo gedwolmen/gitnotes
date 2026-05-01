@@ -24,6 +24,7 @@ import { Ionicons } from "@expo/vector-icons";
 import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 
 import { useNotes } from "../contexts/NoteContext";
+import { useNoteStore } from "../stores/noteStore";
 import { useTheme } from "../contexts/ThemeContext";
 import { useViewMode } from "../contexts/ViewModeContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -286,7 +287,7 @@ export default function NotesListScreen() {
           style: "destructive",
           onPress: async () => {
             if (!(await deleteNote(note.id))) {
-              Alert.alert("Error", "Failed to delete note");
+              Alert.alert("Error", useNoteStore.getState().error || "Failed to delete note");
               return;
             }
             HapticService.success();
@@ -1267,7 +1268,7 @@ export default function NotesListScreen() {
                       destructive: true,
                       onPress: async () => {
                         if (!(await deleteNote(longPressedNote.id))) {
-                          Alert.alert("Error", "Failed to delete note");
+                          Alert.alert("Error", useNoteStore.getState().error || "Failed to delete note");
                         }
                       },
                     },

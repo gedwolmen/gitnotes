@@ -100,6 +100,53 @@ async function uploadLocalImages(
   return updatedContent;
 }
 
+export async function deleteNoteFromGitHub(params: {
+  repo: string;
+  branch?: string;
+  filePath: string;
+  title?: string;
+}): Promise<NoteGitHubSyncResult> {
+  const { repo: repoPath, branch, filePath, title } = params;
+
+  if (!GitHubService.isAuthenticated()) {
+    return { success: false, error: 'GitHub not authenticated' };
+  }
+
+  const repoInfo = parseRepoPath(repoPath);
+  if (!repoInfo) {
+    return { success: false, error: `Invalid repo path: ${repoPath}` };
+  }
+
+  const targetBranch = branch || 'main';
+
+  try {
+    const sha = await GitHubService.getFileSha(repoInfo.owner, repoInfo.repo, filePath, targetBranch);
+    if (!sha) {
+      // File already gone on remote; treat as success so local delete proceeds.
+      return { success: true, filePath };
+    }
+
+    const result = await GitHubService.deleteFile(
+      repoInfo.owner,
+      repoInfo.repo,
+      filePath,
+      `Delete note: ${title || filePath}`,
+      sha,
+      targetBranch,
+    );
+
+    if (result) {
+      return { success: true, filePath };
+    }
+    return { success: false, error: 'GitHub API returned no result' };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
 export async function syncNoteToGitHub(params: {
   repo: string;
   branch?: string;

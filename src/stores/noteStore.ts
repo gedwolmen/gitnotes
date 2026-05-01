@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { Note, NoteCreateInput, NoteUpdateInput, sortNotesWithPinnedFirst, filterNotesBySearch } from '../models/Note';
 import { StorageService } from '../services/StorageService';
+import { deleteNoteFromGitHub } from '../services/NoteGitHubSyncService';
+import { GitHubService } from '../services/GitHubService';
 
 interface NoteState {
   notes: Note[];
@@ -76,6 +78,25 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
   deleteNote: async (id) => {
     try {
       set({ error: null });
+
+      const note = get().notes.find((n) => n.id === id);
+      if (note?.repo && note.filePath) {
+        if (!GitHubService.isAuthenticated()) {
+          set({ error: 'Sign in to GitHub to delete synced notes' });
+          return false;
+        }
+        const remote = await deleteNoteFromGitHub({
+          repo: note.repo,
+          branch: note.branch,
+          filePath: note.filePath,
+          title: note.title,
+        });
+        if (!remote.success) {
+          set({ error: remote.error || 'Failed to delete from GitHub' });
+          return false;
+        }
+      }
+
       const success = await StorageService.deleteNote(id);
       if (success) {
         set((state) => ({ notes: state.notes.filter((note) => note.id !== id) }));
