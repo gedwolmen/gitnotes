@@ -452,7 +452,7 @@ export default function CanvasModal({ visible, onSave, onClose, editJsonUri }: C
         >
           {canvasSize && (
             <GestureDetector gesture={panGesture}>
-              <SkiaCanvas ref={canvasRef as any} style={{ width: canvasSize.width, height: canvasSize.height }}>
+              <SkiaCanvas ref={canvasRef} style={{ width: canvasSize.width, height: canvasSize.height }}>
                 <Fill color="white" />
                 {elements.map(renderElement)}
               </SkiaCanvas>

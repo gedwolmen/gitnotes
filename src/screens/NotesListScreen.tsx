@@ -572,7 +572,7 @@ export default function NotesListScreen() {
           }}
         >
           <Ionicons
-            name={VIEW_MODE_ICONS[viewMode] as any}
+            name={VIEW_MODE_ICONS[viewMode]}
             size={20}
             color={colors.primary}
           />
@@ -802,7 +802,7 @@ export default function NotesListScreen() {
                   activeOpacity={0.7}
                 >
                   <Ionicons
-                    name={VIEW_MODE_ICONS[mode] as any}
+                    name={VIEW_MODE_ICONS[mode]}
                     size={22}
                     color={viewMode === mode ? colors.primary : colors.textSecondary}
                   />

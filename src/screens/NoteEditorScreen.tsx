@@ -446,7 +446,7 @@ export default function NoteEditorScreen() {
   }, [content]);
 
   const handleLinkCanvas = useCallback((canvasId: string, canvasTitle: string) => {
-    const link = canvasToLink({ id: canvasId } as any);
+    const link = canvasToLink({ id: canvasId });
     let linkText: string;
     if (noteFormat === 'neorg') {
       linkText = `\n{${link}}[${canvasTitle}]\n`;
