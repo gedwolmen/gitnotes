@@ -14,7 +14,7 @@ exports[`NGroup snapshots a 2-row group 1`] = `
   <Text
     style={
       {
-        "color": "#6B7280",
+        "color": "#6E6E73",
         "fontSize": 14,
         "fontWeight": "600",
         "letterSpacing": 0.6,
@@ -29,11 +29,11 @@ exports[`NGroup snapshots a 2-row group 1`] = `
     style={
       [
         {
-          "backgroundColor": "#E0E5EC",
+          "backgroundColor": "#FFFFFF",
           "borderRadius": 24,
         },
         {
-          "shadowColor": "#A3B1C6",
+          "shadowColor": "#BFBFBF",
           "shadowOffset": {
             "height": 4,
             "width": 4,
@@ -104,7 +104,7 @@ exports[`NGroup snapshots a 2-row group 1`] = `
     <View
       style={
         {
-          "backgroundColor": "#A3B1C6",
+          "backgroundColor": "#BFBFBF",
           "height": 1,
           "marginLeft": 16,
           "opacity": 0.18,

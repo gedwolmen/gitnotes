@@ -5,11 +5,11 @@ exports[`Surface snapshots a raised neumorphic Surface with a Text child 1`] = `
   style={
     [
       {
-        "backgroundColor": "#E0E5EC",
+        "backgroundColor": "#FFFFFF",
         "borderRadius": 18,
       },
       {
-        "shadowColor": "#A3B1C6",
+        "shadowColor": "#BFBFBF",
         "shadowOffset": {
           "height": 4,
           "width": 4,
