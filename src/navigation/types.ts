@@ -1,4 +1,4 @@
-export type RootStackParamList = {
+type ProductionStackParamList = {
   MainTabs: undefined;
   NoteEditor: { noteId?: string; format?: 'markdown' | 'neorg' | 'org'; initialTitle?: string; initialContent?: string; repo?: string; branch?: string; folderPath?: string };
   NoteViewer: { noteId: string };
@@ -8,8 +8,13 @@ export type RootStackParamList = {
   VideoViewer: { owner: string; repo: string; branch?: string; path: string; title?: string; size?: number };
   CanvasEditor: { canvasId?: string; canvasWidth?: number; canvasHeight?: number; canvasTitle?: string };
   CanvasList: undefined;
+};
+
+type DevOnlyStackParamList = {
   NeumorphicGallery: undefined;
 };
+
+export type RootStackParamList = ProductionStackParamList & DevOnlyStackParamList;
 
 export type BottomTabParamList = {
   HomeTab: undefined;

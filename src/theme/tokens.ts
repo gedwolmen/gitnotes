@@ -17,38 +17,41 @@ export interface Palette {
   card: string;
 }
 
+// Neumorphic palette uses a near-pure white (light) / black (dark) surface
+// with a slightly off-shade bg so the soft inner/outer shadows still read.
+// Pure mono-tone (surface === bg) flattens the depth illusion.
 export const NEUMORPHIC_LIGHT: Palette = {
-  bg: '#E0E5EC',
-  surface: '#E0E5EC',
+  bg: '#F2F2F2',
+  surface: '#FFFFFF',
   highlight: '#FFFFFF',
-  shadow: '#A3B1C6',
-  text: '#2D3142',
-  textSecondary: '#6B7280',
+  shadow: '#BFBFBF',
+  text: '#1C1C1E',
+  textSecondary: '#6E6E73',
   accent: '#7B8CDE',
   accentMuted: '#A8B3E5',
   error: '#E07A7A',
-  background: '#E0E5EC',
-  surfaceSecondary: '#D6DCE5',
+  background: '#F2F2F2',
+  surfaceSecondary: '#F5F5F5',
   primary: '#7B8CDE',
-  border: '#C4CBD7',
-  card: '#EAEEF4',
+  border: '#D8D8D8',
+  card: '#FFFFFF',
 };
 
 export const NEUMORPHIC_DARK: Palette = {
-  bg: '#2A2D3A',
-  surface: '#2A2D3A',
-  highlight: '#353945',
-  shadow: '#1F2129',
-  text: '#E4E6EB',
-  textSecondary: '#9097A6',
+  bg: '#0E0E0E',
+  surface: '#000000',
+  highlight: '#1F1F1F',
+  shadow: '#000000',
+  text: '#F2F2F7',
+  textSecondary: '#8E8E93',
   accent: '#8B9BE8',
   accentMuted: '#5A6BB5',
   error: '#E07A7A',
-  background: '#2A2D3A',
-  surfaceSecondary: '#323645',
+  background: '#0E0E0E',
+  surfaceSecondary: '#141414',
   primary: '#8B9BE8',
-  border: '#1F2129',
-  card: '#323645',
+  border: '#262626',
+  card: '#0A0A0A',
 };
 
 export const FLAT_LIGHT: Palette = {

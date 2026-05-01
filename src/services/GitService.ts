@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StorageService } from './StorageService';
 import { GitHubService } from './GitHubService';
+import { parseRepoPath } from '../utils/gitPathParser';
 
 export interface GitRepository {
   id: string;
@@ -89,16 +90,44 @@ export class GitService {
     }
   }
 
+  private static memCache = new Map<string, CacheEntry<unknown>>();
+  private static readonly MEM_CACHE_MAX = 64;
+
+  private static memCacheGet<T>(key: string): T | null {
+    const entry = this.memCache.get(key) as CacheEntry<T> | undefined;
+    if (!entry) return null;
+    if (Date.now() - entry.timestamp > CACHE_DURATION) {
+      this.memCache.delete(key);
+      return null;
+    }
+    // LRU touch: re-insert moves the key to the end of the iteration order.
+    this.memCache.delete(key);
+    this.memCache.set(key, entry);
+    return entry.data;
+  }
+
+  private static memCacheSet<T>(key: string, data: T): void {
+    this.memCache.set(key, { data, timestamp: Date.now() });
+    while (this.memCache.size > this.MEM_CACHE_MAX) {
+      const oldest = this.memCache.keys().next().value;
+      if (oldest === undefined) break;
+      this.memCache.delete(oldest);
+    }
+  }
+
   private static async getCachedData<T>(key: string): Promise<T | null> {
+    const memHit = this.memCacheGet<T>(key);
+    if (memHit !== null) return memHit;
     try {
       const cached = await AsyncStorage.getItem(CACHE_PREFIX + key);
       if (!cached) return null;
-      
+
       const entry: CacheEntry<T> = JSON.parse(cached);
       if (Date.now() - entry.timestamp > CACHE_DURATION) {
         await AsyncStorage.removeItem(CACHE_PREFIX + key);
         return null;
       }
+      this.memCacheSet(key, entry.data);
       return entry.data;
     } catch {
       return null;
@@ -106,6 +135,7 @@ export class GitService {
   }
 
   private static async setCachedData<T>(key: string, data: T): Promise<void> {
+    this.memCacheSet(key, data);
     try {
       const entry: CacheEntry<T> = {
         data,
@@ -115,20 +145,6 @@ export class GitService {
     } catch (error) {
       console.warn('[GitService] Failed to cache data:', error);
     }
-  }
-
-  private static parseRepoPath(repoPath: string): { owner: string; repo: string } | null {
-    // Handle formats: facebook/react, github.com/facebook/react, https://github.com/facebook/react
-    let cleaned = repoPath
-      .replace(/^https?:\/\/github\.com\//, '')
-      .replace(/^github\.com\//, '')
-      .trim();
-    
-    const parts = cleaned.split('/');
-    if (parts.length >= 2) {
-      return { owner: parts[0], repo: parts[1].replace(/\.git$/, '') };
-    }
-    return null;
   }
 
   private static async fetchFromGitHub<T>(url: string): Promise<T | null> {
@@ -160,17 +176,23 @@ export class GitService {
     const cached = await this.getCachedData<GitBranch[]>(cacheKey);
     if (cached) return cached;
 
-    const repoInfo = this.parseRepoPath(repoPath);
+    const repoInfo = parseRepoPath(repoPath);
     
     if (repoInfo) {
-      // Try GitHub API
-      const url = `${GITHUB_API_BASE}/repos/${repoInfo.owner}/${repoInfo.repo}/branches`;
-      const branches = await this.fetchFromGitHub<Array<{ name: string }>>(url);
-      
+      // Try GitHub API. Branches list is alphabetical, so determining
+      // "current" requires the repo's default_branch, fetched in parallel.
+      const branchesUrl = `${GITHUB_API_BASE}/repos/${repoInfo.owner}/${repoInfo.repo}/branches`;
+      const repoUrl = `${GITHUB_API_BASE}/repos/${repoInfo.owner}/${repoInfo.repo}`;
+      const [branches, repoMeta] = await Promise.all([
+        this.fetchFromGitHub<Array<{ name: string }>>(branchesUrl),
+        this.fetchFromGitHub<{ default_branch?: string }>(repoUrl),
+      ]);
+
       if (branches) {
-        const result = branches.map((b, index) => ({
+        const defaultBranch = repoMeta?.default_branch;
+        const result = branches.map((b) => ({
           name: b.name,
-          isCurrent: index === 0,
+          isCurrent: defaultBranch ? b.name === defaultBranch : false,
         }));
         await this.setCachedData(cacheKey, result);
         return result;
@@ -193,7 +215,7 @@ export class GitService {
     const cached = await this.getCachedData<GitCommit[]>(cacheKey);
     if (cached) return cached;
 
-    const repoInfo = this.parseRepoPath(repoPath);
+    const repoInfo = parseRepoPath(repoPath);
     
     if (repoInfo) {
       // Try GitHub API
@@ -235,7 +257,7 @@ export class GitService {
     const cached = await this.getCachedData<GitRepositoryFolder[]>(cacheKey);
     if (cached && cached.length > 0) return cached;
 
-    const repoInfo = this.parseRepoPath(repoPath);
+    const repoInfo = parseRepoPath(repoPath);
     if (!repoInfo) {
       return [];
     }
@@ -272,15 +294,6 @@ export class GitService {
 
     await this.setCachedData(cacheKey, folders);
     return folders;
-  }
-
-  static async isGitRepository(path: string): Promise<boolean> {
-    try {
-      return false;
-    } catch (error) {
-      console.error('[GitService] Failed to validate repository:', error);
-      return false;
-    }
   }
 
   static async clearCache(): Promise<void> {

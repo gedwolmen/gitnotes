@@ -107,7 +107,10 @@ export function CanvasProvider({ children }: CanvasProviderProps) {
     setError(null);
   }, []);
 
-  const filteredCanvases = searchQuery ? filterCanvasesBySearch(canvases, searchQuery) : canvases;
+  const filteredCanvases = useMemo(
+    () => (searchQuery ? filterCanvasesBySearch(canvases, searchQuery) : canvases),
+    [canvases, searchQuery],
+  );
 
   const value: CanvasContextType = useMemo(
     () => ({

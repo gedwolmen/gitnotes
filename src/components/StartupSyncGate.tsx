@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { AppState } from 'react-native';
 import { pullAllFromRepos } from '../services/RepoPullService';
 import { GitHubService } from '../services/GitHubService';
@@ -13,15 +13,27 @@ export function StartupSyncGate({ children }: { children: React.ReactNode }) {
   const { refreshCanvases } = useCanvases();
   const { refreshTodos } = useTodos();
   const { repositories } = useRepos();
-  const lastSyncedCount = useRef(-1);
+  const lastSyncedSignature = useRef<string | null>(null);
   const isSyncing = useRef(false);
+
+  // Track repository identity (sorted set of paths), not just length.
+  // Previously the count-based guard meant remove+re-add or swapping
+  // never re-triggered a pull because length didn't grow.
+  const repoSignature = useMemo(
+    () => [...repositories.map((r) => r.path)].sort().join('|'),
+    [repositories],
+  );
 
   useEffect(() => {
     if (isSyncing.current) return;
-    if (repositories.length <= lastSyncedCount.current) return;
+    if (lastSyncedSignature.current === repoSignature) return;
+    if (repositories.length === 0) {
+      lastSyncedSignature.current = repoSignature;
+      return;
+    }
 
     isSyncing.current = true;
-    const targetCount = repositories.length;
+    const targetSignature = repoSignature;
 
     (async () => {
       try {
@@ -35,14 +47,17 @@ export function StartupSyncGate({ children }: { children: React.ReactNode }) {
           refreshCanvases(),
           refreshTodos(),
         ]);
-        lastSyncedCount.current = targetCount;
+        lastSyncedSignature.current = targetSignature;
         isSyncing.current = false;
       }
     })();
-  }, [repositories.length, refreshNotes, refreshCanvases, refreshTodos]);
+  }, [repoSignature, repositories.length, refreshNotes, refreshCanvases, refreshTodos]);
 
   useEffect(() => {
+    let drainInFlight = false;
     const drainAndRefresh = async () => {
+      if (drainInFlight) return;
+      drainInFlight = true;
       try {
         await GitHubService.initialize();
         if (!GitHubService.isAuthenticated()) return;
@@ -52,6 +67,8 @@ export function StartupSyncGate({ children }: { children: React.ReactNode }) {
         }
       } catch (error) {
         console.warn('[SyncDrain] Failed:', error);
+      } finally {
+        drainInFlight = false;
       }
     };
 
