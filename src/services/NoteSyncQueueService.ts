@@ -94,31 +94,49 @@ class NoteSyncQueueServiceClass {
     let failed = 0;
 
     try {
-      const items = await this.getAll();
-      const remaining: QueuedMutation[] = [];
+      const initial = await this.getAll();
+      // Snapshot the ids we're about to process. After draining we re-read
+      // the live queue and only remove these ids, preserving any new
+      // mutations that arrived during the drain.
+      const processedIds = new Set<string>();
+      const updatedById = new Map<string, QueuedMutation>();
+      const droppedIds = new Set<string>();
 
-      for (const item of items) {
-        if (item.type !== 'note.upsert') {
-          remaining.push(item);
-          continue;
-        }
+      for (const item of initial) {
+        if (item.type !== 'note.upsert') continue;
+        processedIds.add(item.id);
         const result = await syncNoteToGitHub(item.params);
         if (result.success) {
           succeeded++;
+          droppedIds.add(item.id);
           continue;
         }
         const attempts = item.attempts + 1;
         if (attempts >= MAX_ATTEMPTS) {
           console.warn('[NoteSyncQueue] dropped after max attempts:', result.error);
           failed++;
+          droppedIds.add(item.id);
         } else {
-          remaining.push({ ...item, attempts, lastError: result.error });
+          updatedById.set(item.id, { ...item, attempts, lastError: result.error });
           failed++;
         }
       }
 
-      await this.saveAll(remaining);
-      return { succeeded, failed, remaining: remaining.length };
+      // Re-read the queue to pick up anything enqueued during drain. Drop
+      // ids we successfully processed; merge in the updated entries.
+      const live = await this.getAll();
+      const next: QueuedMutation[] = [];
+      for (const m of live) {
+        if (droppedIds.has(m.id)) continue;
+        if (updatedById.has(m.id)) {
+          next.push(updatedById.get(m.id)!);
+          continue;
+        }
+        next.push(m);
+      }
+
+      await this.saveAll(next);
+      return { succeeded, failed, remaining: next.length };
     } finally {
       this.isDraining = false;
     }
