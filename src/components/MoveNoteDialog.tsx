@@ -21,7 +21,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { GitHubService, GitHubContent } from '../services/GitHubService';
 import { HapticService } from '../utils/haptics';
 import { Note, deriveFolderPath } from '../models/Note';
-import { parseRepoPath } from './RepoFileBrowser';
+import { parseRepoPath } from '../utils/gitPathParser';
 
 interface MoveNoteDialogProps {
   visible: boolean;

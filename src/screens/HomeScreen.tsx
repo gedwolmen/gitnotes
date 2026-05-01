@@ -10,7 +10,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useNotes } from '../contexts/NoteContext';
 import { useCanvases } from '../contexts/CanvasContext';
 import { Note, NoteFormat } from '../models/Note';
-import { parseRepoPath } from '../components/RepoFileBrowser';
+import { parseRepoPath } from '../utils/gitPathParser';
 import { HapticService } from '../utils/haptics';
 import TemplateSelector from '../components/TemplateSelector';
 import { NoteTemplate } from '../services/TemplateService';

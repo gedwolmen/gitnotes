@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { View, Image, Text, StyleSheet, TouchableOpacity, Modal, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Dimensions } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -12,7 +13,7 @@ interface NoteImageProps {
 }
 
 export default function NoteImage({ uri, alt = '', caption }: NoteImageProps) {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [imageError, setImageError] = useState(false);
 
@@ -41,8 +42,9 @@ export default function NoteImage({ uri, alt = '', caption }: NoteImageProps) {
         <Image
           source={{ uri }}
           style={styles.image}
-          resizeMode="cover"
+          contentFit="cover"
           onError={() => setImageError(true)}
+          accessibilityLabel={alt || undefined}
         />
       </TouchableOpacity>
 
@@ -60,7 +62,8 @@ export default function NoteImage({ uri, alt = '', caption }: NoteImageProps) {
           <Image
             source={{ uri }}
             style={styles.fullscreenImage}
-            resizeMode="contain"
+            contentFit="contain"
+            accessibilityLabel={alt || undefined}
           />
         </View>
       </Modal>
