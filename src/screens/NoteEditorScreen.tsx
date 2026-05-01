@@ -14,6 +14,7 @@ import {
   Image,
   Linking,
 } from 'react-native';
+
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
@@ -538,65 +539,11 @@ export default function NoteEditorScreen() {
 
   const markdownItInstance = useMemo(() => {
     const md = MarkdownIt({ typographer: true, linkify: true });
-    md.validateLink = (url: string) => /^(https?:|file:|data:|mailto:|tel:|canvas:)/i.test(url) || !/^[a-z][a-z0-9+.-]*:/i.test(url);
+    md.validateLink = (url: string) =>
+      /^(https?:|file:|data:|mailto:|tel:|canvas:|note:|#)/i.test(url) ||
+      !/^[a-z][a-z0-9+.-]*:/i.test(url);
     return md;
   }, []);
-
-  const markdownRules = useMemo(() => ({
-    image: (node: any) => {
-      const src: string = node.attributes?.src ?? '';
-      const alt: string = node.attributes?.alt ?? '';
-      const isCanvas = /canvas-drawings\/canvas-/.test(src) || /^canvas-/.test(alt);
-      if (isCanvas) {
-        const isJson = /\.json(\?|$)/i.test(src);
-        const pngUri = isJson ? src.split('?')[0].replace(/\.json$/i, '.png') : src;
-        return (
-          <Image
-            key={node.key}
-            source={{ uri: pngUri }}
-            resizeMode="contain"
-            style={{ width: '100%', height: 240, borderRadius: 6, backgroundColor: '#fff' }}
-          />
-        );
-      }
-      return (
-        <Image
-          key={node.key}
-          source={{ uri: src }}
-          resizeMode="contain"
-          style={{ width: '100%', height: 240, borderRadius: 6, backgroundColor: colors.surfaceSecondary }}
-        />
-      );
-    },
-    link: (node: any, children: any) => {
-      const href: string = node.attributes?.href ?? '';
-      if (isCanvasLink(href)) {
-        const id = canvasIdFromLink(href);
-        return <CanvasPreview key={node.key} canvasId={id} />;
-      }
-      return (
-        <Text
-          key={node.key}
-          style={{ color: colors.primary, textDecorationLine: 'underline' }}
-          onPress={() => href && Linking.openURL(href).catch(() => {})}
-        >
-          {children}
-        </Text>
-      );
-    },
-    text: (node: any, _children: any, _parent: any, styles: any, inheritedStyles: any = {}) => (
-      <Text key={node.key} selectable style={[inheritedStyles, styles.text]}>{node.content}</Text>
-    ),
-    code_inline: (node: any, _children: any, _parent: any, styles: any, inheritedStyles: any = {}) => (
-      <Text key={node.key} selectable style={[inheritedStyles, styles.code_inline]}>{node.content}</Text>
-    ),
-    code_block: (node: any, _children: any, _parent: any, styles: any, inheritedStyles: any = {}) => (
-      <Text key={node.key} selectable style={[inheritedStyles, styles.code_block]}>{node.content}</Text>
-    ),
-    fence: (node: any, _children: any, _parent: any, styles: any, inheritedStyles: any = {}) => (
-      <Text key={node.key} selectable style={[inheritedStyles, styles.fence]}>{node.content}</Text>
-    ),
-  }), [colors]);
 
   const previewContent = useMemo(() => {
     const stripTopMetadata = (raw: string, format: NoteFormat): string => {
@@ -661,6 +608,80 @@ export default function NoteEditorScreen() {
     return parsed.blocks;
   }, [previewContent, noteFormat]);
 
+  const previewScrollRef = useRef<ScrollView>(null);
+
+  const markdownRules = useMemo(() => ({
+    image: (node: any) => {
+      const src: string = node.attributes?.src ?? '';
+      const alt: string = node.attributes?.alt ?? '';
+      const isCanvas = /canvas-drawings\/canvas-/.test(src) || /^canvas-/.test(alt);
+      if (isCanvas) {
+        const isJson = /\.json(\?|$)/i.test(src);
+        const pngUri = isJson ? src.split('?')[0].replace(/\.json$/i, '.png') : src;
+        return (
+          <Image
+            key={node.key}
+            source={{ uri: pngUri }}
+            resizeMode="contain"
+            style={{ width: '100%', height: 240, borderRadius: 6, backgroundColor: '#fff' }}
+          />
+        );
+      }
+      return (
+        <Image
+          key={node.key}
+          source={{ uri: src }}
+          resizeMode="contain"
+          style={{ width: '100%', height: 240, borderRadius: 6, backgroundColor: colors.surfaceSecondary }}
+        />
+      );
+    },
+    link: (node: any, children: any) => {
+      const href: string = node.attributes?.href ?? '';
+      if (isCanvasLink(href)) {
+        const id = canvasIdFromLink(href);
+        return <CanvasPreview key={node.key} canvasId={id} />;
+      }
+      const onPress = () => {
+        if (!href) return;
+        if (href.startsWith('note:')) {
+          const id = href.slice('note:'.length);
+          if (id) navigation.navigate('NoteEditor', { noteId: id });
+          return;
+        }
+        if (href.startsWith('#')) {
+          const slug = href.slice(1).toLowerCase();
+          const target = previewContent
+            .split('\n')
+            .findIndex((line) => {
+              const m = line.match(/^#{1,6}\s+(.+?)\s*#*\s*$/);
+              if (!m) return false;
+              const headingSlug = m[1]
+                .toLowerCase()
+                .trim()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-|-$/g, '');
+              return headingSlug === slug;
+            });
+          if (target >= 0) {
+            previewScrollRef.current?.scrollTo({ y: target * APPROX_LINE_PX, animated: true });
+          }
+          return;
+        }
+        Linking.openURL(href).catch(() => {});
+      };
+      return (
+        <Text
+          key={node.key}
+          style={{ color: colors.primary, textDecorationLine: 'underline' }}
+          onPress={onPress}
+        >
+          {children}
+        </Text>
+      );
+    },
+  }), [colors, navigation, previewContent]);
+
   const speakableContent = useMemo(() => {
     return previewContent
       .replace(/```[\s\S]*?```/g, '')
@@ -705,7 +726,6 @@ export default function NoteEditorScreen() {
     };
   }, []);
 
-  const previewScrollRef = useRef<ScrollView>(null);
   const [showToc, setShowToc] = useState(false);
 
   const tocEntries = useMemo(() => {
