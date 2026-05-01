@@ -584,6 +584,18 @@ export default function NoteEditorScreen() {
         </Text>
       );
     },
+    text: (node: any, _children: any, _parent: any, styles: any, inheritedStyles: any = {}) => (
+      <Text key={node.key} selectable style={[inheritedStyles, styles.text]}>{node.content}</Text>
+    ),
+    code_inline: (node: any, _children: any, _parent: any, styles: any, inheritedStyles: any = {}) => (
+      <Text key={node.key} selectable style={[inheritedStyles, styles.code_inline]}>{node.content}</Text>
+    ),
+    code_block: (node: any, _children: any, _parent: any, styles: any, inheritedStyles: any = {}) => (
+      <Text key={node.key} selectable style={[inheritedStyles, styles.code_block]}>{node.content}</Text>
+    ),
+    fence: (node: any, _children: any, _parent: any, styles: any, inheritedStyles: any = {}) => (
+      <Text key={node.key} selectable style={[inheritedStyles, styles.fence]}>{node.content}</Text>
+    ),
   }), [colors]);
 
   const previewContent = useMemo(() => {
