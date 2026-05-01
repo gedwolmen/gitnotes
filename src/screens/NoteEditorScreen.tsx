@@ -21,9 +21,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import * as Speech from 'expo-speech';
 import { Ionicons } from '@expo/vector-icons';
-import Markdown from 'react-native-markdown-display';
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const MarkdownIt = require('markdown-it');
+import Markdown from 'react-native-marked';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useNotes } from '../contexts/NoteContext';
@@ -57,6 +55,7 @@ import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import { PositionMemoryService } from '../services/PositionMemoryService';
 import { getMarkdownStyles } from '../utils/preview';
 import { Button, IconButton, Modal } from '../components/ui';
+import { NotePreviewRenderer } from '../utils/markdownRenderer';
 
 interface TocEntry {
   level: number;
@@ -538,14 +537,6 @@ export default function NoteEditorScreen() {
 
   const markdownStyles = useMemo(() => getMarkdownStyles(colors, isDark), [colors, isDark]);
 
-  const markdownItInstance = useMemo(() => {
-    const md = MarkdownIt({ typographer: true, linkify: true });
-    md.validateLink = (url: string) =>
-      /^(https?:|file:|data:|mailto:|tel:|canvas:|note:|#)/i.test(url) ||
-      !/^[a-z][a-z0-9+.-]*:/i.test(url);
-    return md;
-  }, []);
-
 
   const previewContent = useMemo(() => {
     const stripTopMetadata = (raw: string, format: NoteFormat): string => {
@@ -612,91 +603,18 @@ export default function NoteEditorScreen() {
 
   const previewScrollRef = useRef<ScrollView>(null);
 
-  const markdownRules = useMemo(() => ({
-    image: (node: any) => {
-      const src: string = node.attributes?.src ?? '';
-      const alt: string = node.attributes?.alt ?? '';
-      const isCanvas = /canvas-drawings\/canvas-/.test(src) || /^canvas-/.test(alt);
-      if (isCanvas) {
-        const isJson = /\.json(\?|$)/i.test(src);
-        const pngUri = isJson ? src.split('?')[0].replace(/\.json$/i, '.png') : src;
-        return (
-          <Image
-            key={node.key}
-            source={{ uri: pngUri }}
-            contentFit="contain"
-            accessibilityLabel={alt || undefined}
-            style={{ width: '100%', height: 240, borderRadius: 6, backgroundColor: '#fff' }}
-          />
-        );
-      }
-      return (
-        <Image
-          key={node.key}
-          source={{ uri: src }}
-          contentFit="contain"
-          accessibilityLabel={alt || undefined}
-          style={{ width: '100%', height: 240, borderRadius: 6, backgroundColor: colors.surfaceSecondary }}
-        />
-      );
-    },
-    link: (node: any, children: any) => {
-      const href: string = node.attributes?.href ?? '';
-      if (isCanvasLink(href)) {
-        const id = canvasIdFromLink(href);
-        return <CanvasPreview key={node.key} canvasId={id} />;
-      }
-      const onPress = () => {
-        if (!href) return;
-        if (href.startsWith('note:')) {
-          const id = href.slice('note:'.length);
-          if (id) navigation.navigate('NoteEditor', { noteId: id });
-          return;
-        }
-        if (href.startsWith('#')) {
-          const slug = href.slice(1).toLowerCase();
-          const target = previewContent
-            .split('\n')
-            .findIndex((line) => {
-              const m = line.match(/^#{1,6}\s+(.+?)\s*#*\s*$/);
-              if (!m) return false;
-              const headingSlug = m[1]
-                .toLowerCase()
-                .trim()
-                .replace(/[^a-z0-9]+/g, '-')
-                .replace(/^-|-$/g, '');
-              return headingSlug === slug;
-            });
-          if (target >= 0) {
-            previewScrollRef.current?.scrollTo({ y: target * APPROX_LINE_PX, animated: true });
-          }
-          return;
-        }
-        Linking.openURL(href).catch(() => {});
-      };
-      return (
-        <Text
-          key={node.key}
-          style={{ color: colors.primary, textDecorationLine: 'underline' }}
-          onPress={onPress}
-        >
-          {children}
-        </Text>
-      );
-    },
-    text: (node: any, _children: any, _parent: any, styles: any, inheritedStyles: any = {}) => (
-      <Text key={node.key} selectable style={[inheritedStyles, styles.text]}>{node.content}</Text>
-    ),
-    code_inline: (node: any, _children: any, _parent: any, styles: any, inheritedStyles: any = {}) => (
-      <Text key={node.key} selectable style={[inheritedStyles, styles.code_inline]}>{node.content}</Text>
-    ),
-    code_block: (node: any, _children: any, _parent: any, styles: any, inheritedStyles: any = {}) => (
-      <Text key={node.key} selectable style={[inheritedStyles, styles.code_block]}>{node.content}</Text>
-    ),
-    fence: (node: any, _children: any, _parent: any, styles: any, inheritedStyles: any = {}) => (
-      <Text key={node.key} selectable style={[inheritedStyles, styles.fence]}>{node.content}</Text>
-    ),
-  }), [colors, navigation, previewContent]);
+  const notePreviewRenderer = useMemo(
+    () =>
+      new NotePreviewRenderer({
+        colors,
+        navigation,
+        previewContent,
+        previewScrollRef,
+        CanvasPreview,
+        approxLinePx: APPROX_LINE_PX,
+      }),
+    [colors, navigation, previewContent],
+  );
 
   const speakableContent = useMemo(() => {
     return previewContent
@@ -882,7 +800,7 @@ export default function NoteEditorScreen() {
           >
             {previewContent.trim() ? (
               noteFormat === 'markdown' ? (
-                <Markdown style={markdownStyles} rules={markdownRules} markdownit={markdownItInstance}>{previewContent}</Markdown>
+                <Markdown value={previewContent} styles={markdownStyles} renderer={notePreviewRenderer} />
               ) : parsedStructuredContent ? (
                 <NeorgRenderer blocks={parsedStructuredContent} />
               ) : (
@@ -1050,7 +968,7 @@ export default function NoteEditorScreen() {
       <Text style={[styles.livePreviewLabel, { color: colors.textSecondary }]}>Preview</Text>
       {previewContent.trim() ? (
         noteFormat === 'markdown' ? (
-          <Markdown style={markdownStyles} rules={markdownRules} markdownit={markdownItInstance}>{previewContent}</Markdown>
+          <Markdown value={previewContent} styles={markdownStyles} renderer={notePreviewRenderer} />
         ) : parsedStructuredContent ? (
           <NeorgRenderer blocks={parsedStructuredContent} />
         ) : (
