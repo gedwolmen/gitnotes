@@ -1,4 +1,5 @@
 import { NoteFormat } from '../models/Note';
+import type { MarkedStyles } from 'react-native-marked';
 
 interface ColorPalette {
   text: string;
@@ -41,14 +42,14 @@ export function stripTopMetadata(raw: string, format: NoteFormat): string {
   return raw;
 }
 
-export function getMarkdownStyles(colors: ColorPalette, isDark: boolean) {
+export function getMarkdownStyles(colors: ColorPalette, isDark: boolean): MarkedStyles {
   return {
-    body: { fontSize: 16, lineHeight: 26, color: colors.text, marginTop: 0, paddingTop: 6 },
-    heading1: { fontSize: 28, lineHeight: 38, fontWeight: 'bold' as const, marginBottom: 12, marginTop: 8, color: colors.text },
-    heading2: { fontSize: 22, lineHeight: 32, fontWeight: 'bold' as const, marginBottom: 10, marginTop: 8, color: colors.text },
-    heading3: { fontSize: 18, lineHeight: 26, fontWeight: '600' as const, marginBottom: 8, marginTop: 6, color: colors.text },
+    text: { fontSize: 16, lineHeight: 26, color: colors.text },
+    h1: { fontSize: 28, lineHeight: 38, fontWeight: 'bold', marginBottom: 12, marginTop: 8, color: colors.text },
+    h2: { fontSize: 22, lineHeight: 32, fontWeight: 'bold', marginBottom: 10, marginTop: 8, color: colors.text },
+    h3: { fontSize: 18, lineHeight: 26, fontWeight: '600', marginBottom: 8, marginTop: 6, color: colors.text },
     paragraph: { marginTop: 0, marginBottom: 12 },
-    code_inline: {
+    codespan: {
       backgroundColor: isDark ? '#2c2c2e' : '#f0f0f0',
       paddingHorizontal: 4,
       borderRadius: 4,
@@ -56,23 +57,11 @@ export function getMarkdownStyles(colors: ColorPalette, isDark: boolean) {
       fontSize: 14,
       color: colors.text,
     },
-    code_block: {
+    code: {
       backgroundColor: isDark ? '#2c2c2e' : '#f5f5f5',
       padding: 12,
       borderRadius: 8,
-      fontFamily: 'monospace',
-      fontSize: 14,
       marginVertical: 8,
-      color: colors.text,
-    },
-    fence: {
-      backgroundColor: isDark ? '#2c2c2e' : '#f5f5f5',
-      padding: 12,
-      borderRadius: 8,
-      fontFamily: 'monospace',
-      fontSize: 14,
-      marginVertical: 8,
-      color: colors.text,
     },
     blockquote: {
       backgroundColor: colors.primary + '15',
@@ -83,9 +72,8 @@ export function getMarkdownStyles(colors: ColorPalette, isDark: boolean) {
       marginVertical: 8,
     },
     link: { color: colors.primary },
-    list_item: { marginBottom: 4, color: colors.text },
-    bullet_list: { marginBottom: 12 },
-    ordered_list: { marginBottom: 12 },
+    li: { marginBottom: 4, color: colors.text },
+    list: { marginBottom: 12 },
     hr: { backgroundColor: colors.border, height: 1, marginVertical: 16 },
     strong: { color: colors.text },
     em: { color: colors.text },

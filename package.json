@@ -45,7 +45,7 @@
     "react-dom": "19.1.0",
     "react-native": "0.81.5",
     "react-native-gesture-handler": "~2.28.0",
-    "react-native-markdown-display": "^7.0.2",
+    "react-native-marked": "^8.0.1",
     "react-native-reanimated": "~4.1.1",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
@@ -65,12 +65,6 @@
     "jest": "^30.3.0",
     "react-test-renderer": "19.1.0",
     "typescript": "^5.6.3"
-  },
-  "resolutions": {
-    "markdown-it": "^14.0.0"
-  },
-  "overrides": {
-    "markdown-it": "^14.0.0"
   },
   "packageManager": "yarn@1.22.22",
   "private": true

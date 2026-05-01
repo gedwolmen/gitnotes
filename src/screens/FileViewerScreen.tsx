@@ -10,9 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import Markdown from 'react-native-markdown-display';
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const MarkdownIt = require('markdown-it');
+import Markdown from 'react-native-marked';
 
 import { RootStackParamList } from '../navigation/types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -106,15 +104,6 @@ export default function FileViewerScreen() {
 
   const markdownStyles = useMemo(() => getMarkdownStyles(colors, isDark), [colors, isDark]);
 
-  const markdownItInstance = useMemo(() => {
-    const md = MarkdownIt({ typographer: true, linkify: true });
-    // Allow only safe URL schemes. Reject javascript:, data:, vbscript:, etc.
-    md.validateLink = (url: string) =>
-      /^(https?:|mailto:|tel:|#)/i.test(url) ||
-      !/^[a-z][a-z0-9+.-]*:/i.test(url);
-    return md;
-  }, []);
-
   return (
     <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
@@ -151,7 +140,7 @@ export default function FileViewerScreen() {
           showsVerticalScrollIndicator
         >
           {mode === 'markdown' ? (
-            <Markdown style={markdownStyles} markdownit={markdownItInstance}>{renderContent}</Markdown>
+            <Markdown value={renderContent} styles={markdownStyles} />
           ) : (mode === 'neorg' || mode === 'org') && parsedNeorg ? (
             <NeorgRenderer blocks={parsedNeorg} />
           ) : (
