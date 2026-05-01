@@ -1058,30 +1058,18 @@ export default function NoteEditorScreen() {
       </View>
 
       <View style={[styles.toolbar, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
-        <TouchableOpacity
-          onPress={() => setShowVoiceModal(true)}
-          style={styles.toolbarButton}
-        >
-          <Ionicons name="mic-outline" size={22} color={colors.primary} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setShowCanvasModal(true)}
-          style={styles.toolbarButton}
-        >
-          <Ionicons name="brush-outline" size={22} color={colors.primary} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={handlePickImage}
-          style={styles.toolbarButton}
-        >
-          <Ionicons name="image-outline" size={22} color={colors.primary} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setShowCanvasPicker(true)}
-          style={styles.toolbarButton}
-        >
-          <Ionicons name="easel-outline" size={22} color={colors.primary} />
-        </TouchableOpacity>
+        <NIconButton size="sm" onPress={() => setShowVoiceModal(true)} accessibilityLabel="Voice input">
+          <Ionicons name="mic-outline" size={20} color={colors.primary} />
+        </NIconButton>
+        <NIconButton size="sm" onPress={() => setShowCanvasModal(true)} accessibilityLabel="Insert canvas">
+          <Ionicons name="brush-outline" size={20} color={colors.primary} />
+        </NIconButton>
+        <NIconButton size="sm" onPress={handlePickImage} accessibilityLabel="Insert image">
+          <Ionicons name="image-outline" size={20} color={colors.primary} />
+        </NIconButton>
+        <NIconButton size="sm" onPress={() => setShowCanvasPicker(true)} accessibilityLabel="Link existing canvas">
+          <Ionicons name="easel-outline" size={20} color={colors.primary} />
+        </NIconButton>
       </View>
 
       {sideBySide ? (
