@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -14,6 +14,7 @@ import { parseRepoPath } from '../components/RepoFileBrowser';
 import { HapticService } from '../utils/haptics';
 import TemplateSelector from '../components/TemplateSelector';
 import { NoteTemplate } from '../services/TemplateService';
+import { NoteFormatPreferenceService } from '../services/NoteFormatPreferenceService';
 import { useResponsive } from '../hooks/useResponsive';
 import { NButton, NCard, NModal, NGroup, NGroupRow, NScreenHeader } from '../components/neumorphic';
 
@@ -103,16 +104,42 @@ export default function HomeScreen() {
   const { isTablet, maxContentWidth } = useResponsive();
   const [showFormatPicker, setShowFormatPicker] = useState(false);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
+  const [defaultFormat, setDefaultFormat] = useState<EditableNoteFormat | null>(null);
+  const [rememberFormat, setRememberFormat] = useState<boolean>(false);
+  const [pickerRemember, setPickerRemember] = useState<boolean>(false);
+
+  useEffect(() => {
+    (async () => {
+      const fmt = await NoteFormatPreferenceService.getDefaultFormat();
+      const remember = await NoteFormatPreferenceService.getRememberPreference();
+      setDefaultFormat(fmt);
+      setRememberFormat(remember);
+    })();
+  }, []);
 
   const handleCreateNote = useCallback(() => {
     HapticService.medium();
+    if (rememberFormat && defaultFormat) {
+      navigation.navigate('NoteEditor', { format: defaultFormat });
+      return;
+    }
+    setPickerRemember(false);
     setShowFormatPicker(true);
-  }, []);
+  }, [navigation, rememberFormat, defaultFormat]);
 
-  const handleSelectFormat = useCallback((format: EditableNoteFormat) => {
+  const handleSelectFormat = useCallback(async (format: EditableNoteFormat) => {
     setShowFormatPicker(false);
+    if (pickerRemember) {
+      await NoteFormatPreferenceService.setDefaultFormat(format, true);
+      setDefaultFormat(format);
+      setRememberFormat(true);
+    } else {
+      await NoteFormatPreferenceService.setDefaultFormat(format, false);
+      setDefaultFormat(format);
+      setRememberFormat(false);
+    }
     navigation.navigate('NoteEditor', { format });
-  }, [navigation]);
+  }, [navigation, pickerRemember]);
 
   const handleFormatPickerClose = useCallback(() => {
     setShowFormatPicker(false);
@@ -165,6 +192,11 @@ export default function HomeScreen() {
           variant="primary"
           fullWidth
           onPress={handleCreateNote}
+          onLongPress={() => {
+            HapticService.medium();
+            setPickerRemember(false);
+            setShowFormatPicker(true);
+          }}
           leadingIcon={<Ionicons name="add" size={22} color={colors.accent} />}
           label="Create New Note"
         />
@@ -267,6 +299,19 @@ export default function HomeScreen() {
             </NCard>
           ))}
         </View>
+        <TouchableOpacity
+          style={styles.rememberRow}
+          onPress={() => setPickerRemember((v) => !v)}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: pickerRemember }}
+        >
+          <Ionicons
+            name={pickerRemember ? 'checkbox' : 'square-outline'}
+            size={22}
+            color={pickerRemember ? colors.accent : colors.textSecondary}
+          />
+          <Text style={[styles.rememberLabel, { color: colors.text }]}>Remember my choice</Text>
+        </TouchableOpacity>
         <View style={{ marginTop: 12 }}>
           <NButton variant="ghost" fullWidth label="Cancel" onPress={handleFormatPickerClose} />
         </View>
@@ -418,5 +463,15 @@ const styles = StyleSheet.create({
   recentNoteTablet: {
     width: '48%',
     marginHorizontal: 0,
+  },
+  rememberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+  },
+  rememberLabel: {
+    fontSize: 14,
   },
 });
