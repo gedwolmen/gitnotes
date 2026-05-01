@@ -24,6 +24,16 @@ import { OnboardingService } from './src/services/OnboardingService';
 import { NotificationService } from './src/services/NotificationService';
 import { StartupSyncGate } from './src/components/StartupSyncGate';
 import { bootstrapStorage } from './src/services/StorageBootstrap';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 export default function App() {
   const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
@@ -72,6 +82,7 @@ export default function App() {
   }
 
   return (
+    <QueryClientProvider client={queryClient}>
     <SafeAreaProvider>
       <ThemeProvider>
         <AuthProvider>
@@ -94,6 +105,7 @@ export default function App() {
         </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>
+    </QueryClientProvider>
   );
 }
 
