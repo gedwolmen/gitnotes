@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StorageService } from './StorageService';
 import { GitHubService } from './GitHubService';
+import { parseRepoPath } from '../utils/gitPathParser';
 
 export interface GitRepository {
   id: string;
@@ -146,20 +147,6 @@ export class GitService {
     }
   }
 
-  private static parseRepoPath(repoPath: string): { owner: string; repo: string } | null {
-    // Handle formats: facebook/react, github.com/facebook/react, https://github.com/facebook/react
-    let cleaned = repoPath
-      .replace(/^https?:\/\/github\.com\//, '')
-      .replace(/^github\.com\//, '')
-      .trim();
-    
-    const parts = cleaned.split('/');
-    if (parts.length >= 2) {
-      return { owner: parts[0], repo: parts[1].replace(/\.git$/, '') };
-    }
-    return null;
-  }
-
   private static async fetchFromGitHub<T>(url: string): Promise<T | null> {
     try {
       const response = await fetch(url, {
@@ -189,7 +176,7 @@ export class GitService {
     const cached = await this.getCachedData<GitBranch[]>(cacheKey);
     if (cached) return cached;
 
-    const repoInfo = this.parseRepoPath(repoPath);
+    const repoInfo = parseRepoPath(repoPath);
     
     if (repoInfo) {
       // Try GitHub API
@@ -222,7 +209,7 @@ export class GitService {
     const cached = await this.getCachedData<GitCommit[]>(cacheKey);
     if (cached) return cached;
 
-    const repoInfo = this.parseRepoPath(repoPath);
+    const repoInfo = parseRepoPath(repoPath);
     
     if (repoInfo) {
       // Try GitHub API
@@ -264,7 +251,7 @@ export class GitService {
     const cached = await this.getCachedData<GitRepositoryFolder[]>(cacheKey);
     if (cached && cached.length > 0) return cached;
 
-    const repoInfo = this.parseRepoPath(repoPath);
+    const repoInfo = parseRepoPath(repoPath);
     if (!repoInfo) {
       return [];
     }

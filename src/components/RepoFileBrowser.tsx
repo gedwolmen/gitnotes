@@ -30,18 +30,7 @@ interface RepoFileBrowserProps {
   onCreateNoteInFolder: (folderPath: string) => void;
 }
 
-function parseRepoPath(repoPath: string): { owner: string; repo: string } | null {
-  const cleaned = repoPath
-    .replace(/^https?:\/\/github\.com\//, '')
-    .replace(/^github\.com\//, '')
-    .replace(/\.git$/, '')
-    .trim();
-  const parts = cleaned.split('/');
-  if (parts.length >= 2) {
-    return { owner: parts[0], repo: parts[1] };
-  }
-  return null;
-}
+import { parseRepoPath } from '../utils/gitPathParser';
 
 async function deleteFolderRecursive(
   owner: string,
@@ -727,4 +716,3 @@ const fileStyles = StyleSheet.create({
   moveDestText: { fontSize: 14, fontWeight: '500' },
 });
 
-export { parseRepoPath };

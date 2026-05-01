@@ -38,7 +38,8 @@ import ContextMenu from "../components/ContextMenu";
 import NoteCard from "../components/NoteCard";
 import SearchBar from "../components/SearchBar";
 import { NScreenHeader } from "../components/neumorphic";
-import RepoFileBrowser, { parseRepoPath } from "../components/RepoFileBrowser";
+import RepoFileBrowser from "../components/RepoFileBrowser";
+import { parseRepoPath } from "../utils/gitPathParser";
 import { HapticService } from "../utils/haptics";
 import {
   ViewMode,

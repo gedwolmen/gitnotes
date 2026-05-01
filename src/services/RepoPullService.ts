@@ -3,19 +3,7 @@ import { StorageService } from './StorageService';
 import { createNote } from '../models/Note';
 import { createCanvas, updateCanvas, CanvasScene } from '../models/Canvas';
 import { createTodoItem, applyTodoUpdate } from '../models/Todo';
-
-function parseRepoPath(repoPath: string): { owner: string; repo: string } | null {
-  const cleaned = repoPath
-    .replace(/^https?:\/\/github\.com\//, '')
-    .replace(/^github\.com\//, '')
-    .replace(/\.git$/, '')
-    .trim();
-  const parts = cleaned.split('/');
-  if (parts.length >= 2) {
-    return { owner: parts[0], repo: parts[1] };
-  }
-  return null;
-}
+import { parseRepoPath } from '../utils/gitPathParser';
 
 async function fetchDirectoryFiles(
   owner: string,
