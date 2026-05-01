@@ -31,7 +31,7 @@ const TemplateListItem = ({ item, onSelect, colors }: TemplateListItemProps) => 
   return (
     <TouchableOpacity style={[styles.templateItem, { backgroundColor: colors.card, shadowColor: colors.shadow }]} onPress={onPressItem}>
       <View style={[styles.templateIcon, { backgroundColor: colors.primary + '20' }]}>
-        <Ionicons name={item.icon as any} size={24} color={colors.primary} />
+        <Ionicons name={item.icon} size={24} color={colors.primary} />
       </View>
       <View style={styles.templateInfo}>
         <Text style={[styles.templateName, { color: colors.text }]}>{item.name}</Text>

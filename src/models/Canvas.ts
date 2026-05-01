@@ -143,7 +143,7 @@ export function canvasIdFromLink(target: string): string {
   return target.slice(CANVAS_LINK_PREFIX.length);
 }
 
-export function canvasToLink(canvas: Canvas): string {
+export function canvasToLink(canvas: Pick<Canvas, 'id'>): string {
   return `${CANVAS_LINK_PREFIX}${canvas.id}`;
 }
 

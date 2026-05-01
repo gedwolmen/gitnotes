@@ -14,6 +14,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+
+type IoniconName = keyof typeof Ionicons.glyphMap;
 import { DraxView, DraxProvider } from 'react-native-drax';
 import { useTheme } from '../contexts/ThemeContext';
 import { GitHubService, GitHubContent } from '../services/GitHubService';
@@ -239,7 +241,7 @@ export default function MoveNoteDialog({ visible, note, onClose, onMoved }: Move
     Keyboard.dismiss();
   }, []);
 
-  const getFileIcon = useCallback((name: string): string => {
+  const getFileIcon = useCallback((name: string): IoniconName => {
     const ext = name.toLowerCase().split('.').pop();
     switch (ext) {
       case 'md': return 'document-text';
@@ -258,7 +260,7 @@ export default function MoveNoteDialog({ visible, note, onClose, onMoved }: Move
 
     const itemContent = (
       <View style={[exploreStyles.item, { borderBottomColor: colors.border + '40' }]}>
-        <Ionicons name={iconName as any} size={22} color={iconColor} style={exploreStyles.itemIcon} />
+        <Ionicons name={iconName} size={22} color={iconColor} style={exploreStyles.itemIcon} />
         <Text style={[exploreStyles.itemName, { color: colors.text }]} numberOfLines={1}>
           {item.name}
         </Text>
