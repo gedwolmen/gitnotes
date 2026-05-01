@@ -32,12 +32,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const setToken = async (token: string): Promise<boolean> => {
     setIsLoading(true);
     const state = await AuthService.setToken(token);
-    setAuthState(state);
-    if (state.isAuthenticated) {
-      await GitHubService.setToken(token);
+    if (!state.isAuthenticated) {
+      // Validation failed — keep prior auth state untouched so a typo
+      // doesn't log the user out.
+      setIsLoading(false);
+      return false;
     }
+    // Pass the user we just validated so GitHubService doesn't re-hit /user.
+    // If the GitHubService write fails, roll AuthService back so the two
+    // services don't disagree about who's logged in.
+    const ghUser = await GitHubService.setToken(token, (state.user as unknown) as Parameters<typeof GitHubService.setToken>[1]);
+    if (!ghUser) {
+      await AuthService.clearToken();
+      setAuthState({ isAuthenticated: false, user: null, token: null });
+      setIsLoading(false);
+      return false;
+    }
+    setAuthState(state);
     setIsLoading(false);
-    return state.isAuthenticated;
+    return true;
   };
 
   const clearToken = async () => {
