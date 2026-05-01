@@ -111,6 +111,14 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
 
             <NButton
               variant="ghost"
+              onPress={() => Linking.openURL('https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens')}
+              leadingIcon={<Ionicons name="help-circle-outline" size={14} color={colors.accent} />}
+              label="Learn about access tokens"
+              textStyle={{ color: colors.accent, fontSize: 14, fontWeight: '500' }}
+              style={{ marginBottom: 8 }}
+            />
+            <NButton
+              variant="ghost"
               onPress={() => Linking.openURL('https://github.com/settings/tokens/new?scopes=repo,read:user&description=GitNotes')}
               leadingIcon={<Ionicons name="open-outline" size={14} color={colors.accent} />}
               label="Generate token on GitHub"
