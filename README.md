@@ -42,7 +42,7 @@ A React Native app built with Expo for managing development notes with Git integ
 ### Prerequisites
 
 - Node.js ≥ 20.18
-- npm or yarn
+- Yarn 1.x (classic)
 - Expo CLI
 - iOS Simulator (for iOS development) or Android Emulator (for Android development)
 
@@ -50,12 +50,12 @@ A React Native app built with Expo for managing development notes with Git integ
 
 1. Install dependencies:
    ```bash
-   npm install
+   yarn install
    ```
 
 2. Start the development server:
    ```bash
-   npx expo start
+   yarn start
    ```
 
 3. Run on your device:
@@ -157,7 +157,7 @@ The project includes an `eas.json` configuration file with three build profiles:
 
 Run TypeScript type checking:
 ```bash
-npm run ts:check
+yarn ts:check
 ```
 
 ## Contributing
