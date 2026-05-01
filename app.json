@@ -51,7 +51,9 @@
       ],
       "expo-image-picker",
       "@react-native-community/datetimepicker",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-image",
+      "expo-sharing"
     ],
     "owner": "vidwa",
     "runtimeVersion": {
