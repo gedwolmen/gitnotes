@@ -213,8 +213,14 @@ export default function PdfViewerScreen() {
         <WebView
           source={{ uri: localUri }}
           style={{ flex: 1, backgroundColor: colors.background }}
-          originWhitelist={['*']}
+          // Local file PDF — restrict origin to file:// (was '*'). The
+          // injected JS only needs to read scrollY and post a message
+          // back, no cross-origin file access required.
+          originWhitelist={['file://']}
           allowsInlineMediaPlayback
+          allowFileAccess
+          allowFileAccessFromFileURLs={false}
+          allowUniversalAccessFromFileURLs={false}
           injectedJavaScript={injectedJavaScript}
           onMessage={handleMessage}
         />

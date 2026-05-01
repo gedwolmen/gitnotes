@@ -99,17 +99,22 @@ export default function VideoViewerScreen() {
   const html = useMemo(() => {
     if (!localUri) return '';
     const mime = videoMime(fileName);
+    // Escape any " in the URI so a crafted filename can't break out of the
+    // attribute and inject script. (mime is whitelisted in videoMime.)
+    const safeUri = localUri.replace(/"/g, '%22');
+    const safeMime = mime.replace(/[^a-zA-Z0-9/.+-]/g, '');
     return `<!DOCTYPE html>
 <html>
 <head>
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; media-src file: blob:; style-src 'unsafe-inline'">
 <style>
   html, body { margin: 0; height: 100%; background: #000; }
   video { width: 100%; height: 100%; object-fit: contain; }
 </style>
 </head>
 <body>
-  <video src="${localUri}" type="${mime}" controls autoplay playsinline></video>
+  <video src="${safeUri}" type="${safeMime}" controls autoplay playsinline></video>
 </body>
 </html>`;
   }, [localUri, fileName]);
@@ -153,10 +158,16 @@ export default function VideoViewerScreen() {
           style={{ flex: 1, backgroundColor: '#000' }}
           allowsInlineMediaPlayback
           mediaPlaybackRequiresUserAction={false}
-          originWhitelist={['*']}
+          originWhitelist={['file://']}
           allowFileAccess
-          allowFileAccessFromFileURLs
-          allowUniversalAccessFromFileURLs
+          // Universal / cross-origin file access removed — not needed to
+          // play a single local <video src="file://...">. With the previous
+          // flags + originWhitelist=['*'], a script that escaped the
+          // attribute interpolation could read arbitrary file:// resources.
+          allowFileAccessFromFileURLs={false}
+          allowUniversalAccessFromFileURLs={false}
+          javaScriptEnabled={false}
+          domStorageEnabled={false}
         />
       )}
     </SafeAreaView>
