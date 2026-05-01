@@ -50,7 +50,8 @@
         }
       ],
       "expo-image-picker",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-secure-store"
     ],
     "owner": "vidwa",
     "runtimeVersion": {
