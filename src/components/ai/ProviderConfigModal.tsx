@@ -92,20 +92,29 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
     }
   };
 
+  const isBuiltIn = provider?.type === 'apple' || provider?.type === 'llama';
+
   const handleSave = async () => {
-    if (!name.trim() || !baseURL.trim()) {
-      Alert.alert('Validation Error', 'Name and Base URL are required.');
+    if (!name.trim()) {
+      Alert.alert('Validation Error', 'Name is required.');
+      return;
+    }
+
+    if (!isBuiltIn && !baseURL.trim()) {
+      Alert.alert('Validation Error', 'Base URL is required.');
       return;
     }
 
     const baseProvider: AIProviderConfig = {
       id: provider?.id || `custom-${Date.now()}`,
-      type: 'openai-compatible',
+      type: isBuiltIn ? provider!.type : 'openai-compatible',
       name: name.trim(),
       isEnabled: provider?.isEnabled ?? true,
       addedAt: provider?.addedAt || Date.now(),
-      baseURL: baseURL.trim(),
-      apiKey: apiKey.trim() || undefined,
+      ...(isBuiltIn ? {} : {
+        baseURL: baseURL.trim(),
+        apiKey: apiKey.trim() || undefined,
+      }),
       models: testedModels.length > 0 ? testedModels : (provider?.models || []),
     };
 
@@ -168,57 +177,72 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
                   autoCapitalize="words"
                 />
               </GroupRow>
-              <GroupRow>
-                <TextInput
-                  style={[styles.textInput, { color: colors.text }]}
-                  placeholder="Base URL (e.g., http://localhost:11434/v1)"
-                  placeholderTextColor={colors.textSecondary}
-                  value={baseURL}
-                  onChangeText={setBaseURL}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  keyboardType="url"
-                />
-              </GroupRow>
-              <GroupRow>
-                <View style={styles.apiKeyRow}>
-                  <TextInput
-                    style={[styles.textInput, { color: colors.text, flex: 1 }]}
-                    placeholder="API Key (Optional)"
-                    placeholderTextColor={colors.textSecondary}
-                    value={apiKey}
-                    onChangeText={setApiKey}
-                    secureTextEntry={!apiKeyVisible}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                  <TouchableOpacity
-                    onPress={() => setApiKeyVisible((v) => !v)}
-                    style={styles.iconBtn}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Ionicons
-                      name={apiKeyVisible ? 'eye-off-outline' : 'eye-outline'}
-                      size={20}
-                      color={colors.textSecondary}
+              {!isBuiltIn && (
+                <>
+                  <GroupRow>
+                    <TextInput
+                      style={[styles.textInput, { color: colors.text }]}
+                      placeholder="Base URL (e.g., http://localhost:11434/v1)"
+                      placeholderTextColor={colors.textSecondary}
+                      value={baseURL}
+                      onChangeText={setBaseURL}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      keyboardType="url"
                     />
-                  </TouchableOpacity>
-                </View>
-              </GroupRow>
+                  </GroupRow>
+                  <GroupRow>
+                    <View style={styles.apiKeyRow}>
+                      <TextInput
+                        style={[styles.textInput, { color: colors.text, flex: 1 }]}
+                        placeholder="API Key (Optional)"
+                        placeholderTextColor={colors.textSecondary}
+                        value={apiKey}
+                        onChangeText={setApiKey}
+                        secureTextEntry={!apiKeyVisible}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                      />
+                      <TouchableOpacity
+                        onPress={() => setApiKeyVisible((v) => !v)}
+                        style={styles.iconBtn}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons
+                          name={apiKeyVisible ? 'eye-off-outline' : 'eye-outline'}
+                          size={20}
+                          color={colors.textSecondary}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </GroupRow>
+                </>
+              )}
+              {isBuiltIn && (
+                <GroupRow>
+                  <Text style={[{ color: colors.textSecondary, fontSize: 14 }]}>
+                    {provider?.type === 'apple'
+                      ? 'Uses Apple Foundation Models — no configuration needed.'
+                      : 'Runs locally on your device — download model from the model selector.'}
+                  </Text>
+                </GroupRow>
+              )}
             </Group>
 
             <View style={[styles.actionsContainer, { marginTop: spacing[6], gap: spacing[3] }]}>
-              <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}
-                onPress={handleTestConnection}
-                disabled={isTesting}
-              >
-                {isTesting ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                ) : (
-                  <Text style={[styles.actionBtnText, { color: colors.primary }]}>Test Connection</Text>
-                )}
-              </TouchableOpacity>
+              {!isBuiltIn && (
+                <TouchableOpacity
+                  style={[styles.actionBtn, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}
+                  onPress={handleTestConnection}
+                  disabled={isTesting}
+                >
+                  {isTesting ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                    <Text style={[styles.actionBtnText, { color: colors.primary }]}>Test Connection</Text>
+                  )}
+                </TouchableOpacity>
+              )}
 
               <TouchableOpacity
                 style={[styles.actionBtn, { backgroundColor: colors.primary }]}

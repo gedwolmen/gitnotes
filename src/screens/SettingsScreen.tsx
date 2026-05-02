@@ -506,8 +506,14 @@ export default function SettingsScreen() {
                 <GroupRow
                   key={provider.id}
                   onPress={() => {
-                    setEditingProvider(provider);
-                    setShowProviderConfig(true);
+                    if (provider.type === 'openai-compatible') {
+                      setEditingProvider(provider);
+                      setShowProviderConfig(true);
+                    } else {
+                      useAIStore.getState().updateProvider(provider.id, {
+                        isEnabled: !provider.isEnabled,
+                      });
+                    }
                   }}
                   trailing={
                     <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
