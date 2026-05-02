@@ -547,7 +547,7 @@ export default function CanvasEditorScreen() {
       });
 
       if (!syncResult.success) {
-        console.warn('[CanvasEditor] GitHub sync failed:', syncResult.error);
+        Alert.alert('Sync Failed', syncResult.error || 'Canvas changes were saved locally but could not sync to GitHub.');
       }
     }
 
