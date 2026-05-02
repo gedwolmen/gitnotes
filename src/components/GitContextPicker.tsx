@@ -7,8 +7,6 @@ import {
   FlatList,
   ActivityIndicator,
   TextInput,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,39 +25,7 @@ interface GitContextPickerProps {
   onCommitChange: (commit: string | undefined) => void;
 }
 
-interface SheetProps {
-  visible: boolean;
-  title: string;
-  onClose: () => void;
-  children: React.ReactNode;
-}
-
-function ListSheet({ visible, title, onClose, children }: SheetProps) {
-  const { colors } = useTheme();
-  return (
-    <Modal
-      visible={visible}
-      onRequestClose={onClose}
-      bottomSheet
-      contentStyle={{ height: '85%' }}
-    >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.sheetContainer}
-      >
-        <SafeAreaView edges={['bottom']} style={styles.sheet}>
-          <View style={[styles.sheetHeader, { borderBottomColor: colors.border }]}>
-            <Text style={[styles.sheetTitle, { color: colors.text }]}>{title}</Text>
-            <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Ionicons name="close" size={24} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-          {children}
-        </SafeAreaView>
-      </KeyboardAvoidingView>
-    </Modal>
-  );
-}
+type SheetView = 'main' | 'repo' | 'branch';
 
 export default function GitContextPicker({
   repo,
@@ -69,13 +35,10 @@ export default function GitContextPicker({
   onCommitChange,
 }: GitContextPickerProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [view, setView] = useState<SheetView>('main');
   const [isLoading, setIsLoading] = useState(false);
   const { repositories } = useRepos();
   const [branches, setBranches] = useState<GitBranch[]>([]);
-
-  const [showRepoModal, setShowRepoModal] = useState(false);
-  const [showBranchModal, setShowBranchModal] = useState(false);
-
   const [repoSearch, setRepoSearch] = useState('');
   const [branchInput, setBranchInput] = useState('');
 
@@ -87,22 +50,20 @@ export default function GitContextPicker({
         (r) =>
           !repoSearch.trim() ||
           r.name.toLowerCase().includes(repoSearch.toLowerCase()) ||
-          r.path.toLowerCase().includes(repoSearch.toLowerCase())
+          r.path.toLowerCase().includes(repoSearch.toLowerCase()),
       ),
-    [repositories, repoSearch]
+    [repositories, repoSearch],
   );
 
-  const openRepoModal = useCallback(async () => {
+  const goToRepoView = useCallback(() => {
     setRepoSearch('');
-    setIsExpanded(false);
-    setShowRepoModal(true);
+    setView('repo');
   }, []);
 
-  const openBranchModal = useCallback(async () => {
+  const goToBranchView = useCallback(async () => {
     if (!repo) return;
     setBranchInput('');
-    setIsExpanded(false);
-    setShowBranchModal(true);
+    setView('branch');
     setIsLoading(true);
     try {
       setBranches(await GitService.getBranches(repo));
@@ -126,12 +87,18 @@ export default function GitContextPicker({
     }
   }, [repo]);
 
-  const openContextModal = useCallback(() => {
+  const openSheet = useCallback(() => {
+    setView('main');
     setIsExpanded(true);
   }, []);
 
-  const closeContextModal = useCallback(() => {
+  const closeSheet = useCallback(() => {
     setIsExpanded(false);
+    setView('main');
+  }, []);
+
+  const goBackToMain = useCallback(() => {
+    setView('main');
   }, []);
 
   const handleClearContext = useCallback(() => {
@@ -140,11 +107,38 @@ export default function GitContextPicker({
     onCommitChange(undefined);
   }, [onRepoChange, onBranchChange, onCommitChange]);
 
+  const handleRepoPick = useCallback(
+    (path: string) => {
+      HapticService.selection();
+      onRepoChange(path);
+      onBranchChange(undefined);
+      onCommitChange(undefined);
+      setView('main');
+    },
+    [onRepoChange, onBranchChange, onCommitChange],
+  );
+
+  const handleBranchPick = useCallback(
+    (name: string) => {
+      HapticService.selection();
+      onBranchChange(name);
+      setView('main');
+    },
+    [onBranchChange],
+  );
+
+  const isListView = view !== 'main';
+  const headerTitle =
+    view === 'repo' ? 'Select Repository' : view === 'branch' ? 'Select Branch' : 'Git Context';
+
   return (
     <View>
       <TouchableOpacity
-        style={[styles.triggerButton, { backgroundColor: colors.surface, borderColor: repo ? colors.primary : colors.border }]}
-        onPress={openContextModal}
+        style={[
+          styles.triggerButton,
+          { backgroundColor: colors.surface, borderColor: repo ? colors.primary : colors.border },
+        ]}
+        onPress={openSheet}
         activeOpacity={0.7}
       >
         <Ionicons name="git-branch" size={18} color={repo ? colors.primary : colors.textSecondary} />
@@ -161,173 +155,206 @@ export default function GitContextPicker({
         <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
       </TouchableOpacity>
 
-      {/* Main context popup (bottom sheet) */}
       <Modal
         visible={isExpanded}
-        onRequestClose={closeContextModal}
+        onRequestClose={closeSheet}
         bottomSheet
+        contentStyle={isListView ? { height: '85%' } : undefined}
       >
-        <SafeAreaView edges={['bottom']} style={styles.sheet}>
-          <View style={[styles.sheetHeader, { borderBottomColor: colors.border }]}>
-            <Text style={[styles.sheetTitle, { color: colors.text }]}>Git Context</Text>
-            <TouchableOpacity onPress={closeContextModal} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Ionicons name="close" size={24} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.content}>
-            <TouchableOpacity style={styles.selector} onPress={openRepoModal}>
-              <Text style={[styles.selectorLabel, { color: colors.textSecondary }]}>Repository</Text>
-              <View style={[styles.selectorValue, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <Text style={repo ? [styles.valueText, { color: colors.text }] : [styles.placeholderText, { color: colors.textSecondary }]}>
-                  {repo || 'Select repository'}
-                </Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+        <SafeAreaView
+          edges={['bottom']}
+          style={isListView ? styles.sheetFill : styles.sheetAuto}
+        >
+            <View style={[styles.sheetHeader, { borderBottomColor: colors.border }]}>
+              {isListView ? (
+                <TouchableOpacity
+                  onPress={goBackToMain}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={styles.backButton}
+                >
+                  <Ionicons name="chevron-back" size={24} color={colors.textSecondary} />
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.backButton} />
+              )}
+              <Text style={[styles.sheetTitle, { color: colors.text }]} numberOfLines={1}>
+                {headerTitle}
+              </Text>
+              <TouchableOpacity
+                onPress={closeSheet}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {view === 'main' && (
+              <View style={styles.content}>
+                <TouchableOpacity style={styles.selector} onPress={goToRepoView}>
+                  <Text style={[styles.selectorLabel, { color: colors.textSecondary }]}>Repository</Text>
+                  <View style={[styles.selectorValue, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    <Text
+                      style={
+                        repo
+                          ? [styles.valueText, { color: colors.text }]
+                          : [styles.placeholderText, { color: colors.textSecondary }]
+                      }
+                    >
+                      {repo || 'Select repository'}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+                  </View>
+                </TouchableOpacity>
+
+                {repo && (
+                  <TouchableOpacity style={styles.selector} onPress={goToBranchView}>
+                    <Text style={[styles.selectorLabel, { color: colors.textSecondary }]}>Branch</Text>
+                    <View style={[styles.selectorValue, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                      <Text
+                        style={
+                          branch
+                            ? [styles.valueText, { color: colors.text }]
+                            : [styles.placeholderText, { color: colors.textSecondary }]
+                        }
+                      >
+                        {branch || 'Select branch'}
+                      </Text>
+                      <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+                    </View>
+                  </TouchableOpacity>
+                )}
+
+                {(repo || branch) && (
+                  <TouchableOpacity style={styles.clearButton} onPress={handleClearContext}>
+                    <Ionicons name="trash-outline" size={16} color={colors.error} />
+                    <Text style={[styles.clearButtonText, { color: colors.error }]}>Clear Git Context</Text>
+                  </TouchableOpacity>
+                )}
               </View>
-            </TouchableOpacity>
+            )}
 
-            {repo && (
-              <TouchableOpacity style={styles.selector} onPress={openBranchModal}>
-                <Text style={[styles.selectorLabel, { color: colors.textSecondary }]}>Branch</Text>
-                <View style={[styles.selectorValue, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                  <Text style={branch ? [styles.valueText, { color: colors.text }] : [styles.placeholderText, { color: colors.textSecondary }]}>
-                    {branch || 'Select branch'}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+            {view === 'repo' && (
+              <>
+                <View style={[styles.searchRow, { borderBottomColor: colors.border }]}>
+                  <Ionicons name="search" size={16} color={colors.textSecondary} />
+                  <TextInput
+                    style={[styles.searchInput, { color: colors.text }]}
+                    placeholder="Search repositories…"
+                    placeholderTextColor={colors.textSecondary}
+                    value={repoSearch}
+                    onChangeText={setRepoSearch}
+                    autoCorrect={false}
+                    autoCapitalize="none"
+                  />
+                  {repoSearch.length > 0 && (
+                    <TouchableOpacity onPress={() => setRepoSearch('')}>
+                      <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  )}
                 </View>
-              </TouchableOpacity>
+                {filteredRepos.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Text style={[styles.emptyText, { color: colors.text }]}>
+                      {repositories.length === 0 ? 'No repositories added yet' : 'No matches'}
+                    </Text>
+                    {repositories.length === 0 && (
+                      <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+                        Add repositories in Settings
+                      </Text>
+                    )}
+                  </View>
+                ) : (
+                  <FlatList
+                    data={filteredRepos}
+                    keyExtractor={(item) => item.id}
+                    keyboardShouldPersistTaps="handled"
+                    style={styles.list}
+                    contentContainerStyle={styles.listContent}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        style={[styles.listItem, { borderBottomColor: colors.border }]}
+                        onPress={() => handleRepoPick(item.path)}
+                      >
+                        <Ionicons name="folder" size={20} color={colors.primary} />
+                        <View style={styles.listItemInfo}>
+                          <Text style={[styles.listItemText, { color: colors.text }]}>{item.name}</Text>
+                          <Text
+                            style={[styles.listItemSub, { color: colors.textSecondary }]}
+                            numberOfLines={1}
+                          >
+                            {item.path}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    )}
+                  />
+                )}
+              </>
             )}
 
-            {(repo || branch) && (
-              <TouchableOpacity style={styles.clearButton} onPress={handleClearContext}>
-                <Ionicons name="trash-outline" size={16} color={colors.error} />
-                <Text style={[styles.clearButtonText, { color: colors.error }]}>Clear Git Context</Text>
-              </TouchableOpacity>
+            {view === 'branch' && (
+              <>
+                <View style={[styles.inputRow, { borderBottomColor: colors.border }]}>
+                  <TextInput
+                    style={[styles.textInput, { color: colors.text, borderColor: colors.border }]}
+                    placeholder="Type branch name (e.g. main)"
+                    placeholderTextColor={colors.textSecondary}
+                    value={branchInput}
+                    onChangeText={setBranchInput}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity
+                    style={[
+                      styles.useButton,
+                      { backgroundColor: colors.primary },
+                      !branchInput.trim() && styles.useButtonDisabled,
+                    ]}
+                    onPress={() => {
+                      if (!branchInput.trim()) return;
+                      handleBranchPick(branchInput.trim());
+                      setBranchInput('');
+                    }}
+                    disabled={!branchInput.trim()}
+                  >
+                    <Text style={styles.useButtonText}>Use</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={refreshBranches} style={styles.iconButton}>
+                    <Ionicons name="refresh" size={20} color={colors.primary} />
+                  </TouchableOpacity>
+                </View>
+                {isLoading ? (
+                  <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
+                ) : (
+                  <FlatList
+                    data={branches}
+                    keyExtractor={(item) => item.name}
+                    keyboardShouldPersistTaps="handled"
+                    style={styles.list}
+                    contentContainerStyle={styles.listContent}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        style={[
+                          styles.listItem,
+                          { borderBottomColor: colors.border },
+                          item.isCurrent && { backgroundColor: colors.surfaceSecondary },
+                        ]}
+                        onPress={() => handleBranchPick(item.name)}
+                      >
+                        <Ionicons
+                          name={item.isCurrent ? 'checkmark-circle' : 'git-branch'}
+                          size={20}
+                          color={item.isCurrent ? '#34C759' : colors.textSecondary}
+                        />
+                        <Text style={[styles.listItemText, { color: colors.text }]}>{item.name}</Text>
+                      </TouchableOpacity>
+                    )}
+                  />
+                )}
+              </>
             )}
-          </View>
         </SafeAreaView>
       </Modal>
-
-      {/* Repo modal */}
-      <ListSheet visible={showRepoModal} title="Select Repository" onClose={() => setShowRepoModal(false)}>
-        <View style={[styles.searchRow, { borderBottomColor: colors.border }]}>
-          <Ionicons name="search" size={16} color={colors.textSecondary} style={styles.searchIcon} />
-          <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Search repositories…"
-            placeholderTextColor={colors.textSecondary}
-            value={repoSearch}
-            onChangeText={setRepoSearch}
-            autoCorrect={false}
-            autoCapitalize="none"
-          />
-          {repoSearch.length > 0 && (
-            <TouchableOpacity onPress={() => setRepoSearch('')}>
-              <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
-            </TouchableOpacity>
-          )}
-        </View>
-        {isLoading ? (
-          <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
-        ) : filteredRepos.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={[styles.emptyText, { color: colors.text }]}>
-              {repositories.length === 0 ? 'No repositories added yet' : 'No matches'}
-            </Text>
-            {repositories.length === 0 && (
-              <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>Add repositories in Settings</Text>
-            )}
-          </View>
-        ) : (
-          <FlatList
-            data={filteredRepos}
-            keyExtractor={(item) => item.id}
-            keyboardShouldPersistTaps="handled"
-            style={styles.list}
-            contentContainerStyle={styles.listContent}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[styles.listItem, { borderBottomColor: colors.border }]}
-                onPress={() => {
-                  HapticService.selection();
-                  onRepoChange(item.path);
-                  onBranchChange(undefined);
-                  onCommitChange(undefined);
-                  setShowRepoModal(false);
-                }}
-              >
-                <Ionicons name="folder" size={20} color={colors.primary} />
-                <View style={styles.listItemInfo}>
-                  <Text style={[styles.listItemText, { color: colors.text }]}>{item.name}</Text>
-                  <Text style={[styles.listItemSub, { color: colors.textSecondary }]} numberOfLines={1}>{item.path}</Text>
-                </View>
-              </TouchableOpacity>
-            )}
-          />
-        )}
-      </ListSheet>
-
-      {/* Branch modal */}
-      <ListSheet visible={showBranchModal} title="Select Branch" onClose={() => setShowBranchModal(false)}>
-        <View style={[styles.inputRow, { borderBottomColor: colors.border }]}>
-          <TextInput
-            style={[styles.textInput, { color: colors.text, borderColor: colors.border }]}
-            placeholder="Type branch name (e.g. main)"
-            placeholderTextColor={colors.textSecondary}
-            value={branchInput}
-            onChangeText={setBranchInput}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          <TouchableOpacity
-            style={[styles.useButton, { backgroundColor: colors.primary }, !branchInput.trim() && styles.useButtonDisabled]}
-            onPress={() => {
-              if (!branchInput.trim()) return;
-              HapticService.selection();
-              onBranchChange(branchInput.trim());
-              setBranchInput('');
-              setShowBranchModal(false);
-            }}
-            disabled={!branchInput.trim()}
-          >
-            <Text style={styles.useButtonText}>Use</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={refreshBranches} style={styles.iconButton}>
-            <Ionicons name="refresh" size={20} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
-        {isLoading ? (
-          <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
-        ) : (
-          <FlatList
-            data={branches}
-            keyExtractor={(item) => item.name}
-            keyboardShouldPersistTaps="handled"
-            style={styles.list}
-            contentContainerStyle={styles.listContent}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[
-                  styles.listItem,
-                  { borderBottomColor: colors.border },
-                  item.isCurrent && { backgroundColor: colors.surfaceSecondary },
-                ]}
-                onPress={() => {
-                  HapticService.selection();
-                  onBranchChange(item.name);
-                  setShowBranchModal(false);
-                }}
-              >
-                <Ionicons
-                  name={item.isCurrent ? 'checkmark-circle' : 'git-branch'}
-                  size={20}
-                  color={item.isCurrent ? '#34C759' : colors.textSecondary}
-                />
-                <Text style={[styles.listItemText, { color: colors.text }]}>{item.name}</Text>
-              </TouchableOpacity>
-            )}
-          />
-        )}
-      </ListSheet>
     </View>
   );
 }
@@ -386,18 +413,11 @@ const styles = StyleSheet.create({
   clearButtonText: {
     fontSize: 14,
   },
-  modalContent: {
-    padding: 0,
-    width: '100%',
-    height: '85%',
-  },
-  sheetContainer: {
+  sheetFill: {
     flex: 1,
+    paddingBottom: 8,
   },
-  sheet: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    flex: 1,
+  sheetAuto: {
     paddingBottom: 8,
   },
   list: {
@@ -413,10 +433,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
+    gap: 8,
   },
   sheetTitle: {
+    flex: 1,
     fontSize: 17,
     fontWeight: '600',
+    textAlign: 'center',
+  },
+  backButton: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   searchRow: {
     flexDirection: 'row',
@@ -426,7 +455,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     gap: 8,
   },
-  searchIcon: {},
   searchInput: {
     flex: 1,
     fontSize: 15,
@@ -497,18 +525,5 @@ const styles = StyleSheet.create({
   listItemSub: {
     fontSize: 12,
     marginTop: 2,
-  },
-  commitItem: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  commitHash: {
-    fontSize: 13,
-    fontFamily: 'monospace',
-    marginBottom: 3,
-  },
-  commitMessage: {
-    fontSize: 14,
   },
 });

@@ -164,8 +164,18 @@ export default function NotesListScreen() {
     return Array.from(set).sort();
   }, [notes, selectedRepo]);
 
+  const allBranches = useMemo(() => {
+    if (!selectedRepo) return [];
+    const set = new Set<string>();
+    notes.forEach((n) => {
+      if (n.repo === selectedRepo.path && n.branch) set.add(n.branch);
+    });
+    return Array.from(set).sort();
+  }, [notes, selectedRepo]);
+
   const activeFilterCount =
     (selectedRepo ? 1 : 0) +
+    (selectedBranch ? 1 : 0) +
     (selectedFolder ? 1 : 0) +
     (selectedFormat ? 1 : 0) +
     (selectedTags.length > 0 ? 1 : 0);
@@ -488,7 +498,7 @@ export default function NotesListScreen() {
           }}
         >
           <Ionicons
-            name="options-outline"
+            name="funnel-outline"
             size={20}
             color={
               activeFilterCount > 0 ? colors.primary : colors.textSecondary
@@ -746,6 +756,28 @@ export default function NotesListScreen() {
                 />
                 <Text style={[styles.chipText, { color: colors.primary }]}>
                   {FORMAT_LABELS[selectedFormat]}
+                </Text>
+                <Ionicons name="close" size={12} color={colors.primary} />
+              </TouchableOpacity>
+            )}
+            {selectedBranch && (
+              <TouchableOpacity
+                style={[
+                  styles.chip,
+                  {
+                    borderColor: colors.primary,
+                    backgroundColor: colors.primary + "15",
+                  },
+                ]}
+                onPress={() => setSelectedBranch(null)}
+              >
+                <Ionicons
+                  name="git-branch-outline"
+                  size={12}
+                  color={colors.primary}
+                />
+                <Text style={[styles.chipText, { color: colors.primary }]}>
+                  {selectedBranch}
                 </Text>
                 <Ionicons name="close" size={12} color={colors.primary} />
               </TouchableOpacity>
@@ -1031,6 +1063,95 @@ export default function NotesListScreen() {
                   ),
                 )}
               </View>
+
+              {/* Branch */}
+              {selectedRepo && allBranches.length > 0 && (
+                <>
+                  <Text
+                    style={[
+                      styles.filterLabel,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    Branch
+                  </Text>
+                  <FlatList
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.filterChipRow}
+                    data={allBranches}
+                    keyExtractor={(branch: string) => branch}
+                    ListHeaderComponent={
+                      <TouchableOpacity
+                        style={[
+                          styles.filterChip,
+                          { borderColor: colors.border },
+                          !selectedBranch && {
+                            borderColor: colors.primary,
+                            backgroundColor: colors.primary + "15",
+                          },
+                        ]}
+                        onPress={() => setSelectedBranch(null)}
+                      >
+                        <Text
+                          style={[
+                            styles.filterChipText,
+                            {
+                              color: !selectedBranch
+                                ? colors.primary
+                                : colors.text,
+                            },
+                          ]}
+                        >
+                          All
+                        </Text>
+                      </TouchableOpacity>
+                    }
+                    renderItem={({ item: branch }) => {
+                      const isSelected = selectedBranch === branch;
+                      return (
+                        <TouchableOpacity
+                          style={[
+                            styles.filterChip,
+                            { borderColor: colors.border },
+                            isSelected && {
+                              borderColor: colors.primary,
+                              backgroundColor: colors.primary + "15",
+                            },
+                          ]}
+                          onPress={() => {
+                            HapticService.selection();
+                            setSelectedBranch(isSelected ? null : branch);
+                          }}
+                        >
+                          <Ionicons
+                            name="git-branch-outline"
+                            size={13}
+                            color={
+                              isSelected
+                                ? colors.primary
+                                : colors.textSecondary
+                            }
+                          />
+                          <Text
+                            style={[
+                              styles.filterChipText,
+                              {
+                                color: isSelected
+                                  ? colors.primary
+                                  : colors.text,
+                              },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {branch}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    }}
+                  />
+                </>
+              )}
 
               {/* Folder */}
               {allFolders.length > 0 && (

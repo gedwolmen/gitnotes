@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,10 +16,14 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useCanvases } from '../contexts/CanvasContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useRepos } from '../contexts/RepoContext';
 import { RootStackParamList } from '../navigation/types';
 import { Canvas } from '../models/Canvas';
 import SearchBar from '../components/SearchBar';
 import { ScreenHeader, IconButton } from '../components/ui';
+import { EntityFilterModal } from '../components/EntityFilterModal';
+import { ActiveFilterStrip } from '../components/ActiveFilterStrip';
+import { useEntityFilter } from '../hooks/useEntityFilter';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -34,8 +38,12 @@ const CANVAS_PRESETS = [
 export default function CanvasListScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
-  const { filteredCanvases, searchQuery, setSearchQuery, deleteCanvas, refreshCanvases } = useCanvases();
+  const { canvases, filteredCanvases, searchQuery, setSearchQuery, deleteCanvas, refreshCanvases } = useCanvases();
+  const { repositories } = useRepos();
+  const filter = useEntityFilter<Canvas>(canvases);
+  const displayCanvases = useMemo(() => filter.applyFilters(filteredCanvases), [filter, filteredCanvases]);
   const [showSizePicker, setShowSizePicker] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
   const [customW, setCustomW] = useState('800');
   const [customH, setCustomH] = useState('600');
   const [canvasTitle, setCanvasTitle] = useState('');
@@ -154,9 +162,23 @@ export default function CanvasListScreen() {
       <ScreenHeader
         title="Canvases"
         actions={
-          <IconButton size="sm" onPress={handleCreate} accessibilityLabel="New canvas">
-            <Ionicons name="add" size={20} color={colors.accent} />
-          </IconButton>
+          <>
+            <IconButton
+              size="sm"
+              active={filter.activeCount > 0}
+              onPress={() => setShowFilterModal(true)}
+              accessibilityLabel="Filters"
+            >
+              <Ionicons
+                name="funnel-outline"
+                size={18}
+                color={filter.activeCount > 0 ? colors.accent : colors.textSecondary}
+              />
+            </IconButton>
+            <IconButton size="sm" onPress={handleCreate} accessibilityLabel="New canvas">
+              <Ionicons name="add" size={20} color={colors.accent} />
+            </IconButton>
+          </>
         }
       />
 
@@ -168,8 +190,17 @@ export default function CanvasListScreen() {
         />
       </View>
 
+      <ActiveFilterStrip filter={filter} />
+
+      <EntityFilterModal
+        visible={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        filter={filter}
+        repositories={repositories}
+      />
+
       <FlatList
-        data={filteredCanvases}
+        data={displayCanvases}
         keyExtractor={(item) => item.id}
         renderItem={renderCanvas}
         contentContainerStyle={styles.listContent}

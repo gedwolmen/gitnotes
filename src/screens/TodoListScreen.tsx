@@ -26,6 +26,10 @@ import GitContextPicker from '../components/GitContextPicker';
 import { syncTodoToGitHub } from '../services/TodoGitHubSyncService';
 import { IconButton, ScreenHeader } from '../components/ui';
 import SearchBar from '../components/SearchBar';
+import { EntityFilterModal } from '../components/EntityFilterModal';
+import { ActiveFilterStrip } from '../components/ActiveFilterStrip';
+import { useEntityFilter } from '../hooks/useEntityFilter';
+import { useRepos } from '../contexts/RepoContext';
 
 function formatDeadline(timestamp: number): string {
   const date = new Date(timestamp);
@@ -59,9 +63,12 @@ export default function TodoListScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [todoRepo, setTodoRepo] = useState<string | undefined>(undefined);
   const [todoBranch, setTodoBranch] = useState<string | undefined>(undefined);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const { repositories } = useRepos();
+  const filter = useEntityFilter<Todo>(todos);
 
   const filteredTodos = useMemo(() => {
-    let filtered = todos;
+    let filtered = filter.applyFilters(todos);
 
     if (filterCompleted) {
       filtered = filtered.filter(todo => !todo.completed);
@@ -84,7 +91,7 @@ export default function TodoListScreen() {
       if (priorityDiff !== 0) return priorityDiff;
       return b.createdAt - a.createdAt;
     });
-  }, [todos, filterCompleted, searchQuery]);
+  }, [todos, filter, filterCompleted, searchQuery]);
 
   const resetForm = useCallback(() => {
     setTodoText('');
@@ -382,6 +389,18 @@ export default function TodoListScreen() {
                 color={filterCompleted ? colors.accent : colors.textSecondary}
               />
             </IconButton>
+            <IconButton
+              size="sm"
+              active={filter.activeCount > 0}
+              onPress={() => setShowFilterModal(true)}
+              accessibilityLabel="Filters"
+            >
+              <Ionicons
+                name="funnel-outline"
+                size={18}
+                color={filter.activeCount > 0 ? colors.accent : colors.textSecondary}
+              />
+            </IconButton>
             <IconButton size="sm" onPress={() => setShowAddModal(true)} accessibilityLabel="Add todo">
               <Ionicons name="add" size={20} color={colors.accent} />
             </IconButton>
@@ -396,6 +415,16 @@ export default function TodoListScreen() {
           placeholder="Search todos..."
         />
       </View>
+
+      <ActiveFilterStrip filter={filter} />
+
+      <EntityFilterModal
+        visible={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        filter={filter}
+        repositories={repositories}
+      />
+
 
       <FlashList
         data={filteredTodos}
