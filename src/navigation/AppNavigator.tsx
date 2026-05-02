@@ -58,12 +58,14 @@ export default function AppNavigator() {
   const chatRepoOwner = useAIStore((state) => state.chatRepoOwner);
   const chatRepoName = useAIStore((state) => state.chatRepoName);
   const [showChatRepoPicker, setShowChatRepoPicker] = useState(false);
+  const [currentRouteName, setCurrentRouteName] = useState<string | undefined>(undefined);
 
   const navigationTheme = isDark ? DarkTheme : DefaultTheme;
   const hasChatRepo = Boolean(chatRepoOwner && chatRepoName);
 
   const handleStateChange = useCallback(() => {
     const routeName = navigationRef.getCurrentRoute()?.name;
+    setCurrentRouteName(routeName);
 
     if (routeName === 'ChatThreadList' && !hasChatRepo) {
       setShowChatRepoPicker(true);
@@ -159,7 +161,7 @@ export default function AppNavigator() {
               />
             )}
           </Stack.Navigator>
-          <FloatingAIButton />
+          <FloatingAIButton currentRouteName={currentRouteName} />
         </View>
       </NavigationContainer>
         <ChatRepoPickerModal

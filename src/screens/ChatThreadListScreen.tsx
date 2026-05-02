@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, FlatList } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -198,7 +199,7 @@ export default function ChatThreadListScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <ScreenHeader
         title="GitNotes Chat"
         onBack={() => navigation.goBack()}
@@ -223,7 +224,7 @@ export default function ChatThreadListScreen() {
         refreshing={isPullRefreshing}
         onRefresh={handleRefresh}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

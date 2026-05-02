@@ -20,7 +20,11 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const STORAGE_KEY = 'ai-button-position';
 
-export function FloatingAIButton() {
+interface FloatingAIButtonProps {
+  currentRouteName?: string;
+}
+
+export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
   const { isEnabled } = useAIStore();
   const { colors } = useTheme();
   const navigation = useNavigation();
@@ -100,7 +104,7 @@ export function FloatingAIButton() {
     };
   });
 
-  if (!isEnabled) {
+  if (!isEnabled || currentRouteName === 'ChatThreadList' || currentRouteName === 'ChatScreen') {
     return null;
   }
 
