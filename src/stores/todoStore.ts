@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { Todo, TodoCreateInput, TodoUpdateInput } from '../models/Todo';
 import { StorageService } from '../services/StorageService';
+import { GitHubService } from '../services/GitHubService';
+import { parseRepoPath } from '../utils/gitPathParser';
 
 interface TodoState {
   todos: Todo[];
@@ -67,9 +69,30 @@ export const useTodoStore = create<TodoState & TodoActions>()((set, get) => ({
   deleteTodo: async (id) => {
     try {
       set({ error: null });
+      const todoToDelete = get().todos.find((t) => t.id === id);
       const success = await StorageService.deleteTodo(id);
       if (success) {
         set((state) => ({ todos: state.todos.filter((t) => t.id !== id) }));
+        if (todoToDelete?.repo && todoToDelete.filePath && GitHubService.isAuthenticated()) {
+          const repoInfo = parseRepoPath(todoToDelete.repo);
+          if (repoInfo) {
+            const branch = todoToDelete.branch || 'main';
+            const sha = await GitHubService.getFileSha(repoInfo.owner, repoInfo.repo, todoToDelete.filePath, branch);
+            if (sha) {
+              const result = await GitHubService.deleteFile(
+                repoInfo.owner,
+                repoInfo.repo,
+                todoToDelete.filePath,
+                `Delete todo: ${todoToDelete.text}`,
+                sha,
+                branch,
+              );
+              if (!result) {
+                console.warn('[TodoStore] GitHub delete failed for todo:', id);
+              }
+            }
+          }
+        }
       }
       return success;
     } catch (err) {
