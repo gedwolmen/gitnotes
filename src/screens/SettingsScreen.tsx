@@ -32,7 +32,12 @@ import { HapticService } from '../utils/haptics';
 import SearchBar from '../components/SearchBar';
 import { useResponsive } from '../hooks/useResponsive';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ModelSelector } from '../components/ai/ModelSelector';
+import { ProviderConfigModal } from '../components/ai/ProviderConfigModal';
+import { ChatRepoPickerModal } from '../components/ai/ChatRepoPickerModal';
 import { Group, GroupRow, Toggle, ScreenHeader } from '../components/ui';
+import { useAIStore } from '../stores/aiStore';
+import type { AIProviderConfig } from '../models/AIProvider';
 
 export default function SettingsScreen() {
   const { theme, colors, setTheme, style: uiStyle, setStyle } = useTheme();
@@ -42,6 +47,14 @@ export default function SettingsScreen() {
   const { refreshTodos } = useTodos();
   const { authState, setToken, clearToken } = useAuth();
   const { repositories, addRepository: addRepo, removeRepository: removeRepo } = useRepos();
+  const isAIEnabled = useAIStore((state) => state.isEnabled);
+  const selectedModelId = useAIStore((state) => state.selectedModelId);
+  const actionMode = useAIStore((state) => state.actionMode);
+  const chatRepoOwner = useAIStore((state) => state.chatRepoOwner);
+  const chatRepoName = useAIStore((state) => state.chatRepoName);
+  const providers = useAIStore((state) => state.providers);
+  const toggleAI = useAIStore((state) => state.toggleAI);
+  const setActionMode = useAIStore((state) => state.setActionMode);
   const [showRepoPickerModal, setShowRepoPickerModal] = useState(false);
   const [githubRepos, setGithubRepos] = useState<GitHubRepository[]>([]);
   const [isLoadingGithubRepos, setIsLoadingGithubRepos] = useState(false);
@@ -55,6 +68,10 @@ export default function SettingsScreen() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [tokenVisible, setTokenVisible] = useState(false);
+  const [showModelSelector, setShowModelSelector] = useState(false);
+  const [showProviderConfig, setShowProviderConfig] = useState(false);
+  const [showChatRepoPicker, setShowChatRepoPicker] = useState(false);
+  const [editingProvider, setEditingProvider] = useState<AIProviderConfig | undefined>();
 
   const handlePasteToken = useCallback(async () => {
     try {
@@ -80,6 +97,11 @@ export default function SettingsScreen() {
   }, [tokenInput]);
 
   const [syncingRepo, setSyncingRepo] = useState<string | null>(null);
+
+  const selectedModelName = providers
+    .flatMap((provider) => provider.models)
+    .find((model) => model.id === selectedModelId)?.name ?? 'Not set';
+  const chatStorageLabel = chatRepoName ? (chatRepoOwner ? `${chatRepoOwner}/${chatRepoName}` : chatRepoName) : 'Not set';
 
   const handleSyncRepo = useCallback(async (repo: GitRepository) => {
     if (!GitHubService.isAuthenticated()) {
@@ -423,9 +445,9 @@ export default function SettingsScreen() {
         </View>
 
         {/* ── About ── */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}> 
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>About</Text>
-          <View style={[styles.settingItem, { borderBottomColor: colors.border }]}>
+          <View style={[styles.settingItem, { borderBottomColor: colors.border }]}> 
             <Text style={[styles.settingLabel, { color: colors.text }]}>Version</Text>
             <Text style={[styles.settingValue, { color: colors.textSecondary }]}>1.0.0</Text>
           </View>
@@ -434,6 +456,79 @@ export default function SettingsScreen() {
             <Text style={[styles.settingValue, { color: colors.textSecondary }]}>2026.04.07</Text>
           </View>
         </View>
+
+        <Group title="AI">
+          <GroupRow
+            trailing={
+              <Toggle
+                value={isAIEnabled}
+                onValueChange={() => {
+                  void toggleAI();
+                }}
+              />
+            }
+          >
+            <Text style={[styles.settingLabel, { color: colors.text }]}>Enable AI</Text>
+          </GroupRow>
+        </Group>
+
+        {isAIEnabled ? (
+          <>
+            <Group>
+              <GroupRow
+                onPress={() => setShowModelSelector(true)}
+                trailing={<Text style={[styles.settingValue, { color: colors.textSecondary }]}>{selectedModelName}</Text>}
+              >
+                <Text style={[styles.settingLabel, { color: colors.text }]}>Model</Text>
+              </GroupRow>
+              <GroupRow
+                onPress={() => {
+                  void setActionMode(actionMode === 'auto' ? 'confirm' : 'auto');
+                }}
+                trailing={
+                  <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
+                    {actionMode === 'auto' ? 'Auto' : 'Confirm'}
+                  </Text>
+                }
+              >
+                <Text style={[styles.settingLabel, { color: colors.text }]}>Action Mode</Text>
+              </GroupRow>
+              <GroupRow
+                onPress={() => setShowChatRepoPicker(true)}
+                trailing={<Text style={[styles.settingValue, { color: colors.textSecondary }]}>{chatStorageLabel}</Text>}
+              >
+                <Text style={[styles.settingLabel, { color: colors.text }]}>Chat Storage</Text>
+              </GroupRow>
+            </Group>
+
+            <Group title="Providers">
+              {providers.map((provider) => (
+                <GroupRow
+                  key={provider.id}
+                  onPress={() => {
+                    setEditingProvider(provider);
+                    setShowProviderConfig(true);
+                  }}
+                  trailing={
+                    <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
+                      {provider.isEnabled ? 'Enabled' : 'Disabled'}
+                    </Text>
+                  }
+                >
+                  <Text style={[styles.settingLabel, { color: colors.text }]}>{provider.name}</Text>
+                </GroupRow>
+              ))}
+              <GroupRow
+                onPress={() => {
+                  setEditingProvider(undefined);
+                  setShowProviderConfig(true);
+                }}
+              >
+                <Text style={[styles.settingLabel, { color: colors.primary }]}>Add Provider</Text>
+              </GroupRow>
+            </Group>
+          </>
+        ) : null}
 
         <View style={styles.bottomPad} />
       </ScrollView>
@@ -623,6 +718,21 @@ export default function SettingsScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <ModelSelector visible={showModelSelector} onClose={() => setShowModelSelector(false)} />
+      <ProviderConfigModal
+        visible={showProviderConfig}
+        provider={editingProvider}
+        onClose={() => {
+          setShowProviderConfig(false);
+          setEditingProvider(undefined);
+        }}
+      />
+      <ChatRepoPickerModal
+        visible={showChatRepoPicker}
+        onClose={() => setShowChatRepoPicker(false)}
+        onSelected={() => setShowChatRepoPicker(false)}
+      />
     </SafeAreaView>
   );
 }
