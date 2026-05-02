@@ -2,6 +2,10 @@ import { NeorgHeading, NeorgListItem, NeorgContentBlock, NeorgChecklistItem, Neo
 
 export class NeorgContentParser {
   static parseContent(content: string): NeorgContentParseResult {
+    if (typeof content !== 'string') {
+      return { success: false, blocks: [], error: 'Invalid content: expected string' };
+    }
+
     try {
       const lines = content.split('\n');
       const blocks: NeorgContentBlock[] = [];
