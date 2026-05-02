@@ -105,6 +105,33 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
       return;
     }
 
+    if (!isBuiltIn) {
+      const trimmed = baseURL.trim();
+      try {
+        const parsed = new URL(trimmed);
+        if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+          Alert.alert('Validation Error', 'Base URL must use http or https.');
+          return;
+        }
+        if (parsed.protocol === 'http:') {
+          const proceed = await new Promise<boolean>((resolve) => {
+            Alert.alert(
+              'Insecure URL',
+              'This base URL uses http (not https). API key will be sent in plain text. Continue?',
+              [
+                { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+                { text: 'Continue', style: 'destructive', onPress: () => resolve(true) },
+              ],
+            );
+          });
+          if (!proceed) return;
+        }
+      } catch {
+        Alert.alert('Validation Error', 'Base URL is not a valid URL.');
+        return;
+      }
+    }
+
     const providerId = provider?.id || `custom-${Date.now()}`;
     const sourceModels = testedModels.length > 0 ? testedModels : (provider?.models || []);
     const models = sourceModels.map((m) => ({ ...m, providerId }));

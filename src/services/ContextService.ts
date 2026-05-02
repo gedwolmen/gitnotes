@@ -1,13 +1,13 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import type { AIContextItem } from '../models/AIProvider';
 import { useNoteStore } from '../stores/noteStore';
 import { useTodoStore } from '../stores/todoStore';
-
-const TOKEN_KEY = '@gitnotes:github_token';
-
-const MAX_CONTEXT_SIZE = 100 * 1024; // 100KB
-const MAX_FILE_SIZE = 50 * 1024; // 50KB
+import AuthService from './AuthService';
+import {
+  DEFAULT_CHAT_BRANCH,
+  MAX_CONTEXT_FILE_BYTES as MAX_FILE_SIZE,
+  MAX_CONTEXT_TOTAL_BYTES as MAX_CONTEXT_SIZE,
+} from './ai/config';
 const BINARY_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico', '.mp4', '.mov', '.mp3', '.wav', '.pdf', '.zip', '.tar', '.gz', '.rar'];
 
 type GitHubContentType = 'file' | 'dir' | 'symlink' | 'submodule';
@@ -142,7 +142,7 @@ function normalizeFolderPath(folderPath?: string): string | null {
 }
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
-  const token = await AsyncStorage.getItem(TOKEN_KEY);
+  const token = await AuthService.getToken();
   if (!token) {
     throw new Error('GitHub token is not available');
   }
@@ -271,7 +271,7 @@ export async function buildContextString(items: AIContextItem[]): Promise<string
 
   for (const item of items) {
     let content = '';
-    const branch = item.branch || 'main';
+    const branch = item.branch || DEFAULT_CHAT_BRANCH;
 
     try {
       if (item.type === 'file') {

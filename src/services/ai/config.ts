@@ -1,0 +1,24 @@
+/**
+ * Tunables for AI chat / context handling.
+ *
+ * Keep all magic numbers and limits here so they can be tuned in one
+ * place and surfaced for OSS contributors.
+ */
+
+/** Maximum bytes pulled from a single GitHub file when building context. */
+export const MAX_CONTEXT_FILE_BYTES = 50 * 1024;
+
+/** Maximum total bytes packed into the context section of the system prompt. */
+export const MAX_CONTEXT_TOTAL_BYTES = 100 * 1024;
+
+/** How many times to retry a GitHub PUT/DELETE on 409/422 sha conflicts. */
+export const GITHUB_WRITE_RETRIES = 3;
+
+/** Approximate bytes per token for byte→token estimation (English heuristic). */
+export const BYTES_PER_TOKEN = 4;
+
+/** Streaming text deltas are flushed to the UI at most this often. */
+export const STREAM_RENDER_FLUSH_MS = 80;
+
+/** Default chat-storage branch when the user has not picked one. */
+export const DEFAULT_CHAT_BRANCH = 'main';

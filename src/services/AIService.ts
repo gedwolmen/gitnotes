@@ -1,5 +1,5 @@
 import { generateText, streamText } from 'ai';
-import type { CoreMessage, LanguageModel as LanguageModelV1, Tool } from 'ai';
+import type { LanguageModel as LanguageModelV1, ModelMessage, Tool } from 'ai';
 import { Platform } from 'react-native';
 import type { AIModelConfig, AIProviderConfig } from '../models/AIProvider';
 import { chatTools } from './ai/tools';
@@ -190,14 +190,16 @@ function serializeToolEvent(part: unknown): string | null {
 
 export async function* streamChatResponse(
   model: LanguageModelV1,
-  messages: CoreMessage[],
-  tools?: Record<string, Tool>
+  messages: ModelMessage[],
+  tools?: Record<string, Tool>,
+  abortSignal?: AbortSignal,
 ): AsyncGenerator<string> {
   try {
     const result = streamText({
       model,
       messages,
       tools,
+      abortSignal,
     });
 
     for await (const part of result.fullStream as AsyncIterable<any>) {

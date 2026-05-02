@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import http, { setAuthToken, clearAuthToken } from './http';
+import AuthService from './AuthService';
 
-const TOKEN_KEY = '@gitnotes:github_token';
 const USER_KEY = '@gitnotes:github_user';
 
 function base64ToBytes(base64: string): Uint8Array {
@@ -158,7 +158,7 @@ class GitHubServiceClass {
 
   async initialize(): Promise<void> {
     try {
-      this.token = await AsyncStorage.getItem(TOKEN_KEY);
+      this.token = await AuthService.getToken();
       if (!this.token) return;
       setAuthToken(this.token);
       const userJson = await AsyncStorage.getItem(USER_KEY);
@@ -185,7 +185,7 @@ class GitHubServiceClass {
       return null;
     }
     this.user = resolvedUser;
-    await AsyncStorage.setItem(TOKEN_KEY, token);
+    await AuthService.setToken(token);
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(resolvedUser));
     return resolvedUser;
   }
@@ -194,7 +194,8 @@ class GitHubServiceClass {
     this.token = null;
     this.user = null;
     clearAuthToken();
-    await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
+    await AuthService.clearToken();
+    await AsyncStorage.removeItem(USER_KEY);
   }
 
   isAuthenticated(): boolean {

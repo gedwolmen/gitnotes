@@ -7,7 +7,8 @@ import { GitHubService } from './GitHubService';
 const GITHUB_API = 'https://api.github.com';
 const CHAT_DIR = '.gitnotes/chats';
 const INDEX_PATH = `${CHAT_DIR}/index.json`;
-const TOKEN_KEY = '@gitnotes:github_token';
+import AuthService from './AuthService';
+import { GITHUB_WRITE_RETRIES } from './ai/config';
 
 interface GitHubContentResponse {
   content?: string;
@@ -58,7 +59,7 @@ async function getToken(): Promise<string> {
     throw new Error('GitHub not authenticated');
   }
 
-  const token = await AsyncStorage.getItem(TOKEN_KEY);
+  const token = await AuthService.getToken();
   if (!token) {
     throw new Error('GitHub token is not configured');
   }
@@ -114,7 +115,7 @@ async function putFile(params: {
   const { owner, repo, path, branch, message, content } = params;
   let sha = params.sha;
 
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < GITHUB_WRITE_RETRIES; attempt++) {
     try {
       await githubRequest({
         owner,
@@ -131,7 +132,7 @@ async function putFile(params: {
       return;
     } catch (error) {
       const status = getStatus(error);
-      if ((status === 409 || status === 422) && attempt < 2) {
+      if ((status === 409 || status === 422) && attempt < GITHUB_WRITE_RETRIES - 1) {
         const latest = await getFile(owner, repo, path, branch);
         sha = latest?.sha;
         await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
@@ -153,7 +154,7 @@ async function deleteFile(params: {
   const { owner, repo, path, branch, message } = params;
   let sha = params.sha;
 
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < GITHUB_WRITE_RETRIES; attempt++) {
     try {
       await githubRequest({
         owner,
@@ -168,7 +169,7 @@ async function deleteFile(params: {
       if (status === 404) {
         return;
       }
-      if ((status === 409 || status === 422) && attempt < 2) {
+      if ((status === 409 || status === 422) && attempt < GITHUB_WRITE_RETRIES - 1) {
         const latest = await getFile(owner, repo, path, branch);
         if (!latest?.sha) {
           return;

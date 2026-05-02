@@ -1,18 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Platform } from 'react-native';
+import { View, Text, Platform, Pressable } from 'react-native';
 import { ChatMessage } from '../../models/Chat';
 import { useTokens, useTheme } from '../../contexts/ThemeContext';
 import { formatDistanceToNow } from 'date-fns';
 import { Ionicons } from '@expo/vector-icons';
 import { Surface } from '../ui/Surface';
-import Markdown from 'react-native-marked';
+import Markdown, { type MarkedStyles } from 'react-native-marked';
+import type { ViewStyle } from 'react-native';
 
 export interface ChatMessageBubbleProps {
   message: ChatMessage;
   isStreaming?: boolean;
+  onLongPress?: (message: ChatMessage) => void;
 }
 
-export function ChatMessageBubble({ message, isStreaming }: ChatMessageBubbleProps) {
+function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessageBubbleProps) {
   const { colors, spacing, type } = useTokens();
   const { isDark } = useTheme();
 
@@ -64,9 +66,9 @@ export function ChatMessageBubble({ message, isStreaming }: ChatMessageBubblePro
     );
   }
   
-  const containerStyle = {
-    alignSelf: isUser ? 'flex-end' as const : 'flex-start' as const,
-    maxWidth: '85%' as const,
+  const containerStyle: ViewStyle = {
+    alignSelf: isUser ? 'flex-end' : 'flex-start',
+    maxWidth: '85%',
     marginVertical: spacing[1],
   };
 
@@ -93,7 +95,7 @@ export function ChatMessageBubble({ message, isStreaming }: ChatMessageBubblePro
     }
   };
 
-  const markdownStyles = {
+  const markdownStyles: MarkedStyles = {
     paragraph: { backgroundColor: 'transparent', marginVertical: 0, paddingVertical: 0 },
     text: { color: textColor, backgroundColor: 'transparent' },
     em: { color: textColor },
@@ -111,7 +113,12 @@ export function ChatMessageBubble({ message, isStreaming }: ChatMessageBubblePro
   };
 
   return (
-    <View style={containerStyle as any}>
+    <Pressable
+      style={containerStyle}
+      onLongPress={onLongPress ? () => onLongPress(message) : undefined}
+      delayLongPress={350}
+      android_ripple={{ color: 'transparent' }}
+    >
       <View style={bubbleStyle}>
         {message.toolCallName ? (
           <View>
@@ -136,9 +143,9 @@ export function ChatMessageBubble({ message, isStreaming }: ChatMessageBubblePro
         ) : (
           <Markdown
             value={message.content}
-            theme={markdownTheme as any}
-            styles={markdownStyles as any}
-            flatListProps={markdownFlatListProps as any}
+            theme={markdownTheme}
+            styles={markdownStyles}
+            flatListProps={markdownFlatListProps}
           />
         )}
       </View>
@@ -188,6 +195,20 @@ export function ChatMessageBubble({ message, isStreaming }: ChatMessageBubblePro
       }}>
         {timestamp}
       </Text>
-    </View>
+    </Pressable>
   );
 }
+
+export const ChatMessageBubble = React.memo(ChatMessageBubbleImpl, (prev, next) => {
+  if (prev.isStreaming !== next.isStreaming) return false;
+  if (prev.onLongPress !== next.onLongPress) return false;
+  const a = prev.message;
+  const b = next.message;
+  return (
+    a.id === b.id
+    && a.content === b.content
+    && a.toolCallResult === b.toolCallResult
+    && a.toolCallName === b.toolCallName
+    && a.role === b.role
+  );
+});

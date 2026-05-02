@@ -51,6 +51,7 @@ interface ChatActions {
   renameThread: (input: RenameThreadInput) => void;
   addMessage: (message: ChatMessage) => void;
   updateMessage: (messageId: string, updates: Partial<ChatMessage>) => void;
+  truncateAfter: (messageId: string, options?: { inclusive?: boolean }) => void;
   setStreaming: (isStreaming: boolean) => void;
   clearActiveThread: () => void;
   clearError: () => void;
@@ -251,6 +252,26 @@ export const useChatStore = create<ChatState & ChatActions>()((set, get) => ({
         updatedAt: Date.now(),
       };
 
+      return {
+        activeThread: updatedThread,
+        threads: upsertThreadSummary(state.threads, updatedThread),
+      };
+    });
+  },
+
+  truncateAfter: (messageId, options) => {
+    set((state) => {
+      if (!state.activeThread) return state;
+      const messages = state.activeThread.messages;
+      const index = messages.findIndex((m) => m.id === messageId);
+      if (index < 0) return state;
+      const cutoff = options?.inclusive ? index : index + 1;
+      if (cutoff >= messages.length) return state;
+      const updatedThread: ChatThread = {
+        ...state.activeThread,
+        messages: messages.slice(0, cutoff),
+        updatedAt: Date.now(),
+      };
       return {
         activeThread: updatedThread,
         threads: upsertThreadSummary(state.threads, updatedThread),

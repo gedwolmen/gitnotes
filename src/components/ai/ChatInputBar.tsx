@@ -12,6 +12,7 @@ export interface ChatInputBarProps {
   attachedContexts: AIContextItem[];
   onRemoveContext: (index: number) => void;
   isStreaming: boolean;
+  onStop?: () => void;
   disabled?: boolean;
   contextWarning?: { level: 'caution' | 'over' | 'none'; message: string } | null;
 }
@@ -22,6 +23,7 @@ export function ChatInputBar({
   attachedContexts,
   onRemoveContext,
   isStreaming,
+  onStop,
   disabled,
   contextWarning,
 }: ChatInputBarProps) {
@@ -131,18 +133,29 @@ export function ChatInputBar({
           editable={!disabled && !isStreaming}
         />
 
-        <IconButton
-          variant="ghost"
-          onPress={handleSend}
-          disabled={isSendDisabled}
-          style={{ marginLeft: spacing[1], marginBottom: 2 }}
-        >
-          <Ionicons 
-            name="send" 
-            size={24} 
-            color={isSendDisabled ? colors.textSecondary : colors.primary} 
-          />
-        </IconButton>
+        {isStreaming && onStop ? (
+          <IconButton
+            variant="ghost"
+            onPress={onStop}
+            style={{ marginLeft: spacing[1], marginBottom: 2 }}
+            accessibilityLabel="Stop generation"
+          >
+            <Ionicons name="stop-circle" size={26} color={colors.primary} />
+          </IconButton>
+        ) : (
+          <IconButton
+            variant="ghost"
+            onPress={handleSend}
+            disabled={isSendDisabled}
+            style={{ marginLeft: spacing[1], marginBottom: 2 }}
+          >
+            <Ionicons
+              name="send"
+              size={24}
+              color={isSendDisabled ? colors.textSecondary : colors.primary}
+            />
+          </IconButton>
+        )}
       </View>
     </Surface>
   );

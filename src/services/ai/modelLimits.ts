@@ -1,4 +1,5 @@
 import type { AIModelConfig } from '../../models/AIProvider';
+import { BYTES_PER_TOKEN } from './config';
 
 export interface ModelContextLimit {
   totalTokens: number;
@@ -39,9 +40,9 @@ export function getModelContextLimit(model: AIModelConfig): ModelContextLimit | 
   return null;
 }
 
-/** Rough token estimate from byte length. ~4 chars/token for English text. */
+/** Rough token estimate from byte length. See `BYTES_PER_TOKEN`. */
 export function estimateTokensFromBytes(bytes: number): number {
-  return Math.ceil(bytes / 4);
+  return Math.ceil(bytes / BYTES_PER_TOKEN);
 }
 
 export interface ContextBudgetCheck {
