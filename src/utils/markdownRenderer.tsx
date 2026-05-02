@@ -4,6 +4,7 @@ import { Renderer, type RendererInterface } from 'react-native-marked';
 import { Image } from 'expo-image';
 
 import { isCanvasLink, canvasIdFromLink } from '../models/Canvas';
+import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 
 interface CustomRendererDeps {
   colors: {
@@ -26,6 +27,24 @@ export class NotePreviewRenderer extends Renderer implements RendererInterface {
   constructor(deps: CustomRendererDeps) {
     super();
     this.deps = deps;
+  }
+
+  private renderCanvasFallback(id: string): ReactNode {
+    return (
+      <Text
+        key={`canvas-fallback-${id}`}
+        style={{
+          color: this.deps.colors.text,
+          backgroundColor: this.deps.colors.surfaceSecondary ?? '#f0f0f0',
+          borderRadius: 8,
+          overflow: 'hidden',
+          paddingHorizontal: 12,
+          paddingVertical: 10,
+        }}
+      >
+        Canvas preview unavailable
+      </Text>
+    );
   }
 
   image(uri: string, alt?: string, _style?: ImageStyle): ReactNode {
@@ -63,7 +82,11 @@ export class NotePreviewRenderer extends Renderer implements RendererInterface {
   link(children: string | ReactNode[], href: string, styles?: TextStyle): ReactNode {
     if (isCanvasLink(href) && this.deps.CanvasPreview) {
       const id = canvasIdFromLink(href);
-      return <React.Fragment key={this.getKey()}>{React.createElement(this.deps.CanvasPreview, { canvasId: id })}</React.Fragment>;
+      return React.createElement(
+        ErrorBoundary,
+        { key: `canvas-boundary-${id}`, fallback: this.renderCanvasFallback(id) },
+        React.createElement(this.deps.CanvasPreview, { key: id, canvasId: id }),
+      );
     }
 
     const onPress = () => {
