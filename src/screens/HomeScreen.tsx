@@ -237,8 +237,13 @@ export default function HomeScreen() {
               <Ionicons name="easel-outline" size={22} color={colors.accent} />
             </View>
             <View style={styles.bentoTileContent}>
-              <Text style={[styles.bentoTileTitle, { color: colors.text }]}>Canvases</Text>
-              <Text style={[styles.bentoTileSubtitle, { color: colors.textSecondary }]}>Visual notes · Beta</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={[styles.bentoTileTitle, { color: colors.text }]}>Canvases</Text>
+                <View style={{ backgroundColor: '#3B82F6', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 5 }}>
+                  <Text style={{ color: '#ffffff', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 }}>BETA</Text>
+                </View>
+              </View>
+              <Text style={[styles.bentoTileSubtitle, { color: colors.textSecondary }]}>Visual notes</Text>
             </View>
           </Pressable>
         </View>

@@ -8,6 +8,8 @@ type ProductionStackParamList = {
   VideoViewer: { owner: string; repo: string; branch?: string; path: string; title?: string; size?: number };
   CanvasEditor: { canvasId?: string; canvasWidth?: number; canvasHeight?: number; canvasTitle?: string };
   CanvasList: undefined;
+  ChatThreadList: undefined;
+  ChatScreen: { threadId: string };
 };
 
 type DevOnlyStackParamList = {

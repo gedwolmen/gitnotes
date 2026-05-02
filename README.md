@@ -24,6 +24,17 @@ GitNotēs treats your notes as plain files in a Git repository: every note, todo
 - Todos with checkboxes, due dates, and per-repo sync.
 - Canvas drawings with pinch-zoom, two-finger pan, and JSON-backed scenes.
 - Templates for quickly creating structured notes.
+- **GitNotes AI** chat with notes / todos as tools, contexts attached from your repo, threads versioned in GitHub. Provider quirks and known issues documented in [`docs/LLM-issues-fixes.md`](docs/LLM-issues-fixes.md).
+
+### GitNotes AI
+
+- Multi-provider: Apple Foundation Models (on-device, iOS), Llama via `@react-native-ai/llama` (SmolLM3-3B), and any OpenAI-compatible endpoint (OpenAI, Z.AI Coding Plan, local Ollama, etc.).
+- Tool calling: `create_note`, `edit_note`, `search_notes`, `create_todo`, etc., with optional confirm-before-apply mode.
+- Context picker: attach files / folders / whole repos / local notes / local todos to a message; contexts persist across turns in a thread.
+- Token-budget warnings tuned per model (4K hard limit on Apple, 64K on SmolLM3).
+- Streaming with Stop button, edit-and-resend, regenerate, auto-titled threads.
+- Per-provider quirks isolated in [`src/services/ai/providerQuirks.ts`](src/services/ai/providerQuirks.ts) so divergences (e.g. Z.AI's `tool_stream`) don't leak into the chat code.
+- Threads stored as JSON files under `chat/` in your selected repo, retried on 409 conflicts.
 
 ### GitHub sync
 
@@ -141,6 +152,7 @@ The UI is built on a small set of neumorphic primitives that share a single toke
 - React Navigation v7
 - TanStack Query v5
 - Zustand v5
+- Vercel AI SDK v5 with `@ai-sdk/openai-compatible` v1 and `@react-native-ai/{apple,llama}` for the chat layer
 - `react-native-marked` for Markdown rendering
 - `@shopify/flash-list` for virtualized lists
 - `react-native-reanimated` and `react-native-gesture-handler` for animations and gestures
@@ -148,7 +160,8 @@ The UI is built on a small set of neumorphic primitives that share a single toke
 ## Security
 
 - The project pins `markdown-it` to v14.1.1 via npm overrides to address GHSA-6vfc-qv3f-vr6c.
-- GitHub Personal Access Tokens are stored in secure storage, never in plain `AsyncStorage`.
+- GitHub Personal Access Tokens and AI provider API keys are stored in `expo-secure-store` (Keychain on iOS, EncryptedSharedPreferences on Android), never in plain `AsyncStorage`. Legacy AsyncStorage tokens migrate on first read.
+- AI provider configuration validates base URLs and prompts a confirmation before saving any non-https endpoint, since the API key would travel in plain text.
 - Open advisories tracked in issues; see `#222` for upstream Expo bumps for `postcss` and `uuid` CVEs.
 
 ## Deployment

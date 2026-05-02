@@ -336,6 +336,20 @@ export default function TodoListScreen() {
                   </View>
                 )}
 
+                {isOverdue && (
+                  <View style={{
+                    backgroundColor: colors.error,
+                    paddingHorizontal: 6,
+                    paddingVertical: 2,
+                    borderRadius: 5,
+                    marginRight: 6,
+                  }}>
+                    <Text style={{ color: '#ffffff', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 }}>
+                      EXPIRED
+                    </Text>
+                  </View>
+                )}
+
                 {item.dueDate && (
                   <View style={[styles.deadlineBadge, { backgroundColor: isOverdue ? colors.error + '20' : colors.primary + '15' }]}>
                     <Ionicons

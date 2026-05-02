@@ -77,6 +77,15 @@ export class AuthService {
     await deleteToken();
   }
 
+  /**
+   * Returns the stored GitHub token, migrating from legacy AsyncStorage
+   * to SecureStore on first access. Use this everywhere instead of reading
+   * the token storage key directly.
+   */
+  static async getToken(): Promise<string | null> {
+    return readToken();
+  }
+
   static async getUser(token: string): Promise<GitHubUser | null> {
     try {
       const response = await fetch('https://api.github.com/user', {

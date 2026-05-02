@@ -7,13 +7,14 @@ import { IconButton } from './IconButton';
 export interface ScreenHeaderProps {
   title: string;
   subtitle?: string;
+  badge?: string;
   onBack?: () => void;
   actions?: ReactNode;
   style?: StyleProp<ViewStyle>;
 }
 
 export function ScreenHeader(props: ScreenHeaderProps) {
-  const { title, subtitle, onBack, actions, style } = props;
+  const { title, subtitle, badge, onBack, actions, style } = props;
   const { colors, spacing, type } = useTokens();
 
   return (
@@ -36,16 +37,40 @@ export function ScreenHeader(props: ScreenHeaderProps) {
         </IconButton>
       )}
       <View style={{ flex: 1 }}>
-        <Text
-          style={{
-            color: colors.text,
-            fontSize: type['2xl'],
-            fontWeight: '700',
-          }}
-          numberOfLines={1}
-        >
-          {title}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
+          <Text
+            style={{
+              color: colors.text,
+              fontSize: type['2xl'],
+              fontWeight: '700',
+              flexShrink: 1,
+            }}
+            numberOfLines={1}
+          >
+            {title}
+          </Text>
+          {badge && (
+            <View
+              style={{
+                backgroundColor: '#3B82F6',
+                paddingHorizontal: spacing[2],
+                paddingVertical: 2,
+                borderRadius: 6,
+              }}
+            >
+              <Text
+                style={{
+                  color: '#ffffff',
+                  fontSize: 10,
+                  fontWeight: '800',
+                  letterSpacing: 0.5,
+                }}
+              >
+                {badge}
+              </Text>
+            </View>
+          )}
+        </View>
         {subtitle && (
           <Text
             style={{
