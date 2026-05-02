@@ -14,7 +14,10 @@
     "test": "jest"
   },
   "dependencies": {
+    "@ai-sdk/openai-compatible": "^2.0.45",
     "@expo/vector-icons": "^15.0.3",
+    "@react-native-ai/apple": "0.11.0",
+    "@react-native-ai/llama": "0.10.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "8.6.0",
     "@react-navigation/bottom-tabs": "^7.15.9",
@@ -22,7 +25,10 @@
     "@react-navigation/native-stack": "^7.14.10",
     "@shopify/flash-list": "2.0.2",
     "@shopify/react-native-skia": "2.4.18",
+    "@stardazed/streams-text-encoding": "^1.0.2",
     "@tanstack/react-query": "^5.100.7",
+    "@ungap/structured-clone": "^1.3.0",
+    "ai": "5",
     "axios": "^1.15.2",
     "date-fns": "^4.1.0",
     "expo": "^55.0.19",
@@ -42,9 +48,11 @@
     "expo-status-bar": "~55.0.5",
     "expo-web-browser": "~55.0.14",
     "isomorphic-git": "^1.37.4",
+    "llama.rn": "0.10.1",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-native": "0.83.6",
+    "react-native-blob-util": "^0.24.7",
     "react-native-gesture-handler": "~2.30.0",
     "react-native-marked": "^8.0.1",
     "react-native-reanimated": "4.2.1",
@@ -54,6 +62,7 @@
     "react-native-web": "^0.21.0",
     "react-native-webview": "13.16.0",
     "react-native-worklets": "0.7.4",
+    "zod": "^4.4.2",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
