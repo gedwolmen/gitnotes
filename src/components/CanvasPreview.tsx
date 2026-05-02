@@ -19,7 +19,7 @@ import {
 import { useCanvases } from '../contexts/CanvasContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/types';
-import { Canvas, CanvasElement } from '../models/Canvas';
+import { CanvasChart, CanvasShape, CanvasStroke, CanvasText } from '../models/Canvas';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -76,6 +76,71 @@ function buildLinePath(x1: number, y1: number, x2: number, y2: number) {
   return p;
 }
 
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === 'string';
+}
+
+function isPoint(point: unknown): point is { x: number; y: number } {
+  return !!point
+    && typeof point === 'object'
+    && isFiniteNumber((point as { x?: unknown }).x)
+    && isFiniteNumber((point as { y?: unknown }).y);
+}
+
+function isStrokeElement(el: unknown): el is CanvasStroke {
+  return !!el
+    && typeof el === 'object'
+    && (el as { type?: unknown }).type === 'stroke'
+    && Array.isArray((el as { points?: unknown }).points)
+    && (el as { points: unknown[] }).points.every(isPoint)
+    && isString((el as { color?: unknown }).color)
+    && isFiniteNumber((el as { width?: unknown }).width)
+    && isString((el as { tool?: unknown }).tool);
+}
+
+function isShapeElement(el: unknown): el is CanvasShape {
+  return !!el
+    && typeof el === 'object'
+    && (el as { type?: unknown }).type === 'shape'
+    && isString((el as { shape?: unknown }).shape)
+    && isString((el as { color?: unknown }).color)
+    && isFiniteNumber((el as { width?: unknown }).width)
+    && isFiniteNumber((el as { x1?: unknown }).x1)
+    && isFiniteNumber((el as { y1?: unknown }).y1)
+    && isFiniteNumber((el as { x2?: unknown }).x2)
+    && isFiniteNumber((el as { y2?: unknown }).y2)
+    && ((el as { fillColor?: unknown }).fillColor === undefined || isString((el as { fillColor?: unknown }).fillColor));
+}
+
+function isTextElement(el: unknown): el is CanvasText {
+  return !!el
+    && typeof el === 'object'
+    && (el as { type?: unknown }).type === 'text'
+    && isString((el as { text?: unknown }).text)
+    && isString((el as { color?: unknown }).color)
+    && isFiniteNumber((el as { x?: unknown }).x)
+    && isFiniteNumber((el as { y?: unknown }).y);
+}
+
+function isChartElement(el: unknown): el is CanvasChart {
+  return !!el
+    && typeof el === 'object'
+    && (el as { type?: unknown }).type === 'chart'
+    && isString((el as { chartType?: unknown }).chartType)
+    && Array.isArray((el as { labels?: unknown }).labels)
+    && (el as { labels: unknown[] }).labels.every(isString)
+    && Array.isArray((el as { values?: unknown }).values)
+    && (el as { values: unknown[] }).values.every(isFiniteNumber)
+    && isFiniteNumber((el as { x?: unknown }).x)
+    && isFiniteNumber((el as { y?: unknown }).y)
+    && isFiniteNumber((el as { width?: unknown }).width)
+    && isFiniteNumber((el as { height?: unknown }).height);
+}
+
 export default function CanvasPreview({ canvasId }: CanvasPreviewProps) {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
@@ -111,17 +176,17 @@ export default function CanvasPreview({ canvasId }: CanvasPreviewProps) {
   }
 
   const scene = canvasData.scene;
-  const elements = scene?.elements ?? [];
-  const sceneWidth = scene?.width ?? 800;
-  const sceneHeight = scene?.height ?? 600;
+  const elements: unknown[] = Array.isArray(scene?.elements) ? scene.elements : [];
+  const sceneWidth = isFiniteNumber(scene?.width) && scene.width > 0 ? scene.width : 800;
+  const sceneHeight = isFiniteNumber(scene?.height) && scene.height > 0 ? scene.height : 600;
   const previewWidth = Dimensions.get('window').width - 32;
   const previewHeight = 140;
   const scaleX = previewWidth / sceneWidth;
   const scaleY = previewHeight / sceneHeight;
   const scale = Math.min(scaleX, scaleY);
 
-  const renderElement = (el: CanvasElement, idx: number) => {
-    if (el.type === 'stroke') {
+  const renderElement = (el: unknown, idx: number) => {
+    if (isStrokeElement(el)) {
       const path = buildStrokePath(el.points);
       if (!path) return null;
       const strokeColor = el.tool === 'highlighter' ? hexToRgba(el.color, 0.3) : el.color;
@@ -133,7 +198,7 @@ export default function CanvasPreview({ canvasId }: CanvasPreviewProps) {
       );
     }
 
-    if (el.type === 'shape') {
+    if (isShapeElement(el)) {
       const { x1, y1, x2, y2, shape, color: sColor, fillColor, width: sw } = el;
       const minX = Math.min(x1, x2);
       const minY = Math.min(y1, y2);
@@ -181,11 +246,11 @@ export default function CanvasPreview({ canvasId }: CanvasPreviewProps) {
       }
     }
 
-    if (el.type === 'text') {
+    if (isTextElement(el)) {
       return <SkiaText key={el.id ?? idx} x={el.x} y={el.y} text={el.text} font={font} color={el.color} />;
     }
 
-    if (el.type === 'chart') {
+    if (isChartElement(el)) {
       const chartColors = ['#007AFF', '#FF3B30', '#34C759', '#FF9500', '#AF52DE'];
       if (el.chartType === 'bar') {
         const maxVal = Math.max(...el.values, 1);
