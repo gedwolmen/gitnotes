@@ -24,6 +24,7 @@ import * as ChatStorageService from '../services/ChatStorageService';
 import { executeToolCall } from '../services/ai/actionExecutor';
 import { chatTools } from '../services/ai/tools';
 import { buildSystemPrompt } from '../services/ai/systemPrompt';
+import { checkContextBudget } from '../services/ai/modelLimits';
 import { buildContextString } from '../services/ContextService';
 import { useAIStore } from '../stores/aiStore';
 import { useChatStore } from '../stores/chatStore';
@@ -162,6 +163,7 @@ export default function ChatScreen() {
   const setStreaming = useChatStore((state) => state.setStreaming);
   const clearError = useChatStore((state) => state.clearError);
   const setStorageAdapter = useChatStore((state) => state.setStorageAdapter);
+  const renameThread = useChatStore((state) => state.renameThread);
 
   const [attachedContexts, setAttachedContexts] = useState<AIContextItem[]>([]);
   const [isContextPickerVisible, setIsContextPickerVisible] = useState(false);
@@ -342,11 +344,29 @@ export default function ChatScreen() {
         }
       }
 
-      if (!assistantText.trim() && handledToolCount > 0 && !pausedForConfirmation) {
-        updateMessage(assistantMessageId, { content: 'Done.' });
+      if (!assistantText.trim() && !pausedForConfirmation) {
+        updateMessage(assistantMessageId, {
+          content: handledToolCount > 0 ? 'Done.' : 'No response received.',
+        });
       }
 
       await saveActiveThread();
+
+      const latest = useChatStore.getState().activeThread;
+      if (latest && latest.title === 'New Chat' && assistantText.trim()) {
+        void (async () => {
+          try {
+            const titleModelInstance = await AIService.initializeModel(model, provider as AIProviderConfig | undefined);
+            const title = await AIService.generateChatTitle(titleModelInstance, userMessage.content, assistantText);
+            if (title) {
+              renameThread({ threadId: latest.id, title });
+              await saveActiveThread();
+            }
+          } catch {
+            // title generation is best-effort
+          }
+        })();
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to send message.';
       setLocalError(message);
@@ -356,7 +376,7 @@ export default function ChatScreen() {
     } finally {
       setStreaming(false);
     }
-  }, [addMessage, clearError, getSelectedModelConfig, noteCount, runToolCall, saveActiveThread, setStreaming, todoCount, updateMessage]);
+  }, [addMessage, clearError, getSelectedModelConfig, noteCount, renameThread, runToolCall, saveActiveThread, setStreaming, todoCount, updateMessage]);
 
   useEffect(() => {
     if (storageAdapter) {
@@ -444,6 +464,13 @@ export default function ChatScreen() {
     setPendingConfirmation(null);
     await saveActiveThread();
   }, [addMessage, pendingConfirmation, saveActiveThread, updateMessage]);
+
+  const selectedModel = useAIStore((state) => state.selectedModelId);
+  const contextBudget = React.useMemo(() => {
+    const model = useAIStore.getState().getSelectedModel();
+    const totalBytes = attachedContexts.reduce((acc, c) => acc + (c.approxBytes || 0), 0);
+    return checkContextBudget(model, totalBytes);
+  }, [attachedContexts, selectedModel]);
 
   const handleSend = useCallback((text: string) => {
     if (!text.trim() || isStreaming || isLoading) {
@@ -582,6 +609,7 @@ export default function ChatScreen() {
             }}
             isStreaming={isStreaming}
             disabled={!thread && !isLoading}
+            contextWarning={contextBudget.message ? { level: contextBudget.warningLevel, message: contextBudget.message } : null}
           />
         </View>
       </KeyboardAvoidingView>

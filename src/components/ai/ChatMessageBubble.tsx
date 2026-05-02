@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, Platform } from 'react-native';
 import { ChatMessage } from '../../models/Chat';
 import { useTokens, useTheme } from '../../contexts/ThemeContext';
 import { formatDistanceToNow } from 'date-fns';
@@ -16,12 +16,15 @@ export function ChatMessageBubble({ message, isStreaming }: ChatMessageBubblePro
   const { colors, spacing, type } = useTokens();
   const { isDark } = useTheme();
 
-  const [dots, setDots] = useState('');
+  const [dotStep, setDotStep] = useState(0);
 
   useEffect(() => {
-    if (!isStreaming) return;
+    if (!isStreaming) {
+      setDotStep(0);
+      return;
+    }
     const interval = setInterval(() => {
-      setDots((d) => (d.length >= 3 ? '' : d + '.'));
+      setDotStep((s) => (s + 1) % 4);
     }, 400);
     return () => clearInterval(interval);
   }, [isStreaming]);
@@ -39,6 +42,27 @@ export function ChatMessageBubble({ message, isStreaming }: ChatMessageBubblePro
   }
 
   const isUser = message.role === 'user';
+  const isStreamingPlaceholder = !isUser && isStreaming && !message.content && !message.toolCallName;
+
+  if (isStreamingPlaceholder) {
+    return (
+      <View style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', height: type.md * 1.4, paddingHorizontal: spacing[2], marginVertical: spacing[1] }}>
+        {[0, 1, 2].map((i) => (
+          <View
+            key={i}
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: 3,
+              backgroundColor: colors.textSecondary,
+              opacity: dotStep === i + 1 || dotStep === 0 ? 1 : 0.3,
+              marginRight: i < 2 ? 4 : 0,
+            }}
+          />
+        ))}
+      </View>
+    );
+  }
   
   const containerStyle = {
     alignSelf: isUser ? 'flex-end' as const : 'flex-start' as const,
@@ -65,7 +89,25 @@ export function ChatMessageBubble({ message, isStreaming }: ChatMessageBubblePro
       code: textColor,
       link: colors.primary,
       border: isDark ? '#444' : '#ddd',
+      background: 'transparent' as const,
     }
+  };
+
+  const markdownStyles = {
+    paragraph: { backgroundColor: 'transparent', marginVertical: 0, paddingVertical: 0 },
+    text: { color: textColor, backgroundColor: 'transparent' },
+    em: { color: textColor },
+    strong: { color: textColor },
+    li: { color: textColor },
+    codespan: { color: textColor, backgroundColor: isDark ? '#1c1c1e' : '#e8e8e8' },
+    code: { backgroundColor: isDark ? '#1c1c1e' : '#e8e8e8' },
+    blockquote: { backgroundColor: 'transparent', borderLeftColor: isDark ? '#444' : '#ddd' },
+  };
+
+  const markdownFlatListProps = {
+    style: { backgroundColor: 'transparent' },
+    contentContainerStyle: { backgroundColor: 'transparent' },
+    scrollEnabled: false,
   };
 
   return (
@@ -92,15 +134,55 @@ export function ChatMessageBubble({ message, isStreaming }: ChatMessageBubblePro
             {message.content}
           </Text>
         ) : (
-          <Markdown 
-            value={message.content + (isStreaming && !message.content ? dots : '')} 
+          <Markdown
+            value={message.content}
             theme={markdownTheme as any}
+            styles={markdownStyles as any}
+            flatListProps={markdownFlatListProps as any}
           />
         )}
       </View>
-      <Text style={{ 
-        color: colors.textSecondary, 
-        fontSize: 10, 
+      {isUser && message.attachedContexts && message.attachedContexts.length > 0 && (
+        <View style={{
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          justifyContent: 'flex-end',
+          marginTop: spacing[1],
+          gap: spacing[1],
+        }}>
+          {message.attachedContexts.map((ctx, idx) => (
+            <View
+              key={`${ctx.type}-${ctx.path}-${idx}`}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: isDark ? '#2c2c2e' : '#e8e8e8',
+                paddingHorizontal: spacing[2],
+                paddingVertical: 2,
+                borderRadius: 10,
+              }}
+            >
+              <Ionicons
+                name={
+                  ctx.type === 'file' || ctx.type === 'local-notes' ? 'document-text-outline'
+                  : ctx.type === 'repo' ? 'git-branch-outline'
+                  : ctx.type === 'local-todos' ? 'checkbox-outline'
+                  : 'folder-outline'
+                }
+                size={11}
+                color={colors.textSecondary}
+                style={{ marginRight: 3 }}
+              />
+              <Text style={{ color: colors.textSecondary, fontSize: 11 }} numberOfLines={1}>
+                {ctx.name}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+      <Text style={{
+        color: colors.textSecondary,
+        fontSize: 10,
         alignSelf: isUser ? 'flex-end' as const : 'flex-start' as const,
         marginTop: spacing[1]
       }}>

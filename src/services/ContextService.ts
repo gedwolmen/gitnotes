@@ -271,16 +271,17 @@ export async function buildContextString(items: AIContextItem[]): Promise<string
 
   for (const item of items) {
     let content = '';
+    const branch = item.branch || 'main';
 
     try {
       if (item.type === 'file') {
-        const file = await getFileContent(item.owner, item.repo, 'main', item.path);
+        const file = await getFileContent(item.owner, item.repo, branch, item.path);
         content = file.content;
       } else if (item.type === 'folder') {
-        const folder = await getFolderContents(item.owner, item.repo, 'main', item.path);
+        const folder = await getFolderContents(item.owner, item.repo, branch, item.path);
         content = formatFolderContents(folder);
       } else if (item.type === 'repo') {
-        const repo = await getRepoStructure(item.owner, item.repo, 'main');
+        const repo = await getRepoStructure(item.owner, item.repo, branch);
         content = formatFolderContents(repo);
       } else if (item.type === 'local-notes') {
         content = getLocalNotesForContext(item.path || undefined);

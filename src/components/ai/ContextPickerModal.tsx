@@ -23,7 +23,7 @@ import { useTodoStore } from '../../stores/todoStore';
 import { useAIStore } from '../../stores/aiStore';
 
 type TabType = 'files' | 'folders' | 'repo' | 'local-notes' | 'local-todos';
-type RepoTreeEntry = { path: string; type: 'blob' | 'tree'; sha: string };
+type RepoTreeEntry = { path: string; type: 'blob' | 'tree'; sha: string; size?: number };
 
 export interface ContextPickerModalProps {
   visible: boolean;
@@ -143,13 +143,26 @@ export default function ContextPickerModal({
     .filter((item) => !searchTerm || item.path.toLowerCase().includes(searchTerm) || item.path.split('/').pop()?.toLowerCase().includes(searchTerm))
     .sort((a, b) => a.path.localeCompare(b.path));
 
-  const makeContextItem = useCallback((type: 'file' | 'folder', path: string, name: string): AIContextItem => ({
-    type,
-    owner: chatRepoOwner || '',
-    repo: chatRepoName || '',
-    path,
-    name,
-  }), [chatRepoName, chatRepoOwner]);
+  const makeContextItem = useCallback((type: 'file' | 'folder', path: string, name: string): AIContextItem => {
+    let approxBytes: number | undefined;
+    if (type === 'file') {
+      const entry = repoTree.find((e) => e.type === 'blob' && e.path === path);
+      approxBytes = entry?.size;
+    } else if (type === 'folder') {
+      approxBytes = repoTree
+        .filter((e) => e.type === 'blob' && e.path.startsWith(`${path}/`))
+        .reduce((acc, e) => acc + (e.size || 0), 0) || undefined;
+    }
+    return {
+      type,
+      owner: chatRepoOwner || '',
+      repo: chatRepoName || '',
+      path,
+      name,
+      branch: chatRepoBranch || 'main',
+      approxBytes,
+    };
+  }, [chatRepoBranch, chatRepoName, chatRepoOwner, repoTree]);
 
   const renderEmptyState = (icon: keyof typeof Ionicons.glyphMap, title: string, subtitle: string) => (
     <View style={styles.placeholderContainer}>
@@ -275,10 +288,12 @@ export default function ContextPickerModal({
             activeOpacity={0.7}
             onPress={() => toggleSelection({
               type: 'repo',
-              owner: '',
+              owner: chatRepoOwner || '',
               repo: item.name,
               path: item.path,
-              name: item.name
+              name: item.name,
+              branch: chatRepoBranch || 'main',
+              approxBytes: repoTree.filter((e) => e.type === 'blob').reduce((acc, e) => acc + (e.size || 0), 0) || undefined,
             })}
           >
             <Surface 
@@ -330,7 +345,8 @@ export default function ContextPickerModal({
                 owner: '',
                 repo: '',
                 path: item.id,
-                name: item.title
+                name: item.title,
+                approxBytes: (item.title?.length || 0) + (item.content?.length || 0),
               })}
             >
               <Surface 
@@ -390,7 +406,8 @@ export default function ContextPickerModal({
                 owner: '',
                 repo: '',
                 path: item.id,
-                name: item.text
+                name: item.text,
+                approxBytes: (item.text?.length || 0)
               })}
             >
               <Surface 

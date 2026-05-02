@@ -1,4 +1,4 @@
-import { streamText } from 'ai';
+import { generateText, streamText } from 'ai';
 import type { CoreMessage, LanguageModel as LanguageModelV1, Tool } from 'ai';
 import { Platform } from 'react-native';
 import type { AIModelConfig, AIProviderConfig } from '../models/AIProvider';
@@ -137,25 +137,48 @@ function serializeToolEvent(part: unknown): string | null {
 
   const event = part as {
     type: string;
+    id?: string;
     toolCallId?: string;
     toolName?: string;
     input?: unknown;
+    args?: unknown;
+    delta?: string;
     argsTextDelta?: string;
     result?: unknown;
+    output?: unknown;
   };
+
+  const toolCallId = event.toolCallId ?? event.id;
 
   switch (event.type) {
     case 'tool-call':
+      return JSON.stringify({
+        type: 'tool-call',
+        toolCallId,
+        toolName: event.toolName,
+        input: event.input ?? event.args,
+      });
+    case 'tool-input-start':
     case 'tool-call-streaming-start':
+      return JSON.stringify({
+        type: 'tool-call-streaming-start',
+        toolCallId,
+        toolName: event.toolName,
+      });
+    case 'tool-input-delta':
     case 'tool-call-delta':
+      return JSON.stringify({
+        type: 'tool-call-delta',
+        toolCallId,
+        toolName: event.toolName,
+        argsTextDelta: event.delta ?? event.argsTextDelta ?? '',
+      });
     case 'tool-result':
       return JSON.stringify({
-        type: event.type,
-        toolCallId: event.toolCallId,
+        type: 'tool-result',
+        toolCallId,
         toolName: event.toolName,
-        input: event.input,
-        argsTextDelta: event.argsTextDelta,
-        result: event.result,
+        result: event.output ?? event.result,
       });
     default:
       return null;
@@ -175,9 +198,18 @@ export async function* streamChatResponse(
     });
 
     for await (const part of result.fullStream as AsyncIterable<any>) {
-      if (part.type === 'text-delta' && typeof part.textDelta === 'string') {
-        yield part.textDelta;
+      if (part.type === 'text-delta' || part.type === 'text') {
+        const delta = typeof part.text === 'string' ? part.text : part.textDelta;
+        if (typeof delta === 'string' && delta.length > 0) {
+          yield delta;
+        }
         continue;
+      }
+
+      if (part.type === 'error') {
+        const err = part.error;
+        const message = err instanceof Error ? err.message : typeof err === 'string' ? err : 'Stream error';
+        throw new Error(message);
       }
 
       const toolEvent = serializeToolEvent(part);
@@ -192,6 +224,38 @@ export async function* streamChatResponse(
 }
 
 export const sendMessage = streamChatResponse;
+
+export async function generateChatTitle(
+  model: LanguageModelV1,
+  userText: string,
+  assistantText: string,
+): Promise<string | null> {
+  try {
+    const trimmedAssistant = assistantText.trim().slice(0, 400);
+    const trimmedUser = userText.trim().slice(0, 200);
+    const result = await generateText({
+      model,
+      messages: [
+        {
+          role: 'system',
+          content:
+            'Generate a short, descriptive chat title (2-5 words) summarizing the conversation. Reply with only the title, no quotes, no punctuation at the end.',
+        },
+        {
+          role: 'user',
+          content: `User: ${trimmedUser}\nAssistant: ${trimmedAssistant}`,
+        },
+      ],
+    });
+
+    const raw = (result.text || '').trim().replace(/^["'`]|["'`]$/g, '').replace(/\.$/, '');
+    if (!raw) return null;
+    const words = raw.split(/\s+/).slice(0, 6).join(' ');
+    return words.length > 60 ? words.slice(0, 60) : words;
+  } catch {
+    return null;
+  }
+}
 
 export async function getAvailableOnDeviceModels(): Promise<AIModelConfig[]> {
   try {

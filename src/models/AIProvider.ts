@@ -39,4 +39,7 @@ export interface AIContextItem {
   repo: string;
   path: string;
   name: string;
+  branch?: string;
+  /** Approximate byte size used for context-budget warnings. */
+  approxBytes?: number;
 }

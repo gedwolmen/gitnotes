@@ -198,13 +198,21 @@ export const useAIStore = create<AIState & AIActions>()((set, get) => ({
       .flatMap((provider) => provider.models),
 
   getSelectedModel: () => {
-    const { selectedModelId } = get();
+    const { selectedModelId, providers } = get();
 
     if (!selectedModelId) {
       return undefined;
     }
 
-    return get().getAvailableModels().find((model) => model.id === selectedModelId);
+    for (const provider of providers) {
+      if (!provider.isEnabled) continue;
+      const model = provider.models.find((m) => m.id === selectedModelId);
+      if (model) {
+        return { ...model, providerId: provider.id };
+      }
+    }
+
+    return undefined;
   },
 
   persistSettings: async () => {

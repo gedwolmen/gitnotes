@@ -13,6 +13,7 @@ export interface ChatInputBarProps {
   onRemoveContext: (index: number) => void;
   isStreaming: boolean;
   disabled?: boolean;
+  contextWarning?: { level: 'caution' | 'over' | 'none'; message: string } | null;
 }
 
 export function ChatInputBar({
@@ -22,6 +23,7 @@ export function ChatInputBar({
   onRemoveContext,
   isStreaming,
   disabled,
+  contextWarning,
 }: ChatInputBarProps) {
   const [text, setText] = useState('');
   const { colors, spacing, type } = useTokens();
@@ -37,6 +39,30 @@ export function ChatInputBar({
 
   return (
     <Surface elevation="raised" style={{ padding: spacing[2], paddingBottom: spacing[4] }}>
+      {contextWarning && contextWarning.message && (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'flex-start',
+            backgroundColor: contextWarning.level === 'over' ? '#5a1a1a' : '#5a4a1a',
+            borderColor: contextWarning.level === 'over' ? '#d66b6b' : '#e0a936',
+            borderWidth: 1,
+            borderRadius: 8,
+            padding: spacing[2],
+            marginBottom: spacing[2],
+          }}
+        >
+          <Ionicons
+            name={contextWarning.level === 'over' ? 'alert-circle' : 'warning-outline'}
+            size={16}
+            color={contextWarning.level === 'over' ? '#ff8b8b' : '#ffd166'}
+            style={{ marginRight: spacing[2], marginTop: 1 }}
+          />
+          <Text style={{ flex: 1, fontSize: type.sm, color: colors.text }}>
+            {contextWarning.message}
+          </Text>
+        </View>
+      )}
       {attachedContexts.length > 0 && (
         <ScrollView 
           horizontal 

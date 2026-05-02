@@ -105,8 +105,12 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
       return;
     }
 
+    const providerId = provider?.id || `custom-${Date.now()}`;
+    const sourceModels = testedModels.length > 0 ? testedModels : (provider?.models || []);
+    const models = sourceModels.map((m) => ({ ...m, providerId }));
+
     const baseProvider: AIProviderConfig = {
-      id: provider?.id || `custom-${Date.now()}`,
+      id: providerId,
       type: isBuiltIn ? provider!.type : 'openai-compatible',
       name: name.trim(),
       isEnabled: provider?.isEnabled ?? true,
@@ -115,7 +119,7 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
         baseURL: baseURL.trim(),
         apiKey: apiKey.trim() || undefined,
       }),
-      models: testedModels.length > 0 ? testedModels : (provider?.models || []),
+      models,
     };
 
     try {

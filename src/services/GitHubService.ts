@@ -293,7 +293,7 @@ class GitHubServiceClass {
     owner: string,
     repo: string,
     ref: string,
-  ): Promise<{ path: string; type: 'blob' | 'tree'; sha: string }[]> {
+  ): Promise<{ path: string; type: 'blob' | 'tree'; sha: string; size?: number }[]> {
     try {
       const url = `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`;
       const data = await this.request(url);
@@ -302,6 +302,7 @@ class GitHubServiceClass {
         path: item.path,
         type: item.type,
         sha: item.sha,
+        size: typeof item.size === 'number' ? item.size : undefined,
       }));
     } catch (error) {
       if (!isNotFound(error)) {

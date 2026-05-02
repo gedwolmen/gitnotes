@@ -202,6 +202,7 @@ export default function ChatThreadListScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <ScreenHeader
         title="GitNotes Chat"
+        badge="BETA"
         onBack={() => navigation.goBack()}
       />
 
