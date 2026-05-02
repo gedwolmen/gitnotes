@@ -9,6 +9,7 @@ import {
   TextInput,
   ScrollView,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,6 +25,7 @@ import { HapticService } from '../utils/haptics';
 import { useResponsive } from '../hooks/useResponsive';
 import GitContextPicker from '../components/GitContextPicker';
 import { syncTodoToGitHub } from '../services/TodoGitHubSyncService';
+import { pullAllFromRepos } from '../services/RepoPullService';
 import { IconButton, ScreenHeader } from '../components/ui';
 import SearchBar from '../components/SearchBar';
 import { EntityFilterModal } from '../components/EntityFilterModal';
@@ -46,7 +48,8 @@ function findReminderLabel(minutes: number): string {
 export default function TodoListScreen() {
   const { colors, isDark } = useTheme();
   const { isTablet, maxContentWidth } = useResponsive();
-  const { todos, createTodo, updateTodo, deleteTodo, toggleTodo } = useTodos();
+  const { todos, createTodo, updateTodo, deleteTodo, toggleTodo, refreshTodos } = useTodos();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
@@ -265,6 +268,20 @@ export default function TodoListScreen() {
     setTodoReminderMinutes(0);
   }, []);
 
+  const handlePullToRefresh = useCallback(async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    HapticService.light();
+    try {
+      await pullAllFromRepos();
+    } catch (err) {
+      console.warn('[TodoList] Pull failed:', err);
+    } finally {
+      await refreshTodos();
+      setIsRefreshing(false);
+    }
+  }, [isRefreshing, refreshTodos]);
+
   const renderTodoItem = useCallback(
     ({ item }: { item: Todo }) => {
       const renderRightActions = () => (
@@ -433,6 +450,14 @@ export default function TodoListScreen() {
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={renderEmptyState}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handlePullToRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
       />
 
       <Modal visible={showAddModal || editingTodo !== null} transparent animationType="slide" onRequestClose={closeModals}>

@@ -161,6 +161,7 @@ export default function CanvasListScreen() {
     <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: colors.background }]}>
       <ScreenHeader
         title="Canvases"
+        subtitle="Beta"
         actions={
           <>
             <IconButton

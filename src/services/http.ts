@@ -1,4 +1,5 @@
 import axios, { type AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from 'axios';
+import { githubActivity } from '../stores/githubActivityStore';
 
 const GITHUB_API_BASE = 'https://api.github.com';
 
@@ -10,10 +11,7 @@ const http: AxiosInstance = axios.create({
   },
 });
 
-let authToken: string | null = null;
-
 export function setAuthToken(token: string | null): void {
-  authToken = token;
   if (token) {
     http.defaults.headers.common.Authorization = `Bearer ${token}`;
   } else {
@@ -22,18 +20,42 @@ export function setAuthToken(token: string | null): void {
 }
 
 export function clearAuthToken(): void {
-  authToken = null;
   delete http.defaults.headers.common.Authorization;
 }
 
+function labelForMethod(method?: string): string {
+  const m = (method ?? 'get').toLowerCase();
+  if (m === 'delete') return 'Deleting on GitHub…';
+  if (m === 'put' || m === 'post' || m === 'patch') return 'Saving to GitHub…';
+  return 'Syncing with GitHub…';
+}
+
+type TrackedConfig = InternalAxiosRequestConfig & { _activityTracked?: boolean };
+
 http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   config.headers.set('X-Request-ID', `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
+  const tracked = config as TrackedConfig;
+  if (!tracked._activityTracked) {
+    tracked._activityTracked = true;
+    githubActivity.begin(labelForMethod(config.method));
+  }
   return config;
 });
 
+function endIfTracked(config: TrackedConfig | undefined) {
+  if (config?._activityTracked) {
+    config._activityTracked = false;
+    githubActivity.end();
+  }
+}
+
 http.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    endIfTracked(response.config as TrackedConfig);
+    return response;
+  },
   (error: AxiosError) => {
+    endIfTracked(error.config as TrackedConfig | undefined);
     const status = error.response?.status;
     // Prevent credential leaks in error messages
     const safeMessage = status

@@ -238,7 +238,7 @@ export default function HomeScreen() {
             </View>
             <View style={styles.bentoTileContent}>
               <Text style={[styles.bentoTileTitle, { color: colors.text }]}>Canvases</Text>
-              <Text style={[styles.bentoTileSubtitle, { color: colors.textSecondary }]}>Visual notes</Text>
+              <Text style={[styles.bentoTileSubtitle, { color: colors.textSecondary }]}>Visual notes · Beta</Text>
             </View>
           </Pressable>
         </View>

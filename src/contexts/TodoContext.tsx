@@ -30,32 +30,52 @@ export function useTodos(): TodoContextValue {
   const isLoading = useTodoStore((s) => s.isLoading);
 
   const createTodo = useMemo(() => async (input: TodoCreateInput): Promise<Todo | null> => {
+    let todo: Todo;
     try {
-      const todo = await StorageService.createTodo(input);
-      const notificationId = await NotificationService.scheduleReminder(todo);
-      const finalTodo = notificationId
-        ? await StorageService.updateTodo({ id: todo.id, notificationId }) ?? todo
-        : todo;
-      useTodoStore.setState((s) => ({ todos: [finalTodo, ...s.todos] }));
-      return finalTodo;
-    } catch {
+      todo = await StorageService.createTodo(input);
+    } catch (err) {
+      console.warn('[TodoContext] createTodo storage failed:', err);
       return null;
     }
+
+    let finalTodo = todo;
+    try {
+      const notificationId = await NotificationService.scheduleReminder(todo);
+      if (notificationId) {
+        finalTodo = (await StorageService.updateTodo({ id: todo.id, notificationId })) ?? todo;
+      }
+    } catch (err) {
+      console.warn('[TodoContext] Notification schedule failed:', err);
+    }
+
+    useTodoStore.setState((s) => ({ todos: [finalTodo, ...s.todos] }));
+    return finalTodo;
   }, []);
 
   const updateTodo = useMemo(() => async (input: TodoUpdateInput): Promise<Todo | null> => {
+    let updated: Todo | null = null;
     try {
-      const updated = await StorageService.updateTodo(input);
-      if (!updated) return null;
-      const notificationId = await NotificationService.rescheduleReminder(updated);
-      const finalTodo = notificationId !== updated.notificationId
-        ? await StorageService.updateTodo({ id: updated.id, notificationId }) ?? updated
-        : updated;
-      useTodoStore.setState((s) => ({ todos: s.todos.map((t) => (t.id === finalTodo.id ? finalTodo : t)) }));
-      return finalTodo;
-    } catch {
+      updated = await StorageService.updateTodo(input);
+    } catch (err) {
+      console.warn('[TodoContext] updateTodo storage failed:', err);
       return null;
     }
+    if (!updated) return null;
+
+    let finalTodo = updated;
+    try {
+      const notificationId = await NotificationService.rescheduleReminder(updated);
+      if (notificationId !== updated.notificationId) {
+        finalTodo = (await StorageService.updateTodo({ id: updated.id, notificationId })) ?? updated;
+      }
+    } catch (err) {
+      console.warn('[TodoContext] Notification reschedule failed:', err);
+    }
+
+    useTodoStore.setState((s) => ({
+      todos: s.todos.map((t) => (t.id === finalTodo.id ? finalTodo : t)),
+    }));
+    return finalTodo;
   }, []);
 
   const deleteTodo = useMemo(() => async (id: string): Promise<boolean> => {
@@ -75,17 +95,22 @@ export function useTodos(): TodoContextValue {
     if (!todo) return false;
     const updated = await StorageService.updateTodo({ id, completed: !todo.completed });
     if (!updated) return false;
-    if (updated.completed) {
-      await NotificationService.cancelAllForTodo(updated);
-    } else {
-      const notificationId = await NotificationService.scheduleReminder(updated);
-      if (notificationId && notificationId !== updated.notificationId) {
-        const withNotification = await StorageService.updateTodo({ id, notificationId });
-        useTodoStore.setState((s) => ({ todos: s.todos.map((t) => (t.id === id ? (withNotification ?? updated) : t)) }));
-        return true;
+
+    let finalTodo = updated;
+    try {
+      if (updated.completed) {
+        await NotificationService.cancelAllForTodo(updated);
+      } else {
+        const notificationId = await NotificationService.scheduleReminder(updated);
+        if (notificationId && notificationId !== updated.notificationId) {
+          finalTodo = (await StorageService.updateTodo({ id, notificationId })) ?? updated;
+        }
       }
+    } catch (err) {
+      console.warn('[TodoContext] Notification toggle handling failed:', err);
     }
-    useTodoStore.setState((s) => ({ todos: s.todos.map((t) => (t.id === id ? updated : t)) }));
+
+    useTodoStore.setState((s) => ({ todos: s.todos.map((t) => (t.id === id ? finalTodo : t)) }));
     return true;
   }, []);
 

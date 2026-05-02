@@ -23,6 +23,7 @@ import OnboardingScreen from './src/screens/OnboardingScreen';
 import { OnboardingService } from './src/services/OnboardingService';
 import { NotificationService } from './src/services/NotificationService';
 import { StartupSyncGate } from './src/components/StartupSyncGate';
+import { GitHubActivityIndicator } from './src/components/GitHubActivityIndicator';
 import { bootstrapStorage } from './src/services/StorageBootstrap';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -96,6 +97,7 @@ export default function App() {
                       <StartupSyncGate>
                         <AppNavigator />
                       </StartupSyncGate>
+                      <GitHubActivityIndicator />
                     </ViewModeProvider>
                   </CanvasProvider>
                 </TodoProvider>
