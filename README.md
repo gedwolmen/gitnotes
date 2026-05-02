@@ -24,7 +24,7 @@ GitNotēs treats your notes as plain files in a Git repository: every note, todo
 - Todos with checkboxes, due dates, and per-repo sync.
 - Canvas drawings with pinch-zoom, two-finger pan, and JSON-backed scenes.
 - Templates for quickly creating structured notes.
-- **GitNotes AI** chat with notes / todos as tools, contexts attached from your repo, threads versioned in GitHub. See [`docs/ai-chat.md`](docs/ai-chat.md).
+- **GitNotes AI** chat with notes / todos as tools, contexts attached from your repo, threads versioned in GitHub. Provider quirks and known issues documented in [`docs/LLM-issues-fixes.md`](docs/LLM-issues-fixes.md).
 
 ### GitNotes AI
 
