@@ -136,17 +136,24 @@ function NoteCardImpl({ note, onPress, onLongPress, compact = false, highlighted
       </View>
 
       {!showCompact && (note.folderPath || note.repo) && (
-        <View style={[styles.repoContainer, { borderTopColor: colors.border }]}>
+        <View style={[styles.repoContainer, { borderTopColor: colors.border }]}> 
           {note.folderPath && note.folderPath !== '/' && (
-            <Text style={[styles.repoText, { color: colors.textSecondary }]}>
-              📂 {note.folderPath.split('/').pop()}
-            </Text>
+            <View style={styles.repoItem}>
+              <Ionicons name="folder" size={14} color={colors.textSecondary} />
+              <Text style={[styles.repoText, { color: colors.textSecondary }]}>{note.folderPath.split('/').pop()}</Text>
+            </View>
           )}
           {note.repo && (
-            <Text style={[styles.repoText, { color: colors.textSecondary }]}>📁 {note.repo}</Text>
+            <View style={styles.repoItem}>
+              <Ionicons name="cube-outline" size={14} color={colors.textSecondary} />
+              <Text style={[styles.repoText, { color: colors.textSecondary }]}>{note.repo}</Text>
+            </View>
           )}
           {note.branch && (
-            <Text style={[styles.branchText, { color: colors.primary }]}>🌿 {note.branch}</Text>
+            <View style={styles.repoItem}>
+              <Ionicons name="git-branch-outline" size={14} color={colors.primary} />
+              <Text style={[styles.branchText, { color: colors.primary }]}>{note.branch}</Text>
+            </View>
           )}
         </View>
       )}
@@ -269,10 +276,17 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
+    flexWrap: 'wrap',
+  },
+  repoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 12,
+    marginBottom: 4,
+    gap: 4,
   },
   repoText: {
     fontSize: 12,
-    marginRight: 12,
   },
   branchText: {
     fontSize: 12,
