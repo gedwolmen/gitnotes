@@ -76,11 +76,22 @@ export function Button(props: ButtonProps) {
     </Text>
   );
 
+  const childrenNode = typeof children === 'string' ? (
+    <Text
+      style={[
+        { color: textColor, fontSize: type.md, fontWeight: variant === 'primary' ? '600' : '500' },
+        textStyle,
+      ]}
+    >
+      {children}
+    </Text>
+  ) : children;
+
   const content = (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: iconAlign === 'edge' ? spacing[3] : spacing[2] }}>
       {leadingIcon}
       {labelNode}
-      {children}
+      {childrenNode}
       {trailingIcon}
     </View>
   );
