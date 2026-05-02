@@ -3,6 +3,7 @@ import type { CoreMessage, LanguageModel as LanguageModelV1, Tool } from 'ai';
 import { Platform } from 'react-native';
 import type { AIModelConfig, AIProviderConfig } from '../models/AIProvider';
 import { chatTools } from './ai/tools';
+import { buildQuirkedFetch } from './ai/providerQuirks';
 
 type OnDeviceAvailability = {
   apple: boolean;
@@ -64,43 +65,13 @@ async function buildProviderInstance(providerConfig: AIProviderConfig): Promise<
         }
 
         const { createOpenAICompatible } = await import('@ai-sdk/openai-compatible');
-
-        const isZai = /(^|\.)z\.ai($|\/)/i.test(providerConfig.baseURL);
-
-        const customFetch: typeof fetch | undefined = isZai
-          ? async (input, init) => {
-              let outboundInit = init;
-              if (init?.body && typeof init.body === 'string') {
-                try {
-                  const body = JSON.parse(init.body);
-                  if (body && typeof body === 'object') {
-                    if (Array.isArray(body.tools) && body.tools.length > 0) {
-                      body.tool_stream = true;
-                    }
-                    body.stream = true;
-                    outboundInit = { ...init, body: JSON.stringify(body) };
-                    console.log('[z.ai] outbound body:', JSON.stringify({ ...body, messages: '[…]', tools: body.tools ? `[${body.tools.length}]` : undefined }));
-                  }
-                } catch (e) {
-                  console.warn('[z.ai] failed to parse body for rewrite', e);
-                }
-              }
-              const response = await fetch(input as RequestInfo, outboundInit);
-              if (!response.ok) {
-                console.warn('[z.ai] non-OK response', response.status, response.statusText);
-              } else {
-                const contentLength = response.headers.get('content-length');
-                console.log('[z.ai] response ok, content-length:', contentLength, 'content-type:', response.headers.get('content-type'));
-              }
-              return response;
-            }
-          : undefined;
+        const quirkedFetch = buildQuirkedFetch(providerConfig.baseURL);
 
         return createOpenAICompatible({
           name: providerConfig.id,
           baseURL: providerConfig.baseURL,
           apiKey: providerConfig.apiKey,
-          ...(customFetch ? { fetch: customFetch as any } : {}),
+          ...(quirkedFetch ? { fetch: quirkedFetch as any } : {}),
         });
       }
       default:
