@@ -21,7 +21,9 @@ import { FlashList, FlashListRef } from "@shopify/flash-list";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
-import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
+import ReanimatedSwipeable, {
+  type SwipeableMethods,
+} from "react-native-gesture-handler/ReanimatedSwipeable";
 
 import { useNotes } from "../contexts/NoteContext";
 import { useNoteStore } from "../stores/noteStore";
@@ -79,6 +81,10 @@ export default function NotesListScreen() {
   const { isTablet, maxContentWidth } = useResponsive();
   const { repositories } = useRepos();
   const listRef = useRef<FlashListRef<Note>>(null);
+  const swipeableRefs = useRef<
+    Record<string, React.RefObject<SwipeableMethods | null>>
+  >({});
+  const openSwipeableRef = useRef<SwipeableMethods | null>(null);
 
   useEffect(() => {
     if (authState.token) {
@@ -91,6 +97,38 @@ export default function NotesListScreen() {
   const [currentSearchMatchIndex, setCurrentSearchMatchIndex] = useState(0);
   const [pendingSync, setPendingSync] = useState(0);
   const [isManualSyncing, setIsManualSyncing] = useState(false);
+
+  const closeOpenSwipeable = useCallback(() => {
+    openSwipeableRef.current?.close();
+    openSwipeableRef.current = null;
+  }, []);
+
+  const getSwipeableRef = useCallback((noteId: string) => {
+    if (!swipeableRefs.current[noteId]) {
+      swipeableRefs.current[noteId] = React.createRef<SwipeableMethods>();
+    }
+
+    return swipeableRefs.current[noteId];
+  }, []);
+
+  const handleSwipeableWillOpen = useCallback((noteId: string) => {
+    const swipeable = swipeableRefs.current[noteId]?.current;
+
+    if (openSwipeableRef.current && openSwipeableRef.current !== swipeable) {
+      openSwipeableRef.current.close();
+    }
+
+    if (swipeable) {
+      openSwipeableRef.current = swipeable;
+    }
+  }, []);
+
+  const handleSwipeableWillClose = useCallback((noteId: string) => {
+    const swipeable = swipeableRefs.current[noteId]?.current;
+    if (openSwipeableRef.current === swipeable) {
+      openSwipeableRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -290,6 +328,7 @@ export default function NotesListScreen() {
 
   const handleDeleteFromSwipe = useCallback(
     (note: Note) => {
+      closeOpenSwipeable();
       Alert.alert("Delete Note", `Delete "${note.title || "Untitled"}"?`, [
         { text: "Cancel", style: "cancel" },
         {
@@ -305,7 +344,7 @@ export default function NotesListScreen() {
         },
       ]);
     },
-    [deleteNote],
+    [closeOpenSwipeable, deleteNote],
   );
 
   const scrollToSearchMatch = useCallback(
@@ -382,8 +421,12 @@ export default function NotesListScreen() {
   const renderSwipeableNote = useCallback(
     (note: Note, index: number) => (
       <ReanimatedSwipeable
+        key={note.id}
+        ref={getSwipeableRef(note.id)}
         overshootRight={false}
         rightThreshold={40}
+        onSwipeableWillOpen={() => handleSwipeableWillOpen(note.id)}
+        onSwipeableWillClose={() => handleSwipeableWillClose(note.id)}
         renderRightActions={() => renderSwipeActions(note)}
       >
         <NoteCard
@@ -396,6 +439,9 @@ export default function NotesListScreen() {
     ),
     [
       currentSearchMatchIndex,
+      getSwipeableRef,
+      handleSwipeableWillClose,
+      handleSwipeableWillOpen,
       handleNoteLongPress,
       handleNotePress,
       hasActiveSearch,
@@ -411,7 +457,7 @@ export default function NotesListScreen() {
 
   const renderJournalNote = useCallback(
     ({ item, index }: { item: Note; index: number }) => (
-      <View style={styles.journalItem}>
+      <View key={item.id} style={styles.journalItem}>
         <Text style={[styles.journalDate, { color: colors.textSecondary }]}>
           {item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : ""}
         </Text>
