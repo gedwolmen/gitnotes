@@ -32,6 +32,7 @@ import { EntityFilterModal } from '../components/EntityFilterModal';
 import { ActiveFilterStrip } from '../components/ActiveFilterStrip';
 import { useEntityFilter } from '../hooks/useEntityFilter';
 import { useRepos } from '../contexts/RepoContext';
+import { useTodoStore } from '../stores/todoStore';
 
 function formatDeadline(timestamp: number): string {
   const date = new Date(timestamp);
@@ -48,7 +49,8 @@ function findReminderLabel(minutes: number): string {
 export default function TodoListScreen() {
   const { colors, isDark } = useTheme();
   const { isTablet, maxContentWidth } = useResponsive();
-  const { todos, createTodo, updateTodo, deleteTodo, toggleTodo, refreshTodos } = useTodos();
+  const { todos, createTodo, updateTodo, toggleTodo, refreshTodos } = useTodos();
+  const deleteTodo = useTodoStore((state) => state.deleteTodo);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [showAddModal, setShowAddModal] = useState(false);
