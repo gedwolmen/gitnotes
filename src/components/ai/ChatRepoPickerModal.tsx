@@ -6,7 +6,7 @@ import {
   StyleSheet,
   ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTokens } from '../../contexts/ThemeContext';
 import { useRepoStore } from '../../stores/repoStore';
@@ -30,6 +30,7 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
   onGoToSettings,
 }) => {
   const { colors, spacing } = useTokens();
+  const insets = useSafeAreaInsets();
   const repositories = useRepoStore((state) => state.repositories);
   const setChatRepo = useAIStore((state) => state.setChatRepo);
 
@@ -83,7 +84,7 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
       bottomSheet
       contentStyle={{ height: '85%' }}
     >
-      <SafeAreaView edges={['bottom']} style={styles.sheet}>
+      <View style={styles.sheet}>
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <View style={styles.headerSide} />
           <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
@@ -194,7 +195,15 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
           )}
         </View>
 
-        <View style={[styles.footer, { borderTopColor: colors.border }]}>
+        <View
+          style={[
+            styles.footer,
+            {
+              borderTopColor: colors.border,
+              paddingBottom: Math.max(insets.bottom, 16),
+            },
+          ]}
+        >
           <Button
             variant="primary"
             onPress={handleConfirm}
@@ -203,7 +212,7 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
             {isInitializing ? 'Initializing...' : 'Confirm Selection'}
           </Button>
         </View>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 };
