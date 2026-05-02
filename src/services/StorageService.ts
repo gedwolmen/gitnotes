@@ -3,11 +3,12 @@ import { Note, NoteCreateInput, NoteUpdateInput, createNote, updateNote } from '
 import { Folder, FolderCreateInput, createFolder, updateFolder } from '../models/Folder';
 import { GitRepository } from './GitService';
 import { Todo, TodoCreateInput, TodoUpdateInput, createTodoItem, applyTodoUpdate } from '../models/Todo';
-import { Canvas, CanvasCreateInput, CanvasUpdateInput, createCanvas, updateCanvas, sortCanvasesByUpdated } from '../models/Canvas';
+import { Canvas, CanvasCreateInput, CanvasUpdateInput, createCanvas, updateCanvas } from '../models/Canvas';
 import { NOTE_INDEX_KEY, noteKey, getBootValue } from './StorageBootstrap';
 
 const TODOS_STORAGE_KEY = '@gitnotes:todos';
 const CANVASES_STORAGE_KEY = '@gitnotes:canvases';
+const CANVASES_BACKUP_STORAGE_KEY = '@gitnotes:canvases.bak';
 const LEGACY_NOTES_KEY = '@gitnotes:notes';
 const REPOS_STORAGE_KEY = '@gitnotes:repos';
 const FOLDERS_STORAGE_KEY = '@gitnotes:folders';
@@ -38,6 +39,47 @@ async function migrateFromBlob(): Promise<void> {
 }
 
 export class StorageService {
+  private static canvasWriteQueue: Promise<void> = Promise.resolve();
+
+  private static enqueueCanvasWrite<T>(operation: () => Promise<T>): Promise<T> {
+    const run = this.canvasWriteQueue.catch(() => undefined).then(operation);
+    this.canvasWriteQueue = run.then(() => undefined, () => undefined);
+    return run;
+  }
+
+  private static async readAllCanvasesRaw(): Promise<Canvas[]> {
+    try {
+      const boot = getBootValue('@gitnotes:canvases');
+      const json = boot ?? await AsyncStorage.getItem(CANVASES_STORAGE_KEY);
+      return json ? JSON.parse(json) : [];
+    } catch (error) {
+      console.error('Error reading canvases from storage:', error);
+      return [];
+    }
+  }
+
+  private static async backupCanvasBlob(): Promise<void> {
+    const current = await AsyncStorage.getItem(CANVASES_STORAGE_KEY);
+    if (current !== null) {
+      await AsyncStorage.setItem(CANVASES_BACKUP_STORAGE_KEY, current);
+    }
+  }
+
+  static async mutateCanvases<T>(mutator: (canvases: Canvas[]) => Promise<T> | T): Promise<T> {
+    return this.enqueueCanvasWrite(async () => {
+      const canvases = await this.readAllCanvasesRaw();
+      const result = await mutator(canvases);
+      try {
+        await this.backupCanvasBlob();
+        await AsyncStorage.setItem(CANVASES_STORAGE_KEY, JSON.stringify(canvases));
+      } catch (error) {
+        console.error('Error saving canvases to storage:', error);
+        throw error;
+      }
+      return result;
+    });
+  }
+
   static async getAllNotes(): Promise<Note[]> {
     await migrateFromBlob();
     try {
@@ -323,22 +365,20 @@ export class StorageService {
   }
 
   static async getAllCanvases(): Promise<Canvas[]> {
-    try {
-      const boot = getBootValue('@gitnotes:canvases');
-      const json = boot ?? await AsyncStorage.getItem(CANVASES_STORAGE_KEY);
-      return json ? JSON.parse(json) : [];
-    } catch {
-      return [];
-    }
+    await this.canvasWriteQueue;
+    return this.readAllCanvasesRaw();
   }
 
   static async saveAllCanvases(canvases: Canvas[]): Promise<void> {
-    try {
-      await AsyncStorage.setItem(CANVASES_STORAGE_KEY, JSON.stringify(canvases));
-    } catch (error) {
-      console.error('Error saving canvases to storage:', error);
-      throw error;
-    }
+    await this.enqueueCanvasWrite(async () => {
+      try {
+        await this.backupCanvasBlob();
+        await AsyncStorage.setItem(CANVASES_STORAGE_KEY, JSON.stringify(canvases));
+      } catch (error) {
+        console.error('Error saving canvases to storage:', error);
+        throw error;
+      }
+    });
   }
 
   static async getCanvasById(id: string): Promise<Canvas | null> {
@@ -347,27 +387,28 @@ export class StorageService {
   }
 
   static async createCanvas(input: CanvasCreateInput): Promise<Canvas> {
-    const canvases = await this.getAllCanvases();
-    const newCanvas = createCanvas(input);
-    canvases.push(newCanvas);
-    await this.saveAllCanvases(canvases);
-    return newCanvas;
+    return this.mutateCanvases((canvases) => {
+      const newCanvas = createCanvas(input);
+      canvases.push(newCanvas);
+      return newCanvas;
+    });
   }
 
   static async updateCanvas(input: CanvasUpdateInput): Promise<Canvas | null> {
-    const canvases = await this.getAllCanvases();
-    const idx = canvases.findIndex((c) => c.id === input.id);
-    if (idx === -1) return null;
-    canvases[idx] = updateCanvas(canvases[idx], input);
-    await this.saveAllCanvases(canvases);
-    return canvases[idx];
+    return this.mutateCanvases((canvases) => {
+      const idx = canvases.findIndex((c) => c.id === input.id);
+      if (idx === -1) return null;
+      canvases[idx] = updateCanvas(canvases[idx], input);
+      return canvases[idx];
+    });
   }
 
   static async deleteCanvas(id: string): Promise<boolean> {
-    const canvases = await this.getAllCanvases();
-    const filtered = canvases.filter((c) => c.id !== id);
-    if (filtered.length === canvases.length) return false;
-    await this.saveAllCanvases(filtered);
-    return true;
+    return this.mutateCanvases((canvases) => {
+      const idx = canvases.findIndex((c) => c.id === id);
+      if (idx === -1) return false;
+      canvases.splice(idx, 1);
+      return true;
+    });
   }
 }
