@@ -46,7 +46,7 @@ The first quirk whose `matches(baseURL)` returns true wins. Quirks only apply to
 Threads are persisted as JSON files in a user-chosen GitHub repo and branch. Path layout:
 
 ```
-gitnotes-chat/
+chat/
 ├─ .gitkeep
 ├─ index.json             # { threads: [{id,title,updatedAt,...}] }
 └─ <thread-id>.json       # full ChatThread with messages

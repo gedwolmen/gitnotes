@@ -5,7 +5,7 @@ import { ChatThread, ChatThreadSummary } from '../models/Chat';
 import { GitHubService } from './GitHubService';
 
 const GITHUB_API = 'https://api.github.com';
-const CHAT_DIR = '.gitnotes/chats';
+const CHAT_DIR = 'chat';
 const INDEX_PATH = `${CHAT_DIR}/index.json`;
 import AuthService from './AuthService';
 import { GITHUB_WRITE_RETRIES } from './ai/config';
