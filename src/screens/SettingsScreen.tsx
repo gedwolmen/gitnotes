@@ -46,7 +46,7 @@ export default function SettingsScreen() {
   const { clearAllNotes, refreshNotes } = useNotes();
   const { refreshCanvases } = useCanvases();
   const { refreshTodos } = useTodos();
-  const { authState, setToken, clearToken } = useAuth();
+  const { authState, accounts, activeAccountId, setToken, clearToken, addAccount, removeAccount, switchAccount } = useAuth();
   const { repositories, addRepository: addRepo, removeRepository: removeRepo } = useRepos();
   const isAIEnabled = useAIStore((state) => state.isEnabled);
   const selectedModelId = useAIStore((state) => state.selectedModelId);
@@ -69,6 +69,7 @@ export default function SettingsScreen() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [tokenVisible, setTokenVisible] = useState(false);
+  const [tokenModalMode, setTokenModalMode] = useState<'connect' | 'add'>('connect');
   const [showModelSelector, setShowModelSelector] = useState(false);
   const [showProviderConfig, setShowProviderConfig] = useState(false);
   const [showChatRepoPicker, setShowChatRepoPicker] = useState(false);
@@ -234,17 +235,49 @@ export default function SettingsScreen() {
     if (!tokenInput.trim()) { setTokenError('Please enter a token'); return; }
     setIsVerifying(true);
     setTokenError(null);
-    const success = await setToken(tokenInput.trim());
+    let ok = false;
+    if (tokenModalMode === 'add') {
+      const account = await addAccount(tokenInput.trim());
+      ok = !!account;
+    } else {
+      ok = await setToken(tokenInput.trim());
+    }
     setIsVerifying(false);
-    if (success) {
+    if (ok) {
       HapticService.success();
       setShowTokenModal(false);
       setTokenInput('');
+      setTokenModalMode('connect');
     } else {
       HapticService.error();
       setTokenError('Invalid token. Please check and try again.');
     }
-  }, [tokenInput, setToken]);
+  }, [tokenInput, setToken, addAccount, tokenModalMode]);
+
+  const handleSwitchAccount = useCallback(async (id: string) => {
+    if (id === activeAccountId) return;
+    HapticService.success();
+    await switchAccount(id);
+  }, [activeAccountId, switchAccount]);
+
+  const handleRemoveAccount = useCallback((id: string, login: string) => {
+    HapticService.warning();
+    Alert.alert(
+      `Remove @${login}?`,
+      'The token for this account will be deleted from this device. Notes/todos created under it stay locally.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            await removeAccount(id);
+            HapticService.success();
+          },
+        },
+      ],
+    );
+  }, [removeAccount]);
 
   const handleRemoveToken = useCallback(() => {
     HapticService.warning();
@@ -328,48 +361,98 @@ export default function SettingsScreen() {
           </GroupRow>
         </Group>
 
-        {/* ── GitHub Account ── */}
+        {/* ── GitHub Account(s) ── */}
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>GitHub Account</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+            {accounts.length >= 2 ? 'GitHub Accounts' : 'GitHub Account'}
+          </Text>
 
           {authState.isAuthenticated ? (
             <>
-              <View style={[styles.settingItem, { borderBottomColor: colors.border }]}>
-                <View style={styles.authUserRow}>
-                  {authState.user?.avatar_url && (
-                    <Image source={{ uri: authState.user.avatar_url }} style={styles.avatar} />
-                  )}
-                  <View>
-                    <Text style={[styles.settingLabel, { color: colors.text }]}>
-                      {authState.user?.name || authState.user?.login}
-                    </Text>
-                    <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
-                      @{authState.user?.login}
-                    </Text>
+              {accounts.length >= 2 ? (
+                accounts.map((acc) => {
+                  const isActive = acc.id === activeAccountId;
+                  return (
+                    <View key={acc.id} style={[styles.settingItem, { borderBottomColor: colors.border }]}>
+                      <TouchableOpacity
+                        style={[styles.authUserRow, { flex: 1 }]}
+                        onPress={() => handleSwitchAccount(acc.id)}
+                        disabled={isActive}
+                      >
+                        {acc.avatarUrl ? (
+                          <Image source={{ uri: acc.avatarUrl }} style={styles.avatar} />
+                        ) : null}
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.settingLabel, { color: colors.text }]}>
+                            {acc.name || acc.login}
+                            {isActive ? '  ·  Active' : ''}
+                          </Text>
+                          <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
+                            @{acc.login}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => handleRemoveAccount(acc.id, acc.login)} style={{ paddingHorizontal: 8 }}>
+                        <Ionicons name="trash-outline" size={18} color={colors.error} />
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })
+              ) : (
+                <View style={[styles.settingItem, { borderBottomColor: colors.border }]}>
+                  <View style={styles.authUserRow}>
+                    {authState.user?.avatar_url && (
+                      <Image source={{ uri: authState.user.avatar_url }} style={styles.avatar} />
+                    )}
+                    <View>
+                      <Text style={[styles.settingLabel, { color: colors.text }]}>
+                        {authState.user?.name || authState.user?.login}
+                      </Text>
+                      <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
+                        @{authState.user?.login}
+                      </Text>
+                    </View>
                   </View>
                 </View>
-              </View>
+              )}
+
               <TouchableOpacity
                 style={[styles.settingItem, { borderBottomColor: colors.border }]}
-                onPress={() => { setTokenInput(''); setTokenError(null); setShowTokenModal(true); }}
+                onPress={() => { setTokenModalMode('connect'); setTokenInput(''); setTokenError(null); setShowTokenModal(true); }}
               >
                 <View style={styles.settingLeft}>
                   <Ionicons name="key-outline" size={20} color={colors.text} />
-                  <Text style={[styles.settingLabel, { color: colors.text, marginLeft: 12 }]}>Change Token</Text>
+                  <Text style={[styles.settingLabel, { color: colors.text, marginLeft: 12 }]}>
+                    {accounts.length >= 2 ? 'Replace Active Token' : 'Change Token'}
+                  </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
+
               <TouchableOpacity
                 style={[styles.settingItem, { borderBottomColor: colors.border }]}
-                onPress={handleRemoveToken}
+                onPress={() => { setTokenModalMode('add'); setTokenInput(''); setTokenError(null); setShowTokenModal(true); }}
               >
-                <Text style={[styles.settingLabel, { color: colors.error }]}>Remove GitHub Account</Text>
+                <View style={styles.settingLeft}>
+                  <Ionicons name="person-add-outline" size={20} color={colors.text} />
+                  <Text style={[styles.settingLabel, { color: colors.text, marginLeft: 12 }]}>Add another account</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
+
+              {accounts.length < 2 ? (
+                <TouchableOpacity
+                  style={[styles.settingItem, { borderBottomColor: colors.border }]}
+                  onPress={handleRemoveToken}
+                >
+                  <Text style={[styles.settingLabel, { color: colors.error }]}>Remove GitHub Account</Text>
+                </TouchableOpacity>
+              ) : null}
             </>
           ) : (
             <TouchableOpacity
               style={[styles.settingItem, { borderBottomColor: colors.border }]}
-              onPress={() => { setTokenInput(''); setTokenError(null); setShowTokenModal(true); }}
+              onPress={() => { setTokenModalMode('connect'); setTokenInput(''); setTokenError(null); setShowTokenModal(true); }}
             >
               <View style={styles.settingLeft}>
                 <Ionicons name="logo-github" size={20} color={colors.text} />
@@ -650,7 +733,9 @@ export default function SettingsScreen() {
           <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
             <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>
-                {authState.isAuthenticated ? 'Change Token' : 'Connect GitHub'}
+                {tokenModalMode === 'add'
+                  ? 'Add GitHub Account'
+                  : authState.isAuthenticated ? 'Change Token' : 'Connect GitHub'}
               </Text>
               <TouchableOpacity onPress={() => { setShowTokenModal(false); setTokenVisible(false); }}>
                 <Ionicons name="close" size={24} color={colors.textSecondary} />
@@ -718,7 +803,7 @@ export default function SettingsScreen() {
               >
                 {isVerifying
                   ? <ActivityIndicator color="#fff" />
-                  : <Text style={styles.modalButtonText}>Save Token</Text>
+                  : <Text style={styles.modalButtonText}>{tokenModalMode === 'add' ? 'Add Account' : 'Save Token'}</Text>
                 }
               </TouchableOpacity>
             </ScrollView>

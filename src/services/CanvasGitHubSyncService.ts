@@ -1,6 +1,13 @@
 import { GitHubService } from './GitHubService';
 import { CanvasScene, slugifyCanvasTitle } from '../models/Canvas';
 import { parseRepoPath } from '../utils/gitPathParser';
+import { AuthService } from './AuthService';
+
+async function resolveToken(accountId?: string): Promise<string | undefined> {
+  if (!accountId) return undefined;
+  const t = await AuthService.getTokenById(accountId);
+  return t ?? undefined;
+}
 
 export interface CanvasGitHubSyncResult {
   success: boolean;
@@ -14,10 +21,12 @@ export async function syncCanvasToGitHub(params: {
   filePath?: string;
   title: string;
   scene: CanvasScene;
+  accountId?: string;
 }): Promise<CanvasGitHubSyncResult> {
-  const { repo: repoPath, branch, filePath, title, scene } = params;
+  const { repo: repoPath, branch, filePath, title, scene, accountId } = params;
+  const tokenOverride = await resolveToken(accountId);
 
-  if (!GitHubService.isAuthenticated()) {
+  if (!tokenOverride && !GitHubService.isAuthenticated()) {
     return { success: false, error: 'GitHub not authenticated' };
   }
 
@@ -27,6 +36,7 @@ export async function syncCanvasToGitHub(params: {
   }
 
   const targetBranch = branch || 'main';
+  const opts = tokenOverride ? { tokenOverride } : undefined;
 
   let targetPath = filePath;
   if (!targetPath) {
@@ -47,6 +57,7 @@ export async function syncCanvasToGitHub(params: {
       content,
       message,
       targetBranch,
+      opts,
     );
 
     if (result) {

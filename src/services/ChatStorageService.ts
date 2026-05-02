@@ -54,7 +54,23 @@ function getStatus(error: unknown): number | undefined {
   return axios.isAxiosError(error) ? error.response?.status : undefined;
 }
 
+let chatRepoAccountId: string | null = null;
+
+/**
+ * Bind chat-repo requests to a specific account's token. When set, all
+ * ChatStorageService GitHub calls use that account's token regardless of
+ * which account is currently active in the app.
+ */
+export function setChatRepoAccount(accountId: string | null): void {
+  chatRepoAccountId = accountId;
+}
+
 async function getToken(): Promise<string> {
+  if (chatRepoAccountId) {
+    const scoped = await AuthService.getTokenById(chatRepoAccountId);
+    if (scoped) return scoped;
+  }
+
   if (!GitHubService.isAuthenticated()) {
     throw new Error('GitHub not authenticated');
   }

@@ -7,6 +7,7 @@ export interface FilterableItem {
   filePath?: string;
   folderPath?: string;
   tags?: string[];
+  accountId?: string;
 }
 
 export interface EntityFilterState {
@@ -14,6 +15,7 @@ export interface EntityFilterState {
   selectedBranch: string | null;
   selectedFolder: string | null;
   selectedTags: string[];
+  selectedAccountId: string | null;
 }
 
 export interface UseEntityFilterReturn<T extends FilterableItem> {
@@ -21,6 +23,7 @@ export interface UseEntityFilterReturn<T extends FilterableItem> {
   setSelectedRepo: (repo: GitRepository | null) => void;
   setSelectedBranch: (branch: string | null) => void;
   setSelectedFolder: (folder: string | null) => void;
+  setSelectedAccountId: (accountId: string | null) => void;
   toggleTag: (tag: string) => void;
   clearAll: () => void;
   applyFilters: (input: T[]) => T[];
@@ -45,6 +48,7 @@ export function useEntityFilter<T extends FilterableItem>(items: T[]): UseEntity
   const [selectedBranch, setSelectedBranchState] = useState<string | null>(null);
   const [selectedFolder, setSelectedFolderState] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedAccountId, setSelectedAccountIdState] = useState<string | null>(null);
 
   const setSelectedRepo = useCallback((repo: GitRepository | null) => {
     setSelectedRepoState(repo);
@@ -60,6 +64,10 @@ export function useEntityFilter<T extends FilterableItem>(items: T[]): UseEntity
     setSelectedFolderState(folder);
   }, []);
 
+  const setSelectedAccountId = useCallback((accountId: string | null) => {
+    setSelectedAccountIdState(accountId);
+  }, []);
+
   const toggleTag = useCallback((tag: string) => {
     setSelectedTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
   }, []);
@@ -69,6 +77,7 @@ export function useEntityFilter<T extends FilterableItem>(items: T[]): UseEntity
     setSelectedBranchState(null);
     setSelectedFolderState(null);
     setSelectedTags([]);
+    setSelectedAccountIdState(null);
   }, []);
 
   const allBranches = useMemo(() => {
@@ -111,6 +120,7 @@ export function useEntityFilter<T extends FilterableItem>(items: T[]): UseEntity
       return input.filter((item) => {
         if (selectedRepo && item.repo !== selectedRepo.path) return false;
         if (selectedBranch && item.branch !== selectedBranch) return false;
+        if (selectedAccountId && item.accountId !== selectedAccountId) return false;
         if (selectedFolder) {
           const cands = folderCandidates(item);
           const matches = cands.some(
@@ -125,20 +135,22 @@ export function useEntityFilter<T extends FilterableItem>(items: T[]): UseEntity
         return true;
       });
     },
-    [selectedRepo, selectedBranch, selectedFolder, selectedTags],
+    [selectedRepo, selectedBranch, selectedFolder, selectedTags, selectedAccountId],
   );
 
   const activeCount =
     (selectedRepo ? 1 : 0) +
     (selectedBranch ? 1 : 0) +
     (selectedFolder ? 1 : 0) +
-    (selectedTags.length > 0 ? 1 : 0);
+    (selectedTags.length > 0 ? 1 : 0) +
+    (selectedAccountId ? 1 : 0);
 
   return {
-    state: { selectedRepo, selectedBranch, selectedFolder, selectedTags },
+    state: { selectedRepo, selectedBranch, selectedFolder, selectedTags, selectedAccountId },
     setSelectedRepo,
     setSelectedBranch,
     setSelectedFolder,
+    setSelectedAccountId,
     toggleTag,
     clearAll,
     applyFilters,

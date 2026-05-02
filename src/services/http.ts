@@ -1,6 +1,13 @@
 import axios, { type AxiosError, type AxiosInstance, type InternalAxiosRequestConfig } from 'axios';
 import { githubActivity } from '../stores/githubActivityStore';
 
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    /** Per-request token override; replaces the module-level Authorization header for this call only. */
+    authOverride?: string | null;
+  }
+}
+
 const GITHUB_API_BASE = 'https://api.github.com';
 
 const http: AxiosInstance = axios.create({
@@ -30,11 +37,17 @@ function labelForMethod(method?: string): string {
   return 'Syncing with GitHub…';
 }
 
-type TrackedConfig = InternalAxiosRequestConfig & { _activityTracked?: boolean };
+type TrackedConfig = InternalAxiosRequestConfig & {
+  _activityTracked?: boolean;
+  authOverride?: string | null;
+};
 
 http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   config.headers.set('X-Request-ID', `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
   const tracked = config as TrackedConfig;
+  if (typeof tracked.authOverride === 'string' && tracked.authOverride.length > 0) {
+    config.headers.set('Authorization', `Bearer ${tracked.authOverride}`);
+  }
   if (!tracked._activityTracked) {
     tracked._activityTracked = true;
     githubActivity.begin(labelForMethod(config.method));

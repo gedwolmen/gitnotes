@@ -91,6 +91,7 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
           branch: note.branch,
           filePath: note.filePath,
           title: note.title,
+          accountId: note.accountId,
         });
         if (!remote.success) {
           set({ error: remote.error || 'Failed to delete from GitHub' });

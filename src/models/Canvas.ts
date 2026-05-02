@@ -64,6 +64,7 @@ export interface Canvas {
   tags: string[];
   createdAt: number;
   updatedAt: number;
+  accountId?: string;
 }
 
 export interface CanvasCreateInput {
@@ -74,6 +75,7 @@ export interface CanvasCreateInput {
   branch?: string;
   filePath?: string;
   tags?: string[];
+  accountId?: string;
 }
 
 export interface CanvasUpdateInput {
@@ -85,6 +87,7 @@ export interface CanvasUpdateInput {
   branch?: string;
   filePath?: string;
   tags?: string[];
+  accountId?: string;
 }
 
 function generateId(): string {
@@ -116,6 +119,7 @@ export function createCanvas(input: CanvasCreateInput): Canvas {
     tags: input.tags ?? [],
     createdAt: now,
     updatedAt: now,
+    accountId: input.accountId,
   };
 }
 
@@ -129,6 +133,7 @@ export function updateCanvas(existing: Canvas, input: Partial<CanvasCreateInput>
     branch: input.branch ?? existing.branch,
     filePath: input.filePath ?? existing.filePath,
     tags: input.tags ?? existing.tags,
+    accountId: input.accountId ?? existing.accountId,
     updatedAt: Date.now(),
   };
 }
