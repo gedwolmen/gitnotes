@@ -65,10 +65,30 @@ async function buildProviderInstance(providerConfig: AIProviderConfig): Promise<
 
         const { createOpenAICompatible } = await import('@ai-sdk/openai-compatible');
 
+        const isZai = /(^|\.)z\.ai($|\/)/i.test(providerConfig.baseURL);
+
+        const customFetch: typeof fetch | undefined = isZai
+          ? async (input, init) => {
+              if (init?.body && typeof init.body === 'string') {
+                try {
+                  const body = JSON.parse(init.body);
+                  if (body && typeof body === 'object' && Array.isArray(body.tools) && body.tools.length > 0) {
+                    body.tool_stream = true;
+                  }
+                  return fetch(input as RequestInfo, { ...init, body: JSON.stringify(body) });
+                } catch {
+                  // fall through to original
+                }
+              }
+              return fetch(input as RequestInfo, init);
+            }
+          : undefined;
+
         return createOpenAICompatible({
           name: providerConfig.id,
           baseURL: providerConfig.baseURL,
           apiKey: providerConfig.apiKey,
+          ...(customFetch ? { fetch: customFetch as any } : {}),
         });
       }
       default:
