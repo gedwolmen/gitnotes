@@ -150,14 +150,36 @@ async function deleteFile(params: {
   message: string;
   sha: string;
 }): Promise<void> {
-  const { owner, repo, path, branch, message, sha } = params;
-  await githubRequest({
-    owner,
-    repo,
-    path,
-    method: 'DELETE',
-    data: { message, sha, branch },
-  });
+  const { owner, repo, path, branch, message } = params;
+  let sha = params.sha;
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      await githubRequest({
+        owner,
+        repo,
+        path,
+        method: 'DELETE',
+        data: { message, sha, branch },
+      });
+      return;
+    } catch (error) {
+      const status = getStatus(error);
+      if (status === 404) {
+        return;
+      }
+      if ((status === 409 || status === 422) && attempt < 2) {
+        const latest = await getFile(owner, repo, path, branch);
+        if (!latest?.sha) {
+          return;
+        }
+        sha = latest.sha;
+        await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
+        continue;
+      }
+      throw error;
+    }
+  }
 }
 
 async function writeIndex(owner: string, repo: string, branch: string, threads: ChatThreadSummary[]): Promise<void> {

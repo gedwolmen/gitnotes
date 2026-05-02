@@ -10,6 +10,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { useChatStore } from '../stores/chatStore';
 import { useAIStore } from '../stores/aiStore';
 import * as ChatStorageService from '../services/ChatStorageService';
+import { githubActivity } from '../stores/githubActivityStore';
 import { useTokens } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/types';
 import { ChatThreadSummary } from '../models/Chat';
@@ -111,13 +112,21 @@ export default function ChatThreadListScreen() {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
-          if (chatRepoOwner && chatRepoName && chatRepoBranch) {
+          if (!chatRepoOwner || !chatRepoName || !chatRepoBranch) {
+            return;
+          }
+          githubActivity.begin('Deleting chat…');
+          try {
             await deleteThread({
               owner: chatRepoOwner,
               repo: chatRepoName,
               branch: chatRepoBranch,
               threadId: thread.id,
             });
+          } catch (err: any) {
+            Alert.alert('Delete failed', err?.message || 'Could not delete chat.');
+          } finally {
+            githubActivity.end();
           }
         },
       },
