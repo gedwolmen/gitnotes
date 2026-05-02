@@ -562,7 +562,7 @@ export default function ChatScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
       >
         <ScreenHeader
-          title={thread?.title ?? 'GitNotes Chat'}
+          title={thread?.title ?? 'GitNotes AI'}
           subtitle={thread ? `${messages.length} messages` : 'Loading conversation'}
           onBack={() => navigation.goBack()}
         />
