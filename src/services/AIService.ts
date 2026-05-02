@@ -2,6 +2,7 @@ import { streamText } from 'ai';
 import type { CoreMessage, LanguageModel as LanguageModelV1, Tool } from 'ai';
 import { Platform } from 'react-native';
 import type { AIModelConfig, AIProviderConfig } from '../models/AIProvider';
+import { chatTools } from './ai/tools';
 
 type OnDeviceAvailability = {
   apple: boolean;
@@ -90,16 +91,10 @@ export async function initializeModel(
           throw new Error('Apple Intelligence is only available on iOS');
         }
 
-        const provider = await buildProviderInstance({
-          id: modelConfig.providerId,
-          type: 'apple',
-          name: 'Apple Intelligence',
-          isEnabled: true,
-          models: [modelConfig],
-          addedAt: 0,
-        });
+        const { createAppleProvider } = await import('@react-native-ai/apple');
+        const provider = createAppleProvider({ availableTools: chatTools });
 
-        return (provider as () => LanguageModelV1)();
+        return provider() as LanguageModelV1;
       }
       case 'llama': {
         const provider = await buildProviderInstance({
