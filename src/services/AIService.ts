@@ -188,43 +188,70 @@ function serializeToolEvent(part: unknown): string | null {
   }
 }
 
+function isEmptyResponseError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const e = error as { name?: string; message?: string; cause?: { name?: string } };
+  if (e.name === 'AI_EmptyResponseBodyError') return true;
+  if (e.cause?.name === 'AI_EmptyResponseBodyError') return true;
+  return /empty response body/i.test(e.message ?? '');
+}
+
+function humanizeStreamError(error: unknown): string {
+  if (isEmptyResponseError(error)) {
+    return 'The AI provider returned an empty response. This is often caused by high load on the provider, an invalid model name, or a tools-incompatible request. Please try again, or pick a different model.';
+  }
+  const message = error instanceof Error ? error.message : 'Unknown streaming error';
+  return `Failed to stream chat response: ${message}`;
+}
+
 export async function* streamChatResponse(
   model: LanguageModelV1,
   messages: ModelMessage[],
   tools?: Record<string, Tool>,
   abortSignal?: AbortSignal,
 ): AsyncGenerator<string> {
-  try {
-    const result = streamText({
-      model,
-      messages,
-      tools,
-      abortSignal,
-    });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let yielded = false;
+    try {
+      const result = streamText({
+        model,
+        messages,
+        tools,
+        abortSignal,
+      });
 
-    for await (const part of result.fullStream as AsyncIterable<any>) {
-      if (part.type === 'text-delta' || part.type === 'text') {
-        const delta = typeof part.text === 'string' ? part.text : part.textDelta;
-        if (typeof delta === 'string' && delta.length > 0) {
-          yield delta;
+      for await (const part of result.fullStream as AsyncIterable<any>) {
+        if (part.type === 'text-delta' || part.type === 'text') {
+          const delta = typeof part.text === 'string' ? part.text : part.textDelta;
+          if (typeof delta === 'string' && delta.length > 0) {
+            yielded = true;
+            yield delta;
+          }
+          continue;
         }
+
+        if (part.type === 'error') {
+          const err = part.error;
+          const message = err instanceof Error ? err.message : typeof err === 'string' ? err : 'Stream error';
+          throw new Error(message);
+        }
+
+        const toolEvent = serializeToolEvent(part);
+        if (toolEvent) {
+          yielded = true;
+          yield toolEvent;
+        }
+      }
+      return;
+    } catch (error) {
+      // Retry once for transient empty-body responses, but only when no
+      // partial output has been emitted yet (otherwise we'd duplicate content).
+      if (!yielded && attempt === 0 && isEmptyResponseError(error)) {
+        await new Promise((r) => setTimeout(r, 500));
         continue;
       }
-
-      if (part.type === 'error') {
-        const err = part.error;
-        const message = err instanceof Error ? err.message : typeof err === 'string' ? err : 'Stream error';
-        throw new Error(message);
-      }
-
-      const toolEvent = serializeToolEvent(part);
-      if (toolEvent) {
-        yield toolEvent;
-      }
+      throw new Error(humanizeStreamError(error));
     }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown streaming error';
-    throw new Error(`Failed to stream chat response: ${message}`);
   }
 }
 
