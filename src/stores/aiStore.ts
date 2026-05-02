@@ -20,6 +20,7 @@ interface AIState {
 
 interface AIActions {
   toggleAI: () => Promise<void>;
+  setEnabled: (value: boolean) => Promise<void>;
   setActionMode: (mode: AIActionMode) => Promise<void>;
   selectModel: (modelId: string | null) => Promise<void>;
   addProvider: (provider: AIProviderConfig) => Promise<void>;
@@ -126,6 +127,11 @@ export const useAIStore = create<AIState & AIActions>()((set, get) => ({
 
   toggleAI: async () => {
     set((state) => ({ isEnabled: !state.isEnabled, error: null }));
+    await get().persistSettings();
+  },
+
+  setEnabled: async (value) => {
+    set({ isEnabled: value, error: null });
     await get().persistSettings();
   },
 
