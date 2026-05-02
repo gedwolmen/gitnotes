@@ -9,7 +9,6 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   ActivityIndicator,
   Alert,
   TouchableOpacity,
@@ -1121,42 +1120,36 @@ export default function NotesListScreen() {
                   >
                     Branch
                   </Text>
-                  <FlatList
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.filterChipRow}
-                    data={allBranches}
-                    keyExtractor={(branch: string) => branch}
-                    ListHeaderComponent={
-                      <TouchableOpacity
+                  <View style={styles.filterChipRowWrap}>
+                    <TouchableOpacity
+                      style={[
+                        styles.filterChip,
+                        { borderColor: colors.border },
+                        !selectedBranch && {
+                          borderColor: colors.primary,
+                          backgroundColor: colors.primary + "15",
+                        },
+                      ]}
+                      onPress={() => setSelectedBranch(null)}
+                    >
+                      <Text
                         style={[
-                          styles.filterChip,
-                          { borderColor: colors.border },
-                          !selectedBranch && {
-                            borderColor: colors.primary,
-                            backgroundColor: colors.primary + "15",
+                          styles.filterChipText,
+                          {
+                            color: !selectedBranch
+                              ? colors.primary
+                              : colors.text,
                           },
                         ]}
-                        onPress={() => setSelectedBranch(null)}
                       >
-                        <Text
-                          style={[
-                            styles.filterChipText,
-                            {
-                              color: !selectedBranch
-                                ? colors.primary
-                                : colors.text,
-                            },
-                          ]}
-                        >
-                          All
-                        </Text>
-                      </TouchableOpacity>
-                    }
-                    renderItem={({ item: branch }) => {
+                        All
+                      </Text>
+                    </TouchableOpacity>
+                    {allBranches.map((branch) => {
                       const isSelected = selectedBranch === branch;
                       return (
                         <TouchableOpacity
+                          key={branch}
                           style={[
                             styles.filterChip,
                             { borderColor: colors.border },
@@ -1194,8 +1187,8 @@ export default function NotesListScreen() {
                           </Text>
                         </TouchableOpacity>
                       );
-                    }}
-                  />
+                    })}
+                  </View>
                 </>
               )}
 
@@ -1210,42 +1203,36 @@ export default function NotesListScreen() {
                   >
                     Folder
                   </Text>
-                  <FlatList
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.filterChipRow}
-                    data={allFolders}
-                    keyExtractor={(folder: string) => folder}
-                    ListHeaderComponent={
-                      <TouchableOpacity
+                  <View style={styles.filterChipRowWrap}>
+                    <TouchableOpacity
+                      style={[
+                        styles.filterChip,
+                        { borderColor: colors.border },
+                        !selectedFolder && {
+                          borderColor: colors.primary,
+                          backgroundColor: colors.primary + "15",
+                        },
+                      ]}
+                      onPress={() => setSelectedFolder(null)}
+                    >
+                      <Text
                         style={[
-                          styles.filterChip,
-                          { borderColor: colors.border },
-                          !selectedFolder && {
-                            borderColor: colors.primary,
-                            backgroundColor: colors.primary + "15",
+                          styles.filterChipText,
+                          {
+                            color: !selectedFolder
+                              ? colors.primary
+                              : colors.text,
                           },
                         ]}
-                        onPress={() => setSelectedFolder(null)}
                       >
-                        <Text
-                          style={[
-                            styles.filterChipText,
-                            {
-                              color: !selectedFolder
-                                ? colors.primary
-                                : colors.text,
-                            },
-                          ]}
-                        >
-                          All
-                        </Text>
-                      </TouchableOpacity>
-                    }
-                    renderItem={({ item: folder }) => {
+                        All
+                      </Text>
+                    </TouchableOpacity>
+                    {allFolders.map((folder) => {
                       const isSelected = selectedFolder === folder;
                       return (
                         <TouchableOpacity
+                          key={folder}
                           style={[
                             styles.filterChip,
                             { borderColor: colors.border },
@@ -1283,8 +1270,8 @@ export default function NotesListScreen() {
                           </Text>
                         </TouchableOpacity>
                       );
-                    }}
-                  />
+                    })}
+                  </View>
                 </>
               )}
 
@@ -1299,16 +1286,12 @@ export default function NotesListScreen() {
                   >
                     Tags
                   </Text>
-                  <FlatList
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.filterChipRow}
-                    data={allTags}
-                    keyExtractor={(tag: string) => tag}
-                    renderItem={({ item: tag }) => {
+                  <View style={styles.filterChipRowWrap}>
+                    {allTags.map((tag) => {
                       const isSelected = selectedTags.includes(tag);
                       return (
                         <TouchableOpacity
+                          key={tag}
                           style={[
                             styles.filterChip,
                             { borderColor: colors.border },
@@ -1347,8 +1330,8 @@ export default function NotesListScreen() {
                           </Text>
                         </TouchableOpacity>
                       );
-                    }}
-                  />
+                    })}
+                  </View>
                 </>
               )}
 
@@ -1642,7 +1625,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     marginTop: 4,
   },
-  filterChipRow: { marginBottom: 16 },
   filterChipRowWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
