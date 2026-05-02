@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as Clipboard from 'expo-clipboard';
+import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNotes } from '../contexts/NoteContext';
@@ -449,7 +450,7 @@ export default function SettingsScreen() {
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>About</Text>
           <View style={[styles.settingItem, { borderBottomColor: colors.border }]}> 
             <Text style={[styles.settingLabel, { color: colors.text }]}>Version</Text>
-            <Text style={[styles.settingValue, { color: colors.textSecondary }]}>1.0.0</Text>
+            <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{Constants.expoConfig?.version ?? Constants.manifest?.version ?? '—'}</Text>
           </View>
           <View style={[styles.settingItem, { borderBottomColor: colors.border }]}>
             <Text style={[styles.settingLabel, { color: colors.text }]}>Build</Text>
