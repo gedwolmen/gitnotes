@@ -1,5 +1,5 @@
 import React, { ReactNode, useMemo } from 'react';
-import { Platform, StyleSheet, View, ViewStyle, StyleProp } from 'react-native';
+import { Platform, StyleSheet, View, ViewProps, ViewStyle, StyleProp } from 'react-native';
 import { useTheme, useTokens } from '../../contexts/ThemeContext';
 import {
   buildElevation,
@@ -8,7 +8,7 @@ import {
 } from '../../theme/elevation';
 import { Radius } from '../../theme/tokens';
 
-export interface SurfaceProps {
+export interface SurfaceProps extends Omit<ViewProps, 'style'> {
   elevation?: ElevationTier | 'flat';
   inset?: boolean;
   radius?: Radius;
@@ -24,7 +24,7 @@ function detectPlatform(): TokenPlatform {
 }
 
 export function Surface(props: SurfaceProps) {
-  const { elevation = 'raised', inset = false, radius = 'md', style, children, testID } = props;
+  const { elevation = 'raised', inset = false, radius = 'md', style, children, testID, ...rest } = props;
   const { style: themeStyle } = useTheme();
   const { colors, radii } = useTokens();
   const platform = detectPlatform();
@@ -53,6 +53,7 @@ export function Surface(props: SurfaceProps) {
 
   return (
     <View
+      {...rest}
       testID={testID}
       style={[baseStyle, elevationStyles.outer as ViewStyle, style]}
     >

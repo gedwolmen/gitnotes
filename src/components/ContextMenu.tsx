@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { Modal } from './ui';
@@ -72,7 +72,13 @@ export default function ContextMenu({
               style={styles.item}
               onPress={() => {
                 onClose();
-                item.onPress();
+                if (Platform.OS === 'ios') {
+                  // Defer until parent modal finishes dismissing — otherwise UIKit
+                  // refuses to present sheets opened by item.onPress (share, alerts, etc.)
+                  setTimeout(item.onPress, 350);
+                } else {
+                  item.onPress();
+                }
               }}
               activeOpacity={0.7}
             >

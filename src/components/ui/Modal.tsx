@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { Modal as RNModal, Pressable, StyleSheet, useWindowDimensions, ViewStyle, StyleProp } from 'react-native';
+import { Modal as RNModal, Pressable, StyleSheet, useWindowDimensions, View, ViewStyle, StyleProp } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Surface } from './Surface';
 import { useTheme, useTokens } from '../../contexts/ThemeContext';
@@ -84,8 +84,8 @@ export function Modal(props: ModalProps) {
               },
         ]}
       >
-        <Pressable
-          onPress={() => undefined}
+        <View
+          pointerEvents="box-none"
           style={
             bottomSheet
               ? {
@@ -105,11 +105,12 @@ export function Modal(props: ModalProps) {
           <Surface
             elevation="floating"
             radius="lg"
+            onStartShouldSetResponder={() => true}
             style={[surfaceStyle, contentStyle]}
           >
             {children}
           </Surface>
-        </Pressable>
+        </View>
       </Pressable>
     </RNModal>
   );
