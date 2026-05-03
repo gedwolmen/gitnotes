@@ -148,11 +148,14 @@ export const useRenderStyleStore = create<RenderStyleState & RenderStyleActions>
   },
 }));
 
+const EMPTY_OVERRIDES: FormatRenderStyle = Object.freeze({}) as FormatRenderStyle;
+
 /**
  * React-friendly selector that returns the currently-active overrides
- * for a given format. Returns an empty object when no overrides exist
- * (renderers fall back to theme defaults).
+ * for a given format. Returns a stable empty object when no overrides
+ * exist — must be a singleton, otherwise Zustand re-renders every tick
+ * (selector identity changes ⇒ infinite loop in subscribers).
  */
 export function useRenderStyle(format: RenderFormat): FormatRenderStyle {
-  return useRenderStyleStore((state) => state.settings.formats[format] ?? {});
+  return useRenderStyleStore((state) => state.settings.formats[format] ?? EMPTY_OVERRIDES);
 }
