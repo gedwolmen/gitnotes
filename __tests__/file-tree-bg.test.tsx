@@ -1,8 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { render, waitFor } from '@testing-library/react-native';
 
-import { Group } from '../src/components/ui';
-
 jest.mock('../src/contexts/ThemeContext', () => ({
   useTheme: () => ({
     colors: {
@@ -65,8 +63,8 @@ describe('file tree backgrounds', () => {
 
     await waitFor(() => expect(screen.queryAllByText('notes.md').length).toBeGreaterThan(0));
 
-    const group = screen.UNSAFE_getByType(Group);
-    const styles = StyleSheet.flatten(group.props.style);
+    const root = screen.getByTestId('repo-file-tree-root');
+    const styles = StyleSheet.flatten(root.props.style);
 
     expect(isBlackBg(styles?.backgroundColor)).toBe(false);
     expect(styles?.backgroundColor).toBe('#222222');

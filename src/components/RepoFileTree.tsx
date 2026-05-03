@@ -16,7 +16,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { GitHubService, GitHubContent } from '../services/GitHubService';
 import { HapticService } from '../utils/haptics';
 import ContextMenu from './ContextMenu';
-import { Group, GroupRow, Modal, Input, Button } from './ui';
+import { GroupRow, Modal, Input, Button } from './ui';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -719,7 +719,7 @@ export default function RepoFileTree({ owner, repo, branch, onFilePress }: RepoF
   }
 
   return (
-    <Group style={{ flex: 1, backgroundColor: colors.surface }}>
+    <View testID="repo-file-tree-root" style={{ flex: 1, backgroundColor: colors.surface }}>
       {rootItems.map((item) => (
         <TreeItem
           key={item.path}
@@ -732,7 +732,7 @@ export default function RepoFileTree({ owner, repo, branch, onFilePress }: RepoF
           onRefresh={loadRoot}
         />
       ))}
-    </Group>
+    </View>
   );
 }
 
