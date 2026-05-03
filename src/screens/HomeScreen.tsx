@@ -19,7 +19,7 @@ import { useResponsive } from '../hooks/useResponsive';
 import { Button, Card, Modal, Group, GroupRow, ScreenHeader } from '../components/ui';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-type EditableNoteFormat = Exclude<NoteFormat, 'pdf'>;
+type EditableNoteFormat = Exclude<NoteFormat, 'pdf' | 'json'>;
 
 const FORMAT_OPTIONS: { label: string; value: EditableNoteFormat; ext: string }[] = [
   { label: 'Markdown', value: 'markdown', ext: '.md' },

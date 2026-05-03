@@ -16,6 +16,7 @@ const SUPPORTED_EXTENSIONS: Record<string, NoteFormat> = {
   '.norg': 'neorg',
   '.org': 'org',
   '.pdf': 'pdf',
+  '.json': 'json',
 };
 
 function getExtension(filename: string): string {

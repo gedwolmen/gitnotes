@@ -54,7 +54,7 @@ import { useResponsive } from "../hooks/useResponsive";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-const FORMAT_LABELS: Record<NoteFormat, string> = {
+const FORMAT_LABELS: Record<Exclude<NoteFormat, 'json'>, string> = {
   markdown: ".md",
   neorg: ".norg",
   org: ".org",
@@ -802,7 +802,7 @@ export default function NotesListScreen() {
                   color={colors.primary}
                 />
                 <Text style={[styles.chipText, { color: colors.primary }]}>
-                  {FORMAT_LABELS[selectedFormat]}
+                  {FORMAT_LABELS[selectedFormat as Exclude<NoteFormat, 'json'>]}
                 </Text>
                 <Ionicons name="close" size={12} color={colors.primary} />
               </TouchableOpacity>

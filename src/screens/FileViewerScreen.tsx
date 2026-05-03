@@ -17,10 +17,11 @@ import { useTheme } from '../contexts/ThemeContext';
 import { GitHubService } from '../services/GitHubService';
 import { NeorgContentParser } from '../services/NeorgContentParser';
 import NeorgRenderer from '../components/NeorgRenderer';
+import { JsonRenderer } from '../components/JsonRenderer';
 import { HapticService } from '../utils/haptics';
 import { getMarkdownStyles, stripTopMetadata } from '../utils/preview';
 
-type Mode = 'markdown' | 'neorg' | 'org' | 'code' | 'plain';
+type Mode = 'markdown' | 'neorg' | 'org' | 'json' | 'code' | 'plain';
 
 const MARKDOWN_EXTS = ['md', 'markdown'];
 const NEORG_EXTS = ['norg'];
@@ -41,6 +42,7 @@ function detectMode(filename: string): Mode {
   if (MARKDOWN_EXTS.includes(ext)) return 'markdown';
   if (NEORG_EXTS.includes(ext)) return 'neorg';
   if (ORG_EXTS.includes(ext)) return 'org';
+  if (ext === 'json') return 'json';
   if (CODE_EXTS.has(ext)) return 'code';
   return 'plain';
 }
@@ -146,6 +148,8 @@ export default function FileViewerScreen() {
         >
           {mode === 'markdown' ? (
             <MarkdownBody value={renderContent} styles={markdownStyles} />
+          ) : mode === 'json' ? (
+            <JsonRenderer content={renderContent} />
           ) : (mode === 'neorg' || mode === 'org') && parsedNeorg ? (
             <NeorgRenderer blocks={parsedNeorg} />
           ) : (
