@@ -1,9 +1,8 @@
 import React, { ReactNode } from 'react';
 import { Text, View, StyleProp, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme, useTokens } from '../../contexts/ThemeContext';
+import { useTokens } from '../../contexts/ThemeContext';
 import { IconButton } from './IconButton';
-import { Surface } from './Surface';
 
 export interface ScreenHeaderProps {
   title: string;
@@ -17,14 +16,9 @@ export interface ScreenHeaderProps {
 export function ScreenHeader(props: ScreenHeaderProps) {
   const { title, subtitle, badge, onBack, actions, style } = props;
   const { colors, spacing, type } = useTokens();
-  const { glossy } = useTheme();
-
-  const HeaderComponent = glossy ? Surface : View;
-  const headerProps = glossy ? { elevation: 'flat' as const, radius: 'sm' as const, glassLayer: 'glassNav' as const } : {};
 
   return (
-    <HeaderComponent
-      {...headerProps}
+    <View
       style={[
         {
           flexDirection: 'row',
@@ -95,6 +89,6 @@ export function ScreenHeader(props: ScreenHeaderProps) {
           {actions}
         </View>
       )}
-    </HeaderComponent>
+    </View>
   );
 }

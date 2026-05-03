@@ -17,7 +17,6 @@ exports[`Chip snapshots inactive + active: chip-active 1`] = `
         "shadowOpacity": 1,
         "shadowRadius": 4,
       },
-      undefined,
       [
         {
           "alignItems": "center",
@@ -88,7 +87,6 @@ exports[`Chip snapshots inactive + active: chip-inactive 1`] = `
         "shadowOpacity": 1,
         "shadowRadius": 4,
       },
-      undefined,
       [
         {
           "alignItems": "center",

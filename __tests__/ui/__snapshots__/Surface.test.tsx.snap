@@ -18,7 +18,6 @@ exports[`Surface snapshots a raised neumorphic Surface with a Text child 1`] = `
         "shadowRadius": 8,
       },
       undefined,
-      undefined,
     ]
   }
   testID="raised"

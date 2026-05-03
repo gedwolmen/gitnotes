@@ -41,7 +41,6 @@ exports[`Group snapshots a 2-row group 1`] = `
           "shadowOpacity": 1,
           "shadowRadius": 8,
         },
-        undefined,
         {
           "overflow": "hidden",
         },

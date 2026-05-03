@@ -26,7 +26,7 @@ interface FloatingAIButtonProps {
 
 export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
   const { isEnabled } = useAIStore();
-  const { colors, glossy } = useTheme();
+  const { colors } = useTheme();
   const navigation = useNavigation();
 
   const initialX = SCREEN_WIDTH - BUTTON_SIZE - 24;
@@ -117,12 +117,9 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
           <Surface
             elevation="raised"
             radius="pill"
-            style={[
-              styles.button,
-              { backgroundColor: glossy ? colors.glassElevated : colors.primary }
-            ]}
+            style={[styles.button, { backgroundColor: colors.primary }]}
           >
-            <Ionicons name="sparkles" size={24} color={glossy ? colors.primary : "#FFFFFF"} />
+            <Ionicons name="sparkles" size={24} color="#FFFFFF" />
           </Surface>
         </Animated.View>
       </GestureDetector>
