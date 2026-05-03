@@ -7,7 +7,6 @@ import {
   FlatList,
   ActivityIndicator,
   ScrollView,
-  TextInput,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -231,8 +230,8 @@ export default function ExploreScreen() {
         <OfflineBanner />
 
         <ScrollView
-          style={s.treeScroll}
-          contentContainerStyle={s.treeContent}
+          style={[s.treeScroll, { backgroundColor: colors.background }]}
+          contentContainerStyle={[s.treeContent, { backgroundColor: colors.background }]}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
           }
