@@ -73,6 +73,7 @@ const TOOLS = [
 ];
 
 function uid(): string {
+  'worklet';
   return `dm-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 }
 
