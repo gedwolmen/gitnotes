@@ -47,13 +47,26 @@ interface NoteCardProps {
   compact?: boolean;
   highlighted?: boolean;
   variant?: 'default' | 'card';
+  isOffline?: boolean;
+  isCached?: boolean;
 }
 
-function NoteCardImpl({ note, onPress, onLongPress, compact = false, highlighted = false, variant = 'default' }: NoteCardProps) {
+function NoteCardImpl({
+  note,
+  onPress,
+  onLongPress,
+  compact = false,
+  highlighted = false,
+  variant = 'default',
+  isOffline = false,
+  isCached = true,
+}: NoteCardProps) {
   const { colors, isDark, glossy } = useTheme();
   const { isTablet } = useResponsive();
   const isCard = variant === 'card';
   const showCompact = isCard ? false : compact;
+  const isOfflineUncached = isOffline && !isCached;
+  const titleColor = isOfflineUncached ? colors.textSecondary : colors.text;
   
   const checklistProgress = useMemo(() => {
     if (!hasChecklists(note.content)) return null;
@@ -68,12 +81,14 @@ function NoteCardImpl({ note, onPress, onLongPress, compact = false, highlighted
           backgroundColor: glossy ? colors.glassCard : colors.card,
           shadowColor: colors.shadow,
           shadowOpacity: isDark ? 0 : 0.1,
+          opacity: isOfflineUncached ? 0.5 : 1,
         },
         showCompact && styles.cardCompact,
         isCard && styles.cardVariant,
         isTablet && styles.cardTablet,
         highlighted && { borderWidth: 2, borderColor: colors.primary },
       ]}
+      testID={`note-card-${note.id}`}
       onPress={() => onPress(note)}
       onLongPress={() => onLongPress?.(note)}
       activeOpacity={0.7}
@@ -84,11 +99,19 @@ function NoteCardImpl({ note, onPress, onLongPress, compact = false, highlighted
         </View>
       )}
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }, showCompact && styles.titleCompact]} numberOfLines={showCompact ? 1 : 2}>
+        <Text
+          testID={`note-card-title-${note.id}`}
+          style={[styles.title, { color: titleColor }, showCompact && styles.titleCompact]}
+          numberOfLines={showCompact ? 1 : 2}
+        >
           {note.title || 'Untitled Note'}
         </Text>
         {!showCompact && (
-          <Text style={[styles.content, { color: colors.textSecondary }]} numberOfLines={isCard ? 3 : 2}>
+          <Text
+            testID={`note-card-content-${note.id}`}
+            style={[styles.content, { color: colors.textSecondary }]}
+            numberOfLines={isCard ? 3 : 2}
+          >
             {stripPreview(note.content, note.format) || 'No content'}
           </Text>
         )}
