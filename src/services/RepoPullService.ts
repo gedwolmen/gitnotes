@@ -1,4 +1,5 @@
 import { GitHubService } from './GitHubService';
+import { GitService } from './GitService';
 import { StorageService } from './StorageService';
 import { createNote, isNoteColor, NoteColor } from '../models/Note';
 import { createCanvas, updateCanvas, CanvasScene } from '../models/Canvas';
@@ -151,6 +152,13 @@ async function pullNotesFromRepo(
       FILE_FETCH_CONCURRENCY,
     );
 
+    // Build a set of remote file paths we successfully observed. The set is
+    // the basis for reconciling local notes against the remote tree below.
+    // We populate it from `noteBlobs` (the full list of relevant remote
+    // entries) — not `fetched` — so a transient per-file fetch failure does
+    // not cause us to drop a still-existing local note.
+    const remoteFilePaths = new Set<string>(noteBlobs.map((b) => b.path));
+
     let allNotes = await StorageService.getAllNotes();
     let pulled = 0;
 
@@ -226,7 +234,45 @@ async function pullNotesFromRepo(
       }
     }
 
+    // Reconcile: drop local notes that were pulled from this same repo+branch
+    // but whose backing file no longer exists in the remote tree. Without
+    // this, deleting a file on the remote (or moving/renaming it) leaves a
+    // stale local note around forever — which surfaces in the folder filter
+    // chips on the Notes list.
+    //
+    // Safety:
+    //   * Scoped to this (repoPath, branch) — never touches notes from other
+    //     repos or branches.
+    //   * Only deletes notes that have a `filePath` (i.e. originated from the
+    //     repo). Local-only drafts have no filePath and are preserved.
+    //   * The early return when `noteBlobs.length === 0` above acts as the
+    //     empty-tree guardrail: a transient empty/errored fetch skips
+    //     reconciliation entirely rather than wiping everything.
+    const beforeCount = allNotes.length;
+    allNotes = allNotes.filter((n) => {
+      if (n.repo !== repoPath) return true;
+      if (n.branch !== branch) return true;
+      if (!n.filePath) return true;
+      return remoteFilePaths.has(n.filePath);
+    });
+    const removed = beforeCount - allNotes.length;
+    if (removed > 0) {
+      console.log(
+        `[RepoPullService] Reconciled ${removed} stale note(s) for ${repoPath}@${branch}`,
+      );
+    }
+
     await StorageService.saveAllNotes(allNotes);
+
+    // Also invalidate the folders cache so editor folder dropdowns reflect
+    // the freshly pulled tree (ignored if the cache layer fails — best
+    // effort).
+    try {
+      await GitService.invalidateRepoFoldersCache(repoPath, branch);
+    } catch {
+      // best-effort; cache will expire on its own TTL.
+    }
+
     return pulled;
   } catch {
     console.warn(`[RepoPullService] Failed to pull notes from ${owner}/${repo}`);
