@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +19,7 @@ import type { RouteProp } from '@react-navigation/native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useRenderStyleStore } from '../stores/renderStyleStore';
 import NeorgRenderer from '../components/NeorgRenderer';
+import HexColorPickerModal from '../components/HexColorPickerModal';
 import { NeorgContentParser } from '../services/NeorgContentParser';
 import { getMarkdownStyles } from '../utils/preview';
 import type { FormatRenderStyle, RenderFormat } from '../types/RenderStyle';
@@ -46,11 +48,25 @@ interface ColorFieldProps {
 
 function ColorField({ label, value, onChange }: ColorFieldProps) {
   const { colors } = useTheme();
+  const [pickerOpen, setPickerOpen] = useState(false);
+
   return (
     <View style={styles.fieldRow}>
       <Text style={[styles.fieldLabel, { color: colors.text }]}>{label}</Text>
       <View style={styles.fieldRight}>
-        {value ? <View style={[styles.swatch, { backgroundColor: value, borderColor: colors.border }]} /> : null}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`pick color for ${label}`}
+          onPress={() => setPickerOpen(true)}
+          style={({ pressed }) => [
+            styles.swatch,
+            {
+              backgroundColor: value || colors.background,
+              borderColor: colors.border,
+              opacity: pressed ? 0.7 : 1,
+            },
+          ]}
+        />
         <TextInput
           style={[styles.fieldInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
           placeholder="#rrggbb"
@@ -61,6 +77,14 @@ function ColorField({ label, value, onChange }: ColorFieldProps) {
           onChangeText={(t) => onChange(t.trim() ? t.trim() : undefined)}
         />
       </View>
+      <HexColorPickerModal
+        visible={pickerOpen}
+        title={label}
+        initialColor={value}
+        allowClear
+        onClose={() => setPickerOpen(false)}
+        onSelect={(hex) => onChange(hex ?? undefined)}
+      />
     </View>
   );
 }

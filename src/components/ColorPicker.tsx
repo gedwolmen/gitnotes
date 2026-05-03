@@ -1,9 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 
-import { Modal } from './ui';
-import { useTheme } from '../contexts/ThemeContext';
+import HexColorPickerModal from './HexColorPickerModal';
 import { NOTE_COLORS } from '../theme/tokens';
 import { NoteColor, NOTE_COLOR_VALUES } from '../models/Note';
 
@@ -16,7 +13,58 @@ export interface ColorPickerProps {
   title?: string;
 }
 
-const SWATCH_SIZE = 44;
+/**
+ * Snap an arbitrary hex color (e.g. '#aabbcc') to the nearest entry in
+ * `NOTE_COLOR_VALUES` by squared RGB distance. The note model only
+ * accepts the named preset enum, so any free-picker output is coerced
+ * to the closest preset on save.
+ */
+export function snapToPresetColor(hex: string): NoteColor {
+  const rgb = parseHex(hex);
+  if (!rgb) {
+    // Fallback: deterministic default if the input is unparseable.
+    return NOTE_COLOR_VALUES[0];
+  }
+
+  let bestColor: NoteColor = NOTE_COLOR_VALUES[0];
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  for (const color of NOTE_COLOR_VALUES) {
+    const presetRgb = parseHex(NOTE_COLORS[color]);
+    if (!presetRgb) continue;
+    const dr = rgb.r - presetRgb.r;
+    const dg = rgb.g - presetRgb.g;
+    const db = rgb.b - presetRgb.b;
+    const distance = dr * dr + dg * dg + db * db;
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestColor = color;
+    }
+  }
+  return bestColor;
+}
+
+function parseHex(hex: string): { r: number; g: number; b: number } | null {
+  if (!hex) return null;
+  const cleaned = hex.trim().replace(/^#/, '');
+  let normalized: string;
+  if (cleaned.length === 3) {
+    normalized = cleaned
+      .split('')
+      .map((c) => c + c)
+      .join('');
+  } else if (cleaned.length === 6 || cleaned.length === 8) {
+    normalized = cleaned.slice(0, 6);
+  } else {
+    return null;
+  }
+  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) return null;
+  return {
+    r: parseInt(normalized.slice(0, 2), 16),
+    g: parseInt(normalized.slice(2, 4), 16),
+    b: parseInt(normalized.slice(4, 6), 16),
+  };
+}
 
 export default function ColorPicker({
   visible,
@@ -25,122 +73,33 @@ export default function ColorPicker({
   selected,
   title = 'Color',
 }: ColorPickerProps) {
-  const { colors } = useTheme();
+  const initialHex = selected ? NOTE_COLORS[selected] : undefined;
 
-  const handlePick = (color: NoteColor | null) => {
-    onSelect(color);
-    onClose();
+  const presetHexes = NOTE_COLOR_VALUES.map((c) => NOTE_COLORS[c]);
+  const presetIds = NOTE_COLOR_VALUES.slice();
+
+  const handleSelect = (hex: string | null) => {
+    if (hex === null) {
+      onSelect(null);
+      return;
+    }
+    onSelect(snapToPresetColor(hex));
   };
 
   return (
-    <Modal
+    <HexColorPickerModal
       visible={visible}
-      onRequestClose={onClose}
-      contentStyle={{ padding: 20, minWidth: 300 }}
-    >
-      <View testID="color-picker">
-        <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
-
-        <View style={styles.swatchGrid}>
-          {NOTE_COLOR_VALUES.map((color) => {
-            const hex = NOTE_COLORS[color];
-            const isSelected = selected === color;
-            return (
-              <Pressable
-                key={color}
-                testID={`color-picker-swatch-${color}`}
-                accessibilityLabel={`color ${color}`}
-                accessibilityRole="button"
-                onPress={() => handlePick(color)}
-                style={({ pressed }) => [
-                  styles.swatch,
-                  {
-                    backgroundColor: hex,
-                    borderColor: isSelected ? colors.text : 'transparent',
-                    opacity: pressed ? 0.7 : 1,
-                  },
-                ]}
-              >
-                {isSelected ? (
-                  <Ionicons name="checkmark" size={22} color="#ffffff" />
-                ) : null}
-              </Pressable>
-            );
-          })}
-        </View>
-
-        <TouchableOpacity
-          testID="color-picker-none"
-          accessibilityRole="button"
-          onPress={() => handlePick(null)}
-          style={[
-            styles.noneRow,
-            {
-              borderColor: colors.border,
-              backgroundColor: selected == null ? colors.surfaceSecondary : 'transparent',
-            },
-          ]}
-        >
-          <Ionicons name="close-circle-outline" size={20} color={colors.textSecondary} />
-          <Text style={[styles.noneText, { color: colors.text }]}>None</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          testID="color-picker-cancel"
-          accessibilityRole="button"
-          onPress={onClose}
-          style={[styles.cancelRow]}
-        >
-          <Text style={[styles.cancelText, { color: colors.primary }]}>Cancel</Text>
-        </TouchableOpacity>
-      </View>
-    </Modal>
+      initialColor={initialHex}
+      title={title}
+      presets={presetHexes}
+      presetIds={presetIds}
+      presetTestIdPrefix="color-picker-swatch"
+      allowClear
+      clearTestID="color-picker-none"
+      cancelTestID="color-picker-cancel"
+      confirmTestID="color-picker-confirm"
+      onClose={onClose}
+      onSelect={handleSelect}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  swatchGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 12,
-    marginBottom: 16,
-  },
-  swatch: {
-    width: SWATCH_SIZE,
-    height: SWATCH_SIZE,
-    borderRadius: SWATCH_SIZE / 2,
-    borderWidth: 3,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  noneRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    marginBottom: 8,
-  },
-  noneText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  cancelRow: {
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  cancelText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
