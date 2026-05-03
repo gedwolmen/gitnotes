@@ -118,6 +118,110 @@ function buildLinePath(x1: number, y1: number, x2: number, y2: number): SkPath {
   return p;
 }
 
+const PAN_MARGIN = 80;
+
+export interface CanvasBounds {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
+function expandBounds(bounds: CanvasBounds | null, x: number, y: number): CanvasBounds {
+  if (!bounds) {
+    return { minX: x, minY: y, maxX: x, maxY: y };
+  }
+
+  return {
+    minX: Math.min(bounds.minX, x),
+    minY: Math.min(bounds.minY, y),
+    maxX: Math.max(bounds.maxX, x),
+    maxY: Math.max(bounds.maxY, y),
+  };
+}
+
+export function getCanvasContentBounds(elements: CanvasElement[]): CanvasBounds | null {
+  'worklet';
+
+  let bounds: CanvasBounds | null = null;
+
+  for (const el of elements) {
+    if (el.type === 'stroke') {
+      for (const point of el.points) {
+        bounds = expandBounds(bounds, point.x - el.width / 2, point.y - el.width / 2);
+        bounds = expandBounds(bounds, point.x + el.width / 2, point.y + el.width / 2);
+      }
+      continue;
+    }
+
+    if (el.type === 'shape') {
+      const pad = el.width / 2;
+      bounds = expandBounds(bounds, Math.min(el.x1, el.x2) - pad, Math.min(el.y1, el.y2) - pad);
+      bounds = expandBounds(bounds, Math.max(el.x1, el.x2) + pad, Math.max(el.y1, el.y2) + pad);
+      continue;
+    }
+
+    if (el.type === 'text') {
+      const textWidth = Math.max(1, el.text.length * el.fontSize * 0.6);
+      bounds = expandBounds(bounds, el.x, el.y - el.fontSize);
+      bounds = expandBounds(bounds, el.x + textWidth, el.y);
+      continue;
+    }
+
+    if (el.type === 'chart') {
+      bounds = expandBounds(bounds, el.x, el.y);
+      bounds = expandBounds(bounds, el.x + el.width, el.y + el.height);
+    }
+  }
+
+  return bounds;
+}
+
+export function getCanvasFitTranslation(
+  bounds: CanvasBounds | null,
+  viewportWidth: number,
+  viewportHeight: number,
+  scaleValue: number,
+) {
+  'worklet';
+
+  if (!bounds) {
+    return { translateX: 0, translateY: 0 };
+  }
+
+  return {
+    translateX: viewportWidth / 2 - scaleValue * (bounds.minX + bounds.maxX) / 2,
+    translateY: viewportHeight / 2 - scaleValue * (bounds.minY + bounds.maxY) / 2,
+  };
+}
+
+export function clampCanvasTranslation(
+  translateX: number,
+  translateY: number,
+  scaleValue: number,
+  bounds: CanvasBounds | null,
+  viewportWidth: number,
+  viewportHeight: number,
+  margin = PAN_MARGIN,
+) {
+  'worklet';
+
+  if (!bounds) {
+    return { translateX, translateY };
+  }
+
+  const minTx = margin - scaleValue * bounds.maxX;
+  const maxTx = viewportWidth - margin - scaleValue * bounds.minX;
+  const minTy = margin - scaleValue * bounds.maxY;
+  const maxTy = viewportHeight - margin - scaleValue * bounds.minY;
+  const fit = getCanvasFitTranslation(bounds, viewportWidth, viewportHeight, scaleValue);
+
+  return {
+    translateX: minTx <= maxTx ? Math.min(maxTx, Math.max(minTx, translateX)) : fit.translateX,
+    translateY: minTy <= maxTy ? Math.min(maxTy, Math.max(minTy, translateY)) : fit.translateY,
+  };
+}
+
 export default function CanvasEditorScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteType>();
@@ -162,6 +266,9 @@ export default function CanvasEditorScreen() {
   const savedTy = useSharedValue(0);
   const activeDrawingElement = useSharedValue<CanvasStroke | CanvasShape | null>(null);
   const activeStrokePath = useSharedValue(Skia.Path.Make().setIsVolatile(true));
+  const contentBounds = useMemo(() => getCanvasContentBounds(elements), [elements]);
+  const shouldAutoFitRef = useRef((existingCanvas?.scene?.elements?.length ?? 0) > 0);
+  const didAutoFitRef = useRef(false);
 
   const setZoom = useCallback(
     (next: number) => {
@@ -172,10 +279,14 @@ export default function CanvasEditorScreen() {
   );
 
   const resetView = useCallback(() => {
+    const next = canvasSize && contentBounds
+      ? getCanvasFitTranslation(contentBounds, canvasSize.width, canvasSize.height, 1)
+      : { translateX: 0, translateY: 0 };
+
     scale.value = withSpring(1, { mass: 0.5, damping: 14, stiffness: 200 });
-    translateX.value = withSpring(0, { mass: 0.5, damping: 14, stiffness: 200 });
-    translateY.value = withSpring(0, { mass: 0.5, damping: 14, stiffness: 200 });
-  }, [scale, translateX, translateY]);
+    translateX.value = withSpring(next.translateX, { mass: 0.5, damping: 14, stiffness: 200 });
+    translateY.value = withSpring(next.translateY, { mass: 0.5, damping: 14, stiffness: 200 });
+  }, [canvasSize, contentBounds, scale, translateX, translateY]);
 
   const canvasAnimStyle = useAnimatedStyle(() => ({
     transform: [
@@ -198,6 +309,16 @@ export default function CanvasEditorScreen() {
       }),
     [],
   );
+
+  useEffect(() => {
+    if (!canvasSize || !shouldAutoFitRef.current || didAutoFitRef.current || !contentBounds) return;
+
+    const next = getCanvasFitTranslation(contentBounds, canvasSize.width, canvasSize.height, 1);
+    scale.value = withSpring(1, { mass: 0.5, damping: 14, stiffness: 200 });
+    translateX.value = withSpring(next.translateX, { mass: 0.5, damping: 14, stiffness: 200 });
+    translateY.value = withSpring(next.translateY, { mass: 0.5, damping: 14, stiffness: 200 });
+    didAutoFitRef.current = true;
+  }, [canvasSize, contentBounds, scale, translateX, translateY]);
 
   const saveHistory = useCallback(() => {
     setHistory((prev) => {
@@ -485,9 +606,20 @@ export default function CanvasEditorScreen() {
         .onUpdate((e) => {
           'worklet';
           const next = savedScale.value * e.scale;
-          scale.value = Math.max(0.5, Math.min(4, next));
+          const nextScale = Math.max(0.5, Math.min(4, next));
+          scale.value = nextScale;
+          const clamped = clampCanvasTranslation(
+            translateX.value,
+            translateY.value,
+            nextScale,
+            contentBounds,
+            canvasSize?.width ?? 0,
+            canvasSize?.height ?? 0,
+          );
+          translateX.value = clamped.translateX;
+          translateY.value = clamped.translateY;
         }),
-    [scale, savedScale],
+    [scale, savedScale, contentBounds, canvasSize?.width, canvasSize?.height, translateX, translateY],
   );
 
   const twoFingerPan = useMemo(
@@ -502,10 +634,18 @@ export default function CanvasEditorScreen() {
         })
         .onUpdate((e) => {
           'worklet';
-          translateX.value = savedTx.value + e.translationX;
-          translateY.value = savedTy.value + e.translationY;
+          const clamped = clampCanvasTranslation(
+            savedTx.value + e.translationX,
+            savedTy.value + e.translationY,
+            scale.value,
+            contentBounds,
+            canvasSize?.width ?? 0,
+            canvasSize?.height ?? 0,
+          );
+          translateX.value = clamped.translateX;
+          translateY.value = clamped.translateY;
         }),
-    [translateX, translateY, savedTx, savedTy],
+    [translateX, translateY, savedTx, savedTy, scale, contentBounds, canvasSize?.width, canvasSize?.height],
   );
 
   const composedGesture = useMemo(
