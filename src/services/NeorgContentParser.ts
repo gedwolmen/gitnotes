@@ -14,6 +14,9 @@ export class NeorgContentParser {
       let currentChecklist: NeorgChecklistItem[] | null = null;
       let currentTableRows: NeorgTableRow[] | null = null;
       let currentDefinitions: NeorgDefinitionItem[] | null = null;
+      let listIndentWidth: number | null = null;
+      let checklistIndentWidth: number | null = null;
+      let definitionIndentWidth: number | null = null;
       let tableHasHeader: boolean[] = [];
       let inOrgDrawer = false;
       let inOrgBlock = false;
@@ -25,6 +28,7 @@ export class NeorgContentParser {
           blocks.push({ type: 'list', listItems: currentList });
           currentList = null;
         }
+        listIndentWidth = null;
       };
 
       const flushChecklist = () => {
@@ -32,6 +36,7 @@ export class NeorgContentParser {
           blocks.push({ type: 'checklist', checklistItems: currentChecklist });
           currentChecklist = null;
         }
+        checklistIndentWidth = null;
       };
 
       const flushTable = () => {
@@ -47,6 +52,7 @@ export class NeorgContentParser {
           blocks.push({ type: 'definition', definitionItems: currentDefinitions });
           currentDefinitions = null;
         }
+        definitionIndentWidth = null;
       };
 
       let pendingParagraphLines: string[] = [];
@@ -127,13 +133,11 @@ export class NeorgContentParser {
           continue;
         }
 
-        const norgBlockMatch = trimmed.match(/^=(code|raw|embed(?:\.\w+)?)\s*$/);
+        const norgBlockMatch = trimmed.match(/^=(code|raw|embed)(?:\.(\w+))?\s*$/);
         if (norgBlockMatch && !currentCodeBlock) {
           flushAll();
           currentCodeBlock = {
-            language: norgBlockMatch[1].startsWith('code') && norgBlockMatch[1].includes('.')
-              ? norgBlockMatch[1].split('.')[1]
-              : undefined,
+            language: norgBlockMatch[1] === 'code' ? norgBlockMatch[2] : undefined,
             lines: [],
           };
           continue;
@@ -206,12 +210,14 @@ export class NeorgContentParser {
           continue;
         }
 
-        const checklistItem = this.parseChecklistItem(line);
+        const nextChecklistIndentWidth = this.resolveIndentWidth(checklistIndentWidth, line);
+        const checklistItem = this.parseChecklistItem(line, nextChecklistIndentWidth ?? undefined);
         if (checklistItem) {
           flushParagraph();
           flushList();
           flushDefinitions();
           if (!currentChecklist) currentChecklist = [];
+          checklistIndentWidth = nextChecklistIndentWidth;
           currentChecklist.push(checklistItem);
           continue;
         }
@@ -223,22 +229,26 @@ export class NeorgContentParser {
           continue;
         }
 
-        const listItem = this.parseListItem(line);
+        const nextListIndentWidth = this.resolveIndentWidth(listIndentWidth, line);
+        const listItem = this.parseListItem(line, nextListIndentWidth ?? undefined);
         if (listItem) {
           flushParagraph();
           flushChecklist();
           flushDefinitions();
           if (!currentList) currentList = [];
+          listIndentWidth = nextListIndentWidth;
           currentList.push(listItem);
           continue;
         }
 
-        const definitionItem = this.parseDefinitionItem(line);
+        const nextDefinitionIndentWidth = this.resolveIndentWidth(definitionIndentWidth, line);
+        const definitionItem = this.parseDefinitionItem(line, nextDefinitionIndentWidth ?? undefined);
         if (definitionItem) {
           flushParagraph();
           flushList();
           flushChecklist();
           if (!currentDefinitions) currentDefinitions = [];
+          definitionIndentWidth = nextDefinitionIndentWidth;
           currentDefinitions.push(definitionItem);
           continue;
         }
@@ -290,12 +300,43 @@ export class NeorgContentParser {
     return null;
   }
 
-  static parseListItem(line: string): NeorgListItem | null {
+  private static getIndentLevel(spaces: string, indentWidth = 2): number {
+    let level = 0;
+    let consecutiveSpaces = 0;
+
+    for (const char of spaces) {
+      if (char === '\t') {
+        level += 1;
+        consecutiveSpaces = 0;
+      } else {
+        consecutiveSpaces += 1;
+        if (consecutiveSpaces >= indentWidth) {
+          level += 1;
+          consecutiveSpaces = 0;
+        }
+      }
+    }
+
+    if (consecutiveSpaces > 0) {
+      level += 1;
+    }
+
+    return level;
+  }
+
+  private static resolveIndentWidth(currentIndentWidth: number | null, line: string): number | null {
+    if (currentIndentWidth) return currentIndentWidth;
+    const spaces = line.match(/^(\s*)/)?.[1] ?? '';
+    if (!spaces || spaces.includes('\t')) return currentIndentWidth;
+    return spaces.length > 0 ? spaces.length : currentIndentWidth;
+  }
+
+  static parseListItem(line: string, indentWidth = 2): NeorgListItem | null {
     const indentMatch = line.match(/^(\s*)(.*)$/);
     if (!indentMatch) return null;
 
     const spaces = indentMatch[1];
-    const indentLevel = Math.floor(spaces.length / 2);
+    const indentLevel = this.getIndentLevel(spaces, indentWidth);
     const content = indentMatch[2];
 
     // Unordered: - item
@@ -335,12 +376,12 @@ export class NeorgContentParser {
     return null;
   }
 
-  static parseChecklistItem(line: string): NeorgChecklistItem | null {
+  static parseChecklistItem(line: string, indentWidth = 2): NeorgChecklistItem | null {
     const indentMatch = line.match(/^(\s*)(.*)$/);
     if (!indentMatch) return null;
 
     const spaces = indentMatch[1];
-    const indentLevel = Math.floor(spaces.length / 2);
+    const indentLevel = this.getIndentLevel(spaces, indentWidth);
     const content = indentMatch[2];
 
     // - [ ] or - [x] (markdown and norg task syntax)
@@ -357,12 +398,12 @@ export class NeorgContentParser {
     return null;
   }
 
-  static parseDefinitionItem(line: string): NeorgDefinitionItem | null {
+  static parseDefinitionItem(line: string, indentWidth = 2): NeorgDefinitionItem | null {
     const indentMatch = line.match(/^(\s*)(.*)$/);
     if (!indentMatch) return null;
 
     const spaces = indentMatch[1];
-    const indentLevel = Math.floor(spaces.length / 2);
+    const indentLevel = this.getIndentLevel(spaces, indentWidth);
     const content = indentMatch[2];
 
     // Neorg definition: $ Term
