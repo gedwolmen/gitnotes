@@ -1,4 +1,4 @@
-// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+// Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`Surface snapshots a raised neumorphic Surface with a Text child 1`] = `
 <View
@@ -17,6 +17,7 @@ exports[`Surface snapshots a raised neumorphic Surface with a Text child 1`] = `
         "shadowOpacity": 1,
         "shadowRadius": 8,
       },
+      undefined,
       undefined,
     ]
   }

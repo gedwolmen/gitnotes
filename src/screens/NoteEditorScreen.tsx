@@ -54,6 +54,7 @@ import { getMarkdownStyles } from '../utils/preview';
 import { Button, IconButton, Modal } from '../components/ui';
 import { GitHubActivityIndicator } from '../components/GitHubActivityIndicator';
 import { NotePreviewRenderer } from '../utils/markdownRenderer';
+import { canPersistNoteTags } from '../utils/noteTagSupport';
 import { githubActivity } from '../stores/githubActivityStore';
 
 interface TocEntry {
@@ -345,6 +346,7 @@ export default function NoteEditorScreen() {
           title: title.trim(),
           content: content.trim(),
           format: noteFormat,
+          tags,
         };
 
         const syncResult = await syncNoteToGitHub(syncParams);
@@ -965,7 +967,7 @@ export default function NoteEditorScreen() {
         </View>
       </View>
 
-      <TagInput tags={tags} onTagsChange={handleTagsChange} />
+      {canPersistNoteTags(noteFormat) ? <TagInput tags={tags} onTagsChange={handleTagsChange} /> : null}
 
       {canvasJsonRefs.length > 0 && (
         <View style={styles.canvasChipsRow}>
