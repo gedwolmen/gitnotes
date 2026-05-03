@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo } from 'react';
-import { Todo, TodoCreateInput, TodoUpdateInput } from '../models/Todo';
+import { Todo, TodoCreateInput, TodoUpdateInput, reorderTodos } from '../models/Todo';
 import { StorageService } from '../services/StorageService';
 import { NotificationService } from '../services/NotificationService';
 import { useTodoStore } from '../stores/todoStore';
+import { syncTodoToGitHub } from '../services/TodoGitHubSyncService';
 
 interface TodoContextValue {
   todos: Todo[];
@@ -110,7 +111,24 @@ export function useTodos(): TodoContextValue {
       console.warn('[TodoContext] Notification toggle handling failed:', err);
     }
 
-    useTodoStore.setState((s) => ({ todos: s.todos.map((t) => (t.id === id ? finalTodo : t)) }));
+    if (todo.repo) {
+      const syncResult = await syncTodoToGitHub({
+        repo: todo.repo,
+        branch: todo.branch,
+        filePath: todo.filePath,
+        text: finalTodo.text,
+        todo: finalTodo,
+      });
+      if (!syncResult.success) {
+        console.warn('[TodoContext] GitHub sync failed:', syncResult.error);
+      }
+    }
+
+    const nextTodos = reorderTodos(
+      useTodoStore.getState().todos.map((t) => (t.id === id ? finalTodo : t)),
+    );
+    await StorageService.saveAllTodos(nextTodos);
+    useTodoStore.setState({ todos: nextTodos });
     return true;
   }, []);
 

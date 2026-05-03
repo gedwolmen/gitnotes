@@ -106,6 +106,23 @@ export function applyTodoUpdate(existing: Todo, input: Partial<TodoUpdateInput>)
   };
 }
 
+const TODO_PRIORITY_ORDER: Record<TodoPriority, number> = {
+  high: 0,
+  medium: 1,
+  low: 2,
+};
+
+export function compareTodos(a: Todo, b: Todo): number {
+  if (a.completed !== b.completed) return a.completed ? 1 : -1;
+  const priorityDiff = TODO_PRIORITY_ORDER[a.priority || 'medium'] - TODO_PRIORITY_ORDER[b.priority || 'medium'];
+  if (priorityDiff !== 0) return priorityDiff;
+  return b.createdAt - a.createdAt;
+}
+
+export function reorderTodos(todos: Todo[]): Todo[] {
+  return [...todos].sort(compareTodos);
+}
+
 export function slugifyTodoText(text: string): string {
   return text
     .toLowerCase()

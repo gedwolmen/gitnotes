@@ -20,7 +20,7 @@ import { format, isToday, isTomorrow, isPast } from 'date-fns';
 
 import { useTodos } from '../contexts/TodoContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { Todo, TodoPriority, PRIORITY_COLORS, PRIORITY_LABELS, REMINDER_OPTIONS, slugifyTodoText } from '../models/Todo';
+import { Todo, TodoPriority, PRIORITY_COLORS, PRIORITY_LABELS, REMINDER_OPTIONS, slugifyTodoText, reorderTodos } from '../models/Todo';
 import { HapticService } from '../utils/haptics';
 import { useResponsive } from '../hooks/useResponsive';
 import GitContextPicker from '../components/GitContextPicker';
@@ -89,13 +89,7 @@ export default function TodoListScreen() {
       );
     }
 
-    return filtered.sort((a, b) => {
-      if (a.completed !== b.completed) return a.completed ? 1 : -1;
-      const priorityOrder = { high: 0, medium: 1, low: 2 };
-      const priorityDiff = priorityOrder[a.priority || 'medium'] - priorityOrder[b.priority || 'medium'];
-      if (priorityDiff !== 0) return priorityDiff;
-      return b.createdAt - a.createdAt;
-    });
+    return reorderTodos(filtered);
   }, [todos, filter, filterCompleted, searchQuery]);
 
   const resetForm = useCallback(() => {
