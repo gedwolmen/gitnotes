@@ -2,6 +2,22 @@ import { Attachment } from './Attachment';
 
 export type NoteFormat = 'markdown' | 'neorg' | 'org' | 'pdf' | 'json';
 
+export const NOTE_COLOR_VALUES = [
+  'red',
+  'orange',
+  'yellow',
+  'green',
+  'blue',
+  'purple',
+  'pink',
+  'gray',
+] as const;
+export type NoteColor = (typeof NOTE_COLOR_VALUES)[number];
+
+export function isNoteColor(value: unknown): value is NoteColor {
+  return typeof value === 'string' && (NOTE_COLOR_VALUES as readonly string[]).includes(value);
+}
+
 export interface NoteGitHubLink {
   owner: string;
   repo: string;
@@ -19,6 +35,7 @@ export interface Note {
   createdAt: number;
   updatedAt: number;
   tags: string[];
+  color?: NoteColor;
   repo?: string;
   branch?: string;
   commit?: string;
@@ -34,6 +51,7 @@ export interface NoteCreateInput {
   title: string;
   content: string;
   tags?: string[];
+  color?: NoteColor | null;
   repo?: string;
   branch?: string;
   commit?: string;
@@ -49,6 +67,7 @@ export interface NoteUpdateInput {
   title?: string;
   content?: string;
   tags?: string[];
+  color?: NoteColor | null;
   repo?: string;
   branch?: string;
   commit?: string;
@@ -68,6 +87,7 @@ export function createNote(input: NoteCreateInput): Note {
     createdAt: now,
     updatedAt: now,
     tags: input.tags || [],
+    color: input.color === null ? undefined : input.color,
     repo: input.repo,
     branch: input.branch,
     commit: input.commit,
@@ -80,11 +100,19 @@ export function createNote(input: NoteCreateInput): Note {
 }
 
 export function updateNote(existing: Note, input: Partial<NoteCreateInput>): Note {
+  // `color === null` means "clear the color"; `undefined` means "leave unchanged".
+  const nextColor =
+    input.color === null
+      ? undefined
+      : input.color !== undefined
+        ? input.color
+        : existing.color;
   return {
     ...existing,
     title: input.title ?? existing.title,
     content: input.content ?? existing.content,
     tags: input.tags ?? existing.tags,
+    color: nextColor,
     repo: input.repo ?? existing.repo,
     branch: input.branch ?? existing.branch,
     commit: input.commit ?? existing.commit,

@@ -30,13 +30,15 @@ import { useViewMode } from "../contexts/ViewModeContext";
 import { useAuth } from "../contexts/AuthContext";
 import { useRepos } from "../contexts/RepoContext";
 import { RootStackParamList } from "../navigation/types";
-import { Note, NoteFormat } from "../models/Note";
+import { Note, NoteColor, NoteFormat } from "../models/Note";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { GitRepository } from "../services/GitService";
 import { GitHubService } from "../services/GitHubService";
 import { NoteSyncQueueService } from "../services/NoteSyncQueueService";
+import { syncNoteToGitHub } from "../services/NoteGitHubSyncService";
 import { pullAllFromRepos } from "../services/RepoPullService";
 import ContextMenu from "../components/ContextMenu";
+import ColorPicker from "../components/ColorPicker";
 import NoteCard from "../components/NoteCard";
 import SearchBar from "../components/SearchBar";
 import { OfflineBanner } from "../components/ui/OfflineBanner";
@@ -78,6 +80,7 @@ export default function NotesListScreen() {
     togglePin,
     error,
     createNote,
+    updateNote,
   } = useNotes();
   const { viewMode, setViewMode } = useViewMode();
   const { isTablet, maxContentWidth } = useResponsive();
@@ -316,7 +319,52 @@ export default function NotesListScreen() {
   );
 
   const [longPressedNote, setLongPressedNote] = useState<Note | null>(null);
+  const [colorPickerNote, setColorPickerNote] = useState<Note | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleColorSelect = useCallback(
+    async (color: NoteColor | null) => {
+      if (!colorPickerNote) return;
+      try {
+        const updated = await updateNote({ id: colorPickerNote.id, color });
+        if (!updated) {
+          HapticService.error();
+          Alert.alert('Error', 'Failed to update note color');
+          return;
+        }
+        HapticService.success();
+
+        // Best-effort: persist the color change to the remote frontmatter so
+        // it round-trips on next pull. We avoid blocking the UI on failure.
+        if (updated.repo && updated.filePath && (updated.content ?? '').trim()) {
+          const syncParams = {
+            repo: updated.repo,
+            branch: updated.branch,
+            filePath: updated.filePath,
+            title: updated.title,
+            content: updated.content,
+            format: updated.format,
+            tags: updated.tags,
+            color,
+          };
+          try {
+            const result = await syncNoteToGitHub(syncParams);
+            if (!result.success) {
+              await NoteSyncQueueService.enqueueNoteUpsert(syncParams, updated.id);
+            } else if (result.finalContent && result.finalContent !== updated.content) {
+              await updateNote({ id: updated.id, content: result.finalContent });
+            }
+          } catch {
+            await NoteSyncQueueService.enqueueNoteUpsert(syncParams, updated.id);
+          }
+        }
+      } catch {
+        HapticService.error();
+        Alert.alert('Error', 'Failed to update note color');
+      }
+    },
+    [colorPickerNote, updateNote],
+  );
 
   const handleDeleteNote = useCallback(
     async (note: Note) => {
@@ -1419,6 +1467,15 @@ export default function NotesListScreen() {
                       },
                     },
                     {
+                      icon: "color-palette-outline",
+                      label: "Color",
+                      onPress: () => {
+                        const target = longPressedNote;
+                        setLongPressedNote(null);
+                        setColorPickerNote(target);
+                      },
+                    },
+                    {
                       icon: "copy-outline",
                       label: "Duplicate",
                       onPress: async () => {
@@ -1458,6 +1515,13 @@ export default function NotesListScreen() {
               ]
             : []
         }
+      />
+
+      <ColorPicker
+        visible={colorPickerNote !== null}
+        onClose={() => setColorPickerNote(null)}
+        selected={colorPickerNote?.color ?? null}
+        onSelect={handleColorSelect}
       />
     </SafeAreaView>
   );

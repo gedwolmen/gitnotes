@@ -339,6 +339,7 @@ export default function NoteEditorScreen() {
       }
 
       if (repo && content.trim()) {
+        const existingForColor = savedNoteId ? getNoteByIdRef.current(savedNoteId) : undefined;
         const syncParams = {
           repo,
           branch,
@@ -347,6 +348,7 @@ export default function NoteEditorScreen() {
           content: content.trim(),
           format: noteFormat,
           tags,
+          color: existingForColor?.color ?? null,
         };
 
         const syncResult = await syncNoteToGitHub(syncParams);

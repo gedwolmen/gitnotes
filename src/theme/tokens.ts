@@ -118,6 +118,23 @@ export const FLAT_DARK: Palette = {
   glassBorder: 'rgba(56, 56, 58, 0.4)',
 };
 
+// Note color-coding palette. Keys must match `NoteColor` in models/Note.
+// These render as the card border accent in `NoteCard` and as swatches in
+// `ColorPicker`. They are intentionally theme-agnostic — same hex in both
+// light and dark modes — because the user picks them as labels, not as
+// theme-aware backgrounds.
+export const NOTE_COLORS = {
+  red: '#ef4444',
+  orange: '#f97316',
+  yellow: '#eab308',
+  green: '#22c55e',
+  blue: '#3b82f6',
+  purple: '#8b5cf6',
+  pink: '#ec4899',
+  gray: '#6b7280',
+} as const;
+export type NoteColorToken = keyof typeof NOTE_COLORS;
+
 export const RADII = { sm: 12, md: 18, lg: 24, pill: 999 } as const;
 export type Radius = keyof typeof RADII;
 
