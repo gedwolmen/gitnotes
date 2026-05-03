@@ -14,14 +14,20 @@ module.exports = {
   moduleNameMapper: {
     '^expo-blur$': '<rootDir>/__mocks__/expo-blur.ts',
     '^expo-file-system/legacy$': '<rootDir>/__mocks__/expo-file-system-legacy.ts',
+    '^expo-secure-store$': '<rootDir>/__mocks__/expo-secure-store.ts',
   },
   setupFiles: ['<rootDir>/jest.setup.ts'],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/.worktrees/',
+  ],
   transformIgnorePatterns: [
-    'node_modules/(?!(react-native|@react-native|@react-navigation|expo|@expo|react-native-reanimated|@shopify)/)',
+    'node_modules/(?!(react-native|@react-native|@react-navigation|expo|expo-[^/]+|@expo|react-native-reanimated|@shopify)/)',
   ],
   collectCoverage: true,
   coveragePathIgnorePatterns: [
     '/node_modules/',
     '/__tests__/',
+    '/.worktrees/',
   ],
 };

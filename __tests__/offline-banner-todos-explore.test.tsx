@@ -76,6 +76,11 @@ jest.mock('../src/components/ui', () => {
     IconButton: ({ children, onPress }: any) => (
       <TouchableOpacity onPress={onPress}>{children}</TouchableOpacity>
     ),
+    useScreenHeaderHeight: () => 60,
+    SCREEN_HEADER_BASE_HEIGHT: 60,
+    SCREEN_HEADER_SUBTITLE_HEIGHT: 88,
+    useTabBarHeight: () => 84,
+    TAB_BAR_BASE_HEIGHT: 84,
   };
 });
 
@@ -92,6 +97,10 @@ jest.mock('../src/contexts/TodoContext', () => ({
 
 jest.mock('../src/stores/todoStore', () => ({
   useTodoStore: (selector: any) => selector({ deleteTodo: jest.fn() }),
+}));
+
+jest.mock('../src/contexts/AuthContext', () => ({
+  useAuth: () => ({ authState: { token: null, user: null, isAuthenticated: false } }),
 }));
 
 jest.mock('../src/contexts/RepoContext', () => ({

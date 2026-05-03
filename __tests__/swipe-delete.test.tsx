@@ -136,6 +136,11 @@ jest.mock('../src/components/ui', () => ({
     const { Text } = require('react-native');
     return <Text>{title}</Text>;
   },
+  useScreenHeaderHeight: () => 60,
+  SCREEN_HEADER_BASE_HEIGHT: 60,
+  SCREEN_HEADER_SUBTITLE_HEIGHT: 88,
+  useTabBarHeight: () => 84,
+  TAB_BAR_BASE_HEIGHT: 84,
 }));
 
 jest.mock('../src/components/NoteCard', () => ({
