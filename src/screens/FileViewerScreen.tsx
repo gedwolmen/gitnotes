@@ -19,6 +19,7 @@ import { NeorgContentParser } from '../services/NeorgContentParser';
 import NeorgRenderer from '../components/NeorgRenderer';
 import { HapticService } from '../utils/haptics';
 import { getMarkdownStyles, stripTopMetadata } from '../utils/preview';
+import { useRenderStyle } from '../stores/renderStyleStore';
 
 type Mode = 'markdown' | 'neorg' | 'org' | 'code' | 'plain';
 
@@ -107,7 +108,11 @@ export default function FileViewerScreen() {
     return parsed.success && parsed.blocks ? parsed.blocks : null;
   }, [renderContent, mode]);
 
-  const markdownStyles = useMemo(() => getMarkdownStyles(colors, isDark), [colors, isDark]);
+  const markdownOverrides = useRenderStyle('markdown');
+  const markdownStyles = useMemo(
+    () => getMarkdownStyles(colors, isDark, markdownOverrides),
+    [colors, isDark, markdownOverrides],
+  );
 
   return (
     <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
@@ -147,7 +152,7 @@ export default function FileViewerScreen() {
           {mode === 'markdown' ? (
             <MarkdownBody value={renderContent} styles={markdownStyles} />
           ) : (mode === 'neorg' || mode === 'org') && parsedNeorg ? (
-            <NeorgRenderer blocks={parsedNeorg} />
+            <NeorgRenderer blocks={parsedNeorg} format={mode === 'org' ? 'org' : 'neorg'} />
           ) : (
             <Text
               style={[

@@ -10,6 +10,8 @@ type ProductionStackParamList = {
   CanvasList: undefined;
   ChatThreadList: undefined;
   ChatScreen: { threadId: string };
+  RenderStyleSettings: undefined;
+  RenderStyleEditor: { format: 'markdown' | 'org' | 'neorg' };
 };
 
 type DevOnlyStackParamList = {

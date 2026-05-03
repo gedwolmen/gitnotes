@@ -54,6 +54,7 @@ import { syncNoteToGitHub } from '../services/NoteGitHubSyncService';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import { PositionMemoryService } from '../services/PositionMemoryService';
 import { getMarkdownStyles } from '../utils/preview';
+import { useRenderStyle } from '../stores/renderStyleStore';
 import { Button, IconButton, Modal } from '../components/ui';
 import { NotePreviewRenderer } from '../utils/markdownRenderer';
 
@@ -559,7 +560,11 @@ export default function NoteEditorScreen() {
     }
   }, [content, setContent]);
 
-  const markdownStyles = useMemo(() => getMarkdownStyles(colors, isDark), [colors, isDark]);
+  const markdownOverrides = useRenderStyle('markdown');
+  const markdownStyles = useMemo(
+    () => getMarkdownStyles(colors, isDark, markdownOverrides),
+    [colors, isDark, markdownOverrides],
+  );
 
 
   const previewContent = useMemo(() => {
@@ -826,7 +831,7 @@ export default function NoteEditorScreen() {
               noteFormat === 'markdown' ? (
                 <MarkdownBody value={previewContent} styles={markdownStyles} renderer={notePreviewRenderer} />
               ) : parsedStructuredContent ? (
-                <NeorgRenderer blocks={parsedStructuredContent} />
+                <NeorgRenderer blocks={parsedStructuredContent} format={noteFormat === 'org' ? 'org' : 'neorg'} />
               ) : (
                 <Text style={[styles.structuredFallback, { color: colors.text }]}>{previewContent}</Text>
               )
@@ -994,7 +999,7 @@ export default function NoteEditorScreen() {
         noteFormat === 'markdown' ? (
           <MarkdownBody value={previewContent} styles={markdownStyles} renderer={notePreviewRenderer} />
         ) : parsedStructuredContent ? (
-          <NeorgRenderer blocks={parsedStructuredContent} />
+          <NeorgRenderer blocks={parsedStructuredContent} format={noteFormat === 'org' ? 'org' : 'neorg'} />
         ) : (
           <Text style={[styles.structuredFallback, { color: colors.text }]}>{previewContent}</Text>
         )

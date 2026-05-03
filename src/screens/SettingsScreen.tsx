@@ -33,6 +33,9 @@ import { HapticService } from '../utils/haptics';
 import SearchBar from '../components/SearchBar';
 import { useResponsive } from '../hooks/useResponsive';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../navigation/types';
 import { ModelSelector } from '../components/ai/ModelSelector';
 import { ProviderConfigModal } from '../components/ai/ProviderConfigModal';
 import { ChatRepoPickerModal } from '../components/ai/ChatRepoPickerModal';
@@ -42,6 +45,7 @@ import type { AIProviderConfig } from '../models/AIProvider';
 
 export default function SettingsScreen() {
   const { theme, colors, setTheme, style: uiStyle, setStyle } = useTheme();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { isTablet, maxContentWidth } = useResponsive();
   const { clearAllNotes, refreshNotes } = useNotes();
   const { refreshCanvases } = useCanvases();
@@ -506,6 +510,21 @@ export default function SettingsScreen() {
           >
             <Ionicons name="add" size={20} color={colors.primary} />
             <Text style={[styles.addRepoButtonText, { color: colors.primary }]}>Add Repository</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ── Note rendering ── */}
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Note rendering</Text>
+          <TouchableOpacity
+            style={[styles.settingItem, { borderBottomColor: colors.border }]}
+            onPress={() => navigation.navigate('RenderStyleSettings')}
+          >
+            <View style={styles.settingLeft}>
+              <Ionicons name="color-palette-outline" size={20} color={colors.text} />
+              <Text style={[styles.settingLabel, { color: colors.text, marginLeft: 12 }]}>Customize render styles</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 

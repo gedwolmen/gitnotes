@@ -2,9 +2,13 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { NeorgContentBlock, NeorgHeading, NeorgListItem, NeorgChecklistItem, NeorgDefinitionItem } from '../models/NeorgContent';
 import { useTheme } from '../contexts/ThemeContext';
+import { useRenderStyle } from '../stores/renderStyleStore';
+import type { RenderFormat } from '../types/RenderStyle';
 
 interface NeorgRendererProps {
   blocks: NeorgContentBlock[];
+  /** Which format's render-style overrides to apply. Defaults to 'neorg'. */
+  format?: RenderFormat;
 }
 
 type InlineSegment =
@@ -19,8 +23,31 @@ type InlineSegment =
   | { type: 'link'; label: string; target: string }
   | { type: 'tag'; name: string };
 
-export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
+export default function NeorgRenderer({ blocks, format = 'neorg' }: NeorgRendererProps) {
   const { colors } = useTheme();
+  const overrides = useRenderStyle(format);
+
+  const headingColorFor = (level: number): string => {
+    if (level === 1) return overrides.h1?.color ?? colors.text;
+    if (level === 2) return overrides.h2?.color ?? colors.text;
+    if (level === 3) return overrides.h3?.color ?? colors.text;
+    return colors.text;
+  };
+  const headingWeightFor = (level: number): '400' | '500' | '600' | '700' | 'bold' | 'normal' | undefined => {
+    if (level === 1) return overrides.h1?.fontWeight;
+    if (level === 2) return overrides.h2?.fontWeight;
+    if (level === 3) return overrides.h3?.fontWeight;
+    return undefined;
+  };
+  const bodyColor = overrides.body?.color ?? colors.text;
+  const codeBg = overrides.codeBlock?.background ?? colors.surfaceSecondary;
+  const codeText = overrides.codeBlock?.text ?? colors.text;
+  const inlineBg = overrides.inlineCode?.background;
+  const inlineText = overrides.inlineCode?.text;
+  const linkColor = overrides.link?.color ?? colors.primary;
+  const quoteBar = overrides.blockquote?.bar ?? colors.primary;
+  const quoteText = overrides.blockquote?.text ?? colors.text;
+  const dividerColor = overrides.divider?.color ?? colors.border;
 
   const parseInline = (text: string): InlineSegment[] => {
     const segments: InlineSegment[] = [];
@@ -132,7 +159,14 @@ export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
               return <Text key={k} style={styles.strikethrough}>{seg.content}</Text>;
             case 'code':
               return (
-                <Text key={k} style={[styles.inlineCode, { backgroundColor: colors.surfaceSecondary }]}>
+                <Text
+                  key={k}
+                  style={[
+                    styles.inlineCode,
+                    { backgroundColor: inlineBg ?? colors.surfaceSecondary },
+                    inlineText ? { color: inlineText } : null,
+                  ]}
+                >
                   {seg.content}
                 </Text>
               );
@@ -142,7 +176,7 @@ export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
               return <Text key={k} style={styles.subscript}>{seg.content}</Text>;
             case 'link':
               return (
-                <Text key={k} style={[styles.link, { color: colors.primary }]}>
+                <Text key={k} style={[styles.link, { color: linkColor }]}>
                   {seg.label}
                 </Text>
               );
@@ -176,12 +210,18 @@ export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
 
   const renderHeading = (heading: NeorgHeading, blockIndex: number) => {
     const fontSize = 32 - (heading.level - 1) * 4;
+    const weight = headingWeightFor(heading.level);
     return (
       <Text
         key={`heading-${blockIndex}`}
         style={[
           styles.heading,
-          { fontSize, color: colors.text, marginTop: heading.level === 1 ? 16 : 12 },
+          {
+            fontSize,
+            color: headingColorFor(heading.level),
+            marginTop: heading.level === 1 ? 16 : 12,
+            ...(weight ? { fontWeight: weight } : {}),
+          },
         ]}
       >
         {renderInline(heading.text)}
@@ -234,17 +274,17 @@ export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
   };
 
   const renderParagraph = (text: string, blockIndex: number) => (
-    <Text key={`para-${blockIndex}`} style={[styles.paragraph, { color: colors.text }]}>
+    <Text key={`para-${blockIndex}`} style={[styles.paragraph, { color: bodyColor }]}>
       {renderInline(text)}
     </Text>
   );
 
   const renderCodeBlock = (code: { language?: string; content: string }, blockIndex: number) => (
-    <View key={`code-${blockIndex}`} style={[styles.codeBlock, { backgroundColor: colors.surfaceSecondary }]}>
+    <View key={`code-${blockIndex}`} style={[styles.codeBlock, { backgroundColor: codeBg }]}>
       {code.language && (
         <Text style={[styles.codeLanguage, { color: colors.textSecondary }]}>{code.language}</Text>
       )}
-      <Text style={[styles.codeContent, { color: colors.text }]}>{code.content}</Text>
+      <Text style={[styles.codeContent, { color: codeText }]}>{code.content}</Text>
     </View>
   );
 
@@ -285,14 +325,14 @@ export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
   const renderQuote = (text: string, blockIndex: number) => (
     <View
       key={`quote-${blockIndex}`}
-      style={[styles.quoteBlock, { backgroundColor: colors.primary + '15', borderLeftColor: colors.primary }]}
+      style={[styles.quoteBlock, { backgroundColor: quoteBar + '15', borderLeftColor: quoteBar }]}
     >
-      <Text style={[styles.quoteText, { color: colors.text }]}>{renderInline(text)}</Text>
+      <Text style={[styles.quoteText, { color: quoteText }]}>{renderInline(text)}</Text>
     </View>
   );
 
   const renderDivider = (blockIndex: number) => (
-    <View key={`hr-${blockIndex}`} style={[styles.divider, { backgroundColor: colors.border }]} />
+    <View key={`hr-${blockIndex}`} style={[styles.divider, { backgroundColor: dividerColor }]} />
   );
 
   const renderBlock = (block: NeorgContentBlock, index: number) => {
