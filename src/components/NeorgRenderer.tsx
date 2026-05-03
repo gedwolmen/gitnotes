@@ -123,37 +123,37 @@ export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
           const k = segKey(seg, i);
           switch (seg.type) {
             case 'bold':
-              return <Text key={k} style={styles.bold}>{seg.content}</Text>;
+              return <Text key={k} selectable style={styles.bold}>{seg.content}</Text>;
             case 'italic':
-              return <Text key={k} style={styles.italic}>{seg.content}</Text>;
+              return <Text key={k} selectable style={styles.italic}>{seg.content}</Text>;
             case 'underline':
-              return <Text key={k} style={styles.underline}>{seg.content}</Text>;
+              return <Text key={k} selectable style={styles.underline}>{seg.content}</Text>;
             case 'strikethrough':
-              return <Text key={k} style={styles.strikethrough}>{seg.content}</Text>;
+              return <Text key={k} selectable style={styles.strikethrough}>{seg.content}</Text>;
             case 'code':
               return (
-                <Text key={k} style={[styles.inlineCode, { backgroundColor: colors.surfaceSecondary }]}>
+                <Text key={k} selectable style={[styles.inlineCode, { backgroundColor: colors.surfaceSecondary }]}>
                   {seg.content}
                 </Text>
               );
             case 'superscript':
-              return <Text key={k} style={styles.superscript}>{seg.content}</Text>;
+              return <Text key={k} selectable style={styles.superscript}>{seg.content}</Text>;
             case 'subscript':
-              return <Text key={k} style={styles.subscript}>{seg.content}</Text>;
+              return <Text key={k} selectable style={styles.subscript}>{seg.content}</Text>;
             case 'link':
               return (
-                <Text key={k} style={[styles.link, { color: colors.primary }]}>
+                <Text key={k} selectable style={[styles.link, { color: colors.primary }]}>
                   {seg.label}
                 </Text>
               );
             case 'tag':
               return (
-                <Text key={k} style={[styles.tagBadge, { backgroundColor: colors.primary + '20', color: colors.primary }]}>
+                <Text key={k} selectable style={[styles.tagBadge, { backgroundColor: colors.primary + '20', color: colors.primary }]}>
                   {seg.name}
                 </Text>
               );
             default:
-              return <Text key={k}>{seg.content}</Text>;
+              return <Text key={k} selectable>{seg.content}</Text>;
           }
         })}
       </React.Fragment>
@@ -179,6 +179,7 @@ export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
     return (
       <Text
         key={`heading-${blockIndex}`}
+        selectable
         style={[
           styles.heading,
           { fontSize, color: colors.text, marginTop: heading.level === 1 ? 16 : 12 },
@@ -198,8 +199,8 @@ export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
       prefix = `${taskStatusIcon(item.status)} `;
     }
     return (
-      <View key={`list-${blockIndex}-${itemIndex}`} style={[styles.listItem, { marginLeft: indent }]}>
-        <Text style={[styles.listText, { color: colors.text }]}>
+      <View key={`list-${blockIndex}-${itemIndex}`} style={[styles.listItem, { marginLeft: indent }]}> 
+        <Text selectable style={[styles.listText, { color: colors.text }]}>
           {prefix}{renderInline(item.text)}
         </Text>
       </View>
@@ -209,8 +210,8 @@ export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
   const renderChecklistItem = (item: NeorgChecklistItem, blockIndex: number, itemIndex: number) => {
     const indent = item.indentLevel * 16;
     return (
-      <View key={`check-${blockIndex}-${itemIndex}`} style={[styles.listItem, { marginLeft: indent }]}>
-        <Text style={[styles.listText, { color: colors.text }]}>
+      <View key={`check-${blockIndex}-${itemIndex}`} style={[styles.listItem, { marginLeft: indent }]}> 
+        <Text selectable style={[styles.listText, { color: colors.text }]}>
           {item.checked ? '✓' : '○'} {renderInline(item.text)}
         </Text>
       </View>
@@ -220,12 +221,12 @@ export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
   const renderDefinitionItem = (item: NeorgDefinitionItem, blockIndex: number, itemIndex: number) => {
     const indent = item.indentLevel * 16;
     return (
-      <View key={`def-${blockIndex}-${itemIndex}`} style={[styles.definitionItem, { marginLeft: indent }]}>
-        <Text style={[styles.definitionTerm, { color: colors.primary }]}>
+      <View key={`def-${blockIndex}-${itemIndex}`} style={[styles.definitionItem, { marginLeft: indent }]}> 
+        <Text selectable style={[styles.definitionTerm, { color: colors.primary }]}> 
           {item.term}
         </Text>
         {item.definition ? (
-          <Text style={[styles.definitionText, { color: colors.text }]}>
+          <Text selectable style={[styles.definitionText, { color: colors.text }]}>
             {renderInline(item.definition)}
           </Text>
         ) : null}
@@ -234,19 +235,19 @@ export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
   };
 
   const renderParagraph = (text: string, blockIndex: number) => (
-    <Text key={`para-${blockIndex}`} style={[styles.paragraph, { color: colors.text }]}>
+    <Text key={`para-${blockIndex}`} selectable style={[styles.paragraph, { color: colors.text }]}>
       {renderInline(text)}
     </Text>
   );
 
   const renderCodeBlock = (code: { language?: string; content: string }, blockIndex: number) => (
-    <View key={`code-${blockIndex}`} style={[styles.codeBlock, { backgroundColor: colors.surfaceSecondary }]}>
-      {code.language && (
-        <Text style={[styles.codeLanguage, { color: colors.textSecondary }]}>{code.language}</Text>
-      )}
-      <Text style={[styles.codeContent, { color: colors.text }]}>{code.content}</Text>
-    </View>
-  );
+      <View key={`code-${blockIndex}`} style={[styles.codeBlock, { backgroundColor: colors.surfaceSecondary }]}>
+        {code.language && (
+          <Text selectable style={[styles.codeLanguage, { color: colors.textSecondary }]}>{code.language}</Text>
+        )}
+        <Text selectable style={[styles.codeContent, { color: colors.text }]}>{code.content}</Text>
+      </View>
+    );
 
   const renderTable = (block: NeorgContentBlock, blockIndex: number) => {
     if (!block.tableRows || block.tableRows.length === 0) return null;
@@ -266,6 +267,7 @@ export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
               {row.cells.map((cell, cellIdx) => (
                 <Text
                   key={`tc-${blockIndex}-${rowIdx}-${cellIdx}`}
+                  selectable
                   style={[
                     styles.tableCell,
                     { color: colors.text },
@@ -287,7 +289,7 @@ export default function NeorgRenderer({ blocks }: NeorgRendererProps) {
       key={`quote-${blockIndex}`}
       style={[styles.quoteBlock, { backgroundColor: colors.primary + '15', borderLeftColor: colors.primary }]}
     >
-      <Text style={[styles.quoteText, { color: colors.text }]}>{renderInline(text)}</Text>
+      <Text selectable style={[styles.quoteText, { color: colors.text }]}>{renderInline(text)}</Text>
     </View>
   );
 
