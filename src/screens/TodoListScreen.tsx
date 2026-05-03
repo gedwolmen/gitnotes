@@ -27,7 +27,7 @@ import { useResponsive } from '../hooks/useResponsive';
 import GitContextPicker from '../components/GitContextPicker';
 import { syncTodoToGitHub } from '../services/TodoGitHubSyncService';
 import { pullAllFromRepos } from '../services/RepoPullService';
-import { IconButton, ScreenHeader } from '../components/ui';
+import { IconButton, ScreenHeader, useScreenHeaderHeight } from '../components/ui';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
 import SearchBar from '../components/SearchBar';
 import { EntityFilterModal } from '../components/EntityFilterModal';
@@ -51,6 +51,7 @@ function findReminderLabel(minutes: number): string {
 export default function TodoListScreen() {
   const { colors, isDark } = useTheme();
   const { isTablet, maxContentWidth } = useResponsive();
+  const headerHeight = useScreenHeaderHeight();
   const { todos, createTodo, updateTodo, toggleTodo, refreshTodos } = useTodos();
   const deleteTodo = useTodoStore((state) => state.deleteTodo);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -408,42 +409,10 @@ export default function TodoListScreen() {
   );
 
   return (
-    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }, isTablet && { maxWidth: maxContentWidth, alignSelf: 'center', width: '100%' }]}>
-      <ScreenHeader
-        title="Todos"
-        actions={
-          <>
-            <IconButton
-              size="sm"
-              active={filterCompleted}
-              onPress={() => setFilterCompleted(!filterCompleted)}
-              accessibilityLabel="Toggle completed filter"
-            >
-              <Ionicons
-                name={filterCompleted ? 'eye-off' : 'eye'}
-                size={18}
-                color={filterCompleted ? colors.accent : colors.textSecondary}
-              />
-            </IconButton>
-            <IconButton
-              size="sm"
-              active={filter.activeCount > 0}
-              onPress={() => setShowFilterModal(true)}
-              accessibilityLabel="Filters"
-            >
-              <Ionicons
-                name="funnel-outline"
-                size={18}
-                color={filter.activeCount > 0 ? colors.accent : colors.textSecondary}
-              />
-            </IconButton>
-            <IconButton size="sm" onPress={() => setShowAddModal(true)} accessibilityLabel="Add todo">
-              <Ionicons name="add" size={20} color={colors.accent} />
-            </IconButton>
-          </>
-        }
-      />
-      <OfflineBanner />
+    <SafeAreaView edges={[]} style={[styles.container, { backgroundColor: colors.background }, isTablet && { maxWidth: maxContentWidth, alignSelf: 'center', width: '100%' }]}>
+      <View style={{ paddingTop: headerHeight }}>
+        <OfflineBanner />
+      </View>
 
       <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
         <SearchBar
@@ -688,6 +657,40 @@ export default function TodoListScreen() {
           </View>
         </View>
       </Modal>
+      <ScreenHeader
+        title="Todos"
+        actions={
+          <>
+            <IconButton
+              size="sm"
+              active={filterCompleted}
+              onPress={() => setFilterCompleted(!filterCompleted)}
+              accessibilityLabel="Toggle completed filter"
+            >
+              <Ionicons
+                name={filterCompleted ? 'eye-off' : 'eye'}
+                size={18}
+                color={filterCompleted ? colors.accent : colors.textSecondary}
+              />
+            </IconButton>
+            <IconButton
+              size="sm"
+              active={filter.activeCount > 0}
+              onPress={() => setShowFilterModal(true)}
+              accessibilityLabel="Filters"
+            >
+              <Ionicons
+                name="funnel-outline"
+                size={18}
+                color={filter.activeCount > 0 ? colors.accent : colors.textSecondary}
+              />
+            </IconButton>
+            <IconButton size="sm" onPress={() => setShowAddModal(true)} accessibilityLabel="Add todo">
+              <Ionicons name="add" size={20} color={colors.accent} />
+            </IconButton>
+          </>
+        }
+      />
     </SafeAreaView>
   );
 }

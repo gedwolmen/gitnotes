@@ -50,6 +50,8 @@ jest.mock('../src/components/ui', () => {
   const React = require('react');
   const { Text, View, TouchableOpacity } = require('react-native');
   return {
+    useScreenHeaderHeight: () => 60,
+    SCREEN_HEADER_BASE_HEIGHT: 60,
     ScreenHeader: ({ title, subtitle, actions }: any) => (
       <View>
         <Text>{title}</Text>

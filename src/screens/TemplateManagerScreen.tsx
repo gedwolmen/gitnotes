@@ -15,7 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '../contexts/ThemeContext';
-import { ScreenHeader, IconButton, Modal } from '../components/ui';
+import { ScreenHeader, IconButton, Modal, useScreenHeaderHeight } from '../components/ui';
 import { useTemplateStore } from '../stores/templateStore';
 import { NoteTemplate } from '../services/TemplateService';
 import { HapticService } from '../utils/haptics';
@@ -23,6 +23,7 @@ import { HapticService } from '../utils/haptics';
 export default function TemplateManagerScreen() {
   const navigation = useNavigation();
   const { colors } = useTheme();
+  const headerHeight = useScreenHeaderHeight();
 
   const customTemplates = useTemplateStore((s) => s.customTemplates);
   const pinnedIds = useTemplateStore((s) => s.pinnedIds);
@@ -190,21 +191,10 @@ export default function TemplateManagerScreen() {
   const customCount = customTemplates.length;
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScreenHeader
-        title="Templates"
-        subtitle={`${allTemplates.length} total · ${customCount} custom`}
-        onBack={handleBack}
-        actions={
-          <IconButton size="sm" onPress={handleOpenCreate} accessibilityLabel="New template">
-            <Ionicons name="add" size={20} color={colors.accent} />
-          </IconButton>
-        }
-      />
-
+    <SafeAreaView edges={['bottom']} style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight }]}
         keyboardShouldPersistTaps="handled"
       >
         <TouchableOpacity
@@ -289,6 +279,16 @@ export default function TemplateManagerScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+      <ScreenHeader
+        title="Templates"
+        subtitle={`${allTemplates.length} total · ${customCount} custom`}
+        onBack={handleBack}
+        actions={
+          <IconButton size="sm" onPress={handleOpenCreate} accessibilityLabel="New template">
+            <Ionicons name="add" size={20} color={colors.accent} />
+          </IconButton>
+        }
+      />
     </SafeAreaView>
   );
 }
