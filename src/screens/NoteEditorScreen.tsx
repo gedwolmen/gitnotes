@@ -65,6 +65,10 @@ interface TocEntry {
 
 const APPROX_LINE_PX = 22;
 
+function normalizeNotePathForLookup(path: string): string {
+  return path.replace(/^\/+/, '').replace(/\/+/g, '/');
+}
+
 function extractTocFromMarkdown(content: string): TocEntry[] {
   const out: TocEntry[] = [];
   const lines = content.split('\n');
@@ -122,7 +126,7 @@ export default function NoteEditorScreen() {
   const { sideBySide } = useResponsive();
   const { noteId, format: initialFormat, initialTitle, initialContent, repo: initialRepo, branch: initialBranch, folderPath: initialFolderPath } = route.params || {};
 
-  const { getNoteById, createNote, updateNote } = useNotes();
+  const { notes, getNoteById, createNote, updateNote } = useNotes();
   const { canvases } = useCanvases();
 
   const [title, setTitle] = useState(initialTitle ?? '');
@@ -632,6 +636,23 @@ export default function NoteEditorScreen() {
 
   const previewScrollRef = useRef<ScrollView>(null);
 
+  const currentNotePath = useMemo(() => {
+    if (noteId) {
+      return notes.find((note) => note.id === noteId)?.filePath;
+    }
+    return folderPath && title.trim()
+      ? normalizeNotePathForLookup(`${folderPath}/${slugifyLocal(title.trim())}${getExtensionForFormat(noteFormat)}`)
+      : undefined;
+  }, [folderPath, noteFormat, noteId, notes, title]);
+
+  const handleOpenLinkedNote = useCallback((targetPath: string) => {
+    const normalizedTargetPath = normalizeNotePathForLookup(targetPath);
+    const targetNote = notes.find((note) => note.filePath && normalizeNotePathForLookup(note.filePath) === normalizedTargetPath);
+    if (!targetNote?.id) return false;
+    navigation.navigate('NoteEditor', { noteId: targetNote.id });
+    return true;
+  }, [navigation, notes]);
+
   const notePreviewRenderer = useMemo(
     () =>
       new NotePreviewRenderer({
@@ -641,8 +662,10 @@ export default function NoteEditorScreen() {
         previewScrollRef,
         CanvasPreview,
         approxLinePx: APPROX_LINE_PX,
+        currentNotePath,
+        onOpenNote: handleOpenLinkedNote,
       }),
-    [colors, navigation, previewContent],
+    [colors, currentNotePath, handleOpenLinkedNote, navigation, previewContent],
   );
 
   const speakableContent = useMemo(() => {

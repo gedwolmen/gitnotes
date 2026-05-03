@@ -1,10 +1,11 @@
 import React, { type ReactNode } from 'react';
-import { Text, type TextStyle, type ViewStyle, type ImageStyle, type ScrollView, Linking } from 'react-native';
+import { Alert, Text, type TextStyle, type ViewStyle, type ImageStyle, type ScrollView, Linking } from 'react-native';
 import { Renderer, type RendererInterface } from 'react-native-marked';
 import { Image } from 'expo-image';
 
 import { isCanvasLink, canvasIdFromLink } from '../models/Canvas';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
+import { classifyHref } from './linkClassifier';
 
 interface CustomRendererDeps {
   colors: {
@@ -19,6 +20,8 @@ interface CustomRendererDeps {
   previewScrollRef?: React.RefObject<ScrollView | null>;
   CanvasPreview?: React.ComponentType<{ canvasId: string }>;
   approxLinePx?: number;
+  currentNotePath?: string;
+  onOpenNote?: (path: string) => boolean;
 }
 
 export class NotePreviewRenderer extends Renderer implements RendererInterface {
@@ -92,15 +95,20 @@ export class NotePreviewRenderer extends Renderer implements RendererInterface {
 
     const onPress = () => {
       if (!href) return;
-      if (href.startsWith('note:')) {
-        const id = href.slice('note:'.length);
-        if (id && this.deps.navigation) {
-          this.deps.navigation.navigate('NoteEditor', { noteId: id });
+      const classified = classifyHref(href, this.deps.currentNotePath);
+      if (!classified) {
+        Linking.openURL(href).catch(() => {});
+        return;
+      }
+      if (classified.kind === 'note') {
+        const opened = this.deps.onOpenNote?.(classified.target) ?? false;
+        if (!opened) {
+          Alert.alert('Link target not found');
         }
         return;
       }
-      if (href.startsWith('#')) {
-        const slug = href.slice(1).toLowerCase();
+      if (classified.kind === 'anchor') {
+        const slug = classified.target;
         const content = this.deps.previewContent ?? '';
         const target = content
           .split('\n')
@@ -118,6 +126,10 @@ export class NotePreviewRenderer extends Renderer implements RendererInterface {
           const px = this.deps.approxLinePx ?? 22;
           this.deps.previewScrollRef.current.scrollTo({ y: target * px, animated: true });
         }
+        return;
+      }
+      if (classified.kind === 'web' || classified.kind === 'mailto') {
+        Linking.openURL(href).catch(() => {});
         return;
       }
       Linking.openURL(href).catch(() => {});

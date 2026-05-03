@@ -28,3 +28,7 @@
 - Context pickers can reuse the authenticated GitHub tree API directly for file/folder selection instead of relying on placeholder copy or store-only repo metadata.
 
 - Plan-compliance review needs to verify behavior, not just file existence: route overlays rendered outside `NavigationContainer`, placeholder context tabs, and local-only rename flows can still pass typecheck/tests while missing the requested user flow.
+
+## 2026-05-03
+- Markdown preview links need target classification before routing; raw `Linking.openURL` breaks internal note navigation and fragment scrolling behavior.
+- Relative note links should resolve against the current note file path, while stored note lookups should normalize away leading slashes because folder selections use `/path` but synced note `filePath` values do not.
