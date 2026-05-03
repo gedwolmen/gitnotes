@@ -1,4 +1,4 @@
-// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+// Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`Chip snapshots inactive + active: chip-active 1`] = `
 <View
@@ -17,6 +17,7 @@ exports[`Chip snapshots inactive + active: chip-active 1`] = `
         "shadowOpacity": 1,
         "shadowRadius": 4,
       },
+      undefined,
       [
         {
           "alignItems": "center",
@@ -87,6 +88,7 @@ exports[`Chip snapshots inactive + active: chip-inactive 1`] = `
         "shadowOpacity": 1,
         "shadowRadius": 4,
       },
+      undefined,
       [
         {
           "alignItems": "center",

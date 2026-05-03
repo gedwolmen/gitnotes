@@ -26,7 +26,7 @@ interface FloatingAIButtonProps {
 
 export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
   const { isEnabled } = useAIStore();
-  const { colors } = useTheme();
+  const { colors, glossy } = useTheme();
   const navigation = useNavigation();
 
   const initialX = SCREEN_WIDTH - BUTTON_SIZE - 24;
@@ -47,7 +47,9 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
           translateY.value = y;
           savedTranslateX.value = x;
           savedTranslateY.value = y;
-        } catch (e) {}
+        } catch (e) {
+          console.warn('Failed to restore FAB position:', e);
+        }
       }
     });
   }, [translateX, translateY, savedTranslateX, savedTranslateY]);
@@ -117,10 +119,10 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
             radius="pill"
             style={[
               styles.button,
-              { backgroundColor: colors.primary }
+              { backgroundColor: glossy ? colors.glassElevated : colors.primary }
             ]}
           >
-            <Ionicons name="sparkles" size={24} color="#FFFFFF" />
+            <Ionicons name="sparkles" size={24} color={glossy ? colors.primary : "#FFFFFF"} />
           </Surface>
         </Animated.View>
       </GestureDetector>

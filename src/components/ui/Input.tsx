@@ -1,6 +1,6 @@
 import React, { forwardRef, ReactNode, useState } from 'react';
 import { StyleProp, TextInput, TextInputProps, TextStyle, View, ViewStyle } from 'react-native';
-import { Surface } from './Surface';
+import { Surface, SurfaceProps } from './Surface';
 import { useTokens } from '../../contexts/ThemeContext';
 
 export interface InputProps extends Omit<TextInputProps, 'style'> {
@@ -9,6 +9,8 @@ export interface InputProps extends Omit<TextInputProps, 'style'> {
   containerStyle?: StyleProp<ViewStyle>;
   inputStyle?: StyleProp<TextStyle>;
   multilineMinHeight?: number;
+  glassLayer?: SurfaceProps['glassLayer'];
+  surfaceTestID?: string;
 }
 
 export const Input = forwardRef<TextInput, InputProps>(function Input(props, ref) {
@@ -22,6 +24,8 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(props, ref
     onFocus,
     onBlur,
     placeholderTextColor,
+    glassLayer,
+    surfaceTestID,
     ...textInputProps
   } = props;
   const { colors, spacing, type } = useTokens();
@@ -32,6 +36,8 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(props, ref
       elevation="subtle"
       radius="md"
       inset
+      glassLayer={glassLayer}
+      testID={surfaceTestID}
       style={[
         {
           flexDirection: 'row',

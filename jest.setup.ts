@@ -1,5 +1,12 @@
 // Mocks for the @testing-library/react-native render path.
 
+jest.mock('expo-blur', () => {
+  const { View } = require('react-native');
+  return {
+    BlurView: View
+  };
+});
+
 // Minimal reanimated stub — official mock pulls in TS source that the
 // jest transform pipeline can't load. We only need the surface area used
 // by neumorphic primitives (useSharedValue, useAnimatedStyle, withSpring,
@@ -39,5 +46,19 @@ jest.mock('@react-native-async-storage/async-storage', () => {
       removeItem: jest.fn(async (k: string) => { delete store[k]; }),
       clear: jest.fn(async () => { store = {}; }),
     },
+  };
+});
+
+jest.mock('react-native-safe-area-context', () => {
+  const { View } = require('react-native');
+  const insets = { top: 0, right: 0, bottom: 0, left: 0 };
+  const frame = { x: 0, y: 0, width: 0, height: 0 };
+  return {
+    SafeAreaProvider: ({ children }: { children: React.ReactNode }) => children,
+    SafeAreaConsumer: ({ children }: { children: (i: typeof insets) => React.ReactNode }) => children(insets),
+    SafeAreaView: View,
+    useSafeAreaInsets: () => insets,
+    useSafeAreaFrame: () => frame,
+    initialWindowMetrics: { insets, frame },
   };
 });
