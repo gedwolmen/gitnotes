@@ -569,7 +569,7 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        <Group title="AI">
+        <Group title="Artificial Intelligence">
           <GroupRow
             trailing={
               <Toggle
@@ -580,7 +580,7 @@ export default function SettingsScreen() {
               />
             }
           >
-            <Text style={[styles.settingLabel, { color: colors.text }]}>Enable AI</Text>
+            <Text style={[styles.settingLabel, { color: colors.text }]}>Enable Artificial Intelligence</Text>
           </GroupRow>
         </Group>
 
