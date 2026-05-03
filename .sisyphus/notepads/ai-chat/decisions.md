@@ -15,3 +15,7 @@
 - Confirm mode stays inline in the conversation via a pending confirmation card driven by `executeToolCall(..., 'confirm')`, while Apply re-runs the same tool in auto mode so the screen never mutates note/todo stores directly.
 - Keep AI chat entry out of tab navigation; register `ChatThreadList`/`ChatScreen` only in the root stack and mount `FloatingAIButton` plus `ChatRepoPickerModal` as navigator-level overlays.
 - Use the chat repo from `aiStore` as the source of truth for AI context browsing, with `GitHubService.getTreeRecursive()` providing the file/folder lists shown in the modal.
+
+## 2026-05-03
+- Added `classifyHref` as a pure utility so link routing rules are unit-testable outside the renderer.
+- Kept external `http(s)`, `mailto:`, and `tel:` links on the native platform via `Linking.openURL` instead of adding in-app web handling.
