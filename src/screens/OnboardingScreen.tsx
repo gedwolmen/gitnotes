@@ -14,6 +14,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { OnboardingService } from '../services/OnboardingService';
 import { AuthService } from '../services/AuthService';
 import { GitHubService } from '../services/GitHubService';
+import { useAIStore } from '../stores/aiStore';
 import { Button, Input, Surface } from '../components/ui';
 
 interface OnboardingScreenProps {
@@ -45,7 +46,8 @@ const INFO_STEPS = [
 ];
 
 const TOKEN_STEP = INFO_STEPS.length;
-const TOTAL_STEPS = INFO_STEPS.length + 1;
+const AI_STEP = TOKEN_STEP + 1;
+const TOTAL_STEPS = INFO_STEPS.length + 2;
 
 export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScreenProps) {
   const { colors } = useTheme();
@@ -62,7 +64,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
   const handleNext = useCallback(async () => {
     if (currentStep < TOKEN_STEP) {
       setCurrentStep(currentStep + 1);
-    } else {
+    } else if (currentStep === TOKEN_STEP) {
       if (token.trim()) {
         setIsVerifying(true);
         setTokenError(null);
@@ -70,16 +72,26 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
         if (state.isAuthenticated) {
           await GitHubService.setToken(token.trim());
           setIsVerifying(false);
-          await finish();
+          setCurrentStep(AI_STEP);
         } else {
           setIsVerifying(false);
           setTokenError('Invalid token. Please check and try again.');
         }
       } else {
-        await finish();
+        setCurrentStep(AI_STEP);
       }
     }
-  }, [currentStep, token, finish]);
+  }, [currentStep, token]);
+
+  const handleEnableAI = useCallback(async () => {
+    await useAIStore.getState().setEnabled(true);
+    await finish();
+  }, [finish]);
+
+  const handleSkipAI = useCallback(async () => {
+    await useAIStore.getState().setEnabled(false);
+    await finish();
+  }, [finish]);
 
   const handleSkip = useCallback(async () => {
     await OnboardingService.completeOnboarding();
@@ -87,6 +99,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
   }, [onSkip]);
 
   const isTokenStep = currentStep === TOKEN_STEP;
+  const isAIStep = currentStep === AI_STEP;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
@@ -132,6 +145,19 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
               <Text style={styles.errorText}>{tokenError}</Text>
             ) : null}
           </View>
+        ) : isAIStep ? (
+          <View style={styles.content}>
+            <Surface elevation="raised" radius="pill" style={styles.iconContainer}>
+              <Ionicons name="sparkles-outline" size={72} color={colors.accent} />
+            </Surface>
+            <Text style={[styles.title, { color: colors.text }]}>GitNotēs AI</Text>
+            <Text style={[styles.description, { color: colors.textSecondary }]}>
+              Chat over your notes, todos, and canvases. AI can read context and apply edits when you allow it.
+            </Text>
+            <Text style={[styles.helperText, { color: colors.textSecondary }]}>
+              You can turn this on or off anytime in Settings → AI.
+            </Text>
+          </View>
         ) : (
           <View style={styles.content}>
             <Surface elevation="raised" radius="pill" style={styles.iconContainer}>
@@ -164,20 +190,39 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
             ))}
           </View>
 
-          <Button
-            variant="primary"
-            fullWidth
-            onPress={handleNext}
-            disabled={isVerifying}
-            label={isVerifying ? '' : isTokenStep ? (token.trim() ? 'Connect' : 'Skip for Now') : 'Next'}
-            trailingIcon={
-              isVerifying ? (
-                <ActivityIndicator color={colors.accent} />
-              ) : (
-                <Ionicons name="arrow-forward" size={20} color={colors.accent} />
-              )
-            }
-          />
+          {isAIStep ? (
+            <View style={styles.aiButtons}>
+              <Button
+                variant="primary"
+                fullWidth
+                onPress={handleEnableAI}
+                label="Enable AI"
+                trailingIcon={<Ionicons name="sparkles" size={20} color={colors.accent} />}
+              />
+              <Button
+                variant="ghost"
+                fullWidth
+                onPress={handleSkipAI}
+                label="Skip for Now"
+                style={{ marginTop: 8 }}
+              />
+            </View>
+          ) : (
+            <Button
+              variant="primary"
+              fullWidth
+              onPress={handleNext}
+              disabled={isVerifying}
+              label={isVerifying ? '' : isTokenStep ? (token.trim() ? 'Connect' : 'Skip for Now') : 'Next'}
+              trailingIcon={
+                isVerifying ? (
+                  <ActivityIndicator color={colors.accent} />
+                ) : (
+                  <Ionicons name="arrow-forward" size={20} color={colors.accent} />
+                )
+              }
+            />
+          )}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -215,6 +260,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     lineHeight: 24,
+  },
+  helperText: {
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 18,
+    marginTop: 8,
+    opacity: 0.8,
+  },
+  aiButtons: {
+    width: '100%',
   },
   errorText: {
     color: '#FF3B30',
