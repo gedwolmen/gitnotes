@@ -36,7 +36,7 @@ export default function HomeScreen() {
   const { notes } = useNotes();
   const { canvases } = useCanvases();
   const { isTablet, maxContentWidth } = useResponsive();
-  const headerHeight = useScreenHeaderHeight();
+  const headerHeight = useScreenHeaderHeight({ subtitle: true });
   const tabBarHeight = useTabBarHeight();
   const [showFormatPicker, setShowFormatPicker] = useState(false);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);

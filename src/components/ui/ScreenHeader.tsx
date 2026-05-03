@@ -6,17 +6,23 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme, useTokens } from '../../contexts/ThemeContext';
 import { IconButton } from './IconButton';
 
-export const SCREEN_HEADER_BASE_HEIGHT = 88;
+export const SCREEN_HEADER_BASE_HEIGHT = 60;
+export const SCREEN_HEADER_SUBTITLE_HEIGHT = 88;
 
 /**
  * Total reserved space for the floating ScreenHeader, including the
  * top safe-area inset. Use as `paddingTop` on the screen's first
  * scroll/list container so content can scroll behind the bar without
  * being permanently hidden under it.
+ *
+ * Pass `{ subtitle: true }` when the screen's ScreenHeader has a
+ * subtitle; the extra height keeps two-line headers from clipping
+ * content.
  */
-export function useScreenHeaderHeight(): number {
+export function useScreenHeaderHeight(opts?: { subtitle?: boolean }): number {
   const insets = useSafeAreaInsets();
-  return insets.top + SCREEN_HEADER_BASE_HEIGHT;
+  const base = opts?.subtitle ? SCREEN_HEADER_SUBTITLE_HEIGHT : SCREEN_HEADER_BASE_HEIGHT;
+  return insets.top + base;
 }
 
 export interface ScreenHeaderProps {
