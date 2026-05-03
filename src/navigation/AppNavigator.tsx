@@ -16,6 +16,7 @@ import PdfViewerScreen from '../screens/PdfViewerScreen';
 import FileViewerScreen from '../screens/FileViewerScreen';
 import ImageViewerScreen from '../screens/ImageViewerScreen';
 import VideoViewerScreen from '../screens/VideoViewerScreen';
+import TemplateManagerScreen from '../screens/TemplateManagerScreen';
 import NeumorphicGallery from '../screens/__dev__/NeumorphicGallery';
 import { FloatingAIButton } from '../components/ai/FloatingAIButton';
 import { ChatRepoPickerModal } from '../components/ai/ChatRepoPickerModal';
@@ -151,6 +152,11 @@ export default function AppNavigator() {
             <Stack.Screen
               name="ChatScreen"
               component={ChatScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="TemplateManager"
+              component={TemplateManagerScreen}
               options={{ headerShown: false }}
             />
             {__DEV__ && (

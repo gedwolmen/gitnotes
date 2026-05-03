@@ -39,8 +39,10 @@ import { ChatRepoPickerModal } from '../components/ai/ChatRepoPickerModal';
 import { Group, GroupRow, Toggle, ScreenHeader } from '../components/ui';
 import { useAIStore } from '../stores/aiStore';
 import type { AIProviderConfig } from '../models/AIProvider';
+import { useNavigation } from '@react-navigation/native';
 
 export default function SettingsScreen() {
+  const navigation = useNavigation();
   const { theme, colors, setTheme, style: uiStyle, setStyle, glossy, setGlossy } = useTheme();
   const { isTablet, maxContentWidth } = useResponsive();
   const { clearAllNotes, refreshNotes } = useNotes();
@@ -254,6 +256,10 @@ export default function SettingsScreen() {
     ]);
   }, [clearToken]);
 
+  const handleManageTemplates = useCallback(() => {
+    navigation.navigate('TemplateManager' as never);
+  }, [navigation]);
+
   const handleResetOnboarding = useCallback(() => {
     HapticService.warning();
     Alert.alert('Reset Onboarding', 'This will show the onboarding screen on next app launch.', [
@@ -464,10 +470,13 @@ export default function SettingsScreen() {
             <Text style={[styles.settingLabel, { color: colors.text }]}>Version</Text>
             <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{Constants.expoConfig?.version ?? Constants.manifest?.version ?? '—'}</Text>
           </View>
-          <View style={[styles.settingItem, { borderBottomColor: colors.border }]}>
+          <View style={[styles.settingItem, { borderBottomColor: colors.border }]}> 
             <Text style={[styles.settingLabel, { color: colors.text }]}>Build</Text>
             <Text style={[styles.settingValue, { color: colors.textSecondary }]}>2026.04.07</Text>
           </View>
+          <TouchableOpacity style={[styles.settingItem, { borderBottomColor: colors.border }]} onPress={handleManageTemplates}>
+            <Text style={[styles.settingLabel, { color: colors.text }]}>Manage templates</Text>
+          </TouchableOpacity>
         </View>
 
         <Group title="AI">
