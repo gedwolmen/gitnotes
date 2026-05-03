@@ -50,6 +50,7 @@ import {
 } from "../utils/viewModes";
 import { ShareService } from "../services/ShareService";
 import { useResponsive } from "../hooks/useResponsive";
+import { useNetworkStatus } from "../hooks/useNetworkStatus";
 import { GitHubActivityIndicator } from "../components/GitHubActivityIndicator";
 import { githubActivity } from "../stores/githubActivityStore";
 
@@ -80,6 +81,7 @@ export default function NotesListScreen() {
   } = useNotes();
   const { viewMode, setViewMode } = useViewMode();
   const { isTablet, maxContentWidth } = useResponsive();
+  const { isConnected } = useNetworkStatus();
   const { repositories } = useRepos();
   const listRef = useRef<FlashListRef<Note>>(null);
   const swipeableRefs = useRef<
@@ -290,6 +292,11 @@ export default function NotesListScreen() {
 
   const handleNotePress = useCallback(
     (note: Note) => {
+      if (isConnected === false && !note.content?.trim()) {
+        Alert.alert("Not available offline");
+        return;
+      }
+
       if (note.format === "pdf" && note.repo && note.filePath) {
         const info = parseRepoPath(note.repo);
         if (info) {
@@ -305,7 +312,7 @@ export default function NotesListScreen() {
       }
       navigation.navigate("NoteEditor", { noteId: note.id });
     },
-    [navigation],
+    [isConnected, navigation],
   );
 
   const [longPressedNote, setLongPressedNote] = useState<Note | null>(null);
@@ -455,6 +462,8 @@ export default function NotesListScreen() {
           onPress={handleNotePress}
           onLongPress={handleNoteLongPress}
           highlighted={hasActiveSearch && index === currentSearchMatchIndex}
+          isOffline={isConnected === false}
+          isCached={!!note.content?.trim()}
         />
       </ReanimatedSwipeable>
     ),
