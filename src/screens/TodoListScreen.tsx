@@ -27,7 +27,7 @@ import { useResponsive } from '../hooks/useResponsive';
 import GitContextPicker from '../components/GitContextPicker';
 import { syncTodoToGitHub } from '../services/TodoGitHubSyncService';
 import { pullAllFromRepos } from '../services/RepoPullService';
-import { IconButton, ScreenHeader, useScreenHeaderHeight } from '../components/ui';
+import { IconButton, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
 import SearchBar from '../components/SearchBar';
 import { EntityFilterModal } from '../components/EntityFilterModal';
@@ -52,6 +52,7 @@ export default function TodoListScreen() {
   const { colors, isDark } = useTheme();
   const { isTablet, maxContentWidth } = useResponsive();
   const headerHeight = useScreenHeaderHeight();
+  const tabBarHeight = useTabBarHeight();
   const { todos, createTodo, updateTodo, toggleTodo, refreshTodos } = useTodos();
   const deleteTodo = useTodoStore((state) => state.deleteTodo);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -436,7 +437,7 @@ export default function TodoListScreen() {
         data={filteredTodos}
         renderItem={renderTodoItem}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={{ ...styles.listContent, paddingBottom: tabBarHeight + 16 }}
         ListEmptyComponent={renderEmptyState}
         showsVerticalScrollIndicator={false}
         refreshControl={

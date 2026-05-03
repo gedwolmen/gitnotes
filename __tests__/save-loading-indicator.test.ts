@@ -161,6 +161,8 @@ jest.mock('../src/components/ui', () => {
     ScreenHeader: ({ title }: any) => require('react').createElement(Text, null, title),
     useScreenHeaderHeight: () => 60,
     SCREEN_HEADER_BASE_HEIGHT: 60,
+    useTabBarHeight: () => 84,
+    TAB_BAR_BASE_HEIGHT: 84,
   };
 });
 jest.mock('../src/components/ui/OfflineBanner', () => ({ OfflineBanner: () => null }));

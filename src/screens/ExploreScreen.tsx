@@ -20,7 +20,7 @@ import { HapticService } from '../utils/haptics';
 import { parseRepoPath } from '../utils/gitPathParser';
 import RepoFileTree, { TreeNode } from '../components/RepoFileTree';
 import { RootStackParamList } from '../navigation/types';
-import { ScreenHeader, useScreenHeaderHeight } from '../components/ui';
+import { ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
 import SearchBar from '../components/SearchBar';
 
@@ -44,6 +44,7 @@ export default function ExploreScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
   const headerHeight = useScreenHeaderHeight();
+  const tabBarHeight = useTabBarHeight();
   const { repositories: repos, refreshRepos } = useRepos();
   const [view, setView] = useState<ExploreView>('repoList');
   const [selectedRepo, setSelectedRepo] = useState<GitRepository | null>(null);
@@ -159,6 +160,7 @@ export default function ExploreScreen() {
             data={filteredRepos}
             keyExtractor={(item) => item.id.toString()}
             renderItem={renderRepoItem}
+            contentContainerStyle={{ paddingBottom: tabBarHeight + 16 }}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
             }

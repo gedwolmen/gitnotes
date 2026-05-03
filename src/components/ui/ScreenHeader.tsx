@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme, useTokens } from '../../contexts/ThemeContext';
 import { IconButton } from './IconButton';
 
-export const SCREEN_HEADER_BASE_HEIGHT = 60;
+export const SCREEN_HEADER_BASE_HEIGHT = 88;
 
 /**
  * Total reserved space for the floating ScreenHeader, including the
