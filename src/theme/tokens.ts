@@ -16,6 +16,11 @@ export interface Palette {
   border: string;
   card: string;
   elevated: string;
+  glassSurface: string;
+  glassCard: string;
+  glassElevated: string;
+  glassNav: string;
+  glassBorder: string;
 }
 
 // Neumorphic palette uses a near-pure white (light) / black (dark) surface
@@ -37,6 +42,11 @@ export const NEUMORPHIC_LIGHT: Palette = {
   border: '#D8D8D8',
   card: '#FFFFFF',
   elevated: '#FFFFFF',
+  glassSurface: 'rgba(255, 255, 255, 0.7)',
+  glassCard: 'rgba(255, 255, 255, 0.75)',
+  glassElevated: 'rgba(255, 255, 255, 0.85)',
+  glassNav: 'rgba(255, 255, 255, 0.75)',
+  glassBorder: 'rgba(216, 216, 216, 0.4)',
 };
 
 export const NEUMORPHIC_DARK: Palette = {
@@ -55,6 +65,11 @@ export const NEUMORPHIC_DARK: Palette = {
   border: '#262626',
   card: '#0A0A0A',
   elevated: '#1C1C1E',
+  glassSurface: 'rgba(0, 0, 0, 0.7)',
+  glassCard: 'rgba(10, 10, 10, 0.75)',
+  glassElevated: 'rgba(28, 28, 30, 0.85)',
+  glassNav: 'rgba(0, 0, 0, 0.75)',
+  glassBorder: 'rgba(38, 38, 38, 0.4)',
 };
 
 export const FLAT_LIGHT: Palette = {
@@ -73,6 +88,11 @@ export const FLAT_LIGHT: Palette = {
   border: '#c6c6c8',
   card: '#ffffff',
   elevated: '#ffffff',
+  glassSurface: 'rgba(255, 255, 255, 0.7)',
+  glassCard: 'rgba(255, 255, 255, 0.75)',
+  glassElevated: 'rgba(255, 255, 255, 0.85)',
+  glassNav: 'rgba(255, 255, 255, 0.75)',
+  glassBorder: 'rgba(198, 198, 200, 0.4)',
 };
 
 export const FLAT_DARK: Palette = {
@@ -91,6 +111,11 @@ export const FLAT_DARK: Palette = {
   border: '#38383a',
   card: '#2c2c2e',
   elevated: '#2c2c2e',
+  glassSurface: 'rgba(28, 28, 30, 0.7)',
+  glassCard: 'rgba(44, 44, 46, 0.75)',
+  glassElevated: 'rgba(44, 44, 46, 0.85)',
+  glassNav: 'rgba(28, 28, 30, 0.75)',
+  glassBorder: 'rgba(56, 56, 58, 0.4)',
 };
 
 export const RADII = { sm: 12, md: 18, lg: 24, pill: 999 } as const;

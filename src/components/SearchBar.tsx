@@ -10,6 +10,7 @@ interface SearchBarProps {
   placeholder?: string;
   onClear?: () => void;
   style?: StyleProp<ViewStyle>;
+  testID?: string;
 }
 
 export default function SearchBar({
@@ -18,8 +19,9 @@ export default function SearchBar({
   placeholder = 'Search notes...',
   onClear,
   style,
+  testID,
 }: SearchBarProps) {
-  const { colors } = useTheme();
+  const { colors, glossy } = useTheme();
 
   const handleClear = () => {
     onChangeText('');
@@ -35,6 +37,8 @@ export default function SearchBar({
       autoCorrect={false}
       autoCapitalize="none"
       containerStyle={style}
+      glassLayer={glossy ? 'glassNav' : undefined}
+      surfaceTestID={testID}
       leading={<Ionicons name="search" size={20} color={colors.textSecondary} />}
       trailing={
         value.length > 0 ? (

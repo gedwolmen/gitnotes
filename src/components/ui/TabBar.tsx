@@ -4,7 +4,7 @@ import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Surface } from './Surface';
-import { useTokens } from '../../contexts/ThemeContext';
+import { useTheme, useTokens } from '../../contexts/ThemeContext';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
@@ -19,19 +19,25 @@ const TAB_ICONS: Record<string, { focused: IoniconName; outline: IoniconName; la
 export function TabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const { colors, spacing } = useTokens();
+  const { glossy } = useTheme();
 
   return (
     <View
       style={{
-        backgroundColor: colors.bg,
+        backgroundColor: glossy ? 'transparent' : colors.bg,
         paddingHorizontal: spacing[6],
         paddingBottom: insets.bottom + spacing[3],
         paddingTop: spacing[4],
+        position: glossy ? 'absolute' : 'relative',
+        bottom: 0,
+        left: 0,
+        right: 0,
       }}
     >
       <Surface
         elevation="floating"
         radius="pill"
+        glassLayer="glassNav"
         style={{
           flexDirection: 'row',
           alignItems: 'center',

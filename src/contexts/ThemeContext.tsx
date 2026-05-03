@@ -24,8 +24,10 @@ interface ThemeContextType {
   theme: ThemeMode;
   isDark: boolean;
   style: ThemeStyle;
+  glossy: boolean;
   setTheme: (theme: ThemeMode) => void;
   setStyle: (style: ThemeStyle) => void;
+  setGlossy: (glossy: boolean) => void;
   colors: Palette;
   tokens: Tokens;
 }
@@ -34,6 +36,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const THEME_STORAGE_KEY = '@gitnotes:theme';
 const STYLE_STORAGE_KEY = '@gitnotes:style';
+const GLOSSY_STORAGE_KEY = '@gitnotes:glossy';
 
 interface ThemeProviderProps {
   children: ReactNode;
@@ -64,6 +67,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   // ThemeProvider without calling bootstrapStorage first).
   const [theme, setThemeState] = useState<ThemeMode>(readBootTheme);
   const [style, setStyleState] = useState<ThemeStyle>(readBootStyle);
+  const [glossy, setGlossyState] = useState<boolean>(false);
   const systemColorScheme = useColorScheme();
 
   const loadPersisted = useCallback(async () => {
@@ -79,6 +83,10 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         if (savedStyle === 'neumorphic' || savedStyle === 'flat') {
           setStyleState(savedStyle);
         }
+      }
+      const savedGlossy = await AsyncStorage.getItem(GLOSSY_STORAGE_KEY);
+      if (savedGlossy !== null) {
+        setGlossyState(savedGlossy === 'true');
       }
     } catch (error) {
       console.error('Error loading theme preferences:', error);
@@ -109,8 +117,25 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     try {
       setStyleState(newStyle);
       await AsyncStorage.setItem(STYLE_STORAGE_KEY, newStyle);
+      if (newStyle === 'neumorphic') {
+        setGlossyState(false);
+        await AsyncStorage.setItem(GLOSSY_STORAGE_KEY, 'false');
+      }
     } catch (error) {
       console.error('Error saving style:', error);
+    }
+  }, []);
+
+  const setGlossy = useCallback(async (newGlossy: boolean) => {
+    try {
+      setGlossyState(newGlossy);
+      await AsyncStorage.setItem(GLOSSY_STORAGE_KEY, newGlossy ? 'true' : 'false');
+      if (newGlossy) {
+        setStyleState('flat');
+        await AsyncStorage.setItem(STYLE_STORAGE_KEY, 'flat');
+      }
+    } catch (error) {
+      console.error('Error saving glossy:', error);
     }
   }, []);
 
@@ -122,8 +147,8 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   );
 
   const value: ThemeContextType = useMemo(
-    () => ({ theme, isDark, style, setTheme, setStyle, colors, tokens }),
-    [theme, isDark, style, setTheme, setStyle, colors, tokens],
+    () => ({ theme, isDark, style, glossy, setTheme, setStyle, setGlossy, colors, tokens }),
+    [theme, isDark, style, glossy, setTheme, setStyle, setGlossy, colors, tokens],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

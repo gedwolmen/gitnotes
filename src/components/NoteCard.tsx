@@ -50,7 +50,7 @@ interface NoteCardProps {
 }
 
 function NoteCardImpl({ note, onPress, onLongPress, compact = false, highlighted = false, variant = 'default' }: NoteCardProps) {
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, glossy } = useTheme();
   const { isTablet } = useResponsive();
   const isCard = variant === 'card';
   const showCompact = isCard ? false : compact;
@@ -65,7 +65,7 @@ function NoteCardImpl({ note, onPress, onLongPress, compact = false, highlighted
       style={[
         styles.card,
         {
-          backgroundColor: colors.card,
+          backgroundColor: glossy ? colors.glassCard : colors.card,
           shadowColor: colors.shadow,
           shadowOpacity: isDark ? 0 : 0.1,
         },

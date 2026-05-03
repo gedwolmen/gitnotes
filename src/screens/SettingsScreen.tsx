@@ -44,7 +44,7 @@ import { useAIStore } from '../stores/aiStore';
 import type { AIProviderConfig } from '../models/AIProvider';
 
 export default function SettingsScreen() {
-  const { theme, colors, setTheme, style: uiStyle, setStyle } = useTheme();
+  const { theme, colors, setTheme, style: uiStyle, setStyle, glossy, setGlossy } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { isTablet, maxContentWidth } = useResponsive();
   const { clearAllNotes, refreshNotes } = useNotes();
@@ -336,6 +336,7 @@ export default function SettingsScreen() {
           <GroupRow
             trailing={
               <Toggle
+                testID="neu-toggle"
                 value={uiStyle === 'neumorphic'}
                 onValueChange={(v) => setStyle(v ? 'neumorphic' : 'flat')}
               />
@@ -352,6 +353,17 @@ export default function SettingsScreen() {
             }
           >
             <Text style={[styles.settingLabel, { color: colors.text }]}>Dark Mode</Text>
+          </GroupRow>
+          <GroupRow
+            trailing={
+              <Toggle
+                testID="glossy-toggle"
+                value={glossy}
+                onValueChange={setGlossy}
+              />
+            }
+          >
+            <Text style={[styles.settingLabel, { color: colors.text }]}>Glossy UI</Text>
           </GroupRow>
           <GroupRow
             onPress={() => setTheme('system')}

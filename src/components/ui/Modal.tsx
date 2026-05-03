@@ -24,7 +24,7 @@ export function Modal(props: ModalProps) {
     fullWidth = false,
     bottomSheet = false,
   } = props;
-  const { isDark } = useTheme();
+  const { isDark, glossy } = useTheme();
   const { spacing, colors } = useTokens();
   const { height: viewportHeight, width: viewportWidth } = useWindowDimensions();
 
@@ -32,9 +32,11 @@ export function Modal(props: ModalProps) {
   const slotHeight = Math.max(0, viewportHeight - pad * 2);
   const slotWidth = Math.max(0, viewportWidth - pad * 2);
 
+  const bgColor = glossy ? colors.glassElevated : colors.elevated;
+
   const surfaceStyle: ViewStyle = bottomSheet
     ? {
-        backgroundColor: colors.elevated,
+        backgroundColor: bgColor,
         maxHeight: slotHeight,
         overflow: 'hidden',
         borderBottomLeftRadius: 0,
@@ -44,13 +46,13 @@ export function Modal(props: ModalProps) {
     ? {
         padding: pad,
         maxHeight: slotHeight,
-        backgroundColor: colors.elevated,
+        backgroundColor: bgColor,
         overflow: 'hidden',
       }
     : {
         padding: pad,
         maxHeight: slotHeight,
-        backgroundColor: colors.elevated,
+        backgroundColor: bgColor,
       };
 
   return (
