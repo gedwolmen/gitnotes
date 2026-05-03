@@ -35,3 +35,5 @@
 - Markdown fenced code rendering can stay lightweight: a plain `<Text>` language label above the existing code body fixes dropped language metadata without adding syntax highlighting.
 - Neorg inline parsing is safer when URL-shaped substrings are reserved before italic matching and repeated parses are cached behind a memoized parser function.
 - Neorg list indentation needs adaptive parsing: the first indented space-based sibling should define the indent width, while tabs should count as one nesting level.
+- Custom template persistence can stay isolated from note storage by using dedicated AsyncStorage keys for template blobs and pin IDs, with a small Zustand store handling merge/sort behavior.
+- Settings rows can reuse the existing `settingItem` visual pattern for new affordances without introducing new navigation scaffolding in this branch.

@@ -10,6 +10,7 @@ type ProductionStackParamList = {
   CanvasList: undefined;
   ChatThreadList: undefined;
   ChatScreen: { threadId: string };
+  TemplateManager: undefined;
 };
 
 type DevOnlyStackParamList = {
