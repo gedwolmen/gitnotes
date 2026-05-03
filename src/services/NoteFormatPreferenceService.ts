@@ -4,7 +4,7 @@ import type { NoteFormat } from '../models/Note';
 const DEFAULT_FORMAT_KEY = '@gitnotes:default_note_format';
 const REMEMBER_FORMAT_KEY = '@gitnotes:remember_note_format';
 
-export type EditableNoteFormat = Exclude<NoteFormat, 'pdf'>;
+export type EditableNoteFormat = Exclude<NoteFormat, 'pdf' | 'json'>;
 
 export class NoteFormatPreferenceService {
   static async getDefaultFormat(): Promise<EditableNoteFormat | null> {

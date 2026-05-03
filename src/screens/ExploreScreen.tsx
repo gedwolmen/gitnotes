@@ -29,9 +29,10 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'heic', 'heif', 'svg']);
 const VIDEO_EXTS = new Set(['mp4', 'mov', 'm4v', 'webm']);
 
-function classifyFile(name: string): 'pdf' | 'image' | 'video' | 'text' {
+function classifyFile(name: string): 'pdf' | 'json' | 'image' | 'video' | 'text' {
   const ext = name.toLowerCase().split('.').pop() ?? '';
   if (ext === 'pdf') return 'pdf';
+  if (ext === 'json') return 'json';
   if (IMAGE_EXTS.has(ext)) return 'image';
   if (VIDEO_EXTS.has(ext)) return 'video';
   return 'text';
@@ -256,6 +257,8 @@ export default function ExploreScreen() {
                 navigation.navigate('ImageViewer', params);
               } else if (kind === 'video') {
                 navigation.navigate('VideoViewer', params);
+              } else if (kind === 'json') {
+                navigation.navigate('FileViewer', params);
               } else {
                 navigation.navigate('FileViewer', params);
               }
