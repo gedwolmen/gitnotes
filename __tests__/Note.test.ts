@@ -173,7 +173,7 @@ describe('format helpers', () => {
   });
 
   test('getSupportedFileExtensions / isSupportedFileExtension', () => {
-    expect(getSupportedFileExtensions()).toEqual(['.md', '.norg', '.org', '.pdf']);
+    expect(getSupportedFileExtensions()).toEqual(['.md', '.norg', '.org', '.pdf', '.json']);
     expect(isSupportedFileExtension('a.md')).toBe(true);
     expect(isSupportedFileExtension('A.PDF')).toBe(true);
     expect(isSupportedFileExtension('a.txt')).toBe(false);
