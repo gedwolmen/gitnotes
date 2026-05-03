@@ -1,6 +1,12 @@
 import { TouchableOpacity } from 'react-native';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
+jest.mock('@react-native-community/netinfo', () => {
+  const addEventListener = jest.fn(() => jest.fn());
+  const fetch = jest.fn(() => Promise.resolve({ isConnected: true, isInternetReachable: true }));
+  return { __esModule: true, default: { addEventListener, fetch }, addEventListener, fetch };
+});
+
 import NotesListScreen from '../src/screens/NotesListScreen';
 import { Note } from '../src/models/Note';
 
