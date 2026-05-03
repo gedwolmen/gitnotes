@@ -22,6 +22,7 @@ import { parseRepoPath } from '../utils/gitPathParser';
 import RepoFileTree, { TreeNode } from '../components/RepoFileTree';
 import { RootStackParamList } from '../navigation/types';
 import { ScreenHeader } from '../components/ui';
+import { OfflineBanner } from '../components/ui/OfflineBanner';
 import SearchBar from '../components/SearchBar';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -128,6 +129,7 @@ export default function ExploreScreen() {
     return (
       <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
         <ScreenHeader title="Explore" />
+        <OfflineBanner />
         <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
           <SearchBar
             value={repoSearch}
@@ -170,6 +172,7 @@ export default function ExploreScreen() {
     return (
       <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
         <ScreenHeader title={selectedRepo.name} onBack={handleBack} />
+        <OfflineBanner />
 
         <View style={[s.detailCard, { backgroundColor: colors.surface, borderColor: colors.border + '30' }]}>
           <View style={s.detailTop}>
@@ -225,6 +228,7 @@ export default function ExploreScreen() {
           </View>
           <View style={s.headerBtnPlaceholder} />
         </View>
+        <OfflineBanner />
 
         <ScrollView
           style={s.treeScroll}
