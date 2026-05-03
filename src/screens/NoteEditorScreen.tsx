@@ -11,10 +11,7 @@ import {
   ScrollView,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  Linking,
 } from 'react-native';
-
-import { Image } from 'expo-image';
 
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -48,7 +45,7 @@ import { NoteFormat, NoteGitHubLink } from '../models/Note';
 import { Attachment, createAttachment } from '../models/Attachment';
 import { NeorgParser } from '../services/NeorgParser';
 import { NeorgContentParser } from '../services/NeorgContentParser';
-import { canvasIdFromLink, canvasToLink, isCanvasLink } from '../models/Canvas';
+import { canvasToLink } from '../models/Canvas';
 import { useResponsive } from '../hooks/useResponsive';
 import { syncNoteToGitHub } from '../services/NoteGitHubSyncService';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
@@ -56,7 +53,9 @@ import { PositionMemoryService } from '../services/PositionMemoryService';
 import { getMarkdownStyles } from '../utils/preview';
 import { useRenderStyle } from '../stores/renderStyleStore';
 import { Button, IconButton, Modal } from '../components/ui';
+import { GitHubActivityIndicator } from '../components/GitHubActivityIndicator';
 import { NotePreviewRenderer } from '../utils/markdownRenderer';
+import { githubActivity } from '../stores/githubActivityStore';
 
 interface TocEntry {
   level: number;
@@ -301,6 +300,7 @@ export default function NoteEditorScreen() {
       return;
     }
 
+    githubActivity.begin('Saving note…');
     setIsSaving(true);
     try {
       let savedNoteId = noteId;
@@ -376,6 +376,7 @@ export default function NoteEditorScreen() {
       HapticService.error();
       Alert.alert('Error', 'Failed to save note. Please try again.');
     } finally {
+      githubActivity.end();
       setIsSaving(false);
     }
   }, [title, content, tags, repo, branch, commit, folderPath, noteFormat, attachments, noteId, createNote, updateNote, navigation]);
@@ -401,7 +402,6 @@ export default function NoteEditorScreen() {
                   setBranch(existingNote.branch);
                   setCommit(existingNote.commit);
                   setFolderPath(existingNote.folderPath);
-                  setGithub(existingNote.github);
                   setNoteFormat(existingNote.format ?? 'markdown');
                 }
                 setHasChanges(false);
@@ -1012,7 +1012,8 @@ export default function NoteEditorScreen() {
   );
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: colors.surface }]}>
+    <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: colors.surface }]}> 
+      {isSaving ? <GitHubActivityIndicator /> : null}
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.flex}
