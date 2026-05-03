@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Todo, TodoCreateInput, TodoUpdateInput } from '../models/Todo';
+import { Todo, TodoCreateInput, TodoUpdateInput, reorderTodos } from '../models/Todo';
 import { StorageService } from '../services/StorageService';
 import { GitHubService } from '../services/GitHubService';
 import { parseRepoPath } from '../utils/gitPathParser';
@@ -28,7 +28,7 @@ export const useTodoStore = create<TodoState & TodoActions>()((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       const todos = await StorageService.getAllTodos();
-      set({ todos, isLoading: false });
+      set({ todos: reorderTodos(todos), isLoading: false });
     } catch (err) {
       set({ error: 'Failed to load todos', isLoading: false });
       console.error('Error loading todos:', err);

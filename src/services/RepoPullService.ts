@@ -2,7 +2,7 @@ import { GitHubService } from './GitHubService';
 import { StorageService } from './StorageService';
 import { createNote } from '../models/Note';
 import { createCanvas, updateCanvas, CanvasScene } from '../models/Canvas';
-import { createTodoItem, applyTodoUpdate } from '../models/Todo';
+import { createTodoItem, applyTodoUpdate, reorderTodos } from '../models/Todo';
 import { parseRepoPath } from '../utils/gitPathParser';
 
 async function fetchDirectoryFiles(
@@ -269,7 +269,7 @@ async function pullTodosFromRepo(
     }
 
     if (dirty) {
-      await StorageService.saveAllTodos(allTodos);
+      await StorageService.saveAllTodos(reorderTodos(allTodos));
     }
   } catch {
     console.warn(`[RepoPullService] Failed to pull todos from ${owner}/${repo}`);
