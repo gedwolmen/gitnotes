@@ -1,6 +1,6 @@
 import { Attachment } from './Attachment';
 
-export type NoteFormat = 'markdown' | 'neorg' | 'org' | 'pdf';
+export type NoteFormat = 'markdown' | 'neorg' | 'org' | 'pdf' | 'json';
 
 export interface NoteGitHubLink {
   owner: string;
@@ -168,6 +168,7 @@ export function getNoteFileExtension(format?: NoteFormat): string {
     case 'neorg': return '.norg';
     case 'org': return '.org';
     case 'pdf': return '.pdf';
+    case 'json': return '.json';
     default: return '.md';
   }
 }
@@ -177,7 +178,7 @@ export function isNeorgNote(note: Note): boolean {
 }
 
 export function getSupportedFileExtensions(): string[] {
-  return ['.md', '.norg', '.org', '.pdf'];
+  return ['.md', '.norg', '.org', '.pdf', '.json'];
 }
 
 export function isSupportedFileExtension(filename: string): boolean {
