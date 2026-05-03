@@ -648,6 +648,23 @@ export default function SettingsScreen() {
           </>
         ) : null}
 
+        <Text style={[styles.credits, { color: colors.textSecondary }]}>
+          Made with love by{' '}
+          <Text
+            style={{ color: colors.accent }}
+            onPress={() => Linking.openURL('https://www.vidwadeseram.com/')}
+          >
+            Vidwa De Seram
+          </Text>
+          {' '}in collaboration with{' '}
+          <Text
+            style={{ color: colors.accent }}
+            onPress={() => Linking.openURL('https://xaventra.com/')}
+          >
+            Xaventra
+          </Text>
+        </Text>
+
         <View style={styles.bottomPad} />
       </ScrollView>
 
@@ -926,4 +943,11 @@ const styles = StyleSheet.create({
   modalButton: { paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginTop: 8 },
   modalButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   bottomPad: { height: 40 },
+  credits: {
+    fontSize: 12,
+    textAlign: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    lineHeight: 18,
+  },
 });
