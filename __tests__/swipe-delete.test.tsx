@@ -21,6 +21,12 @@ const mockDeleteNote = jest.fn(async (id: string) => {
 const mockUseNoteStore: any = jest.fn();
 mockUseNoteStore.getState = () => ({ error: null });
 
+jest.mock('@react-native-community/netinfo', () => {
+  const addEventListener = jest.fn(() => jest.fn());
+  const fetch = jest.fn(() => Promise.resolve({ isConnected: true, isInternetReachable: true }));
+  return { __esModule: true, default: { addEventListener, fetch }, addEventListener, fetch };
+});
+
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: jest.fn() }),
 }));

@@ -27,6 +27,7 @@ import GitContextPicker from '../components/GitContextPicker';
 import { syncTodoToGitHub } from '../services/TodoGitHubSyncService';
 import { pullAllFromRepos } from '../services/RepoPullService';
 import { IconButton, ScreenHeader } from '../components/ui';
+import { OfflineBanner } from '../components/ui/OfflineBanner';
 import SearchBar from '../components/SearchBar';
 import { EntityFilterModal } from '../components/EntityFilterModal';
 import { ActiveFilterStrip } from '../components/ActiveFilterStrip';
@@ -440,6 +441,7 @@ export default function TodoListScreen() {
           </>
         }
       />
+      <OfflineBanner />
 
       <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
         <SearchBar
