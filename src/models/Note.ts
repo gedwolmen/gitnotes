@@ -19,6 +19,7 @@ export interface Note {
   createdAt: number;
   updatedAt: number;
   tags: string[];
+  color?: string;
   repo?: string;
   branch?: string;
   commit?: string;

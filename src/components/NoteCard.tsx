@@ -5,6 +5,12 @@ import { format } from 'date-fns';
 import { Note, NoteFormat } from '../models/Note';
 import { useResponsive } from '../hooks/useResponsive';
 
+const NOTE_COLORS: Record<string, string> = {
+  red: '#ef4444', orange: '#f97316', yellow: '#eab308',
+  green: '#22c55e', blue: '#3b82f6', purple: '#8b5cf6',
+  pink: '#ec4899', gray: '#6b7280',
+};
+
 function stripPreview(content: string, noteFormat?: NoteFormat): string {
   let text = content;
   const trimmed = text.trimStart();
@@ -67,6 +73,9 @@ function NoteCardImpl({
   const showCompact = isCard ? false : compact;
   const isOfflineUncached = isOffline && !isCached;
   const titleColor = isOfflineUncached ? colors.textSecondary : colors.text;
+  const noteColorStyle = note.color && NOTE_COLORS[note.color]
+    ? { borderColor: NOTE_COLORS[note.color], borderWidth: 2 }
+    : undefined;
   
   const checklistProgress = useMemo(() => {
     if (!hasChecklists(note.content)) return null;
@@ -86,6 +95,7 @@ function NoteCardImpl({
         showCompact && styles.cardCompact,
         isCard && styles.cardVariant,
         isTablet && styles.cardTablet,
+        noteColorStyle,
         highlighted && { borderWidth: 2, borderColor: colors.primary },
       ]}
       testID={`note-card-${note.id}`}
