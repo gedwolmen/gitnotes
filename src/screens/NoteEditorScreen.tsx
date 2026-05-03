@@ -11,10 +11,7 @@ import {
   ScrollView,
   NativeScrollEvent,
   NativeSyntheticEvent,
-  Linking,
 } from 'react-native';
-
-import { Image } from 'expo-image';
 
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -44,18 +41,20 @@ import { Folder } from '../models/Folder';
 import { GitService } from '../services/GitService';
 import { HapticService } from '../utils/haptics';
 import { useUndo } from '../utils/useUndo';
-import { NoteFormat, NoteGitHubLink } from '../models/Note';
+import { NoteFormat } from '../models/Note';
 import { Attachment, createAttachment } from '../models/Attachment';
 import { NeorgParser } from '../services/NeorgParser';
 import { NeorgContentParser } from '../services/NeorgContentParser';
-import { canvasIdFromLink, canvasToLink, isCanvasLink } from '../models/Canvas';
+import { canvasToLink } from '../models/Canvas';
 import { useResponsive } from '../hooks/useResponsive';
 import { syncNoteToGitHub } from '../services/NoteGitHubSyncService';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import { PositionMemoryService } from '../services/PositionMemoryService';
 import { getMarkdownStyles } from '../utils/preview';
 import { Button, IconButton, Modal } from '../components/ui';
+import { GitHubActivityIndicator } from '../components/GitHubActivityIndicator';
 import { NotePreviewRenderer } from '../utils/markdownRenderer';
+import { githubActivity } from '../stores/githubActivityStore';
 
 interface TocEntry {
   level: number;
@@ -131,7 +130,6 @@ export default function NoteEditorScreen() {
   const [branch, setBranch] = useState<string | undefined>(initialBranch);
   const [commit, setCommit] = useState<string | undefined>();
   const [folderPath, setFolderPath] = useState<string | undefined>(initialFolderPath);
-  const [github, setGithub] = useState<NoteGitHubLink | undefined>();
   const [noteFormat, setNoteFormat] = useState<NoteFormat>(initialFormat ?? 'markdown');
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
@@ -251,7 +249,6 @@ export default function NoteEditorScreen() {
         setBranch(existingNote.branch);
         setCommit(existingNote.commit);
         setFolderPath(existingNote.folderPath);
-        setGithub(existingNote.github);
         setNoteFormat(existingNote.format ?? 'markdown');
         setTags(existingNote.tags || []);
         setAttachments(existingNote.attachments || []);
@@ -298,6 +295,7 @@ export default function NoteEditorScreen() {
       return;
     }
 
+    githubActivity.begin('Saving note…');
     setIsSaving(true);
     try {
       let savedNoteId = noteId;
@@ -370,6 +368,7 @@ export default function NoteEditorScreen() {
       HapticService.error();
       Alert.alert('Error', 'Failed to save note. Please try again.');
     } finally {
+      githubActivity.end();
       setIsSaving(false);
     }
   }, [title, content, tags, repo, branch, commit, folderPath, noteFormat, attachments, noteId, createNote, updateNote, navigation]);
@@ -395,7 +394,6 @@ export default function NoteEditorScreen() {
                   setBranch(existingNote.branch);
                   setCommit(existingNote.commit);
                   setFolderPath(existingNote.folderPath);
-                  setGithub(existingNote.github);
                   setNoteFormat(existingNote.format ?? 'markdown');
                 }
                 setHasChanges(false);
@@ -1002,7 +1000,8 @@ export default function NoteEditorScreen() {
   );
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: colors.surface }]}>
+    <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: colors.surface }]}> 
+      {isSaving ? <GitHubActivityIndicator /> : null}
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.flex}
