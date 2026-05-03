@@ -1,4 +1,4 @@
-// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+// Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`Toggle snapshots both states: toggle-off 1`] = `
 <View
@@ -54,6 +54,7 @@ exports[`Toggle snapshots both states: toggle-off 1`] = `
           "shadowOpacity": 1,
           "shadowRadius": 4,
         },
+        undefined,
         {
           "height": 30,
           "justifyContent": "center",
@@ -196,6 +197,7 @@ exports[`Toggle snapshots both states: toggle-on 1`] = `
           "shadowOpacity": 1,
           "shadowRadius": 4,
         },
+        undefined,
         {
           "height": 30,
           "justifyContent": "center",
