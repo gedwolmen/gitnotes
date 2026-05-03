@@ -1,2 +1,3 @@
 - Kept the canvas pan/fit logic inside `CanvasEditorScreen` as exported pure helpers so the screen and unit test stay in sync without changing the canvas data model.
 - Used the same fit-to-content translation for initial auto-fit and the reset button so both flows center existing content consistently.
+- Introduced `src/utils/noteTagSupport.ts` for tag-format capability checks so `NoteEditorScreen` and `RepoPullService` no longer depend on `NoteGitHubSyncService` for a pure predicate.

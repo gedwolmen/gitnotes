@@ -17,6 +17,91 @@ export interface NoteGitHubSyncResult {
   error?: string;
 }
 
+export function canPersistNoteTags(format?: string): boolean {
+  return format === 'markdown' || format === 'neorg' || format === 'org';
+}
+
+function joinTags(tags: string[]): string {
+  return tags.map((tag) => tag.trim()).filter(Boolean).join(', ');
+}
+
+function splitLines(value: string): string[] {
+  return value.length === 0 ? [] : value.split('\n');
+}
+
+function upsertMarkdownTags(content: string, tags: string[]): string {
+  const match = content.match(/^---\n([\s\S]*?)\n---\n?/);
+  if (!match) {
+    return tags.length > 0 ? `---\ntags: [${joinTags(tags)}]\n---\n\n${content}` : content;
+  }
+
+  const body = content.slice(match[0].length);
+  const lines = splitLines(match[1]).filter((line) => !/^tags\s*:/i.test(line.trim()));
+  if (tags.length > 0) {
+    lines.push(`tags: [${joinTags(tags)}]`);
+  }
+
+  if (lines.length === 0) {
+    return body.replace(/^\n+/, '');
+  }
+
+  return `---\n${lines.join('\n')}\n---\n\n${body.replace(/^\n+/, '')}`;
+}
+
+function upsertOrgTags(content: string, tags: string[]): string {
+  const lines = splitLines(content);
+  const index = lines.findIndex((line) => /^#\+FILETAGS:/i.test(line.trim()));
+
+  if (index === -1) {
+    if (tags.length === 0) return content;
+    return `#+FILETAGS: :${tags.map((tag) => tag.trim()).filter(Boolean).join(':')}:\n\n${content}`;
+  }
+
+  if (tags.length === 0) {
+    lines.splice(index, 1);
+    return lines.join('\n').replace(/^\n+/, '');
+  }
+
+  lines[index] = `#+FILETAGS: :${tags.map((tag) => tag.trim()).filter(Boolean).join(':')}:`;
+  return lines.join('\n');
+}
+
+function upsertNeorgTags(content: string, tags: string[]): string {
+  const lines = splitLines(content);
+  const startIndex = lines.findIndex((line) => line.trim() === '@document.meta');
+
+  if (startIndex === -1) {
+    if (tags.length === 0) return content;
+    return `@document.meta\ncategories: [${joinTags(tags)}]\n@end\n\n${content}`;
+  }
+
+  const endIndex = lines.findIndex((line, idx) => idx > startIndex && line.trim() === '@end');
+  if (endIndex === -1) return content;
+
+  const metaLines = lines.slice(startIndex + 1, endIndex).filter((line) => !/^categories\s*:/i.test(line.trim()));
+  if (tags.length > 0) {
+    metaLines.push(`categories: [${joinTags(tags)}]`);
+  }
+
+  if (metaLines.length === 0) {
+    return content;
+  }
+
+  return [
+    ...lines.slice(0, startIndex + 1),
+    ...metaLines,
+    ...lines.slice(endIndex),
+  ].join('\n');
+}
+
+export function applyNoteTagsToContent(content: string, format?: NoteFormat, tags: string[] = []): string {
+  if (!canPersistNoteTags(format)) return content;
+  if (format === 'markdown') return upsertMarkdownTags(content, tags);
+  if (format === 'org') return upsertOrgTags(content, tags);
+  if (format === 'neorg') return upsertNeorgTags(content, tags);
+  return content;
+}
+
 function getExtension(format?: NoteFormat): string {
   switch (format) {
     case 'neorg': return '.norg';
@@ -166,8 +251,9 @@ export async function syncNoteToGitHub(params: {
   content: string;
   format?: NoteFormat;
   accountId?: string;
+  tags?: string[];
 }): Promise<NoteGitHubSyncResult> {
-  const { repo: repoPath, branch, filePath, title, content, format, accountId } = params;
+  const { repo: repoPath, branch, filePath, title, content, format, accountId, tags = [] } = params;
   const tokenOverride = await resolveToken(accountId);
 
   if (!tokenOverride && !GitHubService.isAuthenticated()) {
@@ -191,9 +277,9 @@ export async function syncNoteToGitHub(params: {
 
   const noteSlug = slugify(title);
 
-  let finalContent = content;
+  let finalContent = applyNoteTagsToContent(content, format, tags);
   try {
-    finalContent = await uploadLocalImages(content, repoInfo.owner, repoInfo.repo, targetBranch, noteSlug);
+    finalContent = await uploadLocalImages(finalContent, repoInfo.owner, repoInfo.repo, targetBranch, noteSlug);
   } catch (error) {
     console.warn('[NoteGitHubSync] Image upload failed, syncing note without images:', error);
   }
