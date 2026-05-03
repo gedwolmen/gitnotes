@@ -25,7 +25,6 @@ import ReanimatedSwipeable, {
 } from "react-native-gesture-handler/ReanimatedSwipeable";
 
 import { useNotes } from "../contexts/NoteContext";
-import { useNoteStore } from "../stores/noteStore";
 import { useTheme } from "../contexts/ThemeContext";
 import { useViewMode } from "../contexts/ViewModeContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -51,10 +50,12 @@ import {
 } from "../utils/viewModes";
 import { ShareService } from "../services/ShareService";
 import { useResponsive } from "../hooks/useResponsive";
+import { GitHubActivityIndicator } from "../components/GitHubActivityIndicator";
+import { githubActivity } from "../stores/githubActivityStore";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-const FORMAT_LABELS: Record<NoteFormat, string> = {
+const FORMAT_LABELS: Record<Exclude<NoteFormat, 'json'>, string> = {
   markdown: ".md",
   neorg: ".norg",
   org: ".org",
@@ -308,6 +309,30 @@ export default function NotesListScreen() {
   );
 
   const [longPressedNote, setLongPressedNote] = useState<Note | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteNote = useCallback(
+    async (note: Note) => {
+      githubActivity.begin("Deleting note…");
+      setIsDeleting(true);
+      try {
+        if (!(await deleteNote(note.id))) {
+          Alert.alert("Error", "Failed to delete note");
+          return false;
+        }
+        setLongPressedNote(null);
+        HapticService.success();
+        return true;
+      } catch {
+        Alert.alert("Error", "Failed to delete note");
+        return false;
+      } finally {
+        githubActivity.end();
+        setIsDeleting(false);
+      }
+    },
+    [deleteNote],
+  );
 
   const handleNoteLongPress = useCallback(
     (note: Note) => {
@@ -335,16 +360,12 @@ export default function NotesListScreen() {
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            if (!(await deleteNote(note.id))) {
-              Alert.alert("Error", useNoteStore.getState().error || "Failed to delete note");
-              return;
-            }
-            HapticService.success();
+            await handleDeleteNote(note);
           },
         },
       ]);
     },
-    [closeOpenSwipeable, deleteNote],
+    [closeOpenSwipeable, handleDeleteNote],
   );
 
   const scrollToSearchMatch = useCallback(
@@ -508,6 +529,7 @@ export default function NotesListScreen() {
         },
       ]}
     >
+      {isDeleting ? <GitHubActivityIndicator /> : null}
       <ScreenHeader title="Notes" />
       <OfflineBanner />
 
@@ -802,7 +824,7 @@ export default function NotesListScreen() {
                   color={colors.primary}
                 />
                 <Text style={[styles.chipText, { color: colors.primary }]}>
-                  {FORMAT_LABELS[selectedFormat]}
+                  {FORMAT_LABELS[selectedFormat as Exclude<NoteFormat, 'json'>]}
                 </Text>
                 <Ionicons name="close" size={12} color={colors.primary} />
               </TouchableOpacity>
@@ -1067,7 +1089,7 @@ export default function NotesListScreen() {
                     All
                   </Text>
                 </TouchableOpacity>
-                {(Object.entries(FORMAT_LABELS) as [NoteFormat, string][]).map(
+                {(Object.entries(FORMAT_LABELS) as [Exclude<NoteFormat, 'json'>, string][]).map(
                   ([fmt, label]) => (
                     <TouchableOpacity
                       key={fmt}
@@ -1419,9 +1441,7 @@ export default function NotesListScreen() {
                       label: "Delete",
                       destructive: true,
                       onPress: async () => {
-                        if (!(await deleteNote(longPressedNote.id))) {
-                          Alert.alert("Error", useNoteStore.getState().error || "Failed to delete note");
-                        }
+                        await handleDeleteNote(longPressedNote);
                       },
                     },
                   ],
