@@ -1,6 +1,6 @@
 import { GitHubService } from './GitHubService';
 import { StorageService } from './StorageService';
-import { createNote } from '../models/Note';
+import { createNote, isNoteColor, NoteColor } from '../models/Note';
 import { createCanvas, updateCanvas, CanvasScene } from '../models/Canvas';
 import { createTodoItem, applyTodoUpdate, reorderTodos } from '../models/Todo';
 import { parseRepoPath } from '../utils/gitPathParser';
@@ -87,6 +87,43 @@ function extractTagsFromContent(content: string, format: 'markdown' | 'neorg' | 
   return [];
 }
 
+function extractColorFromMarkdown(content: string): string | undefined {
+  const match = content.match(/^---\n([\s\S]*?)\n---/);
+  if (!match) return undefined;
+  const colorLine = match[1].split('\n').find((line) => /^color\s*:/i.test(line.trim()));
+  if (!colorLine) return undefined;
+  return colorLine.replace(/^\s*color\s*:\s*/i, '').trim().replace(/^['"]|['"]$/g, '');
+}
+
+function extractColorFromOrg(content: string): string | undefined {
+  const match = content.match(/^#\+COLOR:\s*(.+?)\s*$/im);
+  return match ? match[1].trim() : undefined;
+}
+
+function extractColorFromNeorg(content: string): string | undefined {
+  const lines = content.split('\n');
+  const startIndex = lines.findIndex((line) => line.trim() === '@document.meta');
+  if (startIndex === -1) return undefined;
+  const endIndex = lines.findIndex((line, idx) => idx > startIndex && line.trim() === '@end');
+  if (endIndex === -1) return undefined;
+  const colorLine = lines.slice(startIndex + 1, endIndex).find((line) => /^color\s*:/i.test(line.trim()));
+  if (!colorLine) return undefined;
+  return colorLine.replace(/^\s*color\s*:\s*/i, '').trim();
+}
+
+function extractColorFromContent(
+  content: string,
+  format: 'markdown' | 'neorg' | 'org' | 'pdf' | 'json',
+): NoteColor | undefined {
+  if (!canPersistNoteTags(format)) return undefined;
+  let raw: string | undefined;
+  if (format === 'markdown') raw = extractColorFromMarkdown(content);
+  else if (format === 'org') raw = extractColorFromOrg(content);
+  else if (format === 'neorg') raw = extractColorFromNeorg(content);
+  if (!raw) return undefined;
+  return isNoteColor(raw) ? raw : undefined;
+}
+
 async function pullNotesFromRepo(
   owner: string,
   repo: string,
@@ -142,6 +179,7 @@ async function pullNotesFromRepo(
       const ext = item.path.split('.').pop()?.toLowerCase() ?? 'md';
       const format = noteFormatFromExt(ext);
       const tags = extractTagsFromContent(item.content, format);
+      const color = extractColorFromContent(item.content, format);
       const titleFromPath = item.path
         .replace(/^notes\//, '')
         .replace(/\.[^.]+$/, '')
@@ -163,8 +201,12 @@ async function pullNotesFromRepo(
             ...existing,
             content: item.content,
             tags,
+            color: color ?? existing.color,
             updatedAt: Date.now(),
           };
+          pulled++;
+        } else if (color && color !== existing.color) {
+          allNotes[existingIdx] = { ...existing, color };
           pulled++;
         }
       } else {
@@ -177,6 +219,7 @@ async function pullNotesFromRepo(
             filePath: item.path,
             format,
             tags,
+            color,
           }),
         );
         pulled++;

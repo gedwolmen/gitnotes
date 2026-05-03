@@ -1,1 +1,0 @@
-- The canvas screen now has several gesture worklet closures that depend on viewport size and bounds; any future gesture refactor should keep those dependencies explicit so clamping stays correct after layout changes.

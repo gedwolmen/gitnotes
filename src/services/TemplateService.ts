@@ -10,6 +10,10 @@ export interface NoteTemplate {
   title?: string;
   content: string;
   tags: string[];
+  isCustom?: boolean;
+  isPinned?: boolean;
+  createdAt?: number;
+  updatedAt?: number;
 }
 
 export const NOTE_TEMPLATES: NoteTemplate[] = [

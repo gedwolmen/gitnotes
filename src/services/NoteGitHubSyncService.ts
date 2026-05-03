@@ -1,5 +1,5 @@
 import { GitHubService } from './GitHubService';
-import { NoteFormat } from '../models/Note';
+import { NoteColor, NoteFormat } from '../models/Note';
 import * as FileSystem from 'expo-file-system/legacy';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { AuthService } from './AuthService';
@@ -46,6 +46,84 @@ function upsertMarkdownTags(content: string, tags: string[]): string {
   }
 
   return `---\n${lines.join('\n')}\n---\n\n${body.replace(/^\n+/, '')}`;
+}
+
+// Mutates / inserts a `color: <value>` line in the markdown frontmatter.
+// `color === null/undefined` removes the field. Adds a frontmatter block
+// when none exists and the color is set; leaves un-fronted notes untouched
+// when clearing.
+function upsertMarkdownColor(content: string, color: NoteColor | null | undefined): string {
+  const match = content.match(/^---\n([\s\S]*?)\n---\n?/);
+  if (!match) {
+    if (!color) return content;
+    return `---\ncolor: ${color}\n---\n\n${content}`;
+  }
+
+  const body = content.slice(match[0].length);
+  const lines = splitLines(match[1]).filter((line) => !/^color\s*:/i.test(line.trim()));
+  if (color) {
+    lines.push(`color: ${color}`);
+  }
+
+  if (lines.length === 0) {
+    return body.replace(/^\n+/, '');
+  }
+
+  return `---\n${lines.join('\n')}\n---\n\n${body.replace(/^\n+/, '')}`;
+}
+
+function upsertOrgColor(content: string, color: NoteColor | null | undefined): string {
+  const lines = splitLines(content);
+  const index = lines.findIndex((line) => /^#\+COLOR:/i.test(line.trim()));
+
+  if (index === -1) {
+    if (!color) return content;
+    return `#+COLOR: ${color}\n${content}`;
+  }
+
+  if (!color) {
+    lines.splice(index, 1);
+    return lines.join('\n').replace(/^\n+/, '');
+  }
+
+  lines[index] = `#+COLOR: ${color}`;
+  return lines.join('\n');
+}
+
+function upsertNeorgColor(content: string, color: NoteColor | null | undefined): string {
+  const lines = splitLines(content);
+  const startIndex = lines.findIndex((line) => line.trim() === '@document.meta');
+
+  if (startIndex === -1) {
+    if (!color) return content;
+    return `@document.meta\ncolor: ${color}\n@end\n\n${content}`;
+  }
+
+  const endIndex = lines.findIndex((line, idx) => idx > startIndex && line.trim() === '@end');
+  if (endIndex === -1) return content;
+
+  const metaLines = lines.slice(startIndex + 1, endIndex).filter((line) => !/^color\s*:/i.test(line.trim()));
+  if (color) {
+    metaLines.push(`color: ${color}`);
+  }
+
+  return [
+    ...lines.slice(0, startIndex + 1),
+    ...metaLines,
+    ...lines.slice(endIndex),
+  ].join('\n');
+}
+
+export function applyNoteColorToContent(
+  content: string,
+  format: NoteFormat | undefined,
+  color: NoteColor | null | undefined,
+): string {
+  if (!canPersistNoteTags(format)) return content;
+  if (format === 'markdown') return upsertMarkdownColor(content, color);
+  if (format === 'org') return upsertOrgColor(content, color);
+  if (format === 'neorg') return upsertNeorgColor(content, color);
+  return content;
 }
 
 function upsertOrgTags(content: string, tags: string[]): string {
@@ -252,8 +330,9 @@ export async function syncNoteToGitHub(params: {
   format?: NoteFormat;
   accountId?: string;
   tags?: string[];
+  color?: NoteColor | null;
 }): Promise<NoteGitHubSyncResult> {
-  const { repo: repoPath, branch, filePath, title, content, format, accountId, tags = [] } = params;
+  const { repo: repoPath, branch, filePath, title, content, format, accountId, tags = [], color } = params;
   const tokenOverride = await resolveToken(accountId);
 
   if (!tokenOverride && !GitHubService.isAuthenticated()) {
@@ -278,6 +357,7 @@ export async function syncNoteToGitHub(params: {
   const noteSlug = slugify(title);
 
   let finalContent = applyNoteTagsToContent(content, format, tags);
+  finalContent = applyNoteColorToContent(finalContent, format, color);
   try {
     finalContent = await uploadLocalImages(finalContent, repoInfo.owner, repoInfo.repo, targetBranch, noteSlug);
   } catch (error) {
