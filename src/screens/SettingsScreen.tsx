@@ -39,7 +39,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { ModelSelector } from '../components/ai/ModelSelector';
 import { ProviderConfigModal } from '../components/ai/ProviderConfigModal';
 import { ChatRepoPickerModal } from '../components/ai/ChatRepoPickerModal';
-import { Group, GroupRow, Toggle, ScreenHeader, useScreenHeaderHeight } from '../components/ui';
+import { Group, GroupRow, Toggle, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { useAIStore } from '../stores/aiStore';
 import type { AIProviderConfig } from '../models/AIProvider';
 
@@ -48,6 +48,7 @@ export default function SettingsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { isTablet, maxContentWidth } = useResponsive();
   const headerHeight = useScreenHeaderHeight();
+  const tabBarHeight = useTabBarHeight();
   const { clearAllNotes, refreshNotes } = useNotes();
   const { refreshCanvases } = useCanvases();
   const { refreshTodos } = useTodos();
@@ -334,7 +335,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView edges={[]} style={[styles.container, { backgroundColor: colors.background }, isTablet && { maxWidth: maxContentWidth, alignSelf: 'center', width: '100%' }]}>
-      <ScrollView style={styles.scrollContent} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingTop: headerHeight + 16, gap: 20 }}>
+      <ScrollView style={styles.scrollContent} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingTop: headerHeight + 16, paddingBottom: tabBarHeight + 16, gap: 20 }}>
 
         <Group title="Appearance" footer={uiStyle === 'neumorphic' ? 'Soft-UI shadows. Toggle off for the classic flat look.' : 'Classic flat look. Toggle on for the Updated UI shadows.'}>
           <GroupRow

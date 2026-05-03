@@ -9,6 +9,20 @@ import { useTheme, useTokens } from '../../contexts/ThemeContext';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
+export const TAB_BAR_BASE_HEIGHT = 84;
+
+/**
+ * Total reserved space for the floating TabBar, including the bottom
+ * safe-area inset. Use as `paddingBottom` on a tab screen's first
+ * scroll/list container so the last items aren't permanently hidden
+ * under the floating bar. Returns 0 when the custom TabBar is not
+ * rendered (e.g. tablet rail or system tab bar in flat style).
+ */
+export function useTabBarHeight(): number {
+  const insets = useSafeAreaInsets();
+  return insets.bottom + TAB_BAR_BASE_HEIGHT;
+}
+
 const TAB_ICONS: Record<string, { focused: IoniconName; outline: IoniconName; label: string }> = {
   HomeTab: { focused: 'home', outline: 'home-outline', label: 'Home' },
   NotesTab: { focused: 'document-text', outline: 'document-text-outline', label: 'Notes' },

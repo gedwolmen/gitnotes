@@ -16,6 +16,6 @@ export { Toggle } from './Toggle';
 export type { ToggleProps } from './Toggle';
 export { Modal } from './Modal';
 export type { ModalProps } from './Modal';
-export { TabBar } from './TabBar';
+export { TabBar, useTabBarHeight, TAB_BAR_BASE_HEIGHT } from './TabBar';
 export { ScreenHeader, useScreenHeaderHeight, SCREEN_HEADER_BASE_HEIGHT } from './ScreenHeader';
 export type { ScreenHeaderProps } from './ScreenHeader';

@@ -42,7 +42,7 @@ import ColorPicker from "../components/ColorPicker";
 import NoteCard from "../components/NoteCard";
 import SearchBar from "../components/SearchBar";
 import { OfflineBanner } from "../components/ui/OfflineBanner";
-import { ScreenHeader, useScreenHeaderHeight } from "../components/ui";
+import { ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from "../components/ui";
 import { parseRepoPath } from "../utils/gitPathParser";
 import { HapticService } from "../utils/haptics";
 import {
@@ -70,6 +70,7 @@ export default function NotesListScreen() {
   const { colors } = useTheme();
   const { authState } = useAuth();
   const headerHeight = useScreenHeaderHeight();
+  const tabBarHeight = useTabBarHeight();
   const {
     notes,
     filteredNotes,
@@ -967,7 +968,7 @@ export default function NotesListScreen() {
         keyExtractor={keyExtractor}
         key={viewMode}
         {...getListLayout()}
-        contentContainerStyle={getListContentStyle()}
+        contentContainerStyle={{ ...getListContentStyle(), paddingBottom: tabBarHeight + 16 }}
         refreshControl={
           <RefreshControl
             refreshing={isPullRefreshing}
