@@ -9,14 +9,17 @@ import { RootStackParamList } from '../navigation/types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNotes } from '../contexts/NoteContext';
 import { useCanvases } from '../contexts/CanvasContext';
-import { Note, NoteFormat } from '../models/Note';
+import { NoteFormat } from '../models/Note';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { HapticService } from '../utils/haptics';
 import TemplateSelector from '../components/TemplateSelector';
 import { NoteTemplate } from '../services/TemplateService';
 import { NoteFormatPreferenceService } from '../services/NoteFormatPreferenceService';
 import { useResponsive } from '../hooks/useResponsive';
-import { Button, Card, Modal, Group, GroupRow, ScreenHeader } from '../components/ui';
+import { Button, Card, Modal, ScreenHeader } from '../components/ui';
+import { BentoRecent } from '../components/home/BentoRecent';
+import { QuickAccessShelf } from '../components/home/QuickAccessShelf';
+import { buildPinnedFeed, buildRecentFeed, RecentItem } from '../utils/recentItems';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type EditableNoteFormat = Exclude<NoteFormat, 'pdf'>;
@@ -26,75 +29,6 @@ const FORMAT_OPTIONS: { label: string; value: EditableNoteFormat; ext: string }[
   { label: 'Org Mode', value: 'org', ext: '.org' },
   { label: 'Neorg', value: 'neorg', ext: '.norg' },
 ];
-
-function stripFormatting(content: string, format?: NoteFormat): string {
-  const stripTopMetadata = (raw: string): string => {
-    if (format === 'neorg') {
-      const trimmed = raw.trimStart();
-      if (!trimmed.startsWith('@document.meta')) return raw;
-      const lines = raw.split('\n');
-      if (!lines[0]?.trim().startsWith('@document.meta')) return raw;
-      const endIndex = lines.findIndex((line, idx) => idx > 0 && line.trim() === '@end');
-      if (endIndex === -1) return raw;
-      return lines.slice(endIndex + 1).join('\n').trimStart();
-    }
-
-    if (format === 'org') {
-      const lines = raw.split('\n');
-      let i = 0;
-      while (i < lines.length && /^\s*#\+[A-Za-z0-9_]+:\s*.*$/.test(lines[i])) {
-        i++;
-      }
-      while (i < lines.length && lines[i].trim() === '') {
-        i++;
-      }
-      return i > 0 ? lines.slice(i).join('\n') : raw;
-    }
-
-    const trimmed = raw.trimStart();
-    if (!trimmed.startsWith('---\n')) return raw;
-    const lines = trimmed.split('\n');
-    if (lines[0] !== '---') return raw;
-    const closingIndex = lines.findIndex((line, idx) => idx > 0 && line.trim() === '---');
-    if (closingIndex === -1) return raw;
-    return lines.slice(closingIndex + 1).join('\n').trimStart();
-  };
-
-  const normalized = stripTopMetadata(content);
-
-  return normalized
-    // Remove markdown headings
-    .replace(/^#{1,6}\s+/gm, '')
-    // Remove bold/italic
-    .replace(/\*{1,2}([^*]+)\*{1,2}/g, '$1')
-    .replace(/_{1,2}([^_]+)_{1,2}/g, '$1')
-    // Remove org headings
-    .replace(/^\*{1,6}\s+/gm, '')
-    // Remove neorg headings
-    .replace(/^\*{1,6}\s+/gm, '')
-    // Remove markdown links
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    // Remove code blocks
-    .replace(/`{1,3}[^`]*`{1,3}/g, '')
-    // Remove blockquotes
-    .replace(/^>\s*/gm, '')
-    // Collapse whitespace/newlines
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function relativeTime(ms: number): string {
-  const diff = Date.now() - ms;
-  const sec = Math.floor(diff / 1000);
-  if (sec < 60) return 'just now';
-  const min = Math.floor(sec / 60);
-  if (min < 60) return `${min}m ago`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
-  const day = Math.floor(hr / 24);
-  if (day < 7) return `${day}d ago`;
-  return new Date(ms).toLocaleDateString();
-}
 
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
@@ -158,9 +92,19 @@ export default function HomeScreen() {
     });
   }, [navigation]);
 
-  const openItem = useCallback(
-    (note: Note) => () => {
-      if (note.format === 'pdf' && note.repo && note.filePath) {
+  const recentLimit = isTablet ? 12 : 7;
+  const pinnedLimit = isTablet ? 12 : 6;
+  const recentItems = buildRecentFeed(notes, canvases, { excludePinned: true, limit: recentLimit });
+  const pinnedItems = buildPinnedFeed(notes, canvases, pinnedLimit);
+
+  const handleOpenRecentItem = useCallback(
+    (item: RecentItem) => {
+      if (item.kind === 'canvas') {
+        navigation.navigate('CanvasEditor', { canvasId: item.data.id });
+        return;
+      }
+      const note = item.data;
+      if (item.kind === 'document' && note.repo && note.filePath) {
         const info = parseRepoPath(note.repo);
         if (info) {
           navigation.navigate('PdfViewer', {
@@ -175,13 +119,8 @@ export default function HomeScreen() {
       }
       navigation.navigate('NoteEditor', { noteId: note.id });
     },
-    [navigation]
+    [navigation],
   );
-
-  const recentLimit = isTablet ? 6 : 3;
-  const recentNotes = notes.filter((n) => n.format !== 'pdf').slice(0, recentLimit);
-  const recentDocuments = notes.filter((n) => n.format === 'pdf').slice(0, recentLimit);
-  const recentCanvases = canvases.slice(0, recentLimit);
 
   return (
     <SafeAreaView edges={['top']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -249,74 +188,8 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {recentCanvases.length > 0 && (
-        <View style={{ marginTop: 8, marginBottom: 16 }}>
-          <Group title="Recent Canvases">
-            {recentCanvases.map((canvas) => (
-              <GroupRow
-                key={canvas.id}
-                onPress={() => navigation.navigate('CanvasEditor', { canvasId: canvas.id })}
-                leading={<Ionicons name="easel-outline" size={20} color={colors.accent} />}
-                trailing={(
-                  <Text style={[styles.recentNotePreview, { color: colors.textSecondary }]} numberOfLines={1}>
-                    {relativeTime(canvas.updatedAt)}
-                  </Text>
-                )}
-              >
-                <Text style={[styles.recentNoteTitle, { color: colors.text }]} numberOfLines={1}>
-                  {canvas.title || 'Untitled Canvas'}
-                </Text>
-                <Text style={[styles.recentNotePreview, { color: colors.textSecondary }]} numberOfLines={1}>
-                  {canvas.scene?.elements?.length ?? 0} elements
-                </Text>
-              </GroupRow>
-            ))}
-          </Group>
-        </View>
-      )}
-
-      {recentNotes.length > 0 && (
-        <View style={{ marginTop: 8, marginBottom: 16 }}>
-          <Group title="Recent Notes">
-            {recentNotes.map((note) => (
-              <GroupRow
-                key={note.id}
-                onPress={openItem(note)}
-                trailing={note.repo ? <Ionicons name="code-slash" size={14} color={colors.textSecondary} /> : undefined}
-              >
-                <Text style={[styles.recentNoteTitle, { color: colors.text }]} numberOfLines={1}>
-                  {note.title || 'Untitled'}
-                </Text>
-                <Text style={[styles.recentNotePreview, { color: colors.textSecondary }]} numberOfLines={1}>
-                  {stripFormatting(note.content, note.format).substring(0, 60) || 'No content'}
-                </Text>
-              </GroupRow>
-            ))}
-          </Group>
-        </View>
-      )}
-
-      {recentDocuments.length > 0 && (
-        <View style={{ marginTop: 8 }}>
-          <Group title="Recent Documents">
-            {recentDocuments.map((note) => (
-              <GroupRow
-                key={note.id}
-                onPress={openItem(note)}
-                leading={<Ionicons name="document-text" size={22} color={colors.accent} />}
-                trailing={note.repo ? <Ionicons name="code-slash" size={14} color={colors.textSecondary} /> : undefined}
-              >
-                <Text style={[styles.recentNoteTitle, { color: colors.text }]} numberOfLines={1}>
-                  {note.title || (note.filePath ?? 'Document').split('/').pop()}
-                </Text>
-                <Text style={[styles.recentNotePreview, { color: colors.textSecondary }]} numberOfLines={1}>
-                  {note.filePath ?? 'PDF'}
-                </Text>
-              </GroupRow>
-            ))}
-          </Group>
-        </View>
-      )}
+      <QuickAccessShelf items={pinnedItems} onOpen={handleOpenRecentItem} />
+      <BentoRecent items={recentItems} onOpen={handleOpenRecentItem} />
 
       <Modal visible={showFormatPicker} onRequestClose={handleFormatPickerClose} fullWidth>
         <Text style={[styles.modalTitle, { color: colors.text }]}>Choose Note Format</Text>
