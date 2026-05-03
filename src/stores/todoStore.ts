@@ -70,29 +70,44 @@ export const useTodoStore = create<TodoState & TodoActions>()((set, get) => ({
     try {
       set({ error: null });
       const todoToDelete = get().todos.find((t) => t.id === id);
+      const isRepoBacked = !!(todoToDelete?.repo && todoToDelete.filePath);
+
+      // If the todo originated from a repo, the remote file MUST be deleted
+      // first. Otherwise the next pull-to-refresh will re-import it (issue #489).
+      if (isRepoBacked) {
+        if (!GitHubService.isAuthenticated()) {
+          set({ error: 'Cannot delete repo-backed todo while signed out of GitHub' });
+          return false;
+        }
+        const repoInfo = parseRepoPath(todoToDelete!.repo!);
+        if (!repoInfo) {
+          set({ error: 'Cannot delete todo: invalid repository path' });
+          return false;
+        }
+        const branch = todoToDelete!.branch || 'main';
+        const filePath = todoToDelete!.filePath!;
+        const sha = await GitHubService.getFileSha(repoInfo.owner, repoInfo.repo, filePath, branch);
+        if (!sha) {
+          set({ error: 'Cannot delete todo: failed to look up remote file' });
+          return false;
+        }
+        const result = await GitHubService.deleteFile(
+          repoInfo.owner,
+          repoInfo.repo,
+          filePath,
+          `Delete todo: ${todoToDelete!.text}`,
+          sha,
+          branch,
+        );
+        if (!result) {
+          set({ error: 'Cannot delete todo: GitHub delete failed' });
+          return false;
+        }
+      }
+
       const success = await StorageService.deleteTodo(id);
       if (success) {
         set((state) => ({ todos: state.todos.filter((t) => t.id !== id) }));
-        if (todoToDelete?.repo && todoToDelete.filePath && GitHubService.isAuthenticated()) {
-          const repoInfo = parseRepoPath(todoToDelete.repo);
-          if (repoInfo) {
-            const branch = todoToDelete.branch || 'main';
-            const sha = await GitHubService.getFileSha(repoInfo.owner, repoInfo.repo, todoToDelete.filePath, branch);
-            if (sha) {
-              const result = await GitHubService.deleteFile(
-                repoInfo.owner,
-                repoInfo.repo,
-                todoToDelete.filePath,
-                `Delete todo: ${todoToDelete.text}`,
-                sha,
-                branch,
-              );
-              if (!result) {
-                console.warn('[TodoStore] GitHub delete failed for todo:', id);
-              }
-            }
-          }
-        }
       }
       return success;
     } catch (err) {

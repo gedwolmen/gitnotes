@@ -80,4 +80,77 @@ describe('todo delete GitHub sync', () => {
 
     expect(useTodoStore.getState().todos).toEqual([]);
   });
+
+  test('keeps the todo locally when GitHub delete fails so pull does not re-import it', async () => {
+    const syncedTodo = {
+      id: 'todo-2',
+      text: 'Keep on failure',
+      completed: false,
+      createdAt: 1,
+      updatedAt: 1,
+      repo: 'owner/repo',
+      branch: 'main',
+      filePath: 'todos/keep.json',
+    };
+
+    storageTodos = [syncedTodo];
+    useTodoStore.setState({ todos: [syncedTodo], isLoading: false, error: null });
+
+    (GitHubService.deleteFile as jest.Mock).mockResolvedValueOnce(null);
+
+    const ok = await useTodoStore.getState().deleteTodo('todo-2');
+
+    expect(ok).toBe(false);
+    // Local storage MUST NOT be mutated when remote delete fails — otherwise
+    // the next pull-to-refresh would re-create the todo (issue #489).
+    expect(StorageService.deleteTodo).not.toHaveBeenCalled();
+    expect(useTodoStore.getState().todos).toEqual([syncedTodo]);
+    expect(useTodoStore.getState().error).toBeTruthy();
+  });
+
+  test('refuses to delete repo-backed todo when signed out of GitHub', async () => {
+    (GitHubService.isAuthenticated as jest.Mock).mockReturnValueOnce(false);
+
+    const syncedTodo = {
+      id: 'todo-3',
+      text: 'Need auth',
+      completed: false,
+      createdAt: 1,
+      updatedAt: 1,
+      repo: 'owner/repo',
+      branch: 'main',
+      filePath: 'todos/need-auth.json',
+    };
+
+    storageTodos = [syncedTodo];
+    useTodoStore.setState({ todos: [syncedTodo], isLoading: false, error: null });
+
+    const ok = await useTodoStore.getState().deleteTodo('todo-3');
+
+    expect(ok).toBe(false);
+    expect(StorageService.deleteTodo).not.toHaveBeenCalled();
+    expect(GitHubService.deleteFile).not.toHaveBeenCalled();
+    expect(useTodoStore.getState().todos).toEqual([syncedTodo]);
+    expect(useTodoStore.getState().error).toBeTruthy();
+  });
+
+  test('still deletes purely-local todos with no repo metadata', async () => {
+    const localTodo = {
+      id: 'todo-4',
+      text: 'local only',
+      completed: false,
+      createdAt: 1,
+      updatedAt: 1,
+    };
+
+    storageTodos = [localTodo];
+    useTodoStore.setState({ todos: [localTodo], isLoading: false, error: null });
+
+    const ok = await useTodoStore.getState().deleteTodo('todo-4');
+
+    expect(ok).toBe(true);
+    expect(StorageService.deleteTodo).toHaveBeenCalledWith('todo-4');
+    expect(GitHubService.deleteFile).not.toHaveBeenCalled();
+    expect(useTodoStore.getState().todos).toEqual([]);
+  });
 });
