@@ -17,8 +17,9 @@ jest.mock('expo-blur', () => {
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 
-import ColorPicker from '../src/components/ColorPicker';
+import ColorPicker, { snapToPresetColor } from '../src/components/ColorPicker';
 import { TestThemeProvider } from './ui/testThemeProvider';
+import { NOTE_COLORS } from '../src/theme/tokens';
 
 describe('ColorPicker', () => {
   it('fires onSelect with the chosen NoteColor and then closes', () => {
@@ -77,5 +78,31 @@ describe('ColorPicker', () => {
     ].forEach((color) => {
       expect(getByTestId(`color-picker-swatch-${color}`)).toBeTruthy();
     });
+  });
+});
+
+describe('snapToPresetColor', () => {
+  it('returns the exact preset key when given the preset hex', () => {
+    expect(snapToPresetColor(NOTE_COLORS.red)).toBe('red');
+    expect(snapToPresetColor(NOTE_COLORS.blue)).toBe('blue');
+    expect(snapToPresetColor(NOTE_COLORS.gray)).toBe('gray');
+  });
+
+  it('snaps a near-red free pick to red', () => {
+    expect(snapToPresetColor('#f06060')).toBe('red');
+  });
+
+  it('snaps a near-blue free pick to blue', () => {
+    expect(snapToPresetColor('#3366ff')).toBe('blue');
+  });
+
+  it('handles 3-char hex shorthand', () => {
+    // #fff is closest to gray's lightness profile but among presets
+    // the closest by RGB distance for #00f is blue.
+    expect(snapToPresetColor('#00f')).toBe('blue');
+  });
+
+  it('falls back to first preset for invalid input', () => {
+    expect(snapToPresetColor('not-a-color')).toBe('red');
   });
 });

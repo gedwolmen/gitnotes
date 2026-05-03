@@ -58,6 +58,43 @@ jest.mock('@react-native-async-storage/async-storage', () => {
   };
 });
 
+// reanimated-color-picker pulls in react-native-gesture-handler, which
+// depends on a TurboModule that isn't registered in the jest runtime.
+// Stub the picker with a passthrough View — its drag interactions can't
+// be unit-tested anyway; runtime verification happens on a sim.
+jest.mock('reanimated-color-picker', () => {
+  const { View } = require('react-native');
+  const Stub = ({ children }: { children?: React.ReactNode }) =>
+    require('react').createElement(View, null, children);
+  return {
+    __esModule: true,
+    default: Stub,
+    Panel1: Stub,
+    Panel2: Stub,
+    Panel3: Stub,
+    Panel4: Stub,
+    Panel5: Stub,
+    HueSlider: Stub,
+    HueCircular: Stub,
+    SaturationSlider: Stub,
+    BrightnessSlider: Stub,
+    LuminanceSlider: Stub,
+    LuminanceCircular: Stub,
+    HSLSaturationSlider: Stub,
+    OpacitySlider: Stub,
+    RedSlider: Stub,
+    GreenSlider: Stub,
+    BlueSlider: Stub,
+    Preview: Stub,
+    PreviewText: Stub,
+    InputWidget: Stub,
+    Swatches: Stub,
+    ExtraThumb: Stub,
+    colorKit: {},
+    useColorPickerContext: () => ({}),
+  };
+});
+
 jest.mock('react-native-safe-area-context', () => {
   const { View } = require('react-native');
   const insets = { top: 0, right: 0, bottom: 0, left: 0 };
