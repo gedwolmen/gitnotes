@@ -12,6 +12,7 @@ type ProductionStackParamList = {
   ChatScreen: { threadId: string };
   RenderStyleSettings: undefined;
   RenderStyleEditor: { format: 'markdown' | 'org' | 'neorg' };
+  TemplateManager: undefined;
 };
 
 type DevOnlyStackParamList = {

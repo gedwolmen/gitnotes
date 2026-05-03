@@ -1,5 +1,14 @@
 // Mocks for the @testing-library/react-native render path.
 
+// expo-crypto ships ESM; the jest transform pipeline can't load it. The
+// real surface area we depend on is `randomUUID` (consumed by
+// `src/utils/ids.ts`). Tests that need to control its behaviour can still
+// override this with a per-file `jest.mock('expo-crypto', ...)`.
+jest.mock('expo-crypto', () => ({
+  randomUUID: () =>
+    `test-${Math.random().toString(36).slice(2, 11)}-${Math.random().toString(36).slice(2, 11)}`,
+}));
+
 jest.mock('expo-blur', () => {
   const { View } = require('react-native');
   return {

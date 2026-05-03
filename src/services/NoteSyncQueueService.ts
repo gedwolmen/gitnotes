@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { syncNoteToGitHub } from './NoteGitHubSyncService';
 import { StorageService } from './StorageService';
-import { NoteFormat } from '../models/Note';
+import { NoteColor, NoteFormat } from '../models/Note';
 
 const QUEUE_KEY = '@gitnotes:sync_queue_v1';
 const MAX_ATTEMPTS = 8;
@@ -14,6 +14,7 @@ export interface NoteUpsertParams {
   content: string;
   format?: NoteFormat;
   tags?: string[];
+  color?: NoteColor | null;
 }
 
 export interface QueuedMutation {

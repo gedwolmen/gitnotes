@@ -5,6 +5,7 @@ import { GitRepository } from './GitService';
 import { Todo, TodoCreateInput, TodoUpdateInput, createTodoItem, applyTodoUpdate } from '../models/Todo';
 import { Canvas, CanvasCreateInput, CanvasUpdateInput, createCanvas, updateCanvas } from '../models/Canvas';
 import { NOTE_INDEX_KEY, noteKey, getBootValue } from './StorageBootstrap';
+import type { NoteTemplate } from './TemplateService';
 
 const TODOS_STORAGE_KEY = '@gitnotes:todos';
 const CANVASES_STORAGE_KEY = '@gitnotes:canvases';
@@ -12,6 +13,8 @@ const CANVASES_BACKUP_STORAGE_KEY = '@gitnotes:canvases.bak';
 const LEGACY_NOTES_KEY = '@gitnotes:notes';
 const REPOS_STORAGE_KEY = '@gitnotes:repos';
 const FOLDERS_STORAGE_KEY = '@gitnotes:folders';
+const CUSTOM_TEMPLATES_STORAGE_KEY = '@gitnotes:templates';
+const TEMPLATE_PINS_STORAGE_KEY = '@gitnotes:template-pins';
 
 let migrationDone = false;
 
@@ -210,6 +213,44 @@ export class StorageService {
       return JSON.parse(jsonValue);
     } catch (error) {
       console.error('Error reading repositories from storage:', error);
+      return [];
+    }
+  }
+
+  static async saveCustomTemplates(templates: NoteTemplate[]): Promise<void> {
+    try {
+      await AsyncStorage.setItem(CUSTOM_TEMPLATES_STORAGE_KEY, JSON.stringify(templates));
+    } catch (error) {
+      console.error('Error saving custom templates to storage:', error);
+      throw error;
+    }
+  }
+
+  static async loadCustomTemplates(): Promise<NoteTemplate[]> {
+    try {
+      const raw = await AsyncStorage.getItem(CUSTOM_TEMPLATES_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (error) {
+      console.error('Error loading custom templates from storage:', error);
+      return [];
+    }
+  }
+
+  static async saveTemplatePins(pinIds: string[]): Promise<void> {
+    try {
+      await AsyncStorage.setItem(TEMPLATE_PINS_STORAGE_KEY, JSON.stringify(pinIds));
+    } catch (error) {
+      console.error('Error saving template pins to storage:', error);
+      throw error;
+    }
+  }
+
+  static async loadTemplatePins(): Promise<string[]> {
+    try {
+      const raw = await AsyncStorage.getItem(TEMPLATE_PINS_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (error) {
+      console.error('Error loading template pins from storage:', error);
       return [];
     }
   }

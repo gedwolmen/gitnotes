@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { Note, NoteFormat } from '../models/Note';
+import { NOTE_COLORS } from '../theme/tokens';
 import { useResponsive } from '../hooks/useResponsive';
 
 function stripPreview(content: string, noteFormat?: NoteFormat): string {
@@ -67,6 +68,10 @@ function NoteCardImpl({
   const showCompact = isCard ? false : compact;
   const isOfflineUncached = isOffline && !isCached;
   const titleColor = isOfflineUncached ? colors.textSecondary : colors.text;
+  const noteColorHex = note.color ? NOTE_COLORS[note.color as keyof typeof NOTE_COLORS] : undefined;
+  const noteColorStyle = noteColorHex
+    ? { borderColor: noteColorHex, borderWidth: 2 }
+    : undefined;
   
   const checklistProgress = useMemo(() => {
     if (!hasChecklists(note.content)) return null;
@@ -86,6 +91,7 @@ function NoteCardImpl({
         showCompact && styles.cardCompact,
         isCard && styles.cardVariant,
         isTablet && styles.cardTablet,
+        noteColorStyle,
         highlighted && { borderWidth: 2, borderColor: colors.primary },
       ]}
       testID={`note-card-${note.id}`}
