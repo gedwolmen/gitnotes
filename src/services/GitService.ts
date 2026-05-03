@@ -301,8 +301,23 @@ export class GitService {
       const keys = await AsyncStorage.getAllKeys();
       const cacheKeys = keys.filter(k => k.startsWith(CACHE_PREFIX));
       await AsyncStorage.multiRemove(cacheKeys);
+      this.memCache.clear();
     } catch (error) {
       console.warn('[GitService] Failed to clear cache:', error);
+    }
+  }
+
+  // Targeted invalidator used after a successful repo pull so the editor
+  // folder dropdown reflects the freshly fetched tree instead of a stale
+  // (TTL-bound) snapshot.
+  static async invalidateRepoFoldersCache(repoPath: string, branch?: string): Promise<void> {
+    const branchKey = branch || 'HEAD';
+    const cacheKey = `repo_folders_${repoPath.replace(/[^a-zA-Z0-9]/g, '_')}_${branchKey.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    this.memCache.delete(cacheKey);
+    try {
+      await AsyncStorage.removeItem(CACHE_PREFIX + cacheKey);
+    } catch (error) {
+      console.warn('[GitService] Failed to invalidate folders cache:', error);
     }
   }
 }
