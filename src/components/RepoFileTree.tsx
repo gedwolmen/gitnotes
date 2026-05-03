@@ -719,7 +719,7 @@ export default function RepoFileTree({ owner, repo, branch, onFilePress }: RepoF
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.surface }}>
+    <View testID="repo-file-tree-root" style={{ flex: 1, backgroundColor: colors.surface }}>
       {rootItems.map((item) => (
         <TreeItem
           key={item.path}
