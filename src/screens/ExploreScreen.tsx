@@ -20,7 +20,7 @@ import { HapticService } from '../utils/haptics';
 import { parseRepoPath } from '../utils/gitPathParser';
 import RepoFileTree, { TreeNode } from '../components/RepoFileTree';
 import { RootStackParamList } from '../navigation/types';
-import { ScreenHeader } from '../components/ui';
+import { ScreenHeader, useScreenHeaderHeight } from '../components/ui';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
 import SearchBar from '../components/SearchBar';
 
@@ -43,6 +43,7 @@ type ExploreView = 'repoList' | 'repoDetail' | 'fileTree';
 export default function ExploreScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
+  const headerHeight = useScreenHeaderHeight();
   const { repositories: repos, refreshRepos } = useRepos();
   const [view, setView] = useState<ExploreView>('repoList');
   const [selectedRepo, setSelectedRepo] = useState<GitRepository | null>(null);
@@ -127,9 +128,10 @@ export default function ExploreScreen() {
 
   if (view === 'repoList') {
     return (
-      <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-        <ScreenHeader title="Explore" />
-        <OfflineBanner />
+      <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['bottom']}>
+        <View style={{ paddingTop: headerHeight }}>
+          <OfflineBanner />
+        </View>
         <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
           <SearchBar
             value={repoSearch}
@@ -162,6 +164,7 @@ export default function ExploreScreen() {
             }
           />
         )}
+        <ScreenHeader title="Explore" />
       </SafeAreaView>
     );
   }
@@ -170,9 +173,10 @@ export default function ExploreScreen() {
     const parsed = parseRepoPath(selectedRepo.path);
 
     return (
-      <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-        <ScreenHeader title={selectedRepo.name} onBack={handleBack} />
-        <OfflineBanner />
+      <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['bottom']}>
+        <View style={{ paddingTop: headerHeight }}>
+          <OfflineBanner />
+        </View>
 
         <View style={[s.detailCard, { backgroundColor: colors.surface, borderColor: colors.border + '30' }]}>
           <View style={s.detailTop}>
@@ -209,6 +213,7 @@ export default function ExploreScreen() {
             <Text style={s.fileTreeButtonText}>Browse Files</Text>
           </TouchableOpacity>
         </View>
+        <ScreenHeader title={selectedRepo.name} onBack={handleBack} />
       </SafeAreaView>
     );
   }

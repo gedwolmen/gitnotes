@@ -42,7 +42,7 @@ import ColorPicker from "../components/ColorPicker";
 import NoteCard from "../components/NoteCard";
 import SearchBar from "../components/SearchBar";
 import { OfflineBanner } from "../components/ui/OfflineBanner";
-import { ScreenHeader } from "../components/ui";
+import { ScreenHeader, useScreenHeaderHeight } from "../components/ui";
 import { parseRepoPath } from "../utils/gitPathParser";
 import { HapticService } from "../utils/haptics";
 import {
@@ -69,6 +69,7 @@ export default function NotesListScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
   const { authState } = useAuth();
+  const headerHeight = useScreenHeaderHeight();
   const {
     notes,
     filteredNotes,
@@ -575,7 +576,7 @@ export default function NotesListScreen() {
 
   return (
     <SafeAreaView
-      edges={['top']}
+      edges={[]}
       style={[
         styles.container,
         { backgroundColor: colors.background },
@@ -587,8 +588,9 @@ export default function NotesListScreen() {
       ]}
     >
       {isDeleting ? <GitHubActivityIndicator /> : null}
-      <ScreenHeader title="Notes" />
-      <OfflineBanner />
+      <View style={{ paddingTop: headerHeight }}>
+        <OfflineBanner />
+      </View>
 
       <View style={styles.topBar}>
         <SearchBar
@@ -1523,6 +1525,7 @@ export default function NotesListScreen() {
         selected={colorPickerNote?.color ?? null}
         onSelect={handleColorSelect}
       />
+      <ScreenHeader title="Notes" />
     </SafeAreaView>
   );
 }

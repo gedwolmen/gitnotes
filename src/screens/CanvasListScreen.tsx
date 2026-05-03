@@ -20,7 +20,7 @@ import { useRepos } from '../contexts/RepoContext';
 import { RootStackParamList } from '../navigation/types';
 import { Canvas } from '../models/Canvas';
 import SearchBar from '../components/SearchBar';
-import { ScreenHeader, IconButton } from '../components/ui';
+import { ScreenHeader, IconButton, useScreenHeaderHeight } from '../components/ui';
 import { EntityFilterModal } from '../components/EntityFilterModal';
 import { ActiveFilterStrip } from '../components/ActiveFilterStrip';
 import { useEntityFilter } from '../hooks/useEntityFilter';
@@ -38,6 +38,7 @@ const CANVAS_PRESETS = [
 export default function CanvasListScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
+  const headerHeight = useScreenHeaderHeight();
   const { canvases, filteredCanvases, searchQuery, setSearchQuery, deleteCanvas, refreshCanvases } = useCanvases();
   const { repositories } = useRepos();
   const filter = useEntityFilter<Canvas>(canvases);
@@ -158,32 +159,8 @@ export default function CanvasListScreen() {
   );
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScreenHeader
-        title="Canvases"
-        badge="BETA"
-        actions={
-          <>
-            <IconButton
-              size="sm"
-              active={filter.activeCount > 0}
-              onPress={() => setShowFilterModal(true)}
-              accessibilityLabel="Filters"
-            >
-              <Ionicons
-                name="funnel-outline"
-                size={18}
-                color={filter.activeCount > 0 ? colors.accent : colors.textSecondary}
-              />
-            </IconButton>
-            <IconButton size="sm" onPress={handleCreate} accessibilityLabel="New canvas">
-              <Ionicons name="add" size={20} color={colors.accent} />
-            </IconButton>
-          </>
-        }
-      />
-
-      <View style={styles.searchBarContainer}>
+    <SafeAreaView edges={['bottom']} style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.searchBarContainer, { paddingTop: headerHeight }]}>
         <SearchBar
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -296,6 +273,29 @@ export default function CanvasListScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+      <ScreenHeader
+        title="Canvases"
+        badge="BETA"
+        actions={
+          <>
+            <IconButton
+              size="sm"
+              active={filter.activeCount > 0}
+              onPress={() => setShowFilterModal(true)}
+              accessibilityLabel="Filters"
+            >
+              <Ionicons
+                name="funnel-outline"
+                size={18}
+                color={filter.activeCount > 0 ? colors.accent : colors.textSecondary}
+              />
+            </IconButton>
+            <IconButton size="sm" onPress={handleCreate} accessibilityLabel="New canvas">
+              <Ionicons name="add" size={20} color={colors.accent} />
+            </IconButton>
+          </>
+        }
+      />
     </SafeAreaView>
   );
 }

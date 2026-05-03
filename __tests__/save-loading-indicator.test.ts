@@ -159,6 +159,8 @@ jest.mock('../src/components/ui', () => {
     IconButton: ({ children, onPress }: any) => require('react').createElement(Pressable, { onPress }, children),
     Modal: ({ visible, children }: any) => (visible ? require('react').createElement(View, null, children) : null),
     ScreenHeader: ({ title }: any) => require('react').createElement(Text, null, title),
+    useScreenHeaderHeight: () => 60,
+    SCREEN_HEADER_BASE_HEIGHT: 60,
   };
 });
 jest.mock('../src/components/ui/OfflineBanner', () => ({ OfflineBanner: () => null }));

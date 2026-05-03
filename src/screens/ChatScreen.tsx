@@ -15,7 +15,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ChatMessageBubble } from '../components/ai/ChatMessageBubble';
 import { ChatInputBar } from '../components/ai/ChatInputBar';
 import ContextPickerModal from '../components/ai/ContextPickerModal';
-import { Button, ScreenHeader, Surface } from '../components/ui';
+import { Button, ScreenHeader, Surface, useScreenHeaderHeight } from '../components/ui';
 import { useTokens } from '../contexts/ThemeContext';
 import type { AIContextItem, AIProviderConfig } from '../models/AIProvider';
 import type { ChatMessage } from '../models/Chat';
@@ -154,6 +154,7 @@ export default function ChatScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<ChatScreenRouteProp>();
   const { colors, spacing, type } = useTokens();
+  const headerHeight = useScreenHeaderHeight();
   const { threadId } = route.params;
 
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
@@ -692,18 +693,13 @@ export default function ChatScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
       >
-        <ScreenHeader
-          title={thread?.title ?? 'GitNotes AI'}
-          subtitle={thread ? `${messages.length} messages` : 'Loading conversation'}
-          onBack={() => navigation.goBack()}
-        />
-
         <View style={styles.content}>
           <FlatList
             ref={flatListRef}
             data={messages}
             keyExtractor={(item) => item.id}
             contentContainerStyle={{
+              paddingTop: headerHeight,
               paddingHorizontal: spacing[4],
               paddingBottom: spacing[4],
               gap: spacing[1],
@@ -755,6 +751,11 @@ export default function ChatScreen() {
           setAttachedContexts(items);
           setIsContextPickerVisible(false);
         }}
+      />
+      <ScreenHeader
+        title={thread?.title ?? 'GitNotes AI'}
+        subtitle={thread ? `${messages.length} messages` : 'Loading conversation'}
+        onBack={() => navigation.goBack()}
       />
     </SafeAreaView>
   );

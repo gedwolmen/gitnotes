@@ -14,13 +14,14 @@ import { githubActivity } from '../stores/githubActivityStore';
 import { useTokens } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/types';
 import { ChatThreadSummary } from '../models/Chat';
-import { ScreenHeader, Surface, Button } from '../components/ui';
+import { ScreenHeader, Surface, Button, useScreenHeaderHeight } from '../components/ui';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function ChatThreadListScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors, type, spacing } = useTokens();
+  const headerHeight = useScreenHeaderHeight();
 
   const {
     threads,
@@ -208,14 +209,8 @@ export default function ChatThreadListScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <ScreenHeader
-        title="GitNotes AI"
-        badge="BETA"
-        onBack={() => navigation.goBack()}
-      />
-
-      <View style={[styles.headerControls, { paddingHorizontal: spacing[4], paddingVertical: spacing[3] }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      <View style={[styles.headerControls, { paddingTop: headerHeight, paddingHorizontal: spacing[4], paddingVertical: spacing[3] }]}>
         <Button
           label="New Chat"
           onPress={handleNewChat}
@@ -233,6 +228,11 @@ export default function ChatThreadListScreen() {
         ListEmptyComponent={renderEmptyState}
         refreshing={isPullRefreshing}
         onRefresh={handleRefresh}
+      />
+      <ScreenHeader
+        title="GitNotes AI"
+        badge="BETA"
+        onBack={() => navigation.goBack()}
       />
     </SafeAreaView>
   );

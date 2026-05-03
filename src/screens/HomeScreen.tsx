@@ -16,7 +16,7 @@ import TemplateSelector from '../components/TemplateSelector';
 import { NoteTemplate } from '../services/TemplateService';
 import { NoteFormatPreferenceService } from '../services/NoteFormatPreferenceService';
 import { useResponsive } from '../hooks/useResponsive';
-import { Button, Card, Modal, ScreenHeader } from '../components/ui';
+import { Button, Card, Modal, ScreenHeader, useScreenHeaderHeight } from '../components/ui';
 import { BentoRecent } from '../components/home/BentoRecent';
 import { QuickAccessShelf } from '../components/home/QuickAccessShelf';
 import { buildPinnedFeed, buildRecentFeed, RecentItem } from '../utils/recentItems';
@@ -36,6 +36,7 @@ export default function HomeScreen() {
   const { notes } = useNotes();
   const { canvases } = useCanvases();
   const { isTablet, maxContentWidth } = useResponsive();
+  const headerHeight = useScreenHeaderHeight();
   const [showFormatPicker, setShowFormatPicker] = useState(false);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [defaultFormat, setDefaultFormat] = useState<EditableNoteFormat | null>(null);
@@ -123,9 +124,8 @@ export default function HomeScreen() {
   );
 
   return (
-    <SafeAreaView edges={['top']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <ScreenHeader title="GitNotēs" subtitle="Your development notes, organized." />
-      <ScrollView style={styles.container} contentContainerStyle={[styles.content, isTablet && { maxWidth: maxContentWidth, alignSelf: 'center', width: '100%' }]} showsVerticalScrollIndicator={false}>
+    <SafeAreaView edges={[]} style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: headerHeight }, isTablet && { maxWidth: maxContentWidth, alignSelf: 'center', width: '100%' }]} showsVerticalScrollIndicator={false}>
       <View style={styles.bentoGrid}>
         <Pressable
           onPress={handleCreateNote}
@@ -231,6 +231,7 @@ export default function HomeScreen() {
         onSelect={handleTemplateSelect}
       />
       </ScrollView>
+      <ScreenHeader title="GitNotēs" subtitle="Your development notes, organized." />
     </SafeAreaView>
   );
 }
