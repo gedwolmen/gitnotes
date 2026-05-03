@@ -63,7 +63,8 @@ describe('tag persistence', () => {
       'notes/my-note.md',
       expect.stringContaining('tags: [alpha, beta]'),
       'Create note: My Note',
-      'main'
+      'main',
+      undefined
     );
   });
 

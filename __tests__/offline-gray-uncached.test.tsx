@@ -56,7 +56,14 @@ jest.mock('../src/components/ColorPicker', () => ({ __esModule: true, default: (
 jest.mock('../src/components/SearchBar', () => () => null);
 jest.mock('../src/components/GitHubActivityIndicator', () => ({ GitHubActivityIndicator: () => null }));
 jest.mock('../src/components/ui/OfflineBanner', () => ({ OfflineBanner: () => null }));
-jest.mock('../src/components/ui', () => ({ ScreenHeader: () => null }));
+jest.mock('../src/components/ui', () => ({
+  ScreenHeader: () => null,
+  useScreenHeaderHeight: () => 60,
+  SCREEN_HEADER_BASE_HEIGHT: 60,
+  SCREEN_HEADER_SUBTITLE_HEIGHT: 88,
+  useTabBarHeight: () => 84,
+  TAB_BAR_BASE_HEIGHT: 84,
+}));
 jest.mock('../src/hooks/useResponsive', () => ({ useResponsive: () => ({ isTablet: false, maxContentWidth: 720 }) }));
 jest.mock('../src/hooks/useNetworkStatus', () => ({ useNetworkStatus: () => ({ isConnected: false, isInternetReachable: false }) }));
 jest.mock('../src/services/GitHubService', () => ({ GitHubService: { setToken: jest.fn() } }));
