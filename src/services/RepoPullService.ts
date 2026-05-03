@@ -4,6 +4,7 @@ import { createNote } from '../models/Note';
 import { createCanvas, updateCanvas, CanvasScene } from '../models/Canvas';
 import { createTodoItem, applyTodoUpdate, reorderTodos } from '../models/Todo';
 import { parseRepoPath } from '../utils/gitPathParser';
+import { canPersistNoteTags } from '../utils/noteTagSupport';
 
 async function fetchDirectoryFiles(
   owner: string,
@@ -50,6 +51,40 @@ async function fetchInBatches<T, R>(
     out.push(...batchOut);
   }
   return out;
+}
+
+function extractTagsFromMarkdown(content: string): string[] {
+  const match = content.match(/^---\n([\s\S]*?)\n---/);
+  if (!match) return [];
+
+  const tagsLine = match[1].split('\n').find((line) => /^tags\s*:/i.test(line.trim()));
+  if (!tagsLine) return [];
+
+  const raw = tagsLine.replace(/^tags\s*:\s*/i, '').trim();
+  const inner = raw.replace(/^\[/, '').replace(/\]$/, '').trim();
+  if (!inner) return [];
+
+  return inner.split(',').map((tag) => tag.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean);
+}
+
+function extractTagsFromOrg(content: string): string[] {
+  const match = content.match(/^#\+FILETAGS:\s*:(.+?):\s*$/im);
+  if (!match) return [];
+  return match[1].split(':').map((tag) => tag.trim()).filter(Boolean);
+}
+
+function extractTagsFromNeorg(content: string): string[] {
+  const match = content.match(/^categories:\s*\[(.+?)\]\s*$/im);
+  if (!match) return [];
+  return match[1].split(',').map((tag) => tag.trim()).filter(Boolean);
+}
+
+function extractTagsFromContent(content: string, format: 'markdown' | 'neorg' | 'org' | 'pdf' | 'json'): string[] {
+  if (!canPersistNoteTags(format)) return [];
+  if (format === 'markdown') return extractTagsFromMarkdown(content);
+  if (format === 'org') return extractTagsFromOrg(content);
+  if (format === 'neorg') return extractTagsFromNeorg(content);
+  return [];
 }
 
 async function pullNotesFromRepo(
@@ -105,6 +140,8 @@ async function pullNotesFromRepo(
     for (const item of fetched) {
       if (!item) continue;
       const ext = item.path.split('.').pop()?.toLowerCase() ?? 'md';
+      const format = noteFormatFromExt(ext);
+      const tags = extractTagsFromContent(item.content, format);
       const titleFromPath = item.path
         .replace(/^notes\//, '')
         .replace(/\.[^.]+$/, '')
@@ -125,6 +162,7 @@ async function pullNotesFromRepo(
           allNotes[existingIdx] = {
             ...existing,
             content: item.content,
+            tags,
             updatedAt: Date.now(),
           };
           pulled++;
@@ -137,7 +175,8 @@ async function pullNotesFromRepo(
             repo: repoPath,
             branch,
             filePath: item.path,
-            format: noteFormatFromExt(ext),
+            format,
+            tags,
           }),
         );
         pulled++;

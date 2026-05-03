@@ -1,4 +1,4 @@
-// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+// Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`Button snapshots primary in light + dark: primary-dark 1`] = `
 <View
@@ -65,6 +65,7 @@ exports[`Button snapshots primary in light + dark: primary-dark 1`] = `
             "shadowOpacity": 1,
             "shadowRadius": 8,
           },
+          undefined,
           [
             {
               "alignItems": "center",
@@ -199,6 +200,7 @@ exports[`Button snapshots primary in light + dark: primary-light 1`] = `
             "shadowOpacity": 1,
             "shadowRadius": 8,
           },
+          undefined,
           [
             {
               "alignItems": "center",

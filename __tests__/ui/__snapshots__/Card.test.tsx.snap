@@ -1,4 +1,4 @@
-// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+// Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`Card snapshots non-interactive light 1`] = `
 <View
@@ -17,6 +17,7 @@ exports[`Card snapshots non-interactive light 1`] = `
         "shadowOpacity": 1,
         "shadowRadius": 8,
       },
+      undefined,
       [
         {
           "padding": 16,
