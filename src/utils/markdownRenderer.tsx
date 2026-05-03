@@ -33,6 +33,7 @@ export class NotePreviewRenderer extends Renderer implements RendererInterface {
     return (
       <Text
         key={`canvas-fallback-${id}`}
+        selectable
         style={{
           color: this.deps.colors.text,
           backgroundColor: this.deps.colors.surfaceSecondary ?? '#f0f0f0',
@@ -125,6 +126,7 @@ export class NotePreviewRenderer extends Renderer implements RendererInterface {
     return (
       <Text
         key={this.getKey()}
+        selectable
         style={[styles, { color: this.deps.colors.primary, textDecorationLine: 'underline' }]}
         onPress={onPress}
       >
