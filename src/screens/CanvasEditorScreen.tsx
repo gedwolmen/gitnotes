@@ -50,12 +50,13 @@ import type { RootStackParamList } from '../navigation/types';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'CanvasEditor'>;
 type RouteType = RouteProp<RootStackParamList, 'CanvasEditor'>;
 type Point = { x: number; y: number };
+type ToolIconName = React.ComponentProps<typeof Ionicons>['name'];
 
 const COLORS = ['#000000', '#FFFFFF', '#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#007AFF', '#5856D6', '#AF52DE', '#FF2D55'];
 const TOOLS = [
-  { key: 'pen', label: '✏️' },
-  { key: 'highlighter', label: '🖊' },
-  { key: 'eraser', label: '🧹' },
+  { key: 'pen', icon: 'pencil' as ToolIconName },
+  { key: 'highlighter', icon: 'brush' as ToolIconName },
+  { key: 'eraser', icon: 'backspace-outline' as ToolIconName },
   { key: 'line', label: '╱' },
   { key: 'arrow', label: '→' },
   { key: 'rect', label: '□' },
@@ -63,7 +64,7 @@ const TOOLS = [
   { key: 'ellipse', label: '○' },
   { key: 'diamond', label: '◇' },
   { key: 'text', label: 'T' },
-  { key: 'select', label: '☝️' },
+  { key: 'select', icon: 'hand-left-outline' as ToolIconName },
 ];
 
 function uid(): string {
@@ -732,13 +733,13 @@ export default function CanvasEditorScreen() {
 
       <View style={styles.toolbar}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {TOOLS.map(({ key, label }) => (
+          {TOOLS.map(({ key, label, icon }) => (
             <TouchableOpacity
               key={key}
               style={[styles.toolBtn, tool === key && styles.toolBtnActive]}
               onPress={() => { setTool(key); setSelectedId(null); }}
             >
-              <Text style={styles.toolBtnLabel}>{label}</Text>
+              {icon ? <Ionicons name={icon} size={20} color={color} /> : <Text style={styles.toolBtnLabel}>{label}</Text>}
             </TouchableOpacity>
           ))}
           <TouchableOpacity style={[styles.toolBtn, filled && styles.toolBtnActive]} onPress={() => setFilled(!filled)}>
@@ -749,7 +750,7 @@ export default function CanvasEditorScreen() {
             <Text style={styles.toolBtnLabel}>↩</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.toolBtn} onPress={clearAll}>
-            <Text style={styles.toolBtnLabel}>🗑</Text>
+            <Ionicons name="trash-outline" size={20} color={color} />
           </TouchableOpacity>
           <View style={styles.separator} />
           <TouchableOpacity style={styles.toolBtn} onPress={() => setZoom(scale.value - 0.25)}>
