@@ -1,0 +1,3 @@
+- Markdown preview text selection needs to cover link text too; links can stay pressable and selectable together.
+- For nested Neorg inline rendering, setting selectable on every Text node is the safest way to keep copy/paste working across headings, lists, tables, quotes, and inline styles.
+- RNTL `UNSAFE_getAllByType(Text)` is enough to verify selectable props on rendered preview text without adding UI-specific assertions.
