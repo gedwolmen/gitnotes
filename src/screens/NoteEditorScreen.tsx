@@ -118,7 +118,7 @@ export default function NoteEditorScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<NoteEditorRouteProp>();
   const { colors, isDark } = useTheme();
-  const { authState } = useAuth();
+  const { authState, activeAccountId } = useAuth();
   const { sideBySide } = useResponsive();
   const { noteId, format: initialFormat, initialTitle, initialContent, repo: initialRepo, branch: initialBranch, folderPath: initialFolderPath } = route.params || {};
 
@@ -132,6 +132,7 @@ export default function NoteEditorScreen() {
   const [commit, setCommit] = useState<string | undefined>();
   const [folderPath, setFolderPath] = useState<string | undefined>(initialFolderPath);
   const [github, setGithub] = useState<NoteGitHubLink | undefined>();
+  const [accountId, setAccountId] = useState<string | undefined>(activeAccountId ?? undefined);
   const [noteFormat, setNoteFormat] = useState<NoteFormat>(initialFormat ?? 'markdown');
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
@@ -252,6 +253,7 @@ export default function NoteEditorScreen() {
         setCommit(existingNote.commit);
         setFolderPath(existingNote.folderPath);
         setGithub(existingNote.github);
+        setAccountId(existingNote.accountId ?? activeAccountId ?? undefined);
         setNoteFormat(existingNote.format ?? 'markdown');
         setTags(existingNote.tags || []);
         setAttachments(existingNote.attachments || []);
@@ -314,6 +316,7 @@ export default function NoteEditorScreen() {
           folderPath,
           format: noteFormat,
           attachments,
+          accountId,
         });
         setHasChanges(false);
         setIsEditing(false);
@@ -329,6 +332,7 @@ export default function NoteEditorScreen() {
           folderPath,
           format: noteFormat,
           attachments,
+          accountId,
         });
         savedNoteId = newNote?.id;
         HapticService.success();
@@ -343,6 +347,7 @@ export default function NoteEditorScreen() {
           title: title.trim(),
           content: content.trim(),
           format: noteFormat,
+          accountId,
         };
 
         const syncResult = await syncNoteToGitHub(syncParams);

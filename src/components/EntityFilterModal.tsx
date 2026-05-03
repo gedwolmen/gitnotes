@@ -14,6 +14,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { HapticService } from '../utils/haptics';
 import { GitRepository } from '../services/GitService';
 import { FilterableItem, UseEntityFilterReturn } from '../hooks/useEntityFilter';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Props<T extends FilterableItem> {
   visible: boolean;
@@ -25,11 +26,14 @@ interface Props<T extends FilterableItem> {
 export function EntityFilterModal<T extends FilterableItem>(props: Props<T>) {
   const { visible, onClose, filter, repositories } = props;
   const { colors } = useTheme();
+  const { accounts } = useAuth();
+  const showAccountFilter = accounts.length >= 2;
   const {
     state,
     setSelectedRepo,
     setSelectedBranch,
     setSelectedFolder,
+    setSelectedAccountId,
     toggleTag,
     clearAll,
     allBranches,
@@ -37,7 +41,7 @@ export function EntityFilterModal<T extends FilterableItem>(props: Props<T>) {
     allTags,
     activeCount,
   } = filter;
-  const { selectedRepo, selectedBranch, selectedFolder, selectedTags } = state;
+  const { selectedRepo, selectedBranch, selectedFolder, selectedTags, selectedAccountId } = state;
 
   const renderChipRow = (
     items: string[],
@@ -111,6 +115,74 @@ export function EntityFilterModal<T extends FilterableItem>(props: Props<T>) {
         </View>
 
         <ScrollView contentContainerStyle={styles.content}>
+          {showAccountFilter && (
+            <>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Account</Text>
+              <FlatList
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.chipRow}
+                data={accounts}
+                keyExtractor={(acc) => acc.id}
+                ListHeaderComponent={
+                  <TouchableOpacity
+                    style={[
+                      styles.chip,
+                      { borderColor: colors.border },
+                      !selectedAccountId && {
+                        borderColor: colors.primary,
+                        backgroundColor: colors.primary + '15',
+                      },
+                    ]}
+                    onPress={() => setSelectedAccountId(null)}
+                  >
+                    <Text
+                      style={[
+                        styles.chipText,
+                        { color: !selectedAccountId ? colors.primary : colors.text },
+                      ]}
+                    >
+                      All
+                    </Text>
+                  </TouchableOpacity>
+                }
+                renderItem={({ item: acc }) => {
+                  const isSelected = selectedAccountId === acc.id;
+                  return (
+                    <TouchableOpacity
+                      style={[
+                        styles.chip,
+                        { borderColor: colors.border },
+                        isSelected && {
+                          borderColor: colors.primary,
+                          backgroundColor: colors.primary + '15',
+                        },
+                      ]}
+                      onPress={() => {
+                        HapticService.selection();
+                        setSelectedAccountId(isSelected ? null : acc.id);
+                      }}
+                    >
+                      <Ionicons
+                        name="person-outline"
+                        size={13}
+                        color={isSelected ? colors.primary : colors.textSecondary}
+                      />
+                      <Text
+                        style={[
+                          styles.chipText,
+                          { color: isSelected ? colors.primary : colors.text },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        @{acc.login}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                }}
+              />
+            </>
+          )}
           <Text style={[styles.label, { color: colors.textSecondary }]}>Repository</Text>
           <FlatList
             horizontal

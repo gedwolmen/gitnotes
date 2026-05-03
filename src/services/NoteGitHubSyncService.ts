@@ -2,6 +2,13 @@ import { GitHubService } from './GitHubService';
 import { NoteFormat } from '../models/Note';
 import * as FileSystem from 'expo-file-system/legacy';
 import { parseRepoPath } from '../utils/gitPathParser';
+import { AuthService } from './AuthService';
+
+async function resolveToken(accountId?: string): Promise<string | undefined> {
+  if (!accountId) return undefined;
+  const t = await AuthService.getTokenById(accountId);
+  return t ?? undefined;
+}
 
 export interface NoteGitHubSyncResult {
   success: boolean;
@@ -106,10 +113,12 @@ export async function deleteNoteFromGitHub(params: {
   branch?: string;
   filePath: string;
   title?: string;
+  accountId?: string;
 }): Promise<NoteGitHubSyncResult> {
-  const { repo: repoPath, branch, filePath, title } = params;
+  const { repo: repoPath, branch, filePath, title, accountId } = params;
+  const tokenOverride = await resolveToken(accountId);
 
-  if (!GitHubService.isAuthenticated()) {
+  if (!tokenOverride && !GitHubService.isAuthenticated()) {
     return { success: false, error: 'GitHub not authenticated' };
   }
 
@@ -119,11 +128,11 @@ export async function deleteNoteFromGitHub(params: {
   }
 
   const targetBranch = branch || 'main';
+  const opts = tokenOverride ? { tokenOverride } : undefined;
 
   try {
-    const sha = await GitHubService.getFileSha(repoInfo.owner, repoInfo.repo, filePath, targetBranch);
+    const sha = await GitHubService.getFileSha(repoInfo.owner, repoInfo.repo, filePath, targetBranch, opts);
     if (!sha) {
-      // File already gone on remote; treat as success so local delete proceeds.
       return { success: true, filePath };
     }
 
@@ -134,6 +143,7 @@ export async function deleteNoteFromGitHub(params: {
       `Delete note: ${title || filePath}`,
       sha,
       targetBranch,
+      opts,
     );
 
     if (result) {
@@ -155,10 +165,12 @@ export async function syncNoteToGitHub(params: {
   title: string;
   content: string;
   format?: NoteFormat;
+  accountId?: string;
 }): Promise<NoteGitHubSyncResult> {
-  const { repo: repoPath, branch, filePath, title, content, format } = params;
+  const { repo: repoPath, branch, filePath, title, content, format, accountId } = params;
+  const tokenOverride = await resolveToken(accountId);
 
-  if (!GitHubService.isAuthenticated()) {
+  if (!tokenOverride && !GitHubService.isAuthenticated()) {
     return { success: false, error: 'GitHub not authenticated' };
   }
 
@@ -169,6 +181,7 @@ export async function syncNoteToGitHub(params: {
 
   const targetBranch = branch || 'main';
   const ext = getExtension(format);
+  const opts = tokenOverride ? { tokenOverride } : undefined;
 
   let targetPath = filePath;
   if (!targetPath) {
@@ -195,6 +208,7 @@ export async function syncNoteToGitHub(params: {
       finalContent,
       message,
       targetBranch,
+      opts,
     );
 
     if (result) {

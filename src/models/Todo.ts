@@ -27,6 +27,7 @@ export interface Todo {
   repo?: string;
   branch?: string;
   filePath?: string;
+  accountId?: string;
 }
 
 export interface TodoCreateInput {
@@ -42,6 +43,7 @@ export interface TodoCreateInput {
   repo?: string;
   branch?: string;
   filePath?: string;
+  accountId?: string;
 }
 
 export interface TodoUpdateInput {
@@ -59,6 +61,7 @@ export interface TodoUpdateInput {
   repo?: string;
   branch?: string;
   filePath?: string;
+  accountId?: string;
 }
 
 function generateId(): string {
@@ -83,6 +86,7 @@ export function createTodoItem(input: TodoCreateInput): Todo {
     repo: input.repo,
     branch: input.branch,
     filePath: input.filePath,
+    accountId: input.accountId,
   };
 }
 
@@ -102,6 +106,7 @@ export function applyTodoUpdate(existing: Todo, input: Partial<TodoUpdateInput>)
     repo: 'repo' in input ? input.repo : existing.repo,
     branch: 'branch' in input ? input.branch : existing.branch,
     filePath: 'filePath' in input ? input.filePath : existing.filePath,
+    accountId: 'accountId' in input ? input.accountId : existing.accountId,
     updatedAt: Date.now(),
   };
 }

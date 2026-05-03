@@ -313,12 +313,18 @@ class GitHubServiceClass {
     }
   }
 
-  async getFileContent(owner: string, repo: string, path: string, ref?: string): Promise<string | null> {
+  async getFileContent(
+    owner: string,
+    repo: string,
+    path: string,
+    ref?: string,
+    opts?: TokenOpts,
+  ): Promise<string | null> {
     try {
       const encodedPath = path.split('/').map(encodeURIComponent).join('/');
       let url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
       if (ref) url += `?ref=${encodeURIComponent(ref)}`;
-      const data = await this.request(url);
+      const data = await this.request(url, 'GET', undefined, opts);
       if (data.type === 'file' && data.content) {
         const base64 = data.content.replace(/\n/g, '');
         return decodeBase64(base64);
@@ -330,12 +336,18 @@ class GitHubServiceClass {
     }
   }
 
-  async getFileSha(owner: string, repo: string, path: string, ref?: string): Promise<string | null> {
+  async getFileSha(
+    owner: string,
+    repo: string,
+    path: string,
+    ref?: string,
+    opts?: TokenOpts,
+  ): Promise<string | null> {
     try {
       const encodedPath = path.split('/').map(encodeURIComponent).join('/');
       let url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
       if (ref) url += `?ref=${encodeURIComponent(ref)}`;
-      const data = await this.request(url);
+      const data = await this.request(url, 'GET', undefined, opts);
       return data.sha || null;
     } catch {
       return null;
@@ -349,6 +361,7 @@ class GitHubServiceClass {
     content: string,
     message: string,
     branch: string = 'main',
+    opts?: TokenOpts,
   ): Promise<GitHubFileCommit | null> {
     try {
       const encodedPath = path.split('/').map(encodeURIComponent).join('/');
@@ -362,7 +375,7 @@ class GitHubServiceClass {
         message,
         content: base64Content,
         branch,
-      });
+      }, opts);
     } catch (error) {
       console.warn('[GitHubService] Failed to create file:', error);
       return null;
@@ -415,11 +428,12 @@ class GitHubServiceClass {
     message: string,
     sha: string,
     branch: string = 'main',
+    opts?: TokenOpts,
   ): Promise<GitHubFileCommit | null> {
     try {
       const encodedPath = path.split('/').map(encodeURIComponent).join('/');
       const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
-      return await this.request(url, 'DELETE', { message, sha, branch });
+      return await this.request(url, 'DELETE', { message, sha, branch }, opts);
     } catch (error) {
       console.warn('[GitHubService] Failed to delete file:', error);
       return null;
@@ -431,9 +445,10 @@ class GitHubServiceClass {
     repo: string,
     folderPath: string,
     branch: string = 'main',
+    opts?: TokenOpts,
   ): Promise<GitHubFileCommit | null> {
     const keepPath = folderPath ? `${folderPath}/.gitkeep` : '.gitkeep';
-    return this.createFile(owner, repo, keepPath, '', `Create folder ${folderPath || '/'}`, branch);
+    return this.createFile(owner, repo, keepPath, '', `Create folder ${folderPath || '/'}`, branch, opts);
   }
 
   async updateFile(
@@ -443,6 +458,7 @@ class GitHubServiceClass {
     content: string,
     message: string,
     branch: string = 'main',
+    opts?: TokenOpts,
   ): Promise<GitHubFileCommit | null> {
     const encodedPath = path.split('/').map(encodeURIComponent).join('/');
     const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
@@ -454,12 +470,12 @@ class GitHubServiceClass {
 
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        const sha = await this.getFileSha(owner, repo, path, branch);
+        const sha = await this.getFileSha(owner, repo, path, branch, opts);
         if (!sha) {
-          return this.createFile(owner, repo, path, content, message, branch);
+          return this.createFile(owner, repo, path, content, message, branch, opts);
         }
 
-        return await this.request(url, 'PUT', { message, content: base64Content, sha, branch });
+        return await this.request(url, 'PUT', { message, content: base64Content, sha, branch }, opts);
       } catch (error) {
         const status = (error as { status?: number })?.status;
         if (status === 409 && attempt < 2) {
@@ -486,18 +502,23 @@ class GitHubServiceClass {
     message: string,
     oldSha: string,
     branch: string = 'main',
+    opts?: TokenOpts,
   ): Promise<boolean> {
-    const createResult = await this.createFile(owner, repo, newPath, content, message, branch);
+    const createResult = await this.createFile(owner, repo, newPath, content, message, branch, opts);
     if (!createResult) return false;
-    await this.deleteFile(owner, repo, oldPath, message, oldSha, branch);
+    await this.deleteFile(owner, repo, oldPath, message, oldSha, branch, opts);
     return true;
   }
 
-  private async request<T = any>(url: string, method: 'GET' | 'PUT' | 'DELETE' = 'GET', data?: any): Promise<T> {
-    if (!this.token) throw new Error('GitHub token is not configured');
-    const isFullUrl = url.startsWith('http');
-    const requestUrl = isFullUrl ? url : url;
-    const response = await http.request<T>({ url: requestUrl, method, data });
+  private async request<T = any>(
+    url: string,
+    method: 'GET' | 'PUT' | 'DELETE' = 'GET',
+    data?: any,
+    opts?: TokenOpts,
+  ): Promise<T> {
+    const override = opts?.tokenOverride;
+    if (!this.token && !override) throw new Error('GitHub token is not configured');
+    const response = await http.request<T>({ url, method, data, ...(override ? { authOverride: override } : {}) });
     return response.data;
   }
 
@@ -508,6 +529,11 @@ class GitHubServiceClass {
     const nextUrl = parseNextLink(linkHeader);
     return { data: response.data, nextUrl };
   }
+}
+
+export interface TokenOpts {
+  /** Per-call GitHub token override; bypasses the singleton active-account header. */
+  tokenOverride?: string;
 }
 
 function parseNextLink(linkHeader: string | null | undefined): string | null {

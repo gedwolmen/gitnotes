@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { create } from 'zustand';
 import { AIActionMode, AIModelConfig, AIProviderConfig, AISettings } from '../models/AIProvider';
+import { setChatRepoAccount } from '../services/ChatStorageService';
 
 const AI_SETTINGS_STORAGE_KEY = 'ai-settings';
 const AI_PROVIDER_KEY_PREFIX = 'ai-provider-key-';
@@ -13,6 +14,7 @@ interface AIState {
   chatRepoOwner: string | null;
   chatRepoName: string | null;
   chatRepoBranch: string;
+  chatRepoAccountId: string | null;
   providers: AIProviderConfig[];
   isLoading: boolean;
   error: string | null;
@@ -26,7 +28,7 @@ interface AIActions {
   addProvider: (provider: AIProviderConfig) => Promise<void>;
   updateProvider: (providerId: string, updates: Partial<AIProviderConfig>) => Promise<void>;
   removeProvider: (providerId: string) => Promise<void>;
-  setChatRepo: (owner: string | null, name: string | null, branch?: string) => Promise<void>;
+  setChatRepo: (owner: string | null, name: string | null, branch?: string, accountId?: string | null) => Promise<void>;
   getAvailableModels: () => AIModelConfig[];
   getSelectedModel: () => AIModelConfig | undefined;
   persistSettings: () => Promise<void>;
@@ -77,6 +79,7 @@ const createDefaultSettings = (): AISettings => ({
   chatRepoOwner: null,
   chatRepoName: null,
   chatRepoBranch: 'main',
+  chatRepoAccountId: null,
   providers: createDefaultProviders(),
 });
 
@@ -188,13 +191,15 @@ export const useAIStore = create<AIState & AIActions>()((set, get) => ({
     await get().persistSettings();
   },
 
-  setChatRepo: async (owner, name, branch = 'main') => {
+  setChatRepo: async (owner, name, branch = 'main', accountId = null) => {
     set({
       chatRepoOwner: owner,
       chatRepoName: name,
       chatRepoBranch: branch,
+      chatRepoAccountId: accountId,
       error: null,
     });
+    setChatRepoAccount(accountId);
     await get().persistSettings();
   },
 
@@ -230,6 +235,7 @@ export const useAIStore = create<AIState & AIActions>()((set, get) => ({
         chatRepoOwner,
         chatRepoName,
         chatRepoBranch,
+        chatRepoAccountId,
         providers,
       } = get();
 
@@ -253,6 +259,7 @@ export const useAIStore = create<AIState & AIActions>()((set, get) => ({
         chatRepoOwner,
         chatRepoName,
         chatRepoBranch,
+        chatRepoAccountId,
         providers: providers.map(stripProviderApiKey),
       };
 
@@ -284,6 +291,7 @@ export const useAIStore = create<AIState & AIActions>()((set, get) => ({
         ...defaultSettings,
         ...savedSettings,
         chatRepoBranch: savedSettings.chatRepoBranch ?? defaultSettings.chatRepoBranch,
+        chatRepoAccountId: savedSettings.chatRepoAccountId ?? defaultSettings.chatRepoAccountId,
         providers: mergeProviders(savedSettings.providers),
       };
 
@@ -295,6 +303,7 @@ export const useAIStore = create<AIState & AIActions>()((set, get) => ({
         isLoading: false,
         error: null,
       });
+      setChatRepoAccount(mergedSettings.chatRepoAccountId);
     } catch (err) {
       const defaultSettings = createDefaultSettings();
       set({

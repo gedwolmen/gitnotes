@@ -19,6 +19,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { format, isToday, isTomorrow, isPast } from 'date-fns';
 
 import { useTodos } from '../contexts/TodoContext';
+import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Todo, TodoPriority, PRIORITY_COLORS, PRIORITY_LABELS, REMINDER_OPTIONS, slugifyTodoText } from '../models/Todo';
 import { HapticService } from '../utils/haptics';
@@ -53,6 +54,7 @@ export default function TodoListScreen() {
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
+  const { activeAccountId } = useAuth();
   const [todoText, setTodoText] = useState('');
   const [todoNotes, setTodoNotes] = useState('');
   const [todoPriority, setTodoPriority] = useState<TodoPriority>('medium');
@@ -132,6 +134,7 @@ export default function TodoListScreen() {
       repo: todoRepo,
       branch: todoBranch,
       filePath: todoFilePath,
+      accountId: activeAccountId ?? undefined,
     });
 
     if (todoRepo && newTodo) {
@@ -141,6 +144,7 @@ export default function TodoListScreen() {
         filePath: todoFilePath,
         text: todoText.trim(),
         todo: newTodo,
+        accountId: newTodo.accountId,
       });
       if (!syncResult.success) {
         console.warn('[TodoList] GitHub sync failed:', syncResult.error);
@@ -163,6 +167,8 @@ export default function TodoListScreen() {
     const slug = slugifyTodoText(todoText.trim());
     const todoFilePath = editingTodo.filePath ?? `todos/${slug}.json`;
 
+    const editAccountId = editingTodo.accountId ?? activeAccountId ?? undefined;
+
     await updateTodo({
       id: editingTodo.id,
       text: todoText.trim(),
@@ -173,6 +179,7 @@ export default function TodoListScreen() {
       repo: todoRepo,
       branch: todoBranch,
       filePath: todoFilePath,
+      accountId: editAccountId,
     });
 
     const syncResult = await syncTodoToGitHub({
@@ -190,6 +197,7 @@ export default function TodoListScreen() {
         createdAt: editingTodo.createdAt,
         updatedAt: Date.now(),
       },
+      accountId: editAccountId,
     });
     if (!syncResult.success) {
       console.warn('[TodoList] GitHub sync failed:', syncResult.error);

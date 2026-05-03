@@ -30,6 +30,7 @@ export interface AISettings {
   chatRepoOwner: string | null;
   chatRepoName: string | null;
   chatRepoBranch: string;
+  chatRepoAccountId: string | null;
   providers: AIProviderConfig[];
 }
 

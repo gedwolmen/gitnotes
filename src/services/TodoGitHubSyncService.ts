@@ -1,6 +1,13 @@
 import { GitHubService } from './GitHubService';
 import { Todo } from '../models/Todo';
 import { parseRepoPath } from '../utils/gitPathParser';
+import { AuthService } from './AuthService';
+
+async function resolveToken(accountId?: string): Promise<string | undefined> {
+  if (!accountId) return undefined;
+  const t = await AuthService.getTokenById(accountId);
+  return t ?? undefined;
+}
 
 export interface TodoGitHubSyncResult {
   success: boolean;
@@ -28,10 +35,12 @@ export async function syncTodoToGitHub(params: {
   filePath?: string;
   text: string;
   todo: Partial<Todo>;
+  accountId?: string;
 }): Promise<TodoGitHubSyncResult> {
-  const { repo: repoPath, branch, filePath, text, todo } = params;
+  const { repo: repoPath, branch, filePath, text, todo, accountId } = params;
+  const tokenOverride = await resolveToken(accountId);
 
-  if (!GitHubService.isAuthenticated()) {
+  if (!tokenOverride && !GitHubService.isAuthenticated()) {
     return { success: false, error: 'GitHub not authenticated' };
   }
 
@@ -41,6 +50,7 @@ export async function syncTodoToGitHub(params: {
   }
 
   const targetBranch = branch || 'main';
+  const opts = tokenOverride ? { tokenOverride } : undefined;
 
   let targetPath = filePath;
   if (!targetPath) {
@@ -63,6 +73,7 @@ export async function syncTodoToGitHub(params: {
       content,
       message,
       targetBranch,
+      opts,
     );
 
     if (result) {

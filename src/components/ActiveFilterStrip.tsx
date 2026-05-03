@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { FilterableItem, UseEntityFilterReturn } from '../hooks/useEntityFilter';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Props<T extends FilterableItem> {
   filter: UseEntityFilterReturn<T>;
@@ -10,16 +11,19 @@ interface Props<T extends FilterableItem> {
 
 export function ActiveFilterStrip<T extends FilterableItem>({ filter }: Props<T>) {
   const { colors } = useTheme();
+  const { accounts } = useAuth();
   const {
     state,
     setSelectedRepo,
     setSelectedBranch,
     setSelectedFolder,
+    setSelectedAccountId,
     toggleTag,
     clearAll,
     activeCount,
   } = filter;
-  const { selectedRepo, selectedBranch, selectedFolder, selectedTags } = state;
+  const { selectedRepo, selectedBranch, selectedFolder, selectedTags, selectedAccountId } = state;
+  const selectedAccount = selectedAccountId ? accounts.find((a) => a.id === selectedAccountId) : null;
 
   if (activeCount === 0) return null;
 
@@ -48,6 +52,8 @@ export function ActiveFilterStrip<T extends FilterableItem>({ filter }: Props<T>
   return (
     <View style={styles.wrap}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
+        {selectedAccount &&
+          chip('account', 'person-outline', `@${selectedAccount.login}`, () => setSelectedAccountId(null))}
         {selectedRepo &&
           chip('repo', 'logo-github', selectedRepo.name, () => setSelectedRepo(null))}
         {selectedBranch &&

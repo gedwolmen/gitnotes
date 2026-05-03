@@ -28,6 +28,7 @@ export interface Note {
   format?: NoteFormat;
   github?: NoteGitHubLink;
   attachments?: Attachment[];
+  accountId?: string;
 }
 
 export interface NoteCreateInput {
@@ -42,6 +43,7 @@ export interface NoteCreateInput {
   isPinned?: boolean;
   format?: NoteFormat;
   attachments?: Attachment[];
+  accountId?: string;
 }
 
 export interface NoteUpdateInput {
@@ -57,6 +59,7 @@ export interface NoteUpdateInput {
   isPinned?: boolean;
   format?: NoteFormat;
   attachments?: Attachment[];
+  accountId?: string;
 }
 
 export function createNote(input: NoteCreateInput): Note {
@@ -76,6 +79,7 @@ export function createNote(input: NoteCreateInput): Note {
     isPinned: input.isPinned || false,
     format: input.format || 'markdown',
     attachments: input.attachments || [],
+    accountId: input.accountId,
   };
 }
 
@@ -93,6 +97,7 @@ export function updateNote(existing: Note, input: Partial<NoteCreateInput>): Not
     isPinned: input.isPinned ?? existing.isPinned,
     format: input.format ?? existing.format,
     attachments: input.attachments ?? existing.attachments,
+    accountId: input.accountId ?? existing.accountId,
     updatedAt: Date.now(),
   };
 }

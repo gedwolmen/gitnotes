@@ -44,6 +44,7 @@ import {
 } from '../models/Canvas';
 import GitContextPicker from '../components/GitContextPicker';
 import { syncCanvasToGitHub } from '../services/CanvasGitHubSyncService';
+import { useAuth } from '../contexts/AuthContext';
 import type { RootStackParamList } from '../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'CanvasEditor'>;
@@ -185,8 +186,10 @@ export default function CanvasEditorScreen() {
     ],
   }));
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const { activeAccountId } = useAuth();
   const [repo, setRepo] = useState<string | undefined>(existingCanvas?.repo);
   const [branch, setBranch] = useState<string | undefined>(existingCanvas?.branch);
+  const accountId = existingCanvas?.accountId ?? activeAccountId ?? undefined;
   const dragStartRef = useRef<Point | null>(null);
 
   const textFont = useMemo(
@@ -532,9 +535,9 @@ export default function CanvasEditorScreen() {
       : undefined;
 
     if (canvasId) {
-      await updateCanvas({ id: canvasId, title, scene, repo, branch, filePath: canvasFilePath });
+      await updateCanvas({ id: canvasId, title, scene, repo, branch, filePath: canvasFilePath, accountId });
     } else {
-      await createCanvas({ title, scene, repo, branch, filePath: canvasFilePath });
+      await createCanvas({ title, scene, repo, branch, filePath: canvasFilePath, accountId });
     }
 
     if (repo) {
@@ -544,6 +547,7 @@ export default function CanvasEditorScreen() {
         filePath: canvasFilePath,
         title: title.trim(),
         scene,
+        accountId,
       });
 
       if (!syncResult.success) {
@@ -552,7 +556,7 @@ export default function CanvasEditorScreen() {
     }
 
     navigation.goBack();
-  }, [canvasId, title, elements, canvasSize, cw, repo, branch, existingCanvas, updateCanvas, createCanvas, navigation]);
+  }, [canvasId, title, elements, canvasSize, cw, repo, branch, existingCanvas, updateCanvas, createCanvas, navigation, accountId]);
 
   const renderElement = useCallback(
     (el: CanvasElement, idx: number) => {

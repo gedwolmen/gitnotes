@@ -1,48 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
-
-const TOKEN_KEY = '@gitnotes:github_token';
-const SECURE_KEY = 'gitnotes_github_token';
-
-async function readToken(): Promise<string | null> {
-  if (Platform.OS === 'web') {
-    return AsyncStorage.getItem(TOKEN_KEY);
-  }
-  try {
-    const secure = await SecureStore.getItemAsync(SECURE_KEY);
-    if (secure) return secure;
-    // One-time migration from legacy AsyncStorage location.
-    const legacy = await AsyncStorage.getItem(TOKEN_KEY);
-    if (legacy) {
-      await SecureStore.setItemAsync(SECURE_KEY, legacy);
-      await AsyncStorage.removeItem(TOKEN_KEY);
-      return legacy;
-    }
-    return null;
-  } catch (err) {
-    console.error('[AuthService] readToken error:', err);
-    return null;
-  }
-}
-
-async function writeToken(token: string): Promise<void> {
-  if (Platform.OS === 'web') {
-    await AsyncStorage.setItem(TOKEN_KEY, token);
-    return;
-  }
-  await SecureStore.setItemAsync(SECURE_KEY, token);
-  await AsyncStorage.removeItem(TOKEN_KEY).catch(() => undefined);
-}
-
-async function deleteToken(): Promise<void> {
-  if (Platform.OS === 'web') {
-    await AsyncStorage.removeItem(TOKEN_KEY);
-    return;
-  }
-  await SecureStore.deleteItemAsync(SECURE_KEY).catch(() => undefined);
-  await AsyncStorage.removeItem(TOKEN_KEY).catch(() => undefined);
-}
+import AccountStorage, { StoredAccount } from './AccountStorage';
 
 export interface GitHubUser {
   id: number;
@@ -58,10 +14,33 @@ export interface AuthState {
   token: string | null;
 }
 
+function profileFromUser(user: GitHubUser) {
+  return {
+    login: user.login,
+    name: user.name ?? user.login,
+    email: user.email ?? '',
+    avatarUrl: user.avatar_url,
+  };
+}
+
+function userFromAccount(account: StoredAccount): GitHubUser {
+  return {
+    id: 0,
+    login: account.login,
+    name: account.name,
+    email: account.email,
+    avatar_url: account.avatarUrl,
+  };
+}
+
 export class AuthService {
   static async checkAuthState(): Promise<AuthState> {
-    const token = await readToken();
+    const token = await AccountStorage.getActiveToken();
     if (!token) return { isAuthenticated: false, user: null, token: null };
+    const active = await AccountStorage.getActiveAccount();
+    if (active) {
+      return { isAuthenticated: true, user: userFromAccount(active), token };
+    }
     const user = await this.getUser(token);
     return { isAuthenticated: !!user, user, token };
   }
@@ -69,21 +48,69 @@ export class AuthService {
   static async setToken(token: string): Promise<AuthState> {
     const user = await this.getUser(token);
     if (!user) return { isAuthenticated: false, user: null, token: null };
-    await writeToken(token);
+    await AccountStorage.addAccount(token, profileFromUser(user));
     return { isAuthenticated: true, user, token };
   }
 
-  static async clearToken(): Promise<void> {
-    await deleteToken();
+  /**
+   * Add another account without changing the currently-active one. Returns
+   * the persisted account, or null if the token is invalid.
+   */
+  static async addAccount(token: string): Promise<StoredAccount | null> {
+    const user = await this.getUser(token);
+    if (!user) return null;
+    const accountsBefore = await AccountStorage.listAccounts();
+    const account = await AccountStorage.addAccount(token, profileFromUser(user));
+    if (accountsBefore.length > 0) {
+      const currentActive = await AccountStorage.getActiveAccountId();
+      if (!currentActive) {
+        await AccountStorage.setActiveAccountId(account.id);
+      }
+    }
+    return account;
   }
 
-  /**
-   * Returns the stored GitHub token, migrating from legacy AsyncStorage
-   * to SecureStore on first access. Use this everywhere instead of reading
-   * the token storage key directly.
-   */
+  static async clearToken(): Promise<void> {
+    const id = await AccountStorage.getActiveAccountId();
+    if (id) await AccountStorage.removeAccount(id);
+    await AccountStorage.deleteLegacy();
+  }
+
   static async getToken(): Promise<string | null> {
-    return readToken();
+    return AccountStorage.getActiveToken();
+  }
+
+  static async getTokenById(id: string): Promise<string | null> {
+    return AccountStorage.getTokenById(id);
+  }
+
+  static async listAccounts(): Promise<StoredAccount[]> {
+    return AccountStorage.listAccounts();
+  }
+
+  static async getActiveAccount(): Promise<StoredAccount | null> {
+    return AccountStorage.getActiveAccount();
+  }
+
+  static async getActiveAccountId(): Promise<string | null> {
+    return AccountStorage.getActiveAccountId();
+  }
+
+  static async setActiveAccount(id: string): Promise<AuthState> {
+    const accounts = await AccountStorage.listAccounts();
+    const account = accounts.find((a) => a.id === id);
+    if (!account) return { isAuthenticated: false, user: null, token: null };
+    await AccountStorage.setActiveAccountId(id);
+    const token = await AccountStorage.getTokenById(id);
+    return {
+      isAuthenticated: !!token,
+      user: token ? userFromAccount(account) : null,
+      token,
+    };
+  }
+
+  static async removeAccount(id: string): Promise<void> {
+    await AccountStorage.removeAccount(id);
   }
 
   static async getUser(token: string): Promise<GitHubUser | null> {
