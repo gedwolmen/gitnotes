@@ -221,8 +221,14 @@ export default function TodoListScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            await deleteTodo(id);
+            const ok = await deleteTodo(id);
             HapticService.light();
+            if (!ok) {
+              const message =
+                useTodoStore.getState().error ??
+                'Could not delete todo. Please try again.';
+              Alert.alert('Delete failed', message);
+            }
           },
         },
       ]
