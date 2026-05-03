@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { NeorgContentBlock, NeorgHeading, NeorgListItem, NeorgChecklistItem, NeorgDefinitionItem } from '../models/NeorgContent';
 import { useTheme } from '../contexts/ThemeContext';
@@ -22,6 +22,168 @@ type InlineSegment =
   | { type: 'subscript'; content: string }
   | { type: 'link'; label: string; target: string }
   | { type: 'tag'; name: string };
+
+type InlinePattern = {
+  regex: RegExp;
+  handler: (match: RegExpMatchArray) => InlineSegment | null;
+  validate?: (source: string, match: RegExpMatchArray) => boolean;
+};
+
+const URL_SHAPED_REGEX = /https?:\/\/[^\s<>()]+/g;
+const WORD_CHAR_REGEX = /[A-Za-z0-9]/;
+
+const inlinePatterns: InlinePattern[] = [
+  {
+    regex: /\{([a-z0-9_.:]+)\}(?:\[([^\]]+)\])?/g,
+    handler: (m) => {
+      const target = m[1];
+      if (/^[a-z0-9_.:-]+$/.test(target)) {
+        if (m[2]) return { type: 'link', label: m[2], target };
+        return { type: 'tag', name: target };
+      }
+      return null;
+    },
+  },
+  {
+    regex: /\[\[([^\]]+)\]\[([^\]]+)\]\]/g,
+    handler: (m) => ({ type: 'link', label: m[2], target: m[1] }),
+  },
+  {
+    regex: /\[\[([^\]]+)\]\]/g,
+    handler: (m) => ({ type: 'link', label: m[1], target: m[1] }),
+  },
+  {
+    regex: /\[([^\]]+)\]\(([^)]+)\)/g,
+    handler: (m) => ({ type: 'link', label: m[1], target: m[2] }),
+  },
+  {
+    regex: /`([^`]+)`/g,
+    handler: (m) => ({ type: 'code', content: m[1] }),
+  },
+  {
+    regex: /\*(\S[^*]*?)\*/g,
+    handler: (m) => ({ type: 'bold', content: m[1] }),
+  },
+  {
+    regex: /\/(\S[^/]*?)\//g,
+    handler: (m) => ({ type: 'italic', content: m[1] }),
+    validate: (source, match) => {
+      const start = match.index ?? 0;
+      const end = start + match[0].length;
+      const prev = start > 0 ? source[start - 1] : '';
+      const next = end < source.length ? source[end] : '';
+      return (!prev || !WORD_CHAR_REGEX.test(prev)) && (!next || !WORD_CHAR_REGEX.test(next));
+    },
+  },
+  {
+    regex: /_([^_]+)_/g,
+    handler: (m) => ({ type: 'underline', content: m[1] }),
+  },
+  {
+    regex: /-([^-\s][^-]*)-/g,
+    handler: (m) => ({ type: 'strikethrough', content: m[1] }),
+  },
+  {
+    regex: /\^([^^]+)\^/g,
+    handler: (m) => ({ type: 'superscript', content: m[1] }),
+  },
+  {
+    regex: /,([^,]+),/g,
+    handler: (m) => ({ type: 'subscript', content: m[1] }),
+  },
+];
+
+function findOuterDelimitedMatch(text: string, delimiter: '*' | '/'): { length: number; segment: InlineSegment } | null {
+  if (!text.startsWith(delimiter)) return null;
+
+  const closingIndex = text.lastIndexOf(delimiter);
+  if (closingIndex <= 0) return null;
+
+  const content = text.slice(1, closingIndex);
+  if (!content || !content.includes(delimiter)) return null;
+  if (!/^\S/.test(content)) return null;
+
+  return {
+    length: closingIndex + 1,
+    segment: delimiter === '*'
+      ? { type: 'bold', content }
+      : { type: 'italic', content },
+  };
+}
+
+export function parseNeorgInlineSegments(text: string): InlineSegment[] {
+  const segments: InlineSegment[] = [];
+  let remaining = text;
+
+  while (remaining.length > 0) {
+    let earliestMatch: { index: number; length: number; segment: InlineSegment } | null = null;
+
+    const urlMatch = remaining.match(URL_SHAPED_REGEX);
+    if (urlMatch?.index !== undefined) {
+      earliestMatch = {
+        index: urlMatch.index,
+        length: urlMatch[0].length,
+        segment: { type: 'text', content: urlMatch[0] },
+      };
+    }
+
+    const nestedBold = findOuterDelimitedMatch(remaining, '*');
+    if (nestedBold) {
+      earliestMatch = {
+        index: 0,
+        length: nestedBold.length,
+        segment: nestedBold.segment,
+      };
+    }
+
+    const nestedItalic = findOuterDelimitedMatch(remaining, '/');
+    if (nestedItalic && (!earliestMatch || earliestMatch.index > 0 || nestedItalic.length > earliestMatch.length)) {
+      earliestMatch = {
+        index: 0,
+        length: nestedItalic.length,
+        segment: nestedItalic.segment,
+      };
+    }
+
+    for (const { regex, handler, validate } of inlinePatterns) {
+      regex.lastIndex = 0;
+      const match = regex.exec(remaining);
+      if (match && match.index >= 0 && (!validate || validate(remaining, match))) {
+        const seg = handler(match);
+        if (seg && (!earliestMatch || match.index < earliestMatch.index)) {
+          earliestMatch = { index: match.index, length: match[0].length, segment: seg };
+        }
+      }
+    }
+
+    if (earliestMatch) {
+      if (earliestMatch.index > 0) {
+        segments.push({ type: 'text', content: remaining.slice(0, earliestMatch.index) });
+      }
+      segments.push(earliestMatch.segment);
+      remaining = remaining.slice(earliestMatch.index + earliestMatch.length);
+    } else {
+      segments.push({ type: 'text', content: remaining });
+      break;
+    }
+  }
+
+  return segments;
+}
+
+export function createMemoizedNeorgInlineParser(
+  parser: (text: string) => InlineSegment[] = parseNeorgInlineSegments,
+): (text: string) => InlineSegment[] {
+  const cache = new Map<string, InlineSegment[]>();
+
+  return (text: string): InlineSegment[] => {
+    const cached = cache.get(text);
+    if (cached) return cached;
+    const parsed = parser(text);
+    cache.set(text, parsed);
+    return parsed;
+  };
+}
 
 export default function NeorgRenderer({ blocks, format = 'neorg' }: NeorgRendererProps) {
   const { colors } = useTheme();
@@ -49,93 +211,7 @@ export default function NeorgRenderer({ blocks, format = 'neorg' }: NeorgRendere
   const quoteText = overrides.blockquote?.text ?? colors.text;
   const dividerColor = overrides.divider?.color ?? colors.border;
 
-  const parseInline = (text: string): InlineSegment[] => {
-    const segments: InlineSegment[] = [];
-    const patterns: { regex: RegExp; handler: (m: RegExpMatchArray) => InlineSegment | null }[] = [
-      {
-        regex: /\{([a-z0-9_.:]+)\}(?:\[([^\]]+)\])?/g,
-        handler: (m) => {
-          const target = m[1];
-          if (/^[a-z0-9_.:-]+$/.test(target)) {
-            if (m[2]) return { type: 'link', label: m[2], target };
-            return { type: 'tag', name: target };
-          }
-          return null;
-        },
-      },
-      {
-        regex: /\[\[([^\]]+)\]\[([^\]]+)\]\]/g,
-        handler: (m) => ({ type: 'link', label: m[2], target: m[1] }),
-      },
-      {
-        regex: /\[\[([^\]]+)\]\]/g,
-        handler: (m) => ({ type: 'link', label: m[1], target: m[1] }),
-      },
-      {
-        regex: /\[([^\]]+)\]\(([^)]+)\)/g,
-        handler: (m) => ({ type: 'link', label: m[1], target: m[2] }),
-      },
-      {
-        regex: /`([^`]+)`/g,
-        handler: (m) => ({ type: 'code', content: m[1] }),
-      },
-      {
-        regex: /\*([^*]+)\*/g,
-        handler: (m) => ({ type: 'bold', content: m[1] }),
-      },
-      {
-        regex: /\/([^/]+)\//g,
-        handler: (m) => ({ type: 'italic', content: m[1] }),
-      },
-      {
-        regex: /_([^_]+)_/g,
-        handler: (m) => ({ type: 'underline', content: m[1] }),
-      },
-      {
-        regex: /-([^-\s][^-]*)-/g,
-        handler: (m) => ({ type: 'strikethrough', content: m[1] }),
-      },
-      {
-        regex: /\^([^^]+)\^/g,
-        handler: (m) => ({ type: 'superscript', content: m[1] }),
-      },
-      {
-        regex: /,([^,]+),/g,
-        handler: (m) => ({ type: 'subscript', content: m[1] }),
-      },
-    ];
-
-    let remaining = text;
-    while (remaining.length > 0) {
-      let earliestMatch: { index: number; length: number; segment: InlineSegment } | null = null;
-
-      for (const { regex, handler } of patterns) {
-        regex.lastIndex = 0;
-        const match = regex.exec(remaining);
-        if (match && match.index >= 0) {
-          if (!earliestMatch || match.index < earliestMatch.index) {
-            const seg = handler(match);
-            if (seg) {
-              earliestMatch = { index: match.index, length: match[0].length, segment: seg };
-            }
-          }
-        }
-      }
-
-      if (earliestMatch) {
-        if (earliestMatch.index > 0) {
-          segments.push({ type: 'text', content: remaining.slice(0, earliestMatch.index) });
-        }
-        segments.push(earliestMatch.segment);
-        remaining = remaining.slice(earliestMatch.index + earliestMatch.length);
-      } else {
-        segments.push({ type: 'text', content: remaining });
-        break;
-      }
-    }
-
-    return segments;
-  };
+  const parseInline = useMemo(() => createMemoizedNeorgInlineParser(), []);
 
   const segKey = (seg: InlineSegment, i: number): string =>
     `${i}-${seg.type}-${'content' in seg ? seg.content : 'name' in seg ? seg.name : seg.type}`;
@@ -150,13 +226,13 @@ export default function NeorgRenderer({ blocks, format = 'neorg' }: NeorgRendere
           const k = segKey(seg, i);
           switch (seg.type) {
             case 'bold':
-              return <Text key={k} selectable style={styles.bold}>{seg.content}</Text>;
+              return <Text key={k} selectable style={styles.bold}>{renderInline(seg.content)}</Text>;
             case 'italic':
-              return <Text key={k} selectable style={styles.italic}>{seg.content}</Text>;
+              return <Text key={k} selectable style={styles.italic}>{renderInline(seg.content)}</Text>;
             case 'underline':
-              return <Text key={k} selectable style={styles.underline}>{seg.content}</Text>;
+              return <Text key={k} selectable style={styles.underline}>{renderInline(seg.content)}</Text>;
             case 'strikethrough':
-              return <Text key={k} selectable style={styles.strikethrough}>{seg.content}</Text>;
+              return <Text key={k} selectable style={styles.strikethrough}>{renderInline(seg.content)}</Text>;
             case 'code':
               return (
                 <Text
@@ -172,9 +248,9 @@ export default function NeorgRenderer({ blocks, format = 'neorg' }: NeorgRendere
                 </Text>
               );
             case 'superscript':
-              return <Text key={k} selectable style={styles.superscript}>{seg.content}</Text>;
+              return <Text key={k} selectable style={styles.superscript}>{renderInline(seg.content)}</Text>;
             case 'subscript':
-              return <Text key={k} selectable style={styles.subscript}>{seg.content}</Text>;
+              return <Text key={k} selectable style={styles.subscript}>{renderInline(seg.content)}</Text>;
             case 'link':
               return (
                 <Text key={k} selectable style={[styles.link, { color: linkColor }]}>
@@ -211,19 +287,15 @@ export default function NeorgRenderer({ blocks, format = 'neorg' }: NeorgRendere
 
   const renderHeading = (heading: NeorgHeading, blockIndex: number) => {
     const fontSize = 32 - (heading.level - 1) * 4;
-    const weight = headingWeightFor(heading.level);
+    const fontWeight = headingWeightFor(heading.level);
     return (
       <Text
         key={`heading-${blockIndex}`}
         selectable
         style={[
           styles.heading,
-          {
-            fontSize,
-            color: headingColorFor(heading.level),
-            marginTop: heading.level === 1 ? 16 : 12,
-            ...(weight ? { fontWeight: weight } : {}),
-          },
+          { fontSize, color: headingColorFor(heading.level), marginTop: heading.level === 1 ? 16 : 12 },
+          fontWeight ? { fontWeight } : null,
         ]}
       >
         {renderInline(heading.text)}
