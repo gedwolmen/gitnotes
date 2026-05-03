@@ -1,5 +1,5 @@
 import React, { type ReactNode } from 'react';
-import { Alert, Text, type TextStyle, type ViewStyle, type ImageStyle, type ScrollView, Linking } from 'react-native';
+import { Alert, Text, View, type TextStyle, type ViewStyle, type ImageStyle, type ScrollView, Linking } from 'react-native';
 import { Renderer, type RendererInterface } from 'react-native-marked';
 import { Image } from 'expo-image';
 
@@ -157,17 +157,48 @@ export class NotePreviewRenderer extends Renderer implements RendererInterface {
 
   codespan(text: string, styles?: TextStyle): ReactNode {
     return (
-      <Text key={this.getKey()} selectable style={styles}>
+      <Text
+        key={this.getKey()}
+        selectable
+        style={[
+          {
+            backgroundColor: this.deps.colors.surfaceSecondary ?? '#f0f0f0',
+            paddingHorizontal: 4,
+            borderRadius: 4,
+            fontFamily: 'monospace',
+            fontSize: 14,
+            color: this.deps.colors.text,
+          },
+          styles,
+        ]}
+      >
         {text}
       </Text>
     );
   }
 
-  code(text: string, _language?: string, containerStyle?: ViewStyle, textStyle?: TextStyle): ReactNode {
+  code(text: string, language?: string, containerStyle?: ViewStyle, textStyle?: TextStyle): ReactNode {
     return (
-      <Text key={this.getKey()} selectable style={[containerStyle, textStyle]}>
-        {text}
-      </Text>
+      <View key={this.getKey()} style={containerStyle}>
+        {language ? (
+          <Text
+            selectable
+            style={{
+              fontSize: 12,
+              fontWeight: '600',
+              textTransform: 'uppercase',
+              marginBottom: 4,
+              color: this.deps.colors.text,
+              opacity: 0.7,
+            }}
+          >
+            {language}
+          </Text>
+        ) : null}
+        <Text selectable style={textStyle}>
+          {text}
+        </Text>
+      </View>
     );
   }
 }

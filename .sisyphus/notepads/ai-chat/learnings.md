@@ -32,3 +32,6 @@
 ## 2026-05-03
 - Markdown preview links need target classification before routing; raw `Linking.openURL` breaks internal note navigation and fragment scrolling behavior.
 - Relative note links should resolve against the current note file path, while stored note lookups should normalize away leading slashes because folder selections use `/path` but synced note `filePath` values do not.
+- Markdown fenced code rendering can stay lightweight: a plain `<Text>` language label above the existing code body fixes dropped language metadata without adding syntax highlighting.
+- Neorg inline parsing is safer when URL-shaped substrings are reserved before italic matching and repeated parses are cached behind a memoized parser function.
+- Neorg list indentation needs adaptive parsing: the first indented space-based sibling should define the indent width, while tabs should count as one nesting level.

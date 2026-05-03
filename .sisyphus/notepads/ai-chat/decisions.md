@@ -19,3 +19,4 @@
 ## 2026-05-03
 - Added `classifyHref` as a pure utility so link routing rules are unit-testable outside the renderer.
 - Kept external `http(s)`, `mailto:`, and `tel:` links on the native platform via `Linking.openURL` instead of adding in-app web handling.
+- Kept renderer bug coverage in a dedicated `__tests__/renderer-pipeline.test.ts` regression file so markdown and Neorg pipeline fixes for issue #423 stay exercised together.
