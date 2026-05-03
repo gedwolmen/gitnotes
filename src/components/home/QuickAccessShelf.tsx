@@ -3,11 +3,16 @@ import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import type { RecentItem } from '../../utils/recentItems';
+import CanvasThumbnail from '../CanvasThumbnail';
 
 interface Props {
   items: RecentItem[];
   onOpen: (item: RecentItem) => void;
 }
+
+const CARD_WIDTH = 176;
+const CARD_HEIGHT = 116;
+const THUMB_HEIGHT = 64;
 
 function iconFor(kind: RecentItem['kind']): keyof typeof Ionicons.glyphMap {
   if (kind === 'canvas') return 'easel';
@@ -42,6 +47,7 @@ export function QuickAccessShelf({ items, onOpen }: Props) {
       >
         {items.map((item) => {
           const accent = item.kind === 'note' ? colors.primary : colors.accent;
+          const isCanvas = item.kind === 'canvas';
           return (
             <Pressable
               key={`${item.kind}-${item.data.id}`}
@@ -58,15 +64,26 @@ export function QuickAccessShelf({ items, onOpen }: Props) {
               accessibilityRole="button"
               accessibilityLabel={`Pinned ${item.kind} ${titleFor(item)}`}
             >
-              <View style={[styles.badge, { backgroundColor: accent + '1F' }]}>
-                <Ionicons name={iconFor(item.kind)} size={16} color={accent} />
+              {isCanvas ? (
+                <View style={[styles.thumbWrap, { height: THUMB_HEIGHT }]}>
+                  <CanvasThumbnail scene={item.data.scene} width={CARD_WIDTH} height={THUMB_HEIGHT} />
+                  <View style={[styles.canvasBadge, { backgroundColor: colors.background }]}>
+                    <Ionicons name="easel" size={11} color={accent} />
+                  </View>
+                </View>
+              ) : (
+                <View style={[styles.badge, { backgroundColor: accent + '1F' }]}>
+                  <Ionicons name={iconFor(item.kind)} size={18} color={accent} />
+                </View>
+              )}
+              <View style={styles.titleWrap}>
+                <Text
+                  style={[styles.title, { color: colors.text }]}
+                  numberOfLines={2}
+                >
+                  {titleFor(item)}
+                </Text>
               </View>
-              <Text
-                style={[styles.title, { color: colors.text }]}
-                numberOfLines={2}
-              >
-                {titleFor(item)}
-              </Text>
             </Pressable>
           );
         })}
@@ -94,27 +111,48 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   row: {
-    gap: 10,
+    gap: 12,
     paddingRight: 12,
   },
   card: {
-    width: 148,
-    minHeight: 88,
-    borderRadius: 14,
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
+    borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
-    padding: 12,
-    gap: 8,
+    overflow: 'hidden',
     justifyContent: 'space-between',
   },
   badge: {
-    width: 28,
-    height: 28,
-    borderRadius: 9,
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: 12,
+  },
+  thumbWrap: {
+    width: '100%',
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    position: 'relative',
+  },
+  canvasBadge: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  titleWrap: {
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+    paddingTop: 4,
+  },
   title: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
     letterSpacing: -0.1,
   },
