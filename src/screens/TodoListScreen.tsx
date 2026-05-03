@@ -13,7 +13,9 @@ import {
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Ionicons } from '@expo/vector-icons';
-import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import ReanimatedSwipeable, {
+  type SwipeableMethods,
+} from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format, isToday, isTomorrow, isPast } from 'date-fns';
@@ -56,6 +58,34 @@ export default function TodoListScreen() {
   const { todos, createTodo, updateTodo, toggleTodo, refreshTodos } = useTodos();
   const deleteTodo = useTodoStore((state) => state.deleteTodo);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const swipeableRefs = useRef<
+    Record<string, React.RefObject<SwipeableMethods | null>>
+  >({});
+  const openSwipeableRef = useRef<SwipeableMethods | null>(null);
+
+  const getSwipeableRef = useCallback((todoId: string) => {
+    if (!swipeableRefs.current[todoId]) {
+      swipeableRefs.current[todoId] = React.createRef<SwipeableMethods>();
+    }
+    return swipeableRefs.current[todoId];
+  }, []);
+
+  const handleSwipeableWillOpen = useCallback((todoId: string) => {
+    const swipeable = swipeableRefs.current[todoId]?.current;
+    if (openSwipeableRef.current && openSwipeableRef.current !== swipeable) {
+      openSwipeableRef.current.close();
+    }
+    if (swipeable) {
+      openSwipeableRef.current = swipeable;
+    }
+  }, []);
+
+  const handleSwipeableWillClose = useCallback((todoId: string) => {
+    const swipeable = swipeableRefs.current[todoId]?.current;
+    if (openSwipeableRef.current === swipeable) {
+      openSwipeableRef.current = null;
+    }
+  }, []);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
@@ -212,6 +242,16 @@ export default function TodoListScreen() {
   }, [toggleTodo]);
 
   const handleDeleteTodo = useCallback(async (id: string) => {
+    // Close the swipeable BEFORE prompting / deleting so its internal transform
+    // resets and FlashList's row recycling doesn't keep a stale layout for the
+    // deleted index. Without this, deleting the top row leaves an empty slot
+    // until the screen re-mounts or scrolls. (issue #490)
+    const swipeable = swipeableRefs.current[id]?.current;
+    swipeable?.close();
+    if (openSwipeableRef.current === swipeable) {
+      openSwipeableRef.current = null;
+    }
+
     Alert.alert(
       'Delete Todo',
       'Are you sure you want to delete this todo?',
@@ -221,7 +261,14 @@ export default function TodoListScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
+            // Wait one frame so the close animation can settle and the
+            // swipeable's animated container has collapsed back to 0 offset
+            // before the row is removed from the data source. (issue #490)
+            await new Promise<void>((resolve) =>
+              requestAnimationFrame(() => resolve())
+            );
             const ok = await deleteTodo(id);
+            delete swipeableRefs.current[id];
             HapticService.light();
             if (!ok) {
               const message =
@@ -309,7 +356,13 @@ export default function TodoListScreen() {
       const isOverdue = item.dueDate ? isPast(new Date(item.dueDate)) && !item.completed : false;
 
       return (
-        <ReanimatedSwipeable renderRightActions={renderRightActions} overshootRight={false}>
+        <ReanimatedSwipeable
+          ref={getSwipeableRef(item.id)}
+          onSwipeableWillOpen={() => handleSwipeableWillOpen(item.id)}
+          onSwipeableWillClose={() => handleSwipeableWillClose(item.id)}
+          renderRightActions={renderRightActions}
+          overshootRight={false}
+        >
           <TouchableOpacity
             style={[
               styles.todoItem,
@@ -402,7 +455,15 @@ export default function TodoListScreen() {
         </ReanimatedSwipeable>
       );
     },
-    [colors, handleToggleTodo, handleDeleteTodo, openEditModal]
+    [
+      colors,
+      handleToggleTodo,
+      handleDeleteTodo,
+      openEditModal,
+      getSwipeableRef,
+      handleSwipeableWillOpen,
+      handleSwipeableWillClose,
+    ]
   );
 
   const renderEmptyState = () => (
@@ -443,6 +504,9 @@ export default function TodoListScreen() {
         data={filteredTodos}
         renderItem={renderTodoItem}
         keyExtractor={(item) => item.id}
+        // Invalidate cached cell layout when the list shrinks/grows so a deleted
+        // top row doesn't leave a stale empty slot behind. (issue #490)
+        extraData={filteredTodos.length}
         contentContainerStyle={{ ...styles.listContent, paddingBottom: tabBarHeight + 16 }}
         ListEmptyComponent={renderEmptyState}
         showsVerticalScrollIndicator={false}
