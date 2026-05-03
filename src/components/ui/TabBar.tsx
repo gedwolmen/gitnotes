@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,31 +20,33 @@ const TAB_ICONS: Record<string, { focused: IoniconName; outline: IoniconName; la
 export function TabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const { colors, spacing } = useTokens();
-  const { glossy } = useTheme();
+  const { isDark } = useTheme();
 
   return (
     <View
+      pointerEvents="box-none"
       style={{
-        backgroundColor: glossy ? 'transparent' : colors.bg,
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
         paddingHorizontal: spacing[6],
         paddingBottom: insets.bottom + spacing[3],
         paddingTop: spacing[4],
-        position: glossy ? 'absolute' : 'relative',
-        bottom: 0,
-        left: 0,
-        right: 0,
+        backgroundColor: 'transparent',
       }}
     >
-      <Surface
-        elevation="floating"
-        radius="pill"
-        glassLayer="glassNav"
+      <BlurView
+        intensity={Platform.OS === 'ios' ? 60 : 30}
+        tint={isDark ? 'dark' : 'light'}
         style={{
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-around',
           paddingVertical: spacing[2],
           paddingHorizontal: spacing[3],
+          borderRadius: 999,
+          overflow: 'hidden',
         }}
       >
         {state.routes.map((route, index) => {
@@ -85,6 +88,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
                   height: 40,
                   alignItems: 'center',
                   justifyContent: 'center',
+                  backgroundColor: 'transparent',
                 }}
               >
                 <Ionicons
@@ -96,7 +100,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
             </Pressable>
           );
         })}
-      </Surface>
+      </BlurView>
     </View>
   );
 }

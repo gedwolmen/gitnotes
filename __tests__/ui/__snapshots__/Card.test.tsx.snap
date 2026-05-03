@@ -17,7 +17,6 @@ exports[`Card snapshots non-interactive light 1`] = `
         "shadowOpacity": 1,
         "shadowRadius": 8,
       },
-      undefined,
       [
         {
           "padding": 16,

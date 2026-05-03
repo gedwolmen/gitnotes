@@ -21,7 +21,7 @@ export default function SearchBar({
   style,
   testID,
 }: SearchBarProps) {
-  const { colors, glossy } = useTheme();
+  const { colors } = useTheme();
 
   const handleClear = () => {
     onChangeText('');
@@ -37,7 +37,6 @@ export default function SearchBar({
       autoCorrect={false}
       autoCapitalize="none"
       containerStyle={style}
-      glassLayer={glossy ? 'glassNav' : undefined}
       surfaceTestID={testID}
       leading={<Ionicons name="search" size={20} color={colors.textSecondary} />}
       trailing={

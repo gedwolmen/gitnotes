@@ -65,7 +65,6 @@ exports[`Button snapshots primary in light + dark: primary-dark 1`] = `
             "shadowOpacity": 1,
             "shadowRadius": 8,
           },
-          undefined,
           [
             {
               "alignItems": "center",
@@ -200,7 +199,6 @@ exports[`Button snapshots primary in light + dark: primary-light 1`] = `
             "shadowOpacity": 1,
             "shadowRadius": 8,
           },
-          undefined,
           [
             {
               "alignItems": "center",

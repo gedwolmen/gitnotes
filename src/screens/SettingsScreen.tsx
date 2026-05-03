@@ -44,7 +44,7 @@ import { useAIStore } from '../stores/aiStore';
 import type { AIProviderConfig } from '../models/AIProvider';
 
 export default function SettingsScreen() {
-  const { theme, colors, setTheme, style: uiStyle, setStyle, glossyEnabled, setGlossy } = useTheme();
+  const { theme, colors, setTheme, style: uiStyle, setStyle } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { isTablet, maxContentWidth } = useResponsive();
   const { clearAllNotes, refreshNotes } = useNotes();
@@ -336,7 +336,7 @@ export default function SettingsScreen() {
       <ScreenHeader title="Settings" />
       <ScrollView style={styles.scrollContent} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, gap: 20 }}>
 
-        <Group title="Appearance" footer={uiStyle === 'neumorphic' ? 'Soft-UI shadows. Toggle off for the classic flat look. Glossy adds blurred translucency on top.' : 'Classic flat look. Switch to Updated UI to enable Glossy.'}>
+        <Group title="Appearance" footer={uiStyle === 'neumorphic' ? 'Soft-UI shadows. Toggle off for the classic flat look.' : 'Classic flat look. Toggle on for the Updated UI shadows.'}>
           <GroupRow
             trailing={
               <Toggle
@@ -348,19 +348,6 @@ export default function SettingsScreen() {
           >
             <Text style={[styles.settingLabel, { color: colors.text }]}>Updated UI</Text>
           </GroupRow>
-          {uiStyle === 'neumorphic' && (
-            <GroupRow
-              trailing={
-                <Toggle
-                  testID="glossy-toggle"
-                  value={glossyEnabled}
-                  onValueChange={setGlossy}
-                />
-              }
-            >
-              <Text style={[styles.settingLabel, { color: colors.text, paddingLeft: 16 }]}>Glossy</Text>
-            </GroupRow>
-          )}
           <GroupRow
             trailing={
               <Toggle

@@ -54,7 +54,6 @@ exports[`Toggle snapshots both states: toggle-off 1`] = `
           "shadowOpacity": 1,
           "shadowRadius": 4,
         },
-        undefined,
         {
           "height": 30,
           "justifyContent": "center",
@@ -197,7 +196,6 @@ exports[`Toggle snapshots both states: toggle-on 1`] = `
           "shadowOpacity": 1,
           "shadowRadius": 4,
         },
-        undefined,
         {
           "height": 30,
           "justifyContent": "center",

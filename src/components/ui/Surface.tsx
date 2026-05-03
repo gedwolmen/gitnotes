@@ -1,6 +1,5 @@
 import React, { ReactNode, useMemo } from 'react';
 import { Platform, StyleSheet, View, ViewProps, ViewStyle, StyleProp } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { useTheme, useTokens } from '../../contexts/ThemeContext';
 import {
   buildElevation,
@@ -16,7 +15,6 @@ export interface SurfaceProps extends Omit<ViewProps, 'style'> {
   style?: StyleProp<ViewStyle>;
   children?: ReactNode;
   testID?: string;
-  glassLayer?: 'glassSurface' | 'glassCard' | 'glassElevated' | 'glassNav' | 'glassBorder';
 }
 
 function detectPlatform(): TokenPlatform {
@@ -26,8 +24,8 @@ function detectPlatform(): TokenPlatform {
 }
 
 export function Surface(props: SurfaceProps) {
-  const { elevation = 'raised', inset = false, radius = 'md', style, children, testID, glassLayer = 'glassSurface', ...rest } = props;
-  const { style: themeStyle, glossy, isDark } = useTheme();
+  const { elevation = 'raised', inset = false, radius = 'md', style, children, testID, ...rest } = props;
+  const { style: themeStyle } = useTheme();
   const { colors, radii } = useTokens();
   const platform = detectPlatform();
 
@@ -46,41 +44,24 @@ export function Surface(props: SurfaceProps) {
 
   const borderRadius = radii[radius];
   const baseStyle: ViewStyle = {
-    backgroundColor: glossy ? colors[glassLayer] : colors.surface,
+    backgroundColor: colors.surface,
     borderRadius,
   };
-
-  const webGlassStyle = glossy && platform === 'web' ? {
-    backdropFilter: 'blur(20px)',
-    WebkitBackdropFilter: 'blur(20px)',
-  } : {};
 
   const androidOverlays = elevationStyles.androidOverlays;
   const showOverlays = platform === 'android' && androidOverlays !== undefined;
 
-  const Wrapper = glossy && platform !== 'web' ? BlurView : View;
-  const blurProps = glossy && platform !== 'web' ? {
-    intensity: platform === 'ios' ? 60 : 30,
-    tint: isDark ? 'dark' : 'light' as any,
-  } : {};
-
   return (
-    <Wrapper
+    <View
       {...rest}
       testID={testID}
-      {...blurProps}
-      style={[
-        baseStyle,
-        elevationStyles.outer as ViewStyle,
-        (glossy && platform === 'web') ? (webGlassStyle as ViewStyle) : undefined,
-        style
-      ]}
+      style={[baseStyle, elevationStyles.outer as ViewStyle, style]}
     >
       <View
         pointerEvents="none"
         style={[StyleSheet.absoluteFill, { borderRadius }, elevationStyles.inner as ViewStyle]}
       />
-      {showOverlays && androidOverlays && !glossy && (
+      {showOverlays && androidOverlays && (
         <AndroidShadowOverlays
           offset={androidOverlays.offset}
           blur={androidOverlays.blur}
@@ -91,7 +72,7 @@ export function Surface(props: SurfaceProps) {
         />
       )}
       {children}
-    </Wrapper>
+    </View>
   );
 }
 
