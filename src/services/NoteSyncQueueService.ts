@@ -13,6 +13,7 @@ export interface NoteUpsertParams {
   title: string;
   content: string;
   format?: NoteFormat;
+  tags?: string[];
 }
 
 export interface QueuedMutation {

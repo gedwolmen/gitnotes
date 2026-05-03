@@ -3,3 +3,5 @@
 - RNTL `UNSAFE_getAllByType(Text)` is enough to verify selectable props on rendered preview text without adding UI-specific assertions.
 - Canvas viewport clamping is easiest when the content bbox and fit-to-center translation are pure helpers shared by the gesture worklets and reset/open flows.
 - The pan clamp needs to be scale-aware; clamping against screen-space bbox edges keeps at least the requested margin visible after pinch zoom.
+- Tags need a shared format-support helper; importing it from the sync service caused unrelated Jest mocks to break, so a tiny utility module kept the editor, pull flow, and tests aligned.
+- Markdown/org/neorg tag persistence works best when sync and pull use matching serializers/parsers; write the metadata once at save time and read it back during repo refresh.
