@@ -25,6 +25,7 @@ import { NotificationService } from './src/services/NotificationService';
 import { StartupSyncGate } from './src/components/StartupSyncGate';
 import { GitHubActivityIndicator } from './src/components/GitHubActivityIndicator';
 import { bootstrapStorage } from './src/services/StorageBootstrap';
+import { useRenderStyleStore } from './src/stores/renderStyleStore';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const queryClient = new QueryClient({
@@ -42,6 +43,7 @@ export default function App() {
 
   const checkOnboarding = useCallback(async () => {
     await bootstrapStorage();
+    void useRenderStyleStore.getState().hydrate();
     const completed = await OnboardingService.isOnboardingCompleted();
     setShowOnboarding(!completed);
     await NotificationService.requestPermissions();
