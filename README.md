@@ -205,4 +205,4 @@ The project follows an atomic-commit workflow: each commit is a single focused c
 
 ## License
 
-MIT
+[Mozilla Public License 2.0](LICENSE) — file-level copyleft. You can combine MPL-2.0 source with code under other licenses (including proprietary) provided MPL-licensed files remain under MPL and source for those files is made available on distribution.
