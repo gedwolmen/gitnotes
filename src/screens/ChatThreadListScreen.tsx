@@ -160,8 +160,9 @@ export default function ChatThreadListScreen() {
       <ReanimatedSwipeable
         renderRightActions={() => renderRightActions(item)}
         friction={2}
+        containerStyle={{ marginBottom: spacing[3] }}
       >
-        <TouchableOpacity onPress={() => handleThreadPress(item.id)} activeOpacity={0.7} style={{ marginBottom: spacing[3] }}>
+        <TouchableOpacity onPress={() => handleThreadPress(item.id)} activeOpacity={0.7}>
           <Surface style={styles.threadCard}>
             <View style={styles.threadContent}>
               <View style={styles.threadHeader}>
@@ -276,7 +277,6 @@ const styles = StyleSheet.create({
   swipeActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
     marginLeft: 12,
     height: '100%',
   },
