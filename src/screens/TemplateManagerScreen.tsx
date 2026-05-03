@@ -23,7 +23,7 @@ import { HapticService } from '../utils/haptics';
 export default function TemplateManagerScreen() {
   const navigation = useNavigation();
   const { colors } = useTheme();
-  const headerHeight = useScreenHeaderHeight();
+  const headerHeight = useScreenHeaderHeight({ subtitle: true });
 
   const customTemplates = useTemplateStore((s) => s.customTemplates);
   const pinnedIds = useTemplateStore((s) => s.pinnedIds);

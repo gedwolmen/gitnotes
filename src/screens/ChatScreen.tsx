@@ -154,7 +154,7 @@ export default function ChatScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<ChatScreenRouteProp>();
   const { colors, spacing, type } = useTokens();
-  const headerHeight = useScreenHeaderHeight();
+  const headerHeight = useScreenHeaderHeight({ subtitle: true });
   const { threadId } = route.params;
 
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
