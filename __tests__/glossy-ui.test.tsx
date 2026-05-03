@@ -105,39 +105,44 @@ const TestConsumer = () => {
 };
 
 describe('Glossy UI mode', () => {
-  it('is OFF by default and turning it ON disables Neumorphic', async () => {
-    const { getByTestId, getByText } = renderWithProviders(
+  it('coexists with Updated UI and is gated off when style is flat', async () => {
+    const { getByTestId, queryByTestId } = renderWithProviders(
       <>
         <TestConsumer />
         <SettingsScreen />
       </>
     );
 
-    // Initial state: default is flat or neumorphic (neumorphic typically), glossy false
+    // Default: style=neumorphic, glossy=false
     await waitFor(() => {
       expect(getByTestId('glossy-val').props.children).toBe('false');
+      expect(getByTestId('style-val').props.children).toBe('neumorphic');
     });
 
-    // Toggle Glossy ON
-    const glossyToggle = getByTestId('glossy-toggle');
-    fireEvent(glossyToggle, 'valueChange', true);
-
+    // Toggle Glossy ON — style stays neumorphic, glossy is effective
+    fireEvent(getByTestId('glossy-toggle'), 'valueChange', true);
     await waitFor(() => {
       expect(getByTestId('glossy-val').props.children).toBe('true');
-      expect(getByTestId('style-val').props.children).toBe('flat'); // Neumorphic disabled
+      expect(getByTestId('style-val').props.children).toBe('neumorphic');
     });
-    
-    // Toggle Neumorphic ON
-    const neuToggle = getByTestId('neu-toggle');
-    fireEvent(neuToggle, 'valueChange', true);
-    
+
+    // Switch to Flat — glossy toggle disappears; effective glossy becomes false
+    fireEvent(getByTestId('neu-toggle'), 'valueChange', false);
+    await waitFor(() => {
+      expect(getByTestId('style-val').props.children).toBe('flat');
+      expect(getByTestId('glossy-val').props.children).toBe('false');
+      expect(queryByTestId('glossy-toggle')).toBeNull();
+    });
+
+    // Switch back to Updated UI — glossy preference returns to effective true
+    fireEvent(getByTestId('neu-toggle'), 'valueChange', true);
     await waitFor(() => {
       expect(getByTestId('style-val').props.children).toBe('neumorphic');
-      expect(getByTestId('glossy-val').props.children).toBe('false'); // Glossy disabled
+      expect(getByTestId('glossy-val').props.children).toBe('true');
     });
   });
 
-  it('renders BlurView when glossy is ON', async () => {
+  it('renders BlurView when glossy is ON and style is neumorphic', async () => {
     const { getByTestId, queryByTestId, getAllByTestId } = render(
       <ThemeProvider>
         <TestSurface />
@@ -146,10 +151,9 @@ describe('Glossy UI mode', () => {
 
     // Initial glossy false
     expect(queryByTestId('blur-view')).toBeNull();
-    
-    // Check after toggling
+
     fireEvent.press(getByTestId('toggle-btn'));
-    
+
     await waitFor(() => {
       expect(getAllByTestId('blur-view').length).toBeGreaterThan(0);
     });
