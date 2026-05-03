@@ -40,6 +40,7 @@ import { pullAllFromRepos } from "../services/RepoPullService";
 import ContextMenu from "../components/ContextMenu";
 import NoteCard from "../components/NoteCard";
 import SearchBar from "../components/SearchBar";
+import { OfflineBanner } from "../components/ui/OfflineBanner";
 import { ScreenHeader } from "../components/ui";
 import { parseRepoPath } from "../utils/gitPathParser";
 import { HapticService } from "../utils/haptics";
@@ -508,6 +509,7 @@ export default function NotesListScreen() {
       ]}
     >
       <ScreenHeader title="Notes" />
+      <OfflineBanner />
 
       <View style={styles.topBar}>
         <SearchBar
