@@ -11,6 +11,10 @@ module.exports = {
     '**/?(*.)+(spec|test).{ts,tsx}',
   ],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+  moduleNameMapper: {
+    '^expo-blur$': '<rootDir>/__mocks__/expo-blur.ts',
+    '^expo-file-system/legacy$': '<rootDir>/__mocks__/expo-file-system-legacy.ts',
+  },
   setupFiles: ['<rootDir>/jest.setup.ts'],
   transformIgnorePatterns: [
     'node_modules/(?!(react-native|@react-native|@react-navigation|expo|@expo|react-native-reanimated|@shopify)/)',
