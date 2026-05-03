@@ -61,7 +61,7 @@ function NoteCardImpl({
   isOffline = false,
   isCached = true,
 }: NoteCardProps) {
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, glossy } = useTheme();
   const { isTablet } = useResponsive();
   const isCard = variant === 'card';
   const showCompact = isCard ? false : compact;
@@ -78,7 +78,7 @@ function NoteCardImpl({
       style={[
         styles.card,
         {
-          backgroundColor: colors.card,
+          backgroundColor: glossy ? colors.glassCard : colors.card,
           shadowColor: colors.shadow,
           shadowOpacity: isDark ? 0 : 0.1,
           opacity: isOfflineUncached ? 0.5 : 1,

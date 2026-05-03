@@ -1,5 +1,12 @@
 // Mocks for the @testing-library/react-native render path.
 
+jest.mock('expo-blur', () => {
+  const { View } = require('react-native');
+  return {
+    BlurView: View
+  };
+});
+
 // Minimal reanimated stub — official mock pulls in TS source that the
 // jest transform pipeline can't load. We only need the surface area used
 // by neumorphic primitives (useSharedValue, useAnimatedStyle, withSpring,
