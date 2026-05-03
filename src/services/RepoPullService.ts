@@ -163,53 +163,43 @@ async function pullCanvasesFromRepo(
     const files = await fetchDirectoryFiles(owner, repo, 'canvases', branch);
     if (files.length === 0) return 0;
 
-    // Single read → mutate in memory → single write. Previous code re-read
-    // and re-wrote inside each iteration which lost interleaved edits when
-    // pulls ran in parallel (Promise.all in pullAllFromRepos).
-    const allCanvases = await StorageService.getAllCanvases();
-    let dirty = false;
+    await StorageService.mutateCanvases((allCanvases) => {
+      for (const file of files) {
+        if (!file.path.endsWith('.json')) continue;
 
-    for (const file of files) {
-      if (!file.path.endsWith('.json')) continue;
+        let scene: CanvasScene;
+        try {
+          scene = JSON.parse(file.content);
+        } catch {
+          continue;
+        }
 
-      let scene: CanvasScene;
-      try {
-        scene = JSON.parse(file.content);
-      } catch {
-        continue;
-      }
+        const titleFromPath = file.path
+          .replace(/^canvases\//, '')
+          .replace(/\.json$/, '')
+          .replace(/-/g, ' ');
 
-      const titleFromPath = file.path
-        .replace(/^canvases\//, '')
-        .replace(/\.json$/, '')
-        .replace(/-/g, ' ');
-
-      const idx = allCanvases.findIndex((c) => c.filePath === file.path);
-      if (idx !== -1) {
-        const existing = allCanvases[idx];
-        if (JSON.stringify(existing.scene) !== JSON.stringify(scene)) {
-          allCanvases[idx] = updateCanvas(existing, { scene });
-          dirty = true;
+        const idx = allCanvases.findIndex((c) => c.filePath === file.path);
+        if (idx !== -1) {
+          const existing = allCanvases[idx];
+          if (JSON.stringify(existing.scene) !== JSON.stringify(scene)) {
+            allCanvases[idx] = updateCanvas(existing, { scene });
+            pulled++;
+          }
+        } else {
+          allCanvases.push(
+            createCanvas({
+              title: titleFromPath,
+              scene,
+              repo: repoPath,
+              branch,
+              filePath: file.path,
+            }),
+          );
           pulled++;
         }
-      } else {
-        allCanvases.push(
-          createCanvas({
-            title: titleFromPath,
-            scene,
-            repo: repoPath,
-            branch,
-            filePath: file.path,
-          }),
-        );
-        dirty = true;
-        pulled++;
       }
-    }
-
-    if (dirty) {
-      await StorageService.saveAllCanvases(allCanvases);
-    }
+    });
   } catch {
     console.warn(`[RepoPullService] Failed to pull canvases from ${owner}/${repo}`);
   }
