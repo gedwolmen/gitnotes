@@ -11,6 +11,15 @@ config.transformer.getTransformOptions = async () => ({
   },
 });
 
+// Stop Metro from walking into sibling git worktrees, which carry their own
+// `node_modules` (sometimes with broken symlinks like skia's tvOS frameworks)
+// and flood logs with ENOENT noise that has nothing to do with this project.
+config.resolver.blockList = [
+  /.*\/\.worktrees\/.*/,
+  /.*\/\.claude\/worktrees\/.*/,
+];
+config.watchFolders = [__dirname];
+
 // `isomorphic-git`'s package main resolves to `index.cjs`, which does
 // `require('crypto')` at top level. Hermes/Metro have no Node std lib so the
 // bundle blows up. The library also publishes a self-contained UMD bundle
