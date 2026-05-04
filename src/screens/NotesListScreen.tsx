@@ -275,6 +275,17 @@ export default function NotesListScreen() {
   const hasActiveSearch = searchQuery.trim().length > 0;
   const searchMatchCount = hasActiveSearch ? displayNotes.length : 0;
 
+  // When the active filter set changes, snap the list back to the top.
+  // FlashList's recycler keeps its scroll offset across data swaps, which
+  // leaves the surviving rows positioned at the prior scroll position
+  // (visible as a card stuck near the bottom with empty space above).
+  useEffect(() => {
+    const ref = listRef.current;
+    if (ref && typeof ref.scrollToOffset === 'function') {
+      ref.scrollToOffset({ offset: 0, animated: false });
+    }
+  }, [selectedRepo, selectedBranch, selectedFolder, selectedFormat, selectedTags]);
+
   useEffect(() => {
     if (!hasActiveSearch || searchMatchCount === 0) {
       setCurrentSearchMatchIndex(0);
