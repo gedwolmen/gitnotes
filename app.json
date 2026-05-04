@@ -55,7 +55,7 @@
         }
       ],
       "expo-image-picker",
-      "@react-native-community/datetimepicker",
+      "@react-native/datetimepicker",
       "expo-secure-store",
       "expo-image",
       "expo-sharing"
