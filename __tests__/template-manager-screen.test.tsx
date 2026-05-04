@@ -156,6 +156,78 @@ describe('TemplateManagerScreen', () => {
     expect(useTemplateStore.getState().customTemplates[0].id.startsWith('custom-')).toBe(true);
   });
 
+  it('persists icon, description, title, and tags from the create modal', async () => {
+    const { getByTestId, getByText } = render(<TemplateManagerScreen />);
+
+    await waitFor(() => expect(getByText('Templates')).toBeTruthy());
+
+    fireEvent.press(getByTestId('template-create-cta'));
+    fireEvent.changeText(getByTestId('template-name-input'), 'Retro');
+    fireEvent.press(getByTestId('template-icon-bulb-outline'));
+    fireEvent.changeText(getByTestId('template-description-input'), 'Weekly retrospective');
+    fireEvent.changeText(getByTestId('template-title-input'), 'Retro - ');
+    fireEvent.changeText(getByTestId('template-tag-input'), 'team, weekly,');
+    fireEvent.changeText(getByTestId('template-content-input'), '## Wins');
+
+    await act(async () => {
+      fireEvent.press(getByTestId('template-save-btn'));
+    });
+
+    await waitFor(() => {
+      const created = useTemplateStore.getState().customTemplates[0];
+      expect(created).toBeTruthy();
+      expect(created.name).toBe('Retro');
+      expect(created.icon).toBe('bulb-outline');
+      expect(created.description).toBe('Weekly retrospective');
+      expect(created.title).toBe('Retro - ');
+      expect(created.tags).toEqual(['team', 'weekly']);
+      expect(created.content).toBe('## Wins');
+    });
+  });
+
+  it('preloads icon, description, title, and tags when editing', async () => {
+    await act(async () => {
+      await useTemplateStore.getState().createTemplate({
+        name: 'Editable',
+        icon: 'rocket-outline',
+        description: 'Original description',
+        title: 'Launch - ',
+        content: 'body',
+        tags: ['ship', 'launch'],
+      });
+    });
+
+    const created = useTemplateStore.getState().customTemplates[0];
+    const { getByTestId, getByText } = render(<TemplateManagerScreen />);
+
+    await waitFor(() => expect(getByText('Editable')).toBeTruthy());
+
+    await act(async () => {
+      fireEvent.press(getByTestId(`template-edit-${created.id}`));
+    });
+
+    expect(getByTestId('template-name-input').props.value).toBe('Editable');
+    expect(getByTestId('template-description-input').props.value).toBe('Original description');
+    expect(getByTestId('template-title-input').props.value).toBe('Launch - ');
+    expect(getByTestId(`template-tag-chip-ship`)).toBeTruthy();
+    expect(getByTestId(`template-tag-chip-launch`)).toBeTruthy();
+    expect(getByTestId('template-icon-rocket-outline').props.accessibilityState).toMatchObject({ selected: true });
+
+    fireEvent.changeText(getByTestId('template-description-input'), 'Updated description');
+    fireEvent.press(getByTestId('template-tag-chip-ship'));
+
+    await act(async () => {
+      fireEvent.press(getByTestId('template-save-btn'));
+    });
+
+    await waitFor(() => {
+      const updated = useTemplateStore.getState().customTemplates[0];
+      expect(updated.description).toBe('Updated description');
+      expect(updated.tags).toEqual(['launch']);
+      expect(updated.icon).toBe('rocket-outline');
+    });
+  });
+
   it('toggles pin via the pin button and persists state', async () => {
     const { getByTestId, findByTestId } = render(<TemplateManagerScreen />);
 

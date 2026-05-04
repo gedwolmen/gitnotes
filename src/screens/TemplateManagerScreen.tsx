@@ -18,10 +18,33 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { ScreenHeader, IconButton, Modal, useScreenHeaderHeight } from '../components/ui';
 import { useTemplateStore } from '../stores/templateStore';
-import { NoteTemplate } from '../services/TemplateService';
+import { NoteTemplate, NoteTemplateIcon } from '../services/TemplateService';
 import { HapticService } from '../utils/haptics';
 import { TemplateRepoPreferenceService, TemplateRepoPreference } from '../services/TemplateRepoPreferenceService';
 import { pullTemplatesFromConfiguredRepo } from '../services/RepoPullService';
+import {
+  TEMPLATE_MAX_TAGS,
+  TEMPLATE_MAX_TAG_LENGTH,
+  commitPendingTag,
+  parseTagInput,
+} from '../utils/templateTags';
+
+const ICON_OPTIONS: NoteTemplateIcon[] = [
+  'document-outline',
+  'people-outline',
+  'bulb-outline',
+  'code-slash-outline',
+  'book-outline',
+  'bug-outline',
+  'checkmark-done-outline',
+  'calendar-outline',
+  'pencil-outline',
+  'flask-outline',
+  'rocket-outline',
+  'flag-outline',
+];
+
+const DEFAULT_ICON: NoteTemplateIcon = 'document-outline';
 
 export default function TemplateManagerScreen() {
   const navigation = useNavigation();
@@ -41,6 +64,11 @@ export default function TemplateManagerScreen() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftName, setDraftName] = useState('');
   const [draftContent, setDraftContent] = useState('');
+  const [draftIcon, setDraftIcon] = useState<NoteTemplateIcon>(DEFAULT_ICON);
+  const [draftDescription, setDraftDescription] = useState('');
+  const [draftTitle, setDraftTitle] = useState('');
+  const [draftTags, setDraftTags] = useState<string[]>([]);
+  const [tagDraft, setTagDraft] = useState('');
   const [templatesRepoPref, setTemplatesRepoPref] = useState<TemplateRepoPreference | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -59,29 +87,63 @@ export default function TemplateManagerScreen() {
     }
   }, [loadTemplates]);
 
-  // Recompute on store changes (customTemplates / pinnedIds in deps).
   const allTemplates = useMemo(
     () => getAllTemplates(),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [customTemplates, pinnedIds, getAllTemplates],
   );
 
-  const handleOpenCreate = useCallback(() => {
+  const resetDraft = useCallback(() => {
     setEditingId(null);
     setDraftName('');
     setDraftContent('');
-    setShowEditor(true);
+    setDraftIcon(DEFAULT_ICON);
+    setDraftDescription('');
+    setDraftTitle('');
+    setDraftTags([]);
+    setTagDraft('');
   }, []);
+
+  const handleOpenCreate = useCallback(() => {
+    resetDraft();
+    setShowEditor(true);
+  }, [resetDraft]);
 
   const handleOpenEdit = useCallback((template: NoteTemplate) => {
     setEditingId(template.id);
     setDraftName(template.name);
     setDraftContent(template.content);
+    setDraftIcon(template.icon ?? DEFAULT_ICON);
+    setDraftDescription(template.description ?? '');
+    setDraftTitle(template.title ?? '');
+    setDraftTags(template.tags ?? []);
+    setTagDraft('');
     setShowEditor(true);
   }, []);
 
   const handleCloseEditor = useCallback(() => {
     setShowEditor(false);
+  }, []);
+
+  const handleTagInputChange = useCallback(
+    (text: string) => {
+      const { committed, remainder } = parseTagInput(text, draftTags);
+      if (committed.length !== draftTags.length) {
+        setDraftTags(committed);
+      }
+      setTagDraft(remainder);
+    },
+    [draftTags],
+  );
+
+  const handleTagSubmit = useCallback(() => {
+    const next = commitPendingTag(tagDraft, draftTags);
+    setDraftTags(next);
+    setTagDraft('');
+  }, [tagDraft, draftTags]);
+
+  const handleRemoveTag = useCallback((tag: string) => {
+    setDraftTags((prev) => prev.filter((t) => t !== tag));
   }, []);
 
   const handleSave = useCallback(async () => {
@@ -90,16 +152,29 @@ export default function TemplateManagerScreen() {
       Alert.alert('Name required', 'Please give your template a name.');
       return;
     }
+    const description = draftDescription.trim();
+    const trimmedTitle = draftTitle.trim();
+    const title = trimmedTitle ? draftTitle : '';
+    const finalTags = commitPendingTag(tagDraft, draftTags);
+
     try {
       if (editingId) {
-        await updateTemplate(editingId, { name, content: draftContent });
+        await updateTemplate(editingId, {
+          name,
+          icon: draftIcon,
+          description,
+          title: title || undefined,
+          content: draftContent,
+          tags: finalTags,
+        });
       } else {
         await createTemplate({
           name,
-          icon: 'document-outline',
-          description: 'Custom template',
+          icon: draftIcon,
+          description,
+          title: title || undefined,
           content: draftContent,
-          tags: [],
+          tags: finalTags,
         });
       }
       HapticService.success();
@@ -109,7 +184,18 @@ export default function TemplateManagerScreen() {
       HapticService.error();
       Alert.alert('Save failed', 'Could not save the template. Please try again.');
     }
-  }, [draftName, draftContent, editingId, createTemplate, updateTemplate]);
+  }, [
+    draftName,
+    draftDescription,
+    draftTitle,
+    draftIcon,
+    draftContent,
+    draftTags,
+    tagDraft,
+    editingId,
+    createTemplate,
+    updateTemplate,
+  ]);
 
   const handleDelete = useCallback(
     (template: NoteTemplate) => {
@@ -205,6 +291,9 @@ export default function TemplateManagerScreen() {
   };
 
   const customCount = customTemplates.length;
+  const previewName = draftName.trim() || (editingId ? 'Untitled template' : 'New template');
+  const previewDescription = draftDescription.trim() || 'No description yet';
+  const tagLimitReached = draftTags.length >= TEMPLATE_MAX_TAGS;
 
   return (
     <SafeAreaView edges={['bottom']} style={[styles.container, { backgroundColor: colors.background }]}>
@@ -241,7 +330,7 @@ export default function TemplateManagerScreen() {
         )}
       </ScrollView>
 
-      <Modal visible={showEditor} onRequestClose={handleCloseEditor}>
+      <Modal visible={showEditor} onRequestClose={handleCloseEditor} contentStyle={styles.modalSurface}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.editorContainer}
@@ -249,36 +338,180 @@ export default function TemplateManagerScreen() {
           <Text style={[styles.editorTitle, { color: colors.text }]}>
             {editingId ? 'Edit template' : 'New template'}
           </Text>
-          <Text style={[styles.label, { color: colors.textSecondary }]}>Name</Text>
-          <TextInput
-            testID="template-name-input"
-            value={draftName}
-            onChangeText={setDraftName}
-            placeholder="My template"
-            placeholderTextColor={colors.textSecondary}
-            style={[
-              styles.nameInput,
-              { color: colors.text, backgroundColor: colors.surfaceSecondary, borderColor: colors.border },
-            ]}
-            maxLength={60}
-          />
 
-          <Text style={[styles.label, { color: colors.textSecondary, marginTop: 12 }]}>
-            Initial content
-          </Text>
-          <TextInput
-            testID="template-content-input"
-            value={draftContent}
-            onChangeText={setDraftContent}
-            placeholder={'## Heading\n\nWrite something...'}
-            placeholderTextColor={colors.textSecondary}
-            multiline
-            textAlignVertical="top"
-            style={[
-              styles.contentInput,
-              { color: colors.text, backgroundColor: colors.surfaceSecondary, borderColor: colors.border },
-            ]}
-          />
+          <ScrollView
+            style={styles.editorScroll}
+            contentContainerStyle={styles.editorScrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View
+              testID="template-preview-card"
+              style={[styles.previewCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            >
+              <View style={[styles.previewIcon, { backgroundColor: colors.primary + '20' }]}>
+                <Ionicons name={draftIcon} size={22} color={colors.primary} />
+              </View>
+              <View style={styles.previewMeta}>
+                <Text style={[styles.previewName, { color: colors.text }]} numberOfLines={1}>
+                  {previewName}
+                </Text>
+                <Text
+                  style={[styles.previewDesc, { color: colors.textSecondary }]}
+                  numberOfLines={2}
+                >
+                  {previewDescription}
+                </Text>
+                {draftTags.length > 0 && (
+                  <View style={styles.previewTags}>
+                    {draftTags.map((tag) => (
+                      <View
+                        key={`preview-${tag}`}
+                        style={[styles.previewTagChip, { backgroundColor: colors.surfaceSecondary }]}
+                      >
+                        <Text style={[styles.previewTagText, { color: colors.textSecondary }]}>
+                          {tag}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </View>
+
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Name</Text>
+            <TextInput
+              testID="template-name-input"
+              value={draftName}
+              onChangeText={setDraftName}
+              placeholder="My template"
+              placeholderTextColor={colors.textSecondary}
+              style={[
+                styles.nameInput,
+                { color: colors.text, backgroundColor: colors.surfaceSecondary, borderColor: colors.border },
+              ]}
+              maxLength={60}
+            />
+
+            <Text style={[styles.label, { color: colors.textSecondary, marginTop: 14 }]}>Icon</Text>
+            <View style={styles.iconGrid} testID="template-icon-grid">
+              {ICON_OPTIONS.map((icon) => {
+                const selected = icon === draftIcon;
+                return (
+                  <TouchableOpacity
+                    key={icon}
+                    testID={`template-icon-${icon}`}
+                    accessibilityLabel={`Select ${icon} icon`}
+                    accessibilityState={{ selected }}
+                    onPress={() => setDraftIcon(icon)}
+                    style={[
+                      styles.iconCell,
+                      {
+                        backgroundColor: selected ? colors.primary : colors.surfaceSecondary,
+                        borderColor: selected ? colors.primary : colors.border,
+                      },
+                    ]}
+                  >
+                    <Ionicons
+                      name={icon}
+                      size={20}
+                      color={selected ? '#fff' : colors.textSecondary}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={[styles.label, { color: colors.textSecondary, marginTop: 14 }]}>
+              Description
+            </Text>
+            <TextInput
+              testID="template-description-input"
+              value={draftDescription}
+              onChangeText={setDraftDescription}
+              placeholder="e.g. Weekly retrospective"
+              placeholderTextColor={colors.textSecondary}
+              style={[
+                styles.nameInput,
+                { color: colors.text, backgroundColor: colors.surfaceSecondary, borderColor: colors.border },
+              ]}
+              maxLength={120}
+            />
+
+            <Text style={[styles.label, { color: colors.textSecondary, marginTop: 14 }]}>
+              Default note title (optional)
+            </Text>
+            <TextInput
+              testID="template-title-input"
+              value={draftTitle}
+              onChangeText={setDraftTitle}
+              placeholder="e.g. Standup - "
+              placeholderTextColor={colors.textSecondary}
+              style={[
+                styles.nameInput,
+                { color: colors.text, backgroundColor: colors.surfaceSecondary, borderColor: colors.border },
+              ]}
+              maxLength={80}
+            />
+
+            <Text style={[styles.label, { color: colors.textSecondary, marginTop: 14 }]}>Tags</Text>
+            {draftTags.length > 0 && (
+              <View style={styles.tagChipRow} testID="template-tag-chips">
+                {draftTags.map((tag) => (
+                  <TouchableOpacity
+                    key={tag}
+                    testID={`template-tag-chip-${tag}`}
+                    accessibilityLabel={`Remove tag ${tag}`}
+                    onPress={() => handleRemoveTag(tag)}
+                    style={[styles.tagChip, { backgroundColor: colors.primary + '20', borderColor: colors.primary + '40' }]}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.tagChipText, { color: colors.primary }]}>{tag}</Text>
+                    <Ionicons name="close" size={14} color={colors.primary} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+            <TextInput
+              testID="template-tag-input"
+              value={tagDraft}
+              onChangeText={handleTagInputChange}
+              onSubmitEditing={handleTagSubmit}
+              onBlur={handleTagSubmit}
+              placeholder={
+                tagLimitReached
+                  ? `Max ${TEMPLATE_MAX_TAGS} tags`
+                  : 'Add tags (comma or space to separate)'
+              }
+              placeholderTextColor={colors.textSecondary}
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!tagLimitReached}
+              maxLength={TEMPLATE_MAX_TAG_LENGTH + 1}
+              style={[
+                styles.nameInput,
+                { color: colors.text, backgroundColor: colors.surfaceSecondary, borderColor: colors.border },
+              ]}
+              returnKeyType="done"
+            />
+
+            <Text style={[styles.label, { color: colors.textSecondary, marginTop: 14 }]}>
+              Initial content
+            </Text>
+            <TextInput
+              testID="template-content-input"
+              value={draftContent}
+              onChangeText={setDraftContent}
+              placeholder={'## Heading\n\nWrite something...'}
+              placeholderTextColor={colors.textSecondary}
+              multiline
+              textAlignVertical="top"
+              style={[
+                styles.contentInput,
+                { color: colors.text, backgroundColor: colors.surfaceSecondary, borderColor: colors.border },
+              ]}
+            />
+          </ScrollView>
 
           <View style={styles.editorActions}>
             <TouchableOpacity
@@ -387,8 +620,20 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'center',
   },
+  modalSurface: {
+    width: '100%',
+    maxWidth: 480,
+    flex: 1,
+  },
   editorContainer: {
+    flex: 1,
     paddingTop: 4,
+  },
+  editorScroll: {
+    flex: 1,
+  },
+  editorScrollContent: {
+    paddingBottom: 16,
   },
   editorTitle: {
     fontSize: 18,
@@ -415,14 +660,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    minHeight: 160,
+    minHeight: 220,
     fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
   },
   editorActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: 10,
-    marginTop: 16,
+    marginTop: 12,
   },
   btn: {
     paddingHorizontal: 16,
@@ -437,5 +682,79 @@ const styles = StyleSheet.create({
   btnText: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  previewCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  previewIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewMeta: {
+    flex: 1,
+    minWidth: 0,
+  },
+  previewName: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  previewDesc: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  previewTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    marginTop: 6,
+  },
+  previewTagChip: {
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  previewTagText: {
+    fontSize: 11,
+  },
+  iconGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  iconCell: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tagChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 8,
+  },
+  tagChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  tagChipText: {
+    fontSize: 13,
+    fontWeight: '500',
   },
 });
