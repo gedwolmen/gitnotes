@@ -9,6 +9,50 @@ import { canPersistNoteTags } from '../utils/noteTagSupport';
 import { TemplateRepoPreferenceService } from './TemplateRepoPreferenceService';
 import { parseTemplateMarkdown } from './TemplateMarkdownService';
 import type { NoteTemplate } from './TemplateService';
+import { SyncEngineService } from './SyncEngineService';
+import { GitFsService } from './git/GitFsService';
+import { AuthService } from './AuthService';
+
+/**
+ * Picks the read transport for a repo based on the user's per-repo
+ * SyncEngineService toggle. In 'clone' mode the working copy is cloned
+ * lazily on first pull (and fetched on subsequent pulls); in 'api' mode the
+ * existing GitHub Contents API path is used. Output shapes match — both
+ * `listTree` returns `{ path, type, sha }[]` and `readFile` returns
+ * `string | null` — so callers can swap transports without branching.
+ */
+async function getRepoReader(
+  repoPath: string,
+  owner: string,
+  repo: string,
+  branch: string,
+): Promise<{
+  mode: 'api' | 'clone';
+  listTree: () => Promise<{ path: string; type: 'blob' | 'tree'; sha: string; size?: number }[]>;
+  readFile: (path: string) => Promise<string | null>;
+}> {
+  const mode = await SyncEngineService.getMode(repoPath);
+  if (mode === 'clone') {
+    const token = (await AuthService.getToken()) ?? undefined;
+    const cloned = await GitFsService.isCloned({ repoPath });
+    if (!cloned) {
+      await GitFsService.clone({ repoPath, branch, token });
+    } else {
+      await GitFsService.fetch({ repoPath, branch, token });
+    }
+    return {
+      mode,
+      listTree: () => GitFsService.listTree({ repoPath, ref: branch }),
+      readFile: (path: string) =>
+        GitFsService.readFile({ repoPath, ref: branch, filepath: path }),
+    };
+  }
+  return {
+    mode,
+    listTree: () => GitHubService.getTreeRecursiveOrThrow(owner, repo, branch),
+    readFile: (path: string) => GitHubService.getFileContent(owner, repo, path, branch),
+  };
+}
 
 async function fetchDirectoryFiles(
   owner: string,
@@ -135,12 +179,14 @@ async function pullNotesFromRepo(
   branch: string,
 ): Promise<number> {
   try {
-    // Use the strict variant so an actual API failure (auth/rate-limit/network)
-    // throws and is caught below, returning early *without* running the
-    // reconciliation pass. A successful fetch that returns zero note blobs is
-    // authoritative — the user has deleted every notes file on the remote — and
-    // must run reconcile so local copies for this scope are dropped.
-    const tree = await GitHubService.getTreeRecursiveOrThrow(owner, repo, branch);
+    const reader = await getRepoReader(repoPath, owner, repo, branch);
+    // Use the strict listTree contract so an actual API/clone failure (auth /
+    // rate-limit / network / fsck) throws and is caught below, returning early
+    // *without* running the reconciliation pass. A successful fetch that
+    // returns zero note blobs is authoritative — the user has deleted every
+    // notes file on the remote — and must run reconcile so local copies for
+    // this scope are dropped.
+    const tree = await reader.listTree();
     const noteBlobs = tree.filter((item) => {
       if (item.type !== 'blob') return false;
       if (!item.path.startsWith('notes/')) return false;
@@ -152,7 +198,7 @@ async function pullNotesFromRepo(
     const fetched = await fetchInBatches(
       noteBlobs,
       async (blob) => {
-        const content = await GitHubService.getFileContent(owner, repo, blob.path, branch);
+        const content = await reader.readFile(blob.path);
         return content === null ? null : { path: blob.path, content };
       },
       FILE_FETCH_CONCURRENCY,
