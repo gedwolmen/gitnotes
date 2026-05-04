@@ -27,6 +27,8 @@ import { GitHubService, GitHubRepository } from '../services/GitHubService';
 import { RepoFileSyncService } from '../services/RepoFileSyncService';
 import { pullFromSingleRepo } from '../services/RepoPullService';
 import { TemplateRepoPreferenceService, TemplateRepoPreference } from '../services/TemplateRepoPreferenceService';
+import { syncTemplateToGitHub } from '../services/TemplateGitHubSyncService';
+import { useTemplateStore } from '../stores/templateStore';
 import { useCanvases } from '../contexts/CanvasContext';
 import { useTodos } from '../contexts/TodoContext';
 import { OnboardingService } from '../services/OnboardingService';
@@ -128,6 +130,44 @@ export default function SettingsScreen() {
     setTemplatesRepoPref(null);
     HapticService.success();
   }, []);
+
+  const [isSyncingExistingTemplates, setIsSyncingExistingTemplates] = useState(false);
+  const handleSyncExistingTemplates = useCallback(async () => {
+    if (!templatesRepoPref) return;
+    const customs = useTemplateStore.getState().customTemplates;
+    const unsynced = customs.filter((t) => !t.filePath);
+    if (unsynced.length === 0) {
+      Alert.alert('Nothing to sync', 'All custom templates are already in the templates repo.');
+      return;
+    }
+    setIsSyncingExistingTemplates(true);
+    let synced = 0;
+    let failed = 0;
+    try {
+      for (const t of unsynced) {
+        const res = await syncTemplateToGitHub({
+          repoPath: templatesRepoPref.repoPath,
+          branch: templatesRepoPref.branch,
+          template: t,
+        });
+        if (res.success && res.filePath) {
+          await useTemplateStore.getState().updateTemplate(t.id, { filePath: res.filePath });
+          synced++;
+        } else {
+          failed++;
+        }
+      }
+    } finally {
+      setIsSyncingExistingTemplates(false);
+    }
+    HapticService.success();
+    Alert.alert(
+      'Done',
+      failed === 0
+        ? `Synced ${synced} template(s) to ${templatesRepoPref.repoPath}.`
+        : `Synced ${synced} template(s); ${failed} failed.`,
+    );
+  }, [templatesRepoPref]);
 
   const selectedModelName = providers
     .flatMap((provider) => provider.models)
@@ -564,13 +604,31 @@ export default function SettingsScreen() {
           </TouchableOpacity>
 
           {templatesRepoPref ? (
-            <TouchableOpacity
-              testID="templates-repo-clear"
-              style={[styles.settingItem, { borderBottomColor: colors.border }]}
-              onPress={handleClearTemplatesRepo}
-            >
-              <Text style={[styles.settingLabel, { color: colors.error }]}>Disconnect templates repo</Text>
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                testID="templates-sync-existing"
+                style={[styles.settingItem, { borderBottomColor: colors.border }]}
+                onPress={handleSyncExistingTemplates}
+                disabled={isSyncingExistingTemplates}
+              >
+                <View style={styles.settingLeft}>
+                  <Ionicons name="cloud-upload-outline" size={20} color={colors.text} />
+                  <Text style={[styles.settingLabel, { color: colors.text, marginLeft: 12 }]}>
+                    Sync existing custom templates to repo
+                  </Text>
+                </View>
+                {isSyncingExistingTemplates ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : null}
+              </TouchableOpacity>
+              <TouchableOpacity
+                testID="templates-repo-clear"
+                style={[styles.settingItem, { borderBottomColor: colors.border }]}
+                onPress={handleClearTemplatesRepo}
+              >
+                <Text style={[styles.settingLabel, { color: colors.error }]}>Disconnect templates repo</Text>
+              </TouchableOpacity>
+            </>
           ) : null}
         </View>
 
