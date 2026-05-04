@@ -104,7 +104,7 @@ export function buildPinnedFeed(
 }
 
 /** Bento sizing variants. */
-export type BentoSize = 'large' | 'medium' | 'small';
+export type BentoSize = 'large' | 'medium' | 'small' | 'pinned';
 
 /**
  * Map an index in the recent-feed array to a bento tile size.

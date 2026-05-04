@@ -12,6 +12,8 @@ interface Props {
   item: RecentItem;
   size: BentoSize;
   onPress: () => void;
+  widthOverride?: number;
+  hidePinGlyph?: boolean;
 }
 
 function relativeTime(ms: number): string {
@@ -103,22 +105,24 @@ function formatChipLabel(format: NoteFormat | undefined): string | null {
   }
 }
 
-const HEIGHT_FOR: Record<BentoSize, number> = { large: 184, medium: 132, small: 112 };
-const PADDING_FOR: Record<BentoSize, number> = { large: 18, medium: 14, small: 12 };
-const TITLE_SIZE: Record<BentoSize, number> = { large: 18, medium: 15, small: 13 };
-const SUB_SIZE: Record<BentoSize, number> = { large: 13, medium: 12, small: 11 };
-const ICON_SIZE: Record<BentoSize, number> = { large: 28, medium: 22, small: 18 };
-const RADIUS_FOR: Record<BentoSize, number> = { large: 20, medium: 16, small: 14 };
-const THUMB_HEIGHT: Record<BentoSize, number> = { large: 110, medium: 70, small: 56 };
-const TILE_WIDTH_HINT: Record<BentoSize, number> = { large: 320, medium: 160, small: 160 };
-const SNIPPET_LINES: Record<BentoSize, number> = { large: 3, medium: 2, small: 1 };
+const HEIGHT_FOR: Record<BentoSize, number> = { large: 184, medium: 132, small: 112, pinned: 140 };
+const PADDING_FOR: Record<BentoSize, number> = { large: 18, medium: 14, small: 12, pinned: 12 };
+const TITLE_SIZE: Record<BentoSize, number> = { large: 18, medium: 15, small: 13, pinned: 13 };
+const SUB_SIZE: Record<BentoSize, number> = { large: 13, medium: 12, small: 11, pinned: 11 };
+const ICON_SIZE: Record<BentoSize, number> = { large: 28, medium: 22, small: 18, pinned: 18 };
+const RADIUS_FOR: Record<BentoSize, number> = { large: 20, medium: 16, small: 14, pinned: 16 };
+const THUMB_HEIGHT: Record<BentoSize, number> = { large: 110, medium: 70, small: 56, pinned: 76 };
+const TILE_WIDTH_HINT: Record<BentoSize, number> = { large: 320, medium: 160, small: 160, pinned: 176 };
+const SNIPPET_LINES: Record<BentoSize, number> = { large: 3, medium: 2, small: 1, pinned: 2 };
 const COLOR_STRIPE_WIDTH = 4;
 
-export function BentoTile({ item, size, onPress }: Props) {
+export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph }: Props) {
   const { colors } = useTheme();
   const isLarge = size === 'large';
   const isMedium = size === 'medium';
   const isSmall = size === 'small';
+  const isPinned = size === 'pinned';
+  const isCompact = isSmall || isPinned;
   const isCanvas = item.kind === 'canvas';
   const [titleLines, setTitleLines] = useState(1);
   const handleTitleLayout = useCallback(
@@ -139,6 +143,8 @@ export function BentoTile({ item, size, onPress }: Props) {
   const tileHeight = HEIGHT_FOR[size];
   const tilePad = PADDING_FOR[size];
   const tileRadius = RADIUS_FOR[size];
+  const widthStyle = widthOverride !== undefined ? { width: widthOverride } : null;
+  const showPinGlyph = !!item.pinned && !hidePinGlyph;
 
   if (isCanvas) {
     const thumbHeight = THUMB_HEIGHT[size];
@@ -156,16 +162,17 @@ export function BentoTile({ item, size, onPress }: Props) {
             opacity: pressed ? 0.92 : 1,
             transform: [{ scale: pressed ? 0.985 : 1 }],
           },
+          widthStyle,
         ]}
         accessibilityRole="button"
         accessibilityLabel={`canvas ${titleFor(item)}`}
       >
         <View style={[styles.thumbWrap, { height: thumbHeight, backgroundColor: '#FFFFFF' }]}>
-          <CanvasThumbnail scene={scene} width={TILE_WIDTH_HINT[size]} height={thumbHeight} />
+          <CanvasThumbnail scene={scene} width={widthOverride ?? TILE_WIDTH_HINT[size]} height={thumbHeight} />
           <View style={[styles.canvasBadge, { backgroundColor: colors.background }]}>
             <Ionicons name="easel" size={12} color={accent} />
           </View>
-          {item.pinned ? (
+          {showPinGlyph ? (
             <View style={[styles.pin, { backgroundColor: colors.background }]}>
               <Ionicons name="pin" size={11} color={accent} />
             </View>
@@ -208,6 +215,7 @@ export function BentoTile({ item, size, onPress }: Props) {
             transform: [{ scale: pressed ? 0.985 : 1 }],
           },
           noteColorHex ? { borderLeftColor: noteColorHex, borderLeftWidth: COLOR_STRIPE_WIDTH } : null,
+          widthStyle,
         ]}
         accessibilityRole="button"
         accessibilityLabel={`document ${titleFor(item)}`}
@@ -215,7 +223,7 @@ export function BentoTile({ item, size, onPress }: Props) {
         <View style={[styles.badge, { backgroundColor: accent + '1F' }]}>
           <Ionicons name={iconFor(item.kind)} size={ICON_SIZE[size]} color={accent} />
         </View>
-        {item.pinned ? (
+        {showPinGlyph ? (
           <View style={[styles.pin, { backgroundColor: colors.background }]}>
             <Ionicons name="pin" size={11} color={accent} />
           </View>
@@ -233,7 +241,7 @@ export function BentoTile({ item, size, onPress }: Props) {
         <Text style={[styles.subtitle, { color: colors.textSecondary, fontSize: SUB_SIZE[size] }]} numberOfLines={1}>
           {filename ? `${filename} · ${relativeTime(item.updatedAt)}` : `PDF · ${relativeTime(item.updatedAt)}`}
         </Text>
-        {!isSmall && folder ? (
+        {!isCompact && folder ? (
           <Text style={[styles.metaLine, { color: colors.textSecondary, fontSize: SUB_SIZE[size] - 1 }]} numberOfLines={1}>
             {folder}
           </Text>
@@ -245,13 +253,12 @@ export function BentoTile({ item, size, onPress }: Props) {
   // Note tile
   const note = item.data;
   const noteColorHex = note.color ? NOTE_COLORS[note.color as keyof typeof NOTE_COLORS] : undefined;
-  const snippet = !isSmall
-    ? snippetFor(note.content, note.format, isLarge ? 160 : 110)
-    : snippetFor(note.content, note.format, 70);
+  const snippetMax = isLarge ? 160 : isMedium ? 110 : isPinned ? 90 : 70;
+  const snippet = snippetFor(note.content, note.format, snippetMax);
   const tags = note.tags ?? [];
   const visibleTags = tags.slice(0, 2);
   const formatChip = !isSmall ? formatChipLabel(note.format) : null;
-  const showRepoBadge = !isSmall && !!note.repo;
+  const showRepoBadge = !isCompact && !!note.repo;
   const baseSnippetLines = SNIPPET_LINES[size];
   const snippetLines = titleLines > 1 ? Math.max(1, baseSnippetLines - 1) : baseSnippetLines;
 
@@ -270,6 +277,7 @@ export function BentoTile({ item, size, onPress }: Props) {
           transform: [{ scale: pressed ? 0.985 : 1 }],
         },
         noteColorHex ? { borderLeftColor: noteColorHex, borderLeftWidth: COLOR_STRIPE_WIDTH } : null,
+        widthStyle,
       ]}
       accessibilityRole="button"
       accessibilityLabel={`${item.kind} ${titleFor(item)}`}
@@ -277,7 +285,7 @@ export function BentoTile({ item, size, onPress }: Props) {
       <View style={[styles.badge, { backgroundColor: accent + '1F' }]}>
         <Ionicons name={iconFor(item.kind)} size={ICON_SIZE[size]} color={accent} />
       </View>
-      {item.pinned ? (
+      {showPinGlyph ? (
         <View style={[styles.pin, { backgroundColor: colors.background }]}>
           <Ionicons name="pin" size={11} color={accent} />
         </View>
@@ -290,7 +298,7 @@ export function BentoTile({ item, size, onPress }: Props) {
       <View style={styles.body}>
         <Text
           style={[styles.title, { color: colors.text, fontSize: TITLE_SIZE[size] }]}
-          numberOfLines={isLarge ? 2 : isMedium ? 2 : 2}
+          numberOfLines={isPinned ? 1 : 2}
           onTextLayout={handleTitleLayout}
         >
           {titleFor(item)}
@@ -307,7 +315,7 @@ export function BentoTile({ item, size, onPress }: Props) {
       <Text style={[styles.subtitle, { color: colors.textSecondary, fontSize: SUB_SIZE[size] }]} numberOfLines={1}>
         {relativeTime(item.updatedAt)}
       </Text>
-      {!isSmall && (visibleTags.length > 0 || showRepoBadge) ? (
+      {!isCompact && (visibleTags.length > 0 || showRepoBadge) ? (
         <View style={styles.metaRow}>
           {visibleTags.map((tag) => (
             <View key={tag} style={[styles.tagChip, { backgroundColor: colors.primary + '20' }]}>
