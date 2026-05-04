@@ -380,6 +380,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     minHeight: 0,
     marginTop: 10,
+    overflow: 'hidden',
   },
   title: {
     fontWeight: '700',
