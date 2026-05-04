@@ -32,6 +32,29 @@ function joinUri(root: string, virtualPath: string): string {
   return root + trimmed;
 }
 
+async function ensureParentDirs(
+  fileUri: string,
+  rootUri: string,
+  fs: typeof FileSystem,
+): Promise<void> {
+  // expo-file-system's writeAsStringAsync errors with "folder doesn't exist"
+  // when any ancestor of the target path is missing. isomorphic-git issues
+  // writes against deep paths like `.git/objects/pack/<sha>` without always
+  // mkdir'ing every ancestor first, so the adapter has to bridge that gap.
+  if (!fileUri.startsWith(rootUri)) return;
+  const rel = fileUri.slice(rootUri.length);
+  const parts = rel.split('/').filter(Boolean);
+  parts.pop();
+  let acc = rootUri;
+  for (const part of parts) {
+    acc = acc + part + '/';
+    const info = await fs.getInfoAsync(acc);
+    if (!info.exists) {
+      await fs.makeDirectoryAsync(acc, { intermediates: true });
+    }
+  }
+}
+
 interface ReadOpts {
   encoding?: 'utf8' | string;
 }
@@ -74,12 +97,7 @@ export function makeGitFs(root: string): PromiseFsClient {
       opts?: ReadOpts | string,
     ): Promise<void> {
       const uri = joinUri(root, filepath);
-      // Ensure the parent directory exists. isomorphic-git creates `.git` and
-      // its subdirectories itself, but emits writeFile calls into them
-      // without re-checking. expo-file-system only auto-creates parents when
-      // `intermediates: true` is passed to makeDirectoryAsync — writeFile
-      // expects the parent to already be there. That contract holds in
-      // practice; if it ever breaks, we'd see ENOENT here.
+      await ensureParentDirs(uri, root, FileSystem);
       if (typeof data === 'string') {
         const encoding = typeof opts === 'string' ? opts : opts?.encoding;
         if (encoding && encoding !== 'utf8') {
@@ -122,7 +140,12 @@ export function makeGitFs(root: string): PromiseFsClient {
       if (info.exists) {
         throw new FsError('EEXIST', `EEXIST: file already exists '${filepath}'`);
       }
-      await FileSystem.makeDirectoryAsync(uri, { intermediates: false });
+      // intermediates:true so a single mkdir of a deep path (e.g. the repo
+      // working dir on first clone) creates all missing ancestors. The Node
+      // POSIX contract is `mkdir -p` semantics for isomorphic-git — it relies
+      // on EEXIST as the only error for "already there", which we still emit
+      // via the explicit existence check above.
+      await FileSystem.makeDirectoryAsync(uri, { intermediates: true });
     },
 
     async rmdir(filepath: string): Promise<void> {

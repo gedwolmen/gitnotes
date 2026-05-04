@@ -88,6 +88,11 @@ export class GitFsService {
     if (!info) throw new Error(`Invalid repo path: ${opts.repoPath}`);
 
     const dir = repoDirVirtual(info.owner, info.repo);
+    // expo-file-system won't auto-create ancestors when isomorphic-git first
+    // touches the working tree. Pre-create the clones root + owner segment so
+    // git.clone's own mkdir of the repo dir succeeds on a clean install.
+    const fsRoot = clonesRoot();
+    await FileSystem.makeDirectoryAsync?.(`${fsRoot}${info.owner}/`, { intermediates: true });
 
     await git.clone({
       fs: makeRepoFs(),

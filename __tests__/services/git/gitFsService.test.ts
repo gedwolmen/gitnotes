@@ -58,6 +58,9 @@ jest.mock('expo-file-system/legacy', () => {
     async deleteAsync(uri: string) {
       fsStore.delete(uri);
     },
+    async makeDirectoryAsync(uri: string) {
+      fsStore.set(uri.replace(/\/$/, ''), { type: 'dir' });
+    },
   };
 });
 

@@ -23,7 +23,10 @@ jest.mock('expo-file-system/legacy', () => {
     documentDirectory: 'file:///doc/',
     EncodingType,
     async getInfoAsync(uri: string) {
-      const e = store.get(uri);
+      // Real expo-file-system resolves paths regardless of trailing slash —
+      // 'file:///x/y' and 'file:///x/y/' both hit the same inode. Mirror that.
+      const trimmed = uri.replace(/\/$/, '');
+      const e = store.get(trimmed) ?? store.get(uri);
       if (!e) return { exists: false, uri };
       return {
         exists: true,
@@ -51,6 +54,18 @@ jest.mock('expo-file-system/legacy', () => {
       return new TextDecoder('utf-8').decode(bytes);
     },
     async writeAsStringAsync(uri: string, contents: string, opts?: { encoding?: string }) {
+      // Match expo-file-system's real behaviour: writing a file fails when
+      // the immediate parent directory does not exist. The screenshot bug
+      // (#514) showed this surfacing on real devices when isomorphic-git
+      // wrote `.git/config` before its ancestors were created.
+      const idx = uri.lastIndexOf('/');
+      if (idx > -1) {
+        const parent = uri.slice(0, idx);
+        const parentEntry = store.get(parent) ?? store.get(parent + '/');
+        if (!parentEntry || parentEntry.type !== 'dir') {
+          throw new Error(`writeAsStringAsync: parent directory missing for ${uri}`);
+        }
+      }
       const encoding = opts?.encoding === EncodingType.Base64 ? 'base64' : 'utf8';
       const size =
         encoding === 'utf8'
@@ -81,9 +96,26 @@ jest.mock('expo-file-system/legacy', () => {
       }
       return out;
     },
-    async makeDirectoryAsync(uri: string) {
+    async makeDirectoryAsync(uri: string, opts?: { intermediates?: boolean }) {
       const trimmed = uri.replace(/\/$/, '');
-      store.set(trimmed, { type: 'dir' });
+      if (opts?.intermediates) {
+        // Walk segments and stamp each ancestor as a dir, mirroring `mkdir -p`.
+        const protoIdx = trimmed.indexOf('://');
+        const headEnd = protoIdx >= 0 ? trimmed.indexOf('/', protoIdx + 3) : 0;
+        if (headEnd <= 0) {
+          store.set(trimmed, { type: 'dir' });
+        } else {
+          const head = trimmed.slice(0, headEnd);
+          const rest = trimmed.slice(headEnd + 1);
+          let acc = head;
+          for (const part of rest.split('/').filter(Boolean)) {
+            acc = acc + '/' + part;
+            if (!store.has(acc)) store.set(acc, { type: 'dir' });
+          }
+        }
+      } else {
+        store.set(trimmed, { type: 'dir' });
+      }
     },
   };
 });
@@ -183,5 +215,27 @@ describe('gitFs adapter', () => {
 
   test('constructor rejects roots without trailing slash', () => {
     expect(() => makeGitFs('file:///doc/git')).toThrow(/end with/);
+  });
+
+  test('writeFile auto-creates missing parent directories (#514 clone bug)', async () => {
+    // Reproduces the on-device crash: isomorphic-git asks the adapter to
+    // write `.git/config` before any explicit mkdir of `.git`. Real
+    // expo-file-system surfaces this as "the folder doesn't exist" and
+    // aborts the clone.
+    const fs = makeGitFs('file:///doc/git/');
+    await fs.promises.writeFile('/.git/config', '[core]\n');
+    const back = await fs.promises.readFile('/.git/config', { encoding: 'utf8' });
+    expect(back).toBe('[core]\n');
+    const parent = await fs.promises.stat('/.git');
+    expect(parent.type).toBe('dir');
+  });
+
+  test('writeFile auto-creates deep parent chains', async () => {
+    const fs = makeGitFs('file:///doc/git/');
+    await fs.promises.writeFile('/.git/objects/pack/pack-abc.idx', 'idx');
+    const back = await fs.promises.readFile('/.git/objects/pack/pack-abc.idx', {
+      encoding: 'utf8',
+    });
+    expect(back).toBe('idx');
   });
 });
