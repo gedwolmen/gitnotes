@@ -80,6 +80,7 @@ jest.mock('../src/services/GitHubService', () => ({
   GitHubService: {
     isAuthenticated: jest.fn(() => true),
     getTreeRecursive: jest.fn(async () => []),
+    getTreeRecursiveOrThrow: jest.fn(async () => []),
     getRepoContents: jest.fn(async (_owner: string, _repo: string, dirPath: string) => {
       if (dirPath !== 'canvases') return [];
       return [{ type: 'file', path: 'canvases/remote-canvas.json', download_url: 'https://example.com/remote-canvas.json' }];

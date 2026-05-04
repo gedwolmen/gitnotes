@@ -132,7 +132,12 @@ async function pullNotesFromRepo(
   branch: string,
 ): Promise<number> {
   try {
-    const tree = await GitHubService.getTreeRecursive(owner, repo, branch);
+    // Use the strict variant so an actual API failure (auth/rate-limit/network)
+    // throws and is caught below, returning early *without* running the
+    // reconciliation pass. A successful fetch that returns zero note blobs is
+    // authoritative — the user has deleted every notes file on the remote — and
+    // must run reconcile so local copies for this scope are dropped.
+    const tree = await GitHubService.getTreeRecursiveOrThrow(owner, repo, branch);
     const noteBlobs = tree.filter((item) => {
       if (item.type !== 'blob') return false;
       if (!item.path.startsWith('notes/')) return false;
@@ -140,8 +145,6 @@ async function pullNotesFromRepo(
       const ext = item.path.split('.').pop()?.toLowerCase();
       return NOTE_EXTS.includes(ext as (typeof NOTE_EXTS)[number]);
     });
-
-    if (noteBlobs.length === 0) return 0;
 
     const fetched = await fetchInBatches(
       noteBlobs,
@@ -244,10 +247,14 @@ async function pullNotesFromRepo(
     //   * Scoped to this (repoPath, branch) — never touches notes from other
     //     repos or branches.
     //   * Only deletes notes that have a `filePath` (i.e. originated from the
-    //     repo). Local-only drafts have no filePath and are preserved.
-    //   * The early return when `noteBlobs.length === 0` above acts as the
-    //     empty-tree guardrail: a transient empty/errored fetch skips
-    //     reconciliation entirely rather than wiping everything.
+    //     repo). Local-only drafts and pending uploads have no filePath until
+    //     `NoteSyncQueueService` writes one back after a successful push.
+    //   * Tree fetch uses the throwing `getTreeRecursiveOrThrow`, so we only
+    //     reach this point when the GitHub API responded successfully. An
+    //     empty `remoteFilePaths` means "the user actually deleted every note
+    //     on the remote," which is a legitimate signal to wipe local copies.
+    //     Transient failures throw and are caught below, returning 0 without
+    //     running this pass.
     const beforeCount = allNotes.length;
     allNotes = allNotes.filter((n) => {
       if (n.repo !== repoPath) return true;
