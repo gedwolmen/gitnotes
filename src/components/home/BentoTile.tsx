@@ -105,7 +105,7 @@ function formatChipLabel(format: NoteFormat | undefined): string | null {
   }
 }
 
-const HEIGHT_FOR: Record<BentoSize, number> = { large: 184, medium: 132, small: 112, pinned: 140 };
+const HEIGHT_FOR: Record<BentoSize, number> = { large: 200, medium: 132, small: 132, pinned: 140 };
 const PADDING_FOR: Record<BentoSize, number> = { large: 18, medium: 14, small: 12, pinned: 12 };
 const TITLE_SIZE: Record<BentoSize, number> = { large: 18, medium: 15, small: 13, pinned: 13 };
 const SUB_SIZE: Record<BentoSize, number> = { large: 13, medium: 12, small: 11, pinned: 11 };
@@ -120,9 +120,7 @@ export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph }: 
   const { colors } = useTheme();
   const isLarge = size === 'large';
   const isMedium = size === 'medium';
-  const isSmall = size === 'small';
   const isPinned = size === 'pinned';
-  const isCompact = isSmall || isPinned;
   const isCanvas = item.kind === 'canvas';
   const [titleLines, setTitleLines] = useState(1);
   const handleTitleLayout = useCallback(
@@ -228,11 +226,9 @@ export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph }: 
             <Ionicons name="pin" size={11} color={accent} />
           </View>
         ) : null}
-        {!isSmall ? (
-          <View style={[styles.formatChip, { backgroundColor: accent + '20' }]}>
-            <Text style={[styles.formatChipText, { color: accent }]}>PDF</Text>
-          </View>
-        ) : null}
+        <View style={[styles.formatChip, { backgroundColor: accent + '20' }]}>
+          <Text style={[styles.formatChipText, { color: accent }]}>PDF</Text>
+        </View>
         <View style={styles.body}>
           <Text style={[styles.title, { color: colors.text, fontSize: TITLE_SIZE[size] }]} numberOfLines={isLarge ? 2 : 1}>
             {titleFor(item)}
@@ -241,7 +237,7 @@ export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph }: 
         <Text style={[styles.subtitle, { color: colors.textSecondary, fontSize: SUB_SIZE[size] }]} numberOfLines={1}>
           {filename ? `${filename} · ${relativeTime(item.updatedAt)}` : `PDF · ${relativeTime(item.updatedAt)}`}
         </Text>
-        {!isCompact && folder ? (
+        {!isPinned && folder ? (
           <Text style={[styles.metaLine, { color: colors.textSecondary, fontSize: SUB_SIZE[size] - 1 }]} numberOfLines={1}>
             {folder}
           </Text>
@@ -257,8 +253,8 @@ export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph }: 
   const snippet = snippetFor(note.content, note.format, snippetMax);
   const tags = note.tags ?? [];
   const visibleTags = tags.slice(0, 2);
-  const formatChip = !isSmall ? formatChipLabel(note.format) : null;
-  const showRepoBadge = !isCompact && !!note.repo;
+  const formatChip = formatChipLabel(note.format);
+  const showRepoBadge = !isPinned && !!note.repo;
   const baseSnippetLines = SNIPPET_LINES[size];
   const snippetLines = titleLines > 1 ? Math.max(1, baseSnippetLines - 1) : baseSnippetLines;
 
@@ -315,7 +311,7 @@ export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph }: 
       <Text style={[styles.subtitle, { color: colors.textSecondary, fontSize: SUB_SIZE[size] }]} numberOfLines={1}>
         {relativeTime(item.updatedAt)}
       </Text>
-      {!isCompact && (visibleTags.length > 0 || showRepoBadge) ? (
+      {!isPinned && (visibleTags.length > 0 || showRepoBadge) ? (
         <View style={styles.metaRow}>
           {visibleTags.map((tag) => (
             <View key={tag} style={[styles.tagChip, { backgroundColor: colors.primary + '20' }]}>
