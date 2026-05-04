@@ -160,7 +160,11 @@ export default function SettingsScreen() {
     } finally {
       setIsSyncingExistingTemplates(false);
     }
-    HapticService.success();
+    if (failed === 0) {
+      HapticService.success();
+    } else {
+      HapticService.error();
+    }
     Alert.alert(
       'Done',
       failed === 0

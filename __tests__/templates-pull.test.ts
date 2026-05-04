@@ -67,6 +67,18 @@ describe('pullTemplatesFromConfiguredRepo', () => {
     expect(lastSaveArgs.find((t: any) => t.id === 'custom-local')).toBeDefined();
   });
 
+  test('preserves repo-backed locals when getTreeRecursiveOrThrow throws (transient API failure)', async () => {
+    (StorageService.loadCustomTemplates as jest.Mock).mockResolvedValueOnce([
+      { id: 'custom-keep', name: 'Keep', icon: 'document-outline', description: '', content: '', tags: [], isCustom: true, filePath: 'templates/keep.md' },
+    ]);
+    (GitHubService.getTreeRecursiveOrThrow as jest.Mock).mockRejectedValueOnce(new Error('network'));
+
+    const pulled = await pullTemplatesFromConfiguredRepo();
+    expect(pulled).toBe(0);
+    // Save must NOT have been called — local entries survive
+    expect(StorageService.saveCustomTemplates).not.toHaveBeenCalled();
+  });
+
   test('returns 0 when no templates repo is configured', async () => {
     const { TemplateRepoPreferenceService } = require('../src/services/TemplateRepoPreferenceService');
     (TemplateRepoPreferenceService.get as jest.Mock).mockResolvedValueOnce(null);

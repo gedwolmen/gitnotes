@@ -317,7 +317,13 @@ class GitHubServiceClass {
   ): Promise<{ path: string; type: 'blob' | 'tree'; sha: string; size?: number }[]> {
     const url = `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`;
     const data = await this.request(url);
-    if (!Array.isArray(data?.tree)) return [];
+    // Match the "OrThrow" contract: a 200 with a malformed body is *not*
+    // authoritative evidence that the repo has zero entries. Returning [] here
+    // would let reconcilers (#508 templates, notes pull) wipe local entries on
+    // a transient API hiccup. Throw instead so callers' outer catch returns 0.
+    if (!Array.isArray(data?.tree)) {
+      throw new Error('GitHub tree response missing tree array');
+    }
     return data.tree.map((item: any) => ({
       path: item.path,
       type: item.type,
