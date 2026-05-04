@@ -27,6 +27,7 @@ jest.mock('../src/services/GitHubService', () => ({
     updateFile: jest.fn(async () => ({ ok: true })),
     getSavedRepositories: jest.fn(),
     getTreeRecursive: jest.fn(),
+    getTreeRecursiveOrThrow: jest.fn(),
     getFileContent: jest.fn(),
     getRepoContents: jest.fn(async () => []),
   },
@@ -206,7 +207,7 @@ describe('color round-trip via GitHub sync', () => {
       { path: 'org/repo', branch: 'main' },
     ]);
     (StorageService.getAllNotes as jest.Mock).mockResolvedValue([]);
-    (GitHubService.getTreeRecursive as jest.Mock).mockResolvedValue([
+    (GitHubService.getTreeRecursiveOrThrow as jest.Mock).mockResolvedValue([
       { type: 'blob', path: 'notes/color-note.md' },
     ]);
     (GitHubService.getFileContent as jest.Mock).mockResolvedValue(
@@ -231,7 +232,7 @@ describe('color round-trip via GitHub sync', () => {
       { path: 'org/repo', branch: 'main' },
     ]);
     (StorageService.getAllNotes as jest.Mock).mockResolvedValue([]);
-    (GitHubService.getTreeRecursive as jest.Mock).mockResolvedValue([
+    (GitHubService.getTreeRecursiveOrThrow as jest.Mock).mockResolvedValue([
       { type: 'blob', path: 'notes/bad-color.md' },
     ]);
     (GitHubService.getFileContent as jest.Mock).mockResolvedValue(

@@ -43,10 +43,24 @@ export async function bootstrapStorage(): Promise<Map<string, string | null>> {
 
 /**
  * Get a pre-loaded value from the bootstrap cache.
- * Returns undefined if bootstrap hasn't run or key wasn't requested.
+ *
+ * Consumes the entry on read: subsequent calls for the same key return
+ * `undefined`, and callers fall through to `AsyncStorage.getItem` which is
+ * authoritative. Without this, a write (e.g. adding a repo, saving canvases)
+ * would leave the boot cache holding a stale snapshot, and any later read
+ * within the same session would still see the pre-write value until app
+ * restart re-bootstrapped the cache.
+ *
+ * The point of bootCache is to amortize the cost of the very first read at
+ * app startup — once a key has been read once, the optimization has already
+ * paid off and keeping the entry around is purely a foot-gun.
  */
 export function getBootValue(key: StartupKey): string | null | undefined {
-  return bootCache?.get(key);
+  if (!bootCache) return undefined;
+  if (!bootCache.has(key)) return undefined;
+  const value = bootCache.get(key);
+  bootCache.delete(key);
+  return value;
 }
 
 /**

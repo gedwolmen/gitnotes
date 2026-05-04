@@ -296,21 +296,34 @@ class GitHubServiceClass {
     ref: string,
   ): Promise<{ path: string; type: 'blob' | 'tree'; sha: string; size?: number }[]> {
     try {
-      const url = `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`;
-      const data = await this.request(url);
-      if (!Array.isArray(data?.tree)) return [];
-      return data.tree.map((item: any) => ({
-        path: item.path,
-        type: item.type,
-        sha: item.sha,
-        size: typeof item.size === 'number' ? item.size : undefined,
-      }));
+      return await this.getTreeRecursiveOrThrow(owner, repo, ref);
     } catch (error) {
       if (!isNotFound(error)) {
         console.warn('[GitHubService] Failed to get tree:', error);
       }
       return [];
     }
+  }
+
+  // Strict variant that lets the caller distinguish "tree fetched, repo has 0
+  // entries" (resolves to []) from "tree fetch failed" (throws). The swallowing
+  // `getTreeRecursive` returns [] for both cases, which is fine for display
+  // contexts but unsafe for reconciliation logic that uses the absence of a
+  // path as evidence the file was deleted on the remote.
+  async getTreeRecursiveOrThrow(
+    owner: string,
+    repo: string,
+    ref: string,
+  ): Promise<{ path: string; type: 'blob' | 'tree'; sha: string; size?: number }[]> {
+    const url = `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`;
+    const data = await this.request(url);
+    if (!Array.isArray(data?.tree)) return [];
+    return data.tree.map((item: any) => ({
+      path: item.path,
+      type: item.type,
+      sha: item.sha,
+      size: typeof item.size === 'number' ? item.size : undefined,
+    }));
   }
 
   async getFileContent(

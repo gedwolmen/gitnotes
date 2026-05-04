@@ -19,6 +19,7 @@ jest.mock('../src/services/GitHubService', () => ({
     updateFile: jest.fn(),
     getSavedRepositories: jest.fn(),
     getTreeRecursive: jest.fn(),
+    getTreeRecursiveOrThrow: jest.fn(),
     getFileContent: jest.fn(),
     getRepoContents: jest.fn(async () => []),
   },
@@ -73,7 +74,7 @@ describe('tag persistence', () => {
       { path: 'org/repo', branch: 'main' },
     ]);
     (StorageService.getAllNotes as jest.Mock).mockResolvedValue([]);
-    (GitHubService.getTreeRecursive as jest.Mock).mockResolvedValue([
+    (GitHubService.getTreeRecursiveOrThrow as jest.Mock).mockResolvedValue([
       { type: 'blob', path: 'notes/my-note.md' },
     ]);
     (GitHubService.getFileContent as jest.Mock).mockResolvedValue(
