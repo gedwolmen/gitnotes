@@ -14,6 +14,7 @@ export interface NoteTemplate {
   isPinned?: boolean;
   createdAt?: number;
   updatedAt?: number;
+  filePath?: string; // set when the template was loaded from / written to a repo file
 }
 
 export const NOTE_TEMPLATES: NoteTemplate[] = [

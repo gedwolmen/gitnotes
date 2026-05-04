@@ -22,6 +22,7 @@ const STARTUP_KEYS = [
   '@gitnotes:remember_format',
   '@gitnotes:sync_queue',
   '@gitnotes:backlinks_index',
+  '@gitnotes:templates_repo',
 ] as const;
 
 type StartupKey = (typeof STARTUP_KEYS)[number];

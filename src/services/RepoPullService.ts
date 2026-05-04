@@ -6,6 +6,9 @@ import { createCanvas, updateCanvas, CanvasScene } from '../models/Canvas';
 import { createTodoItem, applyTodoUpdate, reorderTodos } from '../models/Todo';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { canPersistNoteTags } from '../utils/noteTagSupport';
+import { TemplateRepoPreferenceService } from './TemplateRepoPreferenceService';
+import { parseTemplateMarkdown } from './TemplateMarkdownService';
+import type { NoteTemplate } from './TemplateService';
 
 async function fetchDirectoryFiles(
   owner: string,
@@ -412,27 +415,95 @@ async function pullTodosFromRepo(
   return pulled;
 }
 
+const TEMPLATE_EXTS = ['md', 'markdown'] as const;
+
+async function pullTemplatesFromRepo(
+  owner: string,
+  repo: string,
+  branch: string,
+): Promise<number> {
+  try {
+    const tree = await GitHubService.getTreeRecursiveOrThrow(owner, repo, branch);
+    const blobs = tree.filter((item) => {
+      if (item.type !== 'blob') return false;
+      if (!item.path.startsWith('templates/')) return false;
+      const ext = item.path.split('.').pop()?.toLowerCase();
+      return TEMPLATE_EXTS.includes(ext as (typeof TEMPLATE_EXTS)[number]);
+    });
+
+    const fetched = await fetchInBatches(
+      blobs,
+      async (b) => {
+        const content = await GitHubService.getFileContent(owner, repo, b.path, branch);
+        return content === null ? null : { path: b.path, content };
+      },
+      FILE_FETCH_CONCURRENCY,
+    );
+
+    const remote: NoteTemplate[] = [];
+    for (const f of fetched) {
+      if (!f) continue;
+      const parsed = parseTemplateMarkdown(f.path, f.content);
+      if (parsed) remote.push(parsed);
+    }
+
+    const remotePaths = new Set(blobs.map((b) => b.path));
+    const local = await StorageService.loadCustomTemplates();
+
+    // Reconcile: drop locals that originated in this repo (have filePath) and
+    // are no longer on the remote. Local-only customs (no filePath) stay.
+    const survivors = local.filter((t) => !t.filePath || remotePaths.has(t.filePath));
+
+    const byId = new Map<string, NoteTemplate>();
+    for (const t of survivors) byId.set(t.id, t);
+    let count = 0;
+    for (const t of remote) {
+      const existing = byId.get(t.id);
+      if (!existing || existing.content !== t.content || existing.name !== t.name) {
+        byId.set(t.id, { ...existing, ...t, isCustom: true });
+        count++;
+      }
+    }
+
+    await StorageService.saveCustomTemplates([...byId.values()]);
+    return count;
+  } catch {
+    console.warn(`[RepoPullService] Failed to pull templates from ${owner}/${repo}`);
+    return 0;
+  }
+}
+
+export async function pullTemplatesFromConfiguredRepo(): Promise<number> {
+  if (!GitHubService.isAuthenticated()) return 0;
+  const pref = await TemplateRepoPreferenceService.get();
+  if (!pref) return 0;
+  const info = parseRepoPath(pref.repoPath);
+  if (!info) return 0;
+  return pullTemplatesFromRepo(info.owner, info.repo, pref.branch);
+}
+
 export interface PullResult {
   repos: number;
   notes: number;
   canvases: number;
   todos: number;
+  templates: number;
 }
 
 export async function pullFromSingleRepo(repoPath: string): Promise<PullResult> {
   if (!GitHubService.isAuthenticated()) {
-    return { repos: 0, notes: 0, canvases: 0, todos: 0 };
+    return { repos: 0, notes: 0, canvases: 0, todos: 0, templates: 0 };
   }
 
   const repos = await StorageService.getSavedRepositories();
   const repo = repos.find((r) => r.path === repoPath);
   if (!repo) {
-    return { repos: 0, notes: 0, canvases: 0, todos: 0 };
+    return { repos: 0, notes: 0, canvases: 0, todos: 0, templates: 0 };
   }
 
   const repoInfo = parseRepoPath(repo.path);
   if (!repoInfo) {
-    return { repos: 0, notes: 0, canvases: 0, todos: 0 };
+    return { repos: 0, notes: 0, canvases: 0, todos: 0, templates: 0 };
   }
   const branch = repo.branch || 'main';
 
@@ -442,12 +513,15 @@ export async function pullFromSingleRepo(repoPath: string): Promise<PullResult> 
     pullTodosFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch),
   ]);
 
-  return { repos: 1, notes, canvases, todos };
+  const pref = await TemplateRepoPreferenceService.get();
+  const templates =
+    pref && pref.repoPath === repoPath ? await pullTemplatesFromConfiguredRepo() : 0;
+  return { repos: 1, notes, canvases, todos, templates };
 }
 
 export async function pullAllFromRepos(): Promise<PullResult> {
   if (!GitHubService.isAuthenticated()) {
-    return { repos: 0, notes: 0, canvases: 0, todos: 0 };
+    return { repos: 0, notes: 0, canvases: 0, todos: 0, templates: 0 };
   }
 
   const repos = await StorageService.getSavedRepositories();
@@ -474,5 +548,6 @@ export async function pullAllFromRepos(): Promise<PullResult> {
     reposProcessed++;
   }
 
-  return { repos: reposProcessed, notes: totalNotes, canvases: totalCanvases, todos: totalTodos };
+  const templates = await pullTemplatesFromConfiguredRepo();
+  return { repos: reposProcessed, notes: totalNotes, canvases: totalCanvases, todos: totalTodos, templates };
 }

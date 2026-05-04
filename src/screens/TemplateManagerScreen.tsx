@@ -9,6 +9,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -19,6 +20,8 @@ import { ScreenHeader, IconButton, Modal, useScreenHeaderHeight } from '../compo
 import { useTemplateStore } from '../stores/templateStore';
 import { NoteTemplate } from '../services/TemplateService';
 import { HapticService } from '../utils/haptics';
+import { TemplateRepoPreferenceService, TemplateRepoPreference } from '../services/TemplateRepoPreferenceService';
+import { pullTemplatesFromConfiguredRepo } from '../services/RepoPullService';
 
 export default function TemplateManagerScreen() {
   const navigation = useNavigation();
@@ -38,9 +41,22 @@ export default function TemplateManagerScreen() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftName, setDraftName] = useState('');
   const [draftContent, setDraftContent] = useState('');
+  const [templatesRepoPref, setTemplatesRepoPref] = useState<TemplateRepoPreference | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     loadTemplates();
+    TemplateRepoPreferenceService.get().then(setTemplatesRepoPref);
+  }, [loadTemplates]);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await pullTemplatesFromConfiguredRepo();
+      await loadTemplates();
+    } finally {
+      setIsRefreshing(false);
+    }
   }, [loadTemplates]);
 
   // Recompute on store changes (customTemplates / pinnedIds in deps).
@@ -196,6 +212,11 @@ export default function TemplateManagerScreen() {
         style={styles.scroll}
         contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight }]}
         keyboardShouldPersistTaps="handled"
+        refreshControl={
+          templatesRepoPref ? (
+            <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
+          ) : undefined
+        }
       >
         <TouchableOpacity
           testID="template-create-cta"
@@ -281,7 +302,11 @@ export default function TemplateManagerScreen() {
       </Modal>
       <ScreenHeader
         title="Templates"
-        subtitle={`${allTemplates.length} total · ${customCount} custom`}
+        subtitle={
+          templatesRepoPref
+            ? `${allTemplates.length} total · ${customCount} custom · ${templatesRepoPref.repoPath}`
+            : `${allTemplates.length} total · ${customCount} custom`
+        }
         onBack={handleBack}
         actions={
           <IconButton size="sm" onPress={handleOpenCreate} accessibilityLabel="New template">
@@ -296,7 +321,7 @@ export default function TemplateManagerScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { flex: 1 },
-  scrollContent: { padding: 16, paddingBottom: 40, gap: 10 },
+  scrollContent: { padding: 16, paddingBottom: 40, gap: 10, flexGrow: 1 },
   createCta: {
     flexDirection: 'row',
     alignItems: 'center',
