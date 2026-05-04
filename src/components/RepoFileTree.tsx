@@ -687,7 +687,7 @@ export default function RepoFileTree({ owner, repo, branch, onFilePress }: RepoF
 
   if (loading) {
     return (
-      <View style={[treeStyles.center, { backgroundColor: colors.surface }]}>
+      <View style={[treeStyles.center]}>
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={[treeStyles.loadingText, { color: colors.textSecondary }]}>
           Loading file tree…
@@ -698,7 +698,7 @@ export default function RepoFileTree({ owner, repo, branch, onFilePress }: RepoF
 
   if (error) {
     return (
-      <View style={[treeStyles.center, { backgroundColor: colors.surface }]}>
+      <View style={[treeStyles.center]}>
         <Ionicons name="alert-circle-outline" size={40} color={colors.textSecondary} />
         <Text style={[treeStyles.emptyText, { color: colors.text }]}>Failed to load</Text>
         <Button variant="secondary" label="Retry" onPress={loadRoot} style={{ marginTop: 8 }} />
@@ -708,7 +708,7 @@ export default function RepoFileTree({ owner, repo, branch, onFilePress }: RepoF
 
   if (rootItems.length === 0) {
     return (
-      <View style={[treeStyles.center, { backgroundColor: colors.surface }]}>
+      <View style={[treeStyles.center]}>
         <Ionicons name="folder-open-outline" size={40} color={colors.textSecondary} />
         <Text style={[treeStyles.emptyText, { color: colors.text }]}>Empty Repository</Text>
         <Text style={[treeStyles.emptySub, { color: colors.textSecondary }]}>
@@ -719,7 +719,7 @@ export default function RepoFileTree({ owner, repo, branch, onFilePress }: RepoF
   }
 
   return (
-    <View testID="repo-file-tree-root" style={{ flex: 1, backgroundColor: colors.surface }}>
+    <View testID="repo-file-tree-root" style={{ flex: 1 }}>
       {rootItems.map((item) => (
         <TreeItem
           key={item.path}

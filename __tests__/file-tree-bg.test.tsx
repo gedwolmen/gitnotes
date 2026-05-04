@@ -58,7 +58,11 @@ const isBlackBg = (value: unknown) =>
   value === '#000' || value === '#000000' || value === 'black';
 
 describe('file tree backgrounds', () => {
-  it('uses theme colors instead of black backgrounds', async () => {
+  // The tree used to paint `colors.surface` as its own background, which
+  // produced a visible step against the screen's background on Explore.
+  // The tree is now expected to inherit the parent screen background — no
+  // explicit `backgroundColor` of its own, no opaque black either.
+  it('does not paint its own background, letting the parent show through', async () => {
     const screen = render(<RepoFileTree owner="acme" repo="notes" />);
 
     await waitFor(() => expect(screen.queryAllByText('notes.md').length).toBeGreaterThan(0));
@@ -66,7 +70,7 @@ describe('file tree backgrounds', () => {
     const root = screen.getByTestId('repo-file-tree-root');
     const styles = StyleSheet.flatten(root.props.style);
 
+    expect(styles?.backgroundColor).toBeUndefined();
     expect(isBlackBg(styles?.backgroundColor)).toBe(false);
-    expect(styles?.backgroundColor).toBe('#222222');
   });
 });
