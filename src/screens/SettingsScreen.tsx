@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -26,6 +26,7 @@ import { GitRepository } from '../services/GitService';
 import { GitHubService, GitHubRepository } from '../services/GitHubService';
 import { RepoFileSyncService } from '../services/RepoFileSyncService';
 import { pullFromSingleRepo } from '../services/RepoPullService';
+import { TemplateRepoPreferenceService, TemplateRepoPreference } from '../services/TemplateRepoPreferenceService';
 import { useCanvases } from '../contexts/CanvasContext';
 import { useTodos } from '../contexts/TodoContext';
 import { OnboardingService } from '../services/OnboardingService';
@@ -105,6 +106,28 @@ export default function SettingsScreen() {
   }, [tokenInput]);
 
   const [syncingRepo, setSyncingRepo] = useState<string | null>(null);
+
+  const [templatesRepoPref, setTemplatesRepoPref] = useState<TemplateRepoPreference | null>(null);
+  const [showTemplatesRepoPicker, setShowTemplatesRepoPicker] = useState(false);
+
+  useEffect(() => {
+    TemplateRepoPreferenceService.get().then(setTemplatesRepoPref);
+  }, []);
+
+  const handlePickTemplatesRepo = useCallback(async (repo: GitRepository) => {
+    const branch = repo.branch || 'main';
+    const next = { repoPath: repo.path, branch };
+    await TemplateRepoPreferenceService.set(next);
+    setTemplatesRepoPref(next);
+    setShowTemplatesRepoPicker(false);
+    HapticService.success();
+  }, []);
+
+  const handleClearTemplatesRepo = useCallback(async () => {
+    await TemplateRepoPreferenceService.clear();
+    setTemplatesRepoPref(null);
+    HapticService.success();
+  }, []);
 
   const selectedModelName = providers
     .flatMap((provider) => provider.models)
@@ -519,6 +542,38 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* ── Templates ── */}
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Templates</Text>
+
+          <TouchableOpacity
+            testID="templates-repo-picker-row"
+            style={[styles.settingItem, { borderBottomColor: colors.border }]}
+            onPress={() => setShowTemplatesRepoPicker(true)}
+          >
+            <View style={styles.settingLeft}>
+              <Ionicons name="document-text-outline" size={20} color={colors.text} />
+              <View style={{ marginLeft: 12, flexShrink: 1 }}>
+                <Text style={[styles.settingLabel, { color: colors.text }]}>Templates repository</Text>
+                <Text style={[styles.settingValue ?? { fontSize: 12, marginTop: 2 }, { color: colors.textSecondary }]} numberOfLines={1}>
+                  {templatesRepoPref ? `${templatesRepoPref.repoPath}@${templatesRepoPref.branch}` : 'Not set'}
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+
+          {templatesRepoPref ? (
+            <TouchableOpacity
+              testID="templates-repo-clear"
+              style={[styles.settingItem, { borderBottomColor: colors.border }]}
+              onPress={handleClearTemplatesRepo}
+            >
+              <Text style={[styles.settingLabel, { color: colors.error }]}>Disconnect templates repo</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+
         {/* ── Note rendering ── */}
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Note rendering</Text>
@@ -763,6 +818,48 @@ export default function SettingsScreen() {
                     );
                   })()}
                 </>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Templates repo picker modal */}
+      <Modal visible={showTemplatesRepoPicker} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Templates repository</Text>
+              <TouchableOpacity onPress={() => setShowTemplatesRepoPicker(false)}>
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView keyboardShouldPersistTaps="handled">
+              {repositories.length === 0 ? (
+                <Text style={[styles.pickerEmpty, { color: colors.textSecondary }]}>
+                  Add a repository first under Repositories to choose it as the templates repo.
+                </Text>
+              ) : (
+                repositories.map((repo) => {
+                  const selected = templatesRepoPref?.repoPath === repo.path;
+                  return (
+                    <TouchableOpacity
+                      key={repo.id}
+                      testID={`templates-repo-option-${repo.path}`}
+                      style={[styles.pickerItem, { borderBottomColor: colors.border }]}
+                      onPress={() => handlePickTemplatesRepo(repo)}
+                    >
+                      <Ionicons name="git-branch-outline" size={18} color={colors.primary} />
+                      <View style={styles.pickerItemInfo}>
+                        <Text style={[styles.pickerItemName, { color: colors.text }]} numberOfLines={1}>{repo.path}</Text>
+                        <Text style={[styles.pickerItemDesc, { color: colors.textSecondary }]} numberOfLines={1}>
+                          Branch: {repo.branch || 'main'}
+                        </Text>
+                      </View>
+                      {selected ? <Ionicons name="checkmark-circle" size={18} color={colors.primary} /> : null}
+                    </TouchableOpacity>
+                  );
+                })
               )}
             </ScrollView>
           </View>
