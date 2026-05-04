@@ -30,7 +30,8 @@ import { useViewMode } from "../contexts/ViewModeContext";
 import { useAuth } from "../contexts/AuthContext";
 import { useRepos } from "../contexts/RepoContext";
 import { RootStackParamList } from "../navigation/types";
-import { Note, NoteColor, NoteFormat } from "../models/Note";
+import { Note, NoteColor, NOTE_COLOR_VALUES, NoteFormat } from "../models/Note";
+import { NOTE_COLORS } from "../theme/tokens";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { GitRepository } from "../services/GitService";
 import { GitHubService } from "../services/GitHubService";
@@ -174,6 +175,17 @@ export default function NotesListScreen() {
   const [selectedFormat, setSelectedFormat] = useState<NoteFormat | null>(null);
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedColors, setSelectedColors] = useState<NoteColor[]>([]);
+
+  // #513 — Only the colors actually applied to at least one note. Sorted by
+  // the canonical palette order so chips don't reshuffle as colors come and go.
+  const allColors = useMemo(() => {
+    const present = new Set<NoteColor>();
+    for (const n of notes) {
+      if (n.color) present.add(n.color);
+    }
+    return NOTE_COLOR_VALUES.filter((c) => present.has(c));
+  }, [notes]);
 
   const allTags = useMemo(() => {
     const tagSet = new Set<string>();
@@ -224,7 +236,8 @@ export default function NotesListScreen() {
     (selectedBranch ? 1 : 0) +
     (selectedFolder ? 1 : 0) +
     (selectedFormat ? 1 : 0) +
-    (selectedTags.length > 0 ? 1 : 0);
+    (selectedTags.length > 0 ? 1 : 0) +
+    (selectedColors.length > 0 ? 1 : 0);
 
   const displayNotes = useMemo(() => {
     let result = filteredNotes;
@@ -249,6 +262,10 @@ export default function NotesListScreen() {
         result = result.filter((n: Note) =>
           selectedTags.every((tag) => n.tags?.includes(tag)),
         );
+      if (selectedColors.length > 0)
+        result = result.filter(
+          (n: Note) => n.color != null && selectedColors.includes(n.color),
+        );
       return result;
     }
     result = result.filter((n: Note) => n.repo === selectedRepo.path);
@@ -262,6 +279,10 @@ export default function NotesListScreen() {
       result = result.filter((n: Note) =>
         selectedTags.every((tag) => n.tags?.includes(tag)),
       );
+    if (selectedColors.length > 0)
+      result = result.filter(
+        (n: Note) => n.color != null && selectedColors.includes(n.color),
+      );
     return result;
   }, [
     filteredNotes,
@@ -270,6 +291,7 @@ export default function NotesListScreen() {
     selectedFolder,
     selectedFormat,
     selectedTags,
+    selectedColors,
   ]);
 
   const hasActiveSearch = searchQuery.trim().length > 0;
@@ -284,7 +306,7 @@ export default function NotesListScreen() {
     if (ref && typeof ref.scrollToOffset === 'function') {
       ref.scrollToOffset({ offset: 0, animated: false });
     }
-  }, [selectedRepo, selectedBranch, selectedFolder, selectedFormat, selectedTags]);
+  }, [selectedRepo, selectedBranch, selectedFolder, selectedFormat, selectedTags, selectedColors]);
 
   useEffect(() => {
     if (!hasActiveSearch || searchMatchCount === 0) {
@@ -304,6 +326,13 @@ export default function NotesListScreen() {
     setSelectedFormat(null);
     setSelectedFolder(null);
     setSelectedTags([]);
+    setSelectedColors([]);
+  }, []);
+
+  const toggleColorFilter = useCallback((color: NoteColor) => {
+    setSelectedColors((prev) =>
+      prev.includes(color) ? prev.filter((c) => c !== color) : [...prev, color],
+    );
   }, []);
 
   const handleNotePress = useCallback(
@@ -1429,6 +1458,66 @@ export default function NotesListScreen() {
                             ]}
                           >
                             {tag}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </>
+              )}
+
+              {/* Color (#513) */}
+              {allColors.length > 0 && (
+                <>
+                  <Text
+                    style={[
+                      styles.filterLabel,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    Color
+                  </Text>
+                  <View style={styles.filterChipRowWrap}>
+                    {allColors.map((color) => {
+                      const isSelected = selectedColors.includes(color);
+                      const swatch = NOTE_COLORS[color];
+                      return (
+                        <TouchableOpacity
+                          key={color}
+                          testID={`note-color-filter-${color}`}
+                          style={[
+                            styles.filterChip,
+                            { borderColor: colors.border },
+                            isSelected && {
+                              borderColor: colors.primary,
+                              backgroundColor: colors.primary + "15",
+                            },
+                          ]}
+                          onPress={() => {
+                            HapticService.selection();
+                            toggleColorFilter(color);
+                          }}
+                        >
+                          <View
+                            style={{
+                              width: 12,
+                              height: 12,
+                              borderRadius: 6,
+                              backgroundColor: swatch,
+                            }}
+                          />
+                          <Text
+                            style={[
+                              styles.filterChipText,
+                              {
+                                color: isSelected
+                                  ? colors.primary
+                                  : colors.text,
+                                textTransform: "capitalize",
+                              },
+                            ]}
+                          >
+                            {color}
                           </Text>
                         </TouchableOpacity>
                       );
