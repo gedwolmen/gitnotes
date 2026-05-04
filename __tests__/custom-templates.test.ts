@@ -6,6 +6,14 @@ jest.mock('@react-native-community/netinfo', () => ({
   },
 }));
 
+jest.mock('../src/services/TemplateRepoPreferenceService', () => ({
+  TemplateRepoPreferenceService: { get: jest.fn(async () => null) },
+}));
+jest.mock('../src/services/TemplateGitHubSyncService', () => ({
+  syncTemplateToGitHub: jest.fn(async () => ({ success: true })),
+  deleteTemplateFromGitHub: jest.fn(async () => ({ success: true })),
+}));
+
 jest.mock('../src/services/StorageService', () => ({
   StorageService: {
     loadCustomTemplates: jest.fn(async () => []),

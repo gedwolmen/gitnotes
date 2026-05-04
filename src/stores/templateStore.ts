@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import { NoteTemplate, NOTE_TEMPLATES } from '../services/TemplateService';
 import { StorageService } from '../services/StorageService';
+import { TemplateRepoPreferenceService } from '../services/TemplateRepoPreferenceService';
+import {
+  syncTemplateToGitHub,
+  deleteTemplateFromGitHub,
+} from '../services/TemplateGitHubSyncService';
 import { generateId } from '../utils/ids';
 
 interface TemplateState {
@@ -37,14 +42,45 @@ export const useTemplateStore = create<TemplateState>()((set, get) => ({
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
-    const next = [...get().customTemplates, template];
+
+    let synced = template;
+    const pref = await TemplateRepoPreferenceService.get();
+    if (pref) {
+      const result = await syncTemplateToGitHub({
+        repoPath: pref.repoPath,
+        branch: pref.branch,
+        template,
+      });
+      if (result.success && result.filePath) {
+        synced = { ...template, filePath: result.filePath };
+      }
+    }
+
+    const next = [...get().customTemplates, synced];
     await StorageService.saveCustomTemplates(next);
     set({ customTemplates: next });
-    return template;
+    return synced;
   },
 
   updateTemplate: async (id, updates) => {
-    const next = get().customTemplates.map((t) => (t.id === id ? { ...t, ...updates, updatedAt: Date.now() } : t));
+    const current = get().customTemplates.find((t) => t.id === id);
+    if (!current) return;
+
+    const merged: NoteTemplate = { ...current, ...updates, updatedAt: Date.now() };
+
+    const pref = await TemplateRepoPreferenceService.get();
+    if (pref) {
+      const result = await syncTemplateToGitHub({
+        repoPath: pref.repoPath,
+        branch: pref.branch,
+        template: merged,
+      });
+      if (result.success && result.filePath) {
+        merged.filePath = result.filePath;
+      }
+    }
+
+    const next = get().customTemplates.map((t) => (t.id === id ? merged : t));
     await StorageService.saveCustomTemplates(next);
     set({ customTemplates: next });
   },
@@ -52,6 +88,17 @@ export const useTemplateStore = create<TemplateState>()((set, get) => ({
   deleteTemplate: async (id) => {
     const template = get().customTemplates.find((t) => t.id === id);
     if (!template?.isCustom) return;
+
+    const pref = await TemplateRepoPreferenceService.get();
+    if (pref && template.filePath) {
+      await deleteTemplateFromGitHub({
+        repoPath: pref.repoPath,
+        branch: pref.branch,
+        filePath: template.filePath,
+        name: template.name,
+      });
+    }
+
     const next = get().customTemplates.filter((t) => t.id !== id);
     await StorageService.saveCustomTemplates(next);
     set({ customTemplates: next });
