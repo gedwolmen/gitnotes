@@ -105,7 +105,7 @@ function formatChipLabel(format: NoteFormat | undefined): string | null {
   }
 }
 
-const HEIGHT_FOR: Record<BentoSize, number> = { large: 200, medium: 132, small: 132, pinned: 140 };
+const HEIGHT_FOR: Record<BentoSize, number> = { large: 200, medium: 132, small: 132, pinned: 156 };
 const PADDING_FOR: Record<BentoSize, number> = { large: 18, medium: 14, small: 12, pinned: 12 };
 const TITLE_SIZE: Record<BentoSize, number> = { large: 18, medium: 15, small: 13, pinned: 13 };
 const SUB_SIZE: Record<BentoSize, number> = { large: 13, medium: 12, small: 11, pinned: 11 };
@@ -254,7 +254,7 @@ export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph }: 
   const tags = note.tags ?? [];
   const visibleTags = tags.slice(0, 2);
   const formatChip = formatChipLabel(note.format);
-  const showRepoBadge = !isPinned && !!note.repo;
+  const showRepoBadge = !!note.repo;
   const baseSnippetLines = SNIPPET_LINES[size];
   const snippetLines = titleLines > 1 ? Math.max(1, baseSnippetLines - 1) : baseSnippetLines;
 
@@ -311,9 +311,9 @@ export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph }: 
       <Text style={[styles.subtitle, { color: colors.textSecondary, fontSize: SUB_SIZE[size] }]} numberOfLines={1}>
         {relativeTime(item.updatedAt)}
       </Text>
-      {!isPinned && (visibleTags.length > 0 || showRepoBadge) ? (
+      {(visibleTags.length > 0 || showRepoBadge) ? (
         <View style={styles.metaRow}>
-          {visibleTags.map((tag) => (
+          {(isPinned ? [] : visibleTags).map((tag) => (
             <View key={tag} style={[styles.tagChip, { backgroundColor: colors.primary + '20' }]}>
               <Text style={[styles.tagChipText, { color: colors.primary }]} numberOfLines={1}>
                 {tag}
