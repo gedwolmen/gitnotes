@@ -4,7 +4,7 @@ import { parseRepoPath } from '../../utils/gitPathParser';
 import { makeGitFs } from './gitFs';
 import { gitHttp } from './gitHttp';
 
-const CLONES_SUBDIR = 'gitnotes-clones/';
+const CLONES_SUBDIR = 'GitNotes/';
 
 /**
  * Tree entry shape that mirrors `GitHubService.getTreeRecursiveOrThrow` so

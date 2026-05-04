@@ -183,21 +183,21 @@ describe('GitFsService', () => {
 
   test('isCloned reflects the on-disk presence of <root>/.git/HEAD', async () => {
     expect(await GitFsService.isCloned({ repoPath: 'me/repo' })).toBe(false);
-    getFsStore().set('file:///doc/gitnotes-clones/me/repo/.git/HEAD', { type: 'file' });
+    getFsStore().set('file:///doc/GitNotes/me/repo/.git/HEAD', { type: 'file' });
     expect(await GitFsService.isCloned({ repoPath: 'me/repo' })).toBe(true);
   });
 
   test('removeRepo deletes the on-disk dir and is idempotent', async () => {
-    getFsStore().set('file:///doc/gitnotes-clones/me/repo', { type: 'dir' });
+    getFsStore().set('file:///doc/GitNotes/me/repo', { type: 'dir' });
     await GitFsService.removeRepo({ repoPath: 'me/repo' });
-    expect(getFsStore().has('file:///doc/gitnotes-clones/me/repo')).toBe(false);
+    expect(getFsStore().has('file:///doc/GitNotes/me/repo')).toBe(false);
     // Second call must not throw.
     await GitFsService.removeRepo({ repoPath: 'me/repo' });
   });
 
   test('workingTreeUri returns the absolute URI', () => {
     expect(GitFsService.workingTreeUri({ repoPath: 'me/repo' })).toBe(
-      'file:///doc/gitnotes-clones/me/repo',
+      'file:///doc/GitNotes/me/repo',
     );
   });
 

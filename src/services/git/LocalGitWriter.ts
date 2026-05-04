@@ -4,7 +4,7 @@ import { parseRepoPath } from '../../utils/gitPathParser';
 import { makeGitFs as buildGitFs } from './gitFs';
 import { gitHttp } from './gitHttp';
 
-const CLONES_SUBDIR = 'gitnotes-clones/';
+const CLONES_SUBDIR = 'GitNotes/';
 
 /**
  * Result shape kept identical to the existing GitHub-Contents-API write paths

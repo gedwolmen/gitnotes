@@ -1,3 +1,4 @@
+import './src/polyfills';
 import 'react-native-gesture-handler';
 import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-reanimated';
 import React, { useState, useEffect, useCallback } from 'react';

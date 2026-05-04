@@ -62,7 +62,7 @@ interface ReadOpts {
 /**
  * Build a PromiseFsClient that isomorphic-git can drive against
  * `expo-file-system/legacy`. The `root` argument is the absolute on-disk URI
- * (e.g. `file:///.../gitnotes-clones/`) to which all virtual git paths get
+ * (e.g. `file:///.../GitNotes/`) to which all virtual git paths get
  * appended. Keeping the root out of the virtual path avoids the `file://` →
  * `file:/` collapsing that path-normalisers do on protocol-prefixed strings.
  */

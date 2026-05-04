@@ -71,7 +71,7 @@ describe('LocalGitWriter', () => {
     expect(result.success).toBe(true);
     expect(result.filePath).toBe('notes/foo.md');
 
-    expect(getFsStore().has('file:///doc/gitnotes-clones/me/repo/notes/foo.md')).toBe(true);
+    expect(getFsStore().has('file:///doc/GitNotes/me/repo/notes/foo.md')).toBe(true);
 
     expect(getGitMocks().add).toHaveBeenCalledWith({
       fs: expect.any(Object),
@@ -122,7 +122,7 @@ describe('LocalGitWriter', () => {
   });
 
   test('deleteAndCommit removes the on-disk file, runs git remove + commit + push', async () => {
-    getFsStore().set('file:///doc/gitnotes-clones/me/repo/notes/old.md', { type: 'file' });
+    getFsStore().set('file:///doc/GitNotes/me/repo/notes/old.md', { type: 'file' });
     const result = await LocalGitWriter.deleteAndCommit({
       repoPath: 'me/repo',
       branch: 'main',
@@ -132,7 +132,7 @@ describe('LocalGitWriter', () => {
       token: 'tok',
     });
     expect(result.success).toBe(true);
-    expect(getFsStore().has('file:///doc/gitnotes-clones/me/repo/notes/old.md')).toBe(false);
+    expect(getFsStore().has('file:///doc/GitNotes/me/repo/notes/old.md')).toBe(false);
     expect(getGitMocks().remove).toHaveBeenCalledWith({
       fs: expect.any(Object),
       dir: '/me/repo',
