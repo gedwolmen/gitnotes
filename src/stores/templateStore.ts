@@ -53,6 +53,8 @@ export const useTemplateStore = create<TemplateState>()((set, get) => ({
       });
       if (result.success && result.filePath) {
         synced = { ...template, filePath: result.filePath };
+      } else if (!result.success) {
+        console.warn(`[templateStore] Failed to sync template "${template.name}" to GitHub: ${result.error ?? 'unknown error'}`);
       }
     }
 
@@ -77,6 +79,8 @@ export const useTemplateStore = create<TemplateState>()((set, get) => ({
       });
       if (result.success && result.filePath) {
         merged.filePath = result.filePath;
+      } else if (!result.success) {
+        console.warn(`[templateStore] Failed to sync template "${merged.name}" to GitHub: ${result.error ?? 'unknown error'}`);
       }
     }
 
@@ -91,12 +95,15 @@ export const useTemplateStore = create<TemplateState>()((set, get) => ({
 
     const pref = await TemplateRepoPreferenceService.get();
     if (pref && template.filePath) {
-      await deleteTemplateFromGitHub({
+      const delResult = await deleteTemplateFromGitHub({
         repoPath: pref.repoPath,
         branch: pref.branch,
         filePath: template.filePath,
         name: template.name,
       });
+      if (!delResult.success) {
+        console.warn(`[templateStore] Failed to delete template "${template.name}" from GitHub: ${delResult.error ?? 'unknown error'}`);
+      }
     }
 
     const next = get().customTemplates.filter((t) => t.id !== id);

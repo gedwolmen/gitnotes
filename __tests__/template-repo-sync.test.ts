@@ -11,8 +11,9 @@ jest.mock('../src/services/TemplateRepoPreferenceService', () => ({
     get: jest.fn(async () => ({ repoPath: 'me/repo', branch: 'main' })),
   },
 }));
-const mockSyncTemplateToGitHub = jest.fn(async (..._args: any[]) => ({ success: true, filePath: 'templates/x.md' }));
-const mockDeleteTemplateFromGitHub = jest.fn(async (..._args: any[]) => ({ success: true }));
+type SyncResult = { success: boolean; filePath?: string; error?: string };
+const mockSyncTemplateToGitHub = jest.fn(async (..._args: any[]): Promise<SyncResult> => ({ success: true, filePath: 'templates/x.md' }));
+const mockDeleteTemplateFromGitHub = jest.fn(async (..._args: any[]): Promise<SyncResult> => ({ success: true }));
 jest.mock('../src/services/TemplateGitHubSyncService', () => ({
   syncTemplateToGitHub: (...a: any[]) => mockSyncTemplateToGitHub(...a),
   deleteTemplateFromGitHub: (...a: any[]) => mockDeleteTemplateFromGitHub(...a),
@@ -56,5 +57,19 @@ describe('templateStore repo sync', () => {
     expect(mockDeleteTemplateFromGitHub).toHaveBeenCalledWith(expect.objectContaining({
       repoPath: 'me/repo', branch: 'main', filePath: 'templates/x.md', name: 'X',
     }));
+  });
+
+  test('createTemplate persists locally without filePath when sync fails', async () => {
+    mockSyncTemplateToGitHub.mockResolvedValueOnce({ success: false, error: 'GitHub unavailable' });
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const t = await useTemplateStore.getState().createTemplate({
+      name: 'Y', icon: 'document-outline', description: '', content: 'body', tags: [],
+    });
+    expect(t.filePath).toBeUndefined();
+    expect(useTemplateStore.getState().customTemplates).toHaveLength(1);
+    expect(useTemplateStore.getState().customTemplates[0].filePath).toBeUndefined();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Failed to sync template'));
+    warn.mockRestore();
   });
 });
