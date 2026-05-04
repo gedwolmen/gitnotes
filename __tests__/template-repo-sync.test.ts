@@ -11,8 +11,8 @@ jest.mock('../src/services/TemplateRepoPreferenceService', () => ({
     get: jest.fn(async () => ({ repoPath: 'me/repo', branch: 'main' })),
   },
 }));
-const mockSyncTemplateToGitHub = jest.fn(async () => ({ success: true, filePath: 'templates/x.md' }));
-const mockDeleteTemplateFromGitHub = jest.fn(async () => ({ success: true }));
+const mockSyncTemplateToGitHub = jest.fn(async (..._args: any[]) => ({ success: true, filePath: 'templates/x.md' }));
+const mockDeleteTemplateFromGitHub = jest.fn(async (..._args: any[]) => ({ success: true }));
 jest.mock('../src/services/TemplateGitHubSyncService', () => ({
   syncTemplateToGitHub: (...a: any[]) => mockSyncTemplateToGitHub(...a),
   deleteTemplateFromGitHub: (...a: any[]) => mockDeleteTemplateFromGitHub(...a),
