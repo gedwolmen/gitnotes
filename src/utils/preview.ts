@@ -100,6 +100,7 @@ export function getMarkdownStyles(
     list: { marginBottom: 12 },
     hr: { backgroundColor: dividerColor, height: 1, marginVertical: 16 },
     strong: { color: bodyColor },
+    strikethrough: { color: colors.textSecondary, textDecorationLine: 'line-through' },
     em: { color: quoteText },
   };
 }
