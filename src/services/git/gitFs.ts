@@ -172,6 +172,9 @@ export function makeGitFs(root: string): PromiseFsClient {
       uid: number;
       gid: number;
       dev: number;
+      isFile: () => boolean;
+      isDirectory: () => boolean;
+      isSymbolicLink: () => boolean;
     }> {
       const uri = joinUri(root, filepath);
       const info = await FileSystem.getInfoAsync(uri);
@@ -183,6 +186,9 @@ export function makeGitFs(root: string): PromiseFsClient {
       // exposed; reuse mtime — git only cares about ordering, not which
       // clock recorded it.
       const mtimeSeconds = Math.floor(info.modificationTime ?? 0);
+      // Some isomorphic-git code paths reach for Node-style `Stats` predicate
+      // methods (`.isDirectory()` etc.) instead of the `type` field. Provide
+      // both — the field for fast-path callers, the methods for the rest.
       return {
         type: isDir ? 'dir' : 'file',
         mode: isDir ? 0o40755 : 0o100644,
@@ -195,6 +201,9 @@ export function makeGitFs(root: string): PromiseFsClient {
         uid: 0,
         gid: 0,
         dev: 0,
+        isFile: () => !isDir,
+        isDirectory: () => isDir,
+        isSymbolicLink: () => false,
       };
     },
 

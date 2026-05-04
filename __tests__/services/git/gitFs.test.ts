@@ -205,6 +205,26 @@ describe('gitFs adapter', () => {
     expect(s.mode).toBe(0o40755);
   });
 
+  test('stat exposes Node-style isFile/isDirectory/isSymbolicLink methods', async () => {
+    // isomorphic-git's CloneMigration path crashed on a real device with
+    // "r.isDirectory is not a function" — the adapter only returned the
+    // `type` field. Methods need to coexist with it.
+    const fs = makeGitFs('file:///doc/git/');
+    await fs.promises.writeFile('/note.txt', 'hi');
+    await fs.promises.mkdir('/d');
+
+    const f: any = await fs.promises.stat('/note.txt');
+    expect(typeof f.isFile).toBe('function');
+    expect(f.isFile()).toBe(true);
+    expect(f.isDirectory()).toBe(false);
+    expect(f.isSymbolicLink()).toBe(false);
+
+    const d: any = await fs.promises.stat('/d');
+    expect(d.isFile()).toBe(false);
+    expect(d.isDirectory()).toBe(true);
+    expect(d.isSymbolicLink()).toBe(false);
+  });
+
   test('readlink/symlink throw — not supported on the sandbox', async () => {
     const fs = makeGitFs('file:///doc/git/');
     expect(typeof fs.promises.readlink).toBe('function');
