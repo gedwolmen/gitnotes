@@ -299,7 +299,7 @@ export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph }: 
         >
           {titleFor(item)}
         </Text>
-        {snippet ? (
+        {isLarge && snippet ? (
           <Text
             style={[styles.snippet, { color: colors.textSecondary, fontSize: SUB_SIZE[size] }]}
             numberOfLines={snippetLines}
