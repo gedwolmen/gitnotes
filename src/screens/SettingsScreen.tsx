@@ -29,6 +29,9 @@ import { pullFromSingleRepo } from '../services/RepoPullService';
 import { TemplateRepoPreferenceService, TemplateRepoPreference } from '../services/TemplateRepoPreferenceService';
 import { syncTemplateToGitHub } from '../services/TemplateGitHubSyncService';
 import { useTemplateStore } from '../stores/templateStore';
+import { SyncEngineService, SyncEngineMode } from '../services/SyncEngineService';
+import { GitFsService } from '../services/git/GitFsService';
+import { AuthService } from '../services/AuthService';
 import { useCanvases } from '../contexts/CanvasContext';
 import { useTodos } from '../contexts/TodoContext';
 import { OnboardingService } from '../services/OnboardingService';
@@ -130,6 +133,75 @@ export default function SettingsScreen() {
     setTemplatesRepoPref(null);
     HapticService.success();
   }, []);
+
+  // ── Sync-engine toggle (#514) ─────────────────────────────────────────────
+  const [syncModes, setSyncModes] = useState<Record<string, SyncEngineMode>>({});
+  const [cloningRepo, setCloningRepo] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const next: Record<string, SyncEngineMode> = {};
+      for (const repo of repositories) {
+        next[repo.path] = await SyncEngineService.getMode(repo.path);
+      }
+      if (!cancelled) setSyncModes(next);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [repositories]);
+
+  const handleEnableCloneMode = useCallback(
+    async (repo: GitRepository) => {
+      if (!GitHubService.isAuthenticated()) {
+        Alert.alert('GitHub required', 'Connect a GitHub account before enabling clone mode.');
+        return;
+      }
+      setCloningRepo(repo.path);
+      try {
+        const token = (await AuthService.getToken()) ?? undefined;
+        const branch = repo.branch || 'main';
+        const already = await GitFsService.isCloned({ repoPath: repo.path });
+        if (!already) {
+          await GitFsService.clone({ repoPath: repo.path, branch, token });
+        }
+        await SyncEngineService.setMode(repo.path, 'clone');
+        setSyncModes((prev) => ({ ...prev, [repo.path]: 'clone' }));
+        HapticService.success();
+        Alert.alert('Clone mode enabled', `${repo.name} now syncs through a local working tree.`);
+      } catch (e) {
+        HapticService.error();
+        Alert.alert('Clone failed', e instanceof Error ? e.message : String(e));
+      } finally {
+        setCloningRepo(null);
+      }
+    },
+    [],
+  );
+
+  const handleDisableCloneMode = useCallback(
+    (repo: GitRepository) => {
+      Alert.alert(
+        'Switch to API mode?',
+        `This will remove the local clone of ${repo.name} and revert to the GitHub Contents API.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Switch',
+            style: 'destructive',
+            onPress: async () => {
+              await GitFsService.removeRepo({ repoPath: repo.path });
+              await SyncEngineService.setMode(repo.path, 'api');
+              setSyncModes((prev) => ({ ...prev, [repo.path]: 'api' }));
+              HapticService.success();
+            },
+          },
+        ],
+      );
+    },
+    [],
+  );
 
   const [isSyncingExistingTemplates, setIsSyncingExistingTemplates] = useState(false);
   const handleSyncExistingTemplates = useCallback(async () => {
@@ -585,6 +657,67 @@ export default function SettingsScreen() {
             <Text style={[styles.addRepoButtonText, { color: colors.primary }]}>Add Repository</Text>
           </TouchableOpacity>
         </View>
+
+        {/* ── Sync engine (per repo) ── */}
+        {repositories.length > 0 && (
+          <View style={[styles.section, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+              Sync engine
+            </Text>
+            {repositories.map((repo) => {
+              const mode = syncModes[repo.path] ?? 'api';
+              const isClone = mode === 'clone';
+              const isCloning = cloningRepo === repo.path;
+              return (
+                <View
+                  key={repo.id}
+                  style={[styles.repoItem, { borderBottomColor: colors.border }]}
+                  testID={`sync-engine-row-${repo.path}`}
+                >
+                  <Ionicons
+                    name={isClone ? 'cloud-done-outline' : 'cloud-outline'}
+                    size={18}
+                    color={isClone ? colors.primary : colors.textSecondary}
+                  />
+                  <View style={styles.repoInfo}>
+                    <Text style={[styles.repoName, { color: colors.text }]} numberOfLines={1}>
+                      {repo.name}
+                    </Text>
+                    <Text
+                      style={[styles.repoPath, { color: colors.textSecondary }]}
+                      numberOfLines={1}
+                    >
+                      {isClone ? 'Clone (local working tree)' : 'GitHub API (per-file)'}
+                    </Text>
+                  </View>
+                  {isCloning ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : isClone ? (
+                    <TouchableOpacity
+                      testID={`sync-engine-disable-${repo.path}`}
+                      onPress={() => handleDisableCloneMode(repo)}
+                      style={styles.removeButton}
+                    >
+                      <Text style={[styles.settingLabel, { color: colors.error }]}>
+                        Use API
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      testID={`sync-engine-enable-${repo.path}`}
+                      onPress={() => handleEnableCloneMode(repo)}
+                      style={styles.removeButton}
+                    >
+                      <Text style={[styles.settingLabel, { color: colors.primary }]}>
+                        Clone
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        )}
 
         {/* ── Templates ── */}
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
