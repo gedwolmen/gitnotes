@@ -105,7 +105,7 @@ function formatChipLabel(format: NoteFormat | undefined): string | null {
   }
 }
 
-const HEIGHT_FOR: Record<BentoSize, number> = { large: 200, medium: 132, small: 132, pinned: 156 };
+const HEIGHT_FOR: Record<BentoSize, number> = { large: 200, medium: 124, small: 124, pinned: 124 };
 const PADDING_FOR: Record<BentoSize, number> = { large: 18, medium: 14, small: 12, pinned: 12 };
 const TITLE_SIZE: Record<BentoSize, number> = { large: 18, medium: 15, small: 13, pinned: 13 };
 const SUB_SIZE: Record<BentoSize, number> = { large: 13, medium: 12, small: 11, pinned: 11 };
@@ -376,7 +376,6 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
   },
   body: {
-    flex: 1,
     flexShrink: 1,
     minHeight: 0,
     marginTop: 10,
