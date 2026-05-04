@@ -38,7 +38,17 @@ async function getRepoReader(
     if (!cloned) {
       await GitFsService.clone({ repoPath, branch, token });
     } else {
-      await GitFsService.fetch({ repoPath, branch, token });
+      // Phase 5: fast-forward instead of bare fetch so local unpushed commits
+      // can't be silently shadowed by stale reconcile. If the local branch
+      // has diverged we throw — the outer try/catch in pullNotesFromRepo
+      // returns 0 without running reconcile, preserving local edits.
+      const result = await GitFsService.pullWithFastForward({ repoPath, branch, token });
+      if (!result.ok) {
+        throw new Error(
+          `Local repo ${repoPath}@${branch} has diverged from upstream (${result.reason}). ` +
+            `Push or reset your local commits before the next pull.`,
+        );
+      }
     }
     return {
       mode,

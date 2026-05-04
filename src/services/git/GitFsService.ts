@@ -123,6 +123,62 @@ export class GitFsService {
   }
 
   /**
+   * Fetch from origin then fast-forward the local branch if possible. Returns
+   * `{ ok: true }` on success and `{ ok: false, reason }` when the local
+   * branch has diverged from upstream. The pull-side caller (#514 phase 5)
+   * uses this in place of a plain fetch so we never silently overwrite local
+   * write commits the user hasn't pushed yet.
+   *
+   * Real 3-way merge / rebase + multi-file conflict UI are deferred — phase 5
+   * deliberately stops at "detect divergence and skip reconcile" so a stale
+   * upstream snapshot can't drop in-flight local edits. Conflict resolution
+   * UX is a separate, larger product surface.
+   */
+  static async pullWithFastForward(opts: FetchOpts): Promise<
+    { ok: true } | { ok: false; reason: 'diverged' | 'unknown'; error?: string }
+  > {
+    const info = parseRepoPath(opts.repoPath);
+    if (!info) return { ok: false, reason: 'unknown', error: `Invalid repo path: ${opts.repoPath}` };
+    const dir = repoDirVirtual(info.owner, info.repo);
+    const fs = makeRepoFs();
+
+    try {
+      await git.fetch({
+        fs,
+        http: gitHttp,
+        dir,
+        ref: opts.branch,
+        singleBranch: true,
+        depth: opts.depth ?? 1,
+        tags: false,
+        onAuth: ensureToken(opts.token),
+      });
+      await git.fastForward({
+        fs,
+        http: gitHttp,
+        dir,
+        ref: opts.branch,
+        singleBranch: true,
+        onAuth: ensureToken(opts.token),
+      });
+      return { ok: true };
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      // isomorphic-git surfaces fast-forward failure as MergeNotSupportedError
+      // / FastForwardError; treat both as "diverged".
+      const code = (e as { code?: string }).code;
+      if (
+        code === 'FastForwardError' ||
+        code === 'MergeNotSupportedError' ||
+        /not.*fast.?forward/i.test(message)
+      ) {
+        return { ok: false, reason: 'diverged', error: message };
+      }
+      return { ok: false, reason: 'unknown', error: message };
+    }
+  }
+
+  /**
    * Recursive tree listing at the given ref. Output mirrors
    * `GitHubService.getTreeRecursiveOrThrow` so the Phase 2 swap is a transport
    * change, not a shape change.

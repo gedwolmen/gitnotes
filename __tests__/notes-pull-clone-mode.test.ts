@@ -43,6 +43,7 @@ jest.mock('../src/services/git/GitFsService', () => ({
     isCloned: jest.fn(async () => false),
     clone: jest.fn(async () => undefined),
     fetch: jest.fn(async () => undefined),
+    pullWithFastForward: jest.fn(async () => ({ ok: true })),
     listTree: jest.fn(async () => [
       { path: 'notes/foo.md', type: 'blob', sha: 'aa' },
       { path: 'notes/images/cover.png', type: 'blob', sha: 'bb' },
@@ -82,13 +83,26 @@ describe('pullNotesFromRepo via clone mode', () => {
 
     (GitFsService.isCloned as jest.Mock).mockResolvedValueOnce(true);
     (GitFsService.clone as jest.Mock).mockClear();
+    (GitFsService.pullWithFastForward as jest.Mock).mockClear();
     await pullFromSingleRepo('me/gitnotes');
     expect(GitFsService.clone).not.toHaveBeenCalled();
-    expect(GitFsService.fetch).toHaveBeenCalledWith({
+    expect(GitFsService.pullWithFastForward).toHaveBeenCalledWith({
       repoPath: 'me/gitnotes',
       branch: 'main',
       token: 'tok-abc',
     });
+  });
+
+  test('diverged local commits abort pull (no reconcile, saveAllNotes not called)', async () => {
+    (GitFsService.isCloned as jest.Mock).mockResolvedValue(true);
+    (GitFsService.pullWithFastForward as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      reason: 'diverged',
+    });
+    const result = await pullFromSingleRepo('me/gitnotes');
+    expect(result.notes).toBe(0);
+    expect(StorageService.saveAllNotes).not.toHaveBeenCalled();
+    expect(GitFsService.listTree).not.toHaveBeenCalled();
   });
 
   test('listTree + readFile go through GitFsService, not GitHubService', async () => {

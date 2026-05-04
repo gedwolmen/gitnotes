@@ -8,6 +8,7 @@ jest.mock('isomorphic-git', () => {
   const mocks = {
     clone: jest.fn(async (..._args: any[]) => undefined),
     fetch: jest.fn(async (..._args: any[]) => ({ defaultBranch: 'main' })),
+    fastForward: jest.fn(async (..._args: any[]) => undefined),
     walk: jest.fn(async (..._args: any[]): Promise<any[]> => []),
     resolveRef: jest.fn(async (..._args: any[]) => 'oid-deadbeef'),
     readBlob: jest.fn(async (..._args: any[]) => ({
@@ -22,6 +23,7 @@ jest.mock('isomorphic-git', () => {
     default: {
       clone: mocks.clone,
       fetch: mocks.fetch,
+      fastForward: mocks.fastForward,
       walk: mocks.walk,
       resolveRef: mocks.resolveRef,
       readBlob: mocks.readBlob,
@@ -34,6 +36,7 @@ function getGitMocks() {
   return (globalThis as any).__isomorphicGitMocks as {
     clone: jest.Mock;
     fetch: jest.Mock;
+    fastForward: jest.Mock;
     walk: jest.Mock;
     resolveRef: jest.Mock;
     readBlob: jest.Mock;
@@ -193,5 +196,42 @@ describe('GitFsService', () => {
     expect(GitFsService.workingTreeUri({ repoPath: 'me/repo' })).toBe(
       'file:///doc/gitnotes-clones/me/repo',
     );
+  });
+
+  test('pullWithFastForward fetches then fast-forwards on success', async () => {
+    const result = await GitFsService.pullWithFastForward({
+      repoPath: 'me/repo',
+      branch: 'main',
+      token: 'tok',
+    });
+    expect(result.ok).toBe(true);
+    expect(getGitMocks().fetch).toHaveBeenCalled();
+    expect(getGitMocks().fastForward).toHaveBeenCalled();
+  });
+
+  test('pullWithFastForward returns diverged when fast-forward fails', async () => {
+    getGitMocks().fastForward.mockRejectedValueOnce(
+      Object.assign(new Error('not fast-forwardable'), { code: 'FastForwardError' }),
+    );
+    const result = await GitFsService.pullWithFastForward({
+      repoPath: 'me/repo',
+      branch: 'main',
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe('diverged');
+    }
+  });
+
+  test('pullWithFastForward classifies network failure as unknown', async () => {
+    getGitMocks().fetch.mockRejectedValueOnce(new Error('network'));
+    const result = await GitFsService.pullWithFastForward({
+      repoPath: 'me/repo',
+      branch: 'main',
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe('unknown');
+    }
   });
 });
