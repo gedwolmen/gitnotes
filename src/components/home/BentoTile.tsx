@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
+import type { TextLayoutEventData, NativeSyntheticEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import type { RecentItem, BentoSize } from '../../utils/recentItems';
@@ -119,6 +120,14 @@ export function BentoTile({ item, size, onPress }: Props) {
   const isMedium = size === 'medium';
   const isSmall = size === 'small';
   const isCanvas = item.kind === 'canvas';
+  const [titleLines, setTitleLines] = useState(1);
+  const handleTitleLayout = useCallback(
+    (e: NativeSyntheticEvent<TextLayoutEventData>) => {
+      const lines = e.nativeEvent.lines.length;
+      if (lines && lines !== titleLines) setTitleLines(lines);
+    },
+    [titleLines],
+  );
 
   const accentByKind: Record<RecentItem['kind'], string> = {
     note: colors.primary,
@@ -216,10 +225,11 @@ export function BentoTile({ item, size, onPress }: Props) {
             <Text style={[styles.formatChipText, { color: accent }]}>PDF</Text>
           </View>
         ) : null}
-        <View style={styles.spacer} />
-        <Text style={[styles.title, { color: colors.text, fontSize: TITLE_SIZE[size] }]} numberOfLines={isLarge ? 2 : 1}>
-          {titleFor(item)}
-        </Text>
+        <View style={styles.body}>
+          <Text style={[styles.title, { color: colors.text, fontSize: TITLE_SIZE[size] }]} numberOfLines={isLarge ? 2 : 1}>
+            {titleFor(item)}
+          </Text>
+        </View>
         <Text style={[styles.subtitle, { color: colors.textSecondary, fontSize: SUB_SIZE[size] }]} numberOfLines={1}>
           {filename ? `${filename} · ${relativeTime(item.updatedAt)}` : `PDF · ${relativeTime(item.updatedAt)}`}
         </Text>
@@ -242,6 +252,8 @@ export function BentoTile({ item, size, onPress }: Props) {
   const visibleTags = tags.slice(0, 2);
   const formatChip = !isSmall ? formatChipLabel(note.format) : null;
   const showRepoBadge = !isSmall && !!note.repo;
+  const baseSnippetLines = SNIPPET_LINES[size];
+  const snippetLines = titleLines > 1 ? Math.max(1, baseSnippetLines - 1) : baseSnippetLines;
 
   return (
     <Pressable
@@ -275,21 +287,23 @@ export function BentoTile({ item, size, onPress }: Props) {
           <Text style={[styles.formatChipText, { color: accent }]}>{formatChip}</Text>
         </View>
       ) : null}
-      <View style={styles.spacer} />
-      <Text
-        style={[styles.title, { color: colors.text, fontSize: TITLE_SIZE[size] }]}
-        numberOfLines={isLarge ? 2 : isMedium ? 2 : 2}
-      >
-        {titleFor(item)}
-      </Text>
-      {snippet ? (
+      <View style={styles.body}>
         <Text
-          style={[styles.snippet, { color: colors.textSecondary, fontSize: SUB_SIZE[size] }]}
-          numberOfLines={SNIPPET_LINES[size]}
+          style={[styles.title, { color: colors.text, fontSize: TITLE_SIZE[size] }]}
+          numberOfLines={isLarge ? 2 : isMedium ? 2 : 2}
+          onTextLayout={handleTitleLayout}
         >
-          {snippet}
+          {titleFor(item)}
         </Text>
-      ) : null}
+        {snippet ? (
+          <Text
+            style={[styles.snippet, { color: colors.textSecondary, fontSize: SUB_SIZE[size] }]}
+            numberOfLines={snippetLines}
+          >
+            {snippet}
+          </Text>
+        ) : null}
+      </View>
       <Text style={[styles.subtitle, { color: colors.textSecondary, fontSize: SUB_SIZE[size] }]} numberOfLines={1}>
         {relativeTime(item.updatedAt)}
       </Text>
@@ -357,7 +371,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     fontFamily: 'monospace',
   },
-  spacer: { flex: 1 },
+  body: {
+    flex: 1,
+    flexShrink: 1,
+    minHeight: 0,
+    justifyContent: 'flex-end',
+  },
   title: {
     fontWeight: '700',
     letterSpacing: -0.2,
