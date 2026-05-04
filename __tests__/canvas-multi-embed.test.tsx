@@ -8,6 +8,14 @@ jest.mock('expo-image', () => ({
   Image: () => null,
 }));
 
+jest.mock('expo-clipboard', () => ({
+  setStringAsync: jest.fn(),
+}));
+
+jest.mock('react-native-webview', () => ({
+  WebView: () => null,
+}));
+
 jest.mock('react-native-marked', () => {
   class Renderer {
     private key = 0;

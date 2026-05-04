@@ -11,6 +11,16 @@ interface ColorPalette {
   background: string;
 }
 
+export interface ExtendedMarkdownStyles extends MarkedStyles {
+  /** Resolved token overrides for new rendering features. Consumers read these
+   *  to apply table / math / frontmatter / checkbox / imageCaption / wikiLink /
+   *  syntaxHighlight colours in their own renderers. */
+  _tokens?: Pick<
+    FormatRenderStyle,
+    'table' | 'math' | 'frontmatter' | 'checkbox' | 'imageCaption' | 'wikiLink' | 'syntaxHighlight'
+  >;
+}
+
 export function stripTopMetadata(raw: string, format: NoteFormat): string {
   if (format === 'markdown') {
     const lines = raw.split('\n');
@@ -47,7 +57,7 @@ export function getMarkdownStyles(
   colors: ColorPalette,
   isDark: boolean,
   overrides?: FormatRenderStyle,
-): MarkedStyles {
+): ExtendedMarkdownStyles {
   const bodyColor = overrides?.body?.color ?? colors.text;
   const h1Color = overrides?.h1?.color ?? colors.text;
   const h2Color = overrides?.h2?.color ?? colors.text;
@@ -100,6 +110,16 @@ export function getMarkdownStyles(
     list: { marginBottom: 12 },
     hr: { backgroundColor: dividerColor, height: 1, marginVertical: 16 },
     strong: { color: bodyColor },
+    strikethrough: { color: colors.textSecondary, textDecorationLine: 'line-through' },
     em: { color: quoteText },
+    _tokens: {
+      table: overrides?.table,
+      math: overrides?.math,
+      frontmatter: overrides?.frontmatter,
+      checkbox: overrides?.checkbox,
+      imageCaption: overrides?.imageCaption,
+      wikiLink: overrides?.wikiLink,
+      syntaxHighlight: overrides?.syntaxHighlight,
+    },
   };
 }

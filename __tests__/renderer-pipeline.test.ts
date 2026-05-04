@@ -17,6 +17,14 @@ jest.mock('expo-image', () => ({
   Image: 'Image',
 }));
 
+jest.mock('expo-clipboard', () => ({
+  setStringAsync: jest.fn(),
+}));
+
+jest.mock('react-native-webview', () => ({
+  WebView: () => null,
+}));
+
 import { NotePreviewRenderer } from '../src/utils/markdownRenderer';
 import { createMemoizedNeorgInlineParser, parseNeorgInlineSegments } from '../src/components/NeorgRenderer';
 import { NeorgContentParser } from '../src/services/NeorgContentParser';
@@ -41,7 +49,7 @@ describe('renderer pipeline regression coverage', () => {
     const node = renderer.code('const value = 1;', 'typescript', { padding: 12 }, { fontFamily: 'monospace' });
     const { getByText } = renderNode(node);
 
-    expect(getByText('typescript')).toBeTruthy();
+    expect(getByText('TYPESCRIPT')).toBeTruthy();
     expect(getByText('const value = 1;')).toBeTruthy();
   });
 

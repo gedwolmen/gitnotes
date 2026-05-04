@@ -3,6 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity, Modal, Dimensions } from 'rea
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
+import SvgImage from './SvgImage';
+import ImageCaption from './ImageCaption';
+import ImageZoomRotate from './ImageZoomRotate';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -13,9 +16,11 @@ interface NoteImageProps {
 }
 
 export default function NoteImage({ uri, alt = '', caption }: NoteImageProps) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const isSvg = /\.svg$/i.test(uri);
+  const captionText = (alt || caption || '').trim();
 
   const handlePress = useCallback(() => {
     setShowFullscreen(true);
@@ -39,32 +44,38 @@ export default function NoteImage({ uri, alt = '', caption }: NoteImageProps) {
   return (
     <View style={styles.container}>
       <TouchableOpacity onPress={handlePress} activeOpacity={0.9}>
-        <Image
-          source={{ uri }}
-          style={styles.image}
-          contentFit="cover"
-          onError={() => setImageError(true)}
-          accessibilityLabel={alt || undefined}
-        />
+        {isSvg ? (
+          <SvgImage uri={uri} isDark={isDark} />
+        ) : (
+          <Image
+            source={{ uri }}
+            style={styles.image}
+            contentFit="cover"
+            onError={() => setImageError(true)}
+            accessibilityLabel={alt || undefined}
+          />
+        )}
       </TouchableOpacity>
 
-      {caption && (
-        <Text style={[styles.caption, { color: colors.textSecondary }]}>
-          {caption}
-        </Text>
-      )}
+      {captionText ? <ImageCaption text={captionText} mode="overlay" isDark={isDark} /> : null}
 
       <Modal visible={showFullscreen} transparent animationType="fade">
         <View style={styles.fullscreenContainer}>
           <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
             <Ionicons name="close" size={28} color="#fff" />
           </TouchableOpacity>
-          <Image
-            source={{ uri }}
-            style={styles.fullscreenImage}
-            contentFit="contain"
-            accessibilityLabel={alt || undefined}
-          />
+          <ImageZoomRotate>
+            {isSvg ? (
+              <SvgImage uri={uri} isDark={isDark} width={screenWidth} height={screenWidth * 0.8} />
+            ) : (
+              <Image
+                source={{ uri }}
+                style={styles.fullscreenImage}
+                contentFit="contain"
+                accessibilityLabel={alt || undefined}
+              />
+            )}
+          </ImageZoomRotate>
         </View>
       </Modal>
     </View>
@@ -74,6 +85,7 @@ export default function NoteImage({ uri, alt = '', caption }: NoteImageProps) {
 const styles = StyleSheet.create({
   container: {
     marginVertical: 8,
+    position: 'relative',
   },
   image: {
     width: screenWidth - 32,

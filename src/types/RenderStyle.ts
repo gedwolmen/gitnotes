@@ -23,6 +23,13 @@ export interface FormatRenderStyle {
   link?: { color?: string };
   blockquote?: { bar?: string; text?: string };
   divider?: { color?: string };
+  table?: { border?: string; headerBg?: string; cellBg?: string };
+  math?: { textColor?: string; blockBg?: string };
+  frontmatter?: { bg?: string; text?: string; keyColor?: string };
+  checkbox?: { checkedColor?: string; uncheckedColor?: string; strikethroughColor?: string };
+  imageCaption?: { color?: string; overlayBg?: string };
+  wikiLink?: { color?: string };
+  syntaxHighlight?: { keyword?: string; string?: string; comment?: string; number?: string; function?: string };
 }
 
 export interface RenderStyleSettings {
@@ -66,5 +73,12 @@ export function mergeFormatStyle(
     link: { ...base.link, ...override.link },
     blockquote: { ...base.blockquote, ...override.blockquote },
     divider: { ...base.divider, ...override.divider },
+    table: { ...base.table, ...override.table },
+    math: { ...base.math, ...override.math },
+    frontmatter: { ...base.frontmatter, ...override.frontmatter },
+    checkbox: { ...base.checkbox, ...override.checkbox },
+    imageCaption: { ...base.imageCaption, ...override.imageCaption },
+    wikiLink: { ...base.wikiLink, ...override.wikiLink },
+    syntaxHighlight: { ...base.syntaxHighlight, ...override.syntaxHighlight },
   };
 }
