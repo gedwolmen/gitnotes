@@ -967,6 +967,13 @@ export default function NotesListScreen() {
         renderItem={getRenderItem()}
         keyExtractor={keyExtractor}
         key={viewMode}
+        // Bust FlashList's cached cell layouts when the visible note count
+        // changes (filter/search/delete shrink the list). Without this, the
+        // recycler keeps stale row geometry for vacated indexes — top rows
+        // can leave phantom slots behind, and the surviving rows can render
+        // outside the viewport until the user scrolls. Same fix the Todo
+        // screen carries for #490 / #505.
+        extraData={displayNotes.length}
         {...getListLayout()}
         contentContainerStyle={{ ...getListContentStyle(), paddingBottom: tabBarHeight + 16 }}
         refreshControl={
