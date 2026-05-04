@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { render, waitFor } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
