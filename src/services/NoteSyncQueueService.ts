@@ -42,7 +42,7 @@ class NoteSyncQueueServiceClass {
     this.listeners.forEach((fn) => {
       try {
         fn();
-      } catch {
+      } catch (error) { void error;
         // ignore listener errors
       }
     });
@@ -54,7 +54,7 @@ class NoteSyncQueueServiceClass {
       if (!raw) return [];
       const parsed = JSON.parse(raw);
       return Array.isArray(parsed) ? parsed : [];
-    } catch {
+    } catch (error) { void error;
       return [];
     }
   }
@@ -121,7 +121,7 @@ class NoteSyncQueueServiceClass {
                   ? { content: result.finalContent }
                   : {}),
               });
-            } catch {
+            } catch (error) { void error;
               // best-effort; RepoPullService dedup-by-title handles stale state
             }
           }

@@ -87,7 +87,7 @@ function parseToolEvent(chunk: string): ToolEvent | null {
   try {
     const parsed = JSON.parse(chunk) as ToolEvent;
     return TOOL_EVENT_TYPES.has(parsed.type) ? parsed : null;
-  } catch {
+  } catch (error) { void error;
     return null;
   }
 }
@@ -104,7 +104,7 @@ function parseToolArgs(value: unknown, fallback = ''): Record<string, unknown> {
   try {
     const parsed = JSON.parse(fallback);
     return isRecord(parsed) ? parsed : {};
-  } catch {
+  } catch (error) { void error;
     return {};
   }
 }
@@ -133,7 +133,7 @@ function formatToolResult(value: unknown): string {
 
   try {
     return JSON.stringify(value, null, 2);
-  } catch {
+  } catch (error) { void error;
     return 'Done.';
   }
 }
@@ -425,7 +425,7 @@ export default function ChatScreen() {
               renameThread({ threadId: latest.id, title });
               await saveActiveThread();
             }
-          } catch {
+          } catch (error) { void error;
             // title generation is best-effort
           }
         })();

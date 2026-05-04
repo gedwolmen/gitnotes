@@ -396,11 +396,11 @@ export default function NotesListScreen() {
             } else if (result.finalContent && result.finalContent !== updated.content) {
               await updateNote({ id: updated.id, content: result.finalContent });
             }
-          } catch {
+          } catch (error) { void error;
             await NoteSyncQueueService.enqueueNoteUpsert(syncParams, updated.id);
           }
         }
-      } catch {
+      } catch (error) { void error;
         HapticService.error();
         Alert.alert('Error', 'Failed to update note color');
       }
@@ -420,7 +420,7 @@ export default function NotesListScreen() {
         setLongPressedNote(null);
         HapticService.success();
         return true;
-      } catch {
+      } catch (error) { void error;
         Alert.alert("Error", "Failed to delete note");
         return false;
       } finally {

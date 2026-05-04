@@ -22,7 +22,7 @@ function safeParse(jsonText: string): RenderStyleSettings {
     if (parsed && typeof parsed === 'object' && parsed.formats && typeof parsed.formats === 'object') {
       return { version: 1, formats: parsed.formats };
     }
-  } catch {
+  } catch (error) { void error;
     // fall through to empty
   }
   return { ...EMPTY_RENDER_STYLE_SETTINGS };
@@ -88,7 +88,7 @@ export class RenderStyleService {
               label: `${repo.owner.login}/${repo.name}`,
             });
           }
-        } catch {
+        } catch (error) { void error;
           // ignore — repo may not be readable or branch may differ
         }
       }),

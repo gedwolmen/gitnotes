@@ -373,7 +373,7 @@ export default function NoteEditorScreen() {
                 ? { content: syncResult.finalContent }
                 : {}),
             });
-          } catch {
+          } catch (error) { void error;
             // best-effort; pull dedup handles stale state
           }
         }
@@ -785,11 +785,11 @@ export default function NoteEditorScreen() {
   const editorPlaceholder = (() => {
     switch (noteFormat) {
       case 'org':
-        return '* My Heading\n** Sub Heading\n- Bullet item\n1. Numbered item\n- [ ] TODO item\n- [x] Done item\n\nParagraph text here...';
+        return '* My Heading\n** Sub Heading\n- Bullet item\n1. Numbered item\n- [ ] Task item\n- [x] Done item\n\nParagraph text here...';
       case 'neorg':
-        return '* Document Heading\n** Sub Heading\n- Bullet item\n~ Numbered item\n( ) TODO item\n(x) Done item\n\n```code\n```';
+        return '* Document Heading\n** Sub Heading\n- Bullet item\n~ Numbered item\n( ) Task item\n(x) Done item\n\n```code\n```';
       default:
-        return '# Heading\n## Sub Heading\n- Bullet item\n1. Numbered item\n- [ ] TODO item\n\nParagraph text here...';
+        return '# Heading\n## Sub Heading\n- Bullet item\n1. Numbered item\n- [ ] Task item\n\nParagraph text here...';
     }
   })();
 

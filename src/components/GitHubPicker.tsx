@@ -123,7 +123,7 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
     setLoading(true);
     try {
       setRepositories(await GitHubService.getRepositories());
-    } catch {
+    } catch (error) { void error;
       setRepositories([]);
     } finally {
       setLoading(false);
@@ -142,7 +142,7 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
       ]);
       setIssues(issuesData);
       setMilestones(milestonesData);
-    } catch {
+    } catch (error) { void error;
       setIssues([]);
       setMilestones([]);
     } finally {
@@ -162,7 +162,7 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
         ]);
         setIssues(issuesData);
         setMilestones(milestonesData);
-      } catch {
+      } catch (error) { void error;
         setMilestones([]);
       } finally {
         setLoading(false);

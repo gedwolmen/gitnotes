@@ -96,7 +96,7 @@ export default function SettingsScreen() {
         setTokenError(null);
         HapticService.success();
       }
-    } catch {
+    } catch (error) { void error;
       HapticService.error();
     }
   }, []);
@@ -106,7 +106,7 @@ export default function SettingsScreen() {
     try {
       await Clipboard.setStringAsync(tokenInput.trim());
       HapticService.success();
-    } catch {
+    } catch (error) { void error;
       HapticService.error();
     }
   }, [tokenInput]);
@@ -325,7 +325,7 @@ export default function SettingsScreen() {
       try {
         const repos = await GitHubService.getRepositories();
         setGithubRepos(repos);
-      } catch {
+      } catch (error) { void error;
         setGithubRepos([]);
       } finally {
         setIsLoadingGithubRepos(false);
@@ -371,7 +371,7 @@ export default function SettingsScreen() {
       HapticService.success();
       setShowRepoPickerModal(false);
       autoSyncAfterAdd(ghRepo.full_name, ghRepo.name);
-    } catch {
+    } catch (error) { void error;
       HapticService.error();
       Alert.alert('Error', 'Failed to add repository.');
     } finally {
@@ -389,7 +389,7 @@ export default function SettingsScreen() {
       HapticService.success();
       setShowRepoPickerModal(false);
       autoSyncAfterAdd(val, val);
-    } catch {
+    } catch (error) { void error;
       HapticService.error();
       Alert.alert('Error', 'Failed to add repository.');
     } finally {

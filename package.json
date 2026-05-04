@@ -98,11 +98,11 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "ESLINT_USE_FLAT_CONFIG=false eslint --fix",
-      "prettier --write"
+      "yarn eslint --fix",
+      "yarn prettier --write"
     ],
     "*.{json,md}": [
-      "prettier --write"
+      "yarn prettier --write"
     ]
   },
   "packageManager": "yarn@1.22.22",

@@ -37,7 +37,7 @@ async function readTokenById(id: string): Promise<string | null> {
   if (Platform.OS === 'web') return AsyncStorage.getItem(key);
   try {
     return await SecureStore.getItemAsync(key);
-  } catch {
+  } catch (error) { void error;
     return null;
   }
 }
@@ -65,7 +65,7 @@ async function readLegacyToken(): Promise<string | null> {
   try {
     const secure = await SecureStore.getItemAsync(LEGACY_TOKEN_KEY_NATIVE);
     if (secure) return secure;
-  } catch {
+  } catch (error) { void error;
     // fall through
   }
   return AsyncStorage.getItem(LEGACY_TOKEN_KEY_WEB);
@@ -90,7 +90,7 @@ export class AccountStorage {
       const parsed = JSON.parse(raw);
       if (!Array.isArray(parsed)) return [];
       return parsed.filter((a): a is StoredAccount => typeof a?.id === 'string' && typeof a?.login === 'string');
-    } catch {
+    } catch (error) { void error;
       return [];
     }
   }

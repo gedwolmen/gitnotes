@@ -286,7 +286,7 @@ export async function loadThreadSummaries(owner: string, repo: string, branch: s
     if (cached) {
       try {
         return JSON.parse(cached) as ChatThreadSummary[];
-      } catch {
+      } catch (error) { void error;
         await AsyncStorage.removeItem(cacheKey);
       }
     }
@@ -323,7 +323,7 @@ export async function loadThread(
     if (cached) {
       try {
         return JSON.parse(cached) as ChatThread;
-      } catch {
+      } catch (error) { void error;
         await AsyncStorage.removeItem(cacheKey);
       }
     }

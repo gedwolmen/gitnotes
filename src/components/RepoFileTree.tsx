@@ -312,7 +312,7 @@ function TreeItem({ node, owner, repo, branch, level, onFilePress, onRefresh }: 
         setChildren(kids);
         setLoaded(true);
         setExpanded(true);
-      } catch {
+      } catch (error) { void error;
       } finally {
         setLoading(false);
       }
@@ -673,7 +673,7 @@ export default function RepoFileTree({ owner, repo, branch, onFilePress }: RepoF
     try {
       const items = await fetchChildren(owner, repo, '', branch);
       setRootItems(items);
-    } catch {
+    } catch (error) { void error;
       setError(true);
       setRootItems([]);
     } finally {

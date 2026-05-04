@@ -86,7 +86,7 @@ export function useTodos(): TodoContextValue {
       const ok = await StorageService.deleteTodo(id);
       if (ok) useTodoStore.setState((s) => ({ todos: s.todos.filter((t) => t.id !== id) }));
       return ok;
-    } catch {
+    } catch (error) { void error;
       return false;
     }
   }, []);

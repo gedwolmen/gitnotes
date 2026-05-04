@@ -8,7 +8,7 @@ export function generateId(): string {
   if (typeof Crypto.randomUUID === 'function') {
     try {
       return Crypto.randomUUID();
-    } catch {
+    } catch (error) { void error;
       // fall through
     }
   }

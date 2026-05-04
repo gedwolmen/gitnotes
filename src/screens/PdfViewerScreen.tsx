@@ -67,8 +67,8 @@ export default function PdfViewerScreen() {
           PositionMemoryService.save(memoryKey, lastYRef.current);
         }, 400);
       }
-    } catch {
-      // ignore parse errors
+    } catch (error) {
+      console.warn('PDF message parse error:', error);
     }
   };
 
@@ -76,7 +76,7 @@ export default function PdfViewerScreen() {
 (function() {
   var RESTORE_Y = ${restoredY};
   function restore() {
-    try { window.scrollTo(0, RESTORE_Y); } catch (_) {}
+    try { window.scrollTo(0, RESTORE_Y); } catch (error) { void error; }
   }
   function send() {
     try {
@@ -84,7 +84,7 @@ export default function PdfViewerScreen() {
       if (window.ReactNativeWebView) {
         window.ReactNativeWebView.postMessage(JSON.stringify({ scrollY: y }));
       }
-    } catch (_) {}
+    } catch (error) { void error; }
   }
   if (document.readyState === 'complete') restore();
   else window.addEventListener('load', restore);
@@ -169,8 +169,8 @@ export default function PdfViewerScreen() {
     if (!localUri) return;
     try {
       await Linking.openURL(localUri);
-    } catch {
-      // ignore
+    } catch (error) {
+      console.warn('Failed to open PDF externally:', error);
     }
   };
 
