@@ -790,8 +790,11 @@ export default function SettingsScreen() {
               >
                 <View style={styles.settingLeft}>
                   <Ionicons name="cloud-upload-outline" size={20} color={colors.text} />
-                  <Text style={[styles.settingLabel, { color: colors.text, marginLeft: 12 }]}>
-                    Sync existing custom templates to repo
+                  <Text
+                    style={[styles.settingLabel, { color: colors.text, marginLeft: 12, flexShrink: 1 }]}
+                    numberOfLines={1}
+                  >
+                    Sync custom templates
                   </Text>
                 </View>
                 {isSyncingExistingTemplates ? (
