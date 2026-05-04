@@ -18,7 +18,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import * as Speech from 'expo-speech';
 import { Ionicons } from '@expo/vector-icons';
-import { useMarkdown, type RendererInterface } from 'react-native-marked';
+import type { RendererInterface } from 'react-native-marked';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useNotes } from '../contexts/NoteContext';
@@ -54,7 +54,7 @@ import { getMarkdownStyles } from '../utils/preview';
 import { useRenderStyle } from '../stores/renderStyleStore';
 import { Button, IconButton, Modal } from '../components/ui';
 import { GitHubActivityIndicator } from '../components/GitHubActivityIndicator';
-import { NotePreviewRenderer } from '../utils/markdownRenderer';
+import { MarkdownPreviewContent, NotePreviewRenderer } from '../utils/markdownRenderer';
 import { canPersistNoteTags } from '../utils/noteTagSupport';
 import { githubActivity } from '../stores/githubActivityStore';
 
@@ -115,8 +115,11 @@ function getExtensionForFormat(format?: NoteFormat): string {
 }
 
 function MarkdownBody({ value, styles: mdStyles, renderer }: { value: string; styles: ReturnType<typeof getMarkdownStyles>; renderer?: RendererInterface }) {
-  const nodes = useMarkdown(value, { styles: mdStyles, renderer });
-  return <>{React.Children.toArray(nodes)}</>;
+  if (renderer instanceof NotePreviewRenderer) {
+    return <MarkdownPreviewContent value={value} styles={mdStyles} renderer={renderer} />;
+  }
+
+  return null;
 }
 
 export default function NoteEditorScreen() {
@@ -136,7 +139,7 @@ export default function NoteEditorScreen() {
   const [branch, setBranch] = useState<string | undefined>(initialBranch);
   const [commit, setCommit] = useState<string | undefined>();
   const [folderPath, setFolderPath] = useState<string | undefined>(initialFolderPath);
-  const [github, setGithub] = useState<NoteGitHubLink | undefined>();
+  const [, setGithub] = useState<NoteGitHubLink | undefined>();
   const [accountId, setAccountId] = useState<string | undefined>(activeAccountId ?? undefined);
   const [noteFormat, setNoteFormat] = useState<NoteFormat>(initialFormat ?? 'markdown');
   const [isSaving, setIsSaving] = useState(false);
@@ -661,6 +664,7 @@ export default function NoteEditorScreen() {
     () =>
       new NotePreviewRenderer({
         colors,
+        isDark,
         navigation,
         previewContent,
         previewScrollRef,
@@ -669,7 +673,7 @@ export default function NoteEditorScreen() {
         currentNotePath,
         onOpenNote: handleOpenLinkedNote,
       }),
-    [colors, currentNotePath, handleOpenLinkedNote, navigation, previewContent],
+    [colors, currentNotePath, handleOpenLinkedNote, isDark, navigation, previewContent],
   );
 
   const speakableContent = useMemo(() => {

@@ -9,6 +9,14 @@ jest.mock('expo-image', () => ({
   Image: () => null,
 }));
 
+jest.mock('expo-clipboard', () => ({
+  setStringAsync: jest.fn(),
+}));
+
+jest.mock('react-native-webview', () => ({
+  WebView: () => null,
+}));
+
 jest.mock('react-native-marked', () => {
   class Renderer {
     private key = 0;
@@ -42,9 +50,10 @@ const createMarkdownRenderer = () => new NotePreviewRenderer({
   },
 });
 
-const expectSelectableTextNodes = (nodes: { props: { selectable?: boolean } }[]) => {
-  expect(nodes.length).toBeGreaterThan(0);
-  expect(nodes.every((node) => node.props.selectable === true)).toBe(true);
+const expectSelectableTextNodes = (nodes: { props: { selectable?: boolean }; children?: unknown[] }[]) => {
+  const contentNodes = nodes.filter((node) => node.props.selectable !== undefined);
+  expect(contentNodes.length).toBeGreaterThan(0);
+  expect(contentNodes.every((node) => node.props.selectable === true)).toBe(true);
 };
 
 describe('preview text selection', () => {

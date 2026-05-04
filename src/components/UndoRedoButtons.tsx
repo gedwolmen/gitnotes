@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -24,8 +24,8 @@ export function UndoRedoButtons({ canUndo, canRedo, onUndo, onRedo }: UndoRedoBu
         onPress={onUndo}
         style={[styles.button, !canUndo && styles.disabled]}
       >
-        <MaterialCommunityIcons
-          name="undo"
+        <Ionicons
+          name="arrow-undo"
           size={20}
           color={canUndo ? colors.text : colors.textSecondary}
         />
@@ -39,8 +39,8 @@ export function UndoRedoButtons({ canUndo, canRedo, onUndo, onRedo }: UndoRedoBu
         onPress={onRedo}
         style={[styles.button, !canRedo && styles.disabled]}
       >
-        <MaterialCommunityIcons
-          name="redo"
+        <Ionicons
+          name="arrow-redo"
           size={20}
           color={canRedo ? colors.text : colors.textSecondary}
         />

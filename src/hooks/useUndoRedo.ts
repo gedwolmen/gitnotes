@@ -8,6 +8,7 @@ type State = {
 
 type Action =
   | { type: 'set'; text: string }
+  | { type: 'reset'; text: string }
   | { type: 'undo' }
   | { type: 'redo' };
 
@@ -24,6 +25,13 @@ function reducer(state: State, action: Action): State {
       return {
         text: action.text,
         past: capHistory([...state.past, state.text]),
+        future: [],
+      };
+    }
+    case 'reset': {
+      return {
+        text: action.text,
+        past: [],
         future: [],
       };
     }
@@ -55,6 +63,7 @@ export interface UseUndoRedoReturn {
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  reset: (t: string) => void;
 }
 
 export function useUndoRedo(initialText: string): UseUndoRedoReturn {
@@ -76,6 +85,10 @@ export function useUndoRedo(initialText: string): UseUndoRedoReturn {
     dispatch({ type: 'redo' });
   }, []);
 
+  const reset = useCallback((text: string) => {
+    dispatch({ type: 'reset', text });
+  }, []);
+
   return {
     text: state.text,
     setText,
@@ -83,5 +96,6 @@ export function useUndoRedo(initialText: string): UseUndoRedoReturn {
     redo,
     canUndo: state.past.length > 0,
     canRedo: state.future.length > 0,
+    reset,
   };
 }

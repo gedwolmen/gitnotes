@@ -2,6 +2,14 @@ import React from 'react';
 import { Alert } from 'react-native';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
+jest.mock('expo-clipboard', () => ({
+  setStringAsync: jest.fn(),
+}));
+
+jest.mock('react-native-webview', () => ({
+  WebView: () => null,
+}));
+
 const mockNavigation = {
   goBack: jest.fn(),
   navigate: jest.fn(),

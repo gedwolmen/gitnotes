@@ -12,6 +12,8 @@ jest.mock('react-native-marked', () => ({
 }));
 
 jest.mock('expo-image', () => ({ Image: () => null }));
+jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn() }));
+jest.mock('react-native-webview', () => ({ WebView: () => null }));
 
 import { classifyHref } from '../src/utils/linkClassifier';
 import { NotePreviewRenderer } from '../src/utils/markdownRenderer';

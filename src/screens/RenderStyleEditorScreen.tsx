@@ -268,6 +268,129 @@ export default function RenderStyleEditorScreen() {
           />
         </View>
 
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Table</Text>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <ColorField
+            label="Border color"
+            value={localOverrides.table?.border}
+            onChange={(c) => setToken('table', { ...localOverrides.table, border: c })}
+          />
+          <ColorField
+            label="Header background"
+            value={localOverrides.table?.headerBg}
+            onChange={(c) => setToken('table', { ...localOverrides.table, headerBg: c })}
+          />
+          <ColorField
+            label="Cell background"
+            value={localOverrides.table?.cellBg}
+            onChange={(c) => setToken('table', { ...localOverrides.table, cellBg: c })}
+          />
+        </View>
+
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Math</Text>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <ColorField
+            label="Text color"
+            value={localOverrides.math?.textColor}
+            onChange={(c) => setToken('math', { ...localOverrides.math, textColor: c })}
+          />
+          <ColorField
+            label="Block background"
+            value={localOverrides.math?.blockBg}
+            onChange={(c) => setToken('math', { ...localOverrides.math, blockBg: c })}
+          />
+        </View>
+
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Frontmatter</Text>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <ColorField
+            label="Background"
+            value={localOverrides.frontmatter?.bg}
+            onChange={(c) => setToken('frontmatter', { ...localOverrides.frontmatter, bg: c })}
+          />
+          <ColorField
+            label="Text color"
+            value={localOverrides.frontmatter?.text}
+            onChange={(c) => setToken('frontmatter', { ...localOverrides.frontmatter, text: c })}
+          />
+          <ColorField
+            label="Key color"
+            value={localOverrides.frontmatter?.keyColor}
+            onChange={(c) => setToken('frontmatter', { ...localOverrides.frontmatter, keyColor: c })}
+          />
+        </View>
+
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Checkbox</Text>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <ColorField
+            label="Checked color"
+            value={localOverrides.checkbox?.checkedColor}
+            onChange={(c) => setToken('checkbox', { ...localOverrides.checkbox, checkedColor: c })}
+          />
+          <ColorField
+            label="Unchecked color"
+            value={localOverrides.checkbox?.uncheckedColor}
+            onChange={(c) => setToken('checkbox', { ...localOverrides.checkbox, uncheckedColor: c })}
+          />
+          <ColorField
+            label="Strikethrough color"
+            value={localOverrides.checkbox?.strikethroughColor}
+            onChange={(c) => setToken('checkbox', { ...localOverrides.checkbox, strikethroughColor: c })}
+          />
+        </View>
+
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Image caption</Text>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <ColorField
+            label="Caption color"
+            value={localOverrides.imageCaption?.color}
+            onChange={(c) => setToken('imageCaption', { ...localOverrides.imageCaption, color: c })}
+          />
+          <ColorField
+            label="Overlay background"
+            value={localOverrides.imageCaption?.overlayBg}
+            onChange={(c) => setToken('imageCaption', { ...localOverrides.imageCaption, overlayBg: c })}
+          />
+        </View>
+
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Wiki link</Text>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <ColorField
+            label="Link color"
+            value={localOverrides.wikiLink?.color}
+            onChange={(c) => setToken('wikiLink', { color: c })}
+          />
+        </View>
+
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Syntax highlight</Text>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <ColorField
+            label="Keyword"
+            value={localOverrides.syntaxHighlight?.keyword}
+            onChange={(c) => setToken('syntaxHighlight', { ...localOverrides.syntaxHighlight, keyword: c })}
+          />
+          <ColorField
+            label="String"
+            value={localOverrides.syntaxHighlight?.string}
+            onChange={(c) => setToken('syntaxHighlight', { ...localOverrides.syntaxHighlight, string: c })}
+          />
+          <ColorField
+            label="Comment"
+            value={localOverrides.syntaxHighlight?.comment}
+            onChange={(c) => setToken('syntaxHighlight', { ...localOverrides.syntaxHighlight, comment: c })}
+          />
+          <ColorField
+            label="Number"
+            value={localOverrides.syntaxHighlight?.number}
+            onChange={(c) => setToken('syntaxHighlight', { ...localOverrides.syntaxHighlight, number: c })}
+          />
+          <ColorField
+            label="Function"
+            value={localOverrides.syntaxHighlight?.function}
+            onChange={(c) => setToken('syntaxHighlight', { ...localOverrides.syntaxHighlight, function: c })}
+          />
+        </View>
+
         <TouchableOpacity style={[styles.resetButton, { borderColor: colors.border }]} onPress={handleReset}>
           <Ionicons name="refresh-outline" size={16} color={colors.error} />
           <Text style={[styles.resetButtonText, { color: colors.error }]}>Reset {formatLabel(format)} to defaults</Text>
