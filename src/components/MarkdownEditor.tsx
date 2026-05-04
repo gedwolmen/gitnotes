@@ -19,7 +19,27 @@ import {
   toggleList,
 } from '../utils/markdownFormatting';
 import { useHardWrap } from '../hooks/useHardWrap';
-import { ReorderableChecklist } from './ReorderableChecklist';
+import ReorderableChecklistDefault, * as ReorderableChecklistModule from './ReorderableChecklist';
+
+type ChecklistItem = {
+  checked: boolean;
+  text: string;
+};
+
+type ReorderableChecklistProps = {
+  items: ChecklistItem[];
+  onReorder: (items: ChecklistItem[]) => void;
+  onToggle: (index: number) => void;
+  onTextChange: (index: number, text: string) => void;
+  onAddItem: () => void;
+  onDeleteItem: (index: number) => void;
+};
+
+const NamedReorderableChecklist = (ReorderableChecklistModule as {
+  ReorderableChecklist?: React.ComponentType<ReorderableChecklistProps>;
+}).ReorderableChecklist;
+
+const ReorderableChecklist = (typeof ReorderableChecklistDefault === 'function' ? ReorderableChecklistDefault : NamedReorderableChecklist) as React.ComponentType<ReorderableChecklistProps>;
 
 export type EditorMode = 'markdown' | 'checklist' | 'raw';
 
@@ -217,11 +237,41 @@ export default function MarkdownEditor({ content, onContentChange, placeholder =
           items={text.split('\n').filter((l) => l.trim()).map((line) => {
             const checked = /^- \[x\] /.test(line.trim());
             const lineText = line.trim().replace(/^- \[[ x]\] /, '');
-            return { id: lineText, text: lineText, checked };
+            return { text: lineText, checked };
           })}
-          onChange={(items) => {
+          onReorder={(items) => {
             const newContent = items.map((item) => `- [${item.checked ? 'x' : ' '}] ${item.text}`).join('\n');
             setText(newContent);
+          }}
+          onToggle={(index) => {
+            const lines = text.split('\n').filter((l) => l.trim());
+            if (index >= 0 && index < lines.length) {
+              const line = lines[index];
+              const checked = /^- \[x\] /.test(line.trim());
+              const content = line.trim().replace(/^- \[[ x]\] /, '');
+              lines[index] = `- [${checked ? ' ' : 'x'}] ${content}`;
+              setText(lines.join('\n'));
+            }
+          }}
+          onTextChange={(index, newText) => {
+            const lines = text.split('\n').filter((l) => l.trim());
+            if (index >= 0 && index < lines.length) {
+              const line = lines[index];
+              const checked = /^- \[x\] /.test(line.trim());
+              lines[index] = `- [${checked ? 'x' : ' '}] ${newText}`;
+              setText(lines.join('\n'));
+            }
+          }}
+          onAddItem={() => {
+            const newLine = '- [ ] ';
+            setText(text ? `${text}\n${newLine}` : newLine);
+          }}
+          onDeleteItem={(index) => {
+            const lines = text.split('\n').filter((l) => l.trim());
+            if (index >= 0 && index < lines.length) {
+              lines.splice(index, 1);
+              setText(lines.join('\n'));
+            }
           }}
         />
       ) : mode === 'raw' ? (
