@@ -482,7 +482,7 @@ export default function TodoListScreen() {
         <OfflineBanner />
       </View>
 
-      <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
+      <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 }}>
         <SearchBar
           value={searchQuery}
           onChangeText={setSearchQuery}
