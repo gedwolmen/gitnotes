@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexShrink: 1,
     minHeight: 0,
-    justifyContent: 'flex-end',
+    marginTop: 10,
   },
   title: {
     fontWeight: '700',
