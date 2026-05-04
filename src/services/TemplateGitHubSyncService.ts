@@ -2,6 +2,17 @@ import { GitHubService } from './GitHubService';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { serializeTemplate, templateSlug } from './TemplateMarkdownService';
 import type { NoteTemplate } from './TemplateService';
+import { SyncEngineService } from './SyncEngineService';
+import { LocalGitWriter } from './git/LocalGitWriter';
+import { AuthService } from './AuthService';
+
+function resolveAuthor() {
+  const user = GitHubService.getUser();
+  return {
+    name: user?.name || user?.login || 'gitnotes',
+    email: user?.email || `${user?.login ?? 'gitnotes'}@users.noreply.github.com`,
+  };
+}
 
 export interface TemplateSyncResult {
   success: boolean;
@@ -26,6 +37,25 @@ export async function syncTemplateToGitHub(params: {
   const isUpdate = Boolean(template.filePath);
   const message = `${isUpdate ? 'Update' : 'Add'} template ${template.name}`;
   const body = serializeTemplate({ ...template, filePath: undefined });
+
+  // Clone-mode write path (#514). Templates target their own configured repo
+  // (TemplateRepoPreferenceService), so the sync-engine flag we read is for
+  // *that* repo, not the editing repo.
+  const mode = await SyncEngineService.getMode(repoPath);
+  if (mode === 'clone') {
+    const tokenForPush = (await AuthService.getToken()) ?? undefined;
+    const writeResult = await LocalGitWriter.writeAndCommit({
+      repoPath,
+      branch,
+      filePath: targetPath,
+      content: body,
+      message,
+      author: resolveAuthor(),
+      token: tokenForPush,
+    });
+    if (writeResult.success) return { success: true, filePath: targetPath };
+    return { success: false, error: writeResult.error };
+  }
 
   try {
     const result = await GitHubService.updateFile(
@@ -52,6 +82,20 @@ export async function deleteTemplateFromGitHub(params: {
   }
   const info = parseRepoPath(repoPath);
   if (!info) return { success: false, error: `Invalid repo path: ${repoPath}` };
+
+  // Clone-mode delete path (#514).
+  const mode = await SyncEngineService.getMode(repoPath);
+  if (mode === 'clone') {
+    const tokenForPush = (await AuthService.getToken()) ?? undefined;
+    return LocalGitWriter.deleteAndCommit({
+      repoPath,
+      branch,
+      filePath,
+      message: `Delete template ${name}`,
+      author: resolveAuthor(),
+      token: tokenForPush,
+    });
+  }
 
   let resolvedSha = sha;
   if (!resolvedSha) {
