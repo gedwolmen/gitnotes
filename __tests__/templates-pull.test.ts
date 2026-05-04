@@ -49,7 +49,8 @@ describe('pullTemplatesFromConfiguredRepo', () => {
     (GitHubService.getFileContent as jest.Mock).mockResolvedValue(null);
 
     await pullTemplatesFromConfiguredRepo();
-    const lastSaveArgs = (StorageService.saveCustomTemplates as jest.Mock).mock.calls.at(-1)![0];
+    const calls = (StorageService.saveCustomTemplates as jest.Mock).mock.calls;
+    const lastSaveArgs = calls[calls.length - 1][0];
     expect(lastSaveArgs.find((t: any) => t.id === 'custom-abc')).toBeUndefined();
   });
 
@@ -61,7 +62,8 @@ describe('pullTemplatesFromConfiguredRepo', () => {
     (GitHubService.getFileContent as jest.Mock).mockResolvedValue(null);
 
     await pullTemplatesFromConfiguredRepo();
-    const lastSaveArgs = (StorageService.saveCustomTemplates as jest.Mock).mock.calls.at(-1)![0];
+    const calls = (StorageService.saveCustomTemplates as jest.Mock).mock.calls;
+    const lastSaveArgs = calls[calls.length - 1][0];
     expect(lastSaveArgs.find((t: any) => t.id === 'custom-local')).toBeDefined();
   });
 
