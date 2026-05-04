@@ -9,6 +9,24 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   default: { getItem: jest.fn(() => Promise.resolve(null)), setItem: jest.fn(() => Promise.resolve()) },
 }));
 
+jest.mock('react-native-gesture-handler', () => ({
+  GestureHandlerRootView: ({ children }: any) => children,
+  GestureDetector: ({ children }: any) => children,
+}));
+
+jest.mock('react-native-reanimated', () => ({
+  default: { createAnimatedComponent: (c: any) => c },
+  useSharedValue: () => ({ value: 0 }),
+  useAnimatedStyle: () => ({}),
+  withTiming: (v: any) => v,
+  withSpring: (v: any) => v,
+  runOnJS: (f: any) => f,
+}));
+
+jest.mock('../src/components/ReorderableChecklist', () => ({
+  ReorderableChecklist: () => null,
+}));
+
 import React, { useState } from 'react';
 import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithTheme } from './helpers/renderWithTheme';

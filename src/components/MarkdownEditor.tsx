@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { TextSearchBar } from './TextSearchBar';
@@ -19,6 +19,17 @@ import {
   toggleList,
 } from '../utils/markdownFormatting';
 import { useHardWrap } from '../hooks/useHardWrap';
+import { ReorderableChecklist } from './ReorderableChecklist';
+
+export type EditorMode = 'markdown' | 'checklist' | 'raw';
+
+function detectMode(content: string): EditorMode {
+  const lines = content.split('\n').filter((l) => l.trim().length > 0);
+  if (lines.length === 0) return 'markdown';
+  const checklistLines = lines.filter((l) => /^- \[[ x]\] /.test(l.trim()));
+  if (checklistLines.length / lines.length >= 0.6) return 'checklist';
+  return 'markdown';
+}
 
 function modifyLinePrefix(text: string, sel: Selection, pattern: RegExp, prefix: string): { text: string; selection: Selection } {
   let lineStart = sel.start;
@@ -40,15 +51,17 @@ interface MarkdownEditorProps {
   content: string;
   onContentChange: (text: string) => void;
   placeholder?: string;
+  initialMode?: EditorMode;
 }
 
-export default function MarkdownEditor({ content, onContentChange, placeholder = 'Start writing...' }: MarkdownEditorProps) {
+export default function MarkdownEditor({ content, onContentChange, placeholder = 'Start writing...', initialMode }: MarkdownEditorProps) {
   const { colors } = useTheme();
   const inputRef = useRef<TextInput>(null);
   const { text, setText, undo, redo, canUndo, canRedo, reset } = useUndoRedo(content);
   const previousTextRef = useRef(text);
   const { hardWrapEnabled, toggleHardWrap } = useHardWrap();
   const [cursor, setCursor] = useState<Selection>({ start: 0, end: 0 });
+  const [mode, setMode] = useState<EditorMode>(() => initialMode ?? detectMode(content));
 
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -169,6 +182,21 @@ export default function MarkdownEditor({ content, onContentChange, placeholder =
           <Ionicons name="return-down-back" size={20} color={hardWrapEnabled ? (colors.primary ?? colors.text) : colors.textSecondary} />
         </TouchableOpacity>
 
+        <View style={styles.modeSelector}>
+          {(['markdown', 'checklist', 'raw'] as EditorMode[]).map((m) => (
+            <TouchableOpacity
+              key={m}
+              testID={`mode-${m}`}
+              onPress={() => setMode(m)}
+              style={[styles.modeButton, mode === m && styles.modeButtonActive]}
+            >
+              <Text style={[styles.modeButtonText, { color: mode === m ? colors.primary : colors.textSecondary }]}>
+                {m === 'markdown' ? 'MD' : m === 'checklist' ? '✓' : 'Raw'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         <View style={styles.headerActions}>
           <UndoRedoButtons canUndo={canUndo} canRedo={canRedo} onUndo={handleUndo} onRedo={handleRedo} />
         </View>
@@ -184,28 +212,57 @@ export default function MarkdownEditor({ content, onContentChange, placeholder =
         />
       )}
 
-      <TextInput
-        ref={inputRef}
-        style={[styles.editor, { color: colors.text }]}
-        value={text}
-        onChangeText={handleContentChange}
-        placeholder={placeholder}
-        placeholderTextColor={colors.textSecondary}
-        multiline
-        textAlignVertical="top"
-        autoCorrect
-        spellCheck
-        selection={selection}
-        onSelectionChange={(e) => {
-          const { start, end } = e.nativeEvent.selection;
-          setCursor({ start, end });
-          if (selection !== undefined) {
-            setSelection(undefined);
-          }
-        }}
-      />
+      {mode === 'checklist' ? (
+        <ReorderableChecklist
+          items={text.split('\n').filter((l) => l.trim()).map((line) => {
+            const checked = /^- \[x\] /.test(line.trim());
+            const lineText = line.trim().replace(/^- \[[ x]\] /, '');
+            return { id: lineText, text: lineText, checked };
+          })}
+          onChange={(items) => {
+            const newContent = items.map((item) => `- [${item.checked ? 'x' : ' '}] ${item.text}`).join('\n');
+            setText(newContent);
+          }}
+        />
+      ) : mode === 'raw' ? (
+        <TextInput
+          testID="raw-input"
+          style={[styles.editor, { color: colors.text, fontFamily: 'monospace' }]}
+          value={text}
+          onChangeText={handleContentChange}
+          placeholder={placeholder}
+          placeholderTextColor={colors.textSecondary}
+          multiline
+          textAlignVertical="top"
+          autoCorrect={false}
+          spellCheck={false}
+        />
+      ) : (
+        <>
+          <TextInput
+            ref={inputRef}
+            style={[styles.editor, { color: colors.text }]}
+            value={text}
+            onChangeText={handleContentChange}
+            placeholder={placeholder}
+            placeholderTextColor={colors.textSecondary}
+            multiline
+            textAlignVertical="top"
+            autoCorrect
+            spellCheck
+            selection={selection}
+            onSelectionChange={(e) => {
+              const { start, end } = e.nativeEvent.selection;
+              setCursor({ start, end });
+              if (selection !== undefined) {
+                setSelection(undefined);
+              }
+            }}
+          />
 
-      <MarkdownToolbar onFormat={handleFormat} />
+          <MarkdownToolbar onFormat={handleFormat} />
+        </>
+      )}
     </View>
   );
 }
@@ -225,6 +282,25 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  modeSelector: {
+    flexDirection: 'row',
+    gap: 2,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 6,
+    padding: 2,
+  },
+  modeButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  modeButtonActive: {
+    backgroundColor: 'rgba(0,0,0,0.08)',
+  },
+  modeButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   editor: {
     fontSize: 16,
