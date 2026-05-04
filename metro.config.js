@@ -1,3 +1,4 @@
+const path = require('path');
 const { getDefaultConfig } = require('expo/metro-config');
 
 /** @type {import('expo/metro-config').MetroConfig} */
@@ -9,5 +10,25 @@ config.transformer.getTransformOptions = async () => ({
     inlineRequires: true,
   },
 });
+
+// `isomorphic-git`'s package main resolves to `index.cjs`, which does
+// `require('crypto')` at top level. Hermes/Metro have no Node std lib so the
+// bundle blows up. The library also publishes a self-contained UMD bundle
+// (`index.umd.min.js`) that has its own SHA-1 and never touches `crypto`.
+// Redirect the bare specifier to the UMD bundle so RN can consume it.
+const isoGitUmd = path.resolve(
+  __dirname,
+  'node_modules/isomorphic-git/index.umd.min.js',
+);
+const baseResolveRequest = config.resolver.resolveRequest;
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (moduleName === 'isomorphic-git') {
+    return { type: 'sourceFile', filePath: isoGitUmd };
+  }
+  if (baseResolveRequest) {
+    return baseResolveRequest(context, moduleName, platform);
+  }
+  return context.resolveRequest(context, moduleName, platform);
+};
 
 module.exports = config;
