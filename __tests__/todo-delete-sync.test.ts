@@ -8,8 +8,22 @@ jest.mock('../src/services/StorageService', () => ({
 jest.mock('../src/services/GitHubService', () => ({
   GitHubService: {
     isAuthenticated: jest.fn(() => true),
+    getUser: jest.fn(() => null),
     getFileSha: jest.fn(),
     deleteFile: jest.fn(),
+  },
+}));
+
+jest.mock('../src/services/SyncEngineService', () => ({
+  SyncEngineService: {
+    getMode: jest.fn(async () => 'api'),
+  },
+}));
+
+jest.mock('../src/services/AuthService', () => ({
+  AuthService: {
+    getTokenById: jest.fn(async () => null),
+    getToken: jest.fn(async () => null),
   },
 }));
 
@@ -65,7 +79,13 @@ describe('todo delete GitHub sync', () => {
     await useTodoStore.getState().deleteTodo('todo-1');
 
     expect(StorageService.deleteTodo).toHaveBeenCalledWith('todo-1');
-    expect(GitHubService.getFileSha).toHaveBeenCalledWith('owner', 'repo', 'todos/ship-it.json', 'main');
+    expect(GitHubService.getFileSha).toHaveBeenCalledWith(
+      'owner',
+      'repo',
+      'todos/ship-it.json',
+      'main',
+      undefined,
+    );
     expect(GitHubService.deleteFile).toHaveBeenCalledWith(
       'owner',
       'repo',
@@ -73,6 +93,7 @@ describe('todo delete GitHub sync', () => {
       'Delete todo: Ship it',
       'todo-sha-123',
       'main',
+      undefined,
     );
     expect(useTodoStore.getState().todos).toEqual([]);
 
@@ -132,6 +153,33 @@ describe('todo delete GitHub sync', () => {
     expect(GitHubService.deleteFile).not.toHaveBeenCalled();
     expect(useTodoStore.getState().todos).toEqual([syncedTodo]);
     expect(useTodoStore.getState().error).toBeTruthy();
+  });
+
+  test('treats a missing remote (sha null) as success so local row can still be removed', async () => {
+    // Reproduces the "Cannot delete todo: failed to look up remote file" bug —
+    // a stale local row whose remote was already deleted should not be stuck
+    // forever. Pull won't re-import a file that doesn't exist anymore.
+    (GitHubService.getFileSha as jest.Mock).mockResolvedValueOnce(null);
+
+    const stale = {
+      id: 'todo-stale',
+      text: 'Already gone remotely',
+      completed: false,
+      createdAt: 1,
+      updatedAt: 1,
+      repo: 'owner/repo',
+      branch: 'main',
+      filePath: 'todos/stale.json',
+    };
+    storageTodos = [stale];
+    useTodoStore.setState({ todos: [stale], isLoading: false, error: null });
+
+    const ok = await useTodoStore.getState().deleteTodo('todo-stale');
+
+    expect(ok).toBe(true);
+    expect(GitHubService.deleteFile).not.toHaveBeenCalled();
+    expect(StorageService.deleteTodo).toHaveBeenCalledWith('todo-stale');
+    expect(useTodoStore.getState().todos).toEqual([]);
   });
 
   test('still deletes purely-local todos with no repo metadata', async () => {

@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { Canvas, CanvasCreateInput, CanvasUpdateInput, sortCanvasesByUpdated } from '../models/Canvas';
 import { StorageService } from '../services/StorageService';
+import { GitHubService } from '../services/GitHubService';
+import { deleteCanvasFromGitHub } from '../services/CanvasGitHubSyncService';
 
 interface CanvasState {
   canvases: Canvas[];
@@ -68,6 +70,29 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()((set, get) =
   deleteCanvas: async (id) => {
     try {
       set({ error: null });
+      const canvas = get().canvases.find((c) => c.id === id);
+
+      // Repo-backed canvases must purge the remote file first; otherwise the
+      // next pull re-imports the row. The sync helper treats a missing remote
+      // (sha null / 404) as success.
+      if (canvas?.repo && canvas.filePath) {
+        if (!GitHubService.isAuthenticated()) {
+          set({ error: 'Sign in to GitHub to delete synced canvases' });
+          return false;
+        }
+        const remote = await deleteCanvasFromGitHub({
+          repo: canvas.repo,
+          branch: canvas.branch,
+          filePath: canvas.filePath,
+          title: canvas.title,
+          accountId: canvas.accountId,
+        });
+        if (!remote.success) {
+          set({ error: remote.error || 'Failed to delete from GitHub' });
+          return false;
+        }
+      }
+
       const success = await StorageService.deleteCanvas(id);
       if (success) {
         set((state) => ({ canvases: state.canvases.filter((c) => c.id !== id) }));
