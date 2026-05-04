@@ -31,6 +31,7 @@ import { syncTemplateToGitHub } from '../services/TemplateGitHubSyncService';
 import { useTemplateStore } from '../stores/templateStore';
 import { SyncEngineService, SyncEngineMode } from '../services/SyncEngineService';
 import { GitFsService } from '../services/git/GitFsService';
+import { CloneMigrationService } from '../services/git/CloneMigrationService';
 import { AuthService } from '../services/AuthService';
 import { useCanvases } from '../contexts/CanvasContext';
 import { useTodos } from '../contexts/TodoContext';
@@ -169,7 +170,46 @@ export default function SettingsScreen() {
         await SyncEngineService.setMode(repo.path, 'clone');
         setSyncModes((prev) => ({ ...prev, [repo.path]: 'clone' }));
         HapticService.success();
-        Alert.alert('Clone mode enabled', `${repo.name} now syncs through a local working tree.`);
+        Alert.alert(
+          'Clone mode enabled',
+          `${repo.name} now syncs through a local working tree.\n\nPush any offline edits up to this clone now?`,
+          [
+            { text: 'Skip', style: 'cancel' },
+            {
+              text: 'Push edits',
+              onPress: async () => {
+                try {
+                  const branch = repo.branch || 'main';
+                  const report = await CloneMigrationService.migrateRepo(repo.path, branch);
+                  const total =
+                    report.notes + report.todos + report.canvases + report.templates;
+                  if (report.failures.length > 0) {
+                    HapticService.error();
+                    Alert.alert(
+                      'Migration finished with issues',
+                      `Pushed ${total} item(s); ${report.failures.length} failed (see console).`,
+                    );
+                    report.failures.forEach((f) =>
+                      console.warn('[CloneMigration]', f.kind, f.filePath, f.error),
+                    );
+                  } else {
+                    HapticService.success();
+                    Alert.alert(
+                      'Pushed offline edits',
+                      `${total} item(s) committed and pushed to ${repo.name}.`,
+                    );
+                  }
+                } catch (e) {
+                  HapticService.error();
+                  Alert.alert(
+                    'Migration failed',
+                    e instanceof Error ? e.message : String(e),
+                  );
+                }
+              },
+            },
+          ],
+        );
       } catch (e) {
         HapticService.error();
         Alert.alert('Clone failed', e instanceof Error ? e.message : String(e));
