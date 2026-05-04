@@ -6,6 +6,35 @@ import { TextSearchBar } from './TextSearchBar';
 import { searchText, navigateToMatch, MatchPosition } from '../utils/textSearch';
 import { useUndoRedo } from '../hooks/useUndoRedo';
 import { UndoRedoButtons } from './UndoRedoButtons';
+import { MarkdownToolbar } from './MarkdownToolbar';
+import type { FormatAction, Selection } from '../utils/markdownFormatting';
+import {
+  addTab,
+  insertLink,
+  toggleBold,
+  toggleChecklist,
+  toggleCode,
+  toggleHeading,
+  toggleItalic,
+  toggleList,
+} from '../utils/markdownFormatting';
+import { useHardWrap } from '../hooks/useHardWrap';
+
+function modifyLinePrefix(text: string, sel: Selection, pattern: RegExp, prefix: string): { text: string; selection: Selection } {
+  let lineStart = sel.start;
+  while (lineStart > 0 && text[lineStart - 1] !== '\n') lineStart--;
+  let lineEnd = sel.start;
+  while (lineEnd < text.length && text[lineEnd] !== '\n') lineEnd++;
+  const line = text.slice(lineStart, lineEnd);
+  let newLine: string;
+  if (pattern.test(line)) {
+    newLine = line.replace(pattern, '');
+  } else {
+    newLine = prefix + line;
+  }
+  const newText = text.slice(0, lineStart) + newLine + text.slice(lineEnd);
+  return { text: newText, selection: { start: sel.start, end: sel.end } };
+}
 
 interface MarkdownEditorProps {
   content: string;
@@ -18,6 +47,8 @@ export default function MarkdownEditor({ content, onContentChange, placeholder =
   const inputRef = useRef<TextInput>(null);
   const { text, setText, undo, redo, canUndo, canRedo, reset } = useUndoRedo(content);
   const previousTextRef = useRef(text);
+  const { hardWrapEnabled, toggleHardWrap } = useHardWrap();
+  const [cursor, setCursor] = useState<Selection>({ start: 0, end: 0 });
 
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -108,11 +139,34 @@ export default function MarkdownEditor({ content, onContentChange, placeholder =
     redo();
   }, [redo]);
 
+  const handleFormat = useCallback((action: FormatAction) => {
+    const sel = { start: cursor.start, end: cursor.end };
+    let result: { text: string; selection: Selection } | undefined;
+
+    if (action.before === '**') result = toggleBold(text, sel);
+    else if (action.before === '*' && action.type === 'wrap') result = toggleItalic(text, sel);
+    else if (action.before === '`') result = toggleCode(text, sel);
+    else if (action.before === '# ') result = toggleHeading(text, sel, 1);
+    else if (action.before === '## ') result = toggleHeading(text, sel, 2);
+    else if (action.before === '- ') result = toggleList(text, sel);
+    else if (action.before === '1. ') result = modifyLinePrefix(text, sel, /^\d+\. /, '1. ');
+    else if (action.before === '- [ ] ') result = toggleChecklist(text, sel);
+    else if (action.before === '> ') result = modifyLinePrefix(text, sel, /^> /, '> ');
+    else if (action.before === '[text](url)') result = insertLink(text, sel);
+    else if (action.before === '  ') result = addTab(text, sel);
+
+    if (result) setText(result.text);
+  }, [cursor, text, setText]);
+
   return (
     <View style={styles.container}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity testID="search-toggle" onPress={handleToggleSearch} hitSlop={8}>
           <Ionicons name={isSearching ? 'search' : 'search-outline'} size={20} color={isSearching ? colors.primary ?? colors.text : colors.textSecondary} />
+        </TouchableOpacity>
+
+        <TouchableOpacity testID="hardwrap-toggle" onPress={toggleHardWrap} hitSlop={8}>
+          <Ionicons name="return-down-back" size={20} color={hardWrapEnabled ? (colors.primary ?? colors.text) : colors.textSecondary} />
         </TouchableOpacity>
 
         <View style={styles.headerActions}>
@@ -142,12 +196,16 @@ export default function MarkdownEditor({ content, onContentChange, placeholder =
         autoCorrect
         spellCheck
         selection={selection}
-        onSelectionChange={() => {
+        onSelectionChange={(e) => {
+          const { start, end } = e.nativeEvent.selection;
+          setCursor({ start, end });
           if (selection !== undefined) {
             setSelection(undefined);
           }
         }}
       />
+
+      <MarkdownToolbar onFormat={handleFormat} />
     </View>
   );
 }
