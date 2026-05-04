@@ -9,9 +9,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { NoteTemplate, TemplateService } from '../services/TemplateService';
 import { useTheme } from '../contexts/ThemeContext';
 import { Modal } from './ui';
+import type { RootStackParamList } from '../navigation/types';
 
 interface TemplateSelectorProps {
   visible: boolean;
@@ -49,11 +52,19 @@ const TemplateListItem = ({ item, onSelect, colors }: TemplateListItemProps) => 
   );
 };
 
+type Nav = NativeStackNavigationProp<RootStackParamList>;
+
 export default function TemplateSelector({ visible, onClose, onSelect }: TemplateSelectorProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [templates, setTemplates] = useState<NoteTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { colors } = useTheme();
+  const navigation = useNavigation<Nav>();
+
+  const handleCreateTemplate = useCallback(() => {
+    onClose();
+    navigation.navigate('TemplateManager');
+  }, [onClose, navigation]);
 
   const loadTemplates = useCallback(async () => {
     setIsLoading(true);
@@ -112,6 +123,22 @@ export default function TemplateSelector({ visible, onClose, onSelect }: Templat
           renderItem={renderTemplate}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
+          ListHeaderComponent={
+            <TouchableOpacity
+              accessibilityLabel="New custom template"
+              style={[styles.templateItem, { backgroundColor: colors.card, shadowColor: colors.shadow }]}
+              onPress={handleCreateTemplate}
+            >
+              <View style={[styles.templateIcon, { backgroundColor: colors.primary + '20' }]}>
+                <Ionicons name="add-circle-outline" size={24} color={colors.primary} />
+              </View>
+              <View style={styles.templateInfo}>
+                <Text style={[styles.templateName, { color: colors.primary }]}>New custom template</Text>
+                <Text style={[styles.templateDescription, { color: colors.textSecondary }]}>Create your own template</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+          }
           ListEmptyComponent={
             isLoading ? (
               <View style={styles.emptyState}>
