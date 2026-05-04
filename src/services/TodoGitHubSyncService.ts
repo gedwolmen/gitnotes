@@ -2,6 +2,8 @@ import { GitHubService } from './GitHubService';
 import { Todo } from '../models/Todo';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { AuthService } from './AuthService';
+import { SyncEngineService } from './SyncEngineService';
+import { LocalGitWriter } from './git/LocalGitWriter';
 
 async function resolveToken(accountId?: string): Promise<string | undefined> {
   if (!accountId) return undefined;
@@ -64,6 +66,31 @@ export async function syncTodoToGitHub(params: {
 
   const content = serializeTodo(todo);
   const message = filePath ? `Update todo: ${text}` : `Create todo: ${text}`;
+
+  // Clone-mode write path (#514). Same on-disk shape as the API path so a
+  // mode flip later doesn't surface a no-op churn commit.
+  const mode = await SyncEngineService.getMode(repoPath);
+  if (mode === 'clone') {
+    const user = GitHubService.getUser();
+    const author = {
+      name: user?.name || user?.login || 'gitnotes',
+      email: user?.email || `${user?.login ?? 'gitnotes'}@users.noreply.github.com`,
+    };
+    const tokenForPush = tokenOverride ?? (await AuthService.getToken()) ?? undefined;
+    const writeResult = await LocalGitWriter.writeAndCommit({
+      repoPath,
+      branch: targetBranch,
+      filePath: targetPath,
+      content,
+      message,
+      author,
+      token: tokenForPush,
+    });
+    if (writeResult.success) {
+      return { success: true, filePath: targetPath };
+    }
+    return { success: false, error: writeResult.error };
+  }
 
   try {
     const result = await GitHubService.updateFile(

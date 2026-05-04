@@ -3,6 +3,16 @@ import { NoteColor, NoteFormat } from '../models/Note';
 import * as FileSystem from 'expo-file-system/legacy';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { AuthService } from './AuthService';
+import { SyncEngineService } from './SyncEngineService';
+import { LocalGitWriter } from './git/LocalGitWriter';
+
+async function resolveAuthor(): Promise<{ name: string; email: string }> {
+  const user = GitHubService.getUser();
+  return {
+    name: user?.name || user?.login || 'gitnotes',
+    email: user?.email || `${user?.login ?? 'gitnotes'}@users.noreply.github.com`,
+  };
+}
 
 async function resolveToken(accountId?: string): Promise<string | undefined> {
   if (!accountId) return undefined;
@@ -293,6 +303,20 @@ export async function deleteNoteFromGitHub(params: {
   const targetBranch = branch || 'main';
   const opts = tokenOverride ? { tokenOverride } : undefined;
 
+  const mode = await SyncEngineService.getMode(repoPath);
+  if (mode === 'clone') {
+    const author = await resolveAuthor();
+    const tokenForPush = tokenOverride ?? (await AuthService.getToken()) ?? undefined;
+    return LocalGitWriter.deleteAndCommit({
+      repoPath,
+      branch: targetBranch,
+      filePath,
+      message: `Delete note: ${title || filePath}`,
+      author,
+      token: tokenForPush,
+    });
+  }
+
   try {
     const sha = await GitHubService.getFileSha(repoInfo.owner, repoInfo.repo, filePath, targetBranch, opts);
     if (!sha) {
@@ -365,6 +389,29 @@ export async function syncNoteToGitHub(params: {
   }
 
   const message = filePath ? `Update note: ${title}` : `Create note: ${title}`;
+
+  // Clone-mode write path (#514). We deliberately use the same `targetPath`
+  // and `finalContent` as the API path, so the on-disk markdown is byte-
+  // identical to what the Contents API would publish — that means a user can
+  // flip modes without their next pull seeing churn.
+  const mode = await SyncEngineService.getMode(repoPath);
+  if (mode === 'clone') {
+    const author = await resolveAuthor();
+    const tokenForPush = tokenOverride ?? (await AuthService.getToken()) ?? undefined;
+    const writeResult = await LocalGitWriter.writeAndCommit({
+      repoPath,
+      branch: targetBranch,
+      filePath: targetPath,
+      content: finalContent,
+      message,
+      author,
+      token: tokenForPush,
+    });
+    if (writeResult.success) {
+      return { success: true, filePath: targetPath, finalContent };
+    }
+    return { success: false, error: writeResult.error };
+  }
 
   try {
     const result = await GitHubService.updateFile(

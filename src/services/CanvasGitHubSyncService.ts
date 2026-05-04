@@ -2,6 +2,8 @@ import { GitHubService } from './GitHubService';
 import { CanvasScene, slugifyCanvasTitle } from '../models/Canvas';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { AuthService } from './AuthService';
+import { SyncEngineService } from './SyncEngineService';
+import { LocalGitWriter } from './git/LocalGitWriter';
 
 async function resolveToken(accountId?: string): Promise<string | undefined> {
   if (!accountId) return undefined;
@@ -48,6 +50,30 @@ export async function syncCanvasToGitHub(params: {
   const message = filePath
     ? `Update canvas: ${title}`
     : `Create canvas: ${title}`;
+
+  // Clone-mode write path (#514).
+  const mode = await SyncEngineService.getMode(repoPath);
+  if (mode === 'clone') {
+    const user = GitHubService.getUser();
+    const author = {
+      name: user?.name || user?.login || 'gitnotes',
+      email: user?.email || `${user?.login ?? 'gitnotes'}@users.noreply.github.com`,
+    };
+    const tokenForPush = tokenOverride ?? (await AuthService.getToken()) ?? undefined;
+    const writeResult = await LocalGitWriter.writeAndCommit({
+      repoPath,
+      branch: targetBranch,
+      filePath: targetPath,
+      content,
+      message,
+      author,
+      token: tokenForPush,
+    });
+    if (writeResult.success) {
+      return { success: true, filePath: targetPath };
+    }
+    return { success: false, error: writeResult.error };
+  }
 
   try {
     const result = await GitHubService.updateFile(
