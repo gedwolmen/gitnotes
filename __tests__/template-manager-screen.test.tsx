@@ -47,7 +47,6 @@ jest.mock('../src/contexts/ThemeContext', () => ({
 }));
 
 jest.mock('../src/components/ui', () => {
-  const React = require('react');
   const { Text, View, TouchableOpacity } = require('react-native');
   return {
     useScreenHeaderHeight: () => 60,
@@ -86,7 +85,6 @@ jest.mock('../src/services/StorageService', () => ({
   },
 }));
 
-import React from 'react';
 import { Alert } from 'react-native';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 

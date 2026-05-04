@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import type { TextLayoutEventData, NativeSyntheticEvent } from 'react-native';
+import type { TextLayoutEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import type { RecentItem, BentoSize } from '../../utils/recentItems';
@@ -126,7 +126,7 @@ export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph }: 
   const isCanvas = item.kind === 'canvas';
   const [titleLines, setTitleLines] = useState(1);
   const handleTitleLayout = useCallback(
-    (e: NativeSyntheticEvent<TextLayoutEventData>) => {
+    (e: TextLayoutEvent) => {
       const lines = e.nativeEvent.lines.length;
       if (lines && lines !== titleLines) setTitleLines(lines);
     },
