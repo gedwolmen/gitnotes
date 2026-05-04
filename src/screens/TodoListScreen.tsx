@@ -17,7 +17,7 @@ import ReanimatedSwipeable, {
   type SwipeableMethods,
 } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker from '@react-native/datetimepicker';
 import { format, isToday, isTomorrow, isPast } from 'date-fns';
 
 import { useTodos } from '../contexts/TodoContext';

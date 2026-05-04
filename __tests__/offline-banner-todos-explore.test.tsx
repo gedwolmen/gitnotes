@@ -146,7 +146,7 @@ jest.mock('../src/services/RepoPullService', () => ({
   pullAllFromRepos: jest.fn(async () => undefined),
 }));
 
-jest.mock('@react-native-community/datetimepicker', () => () => null);
+jest.mock('@react-native/datetimepicker', () => () => null);
 
 // ---------- ExploreScreen-specific mocks ----------
 jest.mock('../src/components/RepoFileTree', () => ({
