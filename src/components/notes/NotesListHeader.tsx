@@ -121,58 +121,62 @@ export function NotesListHeader({
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.chipRow}
-        contentContainerStyle={styles.chipContent}
-      >
-        <TouchableOpacity
-          style={[
-            styles.chip,
-            { borderColor: !selectedRepo ? colors.primary : colors.border + '60' },
-            !selectedRepo && { backgroundColor: colors.primary + '15' },
-          ]}
-          onPress={() => {
-            HapticService.selection();
-            onSelectRepo(null);
-          }}
+      <View style={styles.chipRow}>
+        <View style={styles.sortAnchor}>
+          <SortPicker currentSort={sortMode} onSortChange={onSortChange} entityType="notes" />
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.chipScroll}
+          contentContainerStyle={styles.chipContent}
         >
-          <Ionicons
-            name="home-outline"
-            size={13}
-            color={!selectedRepo ? colors.primary : colors.textSecondary}
-          />
-          <Text style={[styles.chipText, { color: !selectedRepo ? colors.primary : colors.text }]}>All Notes</Text>
-        </TouchableOpacity>
-        {repositories.map((repo) => {
-          const isSelected = selectedRepo?.id === repo.id;
-          return (
-            <TouchableOpacity
-              key={repo.id}
-              style={[
-                styles.chip,
-                { borderColor: isSelected ? colors.primary : colors.border + '60' },
-                isSelected && { backgroundColor: colors.primary + '15' },
-              ]}
-              onPress={() => {
-                HapticService.selection();
-                onSelectRepo(repo);
-              }}
-            >
-              <Ionicons
-                name="git-branch-outline"
-                size={13}
-                color={isSelected ? colors.primary : colors.textSecondary}
-              />
-              <Text style={[styles.chipText, { color: isSelected ? colors.primary : colors.text }]}>
-                {repo.name}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-        <SortPicker currentSort={sortMode} onSortChange={onSortChange} entityType="notes" />
-      </ScrollView>
+          <TouchableOpacity
+            style={[
+              styles.chip,
+              { borderColor: !selectedRepo ? colors.primary : colors.border + '60' },
+              !selectedRepo && { backgroundColor: colors.primary + '15' },
+            ]}
+            onPress={() => {
+              HapticService.selection();
+              onSelectRepo(null);
+            }}
+          >
+            <Ionicons
+              name="home-outline"
+              size={13}
+              color={!selectedRepo ? colors.primary : colors.textSecondary}
+            />
+            <Text style={[styles.chipText, { color: !selectedRepo ? colors.primary : colors.text }]}>All Notes</Text>
+          </TouchableOpacity>
+          {repositories.map((repo) => {
+            const isSelected = selectedRepo?.id === repo.id;
+            return (
+              <TouchableOpacity
+                key={repo.id}
+                style={[
+                  styles.chip,
+                  { borderColor: isSelected ? colors.primary : colors.border + '60' },
+                  isSelected && { backgroundColor: colors.primary + '15' },
+                ]}
+                onPress={() => {
+                  HapticService.selection();
+                  onSelectRepo(repo);
+                }}
+              >
+                <Ionicons
+                  name="git-branch-outline"
+                  size={13}
+                  color={isSelected ? colors.primary : colors.textSecondary}
+                />
+                <Text style={[styles.chipText, { color: isSelected ? colors.primary : colors.text }]}>
+                  {repo.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       {hasActiveSearch ? (
         <View style={[styles.searchNavigatorRow, { backgroundColor: colors.surface }]}>
@@ -231,8 +235,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   badgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
-  chipRow: { marginBottom: 4, minHeight: 50, maxHeight: 50 },
-  chipContent: { gap: 6, paddingTop: 6, paddingBottom: 8, paddingHorizontal: 12 },
+  chipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    minHeight: 50,
+    maxHeight: 50,
+    paddingTop: 6,
+    paddingBottom: 8,
+  },
+  sortAnchor: { paddingLeft: 12, paddingRight: 6 },
+  chipScroll: { flex: 1 },
+  chipContent: { gap: 6, paddingRight: 12, alignItems: 'center' },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
