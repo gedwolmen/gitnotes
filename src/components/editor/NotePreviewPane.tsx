@@ -31,6 +31,9 @@ interface NotePreviewPaneProps {
   authToken?: string | null;
   pdfLoadError: { uri: string; message: string } | null;
   onPdfError: (message: string) => void;
+  onOpenNote?: (path: string, fragment?: string) => boolean;
+  currentNotePath?: string;
+  headingPositions?: { current: Map<string, number> };
   previewScrollRef?: React.RefObject<ScrollView | null>;
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   onContentSizeChange?: () => void;
@@ -48,6 +51,9 @@ export function NotePreviewPane({
   authToken,
   pdfLoadError,
   onPdfError,
+  onOpenNote,
+  currentNotePath,
+  headingPositions,
   previewScrollRef,
   onScroll,
   onContentSizeChange,
@@ -116,7 +122,14 @@ export function NotePreviewPane({
               <MarkdownBody value={previewContent} styles={markdownStyles} renderer={notePreviewRenderer} />
             )
           ) : parsedStructuredContent ? (
-            <StructuredRenderer blocks={parsedStructuredContent as never} format={noteFormat === 'org' ? 'org' : 'neorg'} />
+            <StructuredRenderer
+              blocks={parsedStructuredContent as never}
+              format={noteFormat === 'org' ? 'org' : 'neorg'}
+              onOpenNote={onOpenNote}
+              currentNotePath={currentNotePath}
+              headingPositions={headingPositions}
+              scrollRef={previewScrollRef}
+            />
           ) : (
             <Text style={[styles.structuredFallback, { color: colors.text }]}>{previewContent}</Text>
           )

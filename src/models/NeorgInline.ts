@@ -9,7 +9,8 @@ export type MarkupType =
   | 'subscript'
   | 'verbatim'
   | 'org-code'
-  | 'org-strike';
+  | 'org-strike'
+  | 'link';
 
 export interface InlineMarkup {
   type: MarkupType;

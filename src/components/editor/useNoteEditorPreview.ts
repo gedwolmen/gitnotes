@@ -16,6 +16,8 @@ import {
   APPROX_LINE_PX,
   TocEntry,
   extractTocFromMarkdown,
+  extractTocFromNorg,
+  extractTocFromOrg,
   getExtensionForFormat,
   getPreviewContent,
   getSpeakableContent,
@@ -196,7 +198,8 @@ export function useNoteEditorPreview({
   }, []);
 
   const tocEntries = useMemo<TocEntry[]>(() => {
-    if (noteFormat !== 'markdown') return [];
+    if (noteFormat === 'neorg') return extractTocFromNorg(previewContent);
+    if (noteFormat === 'org') return extractTocFromOrg(previewContent);
     return extractTocFromMarkdown(previewContent);
   }, [noteFormat, previewContent]);
 
@@ -292,6 +295,9 @@ export function useNoteEditorPreview({
     pdfViewerUri,
     parsedStructuredContent,
     notePreviewRenderer,
+    currentNotePath,
+    headingPositions: headingPositionsRef,
+    onOpenNote: handleOpenLinkedNote,
     speakableContent,
     isSpeaking,
     showToc,

@@ -1,13 +1,18 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Alert, Linking, ScrollView } from 'react-native';
 import { NeorgContentBlock, NeorgHeading, NeorgListItem, NeorgChecklistItem, NeorgDefinitionItem } from '../models/NeorgContent';
 import { useTheme } from '../contexts/ThemeContext';
 import { useRenderStyle } from '../stores/renderStyleStore';
 import type { RenderFormat } from '../types/RenderStyle';
+import { classifyHref } from '../utils/linkClassifier';
 
 interface StructuredRendererProps {
   blocks: NeorgContentBlock[];
   format?: RenderFormat;
+  onOpenNote?: (path: string, fragment?: string) => boolean;
+  currentNotePath?: string;
+  headingPositions?: { current: Map<string, number> };
+  scrollRef?: React.RefObject<ScrollView | null>;
 }
 
 type InlineSegment =
@@ -37,11 +42,21 @@ const WORD_CHAR_REGEX = /[A-Za-z0-9]/;
 
 const inlinePatterns: InlinePattern[] = [
   {
-    regex: /\{([a-z0-9_.:]+)\}(?:\[([^\]]+)\])?/g,
+    regex: /\{([*a-z0-9_.:]+)\}(?:\[([^\]]+)\])?/g,
     handler: (m) => {
       const target = m[1];
-      if (/^[a-z0-9_.:-]+$/.test(target)) {
+      if (/^[*a-z0-9_.:-]+$/.test(target)) {
         if (m[2]) return { type: 'link', label: m[2], target };
+        if (/^https?:\/\//i.test(target)) return { type: 'link', label: target, target };
+        if (/^:.+:$/.test(target)) {
+          const filePath = target.slice(1, -1);
+          return { type: 'link', label: filePath, target: filePath };
+        }
+        if (/^\*/.test(target)) {
+          const headingName = target.slice(1);
+          const slug = headingName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+          return { type: 'link', label: headingName, target: `#${slug}` };
+        }
         return { type: 'tag', name: target };
       }
       return null;
@@ -129,7 +144,7 @@ export function parseNeorgInlineSegments(text: string): InlineSegment[] {
       earliestMatch = {
         index: urlMatch.index,
         length: urlMatch[0].length,
-        segment: { type: 'text', content: urlMatch[0] },
+        segment: { type: 'link', label: urlMatch[0], target: urlMatch[0] },
       };
     }
 
@@ -191,7 +206,7 @@ export function createMemoizedNeorgInlineParser(
   };
 }
 
-export default function StructuredRenderer({ blocks, format = 'neorg' }: StructuredRendererProps) {
+export default function StructuredRenderer({ blocks, format = 'neorg', onOpenNote, currentNotePath, headingPositions, scrollRef }: StructuredRendererProps) {
   const { colors } = useTheme();
   const overrides = useRenderStyle(format);
 
@@ -232,6 +247,47 @@ export default function StructuredRenderer({ blocks, format = 'neorg' }: Structu
       case 'B': return '#F59E0B';
       case 'C': return '#22C55E';
       default: return '#9CA3AF';
+    }
+  };
+
+  const handleLinkPress = (target: string) => {
+    const classified = classifyHref(target, currentNotePath);
+    if (!classified) {
+      Alert.alert("Can't open link", target);
+      return;
+    }
+
+    if (classified.kind === 'web') {
+      Linking.openURL(classified.target).catch(() => {
+        Alert.alert("Can't open link", classified.target);
+      });
+      return;
+    }
+
+    if (classified.kind === 'mailto') {
+      Linking.openURL(`mailto:${classified.target}`).catch(() => {
+        Alert.alert("Can't open link", classified.target);
+      });
+      return;
+    }
+
+    if (classified.kind === 'note') {
+      const opened = onOpenNote?.(classified.target, classified.fragment) ?? false;
+      if (!opened) {
+        Alert.alert('Link target not found');
+      }
+      return;
+    }
+
+    if (classified.kind === 'anchor') {
+      const slug = classified.target;
+      const measuredY = headingPositions?.current.get(slug);
+      if (measuredY != null && scrollRef?.current) {
+        scrollRef.current.scrollTo({ y: measuredY, animated: true });
+        return;
+      }
+      Alert.alert('Heading not found', `No heading matches #${slug} in this note.`);
+      return;
     }
   };
 
@@ -283,7 +339,12 @@ export default function StructuredRenderer({ blocks, format = 'neorg' }: Structu
               return <Text key={k} selectable style={styles.subscript}>{renderInline(seg.content)}</Text>;
             case 'link':
               return (
-                <Text key={k} selectable style={[styles.link, { color: linkColor }]}>
+                <Text
+                  key={k}
+                  selectable
+                  style={[styles.link, { color: linkColor }]}
+                  onPress={() => handleLinkPress(seg.target)}
+                >
                   {seg.label}
                 </Text>
               );

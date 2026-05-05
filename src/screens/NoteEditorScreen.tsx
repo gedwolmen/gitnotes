@@ -89,11 +89,11 @@ export default function NoteEditorScreen() {
   // ── PREVIEW MODE ──────────────────────────────────────────────
   if (!document.isEditing) {
     return (
-      <NoteViewer
-        noteId={noteId!}
-        noteFormat={document.noteFormat}
-        canEdit={!isPdfNote}
-        canSpeak={!isPdfNote && !!preview.speakableContent}
+        <NoteViewer
+          noteId={noteId!}
+          noteFormat={document.noteFormat}
+          canEdit={!isPdfNote}
+          canSpeak={!isPdfNote && !!preview.speakableContent}
         isSpeaking={preview.isSpeaking}
         tocEntries={preview.tocEntries}
         showToc={preview.showToc}
@@ -104,18 +104,21 @@ export default function NoteEditorScreen() {
         onCloseToc={() => preview.setShowToc(false)}
         onTocPress={preview.handleTocPress}
         onNavigateToNote={(id) => navigation.navigate('NoteEditor', { noteId: id })}
-        previewContent={preview.previewContent}
-        parsedStructuredContent={preview.parsedStructuredContent}
-        markdownStyles={preview.markdownStyles}
-        notePreviewRenderer={preview.notePreviewRenderer}
-        pdfViewerUri={preview.pdfViewerUri}
-        authToken={authState.token}
-        pdfLoadError={preview.pdfLoadError}
-        onPdfError={(message) => preview.setPdfLoadError({ uri: preview.pdfViewerUri, message })}
-        previewScrollRef={preview.previewScrollRef}
-        onPreviewScroll={preview.handlePreviewScroll}
-        onPreviewContentSizeChange={preview.handlePreviewContentSizeChange}
-      />
+          previewContent={preview.previewContent}
+          parsedStructuredContent={preview.parsedStructuredContent}
+          markdownStyles={preview.markdownStyles}
+          notePreviewRenderer={preview.notePreviewRenderer}
+          pdfViewerUri={preview.pdfViewerUri}
+          authToken={authState.token}
+          pdfLoadError={preview.pdfLoadError}
+          onPdfError={(message) => preview.setPdfLoadError({ uri: preview.pdfViewerUri, message })}
+          onOpenNote={preview.onOpenNote}
+          currentNotePath={preview.currentNotePath}
+          headingPositions={preview.headingPositions}
+          previewScrollRef={preview.previewScrollRef}
+          onPreviewScroll={preview.handlePreviewScroll}
+          onPreviewContentSizeChange={preview.handlePreviewContentSizeChange}
+        />
     );
   }
 
@@ -178,14 +181,17 @@ export default function NoteEditorScreen() {
                 previewContent={preview.previewContent}
                 parsedStructuredContent={preview.parsedStructuredContent}
                 markdownStyles={preview.markdownStyles}
-                notePreviewRenderer={preview.notePreviewRenderer}
-                pdfViewerUri={preview.pdfViewerUri}
-                authToken={authState.token}
-                pdfLoadError={preview.pdfLoadError}
-                onPdfError={(message) => preview.setPdfLoadError({ uri: preview.pdfViewerUri, message })}
-                showLivePreviewLabel
-                bordered
-              />
+              notePreviewRenderer={preview.notePreviewRenderer}
+              pdfViewerUri={preview.pdfViewerUri}
+              authToken={authState.token}
+              pdfLoadError={preview.pdfLoadError}
+              onPdfError={(message) => preview.setPdfLoadError({ uri: preview.pdfViewerUri, message })}
+              onOpenNote={preview.onOpenNote}
+              currentNotePath={preview.currentNotePath}
+              headingPositions={preview.headingPositions}
+              showLivePreviewLabel
+              bordered
+            />
             </View>
           </View>
         ) : (
