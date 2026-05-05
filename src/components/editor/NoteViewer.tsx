@@ -9,8 +9,10 @@ import { HapticService } from '../../utils/haptics';
 import { IconButton, Modal } from '../ui';
 import { NotePreviewPane } from './NotePreviewPane';
 import { NoteFormat } from '../../models/Note';
+import { BacklinksSection } from '../backlinks/BacklinksSection';
 
 interface NoteViewerProps {
+  noteId: string;
   noteFormat: NoteFormat;
   canEdit: boolean;
   canSpeak: boolean;
@@ -23,6 +25,7 @@ interface NoteViewerProps {
   onEdit: () => void;
   onCloseToc: () => void;
   onTocPress: (entry: TocEntry) => void;
+  onNavigateToNote: (id: string) => void;
   previewContent: string;
   parsedStructuredContent: unknown[] | null;
   markdownStyles: any;
@@ -37,6 +40,7 @@ interface NoteViewerProps {
 }
 
 export function NoteViewer({
+  noteId,
   noteFormat,
   canEdit,
   canSpeak,
@@ -49,6 +53,7 @@ export function NoteViewer({
   onEdit,
   onCloseToc,
   onTocPress,
+  onNavigateToNote,
   previewContent,
   parsedStructuredContent,
   markdownStyles,
@@ -119,6 +124,10 @@ export function NoteViewer({
         onScroll={onPreviewScroll}
         onContentSizeChange={onPreviewContentSizeChange}
       />
+
+      {!isPdfNote ? (
+        <BacklinksSection noteId={noteId} onNavigateToNote={onNavigateToNote} />
+      ) : null}
 
       <Modal visible={showToc} onRequestClose={onCloseToc} fullWidth>
         <Text style={[styles.tocTitle, { color: colors.text }]}>Table of contents</Text>

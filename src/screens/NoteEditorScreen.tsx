@@ -89,6 +89,7 @@ export default function NoteEditorScreen() {
   if (!document.isEditing) {
     return (
       <NoteViewer
+        noteId={noteId!}
         noteFormat={document.noteFormat}
         canEdit={!isPdfNote}
         canSpeak={!isPdfNote && !!preview.speakableContent}
@@ -101,6 +102,7 @@ export default function NoteEditorScreen() {
         onEdit={() => document.setIsEditing(true)}
         onCloseToc={() => preview.setShowToc(false)}
         onTocPress={preview.handleTocPress}
+        onNavigateToNote={(id) => navigation.navigate('NoteEditor', { noteId: id })}
         previewContent={preview.previewContent}
         parsedStructuredContent={preview.parsedStructuredContent}
         markdownStyles={preview.markdownStyles}
