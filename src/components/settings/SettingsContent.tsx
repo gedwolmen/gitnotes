@@ -529,12 +529,14 @@ export function SettingsContent(props: SettingsContentProps) {
         </>
       ) : null}
 
-      <Text style={[styles.credits, { color: colors.textSecondary }]} numberOfLines={1}>
-        Made with love by{' '}
-        <Text style={{ color: colors.accent }} onPress={() => Linking.openURL('https://www.vidwadeseram.com/')}>Vidwa De Seram</Text>
-        {' '}in collaboration with{' '}
-        <Text style={{ color: colors.accent }} onPress={() => Linking.openURL('https://xaventra.com/')}>Xaventra</Text>
-      </Text>
+      <View style={styles.creditsWrap}>
+        <Text style={[styles.creditsText, { color: colors.textSecondary }]} numberOfLines={1}>
+          Made with love by{' '}
+          <Text style={{ color: colors.accent }} onPress={() => Linking.openURL('https://www.vidwadeseram.com/')}>Vidwa De Seram</Text>
+          {' '}in collaboration with{' '}
+          <Text style={{ color: colors.accent }} onPress={() => Linking.openURL('https://xaventra.com/')}>Xaventra</Text>
+        </Text>
+      </View>
 
       <View style={styles.bottomPad} />
     </ScrollView>
