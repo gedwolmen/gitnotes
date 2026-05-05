@@ -16,7 +16,8 @@ import { isNoteColor } from '../../models/Note';
 export function ImportSection() {
   const { colors } = useTheme();
   const { createNote } = useNotes();
-  const [isImporting, setIsImporting] = useState(false);
+  const [importing, setImporting] = useState<'google' | 'apple' | null>(null);
+  const isImporting = importing !== null;
 
   const importNotes = useCallback(async (importedNotes: Awaited<ReturnType<typeof parseGoogleKeepTakeout>>) => {
     let created = 0;
@@ -41,7 +42,7 @@ export function ImportSection() {
   }, [createNote]);
 
   const handleImportGoogleKeep = useCallback(async () => {
-    setIsImporting(true);
+    setImporting('google');
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: ['application/zip', 'application/x-zip-compressed'],
@@ -50,7 +51,7 @@ export function ImportSection() {
       });
 
       if (result.canceled || result.assets.length === 0) {
-        setIsImporting(false);
+        setImporting(null);
         return;
       }
 
@@ -87,12 +88,12 @@ export function ImportSection() {
       HapticService.error();
       Alert.alert('Import Failed', e instanceof Error ? e.message : 'Could not import from Google Keep.');
     } finally {
-      setIsImporting(false);
+      setImporting(null);
     }
   }, [importNotes]);
 
   const handleImportAppleNotes = useCallback(async () => {
-    setIsImporting(true);
+    setImporting('apple');
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: ['text/plain', 'text/html'],
@@ -101,7 +102,7 @@ export function ImportSection() {
       });
 
       if (result.canceled || result.assets.length === 0) {
-        setIsImporting(false);
+        setImporting(null);
         return;
       }
 
@@ -131,7 +132,7 @@ export function ImportSection() {
       HapticService.error();
       Alert.alert('Import Failed', e instanceof Error ? e.message : 'Could not import from Apple Notes.');
     } finally {
-      setIsImporting(false);
+      setImporting(null);
     }
   }, [importNotes]);
 
@@ -141,15 +142,15 @@ export function ImportSection() {
         onPress={isImporting ? undefined : handleImportGoogleKeep}
         disabled={isImporting}
         leading={<Ionicons name="logo-google" size={20} color={colors.text} />}
-        trailing={isImporting ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
+        trailing={importing === 'google' ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
       >
         <Text style={{ fontSize: 16, color: colors.text }}>Import from Google Keep</Text>
       </GroupRow>
       <GroupRow
         onPress={isImporting ? undefined : handleImportAppleNotes}
         disabled={isImporting}
-        leading={<Ionicons name="document-text-outline" size={20} color={colors.text} />}
-        trailing={isImporting ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
+        leading={<Ionicons name="logo-apple" size={20} color={colors.text} />}
+        trailing={importing === 'apple' ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
       >
         <Text style={{ fontSize: 16, color: colors.text }}>Import from Apple Notes</Text>
       </GroupRow>
