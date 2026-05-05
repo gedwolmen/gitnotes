@@ -76,7 +76,26 @@ export function classifyHref(href: string, currentNotePath?: string): Classified
   const pathPart = hashIdx >= 0 ? trimmed.slice(0, hashIdx) : trimmed;
   const fragmentPart = hashIdx >= 0 ? trimmed.slice(hashIdx + 1) : '';
 
-  if (!/^[a-z][a-z0-9+.-]*:/i.test(pathPart) && /\.(md|norg|org|pdf|json)$/i.test(pathPart)) {
+  // Skip anything that looks like a URI scheme (e.g. `ftp:`, `data:`).
+  if (/^[a-z][a-z0-9+.-]*:/i.test(pathPart)) return null;
+
+  // Known note extensions: definitive note link.
+  if (/\.(md|norg|org|pdf|json)$/i.test(pathPart)) {
+    return {
+      kind: 'note',
+      target: resolveNotePath(pathPart, currentNotePath),
+      fragment: fragmentPart ? slugifyFragment(fragmentPart) : undefined,
+    };
+  }
+
+  // Extension-less local path (e.g. `[Other](other-note)`,
+  // `[Folder](sub/page)`). Treat as a note candidate when the shape looks
+  // path-like — either it contains a `/` or it has no dots at all. Strings
+  // with dots but no slashes (e.g. `home.com`) almost certainly aren't note
+  // names, so we leave them unclassified and let the renderer surface a
+  // visible "Can't open link" alert instead of silently doing nothing.
+  const looksLikePath = pathPart.includes('/') || !pathPart.includes('.');
+  if (pathPart && looksLikePath && /^[A-Za-z0-9._/\-]+$/.test(pathPart)) {
     return {
       kind: 'note',
       target: resolveNotePath(pathPart, currentNotePath),

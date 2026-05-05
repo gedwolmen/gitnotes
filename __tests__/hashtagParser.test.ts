@@ -54,4 +54,22 @@ describe('parseHashtags', () => {
   test('ignores url fragments', () => {
     expect(parseHashtags('http://example.com#frag and #real').tags).toEqual(['real']);
   });
+
+  test('ignores hash fragments inside markdown anchor links', () => {
+    expect(
+      parseHashtags(
+        '- [Chapter 1: PetDesk](#chapter-1-petdesk-what-the-company-actually-does)\n#real',
+      ).tags,
+    ).toEqual(['real']);
+  });
+
+  test('ignores cross-file fragments in markdown links', () => {
+    expect(
+      parseHashtags('See [details](other.md#deep-dive) for more.\n#actual').tags,
+    ).toEqual(['actual']);
+  });
+
+  test('ignores hashes inside image link URLs', () => {
+    expect(parseHashtags('![alt](pic.png#variant) #actual').tags).toEqual(['actual']);
+  });
 });

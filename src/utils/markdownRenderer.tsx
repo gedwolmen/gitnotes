@@ -338,9 +338,15 @@ export class NotePreviewRenderer extends Renderer implements RendererInterface {
     const onPress = () => {
       if (!href) return;
 
+      const openExternal = (target: string) => {
+        Linking.openURL(target).catch(() => {
+          Alert.alert("Can't open link", target);
+        });
+      };
+
       const classified = classifyHref(href, this.deps.currentNotePath);
       if (!classified) {
-        Linking.openURL(href).catch(() => {});
+        Alert.alert("Can't open link", href);
         return;
       }
 
@@ -399,11 +405,14 @@ export class NotePreviewRenderer extends Renderer implements RendererInterface {
 
         if (targetLine >= 0 && this.deps.previewScrollRef?.current) {
           this.deps.previewScrollRef.current.scrollTo({ y: targetLine * (this.deps.approxLinePx ?? 22), animated: true });
+          return;
         }
+
+        Alert.alert('Heading not found', `No heading matches #${slug} in this note.`);
         return;
       }
 
-      Linking.openURL(href).catch(() => {});
+      openExternal(classified.target);
     };
 
     return (

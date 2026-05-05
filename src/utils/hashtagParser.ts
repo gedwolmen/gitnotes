@@ -19,6 +19,26 @@ function isInsideRanges(index: number, ranges: Array<[number, number]>): boolean
   return ranges.some(([start, end]) => index >= start && index < end);
 }
 
+// Ranges of the URL portion of `[text](url)` and `![alt](url)` on a single
+// line. Used so that `#fragment` inside an anchor link isn't misread as a
+// content hashtag.
+function markdownLinkUrlRanges(line: string): Array<[number, number]> {
+  const ranges: Array<[number, number]> = [];
+  const regex = /!?\[[^\]]*\]\(([^)]*)\)/g;
+  let match: RegExpExecArray | null = regex.exec(line);
+  while (match !== null) {
+    const full = match[0];
+    const openParen = full.lastIndexOf('(');
+    if (openParen >= 0) {
+      const urlStart = match.index + openParen + 1;
+      const urlEnd = match.index + full.length - 1;
+      if (urlEnd > urlStart) ranges.push([urlStart, urlEnd]);
+    }
+    match = regex.exec(line);
+  }
+  return ranges;
+}
+
 function inlineCodeRanges(line: string): Array<[number, number]> {
   const ranges: Array<[number, number]> = [];
   let index = 0;
@@ -63,6 +83,7 @@ export function parseHashtags(text: string): ParsedHashtags {
       inCodeBlock = !inCodeBlock;
     } else if (!inCodeBlock) {
       const codeRanges = inlineCodeRanges(line);
+      const linkRanges = markdownLinkUrlRanges(line);
       HASHTAG_REGEX.lastIndex = 0;
 
       let match: RegExpExecArray | null = HASHTAG_REGEX.exec(line);
@@ -72,22 +93,18 @@ export function parseHashtags(text: string): ParsedHashtags {
         const tag = match[1]!.toLowerCase();
         const previousChar = localStart > 0 ? line[localStart - 1] : '';
         const isWordBoundaryBefore = localStart === 0 || !/[A-Za-z0-9_]/.test(previousChar);
-
-        if (
+        const isExtractable =
           isWordBoundaryBefore &&
           !isInsideRanges(localStart, codeRanges) &&
-          !isHexColor(tag) &&
-          !seen.has(tag)
-        ) {
+          !isInsideRanges(localStart, linkRanges) &&
+          !isHexColor(tag);
+
+        if (isExtractable && !seen.has(tag)) {
           seen.add(tag);
           tags.push(tag);
         }
 
-        if (
-          isWordBoundaryBefore &&
-          !isInsideRanges(localStart, codeRanges) &&
-          !isHexColor(tag)
-        ) {
+        if (isExtractable) {
           positions.push({
             start: lineStart + localStart,
             end: lineStart + localEnd,
