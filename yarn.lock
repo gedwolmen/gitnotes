@@ -3835,6 +3835,13 @@ expo-keep-awake@~55.0.7:
   resolved "https://registry.npmjs.org/expo-keep-awake/-/expo-keep-awake-55.0.7.tgz"
   integrity sha512-QBWOEu8FkPBGYc0h0rsCkSTMJNBEKgzVsmLuQpO7V79V9sPR052k3Iiu/G8Kzmny2enyHYYed8RY+CUsip/SeQ==
 
+expo-local-authentication@~55.0.13:
+  version "55.0.13"
+  resolved "https://registry.yarnpkg.com/expo-local-authentication/-/expo-local-authentication-55.0.13.tgz#18f54ec6d49f2e0a802367d6454e841ffe320982"
+  integrity sha512-7m1+Roub/6xxjHtVKe0vVtsC5g0MXp1Nf0dxK0YfJ1i5314hvi/Glhl5/2loAgnplw8Nx4UVbf6L0/rDjhljsQ==
+  dependencies:
+    invariant "^2.2.4"
+
 expo-modules-autolinking@55.0.19:
   version "55.0.19"
   resolved "https://registry.npmjs.org/expo-modules-autolinking/-/expo-modules-autolinking-55.0.19.tgz"

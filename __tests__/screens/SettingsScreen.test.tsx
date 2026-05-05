@@ -206,6 +206,24 @@ jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: any) => children,
 }));
 
+jest.mock('../../src/contexts/BiometricLockContext', () => ({
+  useBiometricLock: () => ({
+    isLockEnabled: false,
+    isBiometricAvailable: true,
+    lockTimeout: 300_000,
+    setIsLockEnabled: jest.fn(async () => undefined),
+    setLockTimeout: jest.fn(async () => undefined),
+    isLocked: false,
+    authenticate: jest.fn(async () => true),
+  }),
+  TIMEOUT_OPTIONS: [
+    { label: '1 minute', value: 60_000 },
+    { label: '5 minutes', value: 300_000 },
+    { label: '15 minutes', value: 900_000 },
+    { label: '30 minutes', value: 1_800_000 },
+  ],
+}));
+
 jest.mock('../../src/components/ui', () => {
   const React = require('react');
   const { View, Text, Pressable } = require('react-native');

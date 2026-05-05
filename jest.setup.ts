@@ -108,3 +108,11 @@ jest.mock('react-native-safe-area-context', () => {
     initialWindowMetrics: { insets, frame },
   };
 });
+
+jest.mock('expo-local-authentication', () => ({
+  hasHardwareAsync: jest.fn(async () => true),
+  isEnrolledAsync: jest.fn(async () => true),
+  authenticateAsync: jest.fn(async () => ({ success: true })),
+  supportedAuthenticationTypesAsync: jest.fn(async () => []),
+  getEnrolledLevelAsync: jest.fn(async () => 0),
+}));
