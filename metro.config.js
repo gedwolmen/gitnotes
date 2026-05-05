@@ -25,13 +25,21 @@ config.watchFolders = [__dirname];
 // bundle blows up. The library also publishes a self-contained UMD bundle
 // (`index.umd.min.js`) that has its own SHA-1 and never touches `crypto`.
 // Redirect the bare specifier to the UMD bundle so RN can consume it.
+//
+// On newer Metro the package's `exports."."` -> `./index.cjs` mapping fires
+// before our hook runs against the bare specifier, so we also have to catch
+// the post-exports-resolution sub-path forms.
 const isoGitUmd = path.resolve(
   __dirname,
   'node_modules/isomorphic-git/index.umd.min.js',
 );
 const baseResolveRequest = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
-  if (moduleName === 'isomorphic-git') {
+  if (
+    moduleName === 'isomorphic-git' ||
+    moduleName === 'isomorphic-git/index.cjs' ||
+    moduleName === 'isomorphic-git/index.js'
+  ) {
     return { type: 'sourceFile', filePath: isoGitUmd };
   }
   if (baseResolveRequest) {
