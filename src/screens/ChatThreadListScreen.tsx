@@ -223,7 +223,7 @@ export default function ChatThreadListScreen() {
           label="New Chat"
           onPress={handleNewChat}
           variant="primary"
-          leadingIcon={<Ionicons name="add" size={20} color="#FFFFFF" />}
+          leadingIcon={<Ionicons name="add" size={20} color={colors.accent} />}
           fullWidth
         />
       </View>
