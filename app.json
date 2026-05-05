@@ -23,6 +23,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.xaventra.gitnotes",
       "scheme": "gitnotes",
+      "icon": {
+        "light": "./assets/icon.png",
+        "dark": "./assets/icon-dark.png"
+      },
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "GitNotēs needs access to your photo library to attach images to notes.",
         "NSMicrophoneUsageDescription": "GitNotēs needs access to your microphone for voice-to-text note input.",
