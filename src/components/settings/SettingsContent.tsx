@@ -466,7 +466,7 @@ export function SettingsContent(props: SettingsContentProps) {
         <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>About</Text>
         <View style={[styles.settingItem, { borderBottomColor: colors.border }]}>
           <Text style={[styles.settingLabel, { color: colors.text }]}>Version</Text>
-          <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{Constants.expoConfig?.version ?? Constants.manifest?.version ?? '—'}</Text>
+          <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{Constants.expoConfig?.version ?? '—'}</Text>
         </View>
         <View style={[styles.settingItem, { borderBottomColor: colors.border }]}>
           <Text style={[styles.settingLabel, { color: colors.text }]}>Build</Text>
