@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import HomeScreen from '../screens/HomeScreen';
 import NotesListScreen from '../screens/NotesListScreen';
@@ -25,17 +26,18 @@ const Tab = createBottomTabNavigator<BottomTabParamList>();
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
-const TAB_ICONS: Record<string, { focused: IoniconName; outline: IoniconName; label: string }> = {
-  HomeTab: { focused: 'home', outline: 'home-outline', label: 'Home' },
-  NotesTab: { focused: 'document-text', outline: 'document-text-outline', label: 'Notes' },
-  ExploreTab: { focused: 'compass', outline: 'compass-outline', label: 'Explore' },
-  JournalTab: { focused: 'calendar', outline: 'calendar-outline', label: 'Journal' },
-  TodosTab: { focused: 'checkbox', outline: 'checkbox-outline', label: 'Todos' },
-  SettingsTab: { focused: 'settings', outline: 'settings-outline', label: 'Settings' },
+const TAB_ICONS: Record<string, { focused: IoniconName; outline: IoniconName; labelKey: string }> = {
+  HomeTab: { focused: 'home', outline: 'home-outline', labelKey: 'tabs.home' },
+  NotesTab: { focused: 'document-text', outline: 'document-text-outline', labelKey: 'tabs.notes' },
+  ExploreTab: { focused: 'compass', outline: 'compass-outline', labelKey: 'tabs.explore' },
+  JournalTab: { focused: 'calendar', outline: 'calendar-outline', labelKey: 'tabs.journal' },
+  TodosTab: { focused: 'checkbox', outline: 'checkbox-outline', labelKey: 'tabs.todos' },
+  SettingsTab: { focused: 'settings', outline: 'settings-outline', labelKey: 'tabs.settings' },
 };
 
 function TabletRail({ state, navigation }: BottomTabBarProps) {
   const { colors, isDark } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={railStyles.container}>
@@ -77,7 +79,7 @@ function TabletRail({ state, navigation }: BottomTabBarProps) {
               key={route.key}
               accessibilityRole="button"
               accessibilityState={isFocused ? { selected: true } : {}}
-              accessibilityLabel={config.label}
+              accessibilityLabel={t(config.labelKey)}
               style={[
                 railStyles.tab,
                 isFocused && {
@@ -101,7 +103,7 @@ function TabletRail({ state, navigation }: BottomTabBarProps) {
                 ]}
                 numberOfLines={1}
               >
-                {config.label}
+                {t(config.labelKey)}
               </Text>
             </TouchableOpacity>
           );

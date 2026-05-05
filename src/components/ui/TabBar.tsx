@@ -4,6 +4,7 @@ import { BlurView } from 'expo-blur';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Surface } from './Surface';
 import { useTheme, useTokens } from '../../contexts/ThemeContext';
 
@@ -23,18 +24,19 @@ export function useTabBarHeight(): number {
   return insets.bottom + TAB_BAR_BASE_HEIGHT;
 }
 
-const TAB_ICONS: Record<string, { focused: IoniconName; outline: IoniconName; label: string }> = {
-  HomeTab: { focused: 'home', outline: 'home-outline', label: 'Home' },
-  NotesTab: { focused: 'document-text', outline: 'document-text-outline', label: 'Notes' },
-  ExploreTab: { focused: 'compass', outline: 'compass-outline', label: 'Explore' },
-  TodosTab: { focused: 'checkbox', outline: 'checkbox-outline', label: 'Todos' },
-  SettingsTab: { focused: 'settings', outline: 'settings-outline', label: 'Settings' },
+const TAB_ICONS: Record<string, { focused: IoniconName; outline: IoniconName; labelKey: string }> = {
+  HomeTab: { focused: 'home', outline: 'home-outline', labelKey: 'tabs.home' },
+  NotesTab: { focused: 'document-text', outline: 'document-text-outline', labelKey: 'tabs.notes' },
+  ExploreTab: { focused: 'compass', outline: 'compass-outline', labelKey: 'tabs.explore' },
+  TodosTab: { focused: 'checkbox', outline: 'checkbox-outline', labelKey: 'tabs.todos' },
+  SettingsTab: { focused: 'settings', outline: 'settings-outline', labelKey: 'tabs.settings' },
 };
 
 export function TabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const { colors, spacing } = useTokens();
   const { isDark } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View
@@ -88,7 +90,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
               key={route.key}
               accessibilityRole="button"
               accessibilityState={isFocused ? { selected: true } : {}}
-              accessibilityLabel={config.label}
+              accessibilityLabel={t(config.labelKey)}
               onPress={onPress}
               onLongPress={onLongPress}
               hitSlop={6}

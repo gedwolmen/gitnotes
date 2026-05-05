@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 
 interface NotesEmptyStateProps {
@@ -9,15 +10,16 @@ interface NotesEmptyStateProps {
 
 export function NotesEmptyState({ isFiltered }: NotesEmptyStateProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View style={styles.container}>
       <Ionicons name="document-text-outline" size={48} color={colors.textSecondary} />
       <Text style={[styles.title, { color: colors.text }]}>
-        {isFiltered ? 'No matching notes' : 'No notes yet'}
+        {isFiltered ? t('notes.noMatchingNotes') : t('notes.noNotesYet')}
       </Text>
       <Text style={[styles.subtext, { color: colors.textSecondary }]}>
-        {isFiltered ? 'Try adjusting your search or filters' : 'Create your first note to get started'}
+        {isFiltered ? t('notes.tryAdjusting') : t('notes.createFirst')}
       </Text>
     </View>
   );

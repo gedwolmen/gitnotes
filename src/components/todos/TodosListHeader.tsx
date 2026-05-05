@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import SearchBar from '../SearchBar';
 import SortPicker from '../SortPicker';
@@ -13,12 +14,13 @@ interface TodosListHeaderProps {
 }
 
 export function TodosListHeader({ searchQuery, onSearchChange, sortMode, onSortChange }: TodosListHeaderProps) {
+  const { t } = useTranslation();
   return (
     <View style={styles.container}>
       <SearchBar
         value={searchQuery}
         onChangeText={onSearchChange}
-        placeholder="Search todos..."
+        placeholder={t('todos.searchTodos')}
         style={styles.searchBar}
       />
       <SortPicker currentSort={sortMode} onSortChange={onSortChange} entityType="todos" size="bar" />

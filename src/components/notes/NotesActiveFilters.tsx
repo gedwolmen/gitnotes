@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '../../contexts/ThemeContext';
 import { NoteFormat } from '../../models/Note';
@@ -22,6 +23,7 @@ export function NotesActiveFilters({
   onClearAll,
 }: NotesActiveFiltersProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { selectedFormat, selectedBranch, selectedFolder } = filters;
 
   if (!selectedFormat && !selectedBranch && !selectedFolder) return null;
@@ -59,7 +61,7 @@ export function NotesActiveFilters({
           : null}
         {selectedFolder ? renderChip('folder', 'folder-outline', selectedFolder, onClearFolder) : null}
         <TouchableOpacity style={[styles.chip, { borderColor: colors.border + '60' }]} onPress={onClearAll}>
-          <Text style={[styles.chipText, { color: colors.textSecondary }]}>Clear all</Text>
+          <Text style={[styles.chipText, { color: colors.textSecondary }]}>{t('common.clearAll')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

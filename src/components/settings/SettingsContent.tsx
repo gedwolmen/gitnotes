@@ -1,9 +1,16 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Group, GroupRow, Toggle } from '../ui';
+import {
+  SUPPORTED_LANGUAGES,
+  getLanguagePreference,
+  setLanguage,
+  type LanguageCode,
+} from '../../i18n';
 import { ImportSection } from './ImportSection';
 import { settingsStyles as styles } from './settingsStyles';
 import type { GitRepository } from '../../services/GitService';
@@ -142,6 +149,12 @@ export function SettingsContent(props: SettingsContentProps) {
     isBackgroundSyncEnabled,
     onToggleBackgroundSync,
   } = props;
+  const { t } = useTranslation();
+  const [languagePref, setLanguagePref] = useState<string>('system');
+
+  useEffect(() => {
+    getLanguagePreference().then(setLanguagePref);
+  }, []);
 
   return (
     <ScrollView
@@ -155,7 +168,7 @@ export function SettingsContent(props: SettingsContentProps) {
       }}
     >
       <Group
-        title="Appearance"
+        title={t('settings.appearance')}
         footer={
           uiStyle === 'neumorphic'
             ? 'Soft-UI shadows. Toggle off for the classic flat look.'
@@ -171,7 +184,7 @@ export function SettingsContent(props: SettingsContentProps) {
             />
           }
         >
-          <Text style={[styles.settingLabel, { color: colors.text }]}>Updated UI</Text>
+          <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.updatedUI')}</Text>
         </GroupRow>
         <GroupRow
           trailing={
@@ -181,21 +194,42 @@ export function SettingsContent(props: SettingsContentProps) {
             />
           }
         >
-          <Text style={[styles.settingLabel, { color: colors.text }]}>Dark Mode</Text>
+          <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.darkMode')}</Text>
         </GroupRow>
         <GroupRow
           onPress={() => setTheme('system')}
           trailing={
             <Text style={[styles.settingValue, { color: colors.textSecondary }]}> 
-              {theme === 'system' ? 'Active' : 'Inactive'}
+              {theme === 'system' ? t('settings.active') : t('settings.inactive')}
             </Text>
           }
         >
-          <Text style={[styles.settingLabel, { color: colors.text }]}>Use System Theme</Text>
+          <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.useSystemTheme')}</Text>
         </GroupRow>
       </Group>
 
-      <Group title="Security" footer={isBiometricAvailable ? undefined : 'Biometric hardware not available on this device'}>
+      <Group title={t('settings.language')}>
+        {SUPPORTED_LANGUAGES.map((lang) => {
+          const labelKey = `settings.languageOptions.${lang.code}`;
+          const isActive = languagePref === lang.code;
+          return (
+            <GroupRow
+              key={lang.code}
+              onPress={async () => {
+                await setLanguage(lang.code as LanguageCode);
+                setLanguagePref(lang.code);
+              }}
+              trailing={isActive ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : null}
+            >
+              <Text style={[styles.settingLabel, { color: isActive ? colors.primary : colors.text }]}>
+                {t(labelKey)}
+              </Text>
+            </GroupRow>
+          );
+        })}
+      </Group>
+
+      <Group title={t('settings.security')} footer={isBiometricAvailable ? undefined : 'Biometric hardware not available on this device'}>
         <GroupRow
           trailing={
             <Toggle
@@ -480,7 +514,7 @@ export function SettingsContent(props: SettingsContentProps) {
         </TouchableOpacity>
       </View>
 
-      <Group title="Artificial Intelligence">
+      <Group title={t('settings.artificialIntelligence')}>
         <GroupRow trailing={<Toggle value={isAIEnabled} onValueChange={onToggleAI} />}>
           <Text style={[styles.settingLabel, { color: colors.text }]}>Enable Artificial Intelligence</Text>
         </GroupRow>
@@ -500,7 +534,7 @@ export function SettingsContent(props: SettingsContentProps) {
             </GroupRow>
           </Group>
 
-          <Group title="Providers">
+          <Group title={t('settings.providers')}>
             {providers.map((provider) => (
               <GroupRow key={provider.id} onPress={() => onProviderPress(provider)} trailing={<Text style={[styles.settingValue, { color: colors.textSecondary }]}>{provider.isEnabled ? 'Enabled' : 'Disabled'}</Text>}>
                 <Text style={[styles.settingLabel, { color: colors.text }]}>{provider.name}</Text>
