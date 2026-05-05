@@ -40,7 +40,7 @@
     "buffer": "^6.0.3",
     "date-fns": "^4.1.0",
     "expo": "^55.0.19",
-    "expo-background-fetch": "~55.0.15",
+    "expo-background-task": "~55.0.17",
     "expo-blur": "~55.0.14",
     "expo-clipboard": "~55.0.13",
     "expo-crypto": "~55.0.14",

@@ -30,7 +30,9 @@
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "GitNotēs needs access to your photo library to attach images to notes.",
         "NSMicrophoneUsageDescription": "GitNotēs needs access to your microphone for voice-to-text note input.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": ["processing"],
+        "BGTaskSchedulerPermittedIdentifiers": ["com.expo.modules.backgroundtask.processing"]
       }
     },
     "android": {
@@ -62,7 +64,8 @@
       "@react-native/datetimepicker",
       "expo-secure-store",
       "expo-image",
-      "expo-sharing"
+      "expo-sharing",
+      "expo-background-task"
     ],
     "owner": "vidwa",
     "runtimeVersion": {

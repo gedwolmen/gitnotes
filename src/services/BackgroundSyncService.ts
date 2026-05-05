@@ -1,4 +1,4 @@
-import * as BackgroundFetch from 'expo-background-fetch';
+import * as BackgroundTask from 'expo-background-task';
 import * as TaskManager from 'expo-task-manager';
 import { GitHubService } from './GitHubService';
 import { StorageService } from './StorageService';
@@ -6,52 +6,52 @@ import { NoteSyncQueueService } from './NoteSyncQueueService';
 import { pullAllFromRepos } from './RepoPullService';
 
 const TASK_NAME = 'background-sync';
-const MINIMUM_INTERVAL = 15 * 60;
 
 let taskRegistered = false;
 
-async function backgroundSyncTask(): Promise<BackgroundFetch.BackgroundFetchResult> {
+// Must live in module-global scope per expo-background-task docs: the OS may
+// re-launch the app cold to run the task, and the bundle's top-level code is
+// what re-registers the handler.
+TaskManager.defineTask(TASK_NAME, async () => {
   try {
     if (!GitHubService.isAuthenticated()) {
-      return BackgroundFetch.BackgroundFetchResult.NoData;
+      return BackgroundTask.BackgroundTaskResult.Success;
     }
 
     const repos = await StorageService.getSavedRepositories();
     if (repos.length === 0) {
-      return BackgroundFetch.BackgroundFetchResult.NoData;
+      return BackgroundTask.BackgroundTaskResult.Success;
     }
 
     await NoteSyncQueueService.drain();
     await pullAllFromRepos();
 
-    return BackgroundFetch.BackgroundFetchResult.NewData;
+    return BackgroundTask.BackgroundTaskResult.Success;
   } catch (error) {
     console.warn('[BackgroundSync] task failed:', error);
-    return BackgroundFetch.BackgroundFetchResult.Failed;
+    return BackgroundTask.BackgroundTaskResult.Failed;
   }
-}
+});
 
 export async function startBackgroundSync(): Promise<void> {
   if (taskRegistered) return;
 
-  if (!TaskManager.isTaskDefined(TASK_NAME)) {
-    TaskManager.defineTask(TASK_NAME, backgroundSyncTask);
+  // Throws on builds without the BGTaskScheduler Info.plist entries (Expo Go,
+  // dev clients built before the keys were added). Swallow so app boot is not
+  // blocked; the periodic sync just won't run in those environments.
+  try {
+    await BackgroundTask.registerTaskAsync(TASK_NAME);
+    taskRegistered = true;
+  } catch (error) {
+    console.warn('[BackgroundSync] registration unavailable in this build:', error);
   }
-
-  await BackgroundFetch.registerTaskAsync(TASK_NAME, {
-    minimumInterval: MINIMUM_INTERVAL,
-    stopOnTerminate: true,
-    startOnBoot: false,
-  });
-
-  taskRegistered = true;
 }
 
 export async function stopBackgroundSync(): Promise<void> {
   if (!taskRegistered) return;
 
   try {
-    await BackgroundFetch.unregisterTaskAsync(TASK_NAME);
+    await BackgroundTask.unregisterTaskAsync(TASK_NAME);
   } catch (error) {
     console.warn('[BackgroundSync] failed to unregister:', error);
   }
