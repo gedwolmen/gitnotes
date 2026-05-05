@@ -1,6 +1,9 @@
 import React, { useCallback, useState } from 'react';
 import { Text, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
+import JSZip from 'jszip';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useNotes } from '../../contexts/NoteContext';
 import { Group, GroupRow } from '../ui';
@@ -40,21 +43,20 @@ export function ImportSection() {
   const handleImportGoogleKeep = useCallback(async () => {
     setIsImporting(true);
     try {
-      const DocumentPicker = require('react-native-document-picker').default;
-      const result = await DocumentPicker.pick({
-        type: [DocumentPicker.types.zip],
-        allowMultiSelection: false,
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/zip', 'application/x-zip-compressed'],
+        multiple: false,
+        copyToCacheDirectory: true,
       });
 
-      if (!result || result.length === 0) {
+      if (result.canceled || result.assets.length === 0) {
         setIsImporting(false);
         return;
       }
 
-      const RNFS = require('react-native-fs');
-      const { default: JSZip } = require('jszip');
-
-      const fileContent = await RNFS.readFile(result[0].uri, 'base64');
+      const fileContent = await FileSystem.readAsStringAsync(result.assets[0].uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
       const zip = await JSZip.loadAsync(fileContent, { base64: true });
 
       const files: ImportedFile[] = [];
@@ -82,9 +84,6 @@ export function ImportSection() {
         Alert.alert('Import Finished', `Imported ${created} note(s); ${failed} failed.`);
       }
     } catch (e: unknown) {
-      if (e && typeof e === 'object' && 'code' in e && (e as { code: string }).code === 'DOCUMENT_PICKER_CANCELED') {
-        return;
-      }
       HapticService.error();
       Alert.alert('Import Failed', e instanceof Error ? e.message : 'Could not import from Google Keep.');
     } finally {
@@ -95,22 +94,20 @@ export function ImportSection() {
   const handleImportAppleNotes = useCallback(async () => {
     setIsImporting(true);
     try {
-      const DocumentPicker = require('react-native-document-picker').default;
-      const result = await DocumentPicker.pick({
-        type: ['text/plain', 'text/html', 'public.plain-text', 'public.html'],
-        allowMultiSelection: true,
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['text/plain', 'text/html'],
+        multiple: true,
+        copyToCacheDirectory: true,
       });
 
-      if (!result || result.length === 0) {
+      if (result.canceled || result.assets.length === 0) {
         setIsImporting(false);
         return;
       }
 
-      const RNFS = require('react-native-fs');
-
       const files: ImportedFile[] = [];
-      for (const doc of result) {
-        const content = await RNFS.readFile(doc.uri, 'utf8');
+      for (const doc of result.assets) {
+        const content = await FileSystem.readAsStringAsync(doc.uri);
         const name = doc.name || doc.uri.split('/').pop() || 'Untitled';
         files.push({ name, content });
       }
@@ -131,9 +128,6 @@ export function ImportSection() {
         Alert.alert('Import Finished', `Imported ${created} note(s); ${failed} failed.`);
       }
     } catch (e: unknown) {
-      if (e && typeof e === 'object' && 'code' in e && (e as { code: string }).code === 'DOCUMENT_PICKER_CANCELED') {
-        return;
-      }
       HapticService.error();
       Alert.alert('Import Failed', e instanceof Error ? e.message : 'Could not import from Apple Notes.');
     } finally {

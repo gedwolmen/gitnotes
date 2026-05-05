@@ -172,3 +172,12 @@ jest.mock('expo-task-manager', () => ({
   isTaskDefined: jest.fn(() => true),
   unregisterTaskAsync: jest.fn(async () => undefined),
 }));
+
+jest.mock('expo-document-picker', () => ({
+  getDocumentAsync: jest.fn(async () => ({ canceled: true, assets: [] })),
+}));
+
+jest.mock('expo-file-system/legacy', () => ({
+  readAsStringAsync: jest.fn(async () => ''),
+  EncodingType: { UTF8: 'utf8', Base64: 'base64' },
+}));
