@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import HomeScreen from '../screens/HomeScreen';
 import NotesListScreen from '../screens/NotesListScreen';
 import ExploreScreen from '../screens/ExploreScreen';
+import JournalScreen from '../screens/JournalScreen';
 import TodoListScreen from '../screens/TodoListScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import { BottomTabParamList } from './types';
@@ -28,6 +29,7 @@ const TAB_ICONS: Record<string, { focused: IoniconName; outline: IoniconName; la
   HomeTab: { focused: 'home', outline: 'home-outline', label: 'Home' },
   NotesTab: { focused: 'document-text', outline: 'document-text-outline', label: 'Notes' },
   ExploreTab: { focused: 'compass', outline: 'compass-outline', label: 'Explore' },
+  JournalTab: { focused: 'calendar', outline: 'calendar-outline', label: 'Journal' },
   TodosTab: { focused: 'checkbox', outline: 'checkbox-outline', label: 'Todos' },
   SettingsTab: { focused: 'settings', outline: 'settings-outline', label: 'Settings' },
 };
@@ -174,6 +176,11 @@ export default function TabNavigator() {
         name="ExploreTab"
         component={ExploreScreen}
         options={{ title: 'Explore' }}
+      />
+      <Tab.Screen
+        name="JournalTab"
+        component={JournalScreen}
+        options={{ title: 'Journal' }}
       />
       <Tab.Screen
         name="TodosTab"
