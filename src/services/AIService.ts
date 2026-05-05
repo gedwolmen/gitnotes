@@ -1,5 +1,5 @@
 import { generateText, streamText } from 'ai';
-import type { LanguageModel as LanguageModelV1, ModelMessage, Tool } from 'ai';
+import type { LanguageModel, ModelMessage, Tool } from 'ai';
 import { Platform } from 'react-native';
 import type { AIModelConfig, AIProviderConfig } from '../models/AIProvider';
 import { chatTools } from './ai/tools';
@@ -13,16 +13,11 @@ type OnDeviceAvailability = {
 type ModelStatus = 'ready' | 'needs-download' | 'unavailable';
 
 type OpenAICompatibleProvider = {
-  chatModel: (modelId: string) => LanguageModelV1;
+  chatModel: (modelId: string) => LanguageModel;
 };
 
 type LlamaDownloadProgress = {
   percentage?: number;
-};
-
-type LlamaLanguageModel = LanguageModelV1 & {
-  prepare: () => Promise<void>;
-  download: (onProgress?: (progress: LlamaDownloadProgress) => void) => Promise<unknown>;
 };
 
 const DEFAULT_ON_DEVICE_MODELS: AIModelConfig[] = [
@@ -86,7 +81,7 @@ async function buildProviderInstance(providerConfig: AIProviderConfig): Promise<
 export async function initializeModel(
   modelConfig: AIModelConfig,
   providerConfig?: AIProviderConfig
-): Promise<LanguageModelV1> {
+): Promise<LanguageModel> {
   try {
     switch (modelConfig.providerType) {
       case 'apple': {
@@ -97,9 +92,11 @@ export async function initializeModel(
         const { createAppleProvider } = await import('@react-native-ai/apple');
         const provider = createAppleProvider({ availableTools: chatTools });
 
-        return provider() as LanguageModelV1;
+        return provider() as LanguageModel;
       }
       case 'llama': {
+        const { getModelPath } = await import('@react-native-ai/llama');
+        const modelPath = getModelPath(modelConfig.id);
         const provider = await buildProviderInstance({
           id: modelConfig.providerId,
           type: 'llama',
@@ -110,7 +107,7 @@ export async function initializeModel(
         });
 
         const model = (provider as typeof import('@react-native-ai/llama').llama)
-          .languageModel(modelConfig.id) as LlamaLanguageModel;
+          .languageModel(modelPath);
         await model.prepare();
         return model;
       }
@@ -205,7 +202,7 @@ function humanizeStreamError(error: unknown): string {
 }
 
 export async function* streamChatResponse(
-  model: LanguageModelV1,
+  model: LanguageModel,
   messages: ModelMessage[],
   tools?: Record<string, Tool>,
   abortSignal?: AbortSignal,
@@ -258,7 +255,7 @@ export async function* streamChatResponse(
 export const sendMessage = streamChatResponse;
 
 export async function generateChatTitle(
-  model: LanguageModelV1,
+  model: LanguageModel,
   userText: string,
   assistantText: string,
 ): Promise<string | null> {
@@ -331,10 +328,8 @@ export async function downloadModel(
       return;
     }
 
-    const { llama } = await import('@react-native-ai/llama');
-    const model = llama.languageModel(modelConfig.id) as LlamaLanguageModel;
-
-    await model.download((progress: LlamaDownloadProgress) => {
+    const { downloadModel: llamaDownloadModel } = await import('@react-native-ai/llama');
+    await llamaDownloadModel(modelConfig.id, (progress) => {
       onProgress(progress.percentage ?? 0);
     });
   } catch (error) {
@@ -350,8 +345,8 @@ export async function getModelStatus(modelConfig: AIModelConfig): Promise<ModelS
     }
 
     if (modelConfig.providerType === 'llama') {
-      const { LlamaEngine } = await import('@react-native-ai/llama');
-      return (await LlamaEngine.isDownloaded(modelConfig.id)) ? 'ready' : 'needs-download';
+      const { isModelDownloaded } = await import('@react-native-ai/llama');
+      return (await isModelDownloaded(modelConfig.id)) ? 'ready' : 'needs-download';
     }
 
     return 'ready';
