@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 
 import { RootStackParamList } from '../navigation/types';
@@ -26,6 +27,8 @@ function encodeRepoPath(path: string): string {
     .join('/');
 }
 
+const PDF_INVERT_STORAGE_KEY = '@gitnotes:pdf_invert';
+
 export default function PdfViewerScreen() {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<RootStackParamList, 'PdfViewer'>>();
@@ -35,12 +38,30 @@ export default function PdfViewerScreen() {
 
   const [localUri, setLocalUri] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [inverted, setInverted] = useState(false);
   const cancelledRef = useRef(false);
   const downloadedUriRef = useRef<string | null>(null);
   const memoryKey = PositionMemoryService.pdfKey(owner, repo, branch, path);
   const [restoredY, setRestoredY] = useState<number | null>(null);
   const lastYRef = useRef(0);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const webViewRef = useRef<WebView | null>(null);
+
+  useEffect(() => {
+    AsyncStorage.getItem(PDF_INVERT_STORAGE_KEY).then((v) => {
+      if (v === '1') setInverted(true);
+    });
+  }, []);
+
+  const toggleInvert = useCallback(() => {
+    HapticService.light();
+    setInverted((prev) => {
+      const next = !prev;
+      AsyncStorage.setItem(PDF_INVERT_STORAGE_KEY, next ? '1' : '0').catch(() => undefined);
+      webViewRef.current?.injectJavaScript(`window.__setPdfInvert && window.__setPdfInvert(${next}); true;`);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     PositionMemoryService.load(memoryKey).then((y) => {
@@ -75,6 +96,9 @@ export default function PdfViewerScreen() {
   const injectedJavaScript = restoredY != null ? `
 (function() {
   var RESTORE_Y = ${restoredY};
+  var INITIAL_INVERT = ${inverted ? 'true' : 'false'};
+  var pending = null;
+  var restoreTimers = [];
   function restore() {
     try { window.scrollTo(0, RESTORE_Y); } catch (error) { void error; }
   }
@@ -86,15 +110,41 @@ export default function PdfViewerScreen() {
       }
     } catch (error) { void error; }
   }
-  if (document.readyState === 'complete') restore();
-  else window.addEventListener('load', restore);
-  setTimeout(restore, 250);
-  setTimeout(restore, 800);
-  var pending = null;
-  window.addEventListener('scroll', function() {
+  function onScroll() {
     if (pending) return;
     pending = setTimeout(function() { send(); pending = null; }, 350);
-  }, { passive: true });
+  }
+  if (document.readyState === 'complete') restore();
+  else window.addEventListener('load', restore);
+  restoreTimers.push(setTimeout(restore, 250));
+  restoreTimers.push(setTimeout(restore, 800));
+  window.addEventListener('scroll', onScroll, { passive: true });
+
+  // Invert helper — exposed so RN can toggle without reload.
+  window.__setPdfInvert = function(on) {
+    var id = '__pdf_invert_style__';
+    var existing = document.getElementById(id);
+    if (on) {
+      if (!existing) {
+        var s = document.createElement('style');
+        s.id = id;
+        s.textContent = 'html, body { filter: invert(1) hue-rotate(180deg) !important; background: #fff !important; }';
+        document.head.appendChild(s);
+      }
+    } else if (existing) {
+      existing.remove();
+    }
+  };
+  if (INITIAL_INVERT) window.__setPdfInvert(true);
+
+  // #550: clear timers + listeners on pagehide so a stale JS context doesn't
+  // keep firing after the WebView unmounts.
+  window.addEventListener('pagehide', function() {
+    if (pending) { clearTimeout(pending); pending = null; }
+    for (var i = 0; i < restoreTimers.length; i++) clearTimeout(restoreTimers[i]);
+    restoreTimers = [];
+    window.removeEventListener('scroll', onScroll);
+  });
   true;
 })();
   ` : undefined;
@@ -162,6 +212,12 @@ export default function PdfViewerScreen() {
         downloadedUriRef.current = null;
         FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => undefined);
       }
+      // #550: stop any in-flight WebView load before navigation pops the
+      // screen. Without this, react-native-webview can leave the JS
+      // context spinning, leading to an unresponsive UI on return.
+      try {
+        webViewRef.current?.stopLoading?.();
+      } catch (error) { void error; }
     };
   }, []);
 
@@ -187,6 +243,18 @@ export default function PdfViewerScreen() {
           {title || path.split('/').pop()}
         </Text>
         <TouchableOpacity
+          onPress={toggleInvert}
+          style={styles.iconButton}
+          disabled={!localUri}
+          accessibilityLabel={inverted ? 'Restore PDF colors' : 'Invert PDF colors'}
+        >
+          <Ionicons
+            name={inverted ? 'sunny-outline' : 'contrast-outline'}
+            size={22}
+            color={localUri ? colors.primary : colors.textSecondary}
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
           onPress={handleOpenExternal}
           style={styles.iconButton}
           disabled={!localUri}
@@ -211,6 +279,7 @@ export default function PdfViewerScreen() {
         </View>
       ) : (
         <WebView
+          ref={webViewRef}
           source={{ uri: localUri }}
           style={{ flex: 1, backgroundColor: colors.background }}
           // Local file PDF — restrict origin to file:// (was '*'). The
