@@ -16,6 +16,7 @@ import { RootStackParamList } from '../navigation/types';
 import { useTheme } from '../contexts/ThemeContext';
 import { GitHubService } from '../services/GitHubService';
 import { NeorgContentParser } from '../services/NeorgContentParser';
+import { OrgContentParser } from '../services/OrgContentParser';
 import StructuredRenderer from '../components/StructuredRenderer';
 import { JsonRenderer } from '../components/JsonRenderer';
 import { HapticService } from '../utils/haptics';
@@ -106,7 +107,8 @@ export default function FileViewerScreen() {
   const parsedNeorg = useMemo(() => {
     if (!renderContent) return null;
     if (mode !== 'neorg' && mode !== 'org') return null;
-    const parsed = NeorgContentParser.parseContent(renderContent);
+    const parser = mode === 'org' ? OrgContentParser : NeorgContentParser;
+    const parsed = parser.parseContent(renderContent);
     return parsed.success && parsed.blocks ? parsed.blocks : null;
   }, [renderContent, mode]);
 
