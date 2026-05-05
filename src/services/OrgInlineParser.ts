@@ -264,6 +264,7 @@ export class OrgInlineParser {
 }
 
 function restoreEscapes(text: string): string {
+  // eslint-disable-next-line no-control-regex
   return text.replace(/\x00ESCAPED_(\d+)\x00/g, (_, code) =>
     String.fromCharCode(parseInt(code, 10)),
   );
