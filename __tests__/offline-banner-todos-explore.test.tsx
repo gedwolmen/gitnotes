@@ -69,6 +69,8 @@ jest.mock('../src/components/SearchBar', () => {
   );
 });
 
+jest.mock('../src/components/SortPicker', () => () => null);
+
 jest.mock('../src/components/ui', () => {
   const { Text, TouchableOpacity } = require('react-native');
   return {
