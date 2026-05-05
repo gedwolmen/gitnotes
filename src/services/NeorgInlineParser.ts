@@ -149,6 +149,9 @@ export class NeorgInlineParser {
         code: ['mono'],
         superscript: ['superscript'],
         subscript: ['subscript'],
+        verbatim: ['mono'],
+        'org-code': ['mono'],
+        'org-strike': ['lineThrough'],
       };
 
       return {

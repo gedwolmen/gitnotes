@@ -20,6 +20,10 @@ type InlineSegment =
   | { type: 'code'; content: string }
   | { type: 'superscript'; content: string }
   | { type: 'subscript'; content: string }
+  | { type: 'verbatim'; content: string }
+  | { type: 'org-code'; content: string }
+  | { type: 'org-strike'; content: string }
+  | { type: 'footnote-ref'; label: string; content: string }
   | { type: 'link'; label: string; target: string }
   | { type: 'tag'; name: string };
 
@@ -259,12 +263,14 @@ export default function NeorgRenderer({ blocks, format = 'neorg' }: NeorgRendere
               );
             case 'tag':
               return (
-                <Text key={k} selectable style={[styles.tagBadge, { backgroundColor: colors.primary + '20', color: colors.primary }]}>
+                <Text key={k} selectable style={[styles.tagBadge, { backgroundColor: colors.primary + '20', color: colors.primary }]}> 
                   {seg.name}
                 </Text>
               );
+            case 'footnote-ref':
+              return <Text key={k} selectable style={styles.footnoteRef}>[{seg.label}]</Text>;
             default:
-              return <Text key={k} selectable>{seg.content}</Text>;
+              return 'content' in seg ? <Text key={k} selectable>{seg.content}</Text> : null;
           }
         })}
       </React.Fragment>
@@ -486,6 +492,10 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 10,
     overflow: 'hidden',
+  },
+  footnoteRef: {
+    fontSize: 12,
+    lineHeight: 16,
   },
   paragraph: {
     fontSize: 16,
