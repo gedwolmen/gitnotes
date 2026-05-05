@@ -48,7 +48,15 @@ export default function SettingsScreen() {
   const { refreshTodos } = useTodos();
   const { authState, accounts, activeAccountId, setToken, clearToken, addAccount, removeAccount, switchAccount } = useAuth();
   const { repositories, addRepository: addRepo, removeRepository: removeRepo } = useRepos();
-  const { isLockEnabled: isBiometricLockEnabled, isBiometricAvailable, lockTimeout, setIsLockEnabled, setLockTimeout } = useBiometricLock();
+  const {
+    isLockEnabled: isBiometricLockEnabled,
+    isBiometricAvailable,
+    biometricKind,
+    biometricLabel,
+    lockTimeout,
+    setIsLockEnabled,
+    setLockTimeout,
+  } = useBiometricLock();
   const { isEnabled: isBackgroundSyncEnabled, toggle: toggleBackgroundSync } = useBackgroundSync();
   const isAIEnabled = useAIStore((state) => state.isEnabled);
   const selectedModelId = useAIStore((state) => state.selectedModelId);
@@ -462,6 +470,8 @@ export default function SettingsScreen() {
         onAddProvider={() => { setEditingProvider(undefined); setShowProviderConfig(true); }}
         isBiometricLockEnabled={isBiometricLockEnabled}
         isBiometricAvailable={isBiometricAvailable}
+        biometricKind={biometricKind}
+        biometricLabel={biometricLabel}
         lockTimeout={lockTimeout}
         onToggleBiometricLock={(v) => void setIsLockEnabled(v)}
         onSetLockTimeout={(v) => void setLockTimeout(v)}

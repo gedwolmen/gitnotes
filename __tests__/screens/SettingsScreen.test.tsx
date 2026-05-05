@@ -210,8 +210,10 @@ jest.mock('../../src/contexts/BiometricLockContext', () => ({
   useBiometricLock: () => ({
     isLockEnabled: false,
     isBiometricAvailable: true,
+    biometricKind: 'fingerprint',
+    biometricLabel: 'Touch ID',
     lockTimeout: 300_000,
-    setIsLockEnabled: jest.fn(async () => undefined),
+    setIsLockEnabled: jest.fn(async () => true),
     setLockTimeout: jest.fn(async () => undefined),
     isLocked: false,
     authenticate: jest.fn(async () => true),

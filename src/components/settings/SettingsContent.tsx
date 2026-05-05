@@ -16,7 +16,7 @@ import { settingsStyles as styles } from './settingsStyles';
 import type { GitRepository } from '../../services/GitService';
 import type { TemplateRepoPreference } from '../../services/TemplateRepoPreferenceService';
 import type { AIProviderConfig } from '../../models/AIProvider';
-import { TIMEOUT_OPTIONS, type LockTimeout } from '../../contexts/BiometricLockContext';
+import { TIMEOUT_OPTIONS, type BiometricKind, type LockTimeout } from '../../contexts/BiometricLockContext';
 
 type ThemeColors = {
   background: string;
@@ -88,6 +88,8 @@ type SettingsContentProps = {
   onAddProvider: () => void;
   isBiometricLockEnabled: boolean;
   isBiometricAvailable: boolean;
+  biometricKind: BiometricKind;
+  biometricLabel: string;
   lockTimeout: LockTimeout;
   onToggleBiometricLock: (v: boolean) => void;
   onSetLockTimeout: (v: LockTimeout) => void;
@@ -143,6 +145,8 @@ export function SettingsContent(props: SettingsContentProps) {
     onAddProvider,
     isBiometricLockEnabled,
     isBiometricAvailable,
+    biometricKind,
+    biometricLabel,
     lockTimeout,
     onToggleBiometricLock,
     onSetLockTimeout,
@@ -243,8 +247,12 @@ export function SettingsContent(props: SettingsContentProps) {
           }
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Ionicons name="finger-print-outline" size={20} color={colors.text} />
-            <Text style={[styles.settingLabel, { color: colors.text }]}>Biometric Lock</Text>
+            <Ionicons
+              name={biometricKind === 'face' ? 'scan-outline' : 'finger-print-outline'}
+              size={20}
+              color={colors.text}
+            />
+            <Text style={[styles.settingLabel, { color: colors.text }]}>{biometricLabel} Lock</Text>
           </View>
         </GroupRow>
         {isBiometricLockEnabled ? (
