@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { Todo, TodoCreateInput, TodoUpdateInput, reorderTodos } from '../models/Todo';
 import { StorageService } from '../services/StorageService';
 import { GitHubService } from '../services/GitHubService';
-import { parseRepoPath } from '../utils/gitPathParser';
+import { deleteTodoFromGitHub } from '../services/TodoGitHubSyncService';
 
 interface TodoState {
   todos: Todo[];
@@ -72,35 +72,23 @@ export const useTodoStore = create<TodoState & TodoActions>()((set, get) => ({
       const todoToDelete = get().todos.find((t) => t.id === id);
       const isRepoBacked = !!(todoToDelete?.repo && todoToDelete.filePath);
 
-      // If the todo originated from a repo, the remote file MUST be deleted
-      // first. Otherwise the next pull-to-refresh will re-import it (issue #489).
+      // Repo-backed todos must purge the remote file first; otherwise the next
+      // pull re-imports the row (#489). The sync helper already treats a
+      // missing remote (sha null / 404) as success so a stale local row can
+      // still be cleaned up.
       if (isRepoBacked) {
         if (!GitHubService.isAuthenticated()) {
           set({ error: 'Cannot delete repo-backed todo while signed out of GitHub' });
           return false;
         }
-        const repoInfo = parseRepoPath(todoToDelete!.repo!);
-        if (!repoInfo) {
-          set({ error: 'Cannot delete todo: invalid repository path' });
-          return false;
-        }
-        const branch = todoToDelete!.branch || 'main';
-        const filePath = todoToDelete!.filePath!;
-        const sha = await GitHubService.getFileSha(repoInfo.owner, repoInfo.repo, filePath, branch);
-        if (!sha) {
-          set({ error: 'Cannot delete todo: failed to look up remote file' });
-          return false;
-        }
-        const result = await GitHubService.deleteFile(
-          repoInfo.owner,
-          repoInfo.repo,
-          filePath,
-          `Delete todo: ${todoToDelete!.text}`,
-          sha,
-          branch,
-        );
-        if (!result) {
-          set({ error: 'Cannot delete todo: GitHub delete failed' });
+        const remote = await deleteTodoFromGitHub({
+          repo: todoToDelete!.repo!,
+          branch: todoToDelete!.branch,
+          filePath: todoToDelete!.filePath!,
+          text: todoToDelete!.text,
+        });
+        if (!remote.success) {
+          set({ error: remote.error || 'Failed to delete from GitHub' });
           return false;
         }
       }

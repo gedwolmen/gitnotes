@@ -338,10 +338,11 @@ export async function deleteNoteFromGitHub(params: {
     }
     return { success: false, error: 'GitHub API returned no result' };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    if (/404/.test(message)) {
+      return { success: true, filePath };
+    }
+    return { success: false, error: message };
   }
 }
 

@@ -129,12 +129,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [refreshAccounts]);
 
   useEffect(() => {
-    refreshAuth()
-      .then(() => GitHubService.initialize())
-      .catch((err) => {
+    (async () => {
+      try {
+        await refreshAuth();
+        await GitHubService.initialize();
+        const { removed } = await AuthService.validateAllAccounts();
+        if (removed.length > 0) {
+          const state = await AuthService.checkAuthState();
+          if (state.isAuthenticated && state.token) {
+            await GitHubService.setToken(state.token, state.user as unknown as GhSetTokenUser);
+          } else {
+            await GitHubService.clearToken();
+          }
+          setAuthState(state);
+          await refreshAccounts();
+        }
+      } catch (err) {
         console.warn('[AuthContext] auth bootstrap failed:', err);
-      })
-      .finally(() => setIsLoading(false));
+      } finally {
+        setIsLoading(false);
+      }
+    })();
   }, []);
 
   const value = useMemo(

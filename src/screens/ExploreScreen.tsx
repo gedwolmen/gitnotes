@@ -133,7 +133,7 @@ export default function ExploreScreen() {
         <View style={{ paddingTop: headerHeight }}>
           <OfflineBanner />
         </View>
-        <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
+        <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 }}>
           <SearchBar
             value={repoSearch}
             onChangeText={setRepoSearch}

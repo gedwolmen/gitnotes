@@ -14,6 +14,10 @@ export interface AuthState {
   token: string | null;
 }
 
+export type TokenValidity =
+  | { ok: true; user: GitHubUser }
+  | { ok: false; reason: 'invalid' | 'network' };
+
 function profileFromUser(user: GitHubUser) {
   return {
     login: user.login,
@@ -127,6 +131,56 @@ export class AuthService {
       console.error('[AuthService] Failed to get user:', error);
       return null;
     }
+  }
+
+  /**
+   * Hits GET /user to check if a token is still accepted by GitHub.
+   * Distinguishes auth failure (401/403) from network/server failure so we
+   * don't wipe valid tokens just because the device is offline.
+   */
+  static async validateToken(token: string): Promise<TokenValidity> {
+    try {
+      const response = await fetch('https://api.github.com/user', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/vnd.github.v3+json',
+        },
+      });
+      if (response.status === 401 || response.status === 403) {
+        return { ok: false, reason: 'invalid' };
+      }
+      if (!response.ok) {
+        return { ok: false, reason: 'network' };
+      }
+      const user = (await response.json()) as GitHubUser;
+      return { ok: true, user };
+    } catch {
+      return { ok: false, reason: 'network' };
+    }
+  }
+
+  /**
+   * Validates every stored account's token against GitHub. Removes accounts
+   * whose tokens are explicitly rejected (401/403). Network/server errors
+   * leave accounts intact.
+   */
+  static async validateAllAccounts(): Promise<{ removed: string[] }> {
+    const accounts = await AccountStorage.listAccounts();
+    const removed: string[] = [];
+    for (const account of accounts) {
+      const token = await AccountStorage.getTokenById(account.id);
+      if (!token) {
+        await AccountStorage.removeAccount(account.id);
+        removed.push(account.id);
+        continue;
+      }
+      const result = await this.validateToken(token);
+      if (!result.ok && result.reason === 'invalid') {
+        await AccountStorage.removeAccount(account.id);
+        removed.push(account.id);
+      }
+    }
+    return { removed };
   }
 
   static getAuthorizationHeader(token: string): Record<string, string> {
