@@ -1,152 +1,67 @@
 <p align="center">
-<img width="200" height="200" alt="GitNotēs icon" src="https://github.com/user-attachments/assets/776e9654-0117-44c5-a85e-5a72e7f4ac9f" />
+  <img width="180" height="180" alt="GitNotēs icon" src="https://github.com/user-attachments/assets/776e9654-0117-44c5-a85e-5a72e7f4ac9f" />
 </p>
 
 <h1 align="center">GitNotēs</h1>
 
 <p align="center">
-A mobile notes, todos, and canvas app that uses GitHub repositories as durable, versioned storage. Built with Expo and React Native.
+  Mobile notes, todos, and canvases backed by a GitHub repo.<br>
+  Your data lives as plain Markdown, Neorg, Org, or JSON — yours to read, edit, and version anywhere.
+</p>
+
+<p align="center">
+  <a href="https://github.com/gedwolmen/gitnotes/actions/workflows/ci.yml"><img src="https://github.com/gedwolmen/gitnotes/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MPL--2.0-blue.svg" alt="MPL-2.0"></a>
+  <a href="https://docs.expo.dev/versions/latest/"><img src="https://img.shields.io/badge/Expo-SDK%2055-000.svg" alt="Expo SDK 55"></a>
+  <img src="https://img.shields.io/badge/platform-iOS%20%7C%20Android-lightgrey.svg" alt="iOS | Android">
 </p>
 
 ---
 
-## Overview
+## Why
 
-GitNotēs treats your notes as plain files in a Git repository: every note, todo, and canvas is a real Markdown / Neorg / Org / JSON file you can read, edit, and share outside the app. Notes are kept in sync with GitHub, edits are queued and retried when offline, and everything renders locally with native gestures, haptics, and a neumorphic UI.
+- **Files, not a database.** Every note is a real file in your Git repo — nothing locks you in.
+- **Versioned by default.** Edit, branch, diff, and rebase your notes the same way you do code.
+- **Works offline.** Edits queue locally and sync when you're back online.
+- **Open formats.** Markdown, Neorg, Org, JSON, PDF — pick what fits.
+- **Open source.** MPL-2.0; contributions and forks welcome.
 
-## Getting started
+## Highlights
 
-### Prerequisites
+- Notes, todos, journals, and Excalidraw-style canvases — all backed by Git
+- Folders, tags, colors, pins, wiki-links, backlinks, custom templates
+- Multiple GitHub accounts; per-repo API or full-clone sync modes
+- Importers for Google Keep and Apple Notes
+- Optional AI chat layer (OpenAI-compatible providers, Apple Intelligence, on-device Llama)
+- Biometric lock, English & Spanish UI, light / dark / system themes
 
-- Node.js >= 20.18
-- Yarn 1.x (classic)
-- Expo CLI
-- iOS Simulator or Android Emulator (or Expo Go on a physical device)
-
-### Install and run
+## Quick start
 
 ```bash
+git clone https://github.com/gedwolmen/gitnotes
+cd gitnotes
 yarn install
 yarn start
 ```
 
-Then:
+Press `i` for the iOS Simulator, `a` for Android, or scan the QR with Expo Go.
 
-- Press `i` to launch the iOS Simulator.
-- Press `a` to launch the Android Emulator.
-- Or scan the QR code with Expo Go on a physical device.
+You'll need Node ≥ 20.18, Yarn classic (1.x), and Xcode or Android Studio for native builds.
 
-## Project structure
+## Stack
 
-```
-gitnotes/
-├── App.tsx
-├── app.json
-├── eas.json
-├── src/
-│   ├── components/
-│   │   └── ui/              # Neumorphic primitives
-│   ├── contexts/            # Theme, auth, view mode, etc.
-│   ├── hooks/               # TanStack Query hooks, useMarkdown, etc.
-│   ├── models/              # Note, Todo, Canvas, Folder, Repository
-│   ├── navigation/          # React Navigation stacks and types
-│   ├── screens/             # Top-level screens (Notes, Todos, Canvases, Explore, Settings, ...)
-│   ├── services/            # GitHub, storage, sync queue, parsers, notifications
-│   ├── stores/              # Zustand stores
-│   ├── theme/               # Tokens, elevation builder
-│   └── utils/               # gitPathParser, viewModes, haptics, ...
-└── assets/
-```
-
-## Design system
-
-The UI is built on a small set of neumorphic primitives that share a single token system.
-
-- `Surface` is the base soft-shadow container; everything else composes it.
-- `Group` and `GroupRow` produce iOS-style settings lists with leading/trailing slots.
-- `ScreenHeader` and `SearchBar` give every tab the same shape.
-- `IconButton` supports `default`, `primary`, and `ghost` variants for chrome that disappears into the row.
-- A dev-only neumorphic gallery exists for visual smoke testing.
-
-## Tech stack
-
-- Expo SDK 55
-- React Native 0.83
-- TypeScript 5.6
-- React Navigation v7
-- TanStack Query v5
-- Zustand v5
-- Vercel AI SDK v5 with `@ai-sdk/openai-compatible` v1 and `@react-native-ai/{apple,llama}` for the chat layer
-- `react-native-marked` for Markdown rendering
-- `@shopify/flash-list` for virtualized lists
-- `react-native-reanimated` and `react-native-gesture-handler` for animations and gestures
-
-## Security
-
-- The project pins `markdown-it` to v14.1.1 via npm overrides to address GHSA-6vfc-qv3f-vr6c.
-- GitHub Personal Access Tokens and AI provider API keys are stored in `expo-secure-store` (Keychain on iOS, EncryptedSharedPreferences on Android), never in plain `AsyncStorage`. Legacy AsyncStorage tokens migrate on first read.
-- AI provider configuration validates base URLs and prompts a confirmation before saving any non-https endpoint, since the API key would travel in plain text.
-- Open advisories tracked in issues; see `#222` for upstream Expo bumps for `postcss` and `uuid` CVEs.
-
-## Deployment
-
-The repository ships with an `eas.json` containing three build profiles:
-
-- `development` — for testing during development.
-- `preview` — for internal distribution.
-- `production` — for App Store and Play Store submission.
-
-### iOS app icon — regenerate before each release
-
-`ios/` is gitignored and regenerated by `expo prebuild`. The asset catalog (`ios/GitNots/Images.xcassets/AppIcon.appiconset/App-Icon-1024x1024@1x.png`) is a stale copy from whenever prebuild last ran locally — if `assets/icon.png` has been updated since then, the next build will ship the old icon.
-
-Before any iOS production build, regenerate the native dir from the current source icon:
-
-```bash
-rm -rf ios/
-npx expo prebuild -p ios
-```
-
-Then verify the asset-catalog file is `1024×1024`, no alpha (Apple rejects alpha):
-
-```bash
-sips -g pixelWidth -g pixelHeight -g hasAlpha \
-  ios/GitNots/Images.xcassets/AppIcon.appiconset/App-Icon-1024x1024@1x.png
-```
-
-Bump `expo.version` and `ios.buildNumber` in `app.json` so App Store Connect accepts the upload, then build + submit. After upload, ASC takes 10-30 min to render the icon — confirm the **Marketing Icon** in the Build detail view (not just App Information) before promoting.
-
-### Build
-
-```bash
-eas login
-eas build:configure
-
-eas build --platform ios --profile production
-eas build --platform android --profile production
-```
-
-### Submit
-
-```bash
-eas submit --platform ios --profile production
-eas submit --platform android --profile production
-```
-
-Android submission requires a `google-service-account.json` at the repo root (gitignored, path referenced from `eas.json`). See the [EAS Submit docs](https://docs.expo.dev/submit/android/#creating-a-service-account) for how to create one.
-
-## Development scripts
-
-```bash
-yarn start       # Expo dev server
-yarn ts:check    # TypeScript type checking
-yarn test        # Jest unit tests (where present)
-```
+Expo SDK 55 · React Native 0.83 · TypeScript 5.6 · isomorphic-git · React Navigation v7 · TanStack Query · Zustand · Vercel AI SDK v6 · Reanimated · FlashList.
 
 ## Contributing
 
-The project follows an atomic-commit workflow: each commit is a single focused change with a descriptive message. Pull requests are reviewed against the same standard.
+Issues and pull requests are very welcome.
+
+- Atomic commits using [Conventional Commits](https://www.conventionalcommits.org/) prefixes (`feat:`, `fix:`, `chore:`, …).
+- `yarn ts:check` and `yarn test` should pass locally before opening a PR; CI runs both.
+- For larger changes, open an issue first so we can talk through the approach.
+
+Found a bug or rough edge? [File an issue](https://github.com/gedwolmen/gitnotes/issues/new) — even drive-by reports help.
 
 ## License
 
-[Mozilla Public License 2.0](LICENSE) — file-level copyleft. You can combine MPL-2.0 source with code under other licenses (including proprietary) provided MPL-licensed files remain under MPL and source for those files is made available on distribution.
+[Mozilla Public License 2.0](LICENSE) — file-level copyleft. Combine with other licensed code freely; changes to MPL files stay open.
