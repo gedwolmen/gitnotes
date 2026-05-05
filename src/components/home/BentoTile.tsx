@@ -105,7 +105,7 @@ function formatChipLabel(format: NoteFormat | undefined): string | null {
   }
 }
 
-const HEIGHT_FOR: Record<BentoSize, number> = { large: 200, medium: 124, small: 124, pinned: 124 };
+const HEIGHT_FOR: Record<BentoSize, number> = { large: 200, medium: 144, small: 124, pinned: 124 };
 const PADDING_FOR: Record<BentoSize, number> = { large: 18, medium: 14, small: 12, pinned: 12 };
 const TITLE_SIZE: Record<BentoSize, number> = { large: 18, medium: 15, small: 13, pinned: 13 };
 const SUB_SIZE: Record<BentoSize, number> = { large: 13, medium: 12, small: 11, pinned: 11 };
@@ -294,7 +294,7 @@ export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph }: 
       <View style={styles.body}>
         <Text
           style={[styles.title, { color: colors.text, fontSize: TITLE_SIZE[size], lineHeight: Math.round(TITLE_SIZE[size] * 1.3) }]}
-          numberOfLines={isPinned ? 1 : 2}
+          numberOfLines={isLarge ? 2 : 1}
           onTextLayout={handleTitleLayout}
         >
           {titleFor(item)}
