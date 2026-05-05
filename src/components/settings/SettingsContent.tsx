@@ -529,10 +529,15 @@ export function SettingsContent(props: SettingsContentProps) {
         </>
       ) : null}
 
-      <Text style={[styles.credits, { color: colors.textSecondary }]}>
+      <Text
+        style={[styles.credits, { color: colors.textSecondary }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
+      >
         Made with love by{' '}
         <Text style={{ color: colors.accent }} onPress={() => Linking.openURL('https://www.vidwadeseram.com/')}>Vidwa De Seram</Text>
-        {'\n'}in collaboration with{' '}
+        {' '}in collaboration with{' '}
         <Text style={{ color: colors.accent }} onPress={() => Linking.openURL('https://xaventra.com/')}>Xaventra</Text>
       </Text>
 

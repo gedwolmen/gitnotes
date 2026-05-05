@@ -54,5 +54,5 @@ export const settingsStyles = StyleSheet.create({
   modalButton: { paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginTop: 8 },
   modalButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   bottomPad: { height: 40 },
-  credits: { fontSize: 12, textAlign: 'center', paddingHorizontal: 24, paddingTop: 24, lineHeight: 18 },
+  credits: { fontSize: 12, textAlign: 'center', paddingHorizontal: 8, paddingTop: 24, lineHeight: 18 },
 });
