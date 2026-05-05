@@ -14,7 +14,7 @@ import { githubActivity } from '../stores/githubActivityStore';
 import { useTokens } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/types';
 import { ChatThreadSummary } from '../models/Chat';
-import { ScreenHeader, Surface, Button, useScreenHeaderHeight } from '../components/ui';
+import { ScreenHeader, Card, Button, useScreenHeaderHeight } from '../components/ui';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -162,30 +162,28 @@ export default function ChatThreadListScreen() {
         friction={2}
         containerStyle={{ marginBottom: spacing[3] }}
       >
-        <TouchableOpacity onPress={() => handleThreadPress(item.id)} activeOpacity={0.7}>
-          <Surface style={styles.threadCard}>
-            <View style={styles.threadContent}>
-              <View style={styles.threadHeader}>
-                <Text style={[styles.threadTitle, { color: colors.text, fontSize: type.md, fontWeight: '600' }]} numberOfLines={1}>
-                  {item.title}
-                </Text>
-                <Text style={[styles.threadTime, { color: colors.textSecondary, fontSize: type.xs }]}>
-                  {timeAgo}
-                </Text>
-              </View>
-              {item.preview && (
-                <Text style={{ color: colors.textSecondary, fontSize: type.sm, marginBottom: 8 }} numberOfLines={2}>
-                  {item.preview}
-                </Text>
-              )}
-              <View style={styles.threadFooter}>
-                <Text style={[styles.messageCount, { color: colors.primary, fontSize: type.xs, fontWeight: '600' }]}>
-                  {item.messageCount} messages
-                </Text>
-              </View>
+        <Card onPress={() => handleThreadPress(item.id)} radius="md">
+          <View style={styles.threadContent}>
+            <View style={styles.threadHeader}>
+              <Text style={[styles.threadTitle, { color: colors.text, fontSize: type.md, fontWeight: '600' }]} numberOfLines={1}>
+                {item.title}
+              </Text>
+              <Text style={[styles.threadTime, { color: colors.textSecondary, fontSize: type.xs }]}>
+                {timeAgo}
+              </Text>
             </View>
-          </Surface>
-        </TouchableOpacity>
+            {item.preview && (
+              <Text style={{ color: colors.textSecondary, fontSize: type.sm, marginBottom: 8 }} numberOfLines={2}>
+                {item.preview}
+              </Text>
+            )}
+            <View style={styles.threadFooter}>
+              <Text style={[styles.messageCount, { color: colors.primary, fontSize: type.xs, fontWeight: '600' }]}>
+                {item.messageCount} messages
+              </Text>
+            </View>
+          </View>
+        </Card>
       </ReanimatedSwipeable>
     );
   };
@@ -211,7 +209,16 @@ export default function ChatThreadListScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-      <View style={[styles.headerControls, { paddingTop: headerHeight, paddingHorizontal: spacing[4], paddingVertical: spacing[3] }]}>
+      <View
+        style={[
+          styles.headerControls,
+          {
+            paddingTop: headerHeight + spacing[4],
+            paddingHorizontal: spacing[4],
+            paddingBottom: spacing[3],
+          },
+        ]}
+      >
         <Button
           label="New Chat"
           onPress={handleNewChat}
@@ -246,10 +253,6 @@ const styles = StyleSheet.create({
   headerControls: {
   },
   listContent: {
-  },
-  threadCard: {
-    borderRadius: 16,
-    padding: 16,
   },
   threadContent: {
     flex: 1,

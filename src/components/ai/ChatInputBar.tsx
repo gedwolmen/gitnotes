@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { View, TextInput, ScrollView, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, TextInput, ScrollView, TouchableOpacity, Text, Platform } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTokens, useTheme } from '../../contexts/ThemeContext';
 import { AIContextItem } from '../../models/AIProvider';
@@ -29,6 +31,8 @@ export function ChatInputBar({
 }: ChatInputBarProps) {
   const [text, setText] = useState('');
   const { colors, spacing, type } = useTokens();
+  const { isDark } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const handleSend = () => {
     if (text.trim() && !isStreaming) {
@@ -40,7 +44,15 @@ export function ChatInputBar({
   const isSendDisabled = !text.trim() || isStreaming || disabled;
 
   return (
-    <Surface elevation="raised" style={{ padding: spacing[2], paddingBottom: spacing[4] }}>
+    <BlurView
+      intensity={Platform.OS === 'ios' ? 60 : 30}
+      tint={isDark ? 'dark' : 'light'}
+      style={{
+        paddingHorizontal: spacing[2],
+        paddingTop: spacing[2],
+        paddingBottom: insets.bottom + spacing[2],
+      }}
+    >
       {contextWarning && contextWarning.message && (
         <View
           style={{
@@ -102,12 +114,12 @@ export function ChatInputBar({
         </ScrollView>
       )}
 
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <IconButton
           variant="ghost"
           onPress={onAttach}
           disabled={disabled || isStreaming}
-          style={{ marginRight: spacing[1], marginBottom: 2 }}
+          style={{ marginRight: spacing[1] }}
         >
           <Ionicons name="attach" size={24} color={colors.textSecondary} />
         </IconButton>
@@ -137,7 +149,7 @@ export function ChatInputBar({
           <IconButton
             variant="ghost"
             onPress={onStop}
-            style={{ marginLeft: spacing[1], marginBottom: 2 }}
+            style={{ marginLeft: spacing[1] }}
             accessibilityLabel="Stop generation"
           >
             <Ionicons name="stop-circle" size={26} color={colors.primary} />
@@ -147,7 +159,7 @@ export function ChatInputBar({
             variant="ghost"
             onPress={handleSend}
             disabled={isSendDisabled}
-            style={{ marginLeft: spacing[1], marginBottom: 2 }}
+            style={{ marginLeft: spacing[1] }}
           >
             <Ionicons
               name="send"
@@ -157,6 +169,6 @@ export function ChatInputBar({
           </IconButton>
         )}
       </View>
-    </Surface>
+    </BlurView>
   );
 }

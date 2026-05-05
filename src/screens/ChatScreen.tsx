@@ -58,7 +58,7 @@ export default function ChatScreen() {
   const errorMessage = localError || storeError;
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
