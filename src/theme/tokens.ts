@@ -45,7 +45,9 @@ export const NEUMORPHIC_DARK: Palette = {
   highlight: '#1F1F1F',
   shadow: '#000000',
   text: '#F2F2F7',
-  textSecondary: '#8E8E93',
+  // #A8A8AE: ~5.4:1 on the #0A0A0A card surface, clears WCAG AA (4.5:1).
+  // Apple's #8E8E93 is borderline for body text in pure-black mode (#541).
+  textSecondary: '#A8A8AE',
   accent: '#8B9BE8',
   accentMuted: '#5A6BB5',
   error: '#E07A7A',
@@ -81,7 +83,7 @@ export const FLAT_DARK: Palette = {
   highlight: '#1c1c1e',
   shadow: '#000000',
   text: '#f2f2f7',
-  textSecondary: '#8e8e93',
+  textSecondary: '#a8a8ae',
   accent: '#0a84ff',
   accentMuted: '#64d2ff',
   error: '#ff453a',
