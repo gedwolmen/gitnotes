@@ -59,11 +59,11 @@ export default function SortPicker({ currentSort, onSortChange, entityType, size
   const [open, setOpen] = useState(false);
   const [isHydrating, setIsHydrating] = useState(true);
   const isBar = size === 'bar';
-  const triggerHeight = isBar ? 40 : 32;
+  const triggerHeight = isBar ? 44 : 32;
   const triggerPadH = isBar ? 14 : 10;
   const triggerRadius = triggerHeight / 2;
   const triggerGap = isBar ? 6 : 4;
-  const iconSize = isBar ? 16 : 14;
+  const iconSize = isBar ? 18 : 14;
   const textSize = isBar ? 13 : 12;
 
   const storageKey = useMemo(() => `sort-${entityType}`, [entityType]);
