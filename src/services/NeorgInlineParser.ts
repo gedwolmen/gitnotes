@@ -1,4 +1,4 @@
-import { MarkupType, InlineMarkup, TextSegment, ParsedInline } from '../models/NeorgInline';
+import { MarkupType, TextSegment, ParsedInline } from '../models/NeorgInline';
 
 export class NeorgInlineParser {
   private static markupPatterns: Array<{
