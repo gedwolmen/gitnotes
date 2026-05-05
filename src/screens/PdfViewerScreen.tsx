@@ -58,7 +58,6 @@ export default function PdfViewerScreen() {
     setInverted((prev) => {
       const next = !prev;
       AsyncStorage.setItem(PDF_INVERT_STORAGE_KEY, next ? '1' : '0').catch(() => undefined);
-      webViewRef.current?.injectJavaScript(`window.__setPdfInvert && window.__setPdfInvert(${next}); true;`);
       return next;
     });
   }, []);
@@ -96,7 +95,6 @@ export default function PdfViewerScreen() {
   const injectedJavaScript = restoredY != null ? `
 (function() {
   var RESTORE_Y = ${restoredY};
-  var INITIAL_INVERT = ${inverted ? 'true' : 'false'};
   var pending = null;
   var restoreTimers = [];
   function restore() {
@@ -119,23 +117,6 @@ export default function PdfViewerScreen() {
   restoreTimers.push(setTimeout(restore, 250));
   restoreTimers.push(setTimeout(restore, 800));
   window.addEventListener('scroll', onScroll, { passive: true });
-
-  // Invert helper — exposed so RN can toggle without reload.
-  window.__setPdfInvert = function(on) {
-    var id = '__pdf_invert_style__';
-    var existing = document.getElementById(id);
-    if (on) {
-      if (!existing) {
-        var s = document.createElement('style');
-        s.id = id;
-        s.textContent = 'html, body { filter: invert(1) hue-rotate(180deg) !important; background: #fff !important; }';
-        document.head.appendChild(s);
-      }
-    } else if (existing) {
-      existing.remove();
-    }
-  };
-  if (INITIAL_INVERT) window.__setPdfInvert(true);
 
   // #550: clear timers + listeners on pagehide so a stale JS context doesn't
   // keep firing after the WebView unmounts.
@@ -278,21 +259,40 @@ export default function PdfViewerScreen() {
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading PDF…</Text>
         </View>
       ) : (
-        <WebView
-          ref={webViewRef}
-          source={{ uri: localUri }}
-          style={{ flex: 1, backgroundColor: colors.background }}
-          // Local file PDF — restrict origin to file:// (was '*'). The
-          // injected JS only needs to read scrollY and post a message
-          // back, no cross-origin file access required.
-          originWhitelist={['file://']}
-          allowsInlineMediaPlayback
-          allowFileAccess
-          allowFileAccessFromFileURLs={false}
-          allowUniversalAccessFromFileURLs={false}
-          injectedJavaScript={injectedJavaScript}
-          onMessage={handleMessage}
-        />
+        // Wrapper acts as the blend stacking context for the invert overlay.
+        // WKWebView renders PDFs via PDFKit (a native view, not the DOM), so
+        // CSS injected into `document` never reaches the PDF pixels. Compose
+        // an inverted look by layering a white View on top with
+        // `mixBlendMode: 'difference'` — at the iOS / Android compositor
+        // level this produces |255 − pdf_pixel|, i.e. true colour inversion.
+        <View style={{ flex: 1 }}>
+          <WebView
+            ref={webViewRef}
+            source={{ uri: localUri }}
+            style={{ flex: 1, backgroundColor: colors.background }}
+            originWhitelist={['file://']}
+            allowsInlineMediaPlayback
+            allowFileAccess
+            allowFileAccessFromFileURLs={false}
+            allowUniversalAccessFromFileURLs={false}
+            injectedJavaScript={injectedJavaScript}
+            onMessage={handleMessage}
+          />
+          {inverted ? (
+            <View
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: '#FFFFFF',
+                mixBlendMode: 'difference',
+              }}
+            />
+          ) : null}
+        </View>
       )}
     </SafeAreaView>
   );
