@@ -41,6 +41,15 @@ describe('classifyHref', () => {
     expect(classifyHref('mailto:hello@example.com')).toEqual({ kind: 'mailto', target: 'hello@example.com' });
     expect(classifyHref('tel:+15551234567')).toEqual({ kind: 'mailto', target: '+15551234567' });
   });
+
+  it('classifies extension-less local paths as note candidates', () => {
+    expect(classifyHref('other-note', 'notes/current.md')).toEqual({ kind: 'note', target: 'notes/other-note' });
+    expect(classifyHref('sub/page', 'notes/current.md')).toEqual({ kind: 'note', target: 'notes/sub/page' });
+  });
+
+  it('returns null for bare domain-like hrefs so the UI can surface an alert', () => {
+    expect(classifyHref('home.com', 'notes/current.md')).toBeNull();
+  });
 });
 
 describe('NotePreviewRenderer link routing', () => {

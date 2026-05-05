@@ -104,7 +104,35 @@ export function useNoteEditorPreview({
 
   const handleOpenLinkedNote = useCallback((targetPath: string, fragment?: string) => {
     const normalizedTargetPath = normalizeNotePathForLookup(targetPath);
-    const targetNote = notes.find((note) => note.filePath && normalizeNotePathForLookup(note.filePath) === normalizedTargetPath);
+    const matchByExact = (path: string): Note | undefined =>
+      notes.find((note) => note.filePath && normalizeNotePathForLookup(note.filePath) === path);
+
+    let targetNote = matchByExact(normalizedTargetPath);
+
+    // Extension-less link: try each known note extension before giving up
+    // (e.g. `[Other](other)` should resolve to `other.md`, `other.norg`, …).
+    if (!targetNote && !/\.[a-z0-9]+$/i.test(normalizedTargetPath)) {
+      for (const ext of ['md', 'norg', 'org', 'json', 'pdf']) {
+        targetNote = matchByExact(`${normalizedTargetPath}.${ext}`);
+        if (targetNote) break;
+      }
+    }
+
+    // Last-chance basename match for links written without a folder prefix.
+    if (!targetNote) {
+      const basename = normalizedTargetPath.split('/').pop() ?? '';
+      if (basename) {
+        targetNote = notes.find((note) => {
+          const fp = note.filePath;
+          if (!fp) return false;
+          const filename = fp.split('/').pop() ?? '';
+          if (filename === basename) return true;
+          const filenameNoExt = filename.replace(/\.[^.]+$/, '');
+          return filenameNoExt === basename;
+        });
+      }
+    }
+
     if (!targetNote?.id) return false;
     navigation.navigate('NoteEditor', { noteId: targetNote.id, anchor: fragment });
     return true;
