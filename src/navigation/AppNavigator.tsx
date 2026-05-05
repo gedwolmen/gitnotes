@@ -91,7 +91,7 @@ export default function AppNavigator() {
     setShowChatRepoPicker(false);
 
     if (navigationRef.isReady()) {
-      (navigationRef.navigate as any)('MainTabs', { screen: 'SettingsTab' });
+      navigationRef.navigate('MainTabs', { screen: 'SettingsTab' });
     }
   }, [navigationRef]);
 

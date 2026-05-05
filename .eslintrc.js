@@ -1,0 +1,27 @@
+module.exports = {
+  root: true,
+  parser: '@typescript-eslint/parser',
+  plugins: ['@typescript-eslint', 'prettier', 'react-hooks'],
+  extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended', 'prettier'],
+  rules: {
+    '@typescript-eslint/no-explicit-any': 'warn',
+    '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+    '@typescript-eslint/explicit-function-return-type': 'off',
+    '@typescript-eslint/no-empty-function': 'warn',
+    '@typescript-eslint/no-require-imports': 'off',
+    '@typescript-eslint/no-namespace': 'off',
+    '@typescript-eslint/no-empty-object-type': 'off',
+    'no-console': ['warn', { allow: ['warn', 'error'] }],
+    'no-useless-escape': 'warn',
+    'no-empty': 'warn',
+    'no-var': 'warn',
+    'prefer-const': 'warn',
+    'prettier/prettier': 'warn',
+    'react-hooks/exhaustive-deps': 'warn',
+  },
+  env: {
+    node: true,
+    jest: true,
+  },
+  ignorePatterns: ['node_modules/', '.expo/', 'ios/', 'android/', 'dist/', 'coverage/'],
+};

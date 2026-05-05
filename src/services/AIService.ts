@@ -71,7 +71,7 @@ async function buildProviderInstance(providerConfig: AIProviderConfig): Promise<
           name: providerConfig.id,
           baseURL: providerConfig.baseURL,
           apiKey: providerConfig.apiKey,
-          ...(quirkedFetch ? { fetch: quirkedFetch as any } : {}),
+          ...(quirkedFetch ? { fetch: quirkedFetch } : {}),
         });
       }
       default:
@@ -284,7 +284,7 @@ export async function generateChatTitle(
     if (!raw) return null;
     const words = raw.split(/\s+/).slice(0, 6).join(' ');
     return words.length > 60 ? words.slice(0, 60) : words;
-  } catch {
+  } catch (error) { void error;
     return null;
   }
 }

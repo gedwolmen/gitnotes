@@ -239,7 +239,7 @@ export default function MoveNoteDialog({ visible, note, onClose, onMoved }: Move
         });
       setContents(sorted);
       setCurrentPath(path);
-    } catch {
+    } catch (error) { void error;
       setContents([]);
     } finally {
       setIsLoading(false);
@@ -324,7 +324,7 @@ export default function MoveNoteDialog({ visible, note, onClose, onMoved }: Move
       } else {
         Alert.alert('Error', 'Failed to move file on GitHub.');
       }
-    } catch {
+    } catch (error) { void error;
       Alert.alert('Error', 'Failed to move note. Please try again.');
     } finally {
       setIsMoving(false);
@@ -364,7 +364,7 @@ export default function MoveNoteDialog({ visible, note, onClose, onMoved }: Move
           loadContents(currentPath);
         }
       }
-    } catch {
+    } catch (error) { void error;
       Alert.alert('Error', 'Failed to move file.');
     }
   }, [repoInfo, note, branch, currentPath, onMoved, onClose, loadContents]);
@@ -381,7 +381,7 @@ export default function MoveNoteDialog({ visible, note, onClose, onMoved }: Move
       setIsCreatingFolder(false);
       Keyboard.dismiss();
       loadContents(currentPath);
-    } catch {
+    } catch (error) { void error;
       Alert.alert('Error', 'Failed to create folder.');
     }
   }, [newFolderName, repoInfo, currentPath, branch, loadContents]);

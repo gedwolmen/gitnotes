@@ -129,7 +129,7 @@ export class GitService {
       }
       this.memCacheSet(key, entry.data);
       return entry.data;
-    } catch {
+    } catch (error) { void error;
       return null;
     }
   }

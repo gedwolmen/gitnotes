@@ -37,7 +37,7 @@ function decodeBase64(base64: string): string {
   if (TD) {
     try {
       return new TD('utf-8').decode(bytes);
-    } catch {
+    } catch (error) { void error;
       // fall through to manual decoder
     }
   }
@@ -209,7 +209,7 @@ class GitHubServiceClass {
   private async fetchUser(): Promise<GitHubUser | null> {
     try {
       return await this.request<GitHubUser>('https://api.github.com/user');
-    } catch {
+    } catch (error) { void error;
       return null;
     }
   }
@@ -368,7 +368,7 @@ class GitHubServiceClass {
       if (ref) url += `?ref=${encodeURIComponent(ref)}`;
       const data = await this.request(url, 'GET', undefined, opts);
       return data.sha || null;
-    } catch {
+    } catch (error) { void error;
       return null;
     }
   }

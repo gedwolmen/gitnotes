@@ -177,7 +177,7 @@ export class NeorgContentParser {
 
         if (/^\.(quote|aside|footnote)\s*$/.test(trimmed)) {
           flushAll();
-          let collected: string[] = [];
+          const collected: string[] = [];
           for (let j = i + 1; j < lines.length; j++) {
             if (/^\.end\s*$/.test(lines[j].trim())) {
               i = j;
@@ -282,7 +282,7 @@ export class NeorgContentParser {
     if (starMatch) {
       const level = starMatch[1].length;
       let text = starMatch[2].trim();
-      // Strip org TODO keywords
+      // Strip org task keywords
       text = text.replace(/^(TODO|DONE|IN-PROGRESS|WAITING|CANCELED|CANCELLED|SCHEDULED)\s+/i, '');
       // Strip priority cookie [#A]
       text = text.replace(/^\[#[A-C]\]\s*/i, '');

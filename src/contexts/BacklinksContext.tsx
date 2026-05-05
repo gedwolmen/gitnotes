@@ -1,14 +1,11 @@
-import React, { createContext, useContext, useCallback, useMemo, ReactNode } from 'react';
-import { Note } from '../models/Note';
-import { parseWikiLinks, extractWikiLinkTargets, Backlink } from '../utils/wikiLinkParser';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, ReactNode, useCallback, useContext, useMemo, useState } from 'react';
 
-const BACKLINKS_KEY = '@gitnotes:backlinks';
+import { useNotesData } from './NoteContext';
+import { Backlink, buildBacklinkIndex } from '../services/BacklinksService';
 
 interface BacklinksContextType {
-  getBacklinks: (noteId: string, noteTitle: string, allNotes: Note[]) => Backlink[];
-  rebuildIndex: (notes: Note[]) => Promise<void>;
-  getLinkedNoteIds: (noteId: string) => string[];
+  getBacklinks: (noteId: string) => Backlink[];
+  refreshBacklinks: () => void;
 }
 
 const BacklinksContext = createContext<BacklinksContextType | undefined>(undefined);
@@ -17,66 +14,27 @@ interface BacklinksProviderProps {
   children: ReactNode;
 }
 
-interface BacklinkIndex {
-  [noteId: string]: string[];
-}
-
 export function BacklinksProvider({ children }: BacklinksProviderProps) {
-  const buildIndex = useCallback((notes: Note[]): BacklinkIndex => {
-    const index: BacklinkIndex = {};
+  const { notes } = useNotesData();
+  const [refreshVersion, setRefreshVersion] = useState(0);
 
-    for (const note of notes) {
-      const targets = extractWikiLinkTargets(note.content || '');
-      index[note.id] = targets;
-    }
-
-    return index;
-  }, []);
-
-  const rebuildIndex = useCallback(async (notes: Note[]) => {
-    try {
-      const index = buildIndex(notes);
-      await AsyncStorage.setItem(BACKLINKS_KEY, JSON.stringify(index));
-    } catch (error) {
-      console.error('[BacklinksProvider] Failed to rebuild index:', error);
-    }
-  }, [buildIndex]);
-
-  const getLinkedNoteIds = useCallback((noteId: string): string[] => {
-    return [];
-  }, []);
+  const backlinkIndex = useMemo(() => buildBacklinkIndex(notes), [notes, refreshVersion]);
 
   const getBacklinks = useCallback(
-    (noteId: string, noteTitle: string, allNotes: Note[]): Backlink[] => {
-      const backlinks: Backlink[] = [];
-      const normalizedTitle = noteTitle.toLowerCase().trim();
-
-      for (const note of allNotes) {
-        if (note.id === noteId) continue;
-
-        const targets = extractWikiLinkTargets(note.content || '');
-        if (targets.some((t) => t.toLowerCase().trim() === normalizedTitle)) {
-          const context = note.content?.slice(0, 150) || '';
-          backlinks.push({
-            noteId: note.id,
-            noteTitle: note.title || 'Untitled',
-            context,
-          });
-        }
-      }
-
-      return backlinks;
-    },
-    []
+    (noteId: string): Backlink[] => backlinkIndex.get(noteId) ?? [],
+    [backlinkIndex],
   );
+
+  const refreshBacklinks = useCallback(() => {
+    setRefreshVersion((version) => version + 1);
+  }, []);
 
   const value = useMemo(
     () => ({
       getBacklinks,
-      rebuildIndex,
-      getLinkedNoteIds,
+      refreshBacklinks,
     }),
-    [getBacklinks, rebuildIndex, getLinkedNoteIds]
+    [getBacklinks, refreshBacklinks],
   );
 
   return <BacklinksContext.Provider value={value}>{children}</BacklinksContext.Provider>;
@@ -89,3 +47,5 @@ export function useBacklinks(): BacklinksContextType {
   }
   return context;
 }
+
+export { BacklinksContext };

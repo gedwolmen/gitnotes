@@ -69,6 +69,8 @@ jest.mock('../src/components/SearchBar', () => {
   );
 });
 
+jest.mock('../src/components/SortPicker', () => () => null);
+
 jest.mock('../src/components/ui', () => {
   const { Text, TouchableOpacity } = require('react-native');
   return {
@@ -116,12 +118,19 @@ jest.mock('../src/hooks/useEntityFilter', () => ({
   useEntityFilter: () => ({
     applyFilters: (items: any[]) => items,
     activeCount: 0,
-    state: {},
-    setRepo: jest.fn(),
-    setBranch: jest.fn(),
-    setFolder: jest.fn(),
-    setTags: jest.fn(),
-    clear: jest.fn(),
+    state: {
+      selectedRepo: null,
+      selectedBranch: null,
+      selectedFolder: null,
+      selectedTags: [],
+      selectedAccountId: null,
+    },
+    setSelectedRepo: jest.fn(),
+    setSelectedBranch: jest.fn(),
+    setSelectedFolder: jest.fn(),
+    setSelectedAccountId: jest.fn(),
+    toggleTag: jest.fn(),
+    clearAll: jest.fn(),
   }),
 }));
 
@@ -131,6 +140,10 @@ jest.mock('../src/components/EntityFilterModal', () => ({
 
 jest.mock('../src/components/ActiveFilterStrip', () => ({
   ActiveFilterStrip: () => null,
+}));
+
+jest.mock('../src/components/FilterBar', () => ({
+  FilterBar: () => null,
 }));
 
 jest.mock('../src/components/GitContextPicker', () => ({
@@ -146,7 +159,7 @@ jest.mock('../src/services/RepoPullService', () => ({
   pullAllFromRepos: jest.fn(async () => undefined),
 }));
 
-jest.mock('@react-native-community/datetimepicker', () => () => null);
+jest.mock('@react-native/datetimepicker', () => () => null);
 
 // ---------- ExploreScreen-specific mocks ----------
 jest.mock('../src/components/RepoFileTree', () => ({

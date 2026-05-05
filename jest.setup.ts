@@ -108,3 +108,33 @@ jest.mock('react-native-safe-area-context', () => {
     initialWindowMetrics: { insets, frame },
   };
 });
+
+jest.mock('expo-local-authentication', () => ({
+  hasHardwareAsync: jest.fn(async () => true),
+  isEnrolledAsync: jest.fn(async () => true),
+  authenticateAsync: jest.fn(async () => ({ success: true })),
+  supportedAuthenticationTypesAsync: jest.fn(async () => []),
+  getEnrolledLevelAsync: jest.fn(async () => 0),
+}));
+
+jest.mock('expo-background-fetch', () => ({
+  registerTaskAsync: jest.fn(async () => 0),
+  unregisterTaskAsync: jest.fn(async () => undefined),
+  BackgroundFetchResult: {
+    NoData: 'NoData',
+    NewData: 'NewData',
+    Failed: 'Failed',
+  },
+  BackgroundFetchStatus: {
+    Available: 'Available',
+    Denied: 'Denied',
+    Restricted: 'Restricted',
+    Throttled: 'Throttled',
+  },
+}));
+
+jest.mock('expo-task-manager', () => ({
+  defineTask: jest.fn(),
+  isTaskDefined: jest.fn(() => true),
+  unregisterTaskAsync: jest.fn(async () => undefined),
+}));

@@ -73,7 +73,7 @@ export function buildQuirkedFetch(baseURL: string): typeof fetch | undefined {
     if (__DEV__ && quirk.inspectResponse) {
       try {
         quirk.inspectResponse(response);
-      } catch {
+      } catch (error) { void error;
         // diagnostics must never break the request
       }
     }

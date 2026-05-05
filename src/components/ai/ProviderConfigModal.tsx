@@ -126,7 +126,7 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
           });
           if (!proceed) return;
         }
-      } catch {
+      } catch (error) { void error;
         Alert.alert('Validation Error', 'Base URL is not a valid URL.');
         return;
       }

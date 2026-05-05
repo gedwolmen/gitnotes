@@ -67,7 +67,7 @@ export default function GitContextPicker({
     setIsLoading(true);
     try {
       setBranches(await GitService.getBranches(repo));
-    } catch {
+    } catch (error) { void error;
       setBranches([]);
     } finally {
       setIsLoading(false);
@@ -80,7 +80,7 @@ export default function GitContextPicker({
     try {
       await GitService.clearCache();
       setBranches(await GitService.getBranches(repo));
-    } catch {
+    } catch (error) { void error;
       setBranches([]);
     } finally {
       setIsLoading(false);

@@ -101,7 +101,7 @@ function decodeBase64(base64: string): string {
   if (TD) {
     try {
       return new TD('utf-8').decode(bytes);
-    } catch {
+    } catch (error) { void error;
       // fall through
     }
   }

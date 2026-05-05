@@ -11,8 +11,13 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
+    "lint": "ESLINT_USE_FLAT_CONFIG=false eslint . --ext .ts,.tsx,.js,.jsx",
+    "lint:fix": "ESLINT_USE_FLAT_CONFIG=false eslint . --ext .ts,.tsx,.js,.jsx --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "ts:check": "tsc --noEmit",
-    "test": "jest"
+    "test": "jest",
+    "prepare": "husky"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^1.0.39",
@@ -20,8 +25,8 @@
     "@react-native-ai/apple": "0.11.0",
     "@react-native-ai/llama": "0.10.0",
     "@react-native-async-storage/async-storage": "2.2.0",
-    "@react-native-community/datetimepicker": "8.6.0",
     "@react-native-community/netinfo": "^12.0.1",
+    "@react-native/datetimepicker": "npm:@react-native-community/datetimepicker@8.6.0",
     "@react-navigation/bottom-tabs": "^7.15.9",
     "@react-navigation/native": "^7.2.2",
     "@react-navigation/native-stack": "^7.14.10",
@@ -35,6 +40,7 @@
     "buffer": "^6.0.3",
     "date-fns": "^4.1.0",
     "expo": "^55.0.19",
+    "expo-background-fetch": "~55.0.15",
     "expo-blur": "~55.0.14",
     "expo-clipboard": "~55.0.13",
     "expo-crypto": "~55.0.14",
@@ -44,11 +50,13 @@
     "expo-haptics": "~55.0.14",
     "expo-image": "~55.0.9",
     "expo-image-picker": "~55.0.19",
+    "expo-local-authentication": "~55.0.13",
     "expo-notifications": "~55.0.22",
     "expo-secure-store": "~55.0.13",
     "expo-sharing": "~55.0.18",
     "expo-speech": "~55.0.13",
     "expo-status-bar": "~55.0.5",
+    "expo-task-manager": "~55.0.15",
     "expo-web-browser": "~55.0.14",
     "isomorphic-git": "^1.37.4",
     "llama.rn": "0.10.1",
@@ -76,11 +84,29 @@
     "@testing-library/react-native": "^13.3.3",
     "@types/jest": "29.5.14",
     "@types/react": "~19.2.10",
+    "@typescript-eslint/eslint-plugin": "^8.59.2",
+    "@typescript-eslint/parser": "^8.59.2",
     "babel-jest": "^30.3.0",
     "babel-plugin-transform-remove-console": "^6.9.4",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "husky": "^9.1.7",
     "jest": "~29.7.0",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.8.3",
     "react-test-renderer": "19.2.0",
     "typescript": "^5.6.3"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "yarn eslint --fix",
+      "yarn prettier --write"
+    ],
+    "*.{json,md}": [
+      "yarn prettier --write"
+    ]
   },
   "packageManager": "yarn@1.22.22",
   "private": true

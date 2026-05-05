@@ -1,4 +1,4 @@
-var mockNavigate = jest.fn();
+const mockNavigate = jest.fn();
 
 jest.mock('@react-native-community/netinfo', () => {
   const addEventListener = jest.fn(() => jest.fn());
@@ -53,6 +53,7 @@ jest.mock('../src/contexts/ViewModeContext', () => ({
 
 jest.mock('../src/components/ContextMenu', () => () => null);
 jest.mock('../src/components/ColorPicker', () => ({ __esModule: true, default: () => null }));
+jest.mock('../src/components/SortPicker', () => () => null);
 jest.mock('../src/components/SearchBar', () => () => null);
 jest.mock('../src/components/GitHubActivityIndicator', () => ({ GitHubActivityIndicator: () => null }));
 jest.mock('../src/components/ui/OfflineBanner', () => ({ OfflineBanner: () => null }));

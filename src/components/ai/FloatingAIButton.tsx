@@ -8,12 +8,13 @@ import Animated, {
   withSpring,
   runOnJS,
 } from 'react-native-reanimated';
-import { useNavigation } from '@react-navigation/native';
+import { type NavigationProp, useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAIStore } from '../../stores/aiStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import { HapticService } from '../../utils/haptics';
 import { Surface } from '../ui/Surface';
+import { RootStackParamList } from '../../navigation/types';
 
 const BUTTON_SIZE = 56;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -27,7 +28,8 @@ interface FloatingAIButtonProps {
 export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
   const { isEnabled } = useAIStore();
   const { colors } = useTheme();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const navigateToChatThreadList = () => navigation.navigate('ChatThreadList');
 
   const initialX = SCREEN_WIDTH - BUTTON_SIZE - 24;
   const initialY = SCREEN_HEIGHT - BUTTON_SIZE - 100;
@@ -92,7 +94,7 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
 
   const tapGesture = Gesture.Tap().onEnd(() => {
     runOnJS(HapticService.success)();
-    runOnJS(navigation.navigate as any)('ChatThreadList');
+    runOnJS(navigateToChatThreadList)();
   });
 
   const composedGesture = Gesture.Exclusive(panGesture, tapGesture);

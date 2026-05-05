@@ -123,6 +123,7 @@ jest.mock('../src/utils/haptics', () => ({
 
 jest.mock('../src/components/ContextMenu', () => () => null);
 jest.mock('../src/components/ColorPicker', () => ({ __esModule: true, default: () => null }));
+jest.mock('../src/components/SortPicker', () => () => null);
 
 jest.mock('../src/components/SearchBar', () => {
   const { TextInput } = require('react-native');

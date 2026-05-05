@@ -95,7 +95,7 @@ export class StorageService {
       const notes: Note[] = [];
       for (const [, raw] of pairs) {
         if (raw) {
-          try { notes.push(JSON.parse(raw)); } catch { /* skip corrupt */ }
+          try { notes.push(JSON.parse(raw)); } catch (error) { void error; /* skip corrupt */ }
         }
       }
       return notes;
@@ -366,7 +366,7 @@ export class StorageService {
       const boot = getBootValue('@gitnotes:todos');
       const json = boot ?? await AsyncStorage.getItem(TODOS_STORAGE_KEY);
       return json ? JSON.parse(json) : [];
-    } catch {
+    } catch (error) { void error;
       return [];
     }
   }

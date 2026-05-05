@@ -18,7 +18,7 @@ function loadNativePdfModule() {
     const maybeModule = require('react-native-pdf');
     if (maybeModule?.default) return maybeModule.default;
     return null;
-  } catch {
+  } catch (error) { void error;
     return null;
   }
 }

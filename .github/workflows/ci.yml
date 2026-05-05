@@ -31,5 +31,11 @@ jobs:
       - name: TypeScript check
         run: yarn ts:check
 
+      - name: Lint
+        run: yarn lint
+
+      - name: Format check
+        run: yarn format:check
+
       - name: Tests
         run: yarn test --ci --colors=false

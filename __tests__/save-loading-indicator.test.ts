@@ -174,6 +174,7 @@ jest.mock('../src/components/ui', () => {
   };
 });
 jest.mock('../src/components/ui/OfflineBanner', () => ({ OfflineBanner: () => null }));
+jest.mock('../src/components/SortPicker', () => () => null);
 jest.mock('../src/components/MarkdownEditor', () => () => {
   const { Text } = require('react-native');
   return require('react').createElement(Text, null, 'Markdown editor');

@@ -80,7 +80,7 @@ async function fetchDirectoryFiles(
       if (content) {
         results.push({ path: file.path, content });
       }
-    } catch {
+    } catch (error) { void error;
       console.warn(`[RepoPullService] Failed to fetch ${file.path}`);
     }
   }
@@ -321,13 +321,6 @@ async function pullNotesFromRepo(
       if (!n.filePath) return true;
       return remoteFilePaths.has(n.filePath);
     });
-    const removed = beforeCount - allNotes.length;
-    if (removed > 0) {
-      console.log(
-        `[RepoPullService] Reconciled ${removed} stale note(s) for ${repoPath}@${branch}`,
-      );
-    }
-
     await StorageService.saveAllNotes(allNotes);
 
     // Also invalidate the folders cache so editor folder dropdowns reflect
@@ -335,12 +328,13 @@ async function pullNotesFromRepo(
     // effort).
     try {
       await GitService.invalidateRepoFoldersCache(repoPath, branch);
-    } catch {
+    } catch (error) {
+      void error;
       // best-effort; cache will expire on its own TTL.
     }
 
     return pulled;
-  } catch {
+  } catch (error) { void error;
     console.warn(`[RepoPullService] Failed to pull notes from ${owner}/${repo}`);
     return 0;
   }
@@ -364,7 +358,7 @@ async function pullCanvasesFromRepo(
         let scene: CanvasScene;
         try {
           scene = JSON.parse(file.content);
-        } catch {
+        } catch (error) { void error;
           continue;
         }
 
@@ -394,7 +388,7 @@ async function pullCanvasesFromRepo(
         }
       }
     });
-  } catch {
+  } catch (error) { void error;
     console.warn(`[RepoPullService] Failed to pull canvases from ${owner}/${repo}`);
   }
   return pulled;
@@ -420,7 +414,7 @@ async function pullTodosFromRepo(
       let data: Record<string, any>;
       try {
         data = JSON.parse(file.content);
-      } catch {
+      } catch (error) { void error;
         continue;
       }
 
@@ -465,7 +459,7 @@ async function pullTodosFromRepo(
     if (dirty) {
       await StorageService.saveAllTodos(reorderTodos(allTodos));
     }
-  } catch {
+  } catch (error) { void error;
     console.warn(`[RepoPullService] Failed to pull todos from ${owner}/${repo}`);
   }
   return pulled;
@@ -523,7 +517,7 @@ async function pullTemplatesFromRepo(
 
     await StorageService.saveCustomTemplates([...byId.values()]);
     return count;
-  } catch {
+  } catch (error) { void error;
     console.warn(`[RepoPullService] Failed to pull templates from ${owner}/${repo}`);
     return 0;
   }
