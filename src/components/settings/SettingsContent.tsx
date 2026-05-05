@@ -8,6 +8,7 @@ import { settingsStyles as styles } from './settingsStyles';
 import type { GitRepository } from '../../services/GitService';
 import type { TemplateRepoPreference } from '../../services/TemplateRepoPreferenceService';
 import type { AIProviderConfig } from '../../models/AIProvider';
+import { TIMEOUT_OPTIONS, type LockTimeout } from '../../contexts/BiometricLockContext';
 
 type ThemeColors = {
   background: string;
@@ -77,6 +78,11 @@ type SettingsContentProps = {
   onOpenChatRepoPicker: () => void;
   onProviderPress: (provider: AIProviderConfig) => void;
   onAddProvider: () => void;
+  isBiometricLockEnabled: boolean;
+  isBiometricAvailable: boolean;
+  lockTimeout: LockTimeout;
+  onToggleBiometricLock: (v: boolean) => void;
+  onSetLockTimeout: (v: LockTimeout) => void;
 };
 
 export function SettingsContent(props: SettingsContentProps) {
@@ -125,6 +131,11 @@ export function SettingsContent(props: SettingsContentProps) {
     onOpenChatRepoPicker,
     onProviderPress,
     onAddProvider,
+    isBiometricLockEnabled,
+    isBiometricAvailable,
+    lockTimeout,
+    onToggleBiometricLock,
+    onSetLockTimeout,
   } = props;
 
   return (
@@ -177,6 +188,57 @@ export function SettingsContent(props: SettingsContentProps) {
         >
           <Text style={[styles.settingLabel, { color: colors.text }]}>Use System Theme</Text>
         </GroupRow>
+      </Group>
+
+      <Group title="Security" footer={isBiometricAvailable ? undefined : 'Biometric hardware not available on this device'}>
+        <GroupRow
+          trailing={
+            <Toggle
+              testID="biometric-lock-toggle"
+              value={isBiometricLockEnabled}
+              onValueChange={onToggleBiometricLock}
+              disabled={!isBiometricAvailable}
+            />
+          }
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Ionicons name="finger-print-outline" size={20} color={colors.text} />
+            <Text style={[styles.settingLabel, { color: colors.text }]}>Biometric Lock</Text>
+          </View>
+        </GroupRow>
+        {isBiometricLockEnabled ? (
+          <GroupRow
+            trailing={
+              <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
+                {TIMEOUT_OPTIONS.find((o) => o.value === lockTimeout)?.label ?? '5 minutes'}
+              </Text>
+            }
+          >
+            <Text style={[styles.settingLabel, { color: colors.text }]}>Lock Timeout</Text>
+          </GroupRow>
+        ) : null}
+        {isBiometricLockEnabled ? (
+          <View style={{ paddingHorizontal: 16, paddingVertical: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {TIMEOUT_OPTIONS.map((opt) => (
+              <TouchableOpacity
+                key={opt.value}
+                onPress={() => onSetLockTimeout(opt.value)}
+                style={{
+                  paddingVertical: 6,
+                  paddingHorizontal: 12,
+                  borderRadius: 8,
+                  backgroundColor: lockTimeout === opt.value ? colors.accent : colors.background,
+                  borderWidth: 1,
+                  borderColor: lockTimeout === opt.value ? colors.accent : colors.border,
+                }}
+              >
+                <Text style={{ color: lockTimeout === opt.value ? '#fff' : colors.text, fontSize: 13, fontWeight: '500' }}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : null}
       </Group>
 
       <View style={[styles.section, { backgroundColor: colors.surface }]}> 

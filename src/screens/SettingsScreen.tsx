@@ -10,6 +10,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useRepos } from '../contexts/RepoContext';
 import { useCanvases } from '../contexts/CanvasContext';
 import { useTodos } from '../contexts/TodoContext';
+import { useBiometricLock } from '../contexts/BiometricLockContext';
 import type { RootStackParamList } from '../navigation/types';
 import { GitHubService, type GitHubRepository } from '../services/GitHubService';
 import { RepoFileSyncService } from '../services/RepoFileSyncService';
@@ -46,6 +47,7 @@ export default function SettingsScreen() {
   const { refreshTodos } = useTodos();
   const { authState, accounts, activeAccountId, setToken, clearToken, addAccount, removeAccount, switchAccount } = useAuth();
   const { repositories, addRepository: addRepo, removeRepository: removeRepo } = useRepos();
+  const { isLockEnabled: isBiometricLockEnabled, isBiometricAvailable, lockTimeout, setIsLockEnabled, setLockTimeout } = useBiometricLock();
   const isAIEnabled = useAIStore((state) => state.isEnabled);
   const selectedModelId = useAIStore((state) => state.selectedModelId);
   const actionMode = useAIStore((state) => state.actionMode);
@@ -456,6 +458,11 @@ export default function SettingsScreen() {
           }
         }}
         onAddProvider={() => { setEditingProvider(undefined); setShowProviderConfig(true); }}
+        isBiometricLockEnabled={isBiometricLockEnabled}
+        isBiometricAvailable={isBiometricAvailable}
+        lockTimeout={lockTimeout}
+        onToggleBiometricLock={(v) => void setIsLockEnabled(v)}
+        onSetLockTimeout={(v) => void setLockTimeout(v)}
       />
       <SettingsModals
         colors={colors}

@@ -19,6 +19,8 @@ import { AuthProvider } from './src/contexts/AuthContext';
 import { TodoProvider } from './src/contexts/TodoContext';
 import { CanvasProvider } from './src/contexts/CanvasContext';
 import { RepoProvider } from './src/contexts/RepoContext';
+import { BiometricLockProvider } from './src/contexts/BiometricLockContext';
+import { BiometricLockScreen } from './src/components/BiometricLockScreen';
 import AppNavigator from './src/navigation/AppNavigator';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import { OnboardingService } from './src/services/OnboardingService';
@@ -96,11 +98,14 @@ export default function App() {
                 <TodoProvider>
                   <CanvasProvider>
                     <ViewModeProvider>
-                      <StatusBar style="auto" />
-                      <StartupSyncGate>
-                        <AppNavigator />
-                      </StartupSyncGate>
-                      <GitHubActivityIndicator />
+                      <BiometricLockProvider>
+                        <StatusBar style="auto" />
+                        <StartupSyncGate>
+                          <AppNavigator />
+                        </StartupSyncGate>
+                        <GitHubActivityIndicator />
+                        <BiometricLockScreen />
+                      </BiometricLockProvider>
                     </ViewModeProvider>
                   </CanvasProvider>
                 </TodoProvider>
