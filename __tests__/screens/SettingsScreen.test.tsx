@@ -62,6 +62,13 @@ jest.mock('../../src/contexts/ThemeContext', () => ({
     setStyle: mockSetStyle,
     isDark: false,
   }),
+  useTokens: () => ({
+    colors: stableColors,
+    spacing: { 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32 },
+    type: { xs: 12, sm: 14, md: 16, lg: 18, xl: 22, '2xl': 28 },
+    radii: { sm: 12, md: 18, lg: 24, pill: 999 },
+    style: 'flat',
+  }),
 }));
 
 jest.mock('../../src/contexts/AuthContext', () => ({

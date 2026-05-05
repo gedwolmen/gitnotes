@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -34,6 +34,7 @@ import { ChatRepoPickerModal } from '../components/ai/ChatRepoPickerModal';
 import { ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { SettingsContent } from '../components/settings/SettingsContent';
 import { SettingsModals } from '../components/settings/SettingsModals';
+import { CloneProgressModal, type CloneProgress } from '../components/settings/CloneProgressModal';
 import { settingsStyles as styles } from '../components/settings/settingsStyles';
 import type { GitRepository } from '../services/GitService';
 
@@ -88,6 +89,8 @@ export default function SettingsScreen() {
   const [showTemplatesRepoPicker, setShowTemplatesRepoPicker] = useState(false);
   const [syncModes, setSyncModes] = useState<Record<string, SyncEngineMode>>({});
   const [cloningRepo, setCloningRepo] = useState<string | null>(null);
+  const [cloneProgress, setCloneProgress] = useState<CloneProgress | null>(null);
+  const cloneAbortedRef = useRef(false);
   const [isSyncingExistingTemplates, setIsSyncingExistingTemplates] = useState(false);
 
   useEffect(() => {
@@ -155,11 +158,30 @@ export default function SettingsScreen() {
       return;
     }
     setCloningRepo(repo.path);
+    cloneAbortedRef.current = false;
+    setCloneProgress({ repoName: repo.name, phase: 'Preparing', loaded: 0, total: null });
     try {
       const token = (await AuthService.getToken()) ?? undefined;
       const branch = repo.branch || 'main';
       if (!(await GitFsService.isCloned({ repoPath: repo.path }))) {
-        await GitFsService.clone({ repoPath: repo.path, branch, token });
+        await GitFsService.clone({
+          repoPath: repo.path,
+          branch,
+          token,
+          onProgress: (phase, loaded, total) => {
+            // #538: throw to abort isomorphic-git mid-clone when user taps Cancel.
+            if (cloneAbortedRef.current) {
+              throw new Error('CLONE_CANCELLED');
+            }
+            setCloneProgress({ repoName: repo.name, phase, loaded, total });
+          },
+        });
+      }
+      if (cloneAbortedRef.current) {
+        // Partial clone may have written some files between the last onProgress
+        // tick and the throw — wipe so a retry starts clean.
+        await GitFsService.removeRepo({ repoPath: repo.path }).catch(() => undefined);
+        return;
       }
       await SyncEngineService.setMode(repo.path, 'clone');
       setSyncModes((prev) => ({ ...prev, [repo.path]: 'clone' }));
@@ -188,11 +210,25 @@ export default function SettingsScreen() {
         },
       ]);
     } catch (error) {
+      if (cloneAbortedRef.current) {
+        // User cancelled; clean up partial state silently.
+        await GitFsService.removeRepo({ repoPath: repo.path }).catch(() => undefined);
+        return;
+      }
       HapticService.error();
       Alert.alert('Clone failed', error instanceof Error ? error.message : String(error));
     } finally {
       setCloningRepo(null);
+      setCloneProgress(null);
     }
+  }, []);
+
+  const handleCancelClone = useCallback(() => {
+    cloneAbortedRef.current = true;
+    // Don't clear progress here — the running clone will hit the next
+    // onProgress, throw, fall into the finally, and clear state itself.
+    // Updating the modal copy gives immediate feedback while that unwinds.
+    setCloneProgress((prev) => (prev ? { ...prev, phase: 'Cancelling…' } : prev));
   }, []);
 
   const handleDisableCloneMode = useCallback((repo: GitRepository) => {
@@ -513,6 +549,7 @@ export default function SettingsScreen() {
       <ModelSelector visible={showModelSelector} onClose={() => setShowModelSelector(false)} />
       <ProviderConfigModal visible={showProviderConfig} provider={editingProvider} onClose={() => { setShowProviderConfig(false); setEditingProvider(undefined); }} />
       <ChatRepoPickerModal visible={showChatRepoPicker} onClose={() => setShowChatRepoPicker(false)} onSelected={() => setShowChatRepoPicker(false)} />
+      <CloneProgressModal progress={cloneProgress} onCancel={handleCancelClone} />
       <ScreenHeader title="Settings" />
     </SafeAreaView>
   );
