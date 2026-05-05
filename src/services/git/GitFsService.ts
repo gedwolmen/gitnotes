@@ -262,4 +262,22 @@ export class GitFsService {
     if (!info) throw new Error(`Invalid repo path: ${opts.repoPath}`);
     return `${clonesRoot()}${info.owner}/${info.repo}`;
   }
+
+  /**
+   * Resolves the local clone's current branch (HEAD ref). Returns null when
+   * the repo isn't cloned, HEAD is detached, or the lookup fails. Used by
+   * `resolveBranch` (#543) so clone-mode operations don't push to a
+   * hardcoded `main` ref the cloned repo may not have.
+   */
+  static async getCurrentBranch(opts: RepoLocator): Promise<string | null> {
+    const info = parseRepoPath(opts.repoPath);
+    if (!info) return null;
+    const dir = repoDirVirtual(info.owner, info.repo);
+    try {
+      const branch = await git.currentBranch({ fs: makeRepoFs(), dir, fullname: false });
+      return branch ?? null;
+    } catch {
+      return null;
+    }
+  }
 }

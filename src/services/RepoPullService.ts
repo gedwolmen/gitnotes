@@ -11,6 +11,7 @@ import { parseTemplateMarkdown } from './TemplateMarkdownService';
 import type { NoteTemplate } from './TemplateService';
 import { SyncEngineService } from './SyncEngineService';
 import { GitFsService } from './git/GitFsService';
+import { resolveBranch } from './git/branchResolver';
 import { AuthService } from './AuthService';
 
 /**
@@ -555,7 +556,7 @@ export async function pullFromSingleRepo(repoPath: string): Promise<PullResult> 
   if (!repoInfo) {
     return { repos: 0, notes: 0, canvases: 0, todos: 0, templates: 0 };
   }
-  const branch = repo.branch || 'main';
+  const branch = await resolveBranch(repo.path, repo.branch);
 
   const [notes, canvases, todos] = await Promise.all([
     pullNotesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch),
@@ -584,7 +585,7 @@ export async function pullAllFromRepos(): Promise<PullResult> {
     const repoInfo = parseRepoPath(repo.path);
     if (!repoInfo) continue;
 
-    const branch = repo.branch || 'main';
+    const branch = await resolveBranch(repo.path, repo.branch);
 
     const [notes, canvases, todos] = await Promise.all([
       pullNotesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch),
