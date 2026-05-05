@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { GitRepository, GitService } from '../services/GitService';
 import { StorageService } from '../services/StorageService';
+import { useNoteStore } from './noteStore';
+import { useCanvasStore } from './canvasStore';
+import { useTodoStore } from './todoStore';
 
 interface RepoState {
   repositories: GitRepository[];
@@ -38,7 +41,17 @@ export const useRepoStore = create<RepoState & RepoActions>()((set, get) => ({
 
   removeRepository: async (path) => {
     await StorageService.removeRepository(path);
+    // Drop all locally-cached records that originated from the removed repo
+    // before refreshing the dependent stores. Without this, notes/canvases/
+    // todos from the now-disconnected repo keep showing up in their lists
+    // even though the repo is gone from settings.
+    await StorageService.purgeRepoData(path);
     set((state) => ({ repositories: state.repositories.filter((r) => r.path !== path) }));
+    await Promise.all([
+      useNoteStore.getState().refreshNotes(),
+      useCanvasStore.getState().refreshCanvases(),
+      useTodoStore.getState().refreshTodos(),
+    ]);
   },
 
   refreshRepos: async () => {

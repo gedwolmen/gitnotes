@@ -81,6 +81,71 @@ async function ensureParentDirs(rootDir: string, virtualPath: string): Promise<v
   }
 }
 
+/**
+ * Make sure the working tree is on `branch` before we stage / commit /
+ * push. Without this, commit lands on whatever HEAD was last set to (often
+ * the branch the repo was originally cloned with, e.g. `master`) and the
+ * subsequent push to a different `ref` either no-ops or surfaces a stale
+ * `cannot lock ref 'refs/heads/master'` error from the server.
+ *
+ * If the branch ref is missing locally (single-branch clone of a different
+ * branch), we fetch it from origin first and then check out.
+ */
+async function ensureOnBranch(
+  fs: ReturnType<typeof makeRepoFs>,
+  dir: string,
+  branch: string,
+  token: string | undefined,
+): Promise<void> {
+  const current = await git.currentBranch({ fs, dir, fullname: false }).catch(() => null);
+  if (current === branch) return;
+
+  try {
+    await git.checkout({ fs, dir, ref: branch });
+    return;
+  } catch (error) {
+    void error;
+    // local branch ref is missing — fetch then retry checkout below.
+  }
+
+  await git.fetch({
+    fs,
+    http: gitHttp,
+    dir,
+    ref: branch,
+    singleBranch: true,
+    depth: 1,
+    tags: false,
+    onAuth: tokenAuth(token),
+  });
+  await git.checkout({ fs, dir, ref: branch });
+}
+
+/**
+ * Best-effort prettifier for the wall-of-text isomorphic-git produces on
+ * `git.push` failures. The raw text (`One or more branches were not
+ * updated: - refs/heads/master: cannot lock ref ...`) leaks server
+ * internals into the user-facing banner; we keep the raw message in the
+ * console log and surface a one-line summary to callers.
+ */
+export function summarizePushError(raw: string | undefined): string {
+  if (!raw) return 'Sync to GitHub failed';
+  const message = raw.toLowerCase();
+  if (message.includes('cannot lock ref')) {
+    return 'Sync to GitHub failed: branch is locked on the remote. Check your branch settings.';
+  }
+  if (message.includes('one or more branches were not updated')) {
+    return 'Sync to GitHub failed: the remote rejected the update. Pull and try again.';
+  }
+  if (message.includes('not authorized') || message.includes('401') || message.includes('403')) {
+    return 'Sync to GitHub failed: not authorized. Re-link your GitHub account.';
+  }
+  if (message.includes('network') || message.includes('fetch')) {
+    return 'Sync to GitHub failed: network error.';
+  }
+  return 'Sync to GitHub failed';
+}
+
 export class LocalGitWriter {
   /**
    * Write content into the working tree, stage + commit, optionally push.
@@ -97,6 +162,8 @@ export class LocalGitWriter {
     const fsRoot = clonesRoot();
 
     try {
+      await ensureOnBranch(fs, dir, opts.branch, opts.token);
+
       const absVirtual = `${dir}/${opts.filePath}`;
       const absUri = `${fsRoot}${absVirtual.replace(/^\//, '')}`;
       await ensureParentDirs(fsRoot, absVirtual);
@@ -123,7 +190,9 @@ export class LocalGitWriter {
 
       return { success: true, filePath: opts.filePath };
     } catch (e) {
-      return { success: false, error: e instanceof Error ? e.message : String(e) };
+      const raw = e instanceof Error ? e.message : String(e);
+      console.warn('[LocalGitWriter] writeAndCommit failed:', raw);
+      return { success: false, error: raw };
     }
   }
 
@@ -140,6 +209,8 @@ export class LocalGitWriter {
     const fsRoot = clonesRoot();
 
     try {
+      await ensureOnBranch(fs, dir, opts.branch, opts.token);
+
       const absUri = `${fsRoot}${info.owner}/${info.repo}/${opts.filePath}`;
       await FileSystem.deleteAsync(absUri, { idempotent: true });
 
@@ -164,7 +235,9 @@ export class LocalGitWriter {
 
       return { success: true, filePath: opts.filePath };
     } catch (e) {
-      return { success: false, error: e instanceof Error ? e.message : String(e) };
+      const raw = e instanceof Error ? e.message : String(e);
+      console.warn('[LocalGitWriter] deleteAndCommit failed:', raw);
+      return { success: false, error: raw };
     }
   }
 
@@ -182,6 +255,7 @@ export class LocalGitWriter {
     const dir = repoDirVirtual(info.owner, info.repo);
     const fs = makeRepoFs();
     try {
+      await ensureOnBranch(fs, dir, opts.branch, opts.token);
       await git.push({
         fs,
         dir,
@@ -192,7 +266,9 @@ export class LocalGitWriter {
       });
       return { success: true };
     } catch (e) {
-      return { success: false, error: e instanceof Error ? e.message : String(e) };
+      const raw = e instanceof Error ? e.message : String(e);
+      console.warn('[LocalGitWriter] push failed:', raw);
+      return { success: false, error: raw };
     }
   }
 }

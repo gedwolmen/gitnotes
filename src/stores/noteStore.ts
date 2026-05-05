@@ -4,6 +4,7 @@ import { Note, NoteCreateInput, NoteUpdateInput, sortNotesWithPinnedFirst, filte
 import { StorageService } from '../services/StorageService';
 import { deleteNoteFromGitHub } from '../services/NoteGitHubSyncService';
 import { GitHubService } from '../services/GitHubService';
+import { summarizePushError } from '../services/git/LocalGitWriter';
 
 interface NoteState {
   notes: Note[];
@@ -36,8 +37,21 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
   loadNotes: async () => {
     try {
       set({ isLoading: true, error: null });
-      const loadedNotes = await StorageService.getAllNotes();
-      set({ notes: sortNotesWithPinnedFirst(loadedNotes), isLoading: false });
+      const [loadedNotes, savedRepos] = await Promise.all([
+        StorageService.getAllNotes(),
+        StorageService.getSavedRepositories(),
+      ]);
+      // Drop notes whose backing repo was removed from settings on a build
+      // that didn't yet purge per-repo data (issue: ghost notes from a
+      // disconnected repo kept showing up in the list). Local-only notes
+      // (no `repo` field) are always kept.
+      const repoPaths = new Set(savedRepos.map((r) => r.path));
+      const orphans = loadedNotes.filter((n) => n.repo && !repoPaths.has(n.repo));
+      const survivors = loadedNotes.filter((n) => !n.repo || repoPaths.has(n.repo));
+      if (orphans.length > 0) {
+        await Promise.all(orphans.map((n) => StorageService.deleteNote(n.id)));
+      }
+      set({ notes: sortNotesWithPinnedFirst(survivors), isLoading: false });
     } catch (err) {
       set({ error: 'Failed to load notes', isLoading: false });
       console.error('Error loading notes:', err);
@@ -94,7 +108,8 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
           accountId: note.accountId,
         });
         if (!remote.success) {
-          set({ error: remote.error || 'Failed to delete from GitHub' });
+          if (remote.error) console.warn('[NoteStore] delete sync failed:', remote.error);
+          set({ error: summarizePushError(remote.error) });
           return false;
         }
       }

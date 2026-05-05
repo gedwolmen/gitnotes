@@ -4,6 +4,9 @@ jest.mock('isomorphic-git', () => {
     remove: jest.fn(async (..._a: any[]) => undefined),
     commit: jest.fn(async (..._a: any[]) => 'commit-sha-1'),
     push: jest.fn(async (..._a: any[]) => ({ ok: true })),
+    currentBranch: jest.fn(async (..._a: any[]) => 'main'),
+    checkout: jest.fn(async (..._a: any[]) => undefined),
+    fetch: jest.fn(async (..._a: any[]) => undefined),
   };
   (globalThis as any).__lgwGitMocks = mocks;
   return {
@@ -43,6 +46,9 @@ function getGitMocks() {
     remove: jest.Mock;
     commit: jest.Mock;
     push: jest.Mock;
+    currentBranch: jest.Mock;
+    checkout: jest.Mock;
+    fetch: jest.Mock;
   };
 }
 

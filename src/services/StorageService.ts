@@ -279,6 +279,52 @@ export class StorageService {
     await this.saveRepositories(filtered);
   }
 
+  /**
+   * Drop every locally-cached note, canvas and todo whose `repo` matches
+   * `path`. Called after a repo is removed from settings so the lists in
+   * the UI stop showing ghost entries from a disconnected source.
+   *
+   * Local-only items (no `repo` field) are untouched; only remote-backed
+   * records tied to the now-orphaned repo path are cleared.
+   */
+  static async purgeRepoData(path: string): Promise<void> {
+    try {
+      const notes = await this.getAllNotes();
+      const survivingNotes = notes.filter((n) => n.repo !== path);
+      if (survivingNotes.length !== notes.length) {
+        const removedIds = notes
+          .filter((n) => n.repo === path)
+          .map((n) => noteKey(n.id));
+        if (removedIds.length > 0) {
+          await AsyncStorage.multiRemove(removedIds);
+        }
+        await this.saveNoteIndex(survivingNotes.map((n) => n.id));
+      }
+    } catch (error) {
+      console.error('Error purging notes for repo:', error);
+    }
+
+    try {
+      const todos = await this.getAllTodos();
+      const survivingTodos = todos.filter((t) => t.repo !== path);
+      if (survivingTodos.length !== todos.length) {
+        await this.saveAllTodos(survivingTodos);
+      }
+    } catch (error) {
+      console.error('Error purging todos for repo:', error);
+    }
+
+    try {
+      await this.mutateCanvases((canvases) => {
+        for (let i = canvases.length - 1; i >= 0; i--) {
+          if (canvases[i].repo === path) canvases.splice(i, 1);
+        }
+      });
+    } catch (error) {
+      console.error('Error purging canvases for repo:', error);
+    }
+  }
+
   static async getAllFolders(): Promise<Folder[]> {
     try {
       const boot = getBootValue('@gitnotes:folders');
