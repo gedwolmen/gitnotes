@@ -348,10 +348,41 @@ export class NotePreviewRenderer extends Renderer implements RendererInterface {
 
       if (classified.kind === 'anchor') {
         const slug = classified.target;
-        const measuredY = this.deps.headingPositions?.current.get(slug);
+        const positions = this.deps.headingPositions?.current;
+        let measuredY = positions?.get(slug);
+
+        // The renderer's heading() override slugifies the rendered text.
+        // The link href's classifyHref slugifies the URL fragment. They
+        // *should* match, but if the heading rendered with extra inline
+        // formatting (e.g. trailing whitespace from a soft break), look the
+        // slug up against the source-derived ToC entries as a backup.
+        if (measuredY == null && positions && this.deps.previewContent) {
+          for (const line of this.deps.previewContent.split('\n')) {
+            const match = line.match(/^#{1,6}\s+(.+?)\s*#*\s*$/);
+            if (!match) continue;
+            if (slugifyHeading(match[1]) !== slug) continue;
+            for (const [storedSlug, y] of positions) {
+              if (storedSlug === slug || storedSlug.includes(slug) || slug.includes(storedSlug)) {
+                measuredY = y;
+                break;
+              }
+            }
+            break;
+          }
+        }
+
         if (measuredY != null && this.deps.previewScrollRef?.current) {
           this.deps.previewScrollRef.current.scrollTo({ y: measuredY, animated: true });
           return;
+        }
+
+        if (__DEV__ && positions) {
+          console.warn(
+            '[markdown anchor] no measured y for slug',
+            JSON.stringify(slug),
+            'known slugs:',
+            JSON.stringify([...positions.keys()]),
+          );
         }
 
         const targetLine = (this.deps.previewContent ?? '').split('\n').findIndex((line) => {

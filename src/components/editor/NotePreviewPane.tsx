@@ -1,11 +1,25 @@
-import React from 'react';
-import { NativeScrollEvent, NativeSyntheticEvent, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { BlurView } from 'expo-blur';
 
 import { useTheme } from '../../contexts/ThemeContext';
 import { NoteFormat } from '../../models/Note';
 import NeorgRenderer from '../NeorgRenderer';
 import PdfViewer from '../PdfViewer';
 import { MarkdownBody } from './MarkdownBody';
+
+// Notes longer than this defer markdown parsing one frame so the loading
+// overlay can paint before the JS thread is blocked. Short notes parse
+// inline and skip the overlay so we don't add a perceptible flash.
+const DEFERRED_PARSE_THRESHOLD_CHARS = 4000;
 
 interface NotePreviewPaneProps {
   noteFormat: NoteFormat;
@@ -40,7 +54,29 @@ export function NotePreviewPane({
   showLivePreviewLabel = false,
   bordered = false,
 }: NotePreviewPaneProps) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
+  const isHeavy = previewContent.length > DEFERRED_PARSE_THRESHOLD_CHARS;
+  const [renderToken, setRenderToken] = useState(() => (isHeavy ? null : previewContent));
+
+  useEffect(() => {
+    if (!isHeavy) {
+      setRenderToken(previewContent);
+      return;
+    }
+    setRenderToken(null);
+    // Two RAFs: first lets the loading overlay paint, second triggers the
+    // heavy `processMarkdown` + `useMarkdownWithComponents` work.
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => setRenderToken(previewContent));
+    });
+    return () => {
+      cancelAnimationFrame(outer);
+      if (inner) cancelAnimationFrame(inner);
+    };
+  }, [isHeavy, previewContent]);
+
+  const isParsing = isHeavy && renderToken !== previewContent;
 
   if (noteFormat === 'pdf') {
     return (
@@ -62,31 +98,44 @@ export function NotePreviewPane({
   }
 
   return (
-    <ScrollView
-      ref={previewScrollRef}
-      style={[styles.scrollView, bordered && { borderLeftColor: colors.border, borderLeftWidth: StyleSheet.hairlineWidth }]}
-      contentContainerStyle={styles.previewContent}
-      showsVerticalScrollIndicator={false}
-      contentInsetAdjustmentBehavior="automatic"
-      onScroll={onScroll}
-      scrollEventThrottle={200}
-      onContentSizeChange={onContentSizeChange}
-    >
-      {showLivePreviewLabel ? <Text style={[styles.livePreviewLabel, { color: colors.textSecondary }]}>Preview</Text> : null}
-      {previewContent.trim() ? (
-        noteFormat === 'markdown' ? (
-          <MarkdownBody value={previewContent} styles={markdownStyles} renderer={notePreviewRenderer} />
-        ) : parsedStructuredContent ? (
-          <NeorgRenderer blocks={parsedStructuredContent as never} format={noteFormat === 'org' ? 'org' : 'neorg'} />
+    <View style={styles.scrollView}>
+      <ScrollView
+        ref={previewScrollRef}
+        style={[styles.scrollView, bordered && { borderLeftColor: colors.border, borderLeftWidth: StyleSheet.hairlineWidth }]}
+        contentContainerStyle={styles.previewContent}
+        showsVerticalScrollIndicator={false}
+        contentInsetAdjustmentBehavior="automatic"
+        onScroll={onScroll}
+        scrollEventThrottle={200}
+        onContentSizeChange={onContentSizeChange}
+      >
+        {showLivePreviewLabel ? <Text style={[styles.livePreviewLabel, { color: colors.textSecondary }]}>Preview</Text> : null}
+        {previewContent.trim() ? (
+          noteFormat === 'markdown' ? (
+            isParsing ? null : (
+              <MarkdownBody value={previewContent} styles={markdownStyles} renderer={notePreviewRenderer} />
+            )
+          ) : parsedStructuredContent ? (
+            <NeorgRenderer blocks={parsedStructuredContent as never} format={noteFormat === 'org' ? 'org' : 'neorg'} />
+          ) : (
+            <Text style={[styles.structuredFallback, { color: colors.text }]}>{previewContent}</Text>
+          )
         ) : (
-          <Text style={[styles.structuredFallback, { color: colors.text }]}>{previewContent}</Text>
-        )
-      ) : (
-        <Text style={[styles.emptyPreview, { color: colors.textSecondary }]}> 
-          {showLivePreviewLabel ? 'Start writing to see a preview...' : 'No content — tap the pencil to start writing.'}
-        </Text>
-      )}
-    </ScrollView>
+          <Text style={[styles.emptyPreview, { color: colors.textSecondary }]}>
+            {showLivePreviewLabel ? 'Start writing to see a preview...' : 'No content — tap the pencil to start writing.'}
+          </Text>
+        )}
+      </ScrollView>
+      {isParsing ? (
+        <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.loadingOverlay]}>
+          <BlurView intensity={30} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+          <View style={[styles.loadingPill, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={[styles.loadingLabel, { color: colors.textSecondary }]}>Loading note…</Text>
+          </View>
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -125,5 +174,22 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 12,
+  },
+  loadingOverlay: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  loadingLabel: {
+    fontSize: 13,
+    fontWeight: '500',
   },
 });
