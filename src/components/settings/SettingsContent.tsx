@@ -156,10 +156,13 @@ export function SettingsContent(props: SettingsContentProps) {
   const { t } = useTranslation();
   const [languagePref, setLanguagePref] = useState<string>('system');
   const [showTimeoutPicker, setShowTimeoutPicker] = useState(false);
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
 
   useEffect(() => {
     getLanguagePreference().then(setLanguagePref);
   }, []);
+
+  const currentLangLabel = t(`settings.languageOptions.${languagePref}`);
 
   return (
     <>
@@ -215,24 +218,19 @@ export function SettingsContent(props: SettingsContentProps) {
       </Group>
 
       <Group title={t('settings.language')}>
-        {SUPPORTED_LANGUAGES.map((lang) => {
-          const labelKey = `settings.languageOptions.${lang.code}`;
-          const isActive = languagePref === lang.code;
-          return (
-            <GroupRow
-              key={lang.code}
-              onPress={async () => {
-                await setLanguage(lang.code as LanguageCode);
-                setLanguagePref(lang.code);
-              }}
-              trailing={isActive ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : null}
-            >
-              <Text style={[styles.settingLabel, { color: isActive ? colors.primary : colors.text }]}>
-                {t(labelKey)}
+        <GroupRow
+          onPress={() => setShowLanguagePicker(true)}
+          trailing={
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
+                {currentLangLabel}
               </Text>
-            </GroupRow>
-          );
-        })}
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            </View>
+          }
+        >
+          <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.language')}</Text>
+        </GroupRow>
       </Group>
 
       <Group title={t('settings.security')} footer={isBiometricAvailable ? undefined : 'Biometric hardware not available on this device'}>
@@ -566,6 +564,40 @@ export function SettingsContent(props: SettingsContentProps) {
               trailing={isActive ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : null}
             >
               <Text style={{ color: isActive ? colors.primary : colors.text, fontSize: 16 }}>{opt.label}</Text>
+            </GroupRow>
+          );
+        })}
+      </Group>
+    </Modal>
+
+    <Modal
+      visible={showLanguagePicker}
+      onRequestClose={() => setShowLanguagePicker(false)}
+      bottomSheet
+      contentStyle={{ padding: 16, paddingBottom: 34 }}
+    >
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <Text style={{ color: colors.text, fontSize: 17, fontWeight: '600' }}>{t('settings.language')}</Text>
+        <TouchableOpacity onPress={() => setShowLanguagePicker(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Ionicons name="close" size={22} color={colors.textSecondary} />
+        </TouchableOpacity>
+      </View>
+      <Group>
+        {SUPPORTED_LANGUAGES.map((lang) => {
+          const isActive = languagePref === lang.code;
+          return (
+            <GroupRow
+              key={lang.code}
+              onPress={async () => {
+                await setLanguage(lang.code as LanguageCode);
+                setLanguagePref(lang.code);
+                setShowLanguagePicker(false);
+              }}
+              trailing={isActive ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : null}
+            >
+              <Text style={{ color: isActive ? colors.primary : colors.text, fontSize: 16 }}>
+                {t(`settings.languageOptions.${lang.code}`)}
+              </Text>
             </GroupRow>
           );
         })}

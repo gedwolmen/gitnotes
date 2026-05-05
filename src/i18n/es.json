@@ -94,7 +94,11 @@
     "languageOptions": {
       "system": "Predeterminado del sistema",
       "en": "English",
-      "es": "Español"
+      "es": "Español",
+      "ja": "日本語",
+      "de": "Deutsch",
+      "ko": "한국어",
+      "fr": "Français"
     },
     "githubAccount": "Cuenta de GitHub",
     "githubAccounts": "Cuentas de GitHub",

@@ -5,26 +5,43 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import en from './en.json';
 import es from './es.json';
+import ja from './ja.json';
+import de from './de.json';
+import ko from './ko.json';
+import fr from './fr.json';
 
 const LANGUAGE_KEY = 'i18n_language';
 
 const resources = {
   en: { translation: en },
   es: { translation: es },
+  ja: { translation: ja },
+  de: { translation: de },
+  ko: { translation: ko },
+  fr: { translation: fr },
 };
 
 export const SUPPORTED_LANGUAGES = [
   { code: 'system', label: 'System Default' },
   { code: 'en', label: 'English' },
   { code: 'es', label: 'Español' },
+  { code: 'ja', label: '日本語' },
+  { code: 'de', label: 'Deutsch' },
+  { code: 'ko', label: '한국어' },
+  { code: 'fr', label: 'Français' },
 ] as const;
 
 export type LanguageCode = (typeof SUPPORTED_LANGUAGES)[number]['code'];
 
+const SUPPORTED_BUNDLE_CODES = ['en', 'es', 'ja', 'de', 'ko', 'fr'] as const;
+
 function getDeviceLanguage(): string {
   const locales = getLocales();
-  const lang = locales?.[0]?.languageCode ?? 'en';
-  return lang.startsWith('es') ? 'es' : 'en';
+  const lang = (locales?.[0]?.languageCode ?? 'en').toLowerCase();
+  for (const code of SUPPORTED_BUNDLE_CODES) {
+    if (lang === code || lang.startsWith(`${code}-`)) return code;
+  }
+  return 'en';
 }
 
 async function getSavedLanguage(): Promise<string> {
