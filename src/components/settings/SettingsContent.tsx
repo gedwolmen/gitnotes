@@ -83,6 +83,8 @@ type SettingsContentProps = {
   lockTimeout: LockTimeout;
   onToggleBiometricLock: (v: boolean) => void;
   onSetLockTimeout: (v: LockTimeout) => void;
+  isBackgroundSyncEnabled: boolean;
+  onToggleBackgroundSync: () => void;
 };
 
 export function SettingsContent(props: SettingsContentProps) {
@@ -136,6 +138,8 @@ export function SettingsContent(props: SettingsContentProps) {
     lockTimeout,
     onToggleBiometricLock,
     onSetLockTimeout,
+    isBackgroundSyncEnabled,
+    onToggleBackgroundSync,
   } = props;
 
   return (
@@ -430,6 +434,23 @@ export function SettingsContent(props: SettingsContentProps) {
           <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
+
+      <Group title="Sync" footer="Periodically sync notes in the background (every 15 min).">
+        <GroupRow
+          trailing={
+            <Toggle
+              testID="background-sync-toggle"
+              value={isBackgroundSyncEnabled}
+              onValueChange={onToggleBackgroundSync}
+            />
+          }
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Ionicons name="sync-outline" size={20} color={colors.text} />
+            <Text style={[styles.settingLabel, { color: colors.text }]}>Background Sync</Text>
+          </View>
+        </GroupRow>
+      </Group>
 
       <View style={[styles.section, { backgroundColor: colors.surface }]}> 
         <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Data</Text>
