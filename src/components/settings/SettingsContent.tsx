@@ -529,10 +529,10 @@ export function SettingsContent(props: SettingsContentProps) {
         </>
       ) : null}
 
-      <Text style={[styles.credits, { color: colors.textSecondary }]}> 
+      <Text style={[styles.credits, { color: colors.textSecondary }]}>
         Made with love by{' '}
         <Text style={{ color: colors.accent }} onPress={() => Linking.openURL('https://www.vidwadeseram.com/')}>Vidwa De Seram</Text>
-        {' '}in collaboration with{' '}
+        {'\n'}in collaboration with{' '}
         <Text style={{ color: colors.accent }} onPress={() => Linking.openURL('https://xaventra.com/')}>Xaventra</Text>
       </Text>
 
