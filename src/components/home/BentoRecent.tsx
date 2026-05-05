@@ -15,23 +15,22 @@ interface Props {
  * Phone (single column logical width):
  *   [        large        ]
  *   [ medium ] [ medium  ]
- *   [ small  ] [ small   ]
+ *   [ medium ] [ medium  ]
  *   ...
  *
- * Tablet (wider): the medium and small rows show two tiles per row but
- * each tile is roomier. Layout intent is the same; sizing is taller.
+ * Every row after the hero uses the same `medium` tile size so the grid
+ * reads as a single uniform block instead of an ad-hoc featured row +
+ * smaller follow-ups.
  */
 export function BentoRecent({ items, onOpen }: Props) {
   const { colors } = useTheme();
   if (items.length === 0) return null;
 
   const [first, ...rest] = items;
-  const mediums = rest.slice(0, 2);
-  const smalls = rest.slice(2);
 
-  const smallRows: RecentItem[][] = [];
-  for (let i = 0; i < smalls.length; i += 2) {
-    smallRows.push(smalls.slice(i, i + 2));
+  const restRows: RecentItem[][] = [];
+  for (let i = 0; i < rest.length; i += 2) {
+    restRows.push(rest.slice(i, i + 2));
   }
 
   return (
@@ -39,21 +38,11 @@ export function BentoRecent({ items, onOpen }: Props) {
       <Text style={[styles.heading, { color: colors.textSecondary }]}>Recent</Text>
       <View style={styles.column}>
         <BentoTile item={first} size="large" onPress={() => onOpen(first)} />
-        {mediums.length > 0 ? (
-          <View style={styles.row}>
-            {mediums.map((item) => (
-              <View key={`${item.kind}-${item.data.id}`} style={styles.cell}>
-                <BentoTile item={item} size="medium" onPress={() => onOpen(item)} />
-              </View>
-            ))}
-            {mediums.length === 1 ? <View style={styles.cell} /> : null}
-          </View>
-        ) : null}
-        {smallRows.map((row, idx) => (
-          <View key={`small-row-${idx}`} style={styles.row}>
+        {restRows.map((row, idx) => (
+          <View key={`recent-row-${idx}`} style={styles.row}>
             {row.map((item) => (
               <View key={`${item.kind}-${item.data.id}`} style={styles.cell}>
-                <BentoTile item={item} size="small" onPress={() => onOpen(item)} />
+                <BentoTile item={item} size="medium" onPress={() => onOpen(item)} />
               </View>
             ))}
             {row.length === 1 ? <View style={styles.cell} /> : null}
