@@ -5,6 +5,7 @@
     "todos": "Tareas",
     "canvases": "Lienzos",
     "explore": "Explorar",
+    "journal": "Diario",
     "settings": "Ajustes",
     "chat": "Chat"
   },
@@ -46,11 +47,20 @@
     "filterNotes": "Filtrar notas",
     "notAvailableOffline": "No disponible sin conexión"
   },
+  "notesFilter": {
+    "repository": "Repositorio",
+    "noteType": "Tipo de nota",
+    "branch": "Rama",
+    "folder": "Carpeta",
+    "tags": "Etiquetas",
+    "color": "Color"
+  },
   "todos": {
     "title": "Tareas",
     "newTodo": "Nueva tarea",
     "editTodo": "Editar tarea",
     "noTodosYet": "Aún no hay tareas",
+    "noMatchingTodos": "No hay tareas coincidentes",
     "addFirst": "Toca el botón + para añadir tu primera tarea",
     "completed": "Completadas",
     "active": "Activas",
@@ -73,6 +83,7 @@
   },
   "settings": {
     "title": "Ajustes",
+    "security": "Seguridad",
     "appearance": "Apariencia",
     "updatedUI": "IU actualizada",
     "darkMode": "Modo oscuro",

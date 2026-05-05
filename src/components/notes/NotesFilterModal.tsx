@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '../../contexts/ThemeContext';
 import { HapticService } from '../../utils/haptics';
@@ -49,6 +50,7 @@ export function NotesFilterModal({
   onToggleColor,
 }: NotesFilterModalProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const {
     selectedRepo,
     selectedFormat,
@@ -68,11 +70,11 @@ export function NotesFilterModal({
       <View style={styles.overlay}>
         <View style={[styles.sheet, { backgroundColor: colors.surface }]}> 
           <View style={[styles.header, { borderBottomColor: colors.border }]}> 
-            <Text style={[styles.title, { color: colors.text }]}>Filter Notes</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{t('notes.filterNotes')}</Text>
             <View style={styles.headerRight}>
               {activeFilterCount > 0 ? (
                 <TouchableOpacity onPress={onClearFilters} style={styles.clearButton}>
-                  <Text style={[styles.clearText, { color: colors.primary }]}>Clear</Text>
+                  <Text style={[styles.clearText, { color: colors.primary }]}>{t('common.clear')}</Text>
                 </TouchableOpacity>
               ) : null}
               <TouchableOpacity onPress={onClose}>
@@ -84,7 +86,7 @@ export function NotesFilterModal({
           <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
             {repositories.length > 0 ? (
               <>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Repository</Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>{t('notesFilter.repository')}</Text>
                 <View style={styles.chipWrap}>
                   <TouchableOpacity
                     style={[
@@ -99,7 +101,7 @@ export function NotesFilterModal({
                       size={13}
                       color={!selectedRepo ? colors.primary : colors.textSecondary}
                     />
-                    <Text style={[styles.chipText, { color: !selectedRepo ? colors.primary : colors.text }]}>All</Text>
+                    <Text style={[styles.chipText, { color: !selectedRepo ? colors.primary : colors.text }]}>{t('common.all')}</Text>
                   </TouchableOpacity>
                   {repositories.map((repo) => {
                     const isSelected = selectedRepo?.id === repo.id;
@@ -128,7 +130,7 @@ export function NotesFilterModal({
               </>
             ) : null}
 
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Note Type</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>{t('notesFilter.noteType')}</Text>
             <View style={styles.chipWrap}>
               <TouchableOpacity
                 style={[
@@ -138,7 +140,7 @@ export function NotesFilterModal({
                 ]}
                 onPress={() => onSelectFormat(null)}
               >
-                <Text style={[styles.chipText, { color: !selectedFormat ? colors.primary : colors.text }]}>All</Text>
+                <Text style={[styles.chipText, { color: !selectedFormat ? colors.primary : colors.text }]}>{t('common.all')}</Text>
               </TouchableOpacity>
               {(Object.entries(NOTE_FORMAT_LABELS) as [Exclude<NoteFormat, 'json'>, string][]).map(
                 ([format, label]) => {
@@ -169,7 +171,7 @@ export function NotesFilterModal({
 
             {selectedRepo && allBranches.length > 0 ? (
               <>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Branch</Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>{t('notesFilter.branch')}</Text>
                 <View style={styles.chipWrap}>
                   <TouchableOpacity
                     style={[
@@ -179,7 +181,7 @@ export function NotesFilterModal({
                     ]}
                     onPress={() => onSelectBranch(null)}
                   >
-                    <Text style={[styles.chipText, { color: !selectedBranch ? colors.primary : colors.text }]}>All</Text>
+                    <Text style={[styles.chipText, { color: !selectedBranch ? colors.primary : colors.text }]}>{t('common.all')}</Text>
                   </TouchableOpacity>
                   {allBranches.map((branch) => {
                     const isSelected = selectedBranch === branch;
@@ -213,7 +215,7 @@ export function NotesFilterModal({
 
             {allFolders.length > 0 ? (
               <>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Folder</Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>{t('notesFilter.folder')}</Text>
                 <View style={styles.chipWrap}>
                   <TouchableOpacity
                     style={[
@@ -223,7 +225,7 @@ export function NotesFilterModal({
                     ]}
                     onPress={() => onSelectFolder(null)}
                   >
-                    <Text style={[styles.chipText, { color: !selectedFolder ? colors.primary : colors.text }]}>All</Text>
+                    <Text style={[styles.chipText, { color: !selectedFolder ? colors.primary : colors.text }]}>{t('common.all')}</Text>
                   </TouchableOpacity>
                   {allFolders.map((folder) => {
                     const isSelected = selectedFolder === folder;
@@ -257,7 +259,7 @@ export function NotesFilterModal({
 
             {allTags.length > 0 ? (
               <>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Tags</Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>{t('notesFilter.tags')}</Text>
                 <View style={styles.chipWrap}>
                   {allTags.map((tag) => {
                     const isSelected = selectedTags.includes(tag);
@@ -288,7 +290,7 @@ export function NotesFilterModal({
 
             {allColors.length > 0 ? (
               <>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Color</Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>{t('notesFilter.color')}</Text>
                 <View style={styles.chipWrap}>
                   {allColors
                     .filter((color) => NOTE_COLOR_VALUES.includes(color))

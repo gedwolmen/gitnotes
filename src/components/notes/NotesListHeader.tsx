@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 import SearchBar from '../SearchBar';
 import SortPicker from '../SortPicker';
@@ -52,6 +53,7 @@ export function NotesListHeader({
   onSearchNavigate,
 }: NotesListHeaderProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <>
@@ -59,7 +61,7 @@ export function NotesListHeader({
         <SearchBar
           value={searchQuery}
           onChangeText={onSearchChange}
-          placeholder="Search notes..."
+          placeholder={t('notes.searchNotes')}
           style={styles.searchBar}
         />
         <TouchableOpacity
@@ -147,7 +149,7 @@ export function NotesListHeader({
               size={13}
               color={!selectedRepo ? colors.primary : colors.textSecondary}
             />
-            <Text style={[styles.chipText, { color: !selectedRepo ? colors.primary : colors.text }]}>All Notes</Text>
+            <Text style={[styles.chipText, { color: !selectedRepo ? colors.primary : colors.text }]}>{t('notes.allNotes')}</Text>
           </TouchableOpacity>
           {repositories.map((repo) => {
             const isSelected = selectedRepo?.id === repo.id;

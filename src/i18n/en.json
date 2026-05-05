@@ -5,6 +5,7 @@
     "todos": "Todos",
     "canvases": "Canvases",
     "explore": "Explore",
+    "journal": "Journal",
     "settings": "Settings",
     "chat": "Chat"
   },
@@ -46,11 +47,20 @@
     "filterNotes": "Filter Notes",
     "notAvailableOffline": "Not available offline"
   },
+  "notesFilter": {
+    "repository": "Repository",
+    "noteType": "Note Type",
+    "branch": "Branch",
+    "folder": "Folder",
+    "tags": "Tags",
+    "color": "Color"
+  },
   "todos": {
     "title": "Todos",
     "newTodo": "New Todo",
     "editTodo": "Edit Todo",
     "noTodosYet": "No todos yet",
+    "noMatchingTodos": "No matching todos",
     "addFirst": "Tap the + button to add your first todo",
     "completed": "Completed",
     "active": "Active",
@@ -73,6 +83,7 @@
   },
   "settings": {
     "title": "Settings",
+    "security": "Security",
     "appearance": "Appearance",
     "updatedUI": "Updated UI",
     "darkMode": "Dark Mode",

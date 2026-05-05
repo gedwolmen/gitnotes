@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -10,15 +11,16 @@ interface TodosEmptyStateProps {
 
 export function TodosEmptyState({ isFiltered }: TodosEmptyStateProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View style={styles.container}>
       <Ionicons name="checkbox-outline" size={64} color={colors.textSecondary} />
       <Text style={[styles.title, { color: colors.text }]}>
-        {isFiltered ? 'No matching todos' : 'No todos yet'}
+        {isFiltered ? t('todos.noMatchingTodos') : t('todos.noTodosYet')}
       </Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-        {isFiltered ? 'Try adjusting your search or filters' : 'Tap the + button to add your first todo'}
+        {isFiltered ? t('notes.tryAdjusting') : t('todos.addFirst')}
       </Text>
     </View>
   );
