@@ -138,7 +138,12 @@ export function NoteViewer({
         <BacklinksSection noteId={noteId} onNavigateToNote={onNavigateToNote} />
       ) : null}
 
-      <Modal visible={showToc} onRequestClose={onCloseToc} bottomSheet>
+      <Modal
+        visible={showToc}
+        onRequestClose={onCloseToc}
+        bottomSheet
+        contentStyle={{ padding: 16, paddingBottom: 34 }}
+      >
         <View style={styles.tocHeader}>
           <Text style={[styles.tocTitle, { color: colors.text }]}>Table of Contents</Text>
           <TouchableOpacity onPress={onCloseToc} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
