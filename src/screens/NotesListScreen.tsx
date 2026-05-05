@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
 import { FlashList, FlashListRef } from '@shopify/flash-list';
 import { useNavigation } from '@react-navigation/native';
@@ -27,8 +27,8 @@ import { ViewMode } from '../utils/viewModes';
 import { NoteCard as NotesListCard } from '../components/notes/NoteCard';
 import { NotesListHeader } from '../components/notes/NotesListHeader';
 import { NotesViewModePicker } from '../components/notes/NotesViewModePicker';
-import { NotesActiveFilters } from '../components/notes/NotesActiveFilters';
 import { NotesFilterModal } from '../components/notes/NotesFilterModal';
+import { FilterBar, FilterChip } from '../components/FilterBar';
 import { NotesEmptyState } from '../components/notes/NotesEmptyState';
 import { NotesContextMenu } from '../components/notes/NotesContextMenu';
 import { useNotesListFilters } from '../components/notes/useNotesListFilters';
@@ -99,6 +99,41 @@ export default function NotesListScreen() {
     handleToggleTag,
     handleToggleColor,
   } = useNotesListFilters({ notes, filteredNotes, searchQuery });
+
+  const activeFilterChips: FilterChip[] = useMemo(() => {
+    const chips: FilterChip[] = [];
+    if (filters.selectedFormat) {
+      chips.push({ id: 'format', label: String(filters.selectedFormat), type: 'tag' });
+    }
+    if (filters.selectedBranch) {
+      chips.push({ id: 'branch', label: filters.selectedBranch, type: 'folder' });
+    }
+    if (filters.selectedFolder) {
+      chips.push({ id: 'folder', label: filters.selectedFolder, type: 'folder' });
+    }
+    for (const tag of filters.selectedTags) {
+      chips.push({ id: `tag-${tag}`, label: tag, type: 'tag' });
+    }
+    for (const color of filters.selectedColors) {
+      chips.push({ id: `color-${color}`, label: color, type: 'tag' });
+    }
+    return chips;
+  }, [filters]);
+
+  const handleRemoveFilterChip = useCallback(
+    (id: string) => {
+      if (id === 'format') handleSelectFormat(null);
+      else if (id === 'branch') handleSelectBranch(null);
+      else if (id === 'folder') handleSelectFolder(null);
+      else if (id.startsWith('tag-')) handleToggleTag(id.slice(4));
+      else if (id.startsWith('color-')) {
+        const color = id.slice(6) as import('../models/Note').NoteColor;
+        handleToggleColor(color);
+      }
+    },
+    [handleSelectFormat, handleSelectBranch, handleSelectFolder, handleToggleTag, handleToggleColor],
+  );
+
   const {
     handleNotePress,
     handleColorSelect,
@@ -246,6 +281,14 @@ export default function NotesListScreen() {
     [currentSearchMatchIndex, scrollToSearchMatch, searchMatchCount],
   );
 
+  const handleTagPress = useCallback(
+    (tag: string) => {
+      handleToggleTag(tag);
+      HapticService.light();
+    },
+    [handleToggleTag],
+  );
+
   const renderNote = useCallback(
     ({ item, index }: { item: Note; index: number }) => (
       <NotesListCard
@@ -260,6 +303,7 @@ export default function NotesListScreen() {
         highlighted={hasActiveSearch && index === currentSearchMatchIndex}
         isOffline={isConnected === false}
         isCached={!!item.content?.trim()}
+        onTagPress={handleTagPress}
       />
     ),
     [
@@ -270,6 +314,7 @@ export default function NotesListScreen() {
       handleNotePress,
       handleSwipeableWillClose,
       handleSwipeableWillOpen,
+      handleTagPress,
       hasActiveSearch,
       isConnected,
       viewMode,
@@ -326,11 +371,9 @@ export default function NotesListScreen() {
         onChange={handleViewModeChange}
       />
 
-      <NotesActiveFilters
-        filters={filters}
-        onClearFormat={() => handleSelectFormat(null)}
-        onClearBranch={() => handleSelectBranch(null)}
-        onClearFolder={() => handleSelectFolder(null)}
+      <FilterBar
+        filters={activeFilterChips}
+        onRemoveFilter={handleRemoveFilterChip}
         onClearAll={handleClearFilters}
       />
 

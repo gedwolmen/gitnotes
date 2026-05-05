@@ -17,7 +17,7 @@ import { pullAllFromRepos } from '../services/RepoPullService';
 import { IconButton, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
 import { EntityFilterModal } from '../components/EntityFilterModal';
-import { ActiveFilterStrip } from '../components/ActiveFilterStrip';
+import { FilterBar, FilterChip } from '../components/FilterBar';
 import { useEntityFilter } from '../hooks/useEntityFilter';
 import { useRepos } from '../contexts/RepoContext';
 import { useTodoStore } from '../stores/todoStore';
@@ -356,6 +356,37 @@ export default function TodoListScreen() {
 
   const hasActiveFilters = filter.activeCount > 0 || !!searchQuery.trim() || filterCompleted;
 
+  const activeFilterChips: FilterChip[] = useMemo(() => {
+    const chips: FilterChip[] = [];
+    if (filterCompleted) {
+      chips.push({ id: 'status-active', label: 'Active only', type: 'status' });
+    }
+    for (const tag of filter.state.selectedTags) {
+      chips.push({ id: `tag-${tag}`, label: tag, type: 'tag' });
+    }
+    if (filter.state.selectedRepo) {
+      chips.push({ id: 'repo', label: filter.state.selectedRepo.name, type: 'folder' });
+    }
+    if (filter.state.selectedBranch) {
+      chips.push({ id: 'branch', label: filter.state.selectedBranch, type: 'folder' });
+    }
+    if (filter.state.selectedFolder) {
+      chips.push({ id: 'folder', label: filter.state.selectedFolder, type: 'folder' });
+    }
+    return chips;
+  }, [filterCompleted, filter.state, filter.state.selectedTags, filter.state.selectedRepo, filter.state.selectedBranch, filter.state.selectedFolder]);
+
+  const handleRemoveTodoFilterChip = useCallback(
+    (id: string) => {
+      if (id === 'status-active') setFilterCompleted(false);
+      else if (id === 'repo') filter.setSelectedRepo(null);
+      else if (id === 'branch') filter.setSelectedBranch(null);
+      else if (id === 'folder') filter.setSelectedFolder(null);
+      else if (id.startsWith('tag-')) filter.toggleTag(id.slice(4));
+    },
+    [filter],
+  );
+
   return (
     <SafeAreaView
       edges={[]}
@@ -371,7 +402,14 @@ export default function TodoListScreen() {
 
       <TodosListHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} sortMode={sortMode} onSortChange={setSortMode} />
 
-      <ActiveFilterStrip filter={filter} />
+      <FilterBar
+        filters={activeFilterChips}
+        onRemoveFilter={handleRemoveTodoFilterChip}
+        onClearAll={() => {
+          filter.clearAll();
+          setFilterCompleted(false);
+        }}
+      />
 
       <EntityFilterModal
         visible={showFilterModal}
