@@ -4,6 +4,42 @@
 // real surface area we depend on is `randomUUID` (consumed by
 // `src/utils/ids.ts`). Tests that need to control its behaviour can still
 // override this with a per-file `jest.mock('expo-crypto', ...)`.
+jest.mock('react-i18next', () => {
+  const en = require('./src/i18n/en.json');
+
+  function resolve(obj: Record<string, unknown>, path: string): string {
+    const keys = path.split('.');
+    let current: unknown = obj;
+    for (const k of keys) {
+      if (current && typeof current === 'object' && k in (current as Record<string, unknown>)) {
+        current = (current as Record<string, unknown>)[k];
+      } else {
+        return path;
+      }
+    }
+    return typeof current === 'string' ? current : path;
+  }
+
+  return {
+    useTranslation: () => ({
+      t: (key: string, params?: Record<string, string>) => {
+        const value = resolve(en, key);
+        if (!params) return value;
+        return Object.entries(params).reduce(
+          (str, [k, v]) => str.replace(`{{${k}}}`, v),
+          value,
+        );
+      },
+      i18n: { changeLanguage: jest.fn() },
+    }),
+    initReactI18next: { type: '3rdParty', init: jest.fn() },
+  };
+});
+
+jest.mock('expo-localization', () => ({
+  getLocales: () => [{ languageCode: 'en' }],
+}));
+
 jest.mock('expo-crypto', () => ({
   randomUUID: () =>
     `test-${Math.random().toString(36).slice(2, 11)}-${Math.random().toString(36).slice(2, 11)}`,
