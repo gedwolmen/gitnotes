@@ -1,9 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { Text, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system/legacy';
-import JSZip from 'jszip';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useNotes } from '../../contexts/NoteContext';
 import { Group, GroupRow } from '../ui';
@@ -12,6 +9,43 @@ import { parseAppleNotesExport } from '../../services/import/AppleNotesImporter'
 import { ImportedFile } from '../../services/import/types';
 import { HapticService } from '../../utils/haptics';
 import { isNoteColor } from '../../models/Note';
+
+// Native modules required by import flows. We require() them lazily inside
+// the click handlers so a dev client built before these deps were added (or
+// any future native-module mismatch) surfaces a single Alert from the import
+// button instead of crashing the whole Settings tab — when the module fails
+// to resolve at top-level import, every consumer of ImportSection blows up
+// with `Cannot read property 'ImportSection' of undefined`.
+type DocumentPickerModule = typeof import('expo-document-picker');
+type FileSystemModule = typeof import('expo-file-system/legacy');
+type JSZipCtor = typeof import('jszip');
+
+function loadDocumentPicker(): DocumentPickerModule | null {
+  try {
+    return require('expo-document-picker');
+  } catch {
+    return null;
+  }
+}
+
+function loadFileSystem(): FileSystemModule | null {
+  try {
+    return require('expo-file-system/legacy');
+  } catch {
+    return null;
+  }
+}
+
+function loadJSZip(): JSZipCtor | null {
+  try {
+    return require('jszip');
+  } catch {
+    return null;
+  }
+}
+
+const REBUILD_HINT =
+  'Rebuild the dev client (`yarn ios` / `yarn android`) to pick up the import deps.';
 
 export function ImportSection() {
   const { colors } = useTheme();
@@ -41,6 +75,14 @@ export function ImportSection() {
   }, [createNote]);
 
   const handleImportGoogleKeep = useCallback(async () => {
+    const DocumentPicker = loadDocumentPicker();
+    const FileSystem = loadFileSystem();
+    const JSZip = loadJSZip();
+    if (!DocumentPicker || !FileSystem || !JSZip) {
+      Alert.alert('Import unavailable', REBUILD_HINT);
+      return;
+    }
+
     setIsImporting(true);
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -92,6 +134,13 @@ export function ImportSection() {
   }, [importNotes]);
 
   const handleImportAppleNotes = useCallback(async () => {
+    const DocumentPicker = loadDocumentPicker();
+    const FileSystem = loadFileSystem();
+    if (!DocumentPicker || !FileSystem) {
+      Alert.alert('Import unavailable', REBUILD_HINT);
+      return;
+    }
+
     setIsImporting(true);
     try {
       const result = await DocumentPicker.getDocumentAsync({
