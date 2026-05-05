@@ -2,7 +2,7 @@ import type { NavigatorScreenParams } from '@react-navigation/native';
 
 type ProductionStackParamList = {
   MainTabs: NavigatorScreenParams<BottomTabParamList> | undefined;
-  NoteEditor: { noteId?: string; format?: 'markdown' | 'neorg' | 'org'; initialTitle?: string; initialContent?: string; repo?: string; branch?: string; folderPath?: string };
+  NoteEditor: { noteId?: string; format?: 'markdown' | 'neorg' | 'org'; initialTitle?: string; initialContent?: string; repo?: string; branch?: string; folderPath?: string; anchor?: string };
   NoteViewer: { noteId: string };
   PdfViewer: { owner: string; repo: string; branch?: string; path: string; title?: string };
   FileViewer: { owner: string; repo: string; branch?: string; path: string; title?: string; size?: number };

@@ -84,8 +84,16 @@ describe('NotePreviewRenderer link routing', () => {
     const renderer = createRenderer({ onOpenNote });
     pressLink(renderer, './child.md');
 
-    expect(onOpenNote).toHaveBeenCalledWith('notes/child.md');
+    expect(onOpenNote).toHaveBeenCalledWith('notes/child.md', undefined);
     expect(openUrlSpy).not.toHaveBeenCalled();
+  });
+
+  it('forwards the fragment when a cross-file note link carries an anchor', () => {
+    const onOpenNote = jest.fn(() => true);
+    const renderer = createRenderer({ onOpenNote });
+    pressLink(renderer, './child.md#Section Two');
+
+    expect(onOpenNote).toHaveBeenCalledWith('notes/child.md', 'section-two');
   });
 
   it('alerts when linked note cannot be found', () => {

@@ -3,6 +3,12 @@ export type LinkKind = 'anchor' | 'note' | 'web' | 'mailto';
 export interface ClassifiedHref {
   kind: LinkKind;
   target: string;
+  /**
+   * Slugified anchor inside the target note. Only set when the href was
+   * `path/to/file.md#section` — the receiver opens the note and scrolls
+   * to this slug after content lays out.
+   */
+  fragment?: string;
 }
 
 function slugifyFragment(fragment: string): string {
@@ -63,8 +69,19 @@ export function classifyHref(href: string, currentNotePath?: string): Classified
     return { kind: 'mailto', target: trimmed.replace(/^(mailto|tel):/i, '') };
   }
 
-  if (!/^[a-z][a-z0-9+.-]*:/i.test(trimmed) && /\.(md|norg|org|pdf|json)$/i.test(trimmed)) {
-    return { kind: 'note', target: resolveNotePath(trimmed, currentNotePath) };
+  // Cross-file note links can carry a heading fragment, e.g.
+  // `notes/foo.md#section-1`. Split the fragment off before the
+  // extension test so we still recognise the path part as a note.
+  const hashIdx = trimmed.indexOf('#');
+  const pathPart = hashIdx >= 0 ? trimmed.slice(0, hashIdx) : trimmed;
+  const fragmentPart = hashIdx >= 0 ? trimmed.slice(hashIdx + 1) : '';
+
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(pathPart) && /\.(md|norg|org|pdf|json)$/i.test(pathPart)) {
+    return {
+      kind: 'note',
+      target: resolveNotePath(pathPart, currentNotePath),
+      fragment: fragmentPart ? slugifyFragment(fragmentPart) : undefined,
+    };
   }
 
   return null;

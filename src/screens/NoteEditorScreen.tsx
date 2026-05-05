@@ -38,7 +38,7 @@ export default function NoteEditorScreen() {
   const { colors, isDark } = useTheme();
   const { authState, activeAccountId } = useAuth();
   const { sideBySide } = useResponsive();
-  const { noteId, format: initialFormat, initialTitle, initialContent, repo: initialRepo, branch: initialBranch, folderPath: initialFolderPath } = route.params || {};
+  const { noteId, format: initialFormat, initialTitle, initialContent, repo: initialRepo, branch: initialBranch, folderPath: initialFolderPath, anchor: initialAnchor } = route.params || {};
 
   const { notes, getNoteById, createNote, updateNote } = useNotes();
   const { canvases } = useCanvases();
@@ -82,6 +82,7 @@ export default function NoteEditorScreen() {
     isDark,
     navigation,
     markdownStyles,
+    initialAnchor,
   });
   const isPdfNote = document.noteFormat === 'pdf';
 

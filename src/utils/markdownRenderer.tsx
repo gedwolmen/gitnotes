@@ -56,7 +56,7 @@ interface CustomRendererDeps {
   CanvasPreview?: React.ComponentType<{ canvasId: string }>;
   approxLinePx?: number;
   currentNotePath?: string;
-  onOpenNote?: (path: string) => boolean;
+  onOpenNote?: (path: string, fragment?: string) => boolean;
   /**
    * Y-offset map populated as headings render via `onLayout`. The link handler
    * reads from it to scroll to the actual measured heading position instead of
@@ -128,6 +128,12 @@ function wikiTargetToHref(target: string): string {
   if (!trimmed) return trimmed;
   if (/^(https?:\/\/|mailto:|tel:|#)/i.test(trimmed)) return trimmed;
   if (/\.(md|norg|org|pdf|json)(#.*)?$/i.test(trimmed)) return trimmed;
+  // `[[file#section]]` was producing `file#section.md` — break the
+  // fragment off, suffix the path with `.md`, then re-attach.
+  const hashIdx = trimmed.indexOf('#');
+  if (hashIdx >= 0) {
+    return `${trimmed.slice(0, hashIdx)}.md${trimmed.slice(hashIdx)}`;
+  }
   return `${trimmed}.md`;
 }
 
@@ -339,7 +345,7 @@ export class NotePreviewRenderer extends Renderer implements RendererInterface {
       }
 
       if (classified.kind === 'note') {
-        const opened = this.deps.onOpenNote?.(classified.target) ?? false;
+        const opened = this.deps.onOpenNote?.(classified.target, classified.fragment) ?? false;
         if (!opened) {
           Alert.alert('Link target not found');
         }

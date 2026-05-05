@@ -35,6 +35,11 @@ interface UseNoteEditorPreviewParams {
   isDark: boolean;
   navigation: NavigationProp;
   markdownStyles: ReturnType<typeof getMarkdownStyles>;
+  /**
+   * Slug to scroll to once the markdown body has rendered. Set when the
+   * screen was opened via a cross-file link `[X](other.md#section)`.
+   */
+  initialAnchor?: string;
 }
 
 export function useNoteEditorPreview({
@@ -48,6 +53,7 @@ export function useNoteEditorPreview({
   isDark,
   navigation,
   markdownStyles,
+  initialAnchor,
 }: UseNoteEditorPreviewParams) {
   const [pdfLoadError, setPdfLoadError] = useState<{ uri: string; message: string } | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -96,11 +102,11 @@ export function useNoteEditorPreview({
       : undefined;
   }, [folderPath, noteFormat, noteId, notes, title]);
 
-  const handleOpenLinkedNote = useCallback((targetPath: string) => {
+  const handleOpenLinkedNote = useCallback((targetPath: string, fragment?: string) => {
     const normalizedTargetPath = normalizeNotePathForLookup(targetPath);
     const targetNote = notes.find((note) => note.filePath && normalizeNotePathForLookup(note.filePath) === normalizedTargetPath);
     if (!targetNote?.id) return false;
-    navigation.navigate('NoteEditor', { noteId: targetNote.id });
+    navigation.navigate('NoteEditor', { noteId: targetNote.id, anchor: fragment });
     return true;
   }, [navigation, notes]);
 
@@ -210,13 +216,45 @@ export function useNoteEditorPreview({
 
   const handlePreviewContentSizeChange = useCallback(() => {
     if (restoredScrollRef.current) return;
+    // When the screen was opened with an anchor target, the dedicated
+    // anchor-scroll effect drives positioning; don't compete with it.
+    if (initialAnchor) {
+      restoredScrollRef.current = true;
+      return;
+    }
     const target = targetScrollYRef.current;
     if (target == null) return;
     if (target > 0) {
       previewScrollRef.current?.scrollTo({ y: target, animated: false });
     }
     restoredScrollRef.current = true;
-  }, []);
+  }, [initialAnchor]);
+
+  // Cross-file link (`[X](other.md#section)`) opens this screen with the
+  // slug pre-set; poll the heading-position map while headings finish
+  // laying out, then scroll once a y is recorded for the slug.
+  useEffect(() => {
+    if (!initialAnchor) return;
+    const slug = initialAnchor;
+    let cancelled = false;
+    let attempts = 0;
+    const tick = () => {
+      if (cancelled) return;
+      const y = headingPositionsRef.current.get(slug);
+      if (y != null) {
+        previewScrollRef.current?.scrollTo({ y, animated: false });
+        return;
+      }
+      if (attempts++ < 30) {
+        setTimeout(tick, 60);
+      }
+    };
+    const initial = setTimeout(tick, 80);
+    return () => {
+      cancelled = true;
+      clearTimeout(initial);
+    };
+  }, [initialAnchor, previewContent]);
 
   return {
     markdownStyles,

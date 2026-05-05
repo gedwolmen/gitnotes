@@ -176,6 +176,6 @@ describe('MarkdownPreviewContent integration', () => {
     expect(screen.getAllByTestId('webview')).toHaveLength(2);
 
     fireEvent.press(screen.getByText('Reference Note'));
-    expect(onOpenNote).toHaveBeenCalledWith('notes/reference.md');
+    expect(onOpenNote).toHaveBeenCalledWith('notes/reference.md', undefined);
   });
 });

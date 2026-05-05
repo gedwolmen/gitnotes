@@ -117,19 +117,17 @@ jest.mock('expo-local-authentication', () => ({
   getEnrolledLevelAsync: jest.fn(async () => 0),
 }));
 
-jest.mock('expo-background-fetch', () => ({
-  registerTaskAsync: jest.fn(async () => 0),
+jest.mock('expo-background-task', () => ({
+  registerTaskAsync: jest.fn(async () => undefined),
   unregisterTaskAsync: jest.fn(async () => undefined),
-  BackgroundFetchResult: {
-    NoData: 'NoData',
-    NewData: 'NewData',
+  BackgroundTaskResult: {
+    Success: 'Success',
     Failed: 'Failed',
   },
-  BackgroundFetchStatus: {
+  BackgroundTaskStatus: {
     Available: 'Available',
     Denied: 'Denied',
     Restricted: 'Restricted',
-    Throttled: 'Throttled',
   },
 }));
 
