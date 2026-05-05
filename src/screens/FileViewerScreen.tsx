@@ -16,7 +16,7 @@ import { RootStackParamList } from '../navigation/types';
 import { useTheme } from '../contexts/ThemeContext';
 import { GitHubService } from '../services/GitHubService';
 import { NeorgContentParser } from '../services/NeorgContentParser';
-import NeorgRenderer from '../components/NeorgRenderer';
+import StructuredRenderer from '../components/StructuredRenderer';
 import { JsonRenderer } from '../components/JsonRenderer';
 import { HapticService } from '../utils/haptics';
 import { getMarkdownStyles, stripTopMetadata } from '../utils/preview';
@@ -156,7 +156,7 @@ export default function FileViewerScreen() {
           ) : mode === 'json' ? (
             <JsonRenderer content={renderContent} />
           ) : (mode === 'neorg' || mode === 'org') && parsedNeorg ? (
-            <NeorgRenderer blocks={parsedNeorg} format={mode === 'org' ? 'org' : 'neorg'} />
+            <StructuredRenderer blocks={parsedNeorg} format={mode === 'org' ? 'org' : 'neorg'} />
           ) : (
             <Text
               style={[

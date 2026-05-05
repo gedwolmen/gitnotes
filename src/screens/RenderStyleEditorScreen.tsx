@@ -18,7 +18,7 @@ import type { RouteProp } from '@react-navigation/native';
 
 import { useTheme } from '../contexts/ThemeContext';
 import { useRenderStyleStore } from '../stores/renderStyleStore';
-import NeorgRenderer from '../components/NeorgRenderer';
+import StructuredRenderer from '../components/StructuredRenderer';
 import HexColorPickerModal from '../components/HexColorPickerModal';
 import { NeorgContentParser } from '../services/NeorgContentParser';
 import { getMarkdownStyles } from '../utils/preview';
@@ -99,7 +99,7 @@ function MarkdownPreview({ value, format, overrides }: { value: string; format: 
   if (!parsed.success || !parsed.blocks) {
     return <Text style={{ color: colors.textSecondary }}>(preview unavailable)</Text>;
   }
-  return <NeorgRenderer blocks={parsed.blocks} format={format} />;
+  return <StructuredRenderer blocks={parsed.blocks} format={format} />;
 }
 
 function MarkdownNodes({ value, styles2 }: { value: string; styles2: ReturnType<typeof getMarkdownStyles> }) {

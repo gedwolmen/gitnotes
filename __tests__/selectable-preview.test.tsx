@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 import { render } from '@testing-library/react-native';
 
 import { NotePreviewRenderer } from '../src/utils/markdownRenderer';
-import NeorgRenderer from '../src/components/NeorgRenderer';
+import StructuredRenderer from '../src/components/StructuredRenderer';
 
 jest.mock('expo-image', () => ({
   Image: () => null,
@@ -74,7 +74,7 @@ describe('preview text selection', () => {
 
   it('marks neorg preview text selectable', () => {
     const screen = render(
-      <NeorgRenderer
+      <StructuredRenderer
         blocks={[
           { type: 'heading', heading: { level: 1, text: 'Heading *bold* `code`' } },
           { type: 'list', listItems: [{ type: 'ordered', indentLevel: 0, text: 'List item /italic/' }] },

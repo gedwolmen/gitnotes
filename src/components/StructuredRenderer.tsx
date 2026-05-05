@@ -5,9 +5,8 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useRenderStyle } from '../stores/renderStyleStore';
 import type { RenderFormat } from '../types/RenderStyle';
 
-interface NeorgRendererProps {
+interface StructuredRendererProps {
   blocks: NeorgContentBlock[];
-  /** Which format's render-style overrides to apply. Defaults to 'neorg'. */
   format?: RenderFormat;
 }
 
@@ -95,6 +94,9 @@ const inlinePatterns: InlinePattern[] = [
     regex: /,([^,]+),/g,
     handler: (m) => ({ type: 'subscript', content: m[1] }),
   },
+  { regex: /\+([^+\s][^+]*[^+\s]?)\+/g, handler: (m) => ({ type: 'org-strike', content: m[1] }) },
+  { regex: /=([^=\s][^=]*[^=\s]?)=/g, handler: (m) => ({ type: 'verbatim', content: m[1] }) },
+  { regex: /~([^~\s][^~]*[^~\s]?)~/g, handler: (m) => ({ type: 'org-code', content: m[1] }) },
 ];
 
 function findOuterDelimitedMatch(text: string, delimiter: '*' | '/'): { length: number; segment: InlineSegment } | null {
@@ -189,7 +191,7 @@ export function createMemoizedNeorgInlineParser(
   };
 }
 
-export default function NeorgRenderer({ blocks, format = 'neorg' }: NeorgRendererProps) {
+export default function StructuredRenderer({ blocks, format = 'neorg' }: StructuredRendererProps) {
   const { colors } = useTheme();
   const overrides = useRenderStyle(format);
 
@@ -215,6 +217,24 @@ export default function NeorgRenderer({ blocks, format = 'neorg' }: NeorgRendere
   const quoteText = overrides.blockquote?.text ?? colors.text;
   const dividerColor = overrides.divider?.color ?? colors.border;
 
+  const todoColor = (state: string): string => {
+    switch (state) {
+      case 'TODO': return '#F97316';
+      case 'DONE': return '#22C55E';
+      case 'IN-PROGRESS': return '#3B82F6';
+      case 'WAITING': return '#EAB308';
+      default: return '#9CA3AF';
+    }
+  };
+  const priorityColor = (p: string): string => {
+    switch (p) {
+      case 'A': return '#EF4444';
+      case 'B': return '#F59E0B';
+      case 'C': return '#22C55E';
+      default: return '#9CA3AF';
+    }
+  };
+
   const parseInline = useMemo(() => createMemoizedNeorgInlineParser(), []);
 
   const segKey = (seg: InlineSegment, i: number): string =>
@@ -237,6 +257,12 @@ export default function NeorgRenderer({ blocks, format = 'neorg' }: NeorgRendere
               return <Text key={k} selectable style={styles.underline}>{renderInline(seg.content)}</Text>;
             case 'strikethrough':
               return <Text key={k} selectable style={styles.strikethrough}>{renderInline(seg.content)}</Text>;
+            case 'verbatim':
+              return <Text key={k} selectable style={[styles.inlineCode, { backgroundColor: inlineBg ?? colors.surfaceSecondary }]}>{seg.content}</Text>;
+            case 'org-code':
+              return <Text key={k} selectable style={[styles.inlineCode, { backgroundColor: inlineBg ?? colors.surfaceSecondary }, inlineText ? { color: inlineText } : null]}>{seg.content}</Text>;
+            case 'org-strike':
+              return <Text key={k} selectable style={styles.strikethrough}>{seg.content}</Text>;
             case 'code':
               return (
                 <Text
@@ -268,7 +294,7 @@ export default function NeorgRenderer({ blocks, format = 'neorg' }: NeorgRendere
                 </Text>
               );
             case 'footnote-ref':
-              return <Text key={k} selectable style={styles.footnoteRef}>[{seg.label}]</Text>;
+              return <Text key={k} selectable style={{ fontSize: 11, lineHeight: 14, color: linkColor }}>{seg.label}</Text>;
             default:
               return 'content' in seg ? <Text key={k} selectable>{seg.content}</Text> : null;
           }
@@ -295,17 +321,33 @@ export default function NeorgRenderer({ blocks, format = 'neorg' }: NeorgRendere
     const fontSize = 32 - (heading.level - 1) * 4;
     const fontWeight = headingWeightFor(heading.level);
     return (
-      <Text
-        key={`heading-${blockIndex}`}
-        selectable
-        style={[
-          styles.heading,
-          { fontSize, color: headingColorFor(heading.level), marginTop: heading.level === 1 ? 16 : 12 },
-          fontWeight ? { fontWeight } : null,
-        ]}
-      >
-        {renderInline(heading.text)}
-      </Text>
+      <View key={`heading-${blockIndex}`} style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginTop: heading.level === 1 ? 16 : 12, marginBottom: 8 }}>
+        {format === 'org' && heading.todoState && (
+          <Text style={[styles.todoBadge, { backgroundColor: todoColor(heading.todoState) + '20', color: todoColor(heading.todoState) }]}>
+            {heading.todoState}
+          </Text>
+        )}
+        {format === 'org' && heading.priority && (
+          <Text style={[styles.priorityBadge, { backgroundColor: priorityColor(heading.priority) + '30', color: priorityColor(heading.priority) }]}>
+            #{heading.priority}
+          </Text>
+        )}
+        <Text
+          selectable
+          style={[
+            styles.heading,
+            { fontSize, color: headingColorFor(heading.level) },
+            fontWeight ? { fontWeight } : null,
+          ]}
+        >
+          {renderInline(heading.text)}
+        </Text>
+        {format === 'org' && heading.tags && heading.tags.map((tag, ti) => (
+          <Text key={`tag-${ti}`} style={[styles.tagChip, { backgroundColor: colors.primary + '15', color: colors.primary }]}>
+            {tag}
+          </Text>
+        ))}
+      </View>
     );
   };
 
@@ -436,6 +478,64 @@ export default function NeorgRenderer({ blocks, format = 'neorg' }: NeorgRendere
         return block.text ? renderQuote(block.text, index) : null;
       case 'divider':
         return renderDivider(index);
+      case 'timestamp':
+        return block.timestamp ? (
+          <View key={`ts-${index}`} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+            <Text selectable style={{ fontSize: 14, color: colors.textSecondary }}>
+              {block.timestamp.type === 'scheduled' ? '📅 SCHEDULED' :
+               block.timestamp.type === 'deadline' ? '⏰ DEADLINE' :
+               block.timestamp.type === 'closed' ? '✅ CLOSED' :
+               block.timestamp.type === 'active' ? '📆' : '📋'} {block.timestamp.date}
+              {block.timestamp.time ? ` ${block.timestamp.time}` : ''}
+            </Text>
+          </View>
+        ) : null;
+      case 'footnote':
+        return block.footnote ? (
+          <View key={`fn-${index}`} style={{ marginBottom: 8, paddingLeft: 16 }}>
+            <Text selectable style={{ fontSize: 12, fontWeight: '600', color: colors.primary }}>
+              [^{block.footnote.label}]
+            </Text>
+            <Text selectable style={{ fontSize: 14, lineHeight: 20, marginLeft: 16, marginTop: 2, color: colors.textSecondary }}>
+              {block.footnote.content}
+            </Text>
+          </View>
+        ) : null;
+      case 'drawer':
+        return block.drawer ? (
+          <View key={`dr-${index}`} style={{ padding: 8, borderRadius: 4, marginVertical: 4, backgroundColor: colors.surfaceSecondary, opacity: 0.7 }}>
+            <Text selectable style={{ fontSize: 12, fontWeight: '600', color: colors.textSecondary, marginBottom: 4 }}>
+              :{block.drawer.name}:
+            </Text>
+            {Object.entries(block.drawer.properties).map(([key, value]) => (
+              <Text key={key} selectable style={{ fontSize: 12, fontFamily: 'monospace', color: colors.textSecondary }}>
+                :{key}: {value}
+              </Text>
+            ))}
+          </View>
+        ) : null;
+      case 'fixed-width':
+        return block.text ? (
+          <Text key={`fw-${index}`} selectable style={{ fontFamily: 'monospace', fontSize: 14, paddingVertical: 2, color: colors.text }}>
+            {block.text}
+          </Text>
+        ) : null;
+      case 'image':
+        return block.image ? (
+          <View key={`img-${index}`} style={{ padding: 8, borderRadius: 4, marginVertical: 4, backgroundColor: colors.surfaceSecondary, alignItems: 'center' }}>
+            <Text selectable style={{ fontSize: 14, color: colors.text }}>📷 {block.image.path}</Text>
+            {block.image.caption ? <Text selectable style={{ fontSize: 12, color: colors.textSecondary }}>{block.image.caption}</Text> : null}
+          </View>
+        ) : null;
+      case 'math':
+        return block.math ? (
+          <View key={`math-${index}`} style={[styles.codeBlock, { backgroundColor: codeBg }]}>
+            <Text selectable style={{ fontSize: 12, fontWeight: '600', color: colors.textSecondary, marginBottom: 4 }}>MATH</Text>
+            <Text selectable style={{ fontFamily: 'monospace', fontSize: 14, color: codeText }}>{block.math.content}</Text>
+          </View>
+        ) : null;
+      case 'comment':
+        return null;
       default:
         return null;
     }
@@ -572,4 +672,7 @@ const styles = StyleSheet.create({
     height: 1,
     marginVertical: 16,
   },
+  todoBadge: { fontSize: 12, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, overflow: 'hidden' },
+  priorityBadge: { fontSize: 11, paddingHorizontal: 4, paddingVertical: 1, borderRadius: 3, overflow: 'hidden' },
+  tagChip: { fontSize: 11, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10, overflow: 'hidden' },
 });
