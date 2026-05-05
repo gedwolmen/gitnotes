@@ -505,10 +505,6 @@ export function SettingsContent(props: SettingsContentProps) {
           <Text style={[styles.settingLabel, { color: colors.text }]}>Version</Text>
           <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{Constants.expoConfig?.version ?? '—'}</Text>
         </View>
-        <View style={[styles.settingItem, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.settingLabel, { color: colors.text }]}>Build</Text>
-          <Text style={[styles.settingValue, { color: colors.textSecondary }]}>2026.04.07</Text>
-        </View>
         <TouchableOpacity style={[styles.settingItem, { borderBottomColor: colors.border }]} onPress={onManageTemplates}>
           <Text style={[styles.settingLabel, { color: colors.text }]}>Manage templates</Text>
         </TouchableOpacity>
