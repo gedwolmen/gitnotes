@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
 import { Group, GroupRow, Toggle } from '../ui';
+import { ImportSection } from './ImportSection';
 import { settingsStyles as styles } from './settingsStyles';
 import type { GitRepository } from '../../services/GitService';
 import type { TemplateRepoPreference } from '../../services/TemplateRepoPreferenceService';
@@ -462,7 +463,9 @@ export function SettingsContent(props: SettingsContentProps) {
         </TouchableOpacity>
       </View>
 
-      <View style={[styles.section, { backgroundColor: colors.surface }]}> 
+      <ImportSection />
+
+      <View style={[styles.section, { backgroundColor: colors.surface }]}>
         <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>About</Text>
         <View style={[styles.settingItem, { borderBottomColor: colors.border }]}>
           <Text style={[styles.settingLabel, { color: colors.text }]}>Version</Text>
