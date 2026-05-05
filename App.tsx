@@ -21,6 +21,7 @@ import { CanvasProvider } from './src/contexts/CanvasContext';
 import { RepoProvider } from './src/contexts/RepoContext';
 import { BiometricLockProvider } from './src/contexts/BiometricLockContext';
 import { BiometricLockScreen } from './src/components/BiometricLockScreen';
+import { BacklinksProvider } from './src/contexts/BacklinksContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import { OnboardingService } from './src/services/OnboardingService';
@@ -95,20 +96,22 @@ export default function App() {
           <RepoProvider>
             <FolderProvider>
               <NoteProvider>
-                <TodoProvider>
-                  <CanvasProvider>
-                    <ViewModeProvider>
-                      <BiometricLockProvider>
-                        <StatusBar style="auto" />
-                        <StartupSyncGate>
-                          <AppNavigator />
-                        </StartupSyncGate>
-                        <GitHubActivityIndicator />
-                        <BiometricLockScreen />
-                      </BiometricLockProvider>
-                    </ViewModeProvider>
-                  </CanvasProvider>
-                </TodoProvider>
+                <BacklinksProvider>
+                  <TodoProvider>
+                    <CanvasProvider>
+                      <ViewModeProvider>
+                        <BiometricLockProvider>
+                          <StatusBar style="auto" />
+                          <StartupSyncGate>
+                            <AppNavigator />
+                          </StartupSyncGate>
+                          <GitHubActivityIndicator />
+                          <BiometricLockScreen />
+                        </BiometricLockProvider>
+                      </ViewModeProvider>
+                    </CanvasProvider>
+                  </TodoProvider>
+                </BacklinksProvider>
               </NoteProvider>
             </FolderProvider>
           </RepoProvider>
