@@ -15,13 +15,25 @@ export const TIMEOUT_OPTIONS = [
 
 export type LockTimeout = (typeof TIMEOUT_OPTIONS)[number]['value'];
 
+export type BiometricKind = 'face' | 'fingerprint' | 'iris' | 'unknown';
+
 interface BiometricLockContextType {
   isLockEnabled: boolean;
-  setIsLockEnabled: (v: boolean) => void;
+  /**
+   * Toggles the lock setting after a successful biometric prompt. Resolves
+   * `true` when persisted, `false` when the user cancelled or auth failed.
+   * Required for both enable and disable so the setting can't be flipped
+   * by anyone with a briefly-unlocked device. (#544)
+   */
+  setIsLockEnabled: (v: boolean) => Promise<boolean>;
   lockTimeout: LockTimeout;
   setLockTimeout: (v: LockTimeout) => void;
   isLocked: boolean;
   isBiometricAvailable: boolean;
+  /** Detected biometric kind so UI can pick the right icon + copy. */
+  biometricKind: BiometricKind;
+  /** "Face ID" / "Touch ID" / "Biometrics" — for prompt + label text. */
+  biometricLabel: string;
   authenticate: () => Promise<boolean>;
 }
 
@@ -36,6 +48,9 @@ export function BiometricLockProvider({ children }: BiometricLockProviderProps) 
   const [lockTimeout, setLockTimeoutState] = useState<LockTimeout>(300_000);
   const [isLocked, setIsLocked] = useState(false);
   const [isBiometricAvailable, setIsBiometricAvailable] = useState(false);
+  const [supportedAuthTypes, setSupportedAuthTypes] = useState<
+    LocalAuthentication.AuthenticationType[]
+  >([]);
   const backgroundTimeRef = useRef<number | null>(null);
   const isInitializedRef = useRef(false);
 
@@ -44,8 +59,34 @@ export function BiometricLockProvider({ children }: BiometricLockProviderProps) 
       const compatible = await LocalAuthentication.hasHardwareAsync();
       const enrolled = await LocalAuthentication.isEnrolledAsync();
       setIsBiometricAvailable(compatible && enrolled);
+      if (compatible) {
+        const types = await LocalAuthentication.supportedAuthenticationTypesAsync();
+        setSupportedAuthTypes(types);
+      }
     })();
   }, []);
+
+  const biometricKind = useMemo<BiometricKind>(() => {
+    if (
+      supportedAuthTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)
+    ) {
+      return 'face';
+    }
+    if (supportedAuthTypes.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
+      return 'fingerprint';
+    }
+    if (supportedAuthTypes.includes(LocalAuthentication.AuthenticationType.IRIS)) {
+      return 'iris';
+    }
+    return 'unknown';
+  }, [supportedAuthTypes]);
+
+  const biometricLabel = useMemo(() => {
+    if (biometricKind === 'face') return 'Face ID';
+    if (biometricKind === 'fingerprint') return 'Touch ID';
+    if (biometricKind === 'iris') return 'Iris';
+    return 'Biometrics';
+  }, [biometricKind]);
 
   useEffect(() => {
     (async () => {
@@ -64,13 +105,30 @@ export function BiometricLockProvider({ children }: BiometricLockProviderProps) 
     })();
   }, []);
 
-  const setIsLockEnabled = useCallback(async (v: boolean) => {
-    setIsLockEnabledState(v);
-    await AsyncStorage.setItem(STORAGE_KEY_ENABLED, String(v));
-    if (!v) {
-      setIsLocked(false);
-    }
-  }, []);
+  const setIsLockEnabled = useCallback(
+    async (v: boolean): Promise<boolean> => {
+      // #544: require biometric auth before flipping the setting in either
+      // direction so anyone with a briefly-unlocked device can't bypass the
+      // lock by toggling it off.
+      try {
+        const result = await LocalAuthentication.authenticateAsync({
+          promptMessage: v
+            ? `Enable ${biometricLabel} lock`
+            : `Disable ${biometricLabel} lock`,
+          fallbackLabel: 'Use passcode',
+          cancelLabel: 'Cancel',
+        });
+        if (!result.success) return false;
+      } catch {
+        return false;
+      }
+      setIsLockEnabledState(v);
+      await AsyncStorage.setItem(STORAGE_KEY_ENABLED, String(v));
+      if (!v) setIsLocked(false);
+      return true;
+    },
+    [biometricLabel],
+  );
 
   const setLockTimeout = useCallback(async (v: LockTimeout) => {
     setLockTimeoutState(v);
@@ -80,7 +138,7 @@ export function BiometricLockProvider({ children }: BiometricLockProviderProps) 
   const authenticate = useCallback(async (): Promise<boolean> => {
     try {
       const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Unlock GitNotēs',
+        promptMessage: `Unlock GitNotēs with ${biometricLabel}`,
         fallbackLabel: 'Use passcode',
         cancelLabel: 'Cancel',
       });
@@ -92,7 +150,7 @@ export function BiometricLockProvider({ children }: BiometricLockProviderProps) 
     } catch {
       return false;
     }
-  }, []);
+  }, [biometricLabel]);
 
   useEffect(() => {
     const handleAppState = (nextState: AppStateStatus) => {
@@ -121,9 +179,21 @@ export function BiometricLockProvider({ children }: BiometricLockProviderProps) 
       setLockTimeout,
       isLocked,
       isBiometricAvailable,
+      biometricKind,
+      biometricLabel,
       authenticate,
     }),
-    [isLockEnabled, setIsLockEnabled, lockTimeout, setLockTimeout, isLocked, isBiometricAvailable, authenticate],
+    [
+      isLockEnabled,
+      setIsLockEnabled,
+      lockTimeout,
+      setLockTimeout,
+      isLocked,
+      isBiometricAvailable,
+      biometricKind,
+      biometricLabel,
+      authenticate,
+    ],
   );
 
   return (
