@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StorageService } from './StorageService';
 import { GitHubService } from './GitHubService';
 import { parseRepoPath } from '../utils/gitPathParser';
+import { fetchGitHubDefaultBranch } from './git/branchResolver';
 
 export interface GitRepository {
   id: string;
@@ -67,10 +68,15 @@ export class GitService {
   static async addRepository(path: string, name?: string): Promise<GitRepository> {
     try {
       const repoName = name || path.split('/').pop() || path;
+      // Capture the remote's actual default branch at add-time so clone +
+      // sync paths don't fall back to a hardcoded 'main' (#543). Best-effort:
+      // offline / 404 leaves `branch` undefined; the resolver re-tries lazily.
+      const branch = (await fetchGitHubDefaultBranch(path)) ?? undefined;
       const repo: GitRepository = {
         id: Date.now().toString(),
         name: repoName,
         path: path,
+        branch,
       };
 
       await StorageService.addRepository(repo);

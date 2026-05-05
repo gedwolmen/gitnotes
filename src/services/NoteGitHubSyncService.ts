@@ -5,6 +5,7 @@ import { parseRepoPath } from '../utils/gitPathParser';
 import { AuthService } from './AuthService';
 import { SyncEngineService } from './SyncEngineService';
 import { LocalGitWriter } from './git/LocalGitWriter';
+import { resolveBranch } from './git/branchResolver';
 
 async function resolveAuthor(): Promise<{ name: string; email: string }> {
   const user = GitHubService.getUser();
@@ -300,7 +301,7 @@ export async function deleteNoteFromGitHub(params: {
     return { success: false, error: `Invalid repo path: ${repoPath}` };
   }
 
-  const targetBranch = branch || 'main';
+  const targetBranch = await resolveBranch(repoPath, branch);
   const opts = tokenOverride ? { tokenOverride } : undefined;
 
   const mode = await SyncEngineService.getMode(repoPath);
@@ -369,7 +370,7 @@ export async function syncNoteToGitHub(params: {
     return { success: false, error: `Invalid repo path: ${repoPath}` };
   }
 
-  const targetBranch = branch || 'main';
+  const targetBranch = await resolveBranch(repoPath, branch);
   const ext = getExtension(format);
   const opts = tokenOverride ? { tokenOverride } : undefined;
 

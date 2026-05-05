@@ -4,6 +4,7 @@ import { parseRepoPath } from '../utils/gitPathParser';
 import { AuthService } from './AuthService';
 import { SyncEngineService } from './SyncEngineService';
 import { LocalGitWriter } from './git/LocalGitWriter';
+import { resolveBranch } from './git/branchResolver';
 
 async function resolveToken(accountId?: string): Promise<string | undefined> {
   if (!accountId) return undefined;
@@ -37,7 +38,7 @@ export async function syncCanvasToGitHub(params: {
     return { success: false, error: `Invalid repo path: ${repoPath}` };
   }
 
-  const targetBranch = branch || 'main';
+  const targetBranch = await resolveBranch(repoPath, branch);
   const opts = tokenOverride ? { tokenOverride } : undefined;
 
   let targetPath = filePath;
@@ -117,7 +118,7 @@ export async function deleteCanvasFromGitHub(params: {
     return { success: false, error: `Invalid repo path: ${repoPath}` };
   }
 
-  const targetBranch = branch || 'main';
+  const targetBranch = await resolveBranch(repoPath, branch);
   const opts = tokenOverride ? { tokenOverride } : undefined;
 
   const mode = await SyncEngineService.getMode(repoPath);
