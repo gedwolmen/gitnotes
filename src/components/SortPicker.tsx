@@ -11,6 +11,11 @@ export interface SortPickerProps {
   currentSort: SortMode;
   onSortChange: (mode: SortMode) => void;
   entityType: EntityType;
+  /**
+   * `chip` matches the 32px filter-chip row used in NotesListHeader.
+   * `bar` matches the 40px SearchBar row used in TodosListHeader.
+   */
+  size?: 'chip' | 'bar';
 }
 
 const SORT_FIELDS: Array<{ field: SortField; label: string }> = [
@@ -49,10 +54,17 @@ function formatSortLabel(mode: SortMode): string {
   return `${DIRECTION_LABELS[mode.field][mode.direction]} ${SORT_FIELDS.find((item) => item.field === mode.field)?.label ?? ''}`;
 }
 
-export default function SortPicker({ currentSort, onSortChange, entityType }: SortPickerProps) {
+export default function SortPicker({ currentSort, onSortChange, entityType, size = 'chip' }: SortPickerProps) {
   const { colors, tokens } = useTheme();
   const [open, setOpen] = useState(false);
   const [isHydrating, setIsHydrating] = useState(true);
+  const isBar = size === 'bar';
+  const triggerHeight = isBar ? 40 : 32;
+  const triggerPadH = isBar ? 14 : 10;
+  const triggerRadius = triggerHeight / 2;
+  const triggerGap = isBar ? 6 : 4;
+  const iconSize = isBar ? 16 : 14;
+  const textSize = isBar ? 13 : 12;
 
   const storageKey = useMemo(() => `sort-${entityType}`, [entityType]);
 
@@ -101,17 +113,17 @@ export default function SortPicker({ currentSort, onSortChange, entityType }: So
         style={{
           flexDirection: 'row',
           alignItems: 'center',
-          gap: tokens.spacing[2],
-          paddingHorizontal: tokens.spacing[3],
-          paddingVertical: tokens.spacing[2],
-          borderRadius: tokens.radii.pill,
+          height: triggerHeight,
+          gap: triggerGap,
+          paddingHorizontal: triggerPadH,
+          borderRadius: triggerRadius,
           backgroundColor: colors.surface,
           borderWidth: 1,
           borderColor: colors.border,
         }}
       >
-        <Ionicons name="swap-vertical" size={16} color={colors.primary} />
-        <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{formatSortLabel(currentSort)}</Text>
+        <Ionicons name="swap-vertical" size={iconSize} color={colors.primary} />
+        <Text style={{ color: colors.textSecondary, fontSize: textSize }}>{formatSortLabel(currentSort)}</Text>
       </TouchableOpacity>
 
       <Modal visible={open} onRequestClose={() => setOpen(false)} fullWidth>

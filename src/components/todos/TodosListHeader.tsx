@@ -21,7 +21,7 @@ export function TodosListHeader({ searchQuery, onSearchChange, sortMode, onSortC
         placeholder="Search todos..."
         style={styles.searchBar}
       />
-      <SortPicker currentSort={sortMode} onSortChange={onSortChange} entityType="todos" />
+      <SortPicker currentSort={sortMode} onSortChange={onSortChange} entityType="todos" size="bar" />
     </View>
   );
 }
