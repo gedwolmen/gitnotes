@@ -142,23 +142,35 @@ export function ImportSection() {
         onPress={isImporting ? undefined : handleImportGoogleKeep}
         disabled={isImporting}
         leading={<Ionicons name="logo-google" size={20} color={colors.text} />}
-        trailing={importing === 'google' ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
+        trailing={
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Chip label="BETA" />
+            {importing === 'google' ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            )}
+          </View>
+        }
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <Text style={{ fontSize: 16, color: colors.text }}>Import from Google Keep</Text>
-          <Chip label="BETA" />
-        </View>
+        <Text style={{ fontSize: 16, color: colors.text }}>Import from Google Keep</Text>
       </GroupRow>
       <GroupRow
         onPress={isImporting ? undefined : handleImportAppleNotes}
         disabled={isImporting}
         leading={<Ionicons name="logo-apple" size={20} color={colors.text} />}
-        trailing={importing === 'apple' ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
+        trailing={
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Chip label="BETA" />
+            {importing === 'apple' ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            )}
+          </View>
+        }
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <Text style={{ fontSize: 16, color: colors.text }}>Import from Apple Notes</Text>
-          <Chip label="BETA" />
-        </View>
+        <Text style={{ fontSize: 16, color: colors.text }}>Import from Apple Notes</Text>
       </GroupRow>
     </Group>
   );
