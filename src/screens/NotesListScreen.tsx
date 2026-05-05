@@ -89,6 +89,8 @@ export default function NotesListScreen() {
     allTags,
     allFolders,
     allBranches,
+    sortMode,
+    setSortMode,
     handleClearFilters,
     handleSelectRepo,
     handleSelectFormat,
@@ -308,6 +310,8 @@ export default function NotesListScreen() {
         hasActiveSearch={hasActiveSearch}
         searchMatchCount={searchMatchCount}
         currentSearchMatchIndex={currentSearchMatchIndex}
+        sortMode={sortMode}
+        onSortChange={setSortMode}
         onToggleViewModePicker={() => setShowViewModePicker((previous) => !previous)}
         onOpenFilters={() => setShowFilterModal(true)}
         onManualSync={handleManualSync}

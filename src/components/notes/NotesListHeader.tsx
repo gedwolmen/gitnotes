@@ -3,10 +3,12 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator
 import { Ionicons } from '@expo/vector-icons';
 
 import SearchBar from '../SearchBar';
+import SortPicker from '../SortPicker';
 import { useTheme } from '../../contexts/ThemeContext';
 import { HapticService } from '../../utils/haptics';
 import { GitRepository } from '../../services/GitService';
 import { ViewMode, VIEW_MODE_ICONS } from '../../utils/viewModes';
+import { SortMode } from '../../types/SortTypes';
 
 interface NotesListHeaderProps {
   searchQuery: string;
@@ -20,6 +22,8 @@ interface NotesListHeaderProps {
   hasActiveSearch: boolean;
   searchMatchCount: number;
   currentSearchMatchIndex: number;
+  sortMode: SortMode;
+  onSortChange: (mode: SortMode) => void;
   onToggleViewModePicker: () => void;
   onOpenFilters: () => void;
   onManualSync: () => void;
@@ -39,6 +43,8 @@ export function NotesListHeader({
   hasActiveSearch,
   searchMatchCount,
   currentSearchMatchIndex,
+  sortMode,
+  onSortChange,
   onToggleViewModePicker,
   onOpenFilters,
   onManualSync,
@@ -165,6 +171,7 @@ export function NotesListHeader({
             </TouchableOpacity>
           );
         })}
+        <SortPicker currentSort={sortMode} onSortChange={onSortChange} entityType="notes" />
       </ScrollView>
 
       {hasActiveSearch ? (

@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 
 import { useEntityList } from '../../hooks/useEntityList';
 import { Note, NoteColor, NOTE_COLOR_VALUES, NoteFormat } from '../../models/Note';
+import { SortMode } from '../../types/SortTypes';
 import { GitRepository } from '../../services/GitService';
 import {
   INITIAL_NOTES_LIST_FILTERS,
@@ -10,6 +11,18 @@ import {
   noteMatchesListFilters,
 } from './notesShared';
 
+function compareNotes(a: Note, b: Note, mode: SortMode): number {
+  const dir = mode.direction === 'asc' ? 1 : -1;
+  switch (mode.field) {
+    case 'modified':
+      return dir * (a.updatedAt - b.updatedAt);
+    case 'created':
+      return dir * (a.createdAt - b.createdAt);
+    case 'title':
+      return dir * a.title.localeCompare(b.title);
+  }
+}
+
 interface UseNotesListFiltersArgs {
   notes: Note[];
   filteredNotes: Note[];
@@ -17,10 +30,17 @@ interface UseNotesListFiltersArgs {
 }
 
 export function useNotesListFilters({ notes, filteredNotes, searchQuery }: UseNotesListFiltersArgs) {
-  const { filteredData, filters: rawFilters, setFilters } = useEntityList<Note>({
+  const {
+    filteredData,
+    filters: rawFilters,
+    setFilters,
+    sortMode,
+    setSortMode,
+  } = useEntityList<Note>({
     data: filteredNotes,
     searchFields: ['title'],
     entityName: 'notes',
+    sortFn: compareNotes,
     initialFilters: INITIAL_NOTES_LIST_FILTERS,
     filterFn: (note, filters) => noteMatchesListFilters(note, filters as NotesListFilters),
   });
@@ -152,6 +172,8 @@ export function useNotesListFilters({ notes, filteredNotes, searchQuery }: UseNo
     allTags,
     allFolders,
     allBranches,
+    sortMode,
+    setSortMode,
     handleClearFilters,
     handleSelectRepo,
     handleSelectFormat,

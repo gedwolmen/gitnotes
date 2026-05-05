@@ -8,7 +8,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTodos } from '../contexts/TodoContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { compareTodos, slugifyTodoText, Todo, TodoPriority } from '../models/Todo';
+import { slugifyTodoText, Todo, TodoPriority } from '../models/Todo';
+import { SortMode } from '../types/SortTypes';
 import { HapticService } from '../utils/haptics';
 import { useResponsive } from '../hooks/useResponsive';
 import { syncTodoToGitHub } from '../services/TodoGitHubSyncService';
@@ -65,10 +66,23 @@ export default function TodoListScreen() {
     filteredData: filteredTodos,
     searchQuery,
     setSearchQuery,
+    sortMode,
+    setSortMode,
   } = useEntityList<Todo>({
     data: todosAfterEntityFilters,
     searchFields: ['text', 'notes', 'tags'],
-    sortFn: (a, b) => compareTodos(a, b),
+    sortFn: (a, b, mode: SortMode) => {
+      if (a.completed !== b.completed) return a.completed ? 1 : -1;
+      const dir = mode.direction === 'asc' ? 1 : -1;
+      switch (mode.field) {
+        case 'modified':
+          return dir * (a.updatedAt - b.updatedAt);
+        case 'created':
+          return dir * (a.createdAt - b.createdAt);
+        case 'title':
+          return dir * a.text.localeCompare(b.text);
+      }
+    },
     entityName: 'todo',
   });
 
@@ -355,7 +369,7 @@ export default function TodoListScreen() {
         <OfflineBanner />
       </View>
 
-      <TodosListHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+      <TodosListHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} sortMode={sortMode} onSortChange={setSortMode} />
 
       <ActiveFilterStrip filter={filter} />
 
