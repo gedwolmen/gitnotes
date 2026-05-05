@@ -158,7 +158,26 @@ export default function FileViewerScreen() {
           ) : mode === 'json' ? (
             <JsonRenderer content={renderContent} />
           ) : (mode === 'neorg' || mode === 'org') && parsedNeorg ? (
-            <StructuredRenderer blocks={parsedNeorg} format={mode === 'org' ? 'org' : 'neorg'} />
+            <StructuredRenderer
+              blocks={parsedNeorg}
+              format={mode === 'org' ? 'org' : 'neorg'}
+              currentNotePath={path}
+              onOpenNote={(targetPath: string, fragment?: string) => {
+                const targetTitle = targetPath.split('/').pop() ?? targetPath;
+                (navigation as any).navigate(
+                  'FileViewer' as never,
+                  {
+                    owner,
+                    repo,
+                    branch,
+                    path: targetPath,
+                    title: targetTitle,
+                    fragment,
+                  } as never,
+                );
+                return true;
+              }}
+            />
           ) : (
             <Text
               style={[

@@ -54,16 +54,16 @@ function findOrgLinks(text: string): RawMatch[] {
   const linkRegex = /\[\[([^\]]+)\](?:\[([^\]]*)\])?\]/g;
   let match: RegExpExecArray | null;
 
-  while ((match = linkRegex.exec(text)) !== null) {
-    const target = match[1];
-    const label = match[2] ?? target;
-    results.push({
-      type: 'bold',
-      start: match.index,
-      end: match.index + match[0].length,
-      content: label,
-      verbatim: true,
-    });
+    while ((match = linkRegex.exec(text)) !== null) {
+      const target = match[1];
+      const label = match[2] ?? target;
+      results.push({
+      type: 'link',
+        start: match.index,
+        end: match.index + match[0].length,
+        content: label,
+        verbatim: true,
+      });
   }
 
   return results;
@@ -224,6 +224,8 @@ export class OrgInlineParser {
           return `\`${markup.content}\``;
         case 'org-code':
           return `\`${markup.content}\``;
+        case 'link':
+          return markup.content;
         default:
           return markup.content;
       }
@@ -253,6 +255,7 @@ export class OrgInlineParser {
         verbatim: ['mono'],
         'org-code': ['mono'],
         'org-strike': ['lineThrough'],
+        link: [],
       };
 
       return {

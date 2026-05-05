@@ -41,6 +41,46 @@ export function extractTocFromMarkdown(content: string): TocEntry[] {
   return out;
 }
 
+export function extractTocFromNorg(content: string): TocEntry[] {
+  const out: TocEntry[] = [];
+  const lines = content.split('\n');
+  let inCode = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^\s*@code/.test(line)) { inCode = true; continue; }
+    if (/^\s*@end/.test(line) && inCode) { inCode = false; continue; }
+    if (inCode) continue;
+
+    const match = line.match(/^(\*{1,6})\s+(.+?)\s*$/);
+    if (match) {
+      out.push({ level: match[1].length, text: match[2].trim(), lineIndex: i });
+    }
+  }
+
+  return out;
+}
+
+export function extractTocFromOrg(content: string): TocEntry[] {
+  const out: TocEntry[] = [];
+  const lines = content.split('\n');
+  let inSrc = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^\s*#\+BEGIN_SRC/.test(line)) { inSrc = true; continue; }
+    if (/^\s*#\+END_SRC/.test(line) && inSrc) { inSrc = false; continue; }
+    if (inSrc) continue;
+
+    const match = line.match(/^(\*{1,6})\s+(?:TODO|DONE|IN-PROGRESS|WAITING|HOLD|CANCELLED|NEXT)?\s*(.+?)\s*$/i);
+    if (match) {
+      out.push({ level: match[1].length, text: match[2].trim(), lineIndex: i });
+    }
+  }
+
+  return out;
+}
+
 export function slugifyLocal(title: string): string {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'untitled';
 }

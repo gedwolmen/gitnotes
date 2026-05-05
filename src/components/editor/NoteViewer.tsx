@@ -34,6 +34,9 @@ interface NoteViewerProps {
   authToken?: string | null;
   pdfLoadError: { uri: string; message: string } | null;
   onPdfError: (message: string) => void;
+  onOpenNote?: (path: string, fragment?: string) => boolean;
+  currentNotePath?: string;
+  headingPositions?: { current: Map<string, number> };
   previewScrollRef: React.RefObject<ScrollView | null>;
   onPreviewScroll: (event: any) => void;
   onPreviewContentSizeChange: () => void;
@@ -62,6 +65,9 @@ export function NoteViewer({
   authToken,
   pdfLoadError,
   onPdfError,
+  onOpenNote,
+  currentNotePath,
+  headingPositions,
   previewScrollRef,
   onPreviewScroll,
   onPreviewContentSizeChange,
@@ -120,6 +126,9 @@ export function NoteViewer({
         authToken={authToken}
         pdfLoadError={pdfLoadError}
         onPdfError={onPdfError}
+        onOpenNote={onOpenNote}
+        currentNotePath={currentNotePath}
+        headingPositions={headingPositions}
         previewScrollRef={previewScrollRef}
         onScroll={onPreviewScroll}
         onContentSizeChange={onPreviewContentSizeChange}
@@ -129,38 +138,51 @@ export function NoteViewer({
         <BacklinksSection noteId={noteId} onNavigateToNote={onNavigateToNote} />
       ) : null}
 
-      <Modal visible={showToc} onRequestClose={onCloseToc} fullWidth>
-        <Text style={[styles.tocTitle, { color: colors.text }]}>Table of contents</Text>
+      <Modal visible={showToc} onRequestClose={onCloseToc} bottomSheet>
+        <View style={styles.tocHeader}>
+          <Text style={[styles.tocTitle, { color: colors.text }]}>Table of Contents</Text>
+          <TouchableOpacity onPress={onCloseToc} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="close" size={22} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
         {tocEntries.length === 0 ? (
-          <Text style={{ color: colors.textSecondary }}>No headings in this note.</Text>
+          <Text style={{ color: colors.textSecondary, textAlign: 'center', paddingVertical: 24 }}>
+            No headings in this note.
+          </Text>
         ) : (
-          <ScrollView style={{ maxHeight: 360 }}>
-            {tocEntries.map((entry, index) => (
-              <TouchableOpacity
-                key={`${entry.lineIndex}-${index}`}
-                onPress={() => onTocPress(entry)}
-                style={[styles.tocRow, { paddingLeft: 8 + (entry.level - 1) * 14 }]}
-              >
-                <Text
-                  style={[
-                    styles.tocText,
-                    {
-                      color: colors.text,
-                      fontWeight: entry.level <= 2 ? '600' : '400',
-                      fontSize: entry.level === 1 ? 16 : 14,
-                    },
-                  ]}
-                  numberOfLines={2}
+          <ScrollView style={{ maxHeight: 480 }} showsVerticalScrollIndicator={false}>
+            {tocEntries.map((entry, index) => {
+              const levelColors = [colors.primary, colors.primary + '99', colors.textSecondary + '66'];
+              const barColor = levelColors[Math.min(entry.level - 1, 2)];
+              const indent = (entry.level - 1) * 16;
+              return (
+                <TouchableOpacity
+                  key={`${entry.lineIndex}-${index}`}
+                  onPress={() => {
+                    HapticService.light();
+                    onTocPress(entry);
+                  }}
+                  style={[styles.tocRow, { paddingLeft: 12 + indent }]}
                 >
-                  {entry.text}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <View style={[styles.tocLevelBar, { backgroundColor: barColor }]} />
+                  <Text
+                    style={[
+                      styles.tocText,
+                      {
+                        color: colors.text,
+                        fontWeight: entry.level <= 2 ? '600' : '400',
+                        fontSize: entry.level === 1 ? 16 : entry.level === 2 ? 15 : 14,
+                      },
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {entry.text}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
         )}
-        <TouchableOpacity onPress={onCloseToc} style={styles.tocClose}>
-          <Text style={{ color: colors.primary, fontWeight: '600' }}>Close</Text>
-        </TouchableOpacity>
       </Modal>
     </SafeAreaView>
   );
@@ -176,8 +198,31 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
   },
-  tocTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
-  tocRow: { paddingVertical: 8 },
-  tocText: { fontSize: 14 },
-  tocClose: { paddingTop: 12, alignItems: 'flex-end' },
+  tocHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  tocTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  tocRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(128,128,128,0.15)',
+  },
+  tocText: {
+    fontSize: 14,
+    flex: 1,
+  },
+  tocLevelBar: {
+    width: 3,
+    height: 20,
+    borderRadius: 1.5,
+    marginRight: 10,
+  },
 });

@@ -213,6 +213,7 @@ export class NeorgInlineParser {
         verbatim: ['mono'],
         'org-code': ['mono'],
         'org-strike': ['lineThrough'],
+        link: [],
       };
 
       return {
