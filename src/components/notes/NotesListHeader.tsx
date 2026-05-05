@@ -231,8 +231,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   badgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
-  chipRow: { marginHorizontal: 12, marginBottom: 4, minHeight: 50, maxHeight: 50 },
-  chipContent: { gap: 6, paddingTop: 6, paddingBottom: 8, paddingRight: 8 },
+  chipRow: { marginBottom: 4, minHeight: 50, maxHeight: 50 },
+  chipContent: { gap: 6, paddingTop: 6, paddingBottom: 8, paddingHorizontal: 12 },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',

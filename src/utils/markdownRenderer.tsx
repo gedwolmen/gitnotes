@@ -57,6 +57,32 @@ interface CustomRendererDeps {
   approxLinePx?: number;
   currentNotePath?: string;
   onOpenNote?: (path: string) => boolean;
+  /**
+   * Y-offset map populated as headings render via `onLayout`. The link handler
+   * reads from it to scroll to the actual measured heading position instead of
+   * the wildly inaccurate `lineIndex * approxLinePx` heuristic.
+   */
+  headingPositions?: { current: Map<string, number> };
+}
+
+function slugifyHeading(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+function flattenNodeText(input: string | ReactNode | ReactNode[]): string {
+  if (input == null || typeof input === 'boolean') return '';
+  if (typeof input === 'string') return input;
+  if (typeof input === 'number') return String(input);
+  if (Array.isArray(input)) return input.map(flattenNodeText).join('');
+  if (typeof input === 'object' && 'props' in (input as object)) {
+    const children = (input as { props?: { children?: ReactNode } }).props?.children;
+    return flattenNodeText(children ?? '');
+  }
+  return '';
 }
 
 function splitFenceSections(markdown: string): Array<{ text: string; isCodeFence: boolean }> {
@@ -257,6 +283,24 @@ export class NotePreviewRenderer extends Renderer implements RendererInterface {
       ];
   }
 
+  heading(text: string | ReactNode[], styles?: TextStyle): ReactNode {
+    const node = super.heading(text, styles);
+    const positions = this.deps.headingPositions;
+    if (!positions) return node;
+    const slug = slugifyHeading(flattenNodeText(text));
+    if (!slug) return node;
+    return (
+      <View
+        key={this.getKey()}
+        onLayout={(event) => {
+          positions.current.set(slug, event.nativeEvent.layout.y);
+        }}
+      >
+        {node}
+      </View>
+    );
+  }
+
   image(uri: string, alt?: string, _style?: ImageStyle): ReactNode {
     const isCanvas = /canvas-drawings\/canvas-/.test(uri) || /^canvas-/.test(alt ?? '');
     const pngUri = /\.json(\?|$)/i.test(uri) ? uri.split('?')[0].replace(/\.json$/i, '.png') : uri;
@@ -304,15 +348,16 @@ export class NotePreviewRenderer extends Renderer implements RendererInterface {
 
       if (classified.kind === 'anchor') {
         const slug = classified.target;
+        const measuredY = this.deps.headingPositions?.current.get(slug);
+        if (measuredY != null && this.deps.previewScrollRef?.current) {
+          this.deps.previewScrollRef.current.scrollTo({ y: measuredY, animated: true });
+          return;
+        }
+
         const targetLine = (this.deps.previewContent ?? '').split('\n').findIndex((line) => {
           const match = line.match(/^#{1,6}\s+(.+?)\s*#*\s*$/);
           if (!match) return false;
-          const headingSlug = match[1]
-            .toLowerCase()
-            .trim()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-|-$/g, '');
-          return headingSlug === slug;
+          return slugifyHeading(match[1]) === slug;
         });
 
         if (targetLine >= 0 && this.deps.previewScrollRef?.current) {

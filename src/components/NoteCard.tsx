@@ -153,11 +153,13 @@ function NoteCardImpl({
             </Text>
           </View>
         </View>
-        
-        {!showCompact && mergedTags.length > 0 && (
-          <TagChips tags={mergedTags} onTagPress={onTagPress} />
-        )}
       </View>
+
+      {!showCompact && mergedTags.length > 0 && (
+        <View style={styles.tagsRow}>
+          <TagChips tags={mergedTags} onTagPress={onTagPress} />
+        </View>
+      )}
 
       {!showCompact && (note.folderPath || note.repo) && (
         <View style={[styles.repoContainer, { borderTopColor: colors.border }]}> 
@@ -274,6 +276,9 @@ const styles = StyleSheet.create({
   },
   date: {
     fontSize: 12,
+  },
+  tagsRow: {
+    marginTop: 8,
   },
   tagsContainer: {
     flexDirection: 'row',

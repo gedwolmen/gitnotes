@@ -58,6 +58,7 @@ export function useNoteEditorPreview({
   const restoredScrollRef = useRef(false);
   const lastScrollYRef = useRef(0);
   const saveScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const headingPositionsRef = useRef<Map<string, number>>(new Map());
 
   const resolvePdfUrl = useCallback((value: string): string => {
     const trimmed = value.trim();
@@ -72,6 +73,10 @@ export function useNoteEditorPreview({
   }, []);
 
   const previewContent = useMemo(() => getPreviewContent(content, noteFormat), [content, noteFormat]);
+
+  useEffect(() => {
+    headingPositionsRef.current.clear();
+  }, [previewContent]);
   const pdfViewerUri = useMemo(() => resolvePdfUrl(previewContent), [previewContent, resolvePdfUrl]);
 
   const parsedStructuredContent = useMemo(() => {
@@ -111,6 +116,7 @@ export function useNoteEditorPreview({
         approxLinePx: APPROX_LINE_PX,
         currentNotePath,
         onOpenNote: handleOpenLinkedNote,
+        headingPositions: headingPositionsRef,
       }),
     [colors, currentNotePath, handleOpenLinkedNote, isDark, navigation, previewContent],
   );
@@ -161,7 +167,14 @@ export function useNoteEditorPreview({
   const handleTocPress = useCallback((entry: TocEntry) => {
     setShowToc(false);
     requestAnimationFrame(() => {
-      previewScrollRef.current?.scrollTo({ y: entry.lineIndex * APPROX_LINE_PX, animated: true });
+      const slug = entry.text
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+      const measuredY = headingPositionsRef.current.get(slug);
+      const targetY = measuredY ?? entry.lineIndex * APPROX_LINE_PX;
+      previewScrollRef.current?.scrollTo({ y: targetY, animated: true });
     });
   }, []);
 

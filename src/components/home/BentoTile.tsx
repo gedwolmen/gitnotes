@@ -177,7 +177,7 @@ export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph }: 
           ) : null}
         </View>
         <View style={[styles.canvasFooter, { padding: tilePad }]}>
-          <Text style={[styles.title, { color: colors.text, fontSize: TITLE_SIZE[size] }]} numberOfLines={isLarge ? 2 : 1}>
+          <Text style={[styles.title, { color: colors.text, fontSize: TITLE_SIZE[size], lineHeight: Math.round(TITLE_SIZE[size] * 1.3) }]} numberOfLines={isLarge ? 2 : 1}>
             {titleFor(item)}
           </Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary, fontSize: SUB_SIZE[size] }]} numberOfLines={1}>
@@ -230,7 +230,7 @@ export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph }: 
           <Text style={[styles.formatChipText, { color: accent }]}>PDF</Text>
         </View>
         <View style={styles.body}>
-          <Text style={[styles.title, { color: colors.text, fontSize: TITLE_SIZE[size] }]} numberOfLines={isLarge ? 2 : 1}>
+          <Text style={[styles.title, { color: colors.text, fontSize: TITLE_SIZE[size], lineHeight: Math.round(TITLE_SIZE[size] * 1.3) }]} numberOfLines={isLarge ? 2 : 1}>
             {titleFor(item)}
           </Text>
         </View>
@@ -293,7 +293,7 @@ export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph }: 
       ) : null}
       <View style={styles.body}>
         <Text
-          style={[styles.title, { color: colors.text, fontSize: TITLE_SIZE[size] }]}
+          style={[styles.title, { color: colors.text, fontSize: TITLE_SIZE[size], lineHeight: Math.round(TITLE_SIZE[size] * 1.3) }]}
           numberOfLines={isPinned ? 1 : 2}
           onTextLayout={handleTitleLayout}
         >
@@ -379,11 +379,11 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     minHeight: 0,
     marginTop: 10,
-    overflow: 'hidden',
   },
   title: {
     fontWeight: '700',
     letterSpacing: -0.2,
+    includeFontPadding: false,
   },
   subtitle: {
     fontWeight: '500',
