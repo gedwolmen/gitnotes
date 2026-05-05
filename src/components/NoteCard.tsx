@@ -40,6 +40,8 @@ function stripPreview(content: string, noteFormat?: NoteFormat): string {
 }
 import { useTheme } from '../contexts/ThemeContext';
 import { getChecklistProgress, hasChecklists } from '../utils/checklist';
+import { useNoteTags } from '../hooks/useNoteTags';
+import { TagChips } from './TagChips';
 
 interface NoteCardProps {
   note: Note;
@@ -50,6 +52,7 @@ interface NoteCardProps {
   variant?: 'default' | 'card';
   isOffline?: boolean;
   isCached?: boolean;
+  onTagPress?: (tag: string) => void;
 }
 
 function NoteCardImpl({
@@ -61,6 +64,7 @@ function NoteCardImpl({
   variant = 'default',
   isOffline = false,
   isCached = true,
+  onTagPress,
 }: NoteCardProps) {
   const { colors, isDark } = useTheme();
   const { isTablet } = useResponsive();
@@ -77,6 +81,8 @@ function NoteCardImpl({
     if (!hasChecklists(note.content)) return null;
     return getChecklistProgress(note.content);
   }, [note.content]);
+
+  const { allTags: mergedTags } = useNoteTags(note.tags ?? [], note.content ?? '');
 
   return (
     <TouchableOpacity
@@ -148,19 +154,8 @@ function NoteCardImpl({
           </View>
         </View>
         
-        {!showCompact && note.tags && note.tags.length > 0 && (
-          <View style={styles.tagsContainer}>
-            {note.tags.slice(0, 3).map((tag) => (
-              <View key={tag} style={[styles.tag, { backgroundColor: colors.primary + '20' }]}>
-                <Text style={[styles.tagText, { color: colors.primary }]}>{tag}</Text>
-              </View>
-            ))}
-            {note.tags.length > 3 && (
-              <Text style={[styles.moreTagsText, { color: colors.textSecondary }]}>
-                +{note.tags.length - 3}
-              </Text>
-            )}
-          </View>
+        {!showCompact && mergedTags.length > 0 && (
+          <TagChips tags={mergedTags} onTagPress={onTagPress} />
         )}
       </View>
 

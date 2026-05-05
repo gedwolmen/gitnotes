@@ -22,6 +22,7 @@ interface NotesNoteCardProps {
   highlighted: boolean;
   isOffline: boolean;
   isCached: boolean;
+  onTagPress?: (tag: string) => void;
 }
 
 function NotesNoteCardImpl({
@@ -36,6 +37,7 @@ function NotesNoteCardImpl({
   highlighted,
   isOffline,
   isCached,
+  onTagPress,
 }: NotesNoteCardProps) {
   const { colors } = useTheme();
 
@@ -47,6 +49,7 @@ function NotesNoteCardImpl({
       highlighted={highlighted}
       isOffline={isOffline}
       isCached={isCached}
+      onTagPress={onTagPress}
     />
   );
 
@@ -85,7 +88,8 @@ export const NoteCard = memo(NotesNoteCardImpl, (prev, next) => {
     prev.onSwipeableWillClose === next.onSwipeableWillClose &&
     prev.onDelete === next.onDelete &&
     prev.onPress === next.onPress &&
-    prev.onLongPress === next.onLongPress
+    prev.onLongPress === next.onLongPress &&
+    prev.onTagPress === next.onTagPress
   );
 });
 
