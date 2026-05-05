@@ -1,12 +1,12 @@
 import React, { useCallback, useState } from 'react';
-import { Text, ActivityIndicator, Alert } from 'react-native';
+import { Text, View, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import JSZip from 'jszip';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useNotes } from '../../contexts/NoteContext';
-import { Group, GroupRow } from '../ui';
+import { Chip, Group, GroupRow } from '../ui';
 import { parseGoogleKeepTakeout } from '../../services/import/GoogleKeepImporter';
 import { parseAppleNotesExport } from '../../services/import/AppleNotesImporter';
 import { ImportedFile } from '../../services/import/types';
@@ -144,7 +144,10 @@ export function ImportSection() {
         leading={<Ionicons name="logo-google" size={20} color={colors.text} />}
         trailing={importing === 'google' ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
       >
-        <Text style={{ fontSize: 16, color: colors.text }}>Import from Google Keep</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <Text style={{ fontSize: 16, color: colors.text }}>Import from Google Keep</Text>
+          <Chip label="BETA" />
+        </View>
       </GroupRow>
       <GroupRow
         onPress={isImporting ? undefined : handleImportAppleNotes}
@@ -152,7 +155,10 @@ export function ImportSection() {
         leading={<Ionicons name="logo-apple" size={20} color={colors.text} />}
         trailing={importing === 'apple' ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
       >
-        <Text style={{ fontSize: 16, color: colors.text }}>Import from Apple Notes</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <Text style={{ fontSize: 16, color: colors.text }}>Import from Apple Notes</Text>
+          <Chip label="BETA" />
+        </View>
       </GroupRow>
     </Group>
   );

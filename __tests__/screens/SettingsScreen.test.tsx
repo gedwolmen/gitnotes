@@ -263,6 +263,13 @@ jest.mock('../../src/components/ui', () => {
         <Text>{accessibilityLabel}</Text>
       </Pressable>
     ),
+    Chip: ({ label, children }: any) => (
+      <View testID={`chip-${label ?? ''}`}>
+        {label !== undefined ? <Text>{label}</Text> : null}
+        {children}
+      </View>
+    ),
+    Modal: ({ visible, children }: any) => (visible ? <View testID="modal">{children}</View> : null),
   };
 });
 

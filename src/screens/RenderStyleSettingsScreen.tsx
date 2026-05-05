@@ -19,6 +19,7 @@ import { useRenderStyleStore } from '../stores/renderStyleStore';
 import { RenderStyleService, DiscoveredBinding } from '../services/RenderStyleService';
 import { RENDER_FORMATS, formatLabel } from '../types/RenderStyle';
 import { GitHubService } from '../services/GitHubService';
+import { Chip } from '../components/ui';
 import type { RootStackParamList } from '../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'RenderStyleSettings'>;
@@ -119,6 +120,7 @@ export default function RenderStyleSettingsScreen() {
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
           {RENDER_FORMATS.map((fmt) => {
             const hasOverrides = !!settings.formats[fmt] && Object.keys(settings.formats[fmt] ?? {}).length > 0;
+            const isBeta = fmt === 'neorg';
             return (
               <TouchableOpacity
                 key={fmt}
@@ -126,7 +128,10 @@ export default function RenderStyleSettingsScreen() {
                 onPress={() => navigation.navigate('RenderStyleEditor', { format: fmt })}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.rowLabel, { color: colors.text }]}>{formatLabel(fmt)}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <Text style={[styles.rowLabel, { color: colors.text }]}>{formatLabel(fmt)}</Text>
+                    {isBeta ? <Chip label="BETA" /> : null}
+                  </View>
                   <Text style={[styles.rowSubLabel, { color: colors.textSecondary }]}>
                     {hasOverrides ? 'Custom overrides applied' : 'Theme defaults'}
                   </Text>

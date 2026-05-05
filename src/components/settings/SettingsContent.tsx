@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { Group, GroupRow, Toggle } from '../ui';
+import { Group, GroupRow, Modal, Toggle } from '../ui';
 import {
   SUPPORTED_LANGUAGES,
   getLanguagePreference,
@@ -151,12 +151,14 @@ export function SettingsContent(props: SettingsContentProps) {
   } = props;
   const { t } = useTranslation();
   const [languagePref, setLanguagePref] = useState<string>('system');
+  const [showTimeoutPicker, setShowTimeoutPicker] = useState(false);
 
   useEffect(() => {
     getLanguagePreference().then(setLanguagePref);
   }, []);
 
   return (
+    <>
     <ScrollView
       style={styles.scrollContent}
       keyboardShouldPersistTaps="handled"
@@ -247,228 +249,207 @@ export function SettingsContent(props: SettingsContentProps) {
         </GroupRow>
         {isBiometricLockEnabled ? (
           <GroupRow
+            onPress={() => setShowTimeoutPicker(true)}
             trailing={
-              <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
-                {TIMEOUT_OPTIONS.find((o) => o.value === lockTimeout)?.label ?? '5 minutes'}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
+                  {TIMEOUT_OPTIONS.find((o) => o.value === lockTimeout)?.label ?? '5 minutes'}
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+              </View>
             }
           >
             <Text style={[styles.settingLabel, { color: colors.text }]}>Lock Timeout</Text>
           </GroupRow>
         ) : null}
-        {isBiometricLockEnabled ? (
-          <View style={{ paddingHorizontal: 16, paddingVertical: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {TIMEOUT_OPTIONS.map((opt) => (
-              <TouchableOpacity
-                key={opt.value}
-                onPress={() => onSetLockTimeout(opt.value)}
-                style={{
-                  paddingVertical: 6,
-                  paddingHorizontal: 12,
-                  borderRadius: 8,
-                  backgroundColor: lockTimeout === opt.value ? colors.accent : colors.background,
-                  borderWidth: 1,
-                  borderColor: lockTimeout === opt.value ? colors.accent : colors.border,
-                }}
-              >
-                <Text style={{ color: lockTimeout === opt.value ? '#fff' : colors.text, fontSize: 13, fontWeight: '500' }}>
-                  {opt.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        ) : null}
       </Group>
 
-      <View style={[styles.section, { backgroundColor: colors.surface }]}> 
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}> 
-          {accounts.length >= 2 ? 'GitHub Accounts' : 'GitHub Account'}
-        </Text>
-
+      <Group title={accounts.length >= 2 ? 'GitHub Accounts' : 'GitHub Account'}>
         {authState.isAuthenticated ? (
           <>
             {accounts.length >= 2 ? (
               accounts.map((account) => {
                 const isActive = account.id === activeAccountId;
                 return (
-                  <View key={account.id} style={[styles.settingItem, { borderBottomColor: colors.border }]}> 
-                    <TouchableOpacity
-                      style={[styles.authUserRow, { flex: 1 }]}
-                      onPress={() => void onSwitchAccount(account.id)}
-                      disabled={isActive}
-                    >
-                      {account.avatarUrl ? <Image source={{ uri: account.avatarUrl }} style={styles.avatar} /> : null}
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.settingLabel, { color: colors.text }]}> 
-                          {account.name || account.login}
-                          {isActive ? '  ·  Active' : ''}
-                        </Text>
-                        <Text style={[styles.settingValue, { color: colors.textSecondary }]}>@{account.login}</Text>
-                      </View>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => onRemoveAccount(account.id, account.login)} style={{ paddingHorizontal: 8 }}>
-                      <Ionicons name="trash-outline" size={18} color={colors.error} />
-                    </TouchableOpacity>
-                  </View>
+                  <GroupRow
+                    key={account.id}
+                    onPress={isActive ? undefined : () => void onSwitchAccount(account.id)}
+                    disabled={isActive}
+                    leading={account.avatarUrl ? <Image source={{ uri: account.avatarUrl }} style={styles.avatar} /> : null}
+                    trailing={
+                      <TouchableOpacity onPress={() => onRemoveAccount(account.id, account.login)} style={{ paddingHorizontal: 8 }}>
+                        <Ionicons name="trash-outline" size={18} color={colors.error} />
+                      </TouchableOpacity>
+                    }
+                  >
+                    <Text style={[styles.settingLabel, { color: colors.text }]}>
+                      {account.name || account.login}
+                      {isActive ? '  ·  Active' : ''}
+                    </Text>
+                    <Text style={[styles.settingValue, { color: colors.textSecondary }]}>@{account.login}</Text>
+                  </GroupRow>
                 );
               })
             ) : (
-              <View style={[styles.settingItem, { borderBottomColor: colors.border }]}> 
-                <View style={styles.authUserRow}>
-                  {authState.user?.avatar_url ? <Image source={{ uri: authState.user.avatar_url }} style={styles.avatar} /> : null}
-                  <View>
-                    <Text style={[styles.settingLabel, { color: colors.text }]}>{authState.user?.name || authState.user?.login}</Text>
-                    <Text style={[styles.settingValue, { color: colors.textSecondary }]}>@{authState.user?.login}</Text>
-                  </View>
-                </View>
-              </View>
+              <GroupRow
+                leading={authState.user?.avatar_url ? <Image source={{ uri: authState.user.avatar_url }} style={styles.avatar} /> : null}
+              >
+                <Text style={[styles.settingLabel, { color: colors.text }]}>{authState.user?.name || authState.user?.login}</Text>
+                <Text style={[styles.settingValue, { color: colors.textSecondary }]}>@{authState.user?.login}</Text>
+              </GroupRow>
             )}
 
-            <TouchableOpacity style={[styles.settingItem, { borderBottomColor: colors.border }]} onPress={onOpenConnectToken}>
-              <View style={styles.settingLeft}>
-                <Ionicons name="key-outline" size={20} color={colors.text} />
-                <Text style={[styles.settingLabel, { color: colors.text, marginLeft: 12 }]}>
-                  {accounts.length >= 2 ? 'Replace Active Token' : 'Change Token'}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
+            <GroupRow
+              onPress={onOpenConnectToken}
+              leading={<Ionicons name="key-outline" size={20} color={colors.text} />}
+              trailing={<Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
+            >
+              <Text style={[styles.settingLabel, { color: colors.text }]}>
+                {accounts.length >= 2 ? 'Replace Active Token' : 'Change Token'}
+              </Text>
+            </GroupRow>
 
-            <TouchableOpacity style={[styles.settingItem, { borderBottomColor: colors.border }]} onPress={onOpenAddAccount}>
-              <View style={styles.settingLeft}>
-                <Ionicons name="person-add-outline" size={20} color={colors.text} />
-                <Text style={[styles.settingLabel, { color: colors.text, marginLeft: 12 }]}>Add another account</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
+            <GroupRow
+              onPress={onOpenAddAccount}
+              leading={<Ionicons name="person-add-outline" size={20} color={colors.text} />}
+              trailing={<Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
+            >
+              <Text style={[styles.settingLabel, { color: colors.text }]}>Add another account</Text>
+            </GroupRow>
 
             {accounts.length < 2 ? (
-              <TouchableOpacity style={[styles.settingItem, { borderBottomColor: colors.border }]} onPress={onRemoveToken}>
+              <GroupRow onPress={onRemoveToken}>
                 <Text style={[styles.settingLabel, { color: colors.error }]}>Remove GitHub Account</Text>
-              </TouchableOpacity>
+              </GroupRow>
             ) : null}
           </>
         ) : (
-          <TouchableOpacity style={[styles.settingItem, { borderBottomColor: colors.border }]} onPress={onOpenConnectToken}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="logo-github" size={20} color={colors.text} />
-              <Text style={[styles.settingLabel, { color: colors.text, marginLeft: 12 }]}>Connect GitHub</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
+          <GroupRow
+            onPress={onOpenConnectToken}
+            leading={<Ionicons name="logo-github" size={20} color={colors.text} />}
+            trailing={<Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
+          >
+            <Text style={[styles.settingLabel, { color: colors.text }]}>Connect GitHub</Text>
+          </GroupRow>
         )}
-      </View>
+      </Group>
 
-      <View style={[styles.section, { backgroundColor: colors.surface }]}> 
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Repositories</Text>
+      <Group title="Repositories">
         {repositories.length === 0 ? (
-          <View style={styles.emptyRepos}>
-            <Ionicons name="code-slash-outline" size={32} color={colors.textSecondary} />
-            <Text style={[styles.emptyReposText, { color: colors.textSecondary }]}>No repositories added yet</Text>
-          </View>
+          <GroupRow>
+            <View style={{ alignItems: 'center', gap: 6, paddingVertical: 8 }}>
+              <Ionicons name="code-slash-outline" size={32} color={colors.textSecondary} />
+              <Text style={[styles.emptyReposText, { color: colors.textSecondary }]}>No repositories added yet</Text>
+            </View>
+          </GroupRow>
         ) : (
           repositories.map((repo) => (
-            <View key={repo.id} style={[styles.repoItem, { borderBottomColor: colors.border }]}> 
-              <Ionicons name="git-branch-outline" size={18} color={colors.primary} />
-              <View style={styles.repoInfo}>
-                <Text style={[styles.repoName, { color: colors.text }]} numberOfLines={1}>{repo.name}</Text>
-                <Text style={[styles.repoPath, { color: colors.textSecondary }]} numberOfLines={1}>{repo.path}</Text>
-              </View>
-              {syncingRepo === repo.path ? (
-                <ActivityIndicator size="small" color={colors.primary} style={styles.syncSpinner} />
-              ) : (
-                <TouchableOpacity onPress={() => onSyncRepo(repo)} style={styles.syncButton} disabled={!!syncingRepo}>
-                  <Ionicons name="cloud-download-outline" size={18} color={colors.primary} />
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity onPress={() => onRemoveRepo(repo)} style={styles.removeButton}>
-                <Ionicons name="trash-outline" size={18} color={colors.error} />
-              </TouchableOpacity>
-            </View>
+            <GroupRow
+              key={repo.id}
+              leading={<Ionicons name="git-branch-outline" size={18} color={colors.primary} />}
+              trailing={
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  {syncingRepo === repo.path ? (
+                    <ActivityIndicator size="small" color={colors.primary} style={{ marginHorizontal: 8 }} />
+                  ) : (
+                    <TouchableOpacity onPress={() => onSyncRepo(repo)} style={{ padding: 8 }} disabled={!!syncingRepo}>
+                      <Ionicons name="cloud-download-outline" size={18} color={colors.primary} />
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity onPress={() => onRemoveRepo(repo)} style={{ padding: 4 }}>
+                    <Ionicons name="trash-outline" size={18} color={colors.error} />
+                  </TouchableOpacity>
+                </View>
+              }
+            >
+              <Text style={[styles.repoName, { color: colors.text }]} numberOfLines={1}>{repo.name}</Text>
+              <Text style={[styles.repoPath, { color: colors.textSecondary }]} numberOfLines={1}>{repo.path}</Text>
+            </GroupRow>
           ))
         )}
-        <TouchableOpacity style={[styles.addRepoButton, { borderColor: colors.primary }]} onPress={onOpenRepoPicker}>
-          <Ionicons name="add" size={20} color={colors.primary} />
-          <Text style={[styles.addRepoButtonText, { color: colors.primary }]}>Add Repository</Text>
-        </TouchableOpacity>
-      </View>
+        <GroupRow
+          onPress={onOpenRepoPicker}
+          leading={<Ionicons name="add" size={20} color={colors.primary} />}
+        >
+          <Text style={[styles.settingLabel, { color: colors.primary, fontWeight: '600' }]}>Add Repository</Text>
+        </GroupRow>
+      </Group>
 
       {repositories.length > 0 ? (
-        <View style={[styles.section, { backgroundColor: colors.surface }]}> 
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Sync engine</Text>
+        <Group title="Sync engine">
           {repositories.map((repo) => {
             const mode = syncModes[repo.path] ?? 'api';
             const isClone = mode === 'clone';
             const isCloning = cloningRepo === repo.path;
             return (
-              <View key={repo.id} style={[styles.repoItem, { borderBottomColor: colors.border }]} testID={`sync-engine-row-${repo.path}`}>
-                <Ionicons name={isClone ? 'cloud-done-outline' : 'cloud-outline'} size={18} color={isClone ? colors.primary : colors.textSecondary} />
-                <View style={styles.repoInfo}>
-                  <Text style={[styles.repoName, { color: colors.text }]} numberOfLines={1}>{repo.name}</Text>
-                  <Text style={[styles.repoPath, { color: colors.textSecondary }]} numberOfLines={1}>
-                    {isClone ? 'Clone (local working tree)' : 'GitHub API (per-file)'}
-                  </Text>
-                </View>
-                {isCloning ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                ) : isClone ? (
-                  <TouchableOpacity testID={`sync-engine-disable-${repo.path}`} onPress={() => onDisableCloneMode(repo)} style={styles.removeButton}>
-                    <Text style={[styles.settingLabel, { color: colors.error }]}>Use API</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity testID={`sync-engine-enable-${repo.path}`} onPress={() => onEnableCloneMode(repo)} style={styles.removeButton}>
-                    <Text style={[styles.settingLabel, { color: colors.primary }]}>Clone</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
+              <GroupRow
+                key={repo.id}
+                testID={`sync-engine-row-${repo.path}`}
+                leading={<Ionicons name={isClone ? 'cloud-done-outline' : 'cloud-outline'} size={18} color={isClone ? colors.primary : colors.textSecondary} />}
+                trailing={
+                  isCloning ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : isClone ? (
+                    <TouchableOpacity testID={`sync-engine-disable-${repo.path}`} onPress={() => onDisableCloneMode(repo)} style={{ padding: 4 }}>
+                      <Text style={[styles.settingLabel, { color: colors.error }]}>Use API</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity testID={`sync-engine-enable-${repo.path}`} onPress={() => onEnableCloneMode(repo)} style={{ padding: 4 }}>
+                      <Text style={[styles.settingLabel, { color: colors.primary }]}>Clone</Text>
+                    </TouchableOpacity>
+                  )
+                }
+              >
+                <Text style={[styles.repoName, { color: colors.text }]} numberOfLines={1}>{repo.name}</Text>
+                <Text style={[styles.repoPath, { color: colors.textSecondary }]} numberOfLines={1}>
+                  {isClone ? 'Clone (local working tree)' : 'GitHub API (per-file)'}
+                </Text>
+              </GroupRow>
             );
           })}
-        </View>
+        </Group>
       ) : null}
 
-      <View style={[styles.section, { backgroundColor: colors.surface }]}> 
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Templates</Text>
-        <TouchableOpacity testID="templates-repo-picker-row" style={[styles.settingItem, { borderBottomColor: colors.border }]} onPress={onOpenTemplatesRepoPicker}>
-          <View style={styles.settingLeft}>
-            <Ionicons name="document-text-outline" size={20} color={colors.text} />
-            <View style={{ marginLeft: 12, flexShrink: 1 }}>
-              <Text style={[styles.settingLabel, { color: colors.text }]}>Templates repository</Text>
-              <Text style={[styles.settingValue, { color: colors.textSecondary, fontSize: 12, marginTop: 2 }]} numberOfLines={1}>
-                {templatesRepoPref ? `${templatesRepoPref.repoPath}@${templatesRepoPref.branch}` : 'Not set'}
-              </Text>
-            </View>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
+      <Group title="Templates">
+        <GroupRow
+          testID="templates-repo-picker-row"
+          onPress={onOpenTemplatesRepoPicker}
+          leading={<Ionicons name="document-text-outline" size={20} color={colors.text} />}
+          trailing={<Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
+        >
+          <Text style={[styles.settingLabel, { color: colors.text }]}>Templates repository</Text>
+          <Text style={[styles.settingValue, { color: colors.textSecondary, fontSize: 12, marginTop: 2 }]} numberOfLines={1}>
+            {templatesRepoPref ? `${templatesRepoPref.repoPath}@${templatesRepoPref.branch}` : 'Not set'}
+          </Text>
+        </GroupRow>
 
         {templatesRepoPref ? (
           <>
-            <TouchableOpacity testID="templates-sync-existing" style={[styles.settingItem, { borderBottomColor: colors.border }]} onPress={onSyncExistingTemplates} disabled={isSyncingExistingTemplates}>
-              <View style={styles.settingLeft}>
-                <Ionicons name="cloud-upload-outline" size={20} color={colors.text} />
-                <Text style={[styles.settingLabel, { color: colors.text, marginLeft: 12, flexShrink: 1 }]} numberOfLines={1}>
-                  Sync custom templates
-                </Text>
-              </View>
-              {isSyncingExistingTemplates ? <ActivityIndicator size="small" color={colors.primary} /> : null}
-            </TouchableOpacity>
-            <TouchableOpacity testID="templates-repo-clear" style={[styles.settingItem, { borderBottomColor: colors.border }]} onPress={onClearTemplatesRepo}>
+            <GroupRow
+              testID="templates-sync-existing"
+              onPress={onSyncExistingTemplates}
+              disabled={isSyncingExistingTemplates}
+              leading={<Ionicons name="cloud-upload-outline" size={20} color={colors.text} />}
+              trailing={isSyncingExistingTemplates ? <ActivityIndicator size="small" color={colors.primary} /> : null}
+            >
+              <Text style={[styles.settingLabel, { color: colors.text }]} numberOfLines={1}>Sync custom templates</Text>
+            </GroupRow>
+            <GroupRow testID="templates-repo-clear" onPress={onClearTemplatesRepo}>
               <Text style={[styles.settingLabel, { color: colors.error }]}>Disconnect templates repo</Text>
-            </TouchableOpacity>
+            </GroupRow>
           </>
         ) : null}
-      </View>
+      </Group>
 
-      <View style={[styles.section, { backgroundColor: colors.surface }]}> 
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Note rendering</Text>
-        <TouchableOpacity style={[styles.settingItem, { borderBottomColor: colors.border }]} onPress={onOpenRenderStyleSettings}>
-          <View style={styles.settingLeft}>
-            <Ionicons name="color-palette-outline" size={20} color={colors.text} />
-            <Text style={[styles.settingLabel, { color: colors.text, marginLeft: 12 }]}>Customize render styles</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
-      </View>
+      <Group title="Note rendering">
+        <GroupRow
+          onPress={onOpenRenderStyleSettings}
+          leading={<Ionicons name="color-palette-outline" size={20} color={colors.text} />}
+          trailing={<Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
+        >
+          <Text style={[styles.settingLabel, { color: colors.text }]}>Customize render styles</Text>
+        </GroupRow>
+      </Group>
 
       <Group title="Sync" footer="Periodically sync notes in the background (every 15 min).">
         <GroupRow
@@ -487,28 +468,27 @@ export function SettingsContent(props: SettingsContentProps) {
         </GroupRow>
       </Group>
 
-      <View style={[styles.section, { backgroundColor: colors.surface }]}> 
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Data</Text>
-        <TouchableOpacity style={[styles.settingItem, { borderBottomColor: colors.border }]} onPress={onClearData}>
+      <Group title="Data">
+        <GroupRow onPress={onClearData}>
           <Text style={[styles.settingLabel, { color: colors.error }]}>Clear All Notes</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.settingItem, { borderBottomColor: colors.border }]} onPress={onResetOnboarding}>
+        </GroupRow>
+        <GroupRow onPress={onResetOnboarding}>
           <Text style={[styles.settingLabel, { color: colors.text }]}>Reset Onboarding</Text>
-        </TouchableOpacity>
-      </View>
+        </GroupRow>
+      </Group>
 
       <ImportSection />
 
-      <View style={[styles.section, { backgroundColor: colors.surface }]}>
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>About</Text>
-        <View style={[styles.settingItem, { borderBottomColor: colors.border }]}>
+      <Group title="About">
+        <GroupRow
+          trailing={<Text style={[styles.settingValue, { color: colors.textSecondary }]}>{Constants.expoConfig?.version ?? '—'}</Text>}
+        >
           <Text style={[styles.settingLabel, { color: colors.text }]}>Version</Text>
-          <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{Constants.expoConfig?.version ?? '—'}</Text>
-        </View>
-        <TouchableOpacity style={[styles.settingItem, { borderBottomColor: colors.border }]} onPress={onManageTemplates}>
+        </GroupRow>
+        <GroupRow onPress={onManageTemplates}>
           <Text style={[styles.settingLabel, { color: colors.text }]}>Manage templates</Text>
-        </TouchableOpacity>
-      </View>
+        </GroupRow>
+      </Group>
 
       <Group title={t('settings.artificialIntelligence')}>
         <GroupRow trailing={<Toggle value={isAIEnabled} onValueChange={onToggleAI} />}>
@@ -552,5 +532,37 @@ export function SettingsContent(props: SettingsContentProps) {
 
       <View style={styles.bottomPad} />
     </ScrollView>
+
+    <Modal
+      visible={showTimeoutPicker}
+      onRequestClose={() => setShowTimeoutPicker(false)}
+      bottomSheet
+      contentStyle={{ padding: 16, paddingBottom: 34 }}
+    >
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <Text style={{ color: colors.text, fontSize: 17, fontWeight: '600' }}>Lock Timeout</Text>
+        <TouchableOpacity onPress={() => setShowTimeoutPicker(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Ionicons name="close" size={22} color={colors.textSecondary} />
+        </TouchableOpacity>
+      </View>
+      <Group>
+        {TIMEOUT_OPTIONS.map((opt) => {
+          const isActive = opt.value === lockTimeout;
+          return (
+            <GroupRow
+              key={opt.value}
+              onPress={() => {
+                onSetLockTimeout(opt.value);
+                setShowTimeoutPicker(false);
+              }}
+              trailing={isActive ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : null}
+            >
+              <Text style={{ color: isActive ? colors.primary : colors.text, fontSize: 16 }}>{opt.label}</Text>
+            </GroupRow>
+          );
+        })}
+      </Group>
+    </Modal>
+    </>
   );
 }
