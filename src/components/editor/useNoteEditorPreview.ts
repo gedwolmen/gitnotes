@@ -6,6 +6,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 import { Note, NoteFormat } from '../../models/Note';
 import { NeorgContentParser } from '../../services/NeorgContentParser';
+import { OrgContentParser } from '../../services/OrgContentParser';
 import { PositionMemoryService } from '../../services/PositionMemoryService';
 import { HapticService } from '../../utils/haptics';
 import { getMarkdownStyles } from '../../utils/preview';
@@ -87,7 +88,8 @@ export function useNoteEditorPreview({
 
   const parsedStructuredContent = useMemo(() => {
     if (noteFormat === 'markdown' || noteFormat === 'pdf') return null;
-    const parsed = NeorgContentParser.parseContent(previewContent);
+    const parser = noteFormat === 'org' ? OrgContentParser : NeorgContentParser;
+    const parsed = parser.parseContent(previewContent);
     if (!parsed.success || !parsed.blocks || parsed.blocks.length === 0) return null;
     return parsed.blocks;
   }, [noteFormat, previewContent]);

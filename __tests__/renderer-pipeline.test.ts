@@ -26,7 +26,7 @@ jest.mock('react-native-webview', () => ({
 }));
 
 import { NotePreviewRenderer } from '../src/utils/markdownRenderer';
-import { createMemoizedNeorgInlineParser, parseNeorgInlineSegments } from '../src/components/NeorgRenderer';
+import { createMemoizedNeorgInlineParser, parseNeorgInlineSegments } from '../src/components/StructuredRenderer';
 import { NeorgContentParser } from '../src/services/NeorgContentParser';
 
 function renderNode(node: React.ReactNode) {

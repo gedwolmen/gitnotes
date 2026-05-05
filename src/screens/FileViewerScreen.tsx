@@ -16,7 +16,8 @@ import { RootStackParamList } from '../navigation/types';
 import { useTheme } from '../contexts/ThemeContext';
 import { GitHubService } from '../services/GitHubService';
 import { NeorgContentParser } from '../services/NeorgContentParser';
-import NeorgRenderer from '../components/NeorgRenderer';
+import { OrgContentParser } from '../services/OrgContentParser';
+import StructuredRenderer from '../components/StructuredRenderer';
 import { JsonRenderer } from '../components/JsonRenderer';
 import { HapticService } from '../utils/haptics';
 import { getMarkdownStyles, stripTopMetadata } from '../utils/preview';
@@ -106,7 +107,8 @@ export default function FileViewerScreen() {
   const parsedNeorg = useMemo(() => {
     if (!renderContent) return null;
     if (mode !== 'neorg' && mode !== 'org') return null;
-    const parsed = NeorgContentParser.parseContent(renderContent);
+    const parser = mode === 'org' ? OrgContentParser : NeorgContentParser;
+    const parsed = parser.parseContent(renderContent);
     return parsed.success && parsed.blocks ? parsed.blocks : null;
   }, [renderContent, mode]);
 
@@ -156,7 +158,7 @@ export default function FileViewerScreen() {
           ) : mode === 'json' ? (
             <JsonRenderer content={renderContent} />
           ) : (mode === 'neorg' || mode === 'org') && parsedNeorg ? (
-            <NeorgRenderer blocks={parsedNeorg} format={mode === 'org' ? 'org' : 'neorg'} />
+            <StructuredRenderer blocks={parsedNeorg} format={mode === 'org' ? 'org' : 'neorg'} />
           ) : (
             <Text
               style={[

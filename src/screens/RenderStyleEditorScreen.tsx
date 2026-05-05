@@ -18,9 +18,10 @@ import type { RouteProp } from '@react-navigation/native';
 
 import { useTheme } from '../contexts/ThemeContext';
 import { useRenderStyleStore } from '../stores/renderStyleStore';
-import NeorgRenderer from '../components/NeorgRenderer';
+import StructuredRenderer from '../components/StructuredRenderer';
 import HexColorPickerModal from '../components/HexColorPickerModal';
 import { NeorgContentParser } from '../services/NeorgContentParser';
+import { OrgContentParser } from '../services/OrgContentParser';
 import { getMarkdownStyles } from '../utils/preview';
 import type { FormatRenderStyle, RenderFormat } from '../types/RenderStyle';
 import { formatLabel } from '../types/RenderStyle';
@@ -31,8 +32,8 @@ type Nav = NativeStackNavigationProp<RootStackParamList, 'RenderStyleEditor'>;
 type RouteParams = RouteProp<RootStackParamList, 'RenderStyleEditor'>;
 
 const SAMPLE_MARKDOWN = `# Heading 1\n## Heading 2\n### Heading 3\n\nBody text with a [link](https://example.com) and \`inline code\`.\n\n> Blockquote line.\n\n\`\`\`\nfenced code block\nlet x = 42;\n\`\`\`\n\n---\n`;
-const SAMPLE_NEORG = `* Heading 1\n** Heading 2\n*** Heading 3\n\nBody text with a {https://example.com}[link] and \`inline code\`.\n\n> Blockquote line.\n\n@code\nfenced code block\nlet x = 42;\n@end\n\n___\n`;
-const SAMPLE_ORG = `* Heading 1\n** Heading 2\n*** Heading 3\n\nBody text with a [[https://example.com][link]] and =inline code=.\n\n#+BEGIN_QUOTE\nBlockquote line.\n#+END_QUOTE\n\n#+BEGIN_SRC\nfenced code block\nlet x = 42;\n#+END_SRC\n\n-----\n`;
+const SAMPLE_NEORG = `* Heading 1\n** Heading 2\n*** Heading 3\n\nBody text with a {https://example.com}[link] and \`inline code\`.\n\n- Unordered item\n- Another item\n\n> Blockquote line.\n\n@code\nfenced code block\nlet x = 42;\n@end\n\n___\n`;
+const SAMPLE_ORG = `* TODO Heading 1\n** DONE Heading 2\n*** Heading 3\n\nBody text with a [[https://example.com][link]] and =inline code= and +strikethrough+.\n\n- Unordered item\n- Another item\n\n#+BEGIN_QUOTE\nBlockquote line.\n#+END_QUOTE\n\n#+BEGIN_SRC javascript\nfenced code block\nlet x = 42;\n#+END_SRC\n\nSCHEDULED: <2025-01-15>\n[fn:1] A footnote definition.\n\n-----\n`;
 
 function sampleFor(format: RenderFormat): string {
   if (format === 'markdown') return SAMPLE_MARKDOWN;
@@ -95,11 +96,12 @@ function MarkdownPreview({ value, format, overrides }: { value: string; format: 
   if (format === 'markdown') {
     return <MarkdownNodes value={value} styles2={styles2} />;
   }
-  const parsed = NeorgContentParser.parseContent(value);
+  const parser = format === 'org' ? OrgContentParser : NeorgContentParser;
+  const parsed = parser.parseContent(value);
   if (!parsed.success || !parsed.blocks) {
     return <Text style={{ color: colors.textSecondary }}>(preview unavailable)</Text>;
   }
-  return <NeorgRenderer blocks={parsed.blocks} format={format} />;
+  return <StructuredRenderer blocks={parsed.blocks} format={format} />;
 }
 
 function MarkdownNodes({ value, styles2 }: { value: string; styles2: ReturnType<typeof getMarkdownStyles> }) {

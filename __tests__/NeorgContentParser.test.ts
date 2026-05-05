@@ -350,4 +350,245 @@ print("code")
       expect(secondChecklist.checklistItems[0].checked).toBe(true);
     });
   });
+
+  describe('NeorgContentParser - Extended Norg Features', () => {
+    describe('Footnotes', () => {
+      test('parses ^ Label with content', () => {
+        const result = NeorgContentParser.parseContent('^ 1\n  This is a footnote');
+        expect(result.success).toBe(true);
+        expect(result.blocks).toHaveLength(1);
+        expect(result.blocks![0]).toMatchObject({
+          type: 'footnote',
+          footnote: { label: '1' },
+        });
+        expect(result.blocks![0].footnote!.content).toContain('This is a footnote');
+      });
+
+      test('parses footnote with multi-line content', () => {
+        const input = '^ mynote\n  First line\n  Second line\n\nParagraph after';
+        const result = NeorgContentParser.parseContent(input);
+        expect(result.success).toBe(true);
+        expect(result.blocks).toHaveLength(2);
+        expect(result.blocks![0]).toMatchObject({
+          type: 'footnote',
+          footnote: { label: 'mynote' },
+        });
+        expect(result.blocks![1].type).toBe('paragraph');
+      });
+
+      test('parses multiple footnotes', () => {
+        const input = '^ note1\n  First footnote\n\n^ note2\n  Second footnote';
+        const result = NeorgContentParser.parseContent(input);
+        expect(result.success).toBe(true);
+        expect(result.blocks).toHaveLength(2);
+        expect(result.blocks![0].footnote!.label).toBe('note1');
+        expect(result.blocks![1].footnote!.label).toBe('note2');
+      });
+    });
+
+    describe('Definition Lists', () => {
+      test('parses $ Term with definition text', () => {
+        const result = NeorgContentParser.parseContent('$ API\n  Application Programming Interface');
+        expect(result.success).toBe(true);
+        expect(result.blocks).toHaveLength(1);
+        expect(result.blocks![0]).toMatchObject({ type: 'definition' });
+        expect(result.blocks![0].definitionItems![0].term).toBe('API');
+      });
+
+      test('parses $ Term with multi-line definition', () => {
+        const input = '$ HTML\n  HyperText\n  Markup Language';
+        const result = NeorgContentParser.parseContent(input);
+        expect(result.success).toBe(true);
+        expect(result.blocks![0].definitionItems![0].term).toBe('HTML');
+        expect(result.blocks![0].definitionItems![0].definition).toContain('HyperText');
+        expect(result.blocks![0].definitionItems![0].definition).toContain('Markup Language');
+      });
+
+      test('parses multiple definitions', () => {
+        const input = '$ Term1\n  Def1\n\n$ Term2\n  Def2';
+        const result = NeorgContentParser.parseContent(input);
+        expect(result.success).toBe(true);
+        expect(result.blocks).toHaveLength(2);
+        expect(result.blocks![0].definitionItems![0].term).toBe('Term1');
+        expect(result.blocks![1].definitionItems![0].term).toBe('Term2');
+      });
+    });
+
+    describe('Indentation', () => {
+      test('treats --- as indentation reversion (not divider)', () => {
+        const input = '* Heading\n---\nParagraph after';
+        const result = NeorgContentParser.parseContent(input);
+        expect(result.success).toBe(true);
+        const dividerBlocks = result.blocks!.filter(b => b.type === 'divider');
+        expect(dividerBlocks).toHaveLength(0);
+      });
+
+      test('treats ___ as horizontal divider', () => {
+        const result = NeorgContentParser.parseContent('___');
+        expect(result.success).toBe(true);
+        expect(result.blocks).toHaveLength(1);
+        expect(result.blocks![0].type).toBe('divider');
+      });
+
+      test('treats *** as divider', () => {
+        const result = NeorgContentParser.parseContent('***');
+        expect(result.success).toBe(true);
+        expect(result.blocks).toHaveLength(1);
+        expect(result.blocks![0].type).toBe('divider');
+      });
+    });
+
+    describe('Ranged Tags', () => {
+      test('parses |example ... |end as code-like block', () => {
+        const input = '|example\nsome code here\n|end';
+        const result = NeorgContentParser.parseContent(input);
+        expect(result.success).toBe(true);
+        expect(result.blocks).toHaveLength(1);
+        expect(result.blocks![0]).toMatchObject({
+          type: 'code',
+          code: { content: 'some code here' },
+        });
+      });
+
+      test('skips |comment ... |end silently', () => {
+        const input = '|comment\nthis is hidden\n|end\nVisible text';
+        const result = NeorgContentParser.parseContent(input);
+        expect(result.success).toBe(true);
+        expect(result.blocks).toHaveLength(1);
+        expect(result.blocks![0].type).toBe('paragraph');
+      });
+    });
+
+    describe('Org-specific syntax not parsed', () => {
+      test('does not parse #+BEGIN_SRC as block (org syntax)', () => {
+        const input = '#+BEGIN_SRC js\nconsole.log("hi");\n#+END_SRC';
+        const result = NeorgContentParser.parseContent(input);
+        expect(result.success).toBe(true);
+        const codeBlocks = result.blocks!.filter(b => b.type === 'code');
+        expect(codeBlocks).toHaveLength(0);
+      });
+
+      test('does not parse :PROPERTIES: as drawer', () => {
+        const input = ':PROPERTIES:\n:CREATED: today\n:END:';
+        const result = NeorgContentParser.parseContent(input);
+        expect(result.success).toBe(true);
+        const drawerBlocks = result.blocks!.filter(b => b.type === 'drawer');
+        expect(drawerBlocks).toHaveLength(0);
+      });
+
+      test('does not skip SCHEDULED: lines', () => {
+        const input = 'SCHEDULED: <2025-01-01>';
+        const result = NeorgContentParser.parseContent(input);
+        expect(result.success).toBe(true);
+        expect(result.blocks!.length).toBeGreaterThanOrEqual(1);
+      });
+    });
+
+    describe('Mixed content', () => {
+      test('parses full norg document with all elements', () => {
+        const input = `* Heading 1
+
+Paragraph text.
+
+- List item one
+- List item two
+
+- [ ] Checklist item
+
+\`\`\`python
+print("hello")
+\`\`\`
+
+.quote
+Quote text
+.end
+
+___
+
+^ myfn
+A footnote`;
+
+        const result = NeorgContentParser.parseContent(input);
+        expect(result.success).toBe(true);
+        const types = result.blocks!.map(b => b.type);
+        expect(types).toContain('heading');
+        expect(types).toContain('paragraph');
+        expect(types).toContain('list');
+        expect(types).toContain('checklist');
+        expect(types).toContain('code');
+        expect(types).toContain('quote');
+        expect(types).toContain('divider');
+        expect(types).toContain('footnote');
+      });
+
+      test('handles empty content', () => {
+        const result = NeorgContentParser.parseContent('');
+        expect(result.success).toBe(true);
+        expect(result.blocks).toHaveLength(0);
+      });
+
+      test('handles content with only whitespace', () => {
+        const result = NeorgContentParser.parseContent('   \n   \n   ');
+        expect(result.success).toBe(true);
+        expect(result.blocks).toHaveLength(0);
+      });
+
+      test('parses norg tasks with all status types', () => {
+        const input = `(-) todo task
+(x) done task
+(!) important task
+(?) uncertain task
+(~) in-progress task
+(u) urgent task
+(-) cancelled task
+(_) on-hold task
+(+) recurring task`;
+        const result = NeorgContentParser.parseContent(input);
+        expect(result.success).toBe(true);
+        expect(result.blocks).toHaveLength(1);
+        expect(result.blocks![0].listItems).toHaveLength(9);
+        expect(result.blocks![0].listItems!.every(i => i.type === 'task')).toBe(true);
+      });
+
+      test('parses nested lists', () => {
+        const input = '- top\n  - nested\n    - deep';
+        const result = NeorgContentParser.parseContent(input);
+        expect(result.success).toBe(true);
+        expect(result.blocks![0].listItems).toHaveLength(3);
+        expect(result.blocks![0].listItems![0]!.indentLevel).toBe(0);
+        expect(result.blocks![0].listItems![1]!.indentLevel).toBe(1);
+        expect(result.blocks![0].listItems![2]!.indentLevel).toBe(2);
+      });
+
+      test('parses code blocks with norg syntax =code.lang ... =', () => {
+        const input = '=code.python\nprint("hi")\n=';
+        const result = NeorgContentParser.parseContent(input);
+        expect(result.success).toBe(true);
+        expect(result.blocks).toHaveLength(1);
+        expect(result.blocks![0]).toMatchObject({
+          type: 'code',
+          code: { language: 'python', content: 'print("hi")' },
+        });
+      });
+
+      test('parses .quote ranged tag', () => {
+        const input = '.quote\nSome quoted text\n.end';
+        const result = NeorgContentParser.parseContent(input);
+        expect(result.success).toBe(true);
+        expect(result.blocks).toHaveLength(1);
+        expect(result.blocks![0]).toMatchObject({
+          type: 'quote',
+          text: 'Some quoted text',
+        });
+      });
+
+      test('parses inline markup in headings', () => {
+        const input = '* This is *bold* text';
+        const result = NeorgContentParser.parseContent(input);
+        expect(result.success).toBe(true);
+        expect(result.blocks).toHaveLength(1);
+        expect(result.blocks![0].heading!.text).toBe('This is *bold* text');
+      });
+    });
+  });
 });

@@ -180,7 +180,7 @@ jest.mock('../src/components/MarkdownEditor', () => () => {
   return require('react').createElement(Text, null, 'Markdown editor');
 });
 jest.mock('../src/components/GitContextPicker', () => () => null);
-jest.mock('../src/components/NeorgRenderer', () => () => null);
+jest.mock('../src/components/StructuredRenderer', () => () => null);
 jest.mock('../src/components/PdfViewer', () => () => null);
 jest.mock('../src/components/TagInput', () => () => null);
 jest.mock('../src/components/VoiceInputModal', () => () => null);

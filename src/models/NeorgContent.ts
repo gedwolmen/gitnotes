@@ -2,6 +2,39 @@ export interface NeorgHeading {
   level: number;
   text: string;
   children?: NeorgHeading[];
+  // New org-mode heading metadata:
+  todoState?: string;
+  priority?: string;
+  tags?: string[];
+  commented?: boolean;
+}
+
+export interface NeorgFootnote {
+  label: string;
+  content: string;
+}
+
+export interface NeorgTimestamp {
+  type: 'active' | 'inactive' | 'scheduled' | 'deadline' | 'closed';
+  date: string;
+  time?: string;
+}
+
+export interface NeorgDrawer {
+  name: string;
+  properties: Record<string, string>;
+}
+
+export interface NeorgImage {
+  path: string;
+  caption?: string;
+  width?: number;
+  height?: number;
+}
+
+export interface NeorgMath {
+  content: string;
+  inline: boolean;
 }
 
 export interface NeorgListItem {
@@ -29,7 +62,7 @@ export interface NeorgTableRow {
 }
 
 export interface NeorgContentBlock {
-  type: 'heading' | 'list' | 'paragraph' | 'code' | 'checklist' | 'table' | 'quote' | 'divider' | 'definition';
+  type: 'heading' | 'list' | 'paragraph' | 'code' | 'checklist' | 'table' | 'quote' | 'divider' | 'definition' | 'footnote' | 'timestamp' | 'drawer' | 'image' | 'math' | 'fixed-width' | 'comment';
   heading?: NeorgHeading;
   listItems?: NeorgListItem[];
   checklistItems?: NeorgChecklistItem[];
@@ -41,6 +74,11 @@ export interface NeorgContentBlock {
   };
   tableRows?: NeorgTableRow[];
   isHeaderRow?: boolean[];
+  footnote?: NeorgFootnote;
+  timestamp?: NeorgTimestamp;
+  drawer?: NeorgDrawer;
+  image?: NeorgImage;
+  math?: NeorgMath;
 }
 
 export interface NeorgContentParseResult {

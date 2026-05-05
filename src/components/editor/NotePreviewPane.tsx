@@ -12,7 +12,7 @@ import { BlurView } from 'expo-blur';
 
 import { useTheme } from '../../contexts/ThemeContext';
 import { NoteFormat } from '../../models/Note';
-import NeorgRenderer from '../NeorgRenderer';
+import StructuredRenderer from '../StructuredRenderer';
 import PdfViewer from '../PdfViewer';
 import { MarkdownBody } from './MarkdownBody';
 
@@ -116,7 +116,7 @@ export function NotePreviewPane({
               <MarkdownBody value={previewContent} styles={markdownStyles} renderer={notePreviewRenderer} />
             )
           ) : parsedStructuredContent ? (
-            <NeorgRenderer blocks={parsedStructuredContent as never} format={noteFormat === 'org' ? 'org' : 'neorg'} />
+            <StructuredRenderer blocks={parsedStructuredContent as never} format={noteFormat === 'org' ? 'org' : 'neorg'} />
           ) : (
             <Text style={[styles.structuredFallback, { color: colors.text }]}>{previewContent}</Text>
           )

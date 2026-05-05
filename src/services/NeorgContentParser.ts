@@ -18,10 +18,7 @@ export class NeorgContentParser {
       let checklistIndentWidth: number | null = null;
       let definitionIndentWidth: number | null = null;
       let tableHasHeader: boolean[] = [];
-      let inOrgDrawer = false;
-      let inOrgBlock = false;
-      let orgBlockType = '';
-      let orgBlockLines: string[] = [];
+      let pendingParagraphLines: string[] = [];
 
       const flushList = () => {
         if (currentList) {
@@ -55,8 +52,6 @@ export class NeorgContentParser {
         definitionIndentWidth = null;
       };
 
-      let pendingParagraphLines: string[] = [];
-
       const flushParagraph = () => {
         if (pendingParagraphLines.length > 0) {
           const joined = pendingParagraphLines.join(' ').trim();
@@ -78,51 +73,6 @@ export class NeorgContentParser {
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         const trimmed = line.trim();
-
-        if (/^:\s*(PROPERTIES|LOGBOOK|END)\s*:\s*$/.test(trimmed)) {
-          if (trimmed.includes(':END:')) {
-            inOrgDrawer = false;
-          } else {
-            flushAll();
-            inOrgDrawer = true;
-          }
-          continue;
-        }
-        if (inOrgDrawer) continue;
-
-        const orgBlockBegin = trimmed.match(/^#\+BEGIN_(\w+)\s*(.*)$/i);
-        if (orgBlockBegin) {
-          flushAll();
-          orgBlockType = orgBlockBegin[1].toUpperCase();
-          orgBlockLines = [];
-          inOrgBlock = true;
-          continue;
-        }
-
-        if (inOrgBlock && /^#\+END_\w+\s*$/i.test(trimmed)) {
-          if (orgBlockType === 'QUOTE' || orgBlockType === 'ABSTRACT') {
-            blocks.push({ type: 'quote', text: orgBlockLines.join('\n').trim() });
-          } else {
-            blocks.push({
-              type: 'code',
-              code: { content: orgBlockLines.join('\n') },
-            });
-          }
-          inOrgBlock = false;
-          orgBlockLines = [];
-          continue;
-        }
-        if (inOrgBlock) {
-          orgBlockLines.push(line);
-          continue;
-        }
-
-        if (/^(SCHEDULED|DEADLINE|CLOSED)\s*:/i.test(trimmed)) continue;
-        if (/^#\+(NAME|TBLFM|RESULTS|ATTR|CAPTION|OPTIONS|STARTUP|PROPERTY|SEQ_TODO|TAGS|LANGUAGE|EMAIL|AUTHOR|DATE|SETUPFILE|INCLUDE|MACRO|LINK)\s*:/i.test(trimmed)) continue;
-        if (/^#\+LINK\s*:/i.test(trimmed)) continue;
-
-        if (/^CLOCK\s*:/i.test(trimmed)) continue;
-        if (/^-\s+State\s+"/i.test(trimmed)) continue;
 
         if (!trimmed) {
           if (currentCodeBlock) {
@@ -169,13 +119,17 @@ export class NeorgContentParser {
           continue;
         }
 
-        if (/^-{3,}\s*$/.test(trimmed)) {
+        if (trimmed === '---') {
+          continue;
+        }
+
+        if (/^_{3,}\s*$/.test(trimmed) || /^\*{3,}\s*$/.test(trimmed)) {
           flushAll();
           blocks.push({ type: 'divider' });
           continue;
         }
 
-        if (/^\.(quote|aside|footnote)\s*$/.test(trimmed)) {
+        if (/^\.(quote|aside)\s*$/.test(trimmed)) {
           flushAll();
           const collected: string[] = [];
           for (let j = i + 1; j < lines.length; j++) {
@@ -191,6 +145,38 @@ export class NeorgContentParser {
           continue;
         }
 
+        const rangedTagMatch = trimmed.match(/^\|([A-Za-z][\w-]*)\b.*$/);
+        if (rangedTagMatch && !/^\|.+\|\s*$/.test(trimmed)) {
+          flushAll();
+          const tagName = rangedTagMatch[1].toLowerCase();
+          const collected: string[] = [];
+          for (let j = i + 1; j < lines.length; j++) {
+            if (/^\|end\s*$/.test(lines[j].trim())) {
+              i = j;
+              break;
+            }
+            collected.push(lines[j]);
+          }
+
+          if (tagName === 'comment') {
+            continue;
+          }
+
+          if (tagName === 'example') {
+            blocks.push({
+              type: 'code',
+              code: { content: collected.join('\n') },
+            });
+            continue;
+          }
+
+          const text = collected.join('\n').trim();
+          if (text) {
+            blocks.push({ type: 'quote', text });
+          }
+          continue;
+        }
+
         if (/^\|.+\|\s*$/.test(trimmed)) {
           if (/^\|[\s\-+:]+\|\s*$/.test(trimmed)) {
             if (currentTableRows) {
@@ -201,6 +187,7 @@ export class NeorgContentParser {
           flushParagraph();
           flushList();
           flushChecklist();
+          flushDefinitions();
           const cells = trimmed.split('|').filter((_, idx, arr) => idx > 0 && idx < arr.length - 1).map(c => c.trim());
           if (!currentTableRows) {
             currentTableRows = [];
@@ -229,6 +216,32 @@ export class NeorgContentParser {
           continue;
         }
 
+        const footnoteMatch = line.match(/^(\s*)\^\s+(.+)$/);
+        if (footnoteMatch) {
+          flushAll();
+          const baseIndent = footnoteMatch[1].length;
+          const contentLines: string[] = [];
+          let j = i + 1;
+
+          for (; j < lines.length; j++) {
+            const candidate = lines[j];
+            const candidateTrimmed = candidate.trim();
+            if (!candidateTrimmed) break;
+            if (this.isStructuralLine(candidate) && this.getLeadingWhitespaceWidth(candidate) <= baseIndent) break;
+            contentLines.push(candidate.trim());
+          }
+
+          blocks.push({
+            type: 'footnote',
+            footnote: {
+              label: footnoteMatch[2].trim(),
+              content: contentLines.join('\n').trim(),
+            },
+          });
+          i = j - 1;
+          continue;
+        }
+
         const nextListIndentWidth = this.resolveIndentWidth(listIndentWidth, line);
         const listItem = this.parseListItem(line, nextListIndentWidth ?? undefined);
         if (listItem) {
@@ -247,15 +260,37 @@ export class NeorgContentParser {
           flushParagraph();
           flushList();
           flushChecklist();
+          flushTable();
+
+          const baseIndent = this.getLeadingWhitespaceWidth(line);
+          const definitionLines: string[] = [];
+          let j = i + 1;
+
+          for (; j < lines.length; j++) {
+            const candidate = lines[j];
+            const candidateTrimmed = candidate.trim();
+            if (!candidateTrimmed) break;
+
+            const candidateIndent = this.getLeadingWhitespaceWidth(candidate);
+            if (candidateIndent <= baseIndent) break;
+            if (this.isStructuralLine(candidate)) break;
+
+            definitionLines.push(candidate.trim());
+          }
+
+          definitionItem.definition = definitionLines.join('\n').trim();
+
           if (!currentDefinitions) currentDefinitions = [];
           definitionIndentWidth = nextDefinitionIndentWidth;
           currentDefinitions.push(definitionItem);
+          i = j - 1;
           continue;
         }
 
         flushList();
         flushChecklist();
         flushTable();
+        flushDefinitions();
 
         pendingParagraphLines.push(trimmed);
       }
@@ -280,18 +315,9 @@ export class NeorgContentParser {
   static parseHeading(line: string): NeorgHeading | null {
     const starMatch = line.match(/^(\*{1,7})\s+(.+)$/);
     if (starMatch) {
-      const level = starMatch[1].length;
-      let text = starMatch[2].trim();
-      // Strip org task keywords
-      text = text.replace(/^(TODO|DONE|IN-PROGRESS|WAITING|CANCELED|CANCELLED|SCHEDULED)\s+/i, '');
-      // Strip priority cookie [#A]
-      text = text.replace(/^\[#[A-C]\]\s*/i, '');
-      // Strip trailing tags :tag1:tag2: (tags have colons on both sides)
-      text = text.replace(/\s+:[\w@]+(:[\w@]+)*:\s*$/, '');
-      return { level, text: text || starMatch[2].trim() };
+      return { level: starMatch[1].length, text: starMatch[2].trim() };
     }
 
-    // Markdown: # heading
     const mdMatch = line.match(/^(#{1,6})\s+(.+)$/);
     if (mdMatch) {
       return { level: mdMatch[1].length, text: mdMatch[2].trim() };
@@ -324,11 +350,37 @@ export class NeorgContentParser {
     return level;
   }
 
+  private static getLeadingWhitespaceWidth(line: string): number {
+    const spaces = line.match(/^(\s*)/)?.[1] ?? '';
+    return spaces.replace(/\t/g, '  ').length;
+  }
+
   private static resolveIndentWidth(currentIndentWidth: number | null, line: string): number | null {
     if (currentIndentWidth) return currentIndentWidth;
     const spaces = line.match(/^(\s*)/)?.[1] ?? '';
     if (!spaces || spaces.includes('\t')) return currentIndentWidth;
     return spaces.length > 0 ? spaces.length : currentIndentWidth;
+  }
+
+  private static isStructuralLine(line: string): boolean {
+    const trimmed = line.trim();
+
+    if (!trimmed) return false;
+    if (trimmed === '---' || trimmed === '=') return true;
+    if (/^=(code|raw|embed)(?:\.(\w+))?\s*$/.test(trimmed)) return true;
+    if (/^```(\w*)$/.test(line)) return true;
+    if (/^\.(quote|aside)\s*$/.test(trimmed) || /^\.end\s*$/.test(trimmed)) return true;
+    if (/^\|end\s*$/.test(trimmed)) return true;
+    if (/^\|([A-Za-z][\w-]*)\b.*$/.test(trimmed) && !/^\|.+\|\s*$/.test(trimmed)) return true;
+    if (/^\|.+\|\s*$/.test(trimmed)) return true;
+    if (/^_{3,}\s*$/.test(trimmed) || /^\*{3,}\s*$/.test(trimmed)) return true;
+    if (this.parseHeading(line)) return true;
+    if (this.parseChecklistItem(line)) return true;
+    if (this.parseListItem(line)) return true;
+    if (this.parseDefinitionItem(line)) return true;
+    if (/^(\s*)\^\s+(.+)$/.test(line)) return true;
+
+    return false;
   }
 
   static parseListItem(line: string, indentWidth = 2): NeorgListItem | null {
@@ -339,31 +391,26 @@ export class NeorgContentParser {
     const indentLevel = this.getIndentLevel(spaces, indentWidth);
     const content = indentMatch[2];
 
-    // Unordered: - item
-    const unorderedMatch = content.match(/^-\s+(.+)$/);
+    const unorderedMatch = content.match(/^\-\s+(.+)$/);
     if (unorderedMatch) {
       return { type: 'unordered', text: unorderedMatch[1].trim(), indentLevel };
     }
 
-    // Norg ordered: ~ item
     const norgOrdered = content.match(/^~\s+(.+)$/);
     if (norgOrdered) {
       return { type: 'ordered', text: norgOrdered[1].trim(), indentLevel };
     }
 
-    // Norg counter list: ~~ item
     const counterMatch = content.match(/^~~\s+(.+)$/);
     if (counterMatch) {
       return { type: 'ordered', text: counterMatch[1].trim(), indentLevel };
     }
 
-    // Numeric ordered: 1. item or 1) item
     const numericMatch = content.match(/^(\d+)[.)]\s+(.+)$/);
     if (numericMatch) {
       return { type: 'ordered', text: numericMatch[2].trim(), indentLevel };
     }
 
-    // Norg task: ( ) item, (x) item, (!) item, (?) item, (~) in-progress, (u) urgent, (-) cancelled, (_) on-hold, (+) recurring
     const taskMatch = content.match(/^\(([ x!?~u\-_+])\)\s+(.+)$/);
     if (taskMatch) {
       const statusMap: Record<string, 'todo' | 'done' | 'important' | 'uncertain' | 'in-progress' | 'urgent' | 'cancelled' | 'on-hold' | 'recurring'> = {
@@ -384,13 +431,12 @@ export class NeorgContentParser {
     const indentLevel = this.getIndentLevel(spaces, indentWidth);
     const content = indentMatch[2];
 
-    // - [ ] or - [x] (markdown and norg task syntax)
-    const uncheckedMatch = content.match(/^-\s*\[\s\]\s*(.*)$/);
+    const uncheckedMatch = content.match(/^\-\s*\[\s\]\s*(.*)$/);
     if (uncheckedMatch) {
       return { text: uncheckedMatch[1].trim(), checked: false, indentLevel };
     }
 
-    const checkedMatch = content.match(/^-\s*\[x\]\s*(.*)$/i);
+    const checkedMatch = content.match(/^\-\s*\[x\]\s*(.*)$/i);
     if (checkedMatch) {
       return { text: checkedMatch[1].trim(), checked: true, indentLevel };
     }
@@ -406,8 +452,6 @@ export class NeorgContentParser {
     const indentLevel = this.getIndentLevel(spaces, indentWidth);
     const content = indentMatch[2];
 
-    // Neorg definition: $ Term
-    //   Definition text
     const defMatch = content.match(/^\$\s+(.+)$/);
     if (defMatch) {
       return { term: defMatch[1].trim(), definition: '', indentLevel };
@@ -459,6 +503,8 @@ export class NeorgContentParser {
         case 'definition': return block.definitionItems
           ? block.definitionItems.map(d => `**${d.term}**: ${d.definition}`).join('\n')
           : '';
+        case 'footnote': return block.footnote ? `[^${block.footnote.label}]: ${block.footnote.content}` : '';
+        case 'comment': return '';
         default: return '';
       }
     }).join('\n\n');

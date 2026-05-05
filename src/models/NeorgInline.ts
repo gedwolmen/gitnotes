@@ -6,7 +6,10 @@ export type MarkupType =
   | 'spoiler'
   | 'code'
   | 'superscript'
-  | 'subscript';
+  | 'subscript'
+  | 'verbatim'
+  | 'org-code'
+  | 'org-strike';
 
 export interface InlineMarkup {
   type: MarkupType;
