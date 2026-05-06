@@ -17,6 +17,7 @@ import type { GitRepository } from '../../services/GitService';
 import type { TemplateRepoPreference } from '../../services/TemplateRepoPreferenceService';
 import type { AIProviderConfig } from '../../models/AIProvider';
 import { TIMEOUT_OPTIONS, type BiometricKind, type LockTimeout } from '../../contexts/BiometricLockContext';
+import { SYNC_INTERVAL_OPTIONS, type SyncIntervalSeconds } from '../../hooks/useForegroundSyncSettings';
 
 type ThemeColors = {
   background: string;
@@ -95,6 +96,10 @@ type SettingsContentProps = {
   onSetLockTimeout: (v: LockTimeout) => void;
   isBackgroundSyncEnabled: boolean;
   onToggleBackgroundSync: () => void;
+  syncFrequentlyEnabled: boolean;
+  syncIntervalSeconds: SyncIntervalSeconds;
+  onToggleSyncFrequently: (value: boolean) => void;
+  onSetSyncIntervalSeconds: (value: SyncIntervalSeconds) => void;
 };
 
 export function SettingsContent(props: SettingsContentProps) {
@@ -152,11 +157,18 @@ export function SettingsContent(props: SettingsContentProps) {
     onSetLockTimeout,
     isBackgroundSyncEnabled,
     onToggleBackgroundSync,
+    syncFrequentlyEnabled,
+    syncIntervalSeconds,
+    onToggleSyncFrequently,
+    onSetSyncIntervalSeconds,
   } = props;
   const { t } = useTranslation();
   const [languagePref, setLanguagePref] = useState<string>('system');
   const [showTimeoutPicker, setShowTimeoutPicker] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
+  const [showIntervalPicker, setShowIntervalPicker] = useState(false);
+  const intervalLabel =
+    SYNC_INTERVAL_OPTIONS.find((opt) => opt.value === syncIntervalSeconds)?.label ?? 'Every minute';
 
   useEffect(() => {
     getLanguagePreference().then(setLanguagePref);
@@ -457,7 +469,48 @@ export function SettingsContent(props: SettingsContentProps) {
         </GroupRow>
       </Group>
 
-      <Group title="Sync" footer="Periodically sync notes in the background (every 15 min).">
+      <Group
+        title="Sync"
+        footer={
+          syncFrequentlyEnabled
+            ? 'Pulls every tracked repo when the app comes to the foreground, when network reconnects, and on the chosen interval.'
+            : 'Still pulls when the app comes to the foreground or network reconnects, but skips the periodic interval.'
+        }
+      >
+        <GroupRow
+          trailing={
+            <Toggle
+              testID="sync-frequently-toggle"
+              value={syncFrequentlyEnabled}
+              onValueChange={onToggleSyncFrequently}
+            />
+          }
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Ionicons name="sync-outline" size={20} color={colors.text} />
+            <Text style={[styles.settingLabel, { color: colors.text }]}>Sync frequently (recommended for multi-device)</Text>
+          </View>
+        </GroupRow>
+        <GroupRow
+          testID="sync-interval-row"
+          onPress={syncFrequentlyEnabled ? () => setShowIntervalPicker(true) : undefined}
+          disabled={!syncFrequentlyEnabled}
+          trailing={
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{intervalLabel}</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            </View>
+          }
+        >
+          <Text
+            style={[
+              styles.settingLabel,
+              { color: syncFrequentlyEnabled ? colors.text : colors.textSecondary },
+            ]}
+          >
+            Sync interval
+          </Text>
+        </GroupRow>
         <GroupRow
           trailing={
             <Toggle
@@ -468,8 +521,8 @@ export function SettingsContent(props: SettingsContentProps) {
           }
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Ionicons name="sync-outline" size={20} color={colors.text} />
-            <Text style={[styles.settingLabel, { color: colors.text }]}>Background Sync</Text>
+            <Ionicons name="cloud-download-outline" size={20} color={colors.text} />
+            <Text style={[styles.settingLabel, { color: colors.text }]}>Background Sync (every 15 min)</Text>
           </View>
         </GroupRow>
       </Group>
@@ -562,6 +615,38 @@ export function SettingsContent(props: SettingsContentProps) {
               onPress={() => {
                 onSetLockTimeout(opt.value);
                 setShowTimeoutPicker(false);
+              }}
+              trailing={isActive ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : null}
+            >
+              <Text style={{ color: isActive ? colors.primary : colors.text, fontSize: 16 }}>{opt.label}</Text>
+            </GroupRow>
+          );
+        })}
+      </Group>
+    </Modal>
+
+    <Modal
+      visible={showIntervalPicker}
+      onRequestClose={() => setShowIntervalPicker(false)}
+      bottomSheet
+      contentStyle={{ padding: 16, paddingBottom: 34 }}
+    >
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <Text style={{ color: colors.text, fontSize: 17, fontWeight: '600' }}>Sync interval</Text>
+        <TouchableOpacity onPress={() => setShowIntervalPicker(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Ionicons name="close" size={22} color={colors.textSecondary} />
+        </TouchableOpacity>
+      </View>
+      <Group>
+        {SYNC_INTERVAL_OPTIONS.map((opt) => {
+          const isActive = opt.value === syncIntervalSeconds;
+          return (
+            <GroupRow
+              key={opt.value}
+              testID={`sync-interval-option-${opt.value}`}
+              onPress={() => {
+                onSetSyncIntervalSeconds(opt.value);
+                setShowIntervalPicker(false);
               }}
               trailing={isActive ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : null}
             >

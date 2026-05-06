@@ -31,6 +31,8 @@ import { StartupSyncGate } from './src/components/StartupSyncGate';
 import { GitHubActivityIndicator } from './src/components/GitHubActivityIndicator';
 import { bootstrapStorage } from './src/services/StorageBootstrap';
 import { useRenderStyleStore } from './src/stores/renderStyleStore';
+import { startForegroundWatcher } from './src/services/ForegroundSyncService';
+import { loadForegroundSyncConfig } from './src/hooks/useForegroundSyncSettings';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const queryClient = new QueryClient({
@@ -52,6 +54,14 @@ export default function App() {
     const completed = await OnboardingService.isOnboardingCompleted();
     setShowOnboarding(!completed);
     await NotificationService.requestPermissions();
+    // Foreground auto-pull (#563): subscribe AppState/NetInfo/interval after
+    // storage is hydrated so the first pull sees the persisted repo list.
+    try {
+      const cfg = await loadForegroundSyncConfig();
+      startForegroundWatcher(cfg);
+    } catch (error) {
+      console.warn('[App] foreground sync watcher start failed:', error);
+    }
   }, []);
 
   useEffect(() => {
