@@ -12,6 +12,7 @@ import { useCanvases } from '../contexts/CanvasContext';
 import { useTodos } from '../contexts/TodoContext';
 import { useBiometricLock } from '../contexts/BiometricLockContext';
 import { useBackgroundSync } from '../hooks/useBackgroundSync';
+import { useForegroundSyncSettings } from '../hooks/useForegroundSyncSettings';
 import type { RootStackParamList } from '../navigation/types';
 import { GitHubService, type GitHubRepository } from '../services/GitHubService';
 import { RepoFileSyncService } from '../services/RepoFileSyncService';
@@ -59,6 +60,12 @@ export default function SettingsScreen() {
     setLockTimeout,
   } = useBiometricLock();
   const { isEnabled: isBackgroundSyncEnabled, toggle: toggleBackgroundSync } = useBackgroundSync();
+  const {
+    syncFrequentlyEnabled,
+    syncIntervalSeconds,
+    setSyncFrequentlyEnabled,
+    setSyncIntervalSeconds,
+  } = useForegroundSyncSettings();
   const isAIEnabled = useAIStore((state) => state.isEnabled);
   const selectedModelId = useAIStore((state) => state.selectedModelId);
   const actionMode = useAIStore((state) => state.actionMode);
@@ -513,6 +520,10 @@ export default function SettingsScreen() {
         onSetLockTimeout={(v) => void setLockTimeout(v)}
         isBackgroundSyncEnabled={isBackgroundSyncEnabled}
         onToggleBackgroundSync={() => void toggleBackgroundSync()}
+        syncFrequentlyEnabled={syncFrequentlyEnabled}
+        syncIntervalSeconds={syncIntervalSeconds}
+        onToggleSyncFrequently={(value) => void setSyncFrequentlyEnabled(value)}
+        onSetSyncIntervalSeconds={(value) => void setSyncIntervalSeconds(value)}
       />
       <SettingsModals
         colors={colors}
