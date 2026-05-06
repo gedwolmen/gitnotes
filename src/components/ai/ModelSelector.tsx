@@ -10,11 +10,14 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme, useTokens } from '../../contexts/ThemeContext';
 import { Group, GroupRow } from '../ui';
 import { useAIStore } from '../../stores/aiStore';
 import { downloadModel, getModelStatus } from '../../services/AIService';
 import { AIModelConfig, AIProviderConfig } from '../../models/AIProvider';
+import { resolveProviderAvailability, type Availability } from '../../services/ai/providerAvailability';
+import { describeAvailability } from '../../services/ai/providerAvailabilityCopy';
 
 interface ModelSelectorProps {
   visible: boolean;
@@ -24,20 +27,28 @@ interface ModelSelectorProps {
 export function ModelSelector({ visible, onClose }: ModelSelectorProps) {
   const { colors } = useTheme();
   const { spacing, type } = useTokens();
-  
+  const { t } = useTranslation();
+
   const providers = useAIStore((state) => state.providers);
   const selectedModelId = useAIStore((state) => state.selectedModelId);
   const selectModel = useAIStore((state) => state.selectModel);
   const updateProvider = useAIStore((state) => state.updateProvider);
-  
+
   const [statuses, setStatuses] = useState<Record<string, 'ready' | 'needs-download' | 'unavailable'>>({});
+  const [providerAvailability, setProviderAvailability] = useState<Record<string, Availability>>({});
   const [downloadProgress, setDownloadProgress] = useState<Record<string, number>>({});
   const [isDownloading, setIsDownloading] = useState<Record<string, boolean>>({});
 
   const loadStatuses = useCallback(async () => {
     const newStatuses: Record<string, 'ready' | 'needs-download' | 'unavailable'> = {};
+    const newAvailability: Record<string, Availability> = {};
     for (const provider of providers) {
       if (!provider.isEnabled) continue;
+      try {
+        newAvailability[provider.id] = await resolveProviderAvailability(provider);
+      } catch {
+        newAvailability[provider.id] = { kind: 'available' };
+      }
       for (const model of provider.models) {
         try {
           const status = await getModelStatus(model);
@@ -48,6 +59,7 @@ export function ModelSelector({ visible, onClose }: ModelSelectorProps) {
       }
     }
     setStatuses(newStatuses);
+    setProviderAvailability(newAvailability);
   }, [providers]);
 
   useEffect(() => {
@@ -114,7 +126,12 @@ export function ModelSelector({ visible, onClose }: ModelSelectorProps) {
                     const isSelected = selectedModelId === model.id;
                     const isUnavailable = status === 'unavailable';
                     const needsDownload = status === 'needs-download';
-                    
+                    const availability = providerAvailability[provider.id];
+                    const unavailableReason =
+                      availability && availability.kind === 'unavailable'
+                        ? describeAvailability(t, availability.reason)
+                        : null;
+
                     return (
                       <GroupRow
                         key={model.id}
@@ -132,7 +149,7 @@ export function ModelSelector({ visible, onClose }: ModelSelectorProps) {
                             </Text>
                             {isUnavailable && (
                               <Text style={[styles.modelDesc, { color: colors.textSecondary }]}>
-                                Not available on this device
+                                {unavailableReason ?? t('ai.availability.unknown')}
                               </Text>
                             )}
                             {needsDownload && !downloading && (

@@ -133,9 +133,19 @@
     "addProvider": "Ajouter un fournisseur",
     "enabled": "Activé",
     "disabled": "Désactivé",
+    "unavailable": "Indisponible",
     "auto": "Auto",
     "confirm": "Confirmer",
     "notSet": "Non défini"
+  },
+  "ai": {
+    "availability": {
+      "iosOnly": "iOS uniquement — non disponible sur Android",
+      "androidOnly": "Android uniquement — non disponible sur iOS",
+      "appleIntelligenceDisabled": "Activez Apple Intelligence dans Réglages",
+      "appleIntelligenceDownloading": "Apple Intelligence est en cours de téléchargement — réessayez sous peu",
+      "unknown": "Non disponible sur cet appareil"
+    }
   },
   "chat": {
     "askAI": "Demander à l'IA",
