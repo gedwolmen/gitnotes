@@ -42,7 +42,6 @@ const linking: LinkingOptions<RootStackParamList> = {
           HomeTab: 'home',
           NotesTab: 'notes',
           ExploreTab: 'explore',
-          JournalTab: 'journal',
           SettingsTab: 'settings',
         },
       },

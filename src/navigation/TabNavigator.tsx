@@ -14,7 +14,6 @@ import { useTranslation } from 'react-i18next';
 import HomeScreen from '../screens/HomeScreen';
 import NotesListScreen from '../screens/NotesListScreen';
 import ExploreScreen from '../screens/ExploreScreen';
-import JournalScreen from '../screens/JournalScreen';
 import TodoListScreen from '../screens/TodoListScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import { BottomTabParamList } from './types';
@@ -30,7 +29,6 @@ const TAB_ICONS: Record<string, { focused: IoniconName; outline: IoniconName; la
   HomeTab: { focused: 'home', outline: 'home-outline', labelKey: 'tabs.home' },
   NotesTab: { focused: 'document-text', outline: 'document-text-outline', labelKey: 'tabs.notes' },
   ExploreTab: { focused: 'compass', outline: 'compass-outline', labelKey: 'tabs.explore' },
-  JournalTab: { focused: 'calendar', outline: 'calendar-outline', labelKey: 'tabs.journal' },
   TodosTab: { focused: 'checkbox', outline: 'checkbox-outline', labelKey: 'tabs.todos' },
   SettingsTab: { focused: 'settings', outline: 'settings-outline', labelKey: 'tabs.settings' },
 };
@@ -178,11 +176,6 @@ export default function TabNavigator() {
         name="ExploreTab"
         component={ExploreScreen}
         options={{ title: 'Explore' }}
-      />
-      <Tab.Screen
-        name="JournalTab"
-        component={JournalScreen}
-        options={{ title: 'Journal' }}
       />
       <Tab.Screen
         name="TodosTab"

@@ -27,7 +27,6 @@ export type BottomTabParamList = {
   HomeTab: undefined;
   NotesTab: undefined;
   ExploreTab: undefined;
-  JournalTab: undefined;
   TodosTab: undefined;
   SettingsTab: undefined;
 };
