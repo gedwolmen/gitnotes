@@ -6,7 +6,7 @@ import { useBiometricLock } from '../contexts/BiometricLockContext';
 import { useTheme } from '../contexts/ThemeContext';
 
 export function BiometricLockScreen() {
-  const { isLocked, authenticate, isBiometricAvailable } = useBiometricLock();
+  const { isLocked, authenticate, isBiometricAvailable, biometricKind } = useBiometricLock();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -32,7 +32,17 @@ export function BiometricLockScreen() {
           style={[styles.unlockButton, { backgroundColor: colors.accent }]}
           onPress={handleUnlock}
         >
-          <Ionicons name={isBiometricAvailable ? 'finger-print-outline' : 'keypad-outline'} size={22} color="#fff" />
+          <Ionicons
+            name={
+              !isBiometricAvailable
+                ? 'keypad-outline'
+                : biometricKind === 'face'
+                  ? 'scan-outline'
+                  : 'finger-print-outline'
+            }
+            size={22}
+            color="#fff"
+          />
           <Text style={styles.unlockText}>Unlock</Text>
         </Pressable>
       </View>
