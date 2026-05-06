@@ -4,7 +4,8 @@ import { Note, NoteCreateInput, NoteUpdateInput, sortNotesWithPinnedFirst, filte
 import { StorageService } from '../services/StorageService';
 import { deleteNoteFromGitHub } from '../services/NoteGitHubSyncService';
 import { GitHubService } from '../services/GitHubService';
-import { summarizePushError } from '../services/git/LocalGitWriter';
+import { formatSyncError } from '../services/git/formatSyncError';
+import { slugifyLocal, getExtensionForFormat } from '../components/editor/editorShared';
 
 interface NoteState {
   notes: Note[];
@@ -24,6 +25,14 @@ interface NoteActions {
   togglePin: (id: string) => Promise<boolean>;
   refreshNotes: () => Promise<void>;
   clearError: () => void;
+}
+
+function deriveDefaultNotePath(note: Note): string | null {
+  const title = (note.title ?? '').trim();
+  if (!title) return null;
+  const slug = slugifyLocal(title);
+  const ext = getExtensionForFormat(note.format);
+  return note.folderPath ? `${note.folderPath}/${slug}${ext}` : `notes/${slug}${ext}`;
 }
 
 export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
@@ -95,22 +104,33 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
       set({ error: null });
 
       const note = get().notes.find((n) => n.id === id);
-      if (note?.repo && note.filePath) {
+      if (note?.repo) {
         if (!GitHubService.isAuthenticated()) {
           set({ error: 'Sign in to GitHub to delete synced notes' });
           return false;
         }
-        const remote = await deleteNoteFromGitHub({
-          repo: note.repo,
-          branch: note.branch,
-          filePath: note.filePath,
-          title: note.title,
-          accountId: note.accountId,
-        });
-        if (!remote.success) {
-          if (remote.error) console.warn('[NoteStore] delete sync failed:', remote.error);
-          set({ error: summarizePushError(remote.error) });
-          return false;
+
+        // Recover from the case where the note synced but the response
+        // never landed (so `filePath` is unset locally) by deriving the
+        // canonical path from title + folder + format. The same shape is
+        // produced by `useNoteEditorDocument` when first uploading; if no
+        // such file exists upstream, deleteNoteFromGitHub treats sha-null
+        // as success and the row drops cleanly.
+        const filePath = note.filePath ?? deriveDefaultNotePath(note);
+
+        if (filePath) {
+          const remote = await deleteNoteFromGitHub({
+            repo: note.repo,
+            branch: note.branch,
+            filePath,
+            title: note.title,
+            accountId: note.accountId,
+          });
+          if (!remote.success) {
+            if (remote.error) console.warn('[NoteStore] delete sync failed:', remote.error);
+            set({ error: formatSyncError(remote.error, 'delete') });
+            return false;
+          }
         }
       }
 

@@ -4,6 +4,7 @@ import { StorageService } from '../services/StorageService';
 import { NotificationService } from '../services/NotificationService';
 import { useTodoStore } from '../stores/todoStore';
 import { syncTodoToGitHub } from '../services/TodoGitHubSyncService';
+import { formatSyncError } from '../services/git/formatSyncError';
 
 interface TodoContextValue {
   todos: Todo[];
@@ -120,7 +121,7 @@ export function useTodos(): TodoContextValue {
         todo: finalTodo,
       });
       if (!syncResult.success) {
-        console.warn('[TodoContext] GitHub sync failed:', syncResult.error);
+        console.warn('[TodoContext] GitHub sync failed:', formatSyncError(syncResult.error, 'upsert'));
       }
     }
 

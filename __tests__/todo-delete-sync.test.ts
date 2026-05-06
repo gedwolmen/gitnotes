@@ -53,7 +53,7 @@ describe('todo delete GitHub sync', () => {
       storageTodos = next;
       return true;
     });
-    (GitHubService.getFileSha as jest.Mock).mockResolvedValue('todo-sha-123');
+    (GitHubService.getFileSha as jest.Mock).mockResolvedValue({ kind: 'found', sha: 'todo-sha-123' });
     (GitHubService.deleteFile as jest.Mock).mockResolvedValue({
       content: { sha: 'deleted-sha' },
       commit: { sha: 'commit-sha' },
@@ -159,7 +159,7 @@ describe('todo delete GitHub sync', () => {
     // Reproduces the "Cannot delete todo: failed to look up remote file" bug —
     // a stale local row whose remote was already deleted should not be stuck
     // forever. Pull won't re-import a file that doesn't exist anymore.
-    (GitHubService.getFileSha as jest.Mock).mockResolvedValueOnce(null);
+    (GitHubService.getFileSha as jest.Mock).mockResolvedValueOnce({ kind: 'not-found' });
 
     const stale = {
       id: 'todo-stale',

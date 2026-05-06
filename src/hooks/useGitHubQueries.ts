@@ -79,7 +79,7 @@ export function useGitHubUser() {
 export function useGitHubFileSha(owner: string, repo: string, path: string, branch?: string) {
   return useQuery({
     queryKey: ['github', 'sha', owner, repo, path, branch],
-    queryFn: () => GitHubService.getFileSha(owner, repo, path, branch),
+    queryFn: () => GitHubService.getFileShaOrNull(owner, repo, path, branch),
     staleTime: Infinity,
   });
 }

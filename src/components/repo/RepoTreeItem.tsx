@@ -70,7 +70,7 @@ export function RepoTreeItem({ node, owner, repo, branch, level, onFilePress, on
           Alert.alert('Error', 'Could not read file content.');
           return;
         }
-        const sha = await GitHubService.getFileSha(owner, repo, oldPath, branch);
+        const sha = await GitHubService.getFileShaOrNull(owner, repo, oldPath, branch);
         const moved = await GitHubService.moveFile(owner, repo, oldPath, newPath, content, `Rename: ${oldPath} → ${newPath}`, sha || '', branch || 'main');
         if (!moved) {
           Alert.alert('Error', 'Failed to rename file.');
@@ -97,7 +97,7 @@ export function RepoTreeItem({ node, owner, repo, branch, level, onFilePress, on
           Alert.alert('Error', 'Could not read file content.');
           return;
         }
-        const sha = await GitHubService.getFileSha(owner, repo, oldPath, branch);
+        const sha = await GitHubService.getFileShaOrNull(owner, repo, oldPath, branch);
         const moved = await GitHubService.moveFile(owner, repo, oldPath, newPath, content, `Move: ${oldPath} → ${newPath}`, sha || '', branch || 'main');
         if (!moved) {
           Alert.alert('Error', 'Failed to move file.');
@@ -125,7 +125,7 @@ export function RepoTreeItem({ node, owner, repo, branch, level, onFilePress, on
             if (isDir) {
               await deleteDirectory(owner, repo, branch, node.path);
             } else {
-              const sha = await GitHubService.getFileSha(owner, repo, node.path, branch);
+              const sha = await GitHubService.getFileShaOrNull(owner, repo, node.path, branch);
               if (sha) {
                 await GitHubService.deleteFile(owner, repo, node.path, `Delete: ${node.path}`, sha, branch || 'main');
               }

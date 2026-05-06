@@ -75,7 +75,7 @@ export class RenderStyleService {
     await Promise.all(
       repos.map(async (repo) => {
         try {
-          const sha = await GitHubService.getFileSha(
+          const sha = await GitHubService.getFileShaOrNull(
             repo.owner.login,
             repo.name,
             RENDER_STYLE_PATH,

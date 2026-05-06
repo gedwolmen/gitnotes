@@ -3,6 +3,7 @@ import { Canvas, CanvasCreateInput, CanvasUpdateInput, sortCanvasesByUpdated } f
 import { StorageService } from '../services/StorageService';
 import { GitHubService } from '../services/GitHubService';
 import { deleteCanvasFromGitHub } from '../services/CanvasGitHubSyncService';
+import { formatSyncError } from '../services/git/formatSyncError';
 
 interface CanvasState {
   canvases: Canvas[];
@@ -88,7 +89,8 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()((set, get) =
           accountId: canvas.accountId,
         });
         if (!remote.success) {
-          set({ error: remote.error || 'Failed to delete from GitHub' });
+          if (remote.error) console.warn('[CanvasStore] delete sync failed:', remote.error);
+          set({ error: formatSyncError(remote.error, 'delete') });
           return false;
         }
       }
