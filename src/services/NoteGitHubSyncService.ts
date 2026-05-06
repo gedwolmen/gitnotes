@@ -288,8 +288,16 @@ export async function deleteNoteFromGitHub(params: {
   filePath: string;
   title?: string;
   accountId?: string;
+  /**
+   * Clone-mode only. When false, the delete commit is created locally
+   * but the push to origin is deferred. The drain in
+   * `NoteSyncQueueService` uses this to coalesce delete+upsert pushes
+   * into one round-trip per `(repo, branch)` group (issue #565 phases
+   * B.1 + A). Ignored on the Contents-API path.
+   */
+  push?: boolean;
 }): Promise<NoteGitHubSyncResult> {
-  const { repo: repoPath, branch, filePath, title, accountId } = params;
+  const { repo: repoPath, branch, filePath, title, accountId, push } = params;
   const tokenOverride = await resolveToken(accountId);
 
   if (!tokenOverride && !GitHubService.isAuthenticated()) {
@@ -315,6 +323,7 @@ export async function deleteNoteFromGitHub(params: {
       message: `Delete note: ${title || filePath}`,
       author,
       token: tokenForPush,
+      push,
     });
   }
 
