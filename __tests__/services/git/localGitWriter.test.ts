@@ -7,6 +7,10 @@ jest.mock('isomorphic-git', () => {
     currentBranch: jest.fn(async (..._a: any[]) => 'main'),
     checkout: jest.fn(async (..._a: any[]) => undefined),
     fetch: jest.fn(async (..._a: any[]) => undefined),
+    // Default to "modified" so the idempotent-commit guard (#565 phase
+    // B.1) doesn't short-circuit the existing tests. Tests that exercise
+    // the unmodified path can override per-call.
+    status: jest.fn(async (..._a: any[]) => 'modified'),
   };
   (globalThis as any).__lgwGitMocks = mocks;
   return {
@@ -49,6 +53,7 @@ function getGitMocks() {
     currentBranch: jest.Mock;
     checkout: jest.Mock;
     fetch: jest.Mock;
+    status: jest.Mock;
   };
 }
 

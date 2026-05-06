@@ -319,7 +319,9 @@ export async function deleteNoteFromGitHub(params: {
   }
 
   try {
-    const lookup = await GitHubService.getFileSha(
+    // Cache-first lookup (#565 phase C). When the editor saved this note
+    // a moment ago, the sha is already in memory and we skip the GET.
+    const lookup = await GitHubService.getFileShaCached(
       repoInfo.owner,
       repoInfo.repo,
       filePath,

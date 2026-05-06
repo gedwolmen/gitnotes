@@ -171,6 +171,7 @@ describe('NoteSyncQueueService', () => {
         repo: 'r', branch: 'main', filePath: 'a', title: 'A', content: '', format: 'markdown',
       });
 
+      const before = Date.now();
       const result = await NoteSyncQueueService.drain();
       expect(result.succeeded).toBe(0);
       expect(result.failed).toBe(1);
@@ -179,6 +180,9 @@ describe('NoteSyncQueueService', () => {
       const items = await NoteSyncQueueService.getAll();
       expect(items[0].attempts).toBe(1);
       expect(items[0].lastError).toBe('network');
+      // Backoff scheduled (issue #565 phase D). First retry: 500ms cap.
+      expect(items[0].nextRetryAt).toBeDefined();
+      expect(items[0].nextRetryAt!).toBeGreaterThanOrEqual(before + 500);
     });
 
     test('drops items after MAX_ATTEMPTS', async () => {
@@ -188,11 +192,49 @@ describe('NoteSyncQueueService', () => {
         repo: 'r', branch: 'main', filePath: 'a', title: 'A', content: '', format: 'markdown',
       });
 
-      // 8 failed drains (MAX_ATTEMPTS = 8) → dropped
-      for (let i = 0; i < 8; i++) {
-        await NoteSyncQueueService.drain();
+      // Backoff would skip the item on every immediate retry (#565 phase D).
+      // Advance virtual clock past the backoff cap (30s) between drains.
+      let virtualNow = Date.now();
+      const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => virtualNow);
+      try {
+        for (let i = 0; i < 8; i++) {
+          await NoteSyncQueueService.drain();
+          virtualNow += 60_000;
+        }
+      } finally {
+        nowSpy.mockRestore();
       }
       expect(await NoteSyncQueueService.pendingCount()).toBe(0);
+    });
+
+    test('skips items whose backoff has not elapsed', async () => {
+      (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: false, error: 'transient' });
+
+      await NoteSyncQueueService.enqueueNoteUpsert({
+        repo: 'r', branch: 'main', filePath: 'a', title: 'A', content: '', format: 'markdown',
+      });
+
+      // First drain — fails, sets backoff.
+      await NoteSyncQueueService.drain();
+      expect(syncNoteToGitHub).toHaveBeenCalledTimes(1);
+
+      // Second drain immediately after — backoff hasn't elapsed, item is skipped.
+      const second = await NoteSyncQueueService.drain();
+      expect(syncNoteToGitHub).toHaveBeenCalledTimes(1);
+      expect(second.succeeded).toBe(0);
+      expect(second.failed).toBe(0);
+      expect(second.remaining).toBe(1);
+
+      // Advance past the 500ms backoff for attempt #1, drain again — runs.
+      const items = await NoteSyncQueueService.getAll();
+      const past = items[0].nextRetryAt! + 1;
+      const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => past);
+      try {
+        await NoteSyncQueueService.drain();
+      } finally {
+        nowSpy.mockRestore();
+      }
+      expect(syncNoteToGitHub).toHaveBeenCalledTimes(2);
     });
 
     test('mixes successes and failures', async () => {
