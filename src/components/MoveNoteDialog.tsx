@@ -296,7 +296,7 @@ export default function MoveNoteDialog({ visible, note, onClose, onMoved }: Move
         return;
       }
 
-      const sha = await GitHubService.getFileSha(
+      const sha = await GitHubService.getFileShaOrNull(
         repoInfo.owner, repoInfo.repo, note.filePath, note.branch || undefined,
       );
       if (!sha) {
@@ -344,7 +344,7 @@ export default function MoveNoteDialog({ visible, note, onClose, onMoved }: Move
       );
       if (content === null) return;
 
-      const sha = await GitHubService.getFileSha(
+      const sha = await GitHubService.getFileShaOrNull(
         repoInfo.owner, repoInfo.repo, itemPath, note?.branch || undefined,
       );
       if (!sha) return;

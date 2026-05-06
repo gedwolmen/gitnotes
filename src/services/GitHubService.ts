@@ -152,6 +152,18 @@ export interface GitHubFileCommit {
   commit: { sha: string };
 }
 
+/**
+ * Tristate result of a sha lookup so callers can distinguish
+ * "definitely gone" from "couldn't tell". Critical for delete paths —
+ * see `deleteNoteFromGitHub`: when the lookup itself errors we must
+ * propagate so the local row stays put, otherwise the next pull
+ * resurrects the file we thought we'd cleaned up.
+ */
+export type ShaResult =
+  | { kind: 'found'; sha: string }
+  | { kind: 'not-found' }
+  | { kind: 'error'; status?: number; message: string };
+
 class GitHubServiceClass {
   private token: string | null = null;
   private user: GitHubUser | null = null;
@@ -355,22 +367,53 @@ class GitHubServiceClass {
     }
   }
 
+  /**
+   * Typed sha lookup so callers can distinguish "remote file is gone"
+   * (delete should soft-succeed) from "we couldn't reach GitHub" (delete
+   * must NOT short-circuit, otherwise the local row vanishes while the
+   * upstream copy lingers and gets re-synced on the next pull).
+   *
+   * `getFileShaOrNull` keeps the legacy `string | null` shape for the
+   * upsert paths that just need a sha-or-create decision.
+   */
   async getFileSha(
     owner: string,
     repo: string,
     path: string,
     ref?: string,
     opts?: TokenOpts,
-  ): Promise<string | null> {
+  ): Promise<ShaResult> {
     try {
       const encodedPath = path.split('/').map(encodeURIComponent).join('/');
       let url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
       if (ref) url += `?ref=${encodeURIComponent(ref)}`;
       const data = await this.request(url, 'GET', undefined, opts);
-      return data.sha || null;
-    } catch (error) { void error;
-      return null;
+      if (data?.sha) return { kind: 'found', sha: data.sha };
+      return { kind: 'not-found' };
+    } catch (error) {
+      const status = (error as { status?: number })?.status;
+      const message = error instanceof Error ? error.message : String(error);
+      if (status === 404) return { kind: 'not-found' };
+      return { kind: 'error', status, message };
     }
+  }
+
+  /**
+   * Convenience wrapper that preserves the prior `string | null` shape
+   * for upsert call sites (they only care about "exists, give me the
+   * sha" vs "create new"). Errors collapse to null here just like the
+   * old behavior — deletes go through `getFileSha` and handle the typed
+   * result themselves.
+   */
+  async getFileShaOrNull(
+    owner: string,
+    repo: string,
+    path: string,
+    ref?: string,
+    opts?: TokenOpts,
+  ): Promise<string | null> {
+    const result = await this.getFileSha(owner, repo, path, ref, opts);
+    return result.kind === 'found' ? result.sha : null;
   }
 
   async createFile(
@@ -413,7 +456,7 @@ class GitHubServiceClass {
     const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
 
     for (let attempt = 0; attempt < 3; attempt++) {
-      const existingSha = await this.getFileSha(owner, repo, path, branch);
+      const existingSha = await this.getFileShaOrNull(owner, repo, path, branch);
       try {
         const body: Record<string, string> = {
           message,
@@ -440,6 +483,18 @@ class GitHubServiceClass {
     return null;
   }
 
+  /**
+   * Delete a remote file with bounded retries. The 409 path mirrors the
+   * `updateFile` recovery loop — when the upstream sha drifts mid-flight
+   * we re-fetch it and re-DELETE up to 3 attempts. Transient network
+   * failures get one extra retry with backoff so flaky cellular doesn't
+   * leave a half-deleted note (#567 fix B).
+   *
+   * Throws on terminal failure so callers can distinguish "could not
+   * delete" from "deleted nothing because already gone" — matters for
+   * the typed sha gating in `deleteNoteFromGitHub`. Pre-existing callers
+   * that want the legacy null-on-failure shape should wrap in try/catch.
+   */
   async deleteFile(
     owner: string,
     repo: string,
@@ -449,14 +504,55 @@ class GitHubServiceClass {
     branch: string = 'main',
     opts?: TokenOpts,
   ): Promise<GitHubFileCommit | null> {
-    try {
-      const encodedPath = path.split('/').map(encodeURIComponent).join('/');
-      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
-      return await this.request(url, 'DELETE', { message, sha, branch }, opts);
-    } catch (error) {
-      console.warn('[GitHubService] Failed to delete file:', error);
-      return null;
+    const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
+
+    let currentSha = sha;
+    let networkRetried = false;
+    let lastError: unknown = null;
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        return await this.request(url, 'DELETE', { message, sha: currentSha, branch }, opts);
+      } catch (error) {
+        lastError = error;
+        const status = (error as { status?: number })?.status;
+
+        if (status === 404) {
+          // Already gone upstream — synthetic success so callers can
+          // treat the deletion as complete.
+          return { content: null, commit: { sha: '' } };
+        }
+
+        if (status === 409 && attempt < 2) {
+          const refreshed = await this.getFileSha(owner, repo, path, branch, opts);
+          if (refreshed.kind === 'not-found') {
+            return { content: null, commit: { sha: '' } };
+          }
+          if (refreshed.kind === 'found') {
+            currentSha = refreshed.sha;
+            continue;
+          }
+          // refresh itself errored — bubble up so caller doesn't soft-succeed.
+          throw new Error(refreshed.message);
+        }
+
+        if (!status && !networkRetried && attempt < 2) {
+          networkRetried = true;
+          await new Promise<void>((resolve) => setTimeout(resolve, attempt === 0 ? 250 : 1000));
+          continue;
+        }
+
+        // No retry path applies (or we exhausted attempts). Bubble out so
+        // the delete sync helper can hold the local row.
+        console.warn('[GitHubService] Failed to delete file:', error);
+        throw error instanceof Error ? error : new Error(String(error));
+      }
     }
+    if (lastError) {
+      throw lastError instanceof Error ? lastError : new Error(String(lastError));
+    }
+    return null;
   }
 
   async createFolder(
@@ -489,7 +585,7 @@ class GitHubServiceClass {
 
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        const sha = await this.getFileSha(owner, repo, path, branch, opts);
+        const sha = await this.getFileShaOrNull(owner, repo, path, branch, opts);
         if (!sha) {
           return this.createFile(owner, repo, path, content, message, branch, opts);
         }
@@ -525,7 +621,14 @@ class GitHubServiceClass {
   ): Promise<boolean> {
     const createResult = await this.createFile(owner, repo, newPath, content, message, branch, opts);
     if (!createResult) return false;
-    await this.deleteFile(owner, repo, oldPath, message, oldSha, branch, opts);
+    try {
+      await this.deleteFile(owner, repo, oldPath, message, oldSha, branch, opts);
+    } catch (error) {
+      // Move semantics: the new path landed; failing to clean up the old
+      // path leaves a duplicate but is not catastrophic. Surface the
+      // failure in logs so it can be retried via the file browser.
+      console.warn('[GitHubService] moveFile cleanup failed for', oldPath, error);
+    }
     return true;
   }
 

@@ -3,6 +3,8 @@ import git from 'isomorphic-git';
 import { parseRepoPath } from '../../utils/gitPathParser';
 import { makeGitFs as buildGitFs } from './gitFs';
 import { gitHttp } from './gitHttp';
+import { formatSyncError } from './formatSyncError';
+import { GitFsService } from './GitFsService';
 
 const CLONES_SUBDIR = 'GitNotes/';
 
@@ -122,28 +124,28 @@ async function ensureOnBranch(
 }
 
 /**
- * Best-effort prettifier for the wall-of-text isomorphic-git produces on
- * `git.push` failures. The raw text (`One or more branches were not
- * updated: - refs/heads/master: cannot lock ref ...`) leaks server
- * internals into the user-facing banner; we keep the raw message in the
- * console log and surface a one-line summary to callers.
+ * Backwards-compatible thin re-export of the shared sanitizer. New
+ * callers should use `formatSyncError` directly from
+ * `services/git/formatSyncError`; this wrapper keeps the existing import
+ * path in `noteStore` working without a refactor cascade.
  */
 export function summarizePushError(raw: string | undefined): string {
-  if (!raw) return 'Sync to GitHub failed';
-  const message = raw.toLowerCase();
-  if (message.includes('cannot lock ref')) {
-    return 'Sync to GitHub failed: branch is locked on the remote. Check your branch settings.';
-  }
-  if (message.includes('one or more branches were not updated')) {
-    return 'Sync to GitHub failed: the remote rejected the update. Pull and try again.';
-  }
-  if (message.includes('not authorized') || message.includes('401') || message.includes('403')) {
-    return 'Sync to GitHub failed: not authorized. Re-link your GitHub account.';
-  }
-  if (message.includes('network') || message.includes('fetch')) {
-    return 'Sync to GitHub failed: network error.';
-  }
-  return 'Sync to GitHub failed';
+  return formatSyncError(raw);
+}
+
+/**
+ * Detects the family of push errors isomorphic-git surfaces when the
+ * remote rejects a non-fast-forward push. Used to decide when to
+ * pull-and-retry inside `deleteAndCommit`.
+ */
+function isPushRejected(raw: string): boolean {
+  const m = raw.toLowerCase();
+  return (
+    m.includes('push rejected') ||
+    m.includes('not a simple fast-forward') ||
+    m.includes('non-fast-forward') ||
+    m.includes('one or more branches were not updated')
+  );
 }
 
 export class LocalGitWriter {
@@ -178,14 +180,36 @@ export class LocalGitWriter {
       });
 
       if (opts.push !== false) {
-        await git.push({
-          fs,
-          dir,
-          http: gitHttp,
-          ref: opts.branch,
-          remoteRef: opts.branch,
-          onAuth: tokenAuth(opts.token),
-        });
+        try {
+          await git.push({
+            fs,
+            dir,
+            http: gitHttp,
+            ref: opts.branch,
+            remoteRef: opts.branch,
+            onAuth: tokenAuth(opts.token),
+          });
+        } catch (pushError) {
+          // Same pull-then-retry shape as deleteAndCommit: when the
+          // remote rejects as non-fast-forward, pull once and try the
+          // push again. Doesn't re-stage / re-write — the local commit
+          // is already made and a clean fast-forward will replay it.
+          const raw = pushError instanceof Error ? pushError.message : String(pushError);
+          if (!isPushRejected(raw)) throw pushError;
+          await GitFsService.pullWithFastForward({
+            repoPath: opts.repoPath,
+            branch: opts.branch,
+            token: opts.token,
+          });
+          await git.push({
+            fs,
+            dir,
+            http: gitHttp,
+            ref: opts.branch,
+            remoteRef: opts.branch,
+            onAuth: tokenAuth(opts.token),
+          });
+        }
       }
 
       return { success: true, filePath: opts.filePath };
@@ -197,8 +221,14 @@ export class LocalGitWriter {
   }
 
   /**
-   * Remove a tracked file from the working tree, stage + commit, optionally
-   * push.
+   * Remove a tracked file from the working tree, stage + commit,
+   * optionally push. Pulls upstream first so the delete commit lands on
+   * top of any concurrent edits — otherwise the push gets rejected as
+   * non-fast-forward and the local row gets stranded (#567 fix C, the
+   * single most common clone-mode delete failure).
+   *
+   * Push gets one auto-retry after a fresh pull when the server returns
+   * a fast-forward / push-rejected error.
    */
   static async deleteAndCommit(opts: DeleteOpts): Promise<LocalGitWriterResult> {
     const info = parseRepoPath(opts.repoPath);
@@ -211,10 +241,35 @@ export class LocalGitWriter {
     try {
       await ensureOnBranch(fs, dir, opts.branch, opts.token);
 
+      // Best-effort pull so we delete from the latest tree state. Diverged
+      // local commits keep the existing path (commit lands locally and
+      // push will retry with a stricter error if the server rejects).
+      try {
+        await GitFsService.pullWithFastForward({
+          repoPath: opts.repoPath,
+          branch: opts.branch,
+          token: opts.token,
+        });
+      } catch (pullError) {
+        console.warn('[LocalGitWriter] deleteAndCommit pull failed (continuing):', pullError);
+      }
+
       const absUri = `${fsRoot}${info.owner}/${info.repo}/${opts.filePath}`;
       await FileSystem.deleteAsync(absUri, { idempotent: true });
 
-      await git.remove({ fs, dir, filepath: opts.filePath });
+      // git.remove can fail when the path moved upstream / was already
+      // removed in a fresh pull. Treat NotFoundError as a no-op and
+      // short-circuit; the file is already gone, deletion is complete.
+      try {
+        await git.remove({ fs, dir, filepath: opts.filePath });
+      } catch (removeError) {
+        const code = (removeError as { code?: string }).code;
+        if (code === 'NotFoundError' || code === 'ENOENT') {
+          return { success: true, filePath: opts.filePath };
+        }
+        throw removeError;
+      }
+
       await git.commit({
         fs,
         dir,
@@ -223,14 +278,35 @@ export class LocalGitWriter {
       });
 
       if (opts.push !== false) {
-        await git.push({
-          fs,
-          dir,
-          http: gitHttp,
-          ref: opts.branch,
-          remoteRef: opts.branch,
-          onAuth: tokenAuth(opts.token),
-        });
+        try {
+          await git.push({
+            fs,
+            dir,
+            http: gitHttp,
+            ref: opts.branch,
+            remoteRef: opts.branch,
+            onAuth: tokenAuth(opts.token),
+          });
+        } catch (pushError) {
+          const raw = pushError instanceof Error ? pushError.message : String(pushError);
+          if (!isPushRejected(raw)) throw pushError;
+          // Pull again and retry push exactly once. Anything still
+          // refusing means the upstream truly diverged and the user
+          // needs to reconcile manually — propagate.
+          await GitFsService.pullWithFastForward({
+            repoPath: opts.repoPath,
+            branch: opts.branch,
+            token: opts.token,
+          });
+          await git.push({
+            fs,
+            dir,
+            http: gitHttp,
+            ref: opts.branch,
+            remoteRef: opts.branch,
+            onAuth: tokenAuth(opts.token),
+          });
+        }
       }
 
       return { success: true, filePath: opts.filePath };

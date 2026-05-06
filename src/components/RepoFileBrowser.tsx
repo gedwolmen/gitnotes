@@ -41,7 +41,11 @@ async function deleteFolderRecursive(
     if (item.type === 'dir') {
       await deleteFolderRecursive(owner, repo, item.path, branch);
     } else if (item.type === 'file' && item.sha) {
-      await GitHubService.deleteFile(owner, repo, item.path, `Delete ${item.path}`, item.sha, branch);
+      try {
+        await GitHubService.deleteFile(owner, repo, item.path, `Delete ${item.path}`, item.sha, branch);
+      } catch (deleteError) {
+        console.warn('[RepoFileBrowser] folder cleanup failed:', deleteError);
+      }
     }
   }
 }
@@ -62,9 +66,13 @@ async function moveFolderRecursive(
       if (fileContent === null) continue;
       const newPath = item.path.replace(oldBase, newBase);
       await GitHubService.createFile(owner, repo, newPath, fileContent, `Move ${item.path} to ${newPath}`, branch);
-      const sha = await GitHubService.getFileSha(owner, repo, item.path, branch);
+      const sha = await GitHubService.getFileShaOrNull(owner, repo, item.path, branch);
       if (sha) {
-        await GitHubService.deleteFile(owner, repo, item.path, `Remove old ${item.path}`, sha, branch);
+        try {
+          await GitHubService.deleteFile(owner, repo, item.path, `Remove old ${item.path}`, sha, branch);
+        } catch (cleanupError) {
+          console.warn('[RepoFileBrowser] move cleanup failed:', cleanupError);
+        }
       }
     }
   }

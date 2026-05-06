@@ -3,7 +3,7 @@ jest.mock('../src/services/GitHubService', () => ({
     isAuthenticated: jest.fn(() => true),
     updateFile: jest.fn(async () => ({ content: { sha: 'abc' }, commit: { sha: 'xyz' } })),
     deleteFile: jest.fn(async () => ({ commit: { sha: 'del' } })),
-    getFileSha: jest.fn(async () => 'abc'),
+    getFileSha: jest.fn(async () => ({ kind: 'found', sha: 'abc' })),
   },
 }));
 

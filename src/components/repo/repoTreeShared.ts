@@ -101,7 +101,7 @@ export async function moveDirectory(
     } else {
       const content = await GitHubService.getFileContent(owner, repo, item.path, branch);
       if (content === null) continue;
-      const sha = await GitHubService.getFileSha(owner, repo, item.path, branch);
+      const sha = await GitHubService.getFileShaOrNull(owner, repo, item.path, branch);
       await GitHubService.moveFile(
         owner,
         repo,
@@ -115,12 +115,16 @@ export async function moveDirectory(
     }
   }
 
-  const oldSha = await GitHubService.getFileSha(owner, repo, oldDirPath, branch);
+  const oldSha = await GitHubService.getFileShaOrNull(owner, repo, oldDirPath, branch);
   if (oldSha) {
     const gitkeepPath = `${oldDirPath}/.gitkeep`;
-    const gitkeepSha = await GitHubService.getFileSha(owner, repo, gitkeepPath, branch);
+    const gitkeepSha = await GitHubService.getFileShaOrNull(owner, repo, gitkeepPath, branch);
     if (gitkeepSha) {
-      await GitHubService.deleteFile(owner, repo, gitkeepPath, `Clean up: ${gitkeepPath}`, gitkeepSha, targetBranch);
+      try {
+        await GitHubService.deleteFile(owner, repo, gitkeepPath, `Clean up: ${gitkeepPath}`, gitkeepSha, targetBranch);
+      } catch (cleanupError) {
+        console.warn('[repoTreeShared] gitkeep cleanup failed:', cleanupError);
+      }
     }
   }
 }
@@ -138,9 +142,13 @@ export async function deleteDirectory(
     if (item.type === 'dir') {
       await deleteDirectory(owner, repo, branch, item.path);
     } else {
-      const sha = await GitHubService.getFileSha(owner, repo, item.path, branch);
+      const sha = await GitHubService.getFileShaOrNull(owner, repo, item.path, branch);
       if (sha) {
-        await GitHubService.deleteFile(owner, repo, item.path, `Delete: ${item.path}`, sha, targetBranch);
+        try {
+          await GitHubService.deleteFile(owner, repo, item.path, `Delete: ${item.path}`, sha, targetBranch);
+        } catch (deleteError) {
+          console.warn('[repoTreeShared] delete failed:', deleteError);
+        }
       }
     }
   }

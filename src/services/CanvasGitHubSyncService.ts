@@ -140,11 +140,15 @@ export async function deleteCanvasFromGitHub(params: {
   }
 
   try {
-    // sha-null = remote already gone. Treat as success so the local row can
-    // delete cleanly; pull won't re-import a file that doesn't exist.
-    const sha = await GitHubService.getFileSha(repoInfo.owner, repoInfo.repo, filePath, targetBranch, opts);
-    if (!sha) {
+    // not-found = remote already gone, treat as success so the local
+    // row deletes cleanly. error = couldn't reach GitHub, hold the row
+    // (#567 fix A) so the next pull doesn't re-import the upstream copy.
+    const lookup = await GitHubService.getFileSha(repoInfo.owner, repoInfo.repo, filePath, targetBranch, opts);
+    if (lookup.kind === 'not-found') {
       return { success: true, filePath };
+    }
+    if (lookup.kind === 'error') {
+      return { success: false, error: lookup.message };
     }
 
     const result = await GitHubService.deleteFile(
@@ -152,7 +156,7 @@ export async function deleteCanvasFromGitHub(params: {
       repoInfo.repo,
       filePath,
       `Delete canvas: ${title || filePath}`,
-      sha,
+      lookup.sha,
       targetBranch,
       opts,
     );

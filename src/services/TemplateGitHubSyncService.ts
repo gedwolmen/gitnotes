@@ -99,11 +99,17 @@ export async function deleteTemplateFromGitHub(params: {
 
   let resolvedSha = sha;
   if (!resolvedSha) {
-    resolvedSha = (await GitHubService.getFileSha(info.owner, info.repo, filePath, branch)) ?? undefined;
-    if (!resolvedSha) {
+    const lookup = await GitHubService.getFileSha(info.owner, info.repo, filePath, branch);
+    if (lookup.kind === 'not-found') {
       // File already gone on the remote — treat as success.
       return { success: true, filePath };
     }
+    if (lookup.kind === 'error') {
+      // Don't drop the local row — we couldn't tell if the upstream
+      // copy still exists. Surface so caller can retry / queue.
+      return { success: false, error: lookup.message };
+    }
+    resolvedSha = lookup.sha;
   }
 
   try {

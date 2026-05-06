@@ -3,6 +3,7 @@ import { Todo, TodoCreateInput, TodoUpdateInput, reorderTodos } from '../models/
 import { StorageService } from '../services/StorageService';
 import { GitHubService } from '../services/GitHubService';
 import { deleteTodoFromGitHub } from '../services/TodoGitHubSyncService';
+import { formatSyncError } from '../services/git/formatSyncError';
 
 interface TodoState {
   todos: Todo[];
@@ -88,7 +89,8 @@ export const useTodoStore = create<TodoState & TodoActions>()((set, get) => ({
           text: todoToDelete!.text,
         });
         if (!remote.success) {
-          set({ error: remote.error || 'Failed to delete from GitHub' });
+          if (remote.error) console.warn('[TodoStore] delete sync failed:', remote.error);
+          set({ error: formatSyncError(remote.error, 'delete') });
           return false;
         }
       }

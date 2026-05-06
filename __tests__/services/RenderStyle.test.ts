@@ -12,6 +12,7 @@ jest.mock('../../src/services/GitHubService', () => ({
     getFileContent: jest.fn(),
     updateFile: jest.fn(),
     getFileSha: jest.fn(),
+    getFileShaOrNull: jest.fn(),
     getRepositories: jest.fn(),
   },
 }));
@@ -21,7 +22,7 @@ import { GitHubService } from '../../src/services/GitHubService';
 
 const mockGet = GitHubService.getFileContent as jest.Mock;
 const mockPut = GitHubService.updateFile as jest.Mock;
-const mockSha = GitHubService.getFileSha as jest.Mock;
+const mockSha = GitHubService.getFileShaOrNull as jest.Mock;
 const mockRepos = GitHubService.getRepositories as jest.Mock;
 
 describe('RenderStyle types', () => {
