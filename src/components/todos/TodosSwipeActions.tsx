@@ -28,8 +28,7 @@ export function TodosSwipeActions({ onDelete }: TodosSwipeActionsProps) {
 const styles = StyleSheet.create({
   track: {
     width: 80,
-    marginVertical: 8,
-    marginLeft: 8,
+    marginBottom: 8,
   },
   action: {
     flex: 1,
