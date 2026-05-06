@@ -24,9 +24,27 @@ jest.mock('../src/services/NoteGitHubSyncService', () => ({
   syncNoteToGitHub: jest.fn(),
 }));
 
+jest.mock('../src/services/StorageService', () => ({
+  StorageService: { updateNote: jest.fn(async () => undefined) },
+}));
+
+jest.mock('../src/services/SyncEngineService', () => ({
+  SyncEngineService: { getMode: jest.fn(async () => 'api') },
+}));
+
+jest.mock('../src/services/AuthService', () => ({
+  AuthService: { getToken: jest.fn(async () => 'tok') },
+}));
+
+jest.mock('../src/services/git/LocalGitWriter', () => ({
+  LocalGitWriter: { push: jest.fn(async () => ({ success: true })) },
+}));
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NoteSyncQueueService } from '../src/services/NoteSyncQueueService';
 import { syncNoteToGitHub } from '../src/services/NoteGitHubSyncService';
+import { SyncEngineService } from '../src/services/SyncEngineService';
+import { LocalGitWriter } from '../src/services/git/LocalGitWriter';
 
 const QUEUE_KEY = '@gitnotes:sync_queue_v1';
 
@@ -194,6 +212,126 @@ describe('NoteSyncQueueService', () => {
       expect(result.failed).toBe(1);
       const items = await NoteSyncQueueService.getAll();
       expect(items.map((m) => m.params.filePath)).toEqual(['b']);
+    });
+
+    describe('clone-mode coalesced push', () => {
+      beforeEach(() => {
+        (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
+        (LocalGitWriter.push as jest.Mock).mockResolvedValue({ success: true });
+      });
+
+      afterEach(() => {
+        // Reset to api default so non-clone tests in the file aren't affected
+        // by ordering. The factory default would otherwise be overridden by
+        // the previous mockResolvedValue across describe blocks.
+        (SyncEngineService.getMode as jest.Mock).mockResolvedValue('api');
+      });
+
+      test('runs syncNoteToGitHub with push:false and flushes once per group', async () => {
+        (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: true });
+
+        for (const f of ['a', 'b', 'c']) {
+          await NoteSyncQueueService.enqueueNoteUpsert({
+            repo: 'me/repo', branch: 'main', filePath: f, title: f, content: '', format: 'markdown',
+          });
+        }
+
+        const result = await NoteSyncQueueService.drain();
+        expect(result.succeeded).toBe(3);
+        expect(result.remaining).toBe(0);
+
+        // Every item ran with push:false
+        const calls = (syncNoteToGitHub as jest.Mock).mock.calls;
+        expect(calls).toHaveLength(3);
+        for (const [args] of calls) {
+          expect(args.push).toBe(false);
+        }
+
+        // One coalesced push at end of group
+        expect(LocalGitWriter.push).toHaveBeenCalledTimes(1);
+        expect(LocalGitWriter.push).toHaveBeenCalledWith({
+          repoPath: 'me/repo',
+          branch: 'main',
+          token: 'tok',
+        });
+      });
+
+      test('separate flush per (repo, branch) group', async () => {
+        (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: true });
+
+        await NoteSyncQueueService.enqueueNoteUpsert({
+          repo: 'me/repo', branch: 'main', filePath: 'a', title: 'a', content: '', format: 'markdown',
+        });
+        await NoteSyncQueueService.enqueueNoteUpsert({
+          repo: 'me/repo', branch: 'dev', filePath: 'b', title: 'b', content: '', format: 'markdown',
+        });
+        await NoteSyncQueueService.enqueueNoteUpsert({
+          repo: 'other/repo', branch: 'main', filePath: 'c', title: 'c', content: '', format: 'markdown',
+        });
+
+        await NoteSyncQueueService.drain();
+
+        expect(LocalGitWriter.push).toHaveBeenCalledTimes(3);
+        const pushCalls = (LocalGitWriter.push as jest.Mock).mock.calls.map(([a]) => `${a.repoPath}@${a.branch}`);
+        expect(pushCalls.sort()).toEqual(['me/repo@dev', 'me/repo@main', 'other/repo@main']);
+      });
+
+      test('failed flush keeps items queued and bumps attempts', async () => {
+        (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: true });
+        (LocalGitWriter.push as jest.Mock).mockResolvedValue({
+          success: false,
+          error: 'network down',
+        });
+
+        await NoteSyncQueueService.enqueueNoteUpsert({
+          repo: 'me/repo', branch: 'main', filePath: 'a', title: 'a', content: '', format: 'markdown',
+        });
+        await NoteSyncQueueService.enqueueNoteUpsert({
+          repo: 'me/repo', branch: 'main', filePath: 'b', title: 'b', content: '', format: 'markdown',
+        });
+
+        const result = await NoteSyncQueueService.drain();
+        expect(result.succeeded).toBe(0);
+        expect(result.failed).toBe(2);
+        expect(result.remaining).toBe(2);
+
+        const items = await NoteSyncQueueService.getAll();
+        expect(items).toHaveLength(2);
+        for (const m of items) {
+          expect(m.attempts).toBe(1);
+          expect(m.lastError).toBe('network down');
+        }
+      });
+
+      test('does not flush when every item failed locally', async () => {
+        (syncNoteToGitHub as jest.Mock).mockResolvedValue({
+          success: false,
+          error: 'write failed',
+        });
+
+        await NoteSyncQueueService.enqueueNoteUpsert({
+          repo: 'me/repo', branch: 'main', filePath: 'a', title: 'a', content: '', format: 'markdown',
+        });
+
+        await NoteSyncQueueService.drain();
+        expect(LocalGitWriter.push).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('api-mode (no coalescing)', () => {
+      test('does not call LocalGitWriter.push and runs syncNoteToGitHub without push:false', async () => {
+        (SyncEngineService.getMode as jest.Mock).mockResolvedValue('api');
+        (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: true });
+
+        await NoteSyncQueueService.enqueueNoteUpsert({
+          repo: 'me/repo', branch: 'main', filePath: 'a', title: 'a', content: '', format: 'markdown',
+        });
+        await NoteSyncQueueService.drain();
+
+        expect(LocalGitWriter.push).not.toHaveBeenCalled();
+        const [[args]] = (syncNoteToGitHub as jest.Mock).mock.calls;
+        expect(args.push).toBeUndefined();
+      });
     });
 
     test('is reentrancy-guarded', async () => {

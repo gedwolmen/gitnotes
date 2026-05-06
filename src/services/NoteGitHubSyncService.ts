@@ -369,8 +369,16 @@ export async function syncNoteToGitHub(params: {
   accountId?: string;
   tags?: string[];
   color?: NoteColor | null;
+  /**
+   * Clone-mode only. When false, the local working tree is updated and a
+   * commit is created but the push to origin is deferred. The drain in
+   * `NoteSyncQueueService` uses this to coalesce N writes into 1 push round-
+   * trip per `(repo, branch)` group (issue #565 phase B.1). Ignored on the
+   * Contents-API path — every API call is its own round-trip.
+   */
+  push?: boolean;
 }): Promise<NoteGitHubSyncResult> {
-  const { repo: repoPath, branch, filePath, title, content, format, accountId, tags = [], color } = params;
+  const { repo: repoPath, branch, filePath, title, content, format, accountId, tags = [], color, push } = params;
   const tokenOverride = await resolveToken(accountId);
 
   if (!tokenOverride && !GitHubService.isAuthenticated()) {
@@ -420,6 +428,7 @@ export async function syncNoteToGitHub(params: {
       message,
       author,
       token: tokenForPush,
+      push,
     });
     if (writeResult.success) {
       return { success: true, filePath: targetPath, finalContent };

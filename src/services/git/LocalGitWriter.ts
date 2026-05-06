@@ -172,12 +172,24 @@ export class LocalGitWriter {
       await FileSystem.writeAsStringAsync(absUri, opts.content);
 
       await git.add({ fs, dir, filepath: opts.filePath });
-      await git.commit({
-        fs,
-        dir,
-        message: opts.message,
-        author: { name: opts.author.name, email: opts.author.email },
-      });
+
+      // Skip empty commits when the file content already matches HEAD. This
+      // matters for the coalesced-push retry path: after a failed group-
+      // flush in `NoteSyncQueueService.drain`, the same item is re-run on
+      // the next drain. The file write replays identical content, so
+      // `git.add` is a no-op and committing again would pollute history
+      // with an empty commit. Net effect: failed pushes self-heal without
+      // history churn.
+      const fileStatus = await git.status({ fs, dir, filepath: opts.filePath });
+      const hasTreeChange = fileStatus !== 'unmodified';
+      if (hasTreeChange) {
+        await git.commit({
+          fs,
+          dir,
+          message: opts.message,
+          author: { name: opts.author.name, email: opts.author.email },
+        });
+      }
 
       if (opts.push !== false) {
         try {
@@ -319,8 +331,10 @@ export class LocalGitWriter {
 
   /**
    * Push pending local commits to the remote without staging or committing
-   * anything new. Used to flush a debounced batch of write calls that ran
-   * with `push: false`.
+   * anything new. Used by `NoteSyncQueueService.drain` to flush a coalesced
+   * batch of write calls that ran with `push: false` (issue #565 phase
+   * B.1). On non-fast-forward rejection we pull once and retry the push,
+   * mirroring the pattern in `writeAndCommit` / `deleteAndCommit`.
    */
   static async push(opts: { repoPath: string; branch: string; token?: string }): Promise<
     LocalGitWriterResult
@@ -332,14 +346,32 @@ export class LocalGitWriter {
     const fs = makeRepoFs();
     try {
       await ensureOnBranch(fs, dir, opts.branch, opts.token);
-      await git.push({
-        fs,
-        dir,
-        http: gitHttp,
-        ref: opts.branch,
-        remoteRef: opts.branch,
-        onAuth: tokenAuth(opts.token),
-      });
+      try {
+        await git.push({
+          fs,
+          dir,
+          http: gitHttp,
+          ref: opts.branch,
+          remoteRef: opts.branch,
+          onAuth: tokenAuth(opts.token),
+        });
+      } catch (pushError) {
+        const raw = pushError instanceof Error ? pushError.message : String(pushError);
+        if (!isPushRejected(raw)) throw pushError;
+        await GitFsService.pullWithFastForward({
+          repoPath: opts.repoPath,
+          branch: opts.branch,
+          token: opts.token,
+        });
+        await git.push({
+          fs,
+          dir,
+          http: gitHttp,
+          ref: opts.branch,
+          remoteRef: opts.branch,
+          onAuth: tokenAuth(opts.token),
+        });
+      }
       return { success: true };
     } catch (e) {
       const raw = e instanceof Error ? e.message : String(e);

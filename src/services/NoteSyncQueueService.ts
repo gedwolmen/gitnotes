@@ -1,6 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { syncNoteToGitHub } from './NoteGitHubSyncService';
+import { syncNoteToGitHub, NoteGitHubSyncResult } from './NoteGitHubSyncService';
 import { StorageService } from './StorageService';
+import { SyncEngineService } from './SyncEngineService';
+import { AuthService } from './AuthService';
+import { LocalGitWriter } from './git/LocalGitWriter';
 import { NoteColor, NoteFormat } from '../models/Note';
 
 const QUEUE_KEY = '@gitnotes:sync_queue_v1';
@@ -100,43 +103,101 @@ class NoteSyncQueueServiceClass {
 
     try {
       const initial = await this.getAll();
-      // Snapshot the ids we're about to process. After draining we re-read
-      // the live queue and only remove these ids, preserving any new
-      // mutations that arrived during the drain.
-      const processedIds = new Set<string>();
       const updatedById = new Map<string, QueuedMutation>();
       const droppedIds = new Set<string>();
 
-      for (const item of initial) {
-        if (item.type !== 'note.upsert') continue;
-        processedIds.add(item.id);
-        const result = await syncNoteToGitHub(item.params);
-        if (result.success) {
-          if (result.filePath && item.localNoteId) {
-            try {
-              await StorageService.updateNote({
-                id: item.localNoteId,
-                filePath: result.filePath,
-                ...(result.finalContent != null && result.finalContent !== item.params.content
-                  ? { content: result.finalContent }
-                  : {}),
-              });
-            } catch (error) { void error;
-              // best-effort; RepoPullService dedup-by-title handles stale state
+      // Group items by (repo, branch). Within a clone-mode group every
+      // write runs with `push: false` and a single `LocalGitWriter.push`
+      // flushes all of them at once — turning N pushes into 1 push round-
+      // trip per repo (issue #565 phase B.1). API-mode groups don't
+      // benefit from coalescing (each call is its own HTTP round-trip),
+      // but grouping costs nothing and keeps the code path uniform.
+      const upserts = initial.filter((m) => m.type === 'note.upsert');
+      const groups = new Map<string, QueuedMutation[]>();
+      const groupKey = (m: QueuedMutation) =>
+        `${m.params.repo}\n${m.params.branch || 'main'}`;
+      for (const item of upserts) {
+        const key = groupKey(item);
+        const arr = groups.get(key) ?? [];
+        arr.push(item);
+        groups.set(key, arr);
+      }
+
+      for (const [key, items] of groups) {
+        const sep = key.indexOf('\n');
+        const repoPath = key.slice(0, sep);
+        const branch = key.slice(sep + 1);
+        const isClone = (await SyncEngineService.getMode(repoPath)) === 'clone';
+
+        // Items whose local write+commit succeeded but whose push is
+        // deferred to the group flush. Recorded so we can apply the
+        // post-success StorageService.updateNote and drop them only once
+        // the flush succeeds.
+        const pendingFlush: {
+          item: QueuedMutation;
+          result: NoteGitHubSyncResult;
+        }[] = [];
+
+        for (const item of items) {
+          const result = await syncNoteToGitHub({
+            ...item.params,
+            push: isClone ? false : undefined,
+          });
+
+          if (!result.success) {
+            const attempts = item.attempts + 1;
+            if (attempts >= MAX_ATTEMPTS) {
+              console.warn('[NoteSyncQueue] dropped after max attempts:', result.error);
+              failed++;
+              droppedIds.add(item.id);
+            } else {
+              updatedById.set(item.id, { ...item, attempts, lastError: result.error });
+              failed++;
+            }
+            continue;
+          }
+
+          if (isClone) {
+            // Defer the drop / StorageService update until the group push
+            // succeeds. If flush fails the items stay queued and the next
+            // drain re-runs them — `LocalGitWriter.writeAndCommit` is
+            // idempotent (skips empty commits) so retries don't pollute
+            // the history.
+            pendingFlush.push({ item, result });
+          } else {
+            await this.applyPostSyncStorageUpdate(item, result);
+            succeeded++;
+            droppedIds.add(item.id);
+          }
+        }
+
+        if (isClone && pendingFlush.length > 0) {
+          const token = (await AuthService.getToken()) ?? undefined;
+          const flushResult = await LocalGitWriter.push({
+            repoPath,
+            branch,
+            token,
+          });
+          if (flushResult.success) {
+            for (const { item, result } of pendingFlush) {
+              await this.applyPostSyncStorageUpdate(item, result);
+              succeeded++;
+              droppedIds.add(item.id);
+            }
+          } else {
+            console.warn('[NoteSyncQueue] coalesced push failed:', flushResult.error);
+            for (const { item } of pendingFlush) {
+              const attempts = item.attempts + 1;
+              if (attempts >= MAX_ATTEMPTS) {
+                console.warn('[NoteSyncQueue] dropped after max attempts:', flushResult.error);
+                failed++;
+                droppedIds.add(item.id);
+              } else {
+                updatedById.set(item.id, { ...item, attempts, lastError: flushResult.error });
+                failed++;
+              }
             }
           }
-          succeeded++;
-          droppedIds.add(item.id);
-          continue;
-        }
-        const attempts = item.attempts + 1;
-        if (attempts >= MAX_ATTEMPTS) {
-          console.warn('[NoteSyncQueue] dropped after max attempts:', result.error);
-          failed++;
-          droppedIds.add(item.id);
-        } else {
-          updatedById.set(item.id, { ...item, attempts, lastError: result.error });
-          failed++;
         }
       }
 
@@ -157,6 +218,25 @@ class NoteSyncQueueServiceClass {
       return { succeeded, failed, remaining: next.length };
     } finally {
       this.isDraining = false;
+    }
+  }
+
+  private async applyPostSyncStorageUpdate(
+    item: QueuedMutation,
+    result: NoteGitHubSyncResult,
+  ): Promise<void> {
+    if (!result.filePath || !item.localNoteId) return;
+    try {
+      await StorageService.updateNote({
+        id: item.localNoteId,
+        filePath: result.filePath,
+        ...(result.finalContent != null && result.finalContent !== item.params.content
+          ? { content: result.finalContent }
+          : {}),
+      });
+    } catch (error) {
+      void error;
+      // best-effort; RepoPullService dedup-by-title handles stale state
     }
   }
 }
