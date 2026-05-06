@@ -56,7 +56,7 @@ export function BentoRecent({ items, onOpen }: Props) {
 const styles = StyleSheet.create({
   section: {
     marginTop: 8,
-    marginBottom: 16,
+    marginBottom: 24,
   },
   heading: {
     fontSize: 12,
