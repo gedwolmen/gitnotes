@@ -3,6 +3,7 @@ import git, { TREE } from 'isomorphic-git';
 import { parseRepoPath } from '../../utils/gitPathParser';
 import { makeGitFs } from './gitFs';
 import { gitHttp } from './gitHttp';
+import { LfsService } from './lfs';
 
 const CLONES_SUBDIR = 'GitNotes/';
 
@@ -107,6 +108,16 @@ export class GitFsService {
         ? (event) => opts.onProgress!(event.phase, event.loaded, event.total ?? null)
         : undefined,
     });
+
+    // isomorphic-git has no smudge filter pipeline, so any LFS-tracked
+    // binaries land on disk as ~130-byte pointer text files. Scan now and
+    // remember them so the UI can surface a "Download" affordance and the
+    // user isn't left wondering why their PDF won't open.
+    try {
+      await LfsService.scanRepo(opts.repoPath, GitFsService.workingTreeUri({ repoPath: opts.repoPath }));
+    } catch {
+      // best-effort; pointer detection failure shouldn't fail the clone.
+    }
   }
 
   /** Fetch updates for the cloned repo. Caller must have run `clone` first. */
@@ -166,6 +177,11 @@ export class GitFsService {
         singleBranch: true,
         onAuth: ensureToken(opts.token),
       });
+      try {
+        await LfsService.scanRepo(opts.repoPath, GitFsService.workingTreeUri({ repoPath: opts.repoPath }));
+      } catch {
+        // best-effort
+      }
       return { ok: true };
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
@@ -254,6 +270,7 @@ export class GitFsService {
     const fsRoot = clonesRoot();
     const dir = `${fsRoot}${info.owner}/${info.repo}`;
     await FileSystem.deleteAsync(dir, { idempotent: true });
+    await LfsService.clearRepo(opts.repoPath).catch(() => undefined);
   }
 
   /** Absolute on-disk URI of a repo's working tree. */

@@ -101,8 +101,19 @@ export function makeGitFs(root: string): PromiseFsClient {
       if (typeof data === 'string') {
         const encoding = typeof opts === 'string' ? opts : opts?.encoding;
         if (encoding && encoding !== 'utf8') {
-          // Caller passed a non-utf8 encoding for a string body — treat it as
-          // an explicit binary signal and fall through to base64 path.
+          // Caller declared a non-utf8 encoding (e.g. 'base64') for a string
+          // body — write through expo-file-system's matching encoding rather
+          // than the default utf8 path so binary survives the round-trip.
+          if (encoding === 'base64') {
+            await FileSystem.writeAsStringAsync(uri, data, {
+              encoding: FileSystem.EncodingType.Base64,
+            });
+            return;
+          }
+          throw new FsError(
+            'EINVAL',
+            `writeFile encoding '${encoding}' not supported for '${filepath}'`,
+          );
         }
         await FileSystem.writeAsStringAsync(uri, data);
       } else {
