@@ -1,5 +1,7 @@
 export type AIProviderType = 'apple' | 'llama' | 'openai-compatible';
 
+export type ProviderPlatform = 'ios' | 'android';
+
 export interface AIModelConfig {
   id: string;
   name: string;
@@ -19,6 +21,11 @@ export interface AIProviderConfig {
   isEnabled: boolean;
   models: AIModelConfig[];
   addedAt: number;
+  /**
+   * Platforms this provider is compatible with. `undefined` means cross-platform.
+   * Apple Intelligence is iOS-only; future Android-only providers may set `['android']`.
+   */
+  supportedPlatforms?: ProviderPlatform[];
 }
 
 export type AIActionMode = 'auto' | 'confirm';

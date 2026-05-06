@@ -133,9 +133,19 @@
     "addProvider": "Anbieter hinzufügen",
     "enabled": "Aktiviert",
     "disabled": "Deaktiviert",
+    "unavailable": "Nicht verfügbar",
     "auto": "Automatisch",
     "confirm": "Bestätigen",
     "notSet": "Nicht festgelegt"
+  },
+  "ai": {
+    "availability": {
+      "iosOnly": "Nur iOS — auf Android nicht verfügbar",
+      "androidOnly": "Nur Android — auf iOS nicht verfügbar",
+      "appleIntelligenceDisabled": "Apple Intelligence in Einstellungen aktivieren",
+      "appleIntelligenceDownloading": "Apple Intelligence wird geladen — bitte gleich erneut versuchen",
+      "unknown": "Auf diesem Gerät nicht verfügbar"
+    }
   },
   "chat": {
     "askAI": "KI fragen",

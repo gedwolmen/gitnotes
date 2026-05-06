@@ -133,9 +133,19 @@
     "addProvider": "プロバイダーを追加",
     "enabled": "有効",
     "disabled": "無効",
+    "unavailable": "利用不可",
     "auto": "自動",
     "confirm": "確認",
     "notSet": "未設定"
+  },
+  "ai": {
+    "availability": {
+      "iosOnly": "iOS のみ — Android では利用できません",
+      "androidOnly": "Android のみ — iOS では利用できません",
+      "appleIntelligenceDisabled": "設定で Apple Intelligence を有効にしてください",
+      "appleIntelligenceDownloading": "Apple Intelligence をダウンロード中です — しばらくしてから再度お試しください",
+      "unknown": "このデバイスでは利用できません"
+    }
   },
   "chat": {
     "askAI": "AIに質問",

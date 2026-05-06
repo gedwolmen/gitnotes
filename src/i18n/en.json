@@ -133,9 +133,19 @@
     "addProvider": "Add Provider",
     "enabled": "Enabled",
     "disabled": "Disabled",
+    "unavailable": "Unavailable",
     "auto": "Auto",
     "confirm": "Confirm",
     "notSet": "Not set"
+  },
+  "ai": {
+    "availability": {
+      "iosOnly": "iOS only — not available on Android",
+      "androidOnly": "Android only — not available on iOS",
+      "appleIntelligenceDisabled": "Enable Apple Intelligence in Settings",
+      "appleIntelligenceDownloading": "Apple Intelligence is downloading — try again shortly",
+      "unknown": "Not available on this device"
+    }
   },
   "chat": {
     "askAI": "Ask AI",

@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import { create } from 'zustand';
 import { AIActionMode, AIModelConfig, AIProviderConfig, AISettings } from '../models/AIProvider';
 import { setChatRepoAccount } from '../services/ChatStorageService';
+import { resolveProviderAvailability } from '../services/ai/providerAvailability';
 
 const AI_SETTINGS_STORAGE_KEY = 'ai-settings';
 const AI_PROVIDER_KEY_PREFIX = 'ai-provider-key-';
@@ -42,6 +43,7 @@ const createDefaultProviders = (): AIProviderConfig[] => [
     name: 'Apple Intelligence',
     isEnabled: true,
     addedAt: 0,
+    supportedPlatforms: ['ios'],
     models: [
       {
         id: 'apple-foundation',
@@ -105,6 +107,9 @@ const mergeProviders = (storedProviders?: AIProviderConfig[]): AIProviderConfig[
       ...defaultProvider,
       ...storedProvider,
       models: storedProvider.models?.length ? storedProvider.models : defaultProvider.models,
+      // Always re-derive platform support from the default config so old persisted
+      // entries inherit new gating rules (the Apple provider is iOS-only).
+      supportedPlatforms: defaultProvider.supportedPlatforms,
     };
   });
 
@@ -122,6 +127,48 @@ const hydrateProviderApiKeys = async (providers: AIProviderConfig[]): Promise<AI
       return apiKey ? { ...provider, apiKey } : provider;
     })
   );
+
+/**
+ * If the persisted selection points at a provider that is no longer available
+ * on this device (e.g. user moved from an iPhone 15 Pro to a 14 Pro), pick the
+ * first model from a still-available enabled provider instead. Only runs at
+ * cold start so we don't yank the model out from under an active session.
+ */
+const resolveSelectedModelOnStartup = async (
+  selectedModelId: string | null,
+  providers: AIProviderConfig[]
+): Promise<string | null> => {
+  if (!selectedModelId) return null;
+
+  const owningProvider = providers.find(
+    (p) => p.isEnabled && p.models.some((m) => m.id === selectedModelId)
+  );
+
+  if (owningProvider) {
+    try {
+      const availability = await resolveProviderAvailability(owningProvider);
+      if (availability.kind === 'available') {
+        return selectedModelId;
+      }
+    } catch {
+      // fall through to fallback
+    }
+  }
+
+  for (const provider of providers) {
+    if (!provider.isEnabled || provider.models.length === 0) continue;
+    try {
+      const availability = await resolveProviderAvailability(provider);
+      if (availability.kind === 'available') {
+        return provider.models[0].id;
+      }
+    } catch {
+      // try next
+    }
+  }
+
+  return null;
+};
 
 export const useAIStore = create<AIState & AIActions>()((set, get) => ({
   ...createDefaultSettings(),
@@ -280,7 +327,11 @@ export const useAIStore = create<AIState & AIActions>()((set, get) => ({
       if (!savedSettingsRaw) {
         const defaultSettings = createDefaultSettings();
         const providers = await hydrateProviderApiKeys(defaultSettings.providers);
-        set({ ...defaultSettings, providers, isLoading: false, error: null });
+        const selectedModelId = await resolveSelectedModelOnStartup(
+          defaultSettings.selectedModelId,
+          providers
+        );
+        set({ ...defaultSettings, providers, selectedModelId, isLoading: false, error: null });
         return;
       }
 
@@ -296,10 +347,15 @@ export const useAIStore = create<AIState & AIActions>()((set, get) => ({
       };
 
       const providers = await hydrateProviderApiKeys(mergedSettings.providers);
+      const selectedModelId = await resolveSelectedModelOnStartup(
+        mergedSettings.selectedModelId,
+        providers
+      );
 
       set({
         ...mergedSettings,
         providers,
+        selectedModelId,
         isLoading: false,
         error: null,
       });

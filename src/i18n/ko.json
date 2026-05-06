@@ -133,9 +133,19 @@
     "addProvider": "공급자 추가",
     "enabled": "활성화됨",
     "disabled": "비활성화됨",
+    "unavailable": "사용할 수 없음",
     "auto": "자동",
     "confirm": "확인",
     "notSet": "설정되지 않음"
+  },
+  "ai": {
+    "availability": {
+      "iosOnly": "iOS 전용 — Android에서는 사용할 수 없습니다",
+      "androidOnly": "Android 전용 — iOS에서는 사용할 수 없습니다",
+      "appleIntelligenceDisabled": "설정에서 Apple Intelligence를 활성화하세요",
+      "appleIntelligenceDownloading": "Apple Intelligence를 다운로드 중입니다 — 잠시 후 다시 시도해 주세요",
+      "unknown": "이 기기에서 사용할 수 없습니다"
+    }
   },
   "chat": {
     "askAI": "AI에게 묻기",

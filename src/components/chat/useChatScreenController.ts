@@ -10,6 +10,9 @@ import { buildSystemPrompt } from '../../services/ai/systemPrompt';
 import { checkContextBudget } from '../../services/ai/modelLimits';
 import { buildContextString } from '../../services/ContextService';
 import { STREAM_RENDER_FLUSH_MS } from '../../services/ai/config';
+import { ProviderUnavailableError } from '../../services/ai/providerAvailability';
+import { describeAvailability } from '../../services/ai/providerAvailabilityCopy';
+import { useTranslation } from 'react-i18next';
 import { useAIStore } from '../../stores/aiStore';
 import { useChatStore } from '../../stores/chatStore';
 import { useNoteStore } from '../../stores/noteStore';
@@ -44,6 +47,7 @@ export function useChatScreenController(threadId: string) {
 
   const toolArgsBufferRef = useRef<Record<string, string>>({});
   const abortRef = useRef<AbortController | null>(null);
+  const { t } = useTranslation();
 
   const [attachedContexts, setAttachedContexts] = useState<AIContextItem[]>([]);
   const [isContextPickerVisible, setIsContextPickerVisible] = useState(false);
@@ -198,14 +202,20 @@ export function useChatScreenController(threadId: string) {
       const aborted = (error as Error)?.name === 'AbortError' || abortController.signal.aborted;
       if (aborted) updateMessage(assistantMessageId, { content: assistantText || 'Stopped.' });
       else {
-        setLocalError(error instanceof Error ? error.message : 'Failed to send message.');
-        updateMessage(assistantMessageId, { content: assistantText || 'Something went wrong while streaming this response.' });
+        const message =
+          error instanceof ProviderUnavailableError
+            ? describeAvailability(t, error.reason)
+            : error instanceof Error
+              ? error.message
+              : 'Failed to send message.';
+        setLocalError(message);
+        updateMessage(assistantMessageId, { content: assistantText || message });
       }
     } finally {
       if (abortRef.current === abortController) abortRef.current = null;
       setStreaming(false);
     }
-  }, [addMessage, clearError, getSelectedModelConfig, noteCount, renameThread, runToolCall, saveActiveThread, setStreaming, todoCount, updateMessage]);
+  }, [addMessage, clearError, getSelectedModelConfig, noteCount, renameThread, runToolCall, saveActiveThread, setStreaming, t, todoCount, updateMessage]);
 
   const stopStreaming = useCallback(() => abortRef.current?.abort(), []);
 

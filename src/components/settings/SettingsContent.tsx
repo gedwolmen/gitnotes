@@ -18,6 +18,8 @@ import type { TemplateRepoPreference } from '../../services/TemplateRepoPreferen
 import type { AIProviderConfig } from '../../models/AIProvider';
 import { TIMEOUT_OPTIONS, type BiometricKind, type LockTimeout } from '../../contexts/BiometricLockContext';
 import { SYNC_INTERVAL_OPTIONS, type SyncIntervalSeconds } from '../../hooks/useForegroundSyncSettings';
+import { useProvidersAvailability } from '../../hooks/useProviderAvailability';
+import { describeAvailability } from '../../services/ai/providerAvailabilityCopy';
 
 type ThemeColors = {
   background: string;
@@ -180,6 +182,7 @@ export function SettingsContent(props: SettingsContentProps) {
   const [showTimeoutPicker, setShowTimeoutPicker] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [showIntervalPicker, setShowIntervalPicker] = useState(false);
+  const providerAvailability = useProvidersAvailability(providers);
   const intervalLabel =
     SYNC_INTERVAL_OPTIONS.find((opt) => opt.value === syncIntervalSeconds)?.label ?? 'Every minute';
 
@@ -613,11 +616,38 @@ export function SettingsContent(props: SettingsContentProps) {
           </Group>
 
           <Group title={t('settings.providers')}>
-            {providers.map((provider) => (
-              <GroupRow key={provider.id} onPress={() => onProviderPress(provider)} trailing={<Text style={[styles.settingValue, { color: colors.textSecondary }]}>{provider.isEnabled ? 'Enabled' : 'Disabled'}</Text>}>
-                <Text style={[styles.settingLabel, { color: colors.text }]}>{provider.name}</Text>
-              </GroupRow>
-            ))}
+            {providers.map((provider) => {
+              const availability = providerAvailability[provider.id];
+              const isUnavailable = availability?.kind === 'unavailable';
+              const reasonText = isUnavailable
+                ? describeAvailability(t, availability.reason)
+                : null;
+              return (
+                <GroupRow
+                  key={provider.id}
+                  onPress={() => onProviderPress(provider)}
+                  trailing={
+                    <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
+                      {isUnavailable
+                        ? t('settings.unavailable')
+                        : provider.isEnabled
+                          ? 'Enabled'
+                          : 'Disabled'}
+                    </Text>
+                  }
+                  style={isUnavailable ? { opacity: 0.5 } : undefined}
+                >
+                  <View>
+                    <Text style={[styles.settingLabel, { color: colors.text }]}>{provider.name}</Text>
+                    {reasonText ? (
+                      <Text style={[styles.settingValue, { color: colors.textSecondary, marginTop: 2 }]}>
+                        {reasonText}
+                      </Text>
+                    ) : null}
+                  </View>
+                </GroupRow>
+              );
+            })}
             <GroupRow onPress={onAddProvider}>
               <Text style={[styles.settingLabel, { color: colors.primary }]}>Add Provider</Text>
             </GroupRow>

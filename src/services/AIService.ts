@@ -4,6 +4,10 @@ import { Platform } from 'react-native';
 import type { AIModelConfig, AIProviderConfig } from '../models/AIProvider';
 import { chatTools } from './ai/tools';
 import { buildQuirkedFetch } from './ai/providerQuirks';
+import {
+  ProviderUnavailableError,
+  resolveProviderAvailability,
+} from './ai/providerAvailability';
 
 type OnDeviceAvailability = {
   apple: boolean;
@@ -89,6 +93,23 @@ export async function initializeModel(
           throw new Error('Apple Intelligence is only available on iOS');
         }
 
+        // Probe device eligibility before touching the bridge so the call
+        // doesn't hang silently on devices like iPhone 14 Pro that are
+        // permanently ineligible for Apple Intelligence (A16 Bionic).
+        const probeProvider: AIProviderConfig = providerConfig ?? {
+          id: modelConfig.providerId,
+          type: 'apple',
+          name: 'Apple Intelligence',
+          isEnabled: true,
+          models: [modelConfig],
+          addedAt: 0,
+          supportedPlatforms: ['ios'],
+        };
+        const availability = await resolveProviderAvailability(probeProvider);
+        if (availability.kind === 'unavailable') {
+          throw new ProviderUnavailableError(availability.reason, probeProvider.name);
+        }
+
         const { createAppleProvider } = await import('@react-native-ai/apple');
         const provider = createAppleProvider({ availableTools: chatTools });
 
@@ -125,6 +146,11 @@ export async function initializeModel(
         throw new Error(`Unsupported AI model type: ${(modelConfig as AIModelConfig).providerType}`);
     }
   } catch (error) {
+    // Preserve typed eligibility errors so the UI can surface the specific reason
+    // (otherwise the bridge call would just hang on ineligible iPhones like the 14 Pro).
+    if (error instanceof ProviderUnavailableError) {
+      throw error;
+    }
     const message = error instanceof Error ? error.message : 'Unknown model initialization error';
     throw new Error(`Failed to initialize model \"${modelConfig.name}\": ${message}`);
   }
@@ -341,7 +367,17 @@ export async function downloadModel(
 export async function getModelStatus(modelConfig: AIModelConfig): Promise<ModelStatus> {
   try {
     if (modelConfig.providerType === 'apple') {
-      return Platform.OS === 'ios' ? 'ready' : 'unavailable';
+      const probeProvider: AIProviderConfig = {
+        id: modelConfig.providerId,
+        type: 'apple',
+        name: 'Apple Intelligence',
+        isEnabled: true,
+        models: [modelConfig],
+        addedAt: 0,
+        supportedPlatforms: ['ios'],
+      };
+      const availability = await resolveProviderAvailability(probeProvider);
+      return availability.kind === 'available' ? 'ready' : 'unavailable';
     }
 
     if (modelConfig.providerType === 'llama') {
