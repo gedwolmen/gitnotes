@@ -73,6 +73,9 @@ type SettingsContentProps = {
   onRemoveRepo: (repo: GitRepository) => void;
   onEnableCloneMode: (repo: GitRepository) => void;
   onDisableCloneMode: (repo: GitRepository) => void;
+  lfsPending: Record<string, { count: number; bytes: number }>;
+  lfsDownloadingRepo: string | null;
+  onDownloadLfsObjects: (repo: GitRepository) => void;
   onOpenTemplatesRepoPicker: () => void;
   onSyncExistingTemplates: () => void;
   onClearTemplatesRepo: () => void;
@@ -96,6 +99,13 @@ type SettingsContentProps = {
   isBackgroundSyncEnabled: boolean;
   onToggleBackgroundSync: () => void;
 };
+
+function formatLfsBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
 
 export function SettingsContent(props: SettingsContentProps) {
   const {
@@ -130,6 +140,9 @@ export function SettingsContent(props: SettingsContentProps) {
     onRemoveRepo,
     onEnableCloneMode,
     onDisableCloneMode,
+    lfsPending,
+    lfsDownloadingRepo,
+    onDownloadLfsObjects,
     onOpenTemplatesRepoPicker,
     onSyncExistingTemplates,
     onClearTemplatesRepo,
@@ -387,30 +400,60 @@ export function SettingsContent(props: SettingsContentProps) {
             const mode = syncModes[repo.path] ?? 'api';
             const isClone = mode === 'clone';
             const isCloning = cloningRepo === repo.path;
+            const lfs = lfsPending[repo.path];
+            const isDownloadingLfs = lfsDownloadingRepo === repo.path;
             return (
-              <GroupRow
-                key={repo.id}
-                testID={`sync-engine-row-${repo.path}`}
-                leading={<Ionicons name={isClone ? 'cloud-done-outline' : 'cloud-outline'} size={18} color={isClone ? colors.primary : colors.textSecondary} />}
-                trailing={
-                  isCloning ? (
-                    <ActivityIndicator size="small" color={colors.primary} />
-                  ) : isClone ? (
-                    <TouchableOpacity testID={`sync-engine-disable-${repo.path}`} onPress={() => onDisableCloneMode(repo)} style={{ padding: 4 }}>
-                      <Text style={[styles.settingLabel, { color: colors.error }]}>Use API</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity testID={`sync-engine-enable-${repo.path}`} onPress={() => onEnableCloneMode(repo)} style={{ padding: 4 }}>
-                      <Text style={[styles.settingLabel, { color: colors.primary }]}>Clone</Text>
-                    </TouchableOpacity>
-                  )
-                }
-              >
-                <Text style={[styles.repoName, { color: colors.text }]} numberOfLines={1}>{repo.name}</Text>
-                <Text style={[styles.repoPath, { color: colors.textSecondary }]} numberOfLines={1}>
-                  {isClone ? 'Clone (local working tree)' : 'GitHub API (per-file)'}
-                </Text>
-              </GroupRow>
+              <React.Fragment key={repo.id}>
+                <GroupRow
+                  testID={`sync-engine-row-${repo.path}`}
+                  leading={<Ionicons name={isClone ? 'cloud-done-outline' : 'cloud-outline'} size={18} color={isClone ? colors.primary : colors.textSecondary} />}
+                  trailing={
+                    isCloning ? (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    ) : isClone ? (
+                      <TouchableOpacity testID={`sync-engine-disable-${repo.path}`} onPress={() => onDisableCloneMode(repo)} style={{ padding: 4 }}>
+                        <Text style={[styles.settingLabel, { color: colors.error }]}>Use API</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity testID={`sync-engine-enable-${repo.path}`} onPress={() => onEnableCloneMode(repo)} style={{ padding: 4 }}>
+                        <Text style={[styles.settingLabel, { color: colors.primary }]}>Clone</Text>
+                      </TouchableOpacity>
+                    )
+                  }
+                >
+                  <Text style={[styles.repoName, { color: colors.text }]} numberOfLines={1}>{repo.name}</Text>
+                  <Text style={[styles.repoPath, { color: colors.textSecondary }]} numberOfLines={1}>
+                    {isClone ? 'Clone (local working tree)' : 'GitHub API (per-file)'}
+                  </Text>
+                </GroupRow>
+                {isClone && lfs && lfs.count > 0 ? (
+                  <GroupRow
+                    testID={`lfs-pending-row-${repo.path}`}
+                    leading={<Ionicons name="document-attach-outline" size={18} color={colors.accent} />}
+                    trailing={
+                      isDownloadingLfs ? (
+                        <ActivityIndicator size="small" color={colors.primary} />
+                      ) : (
+                        <TouchableOpacity
+                          testID={`lfs-download-${repo.path}`}
+                          onPress={() => onDownloadLfsObjects(repo)}
+                          style={{ padding: 4 }}
+                          disabled={!!lfsDownloadingRepo}
+                        >
+                          <Text style={[styles.settingLabel, { color: colors.primary }]}>Download</Text>
+                        </TouchableOpacity>
+                      )
+                    }
+                  >
+                    <Text style={[styles.repoName, { color: colors.text }]} numberOfLines={1}>
+                      {lfs.count} LFS file{lfs.count === 1 ? '' : 's'} not downloaded
+                    </Text>
+                    <Text style={[styles.repoPath, { color: colors.textSecondary }]} numberOfLines={1}>
+                      {formatLfsBytes(lfs.bytes)} pending
+                    </Text>
+                  </GroupRow>
+                ) : null}
+              </React.Fragment>
             );
           })}
         </Group>

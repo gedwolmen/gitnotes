@@ -21,6 +21,7 @@ import { syncTemplateToGitHub } from '../services/TemplateGitHubSyncService';
 import { SyncEngineService, type SyncEngineMode } from '../services/SyncEngineService';
 import { GitFsService } from '../services/git/GitFsService';
 import { CloneMigrationService } from '../services/git/CloneMigrationService';
+import { LfsService } from '../services/git/lfs';
 import { AuthService } from '../services/AuthService';
 import { OnboardingService } from '../services/OnboardingService';
 import { HapticService } from '../utils/haptics';
@@ -92,6 +93,8 @@ export default function SettingsScreen() {
   const [cloneProgress, setCloneProgress] = useState<CloneProgress | null>(null);
   const cloneAbortedRef = useRef(false);
   const [isSyncingExistingTemplates, setIsSyncingExistingTemplates] = useState(false);
+  const [lfsPending, setLfsPending] = useState<Record<string, { count: number; bytes: number }>>({});
+  const [lfsDownloadingRepo, setLfsDownloadingRepo] = useState<string | null>(null);
 
   useEffect(() => {
     TemplateRepoPreferenceService.get().then(setTemplatesRepoPref);
@@ -110,6 +113,27 @@ export default function SettingsScreen() {
       cancelled = true;
     };
   }, [repositories]);
+
+  const refreshLfsPending = useCallback(async (repoPaths: string[]) => {
+    const next: Record<string, { count: number; bytes: number }> = {};
+    for (const path of repoPaths) {
+      const items = await LfsService.listPending(path);
+      if (items.length > 0) {
+        const bytes = items.reduce((acc, item) => acc + item.pointer.size, 0);
+        next[path] = { count: items.length, bytes };
+      }
+    }
+    setLfsPending(next);
+  }, []);
+
+  useEffect(() => {
+    const cloned = Object.entries(syncModes).filter(([, mode]) => mode === 'clone').map(([path]) => path);
+    if (cloned.length === 0) {
+      setLfsPending({});
+      return;
+    }
+    void refreshLfsPending(cloned);
+  }, [syncModes, refreshLfsPending]);
 
   const handlePasteToken = useCallback(async () => {
     try {
@@ -185,6 +209,7 @@ export default function SettingsScreen() {
       }
       await SyncEngineService.setMode(repo.path, 'clone');
       setSyncModes((prev) => ({ ...prev, [repo.path]: 'clone' }));
+      void refreshLfsPending([repo.path]);
       HapticService.success();
       Alert.alert('Clone mode enabled', `${repo.name} now syncs through a local working tree.\n\nPush any offline edits up to this clone now?`, [
         { text: 'Skip', style: 'cancel' },
@@ -221,7 +246,7 @@ export default function SettingsScreen() {
       setCloningRepo(null);
       setCloneProgress(null);
     }
-  }, []);
+  }, [refreshLfsPending]);
 
   const handleCancelClone = useCallback(() => {
     cloneAbortedRef.current = true;
@@ -230,6 +255,48 @@ export default function SettingsScreen() {
     // Updating the modal copy gives immediate feedback while that unwinds.
     setCloneProgress((prev) => (prev ? { ...prev, phase: 'Cancelling…' } : prev));
   }, []);
+
+  const handleDownloadLfsObjects = useCallback(async (repo: GitRepository) => {
+    const token = (await AuthService.getToken()) ?? undefined;
+    if (!token) {
+      Alert.alert('GitHub required', 'Connect a GitHub account before downloading LFS objects.');
+      return;
+    }
+    setLfsDownloadingRepo(repo.path);
+    try {
+      const items = await LfsService.listPending(repo.path);
+      const workingTreeUri = GitFsService.workingTreeUri({ repoPath: repo.path });
+      const root = workingTreeUri.endsWith('/') ? workingTreeUri : `${workingTreeUri}/`;
+      let succeeded = 0;
+      const failures: { path: string; error: string }[] = [];
+      for (const item of items) {
+        try {
+          await LfsService.downloadObject({
+            repoPath: repo.path,
+            filePath: item.path,
+            fileUri: `${root}${item.path}`,
+            accessToken: token,
+          });
+          succeeded++;
+        } catch (e) {
+          failures.push({ path: item.path, error: e instanceof Error ? e.message : String(e) });
+        }
+      }
+      await refreshLfsPending([repo.path]);
+      if (failures.length === 0) {
+        HapticService.success();
+        Alert.alert('LFS downloads complete', `Downloaded ${succeeded} file(s) for ${repo.name}.`);
+      } else {
+        HapticService.error();
+        Alert.alert(
+          'Some LFS downloads failed',
+          `Downloaded ${succeeded} file(s); ${failures.length} failed.\n\n${failures[0].error}`,
+        );
+      }
+    } finally {
+      setLfsDownloadingRepo(null);
+    }
+  }, [refreshLfsPending]);
 
   const handleDisableCloneMode = useCallback((repo: GitRepository) => {
     Alert.alert('Switch to API mode?', `This will remove the local clone of ${repo.name} and revert to the GitHub Contents API.`, [
@@ -484,6 +551,9 @@ export default function SettingsScreen() {
         onRemoveRepo={handleRemoveRepo}
         onEnableCloneMode={(repo) => void handleEnableCloneMode(repo)}
         onDisableCloneMode={handleDisableCloneMode}
+        lfsPending={lfsPending}
+        lfsDownloadingRepo={lfsDownloadingRepo}
+        onDownloadLfsObjects={(repo) => void handleDownloadLfsObjects(repo)}
         onOpenTemplatesRepoPicker={() => setShowTemplatesRepoPicker(true)}
         onSyncExistingTemplates={() => void handleSyncExistingTemplates()}
         onClearTemplatesRepo={() => void handleClearTemplatesRepo()}
