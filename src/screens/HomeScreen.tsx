@@ -15,6 +15,11 @@ import { HapticService } from '../utils/haptics';
 import TemplateSelector from '../components/TemplateSelector';
 import { NoteTemplate } from '../services/TemplateService';
 import { NoteFormatPreferenceService } from '../services/NoteFormatPreferenceService';
+import {
+  buildJournalNoteInput,
+  findJournalEntry,
+  journalNoteTitle,
+} from '../services/JournalService';
 import { useResponsive } from '../hooks/useResponsive';
 import { Button, Card, Modal, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { BentoRecent } from '../components/home/BentoRecent';
@@ -33,7 +38,7 @@ const FORMAT_OPTIONS: { label: string; value: EditableNoteFormat; ext: string }[
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
-  const { notes } = useNotes();
+  const { notes, createNote } = useNotes();
   const { canvases } = useCanvases();
   const { isTablet, maxContentWidth } = useResponsive();
   const headerHeight = useScreenHeaderHeight({ subtitle: true });
@@ -43,6 +48,7 @@ export default function HomeScreen() {
   const [defaultFormat, setDefaultFormat] = useState<EditableNoteFormat | null>(null);
   const [rememberFormat, setRememberFormat] = useState<boolean>(false);
   const [pickerRemember, setPickerRemember] = useState<boolean>(false);
+  const [isCreatingJournal, setIsCreatingJournal] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -85,6 +91,29 @@ export default function HomeScreen() {
     HapticService.medium();
     setShowTemplateSelector(true);
   }, []);
+
+  const handleOpenTodaysJournal = useCallback(async () => {
+    if (isCreatingJournal) return;
+    HapticService.medium();
+    const today = new Date();
+    const existing = findJournalEntry(notes, today);
+    if (existing) {
+      navigation.navigate('NoteEditor', { noteId: existing.id });
+      return;
+    }
+    setIsCreatingJournal(true);
+    try {
+      const note = await createNote(buildJournalNoteInput(today));
+      if (note) {
+        navigation.navigate('NoteEditor', { noteId: note.id });
+      }
+    } finally {
+      setIsCreatingJournal(false);
+    }
+  }, [createNote, isCreatingJournal, navigation, notes]);
+
+  const todaysJournalTitle = journalNoteTitle(new Date());
+  const hasTodaysJournal = notes.some((n) => n.title === todaysJournalTitle);
 
   const handleTemplateSelect = useCallback((template: NoteTemplate) => {
     setShowTemplateSelector(false);
@@ -184,6 +213,26 @@ export default function HomeScreen() {
                 </View>
               </View>
               <Text style={[styles.bentoTileSubtitle, { color: colors.textSecondary }]}>Visual notes</Text>
+            </View>
+          </Pressable>
+          <Pressable
+            onPress={handleOpenTodaysJournal}
+            disabled={isCreatingJournal}
+            style={({ pressed }) => [
+              styles.bentoTile,
+              { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
+            ]}
+          >
+            <View style={[styles.bentoTileBadge, { backgroundColor: colors.primary + '1F' }]}>
+              <Ionicons name="journal-outline" size={22} color={colors.primary} />
+            </View>
+            <View style={styles.bentoTileContent}>
+              <Text style={[styles.bentoTileTitle, { color: colors.text }]} numberOfLines={1}>
+                {hasTodaysJournal ? "Today's Journal" : 'New Journal Entry'}
+              </Text>
+              <Text style={[styles.bentoTileSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
+                {todaysJournalTitle.replace('Journal ', '')}
+              </Text>
             </View>
           </Pressable>
         </View>
