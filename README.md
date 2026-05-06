@@ -35,19 +35,6 @@
 - Optional AI chat layer (OpenAI-compatible providers, Apple Intelligence, on-device Llama)
 - Biometric lock, English & Spanish UI, light / dark / system themes
 
-## Quick start
-
-```bash
-git clone https://github.com/gedwolmen/gitnotes
-cd gitnotes
-yarn install
-yarn start
-```
-
-Press `i` for the iOS Simulator, `a` for Android, or scan the QR with Expo Go.
-
-You'll need Node ≥ 20.18, Yarn classic (1.x), and Xcode or Android Studio for native builds.
-
 ## Stack
 
 Expo SDK 55 · React Native 0.83 · TypeScript 5.6 · isomorphic-git · React Navigation v7 · TanStack Query · Zustand · Vercel AI SDK v6 · Reanimated · FlashList.
