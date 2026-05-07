@@ -10,9 +10,10 @@ export interface KatexViewProps {
   onHeightChange?: (height: number) => void;
 }
 
-const KATEX_MIN_CSS = 'html,body{margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}#container{display:inline-block;max-width:100%;box-sizing:border-box;padding:0}.katex{display:inline-block;max-width:100%;white-space:normal;word-break:break-word;line-height:1.4}.katex-display{display:block;width:100%;white-space:normal;text-align:center;margin:0}';
+const KATEX_VERSION = '0.16.11';
 
-const KATEX_MIN_JS = '!function(){function e(e){return e.replace(/[&<>"\']/g,function(e){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","\'":"&#39;"}[e]})}window.katex={render:function(t,n,o){var r=!!(o&&o.displayMode),i=document.createElement(r?"div":"span");i.className=r?"katex-display":"katex",i.innerHTML=e(String(t||"")),n.innerHTML="",n.appendChild(i)}}}();';
+const KATEX_CSS_CDN = `https://cdn.jsdelivr.net/npm/katex@${KATEX_VERSION}/dist/katex.min.css`;
+const KATEX_JS_CDN = `https://cdn.jsdelivr.net/npm/katex@${KATEX_VERSION}/dist/katex.min.js`;
 
 function buildHtml(isDark: boolean): string {
   const background = isDark ? '#0f172a' : '#ffffff';
@@ -23,21 +24,39 @@ function buildHtml(isDark: boolean): string {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <link rel="stylesheet" href="${KATEX_CSS_CDN}" />
     <style>
-      body{background:${background};color:${text};overflow:hidden;}
-      ${KATEX_MIN_CSS}
+      body{background:${background};color:${text};overflow:hidden;margin:0;padding:0}
+      #container{display:inline-block;max-width:100%;box-sizing:border-box;padding:2px 4px}
+      .katex-display{margin:0}
+      .katex-error{color:#cc0000;font-style:italic;font-size:0.9em}
     </style>
   </head>
   <body>
     <div id="container"></div>
-    <script>${KATEX_MIN_JS}</script>
+    <script src="${KATEX_JS_CDN}"></script>
     <script>window.__katexReady=typeof katex!=="undefined"&&typeof katex.render==="function";</script>
   </body>
 </html>`;
 }
 
 function buildInjectedJavaScript(expression: string, displayMode: boolean): string {
-  return `(function(){var container=document.getElementById('container');if(!container||!window.katex||typeof window.katex.render!=='function'){window.ReactNativeWebView.postMessage('0');return true;}katex.render(${JSON.stringify(expression)},container,{displayMode: ${displayMode}, throwOnError: false});var height=Math.ceil(container.offsetHeight||document.body.scrollHeight||0);window.ReactNativeWebView.postMessage(String(height));return true;})();`;
+  return `(function(){
+var container=document.getElementById('container');
+if(!container){window.ReactNativeWebView.postMessage('0');return true;}
+if(!window.katex||typeof window.katex.render!=="function"){
+  container.textContent=${JSON.stringify(expression)};
+  window.ReactNativeWebView.postMessage(String(Math.ceil(container.offsetHeight||0)));
+  return true;
+}
+try{
+  katex.render(${JSON.stringify(expression)},container,{displayMode:${displayMode},throwOnError:false});
+}catch(e){
+  container.textContent=${JSON.stringify(expression)};
+}
+var height=Math.ceil(container.offsetHeight||document.body.scrollHeight||0);
+window.ReactNativeWebView.postMessage(String(height));
+return true;})();`;
 }
 
 export default function KatexView({ expression, displayMode, isDark, onHeightChange }: KatexViewProps) {
