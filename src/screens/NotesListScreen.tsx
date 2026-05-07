@@ -17,6 +17,7 @@ import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import { pullAllFromRepos } from '../services/RepoPullService';
 import ColorPicker from '../components/ColorPicker';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
+import { ConflictBanner } from '../components/ui/ConflictBanner';
 import { ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { HapticService } from '../utils/haptics';
 import { useResponsive } from '../hooks/useResponsive';
@@ -336,6 +337,7 @@ export default function NotesListScreen() {
       {isDeleting ? <GitHubActivityIndicator /> : null}
       <View style={{ paddingTop: headerHeight }}>
         <OfflineBanner />
+        <ConflictBanner />
       </View>
 
       <NotesListHeader
