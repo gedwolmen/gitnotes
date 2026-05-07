@@ -16,8 +16,6 @@ interface SwipeableListItemProps {
   selected: boolean;
   selectionMode: boolean;
   onToggleSelect: () => void;
-  mergeTop?: boolean;
-  mergeBottom?: boolean;
   children: React.ReactNode;
 }
 
@@ -29,8 +27,6 @@ export function SwipeableListItem({
   selected,
   selectionMode,
   onToggleSelect,
-  mergeTop = false,
-  mergeBottom = false,
   children,
 }: SwipeableListItemProps) {
   const { colors } = useTheme();
@@ -81,11 +77,12 @@ export function SwipeableListItem({
         style={[
           styles.itemWrap,
           selected && {
-            backgroundColor: colors.primary + '14',
-            borderColor: colors.primary,
+            shadowColor: colors.error,
+            shadowOpacity: 0.55,
+            shadowRadius: 10,
+            shadowOffset: { width: 0, height: 0 },
+            elevation: 8,
           },
-          selected && mergeTop && styles.mergeTop,
-          selected && mergeBottom && styles.mergeBottom,
           animatedStyle,
         ]}
       >
@@ -98,22 +95,6 @@ export function SwipeableListItem({
 const styles = StyleSheet.create({
   itemWrap: {
     borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'transparent',
-  },
-  mergeTop: {
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
-    borderTopWidth: 0,
-    marginTop: -8,
-    paddingTop: 8,
-  },
-  mergeBottom: {
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-    borderBottomWidth: 0,
-    marginBottom: -8,
-    paddingBottom: 8,
   },
 });
 

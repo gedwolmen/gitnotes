@@ -310,19 +310,12 @@ export default function NotesListScreen() {
   );
 
   const renderNote = useCallback(
-    ({ item, index }: { item: Note; index: number }) => {
-      const prevItem = index > 0 ? displayNotes[index - 1] : undefined;
-      const nextItem = index < displayNotes.length - 1 ? displayNotes[index + 1] : undefined;
-      const mergeTop = !!prevItem && selectedIds.has(prevItem.id);
-      const mergeBottom = !!nextItem && selectedIds.has(nextItem.id);
-      return (
+    ({ item, index }: { item: Note; index: number }) => (
       <SwipeableListItem
         itemId={item.id}
         selected={selectedIds.has(item.id)}
         selectionMode={selectionMode}
         onToggleSelect={() => toggleSelected(item.id)}
-        mergeTop={mergeTop}
-        mergeBottom={mergeBottom}
       >
         <NotesListCard
           note={item}
@@ -335,11 +328,9 @@ export default function NotesListScreen() {
           onTagPress={handleTagPress}
         />
       </SwipeableListItem>
-    );
-    },
+    ),
     [
       currentSearchMatchIndex,
-      displayNotes,
       handleNoteLongPress,
       handleNotePress,
       handleTagPress,

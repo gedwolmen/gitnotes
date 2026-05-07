@@ -323,26 +323,17 @@ export default function TodoListScreen() {
   }, [isRefreshing, refreshTodos]);
 
   const renderTodoItem = useCallback(
-    ({ item, index }: { item: Todo; index: number }) => {
-      const prevItem = index > 0 ? filteredTodos[index - 1] : undefined;
-      const nextItem = index < filteredTodos.length - 1 ? filteredTodos[index + 1] : undefined;
-      const mergeTop = !!prevItem && selectedIds.has(prevItem.id);
-      const mergeBottom = !!nextItem && selectedIds.has(nextItem.id);
-      return (
-        <SwipeableListItem
-          itemId={item.id}
-          selected={selectedIds.has(item.id)}
-          selectionMode={selectionMode}
-          onToggleSelect={() => toggleSelected(item.id)}
-          mergeTop={mergeTop}
-          mergeBottom={mergeBottom}
-        >
-          <TodoCard todo={item} onPress={openEditModal} onToggle={handleToggleTodo} />
-        </SwipeableListItem>
-      );
-    },
+    ({ item }: { item: Todo }) => (
+      <SwipeableListItem
+        itemId={item.id}
+        selected={selectedIds.has(item.id)}
+        selectionMode={selectionMode}
+        onToggleSelect={() => toggleSelected(item.id)}
+      >
+        <TodoCard todo={item} onPress={openEditModal} onToggle={handleToggleTodo} />
+      </SwipeableListItem>
+    ),
     [
-      filteredTodos,
       handleToggleTodo,
       openEditModal,
       selectedIds,
