@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, RefreshControl, FlatList } from 'react-native';
+import { Alert, View, Text, StyleSheet, ActivityIndicator, RefreshControl, FlatList } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,6 +33,8 @@ import { NotesEmptyState } from '../components/notes/NotesEmptyState';
 import { NotesContextMenu } from '../components/notes/NotesContextMenu';
 import { useNotesListFilters } from '../components/notes/useNotesListFilters';
 import { useNotesListNoteActions } from '../components/notes/useNotesListNoteActions';
+import { SwipeableListItem } from '../components/list/SwipeableListItem';
+import { BulkActionBar } from '../components/list/BulkActionBar';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -73,6 +75,20 @@ export default function NotesListScreen() {
   const [longPressedNote, setLongPressedNote] = useState<Note | null>(null);
   const [colorPickerNote, setColorPickerNote] = useState<Note | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+
+  const selectionMode = selectedIds.size > 0;
+
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 
   const closeOpenSwipeable = useCallback(() => {
     openSwipeableRef.current?.close();
@@ -178,6 +194,38 @@ export default function NotesListScreen() {
       openSwipeableRef.current = null;
     }
   }, []);
+
+  const handleBulkDelete = useCallback(() => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    Alert.alert(
+      `Delete ${ids.length} ${ids.length === 1 ? 'note' : 'notes'}?`,
+      'This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setIsDeleting(true);
+            try {
+              for (const id of ids) {
+                try {
+                  await deleteNote(id);
+                } catch (error) {
+                  void error;
+                }
+              }
+              HapticService.success();
+              clearSelection();
+            } finally {
+              setIsDeleting(false);
+            }
+          },
+        },
+      ],
+    );
+  }, [selectedIds, deleteNote, clearSelection]);
 
   useEffect(() => {
     if (authState.token) GitHubService.setToken(authState.token);
@@ -291,16 +339,27 @@ export default function NotesListScreen() {
 
   const renderNote = useCallback(
     ({ item, index }: { item: Note; index: number }) => (
-      <NotesListCard
-        note={item}
-        viewMode={viewMode}
-        onPress={handleNotePress}
-        onLongPress={handleNoteLongPress}
-        highlighted={hasActiveSearch && index === currentSearchMatchIndex}
-        isOffline={isConnected === false}
-        isCached={!!item.content?.trim()}
-        onTagPress={handleTagPress}
-      />
+      <SwipeableListItem
+        itemId={item.id}
+        selected={selectedIds.has(item.id)}
+        selectionMode={selectionMode}
+        onDelete={() => handleDeleteFromSwipe(item)}
+        onToggleSelect={() => toggleSelected(item.id)}
+        registerRef={getSwipeableRef}
+        onSwipeableWillOpen={handleSwipeableWillOpen}
+        onSwipeableWillClose={handleSwipeableWillClose}
+      >
+        <NotesListCard
+          note={item}
+          viewMode={viewMode}
+          onPress={handleNotePress}
+          onLongPress={handleNoteLongPress}
+          highlighted={hasActiveSearch && index === currentSearchMatchIndex}
+          isOffline={isConnected === false}
+          isCached={!!item.content?.trim()}
+          onTagPress={handleTagPress}
+        />
+      </SwipeableListItem>
     ),
     [
       currentSearchMatchIndex,
@@ -313,6 +372,9 @@ export default function NotesListScreen() {
       handleTagPress,
       hasActiveSearch,
       isConnected,
+      selectedIds,
+      selectionMode,
+      toggleSelected,
       viewMode,
     ],
   );
@@ -433,6 +495,16 @@ export default function NotesListScreen() {
         selected={colorPickerNote?.color ?? null}
         onSelect={(color) => handleColorSelect(colorPickerNote, color)}
       />
+
+      <BulkActionBar
+        count={selectedIds.size}
+        itemNoun="note"
+        bottomOffset={tabBarHeight + 12}
+        onCancel={clearSelection}
+        onDelete={handleBulkDelete}
+      />
+      
+
       <ScreenHeader
         title="Notes"
         actions={
@@ -510,6 +582,7 @@ export default function NotesListScreen() {
           </>
         }
       />
+
     </SafeAreaView>
   );
 }

@@ -26,6 +26,8 @@ import { TodoCard } from '../components/todos/TodoCard';
 import { TodosEmptyState } from '../components/todos/TodosEmptyState';
 import { TodosListHeader } from '../components/todos/TodosListHeader';
 import { TodoEditorModal } from '../components/todos/TodoEditorModal';
+import { SwipeableListItem } from '../components/list/SwipeableListItem';
+import { BulkActionBar } from '../components/list/BulkActionBar';
 
 export default function TodoListScreen() {
   const { colors, isDark } = useTheme();
@@ -56,6 +58,20 @@ export default function TodoListScreen() {
   const swipeableRefs = useRef<Record<string, React.RefObject<SwipeableMethods | null>>>({});
   const openSwipeableRef = useRef<SwipeableMethods | null>(null);
   const filter = useEntityFilter<Todo>(todos);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+
+  const selectionMode = selectedIds.size > 0;
+
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 
   const todosAfterEntityFilters = useMemo(() => {
     const baseTodos = filter.applyFilters(todos);
@@ -109,6 +125,34 @@ export default function TodoListScreen() {
       openSwipeableRef.current = null;
     }
   }, []);
+
+  const handleBulkDelete = useCallback(() => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    Alert.alert(
+      `Delete ${ids.length} ${ids.length === 1 ? 'todo' : 'todos'}?`,
+      'This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            for (const id of ids) {
+              try {
+                await deleteTodo(id);
+                delete swipeableRefs.current[id];
+              } catch (error) {
+                void error;
+              }
+            }
+            HapticService.success();
+            clearSelection();
+          },
+        },
+      ],
+    );
+  }, [selectedIds, deleteTodo, clearSelection]);
 
   const resetForm = useCallback(() => {
     setTodoText('');
@@ -334,7 +378,18 @@ export default function TodoListScreen() {
 
   const renderTodoItem = useCallback(
     ({ item }: { item: Todo }) => (
-      <TodoCard todo={item} onPress={openEditModal} onToggle={handleToggleTodo} />
+      <SwipeableListItem
+        itemId={item.id}
+        selected={selectedIds.has(item.id)}
+        selectionMode={selectionMode}
+        onDelete={() => handleDeleteTodo(item.id)}
+        onToggleSelect={() => toggleSelected(item.id)}
+        registerRef={getSwipeableRef}
+        onSwipeableWillOpen={handleSwipeableWillOpen}
+        onSwipeableWillClose={handleSwipeableWillClose}
+      >
+        <TodoCard todo={item} onPress={openEditModal} onToggle={handleToggleTodo} />
+      </SwipeableListItem>
     ),
     [
       getSwipeableRef,
@@ -343,6 +398,9 @@ export default function TodoListScreen() {
       handleSwipeableWillOpen,
       handleToggleTodo,
       openEditModal,
+      selectedIds,
+      selectionMode,
+      toggleSelected,
     ],
   );
 
@@ -470,6 +528,14 @@ export default function TodoListScreen() {
         onRepoChange={setTodoRepo}
         onBranchChange={setTodoBranch}
         onSubmit={editingTodo ? handleUpdateTodo : handleAddTodo}
+      />
+
+      <BulkActionBar
+        count={selectedIds.size}
+        itemNoun="todo"
+        bottomOffset={tabBarHeight + 12}
+        onCancel={clearSelection}
+        onDelete={handleBulkDelete}
       />
 
       <ScreenHeader
