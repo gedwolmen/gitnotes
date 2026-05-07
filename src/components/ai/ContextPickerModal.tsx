@@ -192,7 +192,7 @@ export default function ContextPickerModal({
           const name = item.path.split('/').pop() || item.path;
           const selected = isSelected('file', item.path);
           return (
-            <TouchableOpacity activeOpacity={0.7} onPress={() => toggleSelection(makeContextItem('file', item.path, name))}>
+            <TouchableOpacity testID="context-picker.button.toggle" activeOpacity={0.7} onPress={() => toggleSelection(makeContextItem('file', item.path, name))}>
               <Surface
                 elevation={selected ? 'flat' : 'subtle'}
                 radius="md"
@@ -482,8 +482,9 @@ export default function ContextPickerModal({
             onBack={onClose}
             actions={
               <Button 
+                testID="context-picker.button.confirm"
                 variant="primary" 
-                 
+                
                 onPress={handleConfirm}
                 disabled={selectedItems.length === 0}
               >
@@ -498,6 +499,7 @@ export default function ContextPickerModal({
               return (
                 <TouchableOpacity
                   key={tab.key}
+                  testID={`context-picker.tab.switch`}
                   style={[
                     styles.tabItem,
                     { borderRadius: radii.md },
@@ -518,6 +520,7 @@ export default function ContextPickerModal({
           {showSearch && (
             <View style={{ paddingHorizontal: spacing[4], paddingVertical: spacing[2] }}>
               <Input
+                testID="context-picker.input.search"
                 placeholder="Search..."
                 value={searchQuery}
                 onChangeText={setSearchQuery}

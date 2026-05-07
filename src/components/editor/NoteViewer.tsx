@@ -78,7 +78,7 @@ export function NoteViewer({
   return (
     <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface, gap: 8 }]}>
-        <IconButton size="sm" onPress={onBack} accessibilityLabel="Back">
+        <IconButton size="sm" testID="note-viewer.button.back" onPress={onBack} accessibilityLabel="Back">
           <Ionicons name="arrow-back" size={20} color={colors.accent} />
         </IconButton>
         <View style={styles.flex} />
@@ -86,6 +86,7 @@ export function NoteViewer({
         {!isPdfNote && tocEntries.length > 0 ? (
           <IconButton
             size="sm"
+            testID="note-viewer.button.toggle-toc"
             onPress={() => {
               HapticService.light();
               onToggleToc();
@@ -97,7 +98,7 @@ export function NoteViewer({
         ) : null}
 
         {!isPdfNote && canSpeak ? (
-          <IconButton size="sm" onPress={onToggleSpeak} accessibilityLabel="Read aloud">
+          <IconButton size="sm" testID="note-viewer.button.toggle-speak" onPress={onToggleSpeak} accessibilityLabel="Read aloud">
             <Ionicons name={isSpeaking ? 'stop-circle' : 'volume-high'} size={18} color={colors.accent} />
           </IconButton>
         ) : null}
@@ -105,6 +106,7 @@ export function NoteViewer({
         {canEdit ? (
           <IconButton
             size="sm"
+            testID="note-viewer.button.edit"
             onPress={() => {
               HapticService.light();
               onEdit();
@@ -163,6 +165,7 @@ export function NoteViewer({
               return (
                 <TouchableOpacity
                   key={`${entry.lineIndex}-${index}`}
+                  testID="note-viewer.button.toc-entry"
                   onPress={() => {
                     HapticService.light();
                     onTocPress(entry);

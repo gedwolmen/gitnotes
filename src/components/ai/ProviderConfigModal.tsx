@@ -187,7 +187,7 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
             <Text style={[styles.modalTitle, { color: colors.text }]}>
               {provider ? 'Edit Provider' : 'Add Provider'}
             </Text>
-            <TouchableOpacity onPress={onClose}>
+            <TouchableOpacity testID="provider-config.button.close" onPress={onClose}>
               <Ionicons name="close" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
@@ -200,6 +200,7 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
             <Group title="Provider Details">
               <GroupRow>
                 <TextInput
+                  testID="provider-config.input.name"
                   style={[styles.textInput, { color: colors.text }]}
                   placeholder="Name (e.g., My Ollama, OpenAI)"
                   placeholderTextColor={colors.textSecondary}
@@ -212,6 +213,7 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
                 <>
                   <GroupRow>
                     <TextInput
+                      testID="provider-config.input.base-url"
                       style={[styles.textInput, { color: colors.text }]}
                       placeholder="Base URL (e.g., http://localhost:11434/v1)"
                       placeholderTextColor={colors.textSecondary}
@@ -225,6 +227,7 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
                   <GroupRow>
                     <View style={styles.apiKeyRow}>
                       <TextInput
+                        testID="provider-config.input.api-key"
                         style={[styles.textInput, { color: colors.text, flex: 1 }]}
                         placeholder="API Key (Optional)"
                         placeholderTextColor={colors.textSecondary}
@@ -235,8 +238,8 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
                         autoCorrect={false}
                       />
                       <TouchableOpacity
+                        testID="provider-config.button.toggle-token-visible"
                         onPress={() => setApiKeyVisible((v) => !v)}
-                        style={styles.iconBtn}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       >
                         <Ionicons
@@ -263,6 +266,7 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
             <View style={[styles.actionsContainer, { marginTop: spacing[6], gap: spacing[3] }]}>
               {!isBuiltIn && (
                 <TouchableOpacity
+                  testID="provider-config-modal.button.test-connection"
                   style={[styles.actionBtn, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}
                   onPress={handleTestConnection}
                   disabled={isTesting}
@@ -276,6 +280,7 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
               )}
 
               <TouchableOpacity
+                testID="provider-config-modal.button.save"
                 style={[styles.actionBtn, { backgroundColor: colors.primary }]}
                 onPress={handleSave}
               >
@@ -284,6 +289,7 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
 
               {provider && provider.type !== 'apple' && provider.type !== 'llama' && (
                 <TouchableOpacity
+                  testID="provider-config.button.delete"
                   style={[styles.actionBtn, { backgroundColor: 'transparent', marginTop: spacing[2] }]}
                   onPress={handleDelete}
                 >

@@ -14,6 +14,7 @@ export function TodosSwipeActions({ onDelete }: TodosSwipeActionsProps) {
   return (
     <View style={styles.track}>
       <TouchableOpacity
+        testID="todos-swipe.button.delete"
         style={[styles.action, { backgroundColor: colors.error }]}
         onPress={onDelete}
         activeOpacity={0.85}

@@ -29,6 +29,7 @@ export function BiometricLockScreen() {
             : 'Enter your passcode to unlock'}
         </Text>
         <Pressable
+          testID="biometric-lock.button.authenticate"
           style={[styles.unlockButton, { backgroundColor: colors.accent }]}
           onPress={handleUnlock}
         >

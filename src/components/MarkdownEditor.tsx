@@ -310,7 +310,9 @@ export default function MarkdownEditor({ content, onContentChange, placeholder =
             }}
           />
 
-          <MarkdownToolbar onFormat={handleFormat} />
+          <View testID="markdown-editor.toolbar-action.press">
+            <MarkdownToolbar onFormat={handleFormat} />
+          </View>
         </>
       )}
     </View>

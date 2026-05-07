@@ -35,6 +35,7 @@ export function ActiveFilterStrip<T extends FilterableItem>({ filter }: Props<T>
   ) => (
     <TouchableOpacity
       key={key}
+      testID={`active-filter-strip.filter.remove`}
       style={[
         styles.chip,
         { borderColor: colors.primary, backgroundColor: colors.primary + '15' },
@@ -64,6 +65,7 @@ export function ActiveFilterStrip<T extends FilterableItem>({ filter }: Props<T>
           chip(`tag-${tag}`, 'pricetag-outline', tag, () => toggleTag(tag)),
         )}
         <TouchableOpacity
+          testID="active-filter-strip.button.clear-all"
           style={[styles.chip, { borderColor: colors.border + '60' }]}
           onPress={clearAll}
         >

@@ -30,11 +30,12 @@ export function FilterBar({ filters, onRemoveFilter, onClearAll }: FilterBarProp
   if (filters.length === 0) return null;
 
   return (
-    <View style={styles.wrap}>
+    <View testID="filter-bar.filter.change" style={styles.wrap}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
         {filters.map((f) => (
           <TouchableOpacity
             key={f.id}
+            testID={`notes-filter-bar.button.remove`}
             style={[styles.chip, { borderColor: colors.primary, backgroundColor: colors.primary + '15' }]}
             onPress={() => onRemoveFilter(f.id)}
           >
@@ -46,7 +47,7 @@ export function FilterBar({ filters, onRemoveFilter, onClearAll }: FilterBarProp
           </TouchableOpacity>
         ))}
         {filters.length > 1 ? (
-          <TouchableOpacity style={[styles.chip, { borderColor: colors.border + '60' }]} onPress={onClearAll}>
+          <TouchableOpacity testID="notes-filter-bar.button.clear-all" style={[styles.chip, { borderColor: colors.border + '60' }]} onPress={onClearAll}>
             <Text style={[styles.chipText, { color: colors.textSecondary }]}>Clear all</Text>
           </TouchableOpacity>
         ) : null}

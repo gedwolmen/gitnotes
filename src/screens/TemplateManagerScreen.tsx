@@ -228,7 +228,7 @@ export default function TemplateManagerScreen() {
         }
       >
         <TouchableOpacity
-          testID="template-create-cta"
+          testID="template-manager.button.create"
           onPress={handleOpenCreate}
           style={[styles.createCta, { backgroundColor: colors.primary }]}
           activeOpacity={0.8}
@@ -281,7 +281,7 @@ export default function TemplateManagerScreen() {
         }
         onBack={handleBack}
         actions={
-          <IconButton size="sm" onPress={handleOpenCreate} accessibilityLabel="New template">
+          <IconButton size="sm" testID="template-manager.icon-button.new-template" onPress={handleOpenCreate} accessibilityLabel="New template">
             <Ionicons name="add" size={20} color={colors.accent} />
           </IconButton>
         }

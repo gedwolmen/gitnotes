@@ -17,6 +17,7 @@ export function UndoRedoButtons({ canUndo, canRedo, onUndo, onRedo }: UndoRedoBu
   return (
     <View style={styles.container}>
       <TouchableOpacity
+        testID="undo-redo.icon-button.undo"
         accessibilityRole="button"
         accessibilityLabel="undo"
         accessibilityState={{ disabled: !canUndo }}
@@ -32,6 +33,7 @@ export function UndoRedoButtons({ canUndo, canRedo, onUndo, onRedo }: UndoRedoBu
       </TouchableOpacity>
 
       <TouchableOpacity
+        testID="undo-redo.icon-button.redo"
         accessibilityRole="button"
         accessibilityLabel="redo"
         accessibilityState={{ disabled: !canRedo }}

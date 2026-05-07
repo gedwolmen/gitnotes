@@ -72,6 +72,7 @@ export function RepoTreeMoveDialog({ visible, node, owner, repo, branch, onClose
           {folders.map((folder) => (
             <GroupRow
               key={folder.path}
+              testID="repo-tree-move.button.select-path"
               onPress={() => { setSelectedPath(folder.path); setCustomPath(''); }}
               style={[selectedPath === folder.path && { backgroundColor: colors.primary + '15' }]}
               leading={<Ionicons name="folder-outline" size={16} color={selectedPath === folder.path ? colors.primary : '#FF9500'} />}
@@ -84,8 +85,8 @@ export function RepoTreeMoveDialog({ visible, node, owner, repo, branch, onClose
 
       <Text style={[dialogStyles.label, { color: colors.textSecondary, marginTop: 8 }]}>Or type a path</Text>
       <Input
+        testID="repo-tree-move.input.custom-path"
         ref={inputRef}
-        value={customPath}
         onChangeText={(text) => { setCustomPath(text); if (text) setSelectedPath(''); }}
         placeholder="e.g. notes/archive"
         autoCapitalize="none"
@@ -94,8 +95,8 @@ export function RepoTreeMoveDialog({ visible, node, owner, repo, branch, onClose
       />
 
       <View style={dialogStyles.buttons}>
-        <Button variant="secondary" label="Cancel" onPress={onClose} />
-        <Button variant="primary" label="Move" onPress={handleMove} disabled={!selectedPath && !customPath.trim()} />
+        <Button testID="repo-tree-move-dialog.button.cancel" variant="secondary" label="Cancel" onPress={onClose} />
+        <Button testID="repo-tree-move.button.move" variant="primary" label="Move" onPress={handleMove} disabled={!selectedPath && !customPath.trim()} />
       </View>
     </Modal>
   );

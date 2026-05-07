@@ -147,7 +147,10 @@ export function RepoTreeItem({ node, owner, repo, branch, level, onFilePress, on
 
   return (
     <View>
-      <GroupRow
+      <View testID="repo-tree-item.button.toggle">
+        <View testID="repo-tree-item.button.file-press">
+          <GroupRow
+            testID={isDir ? "repo-tree-item.button.toggle" : "repo-tree-item.button.file-press"}
         onPress={isDir ? handleToggle : handleFileOnlyPress}
         onLongPress={() => { HapticService.medium(); setShowContextMenu(true); }}
         disabled={isOperating}
@@ -184,6 +187,8 @@ export function RepoTreeItem({ node, owner, repo, branch, level, onFilePress, on
       >
         <Text style={[treeStyles.name, { color: colors.text }]} numberOfLines={1}>{node.name}</Text>
       </GroupRow>
+        </View>
+      </View>
 
       {expanded
         ? children.map((child) => (

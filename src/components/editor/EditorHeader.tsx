@@ -16,14 +16,15 @@ export function EditorHeader({ noteId, isSaving, onCancel, onSave }: EditorHeade
 
   return (
     <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
-      <View style={styles.headerLeft}>
-        <Button variant="ghost" label="Cancel" onPress={onCancel} disabled={isSaving} textStyle={styles.headerButtonText} />
+      <View testID="editor-header.button.cancel" style={styles.headerLeft}>
+        <Button variant="ghost" label="Cancel" testID="note-editor.button.cancel" onPress={onCancel} disabled={isSaving} textStyle={styles.headerButtonText} />
       </View>
       <Text style={[styles.headerTitle, { color: colors.text }]}>{noteId ? 'Edit Note' : 'New Note'}</Text>
-      <View style={styles.headerRight}>
+      <View testID="editor-header.button.save" style={styles.headerRight}>
         <Button
           variant="ghost"
           label={isSaving ? 'Saving…' : 'Save'}
+          testID="note-editor.button.save"
           onPress={onSave}
           disabled={isSaving}
           textStyle={[styles.headerButtonText, styles.saveButtonText, isSaving && styles.disabledButton]}

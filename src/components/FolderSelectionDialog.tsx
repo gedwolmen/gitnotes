@@ -198,6 +198,7 @@ export default function FolderSelectionDialog({
               )}
             </TouchableOpacity>
             <TouchableOpacity
+              testID="folder-selection.button.select"
               style={styles.folderRowMain}
               onPress={() => handleSelect(folder)}
               activeOpacity={0.7}
@@ -241,7 +242,7 @@ export default function FolderSelectionDialog({
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
         <View style={[styles.header, { borderBottomColor: colors.border }]}> 
           <View style={styles.headerSide}>
-            <TouchableOpacity onPress={onClose} hitSlop={8} style={styles.headerActionButton}>
+            <TouchableOpacity testID="folder-selection.button.close" onPress={onClose} hitSlop={8} style={styles.headerActionButton}>
               <Text style={[styles.headerButton, { color: colors.primary }]}>Cancel</Text>
             </TouchableOpacity>
           </View>

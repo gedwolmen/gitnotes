@@ -97,6 +97,7 @@ export default function ImageViewerScreen() {
     <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
         <TouchableOpacity
+          testID="image-viewer.icon-button.back"
           onPress={() => { HapticService.light(); navigation.goBack(); }}
           style={styles.iconButton}
         >

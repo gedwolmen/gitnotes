@@ -60,7 +60,7 @@ export function NoteEditorForm({
 
   return (
     <ScrollView style={styles.scrollView} contentContainerStyle={styles.editorContent} keyboardShouldPersistTaps="handled">
-      <View style={styles.gitContextContainer}>
+      <View testID="note-editor-form.picker.repo" style={styles.gitContextContainer}>
         <GitContextPicker
           repo={repo}
           branch={branch}
@@ -72,6 +72,7 @@ export function NoteEditorForm({
       </View>
 
       <TextInput
+        testID="note-editor-form.input.title"
         style={[styles.titleInput, { color: colors.text, borderBottomColor: colors.border }]}
         placeholder="Note Title"
         placeholderTextColor={colors.textSecondary}
@@ -83,6 +84,7 @@ export function NoteEditorForm({
       />
 
       <TouchableOpacity
+        testID="note-editor-form.button.open-folder"
         style={[styles.folderSelector, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}
         onPress={() => {
           HapticService.light();
@@ -105,6 +107,7 @@ export function NoteEditorForm({
           {FORMAT_OPTIONS.map(({ label, value }) => (
             <TouchableOpacity
               key={value}
+              testID="note-editor-form.picker.format"
               style={[
                 styles.formatChip,
                 { borderColor: colors.border },
@@ -123,7 +126,7 @@ export function NoteEditorForm({
         </View>
       </View>
 
-      {canPersistNoteTags(noteFormat) ? <TagInput tags={tags} onTagsChange={onTagsChange} /> : null}
+      {canPersistNoteTags(noteFormat) ? <View testID="note-editor-form.input.tags"><TagInput tags={tags} onTagsChange={onTagsChange} /></View> : null}
 
       {canvasJsonRefs.length > 0 ? (
         <View style={styles.canvasChipsRow}>
@@ -132,6 +135,7 @@ export function NoteEditorForm({
             {canvasJsonRefs.map((uri, index) => (
               <TouchableOpacity
                 key={uri}
+                testID="note-editor-form.button.edit-canvas"
                 style={[styles.canvasChip, { borderColor: colors.border, backgroundColor: colors.surfaceSecondary }]}
                 onPress={() => onEditCanvasJson(uri)}
                 activeOpacity={0.7}
@@ -145,7 +149,9 @@ export function NoteEditorForm({
         </View>
       ) : null}
 
-      <MarkdownEditor content={content} onContentChange={onContentChange} placeholder={placeholder} />
+      <View testID="note-editor-form.input.content">
+        <MarkdownEditor content={content} onContentChange={onContentChange} placeholder={placeholder} />
+      </View>
     </ScrollView>
   );
 }

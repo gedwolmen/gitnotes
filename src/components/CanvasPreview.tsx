@@ -320,6 +320,7 @@ export default function CanvasPreview({ canvasId }: CanvasPreviewProps) {
 
   return (
     <TouchableOpacity
+      testID={`canvas-preview.button.open-${canvasId}`}
       onPress={handleOpen}
       activeOpacity={0.8}
       style={[styles.container, { borderColor: colors.border }]}

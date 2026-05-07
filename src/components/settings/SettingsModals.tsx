@@ -107,6 +107,7 @@ export function SettingsModals(props: SettingsModalsProps) {
             <ScrollView keyboardShouldPersistTaps="handled">
               <View style={[styles.manualRepoRow, { borderBottomColor: colors.border }]}> 
                 <TextInput
+                  testID="settings-modals.input.manual-repo"
                   style={[styles.manualRepoInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
                   placeholder="owner/repo"
                   placeholderTextColor={colors.textSecondary}
@@ -118,8 +119,8 @@ export function SettingsModals(props: SettingsModalsProps) {
                   onSubmitEditing={onAddManualRepo}
                 />
                 <TouchableOpacity
+                  testID="settings-modals.button.add-manual-repo"
                   style={[
-                    styles.manualAddBtn,
                     { backgroundColor: colors.primary },
                     (!manualRepoInput.trim() || isAddingRepo) && styles.disabledButton,
                   ]}
@@ -148,6 +149,7 @@ export function SettingsModals(props: SettingsModalsProps) {
                       return (
                         <TouchableOpacity
                           key={repo.id}
+                          testID="settings-modals.button.select-github-repo"
                           style={[styles.pickerItem, { borderBottomColor: colors.border }, alreadyAdded && { opacity: 0.4 }]}
                           onPress={() => onSelectGithubRepo(repo)}
                           disabled={alreadyAdded}
@@ -178,7 +180,7 @@ export function SettingsModals(props: SettingsModalsProps) {
           <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}> 
             <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}> 
               <Text style={[styles.modalTitle, { color: colors.text }]}>Templates repository</Text>
-              <TouchableOpacity onPress={onCloseTemplatesRepoPicker}>
+              <TouchableOpacity testID="settings-modals.button.close-templates-repo" onPress={onCloseTemplatesRepoPicker}>
                 <Ionicons name="close" size={24} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
@@ -233,6 +235,7 @@ export function SettingsModals(props: SettingsModalsProps) {
               </TouchableOpacity>
               <View style={[styles.tokenInputRow, { borderColor: tokenError ? '#FF3B30' : colors.border, backgroundColor: colors.background }]}> 
                 <TextInput
+                  testID="settings-modals.input.token"
                   style={[styles.tokenInputInner, { color: colors.text }]}
                   placeholder="github_pat_xxxxxxxxxxxxxxxxxxxx"
                   placeholderTextColor={colors.textSecondary}
@@ -243,6 +246,7 @@ export function SettingsModals(props: SettingsModalsProps) {
                   autoCorrect={false}
                 />
                 <TouchableOpacity
+                  testID="settings-modals.button.toggle-token-visible"
                   onPress={onToggleTokenVisible}
                   style={styles.tokenIconBtn}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -252,11 +256,12 @@ export function SettingsModals(props: SettingsModalsProps) {
                 </TouchableOpacity>
               </View>
               <View style={styles.tokenActionsRow}>
-                <TouchableOpacity style={[styles.tokenActionBtn, { borderColor: colors.border }]} onPress={onPasteToken} accessibilityLabel="Paste token from clipboard">
+                <TouchableOpacity testID="settings-modals.button.paste-token" style={[styles.tokenActionBtn, { borderColor: colors.border }]} onPress={onPasteToken} accessibilityLabel="Paste token from clipboard">
                   <Ionicons name="clipboard-outline" size={16} color={colors.primary} />
                   <Text style={[styles.tokenActionLabel, { color: colors.primary }]}>Paste</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
+                  testID="settings-modals.button.copy-token"
                   style={[styles.tokenActionBtn, { borderColor: colors.border, opacity: tokenInput.trim() ? 1 : 0.4 }]}
                   onPress={onCopyToken}
                   disabled={!tokenInput.trim()}
@@ -267,7 +272,7 @@ export function SettingsModals(props: SettingsModalsProps) {
                 </TouchableOpacity>
               </View>
               {tokenError ? <Text style={styles.errorText}>{tokenError}</Text> : null}
-              <TouchableOpacity style={[styles.modalButton, { backgroundColor: colors.primary }]} onPress={onSaveToken} disabled={isVerifying}>
+              <TouchableOpacity testID="settings-modals.button.save-token" style={[styles.modalButton, { backgroundColor: colors.primary }]} onPress={onSaveToken} disabled={isVerifying}>
                 {isVerifying ? <ActivityIndicator color="#fff" /> : <Text style={styles.modalButtonText}>{tokenModalMode === 'add' ? 'Add Account' : 'Save Token'}</Text>}
               </TouchableOpacity>
             </ScrollView>

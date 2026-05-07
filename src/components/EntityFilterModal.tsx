@@ -325,9 +325,10 @@ export function EntityFilterModal<T extends FilterableItem>(props: Props<T>) {
               Clear all
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.footerButton, { backgroundColor: colors.primary, borderColor: colors.primary }]}
-            onPress={onClose}
+           <TouchableOpacity
+             testID="entity-filter-modal.filter.apply"
+             style={[styles.footerButton, { backgroundColor: colors.primary, borderColor: colors.primary }]}
+             onPress={onClose}
           >
             <Text style={[styles.footerButtonText, { color: '#fff' }]}>Done</Text>
           </TouchableOpacity>

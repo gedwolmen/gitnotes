@@ -19,7 +19,7 @@ export function TemplateListItem({ template, pinned, onTogglePin, onEdit, onDele
 
   return (
     <View
-      testID={`template-row-${template.id}`}
+      testID={`template-list-item.button.press-${template.id}`}
       style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
     >
       <View style={[styles.iconWrap, { backgroundColor: colors.primary + '20' }]}>
@@ -36,7 +36,7 @@ export function TemplateListItem({ template, pinned, onTogglePin, onEdit, onDele
       </View>
       <View style={styles.rowActions}>
         <TouchableOpacity
-          testID={`template-pin-${template.id}`}
+          testID={`template-list-item.icon-button.pin-${template.id}`}
           onPress={() => onTogglePin(template)}
           style={styles.actionBtn}
           accessibilityLabel={pinned ? 'Unpin template' : 'Pin template'}
@@ -50,7 +50,7 @@ export function TemplateListItem({ template, pinned, onTogglePin, onEdit, onDele
         {template.isCustom ? (
           <>
             <TouchableOpacity
-              testID={`template-edit-${template.id}`}
+              testID={`template-list-item.icon-button.edit-${template.id}`}
               onPress={() => onEdit(template)}
               style={styles.actionBtn}
               accessibilityLabel="Edit template"
@@ -58,7 +58,7 @@ export function TemplateListItem({ template, pinned, onTogglePin, onEdit, onDele
               <Ionicons name="create-outline" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
             <TouchableOpacity
-              testID={`template-delete-${template.id}`}
+              testID={`template-list-item.icon-button.delete-${template.id}`}
               onPress={() => onDelete(template)}
               style={styles.actionBtn}
               accessibilityLabel="Delete template"

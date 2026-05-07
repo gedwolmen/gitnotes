@@ -852,6 +852,7 @@ export default function CanvasEditorContent() {
       <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
       <View style={styles.header}>
         <TouchableOpacity
+          testID="canvas-editor.button.back"
           onPress={() => navigation.goBack()}
           style={styles.backBtn}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -861,13 +862,14 @@ export default function CanvasEditorContent() {
           <Ionicons name="chevron-back" size={28} color="#007AFF" />
         </TouchableOpacity>
         <TextInput
+          testID="canvas-editor.input.title"
           style={styles.titleInput}
           value={title}
           onChangeText={setTitle}
           placeholder="Canvas Title"
           placeholderTextColor={colors.textSecondary}
         />
-        <TouchableOpacity onPress={saveCanvas} style={styles.saveBtn}>
+        <TouchableOpacity testID="canvas-editor.button.save" onPress={saveCanvas} style={styles.saveBtn}>
           <Text style={styles.saveBtnText}>Save</Text>
         </TouchableOpacity>
       </View>
@@ -877,30 +879,31 @@ export default function CanvasEditorContent() {
           {TOOLS.map(({ key, label, icon }) => (
             <TouchableOpacity
               key={key}
+              testID="canvas-editor.toolbar.set-tool"
               style={[styles.toolBtn, tool === key && styles.toolBtnActive]}
               onPress={() => { setTool(key); setSelectedId(null); }}
             >
               {icon ? <Ionicons name={icon} size={20} color={color} /> : <Text style={styles.toolBtnLabel}>{label}</Text>}
             </TouchableOpacity>
           ))}
-          <TouchableOpacity style={[styles.toolBtn, filled && styles.toolBtnActive]} onPress={() => setFilled(!filled)}>
+          <TouchableOpacity testID="canvas-editor.toolbar.set-filled" style={[styles.toolBtn, filled && styles.toolBtnActive]} onPress={() => setFilled(!filled)}>
             <Text style={styles.toolBtnLabel}>{filled ? '▣' : '□'}</Text>
           </TouchableOpacity>
           <View style={styles.separator} />
-          <TouchableOpacity style={styles.toolBtn} onPress={undo}>
+          <TouchableOpacity testID="canvas-editor.toolbar.undo" style={styles.toolBtn} onPress={undo}>
             <Text style={styles.toolBtnLabel}>↩</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.toolBtn} onPress={clearAll}>
+          <TouchableOpacity testID="canvas-editor.toolbar.clear-all" style={styles.toolBtn} onPress={clearAll}>
             <Ionicons name="trash-outline" size={20} color={color} />
           </TouchableOpacity>
           <View style={styles.separator} />
-          <TouchableOpacity style={styles.toolBtn} onPress={() => setZoom(scale.value - 0.25)}>
+          <TouchableOpacity testID="canvas-editor.toolbar.zoom-out" style={styles.toolBtn} onPress={() => setZoom(scale.value - 0.25)}>
             <Text style={styles.toolBtnLabel}>−</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.toolBtn} onPress={() => setZoom(scale.value + 0.25)}>
+          <TouchableOpacity testID="canvas-editor.toolbar.zoom-in" style={styles.toolBtn} onPress={() => setZoom(scale.value + 0.25)}>
             <Text style={styles.toolBtnLabel}>+</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.toolBtn} onPress={resetView}>
+          <TouchableOpacity testID="canvas-editor.toolbar.reset-view" style={styles.toolBtn} onPress={resetView}>
             <Text style={styles.toolBtnLabel}>⟲</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -910,11 +913,13 @@ export default function CanvasEditorContent() {
         {COLORS.map((c) => (
           <TouchableOpacity
             key={c}
+            testID="canvas-editor.picker.color"
             style={[styles.swatch, { backgroundColor: c }, color === c && styles.swatchActive]}
             onPress={() => setColor(c)}
           />
         ))}
         <TextInput
+          testID="canvas-editor.input.size"
           style={styles.sizeInput}
           value={String(size)}
           onChangeText={(v) => setSize(Math.max(1, Math.min(36, parseInt(v, 10) || 1)))}
@@ -1004,7 +1009,7 @@ export default function CanvasEditorContent() {
               <TouchableOpacity style={styles.modalBtn} onPress={() => setTextModalVisible(false)}>
                 <Text style={{ color: colors.textSecondary }}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.modalBtn} onPress={addTextElement}>
+              <TouchableOpacity testID="canvas-editor.button.add-text" style={styles.modalBtn} onPress={addTextElement}>
                 <Text style={{ color: colors.primary, fontWeight: '600' }}>Add</Text>
               </TouchableOpacity>
             </View>

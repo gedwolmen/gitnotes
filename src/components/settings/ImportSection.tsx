@@ -139,6 +139,7 @@ export function ImportSection() {
   return (
     <Group title="Import">
       <GroupRow
+        testID="settings-import.button.google-keep"
         onPress={isImporting ? undefined : handleImportGoogleKeep}
         disabled={isImporting}
         leading={<Ionicons name="logo-google" size={20} color={colors.text} />}
@@ -156,6 +157,7 @@ export function ImportSection() {
         <Text style={{ fontSize: 16, color: colors.text }}>Import from Google Keep</Text>
       </GroupRow>
       <GroupRow
+        testID="settings-import.button.apple-notes"
         onPress={isImporting ? undefined : handleImportAppleNotes}
         disabled={isImporting}
         leading={<Ionicons name="logo-apple" size={20} color={colors.text} />}

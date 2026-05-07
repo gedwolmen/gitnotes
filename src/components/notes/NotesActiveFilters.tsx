@@ -36,6 +36,7 @@ export function NotesActiveFilters({
   ) => (
     <TouchableOpacity
       key={key}
+      testID={`notes-active-filters.button.remove-${key}`}
       style={[styles.chip, { borderColor: colors.primary, backgroundColor: colors.primary + '15' }]}
       onPress={onPress}
     >
@@ -60,7 +61,7 @@ export function NotesActiveFilters({
           ? renderChip('branch', 'git-branch-outline', selectedBranch, onClearBranch)
           : null}
         {selectedFolder ? renderChip('folder', 'folder-outline', selectedFolder, onClearFolder) : null}
-        <TouchableOpacity style={[styles.chip, { borderColor: colors.border + '60' }]} onPress={onClearAll}>
+        <TouchableOpacity testID="notes-active-filters.button.clear-all" style={[styles.chip, { borderColor: colors.border + '60' }]} onPress={onClearAll}>
           <Text style={[styles.chipText, { color: colors.textSecondary }]}>{t('common.clearAll')}</Text>
         </TouchableOpacity>
       </ScrollView>

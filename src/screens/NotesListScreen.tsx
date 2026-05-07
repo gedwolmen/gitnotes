@@ -394,6 +394,7 @@ export default function NotesListScreen() {
         contentContainerStyle={{ padding: 12, paddingTop: 4, paddingBottom: tabBarHeight + 16 }}
         refreshControl={
           <RefreshControl
+            testID="notes-list.swipe.pull-refresh"
             refreshing={isPullRefreshing}
             onRefresh={handlePullToRefresh}
             tintColor={colors.primary}

@@ -375,12 +375,13 @@ export default function RepoFileBrowser({
         {renderBreadcrumb()}
         <View style={fileStyles.headerActions}>
           {currentPath && browseMode === 'folder' ? (
-            <IconButton size="sm" onPress={navigateUp} accessibilityLabel="Go back">
+            <IconButton size="sm" testID="repo-file-browser.icon-button.back" onPress={navigateUp} accessibilityLabel="Go back">
               <Ionicons name="arrow-back" size={20} color={colors.primary} />
             </IconButton>
           ) : null}
           <IconButton
             size="sm"
+            testID="repo-file-browser.icon-button.browse-mode"
             onPress={() => {
               HapticService.light();
               setBrowseMode((m) => (m === 'folder' ? 'all' : 'folder'));
@@ -396,6 +397,7 @@ export default function RepoFileBrowser({
           </IconButton>
           <IconButton
             size="sm"
+            testID="repo-file-browser.icon-button.create-note"
             onPress={() => { HapticService.light(); onCreateNoteInFolder(currentPath); }}
             accessibilityLabel="Create note"
           >
@@ -403,12 +405,13 @@ export default function RepoFileBrowser({
           </IconButton>
           <IconButton
             size="sm"
+            testID="repo-file-browser.icon-button.new-folder"
             onPress={() => { HapticService.light(); setShowNewFolderModal(true); }}
             accessibilityLabel="New folder"
           >
             <Ionicons name="folder-outline" size={20} color={colors.primary} />
           </IconButton>
-          <IconButton size="sm" onPress={loadContents} accessibilityLabel="Refresh">
+          <IconButton size="sm" testID="repo-file-browser.icon-button.refresh" onPress={loadContents} accessibilityLabel="Refresh">
             <Ionicons name="refresh" size={20} color={colors.textSecondary} />
           </IconButton>
         </View>

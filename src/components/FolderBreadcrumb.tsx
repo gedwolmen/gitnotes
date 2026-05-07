@@ -74,6 +74,7 @@ export default function FolderBreadcrumb({
             style={styles.separator}
           />
           <TouchableOpacity
+            testID="folder-breadcrumb.button.press"
             style={styles.breadcrumbItem}
             onPress={() => onNavigateToFolder(folder)}
           >

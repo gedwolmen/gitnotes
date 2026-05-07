@@ -17,7 +17,7 @@ export function BacklinksSection({ noteId, onNavigateToNote }: BacklinksSectionP
   }
 
   return (
-    <View style={styles.container}>
+    <View testID="note-viewer.button.navigate-note" style={styles.container}>
       <Text style={styles.header}>Backlinks ({backlinks.length})</Text>
       {backlinks.map((bl, i) => (
         <BacklinkItem

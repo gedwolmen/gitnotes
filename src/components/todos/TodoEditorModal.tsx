@@ -91,7 +91,7 @@ export function TodoEditorModal({
             <Text style={[styles.modalTitle, { color: colors.text }]}>
               {editingTodo ? 'Edit Todo' : 'New Todo'}
             </Text>
-            <TouchableOpacity onPress={onClose}>
+            <TouchableOpacity testID="todo-editor.button.close" onPress={onClose}>
               <Ionicons name="close" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
@@ -99,6 +99,7 @@ export function TodoEditorModal({
           <ScrollView ref={modalScrollRef} style={styles.modalBody}>
             <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Todo Text *</Text>
             <TextInput
+              testID="todo-editor.input.title"
               style={[styles.input, { color: colors.text, borderColor: colors.border }]}
               value={todoText}
               onChangeText={onChangeText}
@@ -109,6 +110,7 @@ export function TodoEditorModal({
 
             <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Notes</Text>
             <TextInput
+              testID="todo-editor.input.notes"
               style={[styles.input, styles.inputMultiline, { color: colors.text, borderColor: colors.border }]}
               value={todoNotes}
               onChangeText={onChangeNotes}
@@ -123,6 +125,7 @@ export function TodoEditorModal({
               {(['low', 'medium', 'high'] as TodoPriority[]).map((priority) => (
                 <TouchableOpacity
                   key={priority}
+                  testID="todo-editor.button.priority"
                   style={[
                     styles.priorityOption,
                     { borderColor: colors.border },
@@ -157,12 +160,13 @@ export function TodoEditorModal({
                     <Ionicons name="calendar" size={15} color={colors.primary} />
                     <Text style={[styles.deadlineCardTitle, { color: colors.primary }]}>Deadline</Text>
                   </View>
-                  <TouchableOpacity onPress={onRemoveDeadline} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <TouchableOpacity testID="todo-editor.button.remove-deadline" onPress={onRemoveDeadline} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                     <Ionicons name="close" size={18} color={colors.textSecondary} />
                   </TouchableOpacity>
                 </View>
                 <View style={styles.deadlineCardRow}>
                   <TouchableOpacity
+                    testID="todo-editor.button.date-picker"
                     style={[
                       styles.deadlineSlot,
                       {
@@ -223,6 +227,7 @@ export function TodoEditorModal({
               </View>
             ) : (
               <TouchableOpacity
+                testID="todo-editor.button.add-deadline"
                 style={[styles.addDeadlineButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 onPress={onAddDeadline}
                 activeOpacity={0.7}
@@ -300,12 +305,13 @@ export function TodoEditorModal({
 
           <View style={[styles.modalFooter, { borderTopColor: colors.border }]}> 
             <TouchableOpacity
+              testID="todo-editor.button.cancel"
               style={[styles.cancelButton, { borderColor: colors.border }]}
               onPress={onClose}
             >
               <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.saveButton, { backgroundColor: colors.primary }]} onPress={onSubmit}>
+            <TouchableOpacity testID="todo-editor.button.submit" style={[styles.saveButton, { backgroundColor: colors.primary }]} onPress={onSubmit}>
               <Text style={styles.saveButtonText}>{editingTodo ? 'Update' : 'Add'}</Text>
             </TouchableOpacity>
           </View>

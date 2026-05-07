@@ -32,26 +32,26 @@ export function EditorToolbar({
     <View style={[styles.toolbar, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
       {(canUndo || canRedo) && (
         <>
-          <IconButton size="sm" onPress={onUndo} disabled={!canUndo} accessibilityLabel="Undo">
+          <IconButton size="sm" testID="note-editor.toolbar.undo" onPress={onUndo} disabled={!canUndo} accessibilityLabel="Undo">
             <Ionicons name="arrow-undo" size={20} color={canUndo ? colors.primary : colors.textSecondary} />
           </IconButton>
-          <IconButton size="sm" onPress={onRedo} disabled={!canRedo} accessibilityLabel="Redo">
+          <IconButton size="sm" testID="note-editor.toolbar.redo" onPress={onRedo} disabled={!canRedo} accessibilityLabel="Redo">
             <Ionicons name="arrow-redo" size={20} color={canRedo ? colors.primary : colors.textSecondary} />
           </IconButton>
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
         </>
       )}
 
-      <IconButton size="sm" onPress={onVoiceInput} accessibilityLabel="Voice input">
+      <IconButton size="sm" testID="note-editor.toolbar.voice-input" onPress={onVoiceInput} accessibilityLabel="Voice input">
         <Ionicons name="mic-outline" size={20} color={colors.primary} />
       </IconButton>
-      <IconButton size="sm" onPress={onInsertCanvas} accessibilityLabel="Insert canvas">
+      <IconButton size="sm" testID="note-editor.toolbar.canvas-modal" onPress={onInsertCanvas} accessibilityLabel="Insert canvas">
         <Ionicons name="brush-outline" size={20} color={colors.primary} />
       </IconButton>
-      <IconButton size="sm" onPress={onInsertImage} accessibilityLabel="Insert image">
+      <IconButton size="sm" testID="note-editor.toolbar.insert-image" onPress={onInsertImage} accessibilityLabel="Insert image">
         <Ionicons name="image-outline" size={20} color={colors.primary} />
       </IconButton>
-      <IconButton size="sm" onPress={onLinkCanvas} accessibilityLabel="Link existing canvas">
+      <IconButton size="sm" testID="note-editor.toolbar.canvas-picker" onPress={onLinkCanvas} accessibilityLabel="Link existing canvas">
         <Ionicons name="easel-outline" size={20} color={colors.primary} />
       </IconButton>
     </View>

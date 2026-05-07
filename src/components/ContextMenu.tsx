@@ -10,6 +10,7 @@ export interface ContextMenuItem {
   onPress: () => void;
   destructive?: boolean;
   subtitle?: string;
+  testID?: string;
 }
 
 export interface ContextMenuSection {
@@ -67,8 +68,10 @@ export default function ContextMenu({
         <View key={gi}>
           {gi > 0 ? <View style={[styles.divider, { backgroundColor: colors.border }]} /> : null}
           {group.items.map((item, i) => (
-            <TouchableOpacity
-              key={i}
+            <View key={i} testID="context-menu.item.press">
+              <TouchableOpacity
+                key={i}
+                testID={item.testID ?? `context-menu.item.press-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
               style={styles.item}
               onPress={() => {
                 onClose();
@@ -106,6 +109,7 @@ export default function ContextMenu({
                 ) : null}
               </View>
             </TouchableOpacity>
+            </View>
           ))}
         </View>
       ))}

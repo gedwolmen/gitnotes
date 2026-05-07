@@ -165,7 +165,7 @@ export default function VoiceInputModal({ visible, onDone, onClose }: VoiceInput
       >
         <SafeAreaView edges={['top', 'bottom']} style={styles.container}>
           <View style={styles.header}>
-            <TouchableOpacity onPress={onClose} style={styles.headerBtn}>
+            <TouchableOpacity testID="voice-input-modal.button.close-unavailable" onPress={onClose} style={styles.headerBtn}>
               <Text style={styles.headerBtnText}>Cancel</Text>
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Voice Input</Text>
@@ -189,11 +189,11 @@ export default function VoiceInputModal({ visible, onDone, onClose }: VoiceInput
     >
       <SafeAreaView edges={['top', 'bottom']} style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleCancel} style={styles.headerBtn}>
+          <TouchableOpacity testID="voice-input-modal.button.close" onPress={handleCancel} style={styles.headerBtn}>
             <Text style={styles.headerBtnText}>Cancel</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Voice Input</Text>
-          <TouchableOpacity onPress={handleInsert} style={styles.headerBtn}>
+          <TouchableOpacity testID="voice-input-modal.button.done" onPress={handleInsert} style={styles.headerBtn}>
             <Text style={[styles.headerBtnText, styles.insertBtn]}>Insert</Text>
           </TouchableOpacity>
         </View>

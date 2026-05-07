@@ -215,6 +215,7 @@ export default function PdfViewerScreen() {
     <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
         <TouchableOpacity
+          testID="pdf-viewer.icon-button.back"
           onPress={() => { HapticService.light(); navigation.goBack(); }}
           style={styles.iconButton}
         >
@@ -224,6 +225,7 @@ export default function PdfViewerScreen() {
           {title || path.split('/').pop()}
         </Text>
         <TouchableOpacity
+          testID="pdf-viewer.icon-button.invert"
           onPress={toggleInvert}
           style={styles.iconButton}
           disabled={!localUri}
@@ -236,6 +238,7 @@ export default function PdfViewerScreen() {
           />
         </TouchableOpacity>
         <TouchableOpacity
+          testID="pdf-viewer.icon-button.open-external"
           onPress={handleOpenExternal}
           style={styles.iconButton}
           disabled={!localUri}

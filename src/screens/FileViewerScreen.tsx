@@ -122,6 +122,7 @@ export default function FileViewerScreen() {
     <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
         <TouchableOpacity
+          testID="file-viewer.icon-button.back"
           onPress={() => { HapticService.light(); navigation.goBack(); }}
           style={styles.iconButton}
         >

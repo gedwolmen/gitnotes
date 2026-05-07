@@ -138,12 +138,14 @@ export default function ChatThreadListScreen() {
     return (
       <View style={styles.swipeActions}>
         <TouchableOpacity
+          testID="chat-thread-list.icon-button.rename"
           style={[styles.swipeAction, { backgroundColor: colors.primary }]}
           onPress={() => handleRenameThread(thread)}
         >
           <Ionicons name="pencil" size={20} color="#FFFFFF" />
         </TouchableOpacity>
         <TouchableOpacity
+          testID="chat-thread-list.icon-button.delete"
           style={[styles.swipeAction, { backgroundColor: colors.error }]}
           onPress={() => handleDeleteThread(thread)}
         >
@@ -162,7 +164,7 @@ export default function ChatThreadListScreen() {
         friction={2}
         containerStyle={{ marginBottom: spacing[3] }}
       >
-        <Card onPress={() => handleThreadPress(item.id)} radius="md">
+        <Card testID="chat-thread-list.button.thread-press" onPress={() => handleThreadPress(item.id)} radius="md">
           <View style={styles.threadContent}>
             <View style={styles.threadHeader}>
               <Text style={[styles.threadTitle, { color: colors.text, fontSize: type.md, fontWeight: '600' }]} numberOfLines={1}>
@@ -220,6 +222,7 @@ export default function ChatThreadListScreen() {
         ]}
       >
         <Button
+          testID="chat-thread-list.button.new-chat"
           label="New Chat"
           onPress={handleNewChat}
           variant="primary"

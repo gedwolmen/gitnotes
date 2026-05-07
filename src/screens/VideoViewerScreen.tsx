@@ -125,6 +125,7 @@ export default function VideoViewerScreen() {
     <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
         <TouchableOpacity
+          testID="video-viewer.icon-button.back"
           onPress={() => { HapticService.light(); navigation.goBack(); }}
           style={styles.iconButton}
         >

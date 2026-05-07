@@ -68,7 +68,7 @@ export function TemplateEditorModal({
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View testID="template-preview-card" style={[styles.previewCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View testID="template-editor.view.preview-card" style={[styles.previewCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={[styles.previewIcon, { backgroundColor: colors.primary + '20' }]}>
               <Ionicons name={draftIcon} size={22} color={colors.primary} />
             </View>
@@ -89,7 +89,7 @@ export function TemplateEditorModal({
 
           <Text style={[styles.label, { color: colors.textSecondary }]}>Name</Text>
           <TextInput
-            testID="template-name-input"
+            testID="template-editor.input.name"
             value={draftName}
             onChangeText={onNameChange}
             placeholder="My template"
@@ -99,13 +99,13 @@ export function TemplateEditorModal({
           />
 
           <Text style={[styles.label, { color: colors.textSecondary, marginTop: 14 }]}>Icon</Text>
-          <View style={styles.iconGrid} testID="template-icon-grid">
+          <View style={styles.iconGrid} testID="template-editor.view.icon-grid">
             {ICON_OPTIONS.map((icon) => {
               const selected = icon === draftIcon;
               return (
                 <TouchableOpacity
                   key={icon}
-                  testID={`template-icon-${icon}`}
+                  testID={`template-editor.button.select-icon-${icon}`}
                   accessibilityLabel={`Select ${icon} icon`}
                   accessibilityState={{ selected }}
                   onPress={() => onIconChange(icon)}
@@ -122,7 +122,7 @@ export function TemplateEditorModal({
 
           <Text style={[styles.label, { color: colors.textSecondary, marginTop: 14 }]}>Description</Text>
           <TextInput
-            testID="template-description-input"
+            testID="template-editor.input.description"
             value={draftDescription}
             onChangeText={onDescriptionChange}
             placeholder="e.g. Weekly retrospective"
@@ -133,7 +133,7 @@ export function TemplateEditorModal({
 
           <Text style={[styles.label, { color: colors.textSecondary, marginTop: 14 }]}>Default note title (optional)</Text>
           <TextInput
-            testID="template-title-input"
+            testID="template-editor.input.title"
             value={draftTitle}
             onChangeText={onTitleChange}
             placeholder="e.g. Standup - "
@@ -178,7 +178,7 @@ export function TemplateEditorModal({
 
           <Text style={[styles.label, { color: colors.textSecondary, marginTop: 14 }]}>Initial content</Text>
           <TextInput
-            testID="template-content-input"
+            testID="template-editor.input.content"
             value={draftContent}
             onChangeText={onContentChange}
             placeholder={'## Heading\n\nWrite something...'}
@@ -190,10 +190,10 @@ export function TemplateEditorModal({
         </ScrollView>
 
         <View style={styles.editorActions}>
-          <TouchableOpacity testID="template-cancel-btn" onPress={onClose} style={[styles.btn, { borderColor: colors.border }]}>
+          <TouchableOpacity testID="template-editor.button.close" onPress={onClose} style={[styles.btn, { borderColor: colors.border }]}>
             <Text style={[styles.btnText, { color: colors.textSecondary }]}>Cancel</Text>
           </TouchableOpacity>
-          <TouchableOpacity testID="template-save-btn" onPress={onSave} style={[styles.btn, styles.btnPrimary, { backgroundColor: colors.primary }]}> 
+          <TouchableOpacity testID="template-editor.button.save" onPress={onSave} style={[styles.btn, styles.btnPrimary, { backgroundColor: colors.primary }]}>
             <Text style={[styles.btnText, { color: '#fff' }]}>{editingId ? 'Save changes' : 'Create'}</Text>
           </TouchableOpacity>
         </View>

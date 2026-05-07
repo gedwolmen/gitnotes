@@ -9,7 +9,7 @@ interface BacklinkItemProps {
 
 export function BacklinkItem({ title, snippet, onPress }: BacklinkItemProps) {
   return (
-    <TouchableOpacity onPress={onPress} style={styles.container}>
+    <TouchableOpacity testID="backlink-item.button.press" onPress={onPress} style={styles.container}>
       <Text style={styles.title} numberOfLines={1}>{title}</Text>
       <Text style={styles.snippet} numberOfLines={2}>{snippet}</Text>
     </TouchableOpacity>

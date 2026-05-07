@@ -24,8 +24,8 @@ export function ChatErrorCard({ message, colors, spacing, type, canRetry, isStre
     >
       <Text style={{ color: colors.text, fontSize: type.md, fontWeight: '600', marginBottom: spacing[2] }}>{message}</Text>
       <View style={{ flexDirection: 'row', gap: spacing[2] }}>
-        <Button variant="primary" onPress={onRetry} disabled={!canRetry || isStreaming}>Retry</Button>
-        <Button variant="secondary" onPress={onDismiss}>Dismiss</Button>
+        <Button testID="chat-error.button.retry" variant="primary" onPress={onRetry} disabled={!canRetry || isStreaming}>Retry</Button>
+        <Button testID="chat-error.button.dismiss" variant="secondary" onPress={onDismiss}>Dismiss</Button>
       </View>
     </Surface>
   );

@@ -28,8 +28,8 @@ export function ChatConfirmationCard({ pendingConfirmation, colors, spacing, typ
         {JSON.stringify(pendingConfirmation.details, null, 2)}
       </Text>
       <View style={{ flexDirection: 'row', gap: spacing[2] }}>
-        <Button variant="primary" onPress={onApply} style={{ flex: 1 }}>Apply</Button>
-        <Button variant="secondary" onPress={onCancel} style={{ flex: 1 }}>Cancel</Button>
+        <Button testID="chat-confirmation.button.apply" variant="primary" onPress={onApply} style={{ flex: 1 }}>Apply</Button>
+        <Button testID="chat-confirmation.button.cancel" variant="secondary" onPress={onCancel} style={{ flex: 1 }}>Cancel</Button>
       </View>
     </Surface>
   );

@@ -250,6 +250,7 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
           <View style={styles.selectorRow}>
             <Text style={[styles.selectorLabel, { color: colors.textSecondary }]}>Repository</Text>
             <TouchableOpacity
+              testID="github-picker.picker.select"
               style={[styles.selectorValue, { backgroundColor: colors.surface, borderColor: colors.border }]}
               onPress={openRepoModal}
             >

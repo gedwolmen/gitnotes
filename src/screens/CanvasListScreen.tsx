@@ -114,6 +114,7 @@ export default function CanvasListScreen() {
 
       return (
         <TouchableOpacity
+          testID="canvas-list.button.open"
           style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
           onPress={() => handleOpen(item.id)}
           activeOpacity={0.7}
@@ -147,6 +148,7 @@ export default function CanvasListScreen() {
             )}
           </View>
           <TouchableOpacity
+            testID="canvas-list.button.delete"
             onPress={() => handleDelete(item)}
             style={styles.deleteBtn}
           >
@@ -162,6 +164,7 @@ export default function CanvasListScreen() {
     <SafeAreaView edges={['bottom']} style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.searchBarContainer, { paddingTop: headerHeight }]}>
         <SearchBar
+          testID="canvas-list.search-bar.search"
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholder="Search canvases..."
@@ -190,6 +193,7 @@ export default function CanvasListScreen() {
               Create a canvas to draw, chart, and diagram.
             </Text>
             <TouchableOpacity
+              testID="canvas-list.button.create"
               style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
               onPress={handleCreate}
             >
@@ -214,6 +218,7 @@ export default function CanvasListScreen() {
             <Text style={[styles.sizeTitle, { color: colors.text }]}>New Canvas</Text>
 
             <TextInput
+              testID="canvas-list.input.title"
               style={[styles.titleInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
               value={canvasTitle}
               onChangeText={setCanvasTitle}
@@ -225,6 +230,7 @@ export default function CanvasListScreen() {
             {CANVAS_PRESETS.map((preset) => (
               <TouchableOpacity
                 key={preset.label}
+                testID="canvas-list.button.pick-size"
                 style={[styles.sizeOption, { borderColor: colors.border }]}
                 onPress={() => handlePickSize(preset.w, preset.h)}
                 activeOpacity={0.7}
@@ -237,6 +243,7 @@ export default function CanvasListScreen() {
             <Text style={[styles.sizeSubtitle, { color: colors.textSecondary }]}>Custom Size</Text>
             <View style={styles.customRow}>
               <TextInput
+                testID="canvas-list.input.custom-width"
                 style={[styles.customInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
                 value={customW}
                 onChangeText={setCustomW}
@@ -247,6 +254,7 @@ export default function CanvasListScreen() {
               />
               <Text style={[styles.customX, { color: colors.textSecondary }]}>×</Text>
               <TextInput
+                testID="canvas-list.input.custom-height"
                 style={[styles.customInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
                 value={customH}
                 onChangeText={setCustomH}
@@ -280,6 +288,7 @@ export default function CanvasListScreen() {
           <>
             <IconButton
               size="sm"
+              testID="canvas-list.icon-button.filters"
               active={filter.activeCount > 0}
               onPress={() => setShowFilterModal(true)}
               accessibilityLabel="Filters"
@@ -290,7 +299,7 @@ export default function CanvasListScreen() {
                 color={filter.activeCount > 0 ? colors.accent : colors.textSecondary}
               />
             </IconButton>
-            <IconButton size="sm" onPress={handleCreate} accessibilityLabel="New canvas">
+            <IconButton size="sm" testID="canvas-list.icon-button.new-canvas" onPress={handleCreate} accessibilityLabel="New canvas">
               <Ionicons name="add" size={20} color={colors.accent} />
             </IconButton>
           </>

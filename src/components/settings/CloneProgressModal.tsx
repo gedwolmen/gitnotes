@@ -65,7 +65,7 @@ export function CloneProgressModal({ progress, onCancel }: CloneProgressModalPro
         />
       </View>
 
-      <Button label="Cancel" onPress={onCancel} variant="secondary" />
+      <Button testID="clone-progress.button.cancel" label="Cancel" onPress={onCancel} variant="secondary" />
     </Modal>
   );
 }

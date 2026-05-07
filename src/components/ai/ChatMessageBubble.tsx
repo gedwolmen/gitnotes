@@ -113,7 +113,9 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
   };
 
   return (
-    <Pressable
+    <View testID="chat.message-bubble.button.long-press">
+      <Pressable
+        testID="chat-message-bubble.button.long-press"
       style={containerStyle}
       onLongPress={onLongPress ? () => onLongPress(message) : undefined}
       delayLongPress={350}
@@ -196,6 +198,7 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
         {timestamp}
       </Text>
     </Pressable>
+    </View>
   );
 }
 

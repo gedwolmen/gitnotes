@@ -22,7 +22,7 @@ export function NotesViewModePicker({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose}>
+      <TouchableOpacity testID="notes-view-mode.button.close" style={styles.backdrop} activeOpacity={1} onPress={onClose}>
         <View style={[styles.sheet, { backgroundColor: colors.background }]}>
           <View style={[styles.handle, { backgroundColor: colors.border + '40' }]} />
           <Text style={[styles.title, { color: colors.textSecondary }]}>View Mode</Text>
@@ -32,6 +32,7 @@ export function NotesViewModePicker({
               return (
                 <TouchableOpacity
                   key={mode}
+                  testID={`notes-view-mode.button.change-${mode}`}
                   style={[styles.option, isSelected && { backgroundColor: colors.primary + '15' }]}
                   onPress={() => onChange(mode)}
                   activeOpacity={0.7}

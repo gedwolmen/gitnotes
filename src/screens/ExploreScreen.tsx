@@ -108,6 +108,7 @@ export default function ExploreScreen() {
   const renderRepoItem = useCallback(
     ({ item }: { item: GitRepository }) => (
       <TouchableOpacity
+        testID="explore.button.select-repo"
         style={[s.repoItem, { borderBottomColor: colors.border + '30' }]}
         onPress={() => handleSelectRepo(item)}
         activeOpacity={0.7}
@@ -135,6 +136,7 @@ export default function ExploreScreen() {
         </View>
         <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 }}>
           <SearchBar
+            testID="explore.search-bar.repo-search"
             value={repoSearch}
             onChangeText={setRepoSearch}
             placeholder="Search repositories…"
@@ -207,6 +209,7 @@ export default function ExploreScreen() {
 
         <View style={s.detailActions}>
           <TouchableOpacity
+            testID="explore.button.open-file-tree"
             style={[s.fileTreeButton, { backgroundColor: colors.primary }]}
             onPress={handleOpenFileTree}
             activeOpacity={0.8}
@@ -224,7 +227,7 @@ export default function ExploreScreen() {
     return (
       <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
         <View style={[s.header, { borderBottomColor: colors.border + '40' }]}>
-          <TouchableOpacity onPress={handleBack} style={s.headerBtn}>
+          <TouchableOpacity testID="explore.button.back" onPress={handleBack} style={s.headerBtn}>
             <Ionicons name="arrow-back" size={22} color={colors.primary} />
           </TouchableOpacity>
           <View style={[s.repoSelector, { backgroundColor: colors.surface }]}>

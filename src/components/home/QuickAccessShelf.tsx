@@ -17,7 +17,7 @@ export function QuickAccessShelf({ items, onOpen }: Props) {
   if (items.length === 0) return null;
 
   return (
-    <View style={styles.section}>
+    <View testID="quick-access-shelf.button.open" style={styles.section}>
       <View style={styles.headerRow}>
         <Ionicons name="pin" size={14} color={colors.textSecondary} />
         <Text style={[styles.heading, { color: colors.textSecondary }]}>Quick access</Text>

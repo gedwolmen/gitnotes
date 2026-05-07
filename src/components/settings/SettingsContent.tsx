@@ -215,7 +215,7 @@ export function SettingsContent(props: SettingsContentProps) {
         <GroupRow
           trailing={
             <Toggle
-              testID="neu-toggle"
+              testID="settings.toggle.neu"
               value={uiStyle === 'neumorphic'}
               onValueChange={(value) => setStyle(value ? 'neumorphic' : 'flat')}
             />
@@ -226,6 +226,7 @@ export function SettingsContent(props: SettingsContentProps) {
         <GroupRow
           trailing={
             <Toggle
+              testID="settings.toggle.theme"
               value={theme === 'dark'}
               onValueChange={(value) => setTheme(value ? 'dark' : 'light')}
             />
@@ -234,6 +235,7 @@ export function SettingsContent(props: SettingsContentProps) {
           <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.darkMode')}</Text>
         </GroupRow>
         <GroupRow
+          testID="settings.button.theme"
           onPress={() => setTheme('system')}
           trailing={
             <Text style={[styles.settingValue, { color: colors.textSecondary }]}> 
@@ -247,6 +249,7 @@ export function SettingsContent(props: SettingsContentProps) {
 
       <Group title={t('settings.language')}>
         <GroupRow
+          testID="settings.button.language-picker"
           onPress={() => setShowLanguagePicker(true)}
           trailing={
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -265,7 +268,7 @@ export function SettingsContent(props: SettingsContentProps) {
         <GroupRow
           trailing={
             <Toggle
-              testID="biometric-lock-toggle"
+              testID="settings.toggle.biometric-lock"
               value={isBiometricLockEnabled}
               onValueChange={onToggleBiometricLock}
               disabled={!isBiometricAvailable}
@@ -283,6 +286,7 @@ export function SettingsContent(props: SettingsContentProps) {
         </GroupRow>
         {isBiometricLockEnabled ? (
           <GroupRow
+            testID="settings.button.timeout-picker"
             onPress={() => setShowTimeoutPicker(true)}
             trailing={
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -306,12 +310,13 @@ export function SettingsContent(props: SettingsContentProps) {
                 const isActive = account.id === activeAccountId;
                 return (
                   <GroupRow
+                    testID={`settings.button.switch-account`}
                     key={account.id}
                     onPress={isActive ? undefined : () => void onSwitchAccount(account.id)}
                     disabled={isActive}
                     leading={account.avatarUrl ? <Image source={{ uri: account.avatarUrl }} style={styles.avatar} /> : null}
                     trailing={
-                      <TouchableOpacity onPress={() => onRemoveAccount(account.id, account.login)} style={{ paddingHorizontal: 8 }}>
+                      <TouchableOpacity testID={`settings.button.remove-account`} onPress={() => onRemoveAccount(account.id, account.login)} style={{ paddingHorizontal: 8 }}>
                         <Ionicons name="trash-outline" size={18} color={colors.error} />
                       </TouchableOpacity>
                     }
@@ -334,6 +339,7 @@ export function SettingsContent(props: SettingsContentProps) {
             )}
 
             <GroupRow
+              testID="settings.button.connect-token"
               onPress={onOpenConnectToken}
               leading={<Ionicons name="key-outline" size={20} color={colors.text} />}
               trailing={<Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
@@ -344,6 +350,7 @@ export function SettingsContent(props: SettingsContentProps) {
             </GroupRow>
 
             <GroupRow
+              testID="settings.button.add-account"
               onPress={onOpenAddAccount}
               leading={<Ionicons name="person-add-outline" size={20} color={colors.text} />}
               trailing={<Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
@@ -352,13 +359,14 @@ export function SettingsContent(props: SettingsContentProps) {
             </GroupRow>
 
             {accounts.length < 2 ? (
-              <GroupRow onPress={onRemoveToken}>
+              <GroupRow testID="settings.button.remove-token" onPress={onRemoveToken}>
                 <Text style={[styles.settingLabel, { color: colors.error }]}>Remove GitHub Account</Text>
               </GroupRow>
             ) : null}
           </>
         ) : (
           <GroupRow
+            testID="settings.button.connect-github"
             onPress={onOpenConnectToken}
             leading={<Ionicons name="logo-github" size={20} color={colors.text} />}
             trailing={<Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
@@ -386,11 +394,11 @@ export function SettingsContent(props: SettingsContentProps) {
                   {syncingRepo === repo.path ? (
                     <ActivityIndicator size="small" color={colors.primary} style={{ marginHorizontal: 8 }} />
                   ) : (
-                    <TouchableOpacity onPress={() => onSyncRepo(repo)} style={{ padding: 8 }} disabled={!!syncingRepo}>
+                    <TouchableOpacity testID={`settings.button.sync-repo`} onPress={() => onSyncRepo(repo)} style={{ padding: 8 }} disabled={!!syncingRepo}>
                       <Ionicons name="cloud-download-outline" size={18} color={colors.primary} />
                     </TouchableOpacity>
                   )}
-                  <TouchableOpacity onPress={() => onRemoveRepo(repo)} style={{ padding: 4 }}>
+                  <TouchableOpacity testID={`settings.button.remove-repo`} onPress={() => onRemoveRepo(repo)} style={{ padding: 4 }}>
                     <Ionicons name="trash-outline" size={18} color={colors.error} />
                   </TouchableOpacity>
                 </View>
@@ -402,6 +410,7 @@ export function SettingsContent(props: SettingsContentProps) {
           ))
         )}
         <GroupRow
+          testID="settings.button.repo-picker"
           onPress={onOpenRepoPicker}
           leading={<Ionicons name="add" size={20} color={colors.primary} />}
         >
@@ -426,13 +435,17 @@ export function SettingsContent(props: SettingsContentProps) {
                     isCloning ? (
                       <ActivityIndicator size="small" color={colors.primary} />
                     ) : isClone ? (
-                      <TouchableOpacity testID={`sync-engine-disable-${repo.path}`} onPress={() => onDisableCloneMode(repo)} style={{ padding: 4 }}>
-                        <Text style={[styles.settingLabel, { color: colors.error }]}>Use API</Text>
-                      </TouchableOpacity>
+                      <View testID="settings.button.disable-clone">
+                        <TouchableOpacity testID={`sync-engine-disable-${repo.path}`} onPress={() => onDisableCloneMode(repo)} style={{ padding: 4 }}>
+                          <Text style={[styles.settingLabel, { color: colors.error }]}>Use API</Text>
+                        </TouchableOpacity>
+                      </View>
                     ) : (
-                      <TouchableOpacity testID={`sync-engine-enable-${repo.path}`} onPress={() => onEnableCloneMode(repo)} style={{ padding: 4 }}>
-                        <Text style={[styles.settingLabel, { color: colors.primary }]}>Clone</Text>
-                      </TouchableOpacity>
+                      <View testID="settings.button.enable-clone">
+                        <TouchableOpacity testID={`sync-engine-enable-${repo.path}`} onPress={() => onEnableCloneMode(repo)} style={{ padding: 4 }}>
+                          <Text style={[styles.settingLabel, { color: colors.primary }]}>Clone</Text>
+                        </TouchableOpacity>
+                      </View>
                     )
                   }
                 >
@@ -449,14 +462,16 @@ export function SettingsContent(props: SettingsContentProps) {
                       isDownloadingLfs ? (
                         <ActivityIndicator size="small" color={colors.primary} />
                       ) : (
-                        <TouchableOpacity
-                          testID={`lfs-download-${repo.path}`}
+                        <View testID="settings.button.download-lfs">
+                          <TouchableOpacity
+                            testID={`lfs-download-${repo.path}`}
                           onPress={() => onDownloadLfsObjects(repo)}
                           style={{ padding: 4 }}
                           disabled={!!lfsDownloadingRepo}
                         >
                           <Text style={[styles.settingLabel, { color: colors.primary }]}>Download</Text>
                         </TouchableOpacity>
+                        </View>
                       )
                     }
                   >
@@ -476,7 +491,7 @@ export function SettingsContent(props: SettingsContentProps) {
 
       <Group title="Templates">
         <GroupRow
-          testID="templates-repo-picker-row"
+          testID="settings.button.templates-repo-picker"
           onPress={onOpenTemplatesRepoPicker}
           leading={<Ionicons name="document-text-outline" size={20} color={colors.text} />}
           trailing={<Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
@@ -490,7 +505,7 @@ export function SettingsContent(props: SettingsContentProps) {
         {templatesRepoPref ? (
           <>
             <GroupRow
-              testID="templates-sync-existing"
+              testID="settings.button.sync-templates"
               onPress={onSyncExistingTemplates}
               disabled={isSyncingExistingTemplates}
               leading={<Ionicons name="cloud-upload-outline" size={20} color={colors.text} />}
@@ -498,7 +513,7 @@ export function SettingsContent(props: SettingsContentProps) {
             >
               <Text style={[styles.settingLabel, { color: colors.text }]} numberOfLines={1}>Sync custom templates</Text>
             </GroupRow>
-            <GroupRow testID="templates-repo-clear" onPress={onClearTemplatesRepo}>
+            <GroupRow testID="settings.button.clear-templates-repo" onPress={onClearTemplatesRepo}>
               <Text style={[styles.settingLabel, { color: colors.error }]}>Disconnect templates repo</Text>
             </GroupRow>
           </>
@@ -507,6 +522,7 @@ export function SettingsContent(props: SettingsContentProps) {
 
       <Group title="Note rendering">
         <GroupRow
+          testID="settings.button.render-style-settings"
           onPress={onOpenRenderStyleSettings}
           leading={<Ionicons name="color-palette-outline" size={20} color={colors.text} />}
           trailing={<Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
@@ -526,7 +542,7 @@ export function SettingsContent(props: SettingsContentProps) {
         <GroupRow
           trailing={
             <Toggle
-              testID="sync-frequently-toggle"
+              testID="settings.toggle.sync-frequently"
               value={syncFrequentlyEnabled}
               onValueChange={onToggleSyncFrequently}
             />
@@ -538,7 +554,7 @@ export function SettingsContent(props: SettingsContentProps) {
           </View>
         </GroupRow>
         <GroupRow
-          testID="sync-interval-row"
+          testID="settings.button.interval-picker"
           onPress={syncFrequentlyEnabled ? () => setShowIntervalPicker(true) : undefined}
           disabled={!syncFrequentlyEnabled}
           trailing={
@@ -560,7 +576,7 @@ export function SettingsContent(props: SettingsContentProps) {
         <GroupRow
           trailing={
             <Toggle
-              testID="background-sync-toggle"
+              testID="settings.toggle.background-sync"
               value={isBackgroundSyncEnabled}
               onValueChange={onToggleBackgroundSync}
             />
@@ -574,10 +590,10 @@ export function SettingsContent(props: SettingsContentProps) {
       </Group>
 
       <Group title="Data">
-        <GroupRow onPress={onClearData}>
+        <GroupRow testID="settings.button.clear-data" onPress={onClearData}>
           <Text style={[styles.settingLabel, { color: colors.error }]}>Clear All Notes</Text>
         </GroupRow>
-        <GroupRow onPress={onResetOnboarding}>
+        <GroupRow testID="settings.button.reset-onboarding" onPress={onResetOnboarding}>
           <Text style={[styles.settingLabel, { color: colors.text }]}>Reset Onboarding</Text>
         </GroupRow>
       </Group>
@@ -590,13 +606,13 @@ export function SettingsContent(props: SettingsContentProps) {
         >
           <Text style={[styles.settingLabel, { color: colors.text }]}>Version</Text>
         </GroupRow>
-        <GroupRow onPress={onManageTemplates}>
+        <GroupRow testID="settings.button.manage-templates" onPress={onManageTemplates}>
           <Text style={[styles.settingLabel, { color: colors.text }]}>Manage templates</Text>
         </GroupRow>
       </Group>
 
       <Group title={t('settings.artificialIntelligence')}>
-        <GroupRow trailing={<Toggle value={isAIEnabled} onValueChange={onToggleAI} />}>
+        <GroupRow trailing={<Toggle testID="settings.toggle.ai" value={isAIEnabled} onValueChange={onToggleAI} />}>
           <Text style={[styles.settingLabel, { color: colors.text }]}>Enable Artificial Intelligence</Text>
         </GroupRow>
       </Group>
@@ -604,13 +620,13 @@ export function SettingsContent(props: SettingsContentProps) {
       {isAIEnabled ? (
         <>
           <Group>
-            <GroupRow onPress={onOpenModelSelector} trailing={<Text style={[styles.settingValue, { color: colors.textSecondary }]}>{selectedModelName}</Text>}>
+            <GroupRow testID="settings.button.model-selector" onPress={onOpenModelSelector} trailing={<Text style={[styles.settingValue, { color: colors.textSecondary }]}>{selectedModelName}</Text>}>
               <Text style={[styles.settingLabel, { color: colors.text }]}>Model</Text>
             </GroupRow>
-            <GroupRow onPress={onToggleActionMode} trailing={<Text style={[styles.settingValue, { color: colors.textSecondary }]}>{actionMode === 'auto' ? 'Auto' : 'Confirm'}</Text>}>
+            <GroupRow testID="settings.button.toggle-action-mode" onPress={onToggleActionMode} trailing={<Text style={[styles.settingValue, { color: colors.textSecondary }]}>{actionMode === 'auto' ? 'Auto' : 'Confirm'}</Text>}>
               <Text style={[styles.settingLabel, { color: colors.text }]}>Action Mode</Text>
             </GroupRow>
-            <GroupRow onPress={onOpenChatRepoPicker} trailing={<Text style={[styles.settingValue, { color: colors.textSecondary }]}>{chatStorageLabel}</Text>}>
+            <GroupRow testID="settings.button.chat-repo-picker" onPress={onOpenChatRepoPicker} trailing={<Text style={[styles.settingValue, { color: colors.textSecondary }]}>{chatStorageLabel}</Text>}>
               <Text style={[styles.settingLabel, { color: colors.text }]}>Chat Storage</Text>
             </GroupRow>
           </Group>
@@ -625,6 +641,7 @@ export function SettingsContent(props: SettingsContentProps) {
               return (
                 <GroupRow
                   key={provider.id}
+                  testID={`settings.button.provider`}
                   onPress={() => onProviderPress(provider)}
                   trailing={
                     <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
@@ -648,7 +665,7 @@ export function SettingsContent(props: SettingsContentProps) {
                 </GroupRow>
               );
             })}
-            <GroupRow onPress={onAddProvider}>
+            <GroupRow testID="settings.button.add-provider" onPress={onAddProvider}>
               <Text style={[styles.settingLabel, { color: colors.primary }]}>Add Provider</Text>
             </GroupRow>
           </Group>
@@ -748,6 +765,7 @@ export function SettingsContent(props: SettingsContentProps) {
           return (
             <GroupRow
               key={lang.code}
+              testID="settings.button.language"
               onPress={async () => {
                 await setLanguage(lang.code as LanguageCode);
                 setLanguagePref(lang.code);

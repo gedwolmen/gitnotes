@@ -466,13 +466,14 @@ export default function MoveNoteDialog({ visible, note, onClose, onMoved }: Move
       <DragDropBoundary>
         <SafeAreaView style={[exploreStyles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
           <View style={[exploreStyles.header, { borderBottomColor: colors.border }]}>
-            <TouchableOpacity onPress={onClose} style={exploreStyles.headerBtn}>
+            <TouchableOpacity testID="move-note.button.close" onPress={onClose} style={exploreStyles.headerBtn}>
               <Text style={[exploreStyles.headerBtnText, { color: colors.primary }]}>Cancel</Text>
             </TouchableOpacity>
             <Text style={[exploreStyles.headerTitle, { color: colors.text }]} numberOfLines={1}>
               Explore
             </Text>
             <TouchableOpacity
+              testID="move-note.button.move"
               onPress={handleMove}
               disabled={isMoving}
               style={exploreStyles.headerBtn}
@@ -522,6 +523,7 @@ export default function MoveNoteDialog({ visible, note, onClose, onMoved }: Move
             <View style={[exploreStyles.folderInputRow, { backgroundColor: colors.surface, borderBottomColor: colors.border + '40' }]}>
               <Ionicons name="folder-outline" size={20} color="#FF9500" style={exploreStyles.itemIcon} />
               <TextInput
+                testID="move-note.input.new-folder-name"
                 ref={folderInputRef}
                 style={[exploreStyles.folderInput, { color: colors.text, borderColor: colors.border }]}
                 value={newFolderName}

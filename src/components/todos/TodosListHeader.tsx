@@ -18,12 +18,15 @@ export function TodosListHeader({ searchQuery, onSearchChange, sortMode, onSortC
   return (
     <View style={styles.container}>
       <SearchBar
+        testID="todos-list-header.search-bar.search"
         value={searchQuery}
         onChangeText={onSearchChange}
         placeholder={t('todos.searchTodos')}
         style={styles.searchBar}
       />
-      <SortPicker currentSort={sortMode} onSortChange={onSortChange} entityType="todos" size="bar" />
+      <View testID="todos-list-header.sort.change">
+        <SortPicker currentSort={sortMode} onSortChange={onSortChange} entityType="todos" size="bar" />
+      </View>
     </View>
   );
 }

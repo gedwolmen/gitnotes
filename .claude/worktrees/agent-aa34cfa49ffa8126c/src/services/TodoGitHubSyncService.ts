@@ -1,0 +1,116 @@
+import { GitHubService } from './GitHubService';
+import { Todo } from '../models/Todo';
+import { parseRepoPath } from '../utils/gitPathParser';
+import { AuthService } from './AuthService';
+import { SyncEngineService } from './SyncEngineService';
+import { LocalGitWriter } from './git/LocalGitWriter';
+
+async function resolveToken(accountId?: string): Promise<string | undefined> {
+  if (!accountId) return undefined;
+  const t = await AuthService.getTokenById(accountId);
+  return t ?? undefined;
+}
+
+export interface TodoGitHubSyncResult {
+  success: boolean;
+  filePath?: string;
+  error?: string;
+}
+
+function serializeTodo(todo: Partial<Todo>): string {
+  const data = {
+    text: todo.text ?? '',
+    completed: todo.completed ?? false,
+    priority: todo.priority,
+    notes: todo.notes,
+    tags: todo.tags ?? [],
+    dueDate: todo.dueDate,
+    createdAt: todo.createdAt,
+    updatedAt: todo.updatedAt,
+  };
+  return JSON.stringify(data, null, 2);
+}
+
+export async function syncTodoToGitHub(params: {
+  repo: string;
+  branch?: string;
+  filePath?: string;
+  text: string;
+  todo: Partial<Todo>;
+  accountId?: string;
+}): Promise<TodoGitHubSyncResult> {
+  const { repo: repoPath, branch, filePath, text, todo, accountId } = params;
+  const tokenOverride = await resolveToken(accountId);
+
+  if (!tokenOverride && !GitHubService.isAuthenticated()) {
+    return { success: false, error: 'GitHub not authenticated' };
+  }
+
+  const repoInfo = parseRepoPath(repoPath);
+  if (!repoInfo) {
+    return { success: false, error: `Invalid repo path: ${repoPath}` };
+  }
+
+  const targetBranch = branch || 'main';
+  const opts = tokenOverride ? { tokenOverride } : undefined;
+
+  let targetPath = filePath;
+  if (!targetPath) {
+    const slug = text
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      || 'untitled';
+    targetPath = `todos/${slug}.json`;
+  }
+
+  const content = serializeTodo(todo);
+  const message = filePath ? `Update todo: ${text}` : `Create todo: ${text}`;
+
+  // Clone-mode write path (#514). Same on-disk shape as the API path so a
+  // mode flip later doesn't surface a no-op churn commit.
+  const mode = await SyncEngineService.getMode(repoPath);
+  if (mode === 'clone') {
+    const user = GitHubService.getUser();
+    const author = {
+      name: user?.name || user?.login || 'gitnotes',
+      email: user?.email || `${user?.login ?? 'gitnotes'}@users.noreply.github.com`,
+    };
+    const tokenForPush = tokenOverride ?? (await AuthService.getToken()) ?? undefined;
+    const writeResult = await LocalGitWriter.writeAndCommit({
+      repoPath,
+      branch: targetBranch,
+      filePath: targetPath,
+      content,
+      message,
+      author,
+      token: tokenForPush,
+    });
+    if (writeResult.success) {
+      return { success: true, filePath: targetPath };
+    }
+    return { success: false, error: writeResult.error };
+  }
+
+  try {
+    const result = await GitHubService.updateFile(
+      repoInfo.owner,
+      repoInfo.repo,
+      targetPath,
+      content,
+      message,
+      targetBranch,
+      opts,
+    );
+
+    if (result) {
+      return { success: true, filePath: targetPath };
+    }
+    return { success: false, error: 'GitHub API returned no result' };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}

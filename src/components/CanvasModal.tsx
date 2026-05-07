@@ -477,11 +477,11 @@ export default function CanvasModal({ visible, onSave, onClose, editJsonUri }: C
         ]}
       >
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleClose} style={styles.headerBtn}>
+          <TouchableOpacity testID="canvas-modal.button.close" onPress={handleClose} style={styles.headerBtn}>
             <Ionicons name="close" size={24} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Canvas</Text>
-          <TouchableOpacity onPress={handleSave} style={styles.saveBtn}>
+          <TouchableOpacity testID="canvas-modal.button.save" onPress={handleSave} style={styles.saveBtn}>
             <Text style={styles.saveBtnText}>Save</Text>
           </TouchableOpacity>
         </View>

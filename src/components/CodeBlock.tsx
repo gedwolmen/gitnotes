@@ -52,7 +52,7 @@ export function CodeBlock({ code, language, isDark }: CodeBlockProps) {
           ) : null}
         </View>
 
-        <Pressable accessibilityRole="button" accessibilityLabel="Copy" onPress={handleCopy} style={styles.copyButton}>
+        <Pressable testID="code-block.button.copy" accessibilityRole="button" accessibilityLabel="Copy" onPress={handleCopy} style={styles.copyButton}>
           <Text style={[styles.copyText, { color: isDark ? '#93c5fd' : '#2563eb' }]}>{copied ? 'Copied!' : 'Copy'}</Text>
         </Pressable>
       </View>

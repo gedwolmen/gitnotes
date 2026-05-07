@@ -117,6 +117,7 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
       <GestureDetector gesture={composedGesture}>
         <Animated.View>
           <Surface
+            testID="floating-ai.button.navigate-chat"
             elevation="raised"
             radius="pill"
             style={[styles.button, { backgroundColor: colors.primary }]}

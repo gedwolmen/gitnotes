@@ -11,8 +11,10 @@ export function NotesSwipeActions({ onDelete }: NotesSwipeActionsProps) {
   const { colors } = useTheme();
 
   return (
-    <View style={styles.track}>
+    <View testID="notes-swipe.button.delete">
+      <View testID="notes-list-card.swipe.delete" style={styles.track}>
       <TouchableOpacity
+        testID="notes-list-card.button.delete"
         style={[styles.action, { backgroundColor: colors.error }]}
         onPress={onDelete}
         activeOpacity={0.85}
@@ -20,6 +22,7 @@ export function NotesSwipeActions({ onDelete }: NotesSwipeActionsProps) {
         <Ionicons name="trash-outline" size={20} color="#fff" />
         <Text style={styles.text}>Delete</Text>
       </TouchableOpacity>
+    </View>
     </View>
   );
 }

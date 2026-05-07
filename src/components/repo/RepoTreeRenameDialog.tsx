@@ -50,9 +50,8 @@ export function RepoTreeRenameDialog({ visible, node, onClose, onRename }: RepoT
       <Text style={[dialogStyles.title, { color: colors.text }]}>Rename</Text>
       <Text style={[dialogStyles.subtitle, { color: colors.textSecondary }]}>{node.name}</Text>
       <Input
+        testID="repo-tree-rename.input.name"
         ref={inputRef}
-        value={name}
-        onChangeText={setName}
         autoCapitalize="none"
         autoCorrect={false}
         selectTextOnFocus
@@ -60,10 +59,9 @@ export function RepoTreeRenameDialog({ visible, node, onClose, onRename }: RepoT
         onSubmitEditing={handleRename}
       />
       <View style={dialogStyles.buttons}>
-        <Button variant="secondary" label="Cancel" onPress={onClose} />
-        <Button
+        <Button testID="repo-tree-rename-dialog.button.cancel" variant="secondary" label="Cancel" onPress={onClose} />
+        <Button testID="repo-tree-rename.button.rename"
           variant="primary"
-          label="Rename"
           onPress={handleRename}
           disabled={!name.trim() || name.trim() === (node.type === 'file' ? node.name.replace(/\.[^.]+$/, '') : node.name)}
         />

@@ -38,10 +38,11 @@ export default function SearchBar({
       autoCapitalize="none"
       containerStyle={style}
       surfaceTestID={testID}
+      testID="search-bar.input.search"
       leading={<Ionicons name="search" size={20} color={colors.textSecondary} />}
       trailing={
         value.length > 0 ? (
-          <TouchableOpacity onPress={handleClear} hitSlop={8}>
+          <TouchableOpacity testID="search-bar.icon-button.clear" onPress={handleClear} hitSlop={8}>
             <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         ) : undefined

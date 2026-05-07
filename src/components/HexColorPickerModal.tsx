@@ -96,7 +96,8 @@ export default function HexColorPickerModal({
         <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
 
         {presets && presets.length > 0 ? (
-          <View style={styles.presetsRow}>
+          <View testID="hex-color-picker.picker.select">
+            <View testID="notes-color-picker.button.select-color" style={styles.presetsRow}>
             {presets.map((hex, idx) => {
               const presetId = presetIds?.[idx] ?? hex;
               const testID = presetTestIdPrefix
@@ -120,6 +121,7 @@ export default function HexColorPickerModal({
                 />
               );
             })}
+          </View>
           </View>
         ) : null}
 
@@ -158,7 +160,7 @@ export default function HexColorPickerModal({
           ) : null}
 
           <TouchableOpacity
-            testID={cancelTestID}
+            testID="notes-color-picker.button.close"
             accessibilityRole="button"
             onPress={onClose}
             style={styles.cancelButton}

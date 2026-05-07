@@ -19,6 +19,7 @@ export function CanvasPickerModal({ visible, canvases, onSelect, onClose }: Canv
   const renderItem = useCallback(
     ({ item }: { item: Canvas }) => (
       <TouchableOpacity
+        testID="canvas-picker-modal.button.select"
         style={[styles.item, { borderBottomColor: colors.border }]}
         onPress={() => onSelect(item.id, item.title)}
       >
@@ -39,7 +40,7 @@ export function CanvasPickerModal({ visible, canvases, onSelect, onClose }: Canv
     <RNModal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+          <TouchableOpacity testID="canvas-picker-modal.button.close" onPress={onClose} style={styles.closeBtn}>
             <Text style={[styles.closeText, { color: colors.primary }]}>Cancel</Text>
           </TouchableOpacity>
           <Text style={[styles.title, { color: colors.text }]}>Link Canvas</Text>

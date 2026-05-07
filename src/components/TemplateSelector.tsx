@@ -32,7 +32,7 @@ interface TemplateListItemProps {
 const TemplateListItem = ({ item, onSelect, colors }: TemplateListItemProps) => {
   const onPressItem = useCallback(() => onSelect(item), [onSelect, item]);
   return (
-    <TouchableOpacity style={[styles.templateItem, { backgroundColor: colors.card, shadowColor: colors.shadow }]} onPress={onPressItem}>
+    <TouchableOpacity testID="template-selector.picker.select" style={[styles.templateItem, { backgroundColor: colors.card, shadowColor: colors.shadow }]} onPress={onPressItem}>
       <View style={[styles.templateIcon, { backgroundColor: colors.primary + '20' }]}>
         <Ionicons name={item.icon} size={24} color={colors.primary} />
       </View>

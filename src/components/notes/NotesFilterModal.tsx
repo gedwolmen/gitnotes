@@ -73,11 +73,11 @@ export function NotesFilterModal({
             <Text style={[styles.title, { color: colors.text }]}>{t('notes.filterNotes')}</Text>
             <View style={styles.headerRight}>
               {activeFilterCount > 0 ? (
-                <TouchableOpacity onPress={onClearFilters} style={styles.clearButton}>
+                <TouchableOpacity testID="notes-filter-modal.button.clear" onPress={onClearFilters} style={styles.clearButton}>
                   <Text style={[styles.clearText, { color: colors.primary }]}>{t('common.clear')}</Text>
                 </TouchableOpacity>
               ) : null}
-              <TouchableOpacity onPress={onClose}>
+              <TouchableOpacity testID="notes-filter-modal.button.close" onPress={onClose}>
                 <Ionicons name="close" size={24} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
@@ -89,6 +89,7 @@ export function NotesFilterModal({
                 <Text style={[styles.label, { color: colors.textSecondary }]}>{t('notesFilter.repository')}</Text>
                 <View style={styles.chipWrap}>
                   <TouchableOpacity
+                    testID="notes-filter-modal.button.select-repo-all"
                     style={[
                       styles.chip,
                       { borderColor: colors.border },
@@ -108,6 +109,7 @@ export function NotesFilterModal({
                     return (
                       <TouchableOpacity
                         key={repo.id}
+                        testID={`notes-filter-modal.button.select-repo-${repo.id}`}
                         style={[
                           styles.chip,
                           { borderColor: colors.border },
@@ -133,6 +135,7 @@ export function NotesFilterModal({
             <Text style={[styles.label, { color: colors.textSecondary }]}>{t('notesFilter.noteType')}</Text>
             <View style={styles.chipWrap}>
               <TouchableOpacity
+                testID="notes-filter-modal.button.select-format-all"
                 style={[
                   styles.chip,
                   { borderColor: colors.border },
@@ -148,6 +151,7 @@ export function NotesFilterModal({
                   return (
                     <TouchableOpacity
                       key={format}
+                      testID={`notes-filter-modal.button.select-format-${format}`}
                       style={[
                         styles.chip,
                         { borderColor: colors.border },
@@ -179,6 +183,7 @@ export function NotesFilterModal({
                       { borderColor: colors.border },
                       !selectedBranch && { borderColor: colors.primary, backgroundColor: colors.primary + '15' },
                     ]}
+                    testID="notes-filter-modal.button.select-branch-all"
                     onPress={() => onSelectBranch(null)}
                   >
                     <Text style={[styles.chipText, { color: !selectedBranch ? colors.primary : colors.text }]}>{t('common.all')}</Text>
@@ -188,6 +193,7 @@ export function NotesFilterModal({
                     return (
                       <TouchableOpacity
                         key={branch}
+                        testID={`notes-filter-modal.button.select-branch-${branch}`}
                         style={[
                           styles.chip,
                           { borderColor: colors.border },
@@ -218,6 +224,7 @@ export function NotesFilterModal({
                 <Text style={[styles.label, { color: colors.textSecondary }]}>{t('notesFilter.folder')}</Text>
                 <View style={styles.chipWrap}>
                   <TouchableOpacity
+                    testID="notes-filter-modal.button.select-folder"
                     style={[
                       styles.chip,
                       { borderColor: colors.border },
@@ -266,6 +273,7 @@ export function NotesFilterModal({
                     return (
                       <TouchableOpacity
                         key={tag}
+                        testID="notes-filter-modal.button.toggle-tag"
                         style={[
                           styles.chip,
                           { borderColor: colors.border },
@@ -299,7 +307,7 @@ export function NotesFilterModal({
                       return (
                         <TouchableOpacity
                           key={color}
-                          testID={`note-color-filter-${color}`}
+                          testID="notes-filter-modal.button.toggle-color"
                           style={[
                             styles.chip,
                             { borderColor: colors.border },

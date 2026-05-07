@@ -158,6 +158,7 @@ export default function HomeScreen() {
       <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: headerHeight, paddingBottom: tabBarHeight + 20 }, isTablet && { maxWidth: maxContentWidth, alignSelf: 'center', width: '100%' }]} showsVerticalScrollIndicator={false}>
       <View style={styles.bentoGrid}>
         <Pressable
+          testID="home.button.create-note"
           onPress={handleCreateNote}
           onLongPress={() => {
             HapticService.medium();
@@ -181,6 +182,7 @@ export default function HomeScreen() {
 
         <View style={styles.bentoRow}>
           <Pressable
+            testID="home.button.open-templates"
             onPress={handleOpenTemplates}
             style={({ pressed }) => [
               styles.bentoTile,
@@ -196,6 +198,7 @@ export default function HomeScreen() {
             </View>
           </Pressable>
           <Pressable
+            testID="home.button.navigate"
             onPress={() => navigation.navigate('CanvasList')}
             style={({ pressed }) => [
               styles.bentoTile,
@@ -216,6 +219,7 @@ export default function HomeScreen() {
             </View>
           </Pressable>
           <Pressable
+            testID="home.button.open-journal"
             onPress={handleOpenTodaysJournal}
             disabled={isCreatingJournal}
             style={({ pressed }) => [
@@ -247,6 +251,7 @@ export default function HomeScreen() {
           {FORMAT_OPTIONS.map((option) => (
             <Card
               key={option.value}
+              testID={`home.button.select-format-${option.value}`}
               onPress={() => handleSelectFormat(option.value)}
               padding={14}
             >
@@ -258,6 +263,7 @@ export default function HomeScreen() {
           ))}
         </View>
         <TouchableOpacity
+          testID="home.checkbox.picker-remember"
           style={styles.rememberRow}
           onPress={() => setPickerRemember((v) => !v)}
           accessibilityRole="checkbox"
@@ -271,7 +277,7 @@ export default function HomeScreen() {
           <Text style={[styles.rememberLabel, { color: colors.text }]}>Remember my choice</Text>
         </TouchableOpacity>
         <View style={{ marginTop: 12 }}>
-          <Button variant="ghost" fullWidth label="Cancel" onPress={handleFormatPickerClose} />
+          <Button variant="ghost" fullWidth label="Cancel" testID="home.button.close-format-picker" onPress={handleFormatPickerClose} />
         </View>
       </Modal>
 

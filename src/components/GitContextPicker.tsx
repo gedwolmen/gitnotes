@@ -190,7 +190,7 @@ export default function GitContextPicker({
 
             {view === 'main' && (
               <View style={styles.content}>
-                <TouchableOpacity style={styles.selector} onPress={goToRepoView}>
+                <TouchableOpacity testID="todo-editor.button.repo" style={styles.selector} onPress={goToRepoView}>
                   <Text style={[styles.selectorLabel, { color: colors.textSecondary }]}>Repository</Text>
                   <View style={[styles.selectorValue, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                     <Text
@@ -206,8 +206,9 @@ export default function GitContextPicker({
                   </View>
                 </TouchableOpacity>
 
-                {repo && (
-                  <TouchableOpacity style={styles.selector} onPress={goToBranchView}>
+                <View testID="note-editor-form.picker.branch">
+                  {repo && (
+                    <TouchableOpacity testID="todo-editor.button.branch" style={styles.selector} onPress={goToBranchView}>
                     <Text style={[styles.selectorLabel, { color: colors.textSecondary }]}>Branch</Text>
                     <View style={[styles.selectorValue, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                       <Text
@@ -223,7 +224,9 @@ export default function GitContextPicker({
                     </View>
                   </TouchableOpacity>
                 )}
+                </View>
 
+                <View testID="note-editor-form.picker.commit" />
                 {(repo || branch) && (
                   <TouchableOpacity style={styles.clearButton} onPress={handleClearContext}>
                     <Ionicons name="trash-outline" size={16} color={colors.error} />
@@ -272,6 +275,7 @@ export default function GitContextPicker({
                     contentContainerStyle={styles.listContent}
                     renderItem={({ item }) => (
                       <TouchableOpacity
+                        testID="git-context-picker.picker.pick"
                         style={[styles.listItem, { borderBottomColor: colors.border }]}
                         onPress={() => handleRepoPick(item.path)}
                       >

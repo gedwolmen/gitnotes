@@ -91,6 +91,7 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
             Choose Chat Storage
           </Text>
           <TouchableOpacity
+            testID="chat-repo-picker.button.close"
             onPress={onClose}
             disabled={isInitializing}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -142,6 +143,7 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
                   return (
                     <TouchableOpacity
                       key={repo.path}
+                      testID={`chat-repo-picker.button.select-repo`}
                       onPress={() => handleSelectRepo(repo.path)}
                       style={{ marginBottom: spacing[2] }}
                     >
@@ -182,6 +184,7 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
                   <Text style={[styles.branchLabel, { color: colors.text }]}>Branch:</Text>
                   <View style={{ flex: 1 }}>
                     <Input
+                      testID="chat-repo-picker.input.branch"
                       value={branch}
                       onChangeText={setBranch}
                       placeholder="main"
@@ -205,6 +208,7 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
           ]}
         >
           <Button
+            testID="chat-repo-picker.button.confirm"
             variant="primary"
             onPress={handleConfirm}
             disabled={!selectedRepoPath || isInitializing}

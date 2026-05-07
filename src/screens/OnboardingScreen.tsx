@@ -108,7 +108,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.header}>
-          <Button variant="ghost" label="Skip" onPress={handleSkip} />
+          <Button variant="ghost" label="Skip" testID="onboarding.button.skip" onPress={handleSkip} />
         </View>
 
         {isTokenStep ? (
@@ -124,6 +124,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
 
             <Button
               variant="ghost"
+              testID="onboarding.button.open-link"
               onPress={() => Linking.openURL('https://github.com/settings/personal-access-tokens/new?description=GitNotes')}
               leadingIcon={<Ionicons name="open-outline" size={14} color={colors.accent} />}
               label="Open GitHub token settings"
@@ -132,6 +133,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
             />
 
             <Input
+              testID="onboarding.input.token"
               placeholder="github_pat_xxxxxxxxxxxxxxxxxxxx"
               value={token}
               onChangeText={(t) => { setToken(t); setTokenError(null); }}
@@ -195,6 +197,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
               <Button
                 variant="primary"
                 fullWidth
+                testID="onboarding.button.enable-ai"
                 onPress={handleEnableAI}
                 label="Enable AI"
                 trailingIcon={<Ionicons name="sparkles" size={20} color={colors.accent} />}
@@ -202,6 +205,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
               <Button
                 variant="ghost"
                 fullWidth
+                testID="onboarding.button.skip-ai"
                 onPress={handleSkipAI}
                 label="Skip for Now"
                 style={{ marginTop: 8 }}
@@ -211,6 +215,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
             <Button
               variant="primary"
               fullWidth
+              testID="onboarding.button.next"
               onPress={handleNext}
               disabled={isVerifying}
               label={isVerifying ? '' : isTokenStep ? (token.trim() ? 'Connect' : 'Skip for Now') : 'Next'}

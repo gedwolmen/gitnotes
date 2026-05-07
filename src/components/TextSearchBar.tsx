@@ -24,8 +24,9 @@ export function TextSearchBar({
   const matchCountText = `${displayIndex}/${totalMatches}`;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+     <View testID="text-search-bar.search-bar.search" style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <TextInput
+        testID="text-search-bar.input.search"
         style={[styles.input, { color: colors.text }]}
         placeholder="Search..."
         placeholderTextColor={colors.textSecondary}

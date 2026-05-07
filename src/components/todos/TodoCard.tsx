@@ -38,24 +38,34 @@ function TodoCardImpl({
       ref={swipeableRef}
       onSwipeableWillOpen={onSwipeableWillOpen}
       onSwipeableWillClose={onSwipeableWillClose}
-      renderRightActions={() => <TodosSwipeActions onDelete={onDelete} />}
+      renderRightActions={() => (
+        <View testID="todo-card-root.swipe.action">
+          <View testID="todo-card.swipe.action">
+            <TodosSwipeActions onDelete={onDelete} />
+          </View>
+        </View>
+      )}
       overshootRight={false}
     >
-      <TouchableOpacity
+      <View testID="todo-card.button.press">
+        <TouchableOpacity
+          testID="todo-card-root.button.edit"
         style={[
           styles.todoItem,
           { backgroundColor: colors.surface, borderColor: isOverdue ? colors.error : colors.border },
           isOverdue && { borderWidth: 1.5 },
         ]}
         onPress={() => onPress(todo)}
-        onLongPress={() => onToggle(todo.id)}
       >
-        <TouchableOpacity
-          style={[styles.checkbox, { borderColor: todo.completed ? colors.primary : colors.border }]}
-          onPress={() => onToggle(todo.id)}
-        >
+        <View testID="todo-card.checkbox.toggle">
+          <TouchableOpacity
+            testID="todo-card-root.checkbox.toggle"
+            style={[styles.checkbox, { borderColor: todo.completed ? colors.primary : colors.border }]}
+            onPress={() => onToggle(todo.id)}
+          >
           {todo.completed ? <Ionicons name="checkmark" size={18} color={colors.primary} /> : null}
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.todoContent}>
           <Text
@@ -127,6 +137,7 @@ function TodoCardImpl({
 
         <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
       </TouchableOpacity>
+      </View>
     </ReanimatedSwipeable>
   );
 }

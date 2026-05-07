@@ -158,6 +158,7 @@ export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph }: 
     const scene = item.data.scene;
     return (
       <Pressable
+        testID={`bento-tile.button.press-${item.data.id}`}
         onPress={onPress}
         style={({ pressed }) => [
           styles.tile,
@@ -209,6 +210,7 @@ export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph }: 
 
     return (
       <Pressable
+        testID={`bento-tile.button.press-${item.data.id}`}
         onPress={onPress}
         style={({ pressed }) => [
           styles.tile,
@@ -269,6 +271,7 @@ export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph }: 
 
   return (
     <Pressable
+      testID={`bento-tile.button.press-${item.data.id}`}
       onPress={onPress}
       style={({ pressed }) => [
         styles.tile,

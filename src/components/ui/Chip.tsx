@@ -12,10 +12,11 @@ export interface ChipProps {
   trailing?: ReactNode;
   style?: StyleProp<ViewStyle>;
   children?: ReactNode;
+  testID?: string;
 }
 
 export function Chip(props: ChipProps) {
-  const { label, active = false, onPress, onLongPress, leading, trailing, style, children } = props;
+  const { label, active = false, onPress, onLongPress, leading, trailing, style, children, testID } = props;
   const { colors, spacing, type } = useTokens();
 
   const surface = (
@@ -57,7 +58,7 @@ export function Chip(props: ChipProps) {
   if (!onPress && !onLongPress) return surface;
 
   return (
-    <Pressable onPress={onPress} onLongPress={onLongPress}>
+    <Pressable onPress={onPress} onLongPress={onLongPress} testID={testID}>
       {surface}
     </Pressable>
   );

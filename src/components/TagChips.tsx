@@ -44,6 +44,7 @@ export function TagChips({ tags, onTagPress, maxVisible = 3 }: TagChipsProps) {
         return (
           <TouchableOpacity
             key={tag}
+            testID={`tag-chips.button.press-${tag}`}
             style={[styles.chip, { backgroundColor: bg + '20' }]}
             onPress={onTagPress ? () => onTagPress(tag) : undefined}
             disabled={!onTagPress}

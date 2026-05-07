@@ -43,7 +43,7 @@ export default function NoteImage({ uri, alt = '', caption }: NoteImageProps) {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity onPress={handlePress} activeOpacity={0.9}>
+      <TouchableOpacity testID="note-image.button.tap" onPress={handlePress} activeOpacity={0.9}>
         {isSvg ? (
           <SvgImage uri={uri} isDark={isDark} />
         ) : (

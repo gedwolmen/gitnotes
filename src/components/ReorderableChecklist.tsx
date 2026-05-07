@@ -192,6 +192,7 @@ const ChecklistRow = memo(function ChecklistRow({
       ]}
     >
       <TouchableOpacity
+        testID="reorderable-checklist.checkbox.check"
         accessibilityLabel={`Toggle checklist item ${index + 1}`}
         activeOpacity={0.8}
         onPress={() => onToggle(index)}
@@ -227,7 +228,7 @@ const ChecklistRow = memo(function ChecklistRow({
 
       <GestureDetector gesture={gesture}>
         <Animated.View style={styles.dragHandleWrap}>
-          <TouchableOpacity accessibilityLabel={`Drag checklist item ${index + 1}`} activeOpacity={0.8} style={{ paddingHorizontal: spacing[1], paddingVertical: spacing[2] }}>
+          <TouchableOpacity testID="reorderable-checklist.drag-handle.drag" accessibilityLabel={`Drag checklist item ${index + 1}`} activeOpacity={0.8} style={{ paddingHorizontal: spacing[1], paddingVertical: spacing[2] }}>
             <Text style={{ color: colors.textSecondary, fontSize: type.lg, fontWeight: '600' }}>≡</Text>
           </TouchableOpacity>
         </Animated.View>

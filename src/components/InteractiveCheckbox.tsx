@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { HapticService } from '../utils/haptics';
@@ -10,6 +10,7 @@ interface InteractiveCheckboxProps {
   onToggle: () => void;
   size?: number;
   disabled?: boolean;
+  testID?: string;
 }
 
 export default function InteractiveCheckbox({
@@ -17,6 +18,7 @@ export default function InteractiveCheckbox({
   onToggle,
   size = 22,
   disabled = false,
+  testID,
 }: InteractiveCheckboxProps) {
   const { colors } = useTheme();
 
@@ -28,7 +30,9 @@ export default function InteractiveCheckbox({
   }, [disabled, onToggle]);
 
   return (
-    <Pressable
+    <View testID="interactive-checkbox.checkbox.change">
+      <Pressable
+        testID={testID ?? "interactive-checkbox.checkbox.fallback"}
       onPress={handlePress}
       disabled={disabled}
       style={[styles.container, { width: size + 6, height: size + 6, opacity: disabled ? 0.5 : 1 }]}
@@ -54,6 +58,7 @@ export default function InteractiveCheckbox({
         )}
       </Surface>
     </Pressable>
+    </View>
   );
 }
 

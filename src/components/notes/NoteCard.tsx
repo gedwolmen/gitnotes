@@ -42,37 +42,47 @@ function NotesNoteCardImpl({
   const { colors } = useTheme();
 
   const content = (
-    <BaseNoteCard
-      note={note}
-      onPress={onPress}
-      onLongPress={onLongPress}
-      highlighted={highlighted}
-      isOffline={isOffline}
-      isCached={isCached}
-      onTagPress={onTagPress}
-    />
+    <View testID="notes-list-card.button.press">
+      <BaseNoteCard
+        note={note}
+        onPress={onPress}
+        onLongPress={onLongPress}
+        highlighted={highlighted}
+        isOffline={isOffline}
+        isCached={isCached}
+        onTagPress={onTagPress}
+      />
+    </View>
   );
 
   return (
-    <ReanimatedSwipeable
-      ref={swipeableRef}
-      overshootRight={false}
-      rightThreshold={40}
-      onSwipeableWillOpen={onSwipeableWillOpen}
-      onSwipeableWillClose={onSwipeableWillClose}
-      renderRightActions={() => <NotesSwipeActions onDelete={onDelete} />}
-    >
-      {viewMode === 'journal' ? (
-        <View {...({ note } as { note: Note })} style={styles.journalItem}>
-          <Text style={[styles.journalDate, { color: colors.textSecondary }]}>
-            {note.updatedAt ? new Date(note.updatedAt).toLocaleDateString() : ''}
-          </Text>
-          {content}
-        </View>
-      ) : (
-        content
-      )}
-    </ReanimatedSwipeable>
+    <View testID="note-card-root.button.press">
+      <ReanimatedSwipeable
+        ref={swipeableRef}
+        overshootRight={false}
+        rightThreshold={40}
+        onSwipeableWillOpen={onSwipeableWillOpen}
+        onSwipeableWillClose={onSwipeableWillClose}
+        renderRightActions={() => (
+          <View testID="note-card-root.swipe.right">
+            <View testID="note-card.swipe.action">
+              <NotesSwipeActions onDelete={onDelete} />
+            </View>
+          </View>
+        )}
+      >
+        {viewMode === 'journal' ? (
+          <View {...({ note } as { note: Note })} style={styles.journalItem}>
+            <Text style={[styles.journalDate, { color: colors.textSecondary }]}>
+              {note.updatedAt ? new Date(note.updatedAt).toLocaleDateString() : ''}
+            </Text>
+            {content}
+          </View>
+        ) : (
+          content
+        )}
+      </ReanimatedSwipeable>
+    </View>
   );
 }
 

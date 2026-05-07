@@ -107,7 +107,7 @@ export function ModelSelector({ visible, onClose }: ModelSelectorProps) {
         <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>Select AI Model</Text>
-            <TouchableOpacity onPress={onClose}>
+            <TouchableOpacity testID="model-selector.button.close" onPress={onClose}>
               <Ionicons name="close" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
@@ -135,6 +135,7 @@ export function ModelSelector({ visible, onClose }: ModelSelectorProps) {
                     return (
                       <GroupRow
                         key={model.id}
+                        testID={`model-selector.button.select-model-${model.id}`}
                         onPress={
                           isUnavailable || needsDownload || downloading
                             ? undefined
@@ -169,6 +170,7 @@ export function ModelSelector({ visible, onClose }: ModelSelectorProps) {
                               <ActivityIndicator size="small" color={colors.primary} />
                             ) : needsDownload ? (
                               <TouchableOpacity
+                                testID={`model-selector.button.download-${model.id}`}
                                 style={[styles.downloadBtn, { backgroundColor: colors.primary }]}
                                 onPress={() => handleDownload(model)}
                               >

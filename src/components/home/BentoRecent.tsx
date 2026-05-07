@@ -34,7 +34,7 @@ export function BentoRecent({ items, onOpen }: Props) {
   }
 
   return (
-    <View style={styles.section}>
+    <View testID="bento-recent.button.open" style={styles.section}>
       <Text style={[styles.heading, { color: colors.textSecondary }]}>Recent</Text>
       <View style={styles.column}>
         <BentoTile item={first} size="large" onPress={() => onOpen(first)} />

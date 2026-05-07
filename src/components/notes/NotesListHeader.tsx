@@ -57,55 +57,64 @@ export function NotesListHeader({
 
   return (
     <>
-      <View style={styles.topBar}>
+      <View testID="notes-list-header.search-bar.search" style={styles.topBar}>
         <SearchBar
+          testID="notes-list.search-bar.search"
           value={searchQuery}
           onChangeText={onSearchChange}
           placeholder={t('notes.searchNotes')}
           style={styles.searchBar}
         />
-        <TouchableOpacity
-          style={[styles.iconBtn, { backgroundColor: colors.surface }]}
-          onPress={() => {
-            HapticService.light();
-            onToggleViewModePicker();
-          }}
-        >
-          <Ionicons name={VIEW_MODE_ICONS[viewMode]} size={20} color={colors.primary} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.iconBtn,
-            {
-              backgroundColor: activeFilterCount > 0 ? colors.primary + '20' : colors.surface,
-            },
-          ]}
-          onPress={() => {
-            HapticService.light();
-            onOpenFilters();
-          }}
-        >
-          <Ionicons
-            name="funnel-outline"
-            size={20}
-            color={activeFilterCount > 0 ? colors.primary : colors.textSecondary}
-          />
-          {activeFilterCount > 0 ? (
-            <View style={[styles.badge, { backgroundColor: colors.primary }]}>
-              <Text style={styles.badgeText}>{activeFilterCount}</Text>
-            </View>
-          ) : null}
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.iconBtn,
-            {
-              backgroundColor: pendingSync > 0 ? colors.primary + '20' : colors.surface,
-            },
-          ]}
-          onPress={onManualSync}
-          disabled={isManualSyncing}
-        >
+        <View testID="notes-list-header.icon-button.view-mode">
+          <TouchableOpacity
+            testID="notes-list.button.toggle-view-mode"
+            style={[styles.iconBtn, { backgroundColor: colors.surface }]}
+            onPress={() => {
+              HapticService.light();
+              onToggleViewModePicker();
+            }}
+          >
+            <Ionicons name={VIEW_MODE_ICONS[viewMode]} size={20} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
+        <View testID="notes-list-header.icon-button.filters">
+          <TouchableOpacity
+            testID="notes-list.button.open-filters"
+            style={[
+              styles.iconBtn,
+              {
+                backgroundColor: activeFilterCount > 0 ? colors.primary + '20' : colors.surface,
+              },
+            ]}
+            onPress={() => {
+              HapticService.light();
+              onOpenFilters();
+            }}
+          >
+            <Ionicons
+              name="funnel-outline"
+              size={20}
+              color={activeFilterCount > 0 ? colors.primary : colors.textSecondary}
+            />
+            {activeFilterCount > 0 ? (
+              <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+                <Text style={styles.badgeText}>{activeFilterCount}</Text>
+              </View>
+            ) : null}
+          </TouchableOpacity>
+        </View>
+        <View testID="notes-list-header.icon-button.sync">
+          <TouchableOpacity
+            testID="notes-list.button.manual-sync"
+            style={[
+              styles.iconBtn,
+              {
+                backgroundColor: pendingSync > 0 ? colors.primary + '20' : colors.surface,
+              },
+            ]}
+            onPress={onManualSync}
+            disabled={isManualSyncing}
+          >
           {isManualSyncing ? (
             <ActivityIndicator size="small" color={colors.primary} />
           ) : (
@@ -120,11 +129,12 @@ export function NotesListHeader({
               <Text style={styles.badgeText}>{pendingSync}</Text>
             </View>
           ) : null}
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.chipRow}>
-        <View style={styles.sortAnchor}>
+        <View testID="notes-list.sort.change" style={styles.sortAnchor}>
           <SortPicker currentSort={sortMode} onSortChange={onSortChange} entityType="notes" />
         </View>
         <ScrollView
@@ -133,7 +143,9 @@ export function NotesListHeader({
           style={styles.chipScroll}
           contentContainerStyle={styles.chipContent}
         >
-          <TouchableOpacity
+          <View testID="notes-list.button.select-repo">
+            <TouchableOpacity
+              testID="notes-list-header.button.select-repo"
             style={[
               styles.chip,
               { borderColor: !selectedRepo ? colors.primary : colors.border + '60' },
@@ -151,6 +163,7 @@ export function NotesListHeader({
             />
             <Text style={[styles.chipText, { color: !selectedRepo ? colors.primary : colors.text }]}>{t('notes.allNotes')}</Text>
           </TouchableOpacity>
+          </View>
           {repositories.map((repo) => {
             const isSelected = selectedRepo?.id === repo.id;
             return (
@@ -185,10 +198,11 @@ export function NotesListHeader({
           <Text style={[styles.searchNavigatorCount, { color: colors.textSecondary }]}>
             {searchMatchCount > 0 ? `${currentSearchMatchIndex + 1}/${searchMatchCount}` : '0/0'}
           </Text>
-          <View style={styles.searchNavigatorActions}>
+          <View testID="notes-list.button.navigate-search" style={styles.searchNavigatorActions}>
             {([-1, 1] as const).map((step) => (
               <TouchableOpacity
                 key={step}
+                testID={step === -1 ? 'notes-list.button.navigate-search-prev' : 'notes-list.button.navigate-search-next'}
                 style={[
                   styles.searchNavButton,
                   { backgroundColor: colors.background, borderColor: colors.border },

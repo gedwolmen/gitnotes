@@ -485,6 +485,7 @@ export default function TodoListScreen() {
           <>
             <IconButton
               size="sm"
+              testID="todo-list.icon-button.filter-completed"
               active={filterCompleted}
               onPress={() => setFilterCompleted(!filterCompleted)}
               accessibilityLabel="Toggle completed filter"
@@ -497,6 +498,7 @@ export default function TodoListScreen() {
             </IconButton>
             <IconButton
               size="sm"
+              testID="todo-list.icon-button.filters"
               active={filter.activeCount > 0}
               onPress={() => setShowFilterModal(true)}
               accessibilityLabel="Filters"
@@ -507,7 +509,7 @@ export default function TodoListScreen() {
                 color={filter.activeCount > 0 ? colors.accent : colors.textSecondary}
               />
             </IconButton>
-            <IconButton size="sm" onPress={() => setShowAddModal(true)} accessibilityLabel="Add todo">
+            <IconButton size="sm" testID="todo-list.icon-button.add" onPress={() => setShowAddModal(true)} accessibilityLabel="Add todo">
               <Ionicons name="add" size={20} color={colors.accent} />
             </IconButton>
           </>
