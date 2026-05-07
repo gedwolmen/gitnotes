@@ -21,8 +21,8 @@ interface SwipeableListItemProps {
   children: React.ReactNode;
 }
 
-const SWIPE_THRESHOLD = 64;
-const MAX_DRAG = 96;
+const SWIPE_THRESHOLD = 36;
+const MAX_DRAG = 48;
 
 export function SwipeableListItem({
   itemId,
@@ -48,10 +48,12 @@ export function SwipeableListItem({
       translateX.value = Math.max(Math.min(event.translationX, 0), -MAX_DRAG);
     })
     .onEnd((event) => {
-      if (event.translationX < -SWIPE_THRESHOLD) {
-        runOnJS(triggerToggle)();
-      }
-      translateX.value = withSpring(0, { damping: 18, stiffness: 220 });
+      const shouldToggle = event.translationX < -SWIPE_THRESHOLD;
+      translateX.value = withSpring(0, { damping: 22, stiffness: 320 }, (finished) => {
+        if (finished && shouldToggle) {
+          runOnJS(triggerToggle)();
+        }
+      });
     });
 
   const animatedStyle = useAnimatedStyle(() => ({
