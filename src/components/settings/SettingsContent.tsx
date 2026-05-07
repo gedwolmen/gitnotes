@@ -550,7 +550,12 @@ export function SettingsContent(props: SettingsContentProps) {
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Ionicons name="sync-outline" size={20} color={colors.text} />
-            <Text style={[styles.settingLabel, { color: colors.text }]}>Sync frequently (recommended for multi-device)</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.settingLabel, { color: colors.text }]}>Sync frequently</Text>
+              <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>
+                Recommended for multi-device
+              </Text>
+            </View>
           </View>
         </GroupRow>
         <GroupRow
