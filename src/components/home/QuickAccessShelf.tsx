@@ -11,6 +11,7 @@ interface Props {
 }
 
 const CARD_WIDTH = 176;
+const EDGE_INSET = 20;
 
 export function QuickAccessShelf({ items, onOpen }: Props) {
   const { colors } = useTheme();
@@ -31,7 +32,7 @@ export function QuickAccessShelf({ items, onOpen }: Props) {
           <BentoTile
             key={`${item.kind}-${item.data.id}`}
             item={item}
-            size="pinned"
+            size="medium"
             widthOverride={CARD_WIDTH}
             hidePinGlyph
             onPress={() => onOpen(item)}
@@ -46,13 +47,15 @@ const styles = StyleSheet.create({
   section: {
     marginTop: 4,
     marginBottom: 16,
+    marginHorizontal: -EDGE_INSET,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     marginBottom: 8,
-    paddingHorizontal: 4,
+    paddingLeft: EDGE_INSET + 4,
+    paddingRight: EDGE_INSET + 4,
   },
   heading: {
     fontSize: 12,
@@ -62,7 +65,8 @@ const styles = StyleSheet.create({
   },
   row: {
     gap: 12,
-    paddingRight: 12,
+    paddingLeft: EDGE_INSET,
+    paddingRight: EDGE_INSET,
   },
 });
 
