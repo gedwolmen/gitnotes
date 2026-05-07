@@ -1,0 +1,2683 @@
+[
+  {
+    "file": "src/screens/HomeScreen.tsx",
+    "component": "HomeScreen",
+    "elementType": "button",
+    "action": "handleCreateNote",
+    "testID": "home.button.create-note",
+    "flowId": "home-nav",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/HomeScreen.tsx",
+    "component": "HomeScreen",
+    "elementType": "button",
+    "action": "handleOpenTemplates",
+    "testID": "home.button.open-templates",
+    "flowId": "home-nav",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/HomeScreen.tsx",
+    "component": "HomeScreen",
+    "elementType": "button",
+    "action": "handleOpenTodaysJournal",
+    "testID": "home.button.open-journal",
+    "flowId": "home-nav",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/HomeScreen.tsx",
+    "component": "HomeScreen",
+    "elementType": "button",
+    "action": "navigation.navigate",
+    "testID": "home.button.navigate",
+    "flowId": "home-nav",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/HomeScreen.tsx",
+    "component": "HomeScreen",
+    "elementType": "modal-trigger",
+    "action": "setShowFormatPicker",
+    "testID": "home.modal-trigger.format-picker",
+    "flowId": "home-nav",
+    "platform": ["ios", "android"],
+    "na": true
+  },
+  {
+    "file": "src/screens/HomeScreen.tsx",
+    "component": "HomeScreen",
+    "elementType": "checkbox",
+    "action": "setPickerRemember",
+    "testID": "home.checkbox.picker-remember",
+    "flowId": "home-nav",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/HomeScreen.tsx",
+    "component": "HomeScreen",
+    "elementType": "button",
+    "action": "handleSelectFormat",
+    "testID": "home.button.select-format",
+    "flowId": "home-nav",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/HomeScreen.tsx",
+    "component": "HomeScreen",
+    "elementType": "button",
+    "action": "handleFormatPickerClose",
+    "testID": "home.button.close-format-picker",
+    "flowId": "home-nav",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/OnboardingScreen.tsx",
+    "component": "OnboardingScreen",
+    "elementType": "button",
+    "action": "handleSkip",
+    "testID": "onboarding.button.skip",
+    "flowId": "onboarding",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/OnboardingScreen.tsx",
+    "component": "OnboardingScreen",
+    "elementType": "button",
+    "action": "handleNext",
+    "testID": "onboarding.button.next",
+    "flowId": "onboarding",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/OnboardingScreen.tsx",
+    "component": "OnboardingScreen",
+    "elementType": "button",
+    "action": "Linking.openURL",
+    "testID": "onboarding.button.open-link",
+    "flowId": "onboarding",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/OnboardingScreen.tsx",
+    "component": "OnboardingScreen",
+    "elementType": "button",
+    "action": "handleEnableAI",
+    "testID": "onboarding.button.enable-ai",
+    "flowId": "onboarding",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/OnboardingScreen.tsx",
+    "component": "OnboardingScreen",
+    "elementType": "button",
+    "action": "handleSkipAI",
+    "testID": "onboarding.button.skip-ai",
+    "flowId": "onboarding",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/OnboardingScreen.tsx",
+    "component": "OnboardingScreen",
+    "elementType": "input",
+    "action": "setToken",
+    "testID": "onboarding.input.token",
+    "flowId": "onboarding",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesListHeader",
+    "elementType": "search-bar",
+    "action": "change-search",
+    "testID": "notes-list.search-bar.search",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesListHeader",
+    "elementType": "button",
+    "action": "toggle-view-mode",
+    "testID": "notes-list.button.toggle-view-mode",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesListHeader",
+    "elementType": "button",
+    "action": "open-filters",
+    "testID": "notes-list.button.open-filters",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesListHeader",
+    "elementType": "button",
+    "action": "manual-sync",
+    "testID": "notes-list.button.manual-sync",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesListHeader",
+    "elementType": "button",
+    "action": "select-repo",
+    "testID": "notes-list.button.select-repo",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesListHeader",
+    "elementType": "button",
+    "action": "navigate-search",
+    "testID": "notes-list.button.navigate-search",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesListHeader",
+    "elementType": "sort",
+    "action": "onSortChange",
+    "testID": "notes-list.sort.change",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesViewModePicker",
+    "elementType": "button",
+    "action": "close",
+    "testID": "notes-view-mode.button.close",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesViewModePicker",
+    "elementType": "button",
+    "action": "change-view-mode",
+    "testID": "notes-view-mode.button.change",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "FilterBar",
+    "elementType": "button",
+    "action": "remove-filter",
+    "testID": "notes-filter-bar.button.remove",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "FilterBar",
+    "elementType": "button",
+    "action": "clear-all-filters",
+    "testID": "notes-filter-bar.button.clear-all",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "FlashList",
+    "elementType": "swipe-action",
+    "action": "pull-to-refresh",
+    "testID": "notes-list.swipe.pull-refresh",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesFilterModal",
+    "elementType": "button",
+    "action": "close",
+    "testID": "notes-filter-modal.button.close",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesFilterModal",
+    "elementType": "button",
+    "action": "clear-filters",
+    "testID": "notes-filter-modal.button.clear",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesFilterModal",
+    "elementType": "button",
+    "action": "select-repo",
+    "testID": "notes-filter-modal.button.select-repo",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesFilterModal",
+    "elementType": "button",
+    "action": "select-format",
+    "testID": "notes-filter-modal.button.select-format",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesFilterModal",
+    "elementType": "button",
+    "action": "select-branch",
+    "testID": "notes-filter-modal.button.select-branch",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesFilterModal",
+    "elementType": "button",
+    "action": "select-folder",
+    "testID": "notes-filter-modal.button.select-folder",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesFilterModal",
+    "elementType": "button",
+    "action": "toggle-tag",
+    "testID": "notes-filter-modal.button.toggle-tag",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesFilterModal",
+    "elementType": "button",
+    "action": "toggle-color",
+    "testID": "notes-filter-modal.button.toggle-color",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesContextMenu",
+    "elementType": "context-menu-item",
+    "action": "close",
+    "testID": "notes-context-menu.item.close",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesContextMenu",
+    "elementType": "context-menu-item",
+    "action": "open-note",
+    "testID": "notes-context-menu.item.open",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesContextMenu",
+    "elementType": "context-menu-item",
+    "action": "toggle-pin",
+    "testID": "notes-context-menu.item.toggle-pin",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesContextMenu",
+    "elementType": "context-menu-item",
+    "action": "share",
+    "testID": "notes-context-menu.item.share",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesContextMenu",
+    "elementType": "context-menu-item",
+    "action": "pick-color",
+    "testID": "notes-context-menu.item.pick-color",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesContextMenu",
+    "elementType": "context-menu-item",
+    "action": "duplicate",
+    "testID": "notes-context-menu.item.duplicate",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesContextMenu",
+    "elementType": "context-menu-item",
+    "action": "delete",
+    "testID": "notes-context-menu.item.delete",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "ColorPicker",
+    "elementType": "button",
+    "action": "close",
+    "testID": "notes-color-picker.button.close",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "ColorPicker",
+    "elementType": "button",
+    "action": "select-color",
+    "testID": "notes-color-picker.button.select-color",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesListCard",
+    "elementType": "button",
+    "action": "press-note",
+    "testID": "notes-list-card.button.press",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesListCard",
+    "elementType": "button",
+    "action": "long-press-note",
+    "testID": "notes-list-card.button.long-press",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesListCard",
+    "elementType": "button",
+    "action": "delete-note",
+    "testID": "notes-list-card.button.delete",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesListCard",
+    "elementType": "button",
+    "action": "press-tag",
+    "testID": "notes-list-card.button.press-tag",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesListCard",
+    "elementType": "swipe-action",
+    "action": "delete-from-swipe",
+    "testID": "notes-list-card.swipe.delete",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "EditorHeader",
+    "elementType": "button",
+    "action": "cancel-edit",
+    "testID": "note-editor.button.cancel",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "EditorHeader",
+    "elementType": "button",
+    "action": "save-note",
+    "testID": "note-editor.button.save",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "EditorToolbar",
+    "elementType": "toolbar-action",
+    "action": "undo",
+    "testID": "note-editor.toolbar.undo",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "EditorToolbar",
+    "elementType": "toolbar-action",
+    "action": "redo",
+    "testID": "note-editor.toolbar.redo",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "EditorToolbar",
+    "elementType": "toolbar-action",
+    "action": "voice-input",
+    "testID": "note-editor.toolbar.voice-input",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "EditorToolbar",
+    "elementType": "toolbar-action",
+    "action": "canvas-modal",
+    "testID": "note-editor.toolbar.canvas-modal",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "EditorToolbar",
+    "elementType": "toolbar-action",
+    "action": "insert-image",
+    "testID": "note-editor.toolbar.insert-image",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "EditorToolbar",
+    "elementType": "toolbar-action",
+    "action": "canvas-picker",
+    "testID": "note-editor.toolbar.canvas-picker",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "NoteEditorForm",
+    "elementType": "picker",
+    "action": "change-repo",
+    "testID": "note-editor-form.picker.repo",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "NoteEditorForm",
+    "elementType": "picker",
+    "action": "change-branch",
+    "testID": "note-editor-form.picker.branch",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "NoteEditorForm",
+    "elementType": "picker",
+    "action": "change-commit",
+    "testID": "note-editor-form.picker.commit",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "NoteEditorForm",
+    "elementType": "input",
+    "action": "change-title",
+    "testID": "note-editor-form.input.title",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "NoteEditorForm",
+    "elementType": "button",
+    "action": "open-folder-dialog",
+    "testID": "note-editor-form.button.open-folder",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "NoteEditorForm",
+    "elementType": "picker",
+    "action": "change-format",
+    "testID": "note-editor-form.picker.format",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "NoteEditorForm",
+    "elementType": "input",
+    "action": "change-tags",
+    "testID": "note-editor-form.input.tags",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "NoteEditorForm",
+    "elementType": "button",
+    "action": "edit-canvas-json",
+    "testID": "note-editor-form.button.edit-canvas",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "NoteEditorForm",
+    "elementType": "input",
+    "action": "change-content",
+    "testID": "note-editor-form.input.content",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "NoteViewer",
+    "elementType": "button",
+    "action": "go-back",
+    "testID": "note-viewer.button.back",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "NoteViewer",
+    "elementType": "button",
+    "action": "toggle-toc",
+    "testID": "note-viewer.button.toggle-toc",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "NoteViewer",
+    "elementType": "button",
+    "action": "toggle-speak",
+    "testID": "note-viewer.button.toggle-speak",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "NoteViewer",
+    "elementType": "button",
+    "action": "edit-note",
+    "testID": "note-viewer.button.edit",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "NoteViewer",
+    "elementType": "button",
+    "action": "press-toc-entry",
+    "testID": "note-viewer.button.toc-entry",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "NoteViewer",
+    "elementType": "button",
+    "action": "navigate-to-note",
+    "testID": "note-viewer.button.navigate-note",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "VoiceInputModal",
+    "elementType": "modal-trigger",
+    "action": "open",
+    "testID": "voice-input-modal.trigger.open",
+    "flowId": "notes",
+    "platform": ["ios", "android"],
+    "na": true
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "VoiceInputModal",
+    "elementType": "button",
+    "action": "done",
+    "testID": "voice-input-modal.button.done",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "VoiceInputModal",
+    "elementType": "button",
+    "action": "close",
+    "testID": "voice-input-modal.button.close",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "CanvasModal",
+    "elementType": "modal-trigger",
+    "action": "open",
+    "testID": "canvas-modal.trigger.open",
+    "flowId": "canvas",
+    "platform": ["ios", "android"],
+    "na": true
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "CanvasModal",
+    "elementType": "button",
+    "action": "save",
+    "testID": "canvas-modal.button.save",
+    "flowId": "canvas",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "CanvasModal",
+    "elementType": "button",
+    "action": "close",
+    "testID": "canvas-modal.button.close",
+    "flowId": "canvas",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "CanvasPickerModal",
+    "elementType": "modal-trigger",
+    "action": "open",
+    "testID": "canvas-picker-modal.trigger.open",
+    "flowId": "canvas",
+    "platform": ["ios", "android"],
+    "na": true
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "CanvasPickerModal",
+    "elementType": "button",
+    "action": "select-canvas",
+    "testID": "canvas-picker-modal.button.select",
+    "flowId": "canvas",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "CanvasPickerModal",
+    "elementType": "button",
+    "action": "close",
+    "testID": "canvas-picker-modal.button.close",
+    "flowId": "canvas",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "FolderSelectionDialog",
+    "elementType": "modal-trigger",
+    "action": "open",
+    "testID": "folder-selection.trigger.open",
+    "flowId": "notes",
+    "platform": ["ios", "android"],
+    "na": true
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "FolderSelectionDialog",
+    "elementType": "button",
+    "action": "select-folder",
+    "testID": "folder-selection.button.select",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/NoteEditorScreen.tsx",
+    "component": "FolderSelectionDialog",
+    "elementType": "button",
+    "action": "close",
+    "testID": "folder-selection.button.close",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/TodoListScreen.tsx",
+    "component": "TodoListScreen",
+    "elementType": "icon-button",
+    "action": "toggle-completed-filter",
+    "testID": "todo-list.icon-button.filter-completed",
+    "flowId": "todos",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/TodoListScreen.tsx",
+    "component": "TodoListScreen",
+    "elementType": "icon-button",
+    "action": "open-filter-modal",
+    "testID": "todo-list.icon-button.filters",
+    "flowId": "todos",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/TodoListScreen.tsx",
+    "component": "TodoListScreen",
+    "elementType": "icon-button",
+    "action": "add-todo",
+    "testID": "todo-list.icon-button.add",
+    "flowId": "todos",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/CanvasListScreen.tsx",
+    "component": "CanvasListScreen",
+    "elementType": "search-bar",
+    "action": "setSearchQuery",
+    "testID": "canvas-list.search-bar.search",
+    "flowId": "canvas",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/CanvasListScreen.tsx",
+    "component": "CanvasListScreen",
+    "elementType": "button",
+    "action": "handleOpen",
+    "testID": "canvas-list.button.open",
+    "flowId": "canvas",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/CanvasListScreen.tsx",
+    "component": "CanvasListScreen",
+    "elementType": "button",
+    "action": "handleDelete",
+    "testID": "canvas-list.button.delete",
+    "flowId": "canvas",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/CanvasListScreen.tsx",
+    "component": "CanvasListScreen",
+    "elementType": "button",
+    "action": "handleCreate",
+    "testID": "canvas-list.button.create",
+    "flowId": "canvas",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/CanvasListScreen.tsx",
+    "component": "CanvasListScreen",
+    "elementType": "modal-trigger",
+    "action": "setShowSizePicker",
+    "testID": "canvas-list.trigger.size-picker",
+    "flowId": "canvas",
+    "platform": ["ios", "android"],
+    "na": true
+  },
+  {
+    "file": "src/screens/CanvasListScreen.tsx",
+    "component": "CanvasListScreen",
+    "elementType": "input",
+    "action": "setCanvasTitle",
+    "testID": "canvas-list.input.title",
+    "flowId": "canvas",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/CanvasListScreen.tsx",
+    "component": "CanvasListScreen",
+    "elementType": "button",
+    "action": "handlePickSize",
+    "testID": "canvas-list.button.pick-size",
+    "flowId": "canvas",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/CanvasListScreen.tsx",
+    "component": "CanvasListScreen",
+    "elementType": "input",
+    "action": "setCustomW",
+    "testID": "canvas-list.input.custom-width",
+    "flowId": "canvas",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/CanvasListScreen.tsx",
+    "component": "CanvasListScreen",
+    "elementType": "input",
+    "action": "setCustomH",
+    "testID": "canvas-list.input.custom-height",
+    "flowId": "canvas",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/CanvasListScreen.tsx",
+    "component": "CanvasListScreen",
+    "elementType": "icon-button",
+    "action": "filters",
+    "testID": "canvas-list.icon-button.filters",
+    "flowId": "canvas",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/CanvasListScreen.tsx",
+    "component": "CanvasListScreen",
+    "elementType": "icon-button",
+    "action": "new-canvas",
+    "testID": "canvas-list.icon-button.new-canvas",
+    "flowId": "canvas",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/ChatScreen.tsx",
+    "component": "ChatMessageBubble",
+    "elementType": "button",
+    "action": "handleMessageLongPress",
+    "testID": "chat.message-bubble.button.long-press",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/ChatThreadListScreen.tsx",
+    "component": "ChatThreadListScreen",
+    "elementType": "button",
+    "action": "handleNewChat",
+    "testID": "chat-thread-list.button.new-chat",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/ChatThreadListScreen.tsx",
+    "component": "ChatThreadListScreen",
+    "elementType": "icon-button",
+    "action": "handleRenameThread",
+    "testID": "chat-thread-list.icon-button.rename",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/ChatThreadListScreen.tsx",
+    "component": "ChatThreadListScreen",
+    "elementType": "icon-button",
+    "action": "handleDeleteThread",
+    "testID": "chat-thread-list.icon-button.delete",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/ChatThreadListScreen.tsx",
+    "component": "ChatThreadListScreen",
+    "elementType": "button",
+    "action": "handleThreadPress",
+    "testID": "chat-thread-list.button.thread-press",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/ExploreScreen.tsx",
+    "component": "ExploreScreen",
+    "elementType": "button",
+    "action": "handleSelectRepo",
+    "testID": "explore.button.select-repo",
+    "flowId": "explore",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/ExploreScreen.tsx",
+    "component": "ExploreScreen",
+    "elementType": "button",
+    "action": "handleOpenFileTree",
+    "testID": "explore.button.open-file-tree",
+    "flowId": "explore",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/ExploreScreen.tsx",
+    "component": "ExploreScreen",
+    "elementType": "button",
+    "action": "handleBack",
+    "testID": "explore.button.back",
+    "flowId": "explore",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/ExploreScreen.tsx",
+    "component": "ExploreScreen",
+    "elementType": "search-bar",
+    "action": "setRepoSearch",
+    "testID": "explore.search-bar.repo-search",
+    "flowId": "explore",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/TemplateManagerScreen.tsx",
+    "component": "TemplateManagerScreen",
+    "elementType": "button",
+    "action": "handleOpenCreate",
+    "testID": "template-manager.button.create",
+    "flowId": "templates",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/TemplateManagerScreen.tsx",
+    "component": "TemplateManagerScreen",
+    "elementType": "icon-button",
+    "action": "new-template",
+    "testID": "template-manager.icon-button.new-template",
+    "flowId": "templates",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/PdfViewerScreen.tsx",
+    "component": "PdfViewerScreen",
+    "elementType": "icon-button",
+    "action": "goBack",
+    "testID": "pdf-viewer.icon-button.back",
+    "flowId": "media",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/PdfViewerScreen.tsx",
+    "component": "PdfViewerScreen",
+    "elementType": "icon-button",
+    "action": "toggleInvert",
+    "testID": "pdf-viewer.icon-button.invert",
+    "flowId": "media",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/PdfViewerScreen.tsx",
+    "component": "PdfViewerScreen",
+    "elementType": "icon-button",
+    "action": "handleOpenExternal",
+    "testID": "pdf-viewer.icon-button.open-external",
+    "flowId": "media",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/ImageViewerScreen.tsx",
+    "component": "ImageViewerScreen",
+    "elementType": "icon-button",
+    "action": "goBack",
+    "testID": "image-viewer.icon-button.back",
+    "flowId": "media",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/VideoViewerScreen.tsx",
+    "component": "VideoViewerScreen",
+    "elementType": "icon-button",
+    "action": "goBack",
+    "testID": "video-viewer.icon-button.back",
+    "flowId": "media",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/FileViewerScreen.tsx",
+    "component": "FileViewerScreen",
+    "elementType": "icon-button",
+    "action": "goBack",
+    "testID": "file-viewer.icon-button.back",
+    "flowId": "media",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "toggle",
+    "action": "setStyle-neu-toggle",
+    "testID": "settings.toggle.neu",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "toggle",
+    "action": "setTheme",
+    "testID": "settings.toggle.theme",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "setTheme",
+    "testID": "settings.button.theme",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "setShowLanguagePicker",
+    "testID": "settings.button.language-picker",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "toggle",
+    "action": "biometric-lock",
+    "testID": "settings.toggle.biometric-lock",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "toggle",
+    "action": "sync-frequently",
+    "testID": "settings.toggle.sync-frequently",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "toggle",
+    "action": "background-sync",
+    "testID": "settings.toggle.background-sync",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "toggle",
+    "action": "toggle-ai",
+    "testID": "settings.toggle.ai",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "setShowTimeoutPicker",
+    "testID": "settings.button.timeout-picker",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "onSwitchAccount",
+    "testID": "settings.button.switch-account",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "onRemoveAccount",
+    "testID": "settings.button.remove-account",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "onOpenConnectToken",
+    "testID": "settings.button.connect-token",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "onOpenAddAccount",
+    "testID": "settings.button.add-account",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "onRemoveToken",
+    "testID": "settings.button.remove-token",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "onOpenRepoPicker",
+    "testID": "settings.button.repo-picker",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "onSyncRepo",
+    "testID": "settings.button.sync-repo",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "onRemoveRepo",
+    "testID": "settings.button.remove-repo",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "onEnableCloneMode",
+    "testID": "settings.button.enable-clone",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "onDisableCloneMode",
+    "testID": "settings.button.disable-clone",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "onDownloadLfsObjects",
+    "testID": "settings.button.download-lfs",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "onOpenTemplatesRepoPicker",
+    "testID": "settings.button.templates-repo-picker",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "onSyncExistingTemplates",
+    "testID": "settings.button.sync-templates",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "onClearTemplatesRepo",
+    "testID": "settings.button.clear-templates-repo",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "onOpenRenderStyleSettings",
+    "testID": "settings.button.render-style-settings",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "onClearData",
+    "testID": "settings.button.clear-data",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "onResetOnboarding",
+    "testID": "settings.button.reset-onboarding",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "onManageTemplates",
+    "testID": "settings.button.manage-templates",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "onOpenModelSelector",
+    "testID": "settings.button.model-selector",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "onToggleActionMode",
+    "testID": "settings.button.toggle-action-mode",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "onOpenChatRepoPicker",
+    "testID": "settings.button.chat-repo-picker",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "onProviderPress",
+    "testID": "settings.button.provider",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "onAddProvider",
+    "testID": "settings.button.add-provider",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "setShowIntervalPicker",
+    "testID": "settings.button.interval-picker",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "setLanguage",
+    "testID": "settings.button.language",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/settings/ImportSection.tsx",
+    "component": "ImportSection",
+    "elementType": "button",
+    "action": "handleImportGoogleKeep",
+    "testID": "settings-import.button.google-keep",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/settings/ImportSection.tsx",
+    "component": "ImportSection",
+    "elementType": "button",
+    "action": "handleImportAppleNotes",
+    "testID": "settings-import.button.apple-notes",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/settings/SettingsModals.tsx",
+    "component": "SettingsModals",
+    "elementType": "input",
+    "action": "onSetManualRepoInput",
+    "testID": "settings-modals.input.manual-repo",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/settings/SettingsModals.tsx",
+    "component": "SettingsModals",
+    "elementType": "button",
+    "action": "onAddManualRepo",
+    "testID": "settings-modals.button.add-manual-repo",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/settings/SettingsModals.tsx",
+    "component": "SettingsModals",
+    "elementType": "button",
+    "action": "onSelectGithubRepo",
+    "testID": "settings-modals.button.select-github-repo",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/settings/SettingsModals.tsx",
+    "component": "SettingsModals",
+    "elementType": "button",
+    "action": "onCloseTemplatesRepoPicker",
+    "testID": "settings-modals.button.close-templates-repo",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/settings/SettingsModals.tsx",
+    "component": "SettingsModals",
+    "elementType": "input",
+    "action": "onSetTokenInput",
+    "testID": "settings-modals.input.token",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/settings/SettingsModals.tsx",
+    "component": "SettingsModals",
+    "elementType": "button",
+    "action": "onToggleTokenVisible",
+    "testID": "settings-modals.button.toggle-token-visible",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/settings/SettingsModals.tsx",
+    "component": "SettingsModals",
+    "elementType": "button",
+    "action": "onPasteToken",
+    "testID": "settings-modals.button.paste-token",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/settings/SettingsModals.tsx",
+    "component": "SettingsModals",
+    "elementType": "button",
+    "action": "onCopyToken",
+    "testID": "settings-modals.button.copy-token",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/settings/SettingsModals.tsx",
+    "component": "SettingsModals",
+    "elementType": "button",
+    "action": "onSaveToken",
+    "testID": "settings-modals.button.save-token",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/settings/CloneProgressModal.tsx",
+    "component": "CloneProgressModal",
+    "elementType": "button",
+    "action": "onCancel",
+    "testID": "clone-progress.button.cancel",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/todos/TodoCard.tsx",
+    "component": "TodoCard",
+    "elementType": "checkbox",
+    "action": "onToggle",
+    "testID": "todo-card.checkbox.toggle",
+    "flowId": "todos",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/todos/TodoCard.tsx",
+    "component": "TodoCard",
+    "elementType": "button",
+    "action": "onPress",
+    "testID": "todo-card.button.press",
+    "flowId": "todos",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/todos/TodoCard.tsx",
+    "component": "TodoCard",
+    "elementType": "swipe-action",
+    "action": "onSwipe",
+    "testID": "todo-card.swipe.action",
+    "flowId": "todos",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/todos/TodoEditorModal.tsx",
+    "component": "TodoEditorModal",
+    "elementType": "input",
+    "action": "onChangeTitle",
+    "testID": "todo-editor.input.title",
+    "flowId": "todos",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/todos/TodoEditorModal.tsx",
+    "component": "TodoEditorModal",
+    "elementType": "input",
+    "action": "onChangeNotes",
+    "testID": "todo-editor.input.notes",
+    "flowId": "todos",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/todos/TodoEditorModal.tsx",
+    "component": "TodoEditorModal",
+    "elementType": "button",
+    "action": "onChangePriority",
+    "testID": "todo-editor.button.priority",
+    "flowId": "todos",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/todos/TodoEditorModal.tsx",
+    "component": "TodoEditorModal",
+    "elementType": "button",
+    "action": "onToggleDatePicker",
+    "testID": "todo-editor.button.date-picker",
+    "flowId": "todos",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/todos/TodoEditorModal.tsx",
+    "component": "TodoEditorModal",
+    "elementType": "button",
+    "action": "onAddDeadline",
+    "testID": "todo-editor.button.add-deadline",
+    "flowId": "todos",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/todos/TodoEditorModal.tsx",
+    "component": "TodoEditorModal",
+    "elementType": "button",
+    "action": "onRemoveDeadline",
+    "testID": "todo-editor.button.remove-deadline",
+    "flowId": "todos",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/todos/TodoEditorModal.tsx",
+    "component": "TodoEditorModal",
+    "elementType": "button",
+    "action": "onRepoChange",
+    "testID": "todo-editor.button.repo",
+    "flowId": "todos",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/todos/TodoEditorModal.tsx",
+    "component": "TodoEditorModal",
+    "elementType": "button",
+    "action": "onBranchChange",
+    "testID": "todo-editor.button.branch",
+    "flowId": "todos",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/todos/TodoEditorModal.tsx",
+    "component": "TodoEditorModal",
+    "elementType": "button",
+    "action": "onClose",
+    "testID": "todo-editor.button.close",
+    "flowId": "todos",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/todos/TodoEditorModal.tsx",
+    "component": "TodoEditorModal",
+    "elementType": "button",
+    "action": "onSubmit",
+    "testID": "todo-editor.button.submit",
+    "flowId": "todos",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/todos/TodosListHeader.tsx",
+    "component": "TodosListHeader",
+    "elementType": "search-bar",
+    "action": "onSearchChange",
+    "testID": "todos-list-header.search-bar.search",
+    "flowId": "todos",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/todos/TodosListHeader.tsx",
+    "component": "TodosListHeader",
+    "elementType": "sort",
+    "action": "onSortChange",
+    "testID": "todos-list-header.sort.change",
+    "flowId": "todos",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/todos/TodosSwipeActions.tsx",
+    "component": "TodosSwipeActions",
+    "elementType": "button",
+    "action": "onDelete",
+    "testID": "todos-swipe.button.delete",
+    "flowId": "todos",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/notes/NoteCard.tsx",
+    "component": "NoteCard",
+    "elementType": "button",
+    "action": "onPress",
+    "testID": "note-card.button.press",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/notes/NoteCard.tsx",
+    "component": "NoteCard",
+    "elementType": "swipe-action",
+    "action": "onSwipe",
+    "testID": "note-card.swipe.action",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/notes/NotesListHeader.tsx",
+    "component": "NotesListHeader",
+    "elementType": "search-bar",
+    "action": "onSearchChange",
+    "testID": "notes-list-header.search-bar.search",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/notes/NotesListHeader.tsx",
+    "component": "NotesListHeader",
+    "elementType": "icon-button",
+    "action": "onToggleViewModePicker",
+    "testID": "notes-list-header.icon-button.view-mode",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/notes/NotesListHeader.tsx",
+    "component": "NotesListHeader",
+    "elementType": "icon-button",
+    "action": "onOpenFilters",
+    "testID": "notes-list-header.icon-button.filters",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/notes/NotesListHeader.tsx",
+    "component": "NotesListHeader",
+    "elementType": "icon-button",
+    "action": "onManualSync",
+    "testID": "notes-list-header.icon-button.sync",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/notes/NotesListHeader.tsx",
+    "component": "NotesListHeader",
+    "elementType": "button",
+    "action": "onSelectRepo",
+    "testID": "notes-list-header.button.select-repo",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/notes/NotesFilterModal.tsx",
+    "component": "NotesFilterModal",
+    "elementType": "button",
+    "action": "onClearFilters",
+    "testID": "notes-filter-modal.button.clear",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/notes/NotesFilterModal.tsx",
+    "component": "NotesFilterModal",
+    "elementType": "button",
+    "action": "onClose",
+    "testID": "notes-filter-modal.button.close",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/notes/NotesFilterModal.tsx",
+    "component": "NotesFilterModal",
+    "elementType": "button",
+    "action": "onSelectRepo",
+    "testID": "notes-filter-modal.button.select-repo",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/notes/NotesFilterModal.tsx",
+    "component": "NotesFilterModal",
+    "elementType": "button",
+    "action": "onSelectFormat",
+    "testID": "notes-filter-modal.button.select-format",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/notes/NotesFilterModal.tsx",
+    "component": "NotesFilterModal",
+    "elementType": "button",
+    "action": "onSelectBranch",
+    "testID": "notes-filter-modal.button.select-branch",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/notes/NotesFilterModal.tsx",
+    "component": "NotesFilterModal",
+    "elementType": "button",
+    "action": "onSelectFolder",
+    "testID": "notes-filter-modal.button.select-folder",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/notes/NotesFilterModal.tsx",
+    "component": "NotesFilterModal",
+    "elementType": "button",
+    "action": "onToggleTag",
+    "testID": "notes-filter-modal.button.toggle-tag",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/notes/NotesFilterModal.tsx",
+    "component": "NotesFilterModal",
+    "elementType": "button",
+    "action": "onToggleColor",
+    "testID": "notes-filter-modal.button.toggle-color",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/notes/NotesActiveFilters.tsx",
+    "component": "NotesActiveFilters",
+    "elementType": "button",
+    "action": "onClearAll",
+    "testID": "notes-active-filters.button.clear-all",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/notes/NotesSwipeActions.tsx",
+    "component": "NotesSwipeActions",
+    "elementType": "button",
+    "action": "onDelete",
+    "testID": "notes-swipe.button.delete",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/canvas/CanvasEditorContent.tsx",
+    "component": "CanvasEditorContent",
+    "elementType": "button",
+    "action": "goBack",
+    "testID": "canvas-editor.button.back",
+    "flowId": "canvas",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/canvas/CanvasEditorContent.tsx",
+    "component": "CanvasEditorContent",
+    "elementType": "input",
+    "action": "setTitle",
+    "testID": "canvas-editor.input.title",
+    "flowId": "canvas",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/canvas/CanvasEditorContent.tsx",
+    "component": "CanvasEditorContent",
+    "elementType": "button",
+    "action": "saveCanvas",
+    "testID": "canvas-editor.button.save",
+    "flowId": "canvas",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/canvas/CanvasEditorContent.tsx",
+    "component": "CanvasEditorContent",
+    "elementType": "toolbar-action",
+    "action": "setTool",
+    "testID": "canvas-editor.toolbar.set-tool",
+    "flowId": "canvas",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/canvas/CanvasEditorContent.tsx",
+    "component": "CanvasEditorContent",
+    "elementType": "toolbar-action",
+    "action": "setFilled",
+    "testID": "canvas-editor.toolbar.set-filled",
+    "flowId": "canvas",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/canvas/CanvasEditorContent.tsx",
+    "component": "CanvasEditorContent",
+    "elementType": "toolbar-action",
+    "action": "undo",
+    "testID": "canvas-editor.toolbar.undo",
+    "flowId": "canvas",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/canvas/CanvasEditorContent.tsx",
+    "component": "CanvasEditorContent",
+    "elementType": "toolbar-action",
+    "action": "clearAll",
+    "testID": "canvas-editor.toolbar.clear-all",
+    "flowId": "canvas",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/canvas/CanvasEditorContent.tsx",
+    "component": "CanvasEditorContent",
+    "elementType": "toolbar-action",
+    "action": "setZoom",
+    "testID": "canvas-editor.toolbar.zoom",
+    "flowId": "canvas",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/canvas/CanvasEditorContent.tsx",
+    "component": "CanvasEditorContent",
+    "elementType": "toolbar-action",
+    "action": "resetView",
+    "testID": "canvas-editor.toolbar.reset-view",
+    "flowId": "canvas",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/canvas/CanvasEditorContent.tsx",
+    "component": "CanvasEditorContent",
+    "elementType": "picker",
+    "action": "setColor",
+    "testID": "canvas-editor.picker.color",
+    "flowId": "canvas",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/canvas/CanvasEditorContent.tsx",
+    "component": "CanvasEditorContent",
+    "elementType": "input",
+    "action": "setSize",
+    "testID": "canvas-editor.input.size",
+    "flowId": "canvas",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/canvas/CanvasEditorContent.tsx",
+    "component": "CanvasEditorContent",
+    "elementType": "button",
+    "action": "addTextElement",
+    "testID": "canvas-editor.button.add-text",
+    "flowId": "canvas",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/ai/ModelSelector.tsx",
+    "component": "ModelSelector",
+    "elementType": "button",
+    "action": "onClose",
+    "testID": "model-selector.button.close",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/ai/ModelSelector.tsx",
+    "component": "ModelSelector",
+    "elementType": "button",
+    "action": "handleSelectModel",
+    "testID": "model-selector.button.select",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/ai/ModelSelector.tsx",
+    "component": "ModelSelector",
+    "elementType": "button",
+    "action": "handleDownload",
+    "testID": "model-selector.button.download",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/ai/ProviderConfigModal.tsx",
+    "component": "ProviderConfigModal",
+    "elementType": "input",
+    "action": "setName",
+    "testID": "provider-config.input.name",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/ai/ProviderConfigModal.tsx",
+    "component": "ProviderConfigModal",
+    "elementType": "input",
+    "action": "setBaseURL",
+    "testID": "provider-config.input.base-url",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/ai/ProviderConfigModal.tsx",
+    "component": "ProviderConfigModal",
+    "elementType": "input",
+    "action": "setApiKey",
+    "testID": "provider-config.input.api-key",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/ai/ProviderConfigModal.tsx",
+    "component": "ProviderConfigModal",
+    "elementType": "button",
+    "action": "handleDelete",
+    "testID": "provider-config.button.delete",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/ai/ProviderConfigModal.tsx",
+    "component": "ProviderConfigModal",
+    "elementType": "button",
+    "action": "onClose",
+    "testID": "provider-config.button.close",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/ai/FloatingAIButton.tsx",
+    "component": "FloatingAIButton",
+    "elementType": "button",
+    "action": "navigateToChat",
+    "testID": "floating-ai.button.navigate-chat",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/ai/ChatRepoPickerModal.tsx",
+    "component": "ChatRepoPickerModal",
+    "elementType": "button",
+    "action": "onClose",
+    "testID": "chat-repo-picker.button.close",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/ai/ChatRepoPickerModal.tsx",
+    "component": "ChatRepoPickerModal",
+    "elementType": "button",
+    "action": "handleSelectRepo",
+    "testID": "chat-repo-picker.button.select-repo",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/ai/ChatRepoPickerModal.tsx",
+    "component": "ChatRepoPickerModal",
+    "elementType": "input",
+    "action": "setBranch",
+    "testID": "chat-repo-picker.input.branch",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/ai/ChatRepoPickerModal.tsx",
+    "component": "ChatRepoPickerModal",
+    "elementType": "button",
+    "action": "handleConfirm",
+    "testID": "chat-repo-picker.button.confirm",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/ai/ContextPickerModal.tsx",
+    "component": "ContextPickerModal",
+    "elementType": "tab",
+    "action": "setActiveTab",
+    "testID": "context-picker.tab.switch",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/ai/ContextPickerModal.tsx",
+    "component": "ContextPickerModal",
+    "elementType": "input",
+    "action": "setSearchQuery",
+    "testID": "context-picker.input.search",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/ai/ContextPickerModal.tsx",
+    "component": "ContextPickerModal",
+    "elementType": "button",
+    "action": "toggleSelection",
+    "testID": "context-picker.button.toggle",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/ai/ContextPickerModal.tsx",
+    "component": "ContextPickerModal",
+    "elementType": "button",
+    "action": "handleConfirm",
+    "testID": "context-picker.button.confirm",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/ai/ChatMessageBubble.tsx",
+    "component": "ChatMessageBubble",
+    "elementType": "button",
+    "action": "onLongPress",
+    "testID": "chat-message-bubble.button.long-press",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/chat/ChatErrorCard.tsx",
+    "component": "ChatErrorCard",
+    "elementType": "button",
+    "action": "onRetry",
+    "testID": "chat-error.button.retry",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/chat/ChatErrorCard.tsx",
+    "component": "ChatErrorCard",
+    "elementType": "button",
+    "action": "onDismiss",
+    "testID": "chat-error.button.dismiss",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/chat/ChatConfirmationCard.tsx",
+    "component": "ChatConfirmationCard",
+    "elementType": "button",
+    "action": "onApply",
+    "testID": "chat-confirmation.button.apply",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/chat/ChatConfirmationCard.tsx",
+    "component": "ChatConfirmationCard",
+    "elementType": "button",
+    "action": "onCancel",
+    "testID": "chat-confirmation.button.cancel",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/templates/TemplateListItem.tsx",
+    "component": "TemplateListItem",
+    "elementType": "icon-button",
+    "action": "onTogglePin",
+    "testID": "template-list-item.icon-button.pin",
+    "flowId": "templates",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/templates/TemplateListItem.tsx",
+    "component": "TemplateListItem",
+    "elementType": "icon-button",
+    "action": "onEdit",
+    "testID": "template-list-item.icon-button.edit",
+    "flowId": "templates",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/templates/TemplateListItem.tsx",
+    "component": "TemplateListItem",
+    "elementType": "icon-button",
+    "action": "onDelete",
+    "testID": "template-list-item.icon-button.delete",
+    "flowId": "templates",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/templates/TemplateEditorModal.tsx",
+    "component": "TemplateEditorModal",
+    "elementType": "input",
+    "action": "onNameChange",
+    "testID": "template-editor.input.name",
+    "flowId": "templates",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/templates/TemplateEditorModal.tsx",
+    "component": "TemplateEditorModal",
+    "elementType": "input",
+    "action": "onDescriptionChange",
+    "testID": "template-editor.input.description",
+    "flowId": "templates",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/templates/TemplateEditorModal.tsx",
+    "component": "TemplateEditorModal",
+    "elementType": "input",
+    "action": "onTitleChange",
+    "testID": "template-editor.input.title",
+    "flowId": "templates",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/templates/TemplateEditorModal.tsx",
+    "component": "TemplateEditorModal",
+    "elementType": "input",
+    "action": "onContentChange",
+    "testID": "template-editor.input.content",
+    "flowId": "templates",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/templates/TemplateEditorModal.tsx",
+    "component": "TemplateEditorModal",
+    "elementType": "button",
+    "action": "onSave",
+    "testID": "template-editor.button.save",
+    "flowId": "templates",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/templates/TemplateEditorModal.tsx",
+    "component": "TemplateEditorModal",
+    "elementType": "button",
+    "action": "onClose",
+    "testID": "template-editor.button.close",
+    "flowId": "templates",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/editor/EditorToolbar.tsx",
+    "component": "EditorToolbar",
+    "elementType": "toolbar-action",
+    "action": "format-bold",
+    "testID": "editor-toolbar.toolbar-action.bold",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/editor/EditorToolbar.tsx",
+    "component": "EditorToolbar",
+    "elementType": "toolbar-action",
+    "action": "format-italic",
+    "testID": "editor-toolbar.toolbar-action.italic",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/editor/EditorToolbar.tsx",
+    "component": "EditorToolbar",
+    "elementType": "toolbar-action",
+    "action": "format-heading",
+    "testID": "editor-toolbar.toolbar-action.heading",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/editor/EditorToolbar.tsx",
+    "component": "EditorToolbar",
+    "elementType": "toolbar-action",
+    "action": "format-list",
+    "testID": "editor-toolbar.toolbar-action.list",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/editor/EditorToolbar.tsx",
+    "component": "EditorToolbar",
+    "elementType": "toolbar-action",
+    "action": "insert-link",
+    "testID": "editor-toolbar.toolbar-action.link",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/editor/EditorToolbar.tsx",
+    "component": "EditorToolbar",
+    "elementType": "toolbar-action",
+    "action": "insert-code",
+    "testID": "editor-toolbar.toolbar-action.code",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/editor/EditorHeader.tsx",
+    "component": "EditorHeader",
+    "elementType": "button",
+    "action": "cancel",
+    "testID": "editor-header.button.cancel",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/editor/EditorHeader.tsx",
+    "component": "EditorHeader",
+    "elementType": "button",
+    "action": "save",
+    "testID": "editor-header.button.save",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/ui/TabBar.tsx",
+    "component": "TabBar",
+    "elementType": "tab",
+    "action": "onPress",
+    "testID": "tab-bar.tab.press",
+    "flowId": "home-nav",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/SearchBar.tsx",
+    "component": "SearchBar",
+    "elementType": "search-bar",
+    "action": "onChangeText",
+    "testID": "search-bar.input.search",
+    "flowId": "home-nav",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/SearchBar.tsx",
+    "component": "SearchBar",
+    "elementType": "icon-button",
+    "action": "onClear",
+    "testID": "search-bar.icon-button.clear",
+    "flowId": "home-nav",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/FilterBar.tsx",
+    "component": "FilterBar",
+    "elementType": "filter",
+    "action": "onFilterChange",
+    "testID": "filter-bar.filter.change",
+    "flowId": "home-nav",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/SortPicker.tsx",
+    "component": "SortPicker",
+    "elementType": "picker",
+    "action": "onValueChange",
+    "testID": "sort-picker.picker.change",
+    "flowId": "home-nav",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/TagChips.tsx",
+    "component": "TagChips",
+    "elementType": "button",
+    "action": "onChipPress",
+    "testID": "tag-chips.button.press",
+    "flowId": "home-nav",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/InteractiveCheckbox.tsx",
+    "component": "InteractiveCheckbox",
+    "elementType": "checkbox",
+    "action": "onValueChange",
+    "testID": "interactive-checkbox.checkbox.change",
+    "flowId": "home-nav",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/ReorderableChecklist.tsx",
+    "component": "ReorderableChecklist",
+    "elementType": "drag-handle",
+    "action": "onDrag",
+    "testID": "reorderable-checklist.drag-handle.drag",
+    "flowId": "todos",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/ReorderableChecklist.tsx",
+    "component": "ReorderableChecklist",
+    "elementType": "checkbox",
+    "action": "onCheck",
+    "testID": "reorderable-checklist.checkbox.check",
+    "flowId": "todos",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/MarkdownToolbar.tsx",
+    "component": "MarkdownToolbar",
+    "elementType": "toolbar-action",
+    "action": "onActionPress",
+    "testID": "markdown-toolbar.toolbar-action.press",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/UndoRedoButtons.tsx",
+    "component": "UndoRedoButtons",
+    "elementType": "icon-button",
+    "action": "onUndo",
+    "testID": "undo-redo.icon-button.undo",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/UndoRedoButtons.tsx",
+    "component": "UndoRedoButtons",
+    "elementType": "icon-button",
+    "action": "onRedo",
+    "testID": "undo-redo.icon-button.redo",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/BiometricLockScreen.tsx",
+    "component": "BiometricLockScreen",
+    "elementType": "button",
+    "action": "onBiometricAuth",
+    "testID": "biometric-lock.button.authenticate",
+    "flowId": "home-nav",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/BiometricLockScreen.tsx",
+    "component": "BiometricLockScreen",
+    "elementType": "input",
+    "action": "onPinEnter",
+    "testID": "biometric-lock.input.pin",
+    "flowId": "home-nav",
+    "platform": ["ios", "android"],
+    "na": true
+  },
+  {
+    "file": "src/components/MoveNoteDialog.tsx",
+    "component": "MoveNoteDialog",
+    "elementType": "button",
+    "action": "onClose",
+    "testID": "move-note.button.close",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/MoveNoteDialog.tsx",
+    "component": "MoveNoteDialog",
+    "elementType": "button",
+    "action": "handleMove",
+    "testID": "move-note.button.move",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/MoveNoteDialog.tsx",
+    "component": "MoveNoteDialog",
+    "elementType": "input",
+    "action": "setNewFolderName",
+    "testID": "move-note.input.new-folder-name",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/RepoFileBrowser.tsx",
+    "component": "RepoFileBrowser",
+    "elementType": "icon-button",
+    "action": "navigateUp",
+    "testID": "repo-file-browser.icon-button.back",
+    "flowId": "explore",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/RepoFileBrowser.tsx",
+    "component": "RepoFileBrowser",
+    "elementType": "icon-button",
+    "action": "setBrowseMode",
+    "testID": "repo-file-browser.icon-button.browse-mode",
+    "flowId": "explore",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/RepoFileBrowser.tsx",
+    "component": "RepoFileBrowser",
+    "elementType": "icon-button",
+    "action": "onCreateNoteInFolder",
+    "testID": "repo-file-browser.icon-button.create-note",
+    "flowId": "explore",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/RepoFileBrowser.tsx",
+    "component": "RepoFileBrowser",
+    "elementType": "icon-button",
+    "action": "newFolder",
+    "testID": "repo-file-browser.icon-button.new-folder",
+    "flowId": "explore",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/RepoFileBrowser.tsx",
+    "component": "RepoFileBrowser",
+    "elementType": "icon-button",
+    "action": "refresh",
+    "testID": "repo-file-browser.icon-button.refresh",
+    "flowId": "explore",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/repo/RepoTreeItem.tsx",
+    "component": "RepoTreeItem",
+    "elementType": "button",
+    "action": "handleToggle",
+    "testID": "repo-tree-item.button.toggle",
+    "flowId": "explore",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/repo/RepoTreeItem.tsx",
+    "component": "RepoTreeItem",
+    "elementType": "button",
+    "action": "handleFileOnlyPress",
+    "testID": "repo-tree-item.button.file-press",
+    "flowId": "explore",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/repo/RepoTreeRenameDialog.tsx",
+    "component": "RepoTreeRenameDialog",
+    "elementType": "input",
+    "action": "setName",
+    "testID": "repo-tree-rename.input.name",
+    "flowId": "explore",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/repo/RepoTreeRenameDialog.tsx",
+    "component": "RepoTreeRenameDialog",
+    "elementType": "button",
+    "action": "handleRename",
+    "testID": "repo-tree-rename.button.rename",
+    "flowId": "explore",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/repo/RepoTreeMoveDialog.tsx",
+    "component": "RepoTreeMoveDialog",
+    "elementType": "button",
+    "action": "setSelectedPath",
+    "testID": "repo-tree-move.button.select-path",
+    "flowId": "explore",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/repo/RepoTreeMoveDialog.tsx",
+    "component": "RepoTreeMoveDialog",
+    "elementType": "input",
+    "action": "setCustomPath",
+    "testID": "repo-tree-move.input.custom-path",
+    "flowId": "explore",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/repo/RepoTreeMoveDialog.tsx",
+    "component": "RepoTreeMoveDialog",
+    "elementType": "button",
+    "action": "handleMove",
+    "testID": "repo-tree-move.button.move",
+    "flowId": "explore",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/backlinks/BacklinkItem.tsx",
+    "component": "BacklinkItem",
+    "elementType": "button",
+    "action": "onPress",
+    "testID": "backlink-item.button.press",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/home/BentoTile.tsx",
+    "component": "BentoTile",
+    "elementType": "button",
+    "action": "onPress",
+    "testID": "bento-tile.button.press",
+    "flowId": "home-nav",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/home/BentoRecent.tsx",
+    "component": "BentoRecent",
+    "elementType": "button",
+    "action": "onOpen",
+    "testID": "bento-recent.button.open",
+    "flowId": "home-nav",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/home/QuickAccessShelf.tsx",
+    "component": "QuickAccessShelf",
+    "elementType": "button",
+    "action": "onOpen",
+    "testID": "quick-access-shelf.button.open",
+    "flowId": "home-nav",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/FolderBreadcrumb.tsx",
+    "component": "FolderBreadcrumb",
+    "elementType": "button",
+    "action": "onBreadcrumbPress",
+    "testID": "folder-breadcrumb.button.press",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/FolderSelectionDialog.tsx",
+    "component": "FolderSelectionDialog",
+    "elementType": "button",
+    "action": "onFolderSelect",
+    "testID": "folder-selection.button.select",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/HexColorPickerModal.tsx",
+    "component": "HexColorPickerModal",
+    "elementType": "picker",
+    "action": "onColorSelect",
+    "testID": "hex-color-picker.picker.select",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/EntityFilterModal.tsx",
+    "component": "EntityFilterModal",
+    "elementType": "filter",
+    "action": "onFilterApply",
+    "testID": "entity-filter-modal.filter.apply",
+    "flowId": "home-nav",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/GitHubPicker.tsx",
+    "component": "GitHubPicker",
+    "elementType": "picker",
+    "action": "onRepoSelect",
+    "testID": "github-picker.picker.select",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/CodeBlock.tsx",
+    "component": "CodeBlock",
+    "elementType": "button",
+    "action": "onCopy",
+    "testID": "code-block.button.copy",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/NoteImage.tsx",
+    "component": "NoteImage",
+    "elementType": "button",
+    "action": "onTap",
+    "testID": "note-image.button.tap",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/TextSearchBar.tsx",
+    "component": "TextSearchBar",
+    "elementType": "search-bar",
+    "action": "onSearch",
+    "testID": "text-search-bar.search-bar.search",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/CanvasPreview.tsx",
+    "component": "CanvasPreview",
+    "elementType": "button",
+    "action": "onOpen",
+    "testID": "canvas-preview.button.open",
+    "flowId": "canvas",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/GitContextPicker.tsx",
+    "component": "GitContextPicker",
+    "elementType": "picker",
+    "action": "onContextPick",
+    "testID": "git-context-picker.picker.pick",
+    "flowId": "chat",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/ActiveFilterStrip.tsx",
+    "component": "ActiveFilterStrip",
+    "elementType": "filter",
+    "action": "onRemoveFilter",
+    "testID": "active-filter-strip.filter.remove",
+    "flowId": "home-nav",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/TemplateSelector.tsx",
+    "component": "TemplateSelector",
+    "elementType": "picker",
+    "action": "onTemplateSelect",
+    "testID": "template-selector.picker.select",
+    "flowId": "templates",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/ContextMenu.tsx",
+    "component": "ContextMenu",
+    "elementType": "context-menu-item",
+    "action": "onItemPress",
+    "testID": "context-menu.item.press",
+    "flowId": "home-nav",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/MarkdownEditor.tsx",
+    "component": "MarkdownEditor",
+    "elementType": "toolbar-action",
+    "action": "onToolbarAction",
+    "testID": "markdown-editor.toolbar-action.press",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/NoteCard.tsx",
+    "component": "NoteCard",
+    "elementType": "button",
+    "action": "onPress",
+    "testID": "note-card-root.button.press",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/NoteCard.tsx",
+    "component": "NoteCard",
+    "elementType": "swipe-action",
+    "action": "onSwipeLeft",
+    "testID": "note-card-root.swipe.left",
+    "flowId": "notes",
+    "platform": ["ios", "android"],
+    "na": true
+  },
+  {
+    "file": "src/components/NoteCard.tsx",
+    "component": "NoteCard",
+    "elementType": "swipe-action",
+    "action": "onSwipeRight",
+    "testID": "note-card-root.swipe.right",
+    "flowId": "notes",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/TodoCard.tsx",
+    "component": "TodoCard",
+    "elementType": "checkbox",
+    "action": "onToggle",
+    "testID": "todo-card-root.checkbox.toggle",
+    "flowId": "todos",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/TodoCard.tsx",
+    "component": "TodoCard",
+    "elementType": "button",
+    "action": "onEdit",
+    "testID": "todo-card-root.button.edit",
+    "flowId": "todos",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/components/TodoCard.tsx",
+    "component": "TodoCard",
+    "elementType": "swipe-action",
+    "action": "onSwipe",
+    "testID": "todo-card-root.swipe.action",
+    "flowId": "todos",
+    "platform": ["ios", "android"]
+  }
+]

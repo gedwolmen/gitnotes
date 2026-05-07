@@ -1,0 +1,17 @@
+# Maestro E2E Configuration
+# See https://maestro.mobile.dev/
+
+# iOS app bundle identifier
+iosAppId: com.xaventra.gitnotes
+
+# Android app package
+androidAppId: com.gitnotes.app
+
+# Default timeouts
+timeouts:
+  waitForElement: 10000
+  waitForAppToAppear: 15000
+
+# Retry policy: retry once then fail
+retry:
+  maxRetries: 1
