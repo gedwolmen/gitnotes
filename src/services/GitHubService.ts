@@ -625,7 +625,7 @@ class GitHubServiceClass {
     content: string,
     message: string,
     branch: string = 'main',
-    opts?: TokenOpts,
+    opts?: TokenOpts & { expectExists?: boolean },
   ): Promise<GitHubFileCommit | null> {
     const encodedPath = path.split('/').map(encodeURIComponent).join('/');
     const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
@@ -639,16 +639,16 @@ class GitHubServiceClass {
 
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        // Cache-first sha lookup (#565 phase C). The legacy
-        // `getFileShaOrNull` GET is now skipped on every write after the
-        // first one in this process — drain becomes 1 PUT per item
-        // instead of 1 GET + 1 PUT.
         let sha: string | null = this.shaCache.get(cacheKey) ?? null;
         if (!sha) {
           sha = await this.getFileShaOrNull(owner, repo, path, branch, opts);
           if (sha) this.shaCache.set(cacheKey, sha);
         }
         if (!sha) {
+          if (opts?.expectExists) {
+            console.warn(`[GitHubService] Remote file deleted, aborting update to prevent resurrection: ${path}`);
+            return null;
+          }
           const created = await this.createFile(owner, repo, path, content, message, branch, opts);
           const createdSha = created?.content?.sha;
           if (createdSha) this.shaCache.set(cacheKey, createdSha);
@@ -661,17 +661,21 @@ class GitHubServiceClass {
           { message, content: base64Content, sha, branch },
           opts,
         )) as GitHubFileCommit | null;
-        // Cache the freshly-issued sha so the next write doesn't have
-        // to round-trip for it.
         const newSha = response?.content?.sha;
         if (newSha) this.shaCache.set(cacheKey, newSha);
         return response;
       } catch (error) {
         const status = (error as { status?: number })?.status;
         if (status === 409 && attempt < 2) {
-          // Sha drifted upstream — drop the stale cache entry so the
-          // next iteration falls back to a fresh GET.
           this.shaCache.delete(cacheKey);
+          try {
+            const upstreamContent = await this.getFileContent(owner, repo, path, branch);
+            if (upstreamContent !== null && upstreamContent !== content) {
+              console.warn(`[GitHubService] Aborting update: upstream content diverged for ${path}`);
+              return null;
+            }
+          } catch {
+          }
           continue;
         }
         if (status === 422) {
