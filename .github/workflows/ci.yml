@@ -143,27 +143,19 @@ jobs:
             ~/.android/adb*
           key: avd-api-34
 
-      - name: Create AVD and start emulator
+      - name: Run Android E2E in emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
           arch: x86_64
           profile: pixel_8
-          boot-timeout: 300
-
-      - name: Build and install app
-        run: |
-          cd android && ./gradlew assembleDebug
-          adb install app/build/outputs/apk/debug/app-debug.apk
-        timeout-minutes: 10
-
-      - name: Run Maestro smoke tests
-        run: maestro test e2e/android/smoke --format junit --output maestro-android-results.xml
-        continue-on-error: true
-
-      - name: Retry failed Maestro tests
-        if: failure()
-        run: maestro test e2e/android/smoke --format junit --output maestro-android-results-retry.xml
+          emulator-boot-timeout: 300
+          script: |
+            cd android && ./gradlew assembleDebug
+            adb install app/build/outputs/apk/debug/app-debug.apk
+            cd ..
+            maestro test e2e/android/smoke --format junit --output maestro-android-results.xml || \
+              maestro test e2e/android/smoke --format junit --output maestro-android-results-retry.xml
 
       - name: Upload Maestro results
         if: always()
