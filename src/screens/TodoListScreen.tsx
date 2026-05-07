@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { View, StyleSheet, Alert, Platform, RefreshControl } from 'react-native';
-import { FlatList } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { Ionicons } from '@expo/vector-icons';
 import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -427,12 +427,12 @@ export default function TodoListScreen() {
         repositories={repositories}
       />
 
-      <FlatList
+      <FlashList
+        key={`todos-${listToken}`}
         data={filteredTodos}
         renderItem={renderTodoItem}
         keyExtractor={(item) => item.id}
         extraData={listToken}
-        removeClippedSubviews={false}
         contentContainerStyle={{ ...styles.listContent, paddingBottom: tabBarHeight + 16 }}
         ListEmptyComponent={<TodosEmptyState isFiltered={hasActiveFilters} />}
         showsVerticalScrollIndicator={false}

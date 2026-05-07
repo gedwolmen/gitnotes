@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, RefreshControl, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
+import { FlashList, FlashListRef } from '@shopify/flash-list';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
@@ -59,7 +60,7 @@ export default function NotesListScreen() {
     updateNote,
   } = useNotes();
 
-  const listRef = useRef<FlatList<Note>>(null);
+  const listRef = useRef<FlashListRef<Note>>(null);
   const swipeableRefs = useRef<Record<string, React.RefObject<SwipeableMethods | null>>>({});
   const openSwipeableRef = useRef<SwipeableMethods | null>(null);
 
@@ -391,15 +392,14 @@ export default function NotesListScreen() {
         </View>
       ) : null}
 
-      <FlatList
+      <FlashList
         ref={listRef}
         data={displayNotes}
         renderItem={renderNote}
         keyExtractor={(item) => item.id}
-        key={viewMode}
+        key={`${viewMode}-${listToken}`}
         extraData={listToken}
         numColumns={1}
-        removeClippedSubviews={false}
         contentContainerStyle={{ padding: 12, paddingTop: 4, paddingBottom: tabBarHeight + 16 }}
         refreshControl={
           <RefreshControl
