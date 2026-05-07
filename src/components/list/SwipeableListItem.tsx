@@ -45,17 +45,23 @@ export function SwipeableListItem({
     onDelete();
   };
 
-  const handleSwipeableOpen = (direction: 'left' | 'right') => {
-    if (direction === 'left') {
-      HapticService.selection();
-      close();
-      onToggleSelect();
-      return;
-    }
+  const handleSelectFromButton = () => {
+    HapticService.selection();
+    close();
+    onToggleSelect();
   };
 
   const renderRightActions = () => (
     <View style={styles.actionRowRight}>
+      <TouchableOpacity
+        testID={`swipeable-list-item.button.select-${itemId}`}
+        style={[styles.action, { backgroundColor: colors.primary }]}
+        onPress={handleSelectFromButton}
+        accessibilityLabel={selected ? 'Deselect' : 'Select'}
+      >
+        <Ionicons name={selected ? 'checkmark-circle' : 'ellipse-outline'} size={20} color="#FFFFFF" />
+        <Text style={styles.actionText}>{selected ? 'Deselect' : 'Select'}</Text>
+      </TouchableOpacity>
       <TouchableOpacity
         testID={`swipeable-list-item.button.delete-${itemId}`}
         style={[styles.action, { backgroundColor: colors.error }]}
@@ -65,15 +71,6 @@ export function SwipeableListItem({
         <Ionicons name="trash" size={20} color="#FFFFFF" />
         <Text style={styles.actionText}>Delete</Text>
       </TouchableOpacity>
-    </View>
-  );
-
-  const renderLeftActions = () => (
-    <View
-      testID={`swipeable-list-item.hint.select-${itemId}`}
-      style={[styles.selectHint, { backgroundColor: colors.primary }]}
-    >
-      <Ionicons name={selected ? 'checkmark-circle' : 'ellipse-outline'} size={22} color="#FFFFFF" />
     </View>
   );
 
@@ -109,10 +106,7 @@ export function SwipeableListItem({
       ref={ref}
       friction={2}
       rightThreshold={SWIPE_THRESHOLD}
-      leftThreshold={SWIPE_THRESHOLD}
       renderRightActions={renderRightActions}
-      renderLeftActions={renderLeftActions}
-      onSwipeableOpen={handleSwipeableOpen}
       onSwipeableWillOpen={() => onSwipeableWillOpen(itemId)}
       onSwipeableWillClose={() => onSwipeableWillClose(itemId)}
     >
@@ -131,14 +125,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'stretch',
     justifyContent: 'flex-end',
-  },
-  selectHint: {
-    width: 64,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-    marginVertical: 4,
-    marginHorizontal: 4,
   },
   action: {
     width: ACTION_WIDTH,
