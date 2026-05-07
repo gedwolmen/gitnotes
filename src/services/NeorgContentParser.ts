@@ -10,7 +10,7 @@ export class NeorgContentParser {
       const lines = content.split('\n');
       const blocks: NeorgContentBlock[] = [];
       let currentList: NeorgListItem[] | null = null;
-      let currentCodeBlock: { language?: string; lines: string[] } | null = null;
+      let currentCodeBlock: { language?: string; lines: string[]; blockType?: string } | null = null;
       let currentChecklist: NeorgChecklistItem[] | null = null;
       let currentTableRows: NeorgTableRow[] | null = null;
       let currentDefinitions: NeorgDefinitionItem[] | null = null;
@@ -93,7 +93,18 @@ export class NeorgContentParser {
           continue;
         }
 
-        if (trimmed === '=' && currentCodeBlock) {
+        const atBlockMatch = trimmed.match(/^@(code|raw|embed|math)(?:\s+(\w+))?\s*$/);
+        if (atBlockMatch && !currentCodeBlock) {
+          flushAll();
+          currentCodeBlock = {
+            language: atBlockMatch[1] === 'code' ? (atBlockMatch[2] || undefined) : undefined,
+            blockType: atBlockMatch[1] as 'code' | 'raw' | 'embed' | 'math',
+            lines: [],
+          };
+          continue;
+        }
+
+        if ((trimmed === '=' || trimmed === '@end') && currentCodeBlock) {
           this.finalizeCodeBlock(currentCodeBlock, blocks);
           currentCodeBlock = null;
           continue;
@@ -120,6 +131,13 @@ export class NeorgContentParser {
         }
 
         if (trimmed === '---') {
+          flushAll();
+          continue;
+        }
+
+        if (/^={3,}\s*$/.test(trimmed)) {
+          flushAll();
+          blocks.push({ type: 'divider' });
           continue;
         }
 
@@ -145,10 +163,11 @@ export class NeorgContentParser {
           continue;
         }
 
-        const rangedTagMatch = trimmed.match(/^\|([A-Za-z][\w-]*)\b.*$/);
+        const rangedTagMatch = trimmed.match(/^\|([A-Za-z][\w-]*)\b(.*)$/);
         if (rangedTagMatch && !/^\|.+\|\s*$/.test(trimmed)) {
           flushAll();
           const tagName = rangedTagMatch[1].toLowerCase();
+          const tagParams = rangedTagMatch[2]?.trim() || '';
           const collected: string[] = [];
           for (let j = i + 1; j < lines.length; j++) {
             if (/^\|end\s*$/.test(lines[j].trim())) {
@@ -166,6 +185,17 @@ export class NeorgContentParser {
             blocks.push({
               type: 'code',
               code: { content: collected.join('\n') },
+            });
+            continue;
+          }
+
+          if (tagName === 'details') {
+            blocks.push({
+              type: 'details',
+              details: {
+                summary: tagParams || undefined,
+                content: collected.join('\n').trim(),
+              },
             });
             continue;
           }
@@ -366,8 +396,9 @@ export class NeorgContentParser {
     const trimmed = line.trim();
 
     if (!trimmed) return false;
-    if (trimmed === '---' || trimmed === '=') return true;
+    if (trimmed === '---' || trimmed === '=' || trimmed === '@end') return true;
     if (/^=(code|raw|embed)(?:\.(\w+))?\s*$/.test(trimmed)) return true;
+    if (/^@(code|raw|embed|math)(?:\s+\w+)?\s*$/.test(trimmed)) return true;
     if (/^```(\w*)$/.test(line)) return true;
     if (/^\.(quote|aside)\s*$/.test(trimmed) || /^\.end\s*$/.test(trimmed)) return true;
     if (/^\|end\s*$/.test(trimmed)) return true;
@@ -460,10 +491,18 @@ export class NeorgContentParser {
     return null;
   }
 
-  static finalizeCodeBlock(codeBlock: { language?: string; lines: string[] }, blocks: NeorgContentBlock[]): void {
+  static finalizeCodeBlock(codeBlock: { language?: string; lines: string[]; blockType?: string }, blocks: NeorgContentBlock[]): void {
+    const content = codeBlock.lines.join('\n');
+    if (codeBlock.blockType === 'math') {
+      blocks.push({
+        type: 'math',
+        math: { content, inline: false },
+      });
+      return;
+    }
     blocks.push({
       type: 'code',
-      code: { language: codeBlock.language, content: codeBlock.lines.join('\n') },
+      code: { language: codeBlock.language, content },
     });
   }
 

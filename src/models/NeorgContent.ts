@@ -62,7 +62,7 @@ export interface NeorgTableRow {
 }
 
 export interface NeorgContentBlock {
-  type: 'heading' | 'list' | 'paragraph' | 'code' | 'checklist' | 'table' | 'quote' | 'divider' | 'definition' | 'footnote' | 'timestamp' | 'drawer' | 'image' | 'math' | 'fixed-width' | 'comment';
+  type: 'heading' | 'list' | 'paragraph' | 'code' | 'checklist' | 'table' | 'quote' | 'divider' | 'definition' | 'footnote' | 'timestamp' | 'drawer' | 'image' | 'math' | 'fixed-width' | 'comment' | 'details';
   heading?: NeorgHeading;
   listItems?: NeorgListItem[];
   checklistItems?: NeorgChecklistItem[];
@@ -79,6 +79,10 @@ export interface NeorgContentBlock {
   drawer?: NeorgDrawer;
   image?: NeorgImage;
   math?: NeorgMath;
+  details?: {
+    summary?: string;
+    content: string;
+  };
 }
 
 export interface NeorgContentParseResult {
