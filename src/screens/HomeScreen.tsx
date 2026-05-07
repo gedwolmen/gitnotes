@@ -180,6 +180,29 @@ export default function HomeScreen() {
           </View>
         </Pressable>
 
+        <Pressable
+          testID="home.button.open-journal"
+          onPress={handleOpenTodaysJournal}
+          disabled={isCreatingJournal}
+          style={({ pressed }) => [
+            styles.bentoHero,
+            { backgroundColor: colors.primary, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
+          ]}
+        >
+          <Ionicons name="journal-outline" size={140} color="#FFFFFF" style={styles.bentoHeroDecor} />
+          <View style={styles.bentoHeroBadge}>
+            <Ionicons name="journal-outline" size={18} color={colors.primary} />
+          </View>
+          <View style={styles.bentoHeroContent}>
+            <Text style={styles.bentoHeroTitle} numberOfLines={1}>
+              {hasTodaysJournal ? "Today's Journal" : 'New Journal Entry'}
+            </Text>
+            <Text style={styles.bentoHeroSubtitle} numberOfLines={1}>
+              {todaysJournalTitle.replace('Journal ', '')}
+            </Text>
+          </View>
+        </Pressable>
+
         <View style={styles.bentoRow}>
           <Pressable
             testID="home.button.open-templates"
@@ -216,27 +239,6 @@ export default function HomeScreen() {
                 </View>
               </View>
               <Text style={[styles.bentoTileSubtitle, { color: colors.textSecondary }]}>Visual notes</Text>
-            </View>
-          </Pressable>
-          <Pressable
-            testID="home.button.open-journal"
-            onPress={handleOpenTodaysJournal}
-            disabled={isCreatingJournal}
-            style={({ pressed }) => [
-              styles.bentoTile,
-              { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
-            ]}
-          >
-            <View style={[styles.bentoTileBadge, { backgroundColor: colors.primary + '1F' }]}>
-              <Ionicons name="journal-outline" size={22} color={colors.primary} />
-            </View>
-            <View style={styles.bentoTileContent}>
-              <Text style={[styles.bentoTileTitle, { color: colors.text }]} numberOfLines={1}>
-                {hasTodaysJournal ? "Today's Journal" : 'New Journal Entry'}
-              </Text>
-              <Text style={[styles.bentoTileSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
-                {todaysJournalTitle.replace('Journal ', '')}
-              </Text>
             </View>
           </Pressable>
         </View>
