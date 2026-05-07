@@ -50,6 +50,9 @@ function TodoCardImpl({
       <View testID="todo-card.button.press">
         <TouchableOpacity
           testID="todo-card-root.button.edit"
+          accessibilityLabel={`Todo: ${todo.text}`}
+          onLongPress={onDelete}
+          delayLongPress={500}
         style={[
           styles.todoItem,
           { backgroundColor: colors.surface, borderColor: isOverdue ? colors.error : colors.border },
