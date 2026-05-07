@@ -1,0 +1,46 @@
+appId: com.xaventra.gitnotes
+name: iOS - Settings Flow
+tags:
+  - full
+  - ios
+  - settings
+---
+
+- launchApp
+
+- tapOn:
+    id: tab-bar.tab.press-SettingsTab
+
+- assertVisible:
+    text: "Settings"
+
+- scroll
+
+- assertVisible:
+    id: settings.toggle.neu
+
+- tapOn:
+    id: settings.toggle.neu
+
+- tapOn:
+    id: settings.toggle.neu
+
+- scroll
+
+- assertVisible:
+    id: settings.toggle.biometric-lock
+
+- scroll
+
+- assertVisible:
+    id: settings.toggle.sync-frequently
+
+- tapOn:
+    id: settings.button.interval-picker
+
+- back
+
+- scroll
+
+- assertVisible:
+    id: settings.toggle.background-sync

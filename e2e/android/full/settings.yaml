@@ -1,0 +1,34 @@
+appId: com.gitnotes.app
+name: Android - Settings Flow
+tags:
+  - full
+  - android
+  - settings
+---
+
+- launchApp
+
+- tapOn:
+    id: tab-bar.tab.press-SettingsTab
+
+- assertVisible:
+    text: "Settings"
+
+- scroll
+
+- assertVisible:
+    id: settings.toggle.neu
+
+- tapOn:
+    id: settings.toggle.neu
+
+- tapOn:
+    id: settings.toggle.neu
+
+- scroll
+
+- assertVisible:
+    id: settings.toggle.sync-frequently
+
+- assertVisible:
+    id: settings.toggle.background-sync

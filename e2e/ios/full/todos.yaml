@@ -1,0 +1,29 @@
+appId: com.xaventra.gitnotes
+name: iOS - Todo List Flow
+tags:
+  - full
+  - ios
+  - todos
+---
+
+- launchApp
+
+- tapOn:
+    id: tab-bar.tab.press-TodosTab
+
+- assertVisible:
+    id: todo-list.icon-button.add
+
+- tapOn:
+    id: todo-list.icon-button.filter-completed
+
+- tapOn:
+    id: todo-list.icon-button.filter-completed
+
+- tapOn:
+    id: todo-list.icon-button.filters
+
+- back
+
+- tapOn:
+    id: todo-list.icon-button.add

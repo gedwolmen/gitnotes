@@ -1,0 +1,23 @@
+appId: com.gitnotes.app
+name: Android - Template Manager Flow
+tags:
+  - full
+  - android
+  - templates
+---
+
+- launchApp
+
+- tapOn:
+    id: home.button.open-templates
+
+- assertVisible:
+    text: "Template"
+
+- tapOn:
+    id: template-manager.button.create
+
+- back
+
+- tapOn:
+    id: template-manager.icon-button.new-template

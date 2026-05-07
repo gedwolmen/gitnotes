@@ -1,0 +1,26 @@
+appId: com.gitnotes.app
+name: Android - Todo List Flow
+tags:
+  - full
+  - android
+  - todos
+---
+
+- launchApp
+
+- tapOn:
+    id: tab-bar.tab.press-TodosTab
+
+- assertVisible:
+    id: todo-list.icon-button.add
+
+- tapOn:
+    id: todo-list.icon-button.filter-completed
+
+- tapOn:
+    id: todo-list.icon-button.filters
+
+- back
+
+- tapOn:
+    id: todo-list.icon-button.add

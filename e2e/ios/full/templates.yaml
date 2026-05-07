@@ -1,0 +1,23 @@
+appId: com.xaventra.gitnotes
+name: iOS - Template Manager Flow
+tags:
+  - full
+  - ios
+  - templates
+---
+
+- launchApp
+
+- tapOn:
+    id: home.button.open-templates
+
+- assertVisible:
+    text: "Template"
+
+- tapOn:
+    id: template-manager.button.create
+
+- back
+
+- tapOn:
+    id: template-manager.icon-button.new-template

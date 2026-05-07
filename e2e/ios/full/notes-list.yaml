@@ -1,0 +1,45 @@
+appId: com.xaventra.gitnotes
+name: iOS - Notes List Flow
+tags:
+  - full
+  - ios
+  - notes
+---
+
+- launchApp
+
+- tapOn:
+    id: tab-bar.tab.press-NotesTab
+
+- assertVisible:
+    id: notes-list.search-bar.search
+
+- setInputText:
+    id: notes-list.search-bar.search
+    text: "test search"
+
+- clearTextField:
+    id: notes-list.search-bar.search
+
+- tapOn:
+    id: notes-list.button.toggle-view-mode
+
+- assertVisible:
+    id: notes-view-mode.button.close
+
+- tapOn:
+    id: notes-view-mode.button.change-compact
+
+- tapOn:
+    id: notes-list.button.open-filters
+
+- assertVisible:
+    text: "Filter"
+
+- back
+
+- tapOn:
+    id: notes-list.button.manual-sync
+
+- tapOn:
+    id: notes-list.button.select-repo

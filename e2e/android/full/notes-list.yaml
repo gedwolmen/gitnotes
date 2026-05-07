@@ -1,0 +1,33 @@
+appId: com.gitnotes.app
+name: Android - Notes List Flow
+tags:
+  - full
+  - android
+  - notes
+---
+
+- launchApp
+
+- tapOn:
+    id: tab-bar.tab.press-NotesTab
+
+- assertVisible:
+    id: notes-list.search-bar.search
+
+- setInputText:
+    id: notes-list.search-bar.search
+    text: "test search"
+
+- clearTextField:
+    id: notes-list.search-bar.search
+
+- tapOn:
+    id: notes-list.button.toggle-view-mode
+
+- tapOn:
+    id: notes-list.button.open-filters
+
+- back
+
+- tapOn:
+    id: notes-list.button.manual-sync
