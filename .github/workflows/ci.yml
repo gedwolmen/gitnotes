@@ -154,7 +154,7 @@ jobs:
         with:
           api-level: 34
           arch: x86_64
-          profile: pixel_8
+          profile: pixel_6
           emulator-boot-timeout: 600
           script: |
             cd android && ./gradlew assembleDebug
