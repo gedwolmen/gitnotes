@@ -1,8 +1,7 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, StyleSheet, Alert, Platform, RefreshControl } from 'react-native';
 import { FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTodos } from '../contexts/TodoContext';
@@ -27,6 +26,8 @@ import { TodoCard } from '../components/todos/TodoCard';
 import { TodosEmptyState } from '../components/todos/TodosEmptyState';
 import { TodosListHeader } from '../components/todos/TodosListHeader';
 import { TodoEditorModal } from '../components/todos/TodoEditorModal';
+import { SwipeableListItem } from '../components/list/SwipeableListItem';
+import { BulkActionBar } from '../components/list/BulkActionBar';
 
 export default function TodoListScreen() {
   const { colors, isDark } = useTheme();
@@ -54,9 +55,21 @@ export default function TodoListScreen() {
   const [todoBranch, setTodoBranch] = useState<string | undefined>(undefined);
   const [showFilterModal, setShowFilterModal] = useState(false);
 
-  const swipeableRefs = useRef<Record<string, React.RefObject<SwipeableMethods | null>>>({});
-  const openSwipeableRef = useRef<SwipeableMethods | null>(null);
   const filter = useEntityFilter<Todo>(todos);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+
+  const selectionMode = selectedIds.size > 0;
+
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 
   const todosAfterEntityFilters = useMemo(() => {
     const baseTodos = filter.applyFilters(todos);
@@ -87,29 +100,32 @@ export default function TodoListScreen() {
     entityName: 'todo',
   });
 
-  const getSwipeableRef = useCallback((todoId: string) => {
-    if (!swipeableRefs.current[todoId]) {
-      swipeableRefs.current[todoId] = React.createRef<SwipeableMethods>();
-    }
-    return swipeableRefs.current[todoId];
-  }, []);
-
-  const handleSwipeableWillOpen = useCallback((todoId: string) => {
-    const swipeable = swipeableRefs.current[todoId]?.current;
-    if (openSwipeableRef.current && openSwipeableRef.current !== swipeable) {
-      openSwipeableRef.current.close();
-    }
-    if (swipeable) {
-      openSwipeableRef.current = swipeable;
-    }
-  }, []);
-
-  const handleSwipeableWillClose = useCallback((todoId: string) => {
-    const swipeable = swipeableRefs.current[todoId]?.current;
-    if (openSwipeableRef.current === swipeable) {
-      openSwipeableRef.current = null;
-    }
-  }, []);
+  const handleBulkDelete = useCallback(() => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    Alert.alert(
+      `Delete ${ids.length} ${ids.length === 1 ? 'todo' : 'todos'}?`,
+      'This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            for (const id of ids) {
+              try {
+                await deleteTodo(id);
+              } catch (error) {
+                void error;
+              }
+            }
+            HapticService.success();
+            clearSelection();
+          },
+        },
+      ],
+    );
+  }, [selectedIds, deleteTodo, clearSelection]);
 
   const resetForm = useCallback(() => {
     setTodoText('');
@@ -247,32 +263,6 @@ export default function TodoListScreen() {
     HapticService.light();
   }, [toggleTodo]);
 
-  const handleDeleteTodo = useCallback(async (id: string) => {
-    const swipeable = swipeableRefs.current[id]?.current;
-    swipeable?.close();
-    if (openSwipeableRef.current === swipeable) {
-      openSwipeableRef.current = null;
-    }
-
-    Alert.alert('Delete Todo', 'Are you sure you want to delete this todo?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-          const ok = await deleteTodo(id);
-          delete swipeableRefs.current[id];
-          HapticService.light();
-          if (!ok) {
-            const message = useTodoStore.getState().error ?? 'Could not delete todo. Please try again.';
-            Alert.alert('Delete failed', message);
-          }
-        },
-      },
-    ]);
-  }, [deleteTodo]);
-
   const openEditModal = useCallback((todo: Todo) => {
     setEditingTodo(todo);
     setTodoText(todo.text);
@@ -335,15 +325,21 @@ export default function TodoListScreen() {
 
   const renderTodoItem = useCallback(
     ({ item }: { item: Todo }) => (
-      <TodoCard todo={item} onPress={openEditModal} onToggle={handleToggleTodo} />
+      <SwipeableListItem
+        itemId={item.id}
+        selected={selectedIds.has(item.id)}
+        selectionMode={selectionMode}
+        onToggleSelect={() => toggleSelected(item.id)}
+      >
+        <TodoCard todo={item} onPress={openEditModal} onToggle={handleToggleTodo} />
+      </SwipeableListItem>
     ),
     [
-      getSwipeableRef,
-      handleDeleteTodo,
-      handleSwipeableWillClose,
-      handleSwipeableWillOpen,
       handleToggleTodo,
       openEditModal,
+      selectedIds,
+      selectionMode,
+      toggleSelected,
     ],
   );
 
@@ -472,6 +468,14 @@ export default function TodoListScreen() {
         onRepoChange={setTodoRepo}
         onBranchChange={setTodoBranch}
         onSubmit={editingTodo ? handleUpdateTodo : handleAddTodo}
+      />
+
+      <BulkActionBar
+        count={selectedIds.size}
+        itemNoun="todo"
+        bottomOffset={tabBarHeight + 12}
+        onCancel={clearSelection}
+        onDelete={handleBulkDelete}
       />
 
       <ScreenHeader

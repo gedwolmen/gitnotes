@@ -23,6 +23,7 @@ interface NoteEditorDocumentParams {
   initialFormat?: NoteFormat;
   initialTitle?: string;
   initialContent?: string;
+  initialTags?: string[];
   initialRepo?: string;
   initialBranch?: string;
   initialFolderPath?: string;
@@ -40,6 +41,7 @@ export function useNoteEditorDocument({
   initialFormat,
   initialTitle,
   initialContent,
+  initialTags,
   initialRepo,
   initialBranch,
   initialFolderPath,
@@ -63,7 +65,7 @@ export function useNoteEditorDocument({
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [isEditing, setIsEditing] = useState(!noteId);
-  const [tags, setTags] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>(initialTags ?? []);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [repoFolders, setRepoFolders] = useState<Folder[]>([]);
   const [canvasEditJsonUri, setCanvasEditJsonUri] = useState<string | undefined>(undefined);

@@ -47,7 +47,7 @@ function NoteEditorScreenInner() {
   const { colors, isDark } = useTheme();
   const { authState, activeAccountId } = useAuth();
   const { sideBySide } = useResponsive();
-  const { noteId, format: initialFormat, initialTitle, initialContent, repo: initialRepo, branch: initialBranch, folderPath: initialFolderPath, anchor: initialAnchor } = route.params || {};
+  const { noteId, format: initialFormat, initialTitle, initialContent, initialTags, repo: initialRepo, branch: initialBranch, folderPath: initialFolderPath, anchor: initialAnchor } = route.params || {};
 
   const { notes, getNoteById, createNote, updateNote } = useNotes();
   const { canvases } = useCanvases();
@@ -63,6 +63,7 @@ function NoteEditorScreenInner() {
     initialFormat,
     initialTitle,
     initialContent,
+    initialTags,
     initialRepo,
     initialBranch,
     initialFolderPath,

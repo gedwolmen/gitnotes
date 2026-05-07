@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, RefreshControl, FlatList } from 'react-native';
+import { Alert, View, Text, StyleSheet, ActivityIndicator, RefreshControl, FlatList } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useNotes } from '../contexts/NoteContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -18,12 +18,12 @@ import { pullAllFromRepos } from '../services/RepoPullService';
 import ColorPicker from '../components/ColorPicker';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
 import { ConflictBanner } from '../components/ui/ConflictBanner';
-import { ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
+import { IconButton, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { HapticService } from '../utils/haptics';
 import { useResponsive } from '../hooks/useResponsive';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { GitHubActivityIndicator } from '../components/GitHubActivityIndicator';
-import { ViewMode } from '../utils/viewModes';
+import { ViewMode, VIEW_MODE_ICONS } from '../utils/viewModes';
 import { NoteCard as NotesListCard } from '../components/notes/NoteCard';
 import { NotesListHeader } from '../components/notes/NotesListHeader';
 import { NotesViewModePicker } from '../components/notes/NotesViewModePicker';
@@ -33,6 +33,8 @@ import { NotesEmptyState } from '../components/notes/NotesEmptyState';
 import { NotesContextMenu } from '../components/notes/NotesContextMenu';
 import { useNotesListFilters } from '../components/notes/useNotesListFilters';
 import { useNotesListNoteActions } from '../components/notes/useNotesListNoteActions';
+import { SwipeableListItem } from '../components/list/SwipeableListItem';
+import { BulkActionBar } from '../components/list/BulkActionBar';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -61,8 +63,6 @@ export default function NotesListScreen() {
   } = useNotes();
 
   const listRef = useRef<FlatList<Note>>(null);
-  const swipeableRefs = useRef<Record<string, React.RefObject<SwipeableMethods | null>>>({});
-  const openSwipeableRef = useRef<SwipeableMethods | null>(null);
 
   const [showViewModePicker, setShowViewModePicker] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -73,11 +73,22 @@ export default function NotesListScreen() {
   const [longPressedNote, setLongPressedNote] = useState<Note | null>(null);
   const [colorPickerNote, setColorPickerNote] = useState<Note | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
-  const closeOpenSwipeable = useCallback(() => {
-    openSwipeableRef.current?.close();
-    openSwipeableRef.current = null;
+  const selectionMode = selectedIds.size > 0;
+
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }, []);
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+
+  const closeOpenSwipeable = useCallback(() => {}, []);
 
   const {
     filters,
@@ -157,27 +168,37 @@ export default function NotesListScreen() {
     setIsDeleting,
   });
 
-  const getSwipeableRef = useCallback((noteId: string) => {
-    if (!swipeableRefs.current[noteId]) {
-      swipeableRefs.current[noteId] = React.createRef<SwipeableMethods>();
-    }
-    return swipeableRefs.current[noteId];
-  }, []);
-
-  const handleSwipeableWillOpen = useCallback((noteId: string) => {
-    const swipeable = swipeableRefs.current[noteId]?.current;
-    if (openSwipeableRef.current && openSwipeableRef.current !== swipeable) {
-      openSwipeableRef.current.close();
-    }
-    if (swipeable) openSwipeableRef.current = swipeable;
-  }, []);
-
-  const handleSwipeableWillClose = useCallback((noteId: string) => {
-    const swipeable = swipeableRefs.current[noteId]?.current;
-    if (openSwipeableRef.current === swipeable) {
-      openSwipeableRef.current = null;
-    }
-  }, []);
+  const handleBulkDelete = useCallback(() => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    Alert.alert(
+      `Delete ${ids.length} ${ids.length === 1 ? 'note' : 'notes'}?`,
+      'This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setIsDeleting(true);
+            try {
+              for (const id of ids) {
+                try {
+                  await deleteNote(id);
+                } catch (error) {
+                  void error;
+                }
+              }
+              HapticService.success();
+              clearSelection();
+            } finally {
+              setIsDeleting(false);
+            }
+          },
+        },
+      ],
+    );
+  }, [selectedIds, deleteNote, clearSelection]);
 
   useEffect(() => {
     if (authState.token) GitHubService.setToken(authState.token);
@@ -291,28 +312,34 @@ export default function NotesListScreen() {
 
   const renderNote = useCallback(
     ({ item, index }: { item: Note; index: number }) => (
-      <NotesListCard
-        note={item}
-        viewMode={viewMode}
-        onPress={handleNotePress}
-        onLongPress={handleNoteLongPress}
-        highlighted={hasActiveSearch && index === currentSearchMatchIndex}
-        isOffline={isConnected === false}
-        isCached={!!item.content?.trim()}
-        onTagPress={handleTagPress}
-      />
+      <SwipeableListItem
+        itemId={item.id}
+        selected={selectedIds.has(item.id)}
+        selectionMode={selectionMode}
+        onToggleSelect={() => toggleSelected(item.id)}
+      >
+        <NotesListCard
+          note={item}
+          viewMode={viewMode}
+          onPress={handleNotePress}
+          onLongPress={handleNoteLongPress}
+          highlighted={hasActiveSearch && index === currentSearchMatchIndex}
+          isOffline={isConnected === false}
+          isCached={!!item.content?.trim()}
+          onTagPress={handleTagPress}
+        />
+      </SwipeableListItem>
     ),
     [
       currentSearchMatchIndex,
-      getSwipeableRef,
-      handleDeleteFromSwipe,
       handleNoteLongPress,
       handleNotePress,
-      handleSwipeableWillClose,
-      handleSwipeableWillOpen,
       handleTagPress,
       hasActiveSearch,
       isConnected,
+      selectedIds,
+      selectionMode,
+      toggleSelected,
       viewMode,
     ],
   );
@@ -343,10 +370,6 @@ export default function NotesListScreen() {
       <NotesListHeader
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        viewMode={viewMode}
-        activeFilterCount={activeFilterCount}
-        pendingSync={pendingSync}
-        isManualSyncing={isManualSyncing}
         repositories={repositories}
         selectedRepo={filters.selectedRepo}
         hasActiveSearch={hasActiveSearch}
@@ -354,9 +377,6 @@ export default function NotesListScreen() {
         currentSearchMatchIndex={currentSearchMatchIndex}
         sortMode={sortMode}
         onSortChange={setSortMode}
-        onToggleViewModePicker={() => setShowViewModePicker((previous) => !previous)}
-        onOpenFilters={() => setShowFilterModal(true)}
-        onManualSync={handleManualSync}
         onSelectRepo={handleSelectRepo}
         onSearchNavigate={handleSearchNavigate}
       />
@@ -441,7 +461,94 @@ export default function NotesListScreen() {
         selected={colorPickerNote?.color ?? null}
         onSelect={(color) => handleColorSelect(colorPickerNote, color)}
       />
-      <ScreenHeader title="Notes" />
+
+      <BulkActionBar
+        count={selectedIds.size}
+        itemNoun="note"
+        bottomOffset={tabBarHeight + 12}
+        onCancel={clearSelection}
+        onDelete={handleBulkDelete}
+      />
+      
+
+      <ScreenHeader
+        title="Notes"
+        actions={
+          <>
+            <IconButton
+              size="sm"
+              testID="notes-list.icon-button.view-mode"
+              onPress={() => {
+                HapticService.light();
+                setShowViewModePicker((previous) => !previous);
+              }}
+              accessibilityLabel="View mode"
+            >
+              <Ionicons name={VIEW_MODE_ICONS[viewMode]} size={18} color={colors.textSecondary} />
+            </IconButton>
+            <View style={styles.actionWithBadge}>
+              <IconButton
+                size="sm"
+                testID="notes-list.icon-button.filters"
+                active={activeFilterCount > 0}
+                onPress={() => {
+                  HapticService.light();
+                  setShowFilterModal(true);
+                }}
+                accessibilityLabel="Filters"
+              >
+                <Ionicons
+                  name="funnel-outline"
+                  size={18}
+                  color={activeFilterCount > 0 ? colors.accent : colors.textSecondary}
+                />
+              </IconButton>
+              {activeFilterCount > 0 ? (
+                <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+                  <Text style={styles.badgeText}>{activeFilterCount}</Text>
+                </View>
+              ) : null}
+            </View>
+            <View style={styles.actionWithBadge}>
+              <IconButton
+                size="sm"
+                testID="notes-list.icon-button.sync"
+                active={pendingSync > 0}
+                disabled={isManualSyncing}
+                onPress={handleManualSync}
+                accessibilityLabel="Sync"
+              >
+                {isManualSyncing ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Ionicons
+                    name={pendingSync > 0 ? 'cloud-upload' : 'cloud-done'}
+                    size={18}
+                    color={pendingSync > 0 ? colors.accent : colors.textSecondary}
+                  />
+                )}
+              </IconButton>
+              {pendingSync > 0 ? (
+                <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+                  <Text style={styles.badgeText}>{pendingSync}</Text>
+                </View>
+              ) : null}
+            </View>
+            <IconButton
+              size="sm"
+              testID="notes-list.icon-button.add"
+              onPress={() => {
+                HapticService.medium();
+                navigation.navigate('NoteEditor', {});
+              }}
+              accessibilityLabel="Add note"
+            >
+              <Ionicons name="add" size={20} color={colors.accent} />
+            </IconButton>
+          </>
+        }
+      />
+
     </SafeAreaView>
   );
 }
@@ -457,4 +564,17 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
   },
   errorText: { fontSize: 13 },
+  actionWithBadge: { position: 'relative' },
+  badge: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    minWidth: 14,
+    height: 14,
+    paddingHorizontal: 3,
+    borderRadius: 7,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  badgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
 });

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
@@ -8,16 +8,11 @@ import SortPicker from '../SortPicker';
 import { useTheme } from '../../contexts/ThemeContext';
 import { HapticService } from '../../utils/haptics';
 import { GitRepository } from '../../services/GitService';
-import { ViewMode, VIEW_MODE_ICONS } from '../../utils/viewModes';
 import { SortMode } from '../../types/SortTypes';
 
 interface NotesListHeaderProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  viewMode: ViewMode;
-  activeFilterCount: number;
-  pendingSync: number;
-  isManualSyncing: boolean;
   repositories: GitRepository[];
   selectedRepo: GitRepository | null;
   hasActiveSearch: boolean;
@@ -25,9 +20,6 @@ interface NotesListHeaderProps {
   currentSearchMatchIndex: number;
   sortMode: SortMode;
   onSortChange: (mode: SortMode) => void;
-  onToggleViewModePicker: () => void;
-  onOpenFilters: () => void;
-  onManualSync: () => void;
   onSelectRepo: (repo: GitRepository | null) => void;
   onSearchNavigate: (step: -1 | 1) => void;
 }
@@ -35,10 +27,6 @@ interface NotesListHeaderProps {
 export function NotesListHeader({
   searchQuery,
   onSearchChange,
-  viewMode,
-  activeFilterCount,
-  pendingSync,
-  isManualSyncing,
   repositories,
   selectedRepo,
   hasActiveSearch,
@@ -46,9 +34,6 @@ export function NotesListHeader({
   currentSearchMatchIndex,
   sortMode,
   onSortChange,
-  onToggleViewModePicker,
-  onOpenFilters,
-  onManualSync,
   onSelectRepo,
   onSearchNavigate,
 }: NotesListHeaderProps) {
@@ -65,78 +50,12 @@ export function NotesListHeader({
           placeholder={t('notes.searchNotes')}
           style={styles.searchBar}
         />
-        <View testID="notes-list-header.icon-button.view-mode">
-          <TouchableOpacity
-            testID="notes-list.button.toggle-view-mode"
-            style={[styles.iconBtn, { backgroundColor: colors.surface }]}
-            onPress={() => {
-              HapticService.light();
-              onToggleViewModePicker();
-            }}
-          >
-            <Ionicons name={VIEW_MODE_ICONS[viewMode]} size={20} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
-        <View testID="notes-list-header.icon-button.filters">
-          <TouchableOpacity
-            testID="notes-list.button.open-filters"
-            style={[
-              styles.iconBtn,
-              {
-                backgroundColor: activeFilterCount > 0 ? colors.primary + '20' : colors.surface,
-              },
-            ]}
-            onPress={() => {
-              HapticService.light();
-              onOpenFilters();
-            }}
-          >
-            <Ionicons
-              name="funnel-outline"
-              size={20}
-              color={activeFilterCount > 0 ? colors.primary : colors.textSecondary}
-            />
-            {activeFilterCount > 0 ? (
-              <View style={[styles.badge, { backgroundColor: colors.primary }]}>
-                <Text style={styles.badgeText}>{activeFilterCount}</Text>
-              </View>
-            ) : null}
-          </TouchableOpacity>
-        </View>
-        <View testID="notes-list-header.icon-button.sync">
-          <TouchableOpacity
-            testID="notes-list.button.manual-sync"
-            style={[
-              styles.iconBtn,
-              {
-                backgroundColor: pendingSync > 0 ? colors.primary + '20' : colors.surface,
-              },
-            ]}
-            onPress={onManualSync}
-            disabled={isManualSyncing}
-          >
-          {isManualSyncing ? (
-            <ActivityIndicator size="small" color={colors.primary} />
-          ) : (
-            <Ionicons
-              name={pendingSync > 0 ? 'cloud-upload' : 'cloud-done'}
-              size={20}
-              color={pendingSync > 0 ? colors.primary : colors.textSecondary}
-            />
-          )}
-          {pendingSync > 0 ? (
-            <View style={[styles.badge, { backgroundColor: colors.primary }]}>
-              <Text style={styles.badgeText}>{pendingSync}</Text>
-            </View>
-          ) : null}
-          </TouchableOpacity>
+        <View testID="notes-list.sort.change">
+          <SortPicker currentSort={sortMode} onSortChange={onSortChange} entityType="notes" size="bar" />
         </View>
       </View>
 
       <View style={styles.chipRow}>
-        <View testID="notes-list.sort.change" style={styles.sortAnchor}>
-          <SortPicker currentSort={sortMode} onSortChange={onSortChange} entityType="notes" />
-        </View>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -228,29 +147,12 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 12,
     gap: 8,
   },
   searchBar: { flex: 1 },
-  iconBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  badge: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  badgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
   chipRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -260,9 +162,8 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     paddingBottom: 8,
   },
-  sortAnchor: { paddingLeft: 12, paddingRight: 6 },
   chipScroll: { flex: 1 },
-  chipContent: { gap: 6, paddingRight: 12, alignItems: 'center' },
+  chipContent: { gap: 6, paddingHorizontal: 16, alignItems: 'center' },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',

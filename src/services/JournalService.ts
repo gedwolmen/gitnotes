@@ -58,3 +58,13 @@ export function buildJournalNoteInput(date: Date, content: string = ''): NoteCre
     format: 'markdown',
   };
 }
+
+export function buildJournalEditorParams(date: Date) {
+  return {
+    initialTitle: journalNoteTitle(date),
+    initialContent: '',
+    initialTags: [JOURNAL_TAG],
+    folderPath: JOURNAL_FOLDER,
+    format: 'markdown' as const,
+  };
+}

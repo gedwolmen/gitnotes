@@ -1,10 +1,12 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Alert, Linking, ScrollView } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, Alert, Linking, ScrollView, TouchableOpacity } from 'react-native';
 import { NeorgContentBlock, NeorgHeading, NeorgListItem, NeorgChecklistItem, NeorgDefinitionItem } from '../models/NeorgContent';
 import { useTheme } from '../contexts/ThemeContext';
 import { useRenderStyle } from '../stores/renderStyleStore';
 import type { RenderFormat } from '../types/RenderStyle';
 import { classifyHref } from '../utils/linkClassifier';
+import CodeBlock from './CodeBlock';
+import KatexView from './KatexView';
 
 interface StructuredRendererProps {
   blocks: NeorgContentBlock[];
@@ -25,6 +27,7 @@ type InlineSegment =
   | { type: 'superscript'; content: string }
   | { type: 'subscript'; content: string }
   | { type: 'verbatim'; content: string }
+  | { type: 'spoiler'; content: string }
   | { type: 'org-code'; content: string }
   | { type: 'org-strike'; content: string }
   | { type: 'footnote-ref'; label: string; content: string }
@@ -112,6 +115,7 @@ const inlinePatterns: InlinePattern[] = [
   { regex: /\+([^+\s][^+]*[^+\s]?)\+/g, handler: (m) => ({ type: 'org-strike', content: m[1] }) },
   { regex: /=([^=\s][^=]*[^=\s]?)=/g, handler: (m) => ({ type: 'verbatim', content: m[1] }) },
   { regex: /~([^~\s][^~]*[^~\s]?)~/g, handler: (m) => ({ type: 'org-code', content: m[1] }) },
+  { regex: /!([^!\s][^!]*[^!\s]?)!/g, handler: (m) => ({ type: 'spoiler', content: m[1] }) },
 ];
 
 function findOuterDelimitedMatch(text: string, delimiter: '*' | '/'): { length: number; segment: InlineSegment } | null {
@@ -206,8 +210,24 @@ export function createMemoizedNeorgInlineParser(
   };
 }
 
+function DetailsBlock({ summary, content, colors }: { summary?: string; content: string; colors: any }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <View style={{ marginVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>
+      <TouchableOpacity onPress={() => setExpanded(e => !e)} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, backgroundColor: colors.surfaceSecondary }}>
+        <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary }}>{expanded ? '▼' : '▶'} {summary || 'Details'}</Text>
+      </TouchableOpacity>
+      {expanded && (
+        <View style={{ padding: 12 }}>
+          <Text selectable style={{ fontSize: 14, lineHeight: 20, color: colors.text }}>{content}</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
 export default function StructuredRenderer({ blocks, format = 'neorg', onOpenNote, currentNotePath, headingPositions, scrollRef }: StructuredRendererProps) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const overrides = useRenderStyle(format);
 
   const headingColorFor = (level: number): string => {
@@ -356,6 +376,19 @@ export default function StructuredRenderer({ blocks, format = 'neorg', onOpenNot
               );
             case 'footnote-ref':
               return <Text key={k} selectable style={{ fontSize: 11, lineHeight: 14, color: linkColor }}>{seg.label}</Text>;
+            case 'spoiler': {
+              const SpoilerWrap = ({ children }: { children: React.ReactNode }) => {
+                const [revealed, setRevealed] = useState(false);
+                return (
+                  <TouchableOpacity onPress={() => setRevealed(r => !r)} activeOpacity={0.7}>
+                    <Text selectable style={revealed ? styles.spoilerRevealed : [styles.spoilerHidden, { backgroundColor: colors.text }]}>
+                      {revealed ? children : '████'}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              };
+              return <SpoilerWrap key={k}>{seg.content}</SpoilerWrap>;
+            }
             default:
               return 'content' in seg ? <Text key={k} selectable>{seg.content}</Text> : null;
           }
@@ -463,11 +496,8 @@ export default function StructuredRenderer({ blocks, format = 'neorg', onOpenNot
   );
 
   const renderCodeBlock = (code: { language?: string; content: string }, blockIndex: number) => (
-    <View key={`code-${blockIndex}`} style={[styles.codeBlock, { backgroundColor: codeBg }]}>
-      {code.language && (
-        <Text selectable style={[styles.codeLanguage, { color: colors.textSecondary }]}>{code.language}</Text>
-      )}
-      <Text selectable style={[styles.codeContent, { color: codeText }]}>{code.content}</Text>
+    <View key={`code-${blockIndex}`}>
+      <CodeBlock code={code.content} language={code.language} isDark={isDark} />
     </View>
   );
 
@@ -590,13 +620,16 @@ export default function StructuredRenderer({ blocks, format = 'neorg', onOpenNot
         ) : null;
       case 'math':
         return block.math ? (
-          <View key={`math-${index}`} style={[styles.codeBlock, { backgroundColor: codeBg }]}>
-            <Text selectable style={{ fontSize: 12, fontWeight: '600', color: colors.textSecondary, marginBottom: 4 }}>MATH</Text>
-            <Text selectable style={{ fontFamily: 'monospace', fontSize: 14, color: codeText }}>{block.math.content}</Text>
+          <View key={`math-${index}`} style={{ marginVertical: 8 }}>
+            <KatexView expression={block.math.content} displayMode="block" isDark={isDark} />
           </View>
         ) : null;
       case 'comment':
         return null;
+      case 'details':
+        return block.details ? (
+          <DetailsBlock key={`details-${index}`} summary={block.details.summary} content={block.details.content} colors={colors} />
+        ) : null;
       default:
         return null;
     }
@@ -643,6 +676,19 @@ const styles = StyleSheet.create({
   subscript: {
     fontSize: 11,
     lineHeight: 14,
+  },
+  spoilerHidden: {
+    fontSize: 14,
+    lineHeight: 20,
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    overflow: 'hidden',
+  },
+  spoilerRevealed: {
+    fontSize: 14,
+    lineHeight: 20,
+    backgroundColor: 'transparent',
   },
   link: {
     textDecorationLine: 'underline',

@@ -323,9 +323,9 @@ export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph }: 
       <Text style={[styles.subtitle, { color: colors.textSecondary, fontSize: SUB_SIZE[size] }]} numberOfLines={1}>
         {relativeTime(item.updatedAt)}
       </Text>
-      {(visibleTags.length > 0 || showRepoBadge) ? (
+      {(isLarge && visibleTags.length > 0) || showRepoBadge ? (
         <View style={styles.metaRow}>
-          {(isPinned ? [] : visibleTags).map((tag) => (
+          {(isLarge ? visibleTags : []).map((tag) => (
             <View key={tag} style={[styles.tagChip, { backgroundColor: colors.primary + '20' }]}>
               <Text style={[styles.tagChipText, { color: colors.primary }]} numberOfLines={1}>
                 {tag}

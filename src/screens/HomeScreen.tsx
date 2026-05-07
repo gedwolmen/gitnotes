@@ -16,7 +16,7 @@ import TemplateSelector from '../components/TemplateSelector';
 import { NoteTemplate } from '../services/TemplateService';
 import { NoteFormatPreferenceService } from '../services/NoteFormatPreferenceService';
 import {
-  buildJournalNoteInput,
+  buildJournalEditorParams,
   findJournalEntry,
   journalNoteTitle,
 } from '../services/JournalService';
@@ -38,7 +38,7 @@ const FORMAT_OPTIONS: { label: string; value: EditableNoteFormat; ext: string }[
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
-  const { notes, createNote } = useNotes();
+  const { notes } = useNotes();
   const { canvases } = useCanvases();
   const { isTablet, maxContentWidth } = useResponsive();
   const headerHeight = useScreenHeaderHeight({ subtitle: true });
@@ -48,7 +48,6 @@ export default function HomeScreen() {
   const [defaultFormat, setDefaultFormat] = useState<EditableNoteFormat | null>(null);
   const [rememberFormat, setRememberFormat] = useState<boolean>(false);
   const [pickerRemember, setPickerRemember] = useState<boolean>(false);
-  const [isCreatingJournal, setIsCreatingJournal] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -92,8 +91,7 @@ export default function HomeScreen() {
     setShowTemplateSelector(true);
   }, []);
 
-  const handleOpenTodaysJournal = useCallback(async () => {
-    if (isCreatingJournal) return;
+  const handleOpenTodaysJournal = useCallback(() => {
     HapticService.medium();
     const today = new Date();
     const existing = findJournalEntry(notes, today);
@@ -101,16 +99,8 @@ export default function HomeScreen() {
       navigation.navigate('NoteEditor', { noteId: existing.id });
       return;
     }
-    setIsCreatingJournal(true);
-    try {
-      const note = await createNote(buildJournalNoteInput(today));
-      if (note) {
-        navigation.navigate('NoteEditor', { noteId: note.id });
-      }
-    } finally {
-      setIsCreatingJournal(false);
-    }
-  }, [createNote, isCreatingJournal, navigation, notes]);
+    navigation.navigate('NoteEditor', buildJournalEditorParams(today));
+  }, [navigation, notes]);
 
   const todaysJournalTitle = journalNoteTitle(new Date());
   const hasTodaysJournal = notes.some((n) => n.title === todaysJournalTitle);
@@ -183,7 +173,6 @@ export default function HomeScreen() {
         <Pressable
           testID="home.button.open-journal"
           onPress={handleOpenTodaysJournal}
-          disabled={isCreatingJournal}
           style={({ pressed }) => [
             styles.bentoHero,
             { backgroundColor: colors.primary, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
