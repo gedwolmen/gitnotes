@@ -86,3 +86,4 @@ yarn-error.log*
 # Sisyphus
 .sisyphus/
 .claude/worktrees/
+.claude/
