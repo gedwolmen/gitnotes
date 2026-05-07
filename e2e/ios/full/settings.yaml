@@ -6,7 +6,8 @@ tags:
   - settings
 ---
 
-- launchApp
+- launchApp:
+    clearState: false
 
 - tapOn:
     id: tab-bar.tab.press-SettingsTab
@@ -14,33 +15,41 @@ tags:
 - assertVisible:
     text: "Settings"
 
-- scroll
+- scrollUntilVisible:
+    element:
+      id: settings.toggle.neu
+    direction: DOWN
 
-- assertVisible:
+- tapOn:
     id: settings.toggle.neu
 
 - tapOn:
     id: settings.toggle.neu
 
-- tapOn:
-    id: settings.toggle.neu
+- scrollUntilVisible:
+    element:
+      id: settings.toggle.biometric-lock
+    direction: DOWN
 
-- scroll
-
-- assertVisible:
-    id: settings.toggle.biometric-lock
-
-- scroll
-
-- assertVisible:
-    id: settings.toggle.sync-frequently
+- scrollUntilVisible:
+    element:
+      id: settings.toggle.sync-frequently
+    direction: DOWN
 
 - tapOn:
     id: settings.button.interval-picker
 
 - back
 
-- scroll
+- scrollUntilVisible:
+    element:
+      id: settings.toggle.background-sync
+    direction: DOWN
+
+- scrollUntilVisible:
+    element:
+      id: settings.button.add-account
+    direction: UP
 
 - assertVisible:
-    id: settings.toggle.background-sync
+    id: settings.button.add-account

@@ -14,12 +14,13 @@ tags:
 - assertVisible:
     id: notes-list.search-bar.search
 
-- setInputText:
+- inputText:
     id: notes-list.search-bar.search
     text: "test search"
 
-- clearTextField:
+- tapOn:
     id: notes-list.search-bar.search
+- eraseText: 50
 
 - tapOn:
     id: notes-list.button.toggle-view-mode

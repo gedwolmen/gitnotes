@@ -5,7 +5,11 @@ tags:
   - ios
 ---
 
-- launchApp
+- launchApp:
+    clearState: false
+
+- tapOn:
+    id: tab-bar.tab.press-HomeTab
 
 - assertVisible:
     id: home.button.create-note
@@ -13,12 +17,8 @@ tags:
 - assertVisible:
     id: home.button.open-journal
 
-- tapOn:
+- assertVisible:
     id: home.button.open-templates
 
-- back
-
-- tapOn:
+- assertVisible:
     id: home.button.navigate
-
-- back

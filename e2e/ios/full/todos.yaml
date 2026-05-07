@@ -6,10 +6,14 @@ tags:
   - todos
 ---
 
-- launchApp
+- launchApp:
+    clearState: false
 
 - tapOn:
     id: tab-bar.tab.press-TodosTab
+
+- waitForAnimationToEnd:
+    timeout: 5000
 
 - assertVisible:
     id: todo-list.icon-button.add
@@ -23,7 +27,8 @@ tags:
 - tapOn:
     id: todo-list.icon-button.filters
 
-- back
+- tapOn:
+    point: 50%,10%
 
 - tapOn:
     id: todo-list.icon-button.add

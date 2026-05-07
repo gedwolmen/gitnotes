@@ -67,8 +67,12 @@ export function Modal(props: ModalProps) {
         intensity={40}
         tint={isDark ? 'dark' : 'light'}
         style={StyleSheet.absoluteFill}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
       />
       <Pressable
+        accessible={false}
+        importantForAccessibility="no"
         onPress={dismissOnBackdrop ? onRequestClose : undefined}
         style={[
           StyleSheet.absoluteFill,

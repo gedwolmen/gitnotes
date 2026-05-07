@@ -134,6 +134,7 @@ export default function GitContextPicker({
   return (
     <View>
       <TouchableOpacity
+        testID="git-context-picker.button.open"
         style={[
           styles.triggerButton,
           { backgroundColor: colors.surface, borderColor: repo ? colors.primary : colors.border },

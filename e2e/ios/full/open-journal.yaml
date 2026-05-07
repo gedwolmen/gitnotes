@@ -1,0 +1,23 @@
+appId: com.xaventra.gitnotes
+name: iOS - Open Journal Flow
+tags:
+  - full
+  - ios
+  - journal
+
+---
+
+- launchApp:
+    clearState: false
+
+- tapOn:
+    id: tab-bar.tab.press-HomeTab
+
+- tapOn:
+    id: home.button.open-journal
+
+- assertVisible:
+    id: note-viewer.button.edit
+
+- tapOn:
+    id: note-viewer.button.back

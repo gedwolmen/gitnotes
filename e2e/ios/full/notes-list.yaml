@@ -6,7 +6,8 @@ tags:
   - notes
 ---
 
-- launchApp
+- launchApp:
+    clearState: false
 
 - tapOn:
     id: tab-bar.tab.press-NotesTab
@@ -14,12 +15,13 @@ tags:
 - assertVisible:
     id: notes-list.search-bar.search
 
-- setInputText:
+- inputText:
     id: notes-list.search-bar.search
     text: "test search"
 
-- clearTextField:
+- tapOn:
     id: notes-list.search-bar.search
+- eraseText: 50
 
 - tapOn:
     id: notes-list.button.toggle-view-mode
@@ -28,15 +30,16 @@ tags:
     id: notes-view-mode.button.close
 
 - tapOn:
-    id: notes-view-mode.button.change-compact
+    id: notes-view-mode.button.change-list
 
 - tapOn:
     id: notes-list.button.open-filters
 
 - assertVisible:
-    text: "Filter"
+    id: notes-filter-modal.button.close
 
-- back
+- tapOn:
+    id: notes-filter-modal.button.close
 
 - tapOn:
     id: notes-list.button.manual-sync

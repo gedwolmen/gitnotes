@@ -6,18 +6,22 @@ tags:
   - templates
 ---
 
-- launchApp
+- launchApp:
+    clearState: false
 
 - tapOn:
-    id: home.button.open-templates
+    id: tab-bar.tab.press-SettingsTab
+
+- scrollUntilVisible:
+    element:
+      id: settings.button.manage-templates
+    direction: DOWN
+
+- tapOn:
+    id: settings.button.manage-templates
 
 - assertVisible:
-    text: "Template"
-
-- tapOn:
     id: template-manager.button.create
-
-- back
 
 - tapOn:
     id: template-manager.icon-button.new-template
