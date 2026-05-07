@@ -168,6 +168,45 @@ class GitHubServiceClass {
   private token: string | null = null;
   private user: GitHubUser | null = null;
 
+  /**
+   * Per-process cache of `(owner/repo/path@ref) → sha`. Populated on every
+   * successful read/write that surfaces a sha and invalidated on 409. Lets
+   * the upsert / delete paths skip the GET-for-sha that #565 phase C calls
+   * out as a fixed cost on every API-mode write. Cold on app launch (1
+   * legacy GET on first touch); after that, in-session repeat saves cost
+   * only the PUT/DELETE round-trip.
+   */
+  private shaCache = new Map<string, string>();
+
+  private shaCacheKey(owner: string, repo: string, path: string, ref?: string): string {
+    return `${owner}/${repo}/${path}@${ref ?? ''}`;
+  }
+
+  invalidateShaCache(owner: string, repo: string, path: string, ref?: string): void {
+    this.shaCache.delete(this.shaCacheKey(owner, repo, path, ref));
+  }
+
+  /**
+   * Cache-first sha lookup. Hits the GET only when the entry is missing
+   * (or has been invalidated by a prior 409). Same return shape as
+   * `getFileSha`, so callers branch on `kind` exactly the same way.
+   */
+  async getFileShaCached(
+    owner: string,
+    repo: string,
+    path: string,
+    ref?: string,
+    opts?: TokenOpts,
+  ): Promise<ShaResult> {
+    const cached = this.shaCache.get(this.shaCacheKey(owner, repo, path, ref));
+    if (cached) return { kind: 'found', sha: cached };
+    const result = await this.getFileSha(owner, repo, path, ref, opts);
+    if (result.kind === 'found') {
+      this.shaCache.set(this.shaCacheKey(owner, repo, path, ref), result.sha);
+    }
+    return result;
+  }
+
   async initialize(): Promise<void> {
     try {
       this.token = await AuthService.getToken();
@@ -507,13 +546,23 @@ class GitHubServiceClass {
     const encodedPath = path.split('/').map(encodeURIComponent).join('/');
     const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
 
+    const cacheKey = this.shaCacheKey(owner, repo, path, branch);
     let currentSha = sha;
     let networkRetried = false;
     let lastError: unknown = null;
 
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        return await this.request(url, 'DELETE', { message, sha: currentSha, branch }, opts);
+        const result = (await this.request(
+          url,
+          'DELETE',
+          { message, sha: currentSha, branch },
+          opts,
+        )) as GitHubFileCommit | null;
+        // File is gone — drop the cache so a future create gets a fresh
+        // sha instead of one pointing at a deleted blob.
+        this.shaCache.delete(cacheKey);
+        return result;
       } catch (error) {
         lastError = error;
         const status = (error as { status?: number })?.status;
@@ -521,16 +570,19 @@ class GitHubServiceClass {
         if (status === 404) {
           // Already gone upstream — synthetic success so callers can
           // treat the deletion as complete.
+          this.shaCache.delete(cacheKey);
           return { content: null, commit: { sha: '' } };
         }
 
         if (status === 409 && attempt < 2) {
+          this.shaCache.delete(cacheKey);
           const refreshed = await this.getFileSha(owner, repo, path, branch, opts);
           if (refreshed.kind === 'not-found') {
             return { content: null, commit: { sha: '' } };
           }
           if (refreshed.kind === 'found') {
             currentSha = refreshed.sha;
+            this.shaCache.set(cacheKey, refreshed.sha);
             continue;
           }
           // refresh itself errored — bubble up so caller doesn't soft-succeed.
@@ -583,20 +635,47 @@ class GitHubServiceClass {
     bytes.forEach((b) => { binary += String.fromCharCode(b); });
     const base64Content = btoa(binary);
 
+    const cacheKey = this.shaCacheKey(owner, repo, path, branch);
+
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        const sha = await this.getFileShaOrNull(owner, repo, path, branch, opts);
+        // Cache-first sha lookup (#565 phase C). The legacy
+        // `getFileShaOrNull` GET is now skipped on every write after the
+        // first one in this process — drain becomes 1 PUT per item
+        // instead of 1 GET + 1 PUT.
+        let sha: string | null = this.shaCache.get(cacheKey) ?? null;
         if (!sha) {
-          return this.createFile(owner, repo, path, content, message, branch, opts);
+          sha = await this.getFileShaOrNull(owner, repo, path, branch, opts);
+          if (sha) this.shaCache.set(cacheKey, sha);
+        }
+        if (!sha) {
+          const created = await this.createFile(owner, repo, path, content, message, branch, opts);
+          const createdSha = created?.content?.sha;
+          if (createdSha) this.shaCache.set(cacheKey, createdSha);
+          return created;
         }
 
-        return await this.request(url, 'PUT', { message, content: base64Content, sha, branch }, opts);
+        const response = (await this.request(
+          url,
+          'PUT',
+          { message, content: base64Content, sha, branch },
+          opts,
+        )) as GitHubFileCommit | null;
+        // Cache the freshly-issued sha so the next write doesn't have
+        // to round-trip for it.
+        const newSha = response?.content?.sha;
+        if (newSha) this.shaCache.set(cacheKey, newSha);
+        return response;
       } catch (error) {
         const status = (error as { status?: number })?.status;
         if (status === 409 && attempt < 2) {
+          // Sha drifted upstream — drop the stale cache entry so the
+          // next iteration falls back to a fresh GET.
+          this.shaCache.delete(cacheKey);
           continue;
         }
         if (status === 422) {
+          this.shaCache.delete(cacheKey);
           return { content: { sha: '' }, commit: { sha: '' } } as GitHubFileCommit;
         }
         if (attempt === 2) {
