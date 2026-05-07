@@ -45,10 +45,13 @@ export function SwipeableListItem({
     onDelete();
   };
 
-  const handleSelectFromSwipe = () => {
-    HapticService.selection();
-    close();
-    onToggleSelect();
+  const handleSwipeableOpen = (direction: 'left' | 'right') => {
+    if (direction === 'left') {
+      HapticService.selection();
+      close();
+      onToggleSelect();
+      return;
+    }
   };
 
   const renderRightActions = () => (
@@ -66,16 +69,11 @@ export function SwipeableListItem({
   );
 
   const renderLeftActions = () => (
-    <View style={styles.actionRowLeft}>
-      <TouchableOpacity
-        testID={`swipeable-list-item.button.select-${itemId}`}
-        style={[styles.action, { backgroundColor: colors.primary }]}
-        onPress={handleSelectFromSwipe}
-        accessibilityLabel={selected ? 'Deselect' : 'Select'}
-      >
-        <Ionicons name={selected ? 'checkmark-circle' : 'ellipse-outline'} size={20} color="#FFFFFF" />
-        <Text style={styles.actionText}>{selected ? 'Deselect' : 'Select'}</Text>
-      </TouchableOpacity>
+    <View
+      testID={`swipeable-list-item.hint.select-${itemId}`}
+      style={[styles.selectHint, { backgroundColor: colors.primary }]}
+    >
+      <Ionicons name={selected ? 'checkmark-circle' : 'ellipse-outline'} size={22} color="#FFFFFF" />
     </View>
   );
 
@@ -109,12 +107,12 @@ export function SwipeableListItem({
   return (
     <ReanimatedSwipeable
       ref={ref}
-      enabled={!selectionMode}
       friction={2}
       rightThreshold={SWIPE_THRESHOLD}
       leftThreshold={SWIPE_THRESHOLD}
       renderRightActions={renderRightActions}
       renderLeftActions={renderLeftActions}
+      onSwipeableOpen={handleSwipeableOpen}
       onSwipeableWillOpen={() => onSwipeableWillOpen(itemId)}
       onSwipeableWillClose={() => onSwipeableWillClose(itemId)}
     >
@@ -134,10 +132,13 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
     justifyContent: 'flex-end',
   },
-  actionRowLeft: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    justifyContent: 'flex-start',
+  selectHint: {
+    width: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    marginVertical: 4,
+    marginHorizontal: 4,
   },
   action: {
     width: ACTION_WIDTH,
