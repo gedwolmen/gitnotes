@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { Alert, View, Text, StyleSheet, ActivityIndicator, RefreshControl, FlatList } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 import { useNotes } from '../contexts/NoteContext';
@@ -17,12 +18,12 @@ import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import { pullAllFromRepos } from '../services/RepoPullService';
 import ColorPicker from '../components/ColorPicker';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
-import { ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
+import { IconButton, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { HapticService } from '../utils/haptics';
 import { useResponsive } from '../hooks/useResponsive';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { GitHubActivityIndicator } from '../components/GitHubActivityIndicator';
-import { ViewMode } from '../utils/viewModes';
+import { ViewMode, VIEW_MODE_ICONS } from '../utils/viewModes';
 import { NoteCard as NotesListCard } from '../components/notes/NoteCard';
 import { NotesListHeader } from '../components/notes/NotesListHeader';
 import { NotesViewModePicker } from '../components/notes/NotesViewModePicker';
@@ -403,10 +404,6 @@ export default function NotesListScreen() {
       <NotesListHeader
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        viewMode={viewMode}
-        activeFilterCount={activeFilterCount}
-        pendingSync={pendingSync}
-        isManualSyncing={isManualSyncing}
         repositories={repositories}
         selectedRepo={filters.selectedRepo}
         hasActiveSearch={hasActiveSearch}
@@ -414,9 +411,6 @@ export default function NotesListScreen() {
         currentSearchMatchIndex={currentSearchMatchIndex}
         sortMode={sortMode}
         onSortChange={setSortMode}
-        onToggleViewModePicker={() => setShowViewModePicker((previous) => !previous)}
-        onOpenFilters={() => setShowFilterModal(true)}
-        onManualSync={handleManualSync}
         onSelectRepo={handleSelectRepo}
         onSearchNavigate={handleSearchNavigate}
       />
@@ -501,6 +495,7 @@ export default function NotesListScreen() {
         selected={colorPickerNote?.color ?? null}
         onSelect={(color) => handleColorSelect(colorPickerNote, color)}
       />
+
       <BulkActionBar
         count={selectedIds.size}
         itemNoun="note"
@@ -508,7 +503,86 @@ export default function NotesListScreen() {
         onCancel={clearSelection}
         onDelete={handleBulkDelete}
       />
-      <ScreenHeader title="Notes" />
+      
+
+      <ScreenHeader
+        title="Notes"
+        actions={
+          <>
+            <IconButton
+              size="sm"
+              testID="notes-list.icon-button.view-mode"
+              onPress={() => {
+                HapticService.light();
+                setShowViewModePicker((previous) => !previous);
+              }}
+              accessibilityLabel="View mode"
+            >
+              <Ionicons name={VIEW_MODE_ICONS[viewMode]} size={18} color={colors.textSecondary} />
+            </IconButton>
+            <View style={styles.actionWithBadge}>
+              <IconButton
+                size="sm"
+                testID="notes-list.icon-button.filters"
+                active={activeFilterCount > 0}
+                onPress={() => {
+                  HapticService.light();
+                  setShowFilterModal(true);
+                }}
+                accessibilityLabel="Filters"
+              >
+                <Ionicons
+                  name="funnel-outline"
+                  size={18}
+                  color={activeFilterCount > 0 ? colors.accent : colors.textSecondary}
+                />
+              </IconButton>
+              {activeFilterCount > 0 ? (
+                <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+                  <Text style={styles.badgeText}>{activeFilterCount}</Text>
+                </View>
+              ) : null}
+            </View>
+            <View style={styles.actionWithBadge}>
+              <IconButton
+                size="sm"
+                testID="notes-list.icon-button.sync"
+                active={pendingSync > 0}
+                disabled={isManualSyncing}
+                onPress={handleManualSync}
+                accessibilityLabel="Sync"
+              >
+                {isManualSyncing ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Ionicons
+                    name={pendingSync > 0 ? 'cloud-upload' : 'cloud-done'}
+                    size={18}
+                    color={pendingSync > 0 ? colors.accent : colors.textSecondary}
+                  />
+                )}
+              </IconButton>
+              {pendingSync > 0 ? (
+                <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+                  <Text style={styles.badgeText}>{pendingSync}</Text>
+                </View>
+              ) : null}
+            </View>
+            <IconButton
+              size="sm"
+              testID="notes-list.icon-button.add"
+              onPress={() => {
+                HapticService.medium();
+                navigation.navigate('NoteEditor', {});
+              }}
+              accessibilityLabel="Add note"
+            >
+              <Ionicons name="add" size={20} color={colors.accent} />
+            </IconButton>
+          </>
+        }
+      />
+
     </SafeAreaView>
   );
 }
@@ -524,4 +598,17 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
   },
   errorText: { fontSize: 13 },
+  actionWithBadge: { position: 'relative' },
+  badge: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    minWidth: 14,
+    height: 14,
+    paddingHorizontal: 3,
+    borderRadius: 7,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  badgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
 });
