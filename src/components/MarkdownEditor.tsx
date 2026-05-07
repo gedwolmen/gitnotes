@@ -99,10 +99,11 @@ export default function MarkdownEditor({ content, onContentChange, placeholder =
   }, [onContentChange, text]);
 
   useEffect(() => {
-    if (content !== text) {
+    if (content !== previousTextRef.current && content !== text) {
+      previousTextRef.current = content;
       reset(content);
     }
-  }, [content, reset]);
+  }, [content, reset, text]);
 
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
