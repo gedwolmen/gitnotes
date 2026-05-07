@@ -401,7 +401,7 @@
     "component": "NotesListCard",
     "elementType": "button",
     "action": "long-press-note",
-    "testID": "notes-list-card.button.long-press",
+    "testID": "note-card-${id}",
     "flowId": "notes",
     "platform": ["ios", "android"]
   },
@@ -2242,7 +2242,7 @@
     "component": "SortPicker",
     "elementType": "picker",
     "action": "onValueChange",
-    "testID": "sort-picker.picker.change",
+    "testID": "sort-option-${field}-${direction}",
     "flowId": "home-nav",
     "platform": ["ios", "android"]
   },
