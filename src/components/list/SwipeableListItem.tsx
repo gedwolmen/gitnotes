@@ -43,10 +43,10 @@ export function SwipeableListItem({
 
   const renderRightActions = () => (
     <View
-      testID={`swipeable-list-item.hint.select-${itemId}`}
-      style={[styles.selectHint, { backgroundColor: colors.primary }]}
+      testID={`swipeable-list-item.hint.swipe-${itemId}`}
+      style={[styles.swipeHint, { backgroundColor: colors.error }]}
     >
-      <Ionicons name={selected ? 'checkmark-circle' : 'ellipse-outline'} size={22} color="#FFFFFF" />
+      <Ionicons name={selected ? 'checkmark-circle' : 'trash'} size={22} color="#FFFFFF" />
     </View>
   );
 
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'transparent',
   },
-  selectHint: {
+  swipeHint: {
     width: 64,
     alignItems: 'center',
     justifyContent: 'center',
