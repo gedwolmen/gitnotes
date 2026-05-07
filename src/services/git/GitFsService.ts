@@ -297,4 +297,85 @@ export class GitFsService {
       return null;
     }
   }
+
+  static async findMergeBase(opts: {
+    repoPath: string;
+    ref1: string;
+    ref2: string;
+  }): Promise<string | null> {
+    const info = parseRepoPath(opts.repoPath);
+    if (!info) return null;
+    const dir = repoDirVirtual(info.owner, info.repo);
+    const fs = makeRepoFs();
+    try {
+      const oid1 = await git.resolveRef({ fs, dir, ref: opts.ref1 });
+      const oid2 = await git.resolveRef({ fs, dir, ref: opts.ref2 });
+      const bases = await git.findMergeBase({ fs, dir, oids: [oid1, oid2] });
+      return bases?.[0] ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  static async mergeCommit(opts: {
+    repoPath: string;
+    branch: string;
+    oursRef: string;
+    theirsRef: string;
+    message: string;
+    author: { name: string; email: string };
+    token?: string;
+  }): Promise<{ sha: string } | { error: string }> {
+    const info = parseRepoPath(opts.repoPath);
+    if (!info) return { error: `Invalid repo path: ${opts.repoPath}` };
+    const dir = repoDirVirtual(info.owner, info.repo);
+    const fs = makeRepoFs();
+
+    try {
+      const oursOid = await git.resolveRef({ fs, dir, ref: opts.oursRef });
+      const theirsOid = await git.resolveRef({ fs, dir, ref: opts.theirsRef });
+
+      const sha = await git.commit({
+        fs,
+        dir,
+        message: opts.message,
+        author: opts.author,
+        parent: [oursOid, theirsOid],
+        ref: opts.branch,
+      });
+
+      await git.push({
+        fs,
+        dir,
+        http: gitHttp,
+        ref: opts.branch,
+        remoteRef: opts.branch,
+        onAuth: ensureToken(opts.token),
+      });
+
+      return { sha };
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      return { error: message };
+    }
+  }
+
+  static async readBlobAtRef(opts: {
+    repoPath: string;
+    ref: string;
+    filepath: string;
+  }): Promise<{ content: string; oid: string } | null> {
+    const info = parseRepoPath(opts.repoPath);
+    if (!info) return null;
+    const dir = repoDirVirtual(info.owner, info.repo);
+    const fs = makeRepoFs();
+
+    try {
+      const resolved = await git.resolveRef({ fs, dir, ref: opts.ref });
+      const blob = await git.readBlob({ fs, dir, oid: resolved, filepath: opts.filepath });
+      return { content: new TextDecoder('utf-8').decode(blob.blob), oid: blob.oid };
+    } catch {
+      return null;
+    }
+  }
 }

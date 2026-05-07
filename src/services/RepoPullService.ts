@@ -13,6 +13,8 @@ import { SyncEngineService } from './SyncEngineService';
 import { GitFsService } from './git/GitFsService';
 import { resolveBranch } from './git/branchResolver';
 import { AuthService } from './AuthService';
+import { ConflictResolverService } from './conflict/ConflictResolverService';
+import { useConflictStore } from '../stores/conflictStore';
 
 /**
  * Picks the read transport for a repo based on the user's per-repo
@@ -45,6 +47,22 @@ async function getRepoReader(
       // returns 0 without running reconcile, preserving local edits.
       const result = await GitFsService.pullWithFastForward({ repoPath, branch, token });
       if (!result.ok) {
+        if (result.reason === 'diverged') {
+          try {
+            const localRef = `refs/heads/${branch}`;
+            const remoteRef = `refs/remotes/origin/${branch}`;
+            const mergeBase = await GitFsService.findMergeBase({ repoPath, ref1: localRef, ref2: remoteRef });
+            if (mergeBase) {
+              const conflictSet = await ConflictResolverService.detectConflicts({
+                repoPath, branch, localRef, remoteRef, mergeBaseRef: mergeBase,
+              });
+              const resolved = await ConflictResolverService.autoResolve(conflictSet);
+              await useConflictStore.getState().addConflict(resolved);
+            }
+          } catch {
+            // best effort
+          }
+        }
         throw new Error(
           `Local repo ${repoPath}@${branch} has diverged from upstream (${result.reason}). ` +
             `Push or reset your local commits before the next pull.`,

@@ -19,6 +19,8 @@ import VideoViewerScreen from '../screens/VideoViewerScreen';
 import RenderStyleSettingsScreen from '../screens/RenderStyleSettingsScreen';
 import RenderStyleEditorScreen from '../screens/RenderStyleEditorScreen';
 import TemplateManagerScreen from '../screens/TemplateManagerScreen';
+import SyncStatusScreen from '../screens/SyncStatusScreen';
+import ConflictResolverScreen from '../screens/ConflictResolverScreen';
 import NeumorphicGallery from '../screens/__dev__/NeumorphicGallery';
 import { FloatingAIButton } from '../components/ai/FloatingAIButton';
 import { ChatRepoPickerModal } from '../components/ai/ChatRepoPickerModal';
@@ -169,6 +171,16 @@ export default function AppNavigator() {
             <Stack.Screen
               name="TemplateManager"
               component={TemplateManagerScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="SyncStatus"
+              component={SyncStatusScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="ConflictResolver"
+              component={ConflictResolverScreen}
               options={{ headerShown: false }}
             />
             {__DEV__ && (

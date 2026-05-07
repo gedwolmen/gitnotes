@@ -15,6 +15,8 @@ type ProductionStackParamList = {
   RenderStyleSettings: undefined;
   RenderStyleEditor: { format: 'markdown' | 'org' | 'neorg' };
   TemplateManager: undefined;
+  SyncStatus: undefined;
+  ConflictResolver: { repoPath: string; branch: string; filePath: string };
 };
 
 type DevOnlyStackParamList = {

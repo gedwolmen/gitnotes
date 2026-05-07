@@ -15,6 +15,7 @@ import { syncTodoToGitHub } from '../services/TodoGitHubSyncService';
 import { pullAllFromRepos } from '../services/RepoPullService';
 import { IconButton, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
+import { ConflictBanner } from '../components/ui/ConflictBanner';
 import { EntityFilterModal } from '../components/EntityFilterModal';
 import { FilterBar, FilterChip } from '../components/FilterBar';
 import { useEntityFilter } from '../hooks/useEntityFilter';
@@ -386,6 +387,7 @@ export default function TodoListScreen() {
     >
       <View style={{ paddingTop: headerHeight }}>
         <OfflineBanner />
+        <ConflictBanner />
       </View>
 
       <TodosListHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} sortMode={sortMode} onSortChange={setSortMode} />
