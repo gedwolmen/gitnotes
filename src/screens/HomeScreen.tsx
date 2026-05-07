@@ -123,7 +123,7 @@ export default function HomeScreen() {
     });
   }, [navigation]);
 
-  const recentLimit = isTablet ? 12 : 7;
+  const recentLimit = isTablet ? 12 : 10;
   const pinnedLimit = isTablet ? 12 : 6;
   const recentItems = buildRecentFeed(notes, canvases, { excludePinned: true, limit: recentLimit });
   const pinnedItems = buildPinnedFeed(notes, canvases, pinnedLimit);
