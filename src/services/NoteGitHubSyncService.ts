@@ -455,7 +455,7 @@ export async function syncNoteToGitHub(params: {
       finalContent,
       message,
       targetBranch,
-      opts,
+      { ...opts, expectExists: !!filePath },
     );
 
     if (result) {
