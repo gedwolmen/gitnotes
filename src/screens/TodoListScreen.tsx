@@ -86,6 +86,11 @@ export default function TodoListScreen() {
     entityName: 'todo',
   });
 
+  const todosListToken = useMemo(
+    () => filteredTodos.map((t) => `${t.id}:${t.completed ? 1 : 0}`).join('|'),
+    [filteredTodos],
+  );
+
   const getSwipeableRef = useCallback((todoId: string) => {
     if (!swipeableRefs.current[todoId]) {
       swipeableRefs.current[todoId] = React.createRef<SwipeableMethods>();
@@ -422,7 +427,7 @@ export default function TodoListScreen() {
         data={filteredTodos}
         renderItem={renderTodoItem}
         keyExtractor={(item) => item.id}
-        extraData={filteredTodos.length}
+        extraData={todosListToken}
         contentContainerStyle={{ ...styles.listContent, paddingBottom: tabBarHeight + 16 }}
         ListEmptyComponent={<TodosEmptyState isFiltered={hasActiveFilters} />}
         showsVerticalScrollIndicator={false}

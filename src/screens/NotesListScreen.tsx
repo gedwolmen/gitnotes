@@ -120,6 +120,11 @@ export default function NotesListScreen() {
     return chips;
   }, [filters]);
 
+  const notesListToken = useMemo(
+    () => displayNotes.map((n) => `${n.id}:${n.isPinned ? 1 : 0}`).join('|'),
+    [displayNotes],
+  );
+
   const handleRemoveFilterChip = useCallback(
     (id: string) => {
       if (id === 'format') handleSelectFormat(null);
@@ -389,7 +394,7 @@ export default function NotesListScreen() {
         renderItem={renderNote}
         keyExtractor={(item) => item.id}
         key={viewMode}
-        extraData={displayNotes.length}
+        extraData={notesListToken}
         numColumns={1}
         contentContainerStyle={{ padding: 12, paddingTop: 4, paddingBottom: tabBarHeight + 16 }}
         refreshControl={
