@@ -87,7 +87,7 @@ jobs:
 
       - name: Build and install app
         run: |
-          npx expo run:ios --device "$DEVICE_ID" --no-install-cache
+          npx expo run:ios --device "$DEVICE_ID"
         timeout-minutes: 15
 
       - name: Run Maestro smoke tests
@@ -107,10 +107,16 @@ jobs:
 
   maestro-android:
     name: Maestro Android E2E
-    runs-on: macos-latest
-    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
     needs: build-test
     steps:
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
       - name: Checkout
         uses: actions/checkout@v5
 
@@ -149,7 +155,7 @@ jobs:
           api-level: 34
           arch: x86_64
           profile: pixel_8
-          emulator-boot-timeout: 300
+          emulator-boot-timeout: 600
           script: |
             cd android && ./gradlew assembleDebug
             adb install app/build/outputs/apk/debug/app-debug.apk
