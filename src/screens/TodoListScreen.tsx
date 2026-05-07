@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { View, StyleSheet, Alert, Platform, RefreshControl } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
+import { FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -334,15 +334,7 @@ export default function TodoListScreen() {
 
   const renderTodoItem = useCallback(
     ({ item }: { item: Todo }) => (
-      <TodoCard
-        todo={item}
-        swipeableRef={getSwipeableRef(item.id)}
-        onSwipeableWillOpen={() => handleSwipeableWillOpen(item.id)}
-        onSwipeableWillClose={() => handleSwipeableWillClose(item.id)}
-        onDelete={() => handleDeleteTodo(item.id)}
-        onPress={openEditModal}
-        onToggle={handleToggleTodo}
-      />
+      <TodoCard todo={item} onPress={openEditModal} onToggle={handleToggleTodo} />
     ),
     [
       getSwipeableRef,
@@ -418,11 +410,12 @@ export default function TodoListScreen() {
         repositories={repositories}
       />
 
-      <FlashList
+      <FlatList
         data={filteredTodos}
         renderItem={renderTodoItem}
         keyExtractor={(item) => item.id}
-        extraData={filteredTodos.length}
+        extraData={filteredTodos}
+        removeClippedSubviews={false}
         contentContainerStyle={{ ...styles.listContent, paddingBottom: tabBarHeight + 16 }}
         ListEmptyComponent={<TodosEmptyState isFiltered={hasActiveFilters} />}
         showsVerticalScrollIndicator={false}

@@ -1,58 +1,27 @@
 import React, { memo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import ReanimatedSwipeable, {
-  type SwipeableMethods,
-} from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { isPast } from 'date-fns';
 
 import { useTheme } from '../../contexts/ThemeContext';
 import { PRIORITY_COLORS, PRIORITY_LABELS, Todo } from '../../models/Todo';
-import { TodosSwipeActions } from './TodosSwipeActions';
 import { findReminderLabel, formatDeadline } from './todosShared';
 
 interface TodoCardProps {
   todo: Todo;
-  swipeableRef: React.RefObject<SwipeableMethods | null>;
-  onSwipeableWillOpen: () => void;
-  onSwipeableWillClose: () => void;
-  onDelete: () => void;
   onPress: (todo: Todo) => void;
   onToggle: (id: string) => void;
 }
 
-function TodoCardImpl({
-  todo,
-  swipeableRef,
-  onSwipeableWillOpen,
-  onSwipeableWillClose,
-  onDelete,
-  onPress,
-  onToggle,
-}: TodoCardProps) {
+function TodoCardImpl({ todo, onPress, onToggle }: TodoCardProps) {
   const { colors } = useTheme();
   const isOverdue = todo.dueDate ? isPast(new Date(todo.dueDate)) && !todo.completed : false;
 
   return (
-    <ReanimatedSwipeable
-      ref={swipeableRef}
-      onSwipeableWillOpen={onSwipeableWillOpen}
-      onSwipeableWillClose={onSwipeableWillClose}
-      renderRightActions={() => (
-        <View testID="todo-card-root.swipe.action">
-          <View testID="todo-card.swipe.action">
-            <TodosSwipeActions onDelete={onDelete} />
-          </View>
-        </View>
-      )}
-      overshootRight={false}
-    >
-      <View testID="todo-card.button.press">
-        <TouchableOpacity
-          testID="todo-card-root.button.edit"
-          accessibilityLabel={`Todo: ${todo.text}`}
-          onLongPress={onDelete}
-          delayLongPress={500}
+    <View testID="todo-card.button.press">
+      <TouchableOpacity
+        testID="todo-card-root.button.edit"
+        accessibilityLabel={`Todo: ${todo.text}`}
         style={[
           styles.todoItem,
           { backgroundColor: colors.surface, borderColor: isOverdue ? colors.error : colors.border },
@@ -66,7 +35,7 @@ function TodoCardImpl({
             style={[styles.checkbox, { borderColor: todo.completed ? colors.primary : colors.border }]}
             onPress={() => onToggle(todo.id)}
           >
-          {todo.completed ? <Ionicons name="checkmark" size={18} color={colors.primary} /> : null}
+            {todo.completed ? <Ionicons name="checkmark" size={18} color={colors.primary} /> : null}
           </TouchableOpacity>
         </View>
 
@@ -140,21 +109,12 @@ function TodoCardImpl({
 
         <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
       </TouchableOpacity>
-      </View>
-    </ReanimatedSwipeable>
+    </View>
   );
 }
 
 export const TodoCard = memo(TodoCardImpl, (prev, next) => {
-  return (
-    prev.todo === next.todo &&
-    prev.swipeableRef === next.swipeableRef &&
-    prev.onSwipeableWillOpen === next.onSwipeableWillOpen &&
-    prev.onSwipeableWillClose === next.onSwipeableWillClose &&
-    prev.onDelete === next.onDelete &&
-    prev.onPress === next.onPress &&
-    prev.onToggle === next.onToggle
-  );
+  return prev.todo === next.todo && prev.onPress === next.onPress && prev.onToggle === next.onToggle;
 });
 
 const styles = StyleSheet.create({
