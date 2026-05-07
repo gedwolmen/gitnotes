@@ -22,11 +22,30 @@ jest.mock('@react-native-async-storage/async-storage', () => {
 
 jest.mock('../src/services/NoteGitHubSyncService', () => ({
   syncNoteToGitHub: jest.fn(),
+  deleteNoteFromGitHub: jest.fn(),
+}));
+
+jest.mock('../src/services/StorageService', () => ({
+  StorageService: { updateNote: jest.fn(async () => undefined) },
+}));
+
+jest.mock('../src/services/SyncEngineService', () => ({
+  SyncEngineService: { getMode: jest.fn(async () => 'api') },
+}));
+
+jest.mock('../src/services/AuthService', () => ({
+  AuthService: { getToken: jest.fn(async () => 'tok') },
+}));
+
+jest.mock('../src/services/git/LocalGitWriter', () => ({
+  LocalGitWriter: { push: jest.fn(async () => ({ success: true })) },
 }));
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NoteSyncQueueService } from '../src/services/NoteSyncQueueService';
-import { syncNoteToGitHub } from '../src/services/NoteGitHubSyncService';
+import { syncNoteToGitHub, deleteNoteFromGitHub } from '../src/services/NoteGitHubSyncService';
+import { SyncEngineService } from '../src/services/SyncEngineService';
+import { LocalGitWriter } from '../src/services/git/LocalGitWriter';
 
 const QUEUE_KEY = '@gitnotes:sync_queue_v1';
 
@@ -67,7 +86,9 @@ describe('NoteSyncQueueService', () => {
 
       const items = await NoteSyncQueueService.getAll();
       expect(items).toHaveLength(1);
-      expect(items[0].params.content).toBe('third');
+      const m = items[0];
+      expect(m.type).toBe('note.upsert');
+      if (m.type === 'note.upsert') expect(m.params.content).toBe('third');
     });
 
     test('treats missing branch as "main" for dedupe', async () => {
@@ -82,7 +103,9 @@ describe('NoteSyncQueueService', () => {
 
       const items = await NoteSyncQueueService.getAll();
       expect(items).toHaveLength(1);
-      expect(items[0].params.content).toBe('two');
+      const m = items[0];
+      expect(m.type).toBe('note.upsert');
+      if (m.type === 'note.upsert') expect(m.params.content).toBe('two');
     });
 
     test('keeps separate entries for different files', async () => {
@@ -97,6 +120,67 @@ describe('NoteSyncQueueService', () => {
       await NoteSyncQueueService.enqueueNoteUpsert({ ...base, filePath: 'b.md' });
       const items = await NoteSyncQueueService.getAll();
       expect(items.map((m) => m.params.filePath)).toEqual(['a.md', 'b.md']);
+    });
+
+    test('upsert drops a pending delete for the same path (#565 phase B.2)', async () => {
+      await NoteSyncQueueService.enqueueNoteDelete({
+        repo: 'r', branch: 'main', filePath: 'a.md', title: 'A',
+      });
+      await NoteSyncQueueService.enqueueNoteUpsert({
+        repo: 'r', branch: 'main', filePath: 'a.md', title: 'A', content: 'x', format: 'markdown',
+      });
+      const items = await NoteSyncQueueService.getAll();
+      expect(items).toHaveLength(1);
+      expect(items[0].type).toBe('note.upsert');
+    });
+  });
+
+  describe('enqueueNoteDelete', () => {
+    test('appends a delete mutation', async () => {
+      await NoteSyncQueueService.enqueueNoteDelete({
+        repo: 'r', branch: 'main', filePath: 'notes/a.md', title: 'A',
+      });
+      const items = await NoteSyncQueueService.getAll();
+      expect(items).toHaveLength(1);
+      expect(items[0].type).toBe('note.delete');
+      expect(items[0].params.filePath).toBe('notes/a.md');
+    });
+
+    test('drops pending upserts for the same file (#565 phase B.2)', async () => {
+      await NoteSyncQueueService.enqueueNoteUpsert({
+        repo: 'r', branch: 'main', filePath: 'a.md', title: 'A', content: 'x', format: 'markdown',
+      });
+      await NoteSyncQueueService.enqueueNoteUpsert({
+        repo: 'r', branch: 'main', filePath: 'a.md', title: 'A', content: 'y', format: 'markdown',
+      });
+      await NoteSyncQueueService.enqueueNoteDelete({
+        repo: 'r', branch: 'main', filePath: 'a.md', title: 'A',
+      });
+      const items = await NoteSyncQueueService.getAll();
+      expect(items).toHaveLength(1);
+      expect(items[0].type).toBe('note.delete');
+    });
+
+    test('coalesces back-to-back deletes', async () => {
+      await NoteSyncQueueService.enqueueNoteDelete({
+        repo: 'r', branch: 'main', filePath: 'a.md',
+      });
+      await NoteSyncQueueService.enqueueNoteDelete({
+        repo: 'r', branch: 'main', filePath: 'a.md',
+      });
+      const items = await NoteSyncQueueService.getAll();
+      expect(items).toHaveLength(1);
+    });
+
+    test('keeps separate deletes for different files', async () => {
+      await NoteSyncQueueService.enqueueNoteDelete({
+        repo: 'r', branch: 'main', filePath: 'a.md',
+      });
+      await NoteSyncQueueService.enqueueNoteDelete({
+        repo: 'r', branch: 'main', filePath: 'b.md',
+      });
+      const items = await NoteSyncQueueService.getAll();
+      expect(items).toHaveLength(2);
     });
   });
 
@@ -153,6 +237,7 @@ describe('NoteSyncQueueService', () => {
         repo: 'r', branch: 'main', filePath: 'a', title: 'A', content: '', format: 'markdown',
       });
 
+      const before = Date.now();
       const result = await NoteSyncQueueService.drain();
       expect(result.succeeded).toBe(0);
       expect(result.failed).toBe(1);
@@ -161,6 +246,9 @@ describe('NoteSyncQueueService', () => {
       const items = await NoteSyncQueueService.getAll();
       expect(items[0].attempts).toBe(1);
       expect(items[0].lastError).toBe('network');
+      // Backoff scheduled (issue #565 phase D). First retry: 500ms cap.
+      expect(items[0].nextRetryAt).toBeDefined();
+      expect(items[0].nextRetryAt!).toBeGreaterThanOrEqual(before + 500);
     });
 
     test('drops items after MAX_ATTEMPTS', async () => {
@@ -170,11 +258,49 @@ describe('NoteSyncQueueService', () => {
         repo: 'r', branch: 'main', filePath: 'a', title: 'A', content: '', format: 'markdown',
       });
 
-      // 8 failed drains (MAX_ATTEMPTS = 8) → dropped
-      for (let i = 0; i < 8; i++) {
-        await NoteSyncQueueService.drain();
+      // Backoff would skip the item on every immediate retry (#565 phase D).
+      // Advance virtual clock past the backoff cap (30s) between drains.
+      let virtualNow = Date.now();
+      const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => virtualNow);
+      try {
+        for (let i = 0; i < 8; i++) {
+          await NoteSyncQueueService.drain();
+          virtualNow += 60_000;
+        }
+      } finally {
+        nowSpy.mockRestore();
       }
       expect(await NoteSyncQueueService.pendingCount()).toBe(0);
+    });
+
+    test('skips items whose backoff has not elapsed', async () => {
+      (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: false, error: 'transient' });
+
+      await NoteSyncQueueService.enqueueNoteUpsert({
+        repo: 'r', branch: 'main', filePath: 'a', title: 'A', content: '', format: 'markdown',
+      });
+
+      // First drain — fails, sets backoff.
+      await NoteSyncQueueService.drain();
+      expect(syncNoteToGitHub).toHaveBeenCalledTimes(1);
+
+      // Second drain immediately after — backoff hasn't elapsed, item is skipped.
+      const second = await NoteSyncQueueService.drain();
+      expect(syncNoteToGitHub).toHaveBeenCalledTimes(1);
+      expect(second.succeeded).toBe(0);
+      expect(second.failed).toBe(0);
+      expect(second.remaining).toBe(1);
+
+      // Advance past the 500ms backoff for attempt #1, drain again — runs.
+      const items = await NoteSyncQueueService.getAll();
+      const past = items[0].nextRetryAt! + 1;
+      const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => past);
+      try {
+        await NoteSyncQueueService.drain();
+      } finally {
+        nowSpy.mockRestore();
+      }
+      expect(syncNoteToGitHub).toHaveBeenCalledTimes(2);
     });
 
     test('mixes successes and failures', async () => {
@@ -194,6 +320,163 @@ describe('NoteSyncQueueService', () => {
       expect(result.failed).toBe(1);
       const items = await NoteSyncQueueService.getAll();
       expect(items.map((m) => m.params.filePath)).toEqual(['b']);
+    });
+
+    describe('clone-mode coalesced push', () => {
+      beforeEach(() => {
+        (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
+        (LocalGitWriter.push as jest.Mock).mockResolvedValue({ success: true });
+      });
+
+      afterEach(() => {
+        // Reset to api default so non-clone tests in the file aren't affected
+        // by ordering. The factory default would otherwise be overridden by
+        // the previous mockResolvedValue across describe blocks.
+        (SyncEngineService.getMode as jest.Mock).mockResolvedValue('api');
+      });
+
+      test('runs syncNoteToGitHub with push:false and flushes once per group', async () => {
+        (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: true });
+
+        for (const f of ['a', 'b', 'c']) {
+          await NoteSyncQueueService.enqueueNoteUpsert({
+            repo: 'me/repo', branch: 'main', filePath: f, title: f, content: '', format: 'markdown',
+          });
+        }
+
+        const result = await NoteSyncQueueService.drain();
+        expect(result.succeeded).toBe(3);
+        expect(result.remaining).toBe(0);
+
+        // Every item ran with push:false
+        const calls = (syncNoteToGitHub as jest.Mock).mock.calls;
+        expect(calls).toHaveLength(3);
+        for (const [args] of calls) {
+          expect(args.push).toBe(false);
+        }
+
+        // One coalesced push at end of group
+        expect(LocalGitWriter.push).toHaveBeenCalledTimes(1);
+        expect(LocalGitWriter.push).toHaveBeenCalledWith({
+          repoPath: 'me/repo',
+          branch: 'main',
+          token: 'tok',
+        });
+      });
+
+      test('separate flush per (repo, branch) group', async () => {
+        (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: true });
+
+        await NoteSyncQueueService.enqueueNoteUpsert({
+          repo: 'me/repo', branch: 'main', filePath: 'a', title: 'a', content: '', format: 'markdown',
+        });
+        await NoteSyncQueueService.enqueueNoteUpsert({
+          repo: 'me/repo', branch: 'dev', filePath: 'b', title: 'b', content: '', format: 'markdown',
+        });
+        await NoteSyncQueueService.enqueueNoteUpsert({
+          repo: 'other/repo', branch: 'main', filePath: 'c', title: 'c', content: '', format: 'markdown',
+        });
+
+        await NoteSyncQueueService.drain();
+
+        expect(LocalGitWriter.push).toHaveBeenCalledTimes(3);
+        const pushCalls = (LocalGitWriter.push as jest.Mock).mock.calls.map(([a]) => `${a.repoPath}@${a.branch}`);
+        expect(pushCalls.sort()).toEqual(['me/repo@dev', 'me/repo@main', 'other/repo@main']);
+      });
+
+      test('failed flush keeps items queued and bumps attempts', async () => {
+        (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: true });
+        (LocalGitWriter.push as jest.Mock).mockResolvedValue({
+          success: false,
+          error: 'network down',
+        });
+
+        await NoteSyncQueueService.enqueueNoteUpsert({
+          repo: 'me/repo', branch: 'main', filePath: 'a', title: 'a', content: '', format: 'markdown',
+        });
+        await NoteSyncQueueService.enqueueNoteUpsert({
+          repo: 'me/repo', branch: 'main', filePath: 'b', title: 'b', content: '', format: 'markdown',
+        });
+
+        const result = await NoteSyncQueueService.drain();
+        expect(result.succeeded).toBe(0);
+        expect(result.failed).toBe(2);
+        expect(result.remaining).toBe(2);
+
+        const items = await NoteSyncQueueService.getAll();
+        expect(items).toHaveLength(2);
+        for (const m of items) {
+          expect(m.attempts).toBe(1);
+          expect(m.lastError).toBe('network down');
+        }
+      });
+
+      test('does not flush when every item failed locally', async () => {
+        (syncNoteToGitHub as jest.Mock).mockResolvedValue({
+          success: false,
+          error: 'write failed',
+        });
+
+        await NoteSyncQueueService.enqueueNoteUpsert({
+          repo: 'me/repo', branch: 'main', filePath: 'a', title: 'a', content: '', format: 'markdown',
+        });
+
+        await NoteSyncQueueService.drain();
+        expect(LocalGitWriter.push).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('note.delete drain', () => {
+      test('routes delete items through deleteNoteFromGitHub', async () => {
+        (deleteNoteFromGitHub as jest.Mock).mockResolvedValue({ success: true });
+
+        await NoteSyncQueueService.enqueueNoteDelete({
+          repo: 'r', branch: 'main', filePath: 'a.md', title: 'A',
+        });
+
+        const result = await NoteSyncQueueService.drain();
+        expect(result.succeeded).toBe(1);
+        expect(result.remaining).toBe(0);
+        expect(deleteNoteFromGitHub).toHaveBeenCalledTimes(1);
+      });
+
+      test('clone-mode delete defers push and flushes once with upsert siblings', async () => {
+        (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
+        (LocalGitWriter.push as jest.Mock).mockResolvedValue({ success: true });
+        (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: true });
+        (deleteNoteFromGitHub as jest.Mock).mockResolvedValue({ success: true });
+
+        await NoteSyncQueueService.enqueueNoteUpsert({
+          repo: 'r', branch: 'main', filePath: 'a.md', title: 'A', content: 'x', format: 'markdown',
+        });
+        await NoteSyncQueueService.enqueueNoteDelete({
+          repo: 'r', branch: 'main', filePath: 'b.md', title: 'B',
+        });
+
+        await NoteSyncQueueService.drain();
+
+        // One coalesced push regardless of upsert + delete mix.
+        expect(LocalGitWriter.push).toHaveBeenCalledTimes(1);
+        // The deleteNoteFromGitHub call was made with push:false.
+        expect((deleteNoteFromGitHub as jest.Mock).mock.calls[0][0].push).toBe(false);
+        (SyncEngineService.getMode as jest.Mock).mockResolvedValue('api');
+      });
+    });
+
+    describe('api-mode (no coalescing)', () => {
+      test('does not call LocalGitWriter.push and runs syncNoteToGitHub without push:false', async () => {
+        (SyncEngineService.getMode as jest.Mock).mockResolvedValue('api');
+        (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: true });
+
+        await NoteSyncQueueService.enqueueNoteUpsert({
+          repo: 'me/repo', branch: 'main', filePath: 'a', title: 'a', content: '', format: 'markdown',
+        });
+        await NoteSyncQueueService.drain();
+
+        expect(LocalGitWriter.push).not.toHaveBeenCalled();
+        const [[args]] = (syncNoteToGitHub as jest.Mock).mock.calls;
+        expect(args.push).toBeUndefined();
+      });
     });
 
     test('is reentrancy-guarded', async () => {

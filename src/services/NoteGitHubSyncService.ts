@@ -288,8 +288,16 @@ export async function deleteNoteFromGitHub(params: {
   filePath: string;
   title?: string;
   accountId?: string;
+  /**
+   * Clone-mode only. When false, the delete commit is created locally
+   * but the push to origin is deferred. The drain in
+   * `NoteSyncQueueService` uses this to coalesce delete+upsert pushes
+   * into one round-trip per `(repo, branch)` group (issue #565 phases
+   * B.1 + A). Ignored on the Contents-API path.
+   */
+  push?: boolean;
 }): Promise<NoteGitHubSyncResult> {
-  const { repo: repoPath, branch, filePath, title, accountId } = params;
+  const { repo: repoPath, branch, filePath, title, accountId, push } = params;
   const tokenOverride = await resolveToken(accountId);
 
   if (!tokenOverride && !GitHubService.isAuthenticated()) {
@@ -315,11 +323,14 @@ export async function deleteNoteFromGitHub(params: {
       message: `Delete note: ${title || filePath}`,
       author,
       token: tokenForPush,
+      push,
     });
   }
 
   try {
-    const lookup = await GitHubService.getFileSha(
+    // Cache-first lookup (#565 phase C). When the editor saved this note
+    // a moment ago, the sha is already in memory and we skip the GET.
+    const lookup = await GitHubService.getFileShaCached(
       repoInfo.owner,
       repoInfo.repo,
       filePath,
@@ -369,8 +380,16 @@ export async function syncNoteToGitHub(params: {
   accountId?: string;
   tags?: string[];
   color?: NoteColor | null;
+  /**
+   * Clone-mode only. When false, the local working tree is updated and a
+   * commit is created but the push to origin is deferred. The drain in
+   * `NoteSyncQueueService` uses this to coalesce N writes into 1 push round-
+   * trip per `(repo, branch)` group (issue #565 phase B.1). Ignored on the
+   * Contents-API path — every API call is its own round-trip.
+   */
+  push?: boolean;
 }): Promise<NoteGitHubSyncResult> {
-  const { repo: repoPath, branch, filePath, title, content, format, accountId, tags = [], color } = params;
+  const { repo: repoPath, branch, filePath, title, content, format, accountId, tags = [], color, push } = params;
   const tokenOverride = await resolveToken(accountId);
 
   if (!tokenOverride && !GitHubService.isAuthenticated()) {
@@ -420,6 +439,7 @@ export async function syncNoteToGitHub(params: {
       message,
       author,
       token: tokenForPush,
+      push,
     });
     if (writeResult.success) {
       return { success: true, filePath: targetPath, finalContent };

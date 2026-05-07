@@ -2,9 +2,7 @@ import { useMemo } from 'react';
 import { create } from 'zustand';
 import { Note, NoteCreateInput, NoteUpdateInput, sortNotesWithPinnedFirst, filterNotesBySearch } from '../models/Note';
 import { StorageService } from '../services/StorageService';
-import { deleteNoteFromGitHub } from '../services/NoteGitHubSyncService';
-import { GitHubService } from '../services/GitHubService';
-import { formatSyncError } from '../services/git/formatSyncError';
+import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import { slugifyLocal, getExtensionForFormat } from '../components/editor/editorShared';
 
 interface NoteState {
@@ -105,11 +103,6 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
 
       const note = get().notes.find((n) => n.id === id);
       if (note?.repo) {
-        if (!GitHubService.isAuthenticated()) {
-          set({ error: 'Sign in to GitHub to delete synced notes' });
-          return false;
-        }
-
         // Recover from the case where the note synced but the response
         // never landed (so `filePath` is unset locally) by deriving the
         // canonical path from title + folder + format. The same shape is
@@ -117,26 +110,28 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
         // such file exists upstream, deleteNoteFromGitHub treats sha-null
         // as success and the row drops cleanly.
         const filePath = note.filePath ?? deriveDefaultNotePath(note);
-
         if (filePath) {
-          const remote = await deleteNoteFromGitHub({
+          // Optimistic delete (#565 phase A): enqueue the remote delete
+          // and let the next drain ship it. The UI removes the row
+          // immediately below — no spinner on the GitHub round-trip.
+          // Auth/network failures stay queued and retry on foreground/
+          // online triggers.
+          await NoteSyncQueueService.enqueueNoteDelete({
             repo: note.repo,
             branch: note.branch,
             filePath,
             title: note.title,
             accountId: note.accountId,
           });
-          if (!remote.success) {
-            if (remote.error) console.warn('[NoteStore] delete sync failed:', remote.error);
-            set({ error: formatSyncError(remote.error, 'delete') });
-            return false;
-          }
+          // Fire-and-forget drain so the typical online case still pushes
+          // immediately. Reentrancy guard inside drain handles overlap.
+          void NoteSyncQueueService.drain();
         }
       }
 
       const success = await StorageService.deleteNote(id);
       if (success) {
-        set((state) => ({ notes: state.notes.filter((note) => note.id !== id) }));
+        set((state) => ({ notes: state.notes.filter((n) => n.id !== id) }));
       }
       return success;
     } catch (err) {
