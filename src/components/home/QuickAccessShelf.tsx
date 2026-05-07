@@ -31,7 +31,7 @@ export function QuickAccessShelf({ items, onOpen }: Props) {
           <BentoTile
             key={`${item.kind}-${item.data.id}`}
             item={item}
-            size="pinned"
+            size="medium"
             widthOverride={CARD_WIDTH}
             hidePinGlyph
             onPress={() => onOpen(item)}
