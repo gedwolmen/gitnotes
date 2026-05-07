@@ -382,7 +382,6 @@ export default function TodoListScreen() {
         itemId={item.id}
         selected={selectedIds.has(item.id)}
         selectionMode={selectionMode}
-        onDelete={() => handleDeleteTodo(item.id)}
         onToggleSelect={() => toggleSelected(item.id)}
         registerRef={getSwipeableRef}
         onSwipeableWillOpen={handleSwipeableWillOpen}

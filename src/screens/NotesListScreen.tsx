@@ -343,7 +343,6 @@ export default function NotesListScreen() {
         itemId={item.id}
         selected={selectedIds.has(item.id)}
         selectionMode={selectionMode}
-        onDelete={() => handleDeleteFromSwipe(item)}
         onToggleSelect={() => toggleSelected(item.id)}
         registerRef={getSwipeableRef}
         onSwipeableWillOpen={handleSwipeableWillOpen}
