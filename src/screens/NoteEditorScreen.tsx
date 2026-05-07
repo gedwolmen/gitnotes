@@ -28,11 +28,20 @@ import { NotePreviewPane } from '../components/editor/NotePreviewPane';
 import { NoteViewer } from '../components/editor/NoteViewer';
 import { useNoteEditorDocument } from '../components/editor/useNoteEditorDocument';
 import { useNoteEditorPreview } from '../components/editor/useNoteEditorPreview';
+import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'NoteEditor'>;
 type NoteEditorRouteProp = RouteProp<RootStackParamList, 'NoteEditor'>;
 
 export default function NoteEditorScreen() {
+  return (
+    <ErrorBoundary>
+      <NoteEditorScreenInner />
+    </ErrorBoundary>
+  );
+}
+
+function NoteEditorScreenInner() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<NoteEditorRouteProp>();
   const { colors, isDark } = useTheme();

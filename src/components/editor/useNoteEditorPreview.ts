@@ -89,11 +89,15 @@ export function useNoteEditorPreview({
   const pdfViewerUri = useMemo(() => resolvePdfUrl(previewContent), [previewContent, resolvePdfUrl]);
 
   const parsedStructuredContent = useMemo(() => {
-    if (noteFormat === 'markdown' || noteFormat === 'pdf') return null;
-    const parser = noteFormat === 'org' ? OrgContentParser : NeorgContentParser;
-    const parsed = parser.parseContent(previewContent);
-    if (!parsed.success || !parsed.blocks || parsed.blocks.length === 0) return null;
-    return parsed.blocks;
+    try {
+      if (noteFormat === 'markdown' || noteFormat === 'pdf') return null;
+      const parser = noteFormat === 'org' ? OrgContentParser : NeorgContentParser;
+      const parsed = parser.parseContent(previewContent);
+      if (!parsed.success || !parsed.blocks || parsed.blocks.length === 0) return null;
+      return parsed.blocks;
+    } catch {
+      return null;
+    }
   }, [noteFormat, previewContent]);
 
   const currentNotePath = useMemo(() => {
