@@ -147,7 +147,7 @@ export default function SortPicker({ currentSort, onSortChange, entityType, size
                     return (
                       <TouchableOpacity
                         key={`${field}-${direction}`}
-                        testID={`sort-picker.picker.change`}
+                        testID={`sort-option-${field}-${direction}`}
                         accessibilityRole="button"
                         accessibilityState={{ selected }}
                         onPress={() => handleSelect({ field, direction })}

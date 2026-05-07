@@ -42,7 +42,7 @@ function NotesNoteCardImpl({
   const { colors } = useTheme();
 
   const content = (
-    <View testID="notes-list-card.button.press">
+    <View testID="notes-list-card.button.press" {...({ note } as { note: Note })}>
       <BaseNoteCard
         note={note}
         onPress={onPress}

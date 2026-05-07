@@ -110,7 +110,7 @@ function NoteCardImpl({
         noteColorStyle,
         highlighted && { borderWidth: 2, borderColor: colors.primary },
       ]}
-      testID="notes-list-card.button.long-press"
+      testID={`note-card-${note.id}`}
       onPress={() => onPress(note)}
       onLongPress={() => onLongPress?.(note)}
       activeOpacity={0.7}

@@ -140,12 +140,12 @@ describe('TemplateManagerScreen', () => {
 
     await waitFor(() => expect(getByText('Templates')).toBeTruthy());
 
-    fireEvent.press(getByTestId('template-create-cta'));
-    fireEvent.changeText(getByTestId('template-name-input'), 'Brand New');
-    fireEvent.changeText(getByTestId('template-content-input'), '## Hi');
+    fireEvent.press(getByTestId('template-manager.button.create'));
+    fireEvent.changeText(getByTestId('template-editor.input.name'), 'Brand New');
+    fireEvent.changeText(getByTestId('template-editor.input.content'), '## Hi');
 
     await act(async () => {
-      fireEvent.press(getByTestId('template-save-btn'));
+      fireEvent.press(getByTestId('template-editor.button.save'));
     });
 
     await waitFor(() => expect(queryByText('Brand New')).toBeTruthy());
@@ -159,16 +159,16 @@ describe('TemplateManagerScreen', () => {
 
     await waitFor(() => expect(getByText('Templates')).toBeTruthy());
 
-    fireEvent.press(getByTestId('template-create-cta'));
-    fireEvent.changeText(getByTestId('template-name-input'), 'Retro');
-    fireEvent.press(getByTestId('template-icon-bulb-outline'));
-    fireEvent.changeText(getByTestId('template-description-input'), 'Weekly retrospective');
-    fireEvent.changeText(getByTestId('template-title-input'), 'Retro - ');
+    fireEvent.press(getByTestId('template-manager.button.create'));
+    fireEvent.changeText(getByTestId('template-editor.input.name'), 'Retro');
+    fireEvent.press(getByTestId('template-editor.button.select-icon-bulb-outline'));
+    fireEvent.changeText(getByTestId('template-editor.input.description'), 'Weekly retrospective');
+    fireEvent.changeText(getByTestId('template-editor.input.title'), 'Retro - ');
     fireEvent.changeText(getByTestId('template-tag-input'), 'team, weekly,');
-    fireEvent.changeText(getByTestId('template-content-input'), '## Wins');
+    fireEvent.changeText(getByTestId('template-editor.input.content'), '## Wins');
 
     await act(async () => {
-      fireEvent.press(getByTestId('template-save-btn'));
+      fireEvent.press(getByTestId('template-editor.button.save'));
     });
 
     await waitFor(() => {
@@ -201,21 +201,21 @@ describe('TemplateManagerScreen', () => {
     await waitFor(() => expect(getByText('Editable')).toBeTruthy());
 
     await act(async () => {
-      fireEvent.press(getByTestId(`template-edit-${created.id}`));
+      fireEvent.press(getByTestId(`template-list-item.icon-button.edit-${created.id}`));
     });
 
-    expect(getByTestId('template-name-input').props.value).toBe('Editable');
-    expect(getByTestId('template-description-input').props.value).toBe('Original description');
-    expect(getByTestId('template-title-input').props.value).toBe('Launch - ');
+    expect(getByTestId('template-editor.input.name').props.value).toBe('Editable');
+    expect(getByTestId('template-editor.input.description').props.value).toBe('Original description');
+    expect(getByTestId('template-editor.input.title').props.value).toBe('Launch - ');
     expect(getByTestId(`template-tag-chip-ship`)).toBeTruthy();
     expect(getByTestId(`template-tag-chip-launch`)).toBeTruthy();
-    expect(getByTestId('template-icon-rocket-outline').props.accessibilityState).toMatchObject({ selected: true });
+    expect(getByTestId('template-editor.button.select-icon-rocket-outline').props.accessibilityState).toMatchObject({ selected: true });
 
-    fireEvent.changeText(getByTestId('template-description-input'), 'Updated description');
+    fireEvent.changeText(getByTestId('template-editor.input.description'), 'Updated description');
     fireEvent.press(getByTestId('template-tag-chip-ship'));
 
     await act(async () => {
-      fireEvent.press(getByTestId('template-save-btn'));
+      fireEvent.press(getByTestId('template-editor.button.save'));
     });
 
     await waitFor(() => {
@@ -232,10 +232,10 @@ describe('TemplateManagerScreen', () => {
     const builtInId = NOTE_TEMPLATES[0].id;
 
     // Wait for the initial loadTemplates() effect to settle so the row exists.
-    await findByTestId(`template-pin-${builtInId}`);
+    await findByTestId(`template-list-item.icon-button.pin-${builtInId}`);
 
     await act(async () => {
-      fireEvent.press(getByTestId(`template-pin-${builtInId}`));
+      fireEvent.press(getByTestId(`template-list-item.icon-button.pin-${builtInId}`));
     });
 
     await waitFor(() =>
@@ -243,7 +243,7 @@ describe('TemplateManagerScreen', () => {
     );
 
     await act(async () => {
-      fireEvent.press(getByTestId(`template-pin-${builtInId}`));
+      fireEvent.press(getByTestId(`template-list-item.icon-button.pin-${builtInId}`));
     });
 
     await waitFor(() =>
@@ -272,7 +272,7 @@ describe('TemplateManagerScreen', () => {
     await waitFor(() => expect(queryByText('To Delete')).toBeTruthy());
 
     await act(async () => {
-      fireEvent.press(getByTestId(`template-delete-${(created as any).id}`));
+      fireEvent.press(getByTestId(`template-list-item.icon-button.delete-${(created as any).id}`));
     });
 
     await waitFor(() => expect(queryByText('To Delete')).toBeNull());
