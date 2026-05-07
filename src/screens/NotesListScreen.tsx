@@ -100,15 +100,6 @@ export default function NotesListScreen() {
     handleToggleColor,
   } = useNotesListFilters({ notes, filteredNotes, searchQuery });
 
-  const listToken = useMemo(() => {
-    let h = displayNotes.length;
-    for (let i = 0; i < displayNotes.length; i++) {
-      const n = displayNotes[i];
-      h = ((h * 31) + (n.isPinned ? 1 : 0) + i) | 0;
-    }
-    return h;
-  }, [displayNotes]);
-
   const activeFilterChips: FilterChip[] = useMemo(() => {
     const chips: FilterChip[] = [];
     if (filters.selectedFormat) {
@@ -397,8 +388,8 @@ export default function NotesListScreen() {
         data={displayNotes}
         renderItem={renderNote}
         keyExtractor={(item) => item.id}
-        key={`${viewMode}-${listToken}`}
-        extraData={listToken}
+        key={viewMode}
+        extraData={displayNotes.length}
         numColumns={1}
         contentContainerStyle={{ padding: 12, paddingTop: 4, paddingBottom: tabBarHeight + 16 }}
         refreshControl={

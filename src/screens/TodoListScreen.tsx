@@ -356,15 +356,6 @@ export default function TodoListScreen() {
 
   const hasActiveFilters = filter.activeCount > 0 || !!searchQuery.trim() || filterCompleted;
 
-  const listToken = useMemo(() => {
-    let h = filteredTodos.length;
-    for (let i = 0; i < filteredTodos.length; i++) {
-      const t = filteredTodos[i];
-      h = ((h * 31) + (t.completed ? 1 : 0) + i) | 0;
-    }
-    return h;
-  }, [filteredTodos]);
-
   const activeFilterChips: FilterChip[] = useMemo(() => {
     const chips: FilterChip[] = [];
     if (filterCompleted) {
@@ -428,11 +419,10 @@ export default function TodoListScreen() {
       />
 
       <FlashList
-        key={`todos-${listToken}`}
         data={filteredTodos}
         renderItem={renderTodoItem}
         keyExtractor={(item) => item.id}
-        extraData={listToken}
+        extraData={filteredTodos.length}
         contentContainerStyle={{ ...styles.listContent, paddingBottom: tabBarHeight + 16 }}
         ListEmptyComponent={<TodosEmptyState isFiltered={hasActiveFilters} />}
         showsVerticalScrollIndicator={false}
