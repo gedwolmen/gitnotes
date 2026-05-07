@@ -44,12 +44,10 @@ export function SwipeableListItem({
       translateX.value = Math.max(Math.min(event.translationX, 0), -MAX_DRAG);
     })
     .onEnd((event) => {
-      const shouldToggle = event.translationX < -SWIPE_THRESHOLD;
-      translateX.value = withSpring(0, { damping: 22, stiffness: 320 }, (finished) => {
-        if (finished && shouldToggle) {
-          runOnJS(triggerToggle)();
-        }
-      });
+      if (event.translationX < -SWIPE_THRESHOLD) {
+        runOnJS(triggerToggle)();
+      }
+      translateX.value = withSpring(0, { damping: 22, stiffness: 320 });
     });
 
   const animatedStyle = useAnimatedStyle(() => ({
