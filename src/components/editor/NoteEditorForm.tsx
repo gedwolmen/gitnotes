@@ -85,12 +85,19 @@ export function NoteEditorForm({
 
       <TouchableOpacity
         testID="note-editor-form.button.open-folder"
-        style={[styles.folderSelector, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}
+        style={[
+          styles.folderSelector,
+          { backgroundColor: colors.surfaceSecondary, borderColor: colors.border },
+          !repo && styles.folderSelectorDisabled,
+        ]}
         onPress={() => {
+          if (!repo) return;
           HapticService.light();
           onOpenFolderDialog();
         }}
-        activeOpacity={0.7}
+        activeOpacity={repo ? 0.7 : 1}
+        disabled={!repo}
+        accessibilityState={{ disabled: !repo }}
       >
         <Ionicons name="folder-outline" size={18} color={folderPath ? colors.primary : colors.textSecondary} />
         <Text style={[styles.folderSelectorLabel, { color: colors.textSecondary }]}>Folder</Text>
@@ -99,6 +106,14 @@ export function NoteEditorForm({
         </Text>
         <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
       </TouchableOpacity>
+      {!repo ? (
+        <Text
+          testID="note-editor-form.text.folder-no-repo-hint"
+          style={[styles.folderHint, { color: colors.textSecondary }]}
+        >
+          Select a repository before choosing a folder.
+        </Text>
+      ) : null}
 
       <View style={[styles.formatRow, { borderBottomColor: colors.border }]}> 
         <Ionicons name="document-outline" size={18} color={colors.textSecondary} />
@@ -190,6 +205,15 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     textAlign: 'right',
+  },
+  folderSelectorDisabled: {
+    opacity: 0.5,
+  },
+  folderHint: {
+    fontSize: 12,
+    marginHorizontal: 16,
+    marginTop: 4,
+    marginBottom: 4,
   },
   formatRow: {
     flexDirection: 'row',
