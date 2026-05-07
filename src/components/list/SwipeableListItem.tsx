@@ -1,9 +1,12 @@
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import ReanimatedSwipeable, {
-  SwipeableMethods,
-} from 'react-native-gesture-handler/ReanimatedSwipeable';
+import { StyleSheet, TouchableOpacity } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 
 import { useTheme } from '../../contexts/ThemeContext';
 import { HapticService } from '../../utils/haptics';
@@ -13,82 +16,80 @@ interface SwipeableListItemProps {
   selected: boolean;
   selectionMode: boolean;
   onToggleSelect: () => void;
-  registerRef: (id: string) => React.RefObject<SwipeableMethods | null>;
-  onSwipeableWillOpen: (id: string) => void;
-  onSwipeableWillClose: (id: string) => void;
+  mergeTop?: boolean;
+  mergeBottom?: boolean;
   children: React.ReactNode;
 }
 
-const SWIPE_THRESHOLD = 56;
+const SWIPE_THRESHOLD = 64;
+const MAX_DRAG = 96;
 
 export function SwipeableListItem({
   itemId,
   selected,
   selectionMode,
   onToggleSelect,
-  registerRef,
-  onSwipeableWillOpen,
-  onSwipeableWillClose,
+  mergeTop = false,
+  mergeBottom = false,
   children,
 }: SwipeableListItemProps) {
   const { colors } = useTheme();
-  const ref = registerRef(itemId);
+  const translateX = useSharedValue(0);
 
-  const handleSwipeableOpen = (direction: 'left' | 'right') => {
-    if (direction !== 'right') return;
+  const triggerToggle = () => {
     HapticService.selection();
-    ref.current?.close();
     onToggleSelect();
   };
 
-  const renderRightActions = () => (
-    <View
-      testID={`swipeable-list-item.hint.swipe-${itemId}`}
-      style={[styles.swipeHint, { backgroundColor: colors.error }]}
-    >
-      <Ionicons name={selected ? 'checkmark-circle' : 'trash'} size={22} color="#FFFFFF" />
-    </View>
-  );
+  const pan = Gesture.Pan()
+    .activeOffsetX([-12, 9999])
+    .failOffsetY([-8, 8])
+    .onUpdate((event) => {
+      translateX.value = Math.max(Math.min(event.translationX, 0), -MAX_DRAG);
+    })
+    .onEnd((event) => {
+      if (event.translationX < -SWIPE_THRESHOLD) {
+        runOnJS(triggerToggle)();
+      }
+      translateX.value = withSpring(0, { damping: 18, stiffness: 220 });
+    });
 
-  const wrapped = (
-    <View
-      style={[
-        styles.itemWrap,
-        selected && {
-          backgroundColor: colors.primary + '14',
-          borderColor: colors.primary,
-        },
-      ]}
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+
+  const cardContent = selectionMode ? (
+    <TouchableOpacity
+      testID={`swipeable-list-item.button.toggle-${itemId}`}
+      activeOpacity={0.7}
+      onPress={() => {
+        HapticService.selection();
+        onToggleSelect();
+      }}
     >
-      {selectionMode ? (
-        <TouchableOpacity
-          testID={`swipeable-list-item.button.toggle-${itemId}`}
-          activeOpacity={0.7}
-          onPress={() => {
-            HapticService.selection();
-            onToggleSelect();
-          }}
-        >
-          {children}
-        </TouchableOpacity>
-      ) : (
-        children
-      )}
-    </View>
+      {children}
+    </TouchableOpacity>
+  ) : (
+    children
   );
 
   return (
-    <ReanimatedSwipeable
-      ref={ref}
-      friction={2}
-      rightThreshold={SWIPE_THRESHOLD}
-      renderRightActions={renderRightActions}
-      onSwipeableOpen={handleSwipeableOpen}
-      onSwipeableWillOpen={() => onSwipeableWillOpen(itemId)}
-      onSwipeableWillClose={() => onSwipeableWillClose(itemId)}
-    >
-      {wrapped}
-    </ReanimatedSwipeable>
+    <GestureDetector gesture={pan}>
+      <Animated.View
+        style={[
+          styles.itemWrap,
+          selected && {
+            backgroundColor: colors.primary + '14',
+            borderColor: colors.primary,
+          },
+          selected && mergeTop && styles.mergeTop,
+          selected && mergeBottom && styles.mergeBottom,
+          animatedStyle,
+        ]}
+      >
+        {cardContent}
+      </Animated.View>
+    </GestureDetector>
   );
 }
 
@@ -98,14 +99,19 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'transparent',
   },
-  swipeHint: {
-    width: 64,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-    marginVertical: 4,
-    marginLeft: 4,
-    marginRight: 4,
+  mergeTop: {
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    borderTopWidth: 0,
+    marginTop: -8,
+    paddingTop: 8,
+  },
+  mergeBottom: {
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    borderBottomWidth: 0,
+    marginBottom: -8,
+    paddingBottom: 8,
   },
 });
 

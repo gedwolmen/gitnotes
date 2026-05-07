@@ -3,7 +3,6 @@ import { Alert, View, Text, StyleSheet, ActivityIndicator, RefreshControl, FlatL
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 import { useNotes } from '../contexts/NoteContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -63,8 +62,6 @@ export default function NotesListScreen() {
   } = useNotes();
 
   const listRef = useRef<FlatList<Note>>(null);
-  const swipeableRefs = useRef<Record<string, React.RefObject<SwipeableMethods | null>>>({});
-  const openSwipeableRef = useRef<SwipeableMethods | null>(null);
 
   const [showViewModePicker, setShowViewModePicker] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -90,10 +87,7 @@ export default function NotesListScreen() {
 
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 
-  const closeOpenSwipeable = useCallback(() => {
-    openSwipeableRef.current?.close();
-    openSwipeableRef.current = null;
-  }, []);
+  const closeOpenSwipeable = useCallback(() => {}, []);
 
   const {
     filters,
@@ -172,28 +166,6 @@ export default function NotesListScreen() {
     setColorPickerNote,
     setIsDeleting,
   });
-
-  const getSwipeableRef = useCallback((noteId: string) => {
-    if (!swipeableRefs.current[noteId]) {
-      swipeableRefs.current[noteId] = React.createRef<SwipeableMethods>();
-    }
-    return swipeableRefs.current[noteId];
-  }, []);
-
-  const handleSwipeableWillOpen = useCallback((noteId: string) => {
-    const swipeable = swipeableRefs.current[noteId]?.current;
-    if (openSwipeableRef.current && openSwipeableRef.current !== swipeable) {
-      openSwipeableRef.current.close();
-    }
-    if (swipeable) openSwipeableRef.current = swipeable;
-  }, []);
-
-  const handleSwipeableWillClose = useCallback((noteId: string) => {
-    const swipeable = swipeableRefs.current[noteId]?.current;
-    if (openSwipeableRef.current === swipeable) {
-      openSwipeableRef.current = null;
-    }
-  }, []);
 
   const handleBulkDelete = useCallback(() => {
     const ids = Array.from(selectedIds);
@@ -338,15 +310,19 @@ export default function NotesListScreen() {
   );
 
   const renderNote = useCallback(
-    ({ item, index }: { item: Note; index: number }) => (
+    ({ item, index }: { item: Note; index: number }) => {
+      const prevItem = index > 0 ? displayNotes[index - 1] : undefined;
+      const nextItem = index < displayNotes.length - 1 ? displayNotes[index + 1] : undefined;
+      const mergeTop = !!prevItem && selectedIds.has(prevItem.id);
+      const mergeBottom = !!nextItem && selectedIds.has(nextItem.id);
+      return (
       <SwipeableListItem
         itemId={item.id}
         selected={selectedIds.has(item.id)}
         selectionMode={selectionMode}
         onToggleSelect={() => toggleSelected(item.id)}
-        registerRef={getSwipeableRef}
-        onSwipeableWillOpen={handleSwipeableWillOpen}
-        onSwipeableWillClose={handleSwipeableWillClose}
+        mergeTop={mergeTop}
+        mergeBottom={mergeBottom}
       >
         <NotesListCard
           note={item}
@@ -359,15 +335,13 @@ export default function NotesListScreen() {
           onTagPress={handleTagPress}
         />
       </SwipeableListItem>
-    ),
+    );
+    },
     [
       currentSearchMatchIndex,
-      getSwipeableRef,
-      handleDeleteFromSwipe,
+      displayNotes,
       handleNoteLongPress,
       handleNotePress,
-      handleSwipeableWillClose,
-      handleSwipeableWillOpen,
       handleTagPress,
       hasActiveSearch,
       isConnected,
