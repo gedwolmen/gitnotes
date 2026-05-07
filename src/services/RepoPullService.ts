@@ -348,48 +348,88 @@ async function pullCanvasesFromRepo(
   branch: string,
 ): Promise<number> {
   let pulled = 0;
+  let files: { path: string; content: string }[] = [];
+  let directoryExists = false;
+
   try {
-    const files = await fetchDirectoryFiles(owner, repo, 'canvases', branch);
-    if (files.length === 0) return 0;
+    files = await fetchDirectoryFiles(owner, repo, 'canvases', branch);
+    directoryExists = true;
+  } catch {
+    // Directory doesn't exist remotely (404) — treat as all canvases deleted.
+    directoryExists = false;
+  }
 
+  try {
     await StorageService.mutateCanvases((allCanvases) => {
-      for (const file of files) {
-        if (!file.path.endsWith('.json')) continue;
+      // Upsert: add / update canvases from files that still exist remotely.
+      if (directoryExists) {
+        const remotePaths = new Set<string>();
+        for (const file of files) {
+          if (!file.path.endsWith('.json')) continue;
+          remotePaths.add(file.path);
 
-        let scene: CanvasScene;
-        try {
-          scene = JSON.parse(file.content);
-        } catch (error) { void error;
-          continue;
-        }
+          let scene: CanvasScene;
+          try {
+            scene = JSON.parse(file.content);
+          } catch (error) {
+            void error;
+            continue;
+          }
 
-        const titleFromPath = file.path
-          .replace(/^canvases\//, '')
-          .replace(/\.json$/, '')
-          .replace(/-/g, ' ');
+          const titleFromPath = file.path
+            .replace(/^canvases\//, '')
+            .replace(/\.json$/, '')
+            .replace(/-/g, ' ');
 
-        const idx = allCanvases.findIndex((c) => c.filePath === file.path);
-        if (idx !== -1) {
-          const existing = allCanvases[idx];
-          if (JSON.stringify(existing.scene) !== JSON.stringify(scene)) {
-            allCanvases[idx] = updateCanvas(existing, { scene });
+          const idx = allCanvases.findIndex((c) => c.filePath === file.path);
+          if (idx !== -1) {
+            const existing = allCanvases[idx];
+            if (JSON.stringify(existing.scene) !== JSON.stringify(scene)) {
+              allCanvases[idx] = updateCanvas(existing, { scene });
+              pulled++;
+            }
+          } else {
+            allCanvases.push(
+              createCanvas({
+                title: titleFromPath,
+                scene,
+                repo: repoPath,
+                branch,
+                filePath: file.path,
+              }),
+            );
             pulled++;
           }
-        } else {
-          allCanvases.push(
-            createCanvas({
-              title: titleFromPath,
-              scene,
-              repo: repoPath,
-              branch,
-              filePath: file.path,
-            }),
-          );
-          pulled++;
         }
+
+        // Reconcile: drop local canvases whose backing file was deleted remotely.
+        // Safety mirrors the notes reconcile — scoped to (repoPath, branch),
+        // only touches canvases with a filePath (local-only drafts kept).
+        const before = allCanvases.length;
+        const survivors = allCanvases.filter((c) => {
+          if (c.repo !== repoPath) return true;
+          if (c.branch !== branch) return true;
+          if (!c.filePath) return true;
+          return remotePaths.has(c.filePath);
+        });
+        allCanvases.length = 0;
+        allCanvases.push(...survivors);
+        void before;
+      } else {
+        // Directory gone — remove all canvases from this repo+branch that
+        // originated from a remote file. Local-only canvases stay.
+        const survivors = allCanvases.filter((c) => {
+          if (c.repo !== repoPath) return true;
+          if (c.branch !== branch) return true;
+          if (!c.filePath) return true;
+          return false;
+        });
+        allCanvases.length = 0;
+        allCanvases.push(...survivors);
       }
     });
-  } catch (error) { void error;
+  } catch (error) {
+    void error;
     console.warn(`[RepoPullService] Failed to pull canvases from ${owner}/${repo}`);
   }
   return pulled;
@@ -402,65 +442,92 @@ async function pullTodosFromRepo(
   branch: string,
 ): Promise<number> {
   let pulled = 0;
-  try {
-    const files = await fetchDirectoryFiles(owner, repo, 'todos', branch);
-    if (files.length === 0) return 0;
+  let files: { path: string; content: string }[] = [];
+  let directoryExists = false;
 
+  try {
+    files = await fetchDirectoryFiles(owner, repo, 'todos', branch);
+    directoryExists = true;
+  } catch {
+    directoryExists = false;
+  }
+
+  try {
     const allTodos = await StorageService.getAllTodos();
     let dirty = false;
+    const remotePaths = new Set<string>();
 
-    for (const file of files) {
-      if (!file.path.endsWith('.json')) continue;
+    if (directoryExists) {
+      for (const file of files) {
+        if (!file.path.endsWith('.json')) continue;
+        remotePaths.add(file.path);
 
-      let data: Record<string, any>;
-      try {
-        data = JSON.parse(file.content);
-      } catch (error) { void error;
-        continue;
+        let data: Record<string, any>;
+        try {
+          data = JSON.parse(file.content);
+        } catch (error) {
+          void error;
+          continue;
+        }
+
+        const titleFromPath = file.path
+          .replace(/^todos\//, '')
+          .replace(/\.json$/, '')
+          .replace(/-/g, ' ');
+
+        const idx = allTodos.findIndex((t) => t.filePath === file.path);
+        if (idx !== -1) {
+          const existing = allTodos[idx];
+          const updated = applyTodoUpdate(existing, {
+            text: data.text ?? existing.text,
+            completed: data.completed ?? existing.completed,
+            priority: data.priority ?? existing.priority,
+            notes: data.notes ?? existing.notes,
+            tags: data.tags ?? existing.tags,
+            dueDate: data.dueDate ?? existing.dueDate,
+          });
+          allTodos[idx] = updated;
+          dirty = true;
+          pulled++;
+        } else {
+          allTodos.push(
+            createTodoItem({
+              text: data.text ?? titleFromPath,
+              completed: data.completed ?? false,
+              priority: data.priority,
+              notes: data.notes,
+              tags: data.tags,
+              dueDate: data.dueDate,
+              repo: repoPath,
+              branch,
+              filePath: file.path,
+            }),
+          );
+          dirty = true;
+          pulled++;
+        }
       }
+    }
 
-      const titleFromPath = file.path
-        .replace(/^todos\//, '')
-        .replace(/\.json$/, '')
-        .replace(/-/g, ' ');
-
-      const idx = allTodos.findIndex((t) => t.filePath === file.path);
-      if (idx !== -1) {
-        const existing = allTodos[idx];
-        const updated = applyTodoUpdate(existing, {
-          text: data.text ?? existing.text,
-          completed: data.completed ?? existing.completed,
-          priority: data.priority ?? existing.priority,
-          notes: data.notes ?? existing.notes,
-          tags: data.tags ?? existing.tags,
-          dueDate: data.dueDate ?? existing.dueDate,
-        });
-        allTodos[idx] = updated;
-        dirty = true;
-        pulled++;
-      } else {
-        allTodos.push(
-          createTodoItem({
-            text: data.text ?? titleFromPath,
-            completed: data.completed ?? false,
-            priority: data.priority,
-            notes: data.notes,
-            tags: data.tags,
-            dueDate: data.dueDate,
-            repo: repoPath,
-            branch,
-            filePath: file.path,
-          }),
-        );
-        dirty = true;
-        pulled++;
-      }
+    // Reconcile: drop local todos whose backing file was deleted remotely.
+    // Same safety scoping as notes and canvases reconcile.
+    const before = allTodos.length;
+    const reconciled = allTodos.filter((t) => {
+      if (t.repo !== repoPath) return true;
+      if (t.branch !== branch) return true;
+      if (!t.filePath) return true;
+      if (!directoryExists) return false;
+      return remotePaths.has(t.filePath);
+    });
+    if (reconciled.length !== before) {
+      dirty = true;
     }
 
     if (dirty) {
-      await StorageService.saveAllTodos(reorderTodos(allTodos));
+      await StorageService.saveAllTodos(reorderTodos(reconciled));
     }
-  } catch (error) { void error;
+  } catch (error) {
+    void error;
     console.warn(`[RepoPullService] Failed to pull todos from ${owner}/${repo}`);
   }
   return pulled;
