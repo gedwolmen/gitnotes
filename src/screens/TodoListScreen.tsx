@@ -431,6 +431,7 @@ export default function TodoListScreen() {
         data={filteredTodos}
         renderItem={renderTodoItem}
         keyExtractor={(item) => item.id}
+        getItemType={(item) => (item.completed ? 'done' : 'open')}
         extraData={listToken}
         contentContainerStyle={{ ...styles.listContent, paddingBottom: tabBarHeight + 16 }}
         ListEmptyComponent={<TodosEmptyState isFiltered={hasActiveFilters} />}

@@ -397,6 +397,7 @@ export default function NotesListScreen() {
         data={displayNotes}
         renderItem={renderNote}
         keyExtractor={(item) => item.id}
+        getItemType={(item) => (item.isPinned ? 'pinned' : 'unpinned')}
         key={viewMode}
         extraData={listToken}
         numColumns={1}
