@@ -88,7 +88,7 @@ jobs:
       - name: Build and install app
         run: |
           npx expo run:ios --device "$DEVICE_ID"
-        timeout-minutes: 15
+        timeout-minutes: 30
 
       - name: Run Maestro smoke tests
         run: maestro test e2e/ios/smoke --format junit --output maestro-ios-results.xml
