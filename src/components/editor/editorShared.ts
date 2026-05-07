@@ -146,19 +146,23 @@ function stripTopMetadata(raw: string, format: NoteFormat): string {
 }
 
 export function getPreviewContent(content: string, noteFormat: NoteFormat): string {
-  if (noteFormat === 'pdf') return content.trim();
-  if (noteFormat === 'markdown') return stripTopMetadata(content, 'markdown');
+  try {
+    if (noteFormat === 'pdf') return content.trim();
+    if (noteFormat === 'markdown') return stripTopMetadata(content, 'markdown');
 
-  if (noteFormat === 'neorg') {
-    const stripped = stripTopMetadata(content, 'neorg');
-    const parsed = NeorgParser.parseDocument(stripped);
-    if (parsed.success && parsed.document) {
-      return parsed.document.content;
+    if (noteFormat === 'neorg') {
+      const stripped = stripTopMetadata(content, 'neorg');
+      const parsed = NeorgParser.parseDocument(stripped);
+      if (parsed.success && parsed.document) {
+        return parsed.document.content;
+      }
+      return stripped;
     }
-    return stripped;
-  }
 
-  return stripTopMetadata(content, 'org');
+    return stripTopMetadata(content, 'org');
+  } catch {
+    return typeof content === 'string' ? content : '';
+  }
 }
 
 export function getSpeakableContent(previewContent: string): string {
