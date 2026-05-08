@@ -38,13 +38,13 @@ function TabletRail({ state, navigation }: BottomTabBarProps) {
   const { t } = useTranslation();
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={railStyles.container}>
+    <SafeAreaView edges={['bottom']} style={railStyles.container}>
       <View
         style={[
           railStyles.rail,
           {
             backgroundColor: isDark ? '#1c1c1e' : '#f8f8f8',
-            borderRightColor: colors.border,
+            borderTopColor: colors.border,
           },
         ]}
       >
@@ -92,7 +92,7 @@ function TabletRail({ state, navigation }: BottomTabBarProps) {
             >
               <Ionicons
                 name={isFocused ? config.focused : config.outline}
-                size={24}
+                size={26}
                 color={isFocused ? colors.primary : colors.textSecondary}
               />
               <Text
@@ -113,27 +113,27 @@ function TabletRail({ state, navigation }: BottomTabBarProps) {
 }
 
 const railStyles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-  },
+  container: {},
   rail: {
-    width: 80,
-    flex: 1,
-    borderRightWidth: StyleSheet.hairlineWidth,
-    paddingTop: 8,
-    paddingBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 24,
+    paddingTop: 6,
+    paddingBottom: 6,
   },
   tab: {
+    flex: 1,
     alignItems: 'center',
-    paddingVertical: 10,
+    justifyContent: 'center',
+    paddingVertical: 8,
     paddingHorizontal: 6,
-    marginHorizontal: 6,
-    marginVertical: 2,
+    marginHorizontal: 4,
   },
   label: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '500',
-    marginTop: 2,
+    marginTop: 4,
   },
 });
 
