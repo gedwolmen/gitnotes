@@ -376,15 +376,13 @@ export default function TodoListScreen() {
     [filter],
   );
 
+  const contentMaxWidth = isTablet
+    ? { maxWidth: maxContentWidth, alignSelf: 'center' as const, width: '100%' as const }
+    : null;
+
   return (
-    <SafeAreaView
-      edges={[]}
-      style={[
-        styles.container,
-        { backgroundColor: colors.background },
-        isTablet && { maxWidth: maxContentWidth, alignSelf: 'center', width: '100%' },
-      ]}
-    >
+    <SafeAreaView edges={[]} style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[{ flex: 1 }, contentMaxWidth]}>
       <View style={{ paddingTop: headerHeight }}>
         <OfflineBanner />
         <ConflictBanner />
@@ -426,6 +424,7 @@ export default function TodoListScreen() {
           />
         }
       />
+      </View>
 
       <TodoEditorModal
         visible={showAddModal || editingTodo !== null}

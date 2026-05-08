@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -524,8 +524,13 @@ export default function SettingsScreen() {
   const selectedModelName = providers.flatMap((provider) => provider.models).find((model) => model.id === selectedModelId)?.name ?? 'Not set';
   const chatStorageLabel = chatRepoName ? (chatRepoOwner ? `${chatRepoOwner}/${chatRepoName}` : chatRepoName) : 'Not set';
 
+  const contentMaxWidth = isTablet
+    ? { maxWidth: maxContentWidth, alignSelf: 'center' as const, width: '100%' as const }
+    : null;
+
   return (
-    <SafeAreaView edges={[]} style={[styles.container, { backgroundColor: colors.background }, isTablet && { maxWidth: maxContentWidth, alignSelf: 'center', width: '100%' }]}>
+    <SafeAreaView edges={[]} style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[{ flex: 1 }, contentMaxWidth]}>
       <SettingsContent
         colors={colors}
         headerHeight={headerHeight}
@@ -631,6 +636,7 @@ export default function SettingsScreen() {
       <ProviderConfigModal visible={showProviderConfig} provider={editingProvider} onClose={() => { setShowProviderConfig(false); setEditingProvider(undefined); }} />
       <ChatRepoPickerModal visible={showChatRepoPicker} onClose={() => setShowChatRepoPicker(false)} onSelected={() => setShowChatRepoPicker(false)} />
       <CloneProgressModal progress={cloneProgress} onCancel={handleCancelClone} />
+      </View>
       <ScreenHeader title="Settings" />
     </SafeAreaView>
   );
