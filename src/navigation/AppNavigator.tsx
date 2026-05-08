@@ -58,14 +58,25 @@ const linking: LinkingOptions<RootStackParamList> = {
 };
 
 export default function AppNavigator() {
-  const { isDark } = useTheme();
+  const { isDark, colors } = useTheme();
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
   const chatRepoOwner = useAIStore((state) => state.chatRepoOwner);
   const chatRepoName = useAIStore((state) => state.chatRepoName);
   const [showChatRepoPicker, setShowChatRepoPicker] = useState(false);
   const [currentRouteName, setCurrentRouteName] = useState<string | undefined>(undefined);
 
-  const navigationTheme = isDark ? DarkTheme : DefaultTheme;
+  const baseTheme = isDark ? DarkTheme : DefaultTheme;
+  const navigationTheme = {
+    ...baseTheme,
+    colors: {
+      ...baseTheme.colors,
+      background: colors.background,
+      card: colors.card,
+      text: colors.text,
+      border: colors.border,
+      primary: colors.primary,
+    },
+  };
   const hasChatRepo = Boolean(chatRepoOwner && chatRepoName);
 
   const handleStateChange = useCallback(() => {
