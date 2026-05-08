@@ -26,7 +26,8 @@
     "e2e:testid:validate": "npx ts-node e2e/scripts/validate-testids.ts",
     "e2e:coverage:validate": "npx ts-node e2e/scripts/validate-coverage.ts",
     "e2e:ios:boot": "bash e2e/scripts/boot-ios-simulator.sh",
-    "prepare": "husky"
+    "prepare": "husky",
+    "ios:fix-icon": "bash scripts/strip-icon-alpha.sh"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^2",
