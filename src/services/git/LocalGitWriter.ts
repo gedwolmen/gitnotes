@@ -159,6 +159,11 @@ export class LocalGitWriter {
     const info = parseRepoPath(opts.repoPath);
     if (!info) return { success: false, error: `Invalid repo path: ${opts.repoPath}` };
 
+    const MAX_FILE_SIZE = 5 * 1024 * 1024;
+    if (opts.content.length > MAX_FILE_SIZE) {
+      return { success: false, error: `Refusing to write file exceeding 5 MB (${Math.round(opts.content.length / 1024 / 1024)} MB) — possible data corruption` };
+    }
+
     const dir = repoDirVirtual(info.owner, info.repo);
     const fs = makeRepoFs();
     const fsRoot = clonesRoot();

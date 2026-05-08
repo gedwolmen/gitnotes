@@ -393,6 +393,11 @@ export async function syncNoteToGitHub(params: {
   const { repo: repoPath, branch, filePath, title, content, format, accountId, tags = [], color, push, knownSha } = params;
   const tokenOverride = await resolveToken(accountId);
 
+  const MAX_FILE_SIZE = 5 * 1024 * 1024;
+  if (content.length > MAX_FILE_SIZE) {
+    return { success: false, error: `Refusing to write file exceeding 5 MB (${Math.round(content.length / 1024 / 1024)} MB) — possible data corruption` };
+  }
+
   if (!tokenOverride && !GitHubService.isAuthenticated()) {
     return { success: false, error: 'GitHub not authenticated' };
   }
