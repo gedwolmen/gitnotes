@@ -8,7 +8,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import HomeScreen from '../screens/HomeScreen';
@@ -36,18 +36,19 @@ const TAB_ICONS: Record<string, { focused: IoniconName; outline: IoniconName; la
 function TabletRail({ state, navigation }: BottomTabBarProps) {
   const { colors, isDark } = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
 
   return (
-    <SafeAreaView edges={['bottom']} style={railStyles.container}>
-      <View
-        style={[
-          railStyles.rail,
-          {
-            backgroundColor: isDark ? '#1c1c1e' : '#f8f8f8',
-            borderTopColor: colors.border,
-          },
-        ]}
-      >
+    <View
+      style={[
+        railStyles.rail,
+        {
+          backgroundColor: isDark ? '#1c1c1e' : '#f8f8f8',
+          borderTopColor: colors.border,
+          paddingBottom: insets.bottom + 6,
+        },
+      ]}
+    >
         {state.routes.map((route, index) => {
           const isFocused = state.index === index;
           const config = TAB_ICONS[route.name];
@@ -107,20 +108,17 @@ function TabletRail({ state, navigation }: BottomTabBarProps) {
             </TouchableOpacity>
           );
         })}
-      </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const railStyles = StyleSheet.create({
-  container: {},
   rail: {
     flexDirection: 'row',
     alignItems: 'stretch',
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 24,
     paddingTop: 6,
-    paddingBottom: 6,
   },
   tab: {
     flex: 1,
