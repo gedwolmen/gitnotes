@@ -20,7 +20,12 @@ export function TableRenderer({ headers, aligns, rows, isDark }: TableRendererPr
   const headerCellStyle = [styles.headerCell, { borderColor }];
 
   return (
-    <ScrollView horizontal testID="table-scroll-view" showsHorizontalScrollIndicator={false}>
+    // showsHorizontalScrollIndicator + a scrollable container, so a table
+    // wider than the viewport scrolls visibly instead of looking truncated.
+    // `maxWidth` on cells lets long content wrap inside the cell rather
+    // than running off the screen edge before the user realizes the table
+    // is scrollable.
+    <ScrollView horizontal testID="table-scroll-view" showsHorizontalScrollIndicator>
       <View>
         <View style={styles.row}>
           {headers.map((header, colIdx) => (
@@ -58,6 +63,7 @@ const styles = StyleSheet.create({
   },
   cell: {
     minWidth: 80,
+    maxWidth: 220,
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderWidth: 1,
@@ -65,6 +71,7 @@ const styles = StyleSheet.create({
   },
   headerCell: {
     minWidth: 80,
+    maxWidth: 220,
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderWidth: 1,

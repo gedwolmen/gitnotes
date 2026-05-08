@@ -114,7 +114,10 @@ function formatChipLabel(format: NoteFormat | undefined): string | null {
   }
 }
 
-const HEIGHT_FOR: Record<BentoSize, number> = { large: 200, medium: 128, small: 124, pinned: 124 };
+// Heights bumped for medium/small/pinned so the bottom repo-badge row has
+// breathing room — previously `vidwadeseram/test-notes` sat flush against
+// the tile's bottom border.
+const HEIGHT_FOR: Record<BentoSize, number> = { large: 200, medium: 144, small: 138, pinned: 138 };
 const PADDING_FOR: Record<BentoSize, number> = { large: 18, medium: 14, small: 12, pinned: 12 };
 const TITLE_SIZE: Record<BentoSize, number> = { large: 18, medium: 15, small: 13, pinned: 13 };
 const SUB_SIZE: Record<BentoSize, number> = { large: 13, medium: 12, small: 11, pinned: 11 };
