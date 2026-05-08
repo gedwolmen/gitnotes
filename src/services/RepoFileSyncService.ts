@@ -10,13 +10,15 @@ export interface SyncResult {
   errors: string[];
 }
 
+// JSON intentionally excluded: canvases live in /canvases/*.json with their
+// own storage and shouldn't pollute the notes list. Including JSON here also
+// surfaces unrelated repo configs (package.json, tsconfig.json) as notes.
 const SUPPORTED_EXTENSIONS: Record<string, NoteFormat> = {
   '.md': 'markdown',
   '.markdown': 'markdown',
   '.norg': 'neorg',
   '.org': 'org',
   '.pdf': 'pdf',
-  '.json': 'json',
 };
 
 function getExtension(filename: string): string {

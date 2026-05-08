@@ -194,7 +194,14 @@ export const useFilteredNotes = () => {
   const notes = useNoteStore((s) => s.notes);
   const searchQuery = useNoteStore((s) => s.searchQuery);
   return useMemo(
-    () => (searchQuery ? filterNotesBySearch(notes, searchQuery) : notes),
+    () => {
+      // Hide json-format notes from the list — these are leftovers from a
+      // previous version of RepoFileSyncService that imported `.json` files
+      // (resume schemas, package.json, etc.) as notes. The source is fixed,
+      // but storage may still hold them until the next reconcile drops them.
+      const noteOnly = notes.filter((n) => n.format !== 'json');
+      return searchQuery ? filterNotesBySearch(noteOnly, searchQuery) : noteOnly;
+    },
     [notes, searchQuery],
   );
 };

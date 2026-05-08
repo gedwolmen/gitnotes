@@ -159,7 +159,14 @@ function NoteCardImpl({
           </Text>
           <View style={[styles.formatBadge, { backgroundColor: colors.primary + '18' }]}>
             <Text style={[styles.formatBadgeText, { color: colors.primary }]}>
-              {(note.format ?? 'markdown') === 'markdown' ? '.md' : (note.format ?? 'markdown') === 'neorg' ? '.norg' : (note.format ?? 'markdown') === 'org' ? '.org' : (note.format ?? 'markdown') === 'pdf' ? '.pdf' : '.md'}
+              {(() => {
+                const f = note.format ?? 'markdown';
+                if (f === 'neorg') return '.norg';
+                if (f === 'org') return '.org';
+                if (f === 'pdf') return '.pdf';
+                if (f === 'json') return '.json';
+                return '.md';
+              })()}
             </Text>
           </View>
         </View>
