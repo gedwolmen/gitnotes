@@ -388,8 +388,9 @@ export async function syncNoteToGitHub(params: {
    * Contents-API path — every API call is its own round-trip.
    */
   push?: boolean;
+  knownSha?: string;
 }): Promise<NoteGitHubSyncResult> {
-  const { repo: repoPath, branch, filePath, title, content, format, accountId, tags = [], color, push } = params;
+  const { repo: repoPath, branch, filePath, title, content, format, accountId, tags = [], color, push, knownSha } = params;
   const tokenOverride = await resolveToken(accountId);
 
   if (!tokenOverride && !GitHubService.isAuthenticated()) {
@@ -421,7 +422,7 @@ export async function syncNoteToGitHub(params: {
     console.warn('[NoteGitHubSync] Image upload failed, syncing note without images:', error);
   }
 
-  const message = filePath ? `Update note: ${title}` : `Create note: ${title}`;
+  const message = knownSha || filePath ? `Update note: ${title}` : `Create note: ${title}`;
 
   // Clone-mode write path (#514). We deliberately use the same `targetPath`
   // and `finalContent` as the API path, so the on-disk markdown is byte-
@@ -448,6 +449,15 @@ export async function syncNoteToGitHub(params: {
   }
 
   try {
+    if (knownSha && filePath) {
+      const currentSha = await GitHubService.getFileShaOrNull(
+        repoInfo.owner, repoInfo.repo, targetPath, targetBranch, opts,
+      );
+      if (currentSha && currentSha !== knownSha) {
+        return { success: false, error: `Conflict: ${targetPath} was modified on GitHub since you last loaded it. Pull to get the latest version.` };
+      }
+    }
+
     const result = await GitHubService.updateFile(
       repoInfo.owner,
       repoInfo.repo,

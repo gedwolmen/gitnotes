@@ -58,6 +58,7 @@ export function useNoteEditorDocument({
   const [repo, setRepo] = useState<string | undefined>(initialRepo);
   const [branch, setBranch] = useState<string | undefined>(initialBranch);
   const [commit, setCommit] = useState<string | undefined>();
+  const [existingFilePath, setExistingFilePath] = useState<string | undefined>();
   const [folderPath, setFolderPath] = useState<string | undefined>(initialFolderPath);
   const [, setGithub] = useState<NoteGitHubLink | undefined>();
   const [accountId, setAccountId] = useState<string | undefined>(activeAccountId ?? undefined);
@@ -152,6 +153,7 @@ export function useNoteEditorDocument({
     setRepo(existingNote.repo);
     setBranch(existingNote.branch);
     setCommit(existingNote.commit);
+    setExistingFilePath(existingNote.filePath);
     setFolderPath(existingNote.folderPath);
     setGithub(existingNote.github);
     setAccountId(existingNote.accountId ?? activeAccountId ?? undefined);
@@ -258,13 +260,14 @@ export function useNoteEditorDocument({
         const syncParams = {
           repo,
           branch,
-          filePath: folderPath ? `${folderPath}/${slugifyLocal(title.trim())}${getExtensionForFormat(noteFormat)}` : undefined,
+          filePath: existingFilePath ?? (folderPath ? `${folderPath}/${slugifyLocal(title.trim())}${getExtensionForFormat(noteFormat)}` : undefined),
           title: title.trim(),
           content: content.trim(),
           format: noteFormat,
           accountId,
           tags,
           color: existingForColor?.color ?? null,
+          knownSha: commit,
         };
 
         const syncResult = await syncNoteToGitHub(syncParams);
