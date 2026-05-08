@@ -213,11 +213,46 @@ export class LocalGitWriter {
           // is already made and a clean fast-forward will replay it.
           const raw = pushError instanceof Error ? pushError.message : String(pushError);
           if (!isPushRejected(raw)) throw pushError;
-          await GitFsService.pullWithFastForward({
+          const ffResult = await GitFsService.pullWithFastForward({
             repoPath: opts.repoPath,
             branch: opts.branch,
             token: opts.token,
           });
+          if (!ffResult.ok && ffResult.reason === 'diverged') {
+            // Auto-rebase the just-made commit onto origin/<branch> so a
+            // single user write isn't held hostage by an out-of-band remote
+            // commit (#630). Reset local branch to the remote head, replay
+            // our file write + commit, retry push. ConflictResolverService
+            // is already populating the conflict banner from the pull-side
+            // path (#629), so a destructive overlap surfaces in the UI even
+            // though the push goes through here. Other queued mutations on
+            // top of our dropped commit will re-drain from
+            // NoteSyncQueueService on the next tick.
+            const remoteRef = `refs/remotes/origin/${opts.branch}`;
+            const remoteOid = await git.resolveRef({ fs, dir, ref: remoteRef });
+            await git.writeRef({
+              fs,
+              dir,
+              ref: `refs/heads/${opts.branch}`,
+              value: remoteOid,
+              force: true,
+            });
+            await git.checkout({ fs, dir, ref: opts.branch, force: true });
+            // checkout may have replaced our file's working-tree content
+            // with origin's version — replay the user's write on top.
+            await ensureParentDirs(fsRoot, absVirtual);
+            await FileSystem.writeAsStringAsync(absUri, opts.content);
+            await git.add({ fs, dir, filepath: opts.filePath });
+            const replayStatus = await git.status({ fs, dir, filepath: opts.filePath });
+            if (replayStatus !== 'unmodified') {
+              await git.commit({
+                fs,
+                dir,
+                message: opts.message,
+                author: { name: opts.author.name, email: opts.author.email },
+              });
+            }
+          }
           await git.push({
             fs,
             dir,
