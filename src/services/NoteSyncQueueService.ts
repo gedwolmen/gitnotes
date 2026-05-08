@@ -34,6 +34,7 @@ export interface NoteUpsertParams {
   format?: NoteFormat;
   tags?: string[];
   color?: NoteColor | null;
+  knownSha?: string;
 }
 
 export interface NoteDeleteParams {
