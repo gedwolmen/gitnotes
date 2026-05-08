@@ -42,9 +42,12 @@ async function getRepoReader(
       await GitFsService.clone({ repoPath, branch, token });
     } else {
       // Phase 5: fast-forward instead of bare fetch so local unpushed commits
-      // can't be silently shadowed by stale reconcile. If the local branch
-      // has diverged we throw — the outer try/catch in pullNotesFromRepo
-      // returns 0 without running reconcile, preserving local edits.
+      // can't be silently shadowed by stale reconcile. When the local branch
+      // has diverged we now keep going against `origin/<branch>` instead of
+      // throwing (#629) — the user still sees the freshest remote state in
+      // their notes list while their unpushed local commits stay safely in
+      // the clone, and the conflict resolver / banner separately drives the
+      // merge UI.
       const result = await GitFsService.pullWithFastForward({ repoPath, branch, token });
       if (!result.ok) {
         if (result.reason === 'diverged') {
@@ -59,12 +62,22 @@ async function getRepoReader(
               const resolved = await ConflictResolverService.autoResolve(conflictSet);
               await useConflictStore.getState().addConflict(resolved);
             }
-          } catch {
-            // best effort
+          } catch (error) {
+            console.warn(`[RepoPullService] conflict-resolve failed for ${repoPath}@${branch}:`, error);
           }
+          // Read against origin so the user keeps seeing remote changes.
+          // Their local commits remain in the clone and the conflict store
+          // is now populated for the merge UI to drive resolution.
+          const remoteRefName = `refs/remotes/origin/${branch}`;
+          return {
+            mode,
+            listTree: () => GitFsService.listTree({ repoPath, ref: remoteRefName }),
+            readFile: (path: string) =>
+              GitFsService.readFile({ repoPath, ref: remoteRefName, filepath: path }),
+          };
         }
         throw new Error(
-          `Local repo ${repoPath}@${branch} has diverged from upstream (${result.reason}). ` +
+          `Local repo ${repoPath}@${branch} pull failed (${result.reason}). ` +
             `Push or reset your local commits before the next pull.`,
         );
       }
@@ -353,8 +366,13 @@ async function pullNotesFromRepo(
     }
 
     return pulled;
-  } catch (error) { void error;
-    console.warn(`[RepoPullService] Failed to pull notes from ${owner}/${repo}`);
+  } catch (error) {
+    // Surface the real cause (#629). Without this, divergence, auth issues,
+    // rate limits, and network failures all looked identical in Metro logs.
+    console.warn(
+      `[RepoPullService] notes pull from ${owner}/${repo}@${branch} failed:`,
+      error instanceof Error ? error.message : error,
+    );
     return 0;
   }
 }

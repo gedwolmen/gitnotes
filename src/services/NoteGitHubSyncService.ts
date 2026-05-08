@@ -201,11 +201,15 @@ function getExtension(format?: NoteFormat): string {
 }
 
 function slugify(title: string): string {
-  return title
+  // Cap the slug at 60 chars so a runaway title (#624 / #628 — body text
+  // accidentally appended to the title field) can't produce a 200-char
+  // filename on GitHub.
+  const slug = title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
     || 'untitled';
+  return slug.length > 60 ? slug.slice(0, 60).replace(/-$/, '') || 'untitled' : slug;
 }
 
 function isLocalUri(uri: string): boolean {

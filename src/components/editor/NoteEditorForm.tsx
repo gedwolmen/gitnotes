@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -7,7 +7,7 @@ import { NoteFormat } from '../../models/Note';
 import { HapticService } from '../../utils/haptics';
 import { canPersistNoteTags } from '../../utils/noteTagSupport';
 import GitContextPicker from '../GitContextPicker';
-import MarkdownEditor from '../MarkdownEditor';
+import MarkdownEditor, { type MarkdownEditorHandle } from '../MarkdownEditor';
 import TagInput from '../TagInput';
 import { FORMAT_OPTIONS } from './editorShared';
 
@@ -57,6 +57,7 @@ export function NoteEditorForm({
   onContentChange,
 }: NoteEditorFormProps) {
   const { colors } = useTheme();
+  const bodyRef = useRef<MarkdownEditorHandle>(null);
 
   return (
     <ScrollView style={styles.scrollView} contentContainerStyle={styles.editorContent} keyboardShouldPersistTaps="handled">
@@ -81,6 +82,10 @@ export function NoteEditorForm({
         autoFocus={!noteId}
         maxLength={100}
         returnKeyType="next"
+        // Pressing Return on the keyboard hops into the body editor (#628)
+        // — gives a deterministic way to leave the title field even when the
+        // OS doesn't transfer focus from a tap on the body input.
+        onSubmitEditing={() => bodyRef.current?.focus()}
       />
 
       <TouchableOpacity
@@ -165,6 +170,7 @@ export function NoteEditorForm({
       ) : null}
 
       <MarkdownEditor
+        ref={bodyRef}
         content={content}
         onContentChange={onContentChange}
         placeholder={placeholder}

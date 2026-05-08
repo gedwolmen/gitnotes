@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
@@ -80,9 +80,23 @@ interface MarkdownEditorProps {
   inputTestID?: string;
 }
 
-export default function MarkdownEditor({ content, onContentChange, placeholder = 'Start writing...', initialMode, inputTestID }: MarkdownEditorProps) {
+/**
+ * Imperative handle exposed via `forwardRef` so a parent (e.g. NoteEditorForm)
+ * can move keyboard focus into the body editor without reaching into private
+ * state — used to hop from title → body on the title's `onSubmitEditing`
+ * (#628), since iOS doesn't reliably transfer focus from a tap on a multiline
+ * TextInput while another sibling input is autofocused.
+ */
+export interface MarkdownEditorHandle {
+  focus: () => void;
+}
+
+const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(function MarkdownEditor({ content, onContentChange, placeholder = 'Start writing...', initialMode, inputTestID }, ref) {
   const { colors } = useTheme();
   const inputRef = useRef<TextInput>(null);
+  useImperativeHandle(ref, () => ({
+    focus: () => inputRef.current?.focus(),
+  }), []);
   const { text, setText, undo, redo, canUndo, canRedo, reset } = useUndoRedo(content);
   const previousTextRef = useRef(text);
   const { hardWrapEnabled, toggleHardWrap } = useHardWrap();
@@ -325,7 +339,9 @@ export default function MarkdownEditor({ content, onContentChange, placeholder =
       )}
     </View>
   );
-}
+});
+
+export default MarkdownEditor;
 
 const styles = StyleSheet.create({
   container: {
