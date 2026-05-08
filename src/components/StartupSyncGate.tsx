@@ -3,6 +3,10 @@ import { AppState } from 'react-native';
 import { pullAllFromRepos } from '../services/RepoPullService';
 import { GitHubService } from '../services/GitHubService';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
+import {
+  isForegroundSyncInFlight,
+  subscribeForegroundSync,
+} from '../services/ForegroundSyncService';
 import { useNotes } from '../contexts/NoteContext';
 import { useCanvases } from '../contexts/CanvasContext';
 import { useTodos } from '../contexts/TodoContext';
@@ -78,6 +82,28 @@ export function StartupSyncGate({ children }: { children: React.ReactNode }) {
     });
     return () => sub.remove();
   }, [refreshNotes]);
+
+  // Refresh React state whenever the foreground auto-pull completes a tick
+  // (#620 / #623). Without this, the periodic 60s pull and the AppState
+  // pull both write fresh data to AsyncStorage but the in-memory notes /
+  // todos / canvases arrays stay stale until the next manual pull-to-
+  // refresh or cold launch — which is what the user observed as "auto-
+  // sync doesn't work."
+  useEffect(() => {
+    let lastSeenInFlight = isForegroundSyncInFlight();
+    return subscribeForegroundSync(() => {
+      const nowInFlight = isForegroundSyncInFlight();
+      // Only refresh on the trailing edge (true → false), i.e. the pull
+      // just finished. Skipping the leading edge avoids a double-refresh
+      // and a flicker before the new data is committed to storage.
+      if (lastSeenInFlight && !nowInFlight) {
+        void Promise.all([refreshNotes(), refreshCanvases(), refreshTodos()]).catch((error) => {
+          console.warn('[StartupSync] post-foregroundsync refresh failed:', error);
+        });
+      }
+      lastSeenInFlight = nowInFlight;
+    });
+  }, [refreshNotes, refreshCanvases, refreshTodos]);
 
   return <>{children}</>;
 }

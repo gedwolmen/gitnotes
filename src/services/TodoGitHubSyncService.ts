@@ -4,6 +4,7 @@ import { parseRepoPath } from '../utils/gitPathParser';
 import { AuthService } from './AuthService';
 import { SyncEngineService } from './SyncEngineService';
 import { LocalGitWriter } from './git/LocalGitWriter';
+import { GitFsService } from './git/GitFsService';
 
 async function resolveToken(accountId?: string): Promise<string | undefined> {
   if (!accountId) return undefined;
@@ -65,11 +66,37 @@ export async function syncTodoToGitHub(params: {
   }
 
   const content = serializeTodo(todo);
-  const message = filePath ? `Update todo: ${text}` : `Create todo: ${text}`;
+
+  // Determine create-vs-update by querying actual remote/clone state rather
+  // than trusting the caller-supplied filePath. Callers (TodoListScreen)
+  // pre-derive the path from the slug at draft time, so a brand-new todo
+  // always carried filePath, which made every first-create commit say
+  // "Update todo:" (#626). Falling back to caller's filePath only on lookup
+  // failure preserves current behavior on transient errors.
+  const mode = await SyncEngineService.getMode(repoPath);
+  let fileExists: boolean | null;
+  try {
+    if (mode === 'clone') {
+      const cloned = await GitFsService.isCloned({ repoPath });
+      if (cloned) {
+        const existing = await GitFsService.readFile({ repoPath, ref: targetBranch, filepath: targetPath });
+        fileExists = existing !== null;
+      } else {
+        fileExists = false;
+      }
+    } else {
+      const sha = await GitHubService.getFileShaOrNull(repoInfo.owner, repoInfo.repo, targetPath, targetBranch, opts);
+      fileExists = sha !== null;
+    }
+  } catch (error) {
+    void error;
+    fileExists = null;
+  }
+  const useUpdateVerb = fileExists ?? !!filePath;
+  const message = useUpdateVerb ? `Update todo: ${text}` : `Create todo: ${text}`;
 
   // Clone-mode write path (#514). Same on-disk shape as the API path so a
   // mode flip later doesn't surface a no-op churn commit.
-  const mode = await SyncEngineService.getMode(repoPath);
   if (mode === 'clone') {
     const user = GitHubService.getUser();
     const author = {

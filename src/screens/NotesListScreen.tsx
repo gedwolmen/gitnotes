@@ -268,8 +268,18 @@ export default function NotesListScreen() {
     HapticService.light();
     setIsManualSyncing(true);
     try {
-      const result = await NoteSyncQueueService.drain();
-      if (result.succeeded > 0) await refreshNotes();
+      // Bidirectional: drain pending upserts AND pull remote changes (#621).
+      // Mirrors handlePullToRefresh so the cloud icon and the swipe gesture
+      // perform the same work — the icon previously only pushed, which left
+      // remote ADD/UPDATE/DELETE invisible to users who tapped it expecting
+      // a sync.
+      await NoteSyncQueueService.drain();
+      await pullAllFromRepos();
+      await refreshNotes();
+      HapticService.success();
+    } catch (error) {
+      HapticService.warning();
+      console.warn('[Sync] manual sync failed:', error);
     } finally {
       setIsManualSyncing(false);
     }

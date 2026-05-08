@@ -5,6 +5,7 @@ import { parseRepoPath } from '../utils/gitPathParser';
 import { AuthService } from './AuthService';
 import { SyncEngineService } from './SyncEngineService';
 import { LocalGitWriter } from './git/LocalGitWriter';
+import { GitFsService } from './git/GitFsService';
 import { resolveBranch } from './git/branchResolver';
 
 async function resolveAuthor(): Promise<{ name: string; email: string }> {
@@ -427,13 +428,40 @@ export async function syncNoteToGitHub(params: {
     console.warn('[NoteGitHubSync] Image upload failed, syncing note without images:', error);
   }
 
-  const message = knownSha || filePath ? `Update note: ${title}` : `Create note: ${title}`;
+  // Determine create-vs-update by querying remote/clone state rather than
+  // trusting the caller-supplied filePath. The note editor pre-derives the
+  // path from `folderPath/slug.ext` at draft time, which made the commit
+  // message read "Update note:" the very first time a note was pushed
+  // (#615 / #626 family). `knownSha` from the conflict guard (#617) is
+  // also a strong "this is an update" signal. Fall back to caller intent
+  // on lookup failure so a transient error doesn't flip a real update into
+  // a "Create".
+  const mode = await SyncEngineService.getMode(repoPath);
+  let fileExists: boolean | null;
+  try {
+    if (mode === 'clone') {
+      const cloned = await GitFsService.isCloned({ repoPath });
+      if (cloned) {
+        const existing = await GitFsService.readFile({ repoPath, ref: targetBranch, filepath: targetPath });
+        fileExists = existing !== null;
+      } else {
+        fileExists = false;
+      }
+    } else {
+      const sha = await GitHubService.getFileShaOrNull(repoInfo.owner, repoInfo.repo, targetPath, targetBranch, opts);
+      fileExists = sha !== null;
+    }
+  } catch (error) {
+    void error;
+    fileExists = null;
+  }
+  const useUpdateVerb = fileExists ?? !!(knownSha || filePath);
+  const message = useUpdateVerb ? `Update note: ${title}` : `Create note: ${title}`;
 
   // Clone-mode write path (#514). We deliberately use the same `targetPath`
   // and `finalContent` as the API path, so the on-disk markdown is byte-
   // identical to what the Contents API would publish — that means a user can
   // flip modes without their next pull seeing churn.
-  const mode = await SyncEngineService.getMode(repoPath);
   if (mode === 'clone') {
     const author = await resolveAuthor();
     const tokenForPush = tokenOverride ?? (await AuthService.getToken()) ?? undefined;

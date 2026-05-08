@@ -207,6 +207,9 @@ export function RepoTreeItem({ node, owner, repo, branch, level, onFilePress, on
               onFilePress={onFilePress}
               onRefresh={onRefresh}
               onChildDeleted={handleChildDeleted}
+            />
+          ))
+        : null}
 
       <ContextMenu
         visible={showContextMenu}

@@ -164,9 +164,12 @@ export function NoteEditorForm({
         </View>
       ) : null}
 
-      <View testID="note-editor-form.input.content">
-        <MarkdownEditor content={content} onContentChange={onContentChange} placeholder={placeholder} />
-      </View>
+      <MarkdownEditor
+        content={content}
+        onContentChange={onContentChange}
+        placeholder={placeholder}
+        inputTestID="note-editor-form.input.content"
+      />
     </ScrollView>
   );
 }

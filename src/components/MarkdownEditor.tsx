@@ -72,9 +72,15 @@ interface MarkdownEditorProps {
   onContentChange: (text: string) => void;
   placeholder?: string;
   initialMode?: EditorMode;
+  /**
+   * testID applied directly to the inner TextInput (or raw textarea) so a
+   * Maestro/XCUITest tap focuses the input rather than an outer wrapper view
+   * that doesn't accept the focus action (#624).
+   */
+  inputTestID?: string;
 }
 
-export default function MarkdownEditor({ content, onContentChange, placeholder = 'Start writing...', initialMode }: MarkdownEditorProps) {
+export default function MarkdownEditor({ content, onContentChange, placeholder = 'Start writing...', initialMode, inputTestID }: MarkdownEditorProps) {
   const { colors } = useTheme();
   const inputRef = useRef<TextInput>(null);
   const { text, setText, undo, redo, canUndo, canRedo, reset } = useUndoRedo(content);
@@ -277,7 +283,7 @@ export default function MarkdownEditor({ content, onContentChange, placeholder =
         />
       ) : mode === 'raw' ? (
         <TextInput
-          testID="raw-input"
+          testID={inputTestID ?? "raw-input"}
           style={[styles.editor, { color: colors.text, fontFamily: 'monospace' }]}
           value={text}
           onChangeText={handleContentChange}
@@ -292,6 +298,7 @@ export default function MarkdownEditor({ content, onContentChange, placeholder =
         <>
           <TextInput
             ref={inputRef}
+            testID={inputTestID}
             style={[styles.editor, { color: colors.text }]}
             value={text}
             onChangeText={handleContentChange}

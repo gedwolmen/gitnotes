@@ -58,19 +58,48 @@ async function shouldPull(): Promise<boolean> {
   return reachable;
 }
 
+// Hard upper-bound on a single pull tick. If a `pullAllFromRepos()` call hangs
+// (network stall, frozen XHR), this watchdog releases `inFlight` so the next
+// tick can run. Without it, one bad tick wedges the foreground watcher for
+// the rest of the session (#620 / #623).
+const PULL_WATCHDOG_MS = 60_000;
+
 async function runPull(reason: string): Promise<void> {
-  if (inFlight) return;
-  if (Date.now() - lastRunAt < COALESCE_WINDOW_MS) return;
-  if (!(await shouldPull())) return;
+  if (inFlight) {
+    if (__DEV__) console.log(`[ForegroundSync] skip (${reason}): already in flight`);
+    return;
+  }
+  if (Date.now() - lastRunAt < COALESCE_WINDOW_MS) {
+    if (__DEV__) console.log(`[ForegroundSync] skip (${reason}): coalesce window`);
+    return;
+  }
+  if (!(await shouldPull())) {
+    if (__DEV__) console.log(`[ForegroundSync] skip (${reason}): shouldPull=false`);
+    return;
+  }
 
   inFlight = true;
   lastRunAt = Date.now();
   notify();
+
+  let watchdog: ReturnType<typeof setTimeout> | null = null;
+  const watchdogPromise = new Promise<void>((_, reject) => {
+    watchdog = setTimeout(
+      () => reject(new Error(`pull tick exceeded ${PULL_WATCHDOG_MS}ms`)),
+      PULL_WATCHDOG_MS,
+    );
+  });
+
+  const startedAt = Date.now();
   try {
-    await pullAllFromRepos();
+    await Promise.race([pullAllFromRepos(), watchdogPromise]);
+    if (__DEV__) {
+      console.log(`[ForegroundSync] pull (${reason}) ok in ${Date.now() - startedAt}ms`);
+    }
   } catch (error) {
-    console.warn(`[ForegroundSync] pull (${reason}) failed:`, error);
+    console.warn(`[ForegroundSync] pull (${reason}) failed after ${Date.now() - startedAt}ms:`, error);
   } finally {
+    if (watchdog !== null) clearTimeout(watchdog);
     inFlight = false;
     lastRunAt = Date.now();
     notify();

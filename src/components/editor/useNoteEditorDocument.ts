@@ -255,7 +255,11 @@ export function useNoteEditorDocument({
         navigation.goBack();
       }
 
-      if (repo && content.trim()) {
+      // Push title-only notes too (#622). Previously the sync trigger required
+      // non-empty content, which silently skipped pushing notes that had only
+      // a title — they ended up with filePath=null in local store, never on
+      // remote, while the cloud icon happily showed cloud-done.
+      if (repo) {
         const existingForColor = savedNoteId ? getNoteByIdRef.current(savedNoteId) : undefined;
         const syncParams = {
           repo,
