@@ -12,7 +12,7 @@ import { RepoTreeMoveDialog } from './RepoTreeMoveDialog';
 import { RepoTreeRenameDialog } from './RepoTreeRenameDialog';
 import { treeStyles } from './repoTreeStyles';
 
-export function RepoTreeItem({ node, owner, repo, branch, level, onFilePress, onRefresh }: TreeItemProps) {
+export function RepoTreeItem({ node, owner, repo, branch, level, onFilePress, onRefresh, onChildDeleted }: TreeItemProps) {
   const { colors } = useTheme();
   const [expanded, setExpanded] = useState(false);
   const [children, setChildren] = useState<TreeItemProps['node'][]>([]);
@@ -86,6 +86,10 @@ export function RepoTreeItem({ node, owner, repo, branch, level, onFilePress, on
     }
   }, [branch, isDir, onRefresh, owner, repo]);
 
+  const handleChildDeleted = useCallback((path: string) => {
+    setChildren((prev) => prev.filter((c) => c.path !== path));
+  }, []);
+
   const handleMove = useCallback(async (oldPath: string, newPath: string) => {
     setIsOperating(true);
     try {
@@ -131,6 +135,7 @@ export function RepoTreeItem({ node, owner, repo, branch, level, onFilePress, on
               }
             }
             HapticService.success();
+            onChildDeleted?.(node.path);
             onRefresh?.();
           } catch (error) {
             Alert.alert('Delete Failed', error instanceof Error ? error.message : 'Unknown error');
@@ -140,7 +145,7 @@ export function RepoTreeItem({ node, owner, repo, branch, level, onFilePress, on
         },
       },
     ]);
-  }, [branch, isDir, node, onRefresh, owner, repo]);
+  }, [branch, isDir, node, onRefresh, onChildDeleted, owner, repo]);
 
   const iconName = isDir ? (expanded ? 'folder-open' : 'folder') : getFileIcon(node.name);
   const iconColor = isDir ? '#FF9500' : colors.textSecondary;
@@ -201,9 +206,7 @@ export function RepoTreeItem({ node, owner, repo, branch, level, onFilePress, on
               level={level + 1}
               onFilePress={onFilePress}
               onRefresh={onRefresh}
-            />
-          ))
-        : null}
+              onChildDeleted={handleChildDeleted}
 
       <ContextMenu
         visible={showContextMenu}

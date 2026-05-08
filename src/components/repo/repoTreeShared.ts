@@ -17,6 +17,7 @@ export interface TreeItemProps {
   level: number;
   onFilePress?: (node: TreeNode) => void;
   onRefresh?: () => void;
+  onChildDeleted?: (path: string) => void;
 }
 
 export type IoniconName = keyof typeof Ionicons.glyphMap;
