@@ -199,7 +199,7 @@ export function SettingsContent(props: SettingsContentProps) {
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={{
         paddingHorizontal: 16,
-        paddingTop: headerHeight,
+        paddingTop: headerHeight + 16,
         paddingBottom: tabBarHeight + 16,
         gap: 20,
       }}
