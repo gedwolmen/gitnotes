@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useConflictStore } from '../../stores/conflictStore';
 
@@ -31,9 +32,12 @@ export function ConflictBanner() {
           { backgroundColor: `${WARNING}20`, borderColor: `${WARNING}33` },
         ]}
       >
-        <Text style={[styles.text, { color: WARNING_DARK }]}>
-          ⚠ {label} — Tap to resolve
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Ionicons name="warning" size={16} color={WARNING_DARK} />
+          <Text style={[styles.text, { color: WARNING_DARK, marginLeft: 6 }]}>
+            {label} — Tap to resolve
+          </Text>
+        </View>
       </View>
     </TouchableOpacity>
   );

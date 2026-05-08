@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -206,7 +207,7 @@ const ChecklistRow = memo(function ChecklistRow({
           },
         ]}
       >
-        {item.checked ? <Text style={styles.checkboxMark}>✓</Text> : null}
+        {item.checked ? <Ionicons name="checkmark" size={16} color="#fff" /> : null}
       </TouchableOpacity>
 
       <TextInput
@@ -240,7 +241,7 @@ const ChecklistRow = memo(function ChecklistRow({
         onPress={() => onDeleteItem(index)}
         style={{ paddingHorizontal: spacing[1], paddingVertical: spacing[2] }}
       >
-        <Text style={{ color: colors.textSecondary, fontSize: type.md }}>✕</Text>
+        <Ionicons name="close" size={18} color={colors.textSecondary} />
       </TouchableOpacity>
     </Animated.View>
   );

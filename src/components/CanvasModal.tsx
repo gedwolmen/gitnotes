@@ -60,16 +60,16 @@ interface DrawShape {
 type DrawElement = DrawStroke | DrawShape;
 
 const COLORS = ['#000000', '#FFFFFF', '#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#007AFF', '#5856D6', '#AF52DE', '#FF2D55'];
-const TOOLS = [
+const TOOLS: { key: string; icon?: ToolIconName; label?: string }[] = [
   { key: 'pen', icon: 'pencil' as ToolIconName },
   { key: 'highlighter', icon: 'brush' as ToolIconName },
   { key: 'eraser', icon: 'backspace-outline' as ToolIconName },
-  { key: 'line', label: '╱' },
-  { key: 'arrow', label: '→' },
-  { key: 'rect', label: '□' },
-  { key: 'roundRect', label: '⬜' },
-  { key: 'ellipse', label: '○' },
-  { key: 'diamond', label: '◇' },
+  { key: 'line', icon: 'remove' as ToolIconName },
+  { key: 'arrow', icon: 'arrow-forward' as ToolIconName },
+  { key: 'rect', icon: 'square-outline' as ToolIconName },
+  { key: 'roundRect', icon: 'rectangle-outline' as ToolIconName },
+  { key: 'ellipse', icon: 'ellipse-outline' as ToolIconName },
+  { key: 'diamond', icon: 'diamond-outline' as ToolIconName },
 ];
 
 function uid(): string {

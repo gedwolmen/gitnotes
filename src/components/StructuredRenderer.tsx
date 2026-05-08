@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Alert, Linking, ScrollView, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { NeorgContentBlock, NeorgHeading, NeorgListItem, NeorgChecklistItem, NeorgDefinitionItem } from '../models/NeorgContent';
 import { useTheme } from '../contexts/ThemeContext';
 import { useRenderStyle } from '../stores/renderStyleStore';
@@ -215,7 +216,8 @@ function DetailsBlock({ summary, content, colors }: { summary?: string; content:
   return (
     <View style={{ marginVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>
       <TouchableOpacity onPress={() => setExpanded(e => !e)} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, backgroundColor: colors.surfaceSecondary }}>
-        <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary }}>{expanded ? '▼' : '▶'} {summary || 'Details'}</Text>
+        <Ionicons name={expanded ? 'chevron-down' : 'chevron-forward'} size={14} color={colors.primary} />
+        <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary, marginLeft: 4 }}>{summary || 'Details'}</Text>
       </TouchableOpacity>
       {expanded && (
         <View style={{ padding: 12 }}>
@@ -397,17 +399,17 @@ export default function StructuredRenderer({ blocks, format = 'neorg', onOpenNot
     );
   };
 
-  const taskStatusIcon = (status?: string): string => {
+  const taskStatusIconName = (status?: string): React.ComponentProps<typeof Ionicons>['name'] => {
     switch (status) {
-      case 'done': return '✓';
-      case 'important': return '!';
-      case 'uncertain': return '?';
-      case 'in-progress': return '◐';
-      case 'urgent': return '⏰';
-      case 'cancelled': return '✗';
-      case 'on-hold': return '⏸';
-      case 'recurring': return '↻';
-      default: return '○';
+      case 'done': return 'checkmark-circle';
+      case 'important': return 'alert-circle';
+      case 'uncertain': return 'help-circle';
+      case 'in-progress': return 'hourglass';
+      case 'urgent': return 'alarm';
+      case 'cancelled': return 'close-circle';
+      case 'on-hold': return 'pause-circle';
+      case 'recurring': return 'refresh';
+      default: return 'ellipse-outline';
     }
   };
 
@@ -447,16 +449,19 @@ export default function StructuredRenderer({ blocks, format = 'neorg', onOpenNot
 
   const renderListItem = (item: NeorgListItem, blockIndex: number, itemIndex: number) => {
     const indent = item.indentLevel * 16;
-    let prefix = '- ';
-    if (item.type === 'ordered') {
-      prefix = `${itemIndex + 1}. `;
-    } else if (item.type === 'task') {
-      prefix = `${taskStatusIcon(item.status)} `;
-    }
     return (
-      <View key={`list-${blockIndex}-${itemIndex}`} style={[styles.listItem, { marginLeft: indent }]}> 
-        <Text selectable style={[styles.listText, { color: colors.text }]}>
-          {prefix}{renderInline(item.text)}
+      <View key={`list-${blockIndex}-${itemIndex}`} style={[styles.listItem, { marginLeft: indent, flexDirection: 'row', alignItems: 'flex-start' }]}>
+        {item.type === 'task' ? (
+          <View style={{ marginTop: 4, marginRight: 6 }}>
+            <Ionicons name={taskStatusIconName(item.status)} size={16} color={colors.text} />
+          </View>
+        ) : (
+          <Text selectable style={[styles.listText, { color: colors.text }]}>
+            {item.type === 'ordered' ? `${itemIndex + 1}. ` : '- '}
+          </Text>
+        )}
+        <Text selectable style={[styles.listText, { color: colors.text, flex: 1 }]}>
+          {renderInline(item.text)}
         </Text>
       </View>
     );
@@ -465,9 +470,12 @@ export default function StructuredRenderer({ blocks, format = 'neorg', onOpenNot
   const renderChecklistItem = (item: NeorgChecklistItem, blockIndex: number, itemIndex: number) => {
     const indent = item.indentLevel * 16;
     return (
-      <View key={`check-${blockIndex}-${itemIndex}`} style={[styles.listItem, { marginLeft: indent }]}> 
-        <Text selectable style={[styles.listText, { color: colors.text }]}>
-          {item.checked ? '✓' : '○'} {renderInline(item.text)}
+      <View key={`check-${blockIndex}-${itemIndex}`} style={[styles.listItem, { marginLeft: indent, flexDirection: 'row', alignItems: 'flex-start' }]}> 
+        <View style={{ marginTop: 4, marginRight: 6 }}>
+          <Ionicons name={item.checked ? 'checkmark-circle' : 'ellipse-outline'} size={16} color={colors.text} />
+        </View>
+        <Text selectable style={[styles.listText, { color: colors.text, flex: 1 }]}>
+          {renderInline(item.text)}
         </Text>
       </View>
     );
@@ -572,11 +580,22 @@ export default function StructuredRenderer({ blocks, format = 'neorg', onOpenNot
       case 'timestamp':
         return block.timestamp ? (
           <View key={`ts-${index}`} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+            <Ionicons 
+              name={
+                block.timestamp.type === 'scheduled' ? 'calendar' :
+                block.timestamp.type === 'deadline' ? 'alarm' :
+                block.timestamp.type === 'closed' ? 'checkmark-circle' :
+                block.timestamp.type === 'active' ? 'calendar-outline' : 'clipboard'
+              } 
+              size={14} 
+              color={colors.textSecondary} 
+              style={{ marginRight: 4 }}
+            />
             <Text selectable style={{ fontSize: 14, color: colors.textSecondary }}>
-              {block.timestamp.type === 'scheduled' ? '📅 SCHEDULED' :
-               block.timestamp.type === 'deadline' ? '⏰ DEADLINE' :
-               block.timestamp.type === 'closed' ? '✅ CLOSED' :
-               block.timestamp.type === 'active' ? '📆' : '📋'} {block.timestamp.date}
+              {block.timestamp.type === 'scheduled' ? 'SCHEDULED ' :
+               block.timestamp.type === 'deadline' ? 'DEADLINE ' :
+               block.timestamp.type === 'closed' ? 'CLOSED ' : ''}
+              {block.timestamp.date}
               {block.timestamp.time ? ` ${block.timestamp.time}` : ''}
             </Text>
           </View>
@@ -614,8 +633,11 @@ export default function StructuredRenderer({ blocks, format = 'neorg', onOpenNot
       case 'image':
         return block.image ? (
           <View key={`img-${index}`} style={{ padding: 8, borderRadius: 4, marginVertical: 4, backgroundColor: colors.surfaceSecondary, alignItems: 'center' }}>
-            <Text selectable style={{ fontSize: 14, color: colors.text }}>📷 {block.image.path}</Text>
-            {block.image.caption ? <Text selectable style={{ fontSize: 12, color: colors.textSecondary }}>{block.image.caption}</Text> : null}
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="camera" size={14} color={colors.text} style={{ marginRight: 6 }} />
+              <Text selectable style={{ fontSize: 14, color: colors.text }}>{block.image.path}</Text>
+            </View>
+            {block.image.caption ? <Text selectable style={{ fontSize: 12, color: colors.textSecondary, marginTop: 4 }}>{block.image.caption}</Text> : null}
           </View>
         ) : null;
       case 'math':
