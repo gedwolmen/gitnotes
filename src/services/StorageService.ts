@@ -112,8 +112,10 @@ export class StorageService {
   static async saveAllNotes(notes: Note[]): Promise<void> {
     await migrateFromBlob();
     try {
-      const pairs: [string, string][] = notes.map((n) => [noteKey(n.id), JSON.stringify(n)]);
-      await AsyncStorage.multiSet(pairs);
+      if (notes.length > 0) {
+        const pairs: [string, string][] = notes.map((n) => [noteKey(n.id), JSON.stringify(n)]);
+        await AsyncStorage.multiSet(pairs);
+      }
       await this.saveNoteIndex(notes.map((n) => n.id));
     } catch (error) {
       console.error('Error saving notes to storage:', error);
