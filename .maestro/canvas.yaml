@@ -7,8 +7,7 @@ appId: com.xaventra.gitnotes
 - launchApp:
     clearState: false
 - tapOn:
-    text: "Home"
-    index: 0
+    id: "tab-bar.*tab.press-HomeTab"
 - tapOn:
     text: ".*Canvases.*"
 - waitForAnimationToEnd:
@@ -32,8 +31,9 @@ appId: com.xaventra.gitnotes
 - assertVisible:
     text: ".*Phone.*1080.*"
 
-# The size modal exposes its rows as a single accessibility group. Tap
-# at the Phone row's vertical position to dismiss the modal.
+# #648 added per-row testIDs but the parent dismiss-overlay
+# (TouchableOpacity around the whole modal) still folds children into
+# one a11y group — see #649. Until that lands, point-tap the Phone row.
 - tapOn:
     point: "50%, 33%"
 - waitForAnimationToEnd:

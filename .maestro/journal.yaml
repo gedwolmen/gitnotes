@@ -5,8 +5,7 @@ appId: com.xaventra.gitnotes
 - launchApp:
     clearState: false
 - tapOn:
-    text: "Home"
-    index: 0
+    id: "tab-bar.*tab.press-HomeTab"
 - waitForAnimationToEnd:
     timeout: 1500
 

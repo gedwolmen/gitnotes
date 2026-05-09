@@ -7,8 +7,7 @@ appId: com.xaventra.gitnotes
 - launchApp:
     clearState: false
 - tapOn:
-    text: "Notes"
-    index: 0
+    id: "tab-bar.*tab.press-NotesTab"
 - waitForAnimationToEnd:
     timeout: 1200
 

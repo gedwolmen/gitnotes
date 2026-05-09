@@ -4,8 +4,7 @@ appId: com.xaventra.gitnotes
 - launchApp:
     clearState: false
 - tapOn:
-    text: "Explore"
-    index: 0
+    id: "tab-bar.*tab.press-ExploreTab"
 - waitForAnimationToEnd:
     timeout: 1500
 

@@ -4,8 +4,7 @@ appId: com.xaventra.gitnotes
 - launchApp:
     clearState: false
 - tapOn:
-    text: "Todos"
-    index: 0
+    id: "tab-bar.*tab.press-TodosTab"
 - waitForAnimationToEnd:
     timeout: 1200
 

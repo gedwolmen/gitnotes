@@ -5,8 +5,7 @@ appId: com.xaventra.gitnotes
 - launchApp:
     clearState: false
 - tapOn:
-    text: "Settings"
-    index: 0
+    id: "tab-bar.*tab.press-SettingsTab"
 - waitForAnimationToEnd:
     timeout: 1500
 # Scroll the Settings list down until we hit the providers section.
