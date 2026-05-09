@@ -560,7 +560,7 @@ export default function SettingsScreen() {
         lfsPending={lfsPending}
         lfsDownloadingRepo={lfsDownloadingRepo}
         onDownloadLfsObjects={(repo) => void handleDownloadLfsObjects(repo)}
-        onOpenTemplatesRepoPicker={() => setShowTemplatesRepoPicker(true)}
+        onOpenTemplatesRepoPicker={() => { setShowChatRepoPicker(false); setShowTemplatesRepoPicker(true); }}
         onSyncExistingTemplates={() => void handleSyncExistingTemplates()}
         onClearTemplatesRepo={() => void handleClearTemplatesRepo()}
         onOpenRenderStyleSettings={() => navigation.navigate('RenderStyleSettings')}
@@ -570,7 +570,7 @@ export default function SettingsScreen() {
         onToggleAI={() => { void toggleAI(); }}
         onOpenModelSelector={() => setShowModelSelector(true)}
         onToggleActionMode={() => { void setActionMode(actionMode === 'auto' ? 'confirm' : 'auto'); }}
-        onOpenChatRepoPicker={() => setShowChatRepoPicker(true)}
+        onOpenChatRepoPicker={() => { setShowTemplatesRepoPicker(false); setShowChatRepoPicker(true); }}
         onProviderPress={(provider) => {
           if (provider.type === 'openai-compatible') {
             setEditingProvider(provider);
