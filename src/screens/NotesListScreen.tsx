@@ -71,6 +71,7 @@ export default function NotesListScreen() {
   const [longPressedNote, setLongPressedNote] = useState<Note | null>(null);
   const [colorPickerNote, setColorPickerNote] = useState<Note | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const isDeletingRef = useRef(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
   const selectionMode = selectedIds.size > 0;
@@ -169,6 +170,7 @@ export default function NotesListScreen() {
   const handleBulkDelete = useCallback(() => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
+    if (isDeletingRef.current) return;
     Alert.alert(
       `Delete ${ids.length} ${ids.length === 1 ? 'note' : 'notes'}?`,
       'This cannot be undone.',
@@ -178,6 +180,8 @@ export default function NotesListScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
+            if (isDeletingRef.current) return;
+            isDeletingRef.current = true;
             setIsDeleting(true);
             try {
               for (const id of ids) {
@@ -191,6 +195,7 @@ export default function NotesListScreen() {
               clearSelection();
             } finally {
               setIsDeleting(false);
+              isDeletingRef.current = false;
             }
           },
         },
