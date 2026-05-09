@@ -48,9 +48,14 @@ appId: com.xaventra.gitnotes
 # reliably; some iPhone builds skip it via gesture handler.
 - runFlow:
     when:
-      visible: "This cannot be undone"
+      visible:
+        text: ".*This cannot be undone.*"
     commands:
-      - tapOn: "Delete"
+      # Tap the Alert's Delete button. The bulk-action-bar's Delete is
+      # also on screen but uses accessibilityLabel "Delete N todo(s)";
+      # the alert button's text is exactly "Delete" (anchored regex).
+      - tapOn:
+          text: "^Delete$"
       - waitForAnimationToEnd:
           timeout: 1500
 

@@ -50,9 +50,11 @@ appId: com.xaventra.gitnotes
 # auto-fired by the gesture handler in some builds.
 - runFlow:
     when:
-      visible: "This cannot be undone"
+      visible:
+        text: ".*Delete .* note.*|.*This cannot be undone.*"
     commands:
-      - tapOn: "Delete"
+      - tapOn:
+          text: "Delete"
       - waitForAnimationToEnd:
           timeout: 1500
 
