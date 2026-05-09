@@ -10,7 +10,6 @@ import { useTheme } from '../contexts/ThemeContext';
 import { slugifyTodoText, Todo, TodoPriority } from '../models/Todo';
 import { SortMode } from '../types/SortTypes';
 import { HapticService } from '../utils/haptics';
-import { useResponsive } from '../hooks/useResponsive';
 import { syncTodoToGitHub } from '../services/TodoGitHubSyncService';
 import { pullAllFromRepos } from '../services/RepoPullService';
 import { IconButton, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
@@ -31,7 +30,6 @@ import { BulkActionBar } from '../components/list/BulkActionBar';
 
 export default function TodoListScreen() {
   const { colors, isDark } = useTheme();
-  const { isTablet, maxContentWidth } = useResponsive();
   const headerHeight = useScreenHeaderHeight();
   const tabBarHeight = useTabBarHeight();
   const { todos, createTodo, updateTodo, toggleTodo, refreshTodos } = useTodos();
@@ -376,13 +374,9 @@ export default function TodoListScreen() {
     [filter],
   );
 
-  const contentMaxWidth = isTablet
-    ? { maxWidth: maxContentWidth, alignSelf: 'center' as const, width: '100%' as const }
-    : null;
-
   return (
     <SafeAreaView edges={[]} style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[{ flex: 1 }, contentMaxWidth]}>
+      <View style={{ flex: 1 }}>
       <View style={{ paddingTop: headerHeight }}>
         <OfflineBanner />
         <ConflictBanner />

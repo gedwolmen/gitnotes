@@ -20,7 +20,6 @@ import { OfflineBanner } from '../components/ui/OfflineBanner';
 import { ConflictBanner } from '../components/ui/ConflictBanner';
 import { IconButton, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { HapticService } from '../utils/haptics';
-import { useResponsive } from '../hooks/useResponsive';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { GitHubActivityIndicator } from '../components/GitHubActivityIndicator';
 import { ViewMode, VIEW_MODE_ICONS } from '../utils/viewModes';
@@ -45,7 +44,6 @@ export default function NotesListScreen() {
   const headerHeight = useScreenHeaderHeight();
   const tabBarHeight = useTabBarHeight();
   const { viewMode, setViewMode } = useViewMode();
-  const { isTablet, maxContentWidth } = useResponsive();
   const { isConnected } = useNetworkStatus();
   const { repositories } = useRepos();
   const {
@@ -362,14 +360,10 @@ export default function NotesListScreen() {
     );
   }
 
-  const contentMaxWidth = isTablet
-    ? { maxWidth: maxContentWidth, alignSelf: 'center' as const, width: '100%' as const }
-    : null;
-
   return (
     <SafeAreaView edges={[]} style={[styles.container, { backgroundColor: colors.background }]}>
       {isDeleting ? <GitHubActivityIndicator /> : null}
-      <View style={[{ flex: 1 }, contentMaxWidth]}>
+      <View style={{ flex: 1 }}>
       <View style={{ paddingTop: headerHeight }}>
         <OfflineBanner />
         <ConflictBanner />

@@ -26,7 +26,6 @@ import { LfsService } from '../services/git/lfs';
 import { AuthService } from '../services/AuthService';
 import { OnboardingService } from '../services/OnboardingService';
 import { HapticService } from '../utils/haptics';
-import { useResponsive } from '../hooks/useResponsive';
 import { useTemplateStore } from '../stores/templateStore';
 import { useAIStore } from '../stores/aiStore';
 import type { AIProviderConfig } from '../models/AIProvider';
@@ -43,7 +42,6 @@ import type { GitRepository } from '../services/GitService';
 export default function SettingsScreen() {
   const { theme, colors, setTheme, style: uiStyle, setStyle } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { isTablet, maxContentWidth } = useResponsive();
   const headerHeight = useScreenHeaderHeight();
   const tabBarHeight = useTabBarHeight();
   const { clearAllNotes, refreshNotes } = useNotes();
@@ -524,13 +522,9 @@ export default function SettingsScreen() {
   const selectedModelName = providers.flatMap((provider) => provider.models).find((model) => model.id === selectedModelId)?.name ?? 'Not set';
   const chatStorageLabel = chatRepoName ? (chatRepoOwner ? `${chatRepoOwner}/${chatRepoName}` : chatRepoName) : 'Not set';
 
-  const contentMaxWidth = isTablet
-    ? { maxWidth: maxContentWidth, alignSelf: 'center' as const, width: '100%' as const }
-    : null;
-
   return (
     <SafeAreaView edges={[]} style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[{ flex: 1 }, contentMaxWidth]}>
+      <View style={{ flex: 1 }}>
       <SettingsContent
         colors={colors}
         headerHeight={headerHeight}
