@@ -1,0 +1,46 @@
+# Add Repository flow: Settings → Add Repository → modal opens →
+# manual owner/repo input is present → typing enables the Add button.
+# We do NOT submit (no Enter, no Add tap) because that hits the real
+# GitHub API and persists a repo to the user's account.
+appId: com.xaventra.gitnotes
+---
+- stopApp
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "Settings"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 1000
+
+- scrollUntilVisible:
+    element:
+      id: "settings.button.repo-picker"
+    direction: DOWN
+    speed: 30
+    timeout: 8000
+    visibilityPercentage: 30
+
+- tapOn:
+    id: "settings.button.repo-picker"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+- assertVisible:
+    text: "Add Repository"
+- assertVisible:
+    id: "settings-modals.input.manual-repo"
+- tapOn:
+    id: "settings-modals.input.manual-repo"
+- inputText: "probe-owner/probe-repo"
+- waitForAnimationToEnd:
+    timeout: 400
+
+- assertVisible:
+    id: "settings-modals.button.add-manual-repo"
+- assertVisible:
+    text: ".*[Yy]our GitHub [Rr]epositories.*|.*Search repositories.*"
+
+# Modal close button has no testID — easiest dismissal is killing
+# the app, since we're not asserting any post-close state.
+- stopApp

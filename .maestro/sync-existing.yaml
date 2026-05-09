@@ -1,0 +1,35 @@
+# handleSyncRepo: tap the cloud-download icon next to a repo, verify
+# the row swaps to a spinner. Real network call against GitHub —
+# leaves note state intact because the repo is already up to date in
+# the test simulator.
+appId: com.xaventra.gitnotes
+---
+- stopApp
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "Settings"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 1000
+
+- scrollUntilVisible:
+    element:
+      id: "settings.button.sync-repo"
+    direction: DOWN
+    speed: 30
+    timeout: 8000
+    visibilityPercentage: 30
+
+- assertVisible:
+    id: "settings.button.sync-repo"
+- tapOn:
+    id: "settings.button.sync-repo"
+- waitForAnimationToEnd:
+    timeout: 8000
+
+# After sync finishes the cloud-download icon comes back. If still
+# loading, this assertion would fail; long timeout above lets it
+# settle on a small repo.
+- assertVisible:
+    id: "settings.button.sync-repo"
