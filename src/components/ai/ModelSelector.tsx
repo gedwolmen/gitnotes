@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Modal,
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
@@ -18,6 +19,7 @@ import { downloadModel, getModelStatus } from '../../services/AIService';
 import { AIModelConfig, AIProviderConfig } from '../../models/AIProvider';
 import { resolveProviderAvailability, type Availability } from '../../services/ai/providerAvailability';
 import { describeAvailability } from '../../services/ai/providerAvailabilityCopy';
+import { filterProviders } from './modelSelectorFilter';
 
 interface ModelSelectorProps {
   visible: boolean;
@@ -38,6 +40,11 @@ export function ModelSelector({ visible, onClose }: ModelSelectorProps) {
   const [providerAvailability, setProviderAvailability] = useState<Record<string, Availability>>({});
   const [downloadProgress, setDownloadProgress] = useState<Record<string, number>>({});
   const [isDownloading, setIsDownloading] = useState<Record<string, boolean>>({});
+  const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    if (!visible) setQuery('');
+  }, [visible]);
 
   const loadStatuses = useCallback(async () => {
     const newStatuses: Record<string, 'ready' | 'needs-download' | 'unavailable'> = {};
@@ -93,6 +100,19 @@ export function ModelSelector({ visible, onClose }: ModelSelectorProps) {
     }
   };
 
+  const visibleProviders = useMemo(() => {
+    const baseProviders = providers
+      .filter((p) => p.isEnabled)
+      .filter((p) => {
+        if (!p.supportedPlatforms || p.supportedPlatforms.length === 0) return true;
+        const os = Platform.OS as 'ios' | 'android';
+        return p.supportedPlatforms.includes(os);
+      });
+    return filterProviders(baseProviders, query);
+  }, [providers, query]);
+
+  const trimmedQuery = query.trim();
+
   const handleSelectModel = async (model: AIModelConfig) => {
     if (statuses[model.id] === 'unavailable') return;
     if (statuses[model.id] === 'needs-download') return;
@@ -112,17 +132,44 @@ export function ModelSelector({ visible, onClose }: ModelSelectorProps) {
             </TouchableOpacity>
           </View>
           
+          <View style={[styles.searchWrap, { borderBottomColor: colors.border }]}>
+            <Ionicons name="search" size={16} color={colors.textSecondary} />
+            <TextInput
+              testID="model-selector.input.search"
+              style={[styles.searchInput, { color: colors.text }]}
+              placeholder="Search models or providers"
+              placeholderTextColor={colors.textSecondary}
+              value={query}
+              onChangeText={setQuery}
+              autoCorrect={false}
+              autoCapitalize="none"
+              returnKeyType="search"
+            />
+            {query.length > 0 && (
+              <TouchableOpacity
+                testID="model-selector.button.clear-search"
+                onPress={() => setQuery('')}
+                hitSlop={8}
+              >
+                <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+              </TouchableOpacity>
+            )}
+          </View>
+
           <ScrollView
             style={styles.modalBody}
             contentContainerStyle={{ paddingBottom: spacing[8] }}
+            keyboardShouldPersistTaps="handled"
           >
-            {providers
-              .filter((p) => p.isEnabled)
-              .filter((p) => {
-                if (!p.supportedPlatforms || p.supportedPlatforms.length === 0) return true;
-                const os = Platform.OS as 'ios' | 'android';
-                return p.supportedPlatforms.includes(os);
-              })
+            {trimmedQuery !== '' && visibleProviders.length === 0 && (
+              <Text
+                testID="model-selector.text.empty"
+                style={[styles.emptyText, { color: colors.textSecondary }]}
+              >
+                No models match "{trimmedQuery}"
+              </Text>
+            )}
+            {visibleProviders
               .map((provider: AIProviderConfig) => {
                 const availability = providerAvailability[provider.id];
                 const providerUnavailable = availability && availability.kind === 'unavailable';
@@ -242,6 +289,24 @@ const styles = StyleSheet.create({
   },
   modalBody: {
     padding: 20,
+  },
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    paddingVertical: 4,
+  },
+  emptyText: {
+    fontSize: 14,
+    textAlign: 'center',
+    paddingVertical: 24,
   },
   rowContent: {
     flexDirection: 'row',
