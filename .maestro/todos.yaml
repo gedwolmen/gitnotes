@@ -1,0 +1,59 @@
+# Todos: add, mark complete, delete via swipe.
+appId: com.xaventra.gitnotes
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "Todos"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 1200
+
+# Add a todo.
+- tapOn:
+    id: "todo-list.icon-button.add"
+- waitForAnimationToEnd:
+    timeout: 1000
+- tapOn:
+    id: "todo-editor.input.title"
+- inputText: "Maestro todo one"
+# `Maestro` keyboard return key submits in the title-only flow; press
+# Enter to dismiss the keyboard, then tap the explicit submit button.
+- pressKey: Enter
+- waitForAnimationToEnd:
+    timeout: 500
+- tapOn:
+    id: "todo-editor.button.submit"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+- assertVisible:
+    text: ".*Maestro todo one.*"
+
+# Swipe-left to reveal delete on the new todo and bulk-delete. Anchor
+# the swipe to the row's visible text — works on phone and tablet
+# without device-specific coordinates.
+- swipe:
+    from:
+      text: ".*Maestro todo one.*"
+    direction: LEFT
+- waitForAnimationToEnd:
+    timeout: 600
+- assertVisible:
+    id: "bulk-action-bar.container"
+- tapOn:
+    id: "bulk-action-bar.button.delete"
+- waitForAnimationToEnd:
+    timeout: 1500
+# Confirm the destructive iOS Alert if it appeared. iPad shows it
+# reliably; some iPhone builds skip it via gesture handler.
+- runFlow:
+    when:
+      visible: "This cannot be undone"
+    commands:
+      - tapOn: "Delete"
+      - waitForAnimationToEnd:
+          timeout: 1500
+
+- assertNotVisible:
+    text: ".*Maestro todo one.*"

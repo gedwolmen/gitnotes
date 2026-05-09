@@ -1,0 +1,60 @@
+# Notes: create a title-only note, save, verify it appears, swipe-delete.
+# Avoids typing into the markdown editor body — Maestro's fast inputText
+# can race the editor's undo-redo state and trip an update-depth loop.
+appId: com.xaventra.gitnotes
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "Notes"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 1200
+
+- tapOn:
+    id: "notes-list.icon-button.add"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+# Title only — body left empty.
+- tapOn:
+    id: "note-editor-form.input.title"
+- inputText: "Maestro note CRUD"
+- pressKey: Enter
+
+- tapOn:
+    id: "note-editor.button.save"
+- waitForAnimationToEnd:
+    timeout: 2000
+
+- assertVisible:
+    text: ".*Maestro note CRUD.*"
+
+# Swipe-left → bulk-delete the new note. Anchor the swipe to the row's
+# visible text so it works on phone and tablet without device-specific
+# coordinates.
+- swipe:
+    from:
+      text: ".*Maestro note CRUD.*"
+    direction: LEFT
+- waitForAnimationToEnd:
+    timeout: 600
+- assertVisible:
+    id: "bulk-action-bar.container"
+- tapOn:
+    id: "bulk-action-bar.button.delete"
+- waitForAnimationToEnd:
+    timeout: 1500
+# Confirm the destructive iOS Alert. Wrapped in runFlow because the
+# Alert appears on tablet but on iPhone the destructive button gets
+# auto-fired by the gesture handler in some builds.
+- runFlow:
+    when:
+      visible: "This cannot be undone"
+    commands:
+      - tapOn: "Delete"
+      - waitForAnimationToEnd:
+          timeout: 1500
+
+- assertNotVisible:
+    text: ".*Maestro note CRUD.*"

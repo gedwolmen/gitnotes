@@ -1,8 +1,7 @@
-# Render smoke. Opens an existing note known to contain `- [ ] task` and
-# `# Heading` and asserts the renderer substitutes the GFM checkbox
-# glyphs and a heading is shown. Avoids the typing path because Maestro's
-# rapid inputText into a controlled <TextInput> can race the editor's
-# undo-redo state and trip a max-update-depth loop on iOS.
+# Render smoke. Creates a markdown note with task list + heading + bare
+# URL link, opens preview, asserts the right glyphs/labels appear.
+# Uses raw mode + slower stepwise typing so the editor's undo/redo
+# state doesn't race with rapid inputText.
 appId: com.xaventra.gitnotes
 ---
 - launchApp:
@@ -10,9 +9,56 @@ appId: com.xaventra.gitnotes
 - tapOn:
     text: "Notes"
     index: 0
-- tapOn: "Maestro render check"
 - waitForAnimationToEnd:
-    timeout: 2500
+    timeout: 1200
+
+# If the prior run's note still exists, open it. Otherwise create one.
+- runFlow:
+    when:
+      visible:
+        text: ".*Maestro render check.*"
+    commands:
+      - tapOn:
+          text: ".*Maestro render check.*"
+
+- runFlow:
+    when:
+      notVisible:
+        text: ".*Maestro render check.*"
+    commands:
+      - tapOn:
+          id: "notes-list.icon-button.add"
+      - waitForAnimationToEnd:
+          timeout: 1200
+      - tapOn:
+          id: "note-editor-form.input.title"
+      - inputText: "Maestro render check"
+      - pressKey: Enter
+      - tapOn:
+          id: "mode-raw"
+      - waitForAnimationToEnd:
+          timeout: 500
+      - tapOn:
+          id: "note-editor-form.input.content"
+      - inputText: "# Heading line"
+      - pressKey: Enter
+      - inputText: "- [ ] open task"
+      - pressKey: Enter
+      - inputText: "- [x] done task"
+      - pressKey: Enter
+      - inputText: "[docs](www.example.com)"
+      - pressKey: Enter
+      - tapOn:
+          id: "note-editor.button.save"
+      - waitForAnimationToEnd:
+          timeout: 2000
+      - tapOn:
+          text: ".*Maestro render check.*"
+
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# Render assertions.
 - assertVisible: "Heading line"
 - assertVisible:
     text: ".*☐.*open task.*"

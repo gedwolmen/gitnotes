@@ -14,19 +14,19 @@ appId: com.xaventra.gitnotes
 - waitForAnimationToEnd:
     timeout: 1500
 
-# Tap "+" if there are existing canvases, "Create Canvas" if empty state.
+# Tap empty-state CTA if no canvases, otherwise the header "+" button.
 - runFlow:
     when:
       visible: "Create Canvas"
     commands:
-      - tapOn: "Create Canvas"
+      - tapOn:
+          id: "canvas-list.button.create"
 - runFlow:
     when:
       notVisible: "Create Canvas"
     commands:
       - tapOn:
-          id: "canvases-list.button.add"
-          optional: true
+          id: "canvas-list.icon-button.new-canvas"
 - waitForAnimationToEnd:
     timeout: 1200
 - assertVisible:
