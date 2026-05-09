@@ -19,6 +19,7 @@ import { useTokens } from '../../contexts/ThemeContext';
 import { Group, GroupRow } from '../ui';
 import { AIProviderConfig, AIModelConfig } from '../../models/AIProvider';
 import { useAIStore } from '../../stores/aiStore';
+import { checkOpenRouterKey, isOpenRouterBaseURL } from '../../services/ai/openrouterPreflight';
 
 interface ProviderConfigModalProps {
   visible: boolean;
@@ -79,9 +80,22 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
           providerType: 'openai-compatible',
           requiresDownload: false,
         }));
-        
+
         setTestedModels(discoveredModels);
-        Alert.alert('Success', `Connected and discovered ${discoveredModels.length} models.`);
+
+        let warning = '';
+        if (isOpenRouterBaseURL(baseURL.trim()) && apiKey.trim()) {
+          const keyInfo = await checkOpenRouterKey(baseURL.trim(), apiKey.trim());
+          if (keyInfo?.isFreeTier) {
+            const limitText = keyInfo.limit != null
+              ? `${keyInfo.limit} req/day`
+              : 'a daily request limit';
+            const usageText = keyInfo.usage != null ? ` (${keyInfo.usage} used)` : '';
+            warning = `\n\nThis API key is on the OpenRouter free tier — ${limitText}${usageText}. Streaming will fail when the daily quota is exhausted.`;
+          }
+        }
+
+        Alert.alert('Success', `Connected and discovered ${discoveredModels.length} models.${warning}`);
       } else {
         throw new Error('Unexpected response format. Expected an array of models.');
       }
