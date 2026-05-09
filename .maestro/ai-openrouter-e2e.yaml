@@ -42,13 +42,8 @@ appId: com.xaventra.gitnotes
       notVisible:
         text: "OpenRouter"
     commands:
-      - scrollUntilVisible:
-          element:
-            id: "settings.button.add-provider"
-          direction: DOWN
-          speed: 30
-          timeout: 8000
-          visibilityPercentage: 30
+      - assertVisible:
+          id: "settings.button.add-provider"
       - tapOn:
           id: "settings.button.add-provider"
       - waitForAnimationToEnd:
@@ -88,25 +83,53 @@ appId: com.xaventra.gitnotes
     text: ".*OpenRouter.*"
 
 # --- Set Chat Storage repo (required for new threads) -------------
-- scrollUntilVisible:
-    element:
-      id: "settings.button.chat-repo-picker"
-    direction: UP
-    speed: 30
-    timeout: 8000
-    visibilityPercentage: 30
-- tapOn:
-    id: "settings.button.chat-repo-picker"
-- waitForAnimationToEnd:
-    timeout: 1500
-- tapOn:
-    id: "chat-repo-picker.button.select-repo"
-- waitForAnimationToEnd:
-    timeout: 800
-- tapOn:
-    id: "chat-repo-picker.button.confirm"
-- waitForAnimationToEnd:
-    timeout: 1500
+# Skip if already configured (the row trailing label shows the
+# repo path; "Not set" only when unconfigured).
+- runFlow:
+    when:
+      visible:
+        text: "Not set"
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "settings.button.chat-repo-picker"
+          direction: UP
+          speed: 30
+          timeout: 8000
+          visibilityPercentage: 30
+      - tapOn:
+          id: "settings.button.chat-repo-picker"
+      - waitForAnimationToEnd:
+          timeout: 1500
+      - tapOn:
+          id: "chat-repo-picker.button.select-repo"
+      - waitForAnimationToEnd:
+          timeout: 800
+      - tapOn:
+          id: "chat-repo-picker.button.confirm"
+      - waitForAnimationToEnd:
+          timeout: 6000
+      # Init can fail with AxiosError: Network — see #654. Retry once.
+      - runFlow:
+          when:
+            visible:
+              id: "chat-repo-picker.button.confirm"
+          commands:
+            - tapOn:
+                id: "chat-repo-picker.button.confirm"
+            - waitForAnimationToEnd:
+                timeout: 6000
+      # If still stuck, dismiss; the chat repo will fall through to
+      # the existing one (Templates row label).
+      - runFlow:
+          when:
+            visible:
+              id: "chat-repo-picker.button.close"
+          commands:
+            - tapOn:
+                id: "chat-repo-picker.button.close"
+            - waitForAnimationToEnd:
+                timeout: 1000
 
 # --- Pick a free OpenRouter model ---------------------------------
 - tapOn:
@@ -116,19 +139,17 @@ appId: com.xaventra.gitnotes
 - assertVisible:
     text: ".*Select AI Model.*"
 
-# Pick a known-stable free model. Gemma streams cleanly through the
-# OpenAI-compatible SDK; other "free" rows on OpenRouter (e.g. the
-# inclusionAI Ring-1T router) return non-standard SSE chunks that
-# trip the AI SDK's "Failed to process successful response".
-- scrollUntilVisible:
-    element:
-      text: ".*Gemma.*free.*|.*Llama.*free.*|.*Mistral.*free.*|.*Qwen.*free.*"
-    direction: DOWN
-    speed: 80
-    timeout: 30000
-    visibilityPercentage: 10
+# Use the new search bar (#650) to filter — faster than scrolling
+# through 367 rows. Search for "gemma" and tap the parenthesised
+# "(free)" suffix that only appears on model row labels (not on the
+# search input itself).
 - tapOn:
-    text: ".*Gemma.*free.*|.*Llama.*free.*|.*Mistral.*free.*|.*Qwen.*free.*"
+    id: "model-selector.input.search"
+- inputText: "gemma"
+- waitForAnimationToEnd:
+    timeout: 1200
+- tapOn:
+    text: ".*[Gg]emma.*\\(free\\).*"
 - waitForAnimationToEnd:
     timeout: 1500
 
