@@ -1,0 +1,81 @@
+# AI provider config modal: open Add Provider, fill name + base URL,
+# save, find in list, delete. Smoke-only — does not store an API key
+# the app would actually call.
+appId: com.xaventra.gitnotes
+---
+- stopApp
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "Settings"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# Settings is long; raw swipes get to the providers section faster than
+# scrollUntilVisible's slow stride.
+- swipe:
+    start: "50%, 80%"
+    end: "50%, 20%"
+    duration: 400
+- swipe:
+    start: "50%, 80%"
+    end: "50%, 20%"
+    duration: 400
+- swipe:
+    start: "50%, 80%"
+    end: "50%, 20%"
+    duration: 400
+- swipe:
+    start: "50%, 80%"
+    end: "50%, 20%"
+    duration: 400
+- swipe:
+    start: "50%, 80%"
+    end: "50%, 20%"
+    duration: 400
+
+- tapOn:
+    id: "settings.button.add-provider"
+- waitForAnimationToEnd:
+    timeout: 1000
+
+- tapOn:
+    id: "provider-config.input.name"
+- inputText: "Maestro Probe Provider"
+- pressKey: Enter
+
+- tapOn:
+    id: "provider-config.input.base-url"
+- inputText: "https://example.invalid/v1"
+- pressKey: Enter
+
+- tapOn:
+    id: "provider-config-modal.button.save"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+# Provider should appear in the list. Find + open it to delete.
+- assertVisible:
+    text: ".*Maestro Probe Provider.*"
+- tapOn:
+    text: ".*Maestro Probe Provider.*"
+- waitForAnimationToEnd:
+    timeout: 1000
+- tapOn:
+    id: "provider-config.button.delete"
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# Confirm destructive iOS Alert if shown.
+- runFlow:
+    when:
+      visible:
+        text: ".*[Dd]elete.*[Pp]rovider.*|.*[Rr]emove.*[Pp]rovider.*"
+    commands:
+      - tapOn: "Delete"
+      - waitForAnimationToEnd:
+          timeout: 1000
+
+- assertNotVisible:
+    text: ".*Maestro Probe Provider.*"
