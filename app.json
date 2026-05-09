@@ -32,8 +32,12 @@
         "NSPhotoLibraryUsageDescription": "GitNotēs needs access to your photo library to attach images to notes.",
         "NSMicrophoneUsageDescription": "GitNotēs needs access to your microphone for voice-to-text note input.",
         "ITSAppUsesNonExemptEncryption": false,
-        "UIBackgroundModes": ["processing"],
-        "BGTaskSchedulerPermittedIdentifiers": ["com.expo.modules.backgroundtask.processing"],
+        "UIBackgroundModes": [
+          "processing"
+        ],
+        "BGTaskSchedulerPermittedIdentifiers": [
+          "com.expo.modules.backgroundtask.processing"
+        ],
         "UIFileSharingEnabled": true,
         "LSSupportsOpeningDocumentsInPlace": true,
         "NSDocumentsFolderUsageDescription": "GitNotēs stores your cloned repositories and note files here so you can browse and back them up from the Files app."
@@ -69,7 +73,14 @@
       "expo-secure-store",
       "expo-image",
       "expo-sharing",
-      "expo-background-task"
+      "expo-background-task",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "GitNotēs needs access to your microphone for voice-to-text note input.",
+          "speechRecognitionPermission": "GitNotēs uses on-device speech recognition to convert your voice into note text. Audio stays on your device."
+        }
+      ]
     ],
     "owner": "vidwa",
     "runtimeVersion": {

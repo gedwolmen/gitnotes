@@ -3913,6 +3913,11 @@ expo-sharing@~55.0.18:
     "@expo/config-types" "^55.0.5"
     "@expo/plist" "^0.5.2"
 
+expo-speech-recognition@^3.1.3:
+  version "3.1.3"
+  resolved "https://registry.yarnpkg.com/expo-speech-recognition/-/expo-speech-recognition-3.1.3.tgz#d8a8a14b71bcd1633176b2147a6cc55afdafb867"
+  integrity sha512-vluXqggfY2AJcazYITvnV6YSE2rVe5SId5TpdjMC/m6JPUgHCOODrcHJtAQF6OUYl4f2T7oZSceGw6fJCC86Xw==
+
 expo-speech@~55.0.13:
   version "55.0.13"
   resolved "https://registry.npmjs.org/expo-speech/-/expo-speech-55.0.13.tgz"
