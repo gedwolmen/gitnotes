@@ -38,6 +38,7 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
   const [selectedRepoPath, setSelectedRepoPath] = useState<string | null>(null);
   const [branch, setBranch] = useState('main');
   const [isInitializing, setIsInitializing] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
 
   const filteredRepos = useMemo(() => {
     if (!searchQuery.trim()) return repositories;
@@ -51,7 +52,13 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
 
   const handleSelectRepo = (path: string) => {
     setSelectedRepoPath(path);
+    setInitError(null);
     HapticService.selection();
+  };
+
+  const handleBranchChange = (next: string) => {
+    setBranch(next);
+    setInitError(null);
   };
 
   const handleConfirm = async () => {
@@ -64,6 +71,7 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
     const name = repo.path.split('/')[1] || repo.name;
 
     setIsInitializing(true);
+    setInitError(null);
     try {
       await setChatRepo(owner, name, branch);
       await ChatStorageService.initializeChatStorage(owner, name, branch);
@@ -72,6 +80,10 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
     } catch (error) {
       console.error('[ChatRepoPickerModal] Error initializing chat storage:', error);
       HapticService.error();
+      const detail = error instanceof Error ? error.message : 'Unknown error';
+      setInitError(
+        `Couldn't write to ${repo.path}/chats/. ${detail}. Check network and repository write access, then tap Retry.`,
+      );
     } finally {
       setIsInitializing(false);
     }
@@ -186,7 +198,7 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
                     <Input
                       testID="chat-repo-picker.input.branch"
                       value={branch}
-                      onChangeText={setBranch}
+                      onChangeText={handleBranchChange}
                       placeholder="main"
                       autoCapitalize="none"
                       autoCorrect={false}
@@ -207,13 +219,33 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
             },
           ]}
         >
+          {initError && (
+            <View
+              style={[
+                styles.errorRow,
+                { backgroundColor: colors.error + '1A', borderColor: colors.error },
+              ]}
+            >
+              <Ionicons name="alert-circle" size={18} color={colors.error} />
+              <Text
+                testID="chat-repo-picker.text.error"
+                style={[styles.errorText, { color: colors.error }]}
+              >
+                {initError}
+              </Text>
+            </View>
+          )}
           <Button
             testID="chat-repo-picker.button.confirm"
             variant="primary"
             onPress={handleConfirm}
             disabled={!selectedRepoPath || isInitializing}
           >
-            {isInitializing ? 'Initializing...' : 'Confirm Selection'}
+            {isInitializing
+              ? 'Initializing...'
+              : initError
+                ? 'Retry'
+                : 'Confirm Selection'}
           </Button>
         </View>
       </View>
@@ -292,6 +324,20 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 4,
     borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  errorRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: 10,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
   },
   emptyState: {
     alignItems: 'center',
