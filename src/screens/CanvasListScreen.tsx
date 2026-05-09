@@ -230,7 +230,10 @@ export default function CanvasListScreen() {
             {CANVAS_PRESETS.map((preset) => (
               <TouchableOpacity
                 key={preset.label}
-                testID="canvas-list.button.pick-size"
+                testID={`canvas-list.button.pick-size-${preset.label.toLowerCase()}`}
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel={`${preset.label}, ${preset.desc}`}
                 style={[styles.sizeOption, { borderColor: colors.border }]}
                 onPress={() => handlePickSize(preset.w, preset.h)}
                 activeOpacity={0.7}
