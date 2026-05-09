@@ -1,0 +1,40 @@
+# Long-press a note → context menu → Pin. Pinned notes float to top of
+# the list above unpinned ones.
+appId: com.xaventra.gitnotes
+---
+- stopApp
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "Notes"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 1500
+
+# Long-press the seed note.
+- scrollUntilVisible:
+    element:
+      text: ".*Maestro render check.*"
+    direction: DOWN
+    speed: 30
+    timeout: 6000
+    visibilityPercentage: 50
+- longPressOn: "Maestro render check"
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# Context menu offers Pin / Pin to top.
+- assertVisible:
+    text: ".*[Pp]in.*"
+- tapOn:
+    text: ".*[Pp]in.*"
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# Re-open menu and unpin to leave state clean.
+- longPressOn: "Maestro render check"
+- waitForAnimationToEnd:
+    timeout: 1000
+- tapOn:
+    text: ".*[Uu]npin.*|.*[Pp]in.*"
+    optional: true

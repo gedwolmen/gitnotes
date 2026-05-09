@@ -4,6 +4,7 @@
 # state doesn't race with rapid inputText.
 appId: com.xaventra.gitnotes
 ---
+- stopApp
 - launchApp:
     clearState: false
 - tapOn:
@@ -12,7 +13,17 @@ appId: com.xaventra.gitnotes
 - waitForAnimationToEnd:
     timeout: 1200
 
-# If the prior run's note still exists, open it. Otherwise create one.
+# Reset sort to Newest Modified so the seed note is at the top if it
+# exists. Best-effort — picker may already be on Newest Modified.
+- tapOn:
+    id: "sort-picker-trigger"
+    optional: true
+- tapOn:
+    id: "sort-option-modified-desc"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 800
+
 - runFlow:
     when:
       visible:
@@ -21,8 +32,13 @@ appId: com.xaventra.gitnotes
       - tapOn:
           text: ".*Maestro render check.*"
 
+# Only create the seed note when we're still on the Notes list (the
+# add button is visible) AND the seed isn't there yet — keeps the two
+# branches mutually exclusive after the first runFlow opens the note.
 - runFlow:
     when:
+      visible:
+        id: "notes-list.icon-button.add"
       notVisible:
         text: ".*Maestro render check.*"
     commands:

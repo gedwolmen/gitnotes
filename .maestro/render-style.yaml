@@ -1,0 +1,36 @@
+# Settings → Render Style sub-screen mounts and pops cleanly.
+appId: com.xaventra.gitnotes
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "Settings"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 1000
+
+- scrollUntilVisible:
+    element:
+      text: ".*Render style.*"
+    direction: DOWN
+    timeout: 8000
+    speed: 30
+    visibilityPercentage: 30
+- tapOn:
+    text: ".*Render style.*"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+# The sub-screen should render *something* — a back button or known
+# header.
+- assertVisible:
+    text: ".*Render style.*"
+
+# Pop back via swipe-from-edge (iOS native back gesture).
+- swipe:
+    start: "1%, 50%"
+    end: "60%, 50%"
+    duration: 350
+- waitForAnimationToEnd:
+    timeout: 1000
+- assertVisible: "Settings"

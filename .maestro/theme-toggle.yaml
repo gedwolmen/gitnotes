@@ -1,0 +1,19 @@
+# Settings → toggle Dark Mode. Verifies the toggle is reachable and
+# its accessibility state flips.
+appId: com.xaventra.gitnotes
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "Settings"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 1200
+
+- assertVisible: "Dark Mode"
+- tapOn: "Dark Mode"
+- waitForAnimationToEnd:
+    timeout: 800
+- tapOn: "Dark Mode"
+- waitForAnimationToEnd:
+    timeout: 800

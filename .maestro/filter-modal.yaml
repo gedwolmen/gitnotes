@@ -1,0 +1,29 @@
+# Notes filter modal: open via header icon, assert visible, close.
+appId: com.xaventra.gitnotes
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "Notes"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 1500
+
+- tapOn:
+    id: "notes-list.icon-button.filters"
+- waitForAnimationToEnd:
+    timeout: 1200
+
+# The filter sheet section labels.
+- assertVisible: "Filter Notes"
+- assertVisible:
+    text: ".*NOTE TYPE.*"
+- assertVisible:
+    text: ".*REPOSITORY.*"
+
+# Close via the Done button.
+- tapOn: "Done"
+- waitForAnimationToEnd:
+    timeout: 1000
+
+- assertVisible: "Notes"

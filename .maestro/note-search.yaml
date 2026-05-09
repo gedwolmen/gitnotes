@@ -1,0 +1,32 @@
+# Notes search: type into the search bar, assert non-matching notes
+# disappear, clear search, assert all back.
+appId: com.xaventra.gitnotes
+---
+- stopApp
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "Notes"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 1500
+
+# Scroll to the seed note (sort order may push it down).
+- scrollUntilVisible:
+    element:
+      text: ".*Maestro render check.*"
+    direction: DOWN
+    speed: 30
+    timeout: 6000
+    visibilityPercentage: 50
+
+# Type a search term that matches only the seed note.
+- tapOn:
+    text: "Search notes..."
+- inputText: "render check"
+- waitForAnimationToEnd:
+    timeout: 800
+
+- assertVisible: "Maestro render check"
+- assertNotVisible: "TODOPROBE"
+

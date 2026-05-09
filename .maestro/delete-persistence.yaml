@@ -1,0 +1,72 @@
+# Regression for issue #636. Create a note, delete it via swipe-to-bulk-
+# delete, force-quit + relaunch, assert it stays gone. Currently expected
+# to FAIL — local delete works, but the next pull from GitHub re-fetches
+# the file and the note resurrects.
+appId: com.xaventra.gitnotes
+---
+- stopApp
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "Notes"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 1500
+
+# Create a uniquely named note.
+- tapOn:
+    id: "notes-list.icon-button.add"
+- waitForAnimationToEnd:
+    timeout: 1500
+- tapOn:
+    id: "note-editor-form.input.title"
+- inputText: "Maestro persistence probe"
+- pressKey: Enter
+- tapOn:
+    id: "note-editor.button.save"
+- waitForAnimationToEnd:
+    timeout: 2500
+- assertVisible:
+    text: ".*Maestro persistence probe.*"
+
+# Delete it via swipe + bulk-delete.
+- swipe:
+    from:
+      text: ".*Maestro persistence probe.*"
+    direction: LEFT
+- waitForAnimationToEnd:
+    timeout: 600
+- tapOn:
+    id: "bulk-action-bar.button.delete"
+- waitForAnimationToEnd:
+    timeout: 1500
+- runFlow:
+    when:
+      visible: "This cannot be undone"
+    commands:
+      - tapOn: "Delete"
+      - waitForAnimationToEnd:
+          timeout: 1500
+- assertNotVisible:
+    text: ".*Maestro persistence probe.*"
+
+# Force-quit and relaunch. The note should stay gone.
+- stopApp
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "Notes"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# Pull-to-refresh to force the same path the bug travels.
+- swipe:
+    start: "50%, 30%"
+    end: "50%, 90%"
+    duration: 600
+- waitForAnimationToEnd:
+    timeout: 4000
+
+- assertNotVisible:
+    text: ".*Maestro persistence probe.*"

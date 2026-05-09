@@ -1,0 +1,29 @@
+# Home → New Journal Entry tile → editor opens.
+appId: com.xaventra.gitnotes
+---
+- stopApp
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "Home"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 1500
+
+- assertVisible:
+    text: ".*New Journal Entry.*"
+- tapOn:
+    text: ".*New Journal Entry.*"
+- waitForAnimationToEnd:
+    timeout: 2000
+
+- assertVisible:
+    id: "note-editor-form.input.title"
+- assertVisible:
+    id: "note-editor.button.save"
+
+# Cancel — leaves no junk note.
+- tapOn:
+    id: "note-editor.button.cancel"
+- waitForAnimationToEnd:
+    timeout: 1000

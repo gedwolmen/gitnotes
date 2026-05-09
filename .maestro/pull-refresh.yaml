@@ -1,0 +1,27 @@
+# Notes pull-to-refresh: drag down on the list, no crash.
+appId: com.xaventra.gitnotes
+---
+- stopApp
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "Notes"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 1500
+
+- swipe:
+    start: "50%, 30%"
+    end: "50%, 90%"
+    duration: 600
+- waitForAnimationToEnd:
+    timeout: 3000
+
+- assertVisible: "Notes"
+- scrollUntilVisible:
+    element:
+      text: ".*Maestro render check.*"
+    direction: DOWN
+    speed: 30
+    timeout: 6000
+    visibilityPercentage: 50

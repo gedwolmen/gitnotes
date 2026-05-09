@@ -1,0 +1,43 @@
+# Notes sort menu: open the trigger, pick a different sort, list still
+# renders.
+appId: com.xaventra.gitnotes
+---
+- stopApp
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "Notes"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 1500
+
+- tapOn:
+    id: "sort-picker-trigger"
+- waitForAnimationToEnd:
+    timeout: 1200
+
+# Picker exposes sort options as testIDs of the form
+# `sort-option-<field>-<direction>`. Pick title-asc.
+- assertVisible:
+    id: "sort-option-title-asc"
+- tapOn:
+    id: "sort-option-title-asc"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+# Picker dismissed, sort applied.
+- assertNotVisible:
+    id: "sort-option-title-asc"
+- assertVisible:
+    id: "sort-picker-trigger"
+
+# Reset sort to Newest Modified so downstream suite tests can find the
+# "Maestro render check" seed at the top of the list.
+- tapOn:
+    id: "sort-picker-trigger"
+- waitForAnimationToEnd:
+    timeout: 1000
+- tapOn:
+    id: "sort-option-modified-desc"
+- waitForAnimationToEnd:
+    timeout: 1000

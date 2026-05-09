@@ -3,6 +3,7 @@
 # can race the editor's undo-redo state and trip an update-depth loop.
 appId: com.xaventra.gitnotes
 ---
+- stopApp
 - launchApp:
     clearState: false
 - tapOn:

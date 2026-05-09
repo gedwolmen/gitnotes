@@ -1,0 +1,22 @@
+# Floating AI sparkle button: tap from Notes, lands on ChatThreadList.
+# stopApp before launch so we start from a clean nav stack.
+appId: com.xaventra.gitnotes
+---
+- stopApp
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "Notes"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 1500
+
+- tapOn:
+    id: "floating-ai.button.navigate-chat"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+# ChatThreadList shows either a list of past chats or an empty
+# sparkle-decorated state. Either way the screen renders without crash.
+- assertVisible:
+    text: ".*[Cc]hat.*|.*[Mm]odel.*|.*[Aa]I.*|.*[Ss]tart.*|.*New.*"

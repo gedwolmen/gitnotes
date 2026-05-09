@@ -1,0 +1,40 @@
+# Notes view-mode picker: open + select alternate layout, list still
+# renders.
+appId: com.xaventra.gitnotes
+---
+- stopApp
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "Notes"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 1500
+
+- tapOn:
+    id: "notes-list.icon-button.view-mode"
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# Picker exposes "List" and "Journal" view modes. The full row
+# accessibility label gets concatenated by iOS, so we match loosely
+# with regex.
+- assertVisible:
+    text: ".*Journal.*"
+
+- tapOn:
+    text: ".*Journal.*"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+# Switch back to List so we leave a deterministic state.
+- tapOn:
+    id: "notes-list.icon-button.view-mode"
+- waitForAnimationToEnd:
+    timeout: 1000
+- tapOn:
+    text: ".*List.*"
+- waitForAnimationToEnd:
+    timeout: 1000
+
+- assertVisible: "Notes"
