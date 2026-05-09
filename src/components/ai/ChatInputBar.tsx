@@ -125,6 +125,7 @@ export function ChatInputBar({
         </IconButton>
 
         <TextInput
+          testID="chat-input.input.message"
           style={{
             flex: 1,
             minHeight: 40,
@@ -156,6 +157,7 @@ export function ChatInputBar({
           </IconButton>
         ) : (
           <IconButton
+            testID="chat-input.button.send"
             variant="ghost"
             onPress={handleSend}
             disabled={isSendDisabled}
