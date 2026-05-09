@@ -1,0 +1,97 @@
+# Edit existing template: open Template Manager, create a probe
+# template, hit edit on it, change the description, save, verify the
+# new description shows in list, then delete to clean up.
+appId: com.xaventra.gitnotes
+---
+- stopApp
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "Settings"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 1000
+- swipe:
+    start: "50%, 80%"
+    end: "50%, 20%"
+    duration: 400
+- tapOn:
+    id: "settings.button.manage-templates"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+# Create a probe template to edit.
+- tapOn:
+    id: "template-manager.icon-button.new-template"
+    optional: true
+- runFlow:
+    when:
+      notVisible:
+        id: "template-editor.input.name"
+    commands:
+      - tapOn:
+          id: "template-manager.button.create"
+          optional: true
+- waitForAnimationToEnd:
+    timeout: 1000
+- tapOn:
+    id: "template-editor.input.name"
+- inputText: "Edit probe"
+- pressKey: Enter
+- tapOn:
+    id: "template-editor.input.description"
+- inputText: "before-edit"
+- pressKey: Enter
+- tapOn:
+    id: "template-editor.button.save"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+- assertVisible:
+    text: ".*Edit probe.*"
+- assertVisible:
+    text: ".*before-edit.*"
+
+# Tap edit pencil; the id contains the template's generated id, so use
+# regex matching.
+- tapOn:
+    id: "template-list-item.icon-button.edit-.*"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+- assertVisible:
+    id: "template-editor.input.name"
+
+# Replace description.
+- tapOn:
+    id: "template-editor.input.description"
+- eraseText: 30
+- inputText: "after-edit"
+- pressKey: Enter
+
+- tapOn:
+    id: "template-editor.button.save"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+- assertVisible:
+    text: ".*after-edit.*"
+- assertNotVisible:
+    text: "before-edit"
+
+# Cleanup — delete the probe template.
+- tapOn:
+    id: "template-list-item.icon-button.delete-.*"
+- waitForAnimationToEnd:
+    timeout: 1000
+- runFlow:
+    when:
+      visible:
+        text: ".*[Dd]elete.*[Tt]emplate.*"
+    commands:
+      - tapOn: "Delete"
+      - waitForAnimationToEnd:
+          timeout: 1000
+
+- assertNotVisible:
+    text: ".*Edit probe.*"
