@@ -4,6 +4,7 @@
 # fires, and the new canvas appears in the list.
 appId: com.xaventra.gitnotes
 ---
+- stopApp
 - launchApp:
     clearState: false
 - tapOn:
@@ -31,11 +32,9 @@ appId: com.xaventra.gitnotes
 - assertVisible:
     text: ".*Phone.*1080.*"
 
-# #648 added per-row testIDs but the parent dismiss-overlay
-# (TouchableOpacity around the whole modal) still folds children into
-# one a11y group — see #649. Until that lands, point-tap the Phone row.
+# Per-row testID from #648 + un-folded overlay from #652.
 - tapOn:
-    point: "50%, 33%"
+    id: "canvas-list.button.pick-size-phone"
 - waitForAnimationToEnd:
     timeout: 1500
 

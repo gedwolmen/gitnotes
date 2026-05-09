@@ -10,22 +10,27 @@ appId: com.xaventra.gitnotes
 - waitForAnimationToEnd:
     timeout: 1500
 
-# Scroll to the seed note (sort order may push it down).
-- scrollUntilVisible:
-    element:
-      text: ".*Maestro render check.*"
-    direction: DOWN
-    speed: 30
-    timeout: 6000
-    visibilityPercentage: 50
+# Self-seed a probe note so this doesn't depend on render.yaml.
+- tapOn:
+    id: "notes-list.icon-button.add"
+- waitForAnimationToEnd:
+    timeout: 1500
+- tapOn:
+    id: "note-editor-form.input.title"
+- inputText: "Maestro search probe"
+- pressKey: Enter
+- tapOn:
+    id: "note-editor.button.save"
+- waitForAnimationToEnd:
+    timeout: 2500
 
-# Type a search term that matches only the seed note.
+# Type a search term that matches only the probe note.
 - tapOn:
     text: "Search notes..."
-- inputText: "render check"
+- inputText: "search probe"
 - waitForAnimationToEnd:
     timeout: 800
 
-- assertVisible: "Maestro render check"
+- assertVisible: "Maestro search probe"
 - assertNotVisible: "TODOPROBE"
 

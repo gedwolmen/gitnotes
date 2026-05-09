@@ -17,10 +17,8 @@ appId: com.xaventra.gitnotes
     timeout: 3000
 
 - assertVisible: "Notes"
-- scrollUntilVisible:
-    element:
-      text: ".*Maestro render check.*"
-    direction: DOWN
-    speed: 30
-    timeout: 6000
-    visibilityPercentage: 50
+# Any note card is fine — we just need proof the list rendered after
+# the refresh finished, not a specific seed.
+- assertVisible:
+    id: "notes-list-card.button.press"
+    index: 0

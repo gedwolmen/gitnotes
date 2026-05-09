@@ -1,5 +1,7 @@
-# Open the seed note in edit mode, toggle the in-editor search bar,
-# assert it appears.
+# Open the top note in edit mode, toggle the in-editor search bar,
+# assert it appears. Order-independent — uses index 0 instead of a
+# specific seed name (the render-style probe was the original target
+# but it's gone if render.yaml hasn't run yet).
 appId: com.xaventra.gitnotes
 ---
 - stopApp
@@ -9,14 +11,9 @@ appId: com.xaventra.gitnotes
     id: "tab-bar.*tab.press-NotesTab"
 - waitForAnimationToEnd:
     timeout: 1500
-- scrollUntilVisible:
-    element:
-      text: ".*Maestro render check.*"
-    direction: DOWN
-    speed: 30
-    timeout: 6000
-    visibilityPercentage: 50
-- tapOn: "Maestro render check"
+- tapOn:
+    id: "notes-list-card.button.press"
+    index: 0
 - waitForAnimationToEnd:
     timeout: 1500
 - tapOn:

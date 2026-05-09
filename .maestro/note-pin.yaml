@@ -10,15 +10,22 @@ appId: com.xaventra.gitnotes
 - waitForAnimationToEnd:
     timeout: 1500
 
-# Long-press the seed note.
-- scrollUntilVisible:
-    element:
-      text: ".*Maestro render check.*"
-    direction: DOWN
-    speed: 30
-    timeout: 6000
-    visibilityPercentage: 50
-- longPressOn: "Maestro render check"
+# Self-seed a probe note we can pin so we don't depend on render.yaml
+# having run first.
+- tapOn:
+    id: "notes-list.icon-button.add"
+- waitForAnimationToEnd:
+    timeout: 1500
+- tapOn:
+    id: "note-editor-form.input.title"
+- inputText: "Maestro pin probe"
+- pressKey: Enter
+- tapOn:
+    id: "note-editor.button.save"
+- waitForAnimationToEnd:
+    timeout: 2500
+
+- longPressOn: "Maestro pin probe"
 - waitForAnimationToEnd:
     timeout: 1000
 
@@ -31,7 +38,7 @@ appId: com.xaventra.gitnotes
     timeout: 1000
 
 # Re-open menu and unpin to leave state clean.
-- longPressOn: "Maestro render check"
+- longPressOn: "Maestro pin probe"
 - waitForAnimationToEnd:
     timeout: 1000
 - tapOn:

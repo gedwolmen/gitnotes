@@ -10,14 +10,10 @@ appId: com.xaventra.gitnotes
 - waitForAnimationToEnd:
     timeout: 1500
 
-- scrollUntilVisible:
-    element:
-      text: ".*Maestro render check.*"
-    direction: DOWN
-    speed: 30
-    timeout: 6000
-    visibilityPercentage: 50
-- tapOn: "Maestro render check"
+# Open the first note in the list — order-independent.
+- tapOn:
+    id: "notes-list-card.button.press"
+    index: 0
 - waitForAnimationToEnd:
     timeout: 2000
 
