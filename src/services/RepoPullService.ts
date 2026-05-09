@@ -15,6 +15,7 @@ import { resolveBranch } from './git/branchResolver';
 import { AuthService } from './AuthService';
 import { ConflictResolverService } from './conflict/ConflictResolverService';
 import { useConflictStore } from '../stores/conflictStore';
+import { NoteSyncQueueService } from './NoteSyncQueueService';
 
 /**
  * Picks the read transport for a repo based on the user's per-repo
@@ -278,6 +279,8 @@ async function pullNotesFromRepo(
 
     for (const item of fetched) {
       if (!item) continue;
+      const isTombstoned = await NoteSyncQueueService.isTombstoned(repoPath, branch, item.path);
+      if (isTombstoned) continue;
       const ext = item.path.split('.').pop()?.toLowerCase() ?? 'md';
       const format = noteFormatFromExt(ext);
       const tags = extractTagsFromContent(item.content, format);

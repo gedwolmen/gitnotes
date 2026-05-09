@@ -11,6 +11,8 @@ import { LocalGitWriter } from './git/LocalGitWriter';
 import { NoteColor, NoteFormat } from '../models/Note';
 
 const QUEUE_KEY = '@gitnotes:sync_queue_v1';
+const TOMBSTONE_KEY = '@gitnotes:delete_tombstones_v1';
+const TOMBSTONE_TTL_MS = 24 * 60 * 60 * 1_000; // 24 hours
 const MAX_ATTEMPTS = 8;
 const BACKOFF_BASE_MS = 500;
 const BACKOFF_CAP_MS = 30_000;
@@ -110,6 +112,46 @@ class NoteSyncQueueServiceClass {
     this.notify();
   }
 
+  private tombstoneKey(repo: string, branch: string, filePath: string): string {
+    return `${repo}::${branch || 'main'}::${filePath}`;
+  }
+
+  async addTombstone(repo: string, branch: string | undefined, filePath: string): Promise<void> {
+    try {
+      const raw = await AsyncStorage.getItem(TOMBSTONE_KEY);
+      const map: Record<string, number> = raw ? JSON.parse(raw) : {};
+      map[this.tombstoneKey(repo, branch || 'main', filePath)] = Date.now();
+      await AsyncStorage.setItem(TOMBSTONE_KEY, JSON.stringify(map));
+    } catch { /* best-effort */ }
+  }
+
+  async isTombstoned(repo: string, branch: string | undefined, filePath: string): Promise<boolean> {
+    try {
+      const raw = await AsyncStorage.getItem(TOMBSTONE_KEY);
+      if (!raw) return false;
+      const map: Record<string, number> = JSON.parse(raw);
+      const key = this.tombstoneKey(repo, branch || 'main', filePath);
+      const ts = map[key];
+      if (ts == null) return false;
+      if (Date.now() - ts > TOMBSTONE_TTL_MS) {
+        delete map[key];
+        await AsyncStorage.setItem(TOMBSTONE_KEY, JSON.stringify(map));
+        return false;
+      }
+      return true;
+    } catch { return false; }
+  }
+
+  async removeTombstone(repo: string, branch: string | undefined, filePath: string): Promise<void> {
+    try {
+      const raw = await AsyncStorage.getItem(TOMBSTONE_KEY);
+      if (!raw) return;
+      const map: Record<string, number> = JSON.parse(raw);
+      delete map[this.tombstoneKey(repo, branch || 'main', filePath)];
+      await AsyncStorage.setItem(TOMBSTONE_KEY, JSON.stringify(map));
+    } catch { /* best-effort */ }
+  }
+
   async enqueueNoteUpsert(params: NoteUpsertParams, localNoteId?: string): Promise<void> {
     const items = await this.getAll();
     const sameRepoBranchPath = (m: QueuedMutation) =>
@@ -159,6 +201,7 @@ class NoteSyncQueueServiceClass {
       params,
     });
     await this.saveAll(filtered);
+    await this.addTombstone(params.repo, params.branch, params.filePath);
   }
 
   async drain(): Promise<{ succeeded: number; failed: number; remaining: number }> {
@@ -295,6 +338,8 @@ class NoteSyncQueueServiceClass {
       } else {
         if (item.type === 'note.upsert') {
           await this.applyPostSyncStorageUpdate(item, result);
+        } else if (item.type === 'note.delete') {
+          await this.removeTombstone(item.params.repo, item.params.branch, item.params.filePath);
         }
         succeeded++;
         droppedIds.add(item.id);
@@ -312,6 +357,8 @@ class NoteSyncQueueServiceClass {
         for (const { item, result } of pendingFlush) {
           if (item.type === 'note.upsert') {
             await this.applyPostSyncStorageUpdate(item, result);
+          } else if (item.type === 'note.delete') {
+            await this.removeTombstone(item.params.repo, item.params.branch, item.params.filePath);
           }
           succeeded++;
           droppedIds.add(item.id);
