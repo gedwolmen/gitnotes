@@ -231,15 +231,9 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(fun
               onPress={() => setMode(m)}
               style={[styles.modeButton, mode === m && styles.modeButtonActive]}
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                {m === 'checklist' ? (
-                  <Ionicons name="checkmark" size={14} color={mode === m ? colors.primary : colors.textSecondary} />
-                ) : (
-                  <Text style={[styles.modeButtonText, { color: mode === m ? colors.primary : colors.textSecondary }]}>
-                    {m === 'markdown' ? 'MD' : 'Raw'}
-                  </Text>
-                )}
-              </View>
+              <Text style={[styles.modeButtonText, { color: mode === m ? colors.primary : colors.textSecondary }]}>
+                {m === 'markdown' ? 'MD' : m === 'checklist' ? 'Todo' : 'Raw'}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>

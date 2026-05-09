@@ -76,18 +76,20 @@ export const styles = StyleSheet.create({
   },
   editorContainer: {
     flex: 1,
-    paddingTop: 4,
+    paddingTop: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
   },
   editorScroll: {
     flex: 1,
   },
   editorScrollContent: {
-    paddingBottom: 16,
+    paddingBottom: 24,
   },
   editorTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '700',
-    marginBottom: 14,
+    marginBottom: 18,
   },
   label: {
     fontSize: 12,

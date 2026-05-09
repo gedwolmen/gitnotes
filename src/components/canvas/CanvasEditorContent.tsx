@@ -73,6 +73,7 @@ function uid(): string {
 }
 
 function hexToRgba(hex: string, alpha: number): string {
+  'worklet';
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
@@ -131,6 +132,7 @@ export interface CanvasBounds {
 }
 
 function expandBounds(bounds: CanvasBounds | null, x: number, y: number): CanvasBounds {
+  'worklet';
   if (!bounds) {
     return { minX: x, minY: y, maxX: x, maxY: y };
   }
@@ -581,6 +583,18 @@ export default function CanvasEditorContent() {
           activeDrawingElement.value = null;
           activeStrokePath.value.rewind();
           runOnJS(commitActiveDrawing)(completedElement);
+        })
+        // onFinalize fires for both onEnd and cancellation. Without it, when
+        // the pan gets cancelled (e.g. a 2nd finger lands and trips
+        // .maxPointers(1)), `activeDrawingElement` stays set and the next
+        // render keeps drawing the half-built stroke from the worklet —
+        // which is the path that was crashing two-finger zoom.
+        .onFinalize(() => {
+          'worklet';
+          if (activeDrawingElement.value !== null) {
+            activeDrawingElement.value = null;
+            activeStrokePath.value.rewind();
+          }
         }),
     [tool, color, size, filled, saveHistory, startTextPlacement, startSelection, updateSelection, endSelection, commitActiveDrawing, activeDrawingElement, activeStrokePath],
   );
@@ -653,9 +667,18 @@ export default function CanvasEditorContent() {
     [translateX, translateY, savedTx, savedTy, scale, contentBounds, canvasSize?.width, canvasSize?.height],
   );
 
+  // Race the 1-finger draw/pan against the 2-finger zoom+pan. Simultaneous
+  // here was wrong: the 1-finger panGesture briefly started, mutated
+  // activeDrawingElement, then failed when the 2nd finger landed — leaving
+  // a half-initialised stroke that the Skia render kept reading from the UI
+  // thread. Race + onFinalize make 1-finger and 2-finger mutually exclusive.
+  const twoFingerCombo = useMemo(
+    () => Gesture.Simultaneous(pinchGesture, twoFingerPan),
+    [pinchGesture, twoFingerPan],
+  );
   const composedGesture = useMemo(
-    () => Gesture.Simultaneous(panGesture, pinchGesture, twoFingerPan),
-    [panGesture, pinchGesture, twoFingerPan],
+    () => Gesture.Race(twoFingerCombo, panGesture),
+    [twoFingerCombo, panGesture],
   );
 
   const saveCanvas = useCallback(async () => {

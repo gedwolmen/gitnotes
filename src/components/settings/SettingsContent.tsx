@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Linking, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
@@ -182,7 +182,19 @@ export function SettingsContent(props: SettingsContentProps) {
   const [showTimeoutPicker, setShowTimeoutPicker] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [showIntervalPicker, setShowIntervalPicker] = useState(false);
-  const providerAvailability = useProvidersAvailability(providers);
+  // Drop providers whose `supportedPlatforms` excludes the current OS so a
+  // provider that physically can't run here (e.g. on-device Llama on iOS) is
+  // hidden entirely instead of showing as a permanently-disabled row.
+  const visibleProviders = useMemo(
+    () =>
+      providers.filter((p) => {
+        if (!p.supportedPlatforms || p.supportedPlatforms.length === 0) return true;
+        const os = Platform.OS as 'ios' | 'android';
+        return p.supportedPlatforms.includes(os);
+      }),
+    [providers],
+  );
+  const providerAvailability = useProvidersAvailability(visibleProviders);
   const intervalLabel =
     SYNC_INTERVAL_OPTIONS.find((opt) => opt.value === syncIntervalSeconds)?.label ?? 'Every minute';
 
@@ -637,7 +649,7 @@ export function SettingsContent(props: SettingsContentProps) {
           </Group>
 
           <Group title={t('settings.providers')}>
-            {providers.map((provider) => {
+            {visibleProviders.map((provider) => {
               const availability = providerAvailability[provider.id];
               const isUnavailable = availability?.kind === 'unavailable';
               const reasonText = isUnavailable

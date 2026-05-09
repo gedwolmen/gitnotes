@@ -61,9 +61,12 @@ function ReorderableChecklist({
 }: ReorderableChecklistProps) {
   const { colors, radii, spacing, type } = useTokens();
 
+  // Key on index only — including item.text in the key remounts the row
+  // every keystroke, which steals focus from the TextInput and dismisses the
+  // keyboard mid-word.
   const itemRows = useMemo(() => items.map((item, index) => (
     <ChecklistRow
-      key={`checklist-item-${index}-${item.text}`}
+      key={`checklist-item-${index}`}
       index={index}
       item={item}
       itemCount={items.length}

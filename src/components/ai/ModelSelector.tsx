@@ -116,9 +116,36 @@ export function ModelSelector({ visible, onClose }: ModelSelectorProps) {
             style={styles.modalBody}
             contentContainerStyle={{ paddingBottom: spacing[8] }}
           >
-            {providers.filter(p => p.isEnabled).map((provider: AIProviderConfig) => (
-              <View key={provider.id} style={{ marginBottom: spacing[6] }}>
-                <Group title={provider.name}>
+            {providers
+              .filter((p) => p.isEnabled)
+              .filter((p) => {
+                if (!p.supportedPlatforms || p.supportedPlatforms.length === 0) return true;
+                const os = Platform.OS as 'ios' | 'android';
+                return p.supportedPlatforms.includes(os);
+              })
+              .map((provider: AIProviderConfig) => {
+                const availability = providerAvailability[provider.id];
+                const providerUnavailable = availability && availability.kind === 'unavailable';
+                const unavailableReason =
+                  providerUnavailable ? describeAvailability(t, availability.reason) : null;
+
+                if (providerUnavailable) {
+                  return (
+                    <View key={provider.id} style={{ marginBottom: spacing[6] }}>
+                      <Group title={provider.name}>
+                        <GroupRow disabled>
+                          <Text style={[styles.modelDesc, { color: colors.textSecondary, paddingVertical: spacing[1] }]}>
+                            {unavailableReason ?? t('ai.availability.unknown')}
+                          </Text>
+                        </GroupRow>
+                      </Group>
+                    </View>
+                  );
+                }
+
+                return (
+                  <View key={provider.id} style={{ marginBottom: spacing[6] }}>
+                    <Group title={provider.name}>
                   {provider.models.map((model) => {
                     const status = statuses[model.id];
                     const downloading = isDownloading[model.id];
@@ -126,12 +153,6 @@ export function ModelSelector({ visible, onClose }: ModelSelectorProps) {
                     const isSelected = selectedModelId === model.id;
                     const isUnavailable = status === 'unavailable';
                     const needsDownload = status === 'needs-download';
-                    const availability = providerAvailability[provider.id];
-                    const unavailableReason =
-                      availability && availability.kind === 'unavailable'
-                        ? describeAvailability(t, availability.reason)
-                        : null;
-
                     return (
                       <GroupRow
                         key={model.id}
@@ -150,7 +171,7 @@ export function ModelSelector({ visible, onClose }: ModelSelectorProps) {
                             </Text>
                             {isUnavailable && (
                               <Text style={[styles.modelDesc, { color: colors.textSecondary }]}>
-                                {unavailableReason ?? t('ai.availability.unknown')}
+                                {t('ai.availability.unknown')}
                               </Text>
                             )}
                             {needsDownload && !downloading && (
@@ -164,7 +185,7 @@ export function ModelSelector({ visible, onClose }: ModelSelectorProps) {
                               </Text>
                             )}
                           </View>
-                          
+
                           <View style={styles.modelStatus}>
                             {downloading ? (
                               <ActivityIndicator size="small" color={colors.primary} />
@@ -185,9 +206,10 @@ export function ModelSelector({ visible, onClose }: ModelSelectorProps) {
                       </GroupRow>
                     );
                   })}
-                </Group>
-              </View>
-            ))}
+                    </Group>
+                  </View>
+                );
+              })}
           </ScrollView>
         </View>
       </View>

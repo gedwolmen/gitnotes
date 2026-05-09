@@ -60,6 +60,10 @@ const createDefaultProviders = (): AIProviderConfig[] => [
     name: 'Llama (On-Device)',
     isEnabled: true,
     addedAt: 0,
+    // Native llama runtime ships only on Android right now; the iOS package is
+    // not bundled, so the provider would crash on instantiation. Hide it from
+    // iOS builds entirely until the iOS native module ships.
+    supportedPlatforms: ['android'],
     models: [
       {
         id: 'llama-smol',
