@@ -8,6 +8,10 @@ import {
   ProviderUnavailableError,
   resolveProviderAvailability,
 } from './ai/providerAvailability';
+import {
+  extractErrorDetails,
+  humanizeStreamError,
+} from './ai/aiServiceErrors';
 
 type OnDeviceAvailability = {
   apple: boolean;
@@ -211,20 +215,23 @@ function serializeToolEvent(part: unknown): string | null {
   }
 }
 
-function isEmptyResponseError(error: unknown): boolean {
-  if (!error || typeof error !== 'object') return false;
-  const e = error as { name?: string; message?: string; cause?: { name?: string } };
-  if (e.name === 'AI_EmptyResponseBodyError') return true;
-  if (e.cause?.name === 'AI_EmptyResponseBodyError') return true;
-  return /empty response body/i.test(e.message ?? '');
-}
-
-function humanizeStreamError(error: unknown): string {
-  if (isEmptyResponseError(error)) {
-    return 'The AI provider returned an empty response. This is often caused by high load on the provider, an invalid model name, or a tools-incompatible request. Please try again, or pick a different model.';
+async function* runGenerateTextFallback(
+  model: LanguageModel,
+  messages: ModelMessage[],
+  tools: Record<string, Tool> | undefined,
+  abortSignal: AbortSignal | undefined,
+): AsyncGenerator<string> {
+  const result = await generateText({ model, messages, tools, abortSignal });
+  if (typeof result.text === 'string' && result.text.length > 0) {
+    yield result.text;
   }
-  const message = error instanceof Error ? error.message : 'Unknown streaming error';
-  return `Failed to stream chat response: ${message}`;
+  const toolCalls = (result as { toolCalls?: unknown[] }).toolCalls;
+  if (Array.isArray(toolCalls)) {
+    for (const call of toolCalls) {
+      const event = serializeToolEvent({ ...(call as object), type: 'tool-call' });
+      if (event) yield event;
+    }
+  }
 }
 
 export async function* streamChatResponse(
@@ -233,15 +240,12 @@ export async function* streamChatResponse(
   tools?: Record<string, Tool>,
   abortSignal?: AbortSignal,
 ): AsyncGenerator<string> {
+  let yielded = false;
+  let lastEmptyBodyError: unknown = null;
+
   for (let attempt = 0; attempt < 2; attempt++) {
-    let yielded = false;
     try {
-      const result = streamText({
-        model,
-        messages,
-        tools,
-        abortSignal,
-      });
+      const result = streamText({ model, messages, tools, abortSignal });
 
       for await (const part of result.fullStream as AsyncIterable<any>) {
         if (part.type === 'text-delta' || part.type === 'text') {
@@ -267,14 +271,32 @@ export async function* streamChatResponse(
       }
       return;
     } catch (error) {
-      // Retry once for transient empty-body responses, but only when no
-      // partial output has been emitted yet (otherwise we'd duplicate content).
-      if (!yielded && attempt === 0 && isEmptyResponseError(error)) {
+      const details = extractErrorDetails(error);
+
+      if (!yielded && attempt === 0 && details.isEmptyBody) {
+        lastEmptyBodyError = error;
         await new Promise((r) => setTimeout(r, 500));
         continue;
       }
+
+      if (!yielded && (details.isParserError || details.isEmptyBody)) {
+        try {
+          for await (const chunk of runGenerateTextFallback(model, messages, tools, abortSignal)) {
+            yielded = true;
+            yield chunk;
+          }
+          return;
+        } catch {
+          throw new Error(humanizeStreamError(error));
+        }
+      }
+
       throw new Error(humanizeStreamError(error));
     }
+  }
+
+  if (!yielded && lastEmptyBodyError) {
+    throw new Error(humanizeStreamError(lastEmptyBodyError));
   }
 }
 
