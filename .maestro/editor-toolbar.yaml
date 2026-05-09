@@ -1,0 +1,93 @@
+# Editor toolbar formatting smoke. Open existing note → edit, hit each
+# formatting toolbar button, no crash. Cancel out without saving.
+appId: com.xaventra.gitnotes
+---
+- stopApp
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "Notes"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 1500
+
+- tapOn:
+    id: "sort-picker-trigger"
+    optional: true
+- tapOn:
+    id: "sort-option-modified-desc"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 800
+
+- tapOn:
+    id: "notes-list-card.button.press"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 1500
+- tapOn:
+    id: "note-viewer.button.edit"
+- waitForAnimationToEnd:
+    timeout: 1200
+
+# Hit each formatting button. They share testIDs so we tap by text label.
+- assertVisible: "B"
+- tapOn: "B"
+- waitForAnimationToEnd:
+    timeout: 200
+- tapOn: "I"
+- waitForAnimationToEnd:
+    timeout: 200
+- tapOn: "Link"
+- waitForAnimationToEnd:
+    timeout: 200
+- tapOn: "UL"
+- waitForAnimationToEnd:
+    timeout: 200
+- tapOn: "OL"
+- waitForAnimationToEnd:
+    timeout: 200
+- tapOn: "Checklist"
+- waitForAnimationToEnd:
+    timeout: 200
+- tapOn: "Code"
+- waitForAnimationToEnd:
+    timeout: 200
+
+# Undo + redo many times to recover from the inserts.
+- tapOn:
+    id: "undo-redo.icon-button.undo"
+- tapOn:
+    id: "undo-redo.icon-button.undo"
+- tapOn:
+    id: "undo-redo.icon-button.undo"
+- tapOn:
+    id: "undo-redo.icon-button.undo"
+- tapOn:
+    id: "undo-redo.icon-button.undo"
+- tapOn:
+    id: "undo-redo.icon-button.undo"
+- tapOn:
+    id: "undo-redo.icon-button.undo"
+- waitForAnimationToEnd:
+    timeout: 600
+- tapOn:
+    id: "undo-redo.icon-button.redo"
+- waitForAnimationToEnd:
+    timeout: 200
+
+# Cancel without saving so we don't pollute the seed note.
+- tapOn:
+    id: "note-editor.button.cancel"
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# May ask "Discard changes?" — confirm if so.
+- runFlow:
+    when:
+      visible:
+        text: ".*[Dd]iscard.*"
+    commands:
+      - tapOn: "Discard"
+      - waitForAnimationToEnd:
+          timeout: 1000

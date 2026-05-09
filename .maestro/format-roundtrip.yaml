@@ -1,0 +1,56 @@
+# Format chip round-trip on a fresh note: .md → .norg → .org → .md.
+# Cancels at the end so no junk note hits the repo.
+appId: com.xaventra.gitnotes
+---
+- stopApp
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "Notes"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 1500
+
+- tapOn:
+    id: "notes-list.icon-button.add"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+- tapOn:
+    id: "note-editor-form.input.title"
+- inputText: "Format probe"
+- pressKey: Enter
+
+# Default is .md. Switch to .norg → tag input should DISAPPEAR (norg uses
+# its own metadata header, not chips). Then to .org → tag input back
+# (org has FILETAGS). Then back to .md.
+- assertVisible:
+    id: "note-editor-form.input.tags"
+
+- tapOn:
+    id: "note-editor-form.picker.format"
+    index: 1
+- waitForAnimationToEnd:
+    timeout: 600
+
+- tapOn:
+    id: "note-editor-form.picker.format"
+    index: 2
+- waitForAnimationToEnd:
+    timeout: 600
+
+- tapOn:
+    id: "note-editor-form.picker.format"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 600
+
+# Should land back on .md with tag input visible again.
+- assertVisible:
+    id: "note-editor-form.input.tags"
+
+# Cancel out.
+- tapOn:
+    id: "note-editor.button.cancel"
+- waitForAnimationToEnd:
+    timeout: 1000
