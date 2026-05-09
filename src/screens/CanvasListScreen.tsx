@@ -210,8 +210,10 @@ export default function CanvasListScreen() {
         onRequestClose={() => setShowSizePicker(false)}
       >
         <TouchableOpacity
+          testID="canvas-list.overlay.size-picker"
           style={styles.sizeOverlay}
           activeOpacity={1}
+          accessible={false}
           onPress={() => setShowSizePicker(false)}
         >
           <View style={[styles.sizeModal, { backgroundColor: colors.surface }]} onStartShouldSetResponder={() => true}>
