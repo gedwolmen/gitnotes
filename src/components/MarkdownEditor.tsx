@@ -70,6 +70,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(fun
   }), []);
   const { text, setText, undo, redo, canUndo, canRedo, reset } = useUndoRedo(content);
   const previousTextRef = useRef(text);
+  const prevPropContentRef = useRef(content);
   const { hardWrapEnabled, toggleHardWrap } = useHardWrap();
   const [cursor, setCursor] = useState<Selection>({ start: 0, end: 0 });
   const [mode, setMode] = useState<EditorMode>(() => initialMode ?? 'markdown');
@@ -90,11 +91,13 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(fun
   }, [onContentChange, text]);
 
   useEffect(() => {
-    if (content !== previousTextRef.current && content !== text) {
+    if (content !== prevPropContentRef.current && content !== previousTextRef.current) {
       previousTextRef.current = content;
+      prevPropContentRef.current = content;
       reset(content);
     }
-  }, [content, reset, text]);
+    prevPropContentRef.current = content;
+  }, [content, reset]);
 
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
