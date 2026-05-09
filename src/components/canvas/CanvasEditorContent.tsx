@@ -899,35 +899,44 @@ export default function CanvasEditorContent() {
 
       <View style={styles.toolbar}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {TOOLS.map(({ key, label, icon }) => (
-            <TouchableOpacity
-              key={key}
-              testID="canvas-editor.toolbar.set-tool"
-              style={[styles.toolBtn, tool === key && styles.toolBtnActive]}
-              onPress={() => { setTool(key); setSelectedId(null); }}
-            >
-              {icon ? <Ionicons name={icon} size={20} color={color} /> : <Text style={styles.toolBtnLabel}>{label}</Text>}
-            </TouchableOpacity>
-          ))}
+          {TOOLS.map(({ key, label, icon }) => {
+            // Tool icon used to inherit the active *pen color*, so on dark
+            // mode with the default black pen the icon vanished against
+            // the dark toolbar. Render in theme text color (highlighted
+            // when the tool is active); the swatch row already shows the
+            // pen color separately.
+            const isActive = tool === key;
+            const iconColor = isActive ? colors.primary : colors.text;
+            return (
+              <TouchableOpacity
+                key={key}
+                testID="canvas-editor.toolbar.set-tool"
+                style={[styles.toolBtn, isActive && styles.toolBtnActive]}
+                onPress={() => { setTool(key); setSelectedId(null); }}
+              >
+                {icon ? <Ionicons name={icon} size={20} color={iconColor} /> : <Text style={[styles.toolBtnLabel, { color: iconColor }]}>{label}</Text>}
+              </TouchableOpacity>
+            );
+          })}
           <TouchableOpacity testID="canvas-editor.toolbar.set-filled" style={[styles.toolBtn, filled && styles.toolBtnActive]} onPress={() => setFilled(!filled)}>
-            <Text style={styles.toolBtnLabel}>{filled ? '▣' : '□'}</Text>
+            <Text style={[styles.toolBtnLabel, { color: filled ? colors.primary : colors.text }]}>{filled ? '▣' : '□'}</Text>
           </TouchableOpacity>
           <View style={styles.separator} />
           <TouchableOpacity testID="canvas-editor.toolbar.undo" style={styles.toolBtn} onPress={undo}>
-            <Text style={styles.toolBtnLabel}>↩</Text>
+            <Text style={[styles.toolBtnLabel, { color: colors.text }]}>↩</Text>
           </TouchableOpacity>
           <TouchableOpacity testID="canvas-editor.toolbar.clear-all" style={styles.toolBtn} onPress={clearAll}>
-            <Ionicons name="trash-outline" size={20} color={color} />
+            <Ionicons name="trash-outline" size={20} color={colors.text} />
           </TouchableOpacity>
           <View style={styles.separator} />
           <TouchableOpacity testID="canvas-editor.toolbar.zoom-out" style={styles.toolBtn} onPress={() => setZoom(scale.value - 0.25)}>
-            <Text style={styles.toolBtnLabel}>−</Text>
+            <Text style={[styles.toolBtnLabel, { color: colors.text }]}>−</Text>
           </TouchableOpacity>
           <TouchableOpacity testID="canvas-editor.toolbar.zoom-in" style={styles.toolBtn} onPress={() => setZoom(scale.value + 0.25)}>
-            <Text style={styles.toolBtnLabel}>+</Text>
+            <Text style={[styles.toolBtnLabel, { color: colors.text }]}>+</Text>
           </TouchableOpacity>
           <TouchableOpacity testID="canvas-editor.toolbar.reset-view" style={styles.toolBtn} onPress={resetView}>
-            <Text style={styles.toolBtnLabel}>⟲</Text>
+            <Text style={[styles.toolBtnLabel, { color: colors.text }]}>⟲</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>

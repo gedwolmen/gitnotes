@@ -1,0 +1,22 @@
+# Render smoke. Opens an existing note known to contain `- [ ] task` and
+# `# Heading` and asserts the renderer substitutes the GFM checkbox
+# glyphs and a heading is shown. Avoids the typing path because Maestro's
+# rapid inputText into a controlled <TextInput> can race the editor's
+# undo-redo state and trip a max-update-depth loop on iOS.
+appId: com.xaventra.gitnotes
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "Notes"
+    index: 0
+- tapOn: "Maestro render check"
+- waitForAnimationToEnd:
+    timeout: 2500
+- assertVisible: "Heading line"
+- assertVisible:
+    text: ".*☐.*open task.*"
+- assertVisible:
+    text: ".*☑.*done task.*"
+- assertVisible:
+    text: ".*docs.*"

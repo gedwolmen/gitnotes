@@ -158,7 +158,14 @@ function processMarkdown(markdown: string): ProcessedMarkdown {
         return section.text;
       }
 
-      let segmentText = section.text;
+      // Render GFM task list items as checkbox glyphs. The marked parser
+      // we use strips `[ ]` / `[x]` and emits a plain bullet — a checklist
+      // ends up looking identical to a regular bullet list. Replacing the
+      // brackets with ☐ / ☑ before parsing keeps a visible state marker
+      // through the existing list_item path with no renderer override.
+      let segmentText = section.text
+        .replace(/^(\s*[-*]\s+)\[ \]\s+/gm, '$1☐ ')
+        .replace(/^(\s*[-*]\s+)\[x\]\s+/gim, '$1☑ ');
 
       const tableOffset = tables.length;
       const parsedTables = parseTables(segmentText);

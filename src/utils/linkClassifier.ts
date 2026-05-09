@@ -88,6 +88,16 @@ export function classifyHref(href: string, currentNotePath?: string): Classified
     };
   }
 
+  // Bare web URL with no scheme (e.g. `[Apple](www.apple.com)` or
+  // `[Docs](docs.example.com/start)`). Marked treats these as relative
+  // paths and `Linking.openURL` rejects them, so users got a "Can't open
+  // link" alert. Auto-prefix `https://` when the whole href looks like
+  // a domain — at least one dot, last segment is a TLD-ish chunk
+  // (≥2 letters), with an optional path/query/fragment trailer.
+  if (/^(?:[a-z0-9-]+\.)+[a-z]{2,}(?:[/?#][^\s]*)?$/i.test(trimmed)) {
+    return { kind: 'web', target: `https://${trimmed}` };
+  }
+
   // Extension-less local path (e.g. `[Other](other-note)`,
   // `[Folder](sub/page)`). Treat as a note candidate when the shape looks
   // path-like — either it contains a `/` or it has no dots at all. Strings

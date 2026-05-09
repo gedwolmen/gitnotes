@@ -7,20 +7,27 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { Surface } from './Surface';
 import { useTheme, useTokens } from '../../contexts/ThemeContext';
+import { useResponsive } from '../../hooks/useResponsive';
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
 export const TAB_BAR_BASE_HEIGHT = 84;
 
 /**
- * Total reserved space for the floating TabBar, including the bottom
- * safe-area inset. Use as `paddingBottom` on a tab screen's first
- * scroll/list container so the last items aren't permanently hidden
- * under the floating bar. Returns 0 when the custom TabBar is not
- * rendered (e.g. tablet rail or system tab bar in flat style).
+ * Reserved space *above* the floating TabBar that callers should add as
+ * extra `paddingBottom` on scroll containers, or as `bottomOffset` on
+ * absolutely-positioned overlays inside a tab screen. Returns 0 when the
+ * tab screen renders ABOVE the system tab bar (default React Navigation
+ * bar, or the iPad rail) — in that case the screen's bottom edge already
+ * sits at the tab bar's top, so adding TAB_BAR_BASE_HEIGHT again pushed
+ * floating UI a full bar's height too high.
  */
 export function useTabBarHeight(): number {
   const insets = useSafeAreaInsets();
+  const { style } = useTheme();
+  const { isTablet } = useResponsive();
+  const useFloatingBar = !isTablet && style === 'neumorphic';
+  if (!useFloatingBar) return 0;
   return insets.bottom + TAB_BAR_BASE_HEIGHT;
 }
 

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { GitBranch, GitService } from '../services/GitService';
+import { LastUsedRepoService } from '../services/LastUsedRepoService';
 import { useRepos } from '../contexts/RepoContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { HapticService } from '../utils/haptics';
@@ -113,10 +114,38 @@ export default function GitContextPicker({
       onRepoChange(path);
       onBranchChange(undefined);
       onCommitChange(undefined);
+      void LastUsedRepoService.set(path);
       setView('main');
     },
     [onRepoChange, onBranchChange, onCommitChange],
   );
+
+  // Auto-fill the repo when opening this picker for a new note/canvas/etc.
+  // Single repo: pick it. Multiple: pick whichever was last used. We only
+  // run this once per mount and only when the parent didn't already
+  // provide a repo, so re-picks and explicit clears stay sticky.
+  const didAutoFillRef = useRef(false);
+  useEffect(() => {
+    if (didAutoFillRef.current) return;
+    if (repo) {
+      didAutoFillRef.current = true;
+      return;
+    }
+    if (repositories.length === 0) return;
+    didAutoFillRef.current = true;
+
+    if (repositories.length === 1) {
+      onRepoChange(repositories[0].path);
+      void LastUsedRepoService.set(repositories[0].path);
+      return;
+    }
+
+    void LastUsedRepoService.get().then((lastPath) => {
+      if (!lastPath) return;
+      const stillExists = repositories.some((r) => r.path === lastPath);
+      if (stillExists) onRepoChange(lastPath);
+    });
+  }, [repo, repositories, onRepoChange]);
 
   const handleBranchPick = useCallback(
     (name: string) => {

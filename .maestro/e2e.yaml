@@ -1,0 +1,74 @@
+# Full app smoke. Walks each tab, exercises core flows, asserts no
+# crashes. Skips destructive ops on real user data — adds & removes a
+# single test note/todo only.
+appId: com.xaventra.gitnotes
+---
+- launchApp:
+    clearState: false
+
+# Home tab
+- tapOn:
+    text: "Home"
+    index: 0
+- assertVisible: "Create New Note"
+- assertVisible: "Canvases"
+
+# Notes tab
+- tapOn:
+    text: "Notes"
+    index: 0
+- assertVisible: "Notes"
+- tapOn:
+    id: "notes-list.icon-button.create-note"
+    optional: true
+- runFlow:
+    when:
+      visible: "Title"
+    commands:
+      - tapOn:
+          id: "note-editor.input.title"
+          optional: true
+      - inputText: "Maestro test note"
+      - hideKeyboard
+      - tapOn:
+          text: "Notes"
+          index: 0
+
+# Explore tab
+- tapOn:
+    text: "Explore"
+    index: 0
+
+# Todos tab
+- tapOn:
+    text: "Todos"
+    index: 0
+- assertVisible: "Todos"
+
+# Settings tab
+- tapOn:
+    text: "Settings"
+    index: 0
+- assertVisible: "Settings"
+- scroll
+- scroll
+- scroll
+- scroll
+- scrollUntilVisible:
+    element: "About"
+    direction: DOWN
+    speed: 30
+    timeout: 8000
+    visibilityPercentage: 50
+- scrollUntilVisible:
+    element: "Made with love"
+    direction: DOWN
+    speed: 30
+    timeout: 8000
+    visibilityPercentage: 30
+
+# Back to Home, confirm app still alive
+- tapOn:
+    text: "Home"
+    index: 0
+- assertVisible: "GitNot"

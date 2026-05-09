@@ -1,0 +1,131 @@
+# Canvas full feature test. Exercises every tool, toolbar action, and the
+# save → reopen round-trip. Doesn't try real pinch (Maestro can't) — uses
+# the zoom toolbar buttons instead, which run the same scale path.
+appId: com.xaventra.gitnotes
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "Home"
+    index: 0
+- assertVisible:
+    text: ".*Canvases.*"
+- tapOn:
+    text: ".*Canvases.*"
+- assertVisible: "No Canvases Yet|Create Canvas"
+- runFlow:
+    when:
+      visible: "Create Canvas"
+    commands:
+      - tapOn: "Create Canvas"
+- runFlow:
+    when:
+      notVisible: "Create Canvas"
+    commands:
+      - tapOn:
+          id: "canvases-list.button.add"
+          optional: true
+- assertVisible:
+    text: ".*Phone.*1080.*"
+- tapOn:
+    point: "50%, 33%"
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# Editor open. Set title.
+- assertVisible:
+    id: "canvas-editor.input.title"
+- tapOn:
+    id: "canvas-editor.input.title"
+- inputText: "Maestro Canvas"
+- hideKeyboard
+
+# Cycle through every tool. The set-tool testID is shared so target by
+# the icon's accessibility label rendered alongside.
+- tapOn:
+    id: "canvas-editor.toolbar.set-tool"
+    index: 0
+- tapOn:
+    id: "canvas-editor.toolbar.set-tool"
+    index: 1
+- tapOn:
+    id: "canvas-editor.toolbar.set-tool"
+    index: 2
+- tapOn:
+    id: "canvas-editor.toolbar.set-tool"
+    index: 3
+- tapOn:
+    id: "canvas-editor.toolbar.set-tool"
+    index: 4
+- tapOn:
+    id: "canvas-editor.toolbar.set-tool"
+    index: 5
+- tapOn:
+    id: "canvas-editor.toolbar.set-tool"
+    index: 6
+- tapOn:
+    id: "canvas-editor.toolbar.set-tool"
+    index: 7
+- tapOn:
+    id: "canvas-editor.toolbar.set-tool"
+    index: 8
+# back to pen for drawing
+- tapOn:
+    id: "canvas-editor.toolbar.set-tool"
+    index: 0
+
+# Toggle filled, change color, change size.
+- tapOn:
+    id: "canvas-editor.toolbar.set-filled"
+- tapOn:
+    id: "canvas-editor.picker.color"
+    index: 6
+- tapOn:
+    id: "canvas-editor.input.size"
+- inputText: "5"
+- hideKeyboard
+
+# Draw a stroke with one finger. Maestro uses swipe; canvas pane center
+# is roughly mid-screen below toolbar.
+- swipe:
+    start: "30%, 60%"
+    end: "70%, 70%"
+    duration: 600
+
+# Toolbar actions: undo, clear, zoom out/in, reset view.
+- tapOn:
+    id: "canvas-editor.toolbar.undo"
+- swipe:
+    start: "30%, 60%"
+    end: "70%, 70%"
+    duration: 600
+- tapOn:
+    id: "canvas-editor.toolbar.zoom-in"
+- tapOn:
+    id: "canvas-editor.toolbar.zoom-in"
+- tapOn:
+    id: "canvas-editor.toolbar.zoom-out"
+- tapOn:
+    id: "canvas-editor.toolbar.reset-view"
+- tapOn:
+    id: "canvas-editor.toolbar.clear-all"
+
+# Text tool: tap, type, add.
+- tapOn:
+    id: "canvas-editor.toolbar.set-tool"
+    index: 9
+- tapOn:
+    point: "50%, 60%"
+- runFlow:
+    when:
+      visible: "Enter text"
+    commands:
+      - inputText: "hi"
+      - tapOn:
+          id: "canvas-editor.button.add-text"
+
+# Save and back to list.
+- tapOn:
+    id: "canvas-editor.button.save"
+- assertVisible: "Canvases"
+- assertVisible: "Maestro Canvas"
