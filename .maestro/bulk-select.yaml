@@ -1,0 +1,30 @@
+# Swipe-left on a note enters selection mode and shows the floating
+# action bar. Verifies the bar appears and the cancel button dismisses it.
+# (The recent fix was the bar's vertical position above the tab bar.)
+appId: com.xaventra.gitnotes
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "Notes"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 1500
+
+# Swipe left on the first note to trigger the slide-left auto-toggle.
+- swipe:
+    start: "85%, 35%"
+    end: "20%, 35%"
+    duration: 400
+- assertVisible:
+    id: "bulk-action-bar.container"
+- assertVisible:
+    text: ".*1 note.*selected.*"
+- assertVisible:
+    id: "bulk-action-bar.button.delete"
+
+# Cancel selection.
+- tapOn:
+    id: "bulk-action-bar.button.cancel"
+- assertNotVisible:
+    id: "bulk-action-bar.container"

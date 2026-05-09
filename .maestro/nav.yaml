@@ -1,0 +1,33 @@
+# Tab navigation smoke. Cycle every tab; assert the landing screen
+# title/header text is present so a black screen / mount crash fails fast.
+appId: com.xaventra.gitnotes
+---
+- launchApp:
+    clearState: false
+
+- tapOn:
+    text: "Home"
+    index: 0
+- assertVisible:
+    text: ".*GitNot.*"
+
+- tapOn:
+    text: "Notes"
+    index: 0
+- assertVisible: "Notes"
+- assertVisible: "Search notes..."
+
+- tapOn:
+    text: "Explore"
+    index: 0
+- assertVisible: "Explore"
+
+- tapOn:
+    text: "Todos"
+    index: 0
+- assertVisible: "Todos"
+
+- tapOn:
+    text: "Settings"
+    index: 0
+- assertVisible: "Settings"

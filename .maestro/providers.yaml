@@ -1,0 +1,34 @@
+# AI providers panel: on iOS, Llama (on-device) should not render. The
+# native module isn't bundled so it would crash on instantiate.
+appId: com.xaventra.gitnotes
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    text: "Settings"
+    index: 0
+- waitForAnimationToEnd:
+    timeout: 1500
+# Scroll the Settings list down until we hit the providers section.
+- swipe:
+    start: "50%, 80%"
+    end: "50%, 20%"
+    duration: 400
+- swipe:
+    start: "50%, 80%"
+    end: "50%, 20%"
+    duration: 400
+- swipe:
+    start: "50%, 80%"
+    end: "50%, 20%"
+    duration: 400
+- swipe:
+    start: "50%, 80%"
+    end: "50%, 20%"
+    duration: 400
+- assertVisible:
+    text: ".*Apple Intelligence.*"
+- assertNotVisible:
+    text: ".*Llama.*"
+- assertNotVisible:
+    text: ".*On-Device.*"
