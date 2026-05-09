@@ -82,6 +82,24 @@ describe('streamChatResponse', () => {
     expect(mockGenerateText).toHaveBeenCalledTimes(1);
   });
 
+  test('falls back to generateText when stream throws status-less parser error (issue #654)', async () => {
+    mockStreamText.mockImplementationOnce(() => {
+      const err = apiCallError({ message: 'Failed to process successful response' });
+      delete (err as any).statusCode;
+      delete (err as any).responseBody;
+      return {
+        fullStream: (async function* () {
+          throw err;
+        })(),
+      };
+    });
+    mockGenerateText.mockResolvedValueOnce({ text: 'recovered via fallback', toolCalls: [] });
+
+    const out = await collect(streamChatResponse(fakeModel, []));
+    expect(out).toEqual(['recovered via fallback']);
+    expect(mockGenerateText).toHaveBeenCalledTimes(1);
+  });
+
   test('does NOT fall back on rate-limit error; surfaces HTTP 429', async () => {
     mockStreamText.mockImplementationOnce(() => {
       const stream = (async function* () {

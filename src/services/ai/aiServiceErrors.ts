@@ -59,6 +59,16 @@ function readBody(e: unknown): string | undefined {
   return typeof b === 'string' ? b : undefined;
 }
 
+const PARSER_MESSAGE_PATTERN =
+  /failed to (process successful response|parse(?: \w+)? (?:stream|json|sse)?[^.]*)|invalid sse chunk|chunk format/i;
+
+function hasParserMessage(e: unknown): boolean {
+  const o = asObj(e);
+  if (!o) return false;
+  const msg = typeof o.message === 'string' ? o.message : '';
+  return PARSER_MESSAGE_PATTERN.test(msg);
+}
+
 export function extractErrorDetails(error: unknown): ErrorDetails {
   const inner = unwrapInner(error);
   const status = readStatus(inner);
@@ -66,8 +76,12 @@ export function extractErrorDetails(error: unknown): ErrorDetails {
   const isEmptyBody = isEmptyBodyError(error) || isEmptyBodyError(inner);
   const isRateLimit = status === 429;
   const isApi = isApiCallError(inner);
-  const isParserError =
+
+  const isStatusedParserError =
     isApi && typeof status === 'number' && status >= 200 && status < 300 && !isEmptyBody;
+  const isMessagedParserError =
+    isApi && typeof status !== 'number' && !isEmptyBody && hasParserMessage(inner);
+  const isParserError = isStatusedParserError || isMessagedParserError;
 
   return {
     status,

@@ -67,6 +67,38 @@ describe('extractErrorDetails', () => {
     expect(extractErrorDetails(e).isParserError).toBe(false);
   });
 
+  test('isParserError true for AI_APICallError with parser-class message and no status (issue #654)', () => {
+    const e = apiCallError({ message: 'Failed to process successful response' });
+    delete (e as any).statusCode;
+    delete (e as any).responseBody;
+    const d = extractErrorDetails(e);
+    expect(d.isParserError).toBe(true);
+    expect(d.isRateLimit).toBe(false);
+  });
+
+  test('isParserError true for AI_APICallError wrapped inside AI_RetryError with no status (issue #654)', () => {
+    const inner = apiCallError({ message: 'Failed to process successful response' });
+    delete (inner as any).statusCode;
+    const e = retryError([inner]);
+    expect(extractErrorDetails(e).isParserError).toBe(true);
+  });
+
+  test.each([
+    'Failed to process successful response',
+    'Failed to parse stream chunk',
+    'Failed to parse JSON response',
+    'invalid SSE chunk format',
+  ])('parser-class message detected: %s', (message) => {
+    const e = apiCallError({ message });
+    delete (e as any).statusCode;
+    expect(extractErrorDetails(e).isParserError).toBe(true);
+  });
+
+  test('non-AI_APICallError with parser-like message is NOT marked parser-error', () => {
+    const e = new Error('Failed to process successful response');
+    expect(extractErrorDetails(e).isParserError).toBe(false);
+  });
+
   test('isEmptyBody true for AI_EmptyResponseBodyError direct or via cause', () => {
     expect(extractErrorDetails(emptyBodyError(false)).isEmptyBody).toBe(true);
     expect(extractErrorDetails(emptyBodyError(true)).isEmptyBody).toBe(true);
