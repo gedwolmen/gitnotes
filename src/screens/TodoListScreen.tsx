@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { View, StyleSheet, Alert, Platform, RefreshControl } from 'react-native';
 import { FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -52,6 +52,7 @@ export default function TodoListScreen() {
   const [todoRepo, setTodoRepo] = useState<string | undefined>(undefined);
   const [todoBranch, setTodoBranch] = useState<string | undefined>(undefined);
   const [showFilterModal, setShowFilterModal] = useState(false);
+  const isDeletingRef = useRef(false);
 
   const filter = useEntityFilter<Todo>(todos);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
@@ -101,6 +102,7 @@ export default function TodoListScreen() {
   const handleBulkDelete = useCallback(() => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
+    if (isDeletingRef.current) return;
     Alert.alert(
       `Delete ${ids.length} ${ids.length === 1 ? 'todo' : 'todos'}?`,
       'This cannot be undone.',
@@ -110,15 +112,21 @@ export default function TodoListScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            for (const id of ids) {
-              try {
-                await deleteTodo(id);
-              } catch (error) {
-                void error;
+            if (isDeletingRef.current) return;
+            isDeletingRef.current = true;
+            try {
+              for (const id of ids) {
+                try {
+                  await deleteTodo(id);
+                } catch (error) {
+                  void error;
+                }
               }
+              HapticService.success();
+              clearSelection();
+            } finally {
+              isDeletingRef.current = false;
             }
-            HapticService.success();
-            clearSelection();
           },
         },
       ],
