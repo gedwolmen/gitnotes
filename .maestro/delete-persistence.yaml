@@ -1,7 +1,8 @@
-# Regression for issue #636. Create a note, delete it via swipe-to-bulk-
-# delete, force-quit + relaunch, assert it stays gone. Currently expected
-# to FAIL — local delete works, but the next pull from GitHub re-fetches
-# the file and the note resurrects.
+# Regression for issue #636 (closed by #647 tombstone fix).
+# Create a note, delete it, force-quit + relaunch, pull from GitHub.
+# Pre-#647 the note resurrected because the local DELETE was in the
+# queue but the next pull re-fetched the file. Post-#647 a tombstone
+# blocks the resurrection.
 appId: com.xaventra.gitnotes
 ---
 - stopApp
@@ -28,6 +29,11 @@ appId: com.xaventra.gitnotes
 - assertVisible:
     text: ".*Maestro persistence probe.*"
 
+# Wait for the create to upload to GitHub before deleting — otherwise
+# the delete runs first and the upload re-creates the row.
+- waitForAnimationToEnd:
+    timeout: 5000
+
 # Delete it via swipe + bulk-delete.
 - swipe:
     from:
@@ -41,9 +47,11 @@ appId: com.xaventra.gitnotes
     timeout: 1500
 - runFlow:
     when:
-      visible: "This cannot be undone"
+      visible:
+        text: ".*This cannot be undone.*"
     commands:
-      - tapOn: "Delete"
+      - tapOn:
+          text: "^Delete$"
       - waitForAnimationToEnd:
           timeout: 1500
 - assertNotVisible:
