@@ -87,3 +87,6 @@ yarn-error.log*
 .sisyphus/
 .claude/worktrees/
 .claude/
+
+# App Store screenshots (local marketing assets)
+appstore_screenshots/

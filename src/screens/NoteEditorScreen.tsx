@@ -164,7 +164,6 @@ function NoteEditorScreenInner() {
                 branch={document.branch}
                 commit={document.commit}
                 title={document.title}
-                noteId={noteId}
                 folderPath={document.folderPath}
                 noteFormat={document.noteFormat}
                 tags={document.tags}
@@ -210,7 +209,6 @@ function NoteEditorScreenInner() {
             branch={document.branch}
             commit={document.commit}
             title={document.title}
-            noteId={noteId}
             folderPath={document.folderPath}
             noteFormat={document.noteFormat}
             tags={document.tags}

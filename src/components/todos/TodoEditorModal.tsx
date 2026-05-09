@@ -106,7 +106,6 @@ export function TodoEditorModal({
               placeholder="What needs to be done?"
               placeholderTextColor={colors.textSecondary}
               returnKeyType="done"
-              autoFocus
             />
 
             <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Notes</Text>

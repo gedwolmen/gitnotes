@@ -16,7 +16,6 @@ interface NoteEditorFormProps {
   branch?: string;
   commit?: string;
   title: string;
-  noteId?: string;
   folderPath?: string;
   noteFormat: NoteFormat;
   tags: string[];
@@ -39,7 +38,6 @@ export function NoteEditorForm({
   branch,
   commit,
   title,
-  noteId,
   folderPath,
   noteFormat,
   tags,
@@ -79,7 +77,6 @@ export function NoteEditorForm({
         placeholderTextColor={colors.textSecondary}
         value={title}
         onChangeText={onTitleChange}
-        autoFocus={!noteId}
         maxLength={100}
         returnKeyType="next"
         // Pressing Return on the keyboard hops into the body editor (#628)

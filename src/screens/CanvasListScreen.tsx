@@ -162,7 +162,7 @@ export default function CanvasListScreen() {
 
   return (
     <SafeAreaView edges={['bottom']} style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.searchBarContainer, { paddingTop: headerHeight }]}>
+      <View style={[styles.searchBarContainer, { paddingTop: headerHeight + 8 }]}>
         <SearchBar
           testID="canvas-list.search-bar.search"
           value={searchQuery}

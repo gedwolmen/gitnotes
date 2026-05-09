@@ -37,7 +37,7 @@ export function CanvasPickerModal({ visible, canvases, onSelect, onClose }: Canv
   );
 
   return (
-    <RNModal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <RNModal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.header}>
           <TouchableOpacity testID="canvas-picker-modal.button.close" onPress={onClose} style={styles.closeBtn}>
