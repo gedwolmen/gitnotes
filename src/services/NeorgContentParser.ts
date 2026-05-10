@@ -422,6 +422,20 @@ export class NeorgContentParser {
     const indentLevel = this.getIndentLevel(spaces, indentWidth);
     const content = indentMatch[2];
 
+    const dashTaskMatch = content.match(/^\-\s+\(([ x!?~u\-_+])\)\s+(.+)$/);
+    if (dashTaskMatch) {
+      const statusMap: Record<string, 'todo' | 'done' | 'important' | 'uncertain' | 'in-progress' | 'urgent' | 'cancelled' | 'on-hold' | 'recurring'> = {
+        ' ': 'todo', 'x': 'done', '!': 'important', '?': 'uncertain',
+        '~': 'in-progress', 'u': 'urgent', '-': 'cancelled', '_': 'on-hold', '+': 'recurring',
+      };
+      return {
+        type: 'task',
+        text: dashTaskMatch[2].trim(),
+        status: statusMap[dashTaskMatch[1]] || 'todo',
+        indentLevel,
+      };
+    }
+
     const unorderedMatch = content.match(/^\-\s+(.+)$/);
     if (unorderedMatch) {
       return { type: 'unordered', text: unorderedMatch[1].trim(), indentLevel };
