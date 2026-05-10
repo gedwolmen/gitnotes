@@ -267,9 +267,23 @@ export class NotePreviewRenderer extends Renderer implements RendererInterface {
       const mathSegment = this.inlineMathEmbeds.get(token);
       if (mathSegment) {
         nodes.push(
-          <View key={this.getKey()} style={{ alignSelf: 'center' }}>
-            <KatexView expression={mathSegment.content} displayMode="inline" isDark={this.isDarkMode()} />
-          </View>,
+          <Text
+            key={this.getKey()}
+            selectable
+            style={[
+              styles,
+              {
+                fontFamily: 'monospace',
+                fontStyle: 'italic',
+                color: this.deps.colors.text,
+                backgroundColor: (this.deps.colors.surfaceSecondary ?? '#f0f0f0') + 'AA',
+                paddingHorizontal: 3,
+                borderRadius: 3,
+              },
+            ]}
+          >
+            {mathSegment.content}
+          </Text>,
         );
         continue;
       }
@@ -431,7 +445,7 @@ export class NotePreviewRenderer extends Renderer implements RendererInterface {
     if (typeof text === 'string' && INLINE_TOKEN_PATTERN.test(text)) {
       INLINE_TOKEN_PATTERN.lastIndex = 0;
       return (
-        <View key={this.getKey()} style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' }}>
+        <View key={this.getKey()} style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline' }}>
           {this.renderInlineSegments(text, styles)}
         </View>
       );
