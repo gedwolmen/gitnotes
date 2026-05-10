@@ -8,6 +8,7 @@ import type { RenderFormat } from '../types/RenderStyle';
 import { classifyHref } from '../utils/linkClassifier';
 import CodeBlock from './CodeBlock';
 import KatexView from './KatexView';
+import { OrgInlineParser } from '../services/OrgInlineParser';
 
 interface StructuredRendererProps {
   blocks: NeorgContentBlock[];
@@ -220,6 +221,45 @@ export function parseNeorgInlineSegments(text: string): InlineSegment[] {
   return segments;
 }
 
+export function parseOrgInlineSegments(text: string): InlineSegment[] {
+  const parsed = OrgInlineParser.parseInline(text);
+  const out: InlineSegment[] = [];
+  for (const seg of parsed.segments) {
+    if (seg.type === 'text') {
+      if (seg.text) out.push({ type: 'text', content: seg.text });
+      continue;
+    }
+    const m = seg.markup;
+    if (!m) continue;
+    switch (m.type) {
+      case 'bold':
+        out.push({ type: 'bold', content: m.content });
+        break;
+      case 'italic':
+        out.push({ type: 'italic', content: m.content });
+        break;
+      case 'underline':
+        out.push({ type: 'underline', content: m.content });
+        break;
+      case 'org-strike':
+        out.push({ type: 'org-strike', content: m.content });
+        break;
+      case 'verbatim':
+        out.push({ type: 'verbatim', content: m.content });
+        break;
+      case 'org-code':
+        out.push({ type: 'org-code', content: m.content });
+        break;
+      case 'link':
+        out.push({ type: 'link', label: m.content, target: m.content });
+        break;
+      default:
+        out.push({ type: 'text', content: m.content });
+    }
+  }
+  return out;
+}
+
 export function createMemoizedNeorgInlineParser(
   parser: (text: string) => InlineSegment[] = parseNeorgInlineSegments,
 ): (text: string) => InlineSegment[] {
@@ -336,7 +376,13 @@ export default function StructuredRenderer({ blocks, format = 'neorg', onOpenNot
     }
   };
 
-  const parseInline = useMemo(() => createMemoizedNeorgInlineParser(), []);
+  const parseInline = useMemo(
+    () =>
+      createMemoizedNeorgInlineParser(
+        format === 'org' ? parseOrgInlineSegments : parseNeorgInlineSegments,
+      ),
+    [format],
+  );
 
   const segKey = (seg: InlineSegment, i: number): string =>
     `${i}-${seg.type}-${'content' in seg ? seg.content : 'name' in seg ? seg.name : seg.type}`;
