@@ -30,6 +30,16 @@ function stripOrgDrawers(text: string): string {
   );
 }
 
+function stripFencedCode(text: string): string {
+  return text.replace(/^[ \t]*```[^\n]*\n[\s\S]*?^[ \t]*```[ \t]*$\n?/gim, '');
+}
+
+function stripMath(text: string): string {
+  return text
+    .replace(/\$\$[\s\S]*?\$\$/g, '')
+    .replace(/\$([^$\n]+)\$/g, '');
+}
+
 function stripCheckboxes(text: string): string {
   return text
     .replace(/^[ \t]*[-*+][ \t]*\[[ xX-]\][ \t]*/gm, '')
@@ -67,6 +77,8 @@ export function stripPreview(content: string, noteFormat?: NoteFormat): string {
     text = stripOrgDrawers(text);
   }
 
+  text = stripFencedCode(text);
+  text = stripMath(text);
   text = stripCheckboxes(text);
   text = stripInlineMarkup(text);
 
