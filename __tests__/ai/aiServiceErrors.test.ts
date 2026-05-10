@@ -146,3 +146,29 @@ describe('humanizeStreamError', () => {
     expect(humanizeStreamError(e)).toMatch(/HTTP 429/);
   });
 });
+
+describe('parser-error detection on bare AI_APICallError (issue #685)', () => {
+  test('AI_APICallError with no statusCode and generic message is treated as parser error', () => {
+    const e = apiCallError({ message: 'Provider returned error' });
+    delete (e as any).statusCode;
+    delete (e as any).responseBody;
+    const d = extractErrorDetails(e);
+    expect(d.isParserError).toBe(true);
+  });
+
+  test('AI_RetryError wrapping an AI_APICallError without statusCode is treated as parser error', () => {
+    const inner = apiCallError({ message: 'Provider returned error' });
+    delete (inner as any).statusCode;
+    const e = retryError([inner]);
+    expect(extractErrorDetails(e).isParserError).toBe(true);
+  });
+
+  test('AI_APICallError with explicit non-success statusCode is NOT marked parser', () => {
+    const e = apiCallError({ statusCode: 500, responseBody: 'oops' });
+    expect(extractErrorDetails(e).isParserError).toBe(false);
+  });
+
+  test('non-AI_APICallError without status is NOT marked parser', () => {
+    expect(extractErrorDetails(new Error('boom')).isParserError).toBe(false);
+  });
+});
