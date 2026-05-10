@@ -101,3 +101,67 @@ describe('stripPreview (issue #661)', () => {
     });
   });
 });
+
+describe('stripPreview fenced code + math (issue #671)', () => {
+  test('strips a fenced code block entirely', () => {
+    const src = [
+      'Heading',
+      'Inline works.',
+      '```javascript',
+      "console.log('hello')",
+      'const x = 1;',
+      '```',
+      'After fence.',
+    ].join('\n');
+    const out = stripPreview(src, 'markdown');
+    expect(out).not.toMatch(/```/);
+    expect(out).not.toMatch(/console\.log/);
+    expect(out).not.toMatch(/const x = 1/);
+    expect(out).toMatch(/Heading/);
+    expect(out).toMatch(/After fence/);
+  });
+
+  test('strips multiple fenced blocks', () => {
+    const src = [
+      'A',
+      '```',
+      'first block',
+      '```',
+      'B',
+      '```py',
+      'second',
+      '```',
+      'C',
+    ].join('\n');
+    const out = stripPreview(src, 'markdown');
+    expect(out).toBe('A B C');
+  });
+
+  test('strips inline $math$', () => {
+    expect(stripPreview('Inline: $E = mc^2$ in a sentence.', 'markdown')).toBe(
+      'Inline: in a sentence.',
+    );
+  });
+
+  test('strips $$block math$$', () => {
+    const src = ['before', '$$', 'a + b = c', '$$', 'after'].join('\n');
+    const out = stripPreview(src, 'markdown');
+    expect(out).toMatch(/before/);
+    expect(out).toMatch(/after/);
+    expect(out).not.toMatch(/a \+ b/);
+    expect(out).not.toMatch(/\$/);
+  });
+
+  test('strips multiple inline math segments on one line', () => {
+    const src = 'when $a \\neq 0$, the equation $ax^2 + bx + c = 0$ has solutions.';
+    const out = stripPreview(src, 'markdown');
+    expect(out).toBe('when , the equation has solutions.');
+  });
+
+  test('does not gobble across paragraphs when $ is unbalanced', () => {
+    const src = 'a $ orphan dollar\nnext line ok';
+    const out = stripPreview(src, 'markdown');
+    expect(out).toMatch(/orphan/);
+    expect(out).toMatch(/next line ok/);
+  });
+});
