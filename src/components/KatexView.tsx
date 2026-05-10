@@ -43,10 +43,10 @@ function buildHtml(isDark: boolean): string {
 function buildInjectedJavaScript(expression: string, displayMode: boolean): string {
   return `(function(){
 var container=document.getElementById('container');
-if(!container){window.ReactNativeWebView.postMessage('0');return true;}
+if(!container){window.ReactNativeWebView.postMessage('{"w":0,"h":0}');return true;}
 if(!window.katex||typeof window.katex.render!=="function"){
   container.textContent=${JSON.stringify(expression)};
-  window.ReactNativeWebView.postMessage(String(Math.ceil(container.offsetHeight||0)));
+  window.ReactNativeWebView.postMessage(JSON.stringify({w:Math.ceil(container.offsetWidth||0),h:Math.ceil(container.offsetHeight||0)}));
   return true;
 }
 try{
@@ -54,13 +54,33 @@ try{
 }catch(e){
   container.textContent=${JSON.stringify(expression)};
 }
-var height=Math.ceil(container.offsetHeight||document.body.scrollHeight||0);
-window.ReactNativeWebView.postMessage(String(height));
+var w=Math.ceil(container.offsetWidth||document.body.scrollWidth||0);
+var h=Math.ceil(container.offsetHeight||document.body.scrollHeight||0);
+window.ReactNativeWebView.postMessage(JSON.stringify({w:w,h:h}));
 return true;})();`;
 }
 
+function parseSize(data: string): { w: number; h: number } | null {
+  try {
+    const parsed = JSON.parse(data);
+    if (parsed && typeof parsed === 'object') {
+      const w = Number(parsed.w);
+      const h = Number(parsed.h);
+      if (Number.isFinite(w) && Number.isFinite(h)) return { w, h };
+    }
+    if (typeof parsed === 'number' && Number.isFinite(parsed)) {
+      return { w: 0, h: parsed };
+    }
+  } catch {
+    // not JSON; fall through to scalar
+  }
+  const legacy = Number(data);
+  if (Number.isFinite(legacy)) return { w: 0, h: legacy };
+  return null;
+}
+
 export default function KatexView({ expression, displayMode, isDark, onHeightChange }: KatexViewProps) {
-  const [measuredHeight, setMeasuredHeight] = useState(0);
+  const [size, setSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
   const html = useMemo(() => buildHtml(isDark), [isDark]);
   const injectedJavaScript = useMemo(
     () => buildInjectedJavaScript(expression, displayMode === 'block'),
@@ -69,18 +89,24 @@ export default function KatexView({ expression, displayMode, isDark, onHeightCha
 
   const handleMessage = useCallback(
     (event: WebViewMessageEvent) => {
-      const height = Number(event.nativeEvent.data);
-
-      if (Number.isFinite(height) && height > 0) {
-        setMeasuredHeight(height);
-        onHeightChange?.(height);
-      }
+      const next = parseSize(event.nativeEvent.data);
+      if (!next || next.h <= 0) return;
+      setSize(next);
+      onHeightChange?.(next.h);
     },
     [onHeightChange],
   );
 
+  const isInline = displayMode === 'inline';
+
   return (
-    <View testID="katex-view.container" style={[styles.container, { minHeight: measuredHeight }]}>
+    <View
+      testID="katex-view.container"
+      style={[
+        isInline ? styles.containerInline : styles.container,
+        { minHeight: size.h, minWidth: isInline ? size.w : 0 },
+      ]}
+    >
       <WebView
         originWhitelist={['*']}
         source={{ html }}
@@ -92,7 +118,10 @@ export default function KatexView({ expression, displayMode, isDark, onHeightCha
         showsHorizontalScrollIndicator={false}
         automaticallyAdjustContentInsets={false}
         nestedScrollEnabled={false}
-        style={[styles.webview, { minHeight: measuredHeight }]}
+        style={[
+          styles.webview,
+          { minHeight: size.h, minWidth: isInline ? size.w : 0 },
+        ]}
       />
     </View>
   );
@@ -101,6 +130,9 @@ export default function KatexView({ expression, displayMode, isDark, onHeightCha
 const styles = StyleSheet.create({
   container: {
     alignSelf: 'stretch',
+  },
+  containerInline: {
+    alignSelf: 'flex-start',
   },
   webview: {
     backgroundColor: 'transparent',
