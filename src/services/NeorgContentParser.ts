@@ -422,33 +422,39 @@ export class NeorgContentParser {
     const indentLevel = this.getIndentLevel(spaces, indentWidth);
     const content = indentMatch[2];
 
-    const dashTaskMatch = content.match(/^\-\s+\(([ x!?~u\-_+])\)\s+(.+)$/);
+    const dashTaskMatch = content.match(/^(-+)\s+\(([ x!?~u\-_+])\)\s+(.+)$/);
     if (dashTaskMatch) {
       const statusMap: Record<string, 'todo' | 'done' | 'important' | 'uncertain' | 'in-progress' | 'urgent' | 'cancelled' | 'on-hold' | 'recurring'> = {
         ' ': 'todo', 'x': 'done', '!': 'important', '?': 'uncertain',
         '~': 'in-progress', 'u': 'urgent', '-': 'cancelled', '_': 'on-hold', '+': 'recurring',
       };
+      const markerDepth = dashTaskMatch[1].length;
       return {
         type: 'task',
-        text: dashTaskMatch[2].trim(),
-        status: statusMap[dashTaskMatch[1]] || 'todo',
-        indentLevel,
+        text: dashTaskMatch[3].trim(),
+        status: statusMap[dashTaskMatch[2]] || 'todo',
+        indentLevel: indentLevel + (markerDepth - 1),
       };
     }
 
-    const unorderedMatch = content.match(/^\-\s+(.+)$/);
+    const unorderedMatch = content.match(/^(-+)\s+(.+)$/);
     if (unorderedMatch) {
-      return { type: 'unordered', text: unorderedMatch[1].trim(), indentLevel };
+      const markerDepth = unorderedMatch[1].length;
+      return {
+        type: 'unordered',
+        text: unorderedMatch[2].trim(),
+        indentLevel: indentLevel + (markerDepth - 1),
+      };
     }
 
-    const norgOrdered = content.match(/^~\s+(.+)$/);
+    const norgOrdered = content.match(/^(~+)\s+(.+)$/);
     if (norgOrdered) {
-      return { type: 'ordered', text: norgOrdered[1].trim(), indentLevel };
-    }
-
-    const counterMatch = content.match(/^~~\s+(.+)$/);
-    if (counterMatch) {
-      return { type: 'ordered', text: counterMatch[1].trim(), indentLevel };
+      const markerDepth = norgOrdered[1].length;
+      return {
+        type: 'ordered',
+        text: norgOrdered[2].trim(),
+        indentLevel: indentLevel + (markerDepth - 1),
+      };
     }
 
     const numericMatch = content.match(/^(\d+)[.)]\s+(.+)$/);
