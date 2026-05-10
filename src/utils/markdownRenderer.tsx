@@ -175,21 +175,35 @@ function processMarkdown(markdown: string): ProcessedMarkdown {
       tables.push(...parsedTables);
       segmentText = replaceSegments(segmentText, parsedTables, (_table, index) => `\n<${TABLE_COMPONENT} index={${tableOffset + index}} />\n`);
 
+      // Block and inline math share a coordinate system (both indexed
+      // into segmentText as it stands here). Substituting them in
+      // separate passes invalidates the second pass's indices because
+      // the first pass shifts the text. Issue #688: a doc with a block
+      // `$$…$$` followed by `$inline$` substituted block math first,
+      // then applied stale inline indices to the now-shifted text —
+      // tokens landed on wrong characters and the original `$inline$`
+      // source remained visible alongside a misplaced chip. Replace
+      // both in one pass so every segment uses indices from the same
+      // pre-substitution snapshot.
       const parsedMath = parseMath(segmentText);
-      const parsedBlockMath = parsedMath.filter((segment) => segment.type === 'block');
-      const parsedInlineMath = parsedMath.filter((segment) => segment.type === 'inline');
-
       const blockMathOffset = blockMath.length;
-      blockMath.push(...parsedBlockMath);
-      segmentText = replaceSegments(segmentText, parsedBlockMath, (_math, index) => `\n<${BLOCK_MATH_COMPONENT} index={${blockMathOffset + index}} />\n`);
-
       const inlineMathOffset = inlineMath.length;
-      const inlineMathEmbeds = parsedInlineMath.map((segment, index) => ({
-        ...segment,
-        token: `${INLINE_MATH_TOKEN_PREFIX}${inlineMathOffset + index}`,
-      }));
-      inlineMath.push(...inlineMathEmbeds);
-      segmentText = replaceSegments(segmentText, parsedInlineMath, (_math, index) => inlineMathEmbeds[index]?.token ?? '');
+
+      const inlineMathEmbeds: InlineMathEmbed[] = [];
+      const replacements = new Map<MathSegment, string>();
+      for (const segment of parsedMath) {
+        if (segment.type === 'block') {
+          replacements.set(segment, `\n<${BLOCK_MATH_COMPONENT} index={${blockMathOffset + blockMath.length}} />\n`);
+          blockMath.push(segment);
+        } else {
+          const token = `${INLINE_MATH_TOKEN_PREFIX}${inlineMathOffset + inlineMathEmbeds.length}`;
+          const embed: InlineMathEmbed = { ...segment, token };
+          replacements.set(segment, token);
+          inlineMathEmbeds.push(embed);
+          inlineMath.push(embed);
+        }
+      }
+      segmentText = replaceSegments(segmentText, parsedMath, (segment) => replacements.get(segment) ?? '');
 
       const wikiOffset = wikiLinks.length;
       const parsedWikiEmbeds = parseWikiLinks(segmentText).map((segment, index) => ({
@@ -205,6 +219,8 @@ function processMarkdown(markdown: string): ProcessedMarkdown {
 
   return { frontmatter, markdown: output, inlineMath, blockMath, wikiLinks, tables };
 }
+
+export const processMarkdownForTest = processMarkdown;
 
 export class NotePreviewRenderer extends Renderer implements RendererInterface {
   private deps: CustomRendererDeps;
