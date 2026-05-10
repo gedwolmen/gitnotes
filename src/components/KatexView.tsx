@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import type { WebViewMessageEvent } from 'react-native-webview';
 import { WebView } from 'react-native-webview';
@@ -60,6 +60,7 @@ return true;})();`;
 }
 
 export default function KatexView({ expression, displayMode, isDark, onHeightChange }: KatexViewProps) {
+  const [measuredHeight, setMeasuredHeight] = useState(0);
   const html = useMemo(() => buildHtml(isDark), [isDark]);
   const injectedJavaScript = useMemo(
     () => buildInjectedJavaScript(expression, displayMode === 'block'),
@@ -70,7 +71,8 @@ export default function KatexView({ expression, displayMode, isDark, onHeightCha
     (event: WebViewMessageEvent) => {
       const height = Number(event.nativeEvent.data);
 
-      if (Number.isFinite(height)) {
+      if (Number.isFinite(height) && height > 0) {
+        setMeasuredHeight(height);
         onHeightChange?.(height);
       }
     },
@@ -78,7 +80,7 @@ export default function KatexView({ expression, displayMode, isDark, onHeightCha
   );
 
   return (
-    <View style={styles.container}>
+    <View testID="katex-view.container" style={[styles.container, { minHeight: measuredHeight }]}>
       <WebView
         originWhitelist={['*']}
         source={{ html }}
@@ -90,7 +92,7 @@ export default function KatexView({ expression, displayMode, isDark, onHeightCha
         showsHorizontalScrollIndicator={false}
         automaticallyAdjustContentInsets={false}
         nestedScrollEnabled={false}
-        style={styles.webview}
+        style={[styles.webview, { minHeight: measuredHeight }]}
       />
     </View>
   );
