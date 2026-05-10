@@ -22,6 +22,7 @@ import { classifyHref } from './linkClassifier';
 import { parseMath, type MathSegment } from './mathParser';
 import { parseTables, type TableSegment } from './tableParser';
 import { parseWikiLinks, type WikiLink } from './wikiLinksParser';
+import { splitInlineTokens } from './inlineTokens';
 
 const INLINE_MATH_TOKEN_PREFIX = 'GITNOTES_INLINE_MATH_TOKEN_';
 const WIKI_LINK_TOKEN_PREFIX = 'GITNOTES_WIKI_LINK_TOKEN_';
@@ -247,20 +248,20 @@ export class NotePreviewRenderer extends Renderer implements RendererInterface {
 
   private renderInlineSegments(text: string, styles?: TextStyle): ReactNode[] {
     const nodes: ReactNode[] = [];
-    let cursor = 0;
-    let match: RegExpExecArray | null = INLINE_TOKEN_PATTERN.exec(text);
 
-    while (match !== null) {
-      const token = match[0];
-
-      if (match.index > cursor) {
-        nodes.push(
-          <Text key={this.getKey()} selectable style={styles}>
-            {text.slice(cursor, match.index)}
-          </Text>,
-        );
+    for (const segment of splitInlineTokens(text)) {
+      if (segment.type === 'text') {
+        if (segment.value.length > 0) {
+          nodes.push(
+            <Text key={this.getKey()} selectable style={styles}>
+              {segment.value}
+            </Text>,
+          );
+        }
+        continue;
       }
 
+      const token = segment.value;
       const mathSegment = this.inlineMathEmbeds.get(token);
       if (mathSegment) {
         nodes.push(
@@ -268,23 +269,13 @@ export class NotePreviewRenderer extends Renderer implements RendererInterface {
             <KatexView expression={mathSegment.content} displayMode="inline" isDark={this.isDarkMode()} />
           </View>,
         );
+        continue;
       }
 
       const wikiLink = this.wikiLinkEmbeds.get(token);
       if (wikiLink) {
         nodes.push(this.link(wikiLink.displayText, wikiTargetToHref(wikiLink.target), styles));
       }
-
-      cursor = match.index + token.length;
-      match = INLINE_TOKEN_PATTERN.exec(text);
-    }
-
-    if (cursor < text.length) {
-      nodes.push(
-        <Text key={this.getKey()} selectable style={styles}>
-          {text.slice(cursor)}
-        </Text>,
-      );
     }
 
     return nodes.length > 0
