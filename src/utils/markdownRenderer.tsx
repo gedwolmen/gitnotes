@@ -17,6 +17,7 @@ import { TableRenderer } from '../components/TableRenderer';
 import { isCanvasLink, canvasIdFromLink } from '../models/Canvas';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { parseFrontmatter } from './frontmatterParser';
+import { normalizeAsteriskAfterCode } from './normalizeAsteriskAfterCode';
 import { decodeHtmlEntities } from './htmlEntities';
 import { classifyHref } from './linkClassifier';
 import { parseMath, type MathSegment } from './mathParser';
@@ -165,7 +166,7 @@ function processMarkdown(markdown: string): ProcessedMarkdown {
       // ends up looking identical to a regular bullet list. Replacing the
       // brackets with ☐ / ☑ before parsing keeps a visible state marker
       // through the existing list_item path with no renderer override.
-      let segmentText = section.text
+      let segmentText = normalizeAsteriskAfterCode(section.text)
         .replace(/^(\s*[-*]\s+)\[ \]\s+/gm, '$1☐ ')
         .replace(/^(\s*[-*]\s+)\[x\]\s+/gim, '$1☑ ');
 
