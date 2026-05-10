@@ -22,11 +22,12 @@ import { classifyHref } from './linkClassifier';
 import { parseMath, type MathSegment } from './mathParser';
 import { parseTables, type TableSegment } from './tableParser';
 import { parseWikiLinks, type WikiLink } from './wikiLinksParser';
-import { splitInlineTokens } from './inlineTokens';
-
-const INLINE_MATH_TOKEN_PREFIX = 'GITNOTES_INLINE_MATH_TOKEN_';
-const WIKI_LINK_TOKEN_PREFIX = 'GITNOTES_WIKI_LINK_TOKEN_';
-const INLINE_TOKEN_PATTERN = /GITNOTES_(?:INLINE_MATH|WIKI_LINK)_TOKEN_\d+__/g;
+import {
+  splitInlineTokens,
+  INLINE_MATH_TOKEN_PREFIX,
+  WIKI_LINK_TOKEN_PREFIX,
+  INLINE_TOKEN_REGEX as INLINE_TOKEN_PATTERN,
+} from './inlineTokens';
 const BLOCK_MATH_COMPONENT = 'MarkdownMath';
 const TABLE_COMPONENT = 'MarkdownTable';
 
@@ -184,7 +185,7 @@ function processMarkdown(markdown: string): ProcessedMarkdown {
       const inlineMathOffset = inlineMath.length;
       const inlineMathEmbeds = parsedInlineMath.map((segment, index) => ({
         ...segment,
-        token: `${INLINE_MATH_TOKEN_PREFIX}${inlineMathOffset + index}__`,
+        token: `${INLINE_MATH_TOKEN_PREFIX}${inlineMathOffset + index}`,
       }));
       inlineMath.push(...inlineMathEmbeds);
       segmentText = replaceSegments(segmentText, parsedInlineMath, (_math, index) => inlineMathEmbeds[index]?.token ?? '');
@@ -192,7 +193,7 @@ function processMarkdown(markdown: string): ProcessedMarkdown {
       const wikiOffset = wikiLinks.length;
       const parsedWikiEmbeds = parseWikiLinks(segmentText).map((segment, index) => ({
         ...segment,
-        token: `${WIKI_LINK_TOKEN_PREFIX}${wikiOffset + index}__`,
+        token: `${WIKI_LINK_TOKEN_PREFIX}${wikiOffset + index}`,
       }));
       wikiLinks.push(...parsedWikiEmbeds);
       segmentText = replaceSegments(segmentText, parsedWikiEmbeds, (_link, index) => parsedWikiEmbeds[index]?.token ?? '');
