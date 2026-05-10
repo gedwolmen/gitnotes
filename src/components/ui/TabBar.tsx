@@ -62,6 +62,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
       <BlurView
         intensity={Platform.OS === 'ios' ? 60 : 30}
         tint={isDark ? 'dark' : 'light'}
+        pointerEvents="box-none"
         style={{
           flexDirection: 'row',
           alignItems: 'center',
