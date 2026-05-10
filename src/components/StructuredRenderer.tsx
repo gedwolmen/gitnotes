@@ -416,17 +416,23 @@ export default function StructuredRenderer({ blocks, format = 'neorg', onOpenNot
   const renderHeading = (heading: NeorgHeading, blockIndex: number) => {
     const fontSize = 32 - (heading.level - 1) * 4;
     const fontWeight = headingWeightFor(heading.level);
+    const hasChips = format === 'org' && (heading.todoState || heading.priority);
+    const hasTags = format === 'org' && heading.tags && heading.tags.length > 0;
     return (
-      <View key={`heading-${blockIndex}`} style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginTop: heading.level === 1 ? 16 : 12, marginBottom: 8 }}>
-        {format === 'org' && heading.todoState && (
-          <Text style={[styles.todoBadge, { backgroundColor: todoColor(heading.todoState) + '20', color: todoColor(heading.todoState) }]}>
-            {heading.todoState}
-          </Text>
-        )}
-        {format === 'org' && heading.priority && (
-          <Text style={[styles.priorityBadge, { backgroundColor: priorityColor(heading.priority) + '30', color: priorityColor(heading.priority) }]}>
-            #{heading.priority}
-          </Text>
+      <View key={`heading-${blockIndex}`} style={{ marginTop: heading.level === 1 ? 16 : 12, marginBottom: 8 }}>
+        {hasChips && (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginBottom: 4 }}>
+            {heading.todoState && (
+              <Text style={[styles.todoBadge, { backgroundColor: todoColor(heading.todoState) + '20', color: todoColor(heading.todoState) }]}>
+                {heading.todoState}
+              </Text>
+            )}
+            {heading.priority && (
+              <Text style={[styles.priorityBadge, { backgroundColor: priorityColor(heading.priority) + '30', color: priorityColor(heading.priority) }]}>
+                #{heading.priority}
+              </Text>
+            )}
+          </View>
         )}
         <Text
           selectable
@@ -438,11 +444,15 @@ export default function StructuredRenderer({ blocks, format = 'neorg', onOpenNot
         >
           {renderInline(heading.text)}
         </Text>
-        {format === 'org' && heading.tags && heading.tags.map((tag, ti) => (
-          <Text key={`tag-${ti}`} style={[styles.tagChip, { backgroundColor: colors.primary + '15', color: colors.primary }]}>
-            {tag}
-          </Text>
-        ))}
+        {hasTags && (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginTop: 4 }}>
+            {heading.tags!.map((tag, ti) => (
+              <Text key={`tag-${ti}`} style={[styles.tagChip, { backgroundColor: colors.primary + '15', color: colors.primary }]}>
+                {tag}
+              </Text>
+            ))}
+          </View>
+        )}
       </View>
     );
   };
@@ -612,18 +622,7 @@ export default function StructuredRenderer({ blocks, format = 'neorg', onOpenNot
           </View>
         ) : null;
       case 'drawer':
-        return block.drawer ? (
-          <View key={`dr-${index}`} style={{ padding: 8, borderRadius: 4, marginVertical: 4, backgroundColor: colors.surfaceSecondary, opacity: 0.7 }}>
-            <Text selectable style={{ fontSize: 12, fontWeight: '600', color: colors.textSecondary, marginBottom: 4 }}>
-              :{block.drawer.name}:
-            </Text>
-            {Object.entries(block.drawer.properties).map(([key, value]) => (
-              <Text key={key} selectable style={{ fontSize: 12, fontFamily: 'monospace', color: colors.textSecondary }}>
-                :{key}: {value}
-              </Text>
-            ))}
-          </View>
-        ) : null;
+        return null;
       case 'fixed-width':
         return block.text ? (
           <Text key={`fw-${index}`} selectable style={{ fontFamily: 'monospace', fontSize: 14, paddingVertical: 2, color: colors.text }}>
