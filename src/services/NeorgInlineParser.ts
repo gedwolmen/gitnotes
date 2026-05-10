@@ -45,7 +45,7 @@ export class NeorgInlineParser {
     { type: 'bold', pattern: /\*([^*]+)\*/g, delimiter: '*', verbatim: false },
     { type: 'italic', pattern: /\/([^/]+)\//g, delimiter: '/', verbatim: false },
     { type: 'underline', pattern: /_([^_]+)_/g, delimiter: '_', verbatim: false },
-    { type: 'strikethrough', pattern: /-([^-]+)-/g, delimiter: '-', verbatim: false },
+    { type: 'strikethrough', pattern: /(?<![A-Za-z0-9])-([^-\n]+)-(?![A-Za-z0-9])/g, delimiter: '-', verbatim: false },
     { type: 'spoiler', pattern: /!([^!]+)!/g, delimiter: '!', verbatim: false },
     { type: 'superscript', pattern: /\^([^^]+)\^/g, delimiter: '^', verbatim: false },
     { type: 'subscript', pattern: /,([^,]+),/g, delimiter: ',', verbatim: false },
