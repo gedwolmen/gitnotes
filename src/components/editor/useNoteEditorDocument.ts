@@ -70,6 +70,7 @@ export function useNoteEditorDocument({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [repoFolders, setRepoFolders] = useState<Folder[]>([]);
   const [canvasEditJsonUri, setCanvasEditJsonUri] = useState<string | undefined>(undefined);
+  const [notFound, setNotFound] = useState(false);
 
   const allFolders = useMemo(() => {
     const merged = new Map<string, Folder>();
@@ -144,9 +145,16 @@ export function useNoteEditorDocument({
   }, [repo, branch]);
 
   useEffect(() => {
-    if (!noteId) return;
+    if (!noteId) {
+      setNotFound(false);
+      return;
+    }
     const existingNote = getNoteByIdRef.current(noteId);
-    if (!existingNote) return;
+    if (!existingNote) {
+      setNotFound(true);
+      return;
+    }
+    setNotFound(false);
 
     setTitle(existingNote.title);
     setContent(existingNote.content);
@@ -470,6 +478,7 @@ export function useNoteEditorDocument({
     attachments,
     isSaving,
     isEditing,
+    notFound,
     canUndo,
     canRedo,
     repoFolders,

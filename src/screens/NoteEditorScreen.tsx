@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -95,6 +95,31 @@ function NoteEditorScreenInner() {
     initialAnchor,
   });
   const isPdfNote = document.noteFormat === 'pdf';
+
+  // ── NOT FOUND (deep link to a noteId that isn't on this device) ──
+  if (document.notFound) {
+    return (
+      <SafeAreaView
+        testID="note-editor.view.not-found"
+        style={[styles.notFoundContainer, { backgroundColor: colors.background }]}
+        edges={['top', 'bottom']}
+      >
+        <Text style={[styles.notFoundTitle, { color: colors.text }]}>Note not found</Text>
+        <Text style={[styles.notFoundBody, { color: colors.textSecondary }]}>
+          {noteId
+            ? `No note with id "${noteId}" exists on this device.`
+            : 'This note isn’t on this device.'}
+        </Text>
+        <Pressable
+          testID="note-editor.button.back-to-notes"
+          onPress={() => navigation.navigate('MainTabs', { screen: 'NotesTab' })}
+          style={[styles.notFoundButton, { backgroundColor: colors.primary }]}
+        >
+          <Text style={styles.notFoundButtonText}>Back to Notes</Text>
+        </Pressable>
+      </SafeAreaView>
+    );
+  }
 
   // ── PREVIEW MODE ──────────────────────────────────────────────
   if (!document.isEditing) {
@@ -290,5 +315,31 @@ const styles = StyleSheet.create({
   },
   sideBySidePreview: {
     flex: 1,
+  },
+  notFoundContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+  notFoundTitle: {
+    fontSize: 22,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  notFoundBody: {
+    fontSize: 15,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  notFoundButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 999,
+  },
+  notFoundButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });
