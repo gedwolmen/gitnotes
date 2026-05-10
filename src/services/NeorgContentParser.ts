@@ -343,12 +343,12 @@ export class NeorgContentParser {
   }
 
   static parseHeading(line: string): NeorgHeading | null {
-    const starMatch = line.match(/^(\*{1,7})\s+(.+)$/);
+    const starMatch = line.match(/^\s*(\*{1,7})\s+(.+)$/);
     if (starMatch) {
       return { level: starMatch[1].length, text: starMatch[2].trim() };
     }
 
-    const mdMatch = line.match(/^(#{1,6})\s+(.+)$/);
+    const mdMatch = line.match(/^\s*(#{1,6})\s+(.+)$/);
     if (mdMatch) {
       return { level: mdMatch[1].length, text: mdMatch[2].trim() };
     }

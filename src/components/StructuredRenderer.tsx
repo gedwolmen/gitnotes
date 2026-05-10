@@ -104,14 +104,37 @@ const inlinePatterns: InlinePattern[] = [
   {
     regex: /-([^-\s][^-]*)-/g,
     handler: (m) => ({ type: 'strikethrough', content: m[1] }),
+    validate: (source, match) => {
+      const start = match.index ?? 0;
+      const end = start + match[0].length;
+      const prev = start > 0 ? source[start - 1] : '';
+      const next = end < source.length ? source[end] : '';
+      return (!prev || !WORD_CHAR_REGEX.test(prev)) && (!next || !WORD_CHAR_REGEX.test(next));
+    },
   },
   {
     regex: /\^([^^]+)\^/g,
     handler: (m) => ({ type: 'superscript', content: m[1] }),
+    validate: (source, match) => {
+      const start = match.index ?? 0;
+      const end = start + match[0].length;
+      const prev = start > 0 ? source[start - 1] : '';
+      const next = end < source.length ? source[end] : '';
+      return (!prev || !WORD_CHAR_REGEX.test(prev)) && (!next || !WORD_CHAR_REGEX.test(next));
+    },
   },
   {
     regex: /,([^,]+),/g,
     handler: (m) => ({ type: 'subscript', content: m[1] }),
+    validate: (source, match) => {
+      const start = match.index ?? 0;
+      const end = start + match[0].length;
+      const prev = start > 0 ? source[start - 1] : '';
+      const next = end < source.length ? source[end] : '';
+      const content = match[1];
+      if (/\s/.test(content)) return false;
+      return (!prev || !WORD_CHAR_REGEX.test(prev)) && (!next || !WORD_CHAR_REGEX.test(next));
+    },
   },
   { regex: /\+([^+\s][^+]*[^+\s]?)\+/g, handler: (m) => ({ type: 'org-strike', content: m[1] }) },
   { regex: /=([^=\s][^=]*[^=\s]?)=/g, handler: (m) => ({ type: 'verbatim', content: m[1] }) },
