@@ -2,29 +2,34 @@
 # native module isn't bundled so it would crash on instantiate.
 appId: com.xaventra.gitnotes
 ---
+- stopApp
 - launchApp:
     clearState: false
 - tapOn:
     id: "tab-bar.*tab.press-SettingsTab"
 - waitForAnimationToEnd:
     timeout: 1500
-# Scroll the Settings list down until we hit the providers section.
+# Two swipes get past Repos/Sync/Templates/Data/About to land at AI.
 - swipe:
     start: "50%, 80%"
     end: "50%, 20%"
     duration: 400
 - swipe:
     start: "50%, 80%"
-    end: "50%, 20%"
+    end: "50%, 30%"
     duration: 400
-- swipe:
-    start: "50%, 80%"
-    end: "50%, 20%"
-    duration: 400
-- swipe:
-    start: "50%, 80%"
-    end: "50%, 20%"
-    duration: 400
+
+# Enable AI iff providers section isn't rendered yet.
+- runFlow:
+    when:
+      notVisible:
+        text: ".*Apple Intelligence.*"
+    commands:
+      - tapOn:
+          id: "settings.toggle.ai"
+      - waitForAnimationToEnd:
+          timeout: 800
+
 - assertVisible:
     text: ".*Apple Intelligence.*"
 - assertNotVisible:
