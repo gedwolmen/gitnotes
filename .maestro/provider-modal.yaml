@@ -11,27 +11,15 @@ appId: com.xaventra.gitnotes
 - waitForAnimationToEnd:
     timeout: 1000
 
-# Settings is long; raw swipes get to the providers section faster than
-# scrollUntilVisible's slow stride.
+# Two big swipes get past Sync/Note rendering/Data/About to land at
+# the AI section where Add Provider lives.
 - swipe:
     start: "50%, 80%"
     end: "50%, 20%"
     duration: 400
 - swipe:
     start: "50%, 80%"
-    end: "50%, 20%"
-    duration: 400
-- swipe:
-    start: "50%, 80%"
-    end: "50%, 20%"
-    duration: 400
-- swipe:
-    start: "50%, 80%"
-    end: "50%, 20%"
-    duration: 400
-- swipe:
-    start: "50%, 80%"
-    end: "50%, 20%"
+    end: "50%, 30%"
     duration: 400
 
 - tapOn:
