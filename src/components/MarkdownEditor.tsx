@@ -1,5 +1,5 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { TextSearchBar } from './TextSearchBar';
@@ -228,11 +228,23 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(fun
           <Ionicons name={isSearching ? 'search' : 'search-outline'} size={20} color={isSearching ? colors.primary ?? colors.text : colors.textSecondary} />
         </TouchableOpacity>
 
-        <TouchableOpacity testID="hardwrap-toggle" onPress={toggleHardWrap} hitSlop={8}>
-          <Ionicons name="return-down-back" size={20} color={hardWrapEnabled ? (colors.primary ?? colors.text) : colors.textSecondary} />
-        </TouchableOpacity>
-
         <View style={styles.headerActions}>
+          <TouchableOpacity
+            testID="hardwrap-toggle"
+            onPress={toggleHardWrap}
+            hitSlop={8}
+            accessibilityLabel="Toggle hard wrap"
+            style={[styles.hardWrapToggle, hardWrapEnabled && { backgroundColor: (colors.primary ?? colors.text) + '1F' }]}
+          >
+            <Ionicons
+              name="return-down-back"
+              size={16}
+              color={hardWrapEnabled ? (colors.primary ?? colors.text) : colors.textSecondary}
+            />
+            <Text style={[styles.hardWrapLabel, { color: hardWrapEnabled ? (colors.primary ?? colors.text) : colors.textSecondary }]}>
+              Wrap
+            </Text>
+          </TouchableOpacity>
           <UndoRedoButtons canUndo={canUndo} canRedo={canRedo} onUndo={handleUndo} onRedo={handleRedo} />
         </View>
       </View>
@@ -295,6 +307,19 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+  },
+  hardWrapToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 4,
+  },
+  hardWrapLabel: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   editor: {
     fontSize: 16,
