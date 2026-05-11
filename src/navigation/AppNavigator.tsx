@@ -11,7 +11,6 @@ import ChatScreen from '../screens/ChatScreen';
 import ChatThreadListScreen from '../screens/ChatThreadListScreen';
 import NoteEditorScreen from '../screens/NoteEditorScreen';
 import CanvasEditorScreen from '../screens/CanvasEditorScreen';
-import CanvasListScreen from '../screens/CanvasListScreen';
 import PdfViewerScreen from '../screens/PdfViewerScreen';
 import FileViewerScreen from '../screens/FileViewerScreen';
 import ImageViewerScreen from '../screens/ImageViewerScreen';
@@ -45,11 +44,11 @@ const linking: LinkingOptions<RootStackParamList> = {
           NotesTab: 'notes',
           ExploreTab: 'explore',
           SettingsTab: 'settings',
+          CanvasList: 'canvases',
         },
       },
       NoteEditor: 'note/:noteId',
       CanvasEditor: 'canvas/:canvasId',
-      CanvasList: 'canvases',
       ChatThreadList: 'chat',
       ChatScreen: 'chat/:threadId',
       NeumorphicGallery: '__dev__/neumorphic',
@@ -129,14 +128,9 @@ export default function AppNavigator() {
               component={NoteEditorScreen}
               options={{ headerShown: false }}
             />
-            <Stack.Screen 
-              name="CanvasEditor" 
-              component={CanvasEditorScreen}
-              options={{ headerShown: false }}
-            />
             <Stack.Screen
-              name="CanvasList"
-              component={CanvasListScreen}
+              name="CanvasEditor"
+              component={CanvasEditorScreen}
               options={{ headerShown: false }}
             />
             <Stack.Screen
