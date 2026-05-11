@@ -227,7 +227,7 @@ export default function HomeScreen() {
           </Pressable>
           <Pressable
             testID="home.button.navigate"
-            onPress={() => navigation.navigate('CanvasList')}
+            onPress={() => navigation.navigate('MainTabs', { screen: 'CanvasList' })}
             style={({ pressed }) => [
               styles.bentoTile,
               { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },

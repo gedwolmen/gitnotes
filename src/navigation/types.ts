@@ -9,7 +9,6 @@ type ProductionStackParamList = {
   ImageViewer: { owner: string; repo: string; branch?: string; path: string; title?: string; size?: number };
   VideoViewer: { owner: string; repo: string; branch?: string; path: string; title?: string; size?: number };
   CanvasEditor: { canvasId?: string; canvasWidth?: number; canvasHeight?: number; canvasTitle?: string };
-  CanvasList: undefined;
   ChatThreadList: undefined;
   ChatScreen: { threadId: string };
   RenderStyleSettings: undefined;
@@ -31,6 +30,7 @@ export type BottomTabParamList = {
   ExploreTab: undefined;
   TodosTab: undefined;
   SettingsTab: undefined;
+  CanvasList: undefined;
 };
 
 export type Note = {

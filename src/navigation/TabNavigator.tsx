@@ -16,6 +16,7 @@ import NotesListScreen from '../screens/NotesListScreen';
 import ExploreScreen from '../screens/ExploreScreen';
 import TodoListScreen from '../screens/TodoListScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import CanvasListScreen from '../screens/CanvasListScreen';
 import { BottomTabParamList } from './types';
 import { useResponsive } from '../hooks/useResponsive';
 import { useTheme } from '../contexts/ThemeContext';
@@ -185,6 +186,11 @@ export default function TabNavigator() {
         name="SettingsTab"
         component={SettingsScreen}
         options={{ title: 'Settings' }}
+      />
+      <Tab.Screen
+        name="CanvasList"
+        component={CanvasListScreen}
+        options={{ title: 'Canvases', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
       />
     </Tab.Navigator>
   );
