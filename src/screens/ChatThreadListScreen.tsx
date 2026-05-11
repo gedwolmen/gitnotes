@@ -14,7 +14,7 @@ import { githubActivity } from '../stores/githubActivityStore';
 import { useTokens } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/types';
 import { ChatThreadSummary } from '../models/Chat';
-import { ScreenHeader, Card, Button, useScreenHeaderHeight } from '../components/ui';
+import { ScreenHeader, Card, Button, EmptyState, useScreenHeaderHeight } from '../components/ui';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -200,12 +200,12 @@ export default function ChatThreadListScreen() {
     }
 
     return (
-      <View style={styles.centerContainer}>
-        <Ionicons name="sparkles" size={48} color={colors.primary} style={styles.emptyIcon} />
-        <Text style={[styles.emptyText, { color: colors.textSecondary, fontSize: type.md }]}>
-          Start your first AI chat
-        </Text>
-      </View>
+      <EmptyState
+        icon="sparkles"
+        iconColor={colors.primary}
+        title="Start your first AI chat"
+        subtitle="Tap New Chat above to send your first prompt."
+      />
     );
   };
 
