@@ -233,6 +233,7 @@ async function uploadLocalImages(
   repo: string,
   branch: string,
   noteSlug: string,
+  opts?: { tokenOverride?: string },
 ): Promise<string> {
   const imageRegex = /(!\[[^\]]*\]\()([^)]+)(\))/g;
   let updatedContent = content;
@@ -246,6 +247,21 @@ async function uploadLocalImages(
     }
     match = imageRegex.exec(content);
   }
+
+  if (matches.length === 0) return updatedContent;
+
+  // Resolve once per save: a public repo gets the cheap raw URL (works
+  // unauthenticated, cacheable on CDNs); a private repo gets a stable
+  // `gitnotes://repo-image/...` scheme that the renderer resolves to a
+  // `data:` URI via the authenticated Contents API at view time. We can't
+  // pin a `?token=` raw URL because GitHub's signed download URLs expire
+  // after a few minutes — once persisted in markdown they 404 forever
+  // (#733).
+  const isPrivate = await GitHubService.getRepoPrivacy(owner, repo, opts);
+  // Conservative default on lookup failure: assume private. A public repo
+  // misclassified as private still renders correctly via the auth path; the
+  // reverse silently 404s for the user.
+  const usePrivateScheme = isPrivate !== false;
 
   for (const img of matches) {
     try {
@@ -271,10 +287,12 @@ async function uploadLocalImages(
       );
 
       if (uploadResult) {
-        const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${imagePath}`;
+        const persistedUrl = usePrivateScheme
+          ? `gitnotes://repo-image/${owner}/${repo}/${encodeURIComponent(branch)}/${imagePath}`
+          : `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${imagePath}`;
         updatedContent = updatedContent.replace(
           `${img.fullPrefix}${img.uri}${img.fullSuffix}`,
-          `${img.fullPrefix}${rawUrl}${img.fullSuffix}`,
+          `${img.fullPrefix}${persistedUrl}${img.fullSuffix}`,
         );
       } else {
         console.warn('[NoteGitHubSync] Failed to upload image:', imageName);
@@ -427,7 +445,7 @@ export async function syncNoteToGitHub(params: {
   let finalContent = applyNoteTagsToContent(content, format, tags);
   finalContent = applyNoteColorToContent(finalContent, format, color);
   try {
-    finalContent = await uploadLocalImages(finalContent, repoInfo.owner, repoInfo.repo, targetBranch, noteSlug);
+    finalContent = await uploadLocalImages(finalContent, repoInfo.owner, repoInfo.repo, targetBranch, noteSlug, opts);
   } catch (error) {
     console.warn('[NoteGitHubSync] Image upload failed, syncing note without images:', error);
   }

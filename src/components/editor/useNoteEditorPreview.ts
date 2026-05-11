@@ -11,6 +11,7 @@ import { PositionMemoryService } from '../../services/PositionMemoryService';
 import { HapticService } from '../../utils/haptics';
 import { getMarkdownStyles } from '../../utils/preview';
 import { NotePreviewRenderer } from '../../utils/markdownRenderer';
+import { hasGitnotesImageUris, resolveGitnotesImageUris } from '../../utils/gitnotesImageResolver';
 import CanvasPreview from '../CanvasPreview';
 import {
   APPROX_LINE_PX,
@@ -81,7 +82,37 @@ export function useNoteEditorPreview({
     return `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}?ref=${encodeURIComponent(ref)}`;
   }, []);
 
-  const previewContent = useMemo(() => getPreviewContent(content, noteFormat), [content, noteFormat]);
+  const rawPreviewContent = useMemo(() => getPreviewContent(content, noteFormat), [content, noteFormat]);
+
+  // Private-repo images are persisted as `gitnotes://repo-image/...` URIs by
+  // the upload path (#733) because GitHub's raw URLs 404 without a token and
+  // the signed `?token=` form expires within minutes — too short to ever
+  // pin into markdown. The resolver fetches each URI via the authenticated
+  // Contents API and substitutes a `data:image/...;base64,...` URI in
+  // memory for the renderer. Resolutions are cached per-process so reopens
+  // are free; first render of a note with N private images costs N parallel
+  // GETs. Public-repo images keep using the cheap raw URL — `previewContent`
+  // is identity-equal to `rawPreviewContent` in that case.
+  const [resolvedPreviewContent, setResolvedPreviewContent] = useState(rawPreviewContent);
+  useEffect(() => {
+    if (!hasGitnotesImageUris(rawPreviewContent)) {
+      setResolvedPreviewContent(rawPreviewContent);
+      return;
+    }
+    let cancelled = false;
+    // Show the markdown immediately with the unresolved URIs so layout is
+    // stable; expo-image will render its placeholder for the gitnotes://
+    // sources until the data: URIs land a tick later.
+    setResolvedPreviewContent(rawPreviewContent);
+    resolveGitnotesImageUris(rawPreviewContent).then((resolved) => {
+      if (cancelled) return;
+      if (resolved !== rawPreviewContent) setResolvedPreviewContent(resolved);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [rawPreviewContent]);
+  const previewContent = resolvedPreviewContent;
 
   useEffect(() => {
     headingPositionsRef.current.clear();
