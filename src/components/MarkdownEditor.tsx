@@ -1,5 +1,5 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { TextSearchBar } from './TextSearchBar';
@@ -8,53 +8,86 @@ import { useUndoRedo } from '../hooks/useUndoRedo';
 import { UndoRedoButtons } from './UndoRedoButtons';
 import { MarkdownToolbar } from './MarkdownToolbar';
 import type { FormatAction, Selection } from '../utils/markdownFormatting';
-import {
-  addTab,
-  insertLink,
-  toggleBold,
-  toggleChecklist,
-  toggleCode,
-  toggleHeading,
-  toggleItalic,
-  toggleList,
-} from '../utils/markdownFormatting';
 import { useHardWrap } from '../hooks/useHardWrap';
+import type { NoteFormat } from '../models/Note';
 
-export type EditorMode = 'markdown' | 'raw';
-
-function modifyLinePrefix(text: string, sel: Selection, pattern: RegExp, prefix: string): { text: string; selection: Selection } {
-  let lineStart = sel.start;
+function lineRange(text: string, pos: number): { lineStart: number; lineEnd: number } {
+  let lineStart = pos;
   while (lineStart > 0 && text[lineStart - 1] !== '\n') lineStart--;
-  let lineEnd = sel.start;
+  let lineEnd = pos;
   while (lineEnd < text.length && text[lineEnd] !== '\n') lineEnd++;
-  const line = text.slice(lineStart, lineEnd);
-  let newLine: string;
-  if (pattern.test(line)) {
-    newLine = line.replace(pattern, '');
-  } else {
-    newLine = prefix + line;
+  return { lineStart, lineEnd };
+}
+
+/**
+ * Apply a FormatAction emitted by the toolbar against the current selection.
+ * Pre-#690 the editor branched on `action.before` string equality to pick a
+ * format-specific helper (`toggleBold` for `**`, `toggleHeading` for `# `,
+ * etc.) — fine while the toolbar only knew markdown, but it silently fell
+ * through whenever the preset emitted Org / Neorg syntax (`* ` heading,
+ * `/italic/`, `=code=`, …). Dispatch by `action.type` instead so any
+ * future format preset works without an editor change.
+ */
+function applyFormatAction(text: string, sel: Selection, action: FormatAction): { text: string; selection: Selection } | undefined {
+  if (action.type === 'wrap') {
+    const after = action.after ?? action.before;
+    const selected = text.slice(sel.start, sel.end);
+    if (
+      selected.startsWith(action.before) &&
+      selected.endsWith(after) &&
+      selected.length >= action.before.length + after.length
+    ) {
+      const inner = selected.slice(action.before.length, selected.length - after.length);
+      return {
+        text: text.slice(0, sel.start) + inner + text.slice(sel.end),
+        selection: { start: sel.start, end: sel.start + inner.length },
+      };
+    }
+    const wrapped = action.before + selected + after;
+    return {
+      text: text.slice(0, sel.start) + wrapped + text.slice(sel.end),
+      selection: { start: sel.start, end: sel.start + wrapped.length },
+    };
   }
-  const newText = text.slice(0, lineStart) + newLine + text.slice(lineEnd);
-  return { text: newText, selection: { start: sel.start, end: sel.end } };
+
+  if (action.type === 'line') {
+    const { lineStart, lineEnd } = lineRange(text, sel.start);
+    const line = text.slice(lineStart, lineEnd);
+    const prefix = action.before;
+    const newLine = line.startsWith(prefix) ? line.slice(prefix.length) : prefix + line;
+    return {
+      text: text.slice(0, lineStart) + newLine + text.slice(lineEnd),
+      selection: sel,
+    };
+  }
+
+  // insert
+  return {
+    text: text.slice(0, sel.start) + action.before + text.slice(sel.end),
+    selection: { start: sel.start + action.before.length, end: sel.start + action.before.length },
+  };
 }
 
 interface MarkdownEditorProps {
   content: string;
   onContentChange: (text: string) => void;
   placeholder?: string;
-  initialMode?: EditorMode;
   /**
-   * testID applied directly to the inner TextInput (or raw textarea) so a
-   * Maestro/XCUITest tap focuses the input rather than an outer wrapper view
-   * that doesn't accept the focus action (#624).
+   * testID applied directly to the inner TextInput so a Maestro/XCUITest tap
+   * focuses the input rather than an outer wrapper view (#624).
    */
   inputTestID?: string;
   /**
    * Render the built-in MarkdownToolbar below the editor. Pass `false` when
-   * the toolbar is being hosted externally (e.g. NoteEditorForm pins it to
-   * the screen bottom so it doesn't scroll with the form).
+   * the toolbar is being hosted externally (NoteEditorForm pins it to the
+   * screen bottom so it doesn't scroll with the form).
    */
   showToolbar?: boolean;
+  /**
+   * Active note format. Determines which syntax preset the toolbar uses
+   * (`.md` → markdown, `.org` → org-mode, `.norg` → neorg).
+   */
+  format?: NoteFormat;
 }
 
 /**
@@ -68,14 +101,13 @@ export interface MarkdownEditorHandle {
   focus: () => void;
   /**
    * Apply a markdown formatting action against the current selection. The
-   * built-in MarkdownToolbar already calls this internally; the imperative
-   * handle exists so a parent (e.g. NoteEditorForm) can host a sticky
-   * toolbar outside the editor's own layout.
+   * imperative handle exists so a parent can host a sticky toolbar outside
+   * the editor's own layout.
    */
   applyFormat: (action: FormatAction) => void;
 }
 
-const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(function MarkdownEditor({ content, onContentChange, placeholder = 'Start writing...', initialMode, inputTestID, showToolbar = true }, ref) {
+const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(function MarkdownEditor({ content, onContentChange, placeholder = 'Start writing...', inputTestID, showToolbar = true, format }, ref) {
   const { colors } = useTheme();
   const inputRef = useRef<TextInput>(null);
   const handleFormatRef = useRef<(action: FormatAction) => void>(() => {});
@@ -88,7 +120,6 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(fun
   const prevPropContentRef = useRef(content);
   const { hardWrapEnabled, toggleHardWrap } = useHardWrap();
   const [cursor, setCursor] = useState<Selection>({ start: 0, end: 0 });
-  const [mode, setMode] = useState<EditorMode>(() => initialMode ?? 'markdown');
 
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -184,20 +215,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(fun
 
   const handleFormat = useCallback((action: FormatAction) => {
     const sel = { start: cursor.start, end: cursor.end };
-    let result: { text: string; selection: Selection } | undefined;
-
-    if (action.before === '**') result = toggleBold(text, sel);
-    else if (action.before === '*' && action.type === 'wrap') result = toggleItalic(text, sel);
-    else if (action.before === '`') result = toggleCode(text, sel);
-    else if (action.before === '# ') result = toggleHeading(text, sel, 1);
-    else if (action.before === '## ') result = toggleHeading(text, sel, 2);
-    else if (action.before === '- ') result = toggleList(text, sel);
-    else if (action.before === '1. ') result = modifyLinePrefix(text, sel, /^\d+\. /, '1. ');
-    else if (action.before === '- [ ] ') result = toggleChecklist(text, sel);
-    else if (action.before === '> ') result = modifyLinePrefix(text, sel, /^> /, '> ');
-    else if (action.before === '[text](url)') result = insertLink(text, sel);
-    else if (action.before === '  ') result = addTab(text, sel);
-
+    const result = applyFormatAction(text, sel, action);
     if (result) setText(result.text);
   }, [cursor, text, setText]);
 
@@ -214,21 +232,6 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(fun
           <Ionicons name="return-down-back" size={20} color={hardWrapEnabled ? (colors.primary ?? colors.text) : colors.textSecondary} />
         </TouchableOpacity>
 
-        <View style={styles.modeSelector}>
-          {(['markdown', 'raw'] as EditorMode[]).map((m) => (
-            <TouchableOpacity
-              key={m}
-              testID={`mode-${m}`}
-              onPress={() => setMode(m)}
-              style={[styles.modeButton, mode === m && styles.modeButtonActive]}
-            >
-              <Text style={[styles.modeButtonText, { color: mode === m ? colors.primary : colors.textSecondary }]}>
-                {m === 'markdown' ? 'MD' : 'Raw'}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
         <View style={styles.headerActions}>
           <UndoRedoButtons canUndo={canUndo} canRedo={canRedo} onUndo={handleUndo} onRedo={handleRedo} />
         </View>
@@ -244,49 +247,32 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(fun
         />
       )}
 
-      {mode === 'raw' ? (
-        <TextInput
-          testID={inputTestID ?? "raw-input"}
-          style={[styles.editor, { color: colors.text, fontFamily: 'monospace' }]}
-          value={text}
-          onChangeText={handleContentChange}
-          placeholder={placeholder}
-          placeholderTextColor={colors.textSecondary}
-          multiline
-          textAlignVertical="top"
-          autoCorrect={false}
-          spellCheck={false}
-        />
-      ) : (
-        <>
-          <TextInput
-            ref={inputRef}
-            testID={inputTestID}
-            style={[styles.editor, { color: colors.text }]}
-            value={text}
-            onChangeText={handleContentChange}
-            placeholder={placeholder}
-            placeholderTextColor={colors.textSecondary}
-            multiline
-            textAlignVertical="top"
-            autoCorrect
-            spellCheck
-            selection={selection}
-            onSelectionChange={(e) => {
-              const { start, end } = e.nativeEvent.selection;
-              setCursor({ start, end });
-              if (selection !== undefined) {
-                setSelection(undefined);
-              }
-            }}
-          />
+      <TextInput
+        ref={inputRef}
+        testID={inputTestID}
+        style={[styles.editor, { color: colors.text }]}
+        value={text}
+        onChangeText={handleContentChange}
+        placeholder={placeholder}
+        placeholderTextColor={colors.textSecondary}
+        multiline
+        textAlignVertical="top"
+        autoCorrect={false}
+        spellCheck={false}
+        selection={selection}
+        onSelectionChange={(e) => {
+          const { start, end } = e.nativeEvent.selection;
+          setCursor({ start, end });
+          if (selection !== undefined) {
+            setSelection(undefined);
+          }
+        }}
+      />
 
-          {showToolbar && (
-            <View testID="markdown-editor.toolbar-action.press">
-              <MarkdownToolbar onFormat={handleFormat} />
-            </View>
-          )}
-        </>
+      {showToolbar && (
+        <View testID="markdown-editor.toolbar-action.press">
+          <MarkdownToolbar onFormat={handleFormat} format={format} />
+        </View>
       )}
     </View>
   );
@@ -309,25 +295,6 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  modeSelector: {
-    flexDirection: 'row',
-    gap: 2,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    borderRadius: 6,
-    padding: 2,
-  },
-  modeButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  modeButtonActive: {
-    backgroundColor: 'rgba(0,0,0,0.08)',
-  },
-  modeButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
   },
   editor: {
     fontSize: 16,

@@ -175,6 +175,7 @@ export function NoteEditorForm({
         placeholder={placeholder}
         inputTestID="note-editor-form.input.content"
         showToolbar={false}
+        format={noteFormat}
       />
     </ScrollView>
 
@@ -182,7 +183,10 @@ export function NoteEditorForm({
       style={[styles.stickyToolbar, { backgroundColor: colors.surface, borderTopColor: colors.border }]}
       testID="note-editor-form.toolbar.sticky"
     >
-      <MarkdownToolbar onFormat={(action) => bodyRef.current?.applyFormat(action)} />
+      <MarkdownToolbar
+        onFormat={(action) => bodyRef.current?.applyFormat(action)}
+        format={noteFormat}
+      />
     </View>
     </View>
   );
