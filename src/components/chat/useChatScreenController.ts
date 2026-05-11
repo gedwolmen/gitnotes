@@ -40,6 +40,7 @@ export function useChatScreenController(threadId: string) {
   const loadThread = useChatStore((state) => state.loadThread);
   const addMessage = useChatStore((state) => state.addMessage);
   const updateMessage = useChatStore((state) => state.updateMessage);
+  const removeMessage = useChatStore((state) => state.removeMessage);
   const setStreaming = useChatStore((state) => state.setStreaming);
   const clearError = useChatStore((state) => state.clearError);
   const setStorageAdapter = useChatStore((state) => state.setStorageAdapter);
@@ -276,14 +277,22 @@ export function useChatScreenController(threadId: string) {
             : error instanceof Error
               ? error.message
               : 'Failed to send message.';
+        // Error text belongs in the banner only — keep the assistant bubble
+        // for real model output. If the stream produced any text before
+        // failing, preserve it in the bubble; otherwise drop the empty
+        // placeholder so the banner isn't duplicated as a grey reply.
+        if (assistantText.trim()) {
+          updateMessage(assistantMessageId, { content: assistantText });
+        } else {
+          removeMessage(assistantMessageId);
+        }
         setLocalError(message);
-        updateMessage(assistantMessageId, { content: assistantText || message });
       }
     } finally {
       if (abortRef.current === abortController) abortRef.current = null;
       setStreaming(false);
     }
-  }, [addMessage, clearError, getSelectedModelConfig, noteCount, renameThread, runToolCall, saveActiveThread, setStreaming, t, todoCount, updateMessage]);
+  }, [addMessage, clearError, getSelectedModelConfig, noteCount, removeMessage, renameThread, runToolCall, saveActiveThread, setStreaming, t, todoCount, updateMessage]);
 
   const stopStreaming = useCallback(() => abortRef.current?.abort(), []);
 
