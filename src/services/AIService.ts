@@ -222,21 +222,44 @@ function serializeToolEvent(part: unknown): string | null {
   }
 }
 
+// The AI SDK warns when a `role: 'system'` entry is included in `messages`
+// because in some providers it can be overridden by user-supplied prompt
+// injection. Lift system entries into the top-level `system` option instead.
+function splitSystemMessages(messages: ModelMessage[]): {
+  system: string | undefined;
+  rest: ModelMessage[];
+} {
+  const systemTexts: string[] = [];
+  const rest: ModelMessage[] = [];
+  for (const message of messages) {
+    if (message.role === 'system') {
+      const content = message.content;
+      if (typeof content === 'string') {
+        systemTexts.push(content);
+      }
+      continue;
+    }
+    rest.push(message);
+  }
+  return {
+    system: systemTexts.length > 0 ? systemTexts.join('\n\n') : undefined,
+    rest,
+  };
+}
+
 async function* runGenerateTextFallback(
   model: LanguageModel,
   messages: ModelMessage[],
   tools: Record<string, Tool> | undefined,
   abortSignal: AbortSignal | undefined,
 ): AsyncGenerator<string> {
-  // `generateText` has no `onError` hook (unlike `streamText`), so when the
-  // SDK's parser-error path runs against an OpenRouter chunk shape it logs
-  // via `console.error` before re-throwing. In dev this surfaces as a
-  // RedBox / LogBox toast even though we recover successfully (#705). We
-  // throw the error away ourselves below, so silence the SDK's own log
-  // for the duration of this call.
+  const { system, rest } = splitSystemMessages(messages);
+  // `generateText` has no `onError` hook (unlike `streamText`), so the
+  // SDK's parser-error path logs via `console.error` before re-throwing
+  // — surfaces as a RedBox even though we recover (#705).
   const originalConsoleError = console.error;
   console.error = () => {};
-  const result = await generateText({ model, messages, tools, abortSignal })
+  const result = await generateText({ model, system, messages: rest, tools, abortSignal })
     .finally(() => {
       console.error = originalConsoleError;
     });
@@ -260,6 +283,7 @@ export async function* streamChatResponse(
 ): AsyncGenerator<string> {
   let yielded = false;
   let lastEmptyBodyError: unknown = null;
+  const { system, rest } = splitSystemMessages(messages);
 
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
@@ -271,7 +295,8 @@ export async function* streamChatResponse(
       // 'error'` so our recovery logic is unaffected.
       const result = streamText({
         model,
-        messages,
+        system,
+        messages: rest,
         tools,
         abortSignal,
         onError: () => {},
