@@ -3,7 +3,6 @@ import { TodoCreateInput, TodoPriority, TodoUpdateInput } from '../../models/Tod
 import { useNoteStore } from '../../stores/noteStore';
 import { useTodoStore } from '../../stores/todoStore';
 import { useAIStore } from '../../stores/aiStore';
-import { getExtensionForFormat, slugifyLocal } from '../../components/editor/editorShared';
 import { NoteSyncQueueService } from '../NoteSyncQueueService';
 
 export interface ProposedChange {
@@ -177,14 +176,21 @@ export async function executeToolCall(
         // Enqueue an upsert so the note is pushed to GitHub on the next
         // queue drain. Other app sessions pick it up via the foreground
         // pull watcher (typically within the configured interval).
+        //
+        // Omit filePath so syncNoteToGitHub derives `notes/${slug}${ext}`
+        // and treats this as a brand-new file (#732). Pre-computing a
+        // bare `${slug}${ext}` here both pointed the file at repo root
+        // and tripped the updateFile "remote was deleted" guard, leaving
+        // the queue stuck with "GitHub API returned no result". The
+        // store-side Note record gets its filePath populated from the
+        // sync result on success (see applyPostSyncStorageUpdate), so
+        // mirror the manual-note path in useNoteEditorDocument.
         if (repoPath) {
-          const filePath = `${slugifyLocal(input.title)}${getExtensionForFormat(input.format)}`;
           try {
             await NoteSyncQueueService.enqueueNoteUpsert(
               {
                 repo: repoPath,
                 branch,
-                filePath,
                 title: input.title,
                 content: input.content,
                 format: input.format,
