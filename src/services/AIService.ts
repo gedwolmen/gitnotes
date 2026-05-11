@@ -252,7 +252,19 @@ export async function* streamChatResponse(
 
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const result = streamText({ model, messages, tools, abortSignal });
+      // The default `onError` in `streamText` calls `console.error(error)`,
+      // which surfaces as a RedBox / LogBox toast in dev even when we
+      // recover via the generateText fallback below. Swallow it here so
+      // the only error the user sees is the humanised one we throw
+      // ourselves; the stream error still propagates via `part.type ===
+      // 'error'` so our recovery logic is unaffected.
+      const result = streamText({
+        model,
+        messages,
+        tools,
+        abortSignal,
+        onError: () => {},
+      });
 
       for await (const part of result.fullStream as AsyncIterable<any>) {
         if (part.type === 'text-delta' || part.type === 'text') {
