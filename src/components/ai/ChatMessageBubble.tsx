@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, Platform, Pressable } from 'react-native';
+import React, { Fragment, useEffect, useMemo, useState } from 'react';
+import { View, Text, Platform, Pressable, useColorScheme } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ChatMessage } from '../../models/Chat';
@@ -7,7 +7,7 @@ import { useTokens, useTheme } from '../../contexts/ThemeContext';
 import { formatDistanceToNow } from 'date-fns';
 import { Ionicons } from '@expo/vector-icons';
 import { Surface } from '../ui/Surface';
-import Markdown, { type MarkedStyles } from 'react-native-marked';
+import { useMarkdown, type MarkedStyles } from 'react-native-marked';
 import type { ViewStyle } from 'react-native';
 import type { RootStackParamList } from '../../navigation/types';
 
@@ -35,6 +35,7 @@ export interface ChatMessageBubbleProps {
 function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessageBubbleProps) {
   const { colors, spacing, type } = useTokens();
   const { isDark } = useTheme();
+  const colorScheme = useColorScheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const [dotStep, setDotStep] = useState(0);
@@ -61,6 +62,39 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
 
   const timestamp = formatDistanceToNow(message.timestamp, { addSuffix: true });
 
+  const isUser = message.role === 'user';
+  const textColor = isUser ? '#ffffff' : colors.text;
+  const markdownTheme = useMemo(() => ({
+    colors: {
+      text: textColor,
+      code: textColor,
+      link: colors.primary,
+      border: isDark ? '#444' : '#ddd',
+      background: 'transparent' as const,
+    },
+  }), [textColor, colors.primary, isDark]);
+  const markdownStyles = useMemo<MarkedStyles>(() => ({
+    paragraph: { backgroundColor: 'transparent', marginVertical: 0, paddingVertical: 0 },
+    text: { color: textColor, backgroundColor: 'transparent' },
+    em: { color: textColor },
+    strong: { color: textColor },
+    li: { color: textColor },
+    codespan: { color: textColor, backgroundColor: isDark ? '#1c1c1e' : '#e8e8e8' },
+    code: { backgroundColor: isDark ? '#1c1c1e' : '#e8e8e8' },
+    blockquote: { backgroundColor: 'transparent', borderLeftColor: isDark ? '#444' : '#ddd' },
+  }), [textColor, isDark]);
+  // react-native-marked's <Markdown> wraps output in a FlatList that captures
+  // pan gestures even with `scrollEnabled: false`, which deadlocks the outer
+  // ChatScreen FlatList on iOS for long bubbles (see #748). Render via the
+  // `useMarkdown` hook directly into a plain <View> instead — same tokens,
+  // no inner virtualized list. Hook must run unconditionally so it sits
+  // above the early returns below.
+  const markdownNodes = useMarkdown(message.content ?? '', {
+    theme: markdownTheme,
+    styles: markdownStyles,
+    colorScheme,
+  });
+
   if (message.role === 'system') {
     return (
       <View style={{ alignItems: 'center', marginVertical: spacing[2] }}>
@@ -71,7 +105,6 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
     );
   }
 
-  const isUser = message.role === 'user';
   const isStreamingPlaceholder = !isUser && isStreaming && !message.content && !message.toolCallName;
 
   if (isStreamingPlaceholder) {
@@ -109,35 +142,6 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
     borderTopRightRadius: 16,
     borderBottomLeftRadius: isUser ? 16 : 4,
     borderBottomRightRadius: isUser ? 4 : 16,
-  };
-
-  const textColor = isUser ? '#ffffff' : colors.text;
-
-  const markdownTheme = {
-    colors: {
-      text: textColor,
-      code: textColor,
-      link: colors.primary,
-      border: isDark ? '#444' : '#ddd',
-      background: 'transparent' as const,
-    }
-  };
-
-  const markdownStyles: MarkedStyles = {
-    paragraph: { backgroundColor: 'transparent', marginVertical: 0, paddingVertical: 0 },
-    text: { color: textColor, backgroundColor: 'transparent' },
-    em: { color: textColor },
-    strong: { color: textColor },
-    li: { color: textColor },
-    codespan: { color: textColor, backgroundColor: isDark ? '#1c1c1e' : '#e8e8e8' },
-    code: { backgroundColor: isDark ? '#1c1c1e' : '#e8e8e8' },
-    blockquote: { backgroundColor: 'transparent', borderLeftColor: isDark ? '#444' : '#ddd' },
-  };
-
-  const markdownFlatListProps = {
-    style: { backgroundColor: 'transparent' },
-    contentContainerStyle: { backgroundColor: 'transparent' },
-    scrollEnabled: false,
   };
 
   return (
@@ -207,12 +211,11 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
             {message.content}
           </Text>
         ) : (
-          <Markdown
-            value={message.content}
-            theme={markdownTheme}
-            styles={markdownStyles}
-            flatListProps={markdownFlatListProps}
-          />
+          <View>
+            {markdownNodes.map((node, idx) => (
+              <Fragment key={idx}>{node}</Fragment>
+            ))}
+          </View>
         )}
       </View>
       {isUser && message.attachedContexts && message.attachedContexts.length > 0 && (

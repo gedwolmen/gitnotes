@@ -57,6 +57,29 @@ export function parseToolEvent(chunk: string): ToolEvent | null {
   }
 }
 
+// Some providers (notably Ring-2.6-1T via OpenRouter) emit assistant text as a
+// JSON-stringified value — a quoted string with `\n`/`\t`/`\"` escape
+// sequences. The Markdown renderer takes that literally and shows backslash-n
+// instead of newlines. Detect over-escaped chunks and decode them so the
+// reader sees real whitespace. Conservative: only triggers on chunks that
+// (a) parse as a JSON string AND (b) look quoted/escaped, so plain markdown
+// text — which never starts with a `"` or `{` — passes through untouched.
+export function decodeOverEscapedChunk(chunk: string): string {
+  if (!chunk) return chunk;
+  const trimmed = chunk.trim();
+  if (!trimmed) return chunk;
+  const looksQuoted = trimmed.startsWith('"') && trimmed.endsWith('"');
+  const looksEscaped = trimmed.includes('\\n') || trimmed.includes('\\t') || trimmed.includes('\\"');
+  if (!looksQuoted || !looksEscaped) return chunk;
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (typeof parsed === 'string') return parsed;
+  } catch (error) {
+    void error;
+  }
+  return chunk;
+}
+
 export function parseToolArgs(value: unknown, fallback = ''): Record<string, unknown> {
   if (isRecord(value)) return value;
   if (!fallback.trim()) return {};
