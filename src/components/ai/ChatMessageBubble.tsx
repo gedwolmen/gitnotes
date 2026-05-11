@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, Platform, Pressable } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ChatMessage } from '../../models/Chat';
 import { useTokens, useTheme } from '../../contexts/ThemeContext';
 import { formatDistanceToNow } from 'date-fns';
@@ -7,6 +9,22 @@ import { Ionicons } from '@expo/vector-icons';
 import { Surface } from '../ui/Surface';
 import Markdown, { type MarkedStyles } from 'react-native-marked';
 import type { ViewStyle } from 'react-native';
+import type { RootStackParamList } from '../../navigation/types';
+
+type NoteToolResult = { noteId: string; title?: string };
+
+function parseNoteToolResult(raw: string | undefined): NoteToolResult | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && typeof parsed.noteId === 'string') {
+      return { noteId: parsed.noteId, title: typeof parsed.title === 'string' ? parsed.title : undefined };
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
 
 export interface ChatMessageBubbleProps {
   message: ChatMessage;
@@ -17,8 +35,18 @@ export interface ChatMessageBubbleProps {
 function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessageBubbleProps) {
   const { colors, spacing, type } = useTokens();
   const { isDark } = useTheme();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const [dotStep, setDotStep] = useState(0);
+
+  // Detect tool calls that touch a single note (`create_note` / `edit_note` /
+  // `get_note`). The previous render dumped the full Note JSON into the chat;
+  // now we collapse it to a tappable link that opens the note in the editor.
+  const noteToolResult = useMemo(() => {
+    if (!message.toolCallName) return null;
+    if (!['create_note', 'edit_note', 'get_note'].includes(message.toolCallName)) return null;
+    return parseNoteToolResult(message.toolCallResult);
+  }, [message.toolCallName, message.toolCallResult]);
 
   useEffect(() => {
     if (!isStreaming) {
@@ -130,13 +158,32 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
                 {message.toolCallName}...
               </Text>
             </View>
-            {message.toolCallResult && (
+            {noteToolResult ? (
+              <Pressable
+                testID="chat-message-bubble.tool-result.note-link"
+                onPress={() => navigation.navigate('NoteEditor', { noteId: noteToolResult.noteId })}
+                style={({ pressed }) => ({
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  marginTop: spacing[1],
+                  paddingHorizontal: spacing[2],
+                  paddingVertical: spacing[1],
+                  borderRadius: 8,
+                  backgroundColor: pressed ? 'rgba(0,0,0,0.08)' : 'rgba(0,0,0,0.05)',
+                })}
+              >
+                <Ionicons name="document-text-outline" size={16} color={colors.primary} style={{ marginRight: spacing[1] }} />
+                <Text style={{ color: colors.primary, fontSize: type.sm, fontWeight: '600', flexShrink: 1 }} numberOfLines={1}>
+                  {noteToolResult.title ?? 'Open note'}
+                </Text>
+              </Pressable>
+            ) : message.toolCallResult ? (
               <Surface elevation="flat" style={{ backgroundColor: 'rgba(0,0,0,0.05)', padding: spacing[2], borderRadius: 8, marginTop: spacing[1] }}>
-                <Text style={{ color: textColor, fontSize: type.sm, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
+                <Text style={{ color: textColor, fontSize: type.sm, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }} numberOfLines={6}>
                   {message.toolCallResult}
                 </Text>
               </Surface>
-            )}
+            ) : null}
           </View>
         ) : isUser ? (
           <Text style={{ color: textColor, fontSize: type.md }}>

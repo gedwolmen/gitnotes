@@ -88,7 +88,20 @@ export function useChatScreenController(threadId: string) {
     }
 
     if (!result.requiresConfirmation) {
-      addMessage({ id: generateId(), role: 'system', content: result.success ? `Tool result: ${resultText}` : `Tool error: ${resultText}`, timestamp: Date.now() });
+      // For note-shaped tool results the tool-call bubble already shows a
+      // tappable "Open note" link — adding a verbose `Tool result: {...}`
+      // system line below just repeats the same info and dumps the full
+      // Note JSON into the chat.
+      const isNoteShapedResult =
+        result.success
+        && typeof result.data === 'object'
+        && result.data !== null
+        && 'noteId' in (result.data as Record<string, unknown>);
+      if (!isNoteShapedResult) {
+        addMessage({ id: generateId(), role: 'system', content: result.success ? `Tool result: ${resultText}` : `Tool error: ${resultText}`, timestamp: Date.now() });
+      } else if (!result.success) {
+        addMessage({ id: generateId(), role: 'system', content: `Tool error: ${resultText}`, timestamp: Date.now() });
+      }
     }
 
     return result;

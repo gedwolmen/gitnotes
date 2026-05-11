@@ -11,8 +11,15 @@ export const MAX_CONTEXT_FILE_BYTES = 50 * 1024;
 /** Maximum total bytes packed into the context section of the system prompt. */
 export const MAX_CONTEXT_TOTAL_BYTES = 100 * 1024;
 
-/** How many times to retry a GitHub PUT/DELETE on 409/422 sha conflicts. */
-export const GITHUB_WRITE_RETRIES = 3;
+/**
+ * How many times to retry a GitHub PUT/DELETE on 409/422 sha conflicts.
+ *
+ * Bumped from 3 → 6: writing chat threads concurrently from two app
+ * sessions (e.g. iPad + phone) races on `chats/index.json` — each save
+ * refreshes the sha and PUTs again, but with only 3 attempts a slow
+ * session would still surface a user-facing 409 instead of converging.
+ */
+export const GITHUB_WRITE_RETRIES = 6;
 
 /** Approximate bytes per token for byte→token estimation (English heuristic). */
 export const BYTES_PER_TOKEN = 4;
