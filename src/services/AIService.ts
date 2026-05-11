@@ -258,9 +258,16 @@ export async function* streamChatResponse(
         }
 
         if (part.type === 'error') {
+          // Preserve the original error shape (e.g. AI_APICallError with
+          // statusCode) so the outer catch's extractErrorDetails can
+          // recognise parser failures and route to the generateText
+          // fallback. Wrapping in `new Error(message)` previously stripped
+          // the error name, so the parser-error branch never fired for
+          // stream-emitted errors (#691).
           const err = part.error;
-          const message = err instanceof Error ? err.message : typeof err === 'string' ? err : 'Stream error';
-          throw new Error(message);
+          if (err instanceof Error) throw err;
+          if (typeof err === 'string') throw new Error(err);
+          throw new Error('Stream error');
         }
 
         const toolEvent = serializeToolEvent(part);
