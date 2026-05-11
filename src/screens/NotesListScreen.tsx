@@ -347,6 +347,7 @@ export default function NotesListScreen() {
             isCached={!!item.content?.trim()}
             onTagPress={handleTagPress}
             prevDateKey={prevDateKey}
+            index={index}
           />
         </SwipeableListItem>
       );

@@ -53,8 +53,7 @@ function NoteCardImpl({
   const { allTags: mergedTags } = useNoteTags(note.tags ?? [], note.content ?? '');
 
   return (
-    <View testID="note-card.button.press">
-      <TouchableOpacity
+    <TouchableOpacity
       style={[
         styles.card,
         {
@@ -69,7 +68,6 @@ function NoteCardImpl({
         noteColorStyle,
         highlighted && { borderWidth: 2, borderColor: colors.primary },
       ]}
-      testID={`note-card-${note.id}`}
       onPress={() => onPress(note)}
       onLongPress={() => onLongPress?.(note)}
       activeOpacity={0.7}
@@ -81,7 +79,6 @@ function NoteCardImpl({
       )}
       <View style={styles.header}>
         <Text
-          testID={`note-card-title-${note.id}`}
           style={[styles.title, { color: titleColor }, showCompact && styles.titleCompact]}
           numberOfLines={showCompact ? 1 : 2}
         >
@@ -89,7 +86,6 @@ function NoteCardImpl({
         </Text>
         {!showCompact && (
           <Text
-            testID={`note-card-content-${note.id}`}
             style={[styles.content, { color: colors.textSecondary }]}
             numberOfLines={isCard ? 3 : 2}
           >
@@ -160,7 +156,6 @@ function NoteCardImpl({
         </View>
       )}
     </TouchableOpacity>
-    </View>
   );
 }
 

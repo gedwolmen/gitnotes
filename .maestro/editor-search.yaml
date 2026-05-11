@@ -12,8 +12,7 @@ appId: com.xaventra.gitnotes
 - waitForAnimationToEnd:
     timeout: 1500
 - tapOn:
-    id: "notes-list-card.button.press"
-    index: 0
+    id: "notes-list.button.press-card-0"
 - waitForAnimationToEnd:
     timeout: 1500
 - tapOn:

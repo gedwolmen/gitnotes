@@ -388,20 +388,11 @@
     "platform": ["ios", "android"]
   },
   {
-    "file": "src/screens/NotesListScreen.tsx",
+    "file": "src/components/notes/NoteCard.tsx",
     "component": "NotesListCard",
     "elementType": "button",
     "action": "press-note",
-    "testID": "notes-list-card.button.press",
-    "flowId": "notes",
-    "platform": ["ios", "android"]
-  },
-  {
-    "file": "src/screens/NotesListScreen.tsx",
-    "component": "NotesListCard",
-    "elementType": "button",
-    "action": "long-press-note",
-    "testID": "note-card-${id}",
+    "testID": "notes-list.button.press-card-${index}",
     "flowId": "notes",
     "platform": ["ios", "android"]
   },
@@ -1592,27 +1583,9 @@
   {
     "file": "src/components/notes/NoteCard.tsx",
     "component": "NoteCard",
-    "elementType": "button",
-    "action": "onPress",
-    "testID": "note-card.button.press",
-    "flowId": "notes",
-    "platform": ["ios", "android"]
-  },
-  {
-    "file": "src/components/notes/NoteCard.tsx",
-    "component": "NoteCard",
     "elementType": "swipe-action",
     "action": "onSwipe",
     "testID": "note-card.swipe.action",
-    "flowId": "notes",
-    "platform": ["ios", "android"]
-  },
-  {
-    "file": "src/components/notes/NotesListHeader.tsx",
-    "component": "NotesListHeader",
-    "elementType": "search-bar",
-    "action": "onSearchChange",
-    "testID": "notes-list-header.search-bar.search",
     "flowId": "notes",
     "platform": ["ios", "android"]
   },
@@ -2213,15 +2186,6 @@
   {
     "file": "src/components/SearchBar.tsx",
     "component": "SearchBar",
-    "elementType": "search-bar",
-    "action": "onChangeText",
-    "testID": "search-bar.input.search",
-    "flowId": "home-nav",
-    "platform": ["ios", "android"]
-  },
-  {
-    "file": "src/components/SearchBar.tsx",
-    "component": "SearchBar",
     "elementType": "icon-button",
     "action": "onClear",
     "testID": "search-bar.icon-button.clear",
@@ -2622,15 +2586,6 @@
     "elementType": "toolbar-action",
     "action": "onToolbarAction",
     "testID": "markdown-editor.toolbar-action.press",
-    "flowId": "notes",
-    "platform": ["ios", "android"]
-  },
-  {
-    "file": "src/components/NoteCard.tsx",
-    "component": "NoteCard",
-    "elementType": "button",
-    "action": "onPress",
-    "testID": "note-card-root.button.press",
     "flowId": "notes",
     "platform": ["ios", "android"]
   },

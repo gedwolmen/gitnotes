@@ -13,8 +13,7 @@ appId: com.xaventra.gitnotes
 # Long-press the first list card. Avoids depending on a specific
 # note title, which depends on the active sort order.
 - longPressOn:
-    id: "notes-list-card.button.press"
-    index: 0
+    id: "notes-list.button.press-card-0"
 - waitForAnimationToEnd:
     timeout: 1000
 
