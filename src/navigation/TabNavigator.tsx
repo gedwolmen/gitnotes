@@ -77,7 +77,7 @@ function TabletRail({ state, navigation }: BottomTabBarProps) {
           return (
             <TouchableOpacity
               key={route.key}
-              testID={`tab-bar-nav.tab.press-${route.name}`}
+              testID={`tab-bar.tab.press-${route.name}`}
               accessibilityRole="tab"
               accessibilityState={isFocused ? { selected: true } : {}}
               accessibilityLabel={t(config.labelKey)}
