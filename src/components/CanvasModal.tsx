@@ -67,7 +67,7 @@ const TOOLS: { key: string; icon?: ToolIconName; label?: string }[] = [
   { key: 'line', icon: 'remove' as ToolIconName },
   { key: 'arrow', icon: 'arrow-forward' as ToolIconName },
   { key: 'rect', icon: 'square-outline' as ToolIconName },
-  { key: 'roundRect', icon: 'rectangle-outline' as ToolIconName },
+  { key: 'roundRect', icon: 'stop-outline' as ToolIconName },
   { key: 'ellipse', icon: 'ellipse-outline' as ToolIconName },
   { key: 'diamond', icon: 'diamond-outline' as ToolIconName },
 ];
