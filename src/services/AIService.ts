@@ -167,6 +167,32 @@ export async function initializeModel(
   }
 }
 
+// Some OpenRouter-routed models (e.g. Ring-2.6-1T) emit tool calls in a
+// text-like form `name: {jsonargs}` that the SDK can't fully split, so the
+// whole line lands in `toolName`. Normalise once at the serialise boundary
+// so every downstream consumer (actionExecutor, ChatMessageBubble) sees a
+// clean toolName plus merged args. (#747)
+function normalizeToolName(raw: string): { name: string; embeddedArgs?: Record<string, unknown> } {
+  const colonIdx = raw.indexOf(':');
+  if (colonIdx < 0) return { name: raw };
+  const name = raw.slice(0, colonIdx).trim();
+  const tail = raw.slice(colonIdx + 1).trim();
+  if (!tail.startsWith('{')) return { name: raw };
+  try {
+    const parsed = JSON.parse(tail);
+    return { name, embeddedArgs: typeof parsed === 'object' && parsed ? parsed : undefined };
+  } catch {
+    return { name: raw };
+  }
+}
+
+function isEmptyInput(value: unknown): boolean {
+  if (value == null) return true;
+  if (typeof value === 'string') return value.trim().length === 0;
+  if (typeof value === 'object') return Object.keys(value as Record<string, unknown>).length === 0;
+  return false;
+}
+
 function serializeToolEvent(part: unknown): string | null {
   if (!part || typeof part !== 'object' || !("type" in part)) {
     return null;
@@ -186,35 +212,40 @@ function serializeToolEvent(part: unknown): string | null {
   };
 
   const toolCallId = event.toolCallId ?? event.id;
+  const rawName = event.toolName ?? '';
+  const { name: toolName, embeddedArgs } = normalizeToolName(rawName);
 
   switch (event.type) {
-    case 'tool-call':
+    case 'tool-call': {
+      const rawInput = event.input ?? event.args;
+      const input = embeddedArgs && isEmptyInput(rawInput) ? embeddedArgs : rawInput;
       return JSON.stringify({
         type: 'tool-call',
         toolCallId,
-        toolName: event.toolName,
-        input: event.input ?? event.args,
+        toolName,
+        input,
       });
+    }
     case 'tool-input-start':
     case 'tool-call-streaming-start':
       return JSON.stringify({
         type: 'tool-call-streaming-start',
         toolCallId,
-        toolName: event.toolName,
+        toolName,
       });
     case 'tool-input-delta':
     case 'tool-call-delta':
       return JSON.stringify({
         type: 'tool-call-delta',
         toolCallId,
-        toolName: event.toolName,
+        toolName,
         argsTextDelta: event.delta ?? event.argsTextDelta ?? '',
       });
     case 'tool-result':
       return JSON.stringify({
         type: 'tool-result',
         toolCallId,
-        toolName: event.toolName,
+        toolName,
         result: event.output ?? event.result,
       });
     default:
