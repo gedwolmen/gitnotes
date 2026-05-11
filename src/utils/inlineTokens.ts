@@ -1,6 +1,6 @@
 export const INLINE_MATH_TOKEN_PREFIX = 'GITNOTESINLINEMATHTOKEN';
 export const WIKI_LINK_TOKEN_PREFIX = 'GITNOTESWIKILINKTOKEN';
-export const INLINE_TOKEN_REGEX = /GITNOTES(?:INLINEMATH|WIKILINK)TOKEN\d+/g;
+export const INLINE_TOKEN_REGEX = /GITNOTES(?:INLINEMATH|WIKILINK|EMPH)TOKEN\d+/g;
 
 export type InlineSegment =
   | { type: 'text'; value: string }

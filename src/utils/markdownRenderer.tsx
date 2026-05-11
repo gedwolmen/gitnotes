@@ -17,7 +17,7 @@ import { TableRenderer } from '../components/TableRenderer';
 import { isCanvasLink, canvasIdFromLink } from '../models/Canvas';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { parseFrontmatter } from './frontmatterParser';
-import { normalizeAsteriskAfterCode } from './normalizeAsteriskAfterCode';
+import { rewriteEmphasisAfterCode, type EmphasisEmbed } from './emphasisAfterCode';
 import { decodeHtmlEntities } from './htmlEntities';
 import { classifyHref } from './linkClassifier';
 import { parseMath, type MathSegment } from './mathParser';
@@ -41,6 +41,7 @@ type ProcessedMarkdown = {
   inlineMath: InlineMathEmbed[];
   blockMath: MathSegment[];
   wikiLinks: WikiLinkEmbed[];
+  emphases: EmphasisEmbed[];
   tables: TableSegment[];
 };
 
@@ -153,6 +154,7 @@ function processMarkdown(markdown: string): ProcessedMarkdown {
   const inlineMath: InlineMathEmbed[] = [];
   const blockMath: MathSegment[] = [];
   const wikiLinks: WikiLinkEmbed[] = [];
+  const emphases: EmphasisEmbed[] = [];
   const tables: TableSegment[] = [];
 
   const output = splitFenceSections(decodedBody)
@@ -166,7 +168,9 @@ function processMarkdown(markdown: string): ProcessedMarkdown {
       // ends up looking identical to a regular bullet list. Replacing the
       // brackets with ☐ / ☑ before parsing keeps a visible state marker
       // through the existing list_item path with no renderer override.
-      let segmentText = normalizeAsteriskAfterCode(section.text)
+      const emphasisRewrite = rewriteEmphasisAfterCode(section.text, emphases.length);
+      emphases.push(...emphasisRewrite.emphases);
+      let segmentText = emphasisRewrite.text
         .replace(/^(\s*[-*]\s+)\[ \]\s+/gm, '$1☐ ')
         .replace(/^(\s*[-*]\s+)\[x\]\s+/gim, '$1☑ ');
 
@@ -217,7 +221,7 @@ function processMarkdown(markdown: string): ProcessedMarkdown {
     })
     .join('');
 
-  return { frontmatter, markdown: output, inlineMath, blockMath, wikiLinks, tables };
+  return { frontmatter, markdown: output, inlineMath, blockMath, wikiLinks, emphases, tables };
 }
 
 export const processMarkdownForTest = processMarkdown;
@@ -226,6 +230,7 @@ export class NotePreviewRenderer extends Renderer implements RendererInterface {
   private deps: CustomRendererDeps;
   private inlineMathEmbeds = new Map<string, InlineMathEmbed>();
   private wikiLinkEmbeds = new Map<string, WikiLinkEmbed>();
+  private emphasisEmbeds = new Map<string, EmphasisEmbed>();
 
   constructor(deps: CustomRendererDeps) {
     super();
@@ -240,9 +245,10 @@ export class NotePreviewRenderer extends Renderer implements RendererInterface {
     return this.deps.isDark ?? false;
   }
 
-  setInlineEmbeds(processed: Pick<ProcessedMarkdown, 'inlineMath' | 'wikiLinks'>) {
+  setInlineEmbeds(processed: Pick<ProcessedMarkdown, 'inlineMath' | 'wikiLinks' | 'emphases'>) {
     this.inlineMathEmbeds = new Map(processed.inlineMath.map((segment) => [segment.token, segment]));
     this.wikiLinkEmbeds = new Map(processed.wikiLinks.map((segment) => [segment.token, segment]));
+    this.emphasisEmbeds = new Map(processed.emphases.map((embed) => [embed.token, embed]));
   }
 
   private renderCanvasFallback(id: string): ReactNode {
@@ -307,6 +313,25 @@ export class NotePreviewRenderer extends Renderer implements RendererInterface {
       const wikiLink = this.wikiLinkEmbeds.get(token);
       if (wikiLink) {
         nodes.push(this.link(wikiLink.displayText, wikiTargetToHref(wikiLink.target), styles));
+        continue;
+      }
+
+      const emphasis = this.emphasisEmbeds.get(token);
+      if (emphasis) {
+        nodes.push(
+          <Text
+            key={this.getKey()}
+            selectable
+            style={[
+              styles,
+              emphasis.kind === 'strong'
+                ? { fontWeight: '700' }
+                : { fontStyle: 'italic' },
+            ]}
+          >
+            {emphasis.content}
+          </Text>,
+        );
       }
     }
 
