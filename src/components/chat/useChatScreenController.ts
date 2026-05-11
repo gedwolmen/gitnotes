@@ -190,9 +190,25 @@ export function useChatScreenController(threadId: string) {
 
       if (pendingFlush) clearTimeout(pendingFlush);
 
-      if (abortController.signal.aborted) updateMessage(assistantMessageId, { content: assistantText || 'Stopped.' });
-      else if (!assistantText.trim() && !pausedForConfirmation) updateMessage(assistantMessageId, { content: handledToolCount > 0 ? 'Done.' : 'No response received.' });
-      else updateMessage(assistantMessageId, { content: assistantText });
+      if (abortController.signal.aborted) {
+        updateMessage(assistantMessageId, { content: assistantText || 'Stopped.' });
+      } else if (!assistantText.trim() && !pausedForConfirmation) {
+        // Stream finished with no text. If the model invoked tools the
+        // tool bubbles carry the actual output — keep this bubble as
+        // "Done." Otherwise the model really did return nothing
+        // (free-tier OpenRouter routes occasionally do this on the first
+        // try). Surface it as a retryable error so the toast's Retry
+        // button appears instead of leaving the user staring at a
+        // dead-end "No response received." bubble.
+        if (handledToolCount > 0) {
+          updateMessage(assistantMessageId, { content: 'Done.' });
+        } else {
+          updateMessage(assistantMessageId, { content: 'No response received. Tap Retry to try again.' });
+          setLocalError('The model returned an empty response.');
+        }
+      } else {
+        updateMessage(assistantMessageId, { content: assistantText });
+      }
 
       await saveActiveThread();
 
