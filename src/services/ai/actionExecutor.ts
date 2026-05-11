@@ -2,6 +2,9 @@ import { NoteCreateInput, NoteFormat, NoteUpdateInput } from '../../models/Note'
 import { TodoCreateInput, TodoPriority, TodoUpdateInput } from '../../models/Todo';
 import { useNoteStore } from '../../stores/noteStore';
 import { useTodoStore } from '../../stores/todoStore';
+import { useAIStore } from '../../stores/aiStore';
+import { getExtensionForFormat, slugifyLocal } from '../../components/editor/editorShared';
+import { NoteSyncQueueService } from '../NoteSyncQueueService';
 
 export interface ProposedChange {
   type: string;
@@ -140,11 +143,22 @@ export async function executeToolCall(
   try {
     switch (toolName) {
       case 'create_note': {
+        const aiState = useAIStore.getState();
+        const repoOwner = aiState.chatRepoOwner ?? undefined;
+        const repoName = aiState.chatRepoName ?? undefined;
+        const repoPath = repoOwner && repoName ? `${repoOwner}/${repoName}` : undefined;
+        const branch = aiState.chatRepoBranch || 'main';
+
         const input: NoteCreateInput = {
           title: getStringArg(args, 'title'),
           content: getStringArg(args, 'content'),
           tags: getOptionalStringArrayArg(args, 'tags'),
           format: getOptionalNoteFormatArg(args, 'format'),
+          // Attach chat-thread repo so the note shows up under the same
+          // repo in the notes list and gets pushed by the sync queue.
+          // Without this, AI-created notes were local-only and never
+          // synced to other sessions until a manual push.
+          ...(repoPath ? { repo: repoPath, branch } : {}),
         };
 
         if (mode === 'confirm') {
@@ -155,8 +169,45 @@ export async function executeToolCall(
           });
         }
 
-        const result = await useNoteStore.getState().createNote(input);
-        return buildSuccessResult(result);
+        const created = await useNoteStore.getState().createNote(input);
+        if (!created) {
+          return { success: false, requiresConfirmation: false, error: 'Failed to create note.' };
+        }
+
+        // Enqueue an upsert so the note is pushed to GitHub on the next
+        // queue drain. Other app sessions pick it up via the foreground
+        // pull watcher (typically within the configured interval).
+        if (repoPath) {
+          const filePath = `${slugifyLocal(input.title)}${getExtensionForFormat(input.format)}`;
+          try {
+            await NoteSyncQueueService.enqueueNoteUpsert(
+              {
+                repo: repoPath,
+                branch,
+                filePath,
+                title: input.title,
+                content: input.content,
+                format: input.format,
+                tags: input.tags ?? [],
+                color: null,
+              },
+              created.id,
+            );
+            void NoteSyncQueueService.drain();
+          } catch (error) {
+            void error;
+          }
+        }
+
+        // Return a slim summary; the previous full-Note dump filled the
+        // chat with JSON, the bubble renders this as a tappable link.
+        return buildSuccessResult({
+          noteId: created.id,
+          title: created.title,
+          format: created.format,
+          repo: created.repo,
+          synced: Boolean(repoPath),
+        });
       }
 
       case 'edit_note': {
@@ -178,7 +229,10 @@ export async function executeToolCall(
         }
 
         const result = await useNoteStore.getState().updateNote(input);
-        return buildSuccessResult(result);
+        if (!result) {
+          return { success: false, requiresConfirmation: false, error: 'Note not found.' };
+        }
+        return buildSuccessResult({ noteId: result.id, title: result.title });
       }
 
       case 'delete_note': {
