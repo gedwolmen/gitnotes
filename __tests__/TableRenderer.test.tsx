@@ -97,4 +97,38 @@ describe('TableRenderer', () => {
     const scrollView = getByTestId('table-scroll-view');
     expect(scrollView.props.horizontal).toBe(true);
   });
+
+  describe('dark-mode text color (issue #687)', () => {
+    const flatten = (style: any): any =>
+      Array.isArray(style)
+        ? Object.assign({}, ...style.flatMap((s: any) => [flatten(s)]))
+        : style ?? {};
+
+    it('cell text color is light in dark mode', () => {
+      const { getAllByTestId } = render(
+        <TableRenderer headers={headers} aligns={aligns} rows={rows} isDark={true} />,
+      );
+      const cells = [...getAllByTestId('table-cell'), ...getAllByTestId('table-header-cell')];
+      cells.forEach((cell) => {
+        const color = flatten(cell.props.style).color;
+        expect(color).toBeDefined();
+        // light text color means high luminance — accept any non-black hex
+        expect(color).not.toBe('#000');
+        expect(color).not.toBe('#000000');
+      });
+    });
+
+    it('cell text color is dark in light mode', () => {
+      const { getAllByTestId } = render(
+        <TableRenderer headers={headers} aligns={aligns} rows={rows} isDark={false} />,
+      );
+      const cells = [...getAllByTestId('table-cell'), ...getAllByTestId('table-header-cell')];
+      cells.forEach((cell) => {
+        const color = flatten(cell.props.style).color;
+        expect(color).toBeDefined();
+        expect(color).not.toBe('#FFF');
+        expect(color).not.toBe('#FFFFFF');
+      });
+    });
+  });
 });
