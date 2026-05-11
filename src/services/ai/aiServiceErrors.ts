@@ -33,6 +33,23 @@ function isEmptyBodyError(e: unknown): boolean {
   return false;
 }
 
+/**
+ * The AI SDK throws `APICallError("Failed to process successful response")`
+ * when a 2xx response body can't be parsed (e.g. OpenRouter free-tier
+ * upstreams returning non-OpenAI chunks). The error message survives even
+ * when the error has been re-wrapped by intermediate layers, so we check
+ * it directly as a fallback to the structural `name === 'AI_APICallError'`
+ * check.
+ */
+function hasParserErrorMessage(e: unknown): boolean {
+  const o = asObj(e);
+  if (!o) return false;
+  if (typeof o.message === 'string' && /failed to process successful response/i.test(o.message)) return true;
+  const cause = asObj(o.cause);
+  if (cause?.message && typeof cause.message === 'string' && /failed to process successful response/i.test(cause.message)) return true;
+  return false;
+}
+
 function unwrapInner(e: unknown): unknown {
   if (!isRetryError(e)) return e;
   const o = asObj(e);
@@ -71,7 +88,9 @@ export function extractErrorDetails(error: unknown): ErrorDetails {
     isApi && typeof status === 'number' && status >= 200 && status < 300 && !isEmptyBody;
   const isStatuslessParserError =
     isApi && typeof status !== 'number' && !isEmptyBody;
-  const isParserError = isStatusedParserError || isStatuslessParserError;
+  const isMessageParserError =
+    !isEmptyBody && (hasParserErrorMessage(error) || hasParserErrorMessage(inner));
+  const isParserError = isStatusedParserError || isStatuslessParserError || isMessageParserError;
 
   return {
     status,
