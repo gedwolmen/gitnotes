@@ -19,3 +19,5 @@ export type { ModalProps } from './Modal';
 export { TabBar, useTabBarHeight, TAB_BAR_BASE_HEIGHT } from './TabBar';
 export { ScreenHeader, useScreenHeaderHeight, SCREEN_HEADER_BASE_HEIGHT, SCREEN_HEADER_SUBTITLE_HEIGHT } from './ScreenHeader';
 export type { ScreenHeaderProps } from './ScreenHeader';
+export { EmptyState } from './EmptyState';
+export type { EmptyStateProps } from './EmptyState';

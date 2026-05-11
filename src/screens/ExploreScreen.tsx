@@ -20,7 +20,7 @@ import { HapticService } from '../utils/haptics';
 import { parseRepoPath } from '../utils/gitPathParser';
 import RepoFileTree, { TreeNode } from '../components/RepoFileTree';
 import { RootStackParamList } from '../navigation/types';
-import { ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
+import { EmptyState, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
 import SearchBar from '../components/SearchBar';
 
@@ -148,15 +148,11 @@ export default function ExploreScreen() {
             <Text style={[s.loadingText, { color: colors.textSecondary }]}>Loading repos…</Text>
           </View>
         ) : filteredRepos.length === 0 ? (
-          <View style={s.emptyContainer}>
-            <Ionicons name="git-branch-outline" size={48} color={colors.textSecondary} />
-            <Text style={[s.emptyTitle, { color: colors.text }]}>
-              {repos.length === 0 ? 'No repositories' : 'No matches'}
-            </Text>
-            <Text style={[s.emptySubtext, { color: colors.textSecondary }]}>
-              {repos.length === 0 ? 'Add a repo in Settings to get started' : 'Try a different search'}
-            </Text>
-          </View>
+          <EmptyState
+            icon="git-branch-outline"
+            title={repos.length === 0 ? 'No repositories' : 'No matches'}
+            subtitle={repos.length === 0 ? 'Add a repo in Settings to get started' : 'Try a different search'}
+          />
         ) : (
           <FlatList
             data={filteredRepos}
