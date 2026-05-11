@@ -209,7 +209,7 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
           <ScrollView
             style={styles.modalBody}
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ paddingBottom: spacing[8] }}
+            contentContainerStyle={{ paddingBottom: spacing[6] }}
           >
             <Group title="Provider Details">
               <GroupRow>
@@ -276,42 +276,47 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
                 </GroupRow>
               )}
             </Group>
-
-            <View style={[styles.actionsContainer, { marginTop: spacing[6], gap: spacing[3] }]}>
-              {!isBuiltIn && (
-                <TouchableOpacity
-                  testID="provider-config-modal.button.test-connection"
-                  style={[styles.actionBtn, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}
-                  onPress={handleTestConnection}
-                  disabled={isTesting}
-                >
-                  {isTesting ? (
-                    <ActivityIndicator size="small" color={colors.primary} />
-                  ) : (
-                    <Text style={[styles.actionBtnText, { color: colors.primary }]}>Test Connection</Text>
-                  )}
-                </TouchableOpacity>
-              )}
-
-              <TouchableOpacity
-                testID="provider-config-modal.button.save"
-                style={[styles.actionBtn, { backgroundColor: colors.primary }]}
-                onPress={handleSave}
-              >
-                <Text style={[styles.actionBtnText, { color: '#FFF' }]}>Save Provider</Text>
-              </TouchableOpacity>
-
-              {provider && provider.type !== 'apple' && provider.type !== 'llama' && (
-                <TouchableOpacity
-                  testID="provider-config.button.delete"
-                  style={[styles.actionBtn, { backgroundColor: 'transparent', marginTop: spacing[2] }]}
-                  onPress={handleDelete}
-                >
-                  <Text style={[styles.actionBtnText, { color: '#FF3B30' }]}>Delete Provider</Text>
-                </TouchableOpacity>
-              )}
-            </View>
           </ScrollView>
+
+          <View
+            style={[
+              styles.actionsContainer,
+              { gap: spacing[3], borderTopColor: colors.border, paddingHorizontal: 20, paddingTop: spacing[4] },
+            ]}
+          >
+            {!isBuiltIn && (
+              <TouchableOpacity
+                testID="provider-config-modal.button.test-connection"
+                style={[styles.actionBtn, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}
+                onPress={handleTestConnection}
+                disabled={isTesting}
+              >
+                {isTesting ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Text style={[styles.actionBtnText, { color: colors.primary }]}>Test Connection</Text>
+                )}
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              testID="provider-config-modal.button.save"
+              style={[styles.actionBtn, { backgroundColor: colors.primary }]}
+              onPress={handleSave}
+            >
+              <Text style={[styles.actionBtnText, { color: '#FFF' }]}>Save Provider</Text>
+            </TouchableOpacity>
+
+            {provider && provider.type !== 'apple' && provider.type !== 'llama' && (
+              <TouchableOpacity
+                testID="provider-config.button.delete"
+                style={[styles.actionBtn, { backgroundColor: 'transparent', marginTop: spacing[2] }]}
+                onPress={handleDelete}
+              >
+                <Text style={[styles.actionBtnText, { color: '#FF3B30' }]}>Delete Provider</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -359,6 +364,7 @@ const styles = StyleSheet.create({
   },
   actionsContainer: {
     paddingBottom: 40,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   actionBtn: {
     paddingVertical: 14,
