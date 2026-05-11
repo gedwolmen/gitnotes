@@ -454,7 +454,7 @@ export function SettingsContent(props: SettingsContentProps) {
                       </View>
                     ) : (
                       <View testID="settings.button.enable-clone">
-                        <TouchableOpacity testID={`sync-engine-enable-${repo.path}`} onPress={() => onEnableCloneMode(repo)} style={{ padding: 4 }}>
+                        <TouchableOpacity testID={`settings.toggle.sync-engine-enable-${repo.path.replace('/', '-')}`} onPress={() => onEnableCloneMode(repo)} style={{ padding: 4 }}>
                           <Text style={[styles.settingLabel, { color: colors.primary }]}>Clone</Text>
                         </TouchableOpacity>
                       </View>
