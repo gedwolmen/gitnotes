@@ -19,6 +19,7 @@ import { useNoteStore } from '../../stores/noteStore';
 import { useTodoStore } from '../../stores/todoStore';
 import { generateId } from '../../utils/ids';
 import {
+  decodeOverEscapedChunk,
   dedupeContexts,
   formatExecutorResult,
   formatHistoryMessage,
@@ -166,7 +167,7 @@ export function useChatScreenController(threadId: string) {
         if (abortController.signal.aborted) break;
         const toolEvent = parseToolEvent(chunk);
         if (!toolEvent) {
-          assistantText += chunk;
+          assistantText += decodeOverEscapedChunk(chunk);
           scheduleFlush();
           continue;
         }
