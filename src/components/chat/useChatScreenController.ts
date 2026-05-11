@@ -59,6 +59,7 @@ export function useChatScreenController(threadId: string) {
   const [pendingConfirmation, setPendingConfirmation] = useState<PendingConfirmation | null>(null);
   const [retryPayload, setRetryPayload] = useState<RetryPayload | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [streamStartedAt, setStreamStartedAt] = useState<number>(0);
 
   const thread = activeThread?.id === threadId ? activeThread : null;
   const messages = thread?.messages ?? [];
@@ -128,6 +129,7 @@ export function useChatScreenController(threadId: string) {
     setLocalError(null);
     clearError();
     setPendingConfirmation(null);
+    setStreamStartedAt(Date.now());
     setStreaming(true);
 
     abortRef.current?.abort();
@@ -388,6 +390,7 @@ export function useChatScreenController(threadId: string) {
     messages,
     isLoading,
     isStreaming,
+    streamStartedAt,
     contextBudget: contextBudget(),
     handleSend,
     stopStreaming,

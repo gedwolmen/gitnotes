@@ -6,6 +6,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { ChatMessageBubble } from '../components/ai/ChatMessageBubble';
 import { ChatInputBar } from '../components/ai/ChatInputBar';
+import { ChatLoadingStrip } from '../components/ai/ChatLoadingStrip';
 import ContextPickerModal from '../components/ai/ContextPickerModal';
 import { ScreenHeader, useScreenHeaderHeight } from '../components/ui';
 import { useTokens } from '../contexts/ThemeContext';
@@ -14,6 +15,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { ChatConfirmationCard } from '../components/chat/ChatConfirmationCard';
 import { ChatErrorCard } from '../components/chat/ChatErrorCard';
 import { useChatScreenController } from '../components/chat/useChatScreenController';
+import { useAIStore } from '../stores/aiStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'ChatScreen'>;
 type ChatScreenRouteProp = RouteProp<RootStackParamList, 'ChatScreen'>;
@@ -40,6 +42,7 @@ export default function ChatScreen() {
     messages,
     isLoading,
     isStreaming,
+    streamStartedAt,
     contextBudget,
     handleSend,
     stopStreaming,
@@ -49,6 +52,11 @@ export default function ChatScreen() {
     handleConfirmCancel,
     clearError,
   } = useChatScreenController(threadId);
+
+  const activeModel = useAIStore((state) => state.getSelectedModel());
+  const activeProvider = useAIStore((state) =>
+    activeModel ? state.providers.find((item) => item.id === activeModel.providerId) : undefined,
+  );
 
   useEffect(() => {
     if (!messages.length) return;
@@ -114,6 +122,14 @@ export default function ChatScreen() {
               setLocalError(null);
               clearError();
             }}
+          />
+
+          <ChatLoadingStrip
+            visible={isStreaming}
+            model={activeModel?.name}
+            provider={activeProvider?.name}
+            startedAt={streamStartedAt}
+            onCancel={stopStreaming}
           />
 
           <ChatInputBar
