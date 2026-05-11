@@ -91,6 +91,7 @@ function buildStrokePath(points: Point[]): SkPath | null {
 }
 
 function buildArrowPath(x1: number, y1: number, x2: number, y2: number, sw: number): SkPath {
+  'worklet';
   const p = Skia.Path.Make();
   p.moveTo(x1, y1);
   p.lineTo(x2, y2);
@@ -104,6 +105,7 @@ function buildArrowPath(x1: number, y1: number, x2: number, y2: number, sw: numb
 }
 
 function buildDiamondPath(x1: number, y1: number, x2: number, y2: number): SkPath {
+  'worklet';
   const cx = (x1 + x2) / 2;
   const cy = (y1 + y2) / 2;
   const p = Skia.Path.Make();
@@ -116,6 +118,7 @@ function buildDiamondPath(x1: number, y1: number, x2: number, y2: number): SkPat
 }
 
 function buildLinePath(x1: number, y1: number, x2: number, y2: number): SkPath {
+  'worklet';
   const p = Skia.Path.Make();
   p.moveTo(x1, y1);
   p.lineTo(x2, y2);
