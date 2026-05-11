@@ -126,6 +126,7 @@ function NoteEditorScreenInner() {
     return (
         <NoteViewer
           noteId={noteId!}
+          title={document.title}
           noteFormat={document.noteFormat}
           canEdit={!isPdfNote}
           canSpeak={!isPdfNote && !!preview.speakableContent}
