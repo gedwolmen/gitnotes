@@ -228,7 +228,18 @@ async function* runGenerateTextFallback(
   tools: Record<string, Tool> | undefined,
   abortSignal: AbortSignal | undefined,
 ): AsyncGenerator<string> {
-  const result = await generateText({ model, messages, tools, abortSignal });
+  // `generateText` has no `onError` hook (unlike `streamText`), so when the
+  // SDK's parser-error path runs against an OpenRouter chunk shape it logs
+  // via `console.error` before re-throwing. In dev this surfaces as a
+  // RedBox / LogBox toast even though we recover successfully (#705). We
+  // throw the error away ourselves below, so silence the SDK's own log
+  // for the duration of this call.
+  const originalConsoleError = console.error;
+  console.error = () => {};
+  const result = await generateText({ model, messages, tools, abortSignal })
+    .finally(() => {
+      console.error = originalConsoleError;
+    });
   if (typeof result.text === 'string' && result.text.length > 0) {
     yield result.text;
   }
