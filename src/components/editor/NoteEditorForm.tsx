@@ -60,7 +60,15 @@ export function NoteEditorForm({
 
   return (
     <View style={styles.container}>
-    <ScrollView style={styles.scrollView} contentContainerStyle={styles.editorContent} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      style={styles.scrollView}
+      contentContainerStyle={styles.editorContent}
+      keyboardShouldPersistTaps="handled"
+      // Keep the focused body TextInput visible above the keyboard +
+      // sticky format toolbar (#727) — without this the multiline input
+      // sits behind the keyboard and users type blind on iOS.
+      automaticallyAdjustKeyboardInsets
+    >
       <View testID="note-editor-form.picker.repo" style={styles.gitContextContainer}>
         <GitContextPicker
           repo={repo}
