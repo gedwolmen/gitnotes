@@ -18,6 +18,8 @@ interface NotesNoteCardProps {
   onTagPress?: (tag: string) => void;
   /** Date key (yyyy-MM-dd) of the previous note in the list, used by journal view to group entries under one header per day. */
   prevDateKey?: string;
+  /** Render-order index from the parent list — used for the canonical card testID so Maestro can target stable slots. */
+  index: number;
 }
 
 function journalDateKey(timestamp: number | undefined): string {
@@ -35,11 +37,12 @@ function NotesNoteCardImpl({
   isCached,
   onTagPress,
   prevDateKey,
+  index,
 }: NotesNoteCardProps) {
   const { colors } = useTheme();
 
   const content = (
-    <View testID="notes-list-card.button.press" {...({ note } as { note: Note })}>
+    <View testID={`notes-list.button.press-card-${index}`} {...({ note } as { note: Note })}>
       <BaseNoteCard
         note={note}
         onPress={onPress}
@@ -56,18 +59,16 @@ function NotesNoteCardImpl({
     const currentDateKey = journalDateKey(note.updatedAt);
     const showDate = currentDateKey !== '' && currentDateKey !== prevDateKey;
     return (
-      <View testID="note-card-root.button.press">
-        <View {...({ note } as { note: Note })} style={styles.journalItem}>
-          {showDate ? (
-            <Text style={[styles.journalDate, { color: colors.textSecondary }]}>{currentDateKey}</Text>
-          ) : null}
-          {content}
-        </View>
+      <View {...({ note } as { note: Note })} style={styles.journalItem}>
+        {showDate ? (
+          <Text style={[styles.journalDate, { color: colors.textSecondary }]}>{currentDateKey}</Text>
+        ) : null}
+        {content}
       </View>
     );
   }
 
-  return <View testID="note-card-root.button.press">{content}</View>;
+  return content;
 }
 
 export const NoteCard = memo(NotesNoteCardImpl, (prev, next) => {
@@ -80,7 +81,8 @@ export const NoteCard = memo(NotesNoteCardImpl, (prev, next) => {
     prev.onPress === next.onPress &&
     prev.onLongPress === next.onLongPress &&
     prev.onTagPress === next.onTagPress &&
-    prev.prevDateKey === next.prevDateKey
+    prev.prevDateKey === next.prevDateKey &&
+    prev.index === next.index
   );
 });
 

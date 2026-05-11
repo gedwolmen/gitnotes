@@ -42,7 +42,7 @@ export function NotesListHeader({
 
   return (
     <>
-      <View testID="notes-list-header.search-bar.search" style={styles.topBar}>
+      <View style={styles.topBar}>
         <SearchBar
           testID="notes-list.search-bar.search"
           value={searchQuery}

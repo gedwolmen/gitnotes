@@ -20,5 +20,4 @@ appId: com.xaventra.gitnotes
 # Any note card is fine — we just need proof the list rendered after
 # the refresh finished, not a specific seed.
 - assertVisible:
-    id: "notes-list-card.button.press"
-    index: 0
+    id: "notes-list.button.press-card-0"

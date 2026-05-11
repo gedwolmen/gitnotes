@@ -12,8 +12,7 @@ appId: com.xaventra.gitnotes
 
 # Open the first note in the list — order-independent.
 - tapOn:
-    id: "notes-list-card.button.press"
-    index: 0
+    id: "notes-list.button.press-card-0"
 - waitForAnimationToEnd:
     timeout: 2000
 

@@ -37,8 +37,7 @@ export default function SearchBar({
       autoCorrect={false}
       autoCapitalize="none"
       containerStyle={style}
-      surfaceTestID={testID}
-      testID="search-bar.input.search"
+      testID={testID}
       leading={<Ionicons name="search" size={20} color={colors.textSecondary} />}
       trailing={
         value.length > 0 ? (

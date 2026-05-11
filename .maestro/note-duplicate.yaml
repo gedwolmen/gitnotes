@@ -21,8 +21,7 @@ appId: com.xaventra.gitnotes
     timeout: 800
 
 - longPressOn:
-    id: "notes-list-card.button.press"
-    index: 0
+    id: "notes-list.button.press-card-0"
 - waitForAnimationToEnd:
     timeout: 1000
 
@@ -37,8 +36,6 @@ appId: com.xaventra.gitnotes
 # rename pattern, so just verify two list cards exist (we already had
 # >=2 before — point is no crash).
 - assertVisible:
-    id: "notes-list-card.button.press"
-    index: 0
+    id: "notes-list.button.press-card-0"
 - assertVisible:
-    id: "notes-list-card.button.press"
-    index: 1
+    id: "notes-list.button.press-card-1"
