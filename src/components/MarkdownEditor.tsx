@@ -49,6 +49,12 @@ interface MarkdownEditorProps {
    * that doesn't accept the focus action (#624).
    */
   inputTestID?: string;
+  /**
+   * Render the built-in MarkdownToolbar below the editor. Pass `false` when
+   * the toolbar is being hosted externally (e.g. NoteEditorForm pins it to
+   * the screen bottom so it doesn't scroll with the form).
+   */
+  showToolbar?: boolean;
 }
 
 /**
@@ -60,13 +66,22 @@ interface MarkdownEditorProps {
  */
 export interface MarkdownEditorHandle {
   focus: () => void;
+  /**
+   * Apply a markdown formatting action against the current selection. The
+   * built-in MarkdownToolbar already calls this internally; the imperative
+   * handle exists so a parent (e.g. NoteEditorForm) can host a sticky
+   * toolbar outside the editor's own layout.
+   */
+  applyFormat: (action: FormatAction) => void;
 }
 
-const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(function MarkdownEditor({ content, onContentChange, placeholder = 'Start writing...', initialMode, inputTestID }, ref) {
+const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(function MarkdownEditor({ content, onContentChange, placeholder = 'Start writing...', initialMode, inputTestID, showToolbar = true }, ref) {
   const { colors } = useTheme();
   const inputRef = useRef<TextInput>(null);
+  const handleFormatRef = useRef<(action: FormatAction) => void>(() => {});
   useImperativeHandle(ref, () => ({
     focus: () => inputRef.current?.focus(),
+    applyFormat: (action) => handleFormatRef.current(action),
   }), []);
   const { text, setText, undo, redo, canUndo, canRedo, reset } = useUndoRedo(content);
   const previousTextRef = useRef(text);
@@ -186,6 +201,8 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(fun
     if (result) setText(result.text);
   }, [cursor, text, setText]);
 
+  handleFormatRef.current = handleFormat;
+
   return (
     <View style={styles.container}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
@@ -264,9 +281,11 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(fun
             }}
           />
 
-          <View testID="markdown-editor.toolbar-action.press">
-            <MarkdownToolbar onFormat={handleFormat} />
-          </View>
+          {showToolbar && (
+            <View testID="markdown-editor.toolbar-action.press">
+              <MarkdownToolbar onFormat={handleFormat} />
+            </View>
+          )}
         </>
       )}
     </View>
