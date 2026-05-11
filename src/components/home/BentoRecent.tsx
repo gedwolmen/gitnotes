@@ -32,13 +32,21 @@ export function BentoRecent({ items, onOpen }: Props) {
     <View testID="bento-recent.button.open" style={styles.section}>
       <Text style={[styles.heading, { color: colors.textSecondary }]}>Recent</Text>
       <View style={styles.column}>
-        {rows.map((row, idx) => (
-          <View key={`recent-row-${idx}`} style={styles.row}>
-            {row.map((item) => (
-              <View key={`${item.kind}-${item.data.id}`} style={styles.cell}>
-                <BentoTile item={item} size="medium" onPress={() => onOpen(item)} />
-              </View>
-            ))}
+        {rows.map((row, rowIdx) => (
+          <View key={`recent-row-${rowIdx}`} style={styles.row}>
+            {row.map((item, colIdx) => {
+              const flatIdx = rowIdx * 2 + colIdx;
+              return (
+                <View key={`${item.kind}-${item.data.id}`} style={styles.cell}>
+                  <BentoTile
+                    item={item}
+                    size="medium"
+                    onPress={() => onOpen(item)}
+                    testIDSlot={`recent-${flatIdx}`}
+                  />
+                </View>
+              );
+            })}
             {row.length === 1 ? <View style={styles.cell} /> : null}
           </View>
         ))}

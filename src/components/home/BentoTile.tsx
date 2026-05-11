@@ -14,6 +14,9 @@ interface Props {
   onPress: () => void;
   widthOverride?: number;
   hidePinGlyph?: boolean;
+  // Stable slot label for testIDs — render-order index from the parent list.
+  // Maestro can't pin against the dynamic note id (changes every install).
+  testIDSlot: string;
 }
 
 function relativeTime(ms: number): string {
@@ -128,7 +131,7 @@ const TILE_WIDTH_HINT: Record<BentoSize, number> = { large: 320, medium: 160, sm
 const SNIPPET_LINES: Record<BentoSize, number> = { large: 3, medium: 2, small: 1, pinned: 2 };
 const COLOR_STRIPE_WIDTH = 4;
 
-export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph }: Props) {
+export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph, testIDSlot }: Props) {
   const { colors } = useTheme();
   const isLarge = size === 'large';
   const isMedium = size === 'medium';
@@ -161,7 +164,7 @@ export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph }: 
     const scene = item.data.scene;
     return (
       <Pressable
-        testID={`bento-tile.button.press-${item.data.id}`}
+        testID={`bento-tile.button.press-${testIDSlot}`}
         onPress={onPress}
         style={({ pressed }) => [
           styles.tile,
@@ -213,7 +216,7 @@ export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph }: 
 
     return (
       <Pressable
-        testID={`bento-tile.button.press-${item.data.id}`}
+        testID={`bento-tile.button.press-${testIDSlot}`}
         onPress={onPress}
         style={({ pressed }) => [
           styles.tile,
@@ -274,7 +277,7 @@ export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph }: 
 
   return (
     <Pressable
-      testID={`bento-tile.button.press-${item.data.id}`}
+      testID={`bento-tile.button.press-${testIDSlot}`}
       onPress={onPress}
       style={({ pressed }) => [
         styles.tile,
