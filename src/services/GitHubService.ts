@@ -178,8 +178,50 @@ class GitHubServiceClass {
    */
   private shaCache = new Map<string, string>();
 
+  /**
+   * Per-process cache of `(owner/repo) → private`. Avoids a /repos/{owner}/{repo}
+   * round-trip on every save when deciding whether to write a public raw URL or
+   * the auth-required `gitnotes://repo-image/...` scheme for uploaded images
+   * (#733). Lifetime is the JS bundle — not durable, but a flipped visibility
+   * is rare enough that we accept the staleness window vs. plumbing storage.
+   */
+  private repoPrivacyCache = new Map<string, boolean>();
+
   private shaCacheKey(owner: string, repo: string, path: string, ref?: string): string {
     return `${owner}/${repo}/${path}@${ref ?? ''}`;
+  }
+
+  /**
+   * Returns the `private` flag for `owner/repo`. Cached per process.
+   * Falls back to `null` on lookup failure so callers can choose a safe
+   * default (#733 picks "treat as private" — the worst case is a new
+   * upload uses the auth-resolved scheme on a public repo, which still
+   * renders correctly).
+   */
+  async getRepoPrivacy(
+    owner: string,
+    repo: string,
+    opts?: TokenOpts,
+  ): Promise<boolean | null> {
+    const key = `${owner}/${repo}`;
+    const cached = this.repoPrivacyCache.get(key);
+    if (cached !== undefined) return cached;
+    try {
+      const data = await this.request<{ private?: boolean }>(
+        `https://api.github.com/repos/${owner}/${repo}`,
+        'GET',
+        undefined,
+        opts,
+      );
+      if (typeof data?.private === 'boolean') {
+        this.repoPrivacyCache.set(key, data.private);
+        return data.private;
+      }
+      return null;
+    } catch (error) {
+      console.warn('[GitHubService] Failed to get repo privacy:', error);
+      return null;
+    }
   }
 
   invalidateShaCache(owner: string, repo: string, path: string, ref?: string): void {
@@ -402,6 +444,35 @@ class GitHubServiceClass {
       return null;
     } catch (error) {
       console.warn('[GitHubService] Failed to get file content:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Fetches a file via the Contents API and returns the raw base64 (no UTF-8
+   * decode). Used by the renderer to inline private-repo image bytes as
+   * `data:` URIs for #733. Files larger than ~1 MB return empty `content`
+   * from this endpoint — for those callers should fall back to the blobs
+   * API; image attachments are well under that bound in practice.
+   */
+  async getFileBase64(
+    owner: string,
+    repo: string,
+    path: string,
+    ref?: string,
+    opts?: TokenOpts,
+  ): Promise<string | null> {
+    try {
+      const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+      let url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
+      if (ref) url += `?ref=${encodeURIComponent(ref)}`;
+      const data = await this.request(url, 'GET', undefined, opts);
+      if (data?.type === 'file' && typeof data.content === 'string' && data.content.length > 0) {
+        return data.content.replace(/\n/g, '');
+      }
+      return null;
+    } catch (error) {
+      console.warn('[GitHubService] Failed to get file base64:', error);
       return null;
     }
   }
