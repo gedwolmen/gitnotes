@@ -295,8 +295,11 @@ export class NotePreviewRenderer extends Renderer implements RendererInterface {
             style={[
               styles,
               {
+                // iOS system monospace italic skews `\` so far it becomes
+                // visually indistinguishable from `|`, scrambling LaTeX
+                // commands like `\neq` / `\frac` (issue #704). Plain
+                // monospace keeps the backslash glyph readable.
                 fontFamily: 'monospace',
-                fontStyle: 'italic',
                 color: this.deps.colors.text,
                 backgroundColor: (this.deps.colors.surfaceSecondary ?? '#f0f0f0') + 'AA',
                 paddingHorizontal: 3,
