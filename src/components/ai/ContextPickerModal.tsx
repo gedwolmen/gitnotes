@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { FlatList } from 'react-native';
 
-import { Surface, ScreenHeader, Button, Input } from '../ui';
+import { Surface, ScreenHeader, Button, Input, useScreenHeaderHeight } from '../ui';
 import { useTokens } from '../../contexts/ThemeContext';
 import { AIContextItem } from '../../models/AIProvider';
 import { GitHubService } from '../../services/GitHubService';
@@ -47,6 +47,7 @@ export default function ContextPickerModal({
   initialSelected = [],
 }: ContextPickerModalProps) {
   const { colors, spacing, type, radii } = useTokens();
+  const headerHeight = useScreenHeaderHeight({ subtitle: true });
 
   const [activeTab, setActiveTab] = useState<TabType>('repo');
   const [selectedItems, setSelectedItems] = useState<AIContextItem[]>([]);
@@ -475,16 +476,16 @@ export default function ContextPickerModal({
       onRequestClose={onClose}
     >
       <View style={[styles.container, { backgroundColor: colors.bg }]}>
-        <SafeAreaView style={styles.safeArea}>
+        <SafeAreaView style={styles.safeArea} edges={['bottom']}>
           <ScreenHeader
             title="Select Context"
-            subtitle={`${selectedItems.length} items selected`}
+            subtitle={`${selectedItems.length} ${selectedItems.length === 1 ? 'item' : 'items'} selected`}
             onBack={onClose}
             actions={
-              <Button 
+              <Button
                 testID="context-picker.button.confirm"
-                variant="primary" 
-                
+                variant="primary"
+
                 onPress={handleConfirm}
                 disabled={selectedItems.length === 0}
               >
@@ -493,7 +494,7 @@ export default function ContextPickerModal({
             }
           />
 
-          <View style={[styles.tabBar, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.lg, padding: spacing[1], marginHorizontal: spacing[4], marginBottom: spacing[2] }]}>
+          <View style={[styles.tabBar, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.lg, padding: spacing[1], marginTop: headerHeight, marginHorizontal: spacing[4], marginBottom: spacing[2] }]}>
             {TABS.map(tab => {
               const isActive = activeTab === tab.key;
               return (
@@ -506,12 +507,24 @@ export default function ContextPickerModal({
                     isActive && { backgroundColor: colors.surface }
                   ]}
                   onPress={() => setActiveTab(tab.key)}
+                  accessibilityLabel={tab.label}
                 >
-                  <Ionicons 
-                    name={(isActive ? tab.icon.replace('-outline', '') : tab.icon) as keyof typeof Ionicons.glyphMap} 
-                    size={20} 
-                    color={isActive ? colors.text : colors.textSecondary} 
+                  <Ionicons
+                    name={(isActive ? tab.icon.replace('-outline', '') : tab.icon) as keyof typeof Ionicons.glyphMap}
+                    size={18}
+                    color={isActive ? colors.text : colors.textSecondary}
                   />
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      marginLeft: 6,
+                      fontSize: type.sm,
+                      fontWeight: isActive ? '600' : '500',
+                      color: isActive ? colors.text : colors.textSecondary,
+                    }}
+                  >
+                    {tab.label}
+                  </Text>
                 </TouchableOpacity>
               );
             })}
@@ -556,9 +569,11 @@ const styles = StyleSheet.create({
   },
   tabItem: {
     flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
   },
   contentContainer: {
     flex: 1,
