@@ -46,6 +46,11 @@ export function useChatScreenController(threadId: string) {
   const truncateAfter = useChatStore((state) => state.truncateAfter);
 
   const toolArgsBufferRef = useRef<Record<string, string>>({});
+  // Maps each in-flight `toolCallId` to the chat message bubble we created
+  // when the tool call started streaming, so subsequent deltas + the final
+  // tool-call event can update the same bubble (rather than creating a
+  // second one once execution finishes).
+  const toolMessageIdsRef = useRef<Record<string, string>>({});
   const abortRef = useRef<AbortController | null>(null);
   const { t } = useTranslation();
 
@@ -167,7 +172,29 @@ export function useChatScreenController(threadId: string) {
         const toolCallId = toolEvent.toolCallId ?? generateId();
         const existingArgs = toolArgsBufferRef.current[toolCallId] ?? '';
         if (toolEvent.type === 'tool-call-streaming-start') {
+          // Pre-create the bubble so the user immediately sees
+          // "create_note…" appear; otherwise nothing renders until the
+          // model finishes streaming the args and the tool actually runs.
           toolArgsBufferRef.current[toolCallId] = existingArgs;
+          if (!toolMessageIdsRef.current[toolCallId] && toolEvent.toolName) {
+            const streamingMessageId = generateId();
+            toolMessageIdsRef.current[toolCallId] = streamingMessageId;
+            addMessage({
+              id: streamingMessageId,
+              role: 'assistant',
+              content: '',
+              timestamp: Date.now(),
+              toolCallId,
+              toolCallName: toolEvent.toolName,
+              toolCallArgs: {},
+            });
+            // Flush any pending assistant text so the new bubble lands
+            // after everything streamed so far, not mid-debounce.
+            if (pendingFlush) {
+              clearTimeout(pendingFlush);
+              flushAssistantText();
+            }
+          }
           continue;
         }
         if (toolEvent.type === 'tool-call-delta') {
@@ -177,11 +204,20 @@ export function useChatScreenController(threadId: string) {
         if (toolEvent.type === 'tool-result' || !toolEvent.toolName) continue;
 
         const args = parseToolArgs(toolEvent.input, toolArgsBufferRef.current[toolCallId]);
-        const toolMessageId = generateId();
+        // Re-use the streaming bubble if we already showed one, otherwise
+        // (older providers that skip the streaming start event) create
+        // the bubble here.
+        const toolMessageId = toolMessageIdsRef.current[toolCallId] ?? generateId();
+        if (!toolMessageIdsRef.current[toolCallId]) {
+          toolMessageIdsRef.current[toolCallId] = toolMessageId;
+          addMessage({ id: toolMessageId, role: 'assistant', content: '', timestamp: Date.now(), toolCallId, toolCallName: toolEvent.toolName, toolCallArgs: args });
+        } else {
+          updateMessage(toolMessageId, { toolCallArgs: args });
+        }
         handledToolCount += 1;
-        addMessage({ id: toolMessageId, role: 'assistant', content: '', timestamp: Date.now(), toolCallId, toolCallName: toolEvent.toolName, toolCallArgs: args });
         const result = await runToolCall(toolEvent.toolName, args, { messageId: toolMessageId });
         delete toolArgsBufferRef.current[toolCallId];
+        delete toolMessageIdsRef.current[toolCallId];
         if (result.requiresConfirmation) {
           pausedForConfirmation = true;
           break;
