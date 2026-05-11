@@ -155,8 +155,25 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: message.toolCallResult ? spacing[1] : 0 }}>
               <Ionicons name="build-outline" size={16} color={textColor} style={{ marginRight: spacing[1] }} />
               <Text style={{ color: textColor, fontWeight: 'bold' }}>
-                {message.toolCallName}...
+                {message.toolCallName}{message.toolCallResult ? '' : '…'}
               </Text>
+              {!message.toolCallResult && isStreaming && (
+                <View style={{ flexDirection: 'row', marginLeft: spacing[2] }}>
+                  {[0, 1, 2].map((i) => (
+                    <View
+                      key={i}
+                      style={{
+                        width: 4,
+                        height: 4,
+                        borderRadius: 2,
+                        backgroundColor: textColor,
+                        opacity: dotStep === i + 1 || dotStep === 0 ? 0.9 : 0.3,
+                        marginRight: i < 2 ? 3 : 0,
+                      }}
+                    />
+                  ))}
+                </View>
+              )}
             </View>
             {noteToolResult ? (
               <Pressable
