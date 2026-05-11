@@ -1,6 +1,7 @@
 import { generateText, streamText } from 'ai';
 import type { LanguageModel, ModelMessage, Tool } from 'ai';
 import { Platform } from 'react-native';
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import type { AIModelConfig, AIProviderConfig } from '../models/AIProvider';
 import { chatTools } from './ai/tools';
 import { buildQuirkedFetch } from './ai/providerQuirks';
@@ -67,7 +68,13 @@ async function buildProviderInstance(providerConfig: AIProviderConfig): Promise<
           throw new Error(`Provider \"${providerConfig.name}\" is missing an API key`);
         }
 
-        const { createOpenAICompatible } = await import('@ai-sdk/openai-compatible');
+        // Static import (not `await import(...)`). Expo's `async-require`
+        // path went through the web HMR helper on iPad and threw
+        // `Cannot read property 'reload' of undefined` (it tried
+        // `window.location.reload`), surfacing in the chat panel as
+        // "Failed to build provider 'Openrouter'". A static import bypasses
+        // the dynamic loader and ships @ai-sdk/openai-compatible directly
+        // in the main bundle.
         const quirkedFetch = buildQuirkedFetch(providerConfig.baseURL);
 
         return createOpenAICompatible({
