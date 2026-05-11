@@ -13,6 +13,7 @@ import { BacklinksSection } from '../backlinks/BacklinksSection';
 
 interface NoteViewerProps {
   noteId: string;
+  title: string;
   noteFormat: NoteFormat;
   canEdit: boolean;
   canSpeak: boolean;
@@ -44,6 +45,7 @@ interface NoteViewerProps {
 
 export function NoteViewer({
   noteId,
+  title,
   noteFormat,
   canEdit,
   canSpeak,
@@ -81,7 +83,14 @@ export function NoteViewer({
         <IconButton size="sm" testID="note-viewer.button.back" onPress={onBack} accessibilityLabel="Back">
           <Ionicons name="arrow-back" size={20} color={colors.accent} />
         </IconButton>
-        <View style={styles.flex} />
+        <Text
+          testID="note-viewer.text.title"
+          style={[styles.headerTitle, { color: colors.text }]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
+          {title?.trim() || 'Untitled'}
+        </Text>
 
         {!isPdfNote && tocEntries.length > 0 ? (
           <IconButton
@@ -198,13 +207,18 @@ export function NoteViewer({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  flex: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 8,
     paddingVertical: 12,
     borderBottomWidth: 1,
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    marginHorizontal: 4,
   },
   tocHeader: {
     flexDirection: 'row',
