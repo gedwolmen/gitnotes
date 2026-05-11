@@ -229,23 +229,33 @@ export async function getRepoStructure(owner: string, repo: string, branch: stri
   return getFolderContents(owner, repo, branch, '');
 }
 
-export function getLocalNotesForContext(folderPath?: string): string {
-  const notes = useNoteStore.getState().notes;
-  const targetFolder = normalizeFolderPath(folderPath);
-  const filteredNotes = targetFolder
-    ? notes.filter((note) => normalizeFolderPath(note.folderPath) === targetFolder)
-    : notes;
-
-  if (!filteredNotes.length) {
+function formatNotesForContext(notes: ReturnType<typeof useNoteStore.getState>['notes']): string {
+  if (!notes.length) {
     return 'No local notes found.';
   }
 
-  return filteredNotes
+  return notes
     .map((note) => {
       const tags = note.tags.length ? note.tags.join(', ') : 'none';
       return `## ${note.title}\n${note.content}\nTags: ${tags}\n---`;
     })
     .join('\n');
+}
+
+// `arg` is dual-meaning: the picker passes a note id when a single note is attached,
+// but folder-scope attachments still pass a folder path — try id lookup first, then fall back.
+export function getLocalNotesForContext(arg?: string): string {
+  const notes = useNoteStore.getState().notes;
+  if (!arg) return formatNotesForContext(notes);
+
+  const byId = notes.find((note) => note.id === arg);
+  if (byId) return formatNotesForContext([byId]);
+
+  const targetFolder = normalizeFolderPath(arg);
+  const byFolder = targetFolder
+    ? notes.filter((note) => normalizeFolderPath(note.folderPath) === targetFolder)
+    : notes;
+  return formatNotesForContext(byFolder);
 }
 
 export function getLocalTodosForContext(): string {
