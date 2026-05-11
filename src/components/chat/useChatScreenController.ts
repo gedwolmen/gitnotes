@@ -343,6 +343,61 @@ export function useChatScreenController(threadId: string) {
     if (retryPayload && !isStreaming) void streamAssistantResponse(retryPayload.text, retryPayload.contexts);
   }, [isStreaming, retryPayload, streamAssistantResponse]);
 
+  // Rebuild `pendingConfirmation` from the persisted message list when this
+  // controller mounts (e.g. user navigated away from a thread that paused
+  // for confirmation and came back). The chip itself rides on the persisted
+  // assistant message, but Apply/Cancel only work when the controller's
+  // local `pendingConfirmation` state is populated — without this the chip
+  // renders as a dead end. Re-issuing the tool call in confirm mode is
+  // non-mutating: the executor returns `proposedChanges` instead of
+  // applying them, which is exactly what we need to repopulate the state.
+  useEffect(() => {
+    if (isStreaming) return;
+    if (pendingConfirmation) return;
+    if (useAIStore.getState().actionMode !== 'confirm') return;
+    if (!messages.length) return;
+
+    const pendingMessage = [...messages].reverse().find(
+      (message) =>
+        message.role === 'assistant'
+        && !!message.toolCallName
+        && !message.toolCallResult,
+    );
+    if (!pendingMessage?.toolCallName) return;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const result = await executeToolCall(
+          pendingMessage.toolCallName as string,
+          pendingMessage.toolCallArgs ?? {},
+          'confirm',
+        );
+        if (cancelled) return;
+        if (!result.requiresConfirmation || !result.proposedChanges) return;
+        setPendingConfirmation({
+          toolName: pendingMessage.toolCallName as string,
+          args: pendingMessage.toolCallArgs ?? {},
+          description: result.proposedChanges.description,
+          details: result.proposedChanges.details,
+          messageId: pendingMessage.id,
+        });
+      } catch (error) {
+        void error;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // We intentionally key off `messages.length` instead of `messages` so this
+    // effect doesn't refire every render (the array identity changes). When a
+    // new tool call arrives mid-stream the live setter in `runToolCall`
+    // populates `pendingConfirmation` directly, so we don't need to react to
+    // every message mutation here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isStreaming, messages.length, pendingConfirmation, threadId]);
+
   const handleConfirmApply = useCallback(async () => {
     if (!pendingConfirmation) return;
     setPendingConfirmation(null);
