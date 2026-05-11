@@ -252,8 +252,25 @@ export default function CanvasEditorContent() {
   const cw = canvasWidth ?? Dimensions.get('window').width;
   const [canvasSize, setCanvasSize] = useState<{ width: number; height: number } | null>(null);
 
-  const [title, setTitle] = useState(canvasTitle ?? 'Untitled Canvas');
   const existingCanvas = canvasId ? getCanvasById(canvasId) : undefined;
+  // Stored canvas title is source-of-truth when reopening. Falls back to the
+  // route-param title (used by the new-canvas size picker), then a default.
+  // Without this, the editor used to mount with 'Untitled Canvas' for any
+  // existing canvas and a Save would overwrite the real title (#713).
+  const [title, setTitle] = useState(
+    existingCanvas?.title || canvasTitle || 'Untitled Canvas',
+  );
+  // Deep-links / cold-launches into the editor may mount before the canvas
+  // store has finished loading. Hydrate once existingCanvas resolves, but
+  // never clobber a user edit in progress.
+  const titleHydratedRef = useRef(!!existingCanvas?.title || !canvasId);
+  useEffect(() => {
+    if (titleHydratedRef.current) return;
+    if (existingCanvas?.title) {
+      setTitle(existingCanvas.title);
+      titleHydratedRef.current = true;
+    }
+  }, [existingCanvas?.title]);
   const [elements, setElements] = useState<CanvasElement[]>(
     existingCanvas?.scene?.elements ?? DEFAULT_SCENE.elements,
   );
