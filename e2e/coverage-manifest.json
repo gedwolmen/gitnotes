@@ -2477,7 +2477,7 @@
     "component": "BentoTile",
     "elementType": "button",
     "action": "onPress",
-    "testID": "bento-tile.button.press",
+    "testID": "bento-tile.button.press-${slot}",
     "flowId": "home-nav",
     "platform": ["ios", "android"]
   },

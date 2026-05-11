@@ -28,7 +28,7 @@ export function QuickAccessShelf({ items, onOpen }: Props) {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.row}
       >
-        {items.map((item) => (
+        {items.map((item, idx) => (
           <BentoTile
             key={`${item.kind}-${item.data.id}`}
             item={item}
@@ -36,6 +36,7 @@ export function QuickAccessShelf({ items, onOpen }: Props) {
             widthOverride={CARD_WIDTH}
             hidePinGlyph
             onPress={() => onOpen(item)}
+            testIDSlot={`pinned-${idx}`}
           />
         ))}
       </ScrollView>
