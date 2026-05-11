@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -53,10 +53,17 @@ export default function ChatScreen() {
     clearError,
   } = useChatScreenController(threadId);
 
-  const activeModel = useAIStore((state) => state.getSelectedModel());
-  const activeProvider = useAIStore((state) =>
-    activeModel ? state.providers.find((item) => item.id === activeModel.providerId) : undefined,
-  );
+  const selectedModelId = useAIStore((state) => state.selectedModelId);
+  const providers = useAIStore((state) => state.providers);
+  const { activeModel, activeProvider } = useMemo(() => {
+    if (!selectedModelId) return { activeModel: undefined, activeProvider: undefined };
+    for (const p of providers) {
+      if (!p.isEnabled) continue;
+      const m = p.models.find((mm) => mm.id === selectedModelId);
+      if (m) return { activeModel: m, activeProvider: p };
+    }
+    return { activeModel: undefined, activeProvider: undefined };
+  }, [selectedModelId, providers]);
 
   useEffect(() => {
     if (!messages.length) return;
