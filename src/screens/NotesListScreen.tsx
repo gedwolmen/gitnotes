@@ -24,6 +24,7 @@ import { HapticService } from '../utils/haptics';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { GitHubActivityIndicator } from '../components/GitHubActivityIndicator';
 import { ViewMode, VIEW_MODE_ICONS } from '../utils/viewModes';
+import { formatJournalDate } from '../services/JournalService';
 import { NoteCard as NotesListCard } from '../components/notes/NoteCard';
 import { NotesListHeader } from '../components/notes/NotesListHeader';
 import { NotesViewModePicker } from '../components/notes/NotesViewModePicker';
@@ -325,27 +326,34 @@ export default function NotesListScreen() {
   );
 
   const renderNote = useCallback(
-    ({ item, index }: { item: Note; index: number }) => (
-      <SwipeableListItem
-        itemId={item.id}
-        selected={selectedIds.has(item.id)}
-        selectionMode={selectionMode}
-        onToggleSelect={() => toggleSelected(item.id)}
-      >
-        <NotesListCard
-          note={item}
-          viewMode={viewMode}
-          onPress={handleNotePress}
-          onLongPress={handleNoteLongPress}
-          highlighted={hasActiveSearch && index === currentSearchMatchIndex}
-          isOffline={isConnected === false}
-          isCached={!!item.content?.trim()}
-          onTagPress={handleTagPress}
-        />
-      </SwipeableListItem>
-    ),
+    ({ item, index }: { item: Note; index: number }) => {
+      const prev = index > 0 ? displayNotes[index - 1] : undefined;
+      const prevDateKey =
+        viewMode === 'journal' && prev?.updatedAt ? formatJournalDate(new Date(prev.updatedAt)) : undefined;
+      return (
+        <SwipeableListItem
+          itemId={item.id}
+          selected={selectedIds.has(item.id)}
+          selectionMode={selectionMode}
+          onToggleSelect={() => toggleSelected(item.id)}
+        >
+          <NotesListCard
+            note={item}
+            viewMode={viewMode}
+            onPress={handleNotePress}
+            onLongPress={handleNoteLongPress}
+            highlighted={hasActiveSearch && index === currentSearchMatchIndex}
+            isOffline={isConnected === false}
+            isCached={!!item.content?.trim()}
+            onTagPress={handleTagPress}
+            prevDateKey={prevDateKey}
+          />
+        </SwipeableListItem>
+      );
+    },
     [
       currentSearchMatchIndex,
+      displayNotes,
       handleNoteLongPress,
       handleNotePress,
       handleTagPress,
