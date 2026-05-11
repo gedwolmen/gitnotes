@@ -12,6 +12,8 @@ interface TableRendererProps {
 
 const LIGHT_BORDER = '#D8D8D8';
 const DARK_BORDER = '#262626';
+const LIGHT_TEXT = '#111827';
+const DARK_TEXT = '#F3F4F6';
 const MIN_COL_WIDTH = 80;
 const MAX_COL_WIDTH = 220;
 const CELL_HORIZONTAL_PADDING = 16;
@@ -38,6 +40,7 @@ function computeColumnWidths(headers: string[], rows: string[][]): number[] {
 
 export function TableRenderer({ headers, aligns, rows, isDark }: TableRendererProps) {
   const borderColor = isDark ? DARK_BORDER : LIGHT_BORDER;
+  const textColor = isDark ? DARK_TEXT : LIGHT_TEXT;
   const colWidths = useMemo(() => computeColumnWidths(headers, rows), [headers, rows]);
 
   return (
@@ -53,7 +56,7 @@ export function TableRenderer({ headers, aligns, rows, isDark }: TableRendererPr
               testID="table-header-cell"
               style={[
                 styles.headerCell,
-                { borderColor, width: colWidths[colIdx], textAlign: aligns[colIdx] ?? 'left' },
+                { borderColor, color: textColor, width: colWidths[colIdx], textAlign: aligns[colIdx] ?? 'left' },
               ]}
             >
               {header}
@@ -69,7 +72,7 @@ export function TableRenderer({ headers, aligns, rows, isDark }: TableRendererPr
                 testID="table-cell"
                 style={[
                   styles.cell,
-                  { borderColor, width: colWidths[colIdx], textAlign: aligns[colIdx] ?? 'left' },
+                  { borderColor, color: textColor, width: colWidths[colIdx], textAlign: aligns[colIdx] ?? 'left' },
                 ]}
               >
                 {row[colIdx] ?? ''}
