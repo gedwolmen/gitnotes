@@ -8,6 +8,7 @@ import { HapticService } from '../../utils/haptics';
 import { canPersistNoteTags } from '../../utils/noteTagSupport';
 import GitContextPicker from '../GitContextPicker';
 import MarkdownEditor, { type MarkdownEditorHandle } from '../MarkdownEditor';
+import { MarkdownToolbar } from '../MarkdownToolbar';
 import TagInput from '../TagInput';
 import { FORMAT_OPTIONS } from './editorShared';
 
@@ -58,6 +59,7 @@ export function NoteEditorForm({
   const bodyRef = useRef<MarkdownEditorHandle>(null);
 
   return (
+    <View style={styles.container}>
     <ScrollView style={styles.scrollView} contentContainerStyle={styles.editorContent} keyboardShouldPersistTaps="handled">
       <View testID="note-editor-form.picker.repo" style={styles.gitContextContainer}>
         <GitContextPicker
@@ -172,14 +174,27 @@ export function NoteEditorForm({
         onContentChange={onContentChange}
         placeholder={placeholder}
         inputTestID="note-editor-form.input.content"
+        showToolbar={false}
       />
     </ScrollView>
+
+    <View
+      style={[styles.stickyToolbar, { backgroundColor: colors.surface, borderTopColor: colors.border }]}
+      testID="note-editor-form.toolbar.sticky"
+    >
+      <MarkdownToolbar onFormat={(action) => bodyRef.current?.applyFormat(action)} />
+    </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1 },
   scrollView: { flex: 1 },
   editorContent: { paddingBottom: 120 },
+  stickyToolbar: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
   gitContextContainer: {
     paddingHorizontal: 16,
     paddingTop: 12,
