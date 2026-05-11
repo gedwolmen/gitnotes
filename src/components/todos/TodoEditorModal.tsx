@@ -128,7 +128,7 @@ export function TodoEditorModal({
               {(['low', 'medium', 'high'] as TodoPriority[]).map((priority) => (
                 <TouchableOpacity
                   key={priority}
-                  testID="todo-editor.button.priority"
+                  testID={`todo-editor.button.priority-${priority}`}
                   style={[
                     styles.priorityOption,
                     { borderColor: colors.border },

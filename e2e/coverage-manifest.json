@@ -1495,7 +1495,7 @@
     "component": "TodoEditorModal",
     "elementType": "button",
     "action": "onChangePriority",
-    "testID": "todo-editor.button.priority",
+    "testID": "todo-editor.button.priority-${priority}",
     "flowId": "todos",
     "platform": ["ios", "android"]
   },
