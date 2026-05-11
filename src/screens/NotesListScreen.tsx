@@ -19,6 +19,7 @@ import ColorPicker from '../components/ColorPicker';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
 import { ConflictBanner } from '../components/ui/ConflictBanner';
 import { IconButton, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
+import { requireRepo } from '../utils/requireRepo';
 import { HapticService } from '../utils/haptics';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { GitHubActivityIndicator } from '../components/GitHubActivityIndicator';
@@ -547,6 +548,12 @@ export default function NotesListScreen() {
               testID="notes-list.icon-button.add"
               onPress={() => {
                 HapticService.medium();
+                if (!requireRepo(repositories.length > 0, {
+                  kind: 'note',
+                  onOpenSettings: () => navigation.getParent()?.navigate('SettingsTab' as never),
+                })) {
+                  return;
+                }
                 navigation.navigate('NoteEditor', {});
               }}
               accessibilityLabel="Add note"

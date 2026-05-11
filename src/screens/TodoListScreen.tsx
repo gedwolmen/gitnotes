@@ -3,7 +3,9 @@ import { View, StyleSheet, Alert, Platform, RefreshControl } from 'react-native'
 import { FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 
+import { requireRepo } from '../utils/requireRepo';
 import { useTodos } from '../contexts/TodoContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -32,6 +34,7 @@ export default function TodoListScreen() {
   const { colors, isDark } = useTheme();
   const headerHeight = useScreenHeaderHeight();
   const tabBarHeight = useTabBarHeight();
+  const navigation = useNavigation();
   const { todos, createTodo, updateTodo, toggleTodo, refreshTodos } = useTodos();
   const deleteTodo = useTodoStore((state) => state.deleteTodo);
   const { activeAccountId } = useAuth();
@@ -509,7 +512,20 @@ export default function TodoListScreen() {
                 color={filter.activeCount > 0 ? colors.accent : colors.textSecondary}
               />
             </IconButton>
-            <IconButton size="sm" testID="todo-list.icon-button.add" onPress={() => setShowAddModal(true)} accessibilityLabel="Add todo">
+            <IconButton
+              size="sm"
+              testID="todo-list.icon-button.add"
+              onPress={() => {
+                if (!requireRepo(repositories.length > 0, {
+                  kind: 'todo',
+                  onOpenSettings: () => navigation.getParent()?.navigate('SettingsTab' as never),
+                })) {
+                  return;
+                }
+                setShowAddModal(true);
+              }}
+              accessibilityLabel="Add todo"
+            >
               <Ionicons name="add" size={20} color={colors.accent} />
             </IconButton>
           </>

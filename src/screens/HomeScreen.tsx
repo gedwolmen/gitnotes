@@ -9,6 +9,8 @@ import { RootStackParamList } from '../navigation/types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNotes } from '../contexts/NoteContext';
 import { useCanvases } from '../contexts/CanvasContext';
+import { useRepos } from '../contexts/RepoContext';
+import { requireRepo } from '../utils/requireRepo';
 import { NoteFormat } from '../models/Note';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { HapticService } from '../utils/haptics';
@@ -40,6 +42,10 @@ export default function HomeScreen() {
   const { colors } = useTheme();
   const { notes } = useNotes();
   const { canvases } = useCanvases();
+  const { repositories } = useRepos();
+  const openSettings = useCallback(() => {
+    navigation.getParent()?.navigate('SettingsTab' as never);
+  }, [navigation]);
   const { isTablet } = useResponsive();
   const headerHeight = useScreenHeaderHeight({ subtitle: true });
   const tabBarHeight = useTabBarHeight();
@@ -60,13 +66,16 @@ export default function HomeScreen() {
 
   const handleCreateNote = useCallback(() => {
     HapticService.medium();
+    if (!requireRepo(repositories.length > 0, { kind: 'note', onOpenSettings: openSettings })) {
+      return;
+    }
     if (rememberFormat && defaultFormat) {
       navigation.navigate('NoteEditor', { format: defaultFormat });
       return;
     }
     setPickerRemember(false);
     setShowFormatPicker(true);
-  }, [navigation, rememberFormat, defaultFormat]);
+  }, [navigation, rememberFormat, defaultFormat, repositories.length, openSettings]);
 
   const handleSelectFormat = useCallback(async (format: EditableNoteFormat) => {
     setShowFormatPicker(false);
@@ -88,19 +97,26 @@ export default function HomeScreen() {
 
   const handleOpenTemplates = useCallback(() => {
     HapticService.medium();
+    if (!requireRepo(repositories.length > 0, { kind: 'template', onOpenSettings: openSettings })) {
+      return;
+    }
     setShowTemplateSelector(true);
-  }, []);
+  }, [repositories.length, openSettings]);
 
   const handleOpenTodaysJournal = useCallback(() => {
     HapticService.medium();
     const today = new Date();
     const existing = findJournalEntry(notes, today);
     if (existing) {
+      // Existing journal entry — let the user open it even with no repo.
       navigation.navigate('NoteEditor', { noteId: existing.id });
       return;
     }
+    if (!requireRepo(repositories.length > 0, { kind: 'journal', onOpenSettings: openSettings })) {
+      return;
+    }
     navigation.navigate('NoteEditor', buildJournalEditorParams(today));
-  }, [navigation, notes]);
+  }, [navigation, notes, repositories.length, openSettings]);
 
   const todaysJournalTitle = journalNoteTitle(new Date());
   const hasTodaysJournal = notes.some((n) => n.title === todaysJournalTitle);
