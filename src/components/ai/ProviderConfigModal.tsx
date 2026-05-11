@@ -28,8 +28,8 @@ interface ProviderConfigModalProps {
 }
 
 export function ProviderConfigModal({ visible, onClose, provider }: ProviderConfigModalProps) {
-  const { colors, style: uiStyle } = useTheme();
-  const { spacing, type } = useTokens();
+  const { colors } = useTheme();
+  const { spacing } = useTokens();
   
   const [name, setName] = useState('');
   const [baseURL, setBaseURL] = useState('');
