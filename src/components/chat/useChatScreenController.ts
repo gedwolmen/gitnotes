@@ -18,6 +18,7 @@ import { useChatStore } from '../../stores/chatStore';
 import { useNoteStore } from '../../stores/noteStore';
 import { useTodoStore } from '../../stores/todoStore';
 import { generateId } from '../../utils/ids';
+import { formatSyncError } from '../../services/git/formatSyncError';
 import {
   decodeOverEscapedChunk,
   dedupeContexts,
@@ -68,7 +69,14 @@ export function useChatScreenController(threadId: string) {
 
   const saveActiveThread = useCallback(async () => {
     const latestThread = useChatStore.getState().activeThread;
-    if (latestThread) await ChatStorageService.saveThread(latestThread);
+    if (!latestThread) return;
+    try {
+      await ChatStorageService.saveThread(latestThread);
+    } catch (error) {
+      const raw = error instanceof Error ? error.message : undefined;
+      const formatted = formatSyncError(raw, 'upsert');
+      throw new Error(formatted === 'Sync to GitHub failed' && raw ? raw : formatted);
+    }
   }, []);
 
   const getSelectedModelConfig = useCallback(() => {
@@ -275,7 +283,7 @@ export function useChatScreenController(threadId: string) {
           error instanceof ProviderUnavailableError
             ? describeAvailability(t, error.reason)
             : error instanceof Error
-              ? error.message
+              ? decodeOverEscapedChunk(error.message)
               : 'Failed to send message.';
         // Error text belongs in the banner only — keep the assistant bubble
         // for real model output. If the stream produced any text before
