@@ -1,0 +1,43 @@
+appId: com.xaventra.gitnotes
+---
+- stopApp
+- launchApp:
+    clearState: false
+- waitForAnimationToEnd:
+    timeout: 1500
+- tapOn:
+    id: "tab-bar.*tab.press-NotesTab"
+- waitForAnimationToEnd:
+    timeout: 1200
+- tapOn:
+    id: "notes-list.button.press-card-0"
+- waitForAnimationToEnd:
+    timeout: 1800
+- tapOn:
+    id: "note-viewer.button.edit"
+- waitForAnimationToEnd:
+    timeout: 1200
+- assertVisible:
+    id: "note-editor.toolbar.voice-input"
+- tapOn:
+    id: "note-editor.toolbar.voice-input"
+- waitForAnimationToEnd:
+    timeout: 1200
+- assertVisible:
+    text: ".*Voice Input.*"
+- assertVisible:
+    text: ".*Speech recognition not available on this device.*|.*Your speech will appear here.*|.*Tap to speak.*"
+- runFlow:
+    when:
+      visible:
+        id: "voice-input-modal.button.close-unavailable"
+    commands:
+      - tapOn:
+          id: "voice-input-modal.button.close-unavailable"
+- runFlow:
+    when:
+      visible:
+        id: "voice-input-modal.button.close"
+    commands:
+      - tapOn:
+          id: "voice-input-modal.button.close"

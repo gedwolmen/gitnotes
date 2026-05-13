@@ -1,0 +1,22 @@
+appId: com.xaventra.gitnotes
+---
+- stopApp
+- launchApp:
+    clearState: false
+- waitForAnimationToEnd:
+    timeout: 1500
+- tapOn:
+    id: "tab-bar.*tab.press-SettingsTab"
+- waitForAnimationToEnd:
+    timeout: 1200
+- scrollUntilVisible:
+    element:
+      id: "settings-import.button.google-keep"
+    direction: DOWN
+    speed: 30
+    timeout: 10000
+    visibilityPercentage: 30
+- assertVisible:
+    id: "settings-import.button.google-keep"
+- assertVisible:
+    id: "settings-import.button.apple-notes"

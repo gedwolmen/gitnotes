@@ -37,6 +37,13 @@ appId: com.xaventra.gitnotes
           timeout: 800
 
 # Add provider only if OpenRouter doesn't already exist.
+- scrollUntilVisible:
+    element:
+      id: "settings.button.add-provider"
+    direction: DOWN
+    speed: 30
+    timeout: 8000
+    visibilityPercentage: 30
 - runFlow:
     when:
       notVisible:
@@ -132,6 +139,13 @@ appId: com.xaventra.gitnotes
                 timeout: 1000
 
 # --- Pick a free OpenRouter model ---------------------------------
+- scrollUntilVisible:
+    element:
+      id: "settings.button.model-selector"
+    direction: UP
+    speed: 30
+    timeout: 8000
+    visibilityPercentage: 30
 - tapOn:
     id: "settings.button.model-selector"
 - waitForAnimationToEnd:
