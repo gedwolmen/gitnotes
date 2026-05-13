@@ -89,7 +89,7 @@ export function extractErrorDetails(error: unknown): ErrorDetails {
   const isStatuslessParserError =
     isApi && typeof status !== 'number' && !isEmptyBody;
   const isMessageParserError =
-    !isEmptyBody && (hasParserErrorMessage(error) || hasParserErrorMessage(inner));
+    isApi && !isEmptyBody && (hasParserErrorMessage(error) || hasParserErrorMessage(inner));
   const isParserError = isStatusedParserError || isStatuslessParserError || isMessageParserError;
 
   return {
