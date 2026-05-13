@@ -246,9 +246,9 @@ export class NotePreviewRenderer extends Renderer implements RendererInterface {
   }
 
   setInlineEmbeds(processed: Pick<ProcessedMarkdown, 'inlineMath' | 'wikiLinks' | 'emphases'>) {
-    this.inlineMathEmbeds = new Map(processed.inlineMath.map((segment) => [segment.token, segment]));
-    this.wikiLinkEmbeds = new Map(processed.wikiLinks.map((segment) => [segment.token, segment]));
-    this.emphasisEmbeds = new Map(processed.emphases.map((embed) => [embed.token, embed]));
+    this.inlineMathEmbeds = new Map((processed.inlineMath ?? []).map((segment) => [segment.token, segment]));
+    this.wikiLinkEmbeds = new Map((processed.wikiLinks ?? []).map((segment) => [segment.token, segment]));
+    this.emphasisEmbeds = new Map((processed.emphases ?? []).map((embed) => [embed.token, embed]));
   }
 
   private renderCanvasFallback(id: string): ReactNode {
