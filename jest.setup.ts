@@ -52,6 +52,16 @@ jest.mock('expo-blur', () => {
   };
 });
 
+jest.mock('@expo/vector-icons', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+  const Icon = (props: Record<string, unknown>) =>
+    React.createElement(Text, props, String(props.name ?? 'icon'));
+  return {
+    Ionicons: Icon,
+  };
+});
+
 // Minimal reanimated stub — official mock pulls in TS source that the
 // jest transform pipeline can't load. We only need the surface area used
 // by neumorphic primitives (useSharedValue, useAnimatedStyle, withSpring,
@@ -128,6 +138,68 @@ jest.mock('reanimated-color-picker', () => {
     ExtraThumb: Stub,
     colorKit: {},
     useColorPickerContext: () => ({}),
+  };
+});
+
+jest.mock('react-native-gesture-handler', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const makeGesture = () => {
+    const api: Record<string, () => Record<string, unknown>> = {};
+    for (const key of [
+      'enabled',
+      'onBegin',
+      'onStart',
+      'onUpdate',
+      'onEnd',
+      'onFinalize',
+      'simultaneousWithExternalGesture',
+      'requireExternalGestureToFail',
+      'hitSlop',
+      'activeOffsetX',
+      'activeOffsetY',
+      'failOffsetX',
+      'failOffsetY',
+      'minDistance',
+      'manualActivation',
+      'runOnJS',
+      'numberOfPointers',
+      'direction',
+      'withTestId',
+    ]) {
+      api[key] = () => api;
+    }
+    return api;
+  };
+  return {
+    GestureDetector: ({ children }: { children?: React.ReactNode }) => React.createElement(View, null, children),
+    GestureHandlerRootView: View,
+    PanGestureHandler: View,
+    TapGestureHandler: View,
+    LongPressGestureHandler: View,
+    FlingGestureHandler: View,
+    ForceTouchGestureHandler: View,
+    PinchGestureHandler: View,
+    RotationGestureHandler: View,
+    NativeViewGestureHandler: View,
+    Swipeable: View,
+    DrawerLayout: View,
+    State: {},
+    Directions: {},
+    Gesture: {
+      Tap: makeGesture,
+      Pan: makeGesture,
+      LongPress: makeGesture,
+      Pinch: makeGesture,
+      Rotation: makeGesture,
+      Fling: makeGesture,
+      ForceTouch: makeGesture,
+      Manual: makeGesture,
+      Native: makeGesture,
+      Simultaneous: () => makeGesture(),
+      Exclusive: () => makeGesture(),
+      Race: () => makeGesture(),
+    },
   };
 });
 
