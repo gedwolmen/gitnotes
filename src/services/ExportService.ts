@@ -1,6 +1,6 @@
 import JSZip from 'jszip';
 import * as Print from 'expo-print';
-import { File, Paths } from 'expo-file-system';
+import { Paths } from 'expo-file-system';
 import { Platform } from 'react-native';
 
 import { Canvas } from '../models/Canvas';
@@ -97,7 +97,7 @@ function paragraphXml(text: string): string {
   return `<w:p><w:r><w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r></w:p>`;
 }
 
-function writeDownloadFile(filename: string, mimeType: string, content: Uint8Array): File {
+function writeDownloadFile(filename: string, mimeType: string, content: Uint8Array) {
   const file = Paths.cache.createFile(filename, mimeType);
   file.write(content);
   return file;
@@ -268,15 +268,15 @@ export class ExportService {
     return zip.generateAsync({ type: 'uint8array' });
   }
 
-  static async createNoteArtifact(note: Note, format: ExportFormat, includeMetadata = true): Promise<ExportArtifact> {
+  static createNoteArtifact(note: Note, format: ExportFormat, includeMetadata = true): Promise<ExportArtifact> {
     return this.createArtifact(format, this.buildNoteSource(note, includeMetadata));
   }
 
-  static async createTodoArtifact(todo: Todo, format: ExportFormat): Promise<ExportArtifact> {
+  static createTodoArtifact(todo: Todo, format: ExportFormat): Promise<ExportArtifact> {
     return this.createArtifact(format, this.buildTodoSource(todo));
   }
 
-  static async createCanvasArtifact(canvas: Canvas, format: ExportFormat): Promise<ExportArtifact> {
+  static createCanvasArtifact(canvas: Canvas, format: ExportFormat): Promise<ExportArtifact> {
     return this.createArtifact(format, this.buildCanvasSource(canvas));
   }
 
