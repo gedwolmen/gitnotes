@@ -163,50 +163,52 @@ export default function HomeScreen() {
     <SafeAreaView edges={[]} style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: headerHeight, paddingBottom: tabBarHeight + 20 }]} showsVerticalScrollIndicator={false}>
       <View style={styles.bentoGrid}>
-        <Pressable
-          testID="home.button.create-note"
-          onPress={handleCreateNote}
-          onLongPress={() => {
-            HapticService.medium();
-            setPickerRemember(false);
-            setShowFormatPicker(true);
-          }}
-          style={({ pressed }) => [
-            styles.bentoHero,
-            { backgroundColor: colors.primary, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
-          ]}
-        >
-          <Ionicons name="add" size={140} color="#FFFFFF" style={styles.bentoHeroDecor} />
-          <View style={styles.bentoHeroBadge}>
-            <Ionicons name="add" size={18} color={colors.primary} />
-          </View>
-          <View style={styles.bentoHeroContent}>
-            <Text style={styles.bentoHeroTitle}>Create New Note</Text>
-            <Text style={styles.bentoHeroSubtitle}>Start with a blank note</Text>
-          </View>
-        </Pressable>
+        <View style={styles.bentoRow}>
+          <Pressable
+            testID="home.button.create-note"
+            onPress={handleCreateNote}
+            onLongPress={() => {
+              HapticService.medium();
+              setPickerRemember(false);
+              setShowFormatPicker(true);
+            }}
+            style={({ pressed }) => [
+              styles.bentoHero,
+              { backgroundColor: colors.primary, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
+            ]}
+          >
+            <Ionicons name="add" size={80} color="#FFFFFF" style={styles.bentoHeroDecor} />
+            <View style={styles.bentoHeroBadge}>
+              <Ionicons name="add" size={18} color={colors.primary} />
+            </View>
+            <View style={styles.bentoHeroContent}>
+              <Text style={styles.bentoHeroTitle}>New Note</Text>
+              <Text style={styles.bentoHeroSubtitle}>Blank note</Text>
+            </View>
+          </Pressable>
 
-        <Pressable
-          testID="home.button.open-journal"
-          onPress={handleOpenTodaysJournal}
-          style={({ pressed }) => [
-            styles.bentoHero,
-            { backgroundColor: colors.primary, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
-          ]}
-        >
-          <Ionicons name="journal-outline" size={140} color="#FFFFFF" style={styles.bentoHeroDecor} />
-          <View style={styles.bentoHeroBadge}>
-            <Ionicons name="journal-outline" size={18} color={colors.primary} />
-          </View>
-          <View style={styles.bentoHeroContent}>
-            <Text style={styles.bentoHeroTitle} numberOfLines={1}>
-              {hasTodaysJournal ? "Today's Journal" : 'New Journal Entry'}
-            </Text>
-            <Text style={styles.bentoHeroSubtitle} numberOfLines={1}>
-              {todaysJournalTitle.replace('Journal ', '')}
-            </Text>
-          </View>
-        </Pressable>
+          <Pressable
+            testID="home.button.open-journal"
+            onPress={handleOpenTodaysJournal}
+            style={({ pressed }) => [
+              styles.bentoHero,
+              { backgroundColor: colors.primary, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
+            ]}
+          >
+            <Ionicons name="journal-outline" size={80} color="#FFFFFF" style={styles.bentoHeroDecor} />
+            <View style={styles.bentoHeroBadge}>
+              <Ionicons name="journal-outline" size={18} color={colors.primary} />
+            </View>
+            <View style={styles.bentoHeroContent}>
+              <Text style={styles.bentoHeroTitle} numberOfLines={1}>
+                {hasTodaysJournal ? "Today's Journal" : 'New Journal'}
+              </Text>
+              <Text style={styles.bentoHeroSubtitle} numberOfLines={1}>
+                {todaysJournalTitle.replace('Journal ', '')}
+              </Text>
+            </View>
+          </Pressable>
+        </View>
 
         <View style={styles.bentoRow}>
           <Pressable
@@ -314,9 +316,10 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   bentoHero: {
-    height: 160,
-    borderRadius: 24,
-    padding: 20,
+    flex: 1,
+    height: 130,
+    borderRadius: 20,
+    padding: 16,
     overflow: 'hidden',
     justifyContent: 'flex-end',
   },
@@ -352,9 +355,20 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     opacity: 0.78,
   },
-  bentoRow: {
+bentoRow: {
     flexDirection: 'row',
+    alignItems: 'stretch',
     gap: 12,
+    overflow: 'hidden',
+  },
+  bentoHero: {
+    flex: 1,
+    minWidth: 0,
+    height: 130,
+    borderRadius: 20,
+    padding: 16,
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
   },
   bentoTile: {
     flex: 1,
