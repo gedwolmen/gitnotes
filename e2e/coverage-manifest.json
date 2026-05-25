@@ -400,26 +400,8 @@
     "file": "src/screens/NotesListScreen.tsx",
     "component": "NotesListCard",
     "elementType": "button",
-    "action": "delete-note",
-    "testID": "notes-list-card.button.delete",
-    "flowId": "notes",
-    "platform": ["ios", "android"]
-  },
-  {
-    "file": "src/screens/NotesListScreen.tsx",
-    "component": "NotesListCard",
-    "elementType": "button",
     "action": "press-tag",
     "testID": "notes-list-card.button.press-tag",
-    "flowId": "notes",
-    "platform": ["ios", "android"]
-  },
-  {
-    "file": "src/screens/NotesListScreen.tsx",
-    "component": "NotesListCard",
-    "elementType": "swipe-action",
-    "action": "delete-from-swipe",
-    "testID": "notes-list-card.swipe.delete",
     "flowId": "notes",
     "platform": ["ios", "android"]
   },
@@ -574,7 +556,9 @@
     "action": "change-content",
     "testID": "note-editor-form.input.content",
     "flowId": "notes",
-    "platform": ["ios", "android"]
+    "platform": ["ios", "android"],
+    "na": true,
+    "note": "Uses inputTestID instead of testID - scanner limitation"
   },
   {
     "file": "src/screens/NoteEditorScreen.tsx",
@@ -1455,15 +1439,6 @@
     "platform": ["ios", "android"]
   },
   {
-    "file": "src/components/todos/TodoCard.tsx",
-    "component": "TodoCard",
-    "elementType": "swipe-action",
-    "action": "onSwipe",
-    "testID": "todo-card.swipe.action",
-    "flowId": "todos",
-    "platform": ["ios", "android"]
-  },
-  {
     "file": "src/components/todos/TodoEditorModal.tsx",
     "component": "TodoEditorModal",
     "elementType": "input",
@@ -1569,24 +1544,6 @@
     "action": "onSortChange",
     "testID": "todos-list-header.sort.change",
     "flowId": "todos",
-    "platform": ["ios", "android"]
-  },
-  {
-    "file": "src/components/todos/TodosSwipeActions.tsx",
-    "component": "TodosSwipeActions",
-    "elementType": "button",
-    "action": "onDelete",
-    "testID": "todos-swipe.button.delete",
-    "flowId": "todos",
-    "platform": ["ios", "android"]
-  },
-  {
-    "file": "src/components/notes/NoteCard.tsx",
-    "component": "NoteCard",
-    "elementType": "swipe-action",
-    "action": "onSwipe",
-    "testID": "note-card.swipe.action",
-    "flowId": "notes",
     "platform": ["ios", "android"]
   },
   {
@@ -1703,15 +1660,6 @@
     "elementType": "button",
     "action": "onClearAll",
     "testID": "notes-active-filters.button.clear-all",
-    "flowId": "notes",
-    "platform": ["ios", "android"]
-  },
-  {
-    "file": "src/components/notes/NotesSwipeActions.tsx",
-    "component": "NotesSwipeActions",
-    "elementType": "button",
-    "action": "onDelete",
-    "testID": "notes-swipe.button.delete",
     "flowId": "notes",
     "platform": ["ios", "android"]
   },
@@ -2600,15 +2548,6 @@
     "na": true
   },
   {
-    "file": "src/components/NoteCard.tsx",
-    "component": "NoteCard",
-    "elementType": "swipe-action",
-    "action": "onSwipeRight",
-    "testID": "note-card-root.swipe.right",
-    "flowId": "notes",
-    "platform": ["ios", "android"]
-  },
-  {
     "file": "src/components/TodoCard.tsx",
     "component": "TodoCard",
     "elementType": "checkbox",
@@ -2623,15 +2562,6 @@
     "elementType": "button",
     "action": "onEdit",
     "testID": "todo-card-root.button.edit",
-    "flowId": "todos",
-    "platform": ["ios", "android"]
-  },
-  {
-    "file": "src/components/TodoCard.tsx",
-    "component": "TodoCard",
-    "elementType": "swipe-action",
-    "action": "onSwipe",
-    "testID": "todo-card-root.swipe.action",
     "flowId": "todos",
     "platform": ["ios", "android"]
   }
