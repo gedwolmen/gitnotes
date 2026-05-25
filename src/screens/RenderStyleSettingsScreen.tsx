@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
   rowSubLabel: { fontSize: 12, marginTop: 2 },
   helperText: { fontSize: 12, lineHeight: 18, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 },
   error: { fontSize: 12, paddingHorizontal: 16, paddingTop: 4 },
-  sheetOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'flex-end' },
+  sheetOverlay: { ...StyleSheet.absoluteFill, justifyContent: 'flex-end' },
   sheet: { borderTopLeftRadius: 16, borderTopRightRadius: 16, borderWidth: 1, maxHeight: '80%' },
   sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1 },
   sheetTitle: { fontSize: 16, fontWeight: '600' },
