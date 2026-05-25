@@ -122,7 +122,7 @@ export async function initializeModel(
         }
 
         const { createAppleProvider } = await import('@react-native-ai/apple');
-        const provider = createAppleProvider({ availableTools: chatTools });
+        const provider = createAppleProvider({ availableTools: chatTools as any });
 
         return provider() as LanguageModel;
       }
