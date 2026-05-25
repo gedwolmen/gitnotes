@@ -5,7 +5,7 @@ import { RootStackParamList } from '../../navigation/types';
 import { Note, NoteColor } from '../../models/Note';
 import { parseRepoPath } from '../../utils/gitPathParser';
 import { HapticService } from '../../utils/haptics';
-import { ShareService } from '../../services/ShareService';
+import { ShareFormat, ShareService } from '../../services/ShareService';
 import { NoteSyncQueueService } from '../../services/NoteSyncQueueService';
 import { syncNoteToGitHub } from '../../services/NoteGitHubSyncService';
 import { githubActivity } from '../../stores/githubActivityStore';
@@ -159,9 +159,16 @@ export function useNotesListNoteActions({
     [togglePin],
   );
 
-  const handleShare = useCallback(async (note: Note) => {
-    const ok = await ShareService.shareByNoteFormat(note);
-    if (!ok) Alert.alert('Error', 'Failed to share note');
+  const handleExport = useCallback(async (note: Note, format: ShareFormat) => {
+    try {
+      const ok = await ShareService.shareInFormat(note, format);
+      if (!ok) {
+        Alert.alert('Error', 'Failed to export note');
+      }
+    } catch (error) {
+      console.error('[useNotesListNoteActions] Share/export error:', error);
+      Alert.alert('Error', 'Failed to export note');
+    }
   }, []);
 
   const handleOpenColorPicker = useCallback((note: Note) => {
@@ -198,7 +205,7 @@ export function useNotesListNoteActions({
     handleDeleteFromSwipe,
     handleNoteLongPress,
     handleTogglePin,
-    handleShare,
+    handleExport,
     handleOpenColorPicker,
     handleDuplicate,
   };

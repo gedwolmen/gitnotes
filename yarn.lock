@@ -3894,6 +3894,11 @@ expo-notifications@~55.0.22:
     expo-application "~55.0.14"
     expo-constants "~55.0.15"
 
+expo-print@~55.0.15:
+  version "55.0.15"
+  resolved "https://registry.yarnpkg.com/expo-print/-/expo-print-55.0.15.tgz#1a5d9d78c1021e5201b5c97c79eedc9712d73bae"
+  integrity sha512-poo/RB8Bzoqi2jCeAqmHJFib07GMx41FPmQCNSb/NI+1KC5kucW/2VCRXKzwgVofdwFYMJbg04ewiA8YpY8PCQ==
+
 expo-secure-store@~55.0.13:
   version "55.0.13"
   resolved "https://registry.npmjs.org/expo-secure-store/-/expo-secure-store-55.0.13.tgz"

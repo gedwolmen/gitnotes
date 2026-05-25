@@ -153,7 +153,7 @@ export default function NotesListScreen() {
     handleDeleteFromSwipe,
     handleNoteLongPress,
     handleTogglePin,
-    handleShare,
+    handleExport,
     handleOpenColorPicker,
     handleDuplicate,
   } = useNotesListNoteActions({
@@ -465,7 +465,7 @@ export default function NotesListScreen() {
         onClose={() => setLongPressedNote(null)}
         onOpen={handleNotePress}
         onTogglePin={handleTogglePin}
-        onShare={handleShare}
+        onShare={handleExport}
         onPickColor={handleOpenColorPicker}
         onDuplicate={handleDuplicate}
         onDelete={async (note) => {

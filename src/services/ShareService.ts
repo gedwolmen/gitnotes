@@ -1,9 +1,13 @@
 import * as Sharing from 'expo-sharing';
-import { File, Paths } from 'expo-file-system';
+import { Paths } from 'expo-file-system';
 import { Platform } from 'react-native';
-import { Note } from '../models/Note';
 
-export type ShareFormat = 'text' | 'markdown' | 'org' | 'neorg';
+import { Canvas } from '../models/Canvas';
+import { Note } from '../models/Note';
+import { Todo } from '../models/Todo';
+import { ExportArtifact, ExportService } from './ExportService';
+
+export type ShareFormat = 'text' | 'markdown' | 'org' | 'neorg' | 'pdf' | 'docx';
 
 export interface ShareOptions {
   format: ShareFormat;
@@ -15,7 +19,53 @@ const FORMAT_EXTENSION: Record<ShareFormat, string> = {
   markdown: '.md',
   org: '.org',
   neorg: '.norg',
+  pdf: '.pdf',
+  docx: '.docx',
 };
+
+function normalizeBlobPart(content: string | Uint8Array): string | ArrayBuffer {
+  if (typeof content === 'string') {
+    return content;
+  }
+
+  const bytes = Uint8Array.from(content);
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+}
+
+function downloadBlob(filename: string, mimeType: string, content: string | Uint8Array): boolean {
+  if (Platform.OS !== 'web') {
+    return false;
+  }
+
+  const url = URL.createObjectURL(new Blob([normalizeBlobPart(content)], { type: mimeType }));
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+  return true;
+}
+
+async function shareExportArtifact(title: string, artifact: ExportArtifact): Promise<boolean> {
+  if (Platform.OS === 'web') {
+    if (!artifact.webData) {
+      return false;
+    }
+    return downloadBlob(artifact.filename, artifact.webMimeType ?? artifact.mimeType, artifact.webData);
+  }
+
+  if (!artifact.uri || !(await Sharing.isAvailableAsync())) {
+    return false;
+  }
+
+  await Sharing.shareAsync(artifact.uri, {
+    mimeType: artifact.mimeType,
+    dialogTitle: `Share ${title}`,
+    UTI: artifact.filename.endsWith('.pdf') ? '.pdf' : undefined,
+  });
+
+  return true;
+}
 
 export class ShareService {
   static async isShareAvailable(): Promise<boolean> {
@@ -30,27 +80,15 @@ export class ShareService {
       content += `title: "${note.title || 'Untitled Note'}"\n`;
       content += `created: ${note.createdAt || new Date().toISOString()}\n`;
       content += `updated: ${note.updatedAt || new Date().toISOString()}\n`;
-      if (note.tags && note.tags.length > 0) {
-        content += `tags: [${note.tags.join(', ')}]\n`;
-      }
-      if (note.folderPath) {
-        content += `folder: "${note.folderPath}"\n`;
-      }
-      if (note.repo) {
-        content += `repo: "${note.repo}"\n`;
-      }
-      if (note.branch) {
-        content += `branch: "${note.branch}"\n`;
-      }
+      if (note.tags.length > 0) content += `tags: [${note.tags.join(', ')}]\n`;
+      if (note.folderPath) content += `folder: "${note.folderPath}"\n`;
+      if (note.repo) content += `repo: "${note.repo}"\n`;
+      if (note.branch) content += `branch: "${note.branch}"\n`;
       content += '---\n\n';
     }
 
-    if (note.title) {
-      content += `# ${note.title}\n\n`;
-    }
-
+    if (note.title) content += `# ${note.title}\n\n`;
     content += note.content || '';
-
     return content;
   }
 
@@ -60,18 +98,10 @@ export class ShareService {
     if (includeMetadata) {
       content += `#+TITLE: ${note.title || 'Untitled Note'}\n`;
       content += `#+DATE: ${new Date(note.updatedAt || Date.now()).toISOString()}\n`;
-      if (note.tags && note.tags.length > 0) {
-        content += `#+FILETAGS: :${note.tags.join(':')}:\n`;
-      }
-      if (note.folderPath) {
-        content += `#+FOLDER: ${note.folderPath}\n`;
-      }
-      if (note.repo) {
-        content += `#+REPO: ${note.repo}\n`;
-      }
-      if (note.branch) {
-        content += `#+BRANCH: ${note.branch}\n`;
-      }
+      if (note.tags.length > 0) content += `#+FILETAGS: :${note.tags.join(':')}:\n`;
+      if (note.folderPath) content += `#+FOLDER: ${note.folderPath}\n`;
+      if (note.repo) content += `#+REPO: ${note.repo}\n`;
+      if (note.branch) content += `#+BRANCH: ${note.branch}\n`;
       content += '\n';
     }
 
@@ -86,9 +116,7 @@ export class ShareService {
       content += '@document.meta\n';
       content += `title: ${note.title || 'Untitled Note'}\n`;
       content += `updated: ${new Date(note.updatedAt || Date.now()).toISOString()}\n`;
-      if (note.tags && note.tags.length > 0) {
-        content += `categories: [${note.tags.join(', ')}]\n`;
-      }
+      if (note.tags.length > 0) content += `categories: [${note.tags.join(', ')}]\n`;
       content += '@end\n\n';
     }
 
@@ -101,25 +129,17 @@ export class ShareService {
 
     if (note.title) {
       content += `${note.title}\n`;
-      content += '='.repeat(note.title.length) + '\n\n';
+      content += `${'='.repeat(note.title.length)}\n\n`;
     }
 
     content += note.content || '';
 
     if (includeMetadata) {
       content += '\n\n---\n';
-      if (note.tags && note.tags.length > 0) {
-        content += `Tags: ${note.tags.join(', ')}\n`;
-      }
-      if (note.folderPath) {
-        content += `Folder: ${note.folderPath}\n`;
-      }
-      if (note.repo) {
-        content += `Repository: ${note.repo}\n`;
-      }
-      if (note.branch) {
-        content += `Branch: ${note.branch}\n`;
-      }
+      if (note.tags.length > 0) content += `Tags: ${note.tags.join(', ')}\n`;
+      if (note.folderPath) content += `Folder: ${note.folderPath}\n`;
+      if (note.repo) content += `Repository: ${note.repo}\n`;
+      if (note.branch) content += `Branch: ${note.branch}\n`;
       content += `Last updated: ${note.updatedAt || 'Unknown'}\n`;
     }
 
@@ -128,13 +148,27 @@ export class ShareService {
 
   static generateFilename(note: Note, format: ShareFormat): string {
     const title = note.title?.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase() || 'untitled-note';
-    const timestamp = new Date().getTime();
-    return `${title}-${timestamp}${FORMAT_EXTENSION[format]}`;
+    return `${title}-${Date.now()}${FORMAT_EXTENSION[format]}`;
+  }
+
+  static getAvailableFormats(note: Note): ShareFormat[] {
+    const formats: ShareFormat[] = ['pdf', 'docx', 'markdown', 'text'];
+    if (note.format === 'org') formats.push('org');
+    if (note.format === 'neorg') formats.push('neorg');
+    return formats;
   }
 
   private static getMimeType(format: ShareFormat): string {
-    if (format === 'markdown') return 'text/markdown';
-    return 'text/plain';
+    switch (format) {
+      case 'markdown':
+        return 'text/markdown';
+      case 'pdf':
+        return 'application/pdf';
+      case 'docx':
+        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      default:
+        return 'text/plain';
+    }
   }
 
   private static generateContent(note: Note, format: ShareFormat, includeMetadata: boolean): string {
@@ -153,25 +187,20 @@ export class ShareService {
   static async shareNote(note: Note, options: ShareOptions): Promise<boolean> {
     try {
       const { format, includeMetadata = true } = options;
-
       const content = this.generateContent(note, format, includeMetadata);
-
       const filename = this.generateFilename(note, format);
       const mimeType = this.getMimeType(format);
 
-      if (Platform.OS === 'web' || !(await this.isShareAvailable())) {
-        if (Platform.OS === 'web') {
-          const data = new Blob([content], { type: mimeType });
-          const url = URL.createObjectURL(data);
-          window.open(url, '_blank');
-          return true;
-        }
+      if (Platform.OS === 'web') {
+        return downloadBlob(filename, mimeType, content);
+      }
+
+      if (!(await this.isShareAvailable())) {
         return false;
       }
 
-      const cacheDir = Paths.cache;
-      const file = cacheDir.createFile(filename, mimeType);
-      await file.write(content);
+      const file = Paths.cache.createFile(filename, mimeType);
+      file.write(content);
 
       await Sharing.shareAsync(file.uri, {
         mimeType,
@@ -188,17 +217,12 @@ export class ShareService {
   static async shareMultipleNotes(notes: Note[], options: ShareOptions): Promise<boolean> {
     try {
       const { format, includeMetadata = true } = options;
-
-      if (notes.length === 0) {
-        return false;
-      }
+      if (notes.length === 0) return false;
 
       let combinedContent = '';
-
       if (format === 'markdown') {
         combinedContent += '# GitNotēs Export\n\n';
-        combinedContent += `Exported ${notes.length} notes on ${new Date().toLocaleDateString()}\n\n`;
-        combinedContent += '---\n\n';
+        combinedContent += `Exported ${notes.length} notes on ${new Date().toLocaleDateString()}\n\n---\n\n`;
       }
 
       for (const note of notes) {
@@ -206,19 +230,15 @@ export class ShareService {
         combinedContent += '\n\n---\n\n';
       }
 
-      const filename = `gitnotes-export-${new Date().getTime()}${FORMAT_EXTENSION[format]}`;
+      const filename = `gitnotes-export-${Date.now()}${FORMAT_EXTENSION[format]}`;
       const mimeType = this.getMimeType(format);
 
       if (Platform.OS === 'web') {
-        const data = new Blob([combinedContent], { type: mimeType });
-        const url = URL.createObjectURL(data);
-        window.open(url, '_blank');
-        return true;
+        return downloadBlob(filename, mimeType, combinedContent);
       }
 
-      const cacheDir = Paths.cache;
-      const file = cacheDir.createFile(filename, mimeType);
-      await file.write(combinedContent);
+      const file = Paths.cache.createFile(filename, mimeType);
+      file.write(combinedContent);
 
       await Sharing.shareAsync(file.uri, {
         mimeType,
@@ -240,14 +260,59 @@ export class ShareService {
     return this.shareNote(note, { format: 'markdown', includeMetadata: true });
   }
 
+  static async shareAsPdf(note: Note): Promise<boolean> {
+    try {
+      return await shareExportArtifact(note.title || 'Note', await ExportService.createNoteArtifact(note, 'pdf', true));
+    } catch (error) {
+      console.error('[ShareService] Failed to share PDF:', error);
+      return false;
+    }
+  }
+
+  static async shareAsDocx(note: Note): Promise<boolean> {
+    try {
+      return await shareExportArtifact(note.title || 'Note', await ExportService.createNoteArtifact(note, 'docx', true));
+    } catch (error) {
+      console.error('[ShareService] Failed to share DOCX:', error);
+      return false;
+    }
+  }
+
+  static async exportTodoAsPdf(todo: Todo): Promise<boolean> {
+    try {
+      return await shareExportArtifact(todo.text || 'Todo', await ExportService.createTodoArtifact(todo, 'pdf'));
+    } catch (error) {
+      console.error('[ShareService] Failed to export todo PDF:', error);
+      return false;
+    }
+  }
+
+  static async exportCanvasAsPdf(canvas: Canvas): Promise<boolean> {
+    try {
+      return await shareExportArtifact(canvas.title || 'Canvas', await ExportService.createCanvasArtifact(canvas, 'pdf'));
+    } catch (error) {
+      console.error('[ShareService] Failed to export canvas PDF:', error);
+      return false;
+    }
+  }
+
+  static async shareInFormat(note: Note, format: ShareFormat): Promise<boolean> {
+    switch (format) {
+      case 'pdf':
+        return this.shareAsPdf(note);
+      case 'docx':
+        return this.shareAsDocx(note);
+      case 'org':
+      case 'neorg':
+      case 'markdown':
+      case 'text':
+        return this.shareNote(note, { format, includeMetadata: true });
+    }
+  }
+
   static async shareByNoteFormat(note: Note): Promise<boolean> {
-    const noteFormat = note.format ?? 'markdown';
-    if (noteFormat === 'org') {
-      return this.shareNote(note, { format: 'org', includeMetadata: true });
-    }
-    if (noteFormat === 'neorg') {
-      return this.shareNote(note, { format: 'neorg', includeMetadata: true });
-    }
+    if (note.format === 'org') return this.shareNote(note, { format: 'org', includeMetadata: true });
+    if (note.format === 'neorg') return this.shareNote(note, { format: 'neorg', includeMetadata: true });
     return this.shareAsMarkdown(note);
   }
 }
