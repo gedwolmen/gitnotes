@@ -32,8 +32,11 @@ async function migrateFromBlob(): Promise<void> {
     const notes: Note[] = JSON.parse(legacyRaw);
     if (!Array.isArray(notes) || notes.length === 0) return;
 
-    const pairs: [string, string][] = notes.map((n) => [noteKey(n.id), JSON.stringify(n)]);
-    await AsyncStorage.multiSet(pairs);
+    const entries: Record<string, string> = {};
+    for (const n of notes) {
+      entries[noteKey(n.id)] = JSON.stringify(n);
+    }
+    await AsyncStorage.setMany(entries);
     await AsyncStorage.setItem(NOTE_INDEX_KEY, JSON.stringify(notes.map((n) => n.id)));
     await AsyncStorage.removeItem(LEGACY_NOTES_KEY);
   } catch (e) {
@@ -91,9 +94,9 @@ export class StorageService {
       const ids: string[] = JSON.parse(indexRaw);
       if (ids.length === 0) return [];
 
-      const pairs = await AsyncStorage.multiGet(ids.map(noteKey));
+      const result = await AsyncStorage.getMany(ids.map(noteKey));
       const notes: Note[] = [];
-      for (const [, raw] of pairs) {
+      for (const [, raw] of Object.entries(result)) {
         if (raw) {
           try { notes.push(JSON.parse(raw)); } catch (error) { void error; /* skip corrupt */ }
         }
@@ -113,8 +116,11 @@ export class StorageService {
     await migrateFromBlob();
     try {
       if (notes.length > 0) {
-        const pairs: [string, string][] = notes.map((n) => [noteKey(n.id), JSON.stringify(n)]);
-        await AsyncStorage.multiSet(pairs);
+        const entries: Record<string, string> = {};
+        for (const n of notes) {
+          entries[noteKey(n.id)] = JSON.stringify(n);
+        }
+        await AsyncStorage.setMany(entries);
       }
       await this.saveNoteIndex(notes.map((n) => n.id));
     } catch (error) {
@@ -197,7 +203,7 @@ export class StorageService {
       const indexRaw = await AsyncStorage.getItem(NOTE_INDEX_KEY);
       if (indexRaw) {
         const ids: string[] = JSON.parse(indexRaw);
-        await AsyncStorage.multiRemove(ids.map(noteKey));
+        await AsyncStorage.removeMany(ids.map(noteKey));
       }
       await AsyncStorage.removeItem(NOTE_INDEX_KEY);
       await AsyncStorage.removeItem(LEGACY_NOTES_KEY);
@@ -298,7 +304,7 @@ export class StorageService {
           .filter((n) => n.repo === path)
           .map((n) => noteKey(n.id));
         if (removedIds.length > 0) {
-          await AsyncStorage.multiRemove(removedIds);
+          await AsyncStorage.removeMany(removedIds);
         }
         await this.saveNoteIndex(survivingNotes.map((n) => n.id));
       }
