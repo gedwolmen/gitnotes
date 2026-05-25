@@ -1,4 +1,4 @@
-# Home → New Journal Entry tile → editor opens.
+# Home → New Journal tile → editor opens.
 appId: com.xaventra.gitnotes
 ---
 - stopApp
@@ -10,9 +10,9 @@ appId: com.xaventra.gitnotes
     timeout: 1500
 
 - assertVisible:
-    text: ".*New Journal Entry.*"
+    text: ".*New Journal.*"
 - tapOn:
-    text: ".*New Journal Entry.*"
+    text: ".*New Journal.*"
 - waitForAnimationToEnd:
     timeout: 2000
 
