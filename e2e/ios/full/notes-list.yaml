@@ -24,7 +24,7 @@ tags:
 - eraseText: 50
 
 - tapOn:
-    id: notes-list.button.toggle-view-mode
+    id: notes-list.icon-button.view-mode
 
 - assertVisible:
     id: notes-view-mode.button.close
@@ -33,7 +33,7 @@ tags:
     id: notes-view-mode.button.change-list
 
 - tapOn:
-    id: notes-list.button.open-filters
+    id: notes-list.icon-button.filters
 
 - assertVisible:
     id: notes-filter-modal.button.close
@@ -42,7 +42,7 @@ tags:
     id: notes-filter-modal.button.close
 
 - tapOn:
-    id: notes-list.button.manual-sync
+    id: notes-list.icon-button.sync
 
 - tapOn:
     id: notes-list.button.select-repo

@@ -137,28 +137,28 @@
   },
   {
     "file": "src/screens/NotesListScreen.tsx",
-    "component": "NotesListHeader",
-    "elementType": "button",
+    "component": "NotesListScreen",
+    "elementType": "icon-button",
     "action": "toggle-view-mode",
-    "testID": "notes-list.button.toggle-view-mode",
+    "testID": "notes-list.icon-button.view-mode",
     "flowId": "notes",
     "platform": ["ios", "android"]
   },
   {
     "file": "src/screens/NotesListScreen.tsx",
-    "component": "NotesListHeader",
-    "elementType": "button",
+    "component": "NotesListScreen",
+    "elementType": "icon-button",
     "action": "open-filters",
-    "testID": "notes-list.button.open-filters",
+    "testID": "notes-list.icon-button.filters",
     "flowId": "notes",
     "platform": ["ios", "android"]
   },
   {
     "file": "src/screens/NotesListScreen.tsx",
-    "component": "NotesListHeader",
-    "elementType": "button",
+    "component": "NotesListScreen",
+    "elementType": "icon-button",
     "action": "manual-sync",
-    "testID": "notes-list.button.manual-sync",
+    "testID": "notes-list.icon-button.sync",
     "flowId": "notes",
     "platform": ["ios", "android"]
   },
@@ -1590,29 +1590,29 @@
     "platform": ["ios", "android"]
   },
   {
-    "file": "src/components/notes/NotesListHeader.tsx",
-    "component": "NotesListHeader",
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesListScreen",
     "elementType": "icon-button",
     "action": "onToggleViewModePicker",
-    "testID": "notes-list-header.icon-button.view-mode",
+    "testID": "notes-list.icon-button.view-mode",
     "flowId": "notes",
     "platform": ["ios", "android"]
   },
   {
-    "file": "src/components/notes/NotesListHeader.tsx",
-    "component": "NotesListHeader",
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesListScreen",
     "elementType": "icon-button",
     "action": "onOpenFilters",
-    "testID": "notes-list-header.icon-button.filters",
+    "testID": "notes-list.icon-button.filters",
     "flowId": "notes",
     "platform": ["ios", "android"]
   },
   {
-    "file": "src/components/notes/NotesListHeader.tsx",
-    "component": "NotesListHeader",
+    "file": "src/screens/NotesListScreen.tsx",
+    "component": "NotesListScreen",
     "elementType": "icon-button",
     "action": "onManualSync",
-    "testID": "notes-list-header.icon-button.sync",
+    "testID": "notes-list.icon-button.sync",
     "flowId": "notes",
     "platform": ["ios", "android"]
   },
