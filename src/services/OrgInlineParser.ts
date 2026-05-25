@@ -123,7 +123,7 @@ export class OrgInlineParser {
   static parseInline(text: string): ParsedInline {
     const unescaped = text.replace(/\\([*/_=~+])/g, (_, ch) => `\x00ESCAPED_${ch.charCodeAt(0)}\x00`);
 
-    let allMatches: RawMatch[] = [];
+    const allMatches: RawMatch[] = [];
 
     const links = findOrgLinks(unescaped);
     const footnotes = findFootnoteRefs(unescaped);

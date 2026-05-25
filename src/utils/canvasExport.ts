@@ -1,4 +1,4 @@
-import { CanvasElement, CanvasScene, CanvasStroke, CanvasShape, CanvasText, CanvasChart } from '../models/Canvas';
+import { CanvasScene, CanvasStroke, CanvasShape, CanvasText, CanvasChart } from '../models/Canvas';
 
 function strokeToSvgPath(stroke: CanvasStroke): string {
   if (!stroke.points || stroke.points.length === 0) return '';

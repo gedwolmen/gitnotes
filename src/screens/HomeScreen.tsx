@@ -315,14 +315,6 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 24,
   },
-  bentoHero: {
-    flex: 1,
-    height: 130,
-    borderRadius: 20,
-    padding: 16,
-    overflow: 'hidden',
-    justifyContent: 'flex-end',
-  },
   bentoHeroDecor: {
     position: 'absolute',
     right: -28,
