@@ -219,6 +219,11 @@ export class ShareService {
       const { format, includeMetadata = true } = options;
       if (notes.length === 0) return false;
 
+      if (format === 'pdf' || format === 'docx') {
+        console.warn('[ShareService] shareMultipleNotes does not support PDF/DOCX export');
+        return false;
+      }
+
       let combinedContent = '';
       if (format === 'markdown') {
         combinedContent += '# GitNotēs Export\n\n';
