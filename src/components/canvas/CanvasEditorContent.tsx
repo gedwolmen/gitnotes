@@ -369,8 +369,7 @@ export default function CanvasEditorContent() {
     setSelectedId(null);
   }, [saveHistory]);
 
-  const hitTest = useCallback((el: CanvasElement, px: number, py: number): boolean => {
-    const pad = 8;
+  const hitTest = useCallback((el: CanvasElement, px: number, py: number, pad = 8): boolean => {
     if (el.type === 'stroke') {
       const pts = el.points;
       if (!pts || pts.length === 0) return false;
@@ -397,6 +396,28 @@ export default function CanvasEditorContent() {
     }
     return false;
   }, []);
+
+  const eraserHitTest = useCallback((pt: Point, eraserRadius: number): string[] => {
+    const idsToErase: string[] = [];
+    for (let i = elements.length - 1; i >= 0; i--) {
+      const el = elements[i];
+      if (hitTest(el, pt.x, pt.y, eraserRadius)) {
+        idsToErase.push(el.id);
+      }
+    }
+    return idsToErase;
+  }, [elements, hitTest]);
+
+  const eraseElementsAtPoint = useCallback((pt: Point, radius: number) => {
+    const idsToErase = eraserHitTest(pt, radius);
+    if (idsToErase.length > 0) {
+      saveHistory();
+      setElements((prev) => prev.filter((el) => !idsToErase.includes(el.id)));
+      if (selectedId && idsToErase.includes(selectedId)) {
+        setSelectedId(null);
+      }
+    }
+  }, [eraserHitTest, saveHistory, selectedId]);
 
   const moveElement = useCallback((el: CanvasElement, dx: number, dy: number): CanvasElement => {
     if (el.type === 'stroke') {
@@ -549,26 +570,25 @@ export default function CanvasEditorContent() {
 
           runOnJS(saveHistory)();
 
-          if (tool === 'pen' || tool === 'highlighter' || tool === 'eraser') {
-            // Safe path rewind
+          if (tool === 'eraser') {
+            runOnJS(eraseElementsAtPoint)(pt, size * 3);
+          } else if (tool === 'pen' || tool === 'highlighter') {
             try {
               activeStrokePath.value.rewind();
               activeStrokePath.value.moveTo(pt.x, pt.y);
-            } catch (e) {
-              // If rewind fails, create a new path
+            } catch (err) {
               activeStrokePath.value = Skia.Path.Make().setIsVolatile(true);
               activeStrokePath.value.moveTo(pt.x, pt.y);
             }
             activeDrawingElement.value = {
               type: 'stroke',
               id: uid(),
-              tool: tool === 'eraser' ? 'eraser' : tool === 'highlighter' ? 'highlighter' : 'pen',
-              color: tool === 'eraser' ? '#FFFFFF' : color,
-              width: tool === 'eraser' ? size * 3 : tool === 'highlighter' ? size * 5 : size,
+              tool,
+              color,
+              width: tool === 'highlighter' ? size * 5 : size,
               points: [pt],
             };
           } else {
-            // Shape tools
             activeStrokePath.value.rewind();
             activeDrawingElement.value = {
               type: 'shape',
@@ -588,8 +608,12 @@ export default function CanvasEditorContent() {
           'worklet';
           const pt = { x: e.x, y: e.y };
 
-          // Skip if in select mode
           if (tool === 'select') {
+            return;
+          }
+
+          if (tool === 'eraser') {
+            runOnJS(eraseElementsAtPoint)(pt, size * 3);
             return;
           }
 
@@ -599,8 +623,7 @@ export default function CanvasEditorContent() {
           if (active.type === 'stroke') {
             try {
               activeStrokePath.value.lineTo(pt.x, pt.y);
-            } catch (e) {
-              // Path may be invalidated, recreate
+            } catch (err) {
               activeStrokePath.value = Skia.Path.Make().setIsVolatile(true);
               activeStrokePath.value.moveTo(active.points[0].x, active.points[0].y);
               for (let i = 1; i < active.points.length; i++) {
@@ -608,7 +631,6 @@ export default function CanvasEditorContent() {
               }
               activeStrokePath.value.lineTo(pt.x, pt.y);
             }
-            // Safely append point
             const newPoints = [...active.points, pt];
             activeDrawingElement.value = { ...active, points: newPoints };
           } else {
@@ -617,8 +639,7 @@ export default function CanvasEditorContent() {
         })
         .onEnd(() => {
           'worklet';
-          // Don't commit if in select mode
-          if (tool === 'select') {
+          if (tool === 'select' || tool === 'eraser') {
             return;
           }
 
@@ -626,24 +647,22 @@ export default function CanvasEditorContent() {
           activeDrawingElement.value = null;
           try {
             activeStrokePath.value.rewind();
-          } catch (e) {
+          } catch (err) {
             activeStrokePath.value = Skia.Path.Make().setIsVolatile(true);
           }
           runOnJS(commitActiveDrawing)(completedElement);
         })
         .onFinalize(() => {
           'worklet';
-          // Clean up if gesture is cancelled (e.g., second finger lands)
-          if (activeDrawingElement.value !== null) {
+          if (activeDrawingElement.value !== null && tool !== 'eraser') {
             activeDrawingElement.value = null;
             try {
               activeStrokePath.value.rewind();
-            } catch (e) {
-              // Ignore
+            } catch (err) {
             }
           }
         }),
-    [tool, color, size, filled, saveHistory, startTextPlacement, commitActiveDrawing, activeDrawingElement, activeStrokePath],
+    [tool, color, size, filled, saveHistory, startTextPlacement, commitActiveDrawing, activeDrawingElement, activeStrokePath, eraseElementsAtPoint],
   );
 
   const addTextElement = useCallback(() => {
