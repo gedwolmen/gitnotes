@@ -81,7 +81,7 @@ function hexToRgba(hex: string, alpha: number): string {
 }
 
 function buildStrokePath(points: Point[]): SkPath | null {
-  if (points.length === 0) return null;
+  if (!points || points.length === 0) return null;
   const p = Skia.Path.Make();
   p.moveTo(points[0].x, points[0].y);
   for (let i = 1; i < points.length; i++) {
@@ -369,8 +369,7 @@ export default function CanvasEditorContent() {
     setSelectedId(null);
   }, [saveHistory]);
 
-  const hitTest = useCallback((el: CanvasElement, px: number, py: number): boolean => {
-    const pad = 8;
+  const hitTest = useCallback((el: CanvasElement, px: number, py: number, pad = 8): boolean => {
     if (el.type === 'stroke') {
       const pts = el.points;
       if (!pts || pts.length === 0) return false;
@@ -397,6 +396,28 @@ export default function CanvasEditorContent() {
     }
     return false;
   }, []);
+
+  const eraserHitTest = useCallback((pt: Point, eraserRadius: number): string[] => {
+    const idsToErase: string[] = [];
+    for (let i = elements.length - 1; i >= 0; i--) {
+      const el = elements[i];
+      if (hitTest(el, pt.x, pt.y, eraserRadius)) {
+        idsToErase.push(el.id);
+      }
+    }
+    return idsToErase;
+  }, [elements, hitTest]);
+
+  const eraseElementsAtPoint = useCallback((pt: Point, radius: number) => {
+    const idsToErase = eraserHitTest(pt, radius);
+    if (idsToErase.length > 0) {
+      saveHistory();
+      setElements((prev) => prev.filter((el) => !idsToErase.includes(el.id)));
+      if (selectedId && idsToErase.includes(selectedId)) {
+        setSelectedId(null);
+      }
+    }
+  }, [eraserHitTest, saveHistory, selectedId]);
 
   const moveElement = useCallback((el: CanvasElement, dx: number, dy: number): CanvasElement => {
     if (el.type === 'stroke') {
@@ -526,7 +547,9 @@ export default function CanvasEditorContent() {
     return element?.type === 'shape' && element.shape === 'ellipse' ? element.width : 0;
   });
 
-  const panGesture = useMemo(
+  // Single-finger pan gesture - only for drawing tools (pen, highlighter, eraser, shapes)
+  // NEVER for select tool - that uses its own pan handler
+  const drawPanGesture = useMemo(
     () =>
       Gesture.Pan()
         .maxPointers(1)
@@ -534,27 +557,35 @@ export default function CanvasEditorContent() {
           'worklet';
           const pt = { x: e.x, y: e.y };
 
+          // Text tool is handled via long-press or tap, not pan
           if (tool === 'text') {
             runOnJS(startTextPlacement)(pt);
             return;
           }
 
+          // Don't draw if in select mode - let the select gesture handle it
           if (tool === 'select') {
-            runOnJS(startSelection)(pt);
             return;
           }
 
           runOnJS(saveHistory)();
 
-          if (tool === 'pen' || tool === 'highlighter' || tool === 'eraser') {
-            activeStrokePath.value.rewind();
-            activeStrokePath.value.moveTo(pt.x, pt.y);
+          if (tool === 'eraser') {
+            runOnJS(eraseElementsAtPoint)(pt, size * 3);
+          } else if (tool === 'pen' || tool === 'highlighter') {
+            try {
+              activeStrokePath.value.rewind();
+              activeStrokePath.value.moveTo(pt.x, pt.y);
+            } catch (err) {
+              activeStrokePath.value = Skia.Path.Make().setIsVolatile(true);
+              activeStrokePath.value.moveTo(pt.x, pt.y);
+            }
             activeDrawingElement.value = {
               type: 'stroke',
               id: uid(),
-              tool: tool === 'eraser' ? 'eraser' : tool === 'highlighter' ? 'highlighter' : 'pen',
-              color: tool === 'eraser' ? '#FFFFFF' : color,
-              width: tool === 'eraser' ? size * 3 : tool === 'highlighter' ? size * 5 : size,
+              tool,
+              color,
+              width: tool === 'highlighter' ? size * 5 : size,
               points: [pt],
             };
           } else {
@@ -578,7 +609,11 @@ export default function CanvasEditorContent() {
           const pt = { x: e.x, y: e.y };
 
           if (tool === 'select') {
-            runOnJS(updateSelection)(pt);
+            return;
+          }
+
+          if (tool === 'eraser') {
+            runOnJS(eraseElementsAtPoint)(pt, size * 3);
             return;
           }
 
@@ -586,37 +621,48 @@ export default function CanvasEditorContent() {
           if (!active) return;
 
           if (active.type === 'stroke') {
-            activeStrokePath.value.lineTo(pt.x, pt.y);
-            activeDrawingElement.value = { ...active, points: [...active.points, pt] };
+            try {
+              activeStrokePath.value.lineTo(pt.x, pt.y);
+            } catch (err) {
+              activeStrokePath.value = Skia.Path.Make().setIsVolatile(true);
+              activeStrokePath.value.moveTo(active.points[0].x, active.points[0].y);
+              for (let i = 1; i < active.points.length; i++) {
+                activeStrokePath.value.lineTo(active.points[i].x, active.points[i].y);
+              }
+              activeStrokePath.value.lineTo(pt.x, pt.y);
+            }
+            const newPoints = [...active.points, pt];
+            activeDrawingElement.value = { ...active, points: newPoints };
           } else {
             activeDrawingElement.value = { ...active, x2: pt.x, y2: pt.y };
           }
         })
         .onEnd(() => {
           'worklet';
-          if (tool === 'select') {
-            runOnJS(endSelection)();
+          if (tool === 'select' || tool === 'eraser') {
             return;
           }
 
           const completedElement = activeDrawingElement.value;
           activeDrawingElement.value = null;
-          activeStrokePath.value.rewind();
+          try {
+            activeStrokePath.value.rewind();
+          } catch (err) {
+            activeStrokePath.value = Skia.Path.Make().setIsVolatile(true);
+          }
           runOnJS(commitActiveDrawing)(completedElement);
         })
-        // onFinalize fires for both onEnd and cancellation. Without it, when
-        // the pan gets cancelled (e.g. a 2nd finger lands and trips
-        // .maxPointers(1)), `activeDrawingElement` stays set and the next
-        // render keeps drawing the half-built stroke from the worklet —
-        // which is the path that was crashing two-finger zoom.
         .onFinalize(() => {
           'worklet';
-          if (activeDrawingElement.value !== null) {
+          if (activeDrawingElement.value !== null && tool !== 'eraser') {
             activeDrawingElement.value = null;
-            activeStrokePath.value.rewind();
+            try {
+              activeStrokePath.value.rewind();
+            } catch (err) {
+            }
           }
         }),
-    [tool, color, size, filled, saveHistory, startTextPlacement, startSelection, updateSelection, endSelection, commitActiveDrawing, activeDrawingElement, activeStrokePath],
+    [tool, color, size, filled, saveHistory, startTextPlacement, commitActiveDrawing, activeDrawingElement, activeStrokePath, eraseElementsAtPoint],
   );
 
   const addTextElement = useCallback(() => {
@@ -635,6 +681,31 @@ export default function CanvasEditorContent() {
     setTextModalVisible(false);
   }, [textPosition, textInput, color, saveHistory]);
 
+  // Select tool pan gesture - ONLY for moving selected elements
+  const selectPanGesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .maxPointers(1)
+        .onStart((e) => {
+          'worklet';
+          if (tool !== 'select' || !selectedId) return;
+          const pt = { x: e.x, y: e.y };
+          runOnJS(startSelection)(pt);
+        })
+        .onUpdate((e) => {
+          'worklet';
+          if (tool !== 'select') return;
+          const pt = { x: e.x, y: e.y };
+          runOnJS(updateSelection)(pt);
+        })
+        .onEnd(() => {
+          'worklet';
+          runOnJS(endSelection)();
+        }),
+    [tool, selectedId, startSelection, updateSelection, endSelection],
+  );
+
+  // Two-finger pinch for zoom
   const pinchGesture = useMemo(
     () =>
       Gesture.Pinch()
@@ -661,6 +732,7 @@ export default function CanvasEditorContent() {
     [scale, savedScale, contentBounds, canvasSize?.width, canvasSize?.height, translateX, translateY],
   );
 
+  // Two-finger pan for canvas panning
   const twoFingerPan = useMemo(
     () =>
       Gesture.Pan()
@@ -687,18 +759,26 @@ export default function CanvasEditorContent() {
     [translateX, translateY, savedTx, savedTy, scale, contentBounds, canvasSize?.width, canvasSize?.height],
   );
 
-  // Race the 1-finger draw/pan against the 2-finger zoom+pan. Simultaneous
-  // here was wrong: the 1-finger panGesture briefly started, mutated
-  // activeDrawingElement, then failed when the 2nd finger landed — leaving
-  // a half-initialised stroke that the Skia render kept reading from the UI
-  // thread. Race + onFinalize make 1-finger and 2-finger mutually exclusive.
+  // Two-finger combo for simultaneous zoom+pan
   const twoFingerCombo = useMemo(
     () => Gesture.Simultaneous(pinchGesture, twoFingerPan),
     [pinchGesture, twoFingerPan],
   );
+
+  // Exclusive gesture handling:
+  // - In select mode: only selectPanGesture can run (single finger pan for moving elements)
+  // - In draw mode: drawPanGesture runs (single finger for drawing)
+  // - Two-finger: always wins via Race, provides zoom+pan
   const composedGesture = useMemo(
-    () => Gesture.Race(twoFingerCombo, panGesture),
-    [twoFingerCombo, panGesture],
+    () => {
+      if (tool === 'select') {
+        // In select mode, use select pan OR two-finger combo
+        return Gesture.Race(twoFingerCombo, selectPanGesture);
+      }
+      // In draw mode, use draw pan OR two-finger combo
+      return Gesture.Race(twoFingerCombo, drawPanGesture);
+    },
+    [tool, twoFingerCombo, drawPanGesture, selectPanGesture],
   );
 
   const saveCanvas = useCallback(async () => {
