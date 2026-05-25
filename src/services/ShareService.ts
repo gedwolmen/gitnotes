@@ -2,8 +2,11 @@ import * as Sharing from 'expo-sharing';
 import { File, Paths } from 'expo-file-system';
 import { Platform } from 'react-native';
 import { Note } from '../models/Note';
+import { Canvas } from '../models/Canvas';
+import { Todo } from '../models/Todo';
+import { ExportService } from './ExportService';
 
-export type ShareFormat = 'text' | 'markdown' | 'org' | 'neorg';
+export type ShareFormat = 'text' | 'markdown' | 'org' | 'neorg' | 'pdf' | 'docx';
 
 export interface ShareOptions {
   format: ShareFormat;
@@ -15,6 +18,8 @@ const FORMAT_EXTENSION: Record<ShareFormat, string> = {
   markdown: '.md',
   org: '.org',
   neorg: '.norg',
+  pdf: '.pdf',
+  docx: '.docx',
 };
 
 export class ShareService {
@@ -132,8 +137,21 @@ export class ShareService {
     return `${title}-${timestamp}${FORMAT_EXTENSION[format]}`;
   }
 
+  static getAvailableFormats(note: Note): ShareFormat[] {
+    const formats: ShareFormat[] = ['pdf', 'docx', 'markdown', 'text'];
+    if (note.format === 'org') {
+      formats.push('org');
+    }
+    if (note.format === 'neorg') {
+      formats.push('neorg');
+    }
+    return formats;
+  }
+
   private static getMimeType(format: ShareFormat): string {
     if (format === 'markdown') return 'text/markdown';
+    if (format === 'pdf') return 'application/pdf';
+    if (format === 'docx') return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
     return 'text/plain';
   }
 
@@ -148,6 +166,46 @@ export class ShareService {
       default:
         return this.generatePlainText(note, includeMetadata);
     }
+  }
+
+  private static downloadBlob(filename: string, mimeType: string, content: string | Uint8Array): boolean {
+    if (Platform.OS !== 'web') {
+      return false;
+    }
+
+    const blobContent = typeof content === 'string' ? content : Uint8Array.from(content);
+    const data = new Blob([blobContent], { type: mimeType });
+    const url = URL.createObjectURL(data);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+    return true;
+  }
+
+  private static async shareExportedFile(noteTitle: string, artifact: { filename: string; mimeType: string; uri?: string; webData?: string | Uint8Array; webMimeType?: string; }): Promise<boolean> {
+    if (Platform.OS === 'web') {
+      if (!artifact.webData) {
+        return false;
+      }
+      const blobData = typeof artifact.webData === 'string'
+        ? artifact.webData
+        : new Uint8Array(artifact.webData);
+      return this.downloadBlob(artifact.filename, artifact.webMimeType ?? artifact.mimeType, blobData);
+    }
+
+    if (!artifact.uri || !(await this.isShareAvailable())) {
+      return false;
+    }
+
+    await Sharing.shareAsync(artifact.uri, {
+      mimeType: artifact.mimeType,
+      dialogTitle: `Share ${noteTitle}`,
+      UTI: artifact.filename.endsWith('.pdf') ? '.pdf' : undefined,
+    });
+
+    return true;
   }
 
   static async shareNote(note: Note, options: ShareOptions): Promise<boolean> {
@@ -238,6 +296,62 @@ export class ShareService {
 
   static async shareAsMarkdown(note: Note): Promise<boolean> {
     return this.shareNote(note, { format: 'markdown', includeMetadata: true });
+  }
+
+  static async shareAsPdf(note: Note): Promise<boolean> {
+    try {
+      const artifact = await ExportService.createNoteArtifact(note, 'pdf', true);
+      return await this.shareExportedFile(note.title || 'Note', artifact);
+    } catch (error) {
+      console.error('[ShareService] Failed to share PDF:', error);
+      return false;
+    }
+  }
+
+  static async shareAsDocx(note: Note): Promise<boolean> {
+    try {
+      const artifact = await ExportService.createNoteArtifact(note, 'docx', true);
+      return await this.shareExportedFile(note.title || 'Note', artifact);
+    } catch (error) {
+      console.error('[ShareService] Failed to share DOCX:', error);
+      return false;
+    }
+  }
+
+  static async exportTodoAsPdf(todo: Todo): Promise<boolean> {
+    try {
+      const artifact = await ExportService.createTodoArtifact(todo, 'pdf');
+      return await this.shareExportedFile(todo.text || 'Todo', artifact);
+    } catch (error) {
+      console.error('[ShareService] Failed to export todo PDF:', error);
+      return false;
+    }
+  }
+
+  static async exportCanvasAsPdf(canvas: Canvas): Promise<boolean> {
+    try {
+      const artifact = await ExportService.createCanvasArtifact(canvas, 'pdf');
+      return await this.shareExportedFile(canvas.title || 'Canvas', artifact);
+    } catch (error) {
+      console.error('[ShareService] Failed to export canvas PDF:', error);
+      return false;
+    }
+  }
+
+  static async shareInFormat(note: Note, format: ShareFormat): Promise<boolean> {
+    switch (format) {
+      case 'pdf':
+        return this.shareAsPdf(note);
+      case 'docx':
+        return this.shareAsDocx(note);
+      case 'org':
+      case 'neorg':
+      case 'markdown':
+      case 'text':
+        return this.shareNote(note, { format, includeMetadata: true });
+      default:
+        return false;
+    }
   }
 
   static async shareByNoteFormat(note: Note): Promise<boolean> {
