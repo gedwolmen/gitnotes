@@ -9,31 +9,31 @@ tags:
     clearState: false
 
 - assertVisible:
-    id: tab-bar.tab.press-HomeTab
+    id: "tab-bar.*tab.press-HomeTab"
 
 - tapOn:
-    id: tab-bar.tab.press-NotesTab
+    id: "tab-bar.*tab.press-NotesTab"
 
 - assertVisible:
-    id: notes-list.search-bar.search
+    id: "notes-list.search-bar.search"
 
 - tapOn:
-    id: tab-bar.tab.press-TodosTab
+    id: "tab-bar.*tab.press-TodosTab"
 
 - assertVisible:
-    id: todo-list.icon-button.add
+    id: "todo-list.icon-button.add"
 
 - tapOn:
-    id: tab-bar.tab.press-ExploreTab
+    id: "tab-bar.*tab.press-ExploreTab"
 
 - tapOn:
-    id: tab-bar.tab.press-SettingsTab
+    id: "tab-bar.*tab.press-SettingsTab"
 
 - assertVisible:
     text: "Settings"
 
 - tapOn:
-    id: tab-bar.tab.press-HomeTab
+    id: "tab-bar.*tab.press-HomeTab"
 
 - assertVisible:
     id: home.button.create-note
