@@ -1,0 +1,26 @@
+appId: com.gitnotes.app
+name: Android - Chat Thread List Flow
+tags:
+  - full
+  - android
+  - chat
+---
+
+- stopApp
+- launchApp:
+    clearState: false
+
+- tapOn:
+    id: "tab-bar.*tab.press-NotesTab"
+
+- waitForAnimationToEnd:
+    timeout: 1500
+
+- tapOn:
+    id: "floating-ai.button.navigate-chat"
+
+- waitForAnimationToEnd:
+    timeout: 1500
+
+- assertVisible:
+    text: ".*[Cc]hat.*|.*[Mm]odel.*|.*[Aa]I.*|.*[Ss]tart.*|.*New.*"

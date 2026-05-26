@@ -1,0 +1,88 @@
+appId: com.gitnotes.app
+name: Android - Canvas Flow
+tags:
+  - full
+  - android
+  - canvas
+---
+
+- launchApp
+
+- tapOn:
+    id: "tab-bar.tab.press-HomeTab"
+
+- tapOn:
+    text: ".*Canvases.*"
+
+- waitForAnimationToEnd:
+    timeout: 1500
+
+- assertVisible:
+    id: "canvas-list.overlay.size-picker"
+    optional: true
+
+- runFlow:
+    when:
+      visible:
+        id: "canvas-list.overlay.size-picker"
+    commands:
+      - tapOn:
+          id: "canvas-list.button.pick-size-phone"
+      - waitForAnimationToEnd:
+          timeout: 1500
+
+- runFlow:
+    when:
+      notVisible:
+        id: "canvas-list.overlay.size-picker"
+    commands:
+      - tapOn:
+          id: "canvas-list.icon-button.new-canvas"
+          optional: true
+      - waitForAnimationToEnd:
+          timeout: 1500
+      - assertVisible:
+          id: "canvas-list.overlay.size-picker"
+      - tapOn:
+          id: "canvas-list.button.pick-size-phone"
+      - waitForAnimationToEnd:
+          timeout: 1500
+
+- assertVisible:
+    id: "canvas-editor.input.title"
+
+- tapOn:
+    id: "canvas-editor.input.title"
+
+- inputText: "Maestro canvas one"
+
+- tapOn:
+    point: "50%, 5%"
+
+- waitForAnimationToEnd:
+    timeout: 700
+
+- tapOn:
+    id: "canvas-editor.button.save"
+
+- waitForAnimationToEnd:
+    timeout: 2000
+
+- runFlow:
+    when:
+      visible:
+        text: ".*Repository Required.*"
+    commands:
+      - tapOn:
+          text: "OK"
+      - waitForAnimationToEnd:
+          timeout: 500
+      - tapOn:
+          id: "canvas-editor.button.back"
+          optional: true
+      - back
+      - waitForAnimationToEnd:
+          timeout: 2000
+
+- assertVisible:
+    text: ".*Canvases.*"

@@ -1,0 +1,52 @@
+appId: com.gitnotes.app
+name: Android - Onboarding Flow
+tags:
+  - full
+  - android
+  - onboarding
+---
+
+- stopApp
+- clearState
+- launchApp
+- waitForAnimationToEnd:
+    timeout: 4000
+
+- assertVisible:
+    text: ".*Welcome to GitNot.*"
+
+- tapOn:
+    id: "onboarding.button.next"
+- waitForAnimationToEnd:
+    timeout: 500
+- tapOn:
+    id: "onboarding.button.next"
+- waitForAnimationToEnd:
+    timeout: 500
+- tapOn:
+    id: "onboarding.button.next"
+- waitForAnimationToEnd:
+    timeout: 500
+- tapOn:
+    id: "onboarding.button.next"
+- waitForAnimationToEnd:
+    timeout: 800
+
+- assertVisible:
+    text: ".*Connect GitHub.*"
+- tapOn:
+    id: "onboarding.button.next"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+- assertVisible:
+    text: ".*GitNot.s AI.*"
+- tapOn:
+    id: "onboarding.button.skip-ai"
+- waitForAnimationToEnd:
+    timeout: 1500
+
+- assertVisible:
+    id: "tab-bar.*tab.press-HomeTab"
+- assertVisible:
+    id: "home.button.create-note"
