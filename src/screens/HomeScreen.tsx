@@ -177,7 +177,6 @@ export default function HomeScreen() {
               { backgroundColor: colors.primary, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
             ]}
           >
-            <Ionicons name="add" size={80} color="#FFFFFF" style={styles.bentoHeroDecor} />
             <View style={styles.bentoHeroBadge}>
               <Ionicons name="add" size={18} color={colors.primary} />
             </View>
@@ -195,7 +194,6 @@ export default function HomeScreen() {
               { backgroundColor: colors.primary, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
             ]}
           >
-            <Ionicons name="journal-outline" size={80} color="#FFFFFF" style={styles.bentoHeroDecor} />
             <View style={styles.bentoHeroBadge}>
               <Ionicons name="journal-outline" size={18} color={colors.primary} />
             </View>
@@ -313,13 +311,8 @@ const styles = StyleSheet.create({
   },
   bentoGrid: {
     gap: 12,
+    marginTop: 8,
     marginBottom: 24,
-  },
-  bentoHeroDecor: {
-    position: 'absolute',
-    right: -28,
-    top: -28,
-    opacity: 0.18,
   },
   bentoHeroBadge: {
     position: 'absolute',
@@ -367,8 +360,10 @@ bentoRow: {
     height: 130,
     borderRadius: 20,
     padding: 16,
+    paddingTop: 14,
     borderWidth: StyleSheet.hairlineWidth,
     justifyContent: 'space-between',
+    overflow: 'hidden',
   },
   bentoTileBadge: {
     width: 40,

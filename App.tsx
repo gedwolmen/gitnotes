@@ -1,8 +1,8 @@
 import './src/polyfills';
 import './src/i18n';
 import 'react-native-gesture-handler';
-import { LogBox } from 'react-native';
-if (!__DEV__) LogBox.ignoreAllLogs();
+import { LogBox, Platform } from 'react-native';
+if (!__DEV__ || Platform.OS === 'android') LogBox.ignoreAllLogs();
 import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-reanimated';
 import React, { useState, useEffect, useCallback } from 'react';
 
