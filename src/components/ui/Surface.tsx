@@ -87,39 +87,63 @@ interface AndroidOverlayProps {
 
 function AndroidShadowOverlays(props: AndroidOverlayProps) {
   const { offset, blur, highlight, shadow, inset, radius } = props;
-  const topLeftColor = inset ? shadow : highlight;
-  const bottomRightColor = inset ? highlight : shadow;
-  const drift = offset;
+  const shadowColor = inset ? shadow : highlight;
+  const highlightColor = inset ? highlight : shadow;
+  const thickness = offset;
   const spread = blur;
 
   return (
     <>
+      {/* Top shadow - extends above element */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
-          top: -drift,
-          left: -drift,
-          right: drift,
-          bottom: drift,
-          backgroundColor: topLeftColor,
-          opacity: 0.15,
-          borderRadius: radius + spread / 2,
-          zIndex: -1,
+          top: -thickness,
+          left: 0,
+          right: 0,
+          height: thickness,
+          backgroundColor: shadowColor,
+          opacity: 0.2,
         }}
       />
+      {/* Bottom shadow - extends below element */}
       <View
         pointerEvents="none"
         style={{
           position: 'absolute',
-          top: drift,
-          left: drift,
-          right: -drift,
-          bottom: -drift,
-          backgroundColor: bottomRightColor,
-          opacity: 0.15,
-          borderRadius: radius + spread / 2,
-          zIndex: -1,
+          bottom: -thickness,
+          left: 0,
+          right: 0,
+          height: thickness,
+          backgroundColor: shadowColor,
+          opacity: 0.2,
+        }}
+      />
+      {/* Left shadow */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: -thickness,
+          bottom: 0,
+          width: thickness,
+          backgroundColor: shadowColor,
+          opacity: 0.2,
+        }}
+      />
+      {/* Right shadow */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 0,
+          right: -thickness,
+          bottom: 0,
+          width: thickness,
+          backgroundColor: shadowColor,
+          opacity: 0.2,
         }}
       />
     </>
