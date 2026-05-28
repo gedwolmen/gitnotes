@@ -67,12 +67,17 @@ export function buildElevation(args: BuildElevationArgs): ElevationStyles {
   }
 
   if (platform === 'web') {
-    const insetPrefix = inset ? 'inset ' : '';
-    const boxShadow =
-      `${insetPrefix}${offset}px ${offset}px ${blur}px ${darkColor}, ` +
-      `${insetPrefix}-${offset}px -${offset}px ${blur}px ${lightColor}`;
+    const offsetX = offset;
+    const offsetY = offset;
+    const blurRadius = blur;
+    const color = inset ? lightColor : darkColor;
     return {
-      outer: { boxShadow },
+      outer: {
+        shadowColor: color,
+        shadowOffset: { width: offsetX, height: offsetY },
+        shadowOpacity: 0.3,
+        shadowRadius: blurRadius,
+      },
       inner: {},
     };
   }

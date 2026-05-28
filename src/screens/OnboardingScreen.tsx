@@ -7,6 +7,9 @@ import {
   Linking,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
+  TouchableOpacity,
+  Clipboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -112,7 +115,11 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
         </View>
 
         {isTokenStep ? (
-          <View style={styles.content}>
+          <ScrollView
+            style={styles.content}
+            contentContainerStyle={styles.tokenScrollContent}
+            keyboardShouldPersistTaps="handled"
+          >
             <Surface elevation="raised" radius="pill" style={styles.iconContainer}>
               <Ionicons name="logo-github" size={72} color={colors.accent} />
             </Surface>
@@ -143,10 +150,25 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
               containerStyle={{ width: '100%' }}
             />
 
+            <TouchableOpacity
+              testID="onboarding.button.paste-token"
+              style={styles.pasteButton}
+              onPress={async () => {
+                const text = await Clipboard.getString();
+                if (text) {
+                  setToken(text);
+                  setTokenError(null);
+                }
+              }}
+            >
+              <Ionicons name="clipboard-outline" size={16} color={colors.accent} />
+              <Text style={[styles.pasteButtonText, { color: colors.accent }]}>Paste from Clipboard</Text>
+            </TouchableOpacity>
+
             {tokenError ? (
               <Text style={styles.errorText}>{tokenError}</Text>
             ) : null}
-          </View>
+          </ScrollView>
         ) : isAIStep ? (
           <View style={styles.content}>
             <Surface elevation="raised" radius="pill" style={styles.iconContainer}>
@@ -244,10 +266,14 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    paddingHorizontal: 40,
+  },
+  tokenScrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 40,
     gap: 16,
+    paddingBottom: 40,
   },
   iconContainer: {
     width: 140,
@@ -275,6 +301,17 @@ const styles = StyleSheet.create({
   },
   aiButtons: {
     width: '100%',
+  },
+  pasteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  pasteButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
   errorText: {
     color: '#FF3B30',
