@@ -85,12 +85,6 @@ export function buildElevation(args: BuildElevationArgs): ElevationStyles {
   return {
     outer: {},
     inner: {},
-    androidOverlays: {
-      offset,
-      blur,
-      highlight: lightColor,
-      shadow: darkColor,
-      inset,
-    },
+    androidOverlays: undefined,
   };
 }
