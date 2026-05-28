@@ -103,7 +103,7 @@ function AndroidShadowOverlays(props: AndroidOverlayProps) {
           right: drift,
           bottom: drift,
           backgroundColor: topLeftColor,
-          opacity: 0.55,
+          opacity: 0.15,
           borderRadius: radius + spread / 2,
           zIndex: -1,
         }}
@@ -117,7 +117,7 @@ function AndroidShadowOverlays(props: AndroidOverlayProps) {
           right: -drift,
           bottom: -drift,
           backgroundColor: bottomRightColor,
-          opacity: 0.55,
+          opacity: 0.15,
           borderRadius: radius + spread / 2,
           zIndex: -1,
         }}
