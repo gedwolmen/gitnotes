@@ -57,7 +57,7 @@ jest.mock('expo-blur', () => {
 // by neumorphic primitives (useSharedValue, useAnimatedStyle, withSpring,
 // Animated.View).
 jest.mock('react-native-reanimated', () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
+   
   const View = require('react-native').View;
   return {
     __esModule: true,
@@ -90,6 +90,9 @@ jest.mock('@react-native-async-storage/async-storage', () => {
       setItem: jest.fn(async (k: string, v: string) => { store[k] = v; }),
       removeItem: jest.fn(async (k: string) => { delete store[k]; }),
       clear: jest.fn(async () => { store = {}; }),
+      getMany: jest.fn(async (keys: string[]) =>
+        Promise.resolve(keys.map((k) => (k in store ? store[k] : null))),
+      ),
     },
   };
 });
@@ -181,3 +184,18 @@ jest.mock('expo-file-system/legacy', () => ({
   readAsStringAsync: jest.fn(async () => ''),
   EncodingType: { UTF8: 'utf8', Base64: 'base64' },
 }));
+
+jest.mock('@expo/vector-icons', () => ({
+  Ionicons: () => null,
+}));
+
+jest.mock('expo-clipboard', () => ({
+  getClipboardAsync: jest.fn(async () => ''),
+  setClipboardAsync: jest.fn(async () => undefined),
+  hasClipboardAsync: jest.fn(async () => false),
+}));
+
+jest.mock('react-native-webview', () => {
+  const { View } = require('react-native');
+  return { WebView: View };
+});

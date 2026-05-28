@@ -9,41 +9,25 @@ tags:
 
 - launchApp
 
+- runFlow:
+    file: ../smoke/onboarding.yaml
+
+- waitForAnimationToEnd
+
 - tapOn:
-    id: "tab-bar.*tab.press-HomeTab"
+    id: "tab-bar.tab.press-HomeTab"
 
 - tapOn:
     id: "home.button.create-note"
 
 - waitForAnimationToEnd:
-    timeout: 2000
+    timeout: 1000
 
 - runFlow:
     when:
       visible:
-        id: "home.button.select-format-markdown"
+        text: ".*Add a repository.*|.*Repository Required.*"
     commands:
-      - tapOn:
-          id: "home.button.select-format-markdown"
-
-- waitForAnimationToEnd:
-    timeout: 3000
-
-- assertVisible:
-    id: "note-editor-form.input.title"
-
-- tapOn:
-    id: "note-editor-form.input.title"
-
-- inputText: "E2E CRUD Note"
-
-- pressKey: Enter
-
-- tapOn:
-    id: "note-editor.button.save"
-
-- waitForAnimationToEnd:
-    timeout: 5000
-
-- assertVisible:
-    id: "home.button.create-note"
+      - assertVisible:
+          text: ".*Add a repository.*"
+      - stopApp

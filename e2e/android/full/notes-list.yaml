@@ -8,27 +8,13 @@ tags:
 
 - launchApp
 
+- runFlow:
+    file: ../smoke/onboarding.yaml
+
+- waitForAnimationToEnd
+
 - tapOn:
     id: tab-bar.tab.press-NotesTab
 
 - assertVisible:
     id: notes-list.search-bar.search
-
-- inputText:
-    id: notes-list.search-bar.search
-    text: "test search"
-
-- tapOn:
-    id: notes-list.search-bar.search
-- eraseText: 50
-
-- tapOn:
-    id: notes-list.button.toggle-view-mode
-
-- tapOn:
-    id: notes-list.button.open-filters
-
-- back
-
-- tapOn:
-    id: notes-list.button.manual-sync

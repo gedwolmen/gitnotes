@@ -47,8 +47,8 @@ describe('classifyHref', () => {
     expect(classifyHref('sub/page', 'notes/current.md')).toEqual({ kind: 'note', target: 'notes/sub/page' });
   });
 
-  it('returns null for bare domain-like hrefs so the UI can surface an alert', () => {
-    expect(classifyHref('home.com', 'notes/current.md')).toBeNull();
+  it('returns web kind for bare domain-like hrefs, auto-prefixing https://', () => {
+    expect(classifyHref('home.com', 'notes/current.md')).toEqual({ kind: 'web', target: 'https://home.com' });
   });
 });
 

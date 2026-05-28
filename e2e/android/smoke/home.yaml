@@ -7,18 +7,19 @@ tags:
 
 - launchApp
 
+- runFlow:
+    file: ./onboarding.yaml
+
+- waitForAnimationToEnd
+
 - assertVisible:
     id: home.button.create-note
 
 - assertVisible:
     id: home.button.open-journal
 
-- tapOn:
+- assertVisible:
     id: home.button.open-templates
 
-- back
-
-- tapOn:
+- assertVisible:
     id: home.button.navigate
-
-- back

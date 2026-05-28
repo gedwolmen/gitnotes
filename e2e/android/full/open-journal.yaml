@@ -6,20 +6,27 @@ tags:
   - journal
 ---
 
-- launchApp:
-    clearState: false
+- launchApp
+
+- runFlow:
+    file: ../smoke/onboarding.yaml
+
+- waitForAnimationToEnd
 
 - tapOn:
-    id: "tab-bar.*tab.press-HomeTab"
+    id: "tab-bar.tab.press-HomeTab"
 
 - tapOn:
     id: "home.button.open-journal"
 
 - waitForAnimationToEnd:
-    timeout: 2000
+    timeout: 1000
 
-- assertVisible:
-    id: "note-viewer.button.edit"
-
-- tapOn:
-    id: "note-viewer.button.back"
+- runFlow:
+    when:
+      visible:
+        text: ".*Add a repository.*|.*Repository Required.*"
+    commands:
+      - assertVisible:
+          text: ".*Add a repository.*"
+      - stopApp

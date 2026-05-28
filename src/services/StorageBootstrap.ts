@@ -38,7 +38,7 @@ export async function bootstrapStorage(): Promise<Map<string, string | null>> {
   if (bootCache) return bootCache;
 
   const result = await AsyncStorage.getMany([...STARTUP_KEYS]);
-  bootCache = new Map(Object.entries(result));
+  bootCache = new Map(STARTUP_KEYS.map((key, i) => [key, result[i]]));
   return bootCache;
 }
 

@@ -65,7 +65,7 @@ describe('tag persistence', () => {
       expect.stringContaining('tags: [alpha, beta]'),
       'Create note: My Note',
       'main',
-      undefined
+      { expectExists: false }
     );
   });
 

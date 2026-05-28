@@ -7,11 +7,26 @@ tags:
 ---
 
 - stopApp
-- launchApp:
-    clearState: false
+- launchApp
+
+- runFlow:
+    file: ../smoke/onboarding.yaml
+
+- waitForAnimationToEnd
 
 - tapOn:
-    id: "tab-bar.*tab.press-NotesTab"
+    id: "tab-bar.tab.press-SettingsTab"
+
+- scrollUntilVisible:
+    element:
+      id: settings.toggle.ai
+    direction: DOWN
+
+- tapOn:
+    id: settings.toggle.ai
+
+- tapOn:
+    id: "tab-bar.tab.press-NotesTab"
 
 - waitForAnimationToEnd:
     timeout: 1500

@@ -14,21 +14,23 @@ tags:
 - assertVisible:
     text: "Settings"
 
-- scroll
+- scrollUntilVisible:
+    element:
+      id: settings.toggle.neu
+    direction: DOWN
 
-- assertVisible:
+- tapOn:
     id: settings.toggle.neu
 
 - tapOn:
     id: settings.toggle.neu
 
-- tapOn:
-    id: settings.toggle.neu
+- scrollUntilVisible:
+    element:
+      id: settings.toggle.sync-frequently
+    direction: DOWN
 
-- scroll
-
-- assertVisible:
-    id: settings.toggle.sync-frequently
-
-- assertVisible:
-    id: settings.toggle.background-sync
+- scrollUntilVisible:
+    element:
+      id: settings.toggle.background-sync
+    direction: DOWN

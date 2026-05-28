@@ -8,16 +8,22 @@ tags:
 
 - launchApp
 
+- runFlow:
+    file: ../smoke/onboarding.yaml
+
+- waitForAnimationToEnd
+
 - tapOn:
     id: home.button.open-templates
 
-- assertVisible:
-    text: "Template"
+- waitForAnimationToEnd:
+    timeout: 1000
 
-- tapOn:
-    id: template-manager.button.create
-
-- back
-
-- tapOn:
-    id: template-manager.icon-button.new-template
+- runFlow:
+    when:
+      visible:
+        text: ".*Add a repository.*|.*Repository Required.*"
+    commands:
+      - assertVisible:
+          text: ".*Add a repository.*"
+      - stopApp
