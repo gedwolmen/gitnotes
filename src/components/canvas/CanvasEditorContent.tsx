@@ -210,7 +210,7 @@ export function clampCanvasTranslation(
   bounds: CanvasBounds | null,
   viewportWidth: number,
   viewportHeight: number,
-  margin = PAN_MARGIN,
+  margin = 80,
 ) {
   'worklet';
 

@@ -44,6 +44,7 @@ jest.mock('../src/services/git/GitFsService', () => ({
     clone: jest.fn(async () => undefined),
     fetch: jest.fn(async () => undefined),
     pullWithFastForward: jest.fn(async () => ({ ok: true })),
+    findMergeBase: jest.fn(async () => null),
     listTree: jest.fn(async () => [
       { path: 'notes/foo.md', type: 'blob', sha: 'aa' },
       { path: 'notes/images/cover.png', type: 'blob', sha: 'bb' },
@@ -52,6 +53,14 @@ jest.mock('../src/services/git/GitFsService', () => ({
       if (opts.filepath === 'notes/foo.md') return 'hello body';
       return null;
     }),
+  },
+}));
+
+jest.mock('../src/stores/conflictStore', () => ({
+  useConflictStore: {
+    getState: jest.fn(() => ({
+      addConflict: jest.fn(async () => undefined),
+    })),
   },
 }));
 
@@ -93,16 +102,23 @@ describe('pullNotesFromRepo via clone mode', () => {
     });
   });
 
-  test('diverged local commits abort pull (no reconcile, saveAllNotes not called)', async () => {
+  test('diverged local commits: conflict detected, store updated, reading from origin/branch', async () => {
     (GitFsService.isCloned as jest.Mock).mockResolvedValue(true);
     (GitFsService.pullWithFastForward as jest.Mock).mockResolvedValueOnce({
       ok: false,
       reason: 'diverged',
     });
+    // Mock findMergeBase to return a value so conflict detection proceeds
+    (GitFsService.findMergeBase as jest.Mock).mockResolvedValueOnce('abc123');
     const result = await pullFromSingleRepo('me/gitnotes');
-    expect(result.notes).toBe(0);
-    expect(StorageService.saveAllNotes).not.toHaveBeenCalled();
-    expect(GitFsService.listTree).not.toHaveBeenCalled();
+    // After #629: pull does NOT abort when diverged. It detects conflicts,
+    // adds them to the conflict store, and continues reading from origin/branch
+    // so the user still sees remote changes.
+    expect(result.notes).toBe(1);
+    expect(GitFsService.listTree).toHaveBeenCalledWith({
+      repoPath: 'me/gitnotes',
+      ref: 'refs/remotes/origin/main',
+    });
   });
 
   test('listTree + readFile go through GitFsService, not GitHubService', async () => {

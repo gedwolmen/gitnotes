@@ -153,7 +153,7 @@ PODS:
     - ExpoModulesCore
   - ExpoSpeech (56.0.3):
     - ExpoModulesCore
-  - ExpoSpeechRecognition (3.1.3):
+  - ExpoSpeechRecognition (56.0.0):
     - ExpoModulesCore
   - ExpoTaskManager (56.0.14):
     - ExpoModulesCore
@@ -2256,7 +2256,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNSVG (15.15.3):
+  - RNSVG (15.15.5):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2277,9 +2277,9 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
-    - RNSVG/common (= 15.15.3)
+    - RNSVG/common (= 15.15.5)
     - Yoga
-  - RNSVG/common (15.15.3):
+  - RNSVG/common (15.15.5):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2773,7 +2773,7 @@ SPEC CHECKSUMS:
   ExpoSecureStore: f1bd083c1b7b8d4142013ffcc0082d377d9f49f4
   ExpoSharing: 972112e7f0c6e5fd87145b01d80328f680356c95
   ExpoSpeech: fe3706df8653ab8c16ff88251e33fab79b07a420
-  ExpoSpeechRecognition: 95a6287f24fb8764ded6e9d0dd667a1e9e633dab
+  ExpoSpeechRecognition: 255445556dbf20df46cc7585d0f5827e4825df8a
   ExpoTaskManager: 4cf41d72644f79a6edd0ef026fbb858393ff7b30
   ExpoWebBrowser: 6e3d90e3fe1952d21a8494872b1e1a485cd50e2f
   FBLazyVector: 26fd21c75314e101f280d401e97f27d54f3f7064
@@ -2858,7 +2858,7 @@ SPEC CHECKSUMS:
   RNGestureHandler: b0d1f061b2f46b3ac6355801175042095a311923
   RNReanimated: 56d68c745cfbb80187b7d78caa72a738901294ee
   RNScreens: 9569f60a48170e4e3e797eb887af1609a7583442
-  RNSVG: f21bef0d41b6495cdd8db5cb010b18bee378152c
+  RNSVG: 0e52210d4d43165e7e2cf9c890a9848b27e513ac
   RNWorklets: a6ebd7b1ae53f150d747986d70bfc34932d7ffb4
   UMAppLoader: b7d22886a244871c20b5a8f2fcea13c18534e677
   Yoga: 04bb4bfeb02c0000b940c1e6e89e856cd8de5a71

@@ -59,16 +59,15 @@ export function StartupSyncGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let drainInFlight = false;
-    const drainAndRefresh = async () => {
+    const drainAndPull = async () => {
       if (drainInFlight) return;
       drainInFlight = true;
       try {
         await GitHubService.initialize();
         if (!GitHubService.isAuthenticated()) return;
-        const result = await NoteSyncQueueService.drain();
-        if (result.succeeded > 0) {
-          await refreshNotes();
-        }
+        // First drain pending local changes (push), then pull remote changes.
+        await NoteSyncQueueService.drain();
+        await pullAllFromRepos();
       } catch (error) {
         console.warn('[SyncDrain] Failed:', error);
       } finally {
@@ -76,9 +75,9 @@ export function StartupSyncGate({ children }: { children: React.ReactNode }) {
       }
     };
 
-    drainAndRefresh();
+    drainAndPull();
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') drainAndRefresh();
+      if (state === 'active') drainAndPull();
     });
     return () => sub.remove();
   }, [refreshNotes]);

@@ -203,12 +203,13 @@ const styles = StyleSheet.create({
   },
   tagsContainer: {
     flexDirection: 'row',
-    gap: 4,
+    marginTop: 6,
+    gap: 6,
   },
   tagBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
   },
   tagText: {
     fontSize: 11,

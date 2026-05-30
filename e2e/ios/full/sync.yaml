@@ -1,0 +1,28 @@
+appId: com.xaventra.gitnotes
+name: iOS - Sync Flow
+tags:
+  - full
+  - ios
+  - sync
+---
+
+- launchApp:
+    clearState: false
+
+- tapOn:
+    id: tab-bar.tab.press-NotesTab
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+- assertVisible:
+    id: notes-list.icon-button.sync
+
+- tapOn:
+    id: notes-list.icon-button.sync
+
+- waitForAnimationToEnd:
+    timeout: 3000
+
+- assertVisible:
+    id: notes-list.icon-button.sync
