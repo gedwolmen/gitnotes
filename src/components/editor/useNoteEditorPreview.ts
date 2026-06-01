@@ -158,16 +158,17 @@ export function useNoteEditorPreview({
     }
 
     // Last-chance basename match for links written without a folder prefix.
+    // Case-insensitive to handle [[Other Note]] matching other-note.md
     if (!targetNote) {
-      const basename = normalizedTargetPath.split('/').pop() ?? '';
-      if (basename) {
+      const basenameLower = normalizedTargetPath.split('/').pop()?.toLowerCase() ?? '';
+      if (basenameLower) {
         targetNote = notes.find((note) => {
           const fp = note.filePath;
           if (!fp) return false;
           const filename = fp.split('/').pop() ?? '';
-          if (filename === basename) return true;
-          const filenameNoExt = filename.replace(/\.[^.]+$/, '');
-          return filenameNoExt === basename;
+          if (filename.toLowerCase() === basenameLower) return true;
+          const filenameNoExt = filename.replace(/\.[^.]+$/, '').toLowerCase();
+          return filenameNoExt === basenameLower;
         });
       }
     }
