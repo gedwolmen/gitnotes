@@ -6,9 +6,8 @@ import { useGitHubActivityStore } from '../stores/githubActivityStore';
 
 export function GitHubActivityIndicator() {
   const { colors, radii, spacing, type } = useTokens();
-  const inflight = useGitHubActivityStore((s) => s.inflight);
+  const visible = useGitHubActivityStore((s) => s.visible);
   const label = useGitHubActivityStore((s) => s.label);
-  const visible = inflight > 0;
 
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(-12)).current;
