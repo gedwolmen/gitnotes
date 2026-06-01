@@ -178,7 +178,10 @@ export default function HomeScreen() {
             ]}
           >
             <View style={styles.bentoHeroBadge}>
-              <Ionicons name="add" size={18} color={colors.primary} />
+              <Ionicons name="document-text" size={18} color={colors.primary} />
+            </View>
+            <View style={[styles.bentoHeroBgIcon, { top: -50, right: -50, opacity: 0.3 }]}>
+              <Ionicons name="document-text" size={120} color="#FFFFFF" />
             </View>
             <View style={styles.bentoHeroContent}>
               <Text style={styles.bentoHeroTitle}>New Note</Text>
@@ -196,6 +199,9 @@ export default function HomeScreen() {
           >
             <View style={styles.bentoHeroBadge}>
               <Ionicons name="journal-outline" size={18} color={colors.primary} />
+            </View>
+            <View style={[styles.bentoHeroBgIcon, { top: -50, right: -50, opacity: 0.3 }]}>
+              <Ionicons name="journal-outline" size={120} color="#FFFFFF" />
             </View>
             <View style={styles.bentoHeroContent}>
               <Text style={styles.bentoHeroTitle} numberOfLines={1}>
@@ -324,6 +330,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  bentoHeroBgIcon: {
+    position: 'absolute',
   },
   bentoHeroContent: {
     gap: 4,

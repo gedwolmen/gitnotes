@@ -55,6 +55,7 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
 
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
+  const [description, setDescription] = useState('');
   const [selectedDays, setSelectedDays] = useState<DayOfWeek[]>(['monday']);
   const [selectedTime, setSelectedTime] = useState(new Date());
   const [selectedModel, setSelectedModel] = useState<string | null>(selectedModelId);
@@ -67,6 +68,7 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
   const resetForm = useCallback(() => {
     setTags([]);
     setTagInput('');
+    setDescription('');
     setSelectedDays(['monday']);
     setSelectedTime(new Date());
     setSelectedModel(selectedModelId);
@@ -122,6 +124,7 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
 
     await createItem({
       tags,
+      description,
       daysOfWeek: selectedDays,
       time: timeStr,
       modelId: selectedModel,
@@ -135,6 +138,7 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
     setShowAddModal(false);
   }, [
     tags,
+    description,
     selectedDays,
     selectedTime,
     selectedModel,
@@ -195,12 +199,13 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
   const localStyles = StyleSheet.create({
     sectionTitle: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
     inputLabel: { fontSize: 14, fontWeight: '500', color: colors.text, marginBottom: 8 },
-    tagInputContainer: { borderWidth: 1, borderRadius: 8, padding: 12 },
-    tagChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary + '20', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 16, marginRight: 6, gap: 4 },
-    tagChipText: { fontSize: 13, fontWeight: '500' },
-    tagInputRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
-    tagTextInput: { flex: 1, fontSize: 14, padding: 0 },
-    addTagButton: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
+    tagInputRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    tagTextInput: { flex: 1, fontSize: 14, padding: 10, borderWidth: 1, borderRadius: 8 },
+    tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
+    tagChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary + '20', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 16, gap: 4 },
+    tagChipText: { fontSize: 13, fontWeight: '500', color: colors.primary },
+    addTagButton: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
+    descriptionInput: { fontSize: 14, padding: 10, borderWidth: 1, borderRadius: 8, minHeight: 80, textAlignVertical: 'top' },
     pickerButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, borderWidth: 1, borderRadius: 8 },
     pickerButtonText: { fontSize: 15 },
     daysRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 6 },
@@ -296,9 +301,32 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
             </TouchableOpacity>
           </View>
 
-          <Text style={localStyles.inputLabel}>Tags (topics to learn)</Text>
-          <View style={localStyles.tagInputContainer}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, marginBottom: tags.length > 0 ? 8 : 0 }}>
+          <Text style={localStyles.inputLabel}>Tags</Text>
+          <View style={localStyles.tagInputRow}>
+            <TextInput
+              style={[localStyles.tagTextInput, { color: colors.text, backgroundColor: colors.surface, borderColor: colors.border }]}
+              value={tagInput}
+              onChangeText={setTagInput}
+              placeholder="Add tag..."
+              placeholderTextColor={colors.textSecondary}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <TouchableOpacity
+              onPress={() => {
+                const trimmed = tagInput.trim().toLowerCase();
+                if (trimmed && !tags.includes(trimmed)) {
+                  setTags([...tags, trimmed]);
+                }
+                setTagInput('');
+              }}
+              style={localStyles.addTagButton}
+            >
+              <Ionicons name="add" size={18} color="#fff" />
+            </TouchableOpacity>
+          </View>
+          {tags.length > 0 && (
+            <View style={localStyles.tagsRow}>
               {tags.map((tag) => (
                 <TouchableOpacity
                   key={tag}
@@ -309,36 +337,19 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
                   <Ionicons name="close-circle" size={14} color={colors.primary} />
                 </TouchableOpacity>
               ))}
-            </ScrollView>
-            <View style={localStyles.tagInputRow}>
-              <TextInput
-                style={[localStyles.tagTextInput, { color: colors.text }]}
-                value={tagInput}
-                onChangeText={setTagInput}
-                onSubmitEditing={() => {
-                  if (tagInput.trim()) {
-                    setTags([...tags, tagInput.trim().toLowerCase()]);
-                    setTagInput('');
-                  }
-                }}
-                placeholder="Add tag..."
-                placeholderTextColor={colors.textSecondary}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              <TouchableOpacity
-                onPress={() => {
-                  if (tagInput.trim()) {
-                    setTags([...tags, tagInput.trim().toLowerCase()]);
-                    setTagInput('');
-                  }
-                }}
-                style={localStyles.addTagButton}
-              >
-                <Ionicons name="add" size={18} color="#fff" />
-              </TouchableOpacity>
             </View>
-          </View>
+          )}
+
+          <Text style={[localStyles.inputLabel, { marginTop: 16 }]}>Description (optional context)</Text>
+          <TextInput
+            style={[localStyles.descriptionInput, { color: colors.text, backgroundColor: colors.surface, borderColor: colors.border }]}
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Add more context for the AI..."
+            placeholderTextColor={colors.textSecondary}
+            multiline
+            numberOfLines={3}
+          />
 
           <Text style={[localStyles.inputLabel, { marginTop: 16 }]}>Days</Text>
           <View style={localStyles.daysRow}>

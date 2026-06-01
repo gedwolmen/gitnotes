@@ -63,10 +63,11 @@ export class ScheduledLearningService {
 
       const tagsText = item.tags.join(', ');
       const wordCount = item.wordCount;
+      const descriptionText = item.description ? `\n\nAdditional context: ${item.description}` : '';
 
       const systemPrompt = `You are an educational content generator. Create a well-structured learning note about the topic(s) provided. The note should be informative, educational, and engaging. Format with markdown. Include examples where helpful.`;
 
-      const userPrompt = `Create a learning note about: ${tagsText}\n\nRequirements:\n- Approximately ${wordCount} words\n- Well-structured with sections/headings\n- Educational and informative tone\n- Include practical examples if relevant`;
+      const userPrompt = `Create a learning note about: ${tagsText}${descriptionText}\n\nRequirements:\n- Approximately ${wordCount} words\n- Well-structured with sections/headings\n- Educational and informative tone\n- Include practical examples if relevant`;
 
       const result = await generateText({
         model,

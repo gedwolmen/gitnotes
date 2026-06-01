@@ -23,6 +23,7 @@ export const WORD_COUNT_OPTIONS = [
 export interface ScheduledLearningItem {
   id: string;
   tags: string[];
+  description: string;
   daysOfWeek: DayOfWeek[];
   time: string;
   modelId: string | null;
@@ -38,6 +39,7 @@ export interface ScheduledLearningItem {
 
 export interface ScheduledLearningCreateInput {
   tags: string[];
+  description?: string;
   daysOfWeek: DayOfWeek[];
   time: string;
   modelId?: string | null;
@@ -52,6 +54,7 @@ export function createScheduledLearningItem(input: ScheduledLearningCreateInput)
   return {
     id: generateId(),
     tags: input.tags,
+    description: input.description ?? '',
     daysOfWeek: input.daysOfWeek,
     time: input.time,
     modelId: input.modelId ?? null,
