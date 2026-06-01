@@ -93,6 +93,7 @@ export default function ChatScreen() {
             ref={flatListRef}
             data={messages}
             keyExtractor={(item) => item.id}
+            extraData={isStreaming}
             onLayout={(event) => {
               listViewportHeightRef.current = event.nativeEvent.layout.height;
             }}

@@ -59,29 +59,8 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
   const colorScheme = useColorScheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const [dotStep, setDotStep] = useState(0);
   const [thoughtExpanded, setThoughtExpanded] = useState(false);
   const [toolCallExpanded, setToolCallExpanded] = useState(false);
-
-  // Detect tool calls that touch a single note (`create_note` / `edit_note` /
-  // `get_note`). For these, we show a tappable link to open the note.
-  // All other tool calls show a collapsible JSON preview.
-  const noteToolResult = useMemo(() => {
-    if (!message.toolCallName) return null;
-    if (!['create_note', 'edit_note', 'get_note'].includes(message.toolCallName)) return null;
-    return parseNoteToolResult(message.toolCallResult);
-  }, [message.toolCallName, message.toolCallResult]);
-
-  useEffect(() => {
-    if (!isStreaming) {
-      setDotStep(0);
-      return;
-    }
-    const interval = setInterval(() => {
-      setDotStep((s) => (s + 1) % 4);
-    }, 400);
-    return () => clearInterval(interval);
-  }, [isStreaming]);
 
   useEffect(() => {
     setThoughtExpanded(false);
@@ -93,7 +72,13 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
   const isUser = message.role === 'user';
   const textColor = isUser ? '#ffffff' : colors.text;
   const toolCallLabel = formatToolCallLabel(message.toolCallName);
+  const noteToolResult = useMemo(() => {
+    if (!message.toolCallName) return null;
+    if (!['create_note', 'edit_note', 'get_note'].includes(message.toolCallName)) return null;
+    return parseNoteToolResult(message.toolCallResult);
+  }, [message.toolCallName, message.toolCallResult]);
   const canExpandToolResult = Boolean(message.toolCallResult);
+
   const { thought: thoughtContent, visible: visibleContent } = useMemo(
     () => parseThoughtContent(message.content),
     [message.content],
@@ -157,7 +142,7 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
               height: 6,
               borderRadius: 3,
               backgroundColor: colors.textSecondary,
-              opacity: dotStep === i + 1 || dotStep === 0 ? 1 : 0.3,
+              opacity: 0.7,
               marginRight: i < 2 ? 4 : 0,
             }}
           />
@@ -246,7 +231,7 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
                           height: 4,
                           borderRadius: 2,
                           backgroundColor: colors.primary,
-                          opacity: dotStep === i + 1 || dotStep === 0 ? 0.9 : 0.3,
+                          opacity: 0.9,
                           marginRight: i < 2 ? 3 : 0,
                         }}
                       />
