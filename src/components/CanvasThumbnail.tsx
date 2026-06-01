@@ -269,7 +269,7 @@ export default function CanvasThumbnail({ scene, width, height, background }: Ca
     <View style={[styles.wrap, { width, height }]} pointerEvents="none">
       <SkiaCanvas style={{ width, height }}>
         <Fill color={fillColor} />
-        <Group transform={[{ scale }]}>
+        <Group transform={[{ translateX: width / 2 }, { translateY: height / 2 }, { scale }, { translateX: -sceneWidth / 2 }, { translateY: -sceneHeight / 2 }]}>
           {elements.map(renderElement)}
         </Group>
       </SkiaCanvas>

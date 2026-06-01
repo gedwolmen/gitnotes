@@ -338,14 +338,22 @@ export default function CanvasEditorContent() {
   );
 
   useEffect(() => {
-    if (!canvasSize || !shouldAutoFitRef.current || didAutoFitRef.current || !contentBounds) return;
+    if (!canvasSize || didAutoFitRef.current) return;
 
-    const next = getCanvasFitTranslation(contentBounds, canvasSize.width, canvasSize.height, 1);
-    scale.value = withSpring(1, { mass: 0.5, damping: 14, stiffness: 200 });
-    translateX.value = withSpring(next.translateX, { mass: 0.5, damping: 14, stiffness: 200 });
-    translateY.value = withSpring(next.translateY, { mass: 0.5, damping: 14, stiffness: 200 });
-    didAutoFitRef.current = true;
-  }, [canvasSize, contentBounds, scale, translateX, translateY]);
+    if (shouldAutoFitRef.current && contentBounds) {
+      const next = getCanvasFitTranslation(contentBounds, canvasSize.width, canvasSize.height, 1);
+      scale.value = withSpring(1, { mass: 0.5, damping: 14, stiffness: 200 });
+      translateX.value = withSpring(next.translateX, { mass: 0.5, damping: 14, stiffness: 200 });
+      translateY.value = withSpring(next.translateY, { mass: 0.5, damping: 14, stiffness: 200 });
+      didAutoFitRef.current = true;
+    } else if (!canvasId) {
+      const cw = route.params.canvasWidth ?? 800;
+      const ch = route.params.canvasHeight ?? 600;
+      translateX.value = withSpring((canvasSize.width - cw) / 2, { mass: 0.5, damping: 14, stiffness: 200 });
+      translateY.value = withSpring((canvasSize.height - ch) / 2, { mass: 0.5, damping: 14, stiffness: 200 });
+      didAutoFitRef.current = true;
+    }
+  }, [canvasSize, contentBounds, scale, translateX, translateY, canvasId, route.params.canvasWidth, route.params.canvasHeight]);
 
   const saveHistory = useCallback(() => {
     setHistory((prev) => {
@@ -1019,24 +1027,24 @@ export default function CanvasEditorContent() {
             );
           })}
           <TouchableOpacity testID="canvas-editor.toolbar.set-filled" style={[styles.toolBtn, filled && styles.toolBtnActive]} onPress={() => setFilled(!filled)}>
-            <Text style={[styles.toolBtnLabel, { color: filled ? colors.primary : colors.text }]}>{filled ? '▣' : '□'}</Text>
+            <Text style={[styles.toolBtnLabel, { color: filled ? colors.primary : colors.text }]}>{filled ? '[X]' : '[ ]'}</Text>
           </TouchableOpacity>
           <View style={styles.separator} />
           <TouchableOpacity testID="canvas-editor.toolbar.undo" style={styles.toolBtn} onPress={undo}>
-            <Text style={[styles.toolBtnLabel, { color: colors.text }]}>↩</Text>
+            <Ionicons name="arrow-undo" size={20} color={colors.text} />
           </TouchableOpacity>
           <TouchableOpacity testID="canvas-editor.toolbar.clear-all" style={styles.toolBtn} onPress={clearAll}>
             <Ionicons name="trash-outline" size={20} color={colors.text} />
           </TouchableOpacity>
           <View style={styles.separator} />
           <TouchableOpacity testID="canvas-editor.toolbar.zoom-out" style={styles.toolBtn} onPress={() => setZoom(scale.value - 0.25)}>
-            <Text style={[styles.toolBtnLabel, { color: colors.text }]}>−</Text>
+            <Text style={[styles.toolBtnLabel, { color: colors.text }]}>-</Text>
           </TouchableOpacity>
           <TouchableOpacity testID="canvas-editor.toolbar.zoom-in" style={styles.toolBtn} onPress={() => setZoom(scale.value + 0.25)}>
             <Text style={[styles.toolBtnLabel, { color: colors.text }]}>+</Text>
           </TouchableOpacity>
           <TouchableOpacity testID="canvas-editor.toolbar.reset-view" style={styles.toolBtn} onPress={resetView}>
-            <Text style={[styles.toolBtnLabel, { color: colors.text }]}>⟲</Text>
+            <Ionicons name="refresh" size={20} color={colors.text} />
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -1228,7 +1236,7 @@ const makeStyles = (colors: StyleColors) => StyleSheet.create({
     color: colors.text,
     backgroundColor: colors.surface,
   },
-  canvasPane: { flex: 1, overflow: 'hidden', backgroundColor: '#FFFFFF' },
+  canvasPane: { flex: 1, overflow: 'hidden', backgroundColor: '#E5E5E5' },
   gitContextContainer: { paddingHorizontal: 16, paddingVertical: 8 },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' },
   modalCard: { width: 300, padding: 16, backgroundColor: colors.surface, borderRadius: 12 },

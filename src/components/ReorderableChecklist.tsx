@@ -231,11 +231,11 @@ const ChecklistRow = memo(function ChecklistRow({
       />
 
       <GestureDetector gesture={gesture}>
-        <Animated.View style={styles.dragHandleWrap}>
-          <TouchableOpacity testID="reorderable-checklist.drag-handle.drag" accessibilityLabel={`Drag checklist item ${index + 1}`} activeOpacity={0.8} style={{ paddingHorizontal: spacing[1], paddingVertical: spacing[2] }}>
-            <Text style={{ color: colors.textSecondary, fontSize: type.lg, fontWeight: '600' }}>≡</Text>
-          </TouchableOpacity>
-        </Animated.View>
+        <View style={styles.dragHandleWrap}>
+          <View testID="reorderable-checklist.drag-handle.drag" accessibilityLabel={`Drag checklist item ${index + 1}`} style={{ paddingHorizontal: spacing[1], paddingVertical: spacing[2] }}>
+            <Text style={{ color: colors.textSecondary, fontSize: type.lg, fontWeight: '600' }}>=</Text>
+          </View>
+        </View>
       </GestureDetector>
 
       <TouchableOpacity

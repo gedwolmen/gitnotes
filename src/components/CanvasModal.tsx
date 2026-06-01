@@ -498,11 +498,11 @@ export default function CanvasModal({ visible, onSave, onClose, editJsonUri }: C
               </TouchableOpacity>
             ))}
             <TouchableOpacity style={[styles.toolBtn, filled && styles.toolBtnActive]} onPress={() => setFilled(!filled)}>
-              <Text style={styles.toolBtnLabel}>{filled ? '▣' : '□'}</Text>
+              <Text style={styles.toolBtnLabel}>{filled ? '[X]' : '[ ]'}</Text>
             </TouchableOpacity>
             <View style={styles.separator} />
             <TouchableOpacity style={styles.toolBtn} onPress={undo}>
-              <Text style={styles.toolBtnLabel}>↩</Text>
+              <Ionicons name="arrow-undo" size={20} color={color} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.toolBtn} onPress={clearAll}>
               <Ionicons name="trash-outline" size={20} color={color} />

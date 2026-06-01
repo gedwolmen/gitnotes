@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,6 +27,8 @@ export default function ChatScreen() {
   const headerHeight = useScreenHeaderHeight({ subtitle: true });
   const { threadId } = route.params;
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
+  const listViewportHeightRef = useRef(0);
+  const listContentHeightRef = useRef(0);
 
   const {
     attachedContexts,
@@ -65,10 +67,17 @@ export default function ChatScreen() {
     return { activeModel: undefined, activeProvider: undefined };
   }, [selectedModelId, providers]);
 
-  useEffect(() => {
+  const maybeScrollToBottom = useCallback((animated: boolean) => {
     if (!messages.length) return;
-    requestAnimationFrame(() => flatListRef.current?.scrollToEnd({ animated: true }));
-  }, [messages.length, isStreaming]);
+    const viewportHeight = listViewportHeightRef.current;
+    const contentHeight = listContentHeightRef.current;
+    if (viewportHeight <= 0 || contentHeight <= viewportHeight) return;
+    requestAnimationFrame(() => flatListRef.current?.scrollToEnd({ animated }));
+  }, [messages.length]);
+
+  useEffect(() => {
+    maybeScrollToBottom(true);
+  }, [messages.length, isStreaming, maybeScrollToBottom]);
 
   const errorMessage = localError || storeError;
 
@@ -84,13 +93,19 @@ export default function ChatScreen() {
             ref={flatListRef}
             data={messages}
             keyExtractor={(item) => item.id}
+            onLayout={(event) => {
+              listViewportHeightRef.current = event.nativeEvent.layout.height;
+            }}
+            onContentSizeChange={(_, contentHeight) => {
+              listContentHeightRef.current = contentHeight;
+            }}
             contentContainerStyle={{
               paddingTop: headerHeight,
               paddingHorizontal: spacing[4],
               paddingBottom: spacing[4],
-              gap: spacing[1],
-              flexGrow: messages.length === 0 ? 1 : 0,
+              flexGrow: messages.length === 0 ? 1 : undefined,
             }}
+            ItemSeparatorComponent={() => <View style={{ height: spacing[1] }} />}
             renderItem={({ item }) => (
               <ChatMessageBubble
                 message={item}
@@ -98,7 +113,6 @@ export default function ChatScreen() {
                 onLongPress={handleMessageLongPress}
               />
             )}
-            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
             ListEmptyComponent={
               <View style={[styles.emptyState, { padding: spacing[6] }]}> 
                 <Text style={{ color: colors.text, fontSize: type.xl, fontWeight: '700', marginBottom: spacing[2] }}>Start the conversation</Text>
