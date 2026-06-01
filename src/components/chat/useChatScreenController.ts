@@ -22,12 +22,114 @@ import {
   decodeOverEscapedChunk,
   dedupeContexts,
   formatExecutorResult,
+  formatToolResult,
   formatHistoryMessage,
   parseToolArgs,
   parseToolEvent,
   type PendingConfirmation,
   type RetryPayload,
 } from './chatScreenShared';
+
+type ToolListItem = {
+  title?: string;
+  text?: string;
+  completed?: boolean;
+};
+
+const KNOWN_TOOL_NAMES = new Set(Object.keys(chatTools));
+
+function sanitizeToolName(raw: string | undefined): string | null {
+  const trimmed = raw?.trim();
+  if (!trimmed) return null;
+  if (KNOWN_TOOL_NAMES.has(trimmed)) return trimmed;
+  const colonIdx = trimmed.indexOf(':');
+  if (colonIdx > 0) {
+    const prefix = trimmed.slice(0, colonIdx).trim();
+    if (KNOWN_TOOL_NAMES.has(prefix)) return prefix;
+  }
+  return null;
+}
+
+function parseToolListItems(raw: string): ToolListItem[] | null {
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    return parsed.filter((item): item is ToolListItem => !!item && typeof item === 'object');
+  } catch {
+    return null;
+  }
+}
+
+function formatBulletList(items: string[], noun: string): string {
+  if (items.length === 0) return `No ${noun} found.`;
+  const visibleItems = items.slice(0, 8);
+  const extraCount = items.length - visibleItems.length;
+  return [
+    `Found ${items.length} ${noun}:`,
+    ...visibleItems.map((item) => `- ${item}`),
+    ...(extraCount > 0 ? [`- and ${extraCount} more`] : []),
+  ].join('\n');
+}
+
+function buildFallbackToolResponse(toolName: string, rawResult: string): string | null {
+  if (!rawResult.trim()) return null;
+  if (toolName === 'search_notes') {
+    const items = parseToolListItems(rawResult);
+    if (!items) return null;
+    return formatBulletList(
+      items.map((item) => item.title?.trim()).filter((item): item is string => !!item),
+      'notes',
+    );
+  }
+  if (toolName === 'search_todos' || toolName === 'get_todos') {
+    const items = parseToolListItems(rawResult);
+    if (!items) return null;
+    return formatBulletList(
+      items
+        .map((item) => {
+          const label = item.text?.trim();
+          if (!label) return null;
+          return item.completed ? `${label} (done)` : label;
+        })
+        .filter((item): item is string => !!item),
+      'todos',
+    );
+  }
+  return null;
+}
+
+function hasMeaningfulAssistantText(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  const normalized = trimmed.toLowerCase();
+  return normalized !== 'show' && normalized !== 'hide';
+}
+
+function mergeAssistantWithToolFallback(
+  assistantText: string,
+  fallbackToolText: string,
+  handledToolCount: number,
+): string {
+  const assistant = assistantText.trim();
+  const fallback = fallbackToolText.trim();
+  const assistantIsMeaningful = hasMeaningfulAssistantText(assistant);
+
+  if (!fallback) {
+    if (assistantIsMeaningful) return assistant;
+    return assistant || 'Done.';
+  }
+
+  if (handledToolCount <= 0) {
+    return assistantIsMeaningful ? assistant : fallback;
+  }
+
+  if (!assistantIsMeaningful) return fallback;
+
+  // Keep the model's narrative text, but always include concrete tool output
+  // when tools actually ran so the user sees a usable final answer.
+  if (assistant.includes(fallback)) return assistant;
+  return `${assistant}\n\n${fallback}`;
+}
 
 export function useChatScreenController(threadId: string) {
   const noteCount = useNoteStore((state) => state.notes.length);
@@ -84,35 +186,33 @@ export function useChatScreenController(threadId: string) {
     args: Record<string, unknown>,
     options?: { allowConfirmation?: boolean; messageId?: string },
   ) => {
-    const mode = useAIStore.getState().actionMode;
-    const effectiveMode = options?.allowConfirmation === false ? 'auto' : mode;
-    const result = await executeToolCall(toolName, args, effectiveMode);
-    const resultText = formatExecutorResult(result);
+    try {
+      const mode = useAIStore.getState().actionMode;
+      const effectiveMode = options?.allowConfirmation === false ? 'auto' : mode;
+      const result = await executeToolCall(toolName, args, effectiveMode);
+      const resultText = formatExecutorResult(result);
 
-    if (options?.messageId) updateMessage(options.messageId, { toolCallResult: resultText });
+      if (options?.messageId) updateMessage(options.messageId, { toolCallResult: resultText });
 
-    if (result.requiresConfirmation && result.proposedChanges && options?.messageId) {
-      setPendingConfirmation({ toolName, args, description: result.proposedChanges.description, details: result.proposedChanges.details, messageId: options.messageId });
-    }
+      if (result.requiresConfirmation && result.proposedChanges && options?.messageId) {
+        setPendingConfirmation({ toolName, args, description: result.proposedChanges.description, details: result.proposedChanges.details, messageId: options.messageId });
+      }
 
-    if (!result.requiresConfirmation) {
-      // For note-shaped tool results the tool-call bubble already shows a
-      // tappable "Open note" link — adding a verbose `Tool result: {...}`
-      // system line below just repeats the same info and dumps the full
-      // Note JSON into the chat.
-      const isNoteShapedResult =
-        result.success
-        && typeof result.data === 'object'
-        && result.data !== null
-        && 'noteId' in (result.data as Record<string, unknown>);
-      if (!isNoteShapedResult) {
-        addMessage({ id: generateId(), role: 'system', content: result.success ? `Tool result: ${resultText}` : `Tool error: ${resultText}`, timestamp: Date.now() });
-      } else if (!result.success) {
+      if (!result.requiresConfirmation && !result.success) {
         addMessage({ id: generateId(), role: 'system', content: `Tool error: ${resultText}`, timestamp: Date.now() });
       }
-    }
 
-    return result;
+      return result;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Tool execution failed.';
+      if (options?.messageId) updateMessage(options.messageId, { toolCallResult: message });
+      addMessage({ id: generateId(), role: 'system', content: `Tool error: ${message}`, timestamp: Date.now() });
+      return {
+        success: false,
+        error: message,
+        requiresConfirmation: false,
+      };
+    }
   }, [addMessage, updateMessage]);
 
   const streamAssistantResponse = useCallback(async (text: string, contexts: AIContextItem[]) => {
@@ -141,6 +241,7 @@ export function useChatScreenController(threadId: string) {
     let handledToolCount = 0;
     let pausedForConfirmation = false;
     let pendingFlush: ReturnType<typeof setTimeout> | null = null;
+    const fallbackToolResponses: string[] = [];
 
     const flushAssistantText = () => {
       pendingFlush = null;
@@ -180,7 +281,9 @@ export function useChatScreenController(threadId: string) {
           // "create_note…" appear; otherwise nothing renders until the
           // model finishes streaming the args and the tool actually runs.
           toolArgsBufferRef.current[toolCallId] = existingArgs;
-          if (!toolMessageIdsRef.current[toolCallId] && toolEvent.toolName) {
+          if (!toolMessageIdsRef.current[toolCallId]) {
+            const streamingToolName = sanitizeToolName(toolEvent.toolName);
+            if (!streamingToolName) continue;
             const streamingMessageId = generateId();
             toolMessageIdsRef.current[toolCallId] = streamingMessageId;
             addMessage({
@@ -189,7 +292,7 @@ export function useChatScreenController(threadId: string) {
               content: '',
               timestamp: Date.now(),
               toolCallId,
-              toolCallName: toolEvent.toolName,
+              toolCallName: streamingToolName,
               toolCallArgs: {},
             });
             // Flush any pending assistant text so the new bubble lands
@@ -205,7 +308,25 @@ export function useChatScreenController(threadId: string) {
           toolArgsBufferRef.current[toolCallId] = existingArgs + (toolEvent.argsTextDelta ?? '');
           continue;
         }
-        if (toolEvent.type === 'tool-result' || !toolEvent.toolName) continue;
+        if (toolEvent.type === 'tool-result') {
+          const streamedResultText = formatToolResult(toolEvent.result);
+          const existingToolMessageId = toolMessageIdsRef.current[toolCallId];
+          if (existingToolMessageId) {
+            const eventToolName = sanitizeToolName(toolEvent.toolName);
+            updateMessage(existingToolMessageId, {
+              ...(eventToolName ? { toolCallName: eventToolName } : null),
+              toolCallResult: streamedResultText,
+            });
+            const fallbackToolResponse = eventToolName
+              ? buildFallbackToolResponse(eventToolName, streamedResultText)
+              : null;
+            if (fallbackToolResponse) fallbackToolResponses.push(fallbackToolResponse);
+          }
+          continue;
+        }
+
+        const resolvedToolName = sanitizeToolName(toolEvent.toolName);
+        if (!resolvedToolName) continue;
 
         const args = parseToolArgs(toolEvent.input, toolArgsBufferRef.current[toolCallId]);
         // Re-use the streaming bubble if we already showed one, otherwise
@@ -214,12 +335,15 @@ export function useChatScreenController(threadId: string) {
         const toolMessageId = toolMessageIdsRef.current[toolCallId] ?? generateId();
         if (!toolMessageIdsRef.current[toolCallId]) {
           toolMessageIdsRef.current[toolCallId] = toolMessageId;
-          addMessage({ id: toolMessageId, role: 'assistant', content: '', timestamp: Date.now(), toolCallId, toolCallName: toolEvent.toolName, toolCallArgs: args });
+          addMessage({ id: toolMessageId, role: 'assistant', content: '', timestamp: Date.now(), toolCallId, toolCallName: resolvedToolName, toolCallArgs: args });
         } else {
-          updateMessage(toolMessageId, { toolCallArgs: args });
+          updateMessage(toolMessageId, { toolCallName: resolvedToolName, toolCallArgs: args });
         }
         handledToolCount += 1;
-        const result = await runToolCall(toolEvent.toolName, args, { messageId: toolMessageId });
+        const result = await runToolCall(resolvedToolName, args, { messageId: toolMessageId });
+        const resultText = formatExecutorResult(result);
+        const fallbackToolResponse = buildFallbackToolResponse(resolvedToolName, resultText);
+        if (fallbackToolResponse) fallbackToolResponses.push(fallbackToolResponse);
         delete toolArgsBufferRef.current[toolCallId];
         delete toolMessageIdsRef.current[toolCallId];
         if (result.requiresConfirmation) {
@@ -233,6 +357,7 @@ export function useChatScreenController(threadId: string) {
       if (abortController.signal.aborted) {
         updateMessage(assistantMessageId, { content: assistantText || 'Stopped.' });
       } else if (!assistantText.trim() && !pausedForConfirmation) {
+        const fallbackToolText = fallbackToolResponses.join('\n\n').trim();
         // Stream finished with no text. If the model invoked tools the
         // tool bubbles carry the actual output — keep this bubble as
         // "Done." Otherwise the model really did return nothing
@@ -241,13 +366,16 @@ export function useChatScreenController(threadId: string) {
         // button appears instead of leaving the user staring at a
         // dead-end "No response received." bubble.
         if (handledToolCount > 0) {
-          updateMessage(assistantMessageId, { content: 'Done.' });
+          assistantText = fallbackToolText || 'Done.';
+          updateMessage(assistantMessageId, { content: assistantText });
         } else {
           updateMessage(assistantMessageId, { content: 'No response received. Tap Retry to try again.' });
           setLocalError('The model returned an empty response.');
         }
       } else {
-        updateMessage(assistantMessageId, { content: assistantText });
+        const fallbackToolText = fallbackToolResponses.join('\n\n').trim();
+        const nextContent = mergeAssistantWithToolFallback(assistantText, fallbackToolText, handledToolCount);
+        updateMessage(assistantMessageId, { content: nextContent });
       }
 
       await saveActiveThread();
@@ -274,25 +402,11 @@ export function useChatScreenController(threadId: string) {
             : error instanceof Error
               ? error.message
               : 'Failed to send message.';
-        // Error text belongs in the banner only — keep the assistant bubble
-        // for real model output. If the stream produced any text before
-        // failing, preserve it in the bubble; otherwise drop the empty
-        // placeholder so the banner isn't duplicated as a grey reply.
-        if (assistantText.trim()) {
-          updateMessage(assistantMessageId, { content: assistantText });
-          await saveActiveThread();
-
-          const latest = useChatStore.getState().activeThread;
-          if (latest && latest.title === 'New Chat') {
-            // Use the first user message as the title instead of calling the LLM
-            // to avoid 404 errors from providers like MiniMax that may not support generateText
-            const firstLine = userMessage.content.trim().split('\n')[0].slice(0, 50);
-            const simpleTitle = firstLine.replace(/[^\w\s]/g, '').trim() || 'New Chat';
-            if (simpleTitle && simpleTitle !== 'New Chat') {
-              renameThread({ threadId: latest.id, title: simpleTitle });
-              await saveActiveThread();
-            }
-          }
+        const fallbackToolText = fallbackToolResponses.join('\n\n').trim();
+        if (hasMeaningfulAssistantText(assistantText) || handledToolCount > 0 || fallbackToolText) {
+          const nextContent = mergeAssistantWithToolFallback(assistantText, fallbackToolText, handledToolCount);
+          updateMessage(assistantMessageId, { content: nextContent });
+          console.warn('[ChatScreen] stream finished with visible output but failed while persisting or post-processing:', message);
         } else {
           removeMessage(assistantMessageId);
           setLocalError(message);

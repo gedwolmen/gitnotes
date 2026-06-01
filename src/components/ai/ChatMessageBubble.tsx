@@ -13,6 +13,7 @@ import type { RootStackParamList } from '../../navigation/types';
 import { parseThoughtContent } from '../../utils/chatThoughts';
 
 type NoteToolResult = { noteId: string; title?: string };
+const COLLAPSIBLE_HEADER_HEIGHT = 44;
 
 function parseNoteToolResult(raw: string | undefined): NoteToolResult | null {
   if (!raw) return null;
@@ -25,6 +26,25 @@ function parseNoteToolResult(raw: string | undefined): NoteToolResult | null {
     return null;
   }
   return null;
+}
+
+function formatToolCallLabel(raw: string | undefined): string {
+  const trimmed = raw?.trim();
+  if (!trimmed) return 'Tool call';
+  const printable = [...trimmed]
+    .map((char) => {
+      const code = char.charCodeAt(0);
+      return code < 32 || code === 127 ? ' ' : char;
+    })
+    .join('')
+    .trim();
+  if (!printable) return 'Tool call';
+  const normalized = printable
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!normalized) return 'Tool call';
+  return normalized.replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 export interface ChatMessageBubbleProps {
@@ -41,10 +61,11 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
 
   const [dotStep, setDotStep] = useState(0);
   const [thoughtExpanded, setThoughtExpanded] = useState(false);
+  const [toolCallExpanded, setToolCallExpanded] = useState(false);
 
   // Detect tool calls that touch a single note (`create_note` / `edit_note` /
-  // `get_note`). The previous render dumped the full Note JSON into the chat;
-  // now we collapse it to a tappable link that opens the note in the editor.
+  // `get_note`). For these, we show a tappable link to open the note.
+  // All other tool calls show a collapsible JSON preview.
   const noteToolResult = useMemo(() => {
     if (!message.toolCallName) return null;
     if (!['create_note', 'edit_note', 'get_note'].includes(message.toolCallName)) return null;
@@ -64,12 +85,15 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
 
   useEffect(() => {
     setThoughtExpanded(false);
+    setToolCallExpanded(false);
   }, [message.id]);
 
   const timestamp = formatDistanceToNow(message.timestamp, { addSuffix: true });
 
   const isUser = message.role === 'user';
   const textColor = isUser ? '#ffffff' : colors.text;
+  const toolCallLabel = formatToolCallLabel(message.toolCallName);
+  const canExpandToolResult = Boolean(message.toolCallResult);
   const { thought: thoughtContent, visible: visibleContent } = useMemo(
     () => parseThoughtContent(message.content),
     [message.content],
@@ -146,18 +170,24 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
     alignSelf: isUser ? 'flex-end' : 'flex-start',
     maxWidth: '85%',
     marginVertical: spacing[1],
+    ...(!isUser && message.toolCallName ? { minWidth: 220 } : null),
   };
 
   const surfaceBg = isDark ? '#2c2c2e' : '#f0f0f0';
 
-  const bubbleStyle = {
-    backgroundColor: isUser ? colors.primary : surfaceBg,
-    padding: spacing[3],
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    borderBottomLeftRadius: isUser ? 16 : 4,
-    borderBottomRightRadius: isUser ? 4 : 16,
-  };
+  const bubbleStyle = message.toolCallName
+    ? {
+        padding: 0,
+        backgroundColor: 'transparent',
+      }
+    : {
+        backgroundColor: isUser ? colors.primary : surfaceBg,
+        padding: spacing[3],
+        borderTopLeftRadius: 16,
+        borderTopRightRadius: 16,
+        borderBottomLeftRadius: isUser ? 16 : 4,
+        borderBottomRightRadius: isUser ? 4 : 16,
+      };
 
   return (
     <View testID="chat.message-bubble.button.long-press">
@@ -170,57 +200,109 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
     >
       <View style={bubbleStyle}>
         {message.toolCallName ? (
-          <View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: message.toolCallResult ? spacing[1] : 0 }}>
-              <Ionicons name="build-outline" size={16} color={textColor} style={{ marginRight: spacing[1] }} />
-              <Text style={{ color: textColor, fontWeight: 'bold' }}>
-                {message.toolCallName}{message.toolCallResult ? '' : '…'}
-              </Text>
-              {!message.toolCallResult && isStreaming && (
-                <View style={{ flexDirection: 'row', marginLeft: spacing[2] }}>
-                  {[0, 1, 2].map((i) => (
-                    <View
-                      key={i}
-                      style={{
-                        width: 4,
-                        height: 4,
-                        borderRadius: 2,
-                        backgroundColor: textColor,
-                        opacity: dotStep === i + 1 || dotStep === 0 ? 0.9 : 0.3,
-                        marginRight: i < 2 ? 3 : 0,
-                      }}
-                    />
-                  ))}
+          <Pressable
+            onPress={canExpandToolResult ? () => setToolCallExpanded((current) => !current) : undefined}
+            style={{
+              width: '100%',
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: isDark ? '#4a4a4f' : '#d8dbe5',
+              overflow: 'hidden',
+              backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(99,102,241,0.05)',
+              paddingHorizontal: spacing[3],
+              paddingVertical: 0,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: COLLAPSIBLE_HEADER_HEIGHT }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 0, marginRight: spacing[2] }}>
+                <Ionicons
+                  name={toolCallExpanded ? 'chevron-down' : 'chevron-forward'}
+                  size={14}
+                  color={colors.primary}
+                />
+                <Ionicons
+                  name="build-outline"
+                  size={14}
+                  color={colors.primary}
+                  style={{ marginLeft: spacing[1], marginRight: spacing[1], flexShrink: 0 }}
+                />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text
+                    style={{ color: colors.primary, fontWeight: '700', fontSize: type.sm, lineHeight: 20 }}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                    allowFontScaling={false}
+                  >
+                    {toolCallLabel}
+                  </Text>
                 </View>
-              )}
+                {!message.toolCallResult && isStreaming && (
+                  <View style={{ flexDirection: 'row', marginLeft: spacing[2], flexShrink: 0 }}>
+                    {[0, 1, 2].map((i) => (
+                      <View
+                        key={i}
+                        style={{
+                          width: 4,
+                          height: 4,
+                          borderRadius: 2,
+                          backgroundColor: colors.primary,
+                          opacity: dotStep === i + 1 || dotStep === 0 ? 0.9 : 0.3,
+                          marginRight: i < 2 ? 3 : 0,
+                        }}
+                      />
+                    ))}
+                  </View>
+                )}
+              </View>
+              <View style={{ width: 52, alignItems: 'flex-end', justifyContent: 'center', flexShrink: 0 }}>
+                <Text
+                  style={{ color: colors.textSecondary, fontSize: 11, lineHeight: 16 }}
+                  numberOfLines={1}
+                  ellipsizeMode="clip"
+                  allowFontScaling={false}
+                >
+                  {canExpandToolResult ? (toolCallExpanded ? 'Hide' : 'Show') : (isStreaming ? 'Running' : 'Pending')}
+                </Text>
+              </View>
             </View>
-            {noteToolResult ? (
-              <Pressable
-                testID="chat-message-bubble.tool-result.note-link"
-                onPress={() => navigation.navigate('NoteEditor', { noteId: noteToolResult.noteId })}
-                style={({ pressed }) => ({
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  marginTop: spacing[1],
-                  paddingHorizontal: spacing[2],
-                  paddingVertical: spacing[1],
-                  borderRadius: 8,
-                  backgroundColor: pressed ? 'rgba(0,0,0,0.08)' : 'rgba(0,0,0,0.05)',
-                })}
+            {toolCallExpanded ? (
+              <View
+                style={{
+                  paddingHorizontal: spacing[3],
+                  paddingTop: spacing[2],
+                  paddingBottom: spacing[3],
+                  borderTopWidth: 1,
+                  borderTopColor: isDark ? '#3a3a3f' : '#e5e7eb',
+                }}
               >
-                <Ionicons name="document-text-outline" size={16} color={colors.primary} style={{ marginRight: spacing[1] }} />
-                <Text style={{ color: colors.primary, fontSize: type.sm, fontWeight: '600', flexShrink: 1 }} numberOfLines={1}>
-                  {noteToolResult.title ?? 'Open note'}
-                </Text>
-              </Pressable>
-            ) : message.toolCallResult ? (
-              <Surface elevation="flat" style={{ backgroundColor: 'rgba(0,0,0,0.05)', padding: spacing[2], borderRadius: 8, marginTop: spacing[1] }}>
-                <Text style={{ color: textColor, fontSize: type.sm, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }} numberOfLines={6}>
-                  {message.toolCallResult}
-                </Text>
-              </Surface>
+                {noteToolResult ? (
+                  <Pressable
+                    testID="chat-message-bubble.tool-result.note-link"
+                    onPress={() => navigation.navigate('NoteEditor', { noteId: noteToolResult.noteId })}
+                    style={({ pressed }) => ({
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: spacing[2],
+                      paddingVertical: spacing[1],
+                      borderRadius: 8,
+                      backgroundColor: pressed ? 'rgba(0,0,0,0.08)' : 'rgba(0,0,0,0.05)',
+                    })}
+                  >
+                    <Ionicons name="document-text-outline" size={16} color={colors.primary} style={{ marginRight: spacing[1] }} />
+                    <Text style={{ color: colors.primary, fontSize: type.sm, fontWeight: '600', flexShrink: 1 }} numberOfLines={1}>
+                      {noteToolResult.title ?? 'Open note'}
+                    </Text>
+                  </Pressable>
+                ) : message.toolCallResult ? (
+                  <Surface elevation="flat" style={{ backgroundColor: 'rgba(0,0,0,0.05)', padding: spacing[2], borderRadius: 8 }}>
+                    <Text style={{ color: textColor, fontSize: type.sm, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }} numberOfLines={6}>
+                      {message.toolCallResult}
+                    </Text>
+                  </Surface>
+                ) : null}
+              </View>
             ) : null}
-          </View>
+          </Pressable>
         ) : isUser ? (
           <Text style={{ color: textColor, fontSize: type.md }}>
             {message.content}
@@ -243,12 +325,12 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
                     paddingHorizontal: spacing[3],
-                    paddingVertical: spacing[2],
+                    paddingVertical: 0,
+                    minHeight: COLLAPSIBLE_HEADER_HEIGHT,
                   }}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 0, marginRight: spacing[2] }}>
                     <Ionicons
                       name={thoughtExpanded ? 'chevron-down' : 'chevron-forward'}
                       size={14}
@@ -260,14 +342,25 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
                         color: colors.primary,
                         fontSize: type.sm,
                         fontWeight: '700',
+                        lineHeight: 20,
                       }}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                      allowFontScaling={false}
                     >
                       Thought process
                     </Text>
                   </View>
-                  <Text style={{ color: colors.textSecondary, fontSize: 11 }}>
-                    {thoughtExpanded ? 'Hide' : 'Show'}
-                  </Text>
+                  <View style={{ width: 52, alignItems: 'flex-end', justifyContent: 'center', flexShrink: 0 }}>
+                    <Text
+                      style={{ color: colors.textSecondary, fontSize: 11, lineHeight: 16 }}
+                      numberOfLines={1}
+                      ellipsizeMode="clip"
+                      allowFontScaling={false}
+                    >
+                      {thoughtExpanded ? 'Hide' : 'Show'}
+                    </Text>
+                  </View>
                 </Pressable>
                 {thoughtExpanded ? (
                   <View
