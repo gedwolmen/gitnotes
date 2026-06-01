@@ -25,6 +25,17 @@ export interface ProviderQuirk {
 
 export const PROVIDER_QUIRKS: ProviderQuirk[] = [
   {
+    // Anthropic API via MiniMax (api.minimax.io/anthropic).
+    // Uses OpenAI-compatible endpoint with Anthropic message format.
+    id: 'anthropic.minimax',
+    matches: (url) => /api\.minimax\.io\/anthropic/i.test(url),
+    transformRequestBody: (body) => {
+      // Anthropic API expects 'messages' array, not 'prompt'
+      // Already compatible via OpenAI-compatible SDK
+      // No transformation needed for basic chat completions
+    },
+  },
+  {
     // Z.AI Coding Plan (api.z.ai/api/coding/paas/v4 and api.z.ai/api/paas/v4).
     // Without `tool_stream: true`, GLM models return HTTP 200 with an empty
     // body when tools are attached. See:
