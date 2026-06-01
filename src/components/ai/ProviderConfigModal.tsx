@@ -426,9 +426,10 @@ const styles = StyleSheet.create({
   eyeIcon: {
     position: 'absolute',
     right: 12,
-    top: '50%',
-    marginTop: -10,
-    padding: 4,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    paddingVertical: 4,
   },
   iconBtn: {
     padding: 4,
