@@ -298,10 +298,10 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
                     />
                   </GroupRow>
                   <GroupRow>
-                    <View style={styles.apiKeyRow}>
+                    <View style={styles.apiKeyContainer}>
                       <TextInput
                         testID="provider-config.input.api-key"
-                        style={[styles.textInput, { color: colors.text, backgroundColor: colors.background, borderColor: colors.border, flex: 1 }]}
+                        style={[styles.textInput, { color: colors.text, backgroundColor: colors.background, borderColor: colors.border, paddingRight: 44 }]}
                         placeholder="API Key (Optional)"
                         placeholderTextColor={colors.textSecondary}
                         value={apiKey}
@@ -312,8 +312,8 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
                       />
                       <TouchableOpacity
                         testID="provider-config.button.toggle-token-visible"
+                        style={styles.eyeIcon}
                         onPress={() => setApiKeyVisible((v) => !v)}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       >
                         <Ionicons
                           name={apiKeyVisible ? 'eye-off-outline' : 'eye-outline'}
@@ -417,10 +417,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
   },
-  apiKeyRow: {
+  apiKeyContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
+    position: 'relative',
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: 12,
+    top: '50%',
+    marginTop: -10,
+    padding: 4,
   },
   iconBtn: {
     padding: 4,
