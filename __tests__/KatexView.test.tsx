@@ -17,7 +17,7 @@ describe('KatexView', () => {
 
     expect(webview.props.injectedJavaScript).toContain('katex.render');
     expect(webview.props.injectedJavaScript).toContain('"E = mc^2"');
-    expect(webview.props.injectedJavaScript).toContain('displayMode: false');
+    expect(webview.props.injectedJavaScript).toContain('displayMode:false');
   });
 
   it('renders block math with displayMode true', () => {
@@ -27,7 +27,7 @@ describe('KatexView', () => {
 
     const webview = getByTestId('webview');
 
-    expect(webview.props.injectedJavaScript).toContain('displayMode: true');
+    expect(webview.props.injectedJavaScript).toContain('displayMode:true');
   });
 
   it('passes inline KaTeX html bundle to the WebView', () => {

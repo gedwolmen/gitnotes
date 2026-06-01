@@ -54,6 +54,7 @@ function NoteCardImpl({
 
   return (
     <TouchableOpacity
+      testID={`note-card-${note.id}`}
       style={[
         styles.card,
         {

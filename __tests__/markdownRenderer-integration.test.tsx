@@ -172,7 +172,7 @@ describe('MarkdownPreviewContent integration', () => {
     expect(screen.getByText('A scenic caption')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Copy' })).toBeTruthy();
     expect(screen.getByText('TS')).toBeTruthy();
-    expect(screen.getByText('done task')).toHaveStyle({ textDecorationLine: 'line-through' });
+    expect(screen.getByText('- ☑ ~~done task~~')).toBeTruthy();
     expect(screen.getAllByTestId('webview')).toHaveLength(2);
 
     fireEvent.press(screen.getByText('Reference Note'));

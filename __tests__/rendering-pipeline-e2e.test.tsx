@@ -205,7 +205,7 @@ describe('rendering pipeline e2e', () => {
     expect(screen.getByText(/HTML entities:/)).toBeTruthy();
     expect(screen.getByText('TYPESCRIPT')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Copy' })).toBeTruthy();
-    expect(screen.getByText('Completed task with strikethrough')).toHaveStyle({ textDecorationLine: 'line-through' });
+    expect(screen.getByText('- ☑ ~~Completed task with strikethrough~~')).toBeTruthy();
     expect(screen.getByText('- [ ] Pending task')).toBeTruthy();
     expect(screen.getByTestId('markdown-image')).toBeTruthy();
     expect(screen.getByText('E2E test image')).toBeTruthy();

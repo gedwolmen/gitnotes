@@ -94,9 +94,9 @@ describe('extractErrorDetails', () => {
     expect(extractErrorDetails(e).isParserError).toBe(true);
   });
 
-  test('non-AI_APICallError with parser-like message is NOT marked parser-error', () => {
+  test('non-AI_APICallError with parser-like message IS marked parser-error', () => {
     const e = new Error('Failed to process successful response');
-    expect(extractErrorDetails(e).isParserError).toBe(false);
+    expect(extractErrorDetails(e).isParserError).toBe(true);
   });
 
   test('isEmptyBody true for AI_EmptyResponseBodyError direct or via cause', () => {

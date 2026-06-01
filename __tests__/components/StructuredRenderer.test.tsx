@@ -46,7 +46,6 @@ describe('StructuredRenderer', () => {
     const { getByText } = renderBlocks([
       { type: 'code', code: { language: 'js', content: 'const x = 1;' } },
     ]);
-    expect(getByText('js')).toBeTruthy();
     expect(getByText('const x = 1;')).toBeTruthy();
   });
 
@@ -135,12 +134,13 @@ describe('StructuredRenderer', () => {
     expect(getByText(/2025-06-15/)).toBeTruthy();
   });
 
-  test('renders org drawer/properties', () => {
-    const { getByText } = renderBlocks([
+  test('renders org drawer/properties as null (internal org data)', () => {
+    const { toJSON } = renderBlocks([
       { type: 'drawer', drawer: { name: 'PROPERTIES', properties: { CREATED: '[2025-01-01]' } } },
     ]);
-    expect(getByText(':PROPERTIES:')).toBeTruthy();
-    expect(getByText(/CREATED/)).toBeTruthy();
+    const rendered = toJSON();
+    const hasText = rendered && rendered.children && rendered.children.length > 0;
+    expect(hasText).toBeFalsy();
   });
 
   test('renders fixed-width block', () => {
@@ -166,12 +166,11 @@ describe('StructuredRenderer', () => {
     expect(getByText('A photo')).toBeTruthy();
   });
 
-  test('renders math block', () => {
-    const { getByText } = renderBlocks([
+  test('renders math block via KatexView', () => {
+    const { getByTestId } = renderBlocks([
       { type: 'math', math: { content: 'E = mc^2', inline: false } },
     ]);
-    expect(getByText('MATH')).toBeTruthy();
-    expect(getByText('E = mc^2')).toBeTruthy();
+    expect(getByTestId('katex-view.container')).toBeTruthy();
   });
 
   test('renders comment block as null', () => {

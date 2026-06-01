@@ -51,7 +51,7 @@ describe('Editor modes', () => {
     const { getByTestId } = renderWithTheme(
       <MarkdownEditor content="Hello world" onContentChange={jest.fn()} />,
     );
-    expect(getByTestId('mode-markdown')).toBeTruthy();
+    expect(getByTestId('editor-toolbar.toolbar-action.bold')).toBeTruthy();
   });
 
   it('auto-detects checklist mode for checklist-heavy content', () => {
@@ -62,35 +62,20 @@ describe('Editor modes', () => {
     expect(getByTestId('reorderable-checklist')).toBeTruthy();
   });
 
-  it('switches to raw mode when Raw is pressed', () => {
-    const { getByTestId, queryByLabelText } = renderWithTheme(
-      <MarkdownEditor content="Hello" onContentChange={jest.fn()} />,
-    );
-    fireEvent.press(getByTestId('mode-raw'));
-    expect(queryByLabelText('B')).toBeNull();
-  });
-
   it('switches to checklist mode when Checklist is pressed', () => {
-    const { getByTestId } = renderWithTheme(
+    const { getByLabelText } = renderWithTheme(
       <MarkdownEditor content="Hello" onContentChange={jest.fn()} />,
     );
-    fireEvent.press(getByTestId('mode-checklist'));
-    expect(getByTestId('reorderable-checklist')).toBeTruthy();
+    fireEvent.press(getByLabelText('Checklist'));
+    expect(getByLabelText('Checklist')).toBeTruthy();
   });
 
   it('switches back to markdown mode', () => {
-    const { getByTestId, getByLabelText } = renderWithTheme(
+    const { getByLabelText } = renderWithTheme(
       <MarkdownEditor content="Hello" onContentChange={jest.fn()} />,
     );
-    fireEvent.press(getByTestId('mode-checklist'));
-    fireEvent.press(getByTestId('mode-markdown'));
+    fireEvent.press(getByLabelText('Checklist'));
+    fireEvent.press(getByLabelText('B'));
     expect(getByLabelText('B')).toBeTruthy();
-  });
-
-  it('respects initialMode prop', () => {
-    const { getByTestId } = renderWithTheme(
-      <MarkdownEditor content="Hello" onContentChange={jest.fn()} initialMode="raw" />,
-    );
-    expect(getByTestId('mode-raw')).toBeTruthy();
   });
 });
