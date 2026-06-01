@@ -63,4 +63,28 @@ export class NotificationService {
       await this.cancelReminder(todo.notificationId);
     }
   }
+
+  static async scheduleLearningNotification(params: {
+    title: string;
+    body: string;
+    data: Record<string, unknown>;
+    trigger: Date;
+  }): Promise<string | null> {
+    const { title, body, data, trigger } = params;
+
+    if (trigger.getTime() <= Date.now()) return null;
+
+    const hasPermission = await this.requestPermissions();
+    if (!hasPermission) return null;
+
+    const notificationId = await Notifications.scheduleNotificationAsync({
+      content: { title, body, data, sound: true },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: trigger,
+      },
+    });
+
+    return notificationId;
+  }
 }
