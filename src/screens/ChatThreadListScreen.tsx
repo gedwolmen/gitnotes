@@ -1,11 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, FlatList } from 'react-native';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { View, StyleSheet, ActivityIndicator, Alert, FlatList, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import { formatDistanceToNow } from 'date-fns';
 
 import { useChatStore } from '../stores/chatStore';
 import { useAIStore } from '../stores/aiStore';
@@ -14,13 +12,17 @@ import { githubActivity } from '../stores/githubActivityStore';
 import { useTokens } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/types';
 import { ChatThreadSummary } from '../models/Chat';
-import { ScreenHeader, Card, Button, EmptyState, useScreenHeaderHeight } from '../components/ui';
+import { ScreenHeader, Button, EmptyState, useScreenHeaderHeight } from '../components/ui';
+import { SwipeableListItem } from '../components/list/SwipeableListItem';
+import { ChatThreadCard } from '../components/chat/ChatThreadCard';
+import { ChatThreadContextMenu } from '../components/chat/ChatThreadContextMenu';
+import { HapticService } from '../utils/haptics';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function ChatThreadListScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const { colors, type, spacing } = useTokens();
+  const { colors, spacing } = useTokens();
   const headerHeight = useScreenHeaderHeight();
 
   const {
@@ -35,6 +37,11 @@ export default function ChatThreadListScreen() {
 
   const { chatRepoOwner, chatRepoName, chatRepoBranch } = useAIStore();
   const [isPullRefreshing, setIsPullRefreshing] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [longPressedThread, setLongPressedThread] = useState<ChatThreadSummary | null>(null);
+  const listRef = useRef<FlatList<ChatThreadSummary>>(null);
+
+  const selectionMode = selectedIds.size > 0;
 
   useEffect(() => {
     setStorageAdapter({
@@ -86,7 +93,18 @@ export default function ChatThreadListScreen() {
     navigation.navigate('ChatScreen', { threadId });
   };
 
+  const handleThreadLongPress = (thread: ChatThreadSummary) => {
+    HapticService.selection();
+    setLongPressedThread(thread);
+  };
+
+  const handleOpenThread = (thread: ChatThreadSummary) => {
+    setLongPressedThread(null);
+    navigation.navigate('ChatScreen', { threadId: thread.id });
+  };
+
   const handleRenameThread = (thread: ChatThreadSummary) => {
+    setLongPressedThread(null);
     Alert.prompt(
       'Rename Chat',
       'Enter a new title for this chat',
@@ -106,91 +124,53 @@ export default function ChatThreadListScreen() {
     );
   };
 
-  const handleDeleteThread = (thread: ChatThreadSummary) => {
-    Alert.alert('Delete Chat', 'Are you sure you want to delete this chat?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          if (!chatRepoOwner || !chatRepoName || !chatRepoBranch) {
-            return;
-          }
-          githubActivity.begin('Deleting chat…');
-          try {
-            await deleteThread({
-              owner: chatRepoOwner,
-              repo: chatRepoName,
-              branch: chatRepoBranch,
-              threadId: thread.id,
-            });
-          } catch (err: any) {
-            Alert.alert('Delete failed', err?.message || 'Could not delete chat.');
-          } finally {
-            githubActivity.end();
-          }
-        },
-      },
-    ]);
+  const handleDeleteThread = async (thread: ChatThreadSummary) => {
+    if (!chatRepoOwner || !chatRepoName || !chatRepoBranch) {
+      return;
+    }
+    githubActivity.begin('Deleting chat…');
+    try {
+      await deleteThread({
+        owner: chatRepoOwner,
+        repo: chatRepoName,
+        branch: chatRepoBranch,
+        threadId: thread.id,
+      });
+      HapticService.success();
+    } catch (err: any) {
+      Alert.alert('Delete failed', err?.message || 'Could not delete chat.');
+      HapticService.error();
+    } finally {
+      githubActivity.end();
+    }
   };
 
-  const renderRightActions = (thread: ChatThreadSummary) => {
-    return (
-      <View style={styles.swipeActions}>
-        <TouchableOpacity
-          testID="chat-thread-list.icon-button.rename"
-          style={[styles.swipeAction, { backgroundColor: colors.primary }]}
-          onPress={() => handleRenameThread(thread)}
-        >
-          <Ionicons name="pencil" size={20} color="#FFFFFF" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          testID="chat-thread-list.icon-button.delete"
-          style={[styles.swipeAction, { backgroundColor: colors.error }]}
-          onPress={() => handleDeleteThread(thread)}
-        >
-          <Ionicons name="trash" size={20} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
-    );
-  };
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
-  const renderItem = ({ item }: { item: ChatThreadSummary }) => {
-    const timeAgo = formatDistanceToNow(item.updatedAt, { addSuffix: true });
-
-    return (
-      <View style={styles.threadRow}>
-        <ReanimatedSwipeable
-          renderRightActions={() => renderRightActions(item)}
-          friction={2}
-          containerStyle={styles.swipeableContainer}
-        >
-          <Card testID="chat-thread-list.button.thread-press" onPress={() => handleThreadPress(item.id)} radius="md">
-            <View style={styles.threadContent}>
-              <View style={styles.threadHeader}>
-                <Text style={[styles.threadTitle, { color: colors.text, fontSize: type.md, fontWeight: '600' }]} numberOfLines={1}>
-                  {item.title}
-                </Text>
-                <Text style={[styles.threadTime, { color: colors.textSecondary, fontSize: type.xs }]}>
-                  {timeAgo}
-                </Text>
-              </View>
-              {item.preview && (
-                <Text style={{ color: colors.textSecondary, fontSize: type.sm, marginBottom: 8 }} numberOfLines={2}>
-                  {item.preview}
-                </Text>
-              )}
-              <View style={styles.threadFooter}>
-                <Text style={[styles.messageCount, { color: colors.primary, fontSize: type.xs, fontWeight: '600' }]}>
-                  {item.messageCount} messages
-                </Text>
-              </View>
-            </View>
-          </Card>
-        </ReanimatedSwipeable>
-      </View>
-    );
-  };
+  const renderThread = useCallback(
+    ({ item }: { item: ChatThreadSummary }) => (
+      <SwipeableListItem
+        itemId={item.id}
+        selected={selectedIds.has(item.id)}
+        selectionMode={selectionMode}
+        onToggleSelect={() => toggleSelected(item.id)}
+      >
+        <ChatThreadCard
+          thread={item}
+          onPress={() => handleThreadPress(item.id)}
+          onLongPress={() => handleThreadLongPress(item)}
+        />
+      </SwipeableListItem>
+    ),
+    [selectedIds, selectionMode, toggleSelected]
+  );
 
   const renderEmptyState = () => {
     if (isLoading) {
@@ -213,36 +193,46 @@ export default function ChatThreadListScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-      <View
-        style={[
-          styles.headerControls,
-          {
-            paddingTop: headerHeight + spacing[4],
-            paddingHorizontal: spacing[4],
-            paddingBottom: spacing[3],
-          },
-        ]}
-      >
-        <Button
-          testID="chat-thread-list.button.new-chat"
-          label="New Chat"
-          onPress={handleNewChat}
-          variant="primary"
-          leadingIcon={<Ionicons name="add" size={20} color={colors.accent} />}
-          fullWidth
+      <View style={{ flex: 1, paddingTop: headerHeight }}>
+        <View style={[styles.headerControls, { paddingHorizontal: spacing[4], paddingBottom: spacing[3] }]}>
+          <Button
+            testID="chat-thread-list.button.new-chat"
+            label="New Chat"
+            onPress={handleNewChat}
+            variant="primary"
+            leadingIcon={<Ionicons name="add" size={20} color={colors.accent} />}
+            fullWidth
+          />
+        </View>
+
+        <FlatList
+          ref={listRef}
+          data={threads}
+          renderItem={renderThread}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ padding: 12, paddingBottom: spacing[6] }}
+          refreshControl={
+            <RefreshControl
+              refreshing={isPullRefreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
+          ListEmptyComponent={renderEmptyState}
+          ItemSeparatorComponent={() => <View style={{ height: spacing[3] }} />}
         />
       </View>
 
-      <FlatList
-        data={threads}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[styles.listContent, { paddingHorizontal: spacing[4], paddingBottom: spacing[6] }]}
-        ItemSeparatorComponent={() => <View style={{ height: spacing[3] }} />}
-        ListEmptyComponent={renderEmptyState}
-        refreshing={isPullRefreshing}
-        onRefresh={handleRefresh}
+      <ChatThreadContextMenu
+        thread={longPressedThread}
+        visible={longPressedThread !== null}
+        onClose={() => setLongPressedThread(null)}
+        onOpen={handleOpenThread}
+        onRename={handleRenameThread}
+        onDelete={handleDeleteThread}
       />
+
       <ScreenHeader
         title="GitNotes AI"
         badge="BETA"
@@ -256,65 +246,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  headerControls: {
-  },
-  listContent: {
-    flexGrow: 0,
-  },
-  threadRow: {
-    flexShrink: 0,
-  },
-  swipeableContainer: {
-    overflow: 'visible',
-  },
-  threadContent: {
-    flex: 1,
-  },
-  threadHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  threadTitle: {
-    flex: 1,
-    marginRight: 16,
-  },
-  threadTime: {
-    flexShrink: 0,
-  },
-  threadFooter: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-  },
-  messageCount: {
-  },
-  swipeActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 12,
-    height: '100%',
-  },
-  swipeAction: {
-    width: 60,
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 12,
-    marginLeft: 8,
-  },
+  headerControls: {},
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingTop: 64,
-  },
-  emptyIcon: {
-    marginBottom: 16,
-    opacity: 0.5,
-  },
-  emptyText: {
-    textAlign: 'center',
   },
 });
