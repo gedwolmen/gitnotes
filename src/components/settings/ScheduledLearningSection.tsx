@@ -1,7 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTranslation } from 'react-i18next';
 import DateTimePicker from '@react-native/datetimepicker';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Group, GroupRow, Modal, Toggle } from '../ui';
@@ -13,6 +12,7 @@ import {
   type DayOfWeek,
   DAY_OF_WEEK_OPTIONS,
   WORD_COUNT_OPTIONS,
+  formatDaysOfWeek,
 } from '../../models/ScheduledLearning';
 import { ScheduledLearningService } from '../../services/ScheduledLearningService';
 
@@ -25,16 +25,24 @@ interface ScheduledLearningSectionProps {
     border: string;
     error: string;
     background: string;
+    accent?: string;
   };
 }
 
 export function ScheduledLearningSection({ colors }: ScheduledLearningSectionProps) {
-  const { t } = useTranslation();
   const { isDark } = useTheme();
-  const { items, createItem, deleteItem, toggleItem } = useScheduledLearningStore();
-  const availableModels = useAIStore((s) => s.providers.filter((p) => p.isEnabled).flatMap((p) => p.models));
+  const items = useScheduledLearningStore((s) => s.items);
+  const createItem = useScheduledLearningStore((s) => s.createItem);
+  const deleteItem = useScheduledLearningStore((s) => s.deleteItem);
+  const toggleItem = useScheduledLearningStore((s) => s.toggleItem);
+  const providers = useAIStore((s) => s.providers);
   const selectedModelId = useAIStore((s) => s.selectedModelId);
   const { folders, createFolder } = useFolders();
+
+  const availableModels = useMemo(
+    () => providers.filter((provider) => provider.isEnabled).flatMap((provider) => provider.models),
+    [providers],
+  );
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDayPicker, setShowDayPicker] = useState(false);
@@ -43,31 +51,53 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
   const [showFolderPicker, setShowFolderPicker] = useState(false);
   const [showWordCountPicker, setShowWordCountPicker] = useState(false);
 
+  const [selectedDay, setSelectedDay] = useState<DayOfWeek>('monday');
+
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
-  const [selectedDay, setSelectedDay] = useState<DayOfWeek>('monday');
+  const [selectedDays, setSelectedDays] = useState<DayOfWeek[]>(['monday']);
   const [selectedTime, setSelectedTime] = useState(new Date());
   const [selectedModel, setSelectedModel] = useState<string | null>(selectedModelId);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [selectedWordCount, setSelectedWordCount] = useState(500);
+  const [repeat, setRepeat] = useState<'weekly' | 'one-time'>('weekly');
   const [newFolderName, setNewFolderName] = useState('');
   const [showNewFolderInput, setShowNewFolderInput] = useState(false);
 
   const resetForm = useCallback(() => {
     setTags([]);
     setTagInput('');
-    setSelectedDay('monday');
+    setSelectedDays(['monday']);
     setSelectedTime(new Date());
     setSelectedModel(selectedModelId);
     setSelectedFolderId(null);
     setSelectedWordCount(500);
+    setRepeat('weekly');
     setShowNewFolderInput(false);
     setNewFolderName('');
   }, [selectedModelId]);
 
+  const toggleDay = useCallback((day: DayOfWeek) => {
+    setSelectedDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+    );
+  }, []);
+
+  const handleAddTag = useCallback(() => {
+    const trimmed = tagInput.trim().toLowerCase();
+    if (trimmed && !tags.includes(trimmed)) {
+      setTags([...tags, trimmed]);
+    }
+    setTagInput('');
+  }, [tagInput, tags]);
+
   const handleAdd = useCallback(async () => {
     if (tags.length === 0) {
       Alert.alert('Tags required', 'Please add at least one tag for the learning topic.');
+      return;
+    }
+    if (selectedDays.length === 0) {
+      Alert.alert('Day required', 'Please select at least one day.');
       return;
     }
 
@@ -92,23 +122,25 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
 
     await createItem({
       tags,
-      dayOfWeek: selectedDay,
+      daysOfWeek: selectedDays,
       time: timeStr,
       modelId: selectedModel,
       folderId,
       folderName,
       wordCount: selectedWordCount,
+      repeat,
     });
 
     resetForm();
     setShowAddModal(false);
   }, [
     tags,
-    selectedDay,
+    selectedDays,
     selectedTime,
     selectedModel,
     selectedFolderId,
     selectedWordCount,
+    repeat,
     newFolderName,
     showNewFolderInput,
     folders,
@@ -171,6 +203,11 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
     addTagButton: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
     pickerButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, borderWidth: 1, borderRadius: 8 },
     pickerButtonText: { fontSize: 15 },
+    daysRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 6 },
+    dayChip: { flex: 1, aspectRatio: 1, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+    dayChipText: { fontSize: 13, fontWeight: '600' },
+    repeatRow: { flexDirection: 'row', gap: 8 },
+    repeatChip: { flex: 1, paddingVertical: 12, borderRadius: 8, borderWidth: 1, alignItems: 'center' },
     newFolderRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 8, paddingLeft: 12 },
     newFolderInput: { flex: 1, fontSize: 14, paddingVertical: 12, paddingRight: 8 },
     createFolderButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 12, borderWidth: 1, borderRadius: 8, borderStyle: 'dashed', gap: 6, marginTop: 8 },
@@ -219,7 +256,7 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
                 {item.tags.join(', ')}
               </Text>
               <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
-                {formatDay(item.dayOfWeek)} at {item.time} · {formatWordCount(item.wordCount)}
+                {formatDaysOfWeek(item.daysOfWeek)} at {item.time} · {formatWordCount(item.wordCount)}
               </Text>
             </GroupRow>
           ))
@@ -303,14 +340,57 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
             </View>
           </View>
 
-          <Text style={[localStyles.inputLabel, { marginTop: 16 }]}>Day</Text>
-          <TouchableOpacity
-            onPress={() => setShowDayPicker(true)}
-            style={[localStyles.pickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-          >
-            <Text style={localStyles.pickerButtonText}>{formatDay(selectedDay)}</Text>
-            <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
-          </TouchableOpacity>
+          <Text style={[localStyles.inputLabel, { marginTop: 16 }]}>Days</Text>
+          <View style={localStyles.daysRow}>
+            {DAY_OF_WEEK_OPTIONS.map((opt) => {
+              const isSelected = selectedDays.includes(opt.value);
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  onPress={() => toggleDay(opt.value)}
+                  style={[
+                    localStyles.dayChip,
+                    { backgroundColor: isSelected ? colors.primary : colors.surface, borderColor: colors.border },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      localStyles.dayChipText,
+                      { color: isSelected ? '#fff' : colors.text },
+                    ]}
+                  >
+                    {opt.short}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <Text style={[localStyles.inputLabel, { marginTop: 16 }]}>Repeat</Text>
+          <View style={localStyles.repeatRow}>
+            <TouchableOpacity
+              onPress={() => setRepeat('weekly')}
+              style={[
+                localStyles.repeatChip,
+                { backgroundColor: repeat === 'weekly' ? colors.primary : colors.surface, borderColor: colors.border },
+              ]}
+            >
+              <Text style={{ color: repeat === 'weekly' ? '#fff' : colors.text, fontSize: 14, fontWeight: '500' }}>
+                Weekly
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setRepeat('one-time')}
+              style={[
+                localStyles.repeatChip,
+                { backgroundColor: repeat === 'one-time' ? colors.primary : colors.surface, borderColor: colors.border },
+              ]}
+            >
+              <Text style={{ color: repeat === 'one-time' ? '#fff' : colors.text, fontSize: 14, fontWeight: '500' }}>
+                One-time
+              </Text>
+            </TouchableOpacity>
+          </View>
 
           <Text style={[localStyles.inputLabel, { marginTop: 16 }]}>Time</Text>
           <TouchableOpacity

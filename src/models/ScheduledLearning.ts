@@ -1,13 +1,13 @@
 export type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 
-export const DAY_OF_WEEK_OPTIONS: { value: DayOfWeek; label: string }[] = [
-  { value: 'monday', label: 'Monday' },
-  { value: 'tuesday', label: 'Tuesday' },
-  { value: 'wednesday', label: 'Wednesday' },
-  { value: 'thursday', label: 'Thursday' },
-  { value: 'friday', label: 'Friday' },
-  { value: 'saturday', label: 'Saturday' },
-  { value: 'sunday', label: 'Sunday' },
+export const DAY_OF_WEEK_OPTIONS: { value: DayOfWeek; label: string; short: string }[] = [
+  { value: 'monday', label: 'Monday', short: 'M' },
+  { value: 'tuesday', label: 'Tuesday', short: 'T' },
+  { value: 'wednesday', label: 'Wednesday', short: 'W' },
+  { value: 'thursday', label: 'Thursday', short: 'T' },
+  { value: 'friday', label: 'Friday', short: 'F' },
+  { value: 'saturday', label: 'Saturday', short: 'S' },
+  { value: 'sunday', label: 'Sunday', short: 'S' },
 ];
 
 export const WORD_COUNT_OPTIONS = [
@@ -23,12 +23,13 @@ export const WORD_COUNT_OPTIONS = [
 export interface ScheduledLearningItem {
   id: string;
   tags: string[];
-  dayOfWeek: DayOfWeek;
-  time: string; // HH:mm format
+  daysOfWeek: DayOfWeek[];
+  time: string;
   modelId: string | null;
   folderId: string | null;
-  folderName: string | null; // For display
+  folderName: string | null;
   wordCount: number;
+  repeat: 'weekly' | 'one-time';
   isEnabled: boolean;
   lastGeneratedAt: number | null;
   createdAt: number;
@@ -37,12 +38,13 @@ export interface ScheduledLearningItem {
 
 export interface ScheduledLearningCreateInput {
   tags: string[];
-  dayOfWeek: DayOfWeek;
+  daysOfWeek: DayOfWeek[];
   time: string;
   modelId?: string | null;
   folderId?: string | null;
   folderName?: string | null;
   wordCount: number;
+  repeat?: 'weekly' | 'one-time';
 }
 
 export function createScheduledLearningItem(input: ScheduledLearningCreateInput): ScheduledLearningItem {
@@ -50,12 +52,13 @@ export function createScheduledLearningItem(input: ScheduledLearningCreateInput)
   return {
     id: generateId(),
     tags: input.tags,
-    dayOfWeek: input.dayOfWeek,
+    daysOfWeek: input.daysOfWeek,
     time: input.time,
     modelId: input.modelId ?? null,
     folderId: input.folderId ?? null,
     folderName: input.folderName ?? null,
     wordCount: input.wordCount,
+    repeat: input.repeat ?? 'weekly',
     isEnabled: true,
     lastGeneratedAt: null,
     createdAt: now,
@@ -83,21 +86,64 @@ export function getDayOfWeekIndex(day: DayOfWeek): number {
   return order.indexOf(day);
 }
 
-export function getNextScheduledDate(dayOfWeek: DayOfWeek, time: string): Date {
+export function getNextScheduledDates(
+  daysOfWeek: DayOfWeek[],
+  time: string,
+  repeat: 'weekly' | 'one-time'
+): Date[] {
   const now = new Date();
   const [hours, minutes] = time.split(':').map(Number);
+  const dates: Date[] = [];
 
-  const targetDayIndex = getDayOfWeekIndex(dayOfWeek);
-  const currentDayIndex = (now.getDay() + 6) % 7; // Monday = 0
+  const dayIndices = daysOfWeek.map(getDayOfWeekIndex).sort((a, b) => a - b);
 
-  let daysUntilTarget = targetDayIndex - currentDayIndex;
-  if (daysUntilTarget <= 0) {
-    daysUntilTarget += 7;
+  if (repeat === 'one-time') {
+    let daysUntilClosest = Infinity;
+    let closestIndex = -1;
+
+    for (let i = 0; i < dayIndices.length; i++) {
+      const targetDayIndex = dayIndices[i];
+      const currentDayIndex = (now.getDay() + 6) % 7;
+      let daysUntil = targetDayIndex - currentDayIndex;
+      if (daysUntil <= 0) daysUntil += 7;
+
+      if (daysUntil < daysUntilClosest) {
+        daysUntilClosest = daysUntil;
+        closestIndex = i;
+      }
+    }
+
+    const targetDayIndex = dayIndices[closestIndex];
+    const currentDayIndex = (now.getDay() + 6) % 7;
+    let daysUntilTarget = targetDayIndex - currentDayIndex;
+    if (daysUntilTarget <= 0) daysUntilTarget += 7;
+
+    const nextDate = new Date(now);
+    nextDate.setDate(now.getDate() + daysUntilTarget);
+    nextDate.setHours(hours, minutes, 0, 0);
+    dates.push(nextDate);
+  } else {
+    for (const targetDayIndex of dayIndices) {
+      const currentDayIndex = (now.getDay() + 6) % 7;
+      let daysUntil = targetDayIndex - currentDayIndex;
+      if (daysUntil <= 0) daysUntil += 7;
+
+      const nextDate = new Date(now);
+      nextDate.setDate(now.getDate() + daysUntil);
+      nextDate.setHours(hours, minutes, 0, 0);
+      dates.push(nextDate);
+    }
   }
 
-  const nextDate = new Date(now);
-  nextDate.setDate(now.getDate() + daysUntilTarget);
-  nextDate.setHours(hours, minutes, 0, 0);
+  return dates;
+}
 
-  return nextDate;
+export function formatDaysOfWeek(days: DayOfWeek[]): string {
+  if (days.length === 0) return 'No days selected';
+  if (days.length === 1) return DAY_OF_WEEK_OPTIONS.find((d) => d.value === days[0])?.label ?? days[0];
+  if (days.length === 7) return 'Every day';
+  if (days.length > 4) {
+    return `${days.length} days/week`;
+  }
+  return days.map((d) => DAY_OF_WEEK_OPTIONS.find((opt) => opt.value === d)?.short ?? d[0]).join(', ');
 }

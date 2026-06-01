@@ -2,14 +2,36 @@ import { generateText } from 'ai';
 import { useAIStore } from '../stores/aiStore';
 import { useNoteStore } from '../stores/noteStore';
 import { useFolderStore } from '../stores/folderStore';
+import { useScheduledLearningStore } from '../stores/scheduledLearningStore';
 import { initializeModel } from './AIService';
 import { NotificationService } from './NotificationService';
-import { ScheduledLearningItem } from '../models/ScheduledLearning';
+import { ScheduledLearningItem, getNextScheduledDates } from '../models/ScheduledLearning';
 
 const NOTIFICATION_ID_PREFIX = 'scheduled-learning-';
 
+const MS_24_HOURS = 24 * 60 * 60 * 1000;
+const MS_6_DAYS = 6 * MS_24_HOURS;
+
+function shouldGenerate(item: ScheduledLearningItem): boolean {
+  if (item.lastGeneratedAt === null) {
+    return true;
+  }
+  if (item.repeat === 'one-time') {
+    return false;
+  }
+  const msSinceLastGeneration = Date.now() - item.lastGeneratedAt;
+  if (msSinceLastGeneration < MS_6_DAYS) {
+    return false;
+  }
+  return true;
+}
+
 export class ScheduledLearningService {
   static async generateAndCreateNote(item: ScheduledLearningItem): Promise<boolean> {
+    if (!shouldGenerate(item)) {
+      return false;
+    }
+
     try {
       const aiStore = useAIStore.getState();
       const noteStore = useNoteStore.getState();
@@ -86,7 +108,10 @@ export class ScheduledLearningService {
       const hasPermission = await NotificationService.requestPermissions();
       if (!hasPermission) return null;
 
-      const nextDate = getNextScheduledDate(item.dayOfWeek, item.time);
+      const nextDates = getNextScheduledDates(item.daysOfWeek, item.time, item.repeat);
+      if (nextDates.length === 0) return null;
+
+      const nextDate = nextDates[0];
 
       const notificationId = await NotificationService.scheduleLearningNotification({
         title: 'Time to Learn!',
@@ -111,6 +136,3 @@ export class ScheduledLearningService {
     }
   }
 }
-
-import { useScheduledLearningStore } from '../stores/scheduledLearningStore';
-import { getNextScheduledDate } from '../models/ScheduledLearning';
