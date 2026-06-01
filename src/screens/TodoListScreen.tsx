@@ -322,11 +322,17 @@ export default function TodoListScreen() {
     if (isRefreshing) return;
     setIsRefreshing(true);
     HapticService.light();
+
+    const safetyTimeout = setTimeout(() => {
+      setIsRefreshing(false);
+    }, 30000);
+
     try {
       await pullAllFromRepos();
     } catch (err) {
       console.warn('[TodoList] Pull failed:', err);
     } finally {
+      clearTimeout(safetyTimeout);
       await refreshTodos();
       setIsRefreshing(false);
     }

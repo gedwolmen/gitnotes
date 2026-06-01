@@ -98,9 +98,18 @@ export default function ExploreScreen() {
   const handleRefresh = useCallback(() => {
     if (refreshing) return;
     setRefreshing(true);
+
+    const safetyTimeout = setTimeout(() => {
+      setRefreshing(false);
+    }, 30000);
+
     if (view === 'repoList') {
-      refreshRepos().then(() => setRefreshing(false));
+      refreshRepos().finally(() => {
+        clearTimeout(safetyTimeout);
+        setRefreshing(false);
+      });
     } else {
+      clearTimeout(safetyTimeout);
       setRefreshing(false);
     }
   }, [view, refreshRepos, refreshing]);

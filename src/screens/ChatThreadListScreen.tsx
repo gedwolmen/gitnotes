@@ -71,7 +71,14 @@ export default function ChatThreadListScreen() {
 
   const handleRefresh = async () => {
     setIsPullRefreshing(true);
+
+    const safetyTimeout = setTimeout(() => {
+      setIsPullRefreshing(false);
+    }, 30000);
+
     await loadData();
+
+    clearTimeout(safetyTimeout);
     setIsPullRefreshing(false);
   };
 

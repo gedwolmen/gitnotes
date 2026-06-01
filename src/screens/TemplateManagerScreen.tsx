@@ -60,10 +60,18 @@ export default function TemplateManagerScreen() {
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
+
+    const safetyTimeout = setTimeout(() => {
+      setIsRefreshing(false);
+    }, 30000);
+
     try {
       await pullTemplatesFromConfiguredRepo();
       await loadTemplates();
+    } catch (err) {
+      console.warn('[TemplateManager] Refresh failed:', err);
     } finally {
+      clearTimeout(safetyTimeout);
       setIsRefreshing(false);
     }
   }, [loadTemplates]);
