@@ -105,7 +105,7 @@ export function classifyHref(href: string, currentNotePath?: string): Classified
   // names, so we leave them unclassified and let the renderer surface a
   // visible "Can't open link" alert instead of silently doing nothing.
   const looksLikePath = pathPart.includes('/') || !pathPart.includes('.');
-  if (pathPart && looksLikePath && /^[A-Za-z0-9._/\-]+$/.test(pathPart)) {
+  if (pathPart && looksLikePath && /^[A-Za-z0-9._/\- ]+$/.test(pathPart)) {
     return {
       kind: 'note',
       target: resolveNotePath(pathPart, currentNotePath),

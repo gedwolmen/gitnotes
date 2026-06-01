@@ -254,17 +254,14 @@ export function useChatScreenController(threadId: string) {
 
       const latest = useChatStore.getState().activeThread;
       if (!abortController.signal.aborted && latest && latest.title === 'New Chat') {
-        void (async () => {
-          try {
-            const titleModelInstance = await AIService.initializeModel(model, provider as AIProviderConfig | undefined);
-            const title = await AIService.generateChatTitle(titleModelInstance, userMessage.content, assistantText);
-            const fresh = useChatStore.getState().activeThread;
-            if (title && fresh?.id === latest.id && fresh.title === 'New Chat') {
-              renameThread({ threadId: latest.id, title });
-              await saveActiveThread();
-            }
-          } catch (error) { void error; }
-        })();
+        // Use the first user message as the title instead of calling the LLM
+        // to avoid 404 errors from providers like MiniMax that may not support generateText
+        const firstLine = userMessage.content.trim().split('\n')[0].slice(0, 50);
+        const simpleTitle = firstLine.replace(/[^\w\s]/g, '').trim() || 'New Chat';
+        if (simpleTitle && simpleTitle !== 'New Chat') {
+          renameThread({ threadId: latest.id, title: simpleTitle });
+          await saveActiveThread();
+        }
       }
     } catch (error) {
       if (pendingFlush) clearTimeout(pendingFlush);

@@ -8,6 +8,7 @@ import { LinkingOptions } from '@react-navigation/native';
 
 import TabNavigator from './TabNavigator';
 import ChatScreen from '../screens/ChatScreen';
+import GraphViewScreen from '../screens/GraphViewScreen';
 import ChatThreadListScreen from '../screens/ChatThreadListScreen';
 import NoteEditorScreen from '../screens/NoteEditorScreen';
 import CanvasEditorScreen from '../screens/CanvasEditorScreen';
@@ -131,6 +132,11 @@ export default function AppNavigator() {
             <Stack.Screen
               name="CanvasEditor"
               component={CanvasEditorScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="GraphView"
+              component={GraphViewScreen}
               options={{ headerShown: false }}
             />
             <Stack.Screen

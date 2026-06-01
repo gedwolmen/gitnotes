@@ -293,10 +293,14 @@ export default function NotesListScreen() {
   const handleViewModeChange = useCallback(
     (mode: ViewMode) => {
       HapticService.selection();
-      setViewMode(mode);
+      if (mode === 'graph') {
+        navigation.navigate('GraphView');
+      } else {
+        setViewMode(mode);
+      }
       setShowViewModePicker(false);
     },
-    [setViewMode],
+    [navigation, setViewMode],
   );
 
   const scrollToSearchMatch = useCallback(

@@ -9,7 +9,6 @@ import { HapticService } from '../../utils/haptics';
 import { IconButton, Modal } from '../ui';
 import { NotePreviewPane } from './NotePreviewPane';
 import { NoteFormat } from '../../models/Note';
-import { BacklinksSection } from '../backlinks/BacklinksSection';
 
 interface NoteViewerProps {
   noteId: string;
@@ -144,10 +143,6 @@ export function NoteViewer({
         onScroll={onPreviewScroll}
         onContentSizeChange={onPreviewContentSizeChange}
       />
-
-      {!isPdfNote ? (
-        <BacklinksSection noteId={noteId} onNavigateToNote={onNavigateToNote} />
-      ) : null}
 
       <Modal
         visible={showToc}

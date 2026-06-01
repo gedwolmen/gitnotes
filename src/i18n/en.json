@@ -44,7 +44,11 @@
     "tryAdjusting": "Try adjusting your search or filters",
     "allNotes": "All Notes",
     "filterNotes": "Filter Notes",
-    "notAvailableOffline": "Not available offline"
+    "notAvailableOffline": "Not available offline",
+    "graphView": "Graph View",
+    "noNotesToDisplay": "No notes to display",
+    "createWithWikiLinks": "Create some notes with [[wiki links]] to see the graph",
+    "openNote": "Open Note"
   },
   "notesFilter": {
     "repository": "Repository",
