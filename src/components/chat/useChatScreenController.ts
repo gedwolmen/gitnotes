@@ -280,10 +280,23 @@ export function useChatScreenController(threadId: string) {
         // placeholder so the banner isn't duplicated as a grey reply.
         if (assistantText.trim()) {
           updateMessage(assistantMessageId, { content: assistantText });
+          await saveActiveThread();
+
+          const latest = useChatStore.getState().activeThread;
+          if (latest && latest.title === 'New Chat') {
+            // Use the first user message as the title instead of calling the LLM
+            // to avoid 404 errors from providers like MiniMax that may not support generateText
+            const firstLine = userMessage.content.trim().split('\n')[0].slice(0, 50);
+            const simpleTitle = firstLine.replace(/[^\w\s]/g, '').trim() || 'New Chat';
+            if (simpleTitle && simpleTitle !== 'New Chat') {
+              renameThread({ threadId: latest.id, title: simpleTitle });
+              await saveActiveThread();
+            }
+          }
         } else {
           removeMessage(assistantMessageId);
+          setLocalError(message);
         }
-        setLocalError(message);
       }
     } finally {
       if (abortRef.current === abortController) abortRef.current = null;

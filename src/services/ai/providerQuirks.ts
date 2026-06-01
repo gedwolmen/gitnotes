@@ -27,6 +27,11 @@ export const PROVIDER_QUIRKS: ProviderQuirk[] = [
       }
     },
   },
+  {
+    id: 'minimax',
+    matches: (url) => /(^|\.)api\.minimax\.io($|\/|:)/i.test(url),
+    transformUrl: (url) => url.replace('https://api.minimax.io/chat/completions', 'https://api.minimax.io/v1/chat/completions'),
+  },
 ];
 
 export function findQuirk(baseURL: string): ProviderQuirk | undefined {
