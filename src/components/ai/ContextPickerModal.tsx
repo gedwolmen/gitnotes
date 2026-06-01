@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -494,7 +495,11 @@ export default function ContextPickerModal({
             }
           />
 
-          <View style={[styles.tabBar, { backgroundColor: colors.surfaceSecondary, borderRadius: radii.lg, padding: spacing[1], marginTop: headerHeight, marginHorizontal: spacing[4], marginBottom: spacing[2] }]}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={[styles.tabBar, { marginTop: headerHeight, marginHorizontal: spacing[4], marginBottom: spacing[2] }]}
+          >
             {TABS.map(tab => {
               const isActive = activeTab === tab.key;
               return (
@@ -528,7 +533,7 @@ export default function ContextPickerModal({
                 </TouchableOpacity>
               );
             })}
-          </View>
+          </ScrollView>
 
           {showSearch && (
             <View style={{ paddingHorizontal: spacing[4], paddingVertical: spacing[2] }}>
@@ -564,16 +569,17 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    gap: 4,
   },
   tabItem: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
-    paddingHorizontal: 4,
+    paddingHorizontal: 12,
   },
   contentContainer: {
     flex: 1,
