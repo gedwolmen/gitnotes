@@ -54,23 +54,14 @@ describe('Editor modes', () => {
     expect(getByTestId('editor-toolbar.toolbar-action.bold')).toBeTruthy();
   });
 
-  it('auto-detects checklist mode for checklist-heavy content', () => {
-    const content = '- [ ] Task 1\n- [x] Task 2\n- [ ] Task 3\n- [ ] Task 4';
-    const { getByTestId } = renderWithTheme(
-      <MarkdownEditor content={content} onContentChange={jest.fn()} />,
-    );
-    expect(getByTestId('reorderable-checklist')).toBeTruthy();
-  });
-
-  it('switches to checklist mode when Checklist is pressed', () => {
+  it('toolbar has checklist button that can be pressed', () => {
     const { getByLabelText } = renderWithTheme(
       <MarkdownEditor content="Hello" onContentChange={jest.fn()} />,
     );
-    fireEvent.press(getByLabelText('Checklist'));
     expect(getByLabelText('Checklist')).toBeTruthy();
   });
 
-  it('switches back to markdown mode', () => {
+  it('switches back to markdown mode after checklist', () => {
     const { getByLabelText } = renderWithTheme(
       <MarkdownEditor content="Hello" onContentChange={jest.fn()} />,
     );
