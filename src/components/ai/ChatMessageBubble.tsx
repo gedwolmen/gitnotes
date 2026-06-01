@@ -113,11 +113,6 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
     styles: markdownStyles,
     colorScheme,
   });
-  const thoughtMarkdownNodes = useMarkdown(thoughtContent ?? '', {
-    theme: markdownTheme,
-    styles: markdownStyles,
-    colorScheme,
-  });
 
   if (message.role === 'system') {
     return (
@@ -356,9 +351,9 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
                       borderTopColor: isDark ? '#3a3a3f' : '#e5e7eb',
                     }}
                   >
-                    {thoughtMarkdownNodes.map((node, idx) => (
-                      <Fragment key={`thought-${idx}`}>{node}</Fragment>
-                    ))}
+                    <Text style={{ color: textColor, fontSize: type.md }}>
+                      {thoughtContent}
+                    </Text>
                   </View>
                 ) : null}
               </View>
