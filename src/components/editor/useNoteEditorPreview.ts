@@ -143,10 +143,14 @@ export function useNoteEditorPreview({
 
   const handleOpenLinkedNote = useCallback((targetPath: string, fragment?: string) => {
     const normalizedTargetPath = normalizeNotePathForLookup(targetPath);
+    const targetLower = normalizedTargetPath.toLowerCase();
     const matchByExact = (path: string): Note | undefined =>
       notes.find((note) => note.filePath && normalizeNotePathForLookup(note.filePath) === path);
 
-    let targetNote = matchByExact(normalizedTargetPath);
+    // First try matching by note title (wiki links like [[Welcome to Graph Notes]] use title)
+    const targetNoteByTitle = notes.find((note) => note.title.toLowerCase() === targetLower);
+
+    let targetNote = targetNoteByTitle || matchByExact(normalizedTargetPath);
 
     // Extension-less link: try each known note extension before giving up
     // (e.g. `[Other](other)` should resolve to `other.md`, `other.norg`, …).
@@ -158,7 +162,6 @@ export function useNoteEditorPreview({
     }
 
     // Last-chance basename match for links written without a folder prefix.
-    // Case-insensitive to handle [[Other Note]] matching other-note.md
     if (!targetNote) {
       const basenameLower = normalizedTargetPath.split('/').pop()?.toLowerCase() ?? '';
       if (basenameLower) {
