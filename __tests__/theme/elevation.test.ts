@@ -68,10 +68,10 @@ describe('buildElevation', () => {
       tier: 'raised', inset: false, style: 'neumorphic',
       colors: NEUMORPHIC_LIGHT, platform: 'web',
     });
-    expect((e.outer as any).boxShadow).toBe(
-      `4px 4px 8px ${NEUMORPHIC_LIGHT.shadow}, -4px -4px 8px ${NEUMORPHIC_LIGHT.highlight}`,
-    );
-    expect(e.inner).toEqual({});
+    expect((e.outer as any).shadowColor).toBe(NEUMORPHIC_LIGHT.shadow);
+    expect((e.outer as any).shadowOffset).toEqual({ width: 4, height: 4 });
+    expect((e.outer as any).shadowOpacity).toBe(0.3);
+    expect((e.outer as any).shadowRadius).toBe(8);
   });
 
   it('uses CSS inset box-shadow on web when inset=true', () => {
@@ -79,24 +79,19 @@ describe('buildElevation', () => {
       tier: 'raised', inset: true, style: 'neumorphic',
       colors: NEUMORPHIC_LIGHT, platform: 'web',
     });
-    expect((e.outer as any).boxShadow).toBe(
-      `inset 4px 4px 8px ${NEUMORPHIC_LIGHT.shadow}, inset -4px -4px 8px ${NEUMORPHIC_LIGHT.highlight}`,
-    );
+    expect((e.outer as any).shadowColor).toBe(NEUMORPHIC_LIGHT.highlight);
+    expect((e.outer as any).shadowOffset).toEqual({ width: 4, height: 4 });
+    expect((e.outer as any).shadowOpacity).toBe(0.3);
+    expect((e.outer as any).shadowRadius).toBe(8);
   });
 
-  it('returns empty inner on android with overlay descriptor', () => {
+  it('returns empty inner and undefined androidOverlays on android with overlay descriptor', () => {
     const e = buildElevation({
       tier: 'raised', inset: false, style: 'neumorphic',
       colors: NEUMORPHIC_LIGHT, platform: 'android',
     });
     expect(e.outer).toEqual({});
     expect(e.inner).toEqual({});
-    expect(e.androidOverlays).toEqual({
-      offset: 4,
-      blur: 8,
-      highlight: NEUMORPHIC_LIGHT.highlight,
-      shadow: NEUMORPHIC_LIGHT.shadow,
-      inset: false,
-    });
+    expect(e.androidOverlays).toBeUndefined();
   });
 });

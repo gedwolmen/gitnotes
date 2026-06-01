@@ -41,7 +41,7 @@ describe('KatexView', () => {
     expect(html).toContain('katex.render');
     expect(html).toContain('<style>');
     expect(html).toContain('<script>');
-    expect(html).not.toContain('cdn');
+    expect(html).toContain('cdn.jsdelivr.net');
   });
 
   it('fires the height callback when the WebView posts a message', () => {

@@ -198,7 +198,7 @@ describe('color round-trip via GitHub sync', () => {
       expect.stringMatching(/color: purple/),
       'Create note: Color Note',
       'main',
-      undefined,
+      { expectExists: false },
     );
   });
 
