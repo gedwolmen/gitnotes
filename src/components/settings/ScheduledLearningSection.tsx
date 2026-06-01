@@ -32,7 +32,7 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
   const { t } = useTranslation();
   const { isDark } = useTheme();
   const { items, createItem, deleteItem, toggleItem } = useScheduledLearningStore();
-  const availableModels = useAIStore((s) => s.getAvailableModels());
+  const availableModels = useAIStore((s) => s.providers.filter((p) => p.isEnabled).flatMap((p) => p.models));
   const selectedModelId = useAIStore((s) => s.selectedModelId);
   const { folders, createFolder } = useFolders();
 
