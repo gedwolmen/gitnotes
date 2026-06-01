@@ -274,7 +274,7 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
               <GroupRow>
                 <TextInput
                   testID="provider-config.input.name"
-                  style={[styles.textInput, { color: colors.text, borderColor: colors.border, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12 }]}
+                  style={[styles.textInput, { color: colors.text, backgroundColor: colors.background, borderColor: colors.border }]}
                   placeholder="Name (e.g., My Ollama, OpenAI)"
                   placeholderTextColor={colors.textSecondary}
                   value={name}
@@ -287,7 +287,7 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
                   <GroupRow>
                     <TextInput
                       testID="provider-config.input.base-url"
-                      style={[styles.textInput, { color: colors.text, borderColor: colors.border, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12 }]}
+                      style={[styles.textInput, { color: colors.text, backgroundColor: colors.background, borderColor: colors.border }]}
                       placeholder="Base URL (e.g., http://localhost:11434/v1)"
                       placeholderTextColor={colors.textSecondary}
                       value={baseURL}
@@ -301,7 +301,7 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
                     <View style={styles.apiKeyRow}>
                       <TextInput
                         testID="provider-config.input.api-key"
-                        style={[styles.textInput, { color: colors.text, flex: 1, borderColor: colors.border, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12 }]}
+                        style={[styles.textInput, { color: colors.text, backgroundColor: colors.background, borderColor: colors.border, flex: 1 }]}
                         placeholder="API Key (Optional)"
                         placeholderTextColor={colors.textSecondary}
                         value={apiKey}
@@ -410,8 +410,12 @@ const styles = StyleSheet.create({
   },
   textInput: {
     fontSize: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     width: '100%',
+    height: 44,
+    borderWidth: 1,
+    borderRadius: 8,
   },
   apiKeyRow: {
     flexDirection: 'row',
