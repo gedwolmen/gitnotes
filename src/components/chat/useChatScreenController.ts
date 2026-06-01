@@ -253,7 +253,7 @@ export function useChatScreenController(threadId: string) {
       await saveActiveThread();
 
       const latest = useChatStore.getState().activeThread;
-      if (!abortController.signal.aborted && latest && latest.title === 'New Chat' && assistantText.trim()) {
+      if (!abortController.signal.aborted && latest && latest.title === 'New Chat') {
         void (async () => {
           try {
             const titleModelInstance = await AIService.initializeModel(model, provider as AIProviderConfig | undefined);
