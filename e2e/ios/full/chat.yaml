@@ -1,8 +1,8 @@
-appId: com.gitnotes.app
-name: Android - Chat Full Flow
+appId: com.xaventra.gitnotes
+name: iOS - Chat Full Flow
 tags:
   - full
-  - android
+  - ios
   - chat
 ---
 

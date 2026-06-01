@@ -12,8 +12,9 @@ import { githubActivity } from '../stores/githubActivityStore';
 import { useTokens } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/types';
 import { ChatThreadSummary } from '../models/Chat';
-import { ScreenHeader, Button, EmptyState, useScreenHeaderHeight } from '../components/ui';
+import { ScreenHeader, Button, EmptyState, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { SwipeableListItem } from '../components/list/SwipeableListItem';
+import { BulkActionBar } from '../components/list/BulkActionBar';
 import { ChatThreadCard } from '../components/chat/ChatThreadCard';
 import { ChatThreadContextMenu } from '../components/chat/ChatThreadContextMenu';
 import { HapticService } from '../utils/haptics';
@@ -24,15 +25,17 @@ export default function ChatThreadListScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors, spacing } = useTokens();
   const headerHeight = useScreenHeaderHeight();
+  const tabBarHeight = useTabBarHeight();
 
   const {
     threads,
     isLoading,
     loadThreads,
-    deleteThread,
-    createThread,
-    renameThread,
-    setStorageAdapter,
+      deleteThread,
+      error: storeError,
+      createThread,
+      renameThread,
+      setStorageAdapter,
   } = useChatStore();
 
   const { chatRepoOwner, chatRepoName, chatRepoBranch } = useAIStore();
@@ -97,7 +100,11 @@ export default function ChatThreadListScreen() {
   };
 
   const handleThreadPress = (threadId: string) => {
-    navigation.navigate('ChatScreen', { threadId });
+    if (selectionMode) {
+      toggleSelected(threadId);
+    } else {
+      navigation.navigate('ChatScreen', { threadId });
+    }
   };
 
   const handleThreadLongPress = (thread: ChatThreadSummary) => {
@@ -119,9 +126,34 @@ export default function ChatThreadListScreen() {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Save',
-          onPress: (newTitle?: string) => {
-            if (newTitle) {
-              renameThread({ threadId: thread.id, title: newTitle });
+          onPress: async (newTitle?: string) => {
+            if (!newTitle) {
+              return;
+            }
+
+            const trimmedTitle = newTitle.trim() || 'New Chat';
+            renameThread({ threadId: thread.id, title: trimmedTitle });
+
+            if (!chatRepoOwner || !chatRepoName || !chatRepoBranch) {
+              return;
+            }
+
+            githubActivity.begin('Renaming chat…');
+            try {
+              const storedThread = await ChatStorageService.loadThread(chatRepoOwner, chatRepoName, thread.id, chatRepoBranch);
+              if (storedThread) {
+                await ChatStorageService.saveThread({
+                  ...storedThread,
+                  title: trimmedTitle,
+                  updatedAt: Date.now(),
+                });
+              }
+              HapticService.success();
+            } catch (err: any) {
+              Alert.alert('Rename failed', err?.message || 'Could not rename chat.');
+              HapticService.error();
+            } finally {
+              githubActivity.end();
             }
           },
         },
@@ -137,12 +169,17 @@ export default function ChatThreadListScreen() {
     }
     githubActivity.begin('Deleting chat…');
     try {
-      await deleteThread({
+      const deleted = await deleteThread({
         owner: chatRepoOwner,
         repo: chatRepoName,
         branch: chatRepoBranch,
         threadId: thread.id,
       });
+      if (!deleted) {
+        Alert.alert('Delete failed', useChatStore.getState().error ?? storeError ?? 'Could not delete chat.');
+        HapticService.error();
+        return;
+      }
       HapticService.success();
     } catch (err: any) {
       Alert.alert('Delete failed', err?.message || 'Could not delete chat.');
@@ -151,6 +188,56 @@ export default function ChatThreadListScreen() {
       githubActivity.end();
     }
   };
+
+  const handleBulkDelete = useCallback(() => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    Alert.alert(
+      `Delete ${ids.length} ${ids.length === 1 ? 'chat' : 'chats'}?`,
+      'This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (!chatRepoOwner || !chatRepoName || !chatRepoBranch) return;
+            githubActivity.begin('Deleting chats…');
+            try {
+              let deletedCount = 0;
+              for (const threadId of ids) {
+                const deleted = await deleteThread({
+                  owner: chatRepoOwner,
+                  repo: chatRepoName,
+                  branch: chatRepoBranch,
+                  threadId,
+                });
+                if (!deleted) {
+                  setSelectedIds(new Set());
+                  const fallbackMessage = deletedCount > 0
+                    ? `Deleted ${deletedCount} ${deletedCount === 1 ? 'chat' : 'chats'}, then hit a sync conflict. Pull and try again.`
+                    : 'Could not delete chats.';
+                  Alert.alert('Delete failed', useChatStore.getState().error ?? storeError ?? fallbackMessage);
+                  HapticService.error();
+                  return;
+                }
+                deletedCount += 1;
+              }
+              HapticService.success();
+              setSelectedIds(new Set());
+            } catch (err: any) {
+              Alert.alert('Delete failed', err?.message || 'Could not delete chats.');
+              HapticService.error();
+            } finally {
+              githubActivity.end();
+            }
+          },
+        },
+      ],
+    );
+  }, [chatRepoOwner, chatRepoName, chatRepoBranch, deleteThread, selectedIds]);
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 
   const toggleSelected = useCallback((id: string) => {
     setSelectedIds((previous) => {
@@ -201,7 +288,7 @@ export default function ChatThreadListScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <View style={{ flex: 1, paddingTop: headerHeight }}>
-        <View style={[styles.headerControls, { paddingHorizontal: spacing[4], paddingBottom: spacing[3] }]}>
+        <View style={[styles.headerControls, { paddingHorizontal: spacing[4], paddingTop: spacing[4], paddingBottom: spacing[3] }]}>
           <Button
             testID="chat-thread-list.button.new-chat"
             label="New Chat"
@@ -238,6 +325,14 @@ export default function ChatThreadListScreen() {
         onOpen={handleOpenThread}
         onRename={handleRenameThread}
         onDelete={handleDeleteThread}
+      />
+
+      <BulkActionBar
+        count={selectedIds.size}
+        itemNoun="chat"
+        bottomOffset={Math.max(tabBarHeight + 4, 8)}
+        onCancel={clearSelection}
+        onDelete={handleBulkDelete}
       />
 
       <ScreenHeader

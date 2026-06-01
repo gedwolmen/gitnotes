@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
 import { ChatThread, ChatThreadSummary } from '../models/Chat';
-import { stripThoughtContent } from '../utils/chatThoughts';
+import { buildThreadSummary, isDefaultChatTitle } from '../utils/chatThreadSummary';
 import { GitHubService } from './GitHubService';
 
 const GITHUB_API = 'https://api.github.com';
@@ -20,12 +20,26 @@ interface ChatIndex {
   threads: ChatThreadSummary[];
 }
 
+interface LoadThreadOptions {
+  persistRepair?: boolean;
+}
+
+const repoWriteQueue = new Map<string, Promise<unknown>>();
+
 function getIndexCacheKey(owner: string, repo: string): string {
   return `chat-index-${owner}-${repo}`;
 }
 
-function getThreadCacheKey(threadId: string): string {
-  return `chat-thread-${threadId}`;
+function getScopedIndexCacheKey(owner: string, repo: string, branch: string): string {
+  return `${getIndexCacheKey(owner, repo)}-${branch}`;
+}
+
+function getThreadCacheKey(owner: string, repo: string, branch: string, threadId: string): string {
+  return `chat-thread-${owner}-${repo}-${branch}-${threadId}`;
+}
+
+function getRepoWriteQueueKey(owner: string, repo: string, branch: string): string {
+  return `${owner}/${repo}/${branch}`;
 }
 
 function encodePath(path: string): string {
@@ -212,23 +226,125 @@ async function writeIndex(owner: string, repo: string, branch: string, threads: 
     content: JSON.stringify({ threads: sortedThreads }, null, 2),
     sha: existingIndex?.sha,
   });
-  await AsyncStorage.setItem(getIndexCacheKey(owner, repo), JSON.stringify(sortedThreads));
+  await AsyncStorage.setItem(getScopedIndexCacheKey(owner, repo, branch), JSON.stringify(sortedThreads));
 }
 
 function sortThreads(threads: ChatThreadSummary[]): ChatThreadSummary[] {
   return [...threads].sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
-function toThreadSummary(thread: ChatThread): ChatThreadSummary {
-  const lastMessage = thread.messages.length > 0 ? thread.messages[thread.messages.length - 1] : undefined;
-  const preview = stripThoughtContent(lastMessage?.content).trim();
+async function repairSummaryIfNeeded(
+  owner: string,
+  repo: string,
+  branch: string,
+  summary: ChatThreadSummary,
+): Promise<ChatThreadSummary> {
+  const needsTitleRepair = isDefaultChatTitle(summary.title);
+  const needsPreviewRepair = summary.messageCount > 0 && (!summary.preview || summary.preview === 'No messages yet');
+
+  if (!needsTitleRepair && !needsPreviewRepair) {
+    return summary;
+  }
+
+  const thread = await loadThread(owner, repo, summary.id, branch, { persistRepair: false });
+  return thread ? buildThreadSummary(thread) : summary;
+}
+
+async function repairCachedSummaryIfNeeded(
+  owner: string,
+  repo: string,
+  branch: string,
+  summary: ChatThreadSummary,
+): Promise<ChatThreadSummary> {
+  const needsTitleRepair = isDefaultChatTitle(summary.title);
+  const needsPreviewRepair = summary.messageCount > 0 && (!summary.preview || summary.preview === 'No messages yet');
+
+  if (!needsTitleRepair && !needsPreviewRepair) {
+    return summary;
+  }
+
+  const cachedThread = await AsyncStorage.getItem(getThreadCacheKey(owner, repo, branch, summary.id));
+  if (!cachedThread) {
+    return summary;
+  }
+
+  try {
+    return buildThreadSummary(normalizeLoadedThread(JSON.parse(cachedThread) as ChatThread));
+  } catch (error) {
+    void error;
+    return summary;
+  }
+}
+
+async function enqueueRepoWrite<T>(
+  owner: string,
+  repo: string,
+  branch: string,
+  work: () => Promise<T>,
+): Promise<T> {
+  const key = getRepoWriteQueueKey(owner, repo, branch);
+  const previous = repoWriteQueue.get(key) ?? Promise.resolve();
+  const next = previous.catch(() => {}).then(work);
+  const tracked = next.then(() => undefined, () => undefined).finally(() => {
+    if (repoWriteQueue.get(key) === tracked) {
+      repoWriteQueue.delete(key);
+    }
+  });
+
+  repoWriteQueue.set(key, tracked);
+  return next;
+}
+
+function normalizeLoadedThread(thread: ChatThread): ChatThread {
+  const derivedTitle = buildThreadSummary(thread).title;
+  if (derivedTitle === thread.title) {
+    return thread;
+  }
+
   return {
-    id: thread.id,
-    title: thread.title,
-    updatedAt: thread.updatedAt,
-    messageCount: thread.messages.length,
-    preview: preview || 'No messages yet',
+    ...thread,
+    title: derivedTitle,
   };
+}
+
+async function persistThreadRepairNow(
+  thread: ChatThread,
+  existingThreadSha: string | undefined,
+): Promise<void> {
+  const owner = thread.repoOwner;
+  const repo = thread.repoName;
+  const branch = thread.branch || 'main';
+  const path = `${CHAT_DIR}/${thread.id}.json`;
+
+  await putFile({
+    owner,
+    repo,
+    path,
+    branch,
+    message: `Repair chat thread title: ${thread.title}`,
+    content: JSON.stringify(thread, null, 2),
+    sha: existingThreadSha,
+  });
+
+  const existingIndex = await getFile(owner, repo, INDEX_PATH, branch);
+  const parsedIndex = existingIndex?.content
+    ? (JSON.parse(fromBase64(existingIndex.content)) as ChatIndex)
+    : { threads: [] };
+  const nextSummaries = sortThreads([
+    ...(Array.isArray(parsedIndex.threads) ? parsedIndex.threads : []).filter((summary) => summary.id !== thread.id),
+    buildThreadSummary(thread),
+  ]);
+  await writeIndex(owner, repo, branch, nextSummaries);
+  await AsyncStorage.setItem(getThreadCacheKey(owner, repo, branch, thread.id), JSON.stringify(thread));
+}
+
+async function persistThreadRepair(
+  thread: ChatThread,
+  existingThreadSha: string | undefined,
+): Promise<void> {
+  await enqueueRepoWrite(thread.repoOwner, thread.repoName, thread.branch || 'main', () =>
+    persistThreadRepairNow(thread, existingThreadSha),
+  );
 }
 
 export async function initializeChatStorage(owner: string, repo: string, branch: string = 'main'): Promise<boolean> {
@@ -260,12 +376,12 @@ export async function initializeChatStorage(owner: string, repo: string, branch:
     }
   }
 
-  await AsyncStorage.setItem(getIndexCacheKey(owner, repo), JSON.stringify([]));
+  await AsyncStorage.setItem(getScopedIndexCacheKey(owner, repo, branch), JSON.stringify([]));
   return true;
 }
 
-export async function loadThreadSummaries(owner: string, repo: string, branch: string = 'main'): Promise<ChatThreadSummary[]> {
-  const cacheKey = getIndexCacheKey(owner, repo);
+async function loadThreadSummariesInternal(owner: string, repo: string, branch: string = 'main'): Promise<ChatThreadSummary[]> {
+  const cacheKey = getScopedIndexCacheKey(owner, repo, branch);
 
   try {
     const indexFile = await getFile(owner, repo, INDEX_PATH, branch);
@@ -276,8 +392,16 @@ export async function loadThreadSummaries(owner: string, repo: string, branch: s
 
     const parsed = JSON.parse(fromBase64(indexFile.content)) as ChatIndex;
     const threads = sortThreads(Array.isArray(parsed.threads) ? parsed.threads : []);
-    await AsyncStorage.setItem(cacheKey, JSON.stringify(threads));
-    return threads;
+    const repairedThreads = sortThreads(
+      await Promise.all(threads.map((summary) => repairSummaryIfNeeded(owner, repo, branch, summary))),
+    );
+    const changed = JSON.stringify(repairedThreads) !== JSON.stringify(threads);
+    if (changed) {
+      await writeIndex(owner, repo, branch, repairedThreads);
+    } else {
+      await AsyncStorage.setItem(cacheKey, JSON.stringify(repairedThreads));
+    }
+    return repairedThreads;
   } catch (error) {
     if (getStatus(error) === 404) {
       await AsyncStorage.setItem(cacheKey, JSON.stringify([]));
@@ -287,7 +411,8 @@ export async function loadThreadSummaries(owner: string, repo: string, branch: s
     const cached = await AsyncStorage.getItem(cacheKey);
     if (cached) {
       try {
-        return JSON.parse(cached) as ChatThreadSummary[];
+        const parsed = JSON.parse(cached) as ChatThreadSummary[];
+        return Promise.all(parsed.map((summary) => repairCachedSummaryIfNeeded(owner, repo, branch, summary)));
       } catch (error) { void error;
         await AsyncStorage.removeItem(cacheKey);
       }
@@ -297,14 +422,20 @@ export async function loadThreadSummaries(owner: string, repo: string, branch: s
   }
 }
 
+export async function loadThreadSummaries(owner: string, repo: string, branch: string = 'main'): Promise<ChatThreadSummary[]> {
+  return enqueueRepoWrite(owner, repo, branch, () => loadThreadSummariesInternal(owner, repo, branch));
+}
+
 export async function loadThread(
   owner: string,
   repo: string,
   threadId: string,
   branch: string = 'main',
+  options: LoadThreadOptions = {},
 ): Promise<ChatThread | null> {
-  const cacheKey = getThreadCacheKey(threadId);
+  const cacheKey = getThreadCacheKey(owner, repo, branch, threadId);
   const path = `${CHAT_DIR}/${threadId}.json`;
+  const persistRepair = options.persistRepair ?? true;
 
   try {
     const file = await getFile(owner, repo, path, branch);
@@ -313,8 +444,12 @@ export async function loadThread(
     }
 
     const thread = JSON.parse(fromBase64(file.content)) as ChatThread;
-    await AsyncStorage.setItem(cacheKey, JSON.stringify(thread));
-    return thread;
+    const normalizedThread = normalizeLoadedThread(thread);
+    await AsyncStorage.setItem(cacheKey, JSON.stringify(normalizedThread));
+    if (persistRepair && normalizedThread.title !== thread.title) {
+      await persistThreadRepair(normalizedThread, file.sha);
+    }
+    return normalizedThread;
   } catch (error) {
     if (getStatus(error) === 404) {
       await AsyncStorage.removeItem(cacheKey);
@@ -324,7 +459,12 @@ export async function loadThread(
     const cached = await AsyncStorage.getItem(cacheKey);
     if (cached) {
       try {
-        return JSON.parse(cached) as ChatThread;
+        const cachedThread = JSON.parse(cached) as ChatThread;
+        const normalizedThread = normalizeLoadedThread(cachedThread);
+        if (normalizedThread.title !== cachedThread.title) {
+          await AsyncStorage.setItem(cacheKey, JSON.stringify(normalizedThread));
+        }
+        return normalizedThread;
       } catch (error) { void error;
         await AsyncStorage.removeItem(cacheKey);
       }
@@ -334,7 +474,7 @@ export async function loadThread(
   }
 }
 
-export async function saveThread(thread: ChatThread): Promise<void> {
+async function saveThreadNow(thread: ChatThread): Promise<void> {
   const owner = thread.repoOwner;
   const repo = thread.repoName;
   const branch = thread.branch || 'main';
@@ -351,14 +491,18 @@ export async function saveThread(thread: ChatThread): Promise<void> {
     sha: existingThread?.sha,
   });
 
-  const summaries = await loadThreadSummaries(owner, repo, branch);
+  const summaries = await loadThreadSummariesInternal(owner, repo, branch);
   const nextSummaries = sortThreads([
     ...summaries.filter((summary) => summary.id !== thread.id),
-    toThreadSummary(thread),
+    buildThreadSummary(thread),
   ]);
 
   await writeIndex(owner, repo, branch, nextSummaries);
-  await AsyncStorage.setItem(getThreadCacheKey(thread.id), JSON.stringify(thread));
+  await AsyncStorage.setItem(getThreadCacheKey(owner, repo, branch, thread.id), JSON.stringify(thread));
+}
+
+export async function saveThread(thread: ChatThread): Promise<void> {
+  await enqueueRepoWrite(thread.repoOwner, thread.repoName, thread.branch || 'main', () => saveThreadNow(thread));
 }
 
 export async function deleteThread(
@@ -367,29 +511,33 @@ export async function deleteThread(
   threadId: string,
   branch: string = 'main',
 ): Promise<boolean> {
-  const path = `${CHAT_DIR}/${threadId}.json`;
-  const existingThread = await getFile(owner, repo, path, branch);
-  const summaries = await loadThreadSummaries(owner, repo, branch);
-  const nextSummaries = summaries.filter((summary) => summary.id !== threadId);
+  return enqueueRepoWrite(owner, repo, branch, async () => {
+    const path = `${CHAT_DIR}/${threadId}.json`;
+    const existingThread = await getFile(owner, repo, path, branch);
 
-  if (!existingThread?.sha) {
+    if (!existingThread?.sha) {
+      const summaries = await loadThreadSummariesInternal(owner, repo, branch);
+      const nextSummaries = summaries.filter((summary) => summary.id !== threadId);
+      await writeIndex(owner, repo, branch, nextSummaries);
+      await AsyncStorage.removeItem(getThreadCacheKey(owner, repo, branch, threadId));
+      return false;
+    }
+
+    await deleteFile({
+      owner,
+      repo,
+      path,
+      branch,
+      message: `Delete chat thread: ${threadId}`,
+      sha: existingThread.sha,
+    });
+
+    const latestSummaries = await loadThreadSummariesInternal(owner, repo, branch);
+    const nextSummaries = latestSummaries.filter((summary) => summary.id !== threadId);
     await writeIndex(owner, repo, branch, nextSummaries);
-    await AsyncStorage.removeItem(getThreadCacheKey(threadId));
-    return false;
-  }
-
-  await deleteFile({
-    owner,
-    repo,
-    path,
-    branch,
-    message: `Delete chat thread: ${threadId}`,
-    sha: existingThread.sha,
+    await AsyncStorage.removeItem(getThreadCacheKey(owner, repo, branch, threadId));
+    return true;
   });
-
-  await writeIndex(owner, repo, branch, nextSummaries);
-  await AsyncStorage.removeItem(getThreadCacheKey(threadId));
-  return true;
 }
 
 export async function isChatStorageInitialized(

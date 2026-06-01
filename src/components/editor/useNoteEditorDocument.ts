@@ -260,48 +260,59 @@ export function useNoteEditorDocument({
         });
         savedNoteId = newNote?.id;
         HapticService.success();
+        // Navigate back immediately for new notes - don't wait for sync
         navigation.goBack();
       }
 
-      // Push title-only notes too (#622). Previously the sync trigger required
-      // non-empty content, which silently skipped pushing notes that had only
-      // a title — they ended up with filePath=null in local store, never on
-      // remote, while the cloud icon happily showed cloud-done.
-      if (repo) {
-        const existingForColor = savedNoteId ? getNoteByIdRef.current(savedNoteId) : undefined;
-        const syncParams = {
-          repo,
-          branch,
-          filePath: existingFilePath ?? (folderPath ? `${folderPath}/${slugifyLocal(title.trim())}${getExtensionForFormat(noteFormat)}` : undefined),
-          title: title.trim(),
-          content: content.trim(),
-          format: noteFormat,
-          accountId,
-          tags,
-          color: existingForColor?.color ?? null,
-          knownSha: commit,
-        };
-
-        const syncResult = await syncNoteToGitHub(syncParams);
-
-        if (syncResult.success && syncResult.filePath && savedNoteId) {
+      // Defer GitHub sync to after UI update to prevent app from getting stuck
+      if (repo && savedNoteId) {
+        // Fire-and-forget sync - don't await
+        void (async () => {
           try {
-            await updateNote({
-              id: savedNoteId,
-              filePath: syncResult.filePath,
-              ...(syncResult.finalContent != null && syncResult.finalContent !== content.trim()
-                ? { content: syncResult.finalContent }
-                : {}),
-            });
+            const existingForColor = getNoteByIdRef.current(savedNoteId);
+            const syncParams = {
+              repo,
+              branch,
+              filePath: existingFilePath ?? (folderPath ? `${folderPath}/${slugifyLocal(title.trim())}${getExtensionForFormat(noteFormat)}` : undefined),
+              title: title.trim(),
+              content: content.trim(),
+              format: noteFormat,
+              accountId,
+              tags,
+              color: existingForColor?.color ?? null,
+              knownSha: commit,
+            };
+
+            const syncResult = await syncNoteToGitHub(syncParams);
+
+            if (syncResult.success && syncResult.filePath) {
+              await updateNote({
+                id: savedNoteId,
+                filePath: syncResult.filePath,
+                ...(syncResult.finalContent != null && syncResult.finalContent !== content.trim()
+                  ? { content: syncResult.finalContent }
+                  : {}),
+              });
+            } else {
+              await NoteSyncQueueService.enqueueNoteUpsert(syncParams, savedNoteId);
+            }
           } catch (error) {
             void error;
+            const existingForColor = getNoteByIdRef.current(savedNoteId);
+            const syncParams = {
+              repo,
+              branch,
+              filePath: existingFilePath ?? (folderPath ? `${folderPath}/${slugifyLocal(title.trim())}${getExtensionForFormat(noteFormat)}` : undefined),
+              title: title.trim(),
+              content: content.trim(),
+              format: noteFormat,
+              accountId,
+              tags,
+              color: existingForColor?.color ?? null,
+            };
+            await NoteSyncQueueService.enqueueNoteUpsert(syncParams, savedNoteId);
           }
-        }
-
-        if (!syncResult.success) {
-          console.warn('[NoteEditor] GitHub sync failed, queueing:', syncResult.error);
-          await NoteSyncQueueService.enqueueNoteUpsert(syncParams, savedNoteId);
-        }
+        })();
       }
     } catch {
       HapticService.error();

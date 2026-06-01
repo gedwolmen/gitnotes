@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { ChatMessage, ChatThread, ChatThreadSummary } from '../models/Chat';
-import { stripThoughtContent } from '../utils/chatThoughts';
+import { formatSyncError } from '../services/git/formatSyncError';
+import { buildThreadSummary, deriveChatTitleFromText, isDefaultChatTitle } from '../utils/chatThreadSummary';
 
 export interface ChatStorageAdapter {
   loadThreadSummaries: (owner: string, repo: string, branch: string) => Promise<ChatThreadSummary[]>;
@@ -60,18 +61,6 @@ interface ChatActions {
   setStorageAdapter: (adapter: ChatStorageAdapter) => void;
 }
 
-const createThreadSummary = (thread: ChatThread): ChatThreadSummary => {
-  const lastMessage = thread.messages.length > 0 ? thread.messages[thread.messages.length - 1] : undefined;
-  const preview = stripThoughtContent(lastMessage?.content).trim();
-  return {
-    id: thread.id,
-    title: thread.title,
-    updatedAt: thread.updatedAt,
-    messageCount: thread.messages.length,
-    preview: preview || 'No messages yet',
-  };
-};
-
 const sortThreadSummaries = (threads: ChatThreadSummary[]): ChatThreadSummary[] =>
   [...threads].sort((a, b) => b.updatedAt - a.updatedAt);
 
@@ -79,7 +68,7 @@ const upsertThreadSummary = (
   summaries: ChatThreadSummary[],
   thread: ChatThread,
 ): ChatThreadSummary[] => {
-  const summary = createThreadSummary(thread);
+  const summary = buildThreadSummary(thread);
   const existingIndex = summaries.findIndex((item) => item.id === thread.id);
 
   if (existingIndex === -1) {
@@ -175,7 +164,8 @@ export const useChatStore = create<ChatState & ChatActions>()((set, get) => ({
       }));
       return true;
     } catch (err) {
-      set({ error: 'Failed to delete chat thread' });
+      const raw = err instanceof Error ? err.message : typeof err === 'string' ? err : String(err);
+      set({ error: formatSyncError(raw, 'delete') });
       console.error('Error deleting chat thread:', err);
       return false;
     }
@@ -218,8 +208,14 @@ export const useChatStore = create<ChatState & ChatActions>()((set, get) => ({
         return state;
       }
 
+      const nextTitle =
+        message.role === 'user' && isDefaultChatTitle(state.activeThread.title)
+          ? deriveChatTitleFromText(message.content)
+          : state.activeThread.title;
+
       const updatedThread: ChatThread = {
         ...state.activeThread,
+        title: nextTitle,
         messages: [...state.activeThread.messages, message],
         updatedAt: Math.max(message.timestamp, Date.now()),
       };

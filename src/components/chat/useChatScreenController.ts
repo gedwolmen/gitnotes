@@ -116,7 +116,7 @@ function mergeAssistantWithToolFallback(
 
   if (!fallback) {
     if (assistantIsMeaningful) return assistant;
-    return assistant || 'Done.';
+    return handledToolCount > 0 ? '' : assistant || 'Done.';
   }
 
   if (handledToolCount <= 0) {
@@ -146,7 +146,6 @@ export function useChatScreenController(threadId: string) {
   const setStreaming = useChatStore((state) => state.setStreaming);
   const clearError = useChatStore((state) => state.clearError);
   const setStorageAdapter = useChatStore((state) => state.setStorageAdapter);
-  const renameThread = useChatStore((state) => state.renameThread);
   const truncateAfter = useChatStore((state) => state.truncateAfter);
 
   const toolArgsBufferRef = useRef<Record<string, string>>({});
@@ -171,6 +170,15 @@ export function useChatScreenController(threadId: string) {
   const saveActiveThread = useCallback(async () => {
     const latestThread = useChatStore.getState().activeThread;
     if (latestThread) await ChatStorageService.saveThread(latestThread);
+  }, []);
+
+  const persistPrimedThread = useCallback(async (threadId: string) => {
+    const latestThread = useChatStore.getState().activeThread;
+    if (!latestThread || latestThread.id !== threadId) {
+      return;
+    }
+
+    await ChatStorageService.saveThread(latestThread).catch(() => {});
   }, []);
 
   const getSelectedModelConfig = useCallback(() => {
@@ -222,9 +230,11 @@ export function useChatScreenController(threadId: string) {
       return;
     }
 
-    const userMessage: ChatMessage = { id: generateId(), role: 'user', content: text.trim(), timestamp: Date.now(), attachedContexts: contexts };
+    const trimmedText = text.trim();
+    const userMessage: ChatMessage = { id: generateId(), role: 'user', content: trimmedText, timestamp: Date.now(), attachedContexts: contexts };
     const assistantMessageId = generateId();
     addMessage(userMessage);
+    void persistPrimedThread(currentThread.id);
     addMessage({ id: assistantMessageId, role: 'assistant', content: '', timestamp: Date.now() });
     setAttachedContexts([]);
     setRetryPayload({ text: userMessage.content, contexts });
@@ -366,8 +376,12 @@ export function useChatScreenController(threadId: string) {
         // button appears instead of leaving the user staring at a
         // dead-end "No response received." bubble.
         if (handledToolCount > 0) {
-          assistantText = fallbackToolText || 'Done.';
-          updateMessage(assistantMessageId, { content: assistantText });
+          if (fallbackToolText) {
+            assistantText = fallbackToolText;
+            updateMessage(assistantMessageId, { content: assistantText });
+          } else {
+            removeMessage(assistantMessageId);
+          }
         } else {
           updateMessage(assistantMessageId, { content: 'No response received. Tap Retry to try again.' });
           setLocalError('The model returned an empty response.');
@@ -375,22 +389,12 @@ export function useChatScreenController(threadId: string) {
       } else {
         const fallbackToolText = fallbackToolResponses.join('\n\n').trim();
         const nextContent = mergeAssistantWithToolFallback(assistantText, fallbackToolText, handledToolCount);
-        updateMessage(assistantMessageId, { content: nextContent });
+        if (!nextContent && handledToolCount > 0) removeMessage(assistantMessageId);
+        else updateMessage(assistantMessageId, { content: nextContent });
       }
 
       await saveActiveThread();
 
-      const latest = useChatStore.getState().activeThread;
-      if (!abortController.signal.aborted && latest && latest.title === 'New Chat') {
-        // Use the first user message as the title instead of calling the LLM
-        // to avoid 404 errors from providers like MiniMax that may not support generateText
-        const firstLine = userMessage.content.trim().split('\n')[0].slice(0, 50);
-        const simpleTitle = firstLine.replace(/[^\w\s]/g, '').trim() || 'New Chat';
-        if (simpleTitle && simpleTitle !== 'New Chat') {
-          renameThread({ threadId: latest.id, title: simpleTitle });
-          await saveActiveThread();
-        }
-      }
     } catch (error) {
       if (pendingFlush) clearTimeout(pendingFlush);
       const aborted = (error as Error)?.name === 'AbortError' || abortController.signal.aborted;
@@ -405,27 +409,20 @@ export function useChatScreenController(threadId: string) {
         const fallbackToolText = fallbackToolResponses.join('\n\n').trim();
         if (hasMeaningfulAssistantText(assistantText) || handledToolCount > 0 || fallbackToolText) {
           const nextContent = mergeAssistantWithToolFallback(assistantText, fallbackToolText, handledToolCount);
-          updateMessage(assistantMessageId, { content: nextContent });
+          if (!nextContent && handledToolCount > 0) removeMessage(assistantMessageId);
+          else updateMessage(assistantMessageId, { content: nextContent });
           console.warn('[ChatScreen] stream finished with visible output but failed while persisting or post-processing:', message);
         } else {
           removeMessage(assistantMessageId);
           setLocalError(message);
         }
       }
-      const latestAfterError = useChatStore.getState().activeThread;
-      if (!abortController.signal.aborted && latestAfterError && latestAfterError.title === 'New Chat') {
-        const firstLine = userMessage.content.trim().split('\n')[0].slice(0, 50);
-        const simpleTitle = firstLine.replace(/[^\w\s]/g, '').trim() || 'New Chat';
-        if (simpleTitle && simpleTitle !== 'New Chat') {
-          renameThread({ threadId: latestAfterError.id, title: simpleTitle });
-          await saveActiveThread().catch(() => {});
-        }
-      }
     } finally {
       if (abortRef.current === abortController) abortRef.current = null;
       setStreaming(false);
+      setStreamStartedAt(0);
     }
-  }, [addMessage, clearError, getSelectedModelConfig, noteCount, removeMessage, renameThread, runToolCall, saveActiveThread, setStreaming, t, todoCount, updateMessage]);
+  }, [addMessage, clearError, getSelectedModelConfig, noteCount, persistPrimedThread, removeMessage, runToolCall, saveActiveThread, setStreaming, t, todoCount, updateMessage]);
 
   const stopStreaming = useCallback(() => abortRef.current?.abort(), []);
 

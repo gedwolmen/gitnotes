@@ -106,13 +106,18 @@ export default function ChatScreen() {
               flexGrow: messages.length === 0 ? 1 : undefined,
             }}
             ItemSeparatorComponent={() => <View style={{ height: spacing[1] }} />}
-            renderItem={({ item }) => (
-              <ChatMessageBubble
-                message={item}
-                isStreaming={isStreaming && item.id === messages[messages.length - 1]?.id && item.role === 'assistant'}
-                onLongPress={handleMessageLongPress}
-              />
-            )}
+            renderItem={({ item }) => {
+              const isLastMessage = item.id === messages[messages.length - 1]?.id;
+              const isToolCallInFlight = Boolean(item.toolCallName) && !item.toolCallResult;
+              const showStreaming = isStreaming && ((isLastMessage && item.role === 'assistant') || isToolCallInFlight);
+              return (
+                <ChatMessageBubble
+                  message={item}
+                  isStreaming={showStreaming}
+                  onLongPress={handleMessageLongPress}
+                />
+              );
+            }}
             ListEmptyComponent={
               <View style={[styles.emptyState, { padding: spacing[6] }]}> 
                 <Text style={{ color: colors.text, fontSize: type.xl, fontWeight: '700', marginBottom: spacing[2] }}>Start the conversation</Text>
