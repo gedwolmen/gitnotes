@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { useTokens } from '../../contexts/ThemeContext';
 import { useRepoStore } from '../../stores/repoStore';
 import { useAIStore } from '../../stores/aiStore';
 import { GitService, GitBranch } from '../../services/GitService';
+import { LastUsedRepoService } from '../../services/LastUsedRepoService';
 import SearchBar from '../SearchBar';
 import { HapticService } from '../../utils/haptics';
 import * as ChatStorageService from '../../services/ChatStorageService';
@@ -45,6 +46,29 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
   const [showBranchPicker, setShowBranchPicker] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
+
+  // Auto-select repo when modal opens: single repo → select it, multiple → last used
+  const didAutoSelectRef = useRef(false);
+  useEffect(() => {
+    if (!visible) {
+      didAutoSelectRef.current = false;
+      return;
+    }
+    if (didAutoSelectRef.current) return;
+    if (repositories.length === 0) return;
+    didAutoSelectRef.current = true;
+
+    if (repositories.length === 1) {
+      void handleSelectRepo(repositories[0].path);
+      return;
+    }
+
+    void LastUsedRepoService.get().then((lastPath) => {
+      if (!lastPath) return;
+      const stillExists = repositories.some((r) => r.path === lastPath);
+      if (stillExists) void handleSelectRepo(lastPath);
+    });
+  }, [visible, repositories]);
 
   const filteredRepos = useMemo(() => {
     if (!searchQuery.trim()) return repositories;
