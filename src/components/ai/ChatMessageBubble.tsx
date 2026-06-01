@@ -417,7 +417,6 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
 
 export const ChatMessageBubble = React.memo(ChatMessageBubbleImpl, (prev, next) => {
   if (prev.isStreaming !== next.isStreaming) return false;
-  if (prev.onLongPress !== next.onLongPress) return false;
   const a = prev.message;
   const b = next.message;
   return (
