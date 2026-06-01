@@ -152,6 +152,11 @@ export interface GitHubFileCommit {
   commit: { sha: string };
 }
 
+export interface GitHubPathCommitDates {
+  updatedAt?: number;
+  createdAt?: number;
+}
+
 /**
  * Tristate result of a sha lookup so callers can distinguish
  * "definitely gone" from "couldn't tell". Critical for delete paths —
@@ -353,6 +358,32 @@ class GitHubServiceClass {
     }
   }
 
+  async createPullRequest(opts: {
+    owner: string;
+    repo: string;
+    title: string;
+    body: string;
+    head: string;
+    base: string;
+  }): Promise<GitHubPullRequest | null> {
+    try {
+      const data = await this.request(
+        `https://api.github.com/repos/${opts.owner}/${opts.repo}/pulls`,
+        'POST',
+        {
+          title: opts.title,
+          body: opts.body,
+          head: opts.head,
+          base: opts.base,
+        }
+      );
+      return data as GitHubPullRequest;
+    } catch (error) {
+      console.warn('[GitHubService] Failed to create pull request:', error);
+      return null;
+    }
+  }
+
   async getMilestones(owner: string, repo: string): Promise<GitHubMilestone[]> {
     try {
       const data = await this.request(
@@ -445,6 +476,40 @@ class GitHubServiceClass {
     } catch (error) {
       console.warn('[GitHubService] Failed to get file content:', error);
       return null;
+    }
+  }
+
+  async getPathCommitDates(
+    owner: string,
+    repo: string,
+    path: string,
+    ref?: string,
+    opts?: TokenOpts,
+  ): Promise<GitHubPathCommitDates> {
+    try {
+      const params = new URLSearchParams({ path, per_page: '100' });
+      if (ref) params.set('sha', ref);
+      const data = await this.request<any[]>(
+        `https://api.github.com/repos/${owner}/${repo}/commits?${params.toString()}`,
+        'GET',
+        undefined,
+        opts,
+      );
+      if (!Array.isArray(data) || data.length === 0) return {};
+      const parseDate = (value: unknown): number | undefined => {
+        if (typeof value !== 'string') return undefined;
+        const timestamp = Date.parse(value);
+        return Number.isFinite(timestamp) ? timestamp : undefined;
+      };
+      const newest = parseDate(data[0]?.commit?.author?.date ?? data[0]?.commit?.committer?.date);
+      const oldest = parseDate(data[data.length - 1]?.commit?.author?.date ?? data[data.length - 1]?.commit?.committer?.date);
+      return {
+        updatedAt: newest,
+        createdAt: oldest ?? newest,
+      };
+    } catch (error) {
+      console.warn('[GitHubService] Failed to get path commit dates:', error);
+      return {};
     }
   }
 
@@ -788,7 +853,7 @@ class GitHubServiceClass {
 
   private async request<T = any>(
     url: string,
-    method: 'GET' | 'PUT' | 'DELETE' = 'GET',
+    method: 'GET' | 'PUT' | 'POST' | 'DELETE' = 'GET',
     data?: any,
     opts?: TokenOpts,
   ): Promise<T> {
