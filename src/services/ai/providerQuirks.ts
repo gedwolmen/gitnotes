@@ -10,30 +10,24 @@
  */
 
 export interface ProviderQuirk {
-  /** Stable identifier; also used as a debug log prefix. */
   id: string;
-  /** Returns true if this quirk applies to the given baseURL. */
   matches: (baseURL: string) => boolean;
-  /**
-   * Mutate the outgoing /chat/completions JSON body in place.
-   * Receives the parsed body; modify and return (no return needed).
-   */
   transformRequestBody?: (body: Record<string, unknown>) => void;
-  /** Optional response inspector for debugging (only called in __DEV__). */
+  transformUrl?: (url: string) => string;
   inspectResponse?: (response: Response) => void;
 }
 
 export const PROVIDER_QUIRKS: ProviderQuirk[] = [
   {
-    // Anthropic API via MiniMax (api.minimax.io/anthropic).
-    // Uses OpenAI-compatible endpoint with Anthropic message format.
     id: 'anthropic.minimax',
-    matches: (url) => /api\.minimax\.io\/anthropic/i.test(url),
-    transformRequestBody: (body) => {
-      // Anthropic API expects 'messages' array, not 'prompt'
-      // Already compatible via OpenAI-compatible SDK
-      // No transformation needed for basic chat completions
+    matches: (url) => /api\.minimax\.io/i.test(url),
+    transformUrl: (url) => {
+      if (url.includes('api.minimax.io')) {
+        return url.replace('/chat/completions', '/anthropic/v1/messages');
+      }
+      return url;
     },
+    transformRequestBody: () => {},
   },
   {
     // Z.AI Coding Plan (api.z.ai/api/coding/paas/v4 and api.z.ai/api/paas/v4).
@@ -66,6 +60,11 @@ export function buildQuirkedFetch(baseURL: string): typeof fetch | undefined {
 
   return async (input, init) => {
     let outboundInit = init;
+    let outboundUrl = input as string;
+
+    if (quirk.transformUrl && typeof input === 'string') {
+      outboundUrl = quirk.transformUrl(input);
+    }
 
     if (init?.body && typeof init.body === 'string' && quirk.transformRequestBody) {
       try {
@@ -79,7 +78,7 @@ export function buildQuirkedFetch(baseURL: string): typeof fetch | undefined {
       }
     }
 
-    const response = await fetch(input as RequestInfo, outboundInit);
+    const response = await fetch(outboundUrl as RequestInfo, outboundInit);
 
     if (__DEV__ && quirk.inspectResponse) {
       try {
