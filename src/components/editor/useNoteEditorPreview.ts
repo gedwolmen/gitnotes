@@ -148,7 +148,9 @@ export function useNoteEditorPreview({
       notes.find((note) => note.filePath && normalizeNotePathForLookup(note.filePath) === path);
 
     // First try matching by note title (wiki links like [[Welcome to Graph Notes]] use title)
-    const targetNoteByTitle = notes.find((note) => note.title.toLowerCase() === targetLower);
+    // Strip extension when comparing since wikiTargetToHref appends .md to wiki links
+    const targetForTitleMatch = targetLower.replace(/\.(md|norg|org|pdf|json)$/i, '');
+    const targetNoteByTitle = notes.find((note) => note.title.toLowerCase() === targetForTitleMatch);
 
     let targetNote = targetNoteByTitle || matchByExact(normalizedTargetPath);
 
