@@ -65,9 +65,22 @@ export class ScheduledLearningService {
       const wordCount = item.wordCount;
       const descriptionText = item.description ? `\n\nAdditional context: ${item.description}` : '';
 
+      const existingNotesForTags = noteStore.notes.filter((note) =>
+        note.tags?.some((tag) => item.tags.includes(tag))
+      );
+
+      let depthHint = '';
+      if (existingNotesForTags.length > 0) {
+        const existingTitles = existingNotesForTags
+          .slice(0, 5)
+          .map((n) => n.title)
+          .join('; ');
+        depthHint = `\n\nA prior note exists on this subject. Existing notes: "${existingTitles}". Generate more advanced content that builds on and goes beyond what has already been covered.`;
+      }
+
       const systemPrompt = `You are an educational content generator. Create a well-structured learning note about the topic(s) provided. The note should be informative, educational, and engaging. Format with markdown. Include examples where helpful.`;
 
-      const userPrompt = `Create a learning note about: ${tagsText}${descriptionText}\n\nRequirements:\n- Approximately ${wordCount} words\n- Well-structured with sections/headings\n- Educational and informative tone\n- Include practical examples if relevant`;
+      const userPrompt = `Create a learning note about: ${tagsText}${descriptionText}${depthHint}\n\nRequirements:\n- Approximately ${wordCount} words\n- Well-structured with sections/headings\n- Educational and informative tone\n- Include practical examples if relevant`;
 
       const result = await generateText({
         model,
