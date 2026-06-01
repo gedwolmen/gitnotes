@@ -1,20 +1,23 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  FlatList,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTokens } from '../../contexts/ThemeContext';
 import { useRepoStore } from '../../stores/repoStore';
 import { useAIStore } from '../../stores/aiStore';
+import { GitService, GitBranch } from '../../services/GitService';
 import SearchBar from '../SearchBar';
 import { HapticService } from '../../utils/haptics';
 import * as ChatStorageService from '../../services/ChatStorageService';
-import { Modal, Button, Input, Surface } from '../ui';
+import { Modal, Button, Surface } from '../ui';
 
 interface ChatRepoPickerModalProps {
   visible: boolean;
@@ -37,6 +40,9 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRepoPath, setSelectedRepoPath] = useState<string | null>(null);
   const [branch, setBranch] = useState('main');
+  const [branches, setBranches] = useState<GitBranch[]>([]);
+  const [loadingBranches, setLoadingBranches] = useState(false);
+  const [showBranchPicker, setShowBranchPicker] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
 
@@ -50,15 +56,28 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
     );
   }, [repositories, searchQuery]);
 
-  const handleSelectRepo = (path: string) => {
+  const handleSelectRepo = async (path: string) => {
     setSelectedRepoPath(path);
     setInitError(null);
+    setLoadingBranches(true);
+    try {
+      const fetchedBranches = await GitService.getBranches(path);
+      setBranches(fetchedBranches);
+      const currentBranch = fetchedBranches.find((b) => b.isCurrent);
+      setBranch(currentBranch?.name || 'main');
+    } catch {
+      setBranches([]);
+    } finally {
+      setLoadingBranches(false);
+    }
     HapticService.selection();
   };
 
-  const handleBranchChange = (next: string) => {
-    setBranch(next);
+  const handleBranchSelect = (branchName: string) => {
+    setBranch(branchName);
+    setShowBranchPicker(false);
     setInitError(null);
+    HapticService.selection();
   };
 
   const handleConfirm = async () => {
@@ -194,16 +213,21 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
               {selectedRepoPath && (
                 <View style={styles.branchConfig}>
                   <Text style={[styles.branchLabel, { color: colors.text }]}>Branch:</Text>
-                  <View style={{ flex: 1 }}>
-                    <Input
-                      testID="chat-repo-picker.input.branch"
-                      value={branch}
-                      onChangeText={handleBranchChange}
-                      placeholder="main"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                    />
-                  </View>
+                  <TouchableOpacity
+                    testID="chat-repo-picker.button.select-branch"
+                    style={[styles.branchPicker, { borderColor: colors.border }]}
+                    onPress={() => setShowBranchPicker(true)}
+                    disabled={loadingBranches}
+                  >
+                    {loadingBranches ? (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    ) : (
+                      <>
+                        <Text style={[styles.branchPickerText, { color: colors.text }]}>{branch}</Text>
+                        <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
+                      </>
+                    )}
+                  </TouchableOpacity>
                 </View>
               )}
             </>
@@ -249,6 +273,43 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
           </Button>
         </View>
       </View>
+
+      {/* Branch Picker Modal */}
+      <Modal visible={showBranchPicker} onRequestClose={() => setShowBranchPicker(false)} bottomSheet contentStyle={{ height: '50%' }}>
+        <View style={[styles.branchModalHeader, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.branchModalTitle, { color: colors.text }]}>Select Branch</Text>
+          <TouchableOpacity onPress={() => setShowBranchPicker(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="close" size={24} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+        <FlatList
+          data={branches}
+          keyExtractor={(item) => item.name}
+          contentContainerStyle={styles.branchListContent}
+          keyboardShouldPersistTaps="handled"
+          renderItem={({ item }) => {
+            const isSelected = item.name === branch;
+            return (
+              <TouchableOpacity
+                testID={`chat-repo-picker.button.branch-${item.name}`}
+                style={[styles.branchItem, { borderBottomColor: colors.border }]}
+                onPress={() => handleBranchSelect(item.name)}
+              >
+                <View style={styles.branchItemLeft}>
+                  <Ionicons name="git-branch-outline" size={18} color={isSelected ? colors.primary : colors.textSecondary} />
+                  <Text style={[styles.branchItemText, { color: colors.text }]}>{item.name}</Text>
+                  {item.isCurrent && (
+                    <View style={[styles.currentBadge, { backgroundColor: colors.primary + '20' }]}>
+                      <Text style={[styles.currentBadgeText, { color: colors.primary }]}>default</Text>
+                    </View>
+                  )}
+                </View>
+                {isSelected && <Ionicons name="checkmark" size={20} color={colors.primary} />}
+              </TouchableOpacity>
+            );
+          }}
+        />
+      </Modal>
     </Modal>
   );
 };
@@ -352,5 +413,61 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 20,
     fontSize: 14,
+  },
+  branchPicker: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    minHeight: 44,
+  },
+  branchPickerText: {
+    fontSize: 15,
+    flex: 1,
+  },
+  branchModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  branchModalTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  branchListContent: {
+    paddingBottom: 8,
+  },
+  branchItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  branchItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  branchItemText: {
+    fontSize: 15,
+  },
+  currentBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  currentBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
 });

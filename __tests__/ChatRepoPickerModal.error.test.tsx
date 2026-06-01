@@ -71,7 +71,7 @@ jest.mock('../src/services/ChatStorageService', () => ({
 }));
 
 jest.mock('../src/components/ui', () => {
-  const { View, Text, Pressable, TextInput } = require('react-native');
+  const { View, Text, Pressable } = require('react-native');
   return {
     Modal: ({ visible, children }: any) => (visible ? <View>{children}</View> : null),
     Button: ({ children, onPress, disabled, testID }: any) => (
@@ -79,12 +79,18 @@ jest.mock('../src/components/ui', () => {
         <Text>{children}</Text>
       </Pressable>
     ),
-    Input: ({ value, onChangeText, testID, placeholder }: any) => (
-      <TextInput testID={testID} value={value} onChangeText={onChangeText} placeholder={placeholder} />
-    ),
     Surface: ({ children }: any) => <View>{children}</View>,
   };
 });
+
+jest.mock('../src/services/GitService', () => ({
+  GitService: {
+    getBranches: jest.fn(async () => [
+      { name: 'main', isCurrent: true },
+      { name: 'develop', isCurrent: false },
+    ]),
+  },
+}));
 
 import { ChatRepoPickerModal } from '../src/components/ai/ChatRepoPickerModal';
 
@@ -172,7 +178,9 @@ describe('ChatRepoPickerModal init error recovery (issue #655)', () => {
       expect(getByTestId('chat-repo-picker.text.error')).toBeTruthy();
     });
 
-    fireEvent.changeText(getByTestId('chat-repo-picker.input.branch'), 'develop');
+    fireEvent.press(getByTestId('chat-repo-picker.button.select-branch'));
+    const developBranch = await waitFor(() => getByTestId('chat-repo-picker.button.branch-develop'));
+    fireEvent.press(developBranch);
 
     expect(queryByTestId('chat-repo-picker.text.error')).toBeNull();
   });
