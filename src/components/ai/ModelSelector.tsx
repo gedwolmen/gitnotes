@@ -132,7 +132,7 @@ export function ModelSelector({ visible, onClose }: ModelSelectorProps) {
             </TouchableOpacity>
           </View>
           
-          <View style={[styles.searchWrap, { borderBottomColor: colors.border }]}>
+          <View style={[styles.searchWrap, { borderColor: colors.border, backgroundColor: colors.background }]}>
             <Ionicons name="search" size={16} color={colors.textSecondary} />
             <TextInput
               testID="model-selector.input.search"
@@ -294,9 +294,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderRadius: 8,
+    marginHorizontal: 16,
+    marginVertical: 8,
   },
   searchInput: {
     flex: 1,

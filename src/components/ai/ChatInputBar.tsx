@@ -132,11 +132,13 @@ export function ChatInputBar({
             maxHeight: 100,
             backgroundColor: colors.background,
             color: colors.text,
+            borderColor: colors.border,
+            borderWidth: 1,
             borderRadius: 20,
             paddingHorizontal: spacing[3],
             paddingTop: spacing[2],
             paddingBottom: spacing[2],
-            fontSize: type.md,
+            fontSize: 16,
           }}
           placeholder="Type a message..."
           placeholderTextColor={colors.textSecondary}

@@ -27,6 +27,28 @@ interface ProviderConfigModalProps {
   provider?: AIProviderConfig;
 }
 
+const MINIMAX_MODELS = [
+  'MiniMax-M3',
+  'MiniMax-M2.7',
+  'MiniMax-M2.7-highspeed',
+  'MiniMax-M2.5',
+  'MiniMax-M2.5-highspeed',
+  'MiniMax-M2.1',
+  'MiniMax-M2',
+] as const;
+
+function isMiniMaxBaseURL(value: string): boolean {
+  return /api\.minimax\.io/i.test(value);
+}
+
+function normalizeMiniMaxBaseURL(value: string): string {
+  const trimmed = value.trim().replace(/\/$/, '');
+  if (!isMiniMaxBaseURL(trimmed)) return trimmed;
+  return trimmed
+    .replace(/\/anthropic(?:\/v1\/messages)?$/i, '')
+    .replace(/\/v1\/text\/chatcompletion_v2$/i, '');
+}
+
 export function ProviderConfigModal({ visible, onClose, provider }: ProviderConfigModalProps) {
   const { colors } = useTheme();
   const { spacing } = useTokens();
@@ -63,41 +85,76 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
     
     setIsTesting(true);
     try {
-      const url = baseURL.endsWith('/') ? `${baseURL}models` : `${baseURL}/models`;
+      const normalizedBaseURL = normalizeMiniMaxBaseURL(baseURL);
       const headers: Record<string, string> = {};
       if (apiKey.trim()) {
         headers['Authorization'] = `Bearer ${apiKey.trim()}`;
       }
-      
-      const response = await axios.get(url, { headers, timeout: 10000 });
-      const modelsData = response.data?.data || response.data;
-      
-      if (Array.isArray(modelsData)) {
-        const discoveredModels: AIModelConfig[] = modelsData.map((m: any) => ({
-          id: String(m.id || m.name),
-          name: String(m.name || m.id),
-          providerId: provider?.id || `custom-${Date.now()}`,
+
+      if (isMiniMaxBaseURL(normalizedBaseURL)) {
+        const response = await axios.post(
+          `${normalizedBaseURL}/v1/text/chatcompletion_v2`,
+          {
+            model: 'MiniMax-M3',
+            messages: [
+              { role: 'system', name: 'MiniMax AI' },
+              { role: 'user', name: 'user', content: 'hello' },
+            ],
+            max_tokens: 16,
+          },
+          { headers, timeout: 10000 },
+        );
+
+        if (!response.data) {
+          throw new Error('MiniMax returned an empty response.');
+        }
+
+        const providerId = provider?.id || `custom-${Date.now()}`;
+        const discoveredModels: AIModelConfig[] = MINIMAX_MODELS.map((modelId) => ({
+          id: modelId,
+          name: modelId,
+          providerId,
           providerType: 'openai-compatible',
           requiresDownload: false,
         }));
-
+        setBaseURL(normalizedBaseURL);
         setTestedModels(discoveredModels);
-
-        let warning = '';
-        if (isOpenRouterBaseURL(baseURL.trim()) && apiKey.trim()) {
-          const keyInfo = await checkOpenRouterKey(baseURL.trim(), apiKey.trim());
-          if (keyInfo?.isFreeTier) {
-            const limitText = keyInfo.limit != null
-              ? `${keyInfo.limit} req/day`
-              : 'a daily request limit';
-            const usageText = keyInfo.usage != null ? ` (${keyInfo.usage} used)` : '';
-            warning = `\n\nThis API key is on the OpenRouter free tier — ${limitText}${usageText}. Streaming will fail when the daily quota is exhausted.`;
-          }
-        }
-
-        Alert.alert('Success', `Connected and discovered ${discoveredModels.length} models.${warning}`);
+        Alert.alert(
+          'Success',
+          `Connected to MiniMax. Using base URL ${normalizedBaseURL} and loaded ${discoveredModels.length} known models.`,
+        );
       } else {
-        throw new Error('Unexpected response format. Expected an array of models.');
+        const url = normalizedBaseURL.endsWith('/') ? `${normalizedBaseURL}models` : `${normalizedBaseURL}/models`;
+        const response = await axios.get(url, { headers, timeout: 10000 });
+        const modelsData = response.data?.data || response.data;
+
+        if (Array.isArray(modelsData)) {
+          const discoveredModels: AIModelConfig[] = modelsData.map((m: any) => ({
+            id: String(m.id || m.name),
+            name: String(m.name || m.id),
+            providerId: provider?.id || `custom-${Date.now()}`,
+            providerType: 'openai-compatible',
+            requiresDownload: false,
+          }));
+
+          setTestedModels(discoveredModels);
+
+          let warning = '';
+          if (isOpenRouterBaseURL(normalizedBaseURL) && apiKey.trim()) {
+            const keyInfo = await checkOpenRouterKey(normalizedBaseURL, apiKey.trim());
+            if (keyInfo?.isFreeTier) {
+              const limitText = keyInfo.limit != null
+                ? `${keyInfo.limit} req/day`
+                : 'a daily request limit';
+              const usageText = keyInfo.usage != null ? ` (${keyInfo.usage} used)` : '';
+              warning = `\n\nThis API key is on the OpenRouter free tier — ${limitText}${usageText}. Streaming will fail when the daily quota is exhausted.`;
+            }
+          }
+
+          Alert.alert('Success', `Connected and discovered ${discoveredModels.length} models.${warning}`);
+        } else {
+          throw new Error('Unexpected response format. Expected an array of models.');
+        }
       }
     } catch (err: any) {
       Alert.alert('Connection Failed', err.message || 'Could not connect to the provider.');
@@ -119,8 +176,10 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
       return;
     }
 
+    const normalizedBaseURL = !isBuiltIn ? normalizeMiniMaxBaseURL(baseURL) : undefined;
+
     if (!isBuiltIn) {
-      const trimmed = baseURL.trim();
+      const trimmed = normalizedBaseURL ?? baseURL.trim();
       try {
         const parsed = new URL(trimmed);
         if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
@@ -157,7 +216,7 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
       isEnabled: provider?.isEnabled ?? true,
       addedAt: provider?.addedAt || Date.now(),
       ...(isBuiltIn ? {} : {
-        baseURL: baseURL.trim(),
+        baseURL: normalizedBaseURL,
         apiKey: apiKey.trim() || undefined,
       }),
       models,
@@ -215,7 +274,7 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
               <GroupRow>
                 <TextInput
                   testID="provider-config.input.name"
-                  style={[styles.textInput, { color: colors.text }]}
+                  style={[styles.textInput, { color: colors.text, borderColor: colors.border, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12 }]}
                   placeholder="Name (e.g., My Ollama, OpenAI)"
                   placeholderTextColor={colors.textSecondary}
                   value={name}
@@ -228,7 +287,7 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
                   <GroupRow>
                     <TextInput
                       testID="provider-config.input.base-url"
-                      style={[styles.textInput, { color: colors.text }]}
+                      style={[styles.textInput, { color: colors.text, borderColor: colors.border, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12 }]}
                       placeholder="Base URL (e.g., http://localhost:11434/v1)"
                       placeholderTextColor={colors.textSecondary}
                       value={baseURL}
@@ -242,7 +301,7 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
                     <View style={styles.apiKeyRow}>
                       <TextInput
                         testID="provider-config.input.api-key"
-                        style={[styles.textInput, { color: colors.text, flex: 1 }]}
+                        style={[styles.textInput, { color: colors.text, flex: 1, borderColor: colors.border, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12 }]}
                         placeholder="API Key (Optional)"
                         placeholderTextColor={colors.textSecondary}
                         value={apiKey}
@@ -310,7 +369,7 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
             {provider && provider.type !== 'apple' && provider.type !== 'llama' && (
               <TouchableOpacity
                 testID="provider-config.button.delete"
-                style={[styles.actionBtn, { backgroundColor: 'transparent', marginTop: spacing[2] }]}
+                style={[styles.actionBtn, { backgroundColor: colors.surface, borderColor: '#FF3B30', borderWidth: 1, marginTop: spacing[2] }]}
                 onPress={handleDelete}
               >
                 <Text style={[styles.actionBtnText, { color: '#FF3B30' }]}>Delete Provider</Text>
