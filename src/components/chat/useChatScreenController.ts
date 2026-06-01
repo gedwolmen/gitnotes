@@ -412,6 +412,15 @@ export function useChatScreenController(threadId: string) {
           setLocalError(message);
         }
       }
+      const latestAfterError = useChatStore.getState().activeThread;
+      if (!abortController.signal.aborted && latestAfterError && latestAfterError.title === 'New Chat') {
+        const firstLine = userMessage.content.trim().split('\n')[0].slice(0, 50);
+        const simpleTitle = firstLine.replace(/[^\w\s]/g, '').trim() || 'New Chat';
+        if (simpleTitle && simpleTitle !== 'New Chat') {
+          renameThread({ threadId: latestAfterError.id, title: simpleTitle });
+          await saveActiveThread().catch(() => {});
+        }
+      }
     } finally {
       if (abortRef.current === abortController) abortRef.current = null;
       setStreaming(false);
