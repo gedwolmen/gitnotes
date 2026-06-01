@@ -25,6 +25,9 @@ export const PROVIDER_QUIRKS: ProviderQuirk[] = [
       if (/api\.minimax\.io\/anthropic($|\/)/i.test(url)) {
         return url.replace('/anthropic/chat/completions', '/anthropic/v1/messages');
       }
+      if (url.includes('api.minimax.io/v1/chat/completions')) {
+        return url;
+      }
       if (url.includes('api.minimax.io')) {
         return url.replace('/chat/completions', '/v1/text/chatcompletion_v2');
       }
@@ -33,10 +36,6 @@ export const PROVIDER_QUIRKS: ProviderQuirk[] = [
     transformRequestBody: () => {},
   },
   {
-    // Z.AI Coding Plan (api.z.ai/api/coding/paas/v4 and api.z.ai/api/paas/v4).
-    // Without `tool_stream: true`, GLM models return HTTP 200 with an empty
-    // body when tools are attached. See:
-    //   https://github.com/openclaw/openclaw/issues/18135
     id: 'z.ai',
     matches: (url) => /(^|\.)z\.ai($|\/|:)/i.test(url),
     transformRequestBody: (body) => {
