@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -159,34 +159,36 @@ export default function ChatThreadListScreen() {
     const timeAgo = formatDistanceToNow(item.updatedAt, { addSuffix: true });
 
     return (
-      <ReanimatedSwipeable
-        renderRightActions={() => renderRightActions(item)}
-        friction={2}
-        containerStyle={{ marginBottom: spacing[3] }}
-      >
-        <Card testID="chat-thread-list.button.thread-press" onPress={() => handleThreadPress(item.id)} radius="md">
-          <View style={styles.threadContent}>
-            <View style={styles.threadHeader}>
-              <Text style={[styles.threadTitle, { color: colors.text, fontSize: type.md, fontWeight: '600' }]} numberOfLines={1}>
-                {item.title}
-              </Text>
-              <Text style={[styles.threadTime, { color: colors.textSecondary, fontSize: type.xs }]}>
-                {timeAgo}
-              </Text>
+      <View style={styles.threadRow}>
+        <ReanimatedSwipeable
+          renderRightActions={() => renderRightActions(item)}
+          friction={2}
+          containerStyle={styles.swipeableContainer}
+        >
+          <Card testID="chat-thread-list.button.thread-press" onPress={() => handleThreadPress(item.id)} radius="md">
+            <View style={styles.threadContent}>
+              <View style={styles.threadHeader}>
+                <Text style={[styles.threadTitle, { color: colors.text, fontSize: type.md, fontWeight: '600' }]} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <Text style={[styles.threadTime, { color: colors.textSecondary, fontSize: type.xs }]}>
+                  {timeAgo}
+                </Text>
+              </View>
+              {item.preview && (
+                <Text style={{ color: colors.textSecondary, fontSize: type.sm, marginBottom: 8 }} numberOfLines={2}>
+                  {item.preview}
+                </Text>
+              )}
+              <View style={styles.threadFooter}>
+                <Text style={[styles.messageCount, { color: colors.primary, fontSize: type.xs, fontWeight: '600' }]}>
+                  {item.messageCount} messages
+                </Text>
+              </View>
             </View>
-            {item.preview && (
-              <Text style={{ color: colors.textSecondary, fontSize: type.sm, marginBottom: 8 }} numberOfLines={2}>
-                {item.preview}
-              </Text>
-            )}
-            <View style={styles.threadFooter}>
-              <Text style={[styles.messageCount, { color: colors.primary, fontSize: type.xs, fontWeight: '600' }]}>
-                {item.messageCount} messages
-              </Text>
-            </View>
-          </View>
-        </Card>
-      </ReanimatedSwipeable>
+          </Card>
+        </ReanimatedSwipeable>
+      </View>
     );
   };
 
@@ -236,6 +238,7 @@ export default function ChatThreadListScreen() {
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={[styles.listContent, { paddingHorizontal: spacing[4], paddingBottom: spacing[6] }]}
+        ItemSeparatorComponent={() => <View style={{ height: spacing[3] }} />}
         ListEmptyComponent={renderEmptyState}
         refreshing={isPullRefreshing}
         onRefresh={handleRefresh}
@@ -256,6 +259,13 @@ const styles = StyleSheet.create({
   headerControls: {
   },
   listContent: {
+    flexGrow: 0,
+  },
+  threadRow: {
+    flexShrink: 0,
+  },
+  swipeableContainer: {
+    overflow: 'visible',
   },
   threadContent: {
     flex: 1,

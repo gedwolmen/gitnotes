@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import { memo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { isPast } from 'date-fns';
@@ -96,7 +96,12 @@ function TodoCardImpl({ todo, onPress, onToggle }: TodoCardProps) {
             ) : null}
 
             {todo.tags && todo.tags.length > 0 ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tagsContainer}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.tagsContainer}
+                contentContainerStyle={styles.tagsContent}
+              >
                 {todo.tags.slice(0, 3).map((tag) => (
                   <View key={tag} style={[styles.tagBadge, { backgroundColor: colors.primary + '20' }]}>
                     <Text style={[styles.tagText, { color: colors.primary }]}>{tag}</Text>
@@ -202,12 +207,15 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   tagsContainer: {
-    flexDirection: 'row',
     marginTop: 6,
+  },
+  tagsContent: {
+    flexDirection: 'row',
     gap: 6,
+    paddingRight: 6,
   },
   tagBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 10,
   },
