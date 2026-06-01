@@ -420,7 +420,9 @@ export async function generateChatTitle(
 
     const raw = (result.text || '').trim().replace(/^["'`]|["'`]$/g, '').replace(/\.$/, '');
     if (!raw) return null;
-    const words = raw.split(/\s+/).slice(0, 6).join(' ');
+    const cleaned = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    if (!cleaned) return null;
+    const words = cleaned.split(/\s+/).slice(0, 6).join(' ');
     return words.length > 60 ? words.slice(0, 60) : words;
   } catch (error) { void error;
     return null;

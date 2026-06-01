@@ -10,6 +10,7 @@ import { Surface } from '../ui/Surface';
 import { useMarkdown, type MarkedStyles } from 'react-native-marked';
 import type { ViewStyle } from 'react-native';
 import type { RootStackParamList } from '../../navigation/types';
+import { parseThoughtContent } from '../../utils/chatThoughts';
 
 type NoteToolResult = { noteId: string; title?: string };
 
@@ -39,6 +40,7 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const [dotStep, setDotStep] = useState(0);
+  const [thoughtExpanded, setThoughtExpanded] = useState(false);
 
   // Detect tool calls that touch a single note (`create_note` / `edit_note` /
   // `get_note`). The previous render dumped the full Note JSON into the chat;
@@ -60,10 +62,18 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
     return () => clearInterval(interval);
   }, [isStreaming]);
 
+  useEffect(() => {
+    setThoughtExpanded(false);
+  }, [message.id]);
+
   const timestamp = formatDistanceToNow(message.timestamp, { addSuffix: true });
 
   const isUser = message.role === 'user';
   const textColor = isUser ? '#ffffff' : colors.text;
+  const { thought: thoughtContent, visible: visibleContent } = useMemo(
+    () => parseThoughtContent(message.content),
+    [message.content],
+  );
   const markdownTheme = useMemo(() => ({
     colors: {
       text: textColor,
@@ -89,7 +99,12 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
   // `useMarkdown` hook directly into a plain <View> instead — same tokens,
   // no inner virtualized list. Hook must run unconditionally so it sits
   // above the early returns below.
-  const markdownNodes = useMarkdown(message.content ?? '', {
+  const markdownNodes = useMarkdown((!isUser ? visibleContent : message.content) ?? '', {
+    theme: markdownTheme,
+    styles: markdownStyles,
+    colorScheme,
+  });
+  const thoughtMarkdownNodes = useMarkdown(thoughtContent ?? '', {
     theme: markdownTheme,
     styles: markdownStyles,
     colorScheme,
@@ -212,6 +227,64 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
           </Text>
         ) : (
           <View>
+            {thoughtContent ? (
+              <View
+                style={{
+                  marginBottom: spacing[2],
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: isDark ? '#4a4a4f' : '#d8dbe5',
+                  overflow: 'hidden',
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(99,102,241,0.05)',
+                }}
+              >
+                <Pressable
+                  onPress={() => setThoughtExpanded((current) => !current)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingHorizontal: spacing[3],
+                    paddingVertical: spacing[2],
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <Ionicons
+                      name={thoughtExpanded ? 'chevron-down' : 'chevron-forward'}
+                      size={14}
+                      color={colors.primary}
+                    />
+                    <Text
+                      style={{
+                        marginLeft: spacing[1],
+                        color: colors.primary,
+                        fontSize: type.sm,
+                        fontWeight: '700',
+                      }}
+                    >
+                      Thought process
+                    </Text>
+                  </View>
+                  <Text style={{ color: colors.textSecondary, fontSize: 11 }}>
+                    {thoughtExpanded ? 'Hide' : 'Show'}
+                  </Text>
+                </Pressable>
+                {thoughtExpanded ? (
+                  <View
+                    style={{
+                      paddingHorizontal: spacing[3],
+                      paddingBottom: spacing[3],
+                      borderTopWidth: 1,
+                      borderTopColor: isDark ? '#3a3a3f' : '#e5e7eb',
+                    }}
+                  >
+                    {thoughtMarkdownNodes.map((node, idx) => (
+                      <Fragment key={`thought-${idx}`}>{node}</Fragment>
+                    ))}
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
             {markdownNodes.map((node, idx) => (
               <Fragment key={idx}>{node}</Fragment>
             ))}

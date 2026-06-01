@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { ChatMessage, ChatThread, ChatThreadSummary } from '../models/Chat';
+import { stripThoughtContent } from '../utils/chatThoughts';
 
 export interface ChatStorageAdapter {
   loadThreadSummaries: (owner: string, repo: string, branch: string) => Promise<ChatThreadSummary[]>;
@@ -61,12 +62,13 @@ interface ChatActions {
 
 const createThreadSummary = (thread: ChatThread): ChatThreadSummary => {
   const lastMessage = thread.messages.length > 0 ? thread.messages[thread.messages.length - 1] : undefined;
+  const preview = stripThoughtContent(lastMessage?.content).trim();
   return {
     id: thread.id,
     title: thread.title,
     updatedAt: thread.updatedAt,
     messageCount: thread.messages.length,
-    preview: lastMessage?.content || 'No messages yet',
+    preview: preview || 'No messages yet',
   };
 };
 

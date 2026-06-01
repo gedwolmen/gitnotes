@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
 import { ChatThread, ChatThreadSummary } from '../models/Chat';
+import { stripThoughtContent } from '../utils/chatThoughts';
 import { GitHubService } from './GitHubService';
 
 const GITHUB_API = 'https://api.github.com';
@@ -220,12 +221,13 @@ function sortThreads(threads: ChatThreadSummary[]): ChatThreadSummary[] {
 
 function toThreadSummary(thread: ChatThread): ChatThreadSummary {
   const lastMessage = thread.messages.length > 0 ? thread.messages[thread.messages.length - 1] : undefined;
+  const preview = stripThoughtContent(lastMessage?.content).trim();
   return {
     id: thread.id,
     title: thread.title,
     updatedAt: thread.updatedAt,
     messageCount: thread.messages.length,
-    preview: lastMessage?.content || 'No messages yet',
+    preview: preview || 'No messages yet',
   };
 }
 

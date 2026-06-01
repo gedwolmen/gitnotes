@@ -23,7 +23,7 @@ export const PROVIDER_QUIRKS: ProviderQuirk[] = [
     matches: (url) => /api\.minimax\.io/i.test(url),
     transformUrl: (url) => {
       if (url.includes('api.minimax.io')) {
-        return url.replace('/chat/completions', '/anthropic/v1/messages');
+        return url.replace('/chat/completions', '/v1/text/chatcompletion_v2');
       }
       return url;
     },
