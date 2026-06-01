@@ -19,19 +19,16 @@ export interface ProviderQuirk {
 
 export const PROVIDER_QUIRKS: ProviderQuirk[] = [
   {
-    id: 'anthropic.minimax',
+    id: 'minimax',
     matches: (url) => /api\.minimax\.io/i.test(url),
     transformUrl: (url) => {
-      if (/api\.minimax\.io\/anthropic($|\/)/i.test(url)) {
-        return url.replace('/anthropic/chat/completions', '/anthropic/v1/messages');
-      }
-      if (url.includes('api.minimax.io/v1/chat/completions')) {
+      if (url.includes('/v1/chat/completions')) {
         return url;
       }
-      if (url.includes('api.minimax.io')) {
-        return url.replace('/chat/completions', '/v1/text/chatcompletion_v2');
+      if (url.includes('/anthropic/')) {
+        return url.replace('/anthropic/chat/completions', '/anthropic/v1/messages');
       }
-      return url;
+      return url.replace('/chat/completions', '/v1/text/chatcompletion_v2');
     },
     transformRequestBody: () => {},
   },
