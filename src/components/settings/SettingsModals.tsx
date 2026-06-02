@@ -97,15 +97,15 @@ export function SettingsModals(props: SettingsModalsProps) {
     <>
       <Modal visible={showRepoPickerModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}> 
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}> 
+          <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>Add Repository</Text>
               <TouchableOpacity onPress={onCloseRepoPicker}>
                 <Ionicons name="close" size={24} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
-            <ScrollView keyboardShouldPersistTaps="handled">
-              <View style={[styles.manualRepoRow, { borderBottomColor: colors.border }]}> 
+            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
+              <View style={[styles.manualRepoRow, { borderBottomColor: colors.border }]}>
                 <TextInput
                   testID="settings-modals.input.manual-repo"
                   style={[styles.manualRepoInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
@@ -177,14 +177,14 @@ export function SettingsModals(props: SettingsModalsProps) {
 
       <Modal visible={showTemplatesRepoPicker} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}> 
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}> 
+          <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>Templates repository</Text>
               <TouchableOpacity testID="settings-modals.button.close-templates-repo" onPress={onCloseTemplatesRepoPicker}>
                 <Ionicons name="close" size={24} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
-            <ScrollView keyboardShouldPersistTaps="handled">
+            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
               {repositories.length === 0 ? (
                 <Text style={[styles.pickerEmpty, { color: colors.textSecondary }]}>
                   Add a repository first under Repositories to choose it as the templates repo.
@@ -218,9 +218,9 @@ export function SettingsModals(props: SettingsModalsProps) {
 
       <Modal visible={showTokenModal} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}> 
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}> 
-              <Text style={[styles.modalTitle, { color: colors.text }]}> 
+          <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
                 {tokenModalMode === 'add' ? 'Add GitHub Account' : authState.isAuthenticated ? 'Change Token' : 'Connect GitHub'}
               </Text>
               <TouchableOpacity onPress={onCloseTokenModal}>
@@ -233,7 +233,7 @@ export function SettingsModals(props: SettingsModalsProps) {
                 <Ionicons name="open-outline" size={14} color={colors.primary} />
                 <Text style={[styles.generateLinkText, { color: colors.primary }]}>Open GitHub token settings</Text>
               </TouchableOpacity>
-              <View style={[styles.tokenInputRow, { borderColor: tokenError ? '#FF3B30' : colors.border, backgroundColor: colors.background }]}> 
+              <View style={[styles.tokenInputRow, { borderColor: tokenError ? '#FF3B30' : colors.border, backgroundColor: colors.background }]}>
                 <TextInput
                   testID="settings-modals.input.token"
                   style={[styles.tokenInputInner, { color: colors.text }]}

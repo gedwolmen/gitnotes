@@ -161,7 +161,7 @@ export function NoteViewer({
             No headings in this note.
           </Text>
         ) : (
-          <ScrollView style={{ maxHeight: 480 }} showsVerticalScrollIndicator={false}>
+          <ScrollView style={{ maxHeight: 480 }} contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
             {tocEntries.map((entry, index) => {
               const levelColors = [colors.primary, colors.primary + '99', colors.textSecondary + '66'];
               const barColor = levelColors[Math.min(entry.level - 1, 2)];
