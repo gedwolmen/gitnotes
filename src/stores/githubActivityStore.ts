@@ -1,13 +1,6 @@
 import { create } from 'zustand';
 
 /**
- * Minimum duration (ms) the indicator must remain visible after the last
- * sync operation completes. Prevents flicker when multiple requests overlap
- * or when several short requests fire in quick succession.
- */
-const HIDE_DELAY_MS = 150;
-
-/**
  * Minimum time (ms) between visibility state changes. Prevents animation
  * restarts when requests cycle rapidly during batch operations.
  */

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { Folder, FolderCreateInput } from '../models/Folder';
 import { StorageService } from '../services/StorageService';
-import { sortFoldersByName, getChildFolders, getFolderPathParts } from '../models/Folder';
+import { sortFoldersByName, getChildFolders } from '../models/Folder';
 
 interface FolderState {
   folders: Folder[];

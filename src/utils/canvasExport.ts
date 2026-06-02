@@ -152,6 +152,12 @@ export function canvasSceneToSvg(scene: CanvasScene): string {
 
 export function canvasSceneToBase64(scene: CanvasScene): string {
   const svg = canvasSceneToSvg(scene);
-  const base64 = btoa(unescape(encodeURIComponent(svg)));
-  return `data:image/svg+xml;base64,${base64}`;
+  const bytes = new TextEncoder().encode(svg);
+  const CHUNK_SIZE = 8192;
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+    const chunk = bytes.slice(i, i + CHUNK_SIZE);
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
 }

@@ -43,7 +43,7 @@ async function readBinding(): Promise<RenderStyleRepoBinding | null> {
     if (parsed?.owner && parsed?.name) {
       return { branch: parsed.branch || 'main', owner: parsed.owner, name: parsed.name };
     }
-  } catch (error) { void error;
+  } catch {
     // fall through
   }
   return null;
@@ -57,7 +57,7 @@ async function readCache(): Promise<RenderStyleSettings> {
     if (parsed && typeof parsed === 'object' && parsed.formats) {
       return { version: 1, formats: parsed.formats };
     }
-  } catch (error) { void error;
+  } catch {
     // fall through
   }
   return { ...EMPTY_RENDER_STYLE_SETTINGS };
