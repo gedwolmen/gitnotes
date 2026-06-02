@@ -267,6 +267,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 40,
+    alignItems: 'center',
   },
   tokenScrollContent: {
     flexGrow: 1,
