@@ -498,7 +498,7 @@ export default function MoveNoteDialog({ visible, note, onClose, onMoved }: Move
           </View>
 
           <View style={[exploreStyles.breadcrumbBar, { borderBottomColor: colors.border + '40' }]}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={exploreStyles.breadcrumb}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={exploreStyles.breadcrumb} contentContainerStyle={{ flexGrow: 1 }}>
               <TouchableOpacity onPress={() => navigateToBreadcrumb(-1)}>
                 <Text style={[exploreStyles.crumb, { color: !currentPath ? colors.primary : colors.textSecondary }]}>
                   {repoInfo?.repo || 'repo'}
