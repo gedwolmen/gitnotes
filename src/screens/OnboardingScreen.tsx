@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
   tokenScrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'stretch',
     gap: 16,
     paddingBottom: 40,
   },
