@@ -43,7 +43,7 @@ interface NoteViewerProps {
 }
 
 export function NoteViewer({
-  noteId,
+  noteId: _noteId,
   title,
   noteFormat,
   canEdit,
@@ -57,7 +57,7 @@ export function NoteViewer({
   onEdit,
   onCloseToc,
   onTocPress,
-  onNavigateToNote,
+  onNavigateToNote: _onNavigateToNote,
   previewContent,
   parsedStructuredContent,
   markdownStyles,

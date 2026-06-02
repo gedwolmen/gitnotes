@@ -178,7 +178,7 @@ export function useChatScreenController(threadId: string) {
       return;
     }
 
-    await ChatStorageService.saveThread(latestThread).catch(() => {});
+    await ChatStorageService.saveThread(latestThread).catch(() => { return; });
   }, []);
 
   const getSelectedModelConfig = useCallback(() => {
@@ -393,10 +393,15 @@ export function useChatScreenController(threadId: string) {
         else updateMessage(assistantMessageId, { content: nextContent });
       }
 
-      await saveActiveThread();
-
+      if (abortRef.current === abortController) abortRef.current = null;
+      setStreaming(false);
+      setStreamStartedAt(0);
+      saveActiveThread().catch((err) => console.warn('[ChatScreen] saveActiveThread failed:', err));
     } catch (error) {
       if (pendingFlush) clearTimeout(pendingFlush);
+      if (abortRef.current === abortController) abortRef.current = null;
+      setStreaming(false);
+      setStreamStartedAt(0);
       const aborted = (error as Error)?.name === 'AbortError' || abortController.signal.aborted;
       if (aborted) updateMessage(assistantMessageId, { content: assistantText || 'Stopped.' });
       else {
@@ -523,7 +528,7 @@ export function useChatScreenController(threadId: string) {
           messageId: pendingMessage.id,
         });
       } catch (error) {
-        void error;
+        console.warn('[useChatScreenController] executeToolCall for pending confirmation failed:', error);
       }
     })();
 

@@ -28,7 +28,7 @@ interface ModelSelectorProps {
 
 export function ModelSelector({ visible, onClose }: ModelSelectorProps) {
   const { colors } = useTheme();
-  const { spacing, type } = useTokens();
+  const { spacing } = useTokens();
   const { t } = useTranslation();
 
   const providers = useAIStore((state) => state.providers);
@@ -60,7 +60,7 @@ export function ModelSelector({ visible, onClose }: ModelSelectorProps) {
         try {
           const status = await getModelStatus(model);
           newStatuses[model.id] = status;
-        } catch (e) {
+        } catch {
           newStatuses[model.id] = 'unavailable';
         }
       }

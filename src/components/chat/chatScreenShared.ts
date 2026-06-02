@@ -51,8 +51,7 @@ export function parseToolEvent(chunk: string): ToolEvent | null {
   try {
     const parsed = JSON.parse(chunk) as ToolEvent;
     return TOOL_EVENT_TYPES.has(parsed.type) ? parsed : null;
-  } catch (error) {
-    void error;
+  } catch {
     return null;
   }
 }
@@ -74,8 +73,8 @@ export function decodeOverEscapedChunk(chunk: string): string {
   try {
     const parsed = JSON.parse(trimmed);
     if (typeof parsed === 'string') return parsed;
-  } catch (error) {
-    void error;
+  } catch {
+    // fall through to return chunk unchanged
   }
   return chunk;
 }
@@ -86,8 +85,7 @@ export function parseToolArgs(value: unknown, fallback = ''): Record<string, unk
   try {
     const parsed = JSON.parse(fallback);
     return isRecord(parsed) ? parsed : {};
-  } catch (error) {
-    void error;
+  } catch {
     return {};
   }
 }
@@ -107,8 +105,7 @@ export function formatToolResult(value: unknown): string {
   if (value == null) return 'Done.';
   try {
     return JSON.stringify(value, null, 2);
-  } catch (error) {
-    void error;
+  } catch {
     return 'Done.';
   }
 }

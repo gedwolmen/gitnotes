@@ -107,7 +107,7 @@ export function useNoteEditorDocument({
         const current = branches.find((branchEntry) => branchEntry.isCurrent) ?? branches[0];
         setBranch(current.name);
       })
-      .catch(() => {});
+      .catch(() => { return; });
 
     return () => {
       cancelled = true;
@@ -297,7 +297,7 @@ export function useNoteEditorDocument({
               await NoteSyncQueueService.enqueueNoteUpsert(syncParams, savedNoteId);
             }
           } catch (error) {
-            void error;
+            console.warn('[useNoteEditorDocument] syncNoteToGitHub failed:', error);
             const existingForColor = getNoteByIdRef.current(savedNoteId);
             const syncParams = {
               repo,

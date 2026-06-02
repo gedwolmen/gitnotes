@@ -99,12 +99,11 @@ export function useNotesListNoteActions({
               await updateNote({ id: updated.id, content: result.finalContent });
             }
           } catch (error) {
-            void error;
+            console.warn('[useNotesListNoteActions] sync after color update failed:', error);
             await NoteSyncQueueService.enqueueNoteUpsert(syncParams, updated.id);
           }
         }
-      } catch (error) {
-        void error;
+      } catch {
         HapticService.error();
         Alert.alert('Error', 'Failed to update note color');
       }
@@ -125,7 +124,7 @@ export function useNotesListNoteActions({
         HapticService.success();
         return true;
       } catch (error) {
-        void error;
+        console.warn('[useNotesListNoteActions] deleteNote failed:', error);
         Alert.alert('Error', 'Failed to delete note');
         return false;
       } finally {

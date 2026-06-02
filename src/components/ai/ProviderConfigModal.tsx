@@ -199,10 +199,11 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
           });
           if (!proceed) return;
         }
-      } catch (error) { void error;
-        Alert.alert('Validation Error', 'Base URL is not a valid URL.');
-        return;
-      }
+} catch (error) {
+      console.warn('[ProviderConfigModal] handleSave failed:', error);
+      Alert.alert('Validation Error', 'Base URL is not a valid URL.');
+      return;
+    }
     }
 
     const providerId = provider?.id || `custom-${Date.now()}`;

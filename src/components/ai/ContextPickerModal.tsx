@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { FlatList } from 'react-native';
 
-import { Surface, ScreenHeader, Button, Input, useScreenHeaderHeight } from '../ui';
+import { Surface, IconButton, Input } from '../ui';
 import { useTokens } from '../../contexts/ThemeContext';
 import { AIContextItem } from '../../models/AIProvider';
 import { GitHubService } from '../../services/GitHubService';
@@ -48,7 +48,6 @@ export default function ContextPickerModal({
   initialSelected = [],
 }: ContextPickerModalProps) {
   const { colors, spacing, type, radii } = useTokens();
-  const headerHeight = useScreenHeaderHeight({ subtitle: true });
 
   const [activeTab, setActiveTab] = useState<TabType>('repo');
   const [selectedItems, setSelectedItems] = useState<AIContextItem[]>([]);
@@ -188,7 +187,7 @@ export default function ContextPickerModal({
       <FlatList
         data={filteredFiles}
         keyExtractor={(item) => item.path}
-        contentContainerStyle={{ padding: spacing[4] }}
+        contentContainerStyle={listContentContainerStyle}
         ListEmptyComponent={renderEmptyState('document-text-outline', 'No files found', 'Try a different search or repository')}
         renderItem={({ item }) => {
           const name = item.path.split('/').pop() || item.path;
@@ -196,11 +195,11 @@ export default function ContextPickerModal({
           return (
             <TouchableOpacity testID="context-picker.button.toggle" activeOpacity={0.7} onPress={() => toggleSelection(makeContextItem('file', item.path, name))}>
               <Surface
-                elevation={selected ? 'flat' : 'subtle'}
+                elevation={selected ? 'flat' : 'raised'}
                 radius="md"
                 style={[
                   styles.listItem,
-                  { marginBottom: spacing[3] },
+                  { marginBottom: spacing[4] },
                   selected && { backgroundColor: colors.surfaceSecondary, borderColor: colors.accent, borderWidth: 1 },
                 ]}
               >
@@ -240,7 +239,7 @@ export default function ContextPickerModal({
       <FlatList
         data={filteredFolders}
         keyExtractor={(item) => item.path}
-        contentContainerStyle={{ padding: spacing[4] }}
+        contentContainerStyle={listContentContainerStyle}
         ListEmptyComponent={renderEmptyState('folder-open-outline', 'No folders found', 'Try a different search or repository')}
         renderItem={({ item }) => {
           const name = item.path.split('/').pop() || item.path;
@@ -248,11 +247,11 @@ export default function ContextPickerModal({
           return (
             <TouchableOpacity activeOpacity={0.7} onPress={() => toggleSelection(makeContextItem('folder', item.path, name))}>
               <Surface
-                elevation={selected ? 'flat' : 'subtle'}
+                elevation={selected ? 'flat' : 'raised'}
                 radius="md"
                 style={[
                   styles.listItem,
-                  { marginBottom: spacing[3] },
+                  { marginBottom: spacing[4] },
                   selected && { backgroundColor: colors.surfaceSecondary, borderColor: colors.accent, borderWidth: 1 },
                 ]}
               >
@@ -282,7 +281,7 @@ export default function ContextPickerModal({
       <FlatList
         data={repos}
         keyExtractor={item => item.path}
-      contentContainerStyle={{ padding: spacing[4] }}
+      contentContainerStyle={listContentContainerStyle}
       renderItem={({ item }) => {
         const selected = isSelected('repo', item.path);
         return (
@@ -299,11 +298,11 @@ export default function ContextPickerModal({
             })}
           >
             <Surface 
-              elevation={selected ? 'flat' : 'subtle'} 
+              elevation={selected ? 'flat' : 'raised'} 
               radius="md"
               style={[
                 styles.listItem, 
-                { marginBottom: spacing[3] },
+                { marginBottom: spacing[4] },
                 selected && { backgroundColor: colors.surfaceSecondary, borderColor: colors.accent, borderWidth: 1 }
               ]}
             >
@@ -336,7 +335,7 @@ export default function ContextPickerModal({
       <FlatList
         data={filteredNotes}
         keyExtractor={item => item.id}
-        contentContainerStyle={{ padding: spacing[4] }}
+        contentContainerStyle={listContentContainerStyle}
         renderItem={({ item }) => {
           const selected = isSelected('local-notes', item.id);
           return (
@@ -352,11 +351,11 @@ export default function ContextPickerModal({
               })}
             >
               <Surface 
-                elevation={selected ? 'flat' : 'subtle'} 
+                elevation={selected ? 'flat' : 'raised'} 
                 radius="md"
                 style={[
                   styles.listItem, 
-                  { marginBottom: spacing[3] },
+                  { marginBottom: spacing[4] },
                   selected && { backgroundColor: colors.surfaceSecondary, borderColor: colors.accent, borderWidth: 1 }
                 ]}
               >
@@ -397,7 +396,7 @@ export default function ContextPickerModal({
       <FlatList
         data={sortedTodos}
         keyExtractor={item => item.id}
-        contentContainerStyle={{ padding: spacing[4] }}
+        contentContainerStyle={listContentContainerStyle}
         renderItem={({ item }) => {
           const selected = isSelected('local-todos', item.id);
           return (
@@ -413,11 +412,11 @@ export default function ContextPickerModal({
               })}
             >
               <Surface 
-                elevation={selected ? 'flat' : 'subtle'} 
+                elevation={selected ? 'flat' : 'raised'} 
                 radius="md"
                 style={[
                   styles.listItem, 
-                  { marginBottom: spacing[3] },
+                  { marginBottom: spacing[4] },
                   selected && { backgroundColor: colors.surfaceSecondary, borderColor: colors.accent, borderWidth: 1 }
                 ]}
               >
@@ -468,6 +467,12 @@ export default function ContextPickerModal({
   };
 
   const showSearch = activeTab === 'files' || activeTab === 'folders' || activeTab === 'local-notes' || activeTab === 'local-todos';
+  const selectedCountLabel = `${selectedItems.length} ${selectedItems.length === 1 ? 'item' : 'items'} selected`;
+  const listContentContainerStyle = {
+    paddingHorizontal: spacing[4],
+    paddingBottom: spacing[4],
+    paddingTop: spacing[2],
+  } as const;
 
   return (
     <Modal
@@ -477,76 +482,105 @@ export default function ContextPickerModal({
       onRequestClose={onClose}
     >
       <View style={[styles.container, { backgroundColor: colors.bg }]}>
-        <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-          <ScreenHeader
-            title="Select Context"
-            subtitle={`${selectedItems.length} ${selectedItems.length === 1 ? 'item' : 'items'} selected`}
-            onBack={onClose}
-            actions={
-              <Button
+        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+          <View style={[styles.chrome, { borderBottomColor: colors.border }]}>
+            <View style={[styles.headerRow, { paddingHorizontal: spacing[4], paddingTop: spacing[3] }]}> 
+              <IconButton size="sm" onPress={onClose} accessibilityLabel="Back">
+                <Ionicons name="arrow-back" size={18} color={colors.accent} />
+              </IconButton>
+
+              <View style={styles.headerTextWrap}>
+                <Text style={[styles.headerTitle, { color: colors.text, fontSize: type['2xl'] }]} numberOfLines={1}>
+                  Select Context
+                </Text>
+                <Text style={[styles.headerSubtitle, { color: colors.textSecondary, fontSize: type.sm }]} numberOfLines={1}>
+                  {selectedCountLabel}
+                </Text>
+              </View>
+
+              <TouchableOpacity
                 testID="context-picker.button.confirm"
-                variant="primary"
-
-                onPress={handleConfirm}
+                activeOpacity={0.8}
+                onPress={selectedItems.length === 0 ? undefined : handleConfirm}
                 disabled={selectedItems.length === 0}
+                accessibilityRole="button"
+                accessibilityLabel="Done"
               >
-                Done
-              </Button>
-            }
-          />
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={[styles.tabBar, { marginTop: headerHeight, marginHorizontal: spacing[4], marginBottom: spacing[2] }]}
-          >
-            {TABS.map(tab => {
-              const isActive = activeTab === tab.key;
-              return (
-                <TouchableOpacity
-                  key={tab.key}
-                  testID={`context-picker.tab.switch`}
+                <Surface
+                  elevation="raised"
+                  radius="pill"
                   style={[
-                    styles.tabItem,
-                    { borderRadius: radii.md },
-                    isActive && { backgroundColor: colors.surface }
+                    styles.doneButton,
+                    { backgroundColor: colors.surface },
+                    selectedItems.length === 0 && styles.disabledAction,
                   ]}
-                  onPress={() => setActiveTab(tab.key)}
-                  accessibilityLabel={tab.label}
                 >
-                  <Ionicons
-                    name={(isActive ? tab.icon.replace('-outline', '') : tab.icon) as keyof typeof Ionicons.glyphMap}
-                    size={18}
-                    color={isActive ? colors.text : colors.textSecondary}
-                  />
                   <Text
-                    numberOfLines={1}
-                    style={{
-                      marginLeft: 6,
-                      fontSize: type.sm,
-                      fontWeight: isActive ? '600' : '500',
-                      color: isActive ? colors.text : colors.textSecondary,
-                    }}
+                    style={[
+                      styles.doneButtonText,
+                      { color: selectedItems.length === 0 ? colors.textSecondary : colors.text, fontSize: type.md },
+                    ]}
                   >
-                    {tab.label}
+                    Done
                   </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-
-          {showSearch && (
-            <View style={{ paddingHorizontal: spacing[4], paddingVertical: spacing[2] }}>
-              <Input
-                testID="context-picker.input.search"
-                placeholder="Search..."
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                leading={<Ionicons name="search" size={20} color={colors.textSecondary} />}
-                autoCapitalize="none"
-              />
+                </Surface>
+              </TouchableOpacity>
             </View>
-          )}
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.tabsScroller}
+              contentContainerStyle={[styles.tabBar, { paddingHorizontal: spacing[4] }]}
+            >
+              {TABS.map(tab => {
+                const isActive = activeTab === tab.key;
+                return (
+                  <TouchableOpacity
+                    key={tab.key}
+                    testID="context-picker.tab.switch"
+                    style={[
+                      styles.tabItem,
+                      { borderRadius: radii.pill },
+                      isActive && { backgroundColor: colors.surface },
+                    ]}
+                    onPress={() => setActiveTab(tab.key)}
+                    accessibilityLabel={tab.label}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons
+                      name={(isActive ? tab.icon.replace('-outline', '') : tab.icon) as keyof typeof Ionicons.glyphMap}
+                      size={18}
+                      color={isActive ? colors.text : colors.textSecondary}
+                    />
+                    <Text
+                      numberOfLines={1}
+                      style={{
+                        fontSize: type.sm,
+                        fontWeight: isActive ? '600' : '500',
+                        color: isActive ? colors.text : colors.textSecondary,
+                      }}
+                    >
+                      {tab.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {showSearch && (
+              <View style={{ paddingHorizontal: spacing[4], paddingTop: spacing[2], paddingBottom: spacing[2] }}>
+                <Input
+                  testID="context-picker.input.search"
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  leading={<Ionicons name="search" size={20} color={colors.textSecondary} />}
+                  autoCapitalize="none"
+                />
+              </View>
+            )}
+          </View>
 
           <KeyboardAvoidingView 
             style={styles.contentContainer} 
@@ -567,19 +601,56 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
+  chrome: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingBottom: 8,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingBottom: 12,
+  },
+  headerTextWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  headerTitle: {
+    fontWeight: '700',
+  },
+  headerSubtitle: {
+    marginTop: 2,
+  },
+  doneButton: {
+    minHeight: 36,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  doneButtonText: {
+    fontWeight: '600',
+    lineHeight: 20,
+  },
+  disabledAction: {
+    opacity: 0.45,
+  },
+  tabsScroller: {
+    flexGrow: 0,
+  },
   tabBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    gap: 4,
+    paddingVertical: 4,
+    gap: 8,
   },
   tabItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
+    gap: 6,
   },
   contentContainer: {
     flex: 1,

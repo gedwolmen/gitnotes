@@ -57,7 +57,7 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
   }, [translateX, translateY, savedTranslateX, savedTranslateY]);
 
   const savePosition = (x: number, y: number) => {
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ x, y })).catch(() => {});
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ x, y })).catch(() => { return; });
   };
 
   const panGesture = Gesture.Pan()

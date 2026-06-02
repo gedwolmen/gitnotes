@@ -125,8 +125,6 @@ function buildLinePath(x1: number, y1: number, x2: number, y2: number): SkPath {
   return p;
 }
 
-const PAN_MARGIN = 80;
-
 export interface CanvasBounds {
   minX: number;
   minY: number;
@@ -584,10 +582,9 @@ export default function CanvasEditorContent() {
             try {
               activeStrokePath.value.rewind();
               activeStrokePath.value.moveTo(pt.x, pt.y);
-            } catch (err) {
-              activeStrokePath.value = Skia.Path.Make().setIsVolatile(true);
-              activeStrokePath.value.moveTo(pt.x, pt.y);
-            }
+} catch {
+            activeStrokePath.value = Skia.Path.Make().setIsVolatile(true);
+          }
             activeDrawingElement.value = {
               type: 'stroke',
               id: uid(),
@@ -631,9 +628,9 @@ export default function CanvasEditorContent() {
           if (active.type === 'stroke') {
             try {
               activeStrokePath.value.lineTo(pt.x, pt.y);
-            } catch (err) {
+            } catch {
               activeStrokePath.value = Skia.Path.Make().setIsVolatile(true);
-              activeStrokePath.value.moveTo(active.points[0].x, active.points[0].y);
+              activeStrokePath.value.moveTo(pt.x, pt.y);
               for (let i = 1; i < active.points.length; i++) {
                 activeStrokePath.value.lineTo(active.points[i].x, active.points[i].y);
               }
@@ -655,9 +652,9 @@ export default function CanvasEditorContent() {
           activeDrawingElement.value = null;
           try {
             activeStrokePath.value.rewind();
-          } catch (err) {
-            activeStrokePath.value = Skia.Path.Make().setIsVolatile(true);
-          }
+} catch {
+              activeStrokePath.value = Skia.Path.Make().setIsVolatile(true);
+            }
           runOnJS(commitActiveDrawing)(completedElement);
         })
         .onFinalize(() => {
@@ -666,7 +663,8 @@ export default function CanvasEditorContent() {
             activeDrawingElement.value = null;
             try {
               activeStrokePath.value.rewind();
-            } catch (err) {
+            } catch {
+              activeStrokePath.value = Skia.Path.Make().setIsVolatile(true);
             }
           }
         }),
@@ -1075,7 +1073,7 @@ export default function CanvasEditorContent() {
           commit={undefined}
           onRepoChange={setRepo}
           onBranchChange={setBranch}
-          onCommitChange={() => {}}
+          onCommitChange={() => undefined}
         />
       </View>
 
