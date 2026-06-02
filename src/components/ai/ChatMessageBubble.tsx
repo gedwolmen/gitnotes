@@ -290,19 +290,19 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
         ) : (
           <View>
             {thoughtContent ? (
-              <View
-                style={thoughtExpanded ? {
-                  marginBottom: spacing[2],
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: isDark ? '#4a4a4f' : '#d8dbe5',
-                  overflow: 'hidden',
-                  backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(99,102,241,0.05)',
-                } : undefined}
-              >
-                {!thoughtExpanded && (
+              thoughtExpanded ? (
+                <View
+                  style={{
+                    marginBottom: spacing[2],
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: isDark ? '#4a4a4f' : '#d8dbe5',
+                    overflow: 'hidden',
+                    backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(99,102,241,0.05)',
+                  }}
+                >
                   <Pressable
-                    onPress={() => setThoughtExpanded(true)}
+                    onPress={() => setThoughtExpanded(false)}
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
@@ -313,7 +313,7 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
                   >
                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 0, marginRight: spacing[2] }}>
                       <Ionicons
-                        name="chevron-forward"
+                        name="chevron-down"
                         size={14}
                         color={colors.primary}
                       />
@@ -339,70 +339,58 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
                         ellipsizeMode="clip"
                         allowFontScaling={false}
                       >
-                        Show
+                        Hide
                       </Text>
                     </View>
                   </Pressable>
-                )}
-                {thoughtExpanded && (
-                  <>
-                    <Pressable
-                      onPress={() => setThoughtExpanded(false)}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        paddingHorizontal: spacing[3],
-                        paddingVertical: 0,
-                        minHeight: COLLAPSIBLE_HEADER_HEIGHT,
-                      }}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 0, marginRight: spacing[2] }}>
-                        <Ionicons
-                          name="chevron-down"
-                          size={14}
-                          color={colors.primary}
-                        />
-                        <Text
-                          style={{
-                            marginLeft: spacing[1],
-                            color: colors.primary,
-                            fontSize: type.sm,
-                            fontWeight: '700',
-                            lineHeight: 20,
-                          }}
-                          numberOfLines={1}
-                          ellipsizeMode="tail"
-                          allowFontScaling={false}
-                        >
-                          Thought process
-                        </Text>
-                      </View>
-                      <View style={{ width: 52, alignItems: 'flex-end', justifyContent: 'center', flexShrink: 0 }}>
-                        <Text
-                          style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '500', lineHeight: 16 }}
-                          numberOfLines={1}
-                          ellipsizeMode="clip"
-                          allowFontScaling={false}
-                        >
-                          Hide
-                        </Text>
-                      </View>
-                    </Pressable>
-                    <View
-                      style={{
-                        paddingHorizontal: spacing[3],
-                        paddingBottom: spacing[3],
-                        borderTopWidth: 1,
-                        borderTopColor: isDark ? '#3a3a3f' : '#e5e7eb',
-                      }}
-                    >
-                      <Text style={{ color: textColor, fontSize: type.md }}>
-                        {thoughtContent}
-                      </Text>
-                    </View>
-                  </>
-                )}
-              </View>
+                  <View
+                    style={{
+                      paddingHorizontal: spacing[3],
+                      paddingBottom: spacing[3],
+                      borderTopWidth: 1,
+                      borderTopColor: isDark ? '#3a3a3f' : '#e5e7eb',
+                    }}
+                  >
+                    <Text style={{ color: textColor, fontSize: type.md }}>
+                      {thoughtContent}
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <Pressable
+                  onPress={() => setThoughtExpanded(true)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingVertical: spacing[1],
+                  }}
+                >
+                  <Ionicons
+                    name="chevron-forward"
+                    size={14}
+                    color={colors.primary}
+                  />
+                  <Text
+                    style={{
+                      marginLeft: spacing[1],
+                      color: colors.primary,
+                      fontSize: type.sm,
+                      fontWeight: '700',
+                      lineHeight: 20,
+                    }}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                    allowFontScaling={false}
+                  >
+                    Thought process
+                  </Text>
+                  <Text
+                    style={{ color: colors.textSecondary, fontSize: 11, marginLeft: spacing[2] }}
+                  >
+                    Show
+                  </Text>
+                </Pressable>
+              )
             ) : null}
             {markdownNodes.map((node, idx) => (
               <Fragment key={idx}>{node}</Fragment>
