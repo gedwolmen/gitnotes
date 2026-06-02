@@ -116,7 +116,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
 
         {isTokenStep ? (
           <ScrollView
-            style={styles.content}
+            style={styles.contentNoAlign}
             contentContainerStyle={styles.tokenScrollContent}
             keyboardShouldPersistTaps="handled"
           >
@@ -268,6 +268,10 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 40,
     alignItems: 'stretch',
+  },
+  contentNoAlign: {
+    flex: 1,
+    paddingHorizontal: 40,
   },
   contentCentered: {
     flex: 1,
