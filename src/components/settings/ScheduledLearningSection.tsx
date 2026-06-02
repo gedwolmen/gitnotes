@@ -225,10 +225,10 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
 
   return (
     <>
-      <Group title="Scheduled Learning">
+      <Group title="Scheduled Learning" badge="BETA">
         {items.length === 0 ? (
           <GroupRow>
-            <View style={{ alignItems: 'center', gap: 6, paddingVertical: 8 }}>
+            <View style={{ gap: 6, paddingVertical: 8 }}>
               <Ionicons name="school-outline" size={32} color={colors.textSecondary} />
               <Text style={[styles.emptyReposText, { color: colors.textSecondary }]}>
                 No scheduled learning set up
@@ -287,7 +287,10 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
         bottomSheet
         contentStyle={{ padding: 16, paddingBottom: 34, maxHeight: '85%' }}
       >
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={{ paddingHorizontal: 0 }}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={localStyles.modalHeader}>
             <Text style={localStyles.modalTitle}>New Learning Schedule</Text>
             <TouchableOpacity

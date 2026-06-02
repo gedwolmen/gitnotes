@@ -325,6 +325,7 @@ export default function ChatThreadListScreen() {
         onOpen={handleOpenThread}
         onRename={handleRenameThread}
         onDelete={handleDeleteThread}
+        bottomSheet
       />
 
       <BulkActionBar

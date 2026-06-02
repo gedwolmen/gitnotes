@@ -5,31 +5,54 @@ import { useTokens } from '../../contexts/ThemeContext';
 
 export interface GroupProps {
   title?: string;
+  badge?: string;
   footer?: string;
   style?: StyleProp<ViewStyle>;
   children?: ReactNode;
 }
 
 export function Group(props: GroupProps) {
-  const { title, footer, style, children } = props;
+  const { title, badge, footer, style, children } = props;
   const { colors, spacing, type } = useTokens();
   const items = React.Children.toArray(children).filter(Boolean);
 
   return (
     <View style={[{ gap: spacing[2] }, style]}>
       {title && (
-        <Text
-          style={{
-            color: colors.textSecondary,
-            fontSize: type.sm,
-            fontWeight: '600',
-            textTransform: 'uppercase',
-            letterSpacing: 0.6,
-            marginLeft: spacing[3],
-          }}
-        >
-          {title}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2], marginLeft: spacing[3] }}>
+          <Text
+            style={{
+              color: colors.textSecondary,
+              fontSize: type.sm,
+              fontWeight: '600',
+              textTransform: 'uppercase',
+              letterSpacing: 0.6,
+            }}
+          >
+            {title}
+          </Text>
+          {badge && (
+            <View
+              style={{
+                backgroundColor: '#3B82F6',
+                paddingHorizontal: spacing[2],
+                paddingVertical: 2,
+                borderRadius: 6,
+              }}
+            >
+              <Text
+                style={{
+                  color: '#ffffff',
+                  fontSize: 10,
+                  fontWeight: '800',
+                  letterSpacing: 0.5,
+                }}
+              >
+                {badge}
+              </Text>
+            </View>
+          )}
+        </View>
       )}
       <Surface elevation="raised" radius="lg" style={{ overflow: 'hidden' }}>
         {items.map((child, idx) => {

@@ -47,9 +47,9 @@ function rewriteMiniMaxChatCompletionsUrl(rawUrl: string): string {
     return rawUrl;
   } catch {
     return rawUrl
-      .replace(/^https?:\/\/api\.minimax\.io\/anthropic\/v1\/chat\/completions(\?|$)/i, 'https://api.minimax.io/v1/chat/completions$1')
-      .replace(/^https?:\/\/api\.minimax\.io\/anthropic\/chat\/completions(\?|$)/i, 'https://api.minimax.io/v1/chat/completions$1')
-      .replace(/^https?:\/\/api\.minimax\.io\/chat\/completions(\?|$)/i, 'https://api.minimax.io/v1/chat/completions$1');
+      .replace(/^\/anthropic\/v1\/chat\/completions(\?|$)/i, '/v1/chat/completions$1')
+      .replace(/^\/anthropic\/chat\/completions(\?|$)/i, '/v1/chat/completions$1')
+      .replace(/^\/chat\/completions(\?|$)/i, '/v1/chat/completions$1');
   }
 }
 

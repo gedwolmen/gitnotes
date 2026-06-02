@@ -10,6 +10,7 @@ interface ChatThreadContextMenuProps {
   onOpen: (thread: ChatThreadSummary) => void;
   onRename: (thread: ChatThreadSummary) => void;
   onDelete: (thread: ChatThreadSummary) => Promise<void>;
+  bottomSheet?: boolean;
 }
 
 export function ChatThreadContextMenu({
@@ -19,6 +20,7 @@ export function ChatThreadContextMenu({
   onOpen,
   onRename,
   onDelete,
+  bottomSheet,
 }: ChatThreadContextMenuProps) {
   return (
     <View testID="chat-thread-context-menu.item.close">
@@ -27,6 +29,7 @@ export function ChatThreadContextMenu({
         onClose={onClose}
         title={thread?.title || 'Untitled'}
         headerIcon="chatbubble"
+        bottomSheet={bottomSheet}
         sections={
           thread
             ? [
