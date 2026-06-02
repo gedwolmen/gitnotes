@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/gedwolmen/gitnotes/actions/workflows/ci.yml"><img src="https://github.com/gedwolmen/gitnotes/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MPL--2.0-blue.svg" alt="MPL-2.0"></a>
-  <a href="https://docs.expo.dev/versions/latest/"><img src="https://img.shields.io/badge/Expo-SDK%2055-000.svg" alt="Expo SDK 55"></a>
+  <a href="https://docs.expo.dev/versions/latest/"><img src="https://img.shields.io/badge/Expo-SDK%2056-000.svg" alt="Expo SDK 56"></a>
   <img src="https://img.shields.io/badge/platform-iOS%20%7C%20Android-lightgrey.svg" alt="iOS | Android">
 </p>
 
@@ -33,21 +33,17 @@
 - Multiple GitHub accounts; per-repo API or full-clone sync modes
 - Importers for Google Keep and Apple Notes
 - Optional AI chat layer (OpenAI-compatible providers, Apple Intelligence, on-device Llama)
-- Biometric lock, English & Spanish UI, light / dark / system themes
+- Biometric lock, multilingual UI (EN, ES, FR, DE, JA, KO), light / dark / system themes
 
 ## Stack
 
-Expo SDK 55 · React Native 0.83 · TypeScript 5.6 · isomorphic-git · React Navigation v7 · TanStack Query · Zustand · Vercel AI SDK v6 · Reanimated · FlashList.
+Expo SDK 56 · React Native 0.85 · TypeScript 5.7 · isomorphic-git · React Navigation v7 · TanStack Query · Zustand · Vercel AI SDK v6 · Reanimated · FlashList.
 
 ## Contributing
 
-Issues and pull requests are very welcome.
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and commit guidelines.
 
-- Atomic commits using [Conventional Commits](https://www.conventionalcommits.org/) prefixes (`feat:`, `fix:`, `chore:`, …).
-- `yarn ts:check` and `yarn test` should pass locally before opening a PR; CI runs both.
-- For larger changes, open an issue first so we can talk through the approach.
-
-Found a bug or rough edge? [File an issue](https://github.com/gedwolmen/gitnotes/issues/new) — even drive-by reports help.
+For bugs or feature requests, [open an issue](https://github.com/gedwolmen/gitnotes/issues/new/choose).
 
 ## License
 
