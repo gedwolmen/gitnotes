@@ -46,7 +46,7 @@ export default function HomeScreen() {
   const openSettings = useCallback(() => {
     navigation.getParent()?.navigate('SettingsTab' as never);
   }, [navigation]);
-  const { isTablet } = useResponsive();
+  const { isTablet, deviceType } = useResponsive();
   const headerHeight = useScreenHeaderHeight({ subtitle: true });
   const tabBarHeight = useTabBarHeight();
   const [showFormatPicker, setShowFormatPicker] = useState(false);
@@ -129,8 +129,8 @@ export default function HomeScreen() {
     });
   }, [navigation]);
 
-  const recentLimit = isTablet ? 12 : 10;
-  const pinnedLimit = isTablet ? 12 : 6;
+  const recentLimit = deviceType === 'mac' ? 16 : deviceType === 'desktop' ? 12 : isTablet ? 12 : 10;
+  const pinnedLimit = deviceType === 'mac' ? 16 : deviceType === 'desktop' ? 12 : isTablet ? 12 : 6;
   const recentItems = buildRecentFeed(notes, canvases, { excludePinned: true, limit: recentLimit });
   const pinnedItems = buildPinnedFeed(notes, canvases, pinnedLimit);
 

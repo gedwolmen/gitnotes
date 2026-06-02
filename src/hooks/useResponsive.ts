@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Dimensions, Platform } from 'react-native';
+import { Dimensions } from 'react-native';
+
+export type DeviceType = 'phone' | 'tablet' | 'desktop' | 'mac';
 
 export interface ResponsiveInfo {
   isTablet: boolean;
@@ -9,11 +11,35 @@ export interface ResponsiveInfo {
   columns: number;
   maxContentWidth: number;
   sideBySide: boolean;
+  deviceType: DeviceType;
+  columnCount: number;
 }
 
 const TABLET_MIN_WIDTH = 600;
 const TABLET_MIN_HEIGHT = 600;
 const SIDE_BY_SIDE_MIN_WIDTH = 900;
+
+const COLUMN_PRESETS = {
+  list: {
+    phone: 1,
+    tablet: 2,
+    desktop: 3,
+    mac: 4,
+  },
+  bento: {
+    phone: 2,
+    tablet: 3,
+    desktop: 4,
+    mac: 4,
+  },
+} as const;
+
+function getDeviceType(minDim: number, maxDim: number): DeviceType {
+  if (minDim >= 1200) return 'mac';
+  if (minDim >= 768) return 'desktop';
+  if (minDim >= 600 && maxDim >= 600) return 'tablet';
+  return 'phone';
+}
 
 function calculateResponsive(): ResponsiveInfo {
   const { width, height } = Dimensions.get('window');
@@ -21,10 +47,11 @@ function calculateResponsive(): ResponsiveInfo {
   const maxDim = Math.max(width, height);
 
   const isTablet =
-    (minDim >= TABLET_MIN_WIDTH && maxDim >= TABLET_MIN_HEIGHT) ||
-    Platform.OS === 'web';
+    (minDim >= TABLET_MIN_WIDTH && maxDim >= TABLET_MIN_HEIGHT);
 
   const isLandscape = width > height;
+
+  const deviceType = getDeviceType(minDim, maxDim);
 
   const columns = (() => {
     if (width >= 1200) return 4;
@@ -42,6 +69,8 @@ function calculateResponsive(): ResponsiveInfo {
     return width;
   })();
 
+  const columnCount = COLUMN_PRESETS.list[deviceType];
+
   return {
     isTablet,
     isLandscape,
@@ -50,18 +79,27 @@ function calculateResponsive(): ResponsiveInfo {
     columns,
     maxContentWidth,
     sideBySide,
+    deviceType,
+    columnCount,
   };
 }
 
-export function useResponsive(): ResponsiveInfo {
+export function useResponsive(layoutType: 'list' | 'bento' = 'list'): ResponsiveInfo {
   const [info, setInfo] = useState<ResponsiveInfo>(calculateResponsive);
 
   useEffect(() => {
-    const subscription = Dimensions.addEventListener('change', () => {
-      setInfo(calculateResponsive());
-    });
+    const update = () => setInfo(calculateResponsive());
+
+    const subscription = Dimensions.addEventListener('change', update);
     return () => subscription.remove();
   }, []);
+
+  if (layoutType === 'bento') {
+    return {
+      ...info,
+      columnCount: COLUMN_PRESETS.bento[info.deviceType],
+    };
+  }
 
   return info;
 }

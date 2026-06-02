@@ -36,6 +36,7 @@ import { useNotesListFilters } from '../components/notes/useNotesListFilters';
 import { useNotesListNoteActions } from '../components/notes/useNotesListNoteActions';
 import { SwipeableListItem } from '../components/list/SwipeableListItem';
 import { BulkActionBar } from '../components/list/BulkActionBar';
+import { useResponsive } from '../hooks/useResponsive';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -48,6 +49,7 @@ export default function NotesListScreen() {
   const { viewMode, setViewMode } = useViewMode();
   const { isConnected } = useNetworkStatus();
   const { repositories } = useRepos();
+  const { columnCount } = useResponsive('list');
   const {
     notes,
     filteredNotes,
@@ -436,10 +438,17 @@ export default function NotesListScreen() {
         data={displayNotes}
         renderItem={renderNote}
         keyExtractor={(item) => item.id}
-        key={viewMode}
+        key={`${viewMode}-${columnCount}`}
+        numColumns={viewMode === 'journal' ? 1 : columnCount}
         extraData={displayNotes}
         removeClippedSubviews={false}
-        contentContainerStyle={{ padding: 12, paddingTop: 4, paddingBottom: tabBarHeight + 16 }}
+        contentContainerStyle={{
+          padding: 12,
+          paddingTop: 4,
+          paddingBottom: tabBarHeight + 16,
+          flexGrow: 1,
+        }}
+        columnWrapperStyle={viewMode !== 'journal' && columnCount > 1 ? { gap: 8 } : undefined}
         refreshControl={
           <RefreshControl
             testID="notes-list.swipe.pull-refresh"

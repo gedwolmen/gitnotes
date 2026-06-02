@@ -29,6 +29,7 @@ import { TodosListHeader } from '../components/todos/TodosListHeader';
 import { TodoEditorModal } from '../components/todos/TodoEditorModal';
 import { SwipeableListItem } from '../components/list/SwipeableListItem';
 import { BulkActionBar } from '../components/list/BulkActionBar';
+import { useResponsive } from '../hooks/useResponsive';
 
 export default function TodoListScreen() {
   const { colors, isDark } = useTheme();
@@ -39,6 +40,7 @@ export default function TodoListScreen() {
   const deleteTodo = useTodoStore((state) => state.deleteTodo);
   const { activeAccountId } = useAuth();
   const { repositories } = useRepos();
+  const { columnCount } = useResponsive('list');
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -425,9 +427,12 @@ export default function TodoListScreen() {
         data={filteredTodos}
         renderItem={renderTodoItem}
         keyExtractor={(item) => item.id}
+        numColumns={columnCount}
+        key={`todos-${columnCount}`}
         extraData={filteredTodos}
         removeClippedSubviews={false}
-        contentContainerStyle={{ ...styles.listContent, paddingBottom: tabBarHeight + 16 }}
+        contentContainerStyle={{ ...styles.listContent, paddingBottom: tabBarHeight + 16, flexGrow: 1 }}
+        columnWrapperStyle={columnCount > 1 ? { gap: 8 } : undefined}
         ListEmptyComponent={<TodosEmptyState isFiltered={hasActiveFilters} />}
         showsVerticalScrollIndicator={false}
         refreshControl={

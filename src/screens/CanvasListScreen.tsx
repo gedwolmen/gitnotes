@@ -24,6 +24,7 @@ import { ScreenHeader, IconButton, useScreenHeaderHeight } from '../components/u
 import { EntityFilterModal } from '../components/EntityFilterModal';
 import { ActiveFilterStrip } from '../components/ActiveFilterStrip';
 import { useEntityFilter } from '../hooks/useEntityFilter';
+import { useResponsive } from '../hooks/useResponsive';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -43,6 +44,7 @@ export default function CanvasListScreen() {
   const { repositories } = useRepos();
   const filter = useEntityFilter<Canvas>(canvases);
   const displayCanvases = useMemo(() => filter.applyFilters(filteredCanvases), [filter, filteredCanvases]);
+  const { columnCount } = useResponsive('list');
   const [showSizePicker, setShowSizePicker] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [customW, setCustomW] = useState('800');
@@ -184,7 +186,10 @@ export default function CanvasListScreen() {
         data={displayCanvases}
         keyExtractor={(item) => item.id}
         renderItem={renderCanvas}
+        numColumns={columnCount}
+        key={`canvases-${columnCount}`}
         contentContainerStyle={styles.listContent}
+        columnWrapperStyle={columnCount > 1 ? { gap: 8 } : undefined}
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Ionicons name="easel-outline" size={48} color={colors.textSecondary} />

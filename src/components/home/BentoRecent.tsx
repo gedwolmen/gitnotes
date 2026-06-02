@@ -3,29 +3,22 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { BentoTile } from './BentoTile';
 import type { RecentItem } from '../../utils/recentItems';
+import { useResponsive } from '../../hooks/useResponsive';
 
 interface Props {
   items: RecentItem[];
   onOpen: (item: RecentItem) => void;
 }
 
-/**
- * Bento layout for the Home screen "Recent" feed.
- *
- * Phone (single column logical width):
- *   [ medium ] [ medium ]
- *   [ medium ] [ medium ]
- *   ...
- *
- * Uniform 2-column grid of medium tiles.
- */
 export function BentoRecent({ items, onOpen }: Props) {
   const { colors } = useTheme();
+  const { columnCount } = useResponsive('bento');
+
   if (items.length === 0) return null;
 
   const rows: RecentItem[][] = [];
-  for (let i = 0; i < items.length; i += 2) {
-    rows.push(items.slice(i, i + 2));
+  for (let i = 0; i < items.length; i += columnCount) {
+    rows.push(items.slice(i, i + columnCount));
   }
 
   return (
@@ -35,7 +28,7 @@ export function BentoRecent({ items, onOpen }: Props) {
         {rows.map((row, rowIdx) => (
           <View key={`recent-row-${rowIdx}`} style={styles.row}>
             {row.map((item, colIdx) => {
-              const flatIdx = rowIdx * 2 + colIdx;
+              const flatIdx = rowIdx * columnCount + colIdx;
               return (
                 <View key={`${item.kind}-${item.data.id}`} style={styles.cell}>
                   <BentoTile
@@ -47,7 +40,11 @@ export function BentoRecent({ items, onOpen }: Props) {
                 </View>
               );
             })}
-            {row.length === 1 ? <View style={styles.cell} /> : null}
+            {row.length < columnCount
+              ? Array.from({ length: columnCount - row.length }).map((_, idx) => (
+                  <View key={`placeholder-${idx}`} style={styles.cell} />
+                ))
+              : null}
           </View>
         ))}
       </View>
