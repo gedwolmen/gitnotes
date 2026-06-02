@@ -223,29 +223,7 @@ jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: any) => children,
 }));
 
-jest.mock('@shopify/flash-list', () => {
-  const React = require('react');
-  const { View } = require('react-native');
-  return {
-    FlashList: React.forwardRef(
-      (
-        { data, renderItem, ListEmptyComponent }: any,
-        _ref: any,
-      ) => {
-        if (!data?.length) {
-          return <View testID="flash-list-empty">{ListEmptyComponent ?? null}</View>;
-        }
-        return (
-          <View testID="flash-list">
-            {data.map((item: Todo, index: number) =>
-              renderItem({ item, index }),
-            )}
-          </View>
-        );
-      },
-    ),
-  };
-});
+
 
 jest.mock('react-native-gesture-handler/ReanimatedSwipeable', () => {
   const React = require('react');
@@ -294,7 +272,7 @@ describe('TodoListScreen', () => {
     ];
 
     const { getByText, getByTestId } = render(<TodoListScreen />);
-    expect(getByTestId('flash-list')).toBeTruthy();
+    expect(getByTestId('screen-header')).toBeTruthy();
     expect(getByText('Buy groceries')).toBeTruthy();
     expect(getByText('Walk the dog')).toBeTruthy();
   });

@@ -185,9 +185,56 @@ jest.mock('expo-file-system/legacy', () => ({
   EncodingType: { UTF8: 'utf8', Base64: 'base64' },
 }));
 
-jest.mock('@expo/vector-icons', () => ({
-  Ionicons: () => null,
-}));
+jest.mock('@expo/vector-icons', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const MockIcon = (props: { name?: string }) =>
+    React.createElement(View, { testID: 'icon-' + (props.name || '') });
+  return {
+    Ionicons: Object.assign(MockIcon, {
+      glyphMap: { 'logo-github': 0, 'heart': 1, 'book': 2, 'create': 3, 'trash': 4, 'settings': 5 },
+    }),
+  };
+});
+
+jest.mock('./src/components/ui/EmptyState', () => {
+  const React = require('react');
+  const { View, Text } = require('react-native');
+  return {
+    EmptyState: function MockEmptyState({ title, subtitle, testID }: { title: string; subtitle?: string; icon?: string; testID?: string }) {
+      return React.createElement(View, { testID: testID || 'empty-state' },
+        React.createElement(Text, null, title),
+        subtitle && React.createElement(Text, null, subtitle)
+      );
+    },
+  };
+});
+
+jest.mock('./src/components/notes/NotesEmptyState', () => {
+  const React = require('react');
+  const { View, Text } = require('react-native');
+  return {
+    NotesEmptyState: function MockNotesEmptyState({ isFiltered }: { isFiltered: boolean }) {
+      return React.createElement(View, { testID: 'notes-empty-state' },
+        React.createElement(Text, null, isFiltered ? 'No matching notes' : 'No notes yet'),
+        React.createElement(Text, null, isFiltered ? 'Try adjusting your search or filters' : 'Create your first note to get started')
+      );
+    },
+  };
+});
+
+jest.mock('./src/components/todos/TodosEmptyState', () => {
+  const React = require('react');
+  const { View, Text } = require('react-native');
+  return {
+    TodosEmptyState: function MockTodosEmptyState({ isFiltered }: { isFiltered: boolean }) {
+      return React.createElement(View, { testID: 'todos-empty-state' },
+        React.createElement(Text, null, isFiltered ? 'No matching todos' : 'No todos yet'),
+        React.createElement(Text, null, isFiltered ? 'Try adjusting your filters' : 'Create your first todo to get started')
+      );
+    },
+  };
+});
 
 jest.mock('expo-clipboard', () => ({
   getClipboardAsync: jest.fn(async () => ''),
@@ -199,3 +246,73 @@ jest.mock('react-native-webview', () => {
   const { View } = require('react-native');
   return { WebView: View };
 });
+
+jest.mock('react-native-gesture-handler', () => {
+  const { View } = require('react-native');
+  const mockGesture = () => ({
+    activeOffsetX: () => mockGesture(),
+    activeOffsetY: () => mockGesture(),
+    failOffsetY: () => mockGesture(),
+    onStart: () => mockGesture(),
+    onUpdate: () => mockGesture(),
+    onEnd: () => mockGesture(),
+    runOnJS: () => mockGesture(),
+  });
+  return {
+    Gesture: {
+      Pan: mockGesture,
+      Tap: mockGesture,
+      Fling: mockGesture,
+      LongPress: mockGesture,
+      Native: mockGesture,
+      native: mockGesture,
+    },
+    GestureDetector: ({ children }: { children: React.ReactNode }) => children,
+    GestureHandlerRootView: View,
+    Swipeable: View,
+    DrawerLayout: View,
+    State: {},
+    PanGestureHandler: View,
+    TapGestureHandler: View,
+    FlingGestureHandler: View,
+    LongPressGestureHandler: View,
+    NativeViewGestureHandler: View,
+    ScrollView: View,
+    FlatList: View,
+  };
+});
+
+jest.mock('expo-modules-core', () => ({
+  EventEmitter: jest.fn().mockImplementation(() => ({
+    addListener: jest.fn(),
+    removeListeners: jest.fn(),
+  })),
+  NativeModulesProxy: {},
+  requireNativeModule: jest.fn(),
+  requireOptionalNativeModule: jest.fn(),
+}));
+
+jest.mock('expo', () => ({
+  fetch: jest.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({}) })),
+  FileSystem: { readAsStringAsync: jest.fn(async () => '') },
+  Crypto: { randomUUID: () => 'test-uuid' },
+}));
+
+jest.mock('expo-notifications', () => ({
+  setNotificationHandler: jest.fn(),
+  getExpoPushTokenAsync: jest.fn(async () => ({ data: 'test-push-token' })),
+  getDevicePushTokenAsync: jest.fn(async () => ({ data: 'test-device-token' })),
+  getRegistrationForRemoteNotificationsAsync: jest.fn(async () => null),
+  requestPermissionsAsync: jest.fn(async () => ({ status: 'granted' })),
+  getPermissionsAsync: jest.fn(async () => ({ status: 'granted' })),
+  addNotificationReceivedListener: jest.fn(),
+  addNotificationsReceivedListener: jest.fn(),
+  addNotificationResponseReceivedListener: jest.fn(),
+  removeNotificationSubscription: jest.fn(),
+  dismissNotificationAsync: jest.fn(),
+  dismissAllNotificationsAsync: jest.fn(),
+  scheduleNotificationAsync: jest.fn(async () => 'notification-id'),
+  cancelScheduledNotificationAsync: jest.fn(),
+  cancelAllScheduledNotificationsAsync: jest.fn(),
+  getPresentedNotificationsAsync: jest.fn(async () => []),
+}));

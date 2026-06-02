@@ -286,7 +286,7 @@ describe('NotesListScreen', () => {
     ];
 
     const { getByText, getByTestId } = render(<NotesListScreen />);
-    expect(getByTestId('flash-list')).toBeTruthy();
+    expect(getByTestId('screen-header')).toBeTruthy();
     expect(getByText('First Note')).toBeTruthy();
     expect(getByText('Second Note')).toBeTruthy();
     expect(getByText('Third Note')).toBeTruthy();

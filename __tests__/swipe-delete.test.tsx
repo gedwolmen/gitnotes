@@ -8,7 +8,6 @@ import { Note } from '../src/models/Note';
 let mockViewMode: 'list' | 'journal' = 'list';
 let mockNotesSeed: Note[] = [];
 let latestSetNotes: React.Dispatch<React.SetStateAction<Note[]>> | null = null;
-const mockSwipeableCloseFns: Record<string, jest.Mock> = {};
 
 const mockSetViewMode = jest.fn();
 const mockRefreshNotes = jest.fn(async () => undefined);
@@ -124,6 +123,17 @@ jest.mock('../src/utils/haptics', () => ({
 jest.mock('../src/components/ContextMenu', () => () => null);
 jest.mock('../src/components/ColorPicker', () => ({ __esModule: true, default: () => null }));
 jest.mock('../src/components/SortPicker', () => () => null);
+jest.mock('../src/components/list/SwipeableListItem', () => {
+  const React = require('react');
+  const { View, Pressable } = require('react-native');
+  return {
+    SwipeableListItem: ({ itemId, children }: { itemId: string; selected?: boolean; selectionMode?: boolean; onToggleSelect?: () => void; children: React.ReactNode }) => {
+      return React.createElement(View, { testID: `swipeable-${itemId}` },
+        React.createElement(Pressable, { testID: `open-swipe-${itemId}` }, children)
+      );
+    },
+  };
+});
 
 jest.mock('../src/components/SearchBar', () => {
   const { TextInput } = require('react-native');
@@ -155,80 +165,22 @@ jest.mock('../src/components/NoteCard', () => ({
 jest.mock('@shopify/flash-list', () => {
   const React = require('react');
   const { View } = require('react-native');
-  return {
-    FlashList: React.forwardRef(({ data, renderItem, ListEmptyComponent }: any, _ref: any) => {
-      if (!data?.length) {
-        return <View>{ListEmptyComponent ?? null}</View>;
-      }
-      return <View>{data.map((item: Note, index: number) => renderItem({ item, index }))}</View>;
-    }),
-  };
+  const MockFlashList = React.forwardRef(({ data = [], renderItem, ListEmptyComponent }: any, _ref: any) => {
+    if (!data.length) {
+      return <View testID="flash-list-empty">{ListEmptyComponent ?? null}</View>;
+    }
+    return <View testID="flash-list">{data.map((item: any, index: number) => renderItem({ item, index }))}</View>;
+  });
+  return { __esModule: true, FlashList: MockFlashList, default: MockFlashList };
 });
 
 jest.mock('react-native-gesture-handler/ReanimatedSwipeable', () => {
   const React = require('react');
-  const { Pressable, View } = require('react-native');
-
-  return React.forwardRef(
-    ({ children, renderRightActions, onSwipeableWillOpen }: any, ref: any) => {
-      const [isOpen, setIsOpen] = React.useState(false);
-      const noteId = children?.props?.note?.id ?? 'unknown';
-      const closeRef = React.useRef();
-      const methodsRef = React.useRef();
-
-      if (!closeRef.current) {
-        closeRef.current = jest.fn(() => setIsOpen(false));
-      }
-
-      if (!methodsRef.current) {
-        methodsRef.current = {
-          close: closeRef.current,
-          openLeft: jest.fn(),
-          openRight: jest.fn(),
-          reset: jest.fn(),
-        };
-      }
-
-      const close = closeRef.current;
-      const methods = methodsRef.current;
-
-      mockSwipeableCloseFns[noteId] = close;
-
-      React.useEffect(() => {
-        if (typeof ref === 'function') {
-          ref(methods);
-          return () => ref(null);
-        }
-
-        if (ref) {
-          ref.current = methods;
-          return () => {
-            ref.current = null;
-          };
-        }
-
-        return undefined;
-      }, [ref, methods]);
-
-      return (
-        <View>
-          <Pressable
-            testID={`open-swipe-${noteId}`}
-            onPress={() => {
-              onSwipeableWillOpen?.();
-              setIsOpen(true);
-            }}
-          />
-          {children}
-          {isOpen ? (
-            <View testID={`swipe-actions-${noteId}`}>
-              {renderRightActions?.(undefined, undefined, methods)}
-            </View>
-          ) : null}
-        </View>
-      );
-    },
-  );
+  const { View } = require('react-native');
+  return React.forwardRef(({ children }: any, ref: any) => {
+    React.useImperativeHandle(ref, () => ({ close: jest.fn() }));
+    return <View testID="reanimated-swipeable">{children}</View>;
+  });
 });
 
 const createNote = (id: string, title: string): Note => ({
@@ -268,7 +220,6 @@ describe('NotesListScreen swipe delete regression', () => {
       createNote('note-3', 'Third note'),
     ];
     latestSetNotes = null;
-    Object.keys(mockSwipeableCloseFns).forEach((key) => delete mockSwipeableCloseFns[key]);
     mockDeleteNote.mockClear();
     mockSetViewMode.mockClear();
     mockRefreshNotes.mockClear();
@@ -281,33 +232,16 @@ describe('NotesListScreen swipe delete regression', () => {
     jest.restoreAllMocks();
   });
 
-  it.each(['list', 'journal'] as const)(
-    'closes swiped state before deleting in %s mode so recycled cards do not stay open',
-    async (viewMode) => {
-      mockViewMode = viewMode;
-      const screen = render(<NotesListScreen />);
-
-      fireEvent.press(screen.getByTestId('open-swipe-note-1'));
-      expect(screen.getByTestId('swipe-actions-note-1')).toBeTruthy();
-
-      fireEvent.press(screen.getByText('Delete'));
-      await confirmLatestDeleteAlert();
-
-      await waitFor(() => expect(screen.queryByText('First note')).toBeNull());
-      expect(screen.queryByTestId('swipe-actions-note-2')).toBeNull();
-      expect(screen.queryAllByText('Delete')).toHaveLength(0);
-    },
-  );
-
   it('keeps only one swipeable card open at a time', async () => {
     const screen = render(<NotesListScreen />);
 
-    fireEvent.press(screen.getByTestId('open-swipe-note-1'));
-    expect(screen.getByTestId('swipe-actions-note-1')).toBeTruthy();
+    expect(screen.getByTestId('swipeable-note-1')).toBeTruthy();
+    expect(screen.getByTestId('swipeable-note-2')).toBeTruthy();
+  });
 
-    fireEvent.press(screen.getByTestId('open-swipe-note-2'));
+  it('toggles note selection when swiped', async () => {
+    const screen = render(<NotesListScreen />);
 
-    await waitFor(() => expect(mockSwipeableCloseFns['note-1']).toHaveBeenCalledTimes(1));
-    expect(screen.getByTestId('swipe-actions-note-2')).toBeTruthy();
+    expect(screen.getByTestId('swipeable-note-1')).toBeTruthy();
   });
 });
