@@ -105,9 +105,8 @@ async function ensureOnBranch(
   try {
     await git.checkout({ fs, dir, ref: branch });
     return;
-  } catch (error) {
-    void error;
-    // local branch ref is missing — fetch then retry checkout below.
+  } catch {
+    // local branch ref is missing - fetch then retry checkout below.
   }
 
   await git.fetch({

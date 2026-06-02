@@ -81,8 +81,9 @@ export class ConflictResolverService {
             fileMap.get(filepath)![bucket] = oid;
           },
         });
-      } catch {
+      } catch (error) {
         // shallow clone may not have all refs
+        console.warn('[ConflictResolver] Failed to walk ref:', error);
       }
     };
 

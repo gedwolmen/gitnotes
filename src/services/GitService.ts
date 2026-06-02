@@ -135,7 +135,8 @@ export class GitService {
       }
       this.memCacheSet(key, entry.data);
       return entry.data;
-    } catch (error) { void error;
+    } catch (error) {
+      console.warn('[GitService] getCachedData failed:', error);
       return null;
     }
   }

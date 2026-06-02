@@ -89,7 +89,7 @@ export async function syncTodoToGitHub(params: {
       fileExists = sha !== null;
     }
   } catch (error) {
-    void error;
+    console.warn('[TodoGitHubSyncService] fileExists check failed:', error);
     fileExists = null;
   }
   const useUpdateVerb = fileExists ?? !!filePath;

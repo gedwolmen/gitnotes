@@ -12,7 +12,8 @@ async function readMap(): Promise<ModeMap> {
     if (!raw) return {};
     const parsed = JSON.parse(raw);
     return typeof parsed === 'object' && parsed !== null ? (parsed as ModeMap) : {};
-  } catch (error) { void error;
+  } catch (error) {
+    console.warn('[SyncEngineService] Failed to load sync mode map:', error);
     return {};
   }
 }

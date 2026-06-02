@@ -474,7 +474,7 @@ export async function syncNoteToGitHub(params: {
       fileExists = sha !== null;
     }
   } catch (error) {
-    void error;
+    console.warn('[NoteGitHubSync] fileExists check failed:', error);
     fileExists = null;
   }
   const useUpdateVerb = fileExists ?? !!(knownSha || filePath);

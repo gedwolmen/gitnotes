@@ -21,8 +21,8 @@ class PositionMemoryServiceClass {
     try {
       const payload: SavedPosition = { scrollY, ts: Date.now() };
       await AsyncStorage.setItem(`${PREFIX}${key}`, JSON.stringify(payload));
-    } catch (error) { void error;
-      // ignore
+    } catch {
+      // ignore save failures - scroll position is non-critical
     }
   }
 
@@ -32,7 +32,8 @@ class PositionMemoryServiceClass {
       if (!raw) return null;
       const parsed = JSON.parse(raw) as Partial<SavedPosition>;
       return typeof parsed?.scrollY === 'number' ? parsed.scrollY : null;
-    } catch (error) { void error;
+    } catch (error) {
+      console.warn('[PositionMemoryService] Failed to load scroll position:', error);
       return null;
     }
   }
@@ -40,8 +41,8 @@ class PositionMemoryServiceClass {
   async clear(key: string): Promise<void> {
     try {
       await AsyncStorage.removeItem(`${PREFIX}${key}`);
-    } catch (error) { void error;
-      // ignore
+    } catch {
+      // ignore - clearing is best-effort
     }
   }
 }

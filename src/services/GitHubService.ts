@@ -37,7 +37,8 @@ function decodeBase64(base64: string): string {
   if (TD) {
     try {
       return new TD('utf-8').decode(bytes);
-    } catch (error) { void error;
+    } catch (error) {
+      console.warn('[GitHubService] TextDecoder.decode failed:', error);
       // fall through to manual decoder
     }
   }
@@ -307,7 +308,8 @@ class GitHubServiceClass {
   private async fetchUser(): Promise<GitHubUser | null> {
     try {
       return await this.request<GitHubUser>('https://api.github.com/user');
-    } catch (error) { void error;
+    } catch (error) {
+      console.warn('[GitHubService] fetchUser failed:', error);
       return null;
     }
   }

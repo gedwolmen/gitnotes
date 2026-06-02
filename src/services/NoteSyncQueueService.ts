@@ -86,8 +86,8 @@ class NoteSyncQueueServiceClass {
     this.listeners.forEach((fn) => {
       try {
         fn();
-      } catch (error) { void error;
-        // ignore listener errors
+      } catch {
+        // ignore listener errors - user callbacks should not break the queue
       }
     });
   }
@@ -98,7 +98,8 @@ class NoteSyncQueueServiceClass {
       if (!raw) return [];
       const parsed = JSON.parse(raw);
       return Array.isArray(parsed) ? parsed : [];
-    } catch (error) { void error;
+    } catch (error) {
+      console.warn('[NoteSyncQueueService] Failed to get all queue items:', error);
       return [];
     }
   }
@@ -386,7 +387,7 @@ class NoteSyncQueueServiceClass {
           : {}),
       });
     } catch (error) {
-      void error;
+      console.warn('[NoteSyncQueueService] Failed to enqueue upsert:', error);
       // best-effort; RepoPullService dedup-by-title handles stale state
     }
   }

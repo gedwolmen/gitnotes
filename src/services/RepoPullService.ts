@@ -113,8 +113,8 @@ async function fetchDirectoryFiles(
       if (content) {
         results.push({ path: file.path, content });
       }
-    } catch (error) { void error;
-      console.warn(`[RepoPullService] Failed to fetch ${file.path}`);
+    } catch (error) {
+      console.warn(`[RepoPullService] Failed to fetch ${file.path}:`, error);
     }
   }
   return results;
@@ -363,8 +363,7 @@ async function pullNotesFromRepo(
     // effort).
     try {
       await GitService.invalidateRepoFoldersCache(repoPath, branch);
-    } catch (error) {
-      void error;
+    } catch {
       // best-effort; cache will expire on its own TTL.
     }
 
@@ -411,7 +410,7 @@ async function pullCanvasesFromRepo(
           try {
             scene = JSON.parse(file.content);
           } catch (error) {
-            void error;
+            console.warn('[RepoPullService] Failed to parse canvas JSON:', error);
             continue;
           }
 
@@ -444,16 +443,20 @@ async function pullCanvasesFromRepo(
         // Reconcile: drop local canvases whose backing file was deleted remotely.
         // Safety mirrors the notes reconcile — scoped to (repoPath, branch),
         // only touches canvases with a filePath (local-only drafts kept).
-        const before = allCanvases.length;
-        const survivors = allCanvases.filter((c) => {
-          if (c.repo !== repoPath) return true;
-          if (c.branch !== branch) return true;
-          if (!c.filePath) return true;
-          return remotePaths.has(c.filePath);
-        });
-        allCanvases.length = 0;
-        allCanvases.push(...survivors);
-        void before;
+        //
+        // TEMPORARILY DISABLED for release safety: local canvases without remote
+        // backing may be unsaved edits that would be incorrectly deleted.
+        // A proper dirty/tombstone tracking system is needed to safely reconcile.
+        // const before = allCanvases.length;
+        // const survivors = allCanvases.filter((c) => {
+        //   if (c.repo !== repoPath) return true;
+        //   if (c.branch !== branch) return true;
+        //   if (!c.filePath) return true;
+        //   return remotePaths.has(c.filePath);
+        // });
+        // allCanvases.length = 0;
+        // allCanvases.push(...survivors);
+        // void before;
       } else {
         // Directory gone — remove all canvases from this repo+branch that
         // originated from a remote file. Local-only canvases stay.
@@ -468,8 +471,7 @@ async function pullCanvasesFromRepo(
       }
     });
   } catch (error) {
-    void error;
-    console.warn(`[RepoPullService] Failed to pull canvases from ${owner}/${repo}`);
+    console.warn('[RepoPullService] Failed to process canvases:', error);
   }
   return pulled;
 }
@@ -505,7 +507,7 @@ async function pullTodosFromRepo(
         try {
           data = JSON.parse(file.content);
         } catch (error) {
-          void error;
+          console.warn('[RepoPullService] Failed to parse todo JSON:', error);
           continue;
         }
 
@@ -566,8 +568,7 @@ async function pullTodosFromRepo(
       await StorageService.saveAllTodos(reorderTodos(reconciled));
     }
   } catch (error) {
-    void error;
-    console.warn(`[RepoPullService] Failed to pull todos from ${owner}/${repo}`);
+    console.warn('[RepoPullService] Failed to pull/process todos:', error);
   }
   return pulled;
 }
@@ -624,8 +625,8 @@ async function pullTemplatesFromRepo(
 
     await StorageService.saveCustomTemplates([...byId.values()]);
     return count;
-  } catch (error) { void error;
-    console.warn(`[RepoPullService] Failed to pull templates from ${owner}/${repo}`);
+  } catch (error) {
+    console.warn('[RepoPullService] Failed to pull templates:', error);
     return 0;
   }
 }
