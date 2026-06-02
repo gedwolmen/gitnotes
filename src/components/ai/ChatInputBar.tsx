@@ -78,10 +78,11 @@ export function ChatInputBar({
         </View>
       )}
       {attachedContexts.length > 0 && (
-        <ScrollView 
-          horizontal 
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={false}
           style={{ marginBottom: spacing[2] }}
+          contentContainerStyle={{ flexGrow: 1 }}
         >
           {attachedContexts.map((ctx, index) => (
             <Surface
