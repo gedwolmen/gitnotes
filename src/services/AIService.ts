@@ -374,7 +374,14 @@ export async function* streamChatResponse(
 
       if (!yielded && (details.isParserError || details.isEmptyBody)) {
         try {
-          for await (const chunk of runGenerateTextFallback(model, messages, tools, abortSignal)) {
+          // Collect fallback chunks before re-yielding to avoid blocking the UI loop.
+          const chunks: string[] = [];
+          await (async () => {
+            for await (const chunk of runGenerateTextFallback(model, messages, tools, abortSignal)) {
+              chunks.push(chunk);
+            }
+          })();
+          for (const chunk of chunks) {
             yielded = true;
             yield chunk;
           }
@@ -424,7 +431,8 @@ export async function generateChatTitle(
     if (!cleaned) return null;
     const words = cleaned.split(/\s+/).slice(0, 6).join(' ');
     return words.length > 60 ? words.slice(0, 60) : words;
-  } catch (error) { void error;
+  } catch (error) {
+    console.warn('[AIService] generateChatTitle failed:', error);
     return null;
   }
 }

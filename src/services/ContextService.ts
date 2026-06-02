@@ -101,7 +101,8 @@ function decodeBase64(base64: string): string {
   if (TD) {
     try {
       return new TD('utf-8').decode(bytes);
-    } catch (error) { void error;
+    } catch (error) {
+      console.warn('[ContextService] TextDecoder.decode failed:', error);
       // fall through
     }
   }

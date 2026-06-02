@@ -201,7 +201,7 @@ export async function executeToolCall(
             );
             void NoteSyncQueueService.drain();
           } catch (error) {
-            void error;
+            console.warn('[actionExecutor] enqueueNoteUpsert failed:', error);
           }
         }
 

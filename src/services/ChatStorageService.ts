@@ -271,7 +271,7 @@ async function repairCachedSummaryIfNeeded(
   try {
     return buildThreadSummary(normalizeLoadedThread(JSON.parse(cachedThread) as ChatThread));
   } catch (error) {
-    void error;
+    console.warn('[ChatStorageService] Failed to parse thread summary:', error);
     return summary;
   }
 }
@@ -413,7 +413,8 @@ async function loadThreadSummariesInternal(owner: string, repo: string, branch: 
       try {
         const parsed = JSON.parse(cached) as ChatThreadSummary[];
         return Promise.all(parsed.map((summary) => repairCachedSummaryIfNeeded(owner, repo, branch, summary)));
-      } catch (error) { void error;
+      } catch (error) {
+        console.warn('[ChatStorageService] Failed to parse thread summaries:', error);
         await AsyncStorage.removeItem(cacheKey);
       }
     }
@@ -465,7 +466,8 @@ export async function loadThread(
           await AsyncStorage.setItem(cacheKey, JSON.stringify(normalizedThread));
         }
         return normalizedThread;
-      } catch (error) { void error;
+      } catch (error) {
+        console.warn('[ChatStorageService] Failed to repair summary:', error);
         await AsyncStorage.removeItem(cacheKey);
       }
     }

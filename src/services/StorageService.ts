@@ -48,9 +48,13 @@ export class StorageService {
   private static canvasWriteQueue: Promise<void> = Promise.resolve();
 
   private static enqueueCanvasWrite<T>(operation: () => Promise<T>): Promise<T> {
-    const run = this.canvasWriteQueue.catch(() => undefined).then(operation);
-    this.canvasWriteQueue = run.then(() => undefined, () => undefined);
-    return run;
+    let queueCapture: Promise<T>;
+    const newQueue = this.canvasWriteQueue.then(async () => {
+      queueCapture = operation();
+      return queueCapture;
+    });
+    this.canvasWriteQueue = newQueue.then(() => undefined).catch(() => undefined);
+    return newQueue.then(() => queueCapture as Promise<T>).then((r) => r as T);
   }
 
   private static async readAllCanvasesRaw(): Promise<Canvas[]> {
@@ -98,7 +102,7 @@ export class StorageService {
       const notes: Note[] = [];
       for (const [, raw] of Object.entries(result)) {
         if (raw) {
-          try { notes.push(JSON.parse(raw)); } catch (error) { void error; /* skip corrupt */ }
+          try { notes.push(JSON.parse(raw)); } catch { /* skip corrupt */ }
         }
       }
       return notes;
@@ -420,7 +424,8 @@ export class StorageService {
       const boot = getBootValue('@gitnotes:todos');
       const json = boot ?? await AsyncStorage.getItem(TODOS_STORAGE_KEY);
       return json ? JSON.parse(json) : [];
-    } catch (error) { void error;
+    } catch (error) {
+      console.warn('[StorageService] Failed to parse todos JSON:', error);
       return [];
     }
   }

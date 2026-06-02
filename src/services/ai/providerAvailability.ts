@@ -58,7 +58,7 @@ async function probeApple(): Promise<Availability> {
   let nativeAvailable = false;
   let nativeError: unknown = null;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+     
     const apple = require('@react-native-ai/apple') as typeof import('@react-native-ai/apple');
     nativeAvailable = apple.AppleFoundationModels.isAvailable();
   } catch (error) {
@@ -72,7 +72,7 @@ async function probeApple(): Promise<Availability> {
   // Native says unavailable. Disambiguate by checking the device model.
   let modelId: string | null | undefined = null;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+     
     const Device = require('expo-device') as typeof import('expo-device');
     modelId = Device.modelId ?? null;
   } catch {

@@ -15,7 +15,8 @@ export class TemplateRepoPreferenceService {
       const parsed = JSON.parse(raw) as TemplateRepoPreference;
       if (!parsed?.repoPath || !parsed?.branch) return null;
       return parsed;
-    } catch (error) { void error;
+    } catch (error) {
+      console.warn('[TemplateRepoPreferenceService] Failed to parse preference:', error);
       return null;
     }
   }
