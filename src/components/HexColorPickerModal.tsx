@@ -52,7 +52,7 @@ export default function HexColorPickerModal({
   presetIds,
   allowClear = false,
   clearTestID = 'hex-color-picker-clear',
-  cancelTestID = 'hex-color-picker-cancel',
+  cancelTestID: _cancelTestID = 'hex-color-picker-cancel',
   confirmTestID = 'hex-color-picker-confirm',
   title = 'Pick a color',
   onClose,

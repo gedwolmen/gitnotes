@@ -68,7 +68,8 @@ export default function GitContextPicker({
     setIsLoading(true);
     try {
       setBranches(await GitService.getBranches(repo));
-    } catch (error) { void error;
+    } catch (error) {
+      console.warn('[GitContextPicker] goToBranchView failed:', error);
       setBranches([]);
     } finally {
       setIsLoading(false);
@@ -81,7 +82,8 @@ export default function GitContextPicker({
     try {
       await GitService.clearCache();
       setBranches(await GitService.getBranches(repo));
-    } catch (error) { void error;
+    } catch (error) {
+      console.warn('[GitContextPicker] refreshBranches failed:', error);
       setBranches([]);
     } finally {
       setIsLoading(false);

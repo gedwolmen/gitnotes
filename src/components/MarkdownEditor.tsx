@@ -110,10 +110,14 @@ export interface MarkdownEditorHandle {
 const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(function MarkdownEditor({ content, onContentChange, placeholder = 'Start writing...', inputTestID, showToolbar = true, format }, ref) {
   const { colors } = useTheme();
   const inputRef = useRef<TextInput>(null);
-  const handleFormatRef = useRef<(action: FormatAction) => void>(() => {});
+  const handleFormatRef = useRef<(action: FormatAction) => void>(null!);
   useImperativeHandle(ref, () => ({
     focus: () => inputRef.current?.focus(),
-    applyFormat: (action) => handleFormatRef.current(action),
+    applyFormat: (action: FormatAction) => {
+      if (handleFormatRef.current) {
+        handleFormatRef.current(action);
+      }
+    },
   }), []);
   const { text, setText, undo, redo, canUndo, canRedo, reset } = useUndoRedo(content);
   const previousTextRef = useRef(text);

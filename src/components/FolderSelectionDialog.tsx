@@ -148,7 +148,7 @@ export default function FolderSelectionDialog({
       } else {
         Alert.alert('Error', 'Failed to create folder — please try again');
       }
-    } catch (error) {
+    } catch {
       HapticService.error();
       Alert.alert('Error', 'Failed to create folder');
     } finally {

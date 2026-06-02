@@ -72,6 +72,7 @@ export function SwipeableListItem({
   return (
     <GestureDetector gesture={pan}>
       <Animated.View
+        testID={`swipeable-${itemId}`}
         style={[
           styles.itemWrap,
           selected && {

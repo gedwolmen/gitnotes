@@ -15,12 +15,13 @@ try {
   const mod = require('expo-speech-recognition');
   speechModule = mod.ExpoSpeechRecognitionModule;
   speechEventHook = mod.useSpeechRecognitionEvent;
-} catch (error) { void error;
+} catch {
+  // expo-speech-recognition not available - this is expected on some platforms
   speechModule = null;
   speechEventHook = null;
 }
 
-const noOpHook = (_event: string, _handler: (...args: any[]) => void) => {};
+const noOpHook = (_event: string, _handler: (...args: any[]) => void) => { return; };
 
 function useSpeechEvents(
   onResult: (results: Array<{ transcript: string; isFinal: boolean }>) => void,
@@ -69,9 +70,9 @@ export default function VoiceInputModal({ visible, onDone, onClose }: VoiceInput
     if (startedRef.current && speechModule) {
       try {
         speechModule.stop();
-      } catch (error) { void error;
-        // Module may throw if not currently listening
-      }
+      } catch {
+      // Module may throw if not currently listening
+    }
       startedRef.current = false;
     }
     setIsListening(false);
@@ -98,7 +99,7 @@ export default function VoiceInputModal({ visible, onDone, onClose }: VoiceInput
       });
       setIsListening(true);
       startedRef.current = true;
-    } catch (error) { void error;
+    } catch {
       setError('Speech recognition not available on this device');
       setAvailable(false);
     }

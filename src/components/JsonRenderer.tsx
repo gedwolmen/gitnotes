@@ -66,7 +66,8 @@ export function JsonRenderer({ content }: JsonRendererProps) {
   const formatted = useMemo(() => {
     try {
       return JSON.stringify(JSON.parse(content), null, 2);
-    } catch (error) { void error;
+    } catch (error) {
+      console.warn('[JsonRenderer] JSON.parse failed:', error);
       return null;
     }
   }, [content]);

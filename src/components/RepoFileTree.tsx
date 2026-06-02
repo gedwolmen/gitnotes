@@ -38,7 +38,8 @@ export default function RepoFileTree({ owner, repo, branch, onFilePress }: RepoF
     try {
       const items = await fetchChildren(owner, repo, '', branch);
       setRootItems(items);
-    } catch (error) { void error;
+    } catch (error) {
+      console.warn('[RepoFileTree] loadRoot failed:', error);
       setError(true);
       setRootItems([]);
     } finally {

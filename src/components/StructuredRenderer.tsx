@@ -308,8 +308,6 @@ export default function StructuredRenderer({ blocks, format = 'neorg', onOpenNot
     return undefined;
   };
   const bodyColor = overrides.body?.color ?? colors.text;
-  const codeBg = overrides.codeBlock?.background ?? colors.surfaceSecondary;
-  const codeText = overrides.codeBlock?.text ?? colors.text;
   const inlineBg = overrides.inlineCode?.background;
   const inlineText = overrides.inlineCode?.text;
   const linkColor = overrides.link?.color ?? colors.primary;

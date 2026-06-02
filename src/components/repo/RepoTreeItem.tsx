@@ -38,7 +38,7 @@ export function RepoTreeItem({ node, owner, repo, branch, level, onFilePress, on
         setLoaded(true);
         setExpanded(true);
       } catch (error) {
-        void error;
+        console.warn('[RepoTreeItem] handlePress failed:', error);
       } finally {
         setLoading(false);
       }

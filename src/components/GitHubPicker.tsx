@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { GitHubService, GitHubRepository, GitHubIssue, GitHubMilestone, GitHubPullRequest } from '../services/GitHubService';
+import { GitHubService, GitHubRepository, GitHubIssue, GitHubMilestone } from '../services/GitHubService';
 import { useTheme } from '../contexts/ThemeContext';
 import { HapticService } from '../utils/haptics';
 import { Note } from '../models/Note';
@@ -70,7 +70,6 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
   const [repositories, setRepositories] = useState<GitHubRepository[]>([]);
   const [issues, setIssues] = useState<GitHubIssue[]>([]);
   const [milestones, setMilestones] = useState<GitHubMilestone[]>([]);
-  const [pullRequests, setPullRequests] = useState<GitHubPullRequest[]>([]);
   const [selectedRepo, setSelectedRepo] = useState<GitHubRepository | null>(null);
   const [linkType, setLinkType] = useState<LinkType>(null);
   const [loading, setLoading] = useState(false);
@@ -78,22 +77,9 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
   const [showRepoModal, setShowRepoModal] = useState(false);
   const [showIssueModal, setShowIssueModal] = useState(false);
   const [showMilestoneModal, setShowMilestoneModal] = useState(false);
-  const [showPrModal, setShowPrModal] = useState(false);
 
   const [repoSearch, setRepoSearch] = useState('');
   const [issueSearch, setIssueSearch] = useState('');
-  const [prSearch, setPrSearch] = useState('');
-
-  const filteredPrs = useMemo(
-    () =>
-      pullRequests.filter(
-        (pr) =>
-          !prSearch.trim() ||
-          pr.title.toLowerCase().includes(prSearch.toLowerCase()) ||
-          String(pr.number).includes(prSearch)
-      ),
-    [pullRequests, prSearch]
-  );
 
   const filteredRepos = useMemo(
     () =>
@@ -123,7 +109,8 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
     setLoading(true);
     try {
       setRepositories(await GitHubService.getRepositories());
-    } catch (error) { void error;
+    } catch (error) {
+      console.warn('[GitHubPicker] Failed to load repositories:', error);
       setRepositories([]);
     } finally {
       setLoading(false);
@@ -142,7 +129,8 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
       ]);
       setIssues(issuesData);
       setMilestones(milestonesData);
-    } catch (error) { void error;
+    } catch {
+      console.warn('[GitHubPicker] Failed to fetch issues/milestones');
       setIssues([]);
       setMilestones([]);
     } finally {
@@ -162,7 +150,8 @@ export default function GitHubPicker({ value, onChange }: GitHubPickerProps) {
         ]);
         setIssues(issuesData);
         setMilestones(milestonesData);
-      } catch (error) { void error;
+      } catch {
+        console.warn('[GitHubPicker] Failed to fetch milestones');
         setMilestones([]);
       } finally {
         setLoading(false);

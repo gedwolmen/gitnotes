@@ -5,7 +5,6 @@ import Reanimated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  runOnJS,
 } from 'react-native-reanimated';
 
 export interface ImageZoomRotateProps {

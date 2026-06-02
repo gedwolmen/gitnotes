@@ -28,7 +28,7 @@ interface RepoFileBrowserProps {
   onCreateNoteInFolder: (folderPath: string) => void;
 }
 
-import { parseRepoPath } from '../utils/gitPathParser';
+
 
 async function deleteFolderRecursive(
   owner: string,
@@ -154,7 +154,8 @@ export default function RepoFileBrowser({
           return a.name.localeCompare(b.name);
         });
       setItems(filtered);
-    } catch (error) { void error;
+    } catch (error) {
+      console.warn('[RepoFileBrowser] loadContents failed:', error);
       setItems([]);
     } finally {
       setIsLoading(false);
@@ -203,7 +204,8 @@ export default function RepoFileBrowser({
       } else {
         Alert.alert('Error', 'Failed to create folder on GitHub.');
       }
-    } catch (error) { void error;
+    } catch (error) {
+      console.warn('[RepoFileBrowser] handleCreateFolder failed:', error);
       Alert.alert('Error', 'Failed to create folder.');
     } finally {
       setIsCreating(false);
@@ -241,7 +243,8 @@ export default function RepoFileBrowser({
                       await deleteFolderRecursive(owner, repo, item.path, branch || 'main');
                       HapticService.success();
                       loadContents();
-                    } catch (error) { void error;
+                    } catch (error) {
+                      console.warn('[RepoFileBrowser] deleteFolderRecursive failed:', error);
                       Alert.alert('Error', 'Failed to delete folder.');
                     }
                   },
@@ -264,7 +267,8 @@ export default function RepoFileBrowser({
         .sort((a: RepoFileItem, b: RepoFileItem) => a.name.localeCompare(b.name));
       setMoveDialogFolders(dirs);
       setMoveDialogPath(path);
-    } catch (error) { void error;
+    } catch (error) {
+      console.warn('[RepoFileBrowser] loadMoveDialogFolders failed:', error);
       setMoveDialogFolders([]);
     } finally {
       setMoveDialogLoading(false);
@@ -291,7 +295,8 @@ export default function RepoFileBrowser({
       setShowMoveFolderDialog(false);
       setFolderToMove(null);
       loadContents();
-    } catch (error) { void error;
+    } catch (error) {
+      console.warn('[RepoFileBrowser] handleMoveFolderConfirm failed:', error);
       Alert.alert('Error', 'Failed to move folder. Some files may have been moved.');
     } finally {
       setIsMovingFolder(false);
