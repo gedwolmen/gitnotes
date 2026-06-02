@@ -99,7 +99,7 @@ export function TodoEditorModal({
             </TouchableOpacity>
           </View>
 
-          <ScrollView ref={modalScrollRef} style={styles.modalBody}>
+          <ScrollView ref={modalScrollRef} style={styles.modalBody} contentContainerStyle={{ flexGrow: 1 }}>
             <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Todo Text *</Text>
             <TextInput
               testID="todo-editor.input.title"

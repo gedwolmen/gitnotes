@@ -1004,7 +1004,7 @@ export default function CanvasEditorContent() {
       </View>
 
       <View style={styles.toolbar}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
           {TOOLS.map(({ key, label, icon }) => {
             // Tool icon used to inherit the active *pen color*, so on dark
             // mode with the default black pen the icon vanished against

@@ -487,7 +487,7 @@ export default function CanvasModal({ visible, onSave, onClose, editJsonUri }: C
         </View>
 
         <View style={styles.toolbar}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
             {TOOLS.map(({ key, label, icon }) => (
               <TouchableOpacity
                 key={key}
