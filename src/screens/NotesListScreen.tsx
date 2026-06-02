@@ -185,16 +185,20 @@ export default function NotesListScreen() {
             if (isDeletingRef.current) return;
             isDeletingRef.current = true;
             setIsDeleting(true);
+            const failedIds = new Set<string>();
             try {
               for (const id of ids) {
                 try {
-                  await deleteNote(id);
-                } catch (error) {
-                  void error;
-                }
+                  const ok = await deleteNote(id);
+                  if (!ok) failedIds.add(id);
+                } catch { failedIds.add(id); }
               }
-              HapticService.success();
-              clearSelection();
+              if (failedIds.size > 0) {
+                HapticService.warning();
+              } else {
+                HapticService.success();
+                clearSelection();
+              }
             } finally {
               setIsDeleting(false);
               isDeletingRef.current = false;

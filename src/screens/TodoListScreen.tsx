@@ -117,16 +117,20 @@ export default function TodoListScreen() {
           onPress: async () => {
             if (isDeletingRef.current) return;
             isDeletingRef.current = true;
+            const failedIds = new Set<string>();
             try {
               for (const id of ids) {
                 try {
-                  await deleteTodo(id);
-                } catch (error) {
-                  void error;
-                }
+                  const ok = await deleteTodo(id);
+                  if (!ok) failedIds.add(id);
+                } catch { failedIds.add(id); }
               }
-              HapticService.success();
-              clearSelection();
+              if (failedIds.size > 0) {
+                HapticService.warning();
+              } else {
+                HapticService.success();
+                clearSelection();
+              }
             } finally {
               isDeletingRef.current = false;
             }

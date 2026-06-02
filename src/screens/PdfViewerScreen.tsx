@@ -98,7 +98,7 @@ export default function PdfViewerScreen() {
   var pending = null;
   var restoreTimers = [];
   function restore() {
-    try { window.scrollTo(0, RESTORE_Y); } catch (error) { void error; }
+    try { window.scrollTo(0, RESTORE_Y); } catch (error) {}
   }
   function send() {
     try {
@@ -106,7 +106,7 @@ export default function PdfViewerScreen() {
       if (window.ReactNativeWebView) {
         window.ReactNativeWebView.postMessage(JSON.stringify({ scrollY: y }));
       }
-    } catch (error) { void error; }
+    } catch (error) {}
   }
   function onScroll() {
     if (pending) return;
@@ -198,7 +198,9 @@ export default function PdfViewerScreen() {
       // context spinning, leading to an unresponsive UI on return.
       try {
         webViewRef.current?.stopLoading?.();
-      } catch (error) { void error; }
+      } catch (error) {
+        console.warn('[PdfViewerScreen] stopLoading failed:', error);
+      }
     };
   }, []);
 

@@ -150,7 +150,7 @@ export default function SettingsScreen() {
         HapticService.success();
       }
     } catch (error) {
-      void error;
+      console.warn('[SettingsScreen] handleTokenInput failed:', error);
       HapticService.error();
     }
   }, []);
@@ -162,7 +162,7 @@ export default function SettingsScreen() {
       await setStringAsync(tokenInput.trim());
       HapticService.success();
     } catch (error) {
-      void error;
+      console.warn('[SettingsScreen] handleCopyToken failed:', error);
       HapticService.error();
     }
   }, [tokenInput]);
@@ -396,7 +396,7 @@ export default function SettingsScreen() {
       try {
         setGithubRepos(await GitHubService.getRepositories());
       } catch (error) {
-        void error;
+        console.warn('[SettingsScreen] getRepositories failed:', error);
         setGithubRepos([]);
       } finally {
         setIsLoadingGithubRepos(false);
@@ -416,7 +416,7 @@ export default function SettingsScreen() {
       setShowRepoPickerModal(false);
       autoSyncAfterAdd(repo.full_name, repo.name);
     } catch (error) {
-      void error;
+      console.warn('[SettingsScreen] handleSelectGithubRepo failed:', error);
       HapticService.error();
       Alert.alert('Error', 'Failed to add repository.');
     } finally {
@@ -435,7 +435,7 @@ export default function SettingsScreen() {
       setShowRepoPickerModal(false);
       autoSyncAfterAdd(value, value);
     } catch (error) {
-      void error;
+      console.warn('[SettingsScreen] handleAddManualRepo failed:', error);
       HapticService.error();
       Alert.alert('Error', 'Failed to add repository.');
     } finally {
