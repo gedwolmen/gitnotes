@@ -170,7 +170,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
             ) : null}
           </ScrollView>
         ) : isAIStep ? (
-          <View style={styles.content}>
+          <View style={styles.contentCentered}>
             <Surface elevation="raised" radius="pill" style={styles.iconContainer}>
               <Ionicons name="sparkles-outline" size={72} color={colors.accent} />
             </Surface>
@@ -183,7 +183,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
             </Text>
           </View>
         ) : (
-          <View style={styles.content}>
+          <View style={styles.contentCentered}>
             <Surface elevation="raised" radius="pill" style={styles.iconContainer}>
               <Ionicons name={INFO_STEPS[currentStep].icon} size={72} color={colors.accent} />
             </Surface>
@@ -269,10 +269,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     alignItems: 'stretch',
   },
+  contentCentered: {
+    flex: 1,
+    paddingHorizontal: 40,
+    alignItems: 'center',
+  },
   tokenScrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    alignItems: 'stretch',
+    alignItems: 'center',
     gap: 16,
     paddingBottom: 40,
   },
