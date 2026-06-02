@@ -290,8 +290,8 @@ export default function CanvasEditorContent() {
   const activeDrawingElement = useSharedValue<CanvasStroke | CanvasShape | null>(null);
   const activeStrokePath = useSharedValue(Skia.Path.Make().setIsVolatile(true));
   const contentBounds = useMemo(() => getCanvasContentBounds(elements), [elements]);
-  const shouldAutoFitRef = useRef((existingCanvas?.scene?.elements?.length ?? 0) > 0);
-  const didAutoFitRef = useRef(false);
+  const shouldAutoFitRef = useRef(true);
+  const didAutoFitRef = useRef(!!canvasId);
 
   const setZoom = useCallback(
     (next: number) => {
@@ -336,7 +336,9 @@ export default function CanvasEditorContent() {
   );
 
   useEffect(() => {
-    if (!canvasSize || didAutoFitRef.current) return;
+    if (!canvasSize) return;
+
+    if (didAutoFitRef.current) return;
 
     if (shouldAutoFitRef.current && contentBounds) {
       const next = getCanvasFitTranslation(contentBounds, canvasSize.width, canvasSize.height, 1);
@@ -344,14 +346,12 @@ export default function CanvasEditorContent() {
       translateX.value = withSpring(next.translateX, { mass: 0.5, damping: 14, stiffness: 200 });
       translateY.value = withSpring(next.translateY, { mass: 0.5, damping: 14, stiffness: 200 });
       didAutoFitRef.current = true;
-    } else if (!canvasId) {
-      const cw = route.params.canvasWidth ?? 800;
-      const ch = route.params.canvasHeight ?? 600;
-      translateX.value = withSpring((canvasSize.width - cw) / 2, { mass: 0.5, damping: 14, stiffness: 200 });
-      translateY.value = withSpring((canvasSize.height - ch) / 2, { mass: 0.5, damping: 14, stiffness: 200 });
+    } else {
+      translateX.value = withSpring(0, { mass: 0.5, damping: 14, stiffness: 200 });
+      translateY.value = withSpring(0, { mass: 0.5, damping: 14, stiffness: 200 });
       didAutoFitRef.current = true;
     }
-  }, [canvasSize, contentBounds, scale, translateX, translateY, canvasId, route.params.canvasWidth, route.params.canvasHeight]);
+  }, [canvasSize, contentBounds, scale, translateX, translateY]);
 
   const saveHistory = useCallback(() => {
     setHistory((prev) => {
@@ -765,6 +765,31 @@ export default function CanvasEditorContent() {
     [translateX, translateY, savedTx, savedTy, scale, contentBounds, canvasSize?.width, canvasSize?.height],
   );
 
+  const viewportPanGesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .maxPointers(1)
+        .onStart(() => {
+          'worklet';
+          savedTx.value = translateX.value;
+          savedTy.value = translateY.value;
+        })
+        .onUpdate((e) => {
+          'worklet';
+          const clamped = clampCanvasTranslation(
+            savedTx.value + e.translationX,
+            savedTy.value + e.translationY,
+            scale.value,
+            contentBounds,
+            canvasSize?.width ?? 0,
+            canvasSize?.height ?? 0,
+          );
+          translateX.value = clamped.translateX;
+          translateY.value = clamped.translateY;
+        }),
+    [savedTx, savedTy, scale, contentBounds, canvasSize?.width, canvasSize?.height, translateX, translateY],
+  );
+
   // Two-finger combo for simultaneous zoom+pan
   const twoFingerCombo = useMemo(
     () => Gesture.Simultaneous(pinchGesture, twoFingerPan),
@@ -1077,59 +1102,61 @@ export default function CanvasEditorContent() {
         />
       </View>
 
-      <View
-        style={styles.canvasPane}
-        onLayout={(e) => {
-          const { width, height } = e.nativeEvent.layout;
-          setCanvasSize((prev) => {
-            if (prev && prev.width === width && prev.height === height) return prev;
-            return { width, height };
-          });
-        }}
-      >
-        {canvasSize && (
-          <GestureDetector gesture={composedGesture}>
-            <Animated.View style={[{ width: canvasSize.width, height: canvasSize.height }, canvasAnimStyle]}>
-              <Canvas style={{ width: canvasSize.width, height: canvasSize.height }}>
-                <Fill color="white" />
-                {elements.map(renderElement)}
-                <Path path={activeStrokePath} color={activeStrokeColor} style="stroke" strokeWidth={activeStrokeWidth} strokeCap="round" strokeJoin="round" />
-                <Path path={activeLinePath} color={activeShapeStrokeColor} style="stroke" strokeWidth={activeShapeStrokeWidth} />
-                <Path path={activeArrowPath} color={activeShapeStrokeColor} style="stroke" strokeWidth={activeShapeStrokeWidth} />
-                <Path path={activeDiamondPath} color={activeShapeStrokeColor} style="stroke" strokeWidth={activeShapeStrokeWidth} />
-                <Group>
-                  <Rect x={activeShapeX} y={activeShapeY} width={activeShapeWidth} height={activeShapeHeight} color={activeRectFillColor} />
-                  <Rect x={activeShapeX} y={activeShapeY} width={activeShapeWidth} height={activeShapeHeight} style="stroke" strokeWidth={activeRectStrokeWidth} color={activeShapeStrokeColor} />
-                </Group>
-                <Group>
-                  <RoundedRect
-                    x={activeShapeX}
-                    y={activeShapeY}
-                    width={activeShapeWidth}
-                    height={activeShapeHeight}
-                    r={10}
-                    color={activeRoundRectFillColor}
-                  />
-                  <RoundedRect
-                    x={activeShapeX}
-                    y={activeShapeY}
-                    width={activeShapeWidth}
-                    height={activeShapeHeight}
-                    r={10}
-                    style="stroke"
-                    strokeWidth={activeRoundRectStrokeWidth}
-                    color={activeShapeStrokeColor}
-                  />
-                </Group>
-                <Group>
-                  <Oval x={activeShapeX} y={activeShapeY} width={activeShapeWidth} height={activeShapeHeight} color={activeEllipseFillColor} />
-                  <Oval x={activeShapeX} y={activeShapeY} width={activeShapeWidth} height={activeShapeHeight} style="stroke" strokeWidth={activeEllipseStrokeWidth} color={activeShapeStrokeColor} />
-                </Group>
-              </Canvas>
-            </Animated.View>
-          </GestureDetector>
-        )}
-      </View>
+      <GestureDetector gesture={viewportPanGesture}>
+        <View
+          style={styles.canvasPane}
+          onLayout={(e) => {
+            const { width, height } = e.nativeEvent.layout;
+            setCanvasSize((prev) => {
+              if (prev && prev.width === width && prev.height === height) return prev;
+              return { width, height };
+            });
+          }}
+        >
+          {canvasSize && (
+            <GestureDetector gesture={composedGesture}>
+              <Animated.View style={[{ width: canvasSize.width, height: canvasSize.height }, canvasAnimStyle]}>
+                <Canvas style={{ width: canvasSize.width, height: canvasSize.height }}>
+                  <Fill color="white" />
+                  {elements.map(renderElement)}
+                  <Path path={activeStrokePath} color={activeStrokeColor} style="stroke" strokeWidth={activeStrokeWidth} strokeCap="round" strokeJoin="round" />
+                  <Path path={activeLinePath} color={activeShapeStrokeColor} style="stroke" strokeWidth={activeShapeStrokeWidth} />
+                  <Path path={activeArrowPath} color={activeShapeStrokeColor} style="stroke" strokeWidth={activeShapeStrokeWidth} />
+                  <Path path={activeDiamondPath} color={activeShapeStrokeColor} style="stroke" strokeWidth={activeShapeStrokeWidth} />
+                  <Group>
+                    <Rect x={activeShapeX} y={activeShapeY} width={activeShapeWidth} height={activeShapeHeight} color={activeRectFillColor} />
+                    <Rect x={activeShapeX} y={activeShapeY} width={activeShapeWidth} height={activeShapeHeight} style="stroke" strokeWidth={activeRectStrokeWidth} color={activeShapeStrokeColor} />
+                  </Group>
+                  <Group>
+                    <RoundedRect
+                      x={activeShapeX}
+                      y={activeShapeY}
+                      width={activeShapeWidth}
+                      height={activeShapeHeight}
+                      r={10}
+                      color={activeRoundRectFillColor}
+                    />
+                    <RoundedRect
+                      x={activeShapeX}
+                      y={activeShapeY}
+                      width={activeShapeWidth}
+                      height={activeShapeHeight}
+                      r={10}
+                      style="stroke"
+                      strokeWidth={activeRoundRectStrokeWidth}
+                      color={activeShapeStrokeColor}
+                    />
+                  </Group>
+                  <Group>
+                    <Oval x={activeShapeX} y={activeShapeY} width={activeShapeWidth} height={activeShapeHeight} color={activeEllipseFillColor} />
+                    <Oval x={activeShapeX} y={activeShapeY} width={activeShapeWidth} height={activeShapeHeight} style="stroke" strokeWidth={activeEllipseStrokeWidth} color={activeShapeStrokeColor} />
+                  </Group>
+                </Canvas>
+              </Animated.View>
+            </GestureDetector>
+          )}
+        </View>
+      </GestureDetector>
 
       <Modal visible={textModalVisible} transparent animationType="fade" onRequestClose={() => setTextModalVisible(false)}>
         <View style={styles.modalBackdrop}>
