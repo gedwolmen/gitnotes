@@ -228,7 +228,7 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
       <Group title="Scheduled Learning" badge="BETA">
         {items.length === 0 ? (
           <GroupRow>
-            <View style={{ gap: 6, paddingVertical: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Ionicons name="school-outline" size={32} color={colors.textSecondary} />
               <Text style={[styles.emptyReposText, { color: colors.textSecondary }]}>
                 No scheduled learning set up
