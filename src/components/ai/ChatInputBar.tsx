@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { View, TextInput, ScrollView, TouchableOpacity, Text, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,6 +18,8 @@ export interface ChatInputBarProps {
   onStop?: () => void;
   disabled?: boolean;
   contextWarning?: { level: 'caution' | 'over' | 'none'; message: string } | null;
+  value?: string;
+  onChangeText?: (text: string) => void;
 }
 
 export function ChatInputBar({
@@ -30,8 +32,13 @@ export function ChatInputBar({
   onStop,
   disabled,
   contextWarning,
+  value,
+  onChangeText,
 }: ChatInputBarProps) {
-  const [text, setText] = useState('');
+  const [internalText, setInternalText] = useState('');
+  const isControlled = value !== undefined && !!onChangeText;
+  const text = isControlled ? value : internalText;
+  const handleTextChange = isControlled ? onChangeText : setInternalText;
   const { colors, spacing, type } = useTokens();
   const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
@@ -39,7 +46,7 @@ export function ChatInputBar({
   const handleSend = () => {
     if (text.trim() && !isStreaming) {
       onSend(text);
-      setText('');
+      handleTextChange('');
     }
   };
 
@@ -159,7 +166,7 @@ export function ChatInputBar({
           placeholderTextColor={colors.textSecondary}
           multiline
           value={text}
-          onChangeText={setText}
+          onChangeText={handleTextChange}
           editable={!disabled && !isStreaming}
         />
 

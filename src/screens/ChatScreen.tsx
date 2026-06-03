@@ -57,13 +57,15 @@ export default function ChatScreen() {
   } = useChatScreenController(threadId);
 
   const [voiceModalVisible, setVoiceModalVisible] = useState(false);
+  const [chatText, setChatText] = useState('');
 
   const handleVoiceDone = useCallback((text: string) => {
     setVoiceModalVisible(false);
-    if (text.trim()) {
-      handleSend(text);
+    const trimmed = text.trim();
+    if (trimmed) {
+      setChatText((prev) => (prev.trim() ? `${prev.trim()} ${trimmed}` : trimmed));
     }
-  }, [handleSend]);
+  }, []);
 
   const selectedModelId = useAIStore((state) => state.selectedModelId);
   const providers = useAIStore((state) => state.providers);
@@ -179,6 +181,8 @@ export default function ChatScreen() {
             onStop={stopStreaming}
             disabled={!thread && !isLoading}
             contextWarning={contextBudget.message ? { level: contextBudget.warningLevel, message: contextBudget.message } : null}
+            value={chatText}
+            onChangeText={setChatText}
           />
         </View>
       </KeyboardAvoidingView>
