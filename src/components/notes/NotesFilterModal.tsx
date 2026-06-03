@@ -96,7 +96,7 @@ export function NotesFilterModal({
                 />
               </TouchableOpacity>
             )}
-            {!hasChildren && <View style={styles.expandButtonPlaceholder} />}
+            {!hasChildren && <View style={{ width: 0 }} />}
             <TouchableOpacity
               style={[
                 styles.chip,
