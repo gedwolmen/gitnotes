@@ -573,7 +573,6 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
 
       <RepoFolderPickerModal
         visible={showRepoFolderPicker}
-        dismissOnBackdrop={false}
         repoPath={selectedRepoPath}
         branch={selectedBranch}
         folderPath={selectedFolderPath}

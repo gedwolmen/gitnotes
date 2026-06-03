@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,6 +8,7 @@ import { ChatMessageBubble } from '../components/ai/ChatMessageBubble';
 import { ChatInputBar } from '../components/ai/ChatInputBar';
 import { ChatLoadingStrip } from '../components/ai/ChatLoadingStrip';
 import ContextPickerModal from '../components/ai/ContextPickerModal';
+import VoiceInputModal from '../components/VoiceInputModal';
 import { ScreenHeader, useScreenHeaderHeight } from '../components/ui';
 import { useTokens } from '../contexts/ThemeContext';
 import type { ChatMessage } from '../models/Chat';
@@ -54,6 +55,15 @@ export default function ChatScreen() {
     handleConfirmCancel,
     clearError,
   } = useChatScreenController(threadId);
+
+  const [voiceModalVisible, setVoiceModalVisible] = useState(false);
+
+  const handleVoiceDone = useCallback((text: string) => {
+    setVoiceModalVisible(false);
+    if (text.trim()) {
+      handleSend(text);
+    }
+  }, [handleSend]);
 
   const selectedModelId = useAIStore((state) => state.selectedModelId);
   const providers = useAIStore((state) => state.providers);
@@ -162,6 +172,7 @@ export default function ChatScreen() {
           <ChatInputBar
             onSend={handleSend}
             onAttach={() => setIsContextPickerVisible(true)}
+            onVoicePress={() => setVoiceModalVisible(true)}
             attachedContexts={attachedContexts}
             onRemoveContext={(index) => setAttachedContexts((current) => current.filter((_, itemIndex) => itemIndex !== index))}
             isStreaming={isStreaming}
@@ -171,6 +182,12 @@ export default function ChatScreen() {
           />
         </View>
       </KeyboardAvoidingView>
+
+      <VoiceInputModal
+        visible={voiceModalVisible}
+        onDone={handleVoiceDone}
+        onClose={() => setVoiceModalVisible(false)}
+      />
 
       <ContextPickerModal
         visible={isContextPickerVisible}
