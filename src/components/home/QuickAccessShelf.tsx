@@ -8,12 +8,13 @@ import { BentoTile } from './BentoTile';
 interface Props {
   items: RecentItem[];
   onOpen: (item: RecentItem) => void;
+  onLongPress?: (item: RecentItem) => void;
 }
 
 const CARD_WIDTH = 176;
 const EDGE_INSET = 20;
 
-export function QuickAccessShelf({ items, onOpen }: Props) {
+export function QuickAccessShelf({ items, onOpen, onLongPress }: Props) {
   const { colors } = useTheme();
   if (items.length === 0) return null;
 
@@ -36,6 +37,7 @@ export function QuickAccessShelf({ items, onOpen }: Props) {
             widthOverride={CARD_WIDTH}
             hidePinGlyph
             onPress={() => onOpen(item)}
+            onLongPress={onLongPress ? () => onLongPress(item) : undefined}
             testIDSlot={`pinned-${idx}`}
           />
         ))}

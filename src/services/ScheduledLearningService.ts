@@ -1,7 +1,6 @@
 import { generateText } from 'ai';
 import { useAIStore } from '../stores/aiStore';
 import { useNoteStore } from '../stores/noteStore';
-import { useFolderStore } from '../stores/folderStore';
 import { useScheduledLearningStore } from '../stores/scheduledLearningStore';
 import { initializeModel } from './AIService';
 import { NotificationService } from './NotificationService';
@@ -35,7 +34,6 @@ export class ScheduledLearningService {
     try {
       const aiStore = useAIStore.getState();
       const noteStore = useNoteStore.getState();
-      const folderStore = useFolderStore.getState();
 
       const modelId = item.modelId ?? aiStore.selectedModelId;
       if (!modelId) {
@@ -96,15 +94,15 @@ export class ScheduledLearningService {
       });
       const title = `Learning: ${tagsText} - ${dateStr}`;
 
-      const folderPath = item.folderId
-        ? folderStore.folders.find((f) => f.id === item.folderId)?.path
-        : undefined;
+      const folderPath = item.folderPath ?? undefined;
 
       await noteStore.createNote({
         title,
         content: result.text,
         tags: ['scheduled-learning', ...item.tags],
         folderPath,
+        repo: item.repoPath ?? undefined,
+        branch: item.branch ?? undefined,
         format: 'markdown',
       });
 

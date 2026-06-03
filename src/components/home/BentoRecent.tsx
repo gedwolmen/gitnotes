@@ -8,9 +8,10 @@ import { useResponsive } from '../../hooks/useResponsive';
 interface Props {
   items: RecentItem[];
   onOpen: (item: RecentItem) => void;
+  onLongPress?: (item: RecentItem) => void;
 }
 
-export function BentoRecent({ items, onOpen }: Props) {
+export function BentoRecent({ items, onOpen, onLongPress }: Props) {
   const { colors } = useTheme();
   const { columnCount } = useResponsive('bento');
 
@@ -35,6 +36,7 @@ export function BentoRecent({ items, onOpen }: Props) {
                     item={item}
                     size="medium"
                     onPress={() => onOpen(item)}
+                    onLongPress={onLongPress ? () => onLongPress(item) : undefined}
                     testIDSlot={`recent-${flatIdx}`}
                   />
                 </View>

@@ -12,6 +12,7 @@ interface Props {
   item: RecentItem;
   size: BentoSize;
   onPress: () => void;
+  onLongPress?: () => void;
   widthOverride?: number;
   hidePinGlyph?: boolean;
   // Stable slot label for testIDs — render-order index from the parent list.
@@ -131,7 +132,7 @@ const TILE_WIDTH_HINT: Record<BentoSize, number> = { large: 320, medium: 160, sm
 const SNIPPET_LINES: Record<BentoSize, number> = { large: 3, medium: 2, small: 1, pinned: 2 };
 const COLOR_STRIPE_WIDTH = 4;
 
-export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph, testIDSlot }: Props) {
+export function BentoTile({ item, size, onPress, onLongPress, widthOverride, hidePinGlyph, testIDSlot }: Props) {
   const { colors } = useTheme();
   const isLarge = size === 'large';
   const isMedium = size === 'medium';
@@ -166,6 +167,7 @@ export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph, te
       <Pressable
         testID={`bento-tile.button.press-${testIDSlot}`}
         onPress={onPress}
+        onLongPress={onLongPress}
         style={({ pressed }) => [
           styles.tile,
           {
@@ -178,7 +180,7 @@ export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph, te
           },
           widthStyle,
         ]}
-        accessibilityRole="button"
+accessibilityRole="button"
         accessibilityLabel={`canvas ${titleFor(item)}`}
       >
         <View style={[styles.thumbWrap, { height: thumbHeight, backgroundColor: '#FFFFFF' }]}>
@@ -218,6 +220,7 @@ export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph, te
       <Pressable
         testID={`bento-tile.button.press-${testIDSlot}`}
         onPress={onPress}
+        onLongPress={onLongPress}
         style={({ pressed }) => [
           styles.tile,
           {
@@ -279,6 +282,7 @@ export function BentoTile({ item, size, onPress, widthOverride, hidePinGlyph, te
     <Pressable
       testID={`bento-tile.button.press-${testIDSlot}`}
       onPress={onPress}
+      onLongPress={onLongPress}
       style={({ pressed }) => [
         styles.tile,
         {

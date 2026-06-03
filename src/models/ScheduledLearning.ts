@@ -29,6 +29,9 @@ export interface ScheduledLearningItem {
   modelId: string | null;
   folderId: string | null;
   folderName: string | null;
+  folderPath: string | null;  // e.g. "notes/learning" - path within the repo
+  repoPath: string | null;    // e.g. "owner/repo" - the GitHub repo
+  branch: string | null;      // e.g. "main" - the branch
   wordCount: number;
   repeat: 'weekly' | 'one-time';
   isEnabled: boolean;
@@ -45,6 +48,9 @@ export interface ScheduledLearningCreateInput {
   modelId?: string | null;
   folderId?: string | null;
   folderName?: string | null;
+  folderPath?: string | null;
+  repoPath?: string | null;
+  branch?: string | null;
   wordCount: number;
   repeat?: 'weekly' | 'one-time';
 }
@@ -60,6 +66,9 @@ export function createScheduledLearningItem(input: ScheduledLearningCreateInput)
     modelId: input.modelId ?? null,
     folderId: input.folderId ?? null,
     folderName: input.folderName ?? null,
+    folderPath: input.folderPath ?? null,
+    repoPath: input.repoPath ?? null,
+    branch: input.branch ?? null,
     wordCount: input.wordCount,
     repeat: input.repeat ?? 'weekly',
     isEnabled: true,

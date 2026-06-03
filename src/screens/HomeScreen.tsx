@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -11,7 +11,7 @@ import { useNotes } from '../contexts/NoteContext';
 import { useCanvases } from '../contexts/CanvasContext';
 import { useRepos } from '../contexts/RepoContext';
 import { requireRepo } from '../utils/requireRepo';
-import { NoteFormat } from '../models/Note';
+import { NoteFormat, NoteColor, Note } from '../models/Note';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { HapticService } from '../utils/haptics';
 import TemplateSelector from '../components/TemplateSelector';
@@ -27,6 +27,9 @@ import { Button, Card, Modal, ScreenHeader, useScreenHeaderHeight, useTabBarHeig
 import { BentoRecent } from '../components/home/BentoRecent';
 import { QuickAccessShelf } from '../components/home/QuickAccessShelf';
 import { buildPinnedFeed, buildRecentFeed, RecentItem } from '../utils/recentItems';
+import { HomeNoteContextMenu } from '../components/home/HomeNoteContextMenu';
+import ColorPicker from '../components/ColorPicker';
+import { ShareFormat } from '../services/ShareService';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type EditableNoteFormat = Exclude<NoteFormat, 'pdf' | 'json'>;
@@ -40,7 +43,7 @@ const FORMAT_OPTIONS: { label: string; value: EditableNoteFormat; ext: string }[
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
-  const { notes } = useNotes();
+  const { notes, togglePin, updateNote, deleteNote } = useNotes();
   const { canvases } = useCanvases();
   const { repositories } = useRepos();
   const openSettings = useCallback(() => {
@@ -54,6 +57,8 @@ export default function HomeScreen() {
   const [defaultFormat, setDefaultFormat] = useState<EditableNoteFormat | null>(null);
   const [rememberFormat, setRememberFormat] = useState<boolean>(false);
   const [pickerRemember, setPickerRemember] = useState<boolean>(false);
+  const [contextMenuItem, setContextMenuItem] = useState<RecentItem | null>(null);
+  const [colorPickerItem, setColorPickerItem] = useState<RecentItem | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -159,6 +164,90 @@ export default function HomeScreen() {
     [navigation],
   );
 
+  const handleLongPressRecentItem = useCallback((item: RecentItem) => {
+    HapticService.medium();
+    setContextMenuItem(item);
+  }, []);
+
+  const handleTogglePin = useCallback(
+    async (item: RecentItem) => {
+      const note = item.data;
+      if (note && 'isPinned' in note) {
+        if (!(await togglePin(note.id))) {
+          Alert.alert('Error', 'Failed to update pin status');
+        }
+      }
+    },
+    [togglePin],
+  );
+
+  const handleShare = useCallback(async (note: Note, format: ShareFormat) => {
+    const { ShareService } = await import('../services/ShareService');
+    try {
+      const ok = await ShareService.shareInFormat(note, format);
+      if (!ok) {
+        Alert.alert('Error', 'Failed to export note');
+      }
+    } catch (error) {
+      console.error('[HomeScreen] Share/export error:', error);
+      Alert.alert('Error', 'Failed to export note');
+    }
+  }, []);
+
+  const handlePickColor = useCallback((item: RecentItem) => {
+    setContextMenuItem(null);
+    setColorPickerItem(item);
+  }, []);
+
+  const handleColorSelect = useCallback(
+    async (color: NoteColor | null) => {
+      const item = colorPickerItem;
+      setColorPickerItem(null);
+      if (!item || item.kind === 'canvas' || !('color' in item.data)) return;
+      const note = item.data;
+      if (!note.id) return;
+      try {
+        const updated = await updateNote({ id: note.id, color });
+        if (!updated) {
+          HapticService.error();
+          Alert.alert('Error', 'Failed to update note color');
+          return;
+        }
+        HapticService.success();
+      } catch {
+        HapticService.error();
+        Alert.alert('Error', 'Failed to update note color');
+      }
+    },
+    [colorPickerItem, updateNote],
+  );
+
+  const handleDelete = useCallback(
+    async (item: RecentItem) => {
+      const note = item.data;
+      if (!('id' in note) || !note.id) return;
+      Alert.alert(
+        `Delete "${note.title || 'Untitled'}"?`,
+        'This cannot be undone.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              if (!(await deleteNote(note.id as string))) {
+                Alert.alert('Error', 'Failed to delete note');
+              } else {
+                HapticService.success();
+              }
+            },
+          },
+        ],
+      );
+    },
+    [deleteNote],
+  );
+
   return (
     <SafeAreaView edges={[]} style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: headerHeight, paddingBottom: tabBarHeight + 20 }]} showsVerticalScrollIndicator={false}>
@@ -255,8 +344,8 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      <QuickAccessShelf items={pinnedItems} onOpen={handleOpenRecentItem} />
-      <BentoRecent items={recentItems} onOpen={handleOpenRecentItem} />
+      <QuickAccessShelf items={pinnedItems} onOpen={handleOpenRecentItem} onLongPress={handleLongPressRecentItem} />
+      <BentoRecent items={recentItems} onOpen={handleOpenRecentItem} onLongPress={handleLongPressRecentItem} />
 
       <Modal visible={showFormatPicker} onRequestClose={handleFormatPickerClose} fullWidth>
         <Text style={[styles.modalTitle, { color: colors.text }]}>Choose Note Format</Text>
@@ -298,6 +387,24 @@ export default function HomeScreen() {
         visible={showTemplateSelector}
         onClose={() => setShowTemplateSelector(false)}
         onSelect={handleTemplateSelect}
+      />
+
+      <HomeNoteContextMenu
+        item={contextMenuItem}
+        visible={contextMenuItem !== null}
+        onClose={() => setContextMenuItem(null)}
+        onOpen={handleOpenRecentItem}
+        onTogglePin={handleTogglePin}
+        onShare={handleShare}
+        onPickColor={handlePickColor}
+        onDelete={handleDelete}
+      />
+
+      <ColorPicker
+        visible={colorPickerItem !== null}
+        onClose={() => setColorPickerItem(null)}
+        selected={colorPickerItem?.kind === 'note' ? (colorPickerItem.data as Note).color ?? null : null}
+        onSelect={handleColorSelect}
       />
       </ScrollView>
       <ScreenHeader title="GitNotēs" subtitle="Your development notes, organized." />

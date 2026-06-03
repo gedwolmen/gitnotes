@@ -6,7 +6,6 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { Group, GroupRow, Modal, Toggle } from '../ui';
 import { useScheduledLearningStore } from '../../stores/scheduledLearningStore';
 import { useAIStore } from '../../stores/aiStore';
-import { useFolders } from '../../contexts/FolderContext';
 import { settingsStyles as styles } from './settingsStyles';
 import {
   type DayOfWeek,
@@ -15,6 +14,7 @@ import {
   formatDaysOfWeek,
 } from '../../models/ScheduledLearning';
 import { ScheduledLearningService } from '../../services/ScheduledLearningService';
+import RepoFolderPickerModal from '../RepoFolderPickerModal';
 
 interface ScheduledLearningSectionProps {
   colors: {
@@ -37,7 +37,6 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
   const toggleItem = useScheduledLearningStore((s) => s.toggleItem);
   const providers = useAIStore((s) => s.providers);
   const selectedModelId = useAIStore((s) => s.selectedModelId);
-  const { folders, createFolder } = useFolders();
 
   const availableModels = useMemo(
     () => providers.filter((provider) => provider.isEnabled).flatMap((provider) => provider.models),
@@ -48,8 +47,8 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
   const [showDayPicker, setShowDayPicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showModelPicker, setShowModelPicker] = useState(false);
-  const [showFolderPicker, setShowFolderPicker] = useState(false);
   const [showWordCountPicker, setShowWordCountPicker] = useState(false);
+  const [showRepoFolderPicker, setShowRepoFolderPicker] = useState(false);
 
   const [selectedDay, setSelectedDay] = useState<DayOfWeek>('monday');
 
@@ -59,11 +58,12 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
   const [selectedDays, setSelectedDays] = useState<DayOfWeek[]>(['monday']);
   const [selectedTime, setSelectedTime] = useState(new Date());
   const [selectedModel, setSelectedModel] = useState<string | null>(selectedModelId);
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [selectedWordCount, setSelectedWordCount] = useState(500);
   const [repeat, setRepeat] = useState<'weekly' | 'one-time'>('weekly');
-  const [newFolderName, setNewFolderName] = useState('');
-  const [showNewFolderInput, setShowNewFolderInput] = useState(false);
+
+  const [selectedRepoPath, setSelectedRepoPath] = useState<string | null>(null);
+  const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
+  const [selectedFolderPath, setSelectedFolderPath] = useState<string | null>(null);
 
   const resetForm = useCallback(() => {
     setTags([]);
@@ -72,11 +72,11 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
     setSelectedDays(['monday']);
     setSelectedTime(new Date());
     setSelectedModel(selectedModelId);
-    setSelectedFolderId(null);
     setSelectedWordCount(500);
     setRepeat('weekly');
-    setShowNewFolderInput(false);
-    setNewFolderName('');
+    setSelectedRepoPath(null);
+    setSelectedBranch(null);
+    setSelectedFolderPath(null);
   }, [selectedModelId]);
 
   const toggleDay = useCallback((day: DayOfWeek) => {
@@ -103,19 +103,6 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
       return;
     }
 
-    let folderId = selectedFolderId;
-    let folderName = selectedFolderId
-      ? folders.find((f) => f.id === selectedFolderId)?.name ?? null
-      : null;
-
-    if (showNewFolderInput && newFolderName.trim()) {
-      const newFolder = await createFolder({ name: newFolderName.trim(), parentId: null });
-      if (newFolder) {
-        folderId = newFolder.id;
-        folderName = newFolder.name;
-      }
-    }
-
     const timeStr = selectedTime.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
@@ -128,8 +115,9 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
       daysOfWeek: selectedDays,
       time: timeStr,
       modelId: selectedModel,
-      folderId,
-      folderName,
+      folderPath: selectedFolderPath,
+      repoPath: selectedRepoPath,
+      branch: selectedBranch,
       wordCount: selectedWordCount,
       repeat,
     });
@@ -142,13 +130,11 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
     selectedDays,
     selectedTime,
     selectedModel,
-    selectedFolderId,
+    selectedFolderPath,
+    selectedRepoPath,
+    selectedBranch,
     selectedWordCount,
     repeat,
-    newFolderName,
-    showNewFolderInput,
-    folders,
-    createFolder,
     createItem,
     resetForm,
   ]);
@@ -191,10 +177,19 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
     return availableModels.find((m) => m.id === modelId)?.name ?? 'Unknown';
   };
 
-  const getFolderName = (folderId: string | null) => {
-    if (!folderId) return 'None';
-    return folders.find((f) => f.id === folderId)?.name ?? 'Unknown';
+  const getRepoDisplayText = () => {
+    if (!selectedRepoPath) return 'None';
+    const repoName = selectedRepoPath.split('/').pop() || selectedRepoPath;
+    if (selectedBranch) return `${repoName} · ${selectedBranch}`;
+    if (selectedFolderPath) return `${repoName} · ${selectedFolderPath}`;
+    return repoName;
   };
+
+  const handleRepoFolderSelect = useCallback((repoPath: string | null, branch: string | null, folderPath: string | null) => {
+    setSelectedRepoPath(repoPath);
+    setSelectedBranch(branch);
+    setSelectedFolderPath(folderPath);
+  }, []);
 
   const localStyles = StyleSheet.create({
     sectionTitle: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
@@ -285,11 +280,14 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
           setShowAddModal(false);
         }}
         bottomSheet
+        dismissOnBackdrop={false}
         contentStyle={{ padding: 16, paddingBottom: 34, maxHeight: '85%' }}
       >
         <ScrollView
           contentContainerStyle={{ paddingHorizontal: 0 }}
           showsVerticalScrollIndicator={false}
+          nestedScrollEnabled
+          keyboardShouldPersistTaps="handled"
         >
           <View style={localStyles.modalHeader}>
             <Text style={localStyles.modalTitle}>New Learning Schedule</Text>
@@ -408,6 +406,7 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
 
           <Text style={[localStyles.inputLabel, { marginTop: 16 }]}>Time</Text>
           <TouchableOpacity
+            testID="scheduled-learning.picker.time"
             onPress={() => setShowTimePicker(true)}
             style={[localStyles.pickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
           >
@@ -433,39 +432,14 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
             <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
           </TouchableOpacity>
 
-          <Text style={[localStyles.inputLabel, { marginTop: 16 }]}>Folder</Text>
-          {showNewFolderInput ? (
-            <View style={[localStyles.newFolderRow, { borderColor: colors.border }]}>
-              <TextInput
-                style={[localStyles.newFolderInput, { color: colors.text }]}
-                value={newFolderName}
-                onChangeText={setNewFolderName}
-                placeholder="New folder name..."
-                placeholderTextColor={colors.textSecondary}
-                autoFocus
-              />
-              <TouchableOpacity onPress={() => setShowNewFolderInput(false)} style={{ padding: 12 }}>
-                <Ionicons name="close" size={18} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View>
-              <TouchableOpacity
-                onPress={() => setShowFolderPicker(true)}
-                style={[localStyles.pickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              >
-                <Text style={localStyles.pickerButtonText}>{getFolderName(selectedFolderId)}</Text>
-                <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setShowNewFolderInput(true)}
-                style={localStyles.createFolderButton}
-              >
-                <Ionicons name="folder-open-outline" size={16} color={colors.primary} />
-                <Text style={localStyles.createFolderButtonText}>Create new folder</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          <Text style={[localStyles.inputLabel, { marginTop: 16 }]}>Git Context</Text>
+          <TouchableOpacity
+            onPress={() => setShowRepoFolderPicker(true)}
+            style={[localStyles.pickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          >
+            <Text style={localStyles.pickerButtonText}>{getRepoDisplayText()}</Text>
+            <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
+          </TouchableOpacity>
 
           <TouchableOpacity
             onPress={handleAdd}
@@ -480,6 +454,7 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
         visible={showDayPicker}
         onRequestClose={() => setShowDayPicker(false)}
         bottomSheet
+        dismissOnBackdrop={false}
         contentStyle={{ padding: 16, paddingBottom: 34 }}
       >
         <View style={localStyles.modalHeader}>
@@ -510,6 +485,7 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
         visible={showTimePicker}
         onRequestClose={() => setShowTimePicker(false)}
         bottomSheet
+        dismissOnBackdrop={false}
         contentStyle={{ padding: 16, paddingBottom: 34 }}
       >
         <View style={localStyles.modalHeader}>
@@ -537,6 +513,7 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
         visible={showWordCountPicker}
         onRequestClose={() => setShowWordCountPicker(false)}
         bottomSheet
+        dismissOnBackdrop={false}
         contentStyle={{ padding: 16, paddingBottom: 34 }}
       >
         <View style={localStyles.modalHeader}>
@@ -567,6 +544,7 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
         visible={showModelPicker}
         onRequestClose={() => setShowModelPicker(false)}
         bottomSheet
+        dismissOnBackdrop={false}
         contentStyle={{ padding: 16, paddingBottom: 34 }}
       >
         <View style={localStyles.modalHeader}>
@@ -576,17 +554,6 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
           </TouchableOpacity>
         </View>
         <Group>
-          <GroupRow
-            onPress={() => {
-              setSelectedModel(null);
-              setShowModelPicker(false);
-            }}
-            trailing={selectedModel === null ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : null}
-          >
-            <Text style={{ color: selectedModel === null ? colors.primary : colors.text, fontSize: 16 }}>
-              Default
-            </Text>
-          </GroupRow>
           {availableModels.map((model) => (
             <GroupRow
               key={model.id}
@@ -604,46 +571,15 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
         </Group>
       </Modal>
 
-      <Modal
-        visible={showFolderPicker}
-        onRequestClose={() => setShowFolderPicker(false)}
-        bottomSheet
-        contentStyle={{ padding: 16, paddingBottom: 34 }}
-      >
-        <View style={localStyles.modalHeader}>
-          <Text style={localStyles.modalTitle}>Select Folder</Text>
-          <TouchableOpacity onPress={() => setShowFolderPicker(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="close" size={22} color={colors.textSecondary} />
-          </TouchableOpacity>
-        </View>
-        <Group>
-          <GroupRow
-            onPress={() => {
-              setSelectedFolderId(null);
-              setShowFolderPicker(false);
-            }}
-            trailing={selectedFolderId === null ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : null}
-          >
-            <Text style={{ color: selectedFolderId === null ? colors.primary : colors.text, fontSize: 16 }}>
-              None
-            </Text>
-          </GroupRow>
-          {folders.map((folder) => (
-            <GroupRow
-              key={folder.id}
-              onPress={() => {
-                setSelectedFolderId(folder.id);
-                setShowFolderPicker(false);
-              }}
-              trailing={selectedFolderId === folder.id ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : null}
-            >
-              <Text style={{ color: selectedFolderId === folder.id ? colors.primary : colors.text, fontSize: 16 }}>
-                {folder.name}
-              </Text>
-            </GroupRow>
-          ))}
-        </Group>
-      </Modal>
+      <RepoFolderPickerModal
+        visible={showRepoFolderPicker}
+        dismissOnBackdrop={false}
+        repoPath={selectedRepoPath}
+        branch={selectedBranch}
+        folderPath={selectedFolderPath}
+        onSelect={handleRepoFolderSelect}
+        onClose={() => setShowRepoFolderPicker(false)}
+      />
     </>
   );
 }
