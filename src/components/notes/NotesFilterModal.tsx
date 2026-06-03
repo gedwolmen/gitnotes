@@ -448,7 +448,9 @@ const styles = StyleSheet.create({
   },
   applyButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   folderTreeContainer: {
-    gap: 6,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
     marginBottom: 16,
   },
   folderRow: {
