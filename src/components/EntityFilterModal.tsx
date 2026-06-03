@@ -321,7 +321,7 @@ export function EntityFilterModal<T extends FilterableItem>(props: Props<T>) {
           {allFolders.length > 0 && (
             <>
               <Text style={[styles.label, { color: colors.textSecondary }]}>Folder</Text>
-              <View style={styles.folderTreeContainer}>
+              <View style={styles.chipWrap}>
                 <TouchableOpacity
                   style={[
                     styles.chip,
@@ -459,6 +459,12 @@ const styles = StyleSheet.create({
   chipRow: {
     paddingHorizontal: 12,
   },
+  chipWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingHorizontal: 4,
+  },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -494,7 +500,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   folderTreeContainer: {
-    paddingHorizontal: 12,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
   },
   folderRow: {

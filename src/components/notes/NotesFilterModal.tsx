@@ -281,7 +281,7 @@ export function NotesFilterModal({
             {allFolders.length > 0 ? (
               <>
                 <Text style={[styles.label, { color: colors.textSecondary }]}>{t('notesFilter.folder')}</Text>
-                <View style={styles.folderTreeContainer}>
+                <View style={styles.chipWrap}>
                   <TouchableOpacity
                     testID="notes-filter-modal.button.select-folder"
                     style={[
@@ -448,6 +448,8 @@ const styles = StyleSheet.create({
   },
   applyButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   folderTreeContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
     marginBottom: 16,
   },
