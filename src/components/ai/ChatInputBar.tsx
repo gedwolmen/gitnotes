@@ -11,6 +11,7 @@ import { IconButton } from '../ui/IconButton';
 export interface ChatInputBarProps {
   onSend: (text: string) => void;
   onAttach: () => void;
+  onVoicePress?: () => void;
   attachedContexts: AIContextItem[];
   onRemoveContext: (index: number) => void;
   isStreaming: boolean;
@@ -22,6 +23,7 @@ export interface ChatInputBarProps {
 export function ChatInputBar({
   onSend,
   onAttach,
+  onVoicePress,
   attachedContexts,
   onRemoveContext,
   isStreaming,
@@ -124,6 +126,18 @@ export function ChatInputBar({
         >
           <Ionicons name="attach" size={24} color={colors.textSecondary} />
         </IconButton>
+
+        {onVoicePress && (
+          <IconButton
+            variant="ghost"
+            onPress={onVoicePress}
+            disabled={disabled || isStreaming}
+            style={{ marginRight: spacing[1] }}
+            accessibilityLabel="Voice input"
+          >
+            <Ionicons name="mic" size={24} color={colors.textSecondary} />
+          </IconButton>
+        )}
 
         <TextInput
           testID="chat-input.input.message"

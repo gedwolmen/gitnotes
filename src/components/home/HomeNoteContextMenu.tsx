@@ -1,10 +1,13 @@
 import React from 'react';
 import { View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
-import ContextMenu from '../ContextMenu';
+import ContextMenu, { ContextMenuItem, ContextMenuSection } from '../ContextMenu';
 import { Note } from '../../models/Note';
 import { ShareFormat, ShareService } from '../../services/ShareService';
 import type { RecentItem } from '../../utils/recentItems';
+
+type IconName = keyof typeof Ionicons.glyphMap;
 
 const EXPORT_LABELS: Record<ShareFormat, string> = {
   pdf: 'PDF',
@@ -15,7 +18,7 @@ const EXPORT_LABELS: Record<ShareFormat, string> = {
   neorg: 'Neorg',
 };
 
-const EXPORT_ICONS: Record<ShareFormat, 'document-outline' | 'document-text-outline'> = {
+const EXPORT_ICONS: Record<ShareFormat, IconName> = {
   pdf: 'document-outline',
   docx: 'document-outline',
   markdown: 'document-text-outline',
@@ -86,6 +89,78 @@ export function HomeNoteContextMenu({
     onClose();
   };
 
+  const headerIcon: IconName = item?.kind === 'document' ? 'document' : item?.kind === 'canvas' ? 'easel' : 'document-text';
+
+  const menuItems: ContextMenuItem[] = item
+    ? [
+        {
+          icon: 'eye-outline' as IconName,
+          label: 'Open',
+          testID: 'home-note-context-menu.item.open',
+          onPress: () => onOpen(item),
+        },
+        ...(onTogglePin
+          ? [
+              {
+                icon: (item.pinned ? 'pin' : 'pin-outline') as IconName,
+                label: item.pinned ? 'Unpin' : 'Pin',
+                testID: 'home-note-context-menu.item.toggle-pin',
+                onPress: handleTogglePin,
+              },
+            ]
+          : []),
+        ...(onShare && note
+          ? [
+              {
+                icon: 'share-outline' as IconName,
+                label: 'Share / Save',
+                subtitle: 'Choose export format',
+                testID: 'home-note-context-menu.item.share',
+                onPress: handleShare,
+              },
+            ]
+          : []),
+        ...(onPickColor && item.kind !== 'canvas'
+          ? [
+              {
+                icon: 'color-palette-outline' as IconName,
+                label: 'Color',
+                testID: 'home-note-context-menu.item.pick-color',
+                onPress: handlePickColor,
+              },
+            ]
+          : []),
+        ...(onDuplicate
+          ? [
+              {
+                icon: 'copy-outline' as IconName,
+                label: 'Duplicate',
+                testID: 'home-note-context-menu.item.duplicate',
+                onPress: handleDuplicate,
+              },
+            ]
+          : []),
+      ]
+    : [];
+
+  const deleteSection: ContextMenuSection | undefined = onDelete
+    ? {
+        items: [
+          {
+            icon: 'trash-outline' as IconName,
+            label: 'Delete',
+            destructive: true,
+            testID: 'home-note-context-menu.item.delete',
+            onPress: handleDelete,
+          },
+        ],
+      }
+    : undefined;
+
+  const sections: ContextMenuSection[] = deleteSection
+    ? [{ items: menuItems }, deleteSection]
+    : [{ items: menuItems }];
+
   return (
     <View testID="home-note-context-menu.item.close">
       <ContextMenu
@@ -93,79 +168,8 @@ export function HomeNoteContextMenu({
         onClose={onClose}
         title={item?.data.title || 'Untitled'}
         subtitle={item?.kind === 'document' ? (item.data as Note).filePath ?? undefined : undefined}
-        headerIcon={item?.kind === 'document' ? 'document' : item?.kind === 'canvas' ? 'easel' : 'document-text'}
-        sections={
-          item
-            ? [
-                {
-                  items: [
-                    {
-                      icon: 'eye-outline',
-                      label: 'Open',
-                      testID: 'home-note-context-menu.item.open',
-                      onPress: () => onOpen(item),
-                    },
-                    ...(onTogglePin
-                      ? [
-                          {
-                            icon: item.pinned ? 'pin' : 'pin-outline',
-                            label: item.pinned ? 'Unpin' : 'Pin',
-                            testID: 'home-note-context-menu.item.toggle-pin',
-                            onPress: handleTogglePin,
-                          },
-                        ]
-                      : []),
-                    ...(onShare && note
-                      ? [
-                          {
-                            icon: 'share-outline',
-                            label: 'Share / Save',
-                            subtitle: 'Choose export format',
-                            testID: 'home-note-context-menu.item.share',
-                            onPress: handleShare,
-                          },
-                        ]
-                      : []),
-                    ...(onPickColor && item.kind !== 'canvas'
-                      ? [
-                          {
-                            icon: 'color-palette-outline',
-                            label: 'Color',
-                            testID: 'home-note-context-menu.item.pick-color',
-                            onPress: handlePickColor,
-                          },
-                        ]
-                      : []),
-                    ...(onDuplicate
-                      ? [
-                          {
-                            icon: 'copy-outline',
-                            label: 'Duplicate',
-                            testID: 'home-note-context-menu.item.duplicate',
-                            onPress: handleDuplicate,
-                          },
-                        ]
-                      : []),
-                  ],
-                },
-                ...(onDelete
-                  ? [
-                      {
-                        items: [
-                          {
-                            icon: 'trash-outline',
-                            label: 'Delete',
-                            destructive: true,
-                            testID: 'home-note-context-menu.item.delete',
-                            onPress: handleDelete,
-                          },
-                        ],
-                      },
-                    ]
-                  : []),
-              ]
-            : []
-        }
+        headerIcon={headerIcon}
+        sections={sections}
       />
       <ContextMenu
         visible={exportPickerItem !== null}
