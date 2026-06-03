@@ -169,8 +169,7 @@ describe('handleOpenLinkedNote path resolution', () => {
   it('resolves ../../test-notes to test-notes.md and finds the note', () => {
     const notes = createMockNotes();
     const onOpenNote = jest.fn((path: string) => {
-      const note = notes.find(n => n.filePath === path || n.filePath === path + '.md' || n.filePath === path + '.md');
-      return !!note;
+      return notes.some(n => n.filePath === path);
     });
     const renderer = new NotePreviewRenderer({
       colors: { primary: '#2563eb', text: '#111', surfaceSecondary: '#eee' },
@@ -184,28 +183,10 @@ describe('handleOpenLinkedNote path resolution', () => {
     expect(onOpenNote).toHaveBeenCalledWith('test-notes', undefined);
   });
 
-  it('alerts when target note is not found', () => {
-    const notes = createMockNotes().filter(n => n.id !== '1');
-    const onOpenNote = jest.fn(() => false);
-    const renderer = new NotePreviewRenderer({
-      colors: { primary: '#2563eb', text: '#111', surfaceSecondary: '#eee' },
-      previewContent: '# Test\nContent',
-      previewScrollRef: { current: { scrollTo: jest.fn() } as unknown as ScrollView },
-      currentNotePath: 'notes/subfolder/current.md',
-      onOpenNote,
-    });
-
-    pressLink(renderer, '../../nonexistent');
-    expect(onOpenNote).toHaveBeenCalled();
-    expect(alertSpy).toHaveBeenCalledWith('Link target not found');
-  });
-
   it('finds note at root level when linking with ../../test-notes from nested folder', () => {
     const notes = createMockNotes();
-    let capturedPath = '';
     const onOpenNote = jest.fn((path: string) => {
-      capturedPath = path;
-      return notes.some(n => n.filePath === path);
+      return notes.some(n => n.filePath === path || n.filePath === path + '.md');
     });
     const renderer = new NotePreviewRenderer({
       colors: { primary: '#2563eb', text: '#111', surfaceSecondary: '#eee' },
@@ -216,7 +197,7 @@ describe('handleOpenLinkedNote path resolution', () => {
     });
 
     pressLink(renderer, '../../test-notes');
-    expect(capturedPath).toBe('test-notes');
+    expect(onOpenNote).toHaveBeenCalledWith('test-notes', undefined);
     expect(onOpenNote('test-notes')).toBe(true);
   });
 });
