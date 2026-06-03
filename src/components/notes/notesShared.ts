@@ -8,6 +8,12 @@ export const NOTE_FORMAT_LABELS: Record<Exclude<NoteFormat, 'json'>, string> = {
   pdf: '.pdf',
 };
 
+export interface FolderTree {
+  name: string;
+  path: string;
+  children: FolderTree[];
+}
+
 export interface NotesListFilters {
   [key: string]: unknown;
   selectedRepo: GitRepository | null;
@@ -74,4 +80,42 @@ export function noteMatchesListFilters(note: Note, filters: NotesListFilters): b
   }
 
   return true;
+}
+
+export function buildFolderHierarchy(folders: string[]): FolderTree[] {
+  const folderMap = new Map<string, FolderTree>();
+  const roots: FolderTree[] = [];
+
+  for (const folderPath of folders) {
+    const parts = folderPath.split('/').filter(Boolean);
+    let currentPath = '';
+
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      currentPath = currentPath ? `${currentPath}/${part}` : part;
+
+      if (!folderMap.has(currentPath)) {
+        const node: FolderTree = { name: part, path: currentPath, children: [] };
+        folderMap.set(currentPath, node);
+
+        if (i === 0) {
+          roots.push(node);
+        } else {
+          const parentPath = parts.slice(0, i).join('/');
+          const parent = folderMap.get(parentPath);
+          if (parent) {
+            parent.children.push(node);
+          }
+        }
+      }
+    }
+  }
+
+  const sortNodes = (nodes: FolderTree[]): void => {
+    nodes.sort((a, b) => a.name.localeCompare(b.name));
+    for (const n of nodes) sortNodes(n.children);
+  };
+  sortNodes(roots);
+
+  return roots;
 }

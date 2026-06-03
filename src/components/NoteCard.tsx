@@ -90,7 +90,7 @@ function NoteCardImpl({
             style={[styles.content, { color: colors.textSecondary }]}
             numberOfLines={isCard ? 3 : 2}
           >
-            {stripPreview(note.content, note.format) || 'No content'}
+            {note.format === 'pdf' ? 'PDF file' : (stripPreview(note.content, note.format) || 'No content')}
           </Text>
         )}
       </View>

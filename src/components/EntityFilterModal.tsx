@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { HapticService } from '../utils/haptics';
 import { GitRepository } from '../services/GitService';
 import { FilterableItem, UseEntityFilterReturn } from '../hooks/useEntityFilter';
 import { useAuth } from '../contexts/AuthContext';
+import { FolderTree, buildFolderHierarchy } from './notes/notesShared';
 
 interface Props<T extends FilterableItem> {
   visible: boolean;
@@ -42,6 +43,19 @@ export function EntityFilterModal<T extends FilterableItem>(props: Props<T>) {
     activeCount,
   } = filter;
   const { selectedRepo, selectedBranch, selectedFolder, selectedTags, selectedAccountId } = state;
+
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+
+  const folderHierarchy = useMemo(() => buildFolderHierarchy(allFolders), [allFolders]);
+
+  const toggleExpanded = (path: string) => {
+    setExpandedFolders(prev => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
+  };
 
   const renderChipRow = (
     items: string[],
@@ -102,6 +116,55 @@ export function EntityFilterModal<T extends FilterableItem>(props: Props<T>) {
       }}
     />
   );
+
+  const renderFolderTree = (folders: FolderTree[], level: number = 0): React.ReactNode => {
+    return folders.map(folder => {
+      const isExpanded = expandedFolders.has(folder.path);
+      const hasChildren = folder.children.length > 0;
+      const isSelected = selectedFolder === folder.path;
+
+      return (
+        <View key={folder.path}>
+          <View style={[styles.folderRow, level > 0 && { paddingLeft: 16 + level * 16 }]}>
+            {hasChildren && (
+              <TouchableOpacity onPress={() => toggleExpanded(folder.path)} style={styles.expandButton}>
+                <Ionicons
+                  name={isExpanded ? 'chevron-down' : 'chevron-forward'}
+                  size={14}
+                  color={colors.textSecondary}
+                />
+              </TouchableOpacity>
+            )}
+            {!hasChildren && <View style={styles.expandButtonPlaceholder} />}
+            <TouchableOpacity
+              style={[
+                styles.chip,
+                { borderColor: colors.border },
+                isSelected && { borderColor: colors.primary, backgroundColor: colors.primary + '15' },
+              ]}
+              onPress={() => {
+                HapticService.selection();
+                setSelectedFolder(isSelected ? null : folder.path);
+              }}
+            >
+              <Ionicons
+                name={isExpanded ? 'folder-open' : 'folder-outline'}
+                size={13}
+                color={isSelected ? colors.primary : colors.textSecondary}
+              />
+              <Text
+                style={[styles.chipText, { color: isSelected ? colors.primary : colors.text }]}
+                numberOfLines={1}
+              >
+                {folder.name}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          {isExpanded && hasChildren && renderFolderTree(folder.children, level + 1)}
+        </View>
+      );
+    });
+  };
 
   return (
     <Modal visible={visible} onRequestClose={onClose} bottomSheet contentStyle={{ height: '85%' }}>
@@ -258,7 +321,29 @@ export function EntityFilterModal<T extends FilterableItem>(props: Props<T>) {
           {allFolders.length > 0 && (
             <>
               <Text style={[styles.label, { color: colors.textSecondary }]}>Folder</Text>
-              {renderChipRow(allFolders, selectedFolder, setSelectedFolder, 'folder-outline')}
+              <View style={styles.folderTreeContainer}>
+                <TouchableOpacity
+                  style={[
+                    styles.chip,
+                    { borderColor: colors.border },
+                    !selectedFolder && { borderColor: colors.primary, backgroundColor: colors.primary + '15' },
+                  ]}
+                  onPress={() => {
+                    HapticService.selection();
+                    setSelectedFolder(null);
+                  }}
+                >
+                  <Ionicons
+                    name="home-outline"
+                    size={13}
+                    color={!selectedFolder ? colors.primary : colors.textSecondary}
+                  />
+                  <Text style={[styles.chipText, { color: !selectedFolder ? colors.primary : colors.text }]}>
+                    All
+                  </Text>
+                </TouchableOpacity>
+                {renderFolderTree(folderHierarchy)}
+              </View>
             </>
           )}
 
@@ -407,5 +492,23 @@ const styles = StyleSheet.create({
   footerButtonText: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  folderTreeContainer: {
+    paddingHorizontal: 12,
+    gap: 6,
+  },
+  folderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  expandButton: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  expandButtonPlaceholder: {
+    width: 24,
   },
 });
