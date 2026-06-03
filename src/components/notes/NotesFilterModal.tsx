@@ -430,7 +430,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    marginRight: 8,
     gap: 5,
   },
   chipText: { fontSize: 14 },
@@ -456,7 +455,7 @@ const styles = StyleSheet.create({
   folderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 2,
   },
   expandButton: {
     width: 24,

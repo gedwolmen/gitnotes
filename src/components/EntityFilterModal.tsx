@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
   chipWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 4,
     paddingHorizontal: 4,
   },
   chip: {
@@ -502,12 +502,12 @@ const styles = StyleSheet.create({
   folderTreeContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: 2,
   },
   folderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 2,
   },
   expandButton: {
     width: 24,
