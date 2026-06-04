@@ -109,7 +109,7 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
       hour12: false,
     });
 
-    await createItem({
+    const newItem = await createItem({
       tags,
       description,
       daysOfWeek: selectedDays,
@@ -121,6 +121,9 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
       wordCount: selectedWordCount,
       repeat,
     });
+    if (newItem) {
+      void ScheduledLearningService.scheduleNotification(newItem);
+    }
 
     resetForm();
     setShowAddModal(false);
@@ -280,7 +283,6 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
           setShowAddModal(false);
         }}
         bottomSheet
-        dismissOnBackdrop={false}
         contentStyle={{ padding: 16, paddingBottom: 34, maxHeight: '85%' }}
       >
         <ScrollView
@@ -454,7 +456,6 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
         visible={showDayPicker}
         onRequestClose={() => setShowDayPicker(false)}
         bottomSheet
-        dismissOnBackdrop={false}
         contentStyle={{ padding: 16, paddingBottom: 34 }}
       >
         <View style={localStyles.modalHeader}>
@@ -485,7 +486,6 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
         visible={showTimePicker}
         onRequestClose={() => setShowTimePicker(false)}
         bottomSheet
-        dismissOnBackdrop={false}
         contentStyle={{ padding: 16, paddingBottom: 34 }}
       >
         <View style={localStyles.modalHeader}>
@@ -513,7 +513,6 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
         visible={showWordCountPicker}
         onRequestClose={() => setShowWordCountPicker(false)}
         bottomSheet
-        dismissOnBackdrop={false}
         contentStyle={{ padding: 16, paddingBottom: 34 }}
       >
         <View style={localStyles.modalHeader}>
@@ -544,7 +543,6 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
         visible={showModelPicker}
         onRequestClose={() => setShowModelPicker(false)}
         bottomSheet
-        dismissOnBackdrop={false}
         contentStyle={{ padding: 16, paddingBottom: 34 }}
       >
         <View style={localStyles.modalHeader}>
@@ -573,7 +571,6 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
 
       <RepoFolderPickerModal
         visible={showRepoFolderPicker}
-        dismissOnBackdrop={false}
         repoPath={selectedRepoPath}
         branch={selectedBranch}
         folderPath={selectedFolderPath}

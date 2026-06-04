@@ -29,11 +29,15 @@ import AppNavigator from './src/navigation/AppNavigator';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import { OnboardingService } from './src/services/OnboardingService';
 import { NotificationService } from './src/services/NotificationService';
+import * as Notifications from 'expo-notifications';
+import { useScheduledLearningStore } from './src/stores/scheduledLearningStore';
+import { ScheduledLearningService } from './src/services/ScheduledLearningService';
 import { StartupSyncGate } from './src/components/StartupSyncGate';
 import { GitHubActivityIndicator } from './src/components/GitHubActivityIndicator';
 import { bootstrapStorage } from './src/services/StorageBootstrap';
 import { useRenderStyleStore } from './src/stores/renderStyleStore';
 import { startForegroundWatcher } from './src/services/ForegroundSyncService';
+import { startScheduledLearningBackgroundTask } from './src/services/ScheduledLearningBackgroundService';
 import { loadForegroundSyncConfig } from './src/hooks/useForegroundSyncSettings';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -56,6 +60,19 @@ export default function App() {
     const completed = await OnboardingService.isOnboardingCompleted();
     setShowOnboarding(!completed);
     await NotificationService.requestPermissions();
+
+    // Set up notification response listener for scheduled learning
+    Notifications.addNotificationResponseReceivedListener(async (response) => {
+      const data = response.notification.request.content.data;
+      if (data?.scheduledLearningId) {
+        const items = useScheduledLearningStore.getState().items;
+        const item = items.find((i) => i.id === data.scheduledLearningId);
+        if (item && item.isEnabled) {
+          await ScheduledLearningService.generateAndCreateNote(item);
+          await ScheduledLearningService.scheduleNotification(item);
+        }
+      }
+    });
     // Foreground auto-pull (#563): subscribe AppState/NetInfo/interval after
     // storage is hydrated so the first pull sees the persisted repo list.
     try {
@@ -64,6 +81,7 @@ export default function App() {
     } catch (error) {
       console.warn('[App] foreground sync watcher start failed:', error);
     }
+    void startScheduledLearningBackgroundTask();
   }, []);
 
   useEffect(() => {
