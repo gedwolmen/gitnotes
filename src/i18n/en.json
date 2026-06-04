@@ -178,7 +178,7 @@
       "lockTimeout": "How long after closing the app before the biometric lock activates.",
       "syncFrequently": "Pulls from tracked repositories when the app comes to the foreground, when network reconnects, and on the chosen interval. Recommended for multi-device use.",
       "syncInterval": "How often the app automatically pulls for new changes when sync frequently is enabled.",
-      "backgroundSync": "Background sync runs every 15 minutes even when the app is not active, ensuring your notes stay up to date.",
+      "backgroundSync": "Background sync runs even when the app is not active, ensuring your notes stay up to date.",
       "cloneMode": "Clone mode syncs through a local git working tree. Requires more storage but works fully offline with LFS support.",
       "apiMode": "API mode uses the GitHub Contents API for per-file operations. Faster initially but requires network and lacks offline support.",
       "lfsFiles": "Large files tracked by Git LFS are downloaded on demand. Download pending files to view them offline.",

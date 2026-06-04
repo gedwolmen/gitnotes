@@ -174,7 +174,7 @@
       "lockTimeout": "Cuánto tiempo después de cerrar la app antes de que se active el bloqueo biométrico.",
       "syncFrequently": "Extrae de los repositorios cuando la app vuelve al primer plano, cuando la red se reconecta y en el intervalo elegido. Recomendado para uso multi-dispositivo.",
       "syncInterval": "Con qué frecuencia la app extrae automáticamente cuando la opción de sincronización frecuente está activada.",
-      "backgroundSync": "La sincronización en segundo plano se ejecuta cada 15 minutos incluso cuando la app no está activa, asegurando que tus notas estén actualizadas.",
+      "backgroundSync": "La sincronización en segundo plano se ejecuta incluso cuando la app no está activa, asegurando que tus notas estén actualizadas.",
       "cloneMode": "El modo clone sincroniza a través de un árbol de trabajo git local. Requiere más almacenamiento pero funciona sin conexión con soporte LFS.",
       "apiMode": "El modo API usa la API de Contenidos de GitHub para operaciones por archivo. Más rápido inicialmente pero requiere red y carece de soporte sin conexión.",
       "lfsFiles": "Los archivos grandes rastreados por Git LFS se descargan bajo demanda. Descarga los archivos pendientes para verlos sin conexión.",

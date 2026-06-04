@@ -174,7 +174,7 @@
       "lockTimeout": "Wie lange nach dem Schließen der App, bevor die biometrische Sperre aktiviert wird.",
       "syncFrequently": "Ruft von verfolgten Repositorys ab, wenn die App in den Vordergrund kommt, wenn das Netzwerk wiederhergestellt wird und im gewählten Intervall. Empfohlen für Multi-Gerät-Nutzung.",
       "syncInterval": "Wie oft die App automatisch abruft, wenn die häufige Synchronisierung aktiviert ist.",
-      "backgroundSync": "Die Hintergrundsynchronisierung läuft alle 15 Minuten, auch wenn die App nicht aktiv ist, und sorgt dafür, dass deine Notizen aktuell bleiben.",
+      "backgroundSync": "Die Hintergrundsynchronisierung läuft auch wenn die App nicht aktiv ist, und sorgt dafür, dass deine Notizen aktuell bleiben.",
       "cloneMode": "Der Clone-Modus synchronisiert über einen lokalen Git-Arbeitsbaum. Erfordert mehr Speicher, funktioniert aber vollständig offline mit LFS-Unterstützung.",
       "apiMode": "Der API-Modus verwendet die GitHub-Inhalts-API für dateibasierte Operationen. Schneller initial, aber erfordert Netzwerk und bietet keine Offline-Unterstützung.",
       "lfsFiles": "Große Dateien, die von Git LFS verfolgt werden, werden bei Bedarf heruntergeladen. Lade ausstehende Dateien herunter, um sie offline anzuzeigen.",
