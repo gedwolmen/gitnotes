@@ -200,4 +200,45 @@ describe('handleOpenLinkedNote path resolution', () => {
     expect(onOpenNote).toHaveBeenCalledWith('test-notes', undefined);
     expect(onOpenNote('test-notes')).toBe(true);
   });
+
+  it('prefers title match over extension fallback for extension-less links', () => {
+    const notes: Note[] = [
+      { id: '1', title: 'My Notes', filePath: 'notes/my-notes.md', content: '', format: 'markdown', repo: 'r', branch: 'b', folderPath: '', tags: [], updatedAt: 0, createdAt: 0 },
+      { id: '2', title: 'Other', filePath: 'notes/other.md', content: '', format: 'markdown', repo: 'r', branch: 'b', folderPath: '', tags: [], updatedAt: 0, createdAt: 0 },
+    ];
+    const onOpenNote = jest.fn((path: string) => {
+      return notes.some(n => n.filePath === path || n.title.toLowerCase() === path.toLowerCase() || n.title.toLowerCase().replace(/\s+/g, '-') === path.toLowerCase().replace(/\s+/g, '-'));
+    });
+    const renderer = new NotePreviewRenderer({
+      colors: { primary: '#2563eb', text: '#111', surfaceSecondary: '#eee' },
+      previewContent: '# Test\nContent',
+      previewScrollRef: { current: { scrollTo: jest.fn() } as unknown as ScrollView },
+      currentNotePath: 'notes/subfolder/current.md',
+      onOpenNote,
+    });
+
+    pressLink(renderer, '../../My Notes');
+    expect(onOpenNote).toHaveBeenCalledWith('My Notes', undefined);
+    expect(onOpenNote('My Notes')).toBe(true);
+  });
+
+  it('falls back to extension resolution when no title match exists', () => {
+    const notes: Note[] = [
+      { id: '1', title: 'Some Title', filePath: 'notes/some-title.md', content: '', format: 'markdown', repo: 'r', branch: 'b', folderPath: '', tags: [], updatedAt: 0, createdAt: 0 },
+    ];
+    const onOpenNote = jest.fn((path: string) => {
+      return notes.some(n => n.filePath === path || n.filePath === path + '.md' || n.title.toLowerCase().replace(/\s+/g, '-') === path.toLowerCase().replace(/\s+/g, '-'));
+    });
+    const renderer = new NotePreviewRenderer({
+      colors: { primary: '#2563eb', text: '#111', surfaceSecondary: '#eee' },
+      previewContent: '# Test\nContent',
+      previewScrollRef: { current: { scrollTo: jest.fn() } as unknown as ScrollView },
+      currentNotePath: 'notes/subfolder/current.md',
+      onOpenNote,
+    });
+
+    pressLink(renderer, '../../some-title');
+    expect(onOpenNote).toHaveBeenCalledWith('some-title', undefined);
+    expect(onOpenNote('some-title')).toBe(true);
+  });
 });
