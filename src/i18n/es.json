@@ -163,5 +163,29 @@
   },
   "home": {
     "title": "Inicio"
+  },
+  "hints": {
+    "settings": {
+      "updatedUI": "Las sombras Soft-UI dan una sensación táctil y elevada. Desactiva para el aspecto clásico plano.",
+      "darkMode": "Cambia entre apariencia clara y oscura. Para ajustes del sistema, usa la opción siguiente.",
+      "useSystemTheme": "Coincide automáticamente con el modo claro u oscuro de tu dispositivo.",
+      "language": "Elige tu idioma preferido para la interfaz de la app. El valor del sistema sigue tu dispositivo.",
+      "biometricLock": "Requiere Face ID o Touch ID para desbloquear la app y proteger tus notas.",
+      "lockTimeout": "Cuánto tiempo después de cerrar la app antes de que se active el bloqueo biométrico.",
+      "syncFrequently": "Extrae de los repositorios cuando la app vuelve al primer plano, cuando la red se reconecta y en el intervalo elegido. Recomendado para uso multi-dispositivo.",
+      "syncInterval": "Con qué frecuencia la app extrae automáticamente cuando la opción de sincronización frecuente está activada.",
+      "backgroundSync": "La sincronización en segundo plano se ejecuta cada 15 minutos incluso cuando la app no está activa, asegurando que tus notas estén actualizadas.",
+      "cloneMode": "El modo clone sincroniza a través de un árbol de trabajo git local. Requiere más almacenamiento pero funciona sin conexión con soporte LFS.",
+      "apiMode": "El modo API usa la API de Contenidos de GitHub para operaciones por archivo. Más rápido inicialmente pero requiere red y carece de soporte sin conexión.",
+      "lfsFiles": "Los archivos grandes rastreados por Git LFS se descargan bajo demanda. Descarga los archivos pendientes para verlos sin conexión.",
+      "templatesRepo": "Conecta un repositorio de GitHub para almacenar y sincronizar tus plantillas de notas personalizadas.",
+      "clearData": "Elimina permanentemente todas las notas, tareas y lienzos de este dispositivo. Tus archivos en GitHub no se ven afectados.",
+      "resetOnboarding": "Muestra las pantallas de bienvenida de nuevo en el próximo lanzamiento de la app. No elimina ningún dato.",
+      "enableAI": "Activa el asistente de chat IA para ayudarte a organizar notas, generar contenido y más.",
+      "actionModeAuto": "La IA realiza acciones automáticamente sin pedir confirmación.",
+      "actionModeConfirm": "La IA pide confirmación antes de realizar operaciones de escritura como crear o eliminar notas.",
+      "chatStorage": "Elige en qué repositorio almacenar las conversaciones de chat IA.",
+      "providers": "Los proveedores IA te permiten conectar diferentes servicios de IA. Apple Intelligence usa procesamiento en el dispositivo para mayor privacidad."
+    }
   }
 }

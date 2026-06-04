@@ -163,5 +163,29 @@
   },
   "home": {
     "title": "Accueil"
+  },
+  "hints": {
+    "settings": {
+      "updatedUI": "Les ombres Soft-UI donnent une sensation tactile et surélevée. Désactivez pour l'apparence classique plate.",
+      "darkMode": "Basculez entre l'apparence claire et sombre. Pour les paramètres système, utilisez l'option ci-dessous.",
+      "useSystemTheme": "Correspond automatiquement au mode clair ou sombre de votre appareil.",
+      "language": "Choisissez votre langue préférée pour l'interface de l'application. Par défaut du système suit votre appareil.",
+      "biometricLock": "Exiger Face ID ou Touch ID pour déverrouiller l'application et protéger vos notes.",
+      "lockTimeout": "Combien de temps après la fermeture de l'application avant que le verrouillage biométrique s'active.",
+      "syncFrequently": "Récupère des dépôts suivis lorsque l'application vient au premier plan, lorsque le réseau se reconnecte, et à l'intervalle choisi. Recommandé pour une utilisation multi-appareils.",
+      "syncInterval": "À quelle fréquence l'application récupère automatiquement lorsque la synchronisation fréquente est activée.",
+      "backgroundSync": "La synchronisation en arrière-plan s'exécute toutes les 15 minutes même lorsque l'application n'est pas active, garantissant que vos notes restent à jour.",
+      "cloneMode": "Le mode clone synchronise via un arbre de travail git local. Nécessite plus de stockage mais fonctionne entièrement hors ligne avec support LFS.",
+      "apiMode": "Le mode API utilise l'API Contenu GitHub pour les opérations par fichier. Plus rapide au départ mais nécessite réseau et manque de support hors ligne.",
+      "lfsFiles": "Les fichiers volumineux suivis par Git LFS sont téléchargés à la demande. Téléchargez les fichiers en attente pour les voir hors ligne.",
+      "templatesRepo": "Connectez un dépôt GitHub pour stocker et synchroniser vos modèles de notes personnalisés.",
+      "clearData": "Supprime définitivement toutes les notes, tâches et toiles de cet appareil. Vos fichiers sur GitHub ne sont pas affectés.",
+      "resetOnboarding": "Affichez à nouveau les écrans de bienvenue lors du prochain lancement de l'application. Ne supprime aucune donnée.",
+      "enableAI": "Activez l'assistant de chat IA pour vous aider à organiser les notes, générer du contenu et plus encore.",
+      "actionModeAuto": "L'IA effectue des actions automatiquement sans demander de confirmation.",
+      "actionModeConfirm": "L'IA demande confirmation avant d'effectuer des opérations d'écriture comme créer ou supprimer des notes.",
+      "chatStorage": "Choisissez dans quel dépôt stocker les conversations de chat IA.",
+      "providers": "Les fournisseurs IA vous permettent de connecter différents services IA. Apple Intelligence utilise le traitement sur appareil pour la confidentialité."
+    }
   }
 }

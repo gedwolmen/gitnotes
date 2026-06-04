@@ -5,6 +5,7 @@ import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { Group, GroupRow, Modal, Toggle } from '../ui';
+import { HintIcon } from '../ui/HintIcon';
 import {
   SUPPORTED_LANGUAGES,
   getLanguagePreference,
@@ -219,19 +220,17 @@ export function SettingsContent(props: SettingsContentProps) {
     >
       <Group
         title={t('settings.appearance')}
-        footer={
-          uiStyle === 'neumorphic'
-            ? 'Soft-UI shadows. Toggle off for the classic flat look.'
-            : 'Classic flat look. Toggle on for the Updated UI shadows.'
-        }
       >
         <GroupRow
           trailing={
-            <Toggle
-              testID="settings.toggle.neu"
-              value={uiStyle === 'neumorphic'}
-              onValueChange={(value) => setStyle(value ? 'neumorphic' : 'flat')}
-            />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <HintIcon hintKey="hints.settings.updatedUI" testID="hint.updated-ui" />
+              <Toggle
+                testID="settings.toggle.neu"
+                value={uiStyle === 'neumorphic'}
+                onValueChange={(value) => setStyle(value ? 'neumorphic' : 'flat')}
+              />
+            </View>
           }
         >
           <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.updatedUI')}</Text>
@@ -277,15 +276,18 @@ export function SettingsContent(props: SettingsContentProps) {
         </GroupRow>
       </Group>
 
-      <Group title={t('settings.security')} footer={isBiometricAvailable ? undefined : 'Biometric hardware not available on this device'}>
+      <Group title={t('settings.security')}>
         <GroupRow
           trailing={
-            <Toggle
-              testID="settings.toggle.biometric-lock"
-              value={isBiometricLockEnabled}
-              onValueChange={onToggleBiometricLock}
-              disabled={!isBiometricAvailable}
-            />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <HintIcon hintKey="hints.settings.biometricLock" testID="hint.biometric-lock" />
+              <Toggle
+                testID="settings.toggle.biometric-lock"
+                value={isBiometricLockEnabled}
+                onValueChange={onToggleBiometricLock}
+                disabled={!isBiometricAvailable}
+              />
+            </View>
           }
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -544,21 +546,17 @@ export function SettingsContent(props: SettingsContentProps) {
         </GroupRow>
       </Group>
 
-      <Group
-        title="Sync"
-        footer={
-          syncFrequentlyEnabled
-            ? 'Pulls every tracked repo when the app comes to the foreground, when network reconnects, and on the chosen interval.'
-            : 'Still pulls when the app comes to the foreground or network reconnects, but skips the periodic interval.'
-        }
-      >
+      <Group title="Sync">
         <GroupRow
           trailing={
-            <Toggle
-              testID="settings.toggle.sync-frequently"
-              value={syncFrequentlyEnabled}
-              onValueChange={onToggleSyncFrequently}
-            />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <HintIcon hintKey="hints.settings.syncFrequently" testID="hint.sync-frequently" />
+              <Toggle
+                testID="settings.toggle.sync-frequently"
+                value={syncFrequentlyEnabled}
+                onValueChange={onToggleSyncFrequently}
+              />
+            </View>
           }
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -609,10 +607,16 @@ export function SettingsContent(props: SettingsContentProps) {
 
       <Group title="Data">
         <GroupRow testID="settings.button.clear-data" onPress={onClearData}>
-          <Text style={[styles.settingLabel, { color: colors.error }]}>Clear All Notes</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={[styles.settingLabel, { color: colors.error }]}>Clear All Notes</Text>
+            <HintIcon hintKey="hints.settings.clearData" testID="hint.clear-data" />
+          </View>
         </GroupRow>
         <GroupRow testID="settings.button.reset-onboarding" onPress={onResetOnboarding}>
-          <Text style={[styles.settingLabel, { color: colors.text }]}>Reset Onboarding</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={[styles.settingLabel, { color: colors.text }]}>Reset Onboarding</Text>
+            <HintIcon hintKey="hints.settings.resetOnboarding" testID="hint.reset-onboarding" />
+          </View>
         </GroupRow>
       </Group>
 
@@ -630,7 +634,10 @@ export function SettingsContent(props: SettingsContentProps) {
       </Group>
 
       <Group title={t('settings.artificialIntelligence')}>
-        <GroupRow trailing={<Toggle testID="settings.toggle.ai" value={isAIEnabled} onValueChange={onToggleAI} />}>
+        <GroupRow trailing={<View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <HintIcon hintKey="hints.settings.enableAI" testID="hint.enable-ai" />
+          <Toggle testID="settings.toggle.ai" value={isAIEnabled} onValueChange={onToggleAI} />
+        </View>}>
           <Text style={[styles.settingLabel, { color: colors.text }]}>Enable Artificial Intelligence</Text>
         </GroupRow>
       </Group>
@@ -641,15 +648,25 @@ export function SettingsContent(props: SettingsContentProps) {
             <GroupRow testID="settings.button.model-selector" onPress={onOpenModelSelector} trailing={<Text style={[styles.settingValue, { color: colors.textSecondary }]}>{selectedModelName}</Text>}>
               <Text style={[styles.settingLabel, { color: colors.text }]}>Model</Text>
             </GroupRow>
-            <GroupRow testID="settings.button.toggle-action-mode" onPress={onToggleActionMode} trailing={<Text style={[styles.settingValue, { color: colors.textSecondary }]}>{actionMode === 'auto' ? 'Auto' : 'Confirm'}</Text>}>
+            <GroupRow testID="settings.button.toggle-action-mode" onPress={onToggleActionMode} trailing={<View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{actionMode === 'auto' ? 'Auto' : 'Confirm'}</Text>
+              <HintIcon hintKey={actionMode === 'auto' ? 'hints.settings.actionModeAuto' : 'hints.settings.actionModeConfirm'} testID="hint.action-mode" />
+            </View>}>
               <Text style={[styles.settingLabel, { color: colors.text }]}>Action Mode</Text>
             </GroupRow>
-            <GroupRow testID="settings.button.chat-repo-picker" onPress={onOpenChatRepoPicker} trailing={<Text style={[styles.settingValue, { color: colors.textSecondary }]}>{chatStorageLabel}</Text>}>
+            <GroupRow testID="settings.button.chat-repo-picker" onPress={onOpenChatRepoPicker} trailing={<View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{chatStorageLabel}</Text>
+              <HintIcon hintKey="hints.settings.chatStorage" testID="hint.chat-storage" />
+            </View>}>
               <Text style={[styles.settingLabel, { color: colors.text }]}>Chat Storage</Text>
             </GroupRow>
           </Group>
 
           <Group title={t('settings.providers')}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 8 }}>
+              <Text style={[styles.settingLabel, { color: colors.textSecondary, fontSize: 12 }]}>AI providers allow connecting different AI services</Text>
+              <HintIcon hintKey="hints.settings.providers" testID="hint.providers" />
+            </View>
             {visibleProviders.map((provider) => {
               const availability = providerAvailability[provider.id];
               const isUnavailable = availability?.kind === 'unavailable';
