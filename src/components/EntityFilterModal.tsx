@@ -499,12 +499,12 @@ const styles = StyleSheet.create({
     gap: 2,
     paddingHorizontal: 12,
   },
-  folderRow: {
+folderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
-expandButton: {
+  expandButton: {
     width: 24,
     height: 24,
     alignItems: 'center',
