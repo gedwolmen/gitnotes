@@ -152,17 +152,32 @@ export function useNoteEditorPreview({
     // Slugify for matching against path-derived titles (e.g. "Welcome to Graph Notes" -> "welcome-to-graph-notes")
     const targetSlugified = targetForMatch.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
+    // Title-based match: find note by title (handles wiki-links to titles like [[My Note]])
     const targetNoteByTitle = notes.find((note) => {
       const titleLower = note.title.toLowerCase();
       const titleSlugified = note.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       return titleLower === targetForMatch || titleSlugified === targetSlugified;
     });
 
-    let targetNote = targetNoteByTitle || matchByExact(normalizedTargetPath);
+    // Determine if this is an extension-less link (wiki-link style without extension)
+    const isExtensionLessLink = !/\.[a-z0-9]+$/i.test(targetLower);
+
+    // For extension-less links, prefer title match over path match since wiki-links
+    // reference titles, not paths. Only use path-based matching as fallback.
+    let targetNote: Note | undefined;
+    if (isExtensionLessLink && targetNoteByTitle) {
+      targetNote = targetNoteByTitle;
+    } else if (!isExtensionLessLink) {
+      // Links with extensions (e.g. other.md) - exact path match first, title as fallback
+      targetNote = matchByExact(normalizedTargetPath) || targetNoteByTitle;
+    } else {
+      // Extension-less link without title match - try path-based matching with extensions
+      targetNote = targetNoteByTitle || matchByExact(normalizedTargetPath);
+    }
 
     // Extension-less link: try each known note extension before giving up
     // (e.g. `[Other](other)` should resolve to `other.md`, `other.norg`, …).
-    if (!targetNote && !/\.[a-z0-9]+$/i.test(normalizedTargetPath)) {
+    if (!targetNote && isExtensionLessLink) {
       for (const ext of ['md', 'norg', 'org', 'json', 'pdf']) {
         targetNote = matchByExact(`${normalizedTargetPath}.${ext}`);
         if (targetNote) break;
