@@ -74,7 +74,9 @@ export default function GraphViewScreen() {
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [containerHeight, setContainerHeight] = useState(0);
+  const containerHeightRef = useRef(0);
   const draggingNodeIdRef = useRef<string | null>(null);
+  const localNodesRef = useRef<GraphNode[]>([]);
   const [localNodes, setLocalNodes] = useState<GraphNode[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -226,44 +228,62 @@ export default function GraphViewScreen() {
     return simNodes.map(({ vx, vy, ...node }) => node);
   }, [nodes, edges, canvasWidth, canvasHeight]);
 
-  useEffect(() => {
-    setLocalNodes(layoutNodes);
-  }, [layoutNodes]);
+  const centerGraph = useCallback(() => {
+    const nodesToCenter = localNodesRef.current;
+    if (nodesToCenter.length === 0 || containerHeightRef.current === 0) return;
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    nodesToCenter.forEach((n) => {
+      minX = Math.min(minX, n.x);
+      minY = Math.min(minY, n.y);
+      maxX = Math.max(maxX, n.x);
+      maxY = Math.max(maxY, n.y);
+    });
+
+    const padding = NODE_SIZE;
+    const contentWidth = maxX - minX + padding * 2;
+    const contentHeight = maxY - minY + padding * 2;
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+
+    const availableWidth = screenWidth;
+    const availableHeight = containerHeightRef.current;
+    const fitScaleX = availableWidth / contentWidth;
+    const fitScaleY = availableHeight / contentHeight;
+    const fitScale = Math.min(fitScaleX, fitScaleY, MAX_SCALE);
+
+    const clampedScale = Math.max(MIN_SCALE, Math.min(fitScale, MAX_SCALE));
+    scale.value = clampedScale;
+    translateX.value = screenWidth / 2 - centerX * clampedScale;
+    translateY.value = headerHeight + 20 + availableHeight / 2 - centerY * clampedScale;
+    savedScale.value = clampedScale;
+    savedTranslateX.value = screenWidth / 2 - centerX * clampedScale;
+    savedTranslateY.value = headerHeight + 20 + availableHeight / 2 - centerY * clampedScale;
+  }, [screenWidth, headerHeight, scale, savedScale, translateX, translateY, savedTranslateX, savedTranslateY]);
 
   useEffect(() => {
-    if (layoutNodes.length > 0 && containerHeight > 0) {
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-      layoutNodes.forEach((n) => {
-        minX = Math.min(minX, n.x);
-        minY = Math.min(minY, n.y);
-        maxX = Math.max(maxX, n.x);
-        maxY = Math.max(maxY, n.y);
-      });
-
-      const padding = NODE_SIZE;
-      const contentWidth = maxX - minX + padding * 2;
-      const contentHeight = maxY - minY + padding * 2;
-      const centerX = (minX + maxX) / 2;
-      const centerY = (minY + maxY) / 2;
-
-      const availableWidth = screenWidth;
-      const availableHeight = containerHeight;
-      const fitScaleX = availableWidth / contentWidth;
-      const fitScaleY = availableHeight / contentHeight;
-      const fitScale = Math.min(fitScaleX, fitScaleY, MAX_SCALE);
-
-      const clampedScale = Math.max(MIN_SCALE, Math.min(fitScale, MAX_SCALE));
-      scale.value = clampedScale;
-      translateX.value = screenWidth / 2 - centerX * clampedScale;
-      translateY.value = headerHeight + 20 + availableHeight / 2 - centerY * clampedScale;
-      savedScale.value = clampedScale;
-      savedTranslateX.value = screenWidth / 2 - centerX * clampedScale;
-      savedTranslateY.value = headerHeight + 20 + availableHeight / 2 - centerY * clampedScale;
+    if (layoutNodes.length > 0) {
+      localNodesRef.current = layoutNodes;
+      setLocalNodes(layoutNodes);
+      if (containerHeightRef.current > 0) {
+        centerGraph();
+      }
     }
-  }, [layoutNodes.length, containerHeight, layoutNodes]);
+  }, [layoutNodes, centerGraph]);
+
+  useEffect(() => {
+    if (containerHeight > 0 && localNodesRef.current.length > 0) {
+      centerGraph();
+    }
+  }, [containerHeight, centerGraph]);
 
   const handleContainerLayout = (e: LayoutChangeEvent) => {
-    setContainerHeight(e.nativeEvent.layout.height);
+    const newHeight = e.nativeEvent.layout.height;
+    containerHeightRef.current = newHeight;
+    setContainerHeight(newHeight);
+    if (localNodesRef.current.length > 0 && newHeight > 0) {
+      centerGraph();
+    }
   };
 
   const selectedNode = useMemo(() => {
@@ -286,6 +306,21 @@ export default function GraphViewScreen() {
     }
     return isNodeHighlighted(node) ? 1.0 : 0.3;
   }, [selectedNodeId, searchQuery, isNodeHighlighted]);
+
+  const isOrphanNode = useCallback((node: GraphNode): boolean => {
+    return node.connections.size === 0;
+  }, []);
+
+  const isWeaklyConnectedNode = useCallback((node: GraphNode): boolean => {
+    return node.connections.size > 0 && node.connections.size <= 2;
+  }, []);
+
+  const getNodeScale = useCallback((node: GraphNode): number => {
+    if (node.id === selectedNodeId) return 1.15;
+    if (isOrphanNode(node)) return 0.85;
+    if (isWeaklyConnectedNode(node)) return 0.95;
+    return 1.0;
+  }, [selectedNodeId, isOrphanNode, isWeaklyConnectedNode]);
 
   const handleNodePress = useCallback((nodeId: string) => {
     setSelectedNodeId(nodeId);
@@ -460,18 +495,21 @@ export default function GraphViewScreen() {
                   {localNodes.map((node) => {
                     const isHighlighted = isNodeHighlighted(node);
                     const nodeAlpha = getNodeAlpha(node);
+                    const nodeScale = getNodeScale(node);
+                    const baseRadius = (NODE_SIZE / 2) * nodeScale;
+                    const ringRadius = isHighlighted ? baseRadius + 8 : baseRadius + 4;
                     return (
                       <Group key={node.id} opacity={nodeAlpha}>
                         <Circle
                           cx={node.x}
                           cy={node.y}
-                          r={isHighlighted ? NODE_SIZE / 2 + 8 : NODE_SIZE / 2 + 4}
+                          r={ringRadius}
                           color={isHighlighted ? colors.primary : colors.background}
                         />
                         <Circle
                           cx={node.x}
                           cy={node.y}
-                          r={NODE_SIZE / 2}
+                          r={baseRadius}
                           color={getNodeColor(node)}
                         />
                       </Group>
