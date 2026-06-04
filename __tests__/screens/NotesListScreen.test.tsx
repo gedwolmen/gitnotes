@@ -32,6 +32,7 @@ jest.mock('@react-native-community/netinfo', () => {
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate }),
+  useIsFocused: () => true,
 }));
 
 jest.mock('@react-navigation/native-stack', () => ({}));
