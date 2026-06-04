@@ -56,14 +56,14 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
         <GroupRow
           leading={
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name="school-outline" size={24} color={colors.textSecondary} />
+              <Ionicons name="school-outline" size={20} color={colors.textSecondary} />
               <Text style={[styles.emptyReposText, { color: colors.textSecondary }]}>
                 No scheduled learning set up
               </Text>
             </View>
           }
           trailing={
-            <HintIcon hintKey="hints.settings.scheduledLearning" testID="hint.scheduled-learning" iconSize={14} />
+            <HintIcon hintKey="hints.settings.scheduledLearning" testID="hint.scheduled-learning" />
           }
         >
           <View />
