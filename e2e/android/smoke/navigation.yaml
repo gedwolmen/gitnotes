@@ -1,4 +1,4 @@
-appId: com.gitnotes.app
+appId: org.gitnotes.app
 name: Android Smoke - App Launch + Navigation
 tags:
   - smoke

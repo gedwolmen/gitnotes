@@ -5,7 +5,7 @@
 iosAppId: com.xaventra.gitnotes
 
 # Android app package
-androidAppId: com.gitnotes.app
+androidAppId: org.gitnotes.app
 
 # Default timeouts
 timeouts:

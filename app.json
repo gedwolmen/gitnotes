@@ -48,7 +48,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.gitnotes.app",
+      "package": "org.gitnotes.app",
       "scheme": "gitnotes",
       "allowBackup": false,
       "permissions": [
