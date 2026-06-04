@@ -271,6 +271,14 @@ export default function GraphViewScreen() {
     return localNodes.find((n) => n.id === selectedNodeId) || null;
   }, [selectedNodeId, localNodes]);
 
+  const isOrphanNode = useCallback((node: GraphNode): boolean => {
+    return node.connections.size === 0;
+  }, []);
+
+  const isWeaklyConnectedNode = useCallback((node: GraphNode): boolean => {
+    return node.connections.size > 0 && node.connections.size <= 2;
+  }, []);
+
   const isNodeHighlighted = useCallback((node: GraphNode): boolean => {
     if (searchQuery) {
       return node.note.title.toLowerCase().includes(searchQuery.toLowerCase());
@@ -286,6 +294,13 @@ export default function GraphViewScreen() {
     }
     return isNodeHighlighted(node) ? 1.0 : 0.3;
   }, [selectedNodeId, searchQuery, isNodeHighlighted]);
+
+  const getNodeScale = useCallback((node: GraphNode): number => {
+    if (node.id === selectedNodeId) return 1.15;
+    if (isOrphanNode(node)) return 0.85;
+    if (isWeaklyConnectedNode(node)) return 0.95;
+    return 1.0;
+  }, [selectedNodeId, isOrphanNode, isWeaklyConnectedNode]);
 
   const handleNodePress = useCallback((nodeId: string) => {
     setSelectedNodeId(nodeId);
@@ -454,26 +469,38 @@ export default function GraphViewScreen() {
                     color={colors.border}
                     style="stroke"
                     strokeWidth={selectedNodeId ? 2.5 : 1.5}
-                    opacity={0.4}
+                    opacity={selectedNodeId ? 0.6 : 0.4}
                   />
 
                   {localNodes.map((node) => {
                     const isHighlighted = isNodeHighlighted(node);
                     const nodeAlpha = getNodeAlpha(node);
+                    const nodeScale = getNodeScale(node);
+                    const baseRadius = (NODE_SIZE / 2) * nodeScale;
+                    const ringRadius = isHighlighted ? baseRadius + 8 : baseRadius + 4;
                     return (
                       <Group key={node.id} opacity={nodeAlpha}>
                         <Circle
                           cx={node.x}
                           cy={node.y}
-                          r={isHighlighted ? NODE_SIZE / 2 + 8 : NODE_SIZE / 2 + 4}
+                          r={ringRadius}
                           color={isHighlighted ? colors.primary : colors.background}
                         />
                         <Circle
                           cx={node.x}
                           cy={node.y}
-                          r={NODE_SIZE / 2}
+                          r={baseRadius}
                           color={getNodeColor(node)}
                         />
+                        {nodeScale < 1.0 && (
+                          <Circle
+                            cx={node.x}
+                            cy={node.y}
+                            r={baseRadius * 0.4}
+                            color={getNodeColor(node)}
+                            opacity={0.5}
+                          />
+                        )}
                       </Group>
                     );
                   })}
