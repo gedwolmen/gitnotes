@@ -269,29 +269,33 @@ export default function GraphViewScreen() {
       maxY = Math.max(maxY, n.y);
     });
 
-    const padding = NODE_SIZE;
-    const contentWidth = maxX - minX + padding * 2;
-    const contentHeight = maxY - minY + padding * 2;
-    const centerX = (minX + maxX) / 2;
-    const centerY = (minY + maxY) / 2;
+    // Cluster center in canvas coordinates
+    const clusterCenterX = (minX + maxX) / 2;
+    const clusterCenterY = (minY + maxY) / 2;
 
-    const availableWidth = screenWidth;
-    const availableHeight = containerHeightRef.current;
-    const fitScaleX = availableWidth / contentWidth;
-    const fitScaleY = availableHeight / contentHeight;
+    // Container center
+    const containerCenterX = screenWidth / 2;
+    const containerCenterY = containerHeightRef.current / 2;
+
+    // Offset to align cluster center with container center
+    translateX.value = containerCenterX - clusterCenterX;
+    translateY.value = containerCenterY - clusterCenterY;
+    savedTranslateX.value = containerCenterX - clusterCenterX;
+    savedTranslateY.value = containerCenterY - clusterCenterY;
+
+    // Fit scale so all nodes fit in view
+    const clusterWidth = maxX - minX + NODE_SIZE * 2;
+    const clusterHeight = maxY - minY + NODE_SIZE * 2;
+    const fitScaleX = screenWidth / clusterWidth;
+    const fitScaleY = containerHeightRef.current / clusterHeight;
     const fitScale = Math.min(fitScaleX, fitScaleY, MAX_SCALE);
 
     const clampedScale = Math.max(MIN_SCALE, Math.min(fitScale, MAX_SCALE));
-
     scale.value = clampedScale;
-    translateX.value = screenWidth / 2 - centerX * clampedScale;
-    translateY.value = headerHeight + 20 + availableHeight / 2 - centerY * clampedScale;
     savedScale.value = clampedScale;
-    savedTranslateX.value = screenWidth / 2 - centerX * clampedScale;
-    savedTranslateY.value = headerHeight + 20 + availableHeight / 2 - centerY * clampedScale;
 
     hasCenteredRef.current = true;
-  }, [screenWidth, headerHeight]);
+  }, [screenWidth]);
 
   const selectedNode = useMemo(() => {
     if (!selectedNodeId) return null;
