@@ -52,17 +52,19 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
 
   return (
     <Group title="Scheduled Learning" badge="BETA">
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', paddingHorizontal: 16, paddingVertical: 4 }}>
-        <HintIcon hintKey="hints.settings.scheduledLearning" testID="hint.scheduled-learning" />
-      </View>
       {items.length === 0 ? (
-        <GroupRow>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <Ionicons name="school-outline" size={32} color={colors.textSecondary} />
-            <Text style={[styles.emptyReposText, { color: colors.textSecondary }]}>
-              No scheduled learning set up
-            </Text>
-          </View>
+        <GroupRow
+          trailing={
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="school-outline" size={24} color={colors.textSecondary} />
+              <Text style={[styles.emptyReposText, { color: colors.textSecondary }]}>
+                No scheduled learning set up
+              </Text>
+              <HintIcon hintKey="hints.settings.scheduledLearning" testID="hint.scheduled-learning" iconSize={14} />
+            </View>
+          }
+        >
+          <View />
         </GroupRow>
       ) : (
         items.map((item) => (

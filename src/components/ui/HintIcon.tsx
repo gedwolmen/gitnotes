@@ -9,10 +9,11 @@ export interface HintIconProps {
   hintKey: string;
   iconName?: string;
   testID?: string;
+  iconSize?: number;
 }
 
 export function HintIcon(props: HintIconProps) {
-  const { hintKey, iconName = 'information-circle-outline', testID } = props;
+  const { hintKey, iconName = 'information-circle-outline', testID, iconSize = 18 } = props;
   const { t } = useTranslation();
   const { colors, spacing, type } = useTokens();
   const [visible, setVisible] = useState(false);
@@ -30,7 +31,7 @@ export function HintIcon(props: HintIconProps) {
       >
         <Ionicons
           name={iconName as any}
-          size={18}
+          size={iconSize}
           color={colors.textSecondary}
           style={styles.icon}
         />
