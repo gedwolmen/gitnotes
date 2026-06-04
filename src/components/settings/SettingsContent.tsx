@@ -224,12 +224,12 @@ export function SettingsContent(props: SettingsContentProps) {
         <GroupRow
           trailing={
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <HintIcon hintKey="hints.settings.updatedUI" testID="hint.updated-ui" />
               <Toggle
                 testID="settings.toggle.neu"
                 value={uiStyle === 'neumorphic'}
                 onValueChange={(value) => setStyle(value ? 'neumorphic' : 'flat')}
               />
+              <HintIcon hintKey="hints.settings.updatedUI" testID="hint.updated-ui" />
             </View>
           }
         >
@@ -280,13 +280,13 @@ export function SettingsContent(props: SettingsContentProps) {
         <GroupRow
           trailing={
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <HintIcon hintKey="hints.settings.biometricLock" testID="hint.biometric-lock" />
               <Toggle
                 testID="settings.toggle.biometric-lock"
                 value={isBiometricLockEnabled}
                 onValueChange={onToggleBiometricLock}
                 disabled={!isBiometricAvailable}
               />
+              <HintIcon hintKey="hints.settings.biometricLock" testID="hint.biometric-lock" />
             </View>
           }
         >
@@ -550,12 +550,12 @@ export function SettingsContent(props: SettingsContentProps) {
         <GroupRow
           trailing={
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <HintIcon hintKey="hints.settings.syncFrequently" testID="hint.sync-frequently" />
               <Toggle
                 testID="settings.toggle.sync-frequently"
                 value={syncFrequentlyEnabled}
                 onValueChange={onToggleSyncFrequently}
               />
+              <HintIcon hintKey="hints.settings.syncFrequently" testID="hint.sync-frequently" />
             </View>
           }
         >
@@ -635,8 +635,8 @@ export function SettingsContent(props: SettingsContentProps) {
 
       <Group title={t('settings.artificialIntelligence')}>
         <GroupRow trailing={<View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <HintIcon hintKey="hints.settings.enableAI" testID="hint.enable-ai" />
           <Toggle testID="settings.toggle.ai" value={isAIEnabled} onValueChange={onToggleAI} />
+          <HintIcon hintKey="hints.settings.enableAI" testID="hint.enable-ai" />
         </View>}>
           <Text style={[styles.settingLabel, { color: colors.text }]}>Enable Artificial Intelligence</Text>
         </GroupRow>
