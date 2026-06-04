@@ -185,7 +185,9 @@
       "actionModeAuto": "AIは確認を求めることなく自動的にアクションを実行します。",
       "actionModeConfirm": "AIはノートを作成や削除などの書き込み操作の前に確認を求めます。",
       "chatStorage": "AIチャット会話を保存するリポジトリを選びます。",
-      "providers": "AIプロバイダーはさまざまなAIサービスを接続できます。Apple Intelligenceはプライバシーのためオンデバイス処理を使用します。"
-    }
+      "providers": "AIプロバイダーはさまざまなAIサービスを接続できます。Apple Intelligenceはプライバシーのためオンデバイス処理を使用します。",
+      "scheduledLearning": "AIプロバイダーはさまざまなAIサービスを接続できます。Apple Intelligenceはプライバシーのためオンデバイス処理を使用します。"
+    },
+    "title": "Hint"
   }
 }

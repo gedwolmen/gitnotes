@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Group, GroupRow, Toggle } from '../ui';
+import { HintIcon } from '../ui/HintIcon';
 import { useScheduledLearningStore } from '../../stores/scheduledLearningStore';
 import { settingsStyles as styles } from './settingsStyles';
 import {
@@ -51,6 +52,9 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
 
   return (
     <Group title="Scheduled Learning" badge="BETA">
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', paddingHorizontal: 16, paddingVertical: 4 }}>
+        <HintIcon hintKey="hints.settings.scheduledLearning" testID="hint.scheduled-learning" />
+      </View>
       {items.length === 0 ? (
         <GroupRow>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>

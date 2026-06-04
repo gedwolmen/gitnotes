@@ -185,7 +185,9 @@
       "actionModeAuto": "L'IA effectue des actions automatiquement sans demander de confirmation.",
       "actionModeConfirm": "L'IA demande confirmation avant d'effectuer des opérations d'écriture comme créer ou supprimer des notes.",
       "chatStorage": "Choisissez dans quel dépôt stocker les conversations de chat IA.",
-      "providers": "Les fournisseurs IA vous permettent de connecter différents services IA. Apple Intelligence utilise le traitement sur appareil pour la confidentialité."
-    }
+      "providers": "Les fournisseurs IA vous permettent de connecter différents services IA. Apple Intelligence utilise le traitement sur appareil pour la confidentialité.",
+      "scheduledLearning": "Les fournisseurs IA vous permettent de connecter différents services IA. Apple Intelligence utilise le traitement sur appareil pour la confidentialité."
+    },
+    "title": "Hint"
   }
 }
