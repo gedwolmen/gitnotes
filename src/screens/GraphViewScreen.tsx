@@ -44,8 +44,8 @@ const CENTERING_FORCE = 0.003;
 const COLLISION_RADIUS = 60;
 const SIM_ITERATIONS = 250;
 const BASE_SCALE = 1.0;
-const MIN_SCALE = 0.25;
-const MAX_SCALE = 2.5;
+const MIN_SCALE = 0.05;
+const MAX_SCALE = 3.0;
 
 function getNodeDisplayTitle(title: string, maxLen = 10): string {
   if (title.length <= maxLen) return title;
@@ -65,10 +65,10 @@ export default function GraphViewScreen() {
   const canvasWidth = CANVAS_SIZE;
   const canvasHeight = CANVAS_SIZE;
 
-  const scale = useSharedValue(BASE_SCALE);
+  const scale = useSharedValue(0.1);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
-  const savedScale = useSharedValue(BASE_SCALE);
+  const savedScale = useSharedValue(0.1);
   const savedTranslateX = useSharedValue(0);
   const savedTranslateY = useSharedValue(0);
 
@@ -229,12 +229,6 @@ export default function GraphViewScreen() {
   }, [nodes, edges, canvasWidth, canvasHeight]);
 
   useEffect(() => {
-    if (containerHeight > 0 && localNodes.length > 0) {
-      hasCenteredRef.current = false;
-    }
-  }, [containerHeight]);
-
-  useEffect(() => {
     if (layoutNodes.length > 0) {
       hasCenteredRef.current = false;
       setLocalNodes(layoutNodes);
@@ -242,19 +236,15 @@ export default function GraphViewScreen() {
   }, [layoutNodes]);
 
   useEffect(() => {
-    if (!hasCenteredRef.current && localNodes.length > 0 && containerHeight > 0) {
+    if (localNodes.length > 0 && containerHeight > 0) {
       centerGraph();
     }
-  }, [localNodes.length, containerHeight]);
+  }, [localNodes, containerHeight, centerGraph]);
 
   const handleContainerLayout = (e: LayoutChangeEvent) => {
     const newHeight = e.nativeEvent.layout.height;
     containerHeightRef.current = newHeight;
     setContainerHeight(newHeight);
-
-    if (localNodes.length > 0 && newHeight > 0) {
-      centerGraph();
-    }
   };
 
   const centerGraph = useCallback(() => {
