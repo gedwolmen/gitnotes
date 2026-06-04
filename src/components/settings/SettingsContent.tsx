@@ -606,17 +606,11 @@ export function SettingsContent(props: SettingsContentProps) {
       </Group>
 
       <Group title="Data">
-        <GroupRow testID="settings.button.clear-data" onPress={onClearData}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Text style={[styles.settingLabel, { color: colors.error }]}>Clear All Notes</Text>
-            <HintIcon hintKey="hints.settings.clearData" testID="hint.clear-data" />
-          </View>
+        <GroupRow testID="settings.button.clear-data" onPress={onClearData} trailing={<HintIcon hintKey="hints.settings.clearData" testID="hint.clear-data" />}>
+          <Text style={[styles.settingLabel, { color: colors.error }]}>Clear All Notes</Text>
         </GroupRow>
-        <GroupRow testID="settings.button.reset-onboarding" onPress={onResetOnboarding}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Text style={[styles.settingLabel, { color: colors.text }]}>Reset Onboarding</Text>
-            <HintIcon hintKey="hints.settings.resetOnboarding" testID="hint.reset-onboarding" />
-          </View>
+        <GroupRow testID="settings.button.reset-onboarding" onPress={onResetOnboarding} trailing={<HintIcon hintKey="hints.settings.resetOnboarding" testID="hint.reset-onboarding" />}>
+          <Text style={[styles.settingLabel, { color: colors.text }]}>Reset Onboarding</Text>
         </GroupRow>
       </Group>
 
@@ -663,10 +657,6 @@ export function SettingsContent(props: SettingsContentProps) {
           </Group>
 
           <Group title={t('settings.providers')}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 8 }}>
-              <Text style={[styles.settingLabel, { color: colors.textSecondary, fontSize: 12 }]}>AI providers allow connecting different AI services</Text>
-              <HintIcon hintKey="hints.settings.providers" testID="hint.providers" />
-            </View>
             {visibleProviders.map((provider) => {
               const availability = providerAvailability[provider.id];
               const isUnavailable = availability?.kind === 'unavailable';
@@ -703,6 +693,9 @@ export function SettingsContent(props: SettingsContentProps) {
             <GroupRow testID="settings.button.add-provider" onPress={onAddProvider}>
               <Text style={[styles.settingLabel, { color: colors.primary }]}>Add Provider</Text>
             </GroupRow>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4, paddingHorizontal: 16, paddingVertical: 4 }}>
+              <HintIcon hintKey="hints.settings.providers" testID="hint.providers" />
+            </View>
           </Group>
         </>
       ) : null}

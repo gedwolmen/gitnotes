@@ -40,27 +40,24 @@ export function HintIcon(props: HintIconProps) {
         visible={visible}
         onRequestClose={() => setVisible(false)}
         dismissOnBackdrop
-        contentStyle={{ padding: spacing[5], paddingBottom: spacing[6] }}
+        contentStyle={{ padding: spacing[6], paddingBottom: spacing[5] }}
       >
-        <View style={styles.header}>
-          <View style={styles.iconContainer}>
-            <Ionicons
-              name={iconName as any}
-              size={24}
-              color={colors.primary}
-            />
-          </View>
-          <TouchableOpacity
-            onPress={() => setVisible(false)}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={styles.closeBtn}
-          >
-            <Ionicons name="close" size={22} color={colors.textSecondary} />
-          </TouchableOpacity>
+        <View style={styles.iconBadge}>
+          <Ionicons
+            name={iconName as any}
+            size={20}
+            color={colors.primary}
+          />
         </View>
+
+        <Text style={[styles.hintTitle, { color: colors.text }]}>
+          {t('hints.title')}
+        </Text>
+
         <Text style={[styles.hintText, { color: colors.text, fontSize: type.md }]}>
           {hintText}
         </Text>
+
         <TouchableOpacity
           testID={`${testID}-close`}
           onPress={() => setVisible(false)}
@@ -79,29 +76,30 @@ const styles = StyleSheet.create({
   icon: {
     opacity: 0.7,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  iconBadge: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(123, 140, 222, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'center',
+    marginBottom: 16,
   },
-  closeBtn: {
-    padding: 4,
+  hintTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 12,
   },
   hintText: {
-    lineHeight: 22,
-    marginBottom: 20,
+    lineHeight: 24,
+    textAlign: 'center',
+    marginBottom: 24,
   },
   okBtn: {
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
   },
   okBtnText: {
