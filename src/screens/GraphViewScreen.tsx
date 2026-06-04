@@ -260,7 +260,7 @@ export default function GraphViewScreen() {
       savedTranslateX.value = screenWidth / 2 - centerX * clampedScale;
       savedTranslateY.value = headerHeight + 20 + availableHeight / 2 - centerY * clampedScale;
     }
-  }, [layoutNodes.length, containerHeight, layoutNodes]);
+  }, [layoutNodes.length, containerHeight, screenWidth, headerHeight]);
 
   const handleContainerLayout = (e: LayoutChangeEvent) => {
     setContainerHeight(e.nativeEvent.layout.height);
