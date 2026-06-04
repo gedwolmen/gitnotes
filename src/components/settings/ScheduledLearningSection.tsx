@@ -408,7 +408,10 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
           <Text style={[localStyles.inputLabel, { marginTop: 16 }]}>Time</Text>
           <TouchableOpacity
             testID="scheduled-learning.picker.time"
-            onPress={() => setShowTimePicker(true)}
+            onPress={() => {
+              Alert.alert('Debug', 'Time button tapped, showTimePicker would be set to true');
+              setShowTimePicker(true);
+            }}
             style={[localStyles.pickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
           >
             <Text style={localStyles.pickerButtonText}>{formatTime(selectedTime)}</Text>
