@@ -13,15 +13,6 @@ type IoniconName = keyof typeof Ionicons.glyphMap;
 
 export const TAB_BAR_BASE_HEIGHT = 84;
 
-/**
- * Reserved space *above* the floating TabBar that callers should add as
- * extra `paddingBottom` on scroll containers, or as `bottomOffset` on
- * absolutely-positioned overlays inside a tab screen. Returns 0 when the
- * tab screen renders ABOVE the system tab bar (default React Navigation
- * bar, or the iPad rail) — in that case the screen's bottom edge already
- * sits at the tab bar's top, so adding TAB_BAR_BASE_HEIGHT again pushed
- * floating UI a full bar's height too high.
- */
 export function useTabBarHeight(): number {
   const insets = useSafeAreaInsets();
   const { style } = useTheme();
@@ -45,6 +36,157 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
   const { isDark } = useTheme();
   const { t } = useTranslation();
 
+  const tabBarContent = (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-around',
+        paddingVertical: spacing[2],
+        paddingHorizontal: spacing[3],
+        borderRadius: 999,
+        overflow: 'hidden',
+      }}
+    >
+      {state.routes.map((route, index) => {
+        const isFocused = state.index === index;
+        const config = TAB_ICONS[route.name];
+        if (!config) return null;
+
+        const onPress = () => {
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+          if (!isFocused && !event.defaultPrevented) {
+            navigation.navigate(route.name as never);
+          }
+        };
+
+        const onLongPress = () => {
+          navigation.emit({ type: 'tabLongPress', target: route.key });
+        };
+
+        return (
+          <Pressable
+            key={route.key}
+            testID={`tab-bar.tab.press-${route.name}`}
+            accessibilityRole="button"
+            accessibilityState={isFocused ? { selected: true } : {}}
+            accessibilityLabel={t(config.labelKey)}
+            onPress={onPress}
+            onLongPress={onLongPress}
+            hitSlop={6}
+          >
+            <Surface
+              elevation="subtle"
+              radius="pill"
+              inset={isFocused}
+              style={{
+                width: 48,
+                height: 40,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'transparent',
+              }}
+            >
+              <Ionicons
+                name={isFocused ? config.focused : config.outline}
+                size={22}
+                color={isFocused ? colors.accent : colors.textSecondary}
+              />
+            </Surface>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+
+  if (Platform.OS === 'android') {
+    return (
+      <View
+        pointerEvents="box-none"
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          paddingHorizontal: spacing[6],
+          paddingBottom: insets.bottom + spacing[3],
+          paddingTop: spacing[4],
+          backgroundColor: 'transparent',
+        }}
+      >
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-around',
+            paddingVertical: spacing[2],
+            paddingHorizontal: spacing[3],
+            borderRadius: 999,
+            overflow: 'hidden',
+            backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)',
+          }}
+        >
+          {state.routes.map((route, index) => {
+            const isFocused = state.index === index;
+            const config = TAB_ICONS[route.name];
+            if (!config) return null;
+
+            const onPress = () => {
+              const event = navigation.emit({
+                type: 'tabPress',
+                target: route.key,
+                canPreventDefault: true,
+              });
+              if (!isFocused && !event.defaultPrevented) {
+                navigation.navigate(route.name as never);
+              }
+            };
+
+            const onLongPress = () => {
+              navigation.emit({ type: 'tabLongPress', target: route.key });
+            };
+
+            return (
+              <Pressable
+                key={route.key}
+                testID={`tab-bar.tab.press-${route.name}`}
+                accessibilityRole="button"
+                accessibilityState={isFocused ? { selected: true } : {}}
+                accessibilityLabel={t(config.labelKey)}
+                onPress={onPress}
+                onLongPress={onLongPress}
+                hitSlop={6}
+              >
+                <Surface
+                  elevation="subtle"
+                  radius="pill"
+                  inset={isFocused}
+                  style={{
+                    width: 48,
+                    height: 40,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: 'transparent',
+                  }}
+                >
+                  <Ionicons
+                    name={isFocused ? config.focused : config.outline}
+                    size={22}
+                    color={isFocused ? colors.accent : colors.textSecondary}
+                  />
+                </Surface>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View
       pointerEvents="box-none"
@@ -60,7 +202,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
       }}
     >
       <BlurView
-        intensity={Platform.OS === 'ios' ? 60 : 30}
+        intensity={60}
         tint={isDark ? 'dark' : 'light'}
         pointerEvents="box-none"
         style={{

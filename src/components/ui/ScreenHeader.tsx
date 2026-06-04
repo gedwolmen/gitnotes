@@ -40,10 +40,105 @@ export function ScreenHeader(props: ScreenHeaderProps) {
   const { colors, spacing, type } = useTokens();
   const insets = useSafeAreaInsets();
 
+  const headerContent = (
+    <View
+      style={[
+        {
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: spacing[4],
+          paddingTop: spacing[3],
+          paddingBottom: spacing[3],
+          gap: spacing[3],
+        },
+        style,
+      ]}
+    >
+      {onBack && (
+        <IconButton size="sm" onPress={onBack} accessibilityLabel="Back">
+          <Ionicons name="arrow-back" size={18} color={colors.accent} />
+        </IconButton>
+      )}
+      <View style={{ flex: 1 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
+          <Text
+            style={{
+              color: colors.text,
+              fontSize: type['2xl'],
+              fontWeight: '700',
+              flexShrink: 1,
+            }}
+            numberOfLines={1}
+          >
+            {title}
+          </Text>
+          {badge && (
+            <View
+              style={{
+                backgroundColor: '#3B82F6',
+                paddingHorizontal: spacing[2],
+                paddingVertical: 2,
+                borderRadius: 6,
+              }}
+            >
+              <Text
+                style={{
+                  color: '#ffffff',
+                  fontSize: 10,
+                  fontWeight: '800',
+                  letterSpacing: 0.5,
+                }}
+              >
+                {badge}
+              </Text>
+            </View>
+          )}
+        </View>
+        {subtitle && (
+          <Text
+            style={{
+              color: colors.textSecondary,
+              fontSize: type.sm,
+              marginTop: 2,
+            }}
+            numberOfLines={1}
+          >
+            {subtitle}
+          </Text>
+        )}
+      </View>
+      {actions && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
+          {actions}
+        </View>
+      )}
+    </View>
+  );
+
+  // Android fallback: use solid semi-transparent background instead of blur
+  if (Platform.OS === 'android') {
+    return (
+      <View
+        pointerEvents="box-none"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          paddingTop: insets.top,
+          zIndex: 10,
+          backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)',
+        }}
+      >
+        {headerContent}
+      </View>
+    );
+  }
+
   return (
     <BlurView
       pointerEvents="box-none"
-      intensity={Platform.OS === 'ios' ? 60 : 30}
+      intensity={60}
       tint={isDark ? 'dark' : 'light'}
       style={{
         position: 'absolute',
@@ -54,78 +149,7 @@ export function ScreenHeader(props: ScreenHeaderProps) {
         zIndex: 10,
       }}
     >
-      <View
-        style={[
-          {
-            flexDirection: 'row',
-            alignItems: 'center',
-            paddingHorizontal: spacing[4],
-            paddingTop: spacing[3],
-            paddingBottom: spacing[3],
-            gap: spacing[3],
-          },
-          style,
-        ]}
-      >
-        {onBack && (
-          <IconButton size="sm" onPress={onBack} accessibilityLabel="Back">
-            <Ionicons name="arrow-back" size={18} color={colors.accent} />
-          </IconButton>
-        )}
-        <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
-            <Text
-              style={{
-                color: colors.text,
-                fontSize: type['2xl'],
-                fontWeight: '700',
-                flexShrink: 1,
-              }}
-              numberOfLines={1}
-            >
-              {title}
-            </Text>
-            {badge && (
-              <View
-                style={{
-                  backgroundColor: '#3B82F6',
-                  paddingHorizontal: spacing[2],
-                  paddingVertical: 2,
-                  borderRadius: 6,
-                }}
-              >
-                <Text
-                  style={{
-                    color: '#ffffff',
-                    fontSize: 10,
-                    fontWeight: '800',
-                    letterSpacing: 0.5,
-                  }}
-                >
-                  {badge}
-                </Text>
-              </View>
-            )}
-          </View>
-          {subtitle && (
-            <Text
-              style={{
-                color: colors.textSecondary,
-                fontSize: type.sm,
-                marginTop: 2,
-              }}
-              numberOfLines={1}
-            >
-              {subtitle}
-            </Text>
-          )}
-        </View>
-        {actions && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
-            {actions}
-          </View>
-        )}
-      </View>
+      {headerContent}
     </BlurView>
   );
 }
