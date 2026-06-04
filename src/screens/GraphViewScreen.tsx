@@ -74,6 +74,8 @@ export default function GraphViewScreen() {
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [containerHeight, setContainerHeight] = useState(0);
+  const containerHeightRef = useRef(0);
+  const hasCenteredRef = useRef(false);
   const draggingNodeIdRef = useRef<string | null>(null);
   const [localNodes, setLocalNodes] = useState<GraphNode[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -227,44 +229,69 @@ export default function GraphViewScreen() {
   }, [nodes, edges, canvasWidth, canvasHeight]);
 
   useEffect(() => {
-    setLocalNodes(layoutNodes);
+    if (containerHeight > 0 && localNodes.length > 0) {
+      hasCenteredRef.current = false;
+    }
+  }, [containerHeight]);
+
+  useEffect(() => {
+    if (layoutNodes.length > 0) {
+      hasCenteredRef.current = false;
+      setLocalNodes(layoutNodes);
+    }
   }, [layoutNodes]);
 
   useEffect(() => {
-    if (layoutNodes.length > 0 && containerHeight > 0) {
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-      layoutNodes.forEach((n) => {
-        minX = Math.min(minX, n.x);
-        minY = Math.min(minY, n.y);
-        maxX = Math.max(maxX, n.x);
-        maxY = Math.max(maxY, n.y);
-      });
-
-      const padding = NODE_SIZE;
-      const contentWidth = maxX - minX + padding * 2;
-      const contentHeight = maxY - minY + padding * 2;
-      const centerX = (minX + maxX) / 2;
-      const centerY = (minY + maxY) / 2;
-
-      const availableWidth = screenWidth;
-      const availableHeight = containerHeight;
-      const fitScaleX = availableWidth / contentWidth;
-      const fitScaleY = availableHeight / contentHeight;
-      const fitScale = Math.min(fitScaleX, fitScaleY, MAX_SCALE);
-
-      const clampedScale = Math.max(MIN_SCALE, Math.min(fitScale, MAX_SCALE));
-      scale.value = clampedScale;
-      translateX.value = screenWidth / 2 - centerX * clampedScale;
-      translateY.value = headerHeight + 20 + availableHeight / 2 - centerY * clampedScale;
-      savedScale.value = clampedScale;
-      savedTranslateX.value = screenWidth / 2 - centerX * clampedScale;
-      savedTranslateY.value = headerHeight + 20 + availableHeight / 2 - centerY * clampedScale;
+    if (!hasCenteredRef.current && localNodes.length > 0 && containerHeight > 0) {
+      centerGraph();
     }
-  }, [layoutNodes.length, containerHeight, screenWidth, headerHeight]);
+  }, [localNodes.length, containerHeight]);
 
   const handleContainerLayout = (e: LayoutChangeEvent) => {
-    setContainerHeight(e.nativeEvent.layout.height);
+    const newHeight = e.nativeEvent.layout.height;
+    containerHeightRef.current = newHeight;
+    setContainerHeight(newHeight);
+
+    if (localNodes.length > 0 && newHeight > 0) {
+      centerGraph();
+    }
   };
+
+  const centerGraph = useCallback(() => {
+    const nodesToCenter = localNodes;
+    if (nodesToCenter.length === 0 || containerHeightRef.current === 0) return;
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    nodesToCenter.forEach((n) => {
+      minX = Math.min(minX, n.x);
+      minY = Math.min(minY, n.y);
+      maxX = Math.max(maxX, n.x);
+      maxY = Math.max(maxY, n.y);
+    });
+
+    const padding = NODE_SIZE;
+    const contentWidth = maxX - minX + padding * 2;
+    const contentHeight = maxY - minY + padding * 2;
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+
+    const availableWidth = screenWidth;
+    const availableHeight = containerHeightRef.current;
+    const fitScaleX = availableWidth / contentWidth;
+    const fitScaleY = availableHeight / contentHeight;
+    const fitScale = Math.min(fitScaleX, fitScaleY, MAX_SCALE);
+
+    const clampedScale = Math.max(MIN_SCALE, Math.min(fitScale, MAX_SCALE));
+
+    scale.value = clampedScale;
+    translateX.value = screenWidth / 2 - centerX * clampedScale;
+    translateY.value = headerHeight + 20 + availableHeight / 2 - centerY * clampedScale;
+    savedScale.value = clampedScale;
+    savedTranslateX.value = screenWidth / 2 - centerX * clampedScale;
+    savedTranslateY.value = headerHeight + 20 + availableHeight / 2 - centerY * clampedScale;
+
+    hasCenteredRef.current = true;
+  }, [screenWidth, headerHeight]);
 
   const selectedNode = useMemo(() => {
     if (!selectedNodeId) return null;
