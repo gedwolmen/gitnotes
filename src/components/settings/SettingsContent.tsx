@@ -700,10 +700,10 @@ export function SettingsContent(props: SettingsContentProps) {
               <Text style={[styles.settingLabel, { color: colors.primary }]}>Add Provider</Text>
             </GroupRow>
           </Group>
+
+          <ScheduledLearningSection colors={colors} />
         </>
       ) : null}
-
-      <ScheduledLearningSection colors={colors} />
 
       <View style={styles.creditsWrap}>
         <Text style={[styles.creditsText, { color: colors.textSecondary }]} numberOfLines={1}>

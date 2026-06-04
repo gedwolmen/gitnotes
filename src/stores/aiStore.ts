@@ -174,6 +174,29 @@ const resolveSelectedModelOnStartup = async (
   return null;
 };
 
+/**
+ * Disables any provider that is unavailable on this device/platform.
+ * Runs at cold start so unavailable providers don't appear enabled.
+ */
+const autoDisableUnavailableProviders = async (
+  providers: AIProviderConfig[]
+): Promise<AIProviderConfig[]> => {
+  return Promise.all(
+    providers.map(async (provider) => {
+      if (!provider.isEnabled) return provider;
+      try {
+        const availability = await resolveProviderAvailability(provider);
+        if (availability.kind === 'unavailable') {
+          return { ...provider, isEnabled: false };
+        }
+      } catch {
+        // keep as-is on error
+      }
+      return provider;
+    })
+  );
+};
+
 export const useAIStore = create<AIState & AIActions>()((set, get) => ({
   ...createDefaultSettings(),
   isLoading: true,
@@ -331,11 +354,12 @@ export const useAIStore = create<AIState & AIActions>()((set, get) => ({
       if (!savedSettingsRaw) {
         const defaultSettings = createDefaultSettings();
         const providers = await hydrateProviderApiKeys(defaultSettings.providers);
+        const resolvedProviders = await autoDisableUnavailableProviders(providers);
         const selectedModelId = await resolveSelectedModelOnStartup(
           defaultSettings.selectedModelId,
-          providers
+          resolvedProviders
         );
-        set({ ...defaultSettings, providers, selectedModelId, isLoading: false, error: null });
+        set({ ...defaultSettings, providers: resolvedProviders, selectedModelId, isLoading: false, error: null });
         return;
       }
 
@@ -351,14 +375,15 @@ export const useAIStore = create<AIState & AIActions>()((set, get) => ({
       };
 
       const providers = await hydrateProviderApiKeys(mergedSettings.providers);
+      const resolvedProviders = await autoDisableUnavailableProviders(providers);
       const selectedModelId = await resolveSelectedModelOnStartup(
         mergedSettings.selectedModelId,
-        providers
+        resolvedProviders
       );
 
       set({
         ...mergedSettings,
-        providers,
+        providers: resolvedProviders,
         selectedModelId,
         isLoading: false,
         error: null,
