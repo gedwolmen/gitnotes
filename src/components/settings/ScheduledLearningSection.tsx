@@ -54,12 +54,9 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
       {items.length === 0 ? (
         <GroupRow
           leading={
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name="school-outline" size={20} color={colors.textSecondary} />
-              <Text style={[styles.emptyReposText, { color: colors.textSecondary }]}>
-                No scheduled learning set up
-              </Text>
-            </View>
+            <Text style={[styles.emptyReposText, { color: colors.textSecondary }]}>
+              No scheduled learning set up
+            </Text>
           }
         >
           <View />
