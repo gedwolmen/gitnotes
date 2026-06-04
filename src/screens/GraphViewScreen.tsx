@@ -255,11 +255,11 @@ export default function GraphViewScreen() {
     const clampedScale = Math.max(MIN_SCALE, Math.min(fitScale, MAX_SCALE));
     scale.value = clampedScale;
     translateX.value = screenWidth / 2 - centerX * clampedScale;
-    translateY.value = headerHeight + 20 + availableHeight / 2 - centerY * clampedScale;
+    translateY.value = containerHeightRef.current * 0.4 - centerY * clampedScale;
     savedScale.value = clampedScale;
     savedTranslateX.value = screenWidth / 2 - centerX * clampedScale;
-    savedTranslateY.value = headerHeight + 20 + availableHeight / 2 - centerY * clampedScale;
-  }, [screenWidth, headerHeight, scale, savedScale, translateX, translateY, savedTranslateX, savedTranslateY]);
+    savedTranslateY.value = containerHeightRef.current * 0.4 - centerY * clampedScale;
+  }, [screenWidth, scale, savedScale, translateX, translateY, savedTranslateX, savedTranslateY]);
 
   useEffect(() => {
     if (layoutNodes.length > 0) {
