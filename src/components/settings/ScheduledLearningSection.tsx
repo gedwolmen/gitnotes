@@ -409,11 +409,7 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
           <TouchableOpacity
             testID="scheduled-learning.picker.time"
 onPress={() => {
-              setShowAddModal(false);
-              setTimeout(() => {
-                setShowTimePicker(true);
-                Alert.alert('Debug', 'showTimePicker should be true now');
-              }, 100);
+              console.log('[DEBUG] Time button pressed');
             }}
             style={[localStyles.pickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
           >
