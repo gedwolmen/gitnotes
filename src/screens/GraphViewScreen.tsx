@@ -17,6 +17,7 @@ import { parseWikiLinks } from '../utils/wikiLinksParser';
 import { RootStackParamList } from '../navigation/types';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
+import SearchBar from '../components/SearchBar';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -42,6 +43,9 @@ const MIN_DISTANCE = 150;
 const CENTERING_FORCE = 0.003;
 const COLLISION_RADIUS = 60;
 const SIM_ITERATIONS = 250;
+const BASE_SCALE = 1.0;
+const MIN_SCALE = 0.25;
+const MAX_SCALE = 2.5;
 
 function getNodeDisplayTitle(title: string, maxLen = 10): string {
   if (title.length <= maxLen) return title;
@@ -61,10 +65,10 @@ export default function GraphViewScreen() {
   const canvasWidth = CANVAS_SIZE;
   const canvasHeight = CANVAS_SIZE;
 
-  const scale = useSharedValue(1.0);
+  const scale = useSharedValue(BASE_SCALE);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
-  const savedScale = useSharedValue(1.0);
+  const savedScale = useSharedValue(BASE_SCALE);
   const savedTranslateX = useSharedValue(0);
   const savedTranslateY = useSharedValue(0);
 
@@ -72,6 +76,7 @@ export default function GraphViewScreen() {
   const [containerHeight, setContainerHeight] = useState(0);
   const draggingNodeIdRef = useRef<string | null>(null);
   const [localNodes, setLocalNodes] = useState<GraphNode[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { nodes, edges } = useMemo(() => {
     if (!notes.length) {
@@ -235,16 +240,19 @@ export default function GraphViewScreen() {
         maxY = Math.max(maxY, n.y);
       });
 
-      const contentWidth = maxX - minX + NODE_SIZE * 2;
-      const contentHeight = maxY - minY + NODE_SIZE * 2;
+      const padding = NODE_SIZE;
+      const contentWidth = maxX - minX + padding * 2;
+      const contentHeight = maxY - minY + padding * 2;
       const centerX = (minX + maxX) / 2;
       const centerY = (minY + maxY) / 2;
 
       const availableWidth = screenWidth;
       const availableHeight = containerHeight;
-      const fitScale = Math.min(availableWidth / contentWidth, availableHeight / contentHeight, 1.5);
+      const fitScaleX = availableWidth / contentWidth;
+      const fitScaleY = availableHeight / contentHeight;
+      const fitScale = Math.min(fitScaleX, fitScaleY, MAX_SCALE);
 
-      const clampedScale = Math.max(0.3, Math.min(fitScale, 2.0));
+      const clampedScale = Math.max(MIN_SCALE, Math.min(fitScale, MAX_SCALE));
       scale.value = clampedScale;
       translateX.value = screenWidth / 2 - centerX * clampedScale;
       translateY.value = headerHeight + 20 + availableHeight / 2 - centerY * clampedScale;
@@ -262,6 +270,22 @@ export default function GraphViewScreen() {
     if (!selectedNodeId) return null;
     return localNodes.find((n) => n.id === selectedNodeId) || null;
   }, [selectedNodeId, localNodes]);
+
+  const isNodeHighlighted = useCallback((node: GraphNode): boolean => {
+    if (searchQuery) {
+      return node.note.title.toLowerCase().includes(searchQuery.toLowerCase());
+    }
+    if (!selectedNodeId) return false;
+    return node.id === selectedNodeId || node.connections.has(selectedNodeId);
+  }, [selectedNodeId, searchQuery]);
+
+  const getNodeAlpha = useCallback((node: GraphNode): number => {
+    if (!selectedNodeId && !searchQuery) return 1.0;
+    if (searchQuery) {
+      return isNodeHighlighted(node) ? 1.0 : 0.2;
+    }
+    return isNodeHighlighted(node) ? 1.0 : 0.3;
+  }, [selectedNodeId, searchQuery, isNodeHighlighted]);
 
   const handleNodePress = useCallback((nodeId: string) => {
     setSelectedNodeId(nodeId);
@@ -338,9 +362,27 @@ export default function GraphViewScreen() {
     return path;
   }, [edges, localNodes]);
 
+  const highlightedEdgeIds = useMemo(() => {
+    if (!selectedNodeId) return new Set<string>();
+    const highlighted = new Set<string>();
+    const selectedNode = localNodes.find((n) => n.id === selectedNodeId);
+    if (selectedNode) {
+      edges.forEach((edge) => {
+        if (edge.from === selectedNodeId || edge.to === selectedNodeId) {
+          highlighted.add(`${edge.from}-${edge.to}`);
+        }
+      });
+      selectedNode.connections.forEach((connId) => {
+        highlighted.add(`${selectedNodeId}-${connId}`);
+        highlighted.add(`${connId}-${selectedNodeId}`);
+      });
+    }
+    return highlighted;
+  }, [selectedNodeId, localNodes, edges]);
+
   const pinchGesture = Gesture.Pinch()
     .onUpdate((e) => {
-      scale.value = Math.max(0.2, Math.min(3, savedScale.value * e.scale));
+      scale.value = Math.max(MIN_SCALE, Math.min(MAX_SCALE, savedScale.value * e.scale));
     })
     .onEnd(() => {
       savedScale.value = scale.value;
@@ -381,6 +423,16 @@ export default function GraphViewScreen() {
         onBack={handleCloseScreen}
       />
 
+      {notes.length > 0 && (
+        <View style={[styles.searchContainer, { backgroundColor: colors.surface }]}>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search nodes..."
+          />
+        </View>
+      )}
+
       <View style={styles.content} onLayout={handleContainerLayout}>
         {notes.length === 0 ? (
           <View style={styles.emptyContainer}>
@@ -401,26 +453,30 @@ export default function GraphViewScreen() {
                     path={edgePath}
                     color={colors.border}
                     style="stroke"
-                    strokeWidth={2}
-                    opacity={0.5}
+                    strokeWidth={selectedNodeId ? 2.5 : 1.5}
+                    opacity={0.4}
                   />
 
-                  {localNodes.map((node) => (
-                    <Group key={node.id}>
-                      <Circle
-                        cx={node.x}
-                        cy={node.y}
-                        r={NODE_SIZE / 2 + 4}
-                        color={colors.background}
-                      />
-                      <Circle
-                        cx={node.x}
-                        cy={node.y}
-                        r={NODE_SIZE / 2}
-                        color={getNodeColor(node)}
-                      />
-                    </Group>
-                  ))}
+                  {localNodes.map((node) => {
+                    const isHighlighted = isNodeHighlighted(node);
+                    const nodeAlpha = getNodeAlpha(node);
+                    return (
+                      <Group key={node.id} opacity={nodeAlpha}>
+                        <Circle
+                          cx={node.x}
+                          cy={node.y}
+                          r={isHighlighted ? NODE_SIZE / 2 + 8 : NODE_SIZE / 2 + 4}
+                          color={isHighlighted ? colors.primary : colors.background}
+                        />
+                        <Circle
+                          cx={node.x}
+                          cy={node.y}
+                          r={NODE_SIZE / 2}
+                          color={getNodeColor(node)}
+                        />
+                      </Group>
+                    );
+                  })}
                 </Canvas>
 
                 {localNodes.map((node) => (
@@ -506,6 +562,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   closeButton: { padding: 8 },
   content: { flex: 1 },
+  searchContainer: { paddingHorizontal: 16, paddingVertical: 8 },
   canvasWrapper: { flex: 1 },
   nodeTouchable: {
     position: 'absolute',
