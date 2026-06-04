@@ -1,12 +1,12 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, TextInput } from 'react-native';
+import { useState, useCallback, useMemo } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Group, GroupRow, Modal } from '../ui';
+import { Group, GroupRow, Modal, Input } from '../ui';
 import { useScheduledLearningStore } from '../../stores/scheduledLearningStore';
 import { useAIStore } from '../../stores/aiStore';
 import { settingsStyles as styles } from './settingsStyles';
@@ -135,164 +135,170 @@ export function AddScheduledLearningScreen() {
     navigation.goBack();
   }, [tags, description, selectedDays, selectedTime, selectedModel, selectedFolderPath, selectedRepoPath, selectedBranch, selectedWordCount, repeat, createItem, resetForm, navigation]);
 
-  const localStyles = StyleSheet.create({
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
-    headerTitle: { fontSize: 18, fontWeight: '600', color: colors.text },
-    closeButton: { padding: 8 },
-    inputLabel: { fontSize: 14, fontWeight: '500', color: colors.text, marginBottom: 8 },
-    tagInputRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    tagTextInput: { flex: 1, fontSize: 14, padding: 10, borderWidth: 1, borderRadius: 8 },
-    tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
-    tagChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary + '20', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 16, gap: 4 },
-    tagChipText: { fontSize: 13, fontWeight: '500', color: colors.primary },
-    addTagButton: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
-    descriptionInput: { fontSize: 14, padding: 10, borderWidth: 1, borderRadius: 8, minHeight: 80, textAlignVertical: 'top' },
-    pickerButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, borderWidth: 1, borderRadius: 8 },
-    pickerButtonText: { fontSize: 15 },
-    daysRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 6 },
-    dayChip: { flex: 1, aspectRatio: 1, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-    dayChipText: { fontSize: 13, fontWeight: '600' },
-    repeatRow: { flexDirection: 'row', gap: 8 },
-    repeatChip: { flex: 1, paddingVertical: 12, borderRadius: 8, borderWidth: 1, alignItems: 'center' },
-    saveButton: { padding: 16, borderRadius: 10, alignItems: 'center', marginTop: 8 },
-    saveButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  });
-
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={localStyles.header}>
-        <Text style={localStyles.headerTitle}>New Learning Schedule</Text>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={localStyles.closeButton}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 }}>
+        <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>New Learning Schedule</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8 }}>
           <Ionicons name="close" size={24} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 20 }}>
-        <Text style={localStyles.inputLabel}>Tags</Text>
-        <View style={localStyles.tagInputRow}>
-          <TextInput
-            style={[localStyles.tagTextInput, { color: colors.text, backgroundColor: colors.surface, borderColor: colors.border }]}
-            value={tagInput}
-            onChangeText={setTagInput}
-            placeholder="Add tag..."
-            placeholderTextColor={colors.textSecondary}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          <TouchableOpacity
-            onPress={() => {
-              const trimmed = tagInput.trim().toLowerCase();
-              if (trimmed && !tags.includes(trimmed)) {
-                setTags([...tags, trimmed]);
-              }
-              setTagInput('');
-            }}
-            style={localStyles.addTagButton}
-          >
-            <Ionicons name="add" size={18} color="#fff" />
-          </TouchableOpacity>
-        </View>
-        {tags.length > 0 && (
-          <View style={localStyles.tagsRow}>
-            {tags.map((tag) => (
+      <ScrollView style={styles.scrollContent} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 40, gap: 24 }}>
+        <Group title="Topic & Context">
+          <View style={{ paddingHorizontal: 16, paddingVertical: 16, gap: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <Input
+                containerStyle={{ flex: 1 }}
+                value={tagInput}
+                onChangeText={setTagInput}
+                placeholder="Add a topic tag..."
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
               <TouchableOpacity
-                key={tag}
-                onPress={() => setTags(tags.filter((t) => t !== tag))}
-                style={localStyles.tagChip}
+                onPress={() => {
+                  const trimmed = tagInput.trim().toLowerCase();
+                  if (trimmed && !tags.includes(trimmed)) {
+                    setTags([...tags, trimmed]);
+                  }
+                  setTagInput('');
+                }}
+                style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary }}
               >
-                <Text style={localStyles.tagChipText}>{tag}</Text>
-                <Ionicons name="close-circle" size={14} color={colors.primary} />
+                <Ionicons name="add" size={24} color="#fff" />
               </TouchableOpacity>
-            ))}
+            </View>
+            {tags.length > 0 && (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {tags.map((tag) => (
+                  <TouchableOpacity
+                    key={tag}
+                    onPress={() => setTags(tags.filter((t) => t !== tag))}
+                    style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary + '20', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, gap: 4 }}
+                  >
+                    <Text style={{ fontSize: 14, fontWeight: '500', color: colors.primary }}>{tag}</Text>
+                    <Ionicons name="close-circle" size={16} color={colors.primary} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
-        )}
+          <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
+            <Input
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Add more context for the AI (optional)..."
+              multiline
+              multilineMinHeight={80}
+            />
+          </View>
+        </Group>
 
-        <Text style={localStyles.inputLabel}>Description (optional context)</Text>
-        <TextInput
-          style={[localStyles.descriptionInput, { color: colors.text, backgroundColor: colors.surface, borderColor: colors.border }]}
-          value={description}
-          onChangeText={setDescription}
-          placeholder="Add more context for the AI..."
-          placeholderTextColor={colors.textSecondary}
-          multiline
-          numberOfLines={3}
-        />
-
-        <Text style={localStyles.inputLabel}>Days</Text>
-        <View style={localStyles.daysRow}>
-          {DAY_OF_WEEK_OPTIONS.map((opt) => {
-            const isSelected = selectedDays.includes(opt.value);
-            return (
+        <Group title="Schedule">
+          <View style={{ paddingHorizontal: 16, paddingVertical: 16, gap: 16 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 6 }}>
+              {DAY_OF_WEEK_OPTIONS.map((opt) => {
+                const isSelected = selectedDays.includes(opt.value);
+                return (
+                  <TouchableOpacity
+                    key={opt.value}
+                    onPress={() => toggleDay(opt.value)}
+                    style={{
+                      flex: 1,
+                      aspectRatio: 1,
+                      borderRadius: 12,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: isSelected ? colors.primary : 'transparent',
+                      borderWidth: 1,
+                      borderColor: isSelected ? colors.primary : colors.border,
+                    }}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: isSelected ? '#fff' : colors.text }}>
+                      {opt.short}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
               <TouchableOpacity
-                key={opt.value}
-                onPress={() => toggleDay(opt.value)}
-                style={[
-                  localStyles.dayChip,
-                  { backgroundColor: isSelected ? colors.primary : colors.surface, borderColor: colors.border },
-                ]}
+                onPress={() => setRepeat('weekly')}
+                style={{ flex: 1, paddingVertical: 12, borderRadius: 10, alignItems: 'center', backgroundColor: repeat === 'weekly' ? colors.primary : 'transparent', borderWidth: 1, borderColor: repeat === 'weekly' ? colors.primary : colors.border }}
               >
-                <Text style={[localStyles.dayChipText, { color: isSelected ? '#fff' : colors.text }]}>
-                  {opt.short}
-                </Text>
+                <Text style={{ color: repeat === 'weekly' ? '#fff' : colors.text, fontSize: 14, fontWeight: '500' }}>Weekly</Text>
               </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        <Text style={localStyles.inputLabel}>Repeat</Text>
-        <View style={localStyles.repeatRow}>
-          <TouchableOpacity
-            onPress={() => setRepeat('weekly')}
-            style={[localStyles.repeatChip, { backgroundColor: repeat === 'weekly' ? colors.primary : colors.surface, borderColor: colors.border }]}
+              <TouchableOpacity
+                onPress={() => setRepeat('one-time')}
+                style={{ flex: 1, paddingVertical: 12, borderRadius: 10, alignItems: 'center', backgroundColor: repeat === 'one-time' ? colors.primary : 'transparent', borderWidth: 1, borderColor: repeat === 'one-time' ? colors.primary : colors.border }}
+              >
+                <Text style={{ color: repeat === 'one-time' ? '#fff' : colors.text, fontSize: 14, fontWeight: '500' }}>One-time</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <GroupRow
+            onPress={() => setShowTimePicker(true)}
+            trailing={
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{formatTime(selectedTime)}</Text>
+                <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
+              </View>
+            }
           >
-            <Text style={{ color: repeat === 'weekly' ? '#fff' : colors.text, fontSize: 14, fontWeight: '500' }}>Weekly</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setRepeat('one-time')}
-            style={[localStyles.repeatChip, { backgroundColor: repeat === 'one-time' ? colors.primary : colors.surface, borderColor: colors.border }]}
+            <Text style={[styles.settingLabel, { color: colors.text }]}>Time</Text>
+          </GroupRow>
+        </Group>
+
+        <Group title="Content & Context">
+          <GroupRow
+            onPress={() => setShowWordCountPicker(true)}
+            trailing={
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{formatWordCount(selectedWordCount)}</Text>
+                <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
+              </View>
+            }
           >
-            <Text style={{ color: repeat === 'one-time' ? '#fff' : colors.text, fontSize: 14, fontWeight: '500' }}>One-time</Text>
-          </TouchableOpacity>
-        </View>
+            <Text style={[styles.settingLabel, { color: colors.text }]}>Target length</Text>
+          </GroupRow>
 
-        <Text style={localStyles.inputLabel}>Time</Text>
+          <GroupRow
+            onPress={() => setShowModelPicker(true)}
+            trailing={
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Text style={[styles.settingValue, { color: colors.textSecondary }]} numberOfLines={1}>{getModelName(selectedModel)}</Text>
+                <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
+              </View>
+            }
+          >
+            <Text style={[styles.settingLabel, { color: colors.text }]}>AI Model</Text>
+          </GroupRow>
+
+          <GroupRow
+            onPress={() => setShowRepoFolderPicker(true)}
+            trailing={
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1, justifyContent: 'flex-end' }}>
+                <Text style={[styles.settingValue, { color: colors.textSecondary, flexShrink: 1 }]} numberOfLines={1}>{getRepoDisplayText()}</Text>
+                <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
+              </View>
+            }
+          >
+            <Text style={[styles.settingLabel, { color: colors.text }]}>Git Context</Text>
+          </GroupRow>
+        </Group>
+
         <TouchableOpacity
-          onPress={() => setShowTimePicker(true)}
-          style={[localStyles.pickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          onPress={handleAdd}
+          style={{
+            backgroundColor: colors.primary,
+            padding: 16,
+            borderRadius: 12,
+            alignItems: 'center',
+            marginTop: 8,
+          }}
         >
-          <Text style={localStyles.pickerButtonText}>{formatTime(selectedTime)}</Text>
-          <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
-        </TouchableOpacity>
-
-        <Text style={localStyles.inputLabel}>Word Count</Text>
-        <TouchableOpacity
-          onPress={() => setShowWordCountPicker(true)}
-          style={[localStyles.pickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-        >
-          <Text style={localStyles.pickerButtonText}>{formatWordCount(selectedWordCount)}</Text>
-          <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
-        </TouchableOpacity>
-
-        <Text style={localStyles.inputLabel}>AI Model</Text>
-        <TouchableOpacity
-          onPress={() => setShowModelPicker(true)}
-          style={[localStyles.pickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-        >
-          <Text style={localStyles.pickerButtonText}>{getModelName(selectedModel)}</Text>
-          <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
-        </TouchableOpacity>
-
-        <Text style={localStyles.inputLabel}>Git Context</Text>
-        <TouchableOpacity
-          onPress={() => setShowRepoFolderPicker(true)}
-          style={[localStyles.pickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-        >
-          <Text style={localStyles.pickerButtonText}>{getRepoDisplayText()}</Text>
-          <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={handleAdd} style={[localStyles.saveButton, { backgroundColor: colors.primary }]}>
-          <Text style={localStyles.saveButtonText}>Add Schedule</Text>
+          <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Add Schedule</Text>
         </TouchableOpacity>
       </ScrollView>
 

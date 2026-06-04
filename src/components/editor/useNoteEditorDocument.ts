@@ -467,13 +467,16 @@ export function useNoteEditorDocument({
   const canvasJsonRefs = useMemo(() => extractCanvasJsonRefs(content), [content]);
 
   const editorPlaceholder = useMemo(() => {
+    const linkExamples = `[[wiki-link]] [[wiki-link|Display Text]]
+[[../folder/note]] [[folder/sub-note|Sub Note]]
+[[tag:research]] [[todo:2024-01-15]]`;
     switch (noteFormat) {
       case 'org':
-        return '* My Heading\n** Sub Heading\n- Bullet item\n1. Numbered item\n- [ ] Task item\n- [x] Done item\n\nParagraph text here...';
+        return `* My Heading\n** Sub Heading\n- Bullet item\n1. Numbered item\n- [ ] Task item\n- [x] Done item\n\n${linkExamples}\n\nParagraph text here...`;
       case 'neorg':
-        return '* Document Heading\n** Sub Heading\n- Bullet item\n~ Numbered item\n( ) Task item\n(x) Done item\n\n```code\n```';
+        return `* Document Heading\n** Sub Heading\n- Bullet item\n~ Numbered item\n( ) Task item\n(x) Done item\n\n${linkExamples}\n\n\`\`\`code\n\`\`\``;
       default:
-        return '# Heading\n## Sub Heading\n- Bullet item\n1. Numbered item\n- [ ] Task item\n\nParagraph text here...';
+        return `# Heading\n## Sub Heading\n- Bullet item\n1. Numbered item\n- [ ] Task item\n\n${linkExamples}\n\nParagraph text here...`;
     }
   }, [noteFormat]);
 

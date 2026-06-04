@@ -135,7 +135,7 @@ export function EntityFilterModal<T extends FilterableItem>(props: Props<T>) {
                 />
               </TouchableOpacity>
             )}
-            {!hasChildren && <View style={styles.expandButtonPlaceholder} />}
+            {!hasChildren && <View style={{ width: 0 }} />}
             <TouchableOpacity
               style={[
                 styles.chip,
@@ -494,21 +494,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   folderTreeContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 2,
     paddingHorizontal: 12,
-    gap: 6,
   },
   folderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
-  expandButton: {
+expandButton: {
     width: 24,
     height: 24,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  expandButtonPlaceholder: {
-    width: 24,
   },
 });
