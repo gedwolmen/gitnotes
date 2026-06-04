@@ -450,7 +450,7 @@ const styles = StyleSheet.create({
   folderTreeContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 4,
     marginBottom: 16,
   },
   folderRow: {
