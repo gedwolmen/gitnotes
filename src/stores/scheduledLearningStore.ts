@@ -5,6 +5,7 @@ import {
   ScheduledLearningCreateInput,
   createScheduledLearningItem,
   updateScheduledLearningItem,
+  DayOfWeek,
 } from '../models/ScheduledLearning';
 
 const SCHEDULED_LEARNING_STORAGE_KEY = '@gitnotes:scheduled-learning';
@@ -23,7 +24,7 @@ interface ScheduledLearningActions {
   toggleItem: (id: string) => Promise<boolean>;
   refreshItems: () => Promise<void>;
   clearError: () => void;
-  markGenerated: (id: string) => Promise<void>;
+  markGenerated: (id: string, day?: DayOfWeek) => Promise<void>;
 }
 
 export const useScheduledLearningStore = create<ScheduledLearningState & ScheduledLearningActions>()((set, get) => ({
@@ -102,10 +103,14 @@ export const useScheduledLearningStore = create<ScheduledLearningState & Schedul
 
   clearError: () => set({ error: null }),
 
-  markGenerated: async (id) => {
+  markGenerated: async (id, day) => {
     const item = get().items.find((item) => item.id === id);
     if (!item) return;
-    await get().updateItem(id, { lastGeneratedAt: Date.now() });
+    const updates: Partial<ScheduledLearningItem> = { lastGeneratedAt: Date.now() };
+    if (day !== undefined) {
+      updates.dayLastGeneratedAt = { ...item.dayLastGeneratedAt, [day]: Date.now() };
+    }
+    await get().updateItem(id, updates);
   },
 }));
 

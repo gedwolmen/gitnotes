@@ -35,7 +35,10 @@ export interface ScheduledLearningItem {
   wordCount: number;
   repeat: 'weekly' | 'one-time';
   isEnabled: boolean;
-  lastGeneratedAt: number | null;
+  lastGeneratedAt: number | null;  // Legacy: overall last generation time (still used for one-time)
+  // Per-day tracking: which days have had their most recent generation.
+  // Key is DayOfWeek value, value is timestamp of last generation for that day.
+  dayLastGeneratedAt: Partial<Record<DayOfWeek, number>>;
   createdAt: number;
   updatedAt: number;
 }
@@ -73,6 +76,7 @@ export function createScheduledLearningItem(input: ScheduledLearningCreateInput)
     repeat: input.repeat ?? 'weekly',
     isEnabled: true,
     lastGeneratedAt: null,
+    dayLastGeneratedAt: {},
     createdAt: now,
     updatedAt: now,
   };

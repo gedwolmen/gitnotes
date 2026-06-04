@@ -4,21 +4,27 @@ import { useNoteStore } from '../stores/noteStore';
 import { useScheduledLearningStore } from '../stores/scheduledLearningStore';
 import { initializeModel } from './AIService';
 import { NotificationService } from './NotificationService';
-import { ScheduledLearningItem, getNextScheduledDates } from '../models/ScheduledLearning';
+import { ScheduledLearningItem, getNextScheduledDates, DayOfWeek } from '../models/ScheduledLearning';
 
 const NOTIFICATION_ID_PREFIX = 'scheduled-learning-';
 
 const MS_24_HOURS = 24 * 60 * 60 * 1000;
 const MS_6_DAYS = 6 * MS_24_HOURS;
 
-function shouldGenerate(item: ScheduledLearningItem): boolean {
-  if (item.lastGeneratedAt === null) {
+function getDayFromDate(date: Date): DayOfWeek {
+  const days: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  return days[(date.getDay() + 6) % 7];
+}
+
+function shouldGenerateForDay(item: ScheduledLearningItem, day: DayOfWeek): boolean {
+  if (item.repeat === 'one-time') {
+    return item.lastGeneratedAt === null;
+  }
+  const lastGen = item.dayLastGeneratedAt[day];
+  if (lastGen === undefined) {
     return true;
   }
-  if (item.repeat === 'one-time') {
-    return false;
-  }
-  const msSinceLastGeneration = Date.now() - item.lastGeneratedAt;
+  const msSinceLastGeneration = Date.now() - lastGen;
   if (msSinceLastGeneration < MS_6_DAYS) {
     return false;
   }
@@ -26,8 +32,10 @@ function shouldGenerate(item: ScheduledLearningItem): boolean {
 }
 
 export class ScheduledLearningService {
-  static async generateAndCreateNote(item: ScheduledLearningItem): Promise<boolean> {
-    if (!shouldGenerate(item)) {
+  static async generateAndCreateNote(item: ScheduledLearningItem, day?: DayOfWeek): Promise<boolean> {
+    const targetDay = day ?? getDayFromDate(new Date());
+
+    if (!shouldGenerateForDay(item, targetDay)) {
       return false;
     }
 
@@ -106,7 +114,7 @@ export class ScheduledLearningService {
         format: 'markdown',
       });
 
-      await useScheduledLearningStore.getState().markGenerated(item.id);
+      await useScheduledLearningStore.getState().markGenerated(item.id, targetDay);
 
       return true;
     } catch (error) {
