@@ -16,7 +16,7 @@ import { buildBacklinkIndex } from '../services/BacklinksService';
 import { parseWikiLinks } from '../utils/wikiLinksParser';
 import { RootStackParamList } from '../navigation/types';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
+import { ScreenHeader, useScreenHeaderHeight } from '../components/ui';
 import SearchBar from '../components/SearchBar';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -43,7 +43,6 @@ const MIN_DISTANCE = 150;
 const CENTERING_FORCE = 0.003;
 const COLLISION_RADIUS = 60;
 const SIM_ITERATIONS = 250;
-const BASE_SCALE = 1.0;
 const MIN_SCALE = 0.05;
 const MAX_SCALE = 3.0;
 
@@ -59,7 +58,6 @@ export default function GraphViewScreen() {
   const { setViewMode } = useViewMode();
   const setChatRepo = useAIStore((s) => s.setChatRepo);
   const headerHeight = useScreenHeaderHeight();
-  const tabBarHeight = useTabBarHeight();
   const { width: screenWidth } = Dimensions.get('window');
 
   const canvasWidth = CANVAS_SIZE;
@@ -75,8 +73,8 @@ export default function GraphViewScreen() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [containerHeight, setContainerHeight] = useState(0);
   const containerHeightRef = useRef(0);
-  const hasCenteredRef = useRef(false);
   const draggingNodeIdRef = useRef<string | null>(null);
+  const localNodesRef = useRef<GraphNode[]>([]);
   const [localNodes, setLocalNodes] = useState<GraphNode[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -228,27 +226,8 @@ export default function GraphViewScreen() {
     return simNodes.map(({ vx, vy, ...node }) => node);
   }, [nodes, edges, canvasWidth, canvasHeight]);
 
-  useEffect(() => {
-    if (layoutNodes.length > 0) {
-      hasCenteredRef.current = false;
-      setLocalNodes(layoutNodes);
-    }
-  }, [layoutNodes]);
-
-  useEffect(() => {
-    if (localNodes.length > 0 && containerHeight > 0) {
-      centerGraph();
-    }
-  }, [localNodes, containerHeight, centerGraph]);
-
-  const handleContainerLayout = (e: LayoutChangeEvent) => {
-    const newHeight = e.nativeEvent.layout.height;
-    containerHeightRef.current = newHeight;
-    setContainerHeight(newHeight);
-  };
-
   const centerGraph = useCallback(() => {
-    const nodesToCenter = localNodes;
+    const nodesToCenter = localNodesRef.current;
     if (nodesToCenter.length === 0 || containerHeightRef.current === 0) return;
 
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -259,21 +238,16 @@ export default function GraphViewScreen() {
       maxY = Math.max(maxY, n.y);
     });
 
-    // Cluster center in canvas coordinates
     const clusterCenterX = (minX + maxX) / 2;
     const clusterCenterY = (minY + maxY) / 2;
-
-    // Container center
     const containerCenterX = screenWidth / 2;
     const containerCenterY = containerHeightRef.current / 2;
 
-    // Offset to align cluster center with container center
     translateX.value = containerCenterX - clusterCenterX;
     translateY.value = containerCenterY - clusterCenterY;
     savedTranslateX.value = containerCenterX - clusterCenterX;
     savedTranslateY.value = containerCenterY - clusterCenterY;
 
-    // Fit scale so all nodes fit in view
     const clusterWidth = maxX - minX + NODE_SIZE * 2;
     const clusterHeight = maxY - minY + NODE_SIZE * 2;
     const fitScaleX = screenWidth / clusterWidth;
@@ -283,9 +257,29 @@ export default function GraphViewScreen() {
     const clampedScale = Math.max(MIN_SCALE, Math.min(fitScale, MAX_SCALE));
     scale.value = clampedScale;
     savedScale.value = clampedScale;
+  }, [screenWidth, scale, savedScale, translateX, translateY, savedTranslateX, savedTranslateY]);
 
-    hasCenteredRef.current = true;
-  }, [screenWidth]);
+  useEffect(() => {
+    if (layoutNodes.length > 0) {
+      localNodesRef.current = layoutNodes;
+      setLocalNodes(layoutNodes);
+    }
+  }, [layoutNodes]);
+
+  useEffect(() => {
+    if (containerHeight > 0 && localNodesRef.current.length > 0) {
+      centerGraph();
+    }
+  }, [containerHeight, centerGraph]);
+
+  const handleContainerLayout = (e: LayoutChangeEvent) => {
+    const newHeight = e.nativeEvent.layout.height;
+    containerHeightRef.current = newHeight;
+    setContainerHeight(newHeight);
+    if (localNodesRef.current.length > 0 && newHeight > 0) {
+      centerGraph();
+    }
+  };
 
   const selectedNode = useMemo(() => {
     if (!selectedNodeId) return null;
@@ -398,24 +392,6 @@ export default function GraphViewScreen() {
     return path;
   }, [edges, localNodes]);
 
-  const highlightedEdgeIds = useMemo(() => {
-    if (!selectedNodeId) return new Set<string>();
-    const highlighted = new Set<string>();
-    const selectedNode = localNodes.find((n) => n.id === selectedNodeId);
-    if (selectedNode) {
-      edges.forEach((edge) => {
-        if (edge.from === selectedNodeId || edge.to === selectedNodeId) {
-          highlighted.add(`${edge.from}-${edge.to}`);
-        }
-      });
-      selectedNode.connections.forEach((connId) => {
-        highlighted.add(`${selectedNodeId}-${connId}`);
-        highlighted.add(`${connId}-${selectedNodeId}`);
-      });
-    }
-    return highlighted;
-  }, [selectedNodeId, localNodes, edges]);
-
   const pinchGesture = Gesture.Pinch()
     .onUpdate((e) => {
       scale.value = Math.max(MIN_SCALE, Math.min(MAX_SCALE, savedScale.value * e.scale));
@@ -513,15 +489,6 @@ export default function GraphViewScreen() {
                           r={baseRadius}
                           color={getNodeColor(node)}
                         />
-                        {nodeScale < 1.0 && (
-                          <Circle
-                            cx={node.x}
-                            cy={node.y}
-                            r={baseRadius * 0.4}
-                            color={getNodeColor(node)}
-                            opacity={0.5}
-                          />
-                        )}
                       </Group>
                     );
                   })}
@@ -640,7 +607,7 @@ const styles = StyleSheet.create({
   nodeBadge: {
     position: 'absolute',
     bottom: -2,
-    right: -2,
+    right: 4,
     minWidth: 20,
     height: 20,
     borderRadius: 10,
