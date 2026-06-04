@@ -34,11 +34,14 @@ interface GraphEdge {
 }
 
 const NODE_SIZE = 72;
-const CANVAS_SIZE = 1500;
-const REPULSION = 8000;
-const ATTRACTION = 0.008;
-const DAMPING = 0.85;
-const MIN_DISTANCE = 120;
+const CANVAS_SIZE = 2000;
+const REPULSION = 12000;
+const ATTRACTION = 0.012;
+const DAMPING = 0.88;
+const MIN_DISTANCE = 150;
+const CENTERING_FORCE = 0.003;
+const COLLISION_RADIUS = 60;
+const SIM_ITERATIONS = 250;
 
 function getNodeDisplayTitle(title: string, maxLen = 10): string {
   if (title.length <= maxLen) return title;
@@ -58,10 +61,10 @@ export default function GraphViewScreen() {
   const canvasWidth = CANVAS_SIZE;
   const canvasHeight = CANVAS_SIZE;
 
-  const scale = useSharedValue(0.6);
+  const scale = useSharedValue(1.0);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
-  const savedScale = useSharedValue(0.6);
+  const savedScale = useSharedValue(1.0);
   const savedTranslateX = useSharedValue(0);
   const savedTranslateY = useSharedValue(0);
 
@@ -129,19 +132,33 @@ export default function GraphViewScreen() {
 
     const simNodes = nodes.map((n) => ({ ...n, vx: 0, vy: 0 }));
 
-    for (let iter = 0; iter < 150; iter++) {
+    let alpha = 1.0;
+    const alphaDecay = 0.02;
+    const repulsionRadius = 80;
+
+    for (let iter = 0; iter < SIM_ITERATIONS; iter++) {
+      alpha = Math.max(0.001, alpha * (1 - alphaDecay));
+
       for (let i = 0; i < simNodes.length; i++) {
         for (let j = i + 1; j < simNodes.length; j++) {
           const dx = simNodes[j].x - simNodes[i].x;
           const dy = simNodes[j].y - simNodes[i].y;
           const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          const force = REPULSION / (dist * dist);
-          const fx = (dx / dist) * force;
-          const fy = (dy / dist) * force;
-          simNodes[i].vx -= fx;
-          simNodes[i].vy -= fy;
-          simNodes[j].vx += fx;
-          simNodes[j].vy += fy;
+
+          if (dist < repulsionRadius) {
+            simNodes[i].vx -= dx * 0.5;
+            simNodes[i].vy -= dy * 0.5;
+            simNodes[j].vx += dx * 0.5;
+            simNodes[j].vy += dy * 0.5;
+          } else {
+            const force = REPULSION / (dist * dist);
+            const fx = (dx / dist) * force * alpha;
+            const fy = (dy / dist) * force * alpha;
+            simNodes[i].vx -= fx;
+            simNodes[i].vy -= fy;
+            simNodes[j].vx += fx;
+            simNodes[j].vy += fy;
+          }
         }
       }
 
@@ -153,7 +170,7 @@ export default function GraphViewScreen() {
           const dy = target.y - source.y;
           const dist = Math.sqrt(dx * dx + dy * dy) || 1;
           if (dist > MIN_DISTANCE) {
-            const force = (dist - MIN_DISTANCE) * ATTRACTION;
+            const force = (dist - MIN_DISTANCE) * ATTRACTION * alpha;
             const fx = (dx / dist) * force;
             const fy = (dy / dist) * force;
             source.vx += fx;
@@ -167,8 +184,28 @@ export default function GraphViewScreen() {
       const centerX = canvasWidth / 2;
       const centerY = canvasHeight / 2;
       for (const node of simNodes) {
-        node.vx += (centerX - node.x) * 0.002;
-        node.vy += (centerY - node.y) * 0.002;
+        node.vx += (centerX - node.x) * CENTERING_FORCE * alpha;
+        node.vy += (centerY - node.y) * CENTERING_FORCE * alpha;
+      }
+
+      const collisionPadding = NODE_SIZE / 2 + 20;
+      for (let i = 0; i < simNodes.length; i++) {
+        for (let j = i + 1; j < simNodes.length; j++) {
+          const dx = simNodes[j].x - simNodes[i].x;
+          const dy = simNodes[j].y - simNodes[i].y;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          const minDist = COLLISION_RADIUS * 2;
+
+          if (dist < minDist && dist > 0) {
+            const overlap = (minDist - dist) / 2;
+            const fx = (dx / dist) * overlap;
+            const fy = (dy / dist) * overlap;
+            simNodes[i].vx -= fx;
+            simNodes[i].vy -= fy;
+            simNodes[j].vx += fx;
+            simNodes[j].vy += fy;
+          }
+        }
       }
 
       for (const node of simNodes) {
@@ -176,8 +213,8 @@ export default function GraphViewScreen() {
         node.vy *= DAMPING;
         node.x += node.vx;
         node.y += node.vy;
-        node.x = Math.max(NODE_SIZE / 2 + 40, Math.min(canvasWidth - NODE_SIZE / 2 - 40, node.x));
-        node.y = Math.max(NODE_SIZE / 2 + 40, Math.min(canvasHeight - NODE_SIZE / 2 - 40, node.y));
+        node.x = Math.max(collisionPadding, Math.min(canvasWidth - collisionPadding, node.x));
+        node.y = Math.max(collisionPadding, Math.min(canvasHeight - collisionPadding, node.y));
       }
     }
 
@@ -189,7 +226,7 @@ export default function GraphViewScreen() {
   }, [layoutNodes]);
 
   useEffect(() => {
-    if (layoutNodes.length > 0) {
+    if (layoutNodes.length > 0 && containerHeight > 0) {
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
       layoutNodes.forEach((n) => {
         minX = Math.min(minX, n.x);
@@ -204,17 +241,18 @@ export default function GraphViewScreen() {
       const centerY = (minY + maxY) / 2;
 
       const availableWidth = screenWidth;
-      const availableHeight = containerHeight > 0 ? containerHeight : screenHeight - headerHeight - tabBarHeight - 60;
+      const availableHeight = containerHeight;
       const fitScale = Math.min(availableWidth / contentWidth, availableHeight / contentHeight, 1.5);
 
-      scale.value = fitScale;
-      translateX.value = screenWidth / 2 - centerX * fitScale;
-      translateY.value = (headerHeight + 20) + availableHeight / 2 - centerY * fitScale;
-      savedScale.value = fitScale;
-      savedTranslateX.value = screenWidth / 2 - centerX * fitScale;
-      savedTranslateY.value = (headerHeight + 20) + availableHeight / 2 - centerY * fitScale;
+      const clampedScale = Math.max(0.3, Math.min(fitScale, 2.0));
+      scale.value = clampedScale;
+      translateX.value = screenWidth / 2 - centerX * clampedScale;
+      translateY.value = headerHeight + 20 + availableHeight / 2 - centerY * clampedScale;
+      savedScale.value = clampedScale;
+      savedTranslateX.value = screenWidth / 2 - centerX * clampedScale;
+      savedTranslateY.value = headerHeight + 20 + availableHeight / 2 - centerY * clampedScale;
     }
-  }, [layoutNodes.length, containerHeight]);
+  }, [layoutNodes.length, containerHeight, layoutNodes]);
 
   const handleContainerLayout = (e: LayoutChangeEvent) => {
     setContainerHeight(e.nativeEvent.layout.height);
@@ -293,8 +331,14 @@ export default function GraphViewScreen() {
       const source = localNodes.find((n) => n.id === edge.from);
       const target = localNodes.find((n) => n.id === edge.to);
       if (source && target) {
+        const midX = (source.x + target.x) / 2;
+        const midY = (source.y + target.y) / 2;
+        const dx = target.x - source.x;
+        const dy = target.y - source.y;
+        const perpX = -dy * 0.15;
+        const perpY = dx * 0.15;
         path.moveTo(source.x, source.y);
-        path.lineTo(target.x, target.y);
+        path.quadraticCurveTo(midX + perpX, midY + perpY, target.x, target.y);
       }
     });
     return path;
