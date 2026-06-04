@@ -693,12 +693,9 @@ export function SettingsContent(props: SettingsContentProps) {
                 </GroupRow>
               );
             })}
-            <GroupRow testID="settings.button.add-provider" onPress={onAddProvider}>
+            <GroupRow testID="settings.button.add-provider" onPress={onAddProvider} trailing={<HintIcon hintKey="hints.settings.providers" testID="hint.providers" />}>
               <Text style={[styles.settingLabel, { color: colors.primary }]}>Add Provider</Text>
             </GroupRow>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4, paddingHorizontal: 16, paddingVertical: 4 }}>
-              <HintIcon hintKey="hints.settings.providers" testID="hint.providers" />
-            </View>
           </Group>
         </>
       ) : null}
