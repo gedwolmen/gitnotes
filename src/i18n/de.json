@@ -163,5 +163,29 @@
   },
   "home": {
     "title": "Start"
+  },
+  "hints": {
+    "settings": {
+      "updatedUI": "Soft-UI-Schatten verleihen ein taktiles, erhöhtes Gefühl. Deaktiviere für den klassischen flachen Look.",
+      "darkMode": "Wechsle zwischen hellem und dunklem Erscheinungsbild. Für Systemeinstellungen verwende die Option unten.",
+      "useSystemTheme": "Automatisch an den hellen oder dunklen Modus deines Geräts anpassen.",
+      "language": "Wähle deine bevorzugte Sprache für die App-Oberfläche. Systemstandard folgt deinem Gerät.",
+      "biometricLock": "Erfordert Face ID oder Touch ID zum Entsperren der App und zum Schutz deiner Notizen.",
+      "lockTimeout": "Wie lange nach dem Schließen der App, bevor die biometrische Sperre aktiviert wird.",
+      "syncFrequently": "Ruft von verfolgten Repositorys ab, wenn die App in den Vordergrund kommt, wenn das Netzwerk wiederhergestellt wird und im gewählten Intervall. Empfohlen für Multi-Gerät-Nutzung.",
+      "syncInterval": "Wie oft die App automatisch abruft, wenn die häufige Synchronisierung aktiviert ist.",
+      "backgroundSync": "Die Hintergrundsynchronisierung läuft alle 15 Minuten, auch wenn die App nicht aktiv ist, und sorgt dafür, dass deine Notizen aktuell bleiben.",
+      "cloneMode": "Der Clone-Modus synchronisiert über einen lokalen Git-Arbeitsbaum. Erfordert mehr Speicher, funktioniert aber vollständig offline mit LFS-Unterstützung.",
+      "apiMode": "Der API-Modus verwendet die GitHub-Inhalts-API für dateibasierte Operationen. Schneller initial, aber erfordert Netzwerk und bietet keine Offline-Unterstützung.",
+      "lfsFiles": "Große Dateien, die von Git LFS verfolgt werden, werden bei Bedarf heruntergeladen. Lade ausstehende Dateien herunter, um sie offline anzuzeigen.",
+      "templatesRepo": "Verbinde ein GitHub-Repository, um deine benutzerdefinierten Notizvorlagen zu speichern und zu synchronisieren.",
+      "clearData": "Löscht dauerhaft alle Notizen, Aufgaben und Leinwände von diesem Gerät. Deine Dateien auf GitHub sind nicht betroffen.",
+      "resetOnboarding": "Zeigt die Willkommensbildschirme erneut beim nächsten App-Start. Löscht keine Daten.",
+      "enableAI": "Aktiviere den KI-Chat-Assistenten, um dir beim Organisieren von Notizen, Erstellen von Inhalten und mehr zu helfen.",
+      "actionModeAuto": "KI führt Aktionen automatisch ohne Nachfrage zur Bestätigung aus.",
+      "actionModeConfirm": "KI fragt vor dem Ausführen von Schreiboperationen wie Erstellen oder Löschen von Notizen nach Bestätigung.",
+      "chatStorage": "Wähle, in welchem Repository KI-Chat-Unterhaltungen gespeichert werden sollen.",
+      "providers": "KI-Anbieter ermöglichen dir, verschiedene KI-Dienste zu verbinden. Apple Intelligence nutzt On-Device-Verarbeitung für Datenschutz."
+    }
   }
 }
