@@ -244,6 +244,7 @@ export function SettingsModals(props: SettingsModalsProps) {
                   secureTextEntry={!tokenVisible}
                   autoCapitalize="none"
                   autoCorrect={false}
+                  showSoftInputOnFocus={false}
                 />
                 <TouchableOpacity
                   testID="settings-modals.button.toggle-token-visible"
