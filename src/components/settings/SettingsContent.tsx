@@ -237,11 +237,14 @@ export function SettingsContent(props: SettingsContentProps) {
         </GroupRow>
         <GroupRow
           trailing={
-            <Toggle
-              testID="settings.toggle.theme"
-              value={theme === 'dark'}
-              onValueChange={(value) => setTheme(value ? 'dark' : 'light')}
-            />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Toggle
+                testID="settings.toggle.theme"
+                value={theme === 'dark'}
+                onValueChange={(value) => setTheme(value ? 'dark' : 'light')}
+              />
+              <HintIcon hintKey="hints.settings.darkMode" testID="hint.dark-mode" />
+            </View>
           }
         >
           <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.darkMode')}</Text>
