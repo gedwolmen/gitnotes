@@ -24,6 +24,7 @@ import ConflictResolverScreen from '../screens/ConflictResolverScreen';
 import NeumorphicGallery from '../screens/__dev__/NeumorphicGallery';
 import { FloatingAIButton } from '../components/ai/FloatingAIButton';
 import { ChatRepoPickerModal } from '../components/ai/ChatRepoPickerModal';
+import { AddScheduledLearningScreen } from '../components/settings/AddScheduledLearningScreen';
 import { RootStackParamList } from './types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAIStore } from '../stores/aiStore';
@@ -192,6 +193,11 @@ export default function AppNavigator() {
             <Stack.Screen
               name="ConflictResolver"
               component={ConflictResolverScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="AddScheduledLearning"
+              component={AddScheduledLearningScreen}
               options={{ headerShown: false }}
             />
             {__DEV__ && (

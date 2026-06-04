@@ -17,6 +17,7 @@ type ProductionStackParamList = {
   TemplateManager: undefined;
   SyncStatus: undefined;
   ConflictResolver: { repoPath: string; branch: string; filePath: string };
+  AddScheduledLearning: undefined;
 };
 
 type DevOnlyStackParamList = {
