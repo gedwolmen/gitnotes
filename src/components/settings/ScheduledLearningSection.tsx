@@ -411,7 +411,7 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
             onPress={() => {
               console.log('[DEBUG] Time pressed, showTimePicker currently:', showTimePicker);
               setShowTimePicker(true);
-              Alert.alert('Debug', 'After setShowTimePicker, showTimePicker should now be true');
+              Alert.alert('Debug', 'After setShowTimePicker, showTimePicker=' + String(showTimePicker));
             }}
             style={[localStyles.pickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
           >
