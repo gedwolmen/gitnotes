@@ -289,7 +289,6 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
           contentContainerStyle={{ paddingHorizontal: 0 }}
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled
-          keyboardShouldPersistTaps="handled"
         >
           <View style={localStyles.modalHeader}>
             <Text style={localStyles.modalTitle}>New Learning Schedule</Text>
