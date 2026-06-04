@@ -59,8 +59,8 @@ dist/
 web-build/
 
 # Native folders (managed by expo prebuild)
-# android/  # Uncomment if using managed workflow
-# ios/      # Uncomment if using managed workflow
+android/
+ios/
 
 # Web build output
 dist_web/
