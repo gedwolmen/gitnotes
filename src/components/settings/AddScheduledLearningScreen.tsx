@@ -1,12 +1,13 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, TextInput } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Alert, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Group, GroupRow, Modal } from '../ui';
+import { Group, GroupRow, Modal, ScreenHeader, useScreenHeaderHeight } from '../ui';
 import { useScheduledLearningStore } from '../../stores/scheduledLearningStore';
 import { useAIStore } from '../../stores/aiStore';
 import { settingsStyles as styles } from './settingsStyles';
@@ -17,25 +18,23 @@ import {
 } from '../../models/ScheduledLearning';
 import { ScheduledLearningService } from '../../services/ScheduledLearningService';
 import RepoFolderPickerModal from '../RepoFolderPickerModal';
+import { ModelSelector } from '../ai/ModelSelector';
 import type { RootStackParamList } from '../../navigation/types';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
 export function AddScheduledLearningScreen() {
   const navigation = useNavigation<Navigation>();
-  const { colors, isDark } = useTheme();
-  const createItem = useScheduledLearningStore((s) => s.createItem);
-  const providers = useAIStore((s) => s.providers);
-  const selectedModelId = useAIStore((s) => s.selectedModelId);
+  const { t } = useTranslation();
+  const { colors } = useTheme();
+  const headerHeight = useScreenHeaderHeight();
 
-  const availableModels = useMemo(
-    () => providers.filter((provider) => provider.isEnabled).flatMap((provider) => provider.models),
-    [providers],
-  );
+  const createItem = useScheduledLearningStore((s) => s.createItem);
+  const selectedModelId = useAIStore((s) => s.selectedModelId);
 
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showWordCountPicker, setShowWordCountPicker] = useState(false);
-  const [showModelPicker, setShowModelPicker] = useState(false);
+  const [showModelSelector, setShowModelSelector] = useState(false);
   const [showRepoFolderPicker, setShowRepoFolderPicker] = useState(false);
 
   const [tags, setTags] = useState<string[]>([]);
@@ -51,20 +50,6 @@ export function AddScheduledLearningScreen() {
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
   const [selectedFolderPath, setSelectedFolderPath] = useState<string | null>(null);
 
-  const resetForm = useCallback(() => {
-    setTags([]);
-    setTagInput('');
-    setDescription('');
-    setSelectedDays(['monday']);
-    setSelectedTime(new Date());
-    setSelectedModel(selectedModelId);
-    setSelectedWordCount(500);
-    setRepeat('weekly');
-    setSelectedRepoPath(null);
-    setSelectedBranch(null);
-    setSelectedFolderPath(null);
-  }, [selectedModelId]);
-
   const toggleDay = useCallback((day: DayOfWeek) => {
     setSelectedDays((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
@@ -79,13 +64,8 @@ export function AddScheduledLearningScreen() {
     return WORD_COUNT_OPTIONS.find((w) => w.value === count)?.label ?? `${count} words`;
   };
 
-  const getModelName = (modelId: string | null) => {
-    if (!modelId) return 'Default';
-    return availableModels.find((m) => m.id === modelId)?.name ?? 'Unknown';
-  };
-
   const getRepoDisplayText = () => {
-    if (!selectedRepoPath) return 'None';
+    if (!selectedRepoPath) return t('settings.none', 'None');
     const repoName = selectedRepoPath.split('/').pop() || selectedRepoPath;
     if (selectedBranch) return `${repoName} · ${selectedBranch}`;
     if (selectedFolderPath) return `${repoName} · ${selectedFolderPath}`;
@@ -100,11 +80,11 @@ export function AddScheduledLearningScreen() {
 
   const handleAdd = useCallback(async () => {
     if (tags.length === 0) {
-      Alert.alert('Tags required', 'Please add at least one tag for the learning topic.');
+      Alert.alert(t('settings.tagsRequired', 'Tags required'), t('settings.addTagPrompt', 'Please add at least one tag for the learning topic.'));
       return;
     }
     if (selectedDays.length === 0) {
-      Alert.alert('Day required', 'Please select at least one day.');
+      Alert.alert(t('settings.dayRequired', 'Day required'), t('settings.selectDayPrompt', 'Please select at least one day.'));
       return;
     }
 
@@ -131,169 +111,184 @@ export function AddScheduledLearningScreen() {
       void ScheduledLearningService.scheduleNotification(newItem);
     }
 
-    resetForm();
     navigation.goBack();
-  }, [tags, description, selectedDays, selectedTime, selectedModel, selectedFolderPath, selectedRepoPath, selectedBranch, selectedWordCount, repeat, createItem, resetForm, navigation]);
-
-  const localStyles = StyleSheet.create({
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
-    headerTitle: { fontSize: 18, fontWeight: '600', color: colors.text },
-    closeButton: { padding: 8 },
-    inputLabel: { fontSize: 14, fontWeight: '500', color: colors.text, marginBottom: 8 },
-    tagInputRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    tagTextInput: { flex: 1, fontSize: 14, padding: 10, borderWidth: 1, borderRadius: 8 },
-    tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
-    tagChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary + '20', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 16, gap: 4 },
-    tagChipText: { fontSize: 13, fontWeight: '500', color: colors.primary },
-    addTagButton: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
-    descriptionInput: { fontSize: 14, padding: 10, borderWidth: 1, borderRadius: 8, minHeight: 80, textAlignVertical: 'top' },
-    pickerButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, borderWidth: 1, borderRadius: 8 },
-    pickerButtonText: { fontSize: 15 },
-    daysRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 6 },
-    dayChip: { flex: 1, aspectRatio: 1, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-    dayChipText: { fontSize: 13, fontWeight: '600' },
-    repeatRow: { flexDirection: 'row', gap: 8 },
-    repeatChip: { flex: 1, paddingVertical: 12, borderRadius: 8, borderWidth: 1, alignItems: 'center' },
-    saveButton: { padding: 16, borderRadius: 10, alignItems: 'center', marginTop: 8 },
-    saveButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  });
+  }, [tags, description, selectedDays, selectedTime, selectedModel, selectedFolderPath, selectedRepoPath, selectedBranch, selectedWordCount, repeat, createItem, navigation, t]);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={localStyles.header}>
-        <Text style={localStyles.headerTitle}>New Learning Schedule</Text>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={localStyles.closeButton}>
-          <Ionicons name="close" size={24} color={colors.textSecondary} />
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+      <ScreenHeader
+        title={t('scheduledLearning.addNew', 'New Learning Schedule')}
+        onBack={() => navigation.goBack()}
+      />
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 20 }}>
-        <Text style={localStyles.inputLabel}>Tags</Text>
-        <View style={localStyles.tagInputRow}>
-          <TextInput
-            style={[localStyles.tagTextInput, { color: colors.text, backgroundColor: colors.surface, borderColor: colors.border }]}
-            value={tagInput}
-            onChangeText={setTagInput}
-            placeholder="Add tag..."
-            placeholderTextColor={colors.textSecondary}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          <TouchableOpacity
-            onPress={() => {
-              const trimmed = tagInput.trim().toLowerCase();
-              if (trimmed && !tags.includes(trimmed)) {
-                setTags([...tags, trimmed]);
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingTop: headerHeight, paddingBottom: 40 }}>
+        <View style={{ paddingHorizontal: 16, gap: 20, paddingTop: 20 }}>
+          <Group title={t('scheduledLearning.tags', 'Tags').toUpperCase()}>
+            <View style={{ paddingHorizontal: 16, paddingVertical: 12, gap: 10 }}>
+              <View style={styles.tagInputRow}>
+                <TextInput
+                  style={[styles.textInput, { color: colors.text, backgroundColor: colors.background, borderColor: colors.border }]}
+                  value={tagInput}
+                  onChangeText={setTagInput}
+                  placeholder={t('scheduledLearning.addTag', 'Add tag...')}
+                  placeholderTextColor={colors.textSecondary}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <TouchableOpacity
+                  onPress={() => {
+                    const trimmed = tagInput.trim().toLowerCase();
+                    if (trimmed && !tags.includes(trimmed)) {
+                      setTags([...tags, trimmed]);
+                    }
+                    setTagInput('');
+                  }}
+                  style={[styles.addTagButton, { backgroundColor: colors.primary }]}
+                >
+                  <Ionicons name="add" size={18} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              {tags.length > 0 && (
+                <View style={styles.tagsRow}>
+                  {tags.map((tag) => (
+                    <TouchableOpacity
+                      key={tag}
+                      onPress={() => setTags(tags.filter((t) => t !== tag))}
+                      style={[styles.tagChip, { backgroundColor: colors.primary + '20' }]}
+                    >
+                      <Text style={[styles.tagChipText, { color: colors.primary }]}>{tag}</Text>
+                      <Ionicons name="close-circle" size={14} color={colors.primary} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+          </Group>
+
+          <Group title={t('scheduledLearning.description', 'Description').toUpperCase()}>
+            <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+              <TextInput
+                style={[styles.textArea, { color: colors.text, backgroundColor: colors.background, borderColor: colors.border }]}
+                value={description}
+                onChangeText={setDescription}
+                placeholder={t('scheduledLearning.addContext', 'Add more context for the AI...')}
+                placeholderTextColor={colors.textSecondary}
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+          </Group>
+
+          <Group title={t('scheduledLearning.schedule', 'Schedule').toUpperCase()}>
+            <View style={{ paddingHorizontal: 16, paddingVertical: 12, gap: 16 }}>
+              <View>
+                <Text style={[styles.labelText, { color: colors.textSecondary }]}>{t('scheduledLearning.days', 'Days')}</Text>
+                <View style={styles.daysRow}>
+                  {DAY_OF_WEEK_OPTIONS.map((opt) => {
+                    const isSelected = selectedDays.includes(opt.value);
+                    return (
+                      <TouchableOpacity
+                        key={opt.value}
+                        onPress={() => toggleDay(opt.value)}
+                        style={[
+                          styles.dayChip,
+                          { backgroundColor: isSelected ? colors.primary : colors.surface, borderColor: colors.border },
+                        ]}
+                      >
+                        <Text style={[styles.dayChipText, { color: isSelected ? '#fff' : colors.text }]}>
+                          {opt.short}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.labelText, { color: colors.textSecondary }]}>{t('scheduledLearning.time', 'Time')}</Text>
+                  <TouchableOpacity
+                    onPress={() => setShowTimePicker(true)}
+                    style={[styles.pickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  >
+                    <Text style={[styles.pickerButtonText, { color: colors.text }]}>{formatTime(selectedTime)}</Text>
+                    <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.labelText, { color: colors.textSecondary }]}>{t('scheduledLearning.repeat', 'Repeat')}</Text>
+                  <View style={styles.repeatRow}>
+                    <TouchableOpacity
+                      onPress={() => setRepeat('weekly')}
+                      style={[styles.repeatChip, { backgroundColor: repeat === 'weekly' ? colors.primary : colors.surface, borderColor: colors.border }]}
+                    >
+                      <Text style={{ color: repeat === 'weekly' ? '#fff' : colors.text, fontSize: 13, fontWeight: '500' }}>
+                        {t('scheduledLearning.weekly', 'Weekly')}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => setRepeat('one-time')}
+                      style={[styles.repeatChip, { backgroundColor: repeat === 'one-time' ? colors.primary : colors.surface, borderColor: colors.border }]}
+                    >
+                      <Text style={{ color: repeat === 'one-time' ? '#fff' : colors.text, fontSize: 13, fontWeight: '500' }}>
+                        {t('scheduledLearning.oneTime', 'One-time')}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
+              <View>
+                <Text style={[styles.labelText, { color: colors.textSecondary }]}>{t('scheduledLearning.wordCount', 'Word Count')}</Text>
+                <TouchableOpacity
+                  onPress={() => setShowWordCountPicker(true)}
+                  style={[styles.pickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                >
+                  <Text style={[styles.pickerButtonText, { color: colors.text }]}>{formatWordCount(selectedWordCount)}</Text>
+                  <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Group>
+
+          <Group title={t('scheduledLearning.aiModel', 'AI Model').toUpperCase()}>
+            <GroupRow
+              onPress={() => setShowModelSelector(true)}
+              trailing={
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Text style={[styles.settingValue, { color: colors.textSecondary }]}>Select model</Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+                </View>
               }
-              setTagInput('');
-            }}
-            style={localStyles.addTagButton}
-          >
-            <Ionicons name="add" size={18} color="#fff" />
-          </TouchableOpacity>
-        </View>
-        {tags.length > 0 && (
-          <View style={localStyles.tagsRow}>
-            {tags.map((tag) => (
-              <TouchableOpacity
-                key={tag}
-                onPress={() => setTags(tags.filter((t) => t !== tag))}
-                style={localStyles.tagChip}
-              >
-                <Text style={localStyles.tagChipText}>{tag}</Text>
-                <Ionicons name="close-circle" size={14} color={colors.primary} />
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
+            >
+              <Text style={[styles.settingLabel, { color: colors.text }]}>AI Model</Text>
+            </GroupRow>
+          </Group>
 
-        <Text style={localStyles.inputLabel}>Description (optional context)</Text>
-        <TextInput
-          style={[localStyles.descriptionInput, { color: colors.text, backgroundColor: colors.surface, borderColor: colors.border }]}
-          value={description}
-          onChangeText={setDescription}
-          placeholder="Add more context for the AI..."
-          placeholderTextColor={colors.textSecondary}
-          multiline
-          numberOfLines={3}
-        />
+          <Group title={t('scheduledLearning.gitContext', 'Git Context').toUpperCase()}>
+            <GroupRow
+              onPress={() => setShowRepoFolderPicker(true)}
+              trailing={
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Text style={[styles.settingValue, { color: selectedRepoPath ? colors.textSecondary : colors.textSecondary }]} numberOfLines={1}>
+                    {getRepoDisplayText()}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+                </View>
+              }
+            >
+              <Text style={[styles.settingLabel, { color: colors.text }]} numberOfLines={1}>{getRepoDisplayText()}</Text>
+            </GroupRow>
+          </Group>
 
-        <Text style={localStyles.inputLabel}>Days</Text>
-        <View style={localStyles.daysRow}>
-          {DAY_OF_WEEK_OPTIONS.map((opt) => {
-            const isSelected = selectedDays.includes(opt.value);
-            return (
-              <TouchableOpacity
-                key={opt.value}
-                onPress={() => toggleDay(opt.value)}
-                style={[
-                  localStyles.dayChip,
-                  { backgroundColor: isSelected ? colors.primary : colors.surface, borderColor: colors.border },
-                ]}
-              >
-                <Text style={[localStyles.dayChipText, { color: isSelected ? '#fff' : colors.text }]}>
-                  {opt.short}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        <Text style={localStyles.inputLabel}>Repeat</Text>
-        <View style={localStyles.repeatRow}>
           <TouchableOpacity
-            onPress={() => setRepeat('weekly')}
-            style={[localStyles.repeatChip, { backgroundColor: repeat === 'weekly' ? colors.primary : colors.surface, borderColor: colors.border }]}
+            onPress={handleAdd}
+            style={[styles.primaryButton, { backgroundColor: colors.primary }]}
           >
-            <Text style={{ color: repeat === 'weekly' ? '#fff' : colors.text, fontSize: 14, fontWeight: '500' }}>Weekly</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setRepeat('one-time')}
-            style={[localStyles.repeatChip, { backgroundColor: repeat === 'one-time' ? colors.primary : colors.surface, borderColor: colors.border }]}
-          >
-            <Text style={{ color: repeat === 'one-time' ? '#fff' : colors.text, fontSize: 14, fontWeight: '500' }}>One-time</Text>
+            <Text style={[styles.primaryButtonText, { color: '#fff' }]}>{t('scheduledLearning.addSchedule', 'Add Schedule')}</Text>
           </TouchableOpacity>
         </View>
-
-        <Text style={localStyles.inputLabel}>Time</Text>
-        <TouchableOpacity
-          onPress={() => setShowTimePicker(true)}
-          style={[localStyles.pickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-        >
-          <Text style={localStyles.pickerButtonText}>{formatTime(selectedTime)}</Text>
-          <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
-        </TouchableOpacity>
-
-        <Text style={localStyles.inputLabel}>Word Count</Text>
-        <TouchableOpacity
-          onPress={() => setShowWordCountPicker(true)}
-          style={[localStyles.pickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-        >
-          <Text style={localStyles.pickerButtonText}>{formatWordCount(selectedWordCount)}</Text>
-          <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
-        </TouchableOpacity>
-
-        <Text style={localStyles.inputLabel}>AI Model</Text>
-        <TouchableOpacity
-          onPress={() => setShowModelPicker(true)}
-          style={[localStyles.pickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-        >
-          <Text style={localStyles.pickerButtonText}>{getModelName(selectedModel)}</Text>
-          <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
-        </TouchableOpacity>
-
-        <Text style={localStyles.inputLabel}>Git Context</Text>
-        <TouchableOpacity
-          onPress={() => setShowRepoFolderPicker(true)}
-          style={[localStyles.pickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-        >
-          <Text style={localStyles.pickerButtonText}>{getRepoDisplayText()}</Text>
-          <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={handleAdd} style={[localStyles.saveButton, { backgroundColor: colors.primary }]}>
-          <Text style={localStyles.saveButtonText}>Add Schedule</Text>
-        </TouchableOpacity>
       </ScrollView>
 
       <Modal
@@ -302,8 +297,8 @@ export function AddScheduledLearningScreen() {
         bottomSheet
         contentStyle={{ padding: 16, paddingBottom: 34 }}
       >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>Select Time</Text>
+        <View style={styles.modalHeader}>
+          <Text style={[styles.modalTitle, { color: colors.text }]}>{t('scheduledLearning.selectTime', 'Select Time')}</Text>
           <TouchableOpacity onPress={() => setShowTimePicker(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Ionicons name="close" size={22} color={colors.textSecondary} />
           </TouchableOpacity>
@@ -319,7 +314,7 @@ export function AddScheduledLearningScreen() {
             }
           }}
           accentColor={colors.primary}
-          themeVariant={isDark ? 'dark' : 'light'}
+          themeVariant={colors.background === '#000000' ? 'dark' : 'light'}
         />
       </Modal>
 
@@ -329,8 +324,8 @@ export function AddScheduledLearningScreen() {
         bottomSheet
         contentStyle={{ padding: 16, paddingBottom: 34 }}
       >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>Select Word Count</Text>
+        <View style={styles.modalHeader}>
+          <Text style={[styles.modalTitle, { color: colors.text }]}>{t('scheduledLearning.selectWordCount', 'Select Word Count')}</Text>
           <TouchableOpacity onPress={() => setShowWordCountPicker(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Ionicons name="close" size={22} color={colors.textSecondary} />
           </TouchableOpacity>
@@ -353,35 +348,10 @@ export function AddScheduledLearningScreen() {
         </Group>
       </Modal>
 
-      <Modal
-        visible={showModelPicker}
-        onRequestClose={() => setShowModelPicker(false)}
-        bottomSheet
-        contentStyle={{ padding: 16, paddingBottom: 34 }}
-      >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>Select AI Model</Text>
-          <TouchableOpacity onPress={() => setShowModelPicker(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="close" size={22} color={colors.textSecondary} />
-          </TouchableOpacity>
-        </View>
-        <Group>
-          {availableModels.map((model) => (
-            <GroupRow
-              key={model.id}
-              onPress={() => {
-                setSelectedModel(model.id);
-                setShowModelPicker(false);
-              }}
-              trailing={selectedModel === model.id ? <Ionicons name="checkmark" size={20} color={colors.primary} /> : null}
-            >
-              <Text style={{ color: selectedModel === model.id ? colors.primary : colors.text, fontSize: 16 }}>
-                {model.name}
-              </Text>
-            </GroupRow>
-          ))}
-        </Group>
-      </Modal>
+      <ModelSelector
+        visible={showModelSelector}
+        onClose={() => setShowModelSelector(false)}
+      />
 
       <RepoFolderPickerModal
         visible={showRepoFolderPicker}
