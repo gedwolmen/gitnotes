@@ -594,11 +594,14 @@ export function SettingsContent(props: SettingsContentProps) {
         </GroupRow>
         <GroupRow
           trailing={
-            <Toggle
-              testID="settings.toggle.background-sync"
-              value={isBackgroundSyncEnabled}
-              onValueChange={onToggleBackgroundSync}
-            />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Toggle
+                testID="settings.toggle.background-sync"
+                value={isBackgroundSyncEnabled}
+                onValueChange={onToggleBackgroundSync}
+              />
+              <HintIcon hintKey="hints.settings.backgroundSync" testID="hint.background-sync" />
+            </View>
           }
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
