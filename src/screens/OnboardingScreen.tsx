@@ -147,6 +147,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
+              showSoftInputOnFocus={false}
               containerStyle={{ width: '100%' }}
             />
 
