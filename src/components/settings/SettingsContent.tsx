@@ -295,7 +295,7 @@ export function SettingsContent(props: SettingsContentProps) {
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Ionicons
-              name={biometricKind === 'face' ? 'scan-outline' : 'finger-print-outline'}
+            name={biometricKind === 'face' ? 'scan-outline' : 'finger-print-outline'}
               size={20}
               color={colors.text}
             />

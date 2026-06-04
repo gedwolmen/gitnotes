@@ -25,6 +25,7 @@ interface ContextMenuProps {
   headerIcon?: keyof typeof Ionicons.glyphMap;
   sections?: ContextMenuSection[];
   items?: ContextMenuItem[];
+  bottomSheet?: boolean;
 }
 
 export default function ContextMenu({
@@ -35,6 +36,7 @@ export default function ContextMenu({
   headerIcon,
   sections,
   items,
+  bottomSheet,
 }: ContextMenuProps) {
   const { colors } = useTheme();
   const groups: ContextMenuSection[] = sections ?? (items ? [{ items }] : []);
@@ -43,6 +45,7 @@ export default function ContextMenu({
     <Modal
       visible={visible}
       onRequestClose={onClose}
+      bottomSheet={bottomSheet}
       contentStyle={{ padding: 0, overflow: 'hidden', minWidth: 280 }}
     >
       {(title || subtitle) ? (
