@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -51,6 +51,7 @@ export default function ExploreScreen() {
   const [repoSearch, setRepoSearch] = useState('');
   const [loadingRepos, setLoadingRepos] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const refreshingRef = useRef(false);
 
   const filteredRepos = useMemo(() => {
     if (!repoSearch.trim()) return repos;
@@ -96,23 +97,27 @@ export default function ExploreScreen() {
   }, [view]);
 
   const handleRefresh = useCallback(() => {
-    if (refreshing) return;
+    if (refreshingRef.current) return;
+    refreshingRef.current = true;
     setRefreshing(true);
 
     const safetyTimeout = setTimeout(() => {
+      refreshingRef.current = false;
       setRefreshing(false);
     }, 30000);
 
     if (view === 'repoList') {
       refreshRepos().finally(() => {
         clearTimeout(safetyTimeout);
+        refreshingRef.current = false;
         setRefreshing(false);
       });
     } else {
       clearTimeout(safetyTimeout);
+      refreshingRef.current = false;
       setRefreshing(false);
     }
-  }, [view, refreshRepos, refreshing]);
+  }, [view, refreshRepos]);
 
   const renderRepoItem = useCallback(
     ({ item }: { item: GitRepository }) => (

@@ -43,6 +43,7 @@ export default function TodoListScreen() {
   const { columnCount } = useResponsive('list');
 
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const isRefreshingRef = useRef(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [todoText, setTodoText] = useState('');
@@ -325,11 +326,13 @@ export default function TodoListScreen() {
   }, []);
 
   const handlePullToRefresh = useCallback(async () => {
-    if (isRefreshing) return;
+    if (isRefreshingRef.current) return;
+    isRefreshingRef.current = true;
     setIsRefreshing(true);
     HapticService.light();
 
     const safetyTimeout = setTimeout(() => {
+      isRefreshingRef.current = false;
       setIsRefreshing(false);
     }, 30000);
 
@@ -340,9 +343,10 @@ export default function TodoListScreen() {
     } finally {
       clearTimeout(safetyTimeout);
       await refreshTodos();
+      isRefreshingRef.current = false;
       setIsRefreshing(false);
     }
-  }, [isRefreshing, refreshTodos]);
+  }, [refreshTodos]);
 
   const renderTodoItem = useCallback(
     ({ item }: { item: Todo }) => (

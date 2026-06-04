@@ -49,7 +49,7 @@
     "axios": "^1.15.2",
     "buffer": "^6.0.3",
     "date-fns": "^4.1.0",
-    "expo": "~56.0.4",
+    "expo": "56.0.8",
     "expo-background-task": "~56.0.2",
     "expo-blur": "~56.0.3",
     "expo-clipboard": "~56.0.2",

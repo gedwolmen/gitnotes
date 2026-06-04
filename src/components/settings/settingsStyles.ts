@@ -56,4 +56,6 @@ export const settingsStyles = StyleSheet.create({
   bottomPad: { height: 40 },
   creditsWrap: { paddingTop: 24, marginHorizontal: -8, alignItems: 'center' },
   creditsText: { fontSize: 12, textAlign: 'center', lineHeight: 18 },
+  header: { flexDirection: 'row', alignItems: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: '600', flexShrink: 1 },
 });

@@ -65,6 +65,7 @@ export default function NotesListScreen() {
   } = useNotes();
 
   const listRef = useRef<FlatList<Note>>(null);
+  const isPullRefreshingRef = useRef(false);
 
   const [showViewModePicker, setShowViewModePicker] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -248,11 +249,13 @@ export default function NotesListScreen() {
   }, [hasActiveSearch, searchMatchCount]);
 
   const handlePullToRefresh = useCallback(async () => {
-    if (isPullRefreshing) return;
+    if (isPullRefreshingRef.current) return;
+    isPullRefreshingRef.current = true;
     setIsPullRefreshing(true);
     HapticService.light();
 
     const safetyTimeout = setTimeout(() => {
+      isPullRefreshingRef.current = false;
       setIsPullRefreshing(false);
     }, 30000);
 
@@ -276,9 +279,10 @@ export default function NotesListScreen() {
     } finally {
       if (timeoutId !== null) clearTimeout(timeoutId);
       clearTimeout(safetyTimeout);
+      isPullRefreshingRef.current = false;
       setIsPullRefreshing(false);
     }
-  }, [isPullRefreshing, refreshNotes]);
+  }, [refreshNotes]);
 
   const handleManualSync = useCallback(async () => {
     if (isManualSyncing) return;

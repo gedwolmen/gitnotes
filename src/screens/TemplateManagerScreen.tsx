@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import {
   Text,
   ScrollView,
@@ -52,6 +52,7 @@ export default function TemplateManagerScreen() {
   const [tagDraft, setTagDraft] = useState('');
   const [templatesRepoPref, setTemplatesRepoPref] = useState<TemplateRepoPreference | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const isRefreshingRef = useRef(false);
 
   useEffect(() => {
     loadTemplates();
@@ -59,9 +60,12 @@ export default function TemplateManagerScreen() {
   }, [loadTemplates]);
 
   const handleRefresh = useCallback(async () => {
+    if (isRefreshingRef.current) return;
+    isRefreshingRef.current = true;
     setIsRefreshing(true);
 
     const safetyTimeout = setTimeout(() => {
+      isRefreshingRef.current = false;
       setIsRefreshing(false);
     }, 30000);
 
@@ -72,6 +76,7 @@ export default function TemplateManagerScreen() {
       console.warn('[TemplateManager] Refresh failed:', err);
     } finally {
       clearTimeout(safetyTimeout);
+      isRefreshingRef.current = false;
       setIsRefreshing(false);
     }
   }, [loadTemplates]);

@@ -40,6 +40,7 @@ export default function ChatThreadListScreen() {
 
   const { chatRepoOwner, chatRepoName, chatRepoBranch } = useAIStore();
   const [isPullRefreshing, setIsPullRefreshing] = useState(false);
+  const isPullRefreshingRef = useRef(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [longPressedThread, setLongPressedThread] = useState<ChatThreadSummary | null>(null);
   const listRef = useRef<FlatList<ChatThreadSummary>>(null);
@@ -73,15 +74,19 @@ export default function ChatThreadListScreen() {
   }, [loadData]);
 
   const handleRefresh = async () => {
+    if (isPullRefreshingRef.current) return;
+    isPullRefreshingRef.current = true;
     setIsPullRefreshing(true);
 
     const safetyTimeout = setTimeout(() => {
+      isPullRefreshingRef.current = false;
       setIsPullRefreshing(false);
     }, 30000);
 
     await loadData();
 
     clearTimeout(safetyTimeout);
+    isPullRefreshingRef.current = false;
     setIsPullRefreshing(false);
   };
 

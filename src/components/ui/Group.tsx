@@ -1,7 +1,7 @@
 import React, { Fragment, ReactNode } from 'react';
-import { Pressable, StyleProp, Text, View, ViewStyle } from 'react-native';
+import { Pressable, StyleProp, Text, View, ViewStyle, StyleSheet } from 'react-native';
 import { Surface } from './Surface';
-import { useTokens } from '../../contexts/ThemeContext';
+import { useTheme, useTokens } from '../../contexts/ThemeContext';
 
 export interface GroupProps {
   title?: string;
@@ -13,8 +13,15 @@ export interface GroupProps {
 
 export function Group(props: GroupProps) {
   const { title, badge, footer, style, children } = props;
+  const { style: themeStyle } = useTheme();
   const { colors, spacing, type } = useTokens();
   const items = React.Children.toArray(children).filter(Boolean);
+
+  // Always show border: shadow/elevation in neumorphic, subtle border in flat
+  const surfaceStyle: StyleProp<ViewStyle> =
+    themeStyle === 'flat'
+      ? { borderWidth: 1, borderColor: colors.primary }
+      : undefined;
 
   return (
     <View style={[{ gap: spacing[2] }, style]}>
@@ -54,7 +61,7 @@ export function Group(props: GroupProps) {
           )}
         </View>
       )}
-      <Surface elevation="raised" radius="lg" style={{ overflow: 'hidden' }}>
+      <Surface elevation="raised" radius="lg" style={[surfaceStyle, { overflow: 'hidden', marginTop: title ? spacing[2] : 0 }]}>
         {items.map((child, idx) => {
           const childKey =
             React.isValidElement(child) && child.key != null
@@ -65,7 +72,7 @@ export function Group(props: GroupProps) {
               {idx > 0 && (
                 <View
                   style={{
-                    height: 1,
+                    height: StyleSheet.hairlineWidth,
                     marginLeft: spacing[4],
                     backgroundColor: colors.shadow,
                     opacity: 0.18,
