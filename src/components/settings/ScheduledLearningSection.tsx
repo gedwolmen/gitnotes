@@ -4,7 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Group, GroupRow, Toggle } from '../ui';
-import { HintIcon } from '../ui/HintIcon';
 import { useScheduledLearningStore } from '../../stores/scheduledLearningStore';
 import { settingsStyles as styles } from './settingsStyles';
 import {
@@ -61,9 +60,6 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
                 No scheduled learning set up
               </Text>
             </View>
-          }
-          trailing={
-            <HintIcon hintKey="hints.settings.scheduledLearning" testID="hint.scheduled-learning" />
           }
         >
           <View />
