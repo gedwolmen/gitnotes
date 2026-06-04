@@ -418,6 +418,7 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
 
           <Text style={[localStyles.inputLabel, { marginTop: 16 }]}>Word Count</Text>
           <TouchableOpacity
+            testID="scheduled-learning.picker.wordcount"
             onPress={() => setShowWordCountPicker(true)}
             style={[localStyles.pickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
           >
@@ -427,6 +428,7 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
 
           <Text style={[localStyles.inputLabel, { marginTop: 16 }]}>AI Model</Text>
           <TouchableOpacity
+            testID="scheduled-learning.picker.model"
             onPress={() => setShowModelPicker(true)}
             style={[localStyles.pickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
           >
@@ -436,6 +438,7 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
 
           <Text style={[localStyles.inputLabel, { marginTop: 16 }]}>Git Context</Text>
           <TouchableOpacity
+            testID="scheduled-learning.picker.gitcontext"
             onPress={() => setShowRepoFolderPicker(true)}
             style={[localStyles.pickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
           >
