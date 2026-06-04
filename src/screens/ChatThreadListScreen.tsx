@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { View, StyleSheet, ActivityIndicator, Alert, FlatList, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -46,6 +46,15 @@ export default function ChatThreadListScreen() {
   const listRef = useRef<FlatList<ChatThreadSummary>>(null);
 
   const selectionMode = selectedIds.size > 0;
+  const isFocused = useIsFocused();
+
+  // Reset refresh state when screen loses focus (tab switch, stack push, etc.)
+  useEffect(() => {
+    if (!isFocused) {
+      isPullRefreshingRef.current = false;
+      setIsPullRefreshing(false);
+    }
+  }, [isFocused]);
 
   useEffect(() => {
     setStorageAdapter({

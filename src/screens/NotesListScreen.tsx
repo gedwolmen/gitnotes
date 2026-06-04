@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Alert, View, Text, StyleSheet, ActivityIndicator, RefreshControl, FlatList } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -78,6 +78,16 @@ export default function NotesListScreen() {
   const [isDeleting, setIsDeleting] = useState(false);
   const isDeletingRef = useRef(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+
+  const isFocused = useIsFocused();
+
+  // Reset refresh state when screen loses focus (tab switch, stack push, etc.)
+  useEffect(() => {
+    if (!isFocused) {
+      isPullRefreshingRef.current = false;
+      setIsPullRefreshing(false);
+    }
+  }, [isFocused]);
 
   const selectionMode = selectedIds.size > 0;
 

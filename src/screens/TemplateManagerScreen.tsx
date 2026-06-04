@@ -7,7 +7,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '../contexts/ThemeContext';
@@ -53,6 +53,15 @@ export default function TemplateManagerScreen() {
   const [templatesRepoPref, setTemplatesRepoPref] = useState<TemplateRepoPreference | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isRefreshingRef = useRef(false);
+  const isFocused = useIsFocused();
+
+  // Reset refresh state when screen loses focus (tab switch, stack push, etc.)
+  useEffect(() => {
+    if (!isFocused) {
+      isRefreshingRef.current = false;
+      setIsRefreshing(false);
+    }
+  }, [isFocused]);
 
   useEffect(() => {
     loadTemplates();

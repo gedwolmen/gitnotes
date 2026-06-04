@@ -1,9 +1,9 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { View, StyleSheet, Alert, Platform, RefreshControl } from 'react-native';
 import { FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 
 import { requireRepo } from '../utils/requireRepo';
 import { useTodos } from '../contexts/TodoContext';
@@ -64,6 +64,15 @@ export default function TodoListScreen() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
   const selectionMode = selectedIds.size > 0;
+  const isFocused = useIsFocused();
+
+  // Reset refresh state when screen loses focus (tab switch, stack push, etc.)
+  useEffect(() => {
+    if (!isFocused) {
+      isRefreshingRef.current = false;
+      setIsRefreshing(false);
+    }
+  }, [isFocused]);
 
   const toggleSelected = useCallback((id: string) => {
     setSelectedIds((previous) => {

@@ -10,7 +10,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
@@ -52,6 +52,15 @@ export default function ExploreScreen() {
   const [loadingRepos, setLoadingRepos] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const refreshingRef = useRef(false);
+  const isFocused = useIsFocused();
+
+  // Reset refresh state when screen loses focus (tab switch, stack push, etc.)
+  useEffect(() => {
+    if (!isFocused) {
+      refreshingRef.current = false;
+      setRefreshing(false);
+    }
+  }, [isFocused]);
 
   const filteredRepos = useMemo(() => {
     if (!repoSearch.trim()) return repos;
