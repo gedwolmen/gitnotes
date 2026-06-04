@@ -606,7 +606,7 @@ export function SettingsContent(props: SettingsContentProps) {
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Ionicons name="cloud-download-outline" size={20} color={colors.text} />
-            <Text style={[styles.settingLabel, { color: colors.text }]}>Background Sync (every 15 min)</Text>
+            <Text style={[styles.settingLabel, { color: colors.text }]}>Background Sync</Text>
           </View>
         </GroupRow>
       </Group>
