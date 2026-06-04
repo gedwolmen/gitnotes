@@ -408,9 +408,10 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
           <Text style={[localStyles.inputLabel, { marginTop: 16 }]}>Time</Text>
           <TouchableOpacity
             testID="scheduled-learning.picker.time"
-            onPress={() => {
-              console.log('[DEBUG] Time pressed, showTimePicker currently:', showTimePicker);
+onPress={() => {
+              console.log('[DEBUG] Time pressed, showTimePicker=', showTimePicker, 'showAddModal=', showAddModal);
               setShowTimePicker(true);
+              setShowAddModal(false);
               Alert.alert('Debug', 'showTimePicker=' + String(showTimePicker) + ' showAddModal=' + String(showAddModal));
             }}
             style={[localStyles.pickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
