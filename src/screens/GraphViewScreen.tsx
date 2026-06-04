@@ -56,7 +56,7 @@ export default function GraphViewScreen() {
   const setChatRepo = useAIStore((s) => s.setChatRepo);
   const headerHeight = useScreenHeaderHeight();
   const tabBarHeight = useTabBarHeight();
-  const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+  const { width: screenWidth } = Dimensions.get('window');
 
   const canvasWidth = CANVAS_SIZE;
   const canvasHeight = CANVAS_SIZE;
@@ -331,14 +331,8 @@ export default function GraphViewScreen() {
       const source = localNodes.find((n) => n.id === edge.from);
       const target = localNodes.find((n) => n.id === edge.to);
       if (source && target) {
-        const midX = (source.x + target.x) / 2;
-        const midY = (source.y + target.y) / 2;
-        const dx = target.x - source.x;
-        const dy = target.y - source.y;
-        const perpX = -dy * 0.15;
-        const perpY = dx * 0.15;
         path.moveTo(source.x, source.y);
-        path.quadraticCurveTo(midX + perpX, midY + perpY, target.x, target.y);
+        path.lineTo(target.x, target.y);
       }
     });
     return path;
