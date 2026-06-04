@@ -50,8 +50,13 @@ export function Toggle(props: ToggleProps) {
       <Surface
         elevation="subtle"
         radius="pill"
-        inset
-        style={{ width: TRACK_WIDTH, height: TRACK_HEIGHT, justifyContent: 'center', padding: 4 }}
+        style={{
+          width: TRACK_WIDTH,
+          height: TRACK_HEIGHT,
+          justifyContent: 'center',
+          padding: 4,
+          backgroundColor: colors.surfaceSecondary,
+        }}
       >
         <Animated.View
           pointerEvents="none"
