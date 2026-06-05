@@ -18,6 +18,8 @@ export function describeAvailability(t: TFunction, reason: AvailabilityReason): 
       return t('ai.availability.appleIntelligenceDisabled');
     case 'apple-intelligence-downloading':
       return t('ai.availability.appleIntelligenceDownloading');
+    case 'llama-not-installed':
+      return reason.message || t('ai.availability.llamaNotInstalled');
     case 'unknown':
     default:
       return t('ai.availability.unknown');

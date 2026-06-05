@@ -148,6 +148,7 @@
       "androidOnly": "Android only — not available on iOS",
       "appleIntelligenceDisabled": "Enable Apple Intelligence in Settings",
       "appleIntelligenceDownloading": "Apple Intelligence is downloading — try again shortly",
+      "llamaNotInstalled": "Llama runtime not installed",
       "unknown": "Not available on this device"
     }
   },

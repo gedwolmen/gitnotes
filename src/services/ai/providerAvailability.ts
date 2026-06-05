@@ -6,7 +6,8 @@ export type AvailabilityReason =
   | { code: 'device-ineligible'; message: string }
   | { code: 'apple-intelligence-disabled' }
   | { code: 'apple-intelligence-downloading' }
-  | { code: 'unknown'; message: string };
+  | { code: 'unknown'; message: string }
+  | { code: 'llama-not-installed'; message: string };
 
 export type Availability =
   | { kind: 'available' }
@@ -100,6 +101,25 @@ async function probeApple(): Promise<Availability> {
   return { kind: 'unavailable', reason: { code: 'apple-intelligence-disabled' } };
 }
 
+async function probeLlama(): Promise<Availability> {
+  let nativeAvailable = false;
+  let nativeError: unknown = null;
+  try {
+    const { llama } = await import('@react-native-ai/llama');
+    void llama;
+    nativeAvailable = true;
+  } catch (error) {
+    nativeError = error;
+  }
+
+  if (nativeAvailable) {
+    return { kind: 'available' };
+  }
+
+  const message = nativeError instanceof Error ? nativeError.message : 'Llama runtime not available';
+  return { kind: 'unavailable', reason: { code: 'llama-not-installed', message } };
+}
+
 export async function resolveProviderAvailability(
   provider: AIProviderConfig
 ): Promise<Availability> {
@@ -125,6 +145,8 @@ export async function resolveProviderAvailability(
 
   if (provider.type === 'apple') {
     value = await probeApple();
+  } else if (provider.type === 'llama') {
+    value = await probeLlama();
   } else {
     value = { kind: 'available' };
   }
