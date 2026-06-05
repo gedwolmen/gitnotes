@@ -17,10 +17,9 @@ export function Group(props: GroupProps) {
   const { colors, spacing, type } = useTokens();
   const items = React.Children.toArray(children).filter(Boolean);
 
-  // Always show border: shadow/elevation in neumorphic, subtle border in flat
   const surfaceStyle: StyleProp<ViewStyle> =
     themeStyle === 'flat'
-      ? { borderWidth: 1, borderColor: colors.primary }
+      ? { borderWidth: 0 }
       : undefined;
 
   return (
