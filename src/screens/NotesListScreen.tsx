@@ -397,7 +397,10 @@ export default function NotesListScreen() {
     ],
   );
 
-  if (isLoading) {
+  // Only show full-screen spinner for initial load when there are no cached notes.
+  // Pull-to-refresh sets isLoading=true but the list already has notes, so we
+  // rely on the RefreshControl spinner instead of blocking the UI.
+  if (isLoading && notes.length === 0) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />
