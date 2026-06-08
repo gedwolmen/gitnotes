@@ -437,60 +437,67 @@ static async push(opts: { repoPath: string; branch: string; token?: string }): P
     const info = parseRepoPath(opts.repoPath);
     if (!info) return { success: false, error: `Invalid repo path: ${opts.repoPath}` };
 
+    const dir = repoDirVirtual(info.owner, info.repo);
+    const fs = makeRepoFs();
     try {
-      return await handleCorruptionAndRetry(opts.repoPath, opts.branch, opts.token, async () => {
-        const dir = repoDirVirtual(info.owner, info.repo);
-        const fs = makeRepoFs();
-        await ensureOnBranch(fs, dir, opts.branch, opts.token);
-        try {
-          await git.push({
-            fs,
-            dir,
-            http: gitHttp,
-            ref: opts.branch,
-            remoteRef: opts.branch,
-            onAuth: tokenAuth(opts.token),
-          });
-        } catch (pushError) {
-          const raw = pushError instanceof Error ? pushError.message : String(pushError);
-          if (!isPushRejected(raw)) throw pushError;
-          const ffResult = await GitFsService.pullWithFastForward({
-            repoPath: opts.repoPath,
-            branch: opts.branch,
-            token: opts.token,
-          });
-          if (!ffResult.ok) {
-            const ffError = ffResult.error ?? '';
-            if (isCorruptionError(ffError)) {
-              const hasLocal = await hasUnpushedLocalCommits(opts.repoPath, opts.branch);
-              if (hasLocal) {
-                throw new Error(
-                  `Clone corruption detected with unpushed local commits in ${opts.repoPath}@${opts.branch}. ` +
-                  `Please push your changes or reset before continuing.`,
-                );
-              }
-              await GitFsService.removeRepo({ repoPath: opts.repoPath });
-              await GitFsService.clone({ repoPath: opts.repoPath, branch: opts.branch, token: opts.token });
-              return { success: false, error: 'Clone corruption detected, push failed. Please retry.' };
-            } else {
-              throw new Error(`Push failed: ${ffResult.error ?? ffResult.reason}`);
-            }
-          }
-          await git.push({
-            fs,
-            dir,
-            http: gitHttp,
-            ref: opts.branch,
-            remoteRef: opts.branch,
-            onAuth: tokenAuth(opts.token),
-          });
-        }
-        return { success: true };
+      await ensureOnBranch(fs, dir, opts.branch, opts.token);
+      await git.push({
+        fs,
+        dir,
+        http: gitHttp,
+        ref: opts.branch,
+        remoteRef: opts.branch,
+        onAuth: tokenAuth(opts.token),
       });
-    } catch (e) {
-      const raw = e instanceof Error ? e.message : String(e);
-      console.warn('[LocalGitWriter] push failed:', raw);
-      return { success: false, error: raw };
+      return { success: true };
+    } catch (pushError) {
+      const raw = pushError instanceof Error ? pushError.message : String(pushError);
+      if (isCorruptionError(raw)) {
+        const hasLocal = await hasUnpushedLocalCommits(opts.repoPath, opts.branch);
+        if (hasLocal) {
+          return { success: false, error: `Clone corruption with unpushed commits in ${opts.repoPath}@${opts.branch}. Please push or reset.` };
+        }
+        await GitFsService.removeRepo({ repoPath: opts.repoPath });
+        await GitFsService.clone({ repoPath: opts.repoPath, branch: opts.branch, token: opts.token });
+        return { success: false, error: 'Clone corruption detected, push failed. Please retry.' };
+      }
+      if (!isPushRejected(raw)) {
+        console.warn('[LocalGitWriter] push failed:', raw);
+        return { success: false, error: raw };
+      }
+      const ffResult = await GitFsService.pullWithFastForward({
+        repoPath: opts.repoPath,
+        branch: opts.branch,
+        token: opts.token,
+      });
+      if (!ffResult.ok) {
+        const ffError = ffResult.error ?? '';
+        if (isCorruptionError(ffError)) {
+          const hasLocal = await hasUnpushedLocalCommits(opts.repoPath, opts.branch);
+          if (hasLocal) {
+            return { success: false, error: `Clone corruption with unpushed commits in ${opts.repoPath}@${opts.branch}. Please push or reset.` };
+          }
+          await GitFsService.removeRepo({ repoPath: opts.repoPath });
+          await GitFsService.clone({ repoPath: opts.repoPath, branch: opts.branch, token: opts.token });
+          return { success: false, error: 'Clone corruption detected, push failed. Please retry.' };
+        }
+        return { success: false, error: `Push failed: ${ffResult.error ?? ffResult.reason}` };
+      }
+      try {
+        await git.push({
+          fs,
+          dir,
+          http: gitHttp,
+          ref: opts.branch,
+          remoteRef: opts.branch,
+          onAuth: tokenAuth(opts.token),
+        });
+        return { success: true };
+      } catch (retryError) {
+        const retryRaw = retryError instanceof Error ? retryError.message : String(retryError);
+        console.warn('[LocalGitWriter] push retry failed:', retryRaw);
+        return { success: false, error: retryRaw };
+      }
     }
   }
 }
