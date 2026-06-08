@@ -1,4 +1,3 @@
-import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -8,7 +7,7 @@ import { HapticService } from '../../utils/haptics';
 import { GitRepository } from '../../services/GitService';
 import { NoteColor, NOTE_COLOR_VALUES, NoteFormat } from '../../models/Note';
 import { NOTE_COLORS } from '../../theme/tokens';
-import { NOTE_FORMAT_LABELS, NotesListFilters, FolderTree, buildFolderHierarchy } from './notesShared';
+import { NOTE_FORMAT_LABELS, NotesListFilters } from './notesShared';
 
 interface NotesFilterModalProps {
   visible: boolean;
@@ -60,68 +59,9 @@ export function NotesFilterModal({
     selectedColors,
   } = filters;
 
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
-
-  const folderHierarchy = useMemo(() => buildFolderHierarchy(allFolders), [allFolders]);
-
-  const toggleExpanded = (path: string) => {
-    setExpandedFolders(prev => {
-      const next = new Set(prev);
-      if (next.has(path)) next.delete(path);
-      else next.add(path);
-      return next;
-    });
-  };
-
   const selectWithHaptic = (action: () => void) => {
     HapticService.selection();
     action();
-  };
-
-  const renderFolderTree = (folders: FolderTree[], level: number = 0): React.ReactNode => {
-    return folders.map(folder => {
-      const isExpanded = expandedFolders.has(folder.path);
-      const hasChildren = folder.children.length > 0;
-      const isSelected = selectedFolder === folder.path;
-
-      return (
-        <View key={folder.path}>
-          <View style={[styles.folderRow, level > 0 && { paddingLeft: 16 + level * 16 }]}>
-            {hasChildren && (
-              <TouchableOpacity onPress={() => toggleExpanded(folder.path)} style={styles.expandButton}>
-                <Ionicons
-                  name={isExpanded ? 'chevron-down' : 'chevron-forward'}
-                  size={14}
-                  color={colors.textSecondary}
-                />
-              </TouchableOpacity>
-            )}
-            {!hasChildren && <View style={{ width: 0 }} />}
-            <TouchableOpacity
-              style={[
-                styles.chip,
-                { borderColor: colors.border },
-                isSelected && { borderColor: colors.primary, backgroundColor: colors.primary + '15' },
-              ]}
-              onPress={() => selectWithHaptic(() => onSelectFolder(isSelected ? null : folder.path))}
-            >
-              <Ionicons
-                name={isExpanded ? 'folder-open' : 'folder-outline'}
-                size={13}
-                color={isSelected ? colors.primary : colors.textSecondary}
-              />
-              <Text
-                style={[styles.chipText, { color: isSelected ? colors.primary : colors.text }]}
-                numberOfLines={1}
-              >
-                {folder.name}
-              </Text>
-            </TouchableOpacity>
-          </View>
-          {isExpanded && hasChildren && renderFolderTree(folder.children, level + 1)}
-        </View>
-      );
-    });
   };
 
   return (
@@ -281,7 +221,7 @@ export function NotesFilterModal({
             {allFolders.length > 0 ? (
               <>
                 <Text style={[styles.label, { color: colors.textSecondary }]}>{t('notesFilter.folder')}</Text>
-                <View style={styles.folderTreeContainer}>
+                <View style={styles.chipWrap}>
                   <TouchableOpacity
                     testID="notes-filter-modal.button.select-folder"
                     style={[
@@ -298,7 +238,33 @@ export function NotesFilterModal({
                     />
                     <Text style={[styles.chipText, { color: !selectedFolder ? colors.primary : colors.text }]}>{t('common.all')}</Text>
                   </TouchableOpacity>
-                  {renderFolderTree(folderHierarchy)}
+                  {allFolders.map((folderPath) => {
+                    const isSelected = selectedFolder === folderPath;
+                    return (
+                      <TouchableOpacity
+                        key={folderPath}
+                        testID={`notes-filter-modal.button.select-folder-${folderPath}`}
+                        style={[
+                          styles.chip,
+                          { borderColor: colors.border },
+                          isSelected && { borderColor: colors.primary, backgroundColor: colors.primary + '15' },
+                        ]}
+                        onPress={() => selectWithHaptic(() => onSelectFolder(isSelected ? null : folderPath))}
+                      >
+                        <Ionicons
+                          name="folder-outline"
+                          size={13}
+                          color={isSelected ? colors.primary : colors.textSecondary}
+                        />
+                        <Text
+                          style={[styles.chipText, { color: isSelected ? colors.primary : colors.text }]}
+                          numberOfLines={1}
+                        >
+                          {folderPath}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </>
             ) : null}
@@ -306,7 +272,7 @@ export function NotesFilterModal({
             {allTags.length > 0 ? (
               <>
                 <Text style={[styles.label, { color: colors.textSecondary }]}>{t('notesFilter.tags')}</Text>
-                <View style={styles.chipWrap}>
+                <View style={styles.chipWrapCompact}>
                   {allTags.map((tag) => {
                     const isSelected = selectedTags.includes(tag);
                     return (
@@ -423,6 +389,12 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 16,
   },
+  chipWrapCompact: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 8,
+  },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -447,24 +419,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   applyButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  folderTreeContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 2,
-    marginBottom: 16,
-  },
-  folderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  expandButton: {
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  expandButtonPlaceholder: {
-    width: 24,
-  },
 });
