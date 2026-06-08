@@ -92,18 +92,17 @@ async function runPull(reason: string): Promise<void> {
   lastRunAt = Date.now();
   notify();
 
+  let watchdogTimedOut = false;
   let watchdog: ReturnType<typeof setTimeout> | null = null;
-  const watchdogPromise = new Promise<void>((_, reject) => {
-    watchdog = setTimeout(
-      () => reject(new Error(`pull tick exceeded ${PULL_WATCHDOG_MS}ms`)),
-      PULL_WATCHDOG_MS,
-    );
-  });
+  watchdog = setTimeout(() => {
+    watchdogTimedOut = true;
+    console.warn(`[ForegroundSync] pull (${reason}) exceeded ${PULL_WATCHDOG_MS}ms, continuing...`);
+  }, PULL_WATCHDOG_MS);
 
   const startedAt = Date.now();
   let success = false;
   try {
-    await Promise.race([pullAllFromRepos(), watchdogPromise]);
+    await pullAllFromRepos();
     success = true;
     if (__DEV__) {
       console.log(`[ForegroundSync] pull (${reason}) ok in ${Date.now() - startedAt}ms`);
@@ -112,8 +111,12 @@ async function runPull(reason: string): Promise<void> {
     console.warn(`[ForegroundSync] pull (${reason}) failed after ${Date.now() - startedAt}ms:`, error);
   } finally {
     if (watchdog !== null) clearTimeout(watchdog);
-    inFlight = false;
-    lastRunAt = Date.now();
+    if (!watchdogTimedOut) {
+      inFlight = false;
+      lastRunAt = Date.now();
+    } else {
+      console.warn(`[ForegroundSync] pull (${reason}) still running after timeout, waiting...`);
+    }
     if (success) {
       consecutiveFailures = 0;
     } else {

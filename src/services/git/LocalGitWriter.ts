@@ -70,6 +70,53 @@ function tokenAuth(token: string | undefined) {
   return () => ({ username: 'x-access-token', password: token });
 }
 
+function isCorruptionError(errorMsg: string): boolean {
+  return /Could not find|not foundobject|NotFoundError/i.test(errorMsg);
+}
+
+async function handleCorruptionAndRetry<T>(
+  repoPath: string,
+  branch: string,
+  token: string | undefined,
+  operation: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    if (!isCorruptionError(errorMsg)) throw error;
+    console.warn(`[LocalGitWriter] clone corruption detected, attempting recovery...`);
+    const hasLocalCommits = await hasUnpushedLocalCommits(repoPath, branch);
+    if (hasLocalCommits) {
+      throw new Error(
+        `Clone corruption detected with unpushed local commits in ${repoPath}@${branch}. ` +
+        `Please push your changes or reset before continuing.`,
+      );
+    }
+    await GitFsService.removeRepo({ repoPath });
+    await GitFsService.clone({ repoPath, branch, token: token ?? undefined });
+    return operation();
+  }
+}
+
+async function hasUnpushedLocalCommits(repoPath: string, branch: string): Promise<boolean> {
+  try {
+    const localRef = `refs/heads/${branch}`;
+    const remoteRef = `refs/remotes/origin/${branch}`;
+    const localOid = await GitFsService.getCommitOid({ repoPath, ref: localRef });
+    const remoteOid = await GitFsService.getCommitOid({ repoPath, ref: remoteRef });
+    if (localOid === null) return true;
+    if (remoteOid === null) return true;
+    if (localOid === remoteOid) return false;
+    const mergeBase = await GitFsService.findMergeBase({ repoPath, ref1: localRef, ref2: remoteRef });
+    if (mergeBase === null) return true;
+    if (mergeBase !== remoteOid) return true;
+    return localOid !== remoteOid;
+  } catch {
+    return true;
+  }
+}
+
 async function ensureParentDirs(rootDir: string, virtualPath: string): Promise<void> {
   // virtualPath is e.g. "/me/repo/notes/foo.md". The on-disk root prefix lives
   // on the FS adapter; here we walk the path segments and `mkdir` each missing
@@ -222,39 +269,41 @@ export class LocalGitWriter {
             branch: opts.branch,
             token: opts.token,
           });
-          if (!ffResult.ok && ffResult.reason === 'diverged') {
-            // Auto-rebase the just-made commit onto origin/<branch> so a
-            // single user write isn't held hostage by an out-of-band remote
-            // commit (#630). Reset local branch to the remote head, replay
-            // our file write + commit, retry push. ConflictResolverService
-            // is already populating the conflict banner from the pull-side
-            // path (#629), so a destructive overlap surfaces in the UI even
-            // though the push goes through here. Other queued mutations on
-            // top of our dropped commit will re-drain from
-            // NoteSyncQueueService on the next tick.
-            const remoteRef = `refs/remotes/origin/${opts.branch}`;
-            const remoteOid = await git.resolveRef({ fs, dir, ref: remoteRef });
-            await git.writeRef({
-              fs,
-              dir,
-              ref: `refs/heads/${opts.branch}`,
-              value: remoteOid,
-              force: true,
-            });
-            await git.checkout({ fs, dir, ref: opts.branch, force: true });
-            // checkout may have replaced our file's working-tree content
-            // with origin's version — replay the user's write on top.
-            await ensureParentDirs(fsRoot, absVirtual);
-            await FileSystem.writeAsStringAsync(absUri, opts.content);
-            await git.add({ fs, dir, filepath: opts.filePath });
-            const replayStatus = await git.status({ fs, dir, filepath: opts.filePath });
-            if (replayStatus !== 'unmodified') {
-              await git.commit({
+          if (!ffResult.ok) {
+            const ffError = ffResult.error ?? '';
+            if (isCorruptionError(ffError)) {
+              const hasLocal = await hasUnpushedLocalCommits(opts.repoPath, opts.branch);
+              if (hasLocal) {
+                throw new Error(
+                  `Clone corruption detected with unpushed local commits in ${opts.repoPath}@${opts.branch}. ` +
+                  `Please push your changes or reset before continuing.`,
+                );
+              }
+              await GitFsService.removeRepo({ repoPath: opts.repoPath });
+              await GitFsService.clone({ repoPath: opts.repoPath, branch: opts.branch, token: opts.token });
+            } else if (ffResult.reason === 'diverged') {
+              const remoteRef = `refs/remotes/origin/${opts.branch}`;
+              const remoteOid = await git.resolveRef({ fs, dir, ref: remoteRef });
+              await git.writeRef({
                 fs,
                 dir,
-                message: opts.message,
-                author: { name: opts.author.name, email: opts.author.email },
+                ref: `refs/heads/${opts.branch}`,
+                value: remoteOid,
+                force: true,
               });
+              await git.checkout({ fs, dir, ref: opts.branch, force: true });
+              await ensureParentDirs(fsRoot, absVirtual);
+              await FileSystem.writeAsStringAsync(absUri, opts.content);
+              await git.add({ fs, dir, filepath: opts.filePath });
+              const replayStatus = await git.status({ fs, dir, filepath: opts.filePath });
+              if (replayStatus !== 'unmodified') {
+                await git.commit({
+                  fs,
+                  dir,
+                  message: opts.message,
+                  author: { name: opts.author.name, email: opts.author.email },
+                });
+              }
             }
           }
           await git.push({
@@ -346,17 +395,30 @@ export class LocalGitWriter {
             
           });
         } catch (pushError) {
-          const raw = pushError instanceof Error ? pushError.message : String(pushError);
-          if (!isPushRejected(raw)) throw pushError;
-          // Pull again and retry push exactly once. Anything still
-          // refusing means the upstream truly diverged and the user
-          // needs to reconcile manually — propagate.
-          await GitFsService.pullWithFastForward({
-            repoPath: opts.repoPath,
-            branch: opts.branch,
-            token: opts.token,
-          });
-          await git.push({
+const raw = pushError instanceof Error ? pushError.message : String(pushError);
+        if (!isPushRejected(raw)) throw pushError;
+        const ffResult = await GitFsService.pullWithFastForward({
+          repoPath: opts.repoPath,
+          branch: opts.branch,
+          token: opts.token,
+        });
+        if (!ffResult.ok) {
+          const ffError = ffResult.error ?? '';
+          if (isCorruptionError(ffError)) {
+            const hasLocal = await hasUnpushedLocalCommits(opts.repoPath, opts.branch);
+            if (hasLocal) {
+              throw new Error(
+                `Clone corruption detected with unpushed local commits in ${opts.repoPath}@${opts.branch}. ` +
+                `Please push your changes or reset before continuing.`,
+              );
+            }
+            await GitFsService.removeRepo({ repoPath: opts.repoPath });
+            await GitFsService.clone({ repoPath: opts.repoPath, branch: opts.branch, token: opts.token });
+          } else {
+            throw new Error(`Push failed: ${ffResult.error ?? ffResult.reason}`);
+          }
+        }
+        await git.push({
             fs,
             dir,
             http: gitHttp,
@@ -406,11 +468,27 @@ export class LocalGitWriter {
       } catch (pushError) {
         const raw = pushError instanceof Error ? pushError.message : String(pushError);
         if (!isPushRejected(raw)) throw pushError;
-        await GitFsService.pullWithFastForward({
+        const ffResult = await GitFsService.pullWithFastForward({
           repoPath: opts.repoPath,
           branch: opts.branch,
           token: opts.token,
         });
+        if (!ffResult.ok) {
+          const ffError = ffResult.error ?? '';
+          if (isCorruptionError(ffError)) {
+            const hasLocal = await hasUnpushedLocalCommits(opts.repoPath, opts.branch);
+            if (hasLocal) {
+              throw new Error(
+                `Clone corruption detected with unpushed local commits in ${opts.repoPath}@${opts.branch}. ` +
+                `Please push your changes or reset before continuing.`,
+              );
+            }
+            await GitFsService.removeRepo({ repoPath: opts.repoPath });
+            await GitFsService.clone({ repoPath: opts.repoPath, branch: opts.branch, token: opts.token });
+          } else {
+            throw new Error(`Push failed: ${ffResult.error ?? ffResult.reason}`);
+          }
+        }
         await git.push({
           fs,
           dir,

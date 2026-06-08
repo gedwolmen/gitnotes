@@ -35,6 +35,7 @@ export function StartupSyncGate({ children }: { children: React.ReactNode }) {
       lastSyncedSignature.current = repoSignature;
       return;
     }
+    if (isForegroundSyncInFlight()) return;
 
     isSyncing.current = true;
     const targetSignature = repoSignature;
@@ -61,6 +62,7 @@ export function StartupSyncGate({ children }: { children: React.ReactNode }) {
     let drainInFlight = false;
     const drainAndPull = async () => {
       if (drainInFlight) return;
+      if (isSyncing.current) return;
       if (isForegroundSyncInFlight()) return;
       drainInFlight = true;
       try {
@@ -77,7 +79,7 @@ export function StartupSyncGate({ children }: { children: React.ReactNode }) {
 
     drainAndPull();
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active' && !isForegroundSyncInFlight()) drainAndPull();
+      if (state === 'active' && !isSyncing.current && !isForegroundSyncInFlight()) drainAndPull();
     });
     return () => sub.remove();
   }, [refreshNotes]);

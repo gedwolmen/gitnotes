@@ -298,6 +298,18 @@ export class GitFsService {
     }
   }
 
+  static async getCommitOid(opts: RepoLocator & { ref: string }): Promise<string | null> {
+    const info = parseRepoPath(opts.repoPath);
+    if (!info) return null;
+    const dir = repoDirVirtual(info.owner, info.repo);
+    try {
+      const oid = await git.resolveRef({ fs: makeRepoFs(), dir, ref: opts.ref });
+      return oid;
+    } catch {
+      return null;
+    }
+  }
+
   static async findMergeBase(opts: {
     repoPath: string;
     ref1: string;
