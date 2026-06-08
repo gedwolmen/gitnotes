@@ -12,6 +12,12 @@ const MIN_VISIBILITY_CHANGE_MS = 300;
  */
 const MINIMUM_DISPLAY_MS = 300;
 
+export interface SyncProgress {
+  phase: string;
+  loaded: number;
+  total: number | null;
+}
+
 interface GitHubActivityState {
   inflight: number;
   label: string | null;
@@ -19,12 +25,14 @@ interface GitHubActivityState {
   visible: boolean;
   pendingVisibilityChange: boolean | null;
   visibilityChangeTimer: ReturnType<typeof setTimeout> | null;
+  progress: SyncProgress | null;
 }
 
 interface GitHubActivityActions {
   begin: (label?: string) => void;
   end: () => void;
   reset: () => void;
+  setProgress: (progress: SyncProgress | null) => void;
 }
 
 export const useGitHubActivityStore = create<GitHubActivityState & GitHubActivityActions>()((set, get) => ({
@@ -34,6 +42,7 @@ export const useGitHubActivityStore = create<GitHubActivityState & GitHubActivit
   visible: false,
   pendingVisibilityChange: null,
   visibilityChangeTimer: null,
+  progress: null,
 
   begin: (label) => {
     const timer = get().hideTimer;
@@ -46,30 +55,34 @@ export const useGitHubActivityStore = create<GitHubActivityState & GitHubActivit
       const vt = setTimeout(() => {
         set({ visible: true, pendingVisibilityChange: null, visibilityChangeTimer: null });
       }, MIN_VISIBILITY_CHANGE_MS);
-      set({ inflight: newInflight, label: newLabel, hideTimer: null, pendingVisibilityChange: true, visibilityChangeTimer: vt });
+      set({ inflight: newInflight, label: newLabel, hideTimer: null, pendingVisibilityChange: true, visibilityChangeTimer: vt, progress: null });
     } else {
-      set({ inflight: newInflight, label: newLabel, hideTimer: null });
+      set({ inflight: newInflight, label: newLabel, hideTimer: null, progress: null });
     }
   },
 
   end: () => {
     const next = Math.max(0, get().inflight - 1);
     if (next > 0) {
-      set({ inflight: next });
+      set({ inflight: next, progress: null });
     } else {
       const vt = get().visibilityChangeTimer;
       if (vt !== null) clearTimeout(vt);
       const timer = setTimeout(() => {
-        set({ inflight: 0, label: null, hideTimer: null, visible: false, pendingVisibilityChange: false });
+        set({ inflight: 0, label: null, hideTimer: null, visible: false, pendingVisibilityChange: false, progress: null });
       }, MINIMUM_DISPLAY_MS);
-      set({ inflight: 0, label: null, hideTimer: timer, visibilityChangeTimer: null });
+      set({ inflight: 0, label: null, hideTimer: timer, visibilityChangeTimer: null, progress: null });
     }
   },
 
   reset: () => {
     const timers = [get().hideTimer, get().visibilityChangeTimer];
     timers.forEach((t) => { if (t !== null) clearTimeout(t); });
-    set({ inflight: 0, label: null, hideTimer: null, visible: false, pendingVisibilityChange: null, visibilityChangeTimer: null });
+    set({ inflight: 0, label: null, hideTimer: null, visible: false, pendingVisibilityChange: null, visibilityChangeTimer: null, progress: null });
+  },
+
+  setProgress: (progress) => {
+    set({ progress });
   },
 }));
 
@@ -77,4 +90,5 @@ export const githubActivity = {
   begin: (label?: string) => useGitHubActivityStore.getState().begin(label),
   end: () => useGitHubActivityStore.getState().end(),
   reset: () => useGitHubActivityStore.getState().reset(),
+  setProgress: (progress: SyncProgress | null) => useGitHubActivityStore.getState().setProgress(progress),
 };

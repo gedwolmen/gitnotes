@@ -37,12 +37,16 @@ interface WriteOpts extends BaseOpts {
   /** When true, push immediately. Defaults to true; callers can batch by passing false. */
   push?: boolean;
   token?: string;
+  /** Progress callback for push operations. */
+  onProgress?: (phase: string, loaded: number, total: number | null) => void;
 }
 
 interface DeleteOpts extends BaseOpts {
   filePath: string;
   push?: boolean;
   token?: string;
+  /** Progress callback for push operations. */
+  onProgress?: (phase: string, loaded: number, total: number | null) => void;
 }
 
 function clonesRoot(): string {
@@ -204,6 +208,7 @@ export class LocalGitWriter {
             ref: opts.branch,
             remoteRef: opts.branch,
             onAuth: tokenAuth(opts.token),
+            onProgress: opts.onProgress,
           });
         } catch (pushError) {
           // Same pull-then-retry shape as deleteAndCommit: when the
@@ -259,6 +264,7 @@ export class LocalGitWriter {
             ref: opts.branch,
             remoteRef: opts.branch,
             onAuth: tokenAuth(opts.token),
+            onProgress: opts.onProgress,
           });
         }
       }
@@ -337,6 +343,7 @@ export class LocalGitWriter {
             ref: opts.branch,
             remoteRef: opts.branch,
             onAuth: tokenAuth(opts.token),
+            onProgress: opts.onProgress,
           });
         } catch (pushError) {
           const raw = pushError instanceof Error ? pushError.message : String(pushError);
@@ -356,6 +363,7 @@ export class LocalGitWriter {
             ref: opts.branch,
             remoteRef: opts.branch,
             onAuth: tokenAuth(opts.token),
+            onProgress: opts.onProgress,
           });
         }
       }
@@ -393,6 +401,7 @@ export class LocalGitWriter {
           ref: opts.branch,
           remoteRef: opts.branch,
           onAuth: tokenAuth(opts.token),
+            onProgress: opts.onProgress,
         });
       } catch (pushError) {
         const raw = pushError instanceof Error ? pushError.message : String(pushError);
@@ -409,6 +418,7 @@ export class LocalGitWriter {
           ref: opts.branch,
           remoteRef: opts.branch,
           onAuth: tokenAuth(opts.token),
+            onProgress: opts.onProgress,
         });
       }
       return { success: true };

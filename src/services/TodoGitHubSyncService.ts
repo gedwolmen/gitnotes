@@ -5,6 +5,7 @@ import { AuthService } from './AuthService';
 import { SyncEngineService } from './SyncEngineService';
 import { LocalGitWriter } from './git/LocalGitWriter';
 import { GitFsService } from './git/GitFsService';
+import { githubActivity } from '../stores/githubActivityStore';
 
 async function resolveToken(accountId?: string): Promise<string | undefined> {
   if (!accountId) return undefined;
@@ -112,6 +113,7 @@ export async function syncTodoToGitHub(params: {
       message,
       author,
       token: tokenForPush,
+      onProgress: (phase, loaded, total) => githubActivity.setProgress({ phase, loaded, total }),
     });
     if (writeResult.success) {
       return { success: true, filePath: targetPath };
@@ -179,6 +181,7 @@ export async function deleteTodoFromGitHub(params: {
       message: `Delete todo: ${text || filePath}`,
       author,
       token: tokenForPush,
+      onProgress: (phase, loaded, total) => githubActivity.setProgress({ phase, loaded, total }),
     });
   }
 

@@ -7,6 +7,7 @@ import { SyncEngineService } from './SyncEngineService';
 import { LocalGitWriter } from './git/LocalGitWriter';
 import { GitFsService } from './git/GitFsService';
 import { resolveBranch } from './git/branchResolver';
+import { githubActivity } from '../stores/githubActivityStore';
 
 async function resolveAuthor(): Promise<{ name: string; email: string }> {
   const user = GitHubService.getUser();
@@ -347,6 +348,7 @@ export async function deleteNoteFromGitHub(params: {
       author,
       token: tokenForPush,
       push,
+      onProgress: (phase, loaded, total) => githubActivity.setProgress({ phase, loaded, total }),
     });
   }
 
@@ -496,6 +498,7 @@ export async function syncNoteToGitHub(params: {
       author,
       token: tokenForPush,
       push,
+      onProgress: (phase, loaded, total) => githubActivity.setProgress({ phase, loaded, total }),
     });
     if (writeResult.success) {
       return { success: true, filePath: targetPath, finalContent };

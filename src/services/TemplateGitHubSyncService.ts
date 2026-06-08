@@ -5,6 +5,7 @@ import type { NoteTemplate } from './TemplateService';
 import { SyncEngineService } from './SyncEngineService';
 import { LocalGitWriter } from './git/LocalGitWriter';
 import { AuthService } from './AuthService';
+import { githubActivity } from '../stores/githubActivityStore';
 
 function resolveAuthor() {
   const user = GitHubService.getUser();
@@ -52,6 +53,7 @@ export async function syncTemplateToGitHub(params: {
       message,
       author: resolveAuthor(),
       token: tokenForPush,
+      onProgress: (phase, loaded, total) => githubActivity.setProgress({ phase, loaded, total }),
     });
     if (writeResult.success) return { success: true, filePath: targetPath };
     return { success: false, error: writeResult.error };
@@ -94,6 +96,7 @@ export async function deleteTemplateFromGitHub(params: {
       message: `Delete template ${name}`,
       author: resolveAuthor(),
       token: tokenForPush,
+      onProgress: (phase, loaded, total) => githubActivity.setProgress({ phase, loaded, total }),
     });
   }
 

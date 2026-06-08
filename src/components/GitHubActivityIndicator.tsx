@@ -2,13 +2,66 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTokens } from '../contexts/ThemeContext';
-import { useGitHubActivityStore } from '../stores/githubActivityStore';
+import { useGitHubActivityStore, SyncProgress } from '../stores/githubActivityStore';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
+
+function ProgressBar({ progress, color }: { progress: SyncProgress; color: string }) {
+  const percentage = progress.total != null && progress.total > 0
+    ? Math.min(100, Math.round((progress.loaded / progress.total) * 100))
+    : null;
+  return (
+    <View style={progressBarStyles.container}>
+      <View style={[progressBarStyles.track, { backgroundColor: color + '30' }]}>
+        {percentage != null ? (
+          <View style={[progressBarStyles.fill, { width: `${percentage}%`, backgroundColor: color }]} />
+        ) : (
+          <Animated.View
+            style={[progressBarStyles.indeterminate, { backgroundColor: color }]}
+ />
+        )}
+      </View>
+      {percentage != null && (
+        <Text style={progressBarStyles.label}>{percentage}%</Text>
+      )}
+    </View>
+  );
+}
+
+const progressBarStyles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minWidth: 80,
+  },
+  track: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  fill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  indeterminate: {
+    width: '40%',
+    height: '100%',
+    borderRadius: 2,
+  },
+  label: {
+    fontSize: 10,
+    fontWeight: '600',
+    minWidth: 28,
+    textAlign: 'right',
+  },
+});
 
 export function GitHubActivityIndicator() {
   const { colors, radii, spacing, type } = useTokens();
   const visible = useGitHubActivityStore((s) => s.visible);
   const label = useGitHubActivityStore((s) => s.label);
+  const progress = useGitHubActivityStore((s) => s.progress);
   const [pendingCount, setPendingCount] = useState(0);
 
   const opacity = useRef(new Animated.Value(0)).current;
@@ -68,6 +121,7 @@ export function GitHubActivityIndicator() {
             {label ?? 'Syncing with GitHub…'}
             {pendingCount > 0 ? ` (${pendingCount} pending)` : ''}
           </Text>
+          {progress && <ProgressBar progress={progress} color={colors.accent} />}
         </View>
       </SafeAreaView>
     </Animated.View>
