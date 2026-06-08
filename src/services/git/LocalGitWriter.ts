@@ -204,7 +204,7 @@ export class LocalGitWriter {
    * Returns the same `{ success, filePath?, error? }` shape the existing
    * Contents-API writers return.
    */
-  static async writeAndCommit(opts: WriteOpts): Promise<LocalGitWriterResult> {
+static async writeAndCommit(opts: WriteOpts): Promise<LocalGitWriterResult> {
     const info = parseRepoPath(opts.repoPath);
     if (!info) return { success: false, error: `Invalid repo path: ${opts.repoPath}` };
 
@@ -213,39 +213,233 @@ export class LocalGitWriter {
       return { success: false, error: `Refusing to write file exceeding 5 MB (${Math.round(opts.content.length / 1024 / 1024)} MB) — possible data corruption` };
     }
 
-    const dir = repoDirVirtual(info.owner, info.repo);
-    const fs = makeRepoFs();
-    const fsRoot = clonesRoot();
+    try {
+      return await handleCorruptionAndRetry(opts.repoPath, opts.branch, opts.token, async () => {
+        const dir = repoDirVirtual(info.owner, info.repo);
+        const fs = makeRepoFs();
+        const fsRoot = clonesRoot();
+
+        await ensureOnBranch(fs, dir, opts.branch, opts.token);
+
+        const absVirtual = `${dir}/${opts.filePath}`;
+        const absUri = `${fsRoot}${absVirtual.replace(/^\//, '')}`;
+        await ensureParentDirs(fsRoot, absVirtual);
+        await FileSystem.writeAsStringAsync(absUri, opts.content);
+
+        await git.add({ fs, dir, filepath: opts.filePath });
+
+        const fileStatus = await git.status({ fs, dir, filepath: opts.filePath });
+        const hasTreeChange = fileStatus !== 'unmodified';
+        if (hasTreeChange) {
+          await git.commit({
+            fs,
+            dir,
+            message: opts.message,
+            author: { name: opts.author.name, email: opts.author.email },
+          });
+        }
+
+        if (opts.push !== false) {
+          try {
+            await git.push({
+              fs,
+              dir,
+              http: gitHttp,
+              ref: opts.branch,
+              remoteRef: opts.branch,
+              onAuth: tokenAuth(opts.token),
+            });
+          } catch (pushError) {
+            const raw = pushError instanceof Error ? pushError.message : String(pushError);
+            if (!isPushRejected(raw)) throw pushError;
+            const ffResult = await GitFsService.pullWithFastForward({
+              repoPath: opts.repoPath,
+              branch: opts.branch,
+              token: opts.token,
+            });
+            if (!ffResult.ok) {
+              const ffError = ffResult.error ?? '';
+              if (isCorruptionError(ffError)) {
+                const hasLocal = await hasUnpushedLocalCommits(opts.repoPath, opts.branch);
+                if (hasLocal) {
+                  throw new Error(
+                    `Clone corruption detected with unpushed local commits in ${opts.repoPath}@${opts.branch}. ` +
+                    `Please push your changes or reset before continuing.`,
+                  );
+                }
+                await GitFsService.removeRepo({ repoPath: opts.repoPath });
+                await GitFsService.clone({ repoPath: opts.repoPath, branch: opts.branch, token: opts.token });
+              } else if (ffResult.reason === 'diverged') {
+                const remoteRef = `refs/remotes/origin/${opts.branch}`;
+                const remoteOid = await git.resolveRef({ fs, dir, ref: remoteRef });
+                await git.writeRef({
+                  fs,
+                  dir,
+                  ref: `refs/heads/${opts.branch}`,
+                  value: remoteOid,
+                  force: true,
+                });
+                await git.checkout({ fs, dir, ref: opts.branch, force: true });
+                await ensureParentDirs(fsRoot, absVirtual);
+                await FileSystem.writeAsStringAsync(absUri, opts.content);
+                await git.add({ fs, dir, filepath: opts.filePath });
+                const replayStatus = await git.status({ fs, dir, filepath: opts.filePath });
+                if (replayStatus !== 'unmodified') {
+                  await git.commit({
+                    fs,
+                    dir,
+                    message: opts.message,
+                    author: { name: opts.author.name, email: opts.author.email },
+                  });
+                }
+              }
+            }
+            await git.push({
+              fs,
+              dir,
+              http: gitHttp,
+              ref: opts.branch,
+              remoteRef: opts.branch,
+              onAuth: tokenAuth(opts.token),
+            });
+          }
+        }
+
+        return { success: true, filePath: opts.filePath };
+      });
+    } catch (e) {
+      const raw = e instanceof Error ? e.message : String(e);
+      console.warn('[LocalGitWriter] writeAndCommit failed:', raw);
+      return { success: false, error: raw };
+    }
+  }
+
+  /**
+   * Remove a tracked file from the working tree, stage + commit,
+   * optionally push. Pulls upstream first so the delete commit lands on
+   * top of any concurrent edits — otherwise the push gets rejected as
+   * non-fast-forward and the local row gets stranded (#567 fix C, the
+   * single most common clone-mode delete failure).
+   *
+   * Push gets one auto-retry after a fresh pull when the server returns
+   * a fast-forward / push-rejected error.
+   */
+static async deleteAndCommit(opts: DeleteOpts): Promise<LocalGitWriterResult> {
+    const info = parseRepoPath(opts.repoPath);
+    if (!info) return { success: false, error: `Invalid repo path: ${opts.repoPath}` };
 
     try {
-      await ensureOnBranch(fs, dir, opts.branch, opts.token);
+      return await handleCorruptionAndRetry(opts.repoPath, opts.branch, opts.token, async () => {
+        const dir = repoDirVirtual(info.owner, info.repo);
+        const fs = makeRepoFs();
+        const fsRoot = clonesRoot();
 
-      const absVirtual = `${dir}/${opts.filePath}`;
-      const absUri = `${fsRoot}${absVirtual.replace(/^\//, '')}`;
-      await ensureParentDirs(fsRoot, absVirtual);
-      await FileSystem.writeAsStringAsync(absUri, opts.content);
+        await ensureOnBranch(fs, dir, opts.branch, opts.token);
 
-      await git.add({ fs, dir, filepath: opts.filePath });
+        try {
+          await GitFsService.pullWithFastForward({
+            repoPath: opts.repoPath,
+            branch: opts.branch,
+            token: opts.token,
+          });
+        } catch (pullError) {
+          console.warn('[LocalGitWriter] deleteAndCommit pull failed (continuing):', pullError);
+        }
 
-      // Skip empty commits when the file content already matches HEAD. This
-      // matters for the coalesced-push retry path: after a failed group-
-      // flush in `NoteSyncQueueService.drain`, the same item is re-run on
-      // the next drain. The file write replays identical content, so
-      // `git.add` is a no-op and committing again would pollute history
-      // with an empty commit. Net effect: failed pushes self-heal without
-      // history churn.
-      const fileStatus = await git.status({ fs, dir, filepath: opts.filePath });
-      const hasTreeChange = fileStatus !== 'unmodified';
-      if (hasTreeChange) {
+        const absUri = `${fsRoot}${info.owner}/${info.repo}/${opts.filePath}`;
+        await FileSystem.deleteAsync(absUri, { idempotent: true });
+
+        try {
+          await git.remove({ fs, dir, filepath: opts.filePath });
+        } catch (removeError) {
+          const code = (removeError as { code?: string }).code;
+          const errorMsg = removeError instanceof Error ? removeError.message : String(removeError);
+          if (code === 'NotFoundError' || code === 'ENOENT') {
+            if (isCorruptionError(errorMsg)) throw removeError;
+            return { success: true, filePath: opts.filePath };
+          }
+          throw removeError;
+        }
+
         await git.commit({
           fs,
           dir,
           message: opts.message,
           author: { name: opts.author.name, email: opts.author.email },
         });
-      }
 
-      if (opts.push !== false) {
+        if (opts.push !== false) {
+          try {
+            await git.push({
+              fs,
+              dir,
+              http: gitHttp,
+              ref: opts.branch,
+              remoteRef: opts.branch,
+              onAuth: tokenAuth(opts.token),
+            });
+          } catch (pushError) {
+            const raw = pushError instanceof Error ? pushError.message : String(pushError);
+            if (!isPushRejected(raw)) throw pushError;
+            const ffResult = await GitFsService.pullWithFastForward({
+              repoPath: opts.repoPath,
+              branch: opts.branch,
+              token: opts.token,
+            });
+            if (!ffResult.ok) {
+              const ffError = ffResult.error ?? '';
+              if (isCorruptionError(ffError)) {
+                const hasLocal = await hasUnpushedLocalCommits(opts.repoPath, opts.branch);
+                if (hasLocal) {
+                  throw new Error(
+                    `Clone corruption detected with unpushed local commits in ${opts.repoPath}@${opts.branch}. ` +
+                    `Please push your changes or reset before continuing.`,
+                  );
+                }
+                await GitFsService.removeRepo({ repoPath: opts.repoPath });
+                await GitFsService.clone({ repoPath: opts.repoPath, branch: opts.branch, token: opts.token });
+              } else {
+                throw new Error(`Push failed: ${ffResult.error ?? ffResult.reason}`);
+              }
+            }
+            await git.push({
+              fs,
+              dir,
+              http: gitHttp,
+              ref: opts.branch,
+              remoteRef: opts.branch,
+              onAuth: tokenAuth(opts.token),
+            });
+          }
+        }
+
+        return { success: true, filePath: opts.filePath };
+      });
+    } catch (e) {
+      const raw = e instanceof Error ? e.message : String(e);
+      console.warn('[LocalGitWriter] deleteAndCommit failed:', raw);
+      return { success: false, error: raw };
+    }
+  }
+
+  /**
+   * Push pending local commits to the remote without staging or committing
+   * anything new. Used by `NoteSyncQueueService.drain` to flush a coalesced
+   * batch of write calls that ran with `push: false` (issue #565 phase
+   * B.1). On non-fast-forward rejection we pull once and retry the push,
+   * mirroring the pattern in `writeAndCommit` / `deleteAndCommit`.
+   */
+static async push(opts: { repoPath: string; branch: string; token?: string }): Promise<
+    LocalGitWriterResult
+  > {
+    const info = parseRepoPath(opts.repoPath);
+    if (!info) return { success: false, error: `Invalid repo path: ${opts.repoPath}` };
+
+    try {
+      return await handleCorruptionAndRetry(opts.repoPath, opts.branch, opts.token, async () => {
+        const dir = repoDirVirtual(info.owner, info.repo);
+        const fs = makeRepoFs();
+        await ensureOnBranch(fs, dir, opts.branch, opts.token);
         try {
           await git.push({
             fs,
@@ -254,13 +448,8 @@ export class LocalGitWriter {
             ref: opts.branch,
             remoteRef: opts.branch,
             onAuth: tokenAuth(opts.token),
-            
           });
         } catch (pushError) {
-          // Same pull-then-retry shape as deleteAndCommit: when the
-          // remote rejects as non-fast-forward, pull once and try the
-          // push again. Doesn't re-stage / re-write — the local commit
-          // is already made and a clean fast-forward will replay it.
           const raw = pushError instanceof Error ? pushError.message : String(pushError);
           if (!isPushRejected(raw)) throw pushError;
           const ffResult = await GitFsService.pullWithFastForward({
@@ -280,29 +469,8 @@ export class LocalGitWriter {
               }
               await GitFsService.removeRepo({ repoPath: opts.repoPath });
               await GitFsService.clone({ repoPath: opts.repoPath, branch: opts.branch, token: opts.token });
-            } else if (ffResult.reason === 'diverged') {
-              const remoteRef = `refs/remotes/origin/${opts.branch}`;
-              const remoteOid = await git.resolveRef({ fs, dir, ref: remoteRef });
-              await git.writeRef({
-                fs,
-                dir,
-                ref: `refs/heads/${opts.branch}`,
-                value: remoteOid,
-                force: true,
-              });
-              await git.checkout({ fs, dir, ref: opts.branch, force: true });
-              await ensureParentDirs(fsRoot, absVirtual);
-              await FileSystem.writeAsStringAsync(absUri, opts.content);
-              await git.add({ fs, dir, filepath: opts.filePath });
-              const replayStatus = await git.status({ fs, dir, filepath: opts.filePath });
-              if (replayStatus !== 'unmodified') {
-                await git.commit({
-                  fs,
-                  dir,
-                  message: opts.message,
-                  author: { name: opts.author.name, email: opts.author.email },
-                });
-              }
+            } else {
+              throw new Error(`Push failed: ${ffResult.error ?? ffResult.reason}`);
             }
           }
           await git.push({
@@ -312,193 +480,10 @@ export class LocalGitWriter {
             ref: opts.branch,
             remoteRef: opts.branch,
             onAuth: tokenAuth(opts.token),
-            
           });
         }
-      }
-
-      return { success: true, filePath: opts.filePath };
-    } catch (e) {
-      const raw = e instanceof Error ? e.message : String(e);
-      console.warn('[LocalGitWriter] writeAndCommit failed:', raw);
-      return { success: false, error: raw };
-    }
-  }
-
-  /**
-   * Remove a tracked file from the working tree, stage + commit,
-   * optionally push. Pulls upstream first so the delete commit lands on
-   * top of any concurrent edits — otherwise the push gets rejected as
-   * non-fast-forward and the local row gets stranded (#567 fix C, the
-   * single most common clone-mode delete failure).
-   *
-   * Push gets one auto-retry after a fresh pull when the server returns
-   * a fast-forward / push-rejected error.
-   */
-  static async deleteAndCommit(opts: DeleteOpts): Promise<LocalGitWriterResult> {
-    const info = parseRepoPath(opts.repoPath);
-    if (!info) return { success: false, error: `Invalid repo path: ${opts.repoPath}` };
-
-    const dir = repoDirVirtual(info.owner, info.repo);
-    const fs = makeRepoFs();
-    const fsRoot = clonesRoot();
-
-    try {
-      await ensureOnBranch(fs, dir, opts.branch, opts.token);
-
-      // Best-effort pull so we delete from the latest tree state. Diverged
-      // local commits keep the existing path (commit lands locally and
-      // push will retry with a stricter error if the server rejects).
-      try {
-        await GitFsService.pullWithFastForward({
-          repoPath: opts.repoPath,
-          branch: opts.branch,
-          token: opts.token,
-        });
-      } catch (pullError) {
-        console.warn('[LocalGitWriter] deleteAndCommit pull failed (continuing):', pullError);
-      }
-
-      const absUri = `${fsRoot}${info.owner}/${info.repo}/${opts.filePath}`;
-      await FileSystem.deleteAsync(absUri, { idempotent: true });
-
-      // git.remove can fail when the path moved upstream / was already
-      // removed in a fresh pull. Treat NotFoundError as a no-op and
-      // short-circuit; the file is already gone, deletion is complete.
-      try {
-        await git.remove({ fs, dir, filepath: opts.filePath });
-      } catch (removeError) {
-        const code = (removeError as { code?: string }).code;
-        if (code === 'NotFoundError' || code === 'ENOENT') {
-          return { success: true, filePath: opts.filePath };
-        }
-        throw removeError;
-      }
-
-      await git.commit({
-        fs,
-        dir,
-        message: opts.message,
-        author: { name: opts.author.name, email: opts.author.email },
+        return { success: true };
       });
-
-      if (opts.push !== false) {
-        try {
-          await git.push({
-            fs,
-            dir,
-            http: gitHttp,
-            ref: opts.branch,
-            remoteRef: opts.branch,
-            onAuth: tokenAuth(opts.token),
-            
-          });
-        } catch (pushError) {
-const raw = pushError instanceof Error ? pushError.message : String(pushError);
-        if (!isPushRejected(raw)) throw pushError;
-        const ffResult = await GitFsService.pullWithFastForward({
-          repoPath: opts.repoPath,
-          branch: opts.branch,
-          token: opts.token,
-        });
-        if (!ffResult.ok) {
-          const ffError = ffResult.error ?? '';
-          if (isCorruptionError(ffError)) {
-            const hasLocal = await hasUnpushedLocalCommits(opts.repoPath, opts.branch);
-            if (hasLocal) {
-              throw new Error(
-                `Clone corruption detected with unpushed local commits in ${opts.repoPath}@${opts.branch}. ` +
-                `Please push your changes or reset before continuing.`,
-              );
-            }
-            await GitFsService.removeRepo({ repoPath: opts.repoPath });
-            await GitFsService.clone({ repoPath: opts.repoPath, branch: opts.branch, token: opts.token });
-          } else {
-            throw new Error(`Push failed: ${ffResult.error ?? ffResult.reason}`);
-          }
-        }
-        await git.push({
-            fs,
-            dir,
-            http: gitHttp,
-            ref: opts.branch,
-            remoteRef: opts.branch,
-            onAuth: tokenAuth(opts.token),
-            
-          });
-        }
-      }
-
-      return { success: true, filePath: opts.filePath };
-    } catch (e) {
-      const raw = e instanceof Error ? e.message : String(e);
-      console.warn('[LocalGitWriter] deleteAndCommit failed:', raw);
-      return { success: false, error: raw };
-    }
-  }
-
-  /**
-   * Push pending local commits to the remote without staging or committing
-   * anything new. Used by `NoteSyncQueueService.drain` to flush a coalesced
-   * batch of write calls that ran with `push: false` (issue #565 phase
-   * B.1). On non-fast-forward rejection we pull once and retry the push,
-   * mirroring the pattern in `writeAndCommit` / `deleteAndCommit`.
-   */
-  static async push(opts: { repoPath: string; branch: string; token?: string }): Promise<
-    LocalGitWriterResult
-  > {
-    const info = parseRepoPath(opts.repoPath);
-    if (!info) return { success: false, error: `Invalid repo path: ${opts.repoPath}` };
-
-    const dir = repoDirVirtual(info.owner, info.repo);
-    const fs = makeRepoFs();
-    try {
-      await ensureOnBranch(fs, dir, opts.branch, opts.token);
-      try {
-        await git.push({
-          fs,
-          dir,
-          http: gitHttp,
-          ref: opts.branch,
-          remoteRef: opts.branch,
-          onAuth: tokenAuth(opts.token),
-            
-        });
-      } catch (pushError) {
-        const raw = pushError instanceof Error ? pushError.message : String(pushError);
-        if (!isPushRejected(raw)) throw pushError;
-        const ffResult = await GitFsService.pullWithFastForward({
-          repoPath: opts.repoPath,
-          branch: opts.branch,
-          token: opts.token,
-        });
-        if (!ffResult.ok) {
-          const ffError = ffResult.error ?? '';
-          if (isCorruptionError(ffError)) {
-            const hasLocal = await hasUnpushedLocalCommits(opts.repoPath, opts.branch);
-            if (hasLocal) {
-              throw new Error(
-                `Clone corruption detected with unpushed local commits in ${opts.repoPath}@${opts.branch}. ` +
-                `Please push your changes or reset before continuing.`,
-              );
-            }
-            await GitFsService.removeRepo({ repoPath: opts.repoPath });
-            await GitFsService.clone({ repoPath: opts.repoPath, branch: opts.branch, token: opts.token });
-          } else {
-            throw new Error(`Push failed: ${ffResult.error ?? ffResult.reason}`);
-          }
-        }
-        await git.push({
-          fs,
-          dir,
-          http: gitHttp,
-          ref: opts.branch,
-          remoteRef: opts.branch,
-          onAuth: tokenAuth(opts.token),
-            
-        });
-      }
-      return { success: true };
     } catch (e) {
       const raw = e instanceof Error ? e.message : String(e);
       console.warn('[LocalGitWriter] push failed:', raw);
