@@ -269,6 +269,7 @@ static async writeAndCommit(opts: WriteOpts): Promise<LocalGitWriterResult> {
                 }
                 await GitFsService.removeRepo({ repoPath: opts.repoPath });
                 await GitFsService.clone({ repoPath: opts.repoPath, branch: opts.branch, token: opts.token });
+                throw new Error('Clone recovered, retrying operation');
               } else if (ffResult.reason === 'diverged') {
                 const remoteRef = `refs/remotes/origin/${opts.branch}`;
                 const remoteOid = await git.resolveRef({ fs, dir, ref: remoteRef });
@@ -398,6 +399,7 @@ static async deleteAndCommit(opts: DeleteOpts): Promise<LocalGitWriterResult> {
                 }
                 await GitFsService.removeRepo({ repoPath: opts.repoPath });
                 await GitFsService.clone({ repoPath: opts.repoPath, branch: opts.branch, token: opts.token });
+                throw new Error('Clone recovered, retrying operation');
               } else {
                 throw new Error(`Push failed: ${ffResult.error ?? ffResult.reason}`);
               }
