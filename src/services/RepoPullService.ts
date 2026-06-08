@@ -77,10 +77,23 @@ async function getRepoReader(
               GitFsService.readFile({ repoPath, ref: remoteRefName, filepath: path }),
           };
         }
-        throw new Error(
-          `Local repo ${repoPath}@${branch} pull failed (${result.reason}). ` +
-            `Push or reset your local commits before the next pull.`,
-        );
+        const errorMsg = result.error ?? '';
+         const isMissingObject = /Could not find|not foundobject|NotFoundError/i.test(errorMsg);
+                if (isMissingObject) {
+                  console.warn(`[RepoPullService] clone appears corrupted (${errorMsg}), re-cloning...`);
+                  await GitFsService.removeRepo({ repoPath });
+                  await GitFsService.clone({ repoPath, branch, token });
+                  return {
+                    mode,
+                    listTree: () => GitFsService.listTree({ repoPath, ref: branch }),
+                    readFile: (path: string) =>
+                      GitFsService.readFile({ repoPath, ref: branch, filepath: path }),
+                  };
+                }
+                throw new Error(
+                  `Local repo ${repoPath}@${branch} pull failed (${result.reason}). ` +
+                    `Push or reset your local commits before the next pull.`,
+                );
       }
     }
     return {
