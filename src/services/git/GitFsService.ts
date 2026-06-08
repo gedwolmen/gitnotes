@@ -248,7 +248,13 @@ export class GitFsService {
       return new TextDecoder('utf-8').decode(blob);
     } catch (e) {
       const code = (e as { code?: string }).code;
-      if (code === 'NotFoundError' || code === 'ENOENT') return null;
+      const msg = e instanceof Error ? e.message : String(e);
+      if (code === 'NotFoundError' || code === 'ENOENT') {
+        if (/Could not find|not foundobject|NotFoundError/i.test(msg)) {
+          throw e;
+        }
+        return null;
+      }
       throw e;
     }
   }
