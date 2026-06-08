@@ -471,6 +471,7 @@ static async push(opts: { repoPath: string; branch: string; token?: string }): P
               }
               await GitFsService.removeRepo({ repoPath: opts.repoPath });
               await GitFsService.clone({ repoPath: opts.repoPath, branch: opts.branch, token: opts.token });
+              return { success: false, error: 'Clone corruption detected, push failed. Please retry.' };
             } else {
               throw new Error(`Push failed: ${ffResult.error ?? ffResult.reason}`);
             }
