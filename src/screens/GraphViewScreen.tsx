@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Pressable, LayoutChangeEvent } from 'react-native';
-import { Canvas, Skia, Path, Circle, Group } from '@shopify/react-native-skia';
+import { Canvas, Skia, Path } from '@shopify/react-native-skia';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -79,6 +79,10 @@ export default function GraphViewScreen() {
   const localNodesRef = useRef<GraphNode[]>([]);
   const [localNodes, setLocalNodes] = useState<GraphNode[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+
+  const CONTENT_PREVIEW_LENGTH = 120;
+  const EXPANDED_LENGTH = 300;
 
   const { nodes, edges } = useMemo(() => {
     if (!notes.length) {
@@ -365,6 +369,47 @@ export default function GraphViewScreen() {
     draggingNodeIdRef.current = null;
   }, []);
 
+  const toggleNodeExpanded = useCallback((nodeId: string) => {
+    setExpandedNodes((prev) => {
+      const next = new Set(prev);
+      if (next.has(nodeId)) {
+        next.delete(nodeId);
+      } else {
+        next.add(nodeId);
+      }
+      return next;
+    });
+  }, []);
+
+  const getNodeDimensions = useCallback((node: GraphNode, isExpanded: boolean) => {
+    const content = node.note.content;
+    const isLong = content.length > CONTENT_PREVIEW_LENGTH;
+    const displayContent = isExpanded || !isLong
+      ? content.slice(0, EXPANDED_LENGTH)
+      : content.slice(0, CONTENT_PREVIEW_LENGTH);
+
+    // Calculate approximate size based on content length
+    const baseWidth = 100;
+    const baseHeight = 60;
+    const charWidth = 7;
+    const lineHeight = 18;
+
+    const maxWidth = isExpanded ? 280 : baseWidth;
+    const charsPerLine = Math.floor(maxWidth / charWidth);
+    const lines = Math.ceil(displayContent.length / charsPerLine);
+    const textHeight = Math.min(lines * lineHeight, isExpanded ? 200 : 80);
+
+    const width = Math.min(maxWidth, displayContent.length * charWidth + 24);
+    const height = textHeight + 40; // padding for title and expand indicator
+
+    return {
+      width: Math.max(100, Math.min(width, 300)),
+      height: Math.max(60, Math.min(height, 240)),
+      isLong,
+      displayContent,
+    };
+  }, []);
+
   const getNodeColor = useCallback(
     (node: GraphNode) => {
       if (node.note.color) {
@@ -491,65 +536,57 @@ export default function GraphViewScreen() {
                     strokeWidth={selectedNodeId ? 2.5 : 1.5}
                     opacity={0.4}
                   />
-
-                  {localNodes.map((node) => {
-                    const isHighlighted = isNodeHighlighted(node);
-                    const nodeAlpha = getNodeAlpha(node);
-                    const nodeScale = getNodeScale(node);
-                    const baseRadius = (NODE_SIZE / 2) * nodeScale;
-                    const ringRadius = isHighlighted ? baseRadius + 8 : baseRadius + 4;
-                    return (
-                      <Group key={node.id} opacity={nodeAlpha}>
-                        <Circle
-                          cx={node.x}
-                          cy={node.y}
-                          r={ringRadius}
-                          color={isHighlighted ? colors.primary : colors.background}
-                        />
-                        <Circle
-                          cx={node.x}
-                          cy={node.y}
-                          r={baseRadius}
-                          color={getNodeColor(node)}
-                        />
-                      </Group>
-                    );
-                  })}
                 </Canvas>
 
-                {localNodes.map((node) => (
-                  <Pressable
-                    key={node.id}
-                    onPress={() => handleNodePress(node.id)}
-                    onLongPress={() => handleNodeLongPress(node)}
-                    onPressIn={() => handleNodeDragStart(node.id)}
-                    style={[
-                      styles.nodeTouchable,
-                      {
-                        left: node.x - NODE_SIZE / 2,
-                        top: node.y - NODE_SIZE / 2,
-                        width: NODE_SIZE,
-                        height: NODE_SIZE,
-                      },
-                    ]}
-                  >
-                    <View
+                {localNodes.map((node) => {
+                  const isHighlighted = isNodeHighlighted(node);
+                  const nodeAlpha = getNodeAlpha(node);
+                  const isExpanded = expandedNodes.has(node.id);
+                  const dims = getNodeDimensions(node, isExpanded);
+                  return (
+                    <Pressable
+                      key={node.id}
+                      onPress={() => handleNodePress(node.id)}
+                      onLongPress={() => handleNodeLongPress(node)}
+                      onPressIn={() => handleNodeDragStart(node.id)}
                       style={[
-                        styles.nodeInner,
-                        { backgroundColor: getNodeColor(node) },
+                        styles.nodeCard,
+                        {
+                          left: node.x - dims.width / 2,
+                          top: node.y - dims.height / 2,
+                          width: dims.width,
+                          height: dims.height,
+                          opacity: nodeAlpha,
+                          borderColor: isHighlighted ? colors.primary : getNodeColor(node),
+                          backgroundColor: colors.surface,
+                        },
                       ]}
                     >
-                      <Text style={styles.nodeText} numberOfLines={2}>
-                        {getNodeDisplayTitle(node.note.title, 9)}
+                      <Text style={[styles.nodeCardTitle, { color: colors.text }]} numberOfLines={1}>
+                        {node.note.title}
                       </Text>
-                    </View>
-                    <View style={[styles.nodeBadge, { backgroundColor: colors.surface }]}>
-                      <Text style={[styles.nodeBadgeText, { color: colors.text }]}>
-                        {node.connections.size}
+                      <Text style={[styles.nodeCardContent, { color: colors.textSecondary }]} numberOfLines={isExpanded ? 10 : 3}>
+                        {dims.displayContent}
                       </Text>
-                    </View>
-                  </Pressable>
-                ))}
+                      {dims.isLong && (
+                        <TouchableOpacity
+                          style={[styles.expandButton, { backgroundColor: getNodeColor(node) }]}
+                          onPress={() => toggleNodeExpanded(node.id)}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Text style={styles.expandButtonText}>
+                            {isExpanded ? '▲' : '▼'}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                      <View style={[styles.nodeBadge, { backgroundColor: colors.surface }]}>
+                        <Text style={[styles.nodeBadgeText, { color: colors.text }]}>
+                          {node.connections.size}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
               </View>
             </Animated.View>
           </GestureDetector>
@@ -602,41 +639,50 @@ const styles = StyleSheet.create({
   content: { flex: 1 },
   searchContainer: { paddingHorizontal: 16, paddingVertical: 8 },
   canvasWrapper: { flex: 1 },
-  nodeTouchable: {
+  nodeCard: {
     position: 'absolute',
-    borderRadius: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  nodeInner: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 6,
+    borderRadius: 12,
+    borderWidth: 2,
+    padding: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
   },
-  nodeText: {
-    color: '#ffffff',
-    fontSize: 10,
+  nodeCardTitle: {
+    fontSize: 13,
     fontWeight: '700',
-    textAlign: 'center',
+    marginBottom: 4,
+  },
+  nodeCardContent: {
+    fontSize: 11,
+    lineHeight: 15,
+    flex: 1,
+  },
+  expandButton: {
+    alignSelf: 'flex-end',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  expandButtonText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '700',
   },
   nodeBadge: {
     position: 'absolute',
-    bottom: -2,
-    right: -2,
+    top: -8,
+    right: -8,
     minWidth: 20,
     height: 20,
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 4,
+    borderWidth: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
