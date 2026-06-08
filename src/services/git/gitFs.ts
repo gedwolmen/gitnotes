@@ -19,10 +19,16 @@ function base64ToBytes(b64: string): Uint8Array {
   return out;
 }
 
+/**
+ * Encode a Uint8Array as base64 using the global `Buffer` polyfill (installed
+ * via src/polyfills.ts for isomorphic-git). Buffer's base64 path is implemented
+ * in optimized native code and avoids the per-byte String.fromCharCode + btoa
+ * loop the previous hand-rolled encoder did — that loop was the single biggest
+ * CPU hog during a clone, freezing the JS thread and stalling taps for ~30s on
+ * repos with non-trivial packfile sizes.
+ */
 function bytesToBase64(bytes: Uint8Array): string {
-  let bin = '';
-  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-  return globalThis.btoa(bin);
+  return Buffer.from(bytes).toString('base64');
 }
 
 function joinUri(root: string, virtualPath: string): string {
@@ -36,6 +42,7 @@ async function ensureParentDirs(
   fileUri: string,
   rootUri: string,
   fs: typeof FileSystem,
+  existingDirs: Set<string>,
 ): Promise<void> {
   // expo-file-system's writeAsStringAsync errors with "folder doesn't exist"
   // when any ancestor of the target path is missing. isomorphic-git issues
@@ -48,10 +55,12 @@ async function ensureParentDirs(
   let acc = rootUri;
   for (const part of parts) {
     acc = acc + part + '/';
+    if (existingDirs.has(acc)) continue;
     const info = await fs.getInfoAsync(acc);
     if (!info.exists) {
       await fs.makeDirectoryAsync(acc, { intermediates: true });
     }
+    existingDirs.add(acc);
   }
 }
 
@@ -70,6 +79,34 @@ export function makeGitFs(root: string): PromiseFsClient {
   if (!root.endsWith('/')) {
     throw new Error(`gitFs root must end with '/': ${root}`);
   }
+
+  // Cache of directory URIs known to exist under `root`. Cloning produces
+  // thousands of writes into the same handful of ancestors (.git/objects/xx,
+  // .git/objects/pack, the working tree) — a getInfoAsync per ancestor per
+  // write saturated the JS thread with native bridge roundtrips. The cache
+  // collapses all ancestor lookups for an already-created directory to a
+  // single Set.has() check.
+  const existingDirs = new Set<string>([root]);
+
+  // Yield to the event loop every N writes. Cloning 10k+ objects still
+  // accumulates JS-thread work even after the ancestor + base64 fixes;
+  // without periodic yields, taps queued in the bridge would still see
+  // multi-second latency on the largest repos. Bounded counter so the
+  // yield cost itself stays a tiny fraction of total clone time.
+  const YIELD_EVERY_N_WRITES = 50;
+  let writesSinceYield = 0;
+  const maybeYield = () => {
+    writesSinceYield += 1;
+    if (writesSinceYield < YIELD_EVERY_N_WRITES) return Promise.resolve();
+    writesSinceYield = 0;
+    return new Promise<void>((resolve) => {
+      if (typeof setImmediate === 'function') {
+        setImmediate(resolve);
+      } else {
+        setTimeout(resolve, 0);
+      }
+    });
+  };
 
   const promises = {
     async readFile(filepath: string, opts?: ReadOpts | string): Promise<string | Uint8Array> {
@@ -97,7 +134,7 @@ export function makeGitFs(root: string): PromiseFsClient {
       opts?: ReadOpts | string,
     ): Promise<void> {
       const uri = joinUri(root, filepath);
-      await ensureParentDirs(uri, root, FileSystem);
+      await ensureParentDirs(uri, root, FileSystem, existingDirs);
       if (typeof data === 'string') {
         const encoding = typeof opts === 'string' ? opts : opts?.encoding;
         if (encoding && encoding !== 'utf8') {
@@ -108,6 +145,7 @@ export function makeGitFs(root: string): PromiseFsClient {
             await FileSystem.writeAsStringAsync(uri, data, {
               encoding: FileSystem.EncodingType.Base64,
             });
+            await maybeYield();
             return;
           }
           throw new FsError(
@@ -116,11 +154,13 @@ export function makeGitFs(root: string): PromiseFsClient {
           );
         }
         await FileSystem.writeAsStringAsync(uri, data);
+        await maybeYield();
       } else {
         const b64 = bytesToBase64(data);
         await FileSystem.writeAsStringAsync(uri, b64, {
           encoding: FileSystem.EncodingType.Base64,
         });
+        await maybeYield();
       }
     },
 
@@ -157,6 +197,7 @@ export function makeGitFs(root: string): PromiseFsClient {
       // on EEXIST as the only error for "already there", which we still emit
       // via the explicit existence check above.
       await FileSystem.makeDirectoryAsync(uri, { intermediates: true });
+      existingDirs.add(uri.endsWith('/') ? uri : uri + '/');
     },
 
     async rmdir(filepath: string): Promise<void> {
