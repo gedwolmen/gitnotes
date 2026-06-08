@@ -282,6 +282,15 @@ static async writeAndCommit(opts: WriteOpts): Promise<LocalGitWriterResult> {
                     author: { name: opts.author.name, email: opts.author.email },
                   });
                 }
+                await git.push({
+                  fs,
+                  dir,
+                  http: gitHttp,
+                  ref: opts.branch,
+                  remoteRef: opts.branch,
+                  onAuth: tokenAuth(opts.token),
+                });
+                return { success: true, filePath: opts.filePath };
               } else if (ffResult.reason === 'diverged') {
                 const remoteRef = `refs/remotes/origin/${opts.branch}`;
                 const remoteOid = await git.resolveRef({ fs, dir, ref: remoteRef });
@@ -305,6 +314,15 @@ static async writeAndCommit(opts: WriteOpts): Promise<LocalGitWriterResult> {
                     author: { name: opts.author.name, email: opts.author.email },
                   });
                 }
+                await git.push({
+                  fs,
+                  dir,
+                  http: gitHttp,
+                  ref: opts.branch,
+                  remoteRef: opts.branch,
+                  onAuth: tokenAuth(opts.token),
+                });
+                return { success: true, filePath: opts.filePath };
               }
             }
             await git.push({
@@ -421,6 +439,15 @@ static async deleteAndCommit(opts: DeleteOpts): Promise<LocalGitWriterResult> {
                   message: opts.message,
                   author: { name: opts.author.name, email: opts.author.email },
                 });
+                await git.push({
+                  fs,
+                  dir,
+                  http: gitHttp,
+                  ref: opts.branch,
+                  remoteRef: opts.branch,
+                  onAuth: tokenAuth(opts.token),
+                });
+                return { success: true, filePath: opts.filePath };
               } else {
                 throw new Error(`Push failed: ${ffResult.error ?? ffResult.reason}`);
               }
