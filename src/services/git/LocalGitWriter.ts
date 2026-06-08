@@ -269,7 +269,19 @@ static async writeAndCommit(opts: WriteOpts): Promise<LocalGitWriterResult> {
                 }
                 await GitFsService.removeRepo({ repoPath: opts.repoPath });
                 await GitFsService.clone({ repoPath: opts.repoPath, branch: opts.branch, token: opts.token });
-                throw new Error('Clone corruption detected during push, recovered and retrying');
+                await ensureOnBranch(fs, dir, opts.branch, opts.token);
+                await ensureParentDirs(fsRoot, absVirtual);
+                await FileSystem.writeAsStringAsync(absUri, opts.content);
+                await git.add({ fs, dir, filepath: opts.filePath });
+                const replayStatus = await git.status({ fs, dir, filepath: opts.filePath });
+                if (replayStatus !== 'unmodified') {
+                  await git.commit({
+                    fs,
+                    dir,
+                    message: opts.message,
+                    author: { name: opts.author.name, email: opts.author.email },
+                  });
+                }
               } else if (ffResult.reason === 'diverged') {
                 const remoteRef = `refs/remotes/origin/${opts.branch}`;
                 const remoteOid = await git.resolveRef({ fs, dir, ref: remoteRef });
@@ -399,7 +411,16 @@ static async deleteAndCommit(opts: DeleteOpts): Promise<LocalGitWriterResult> {
                 }
                 await GitFsService.removeRepo({ repoPath: opts.repoPath });
                 await GitFsService.clone({ repoPath: opts.repoPath, branch: opts.branch, token: opts.token });
-                throw new Error('Clone corruption detected during push, recovered and retrying');
+                await ensureOnBranch(fs, dir, opts.branch, opts.token);
+                const absUri = `${fsRoot}${info.owner}/${info.repo}/${opts.filePath}`;
+                await FileSystem.deleteAsync(absUri, { idempotent: true });
+                await git.remove({ fs, dir, filepath: opts.filePath });
+                await git.commit({
+                  fs,
+                  dir,
+                  message: opts.message,
+                  author: { name: opts.author.name, email: opts.author.email },
+                });
               } else {
                 throw new Error(`Push failed: ${ffResult.error ?? ffResult.reason}`);
               }
