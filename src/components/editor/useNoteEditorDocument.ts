@@ -13,6 +13,7 @@ import { HapticService } from '../../utils/haptics';
 import { useUndo } from '../../utils/useUndo';
 import { syncNoteToGitHub } from '../../services/NoteGitHubSyncService';
 import { NoteSyncQueueService } from '../../services/NoteSyncQueueService';
+import { githubActivity } from '../../stores/githubActivityStore';
 import { canvasToLink } from '../../models/Canvas';
 import { getExtensionForFormat, extractCanvasJsonRefs, slugifyLocal } from './editorShared';
 
@@ -229,7 +230,7 @@ export function useNoteEditorDocument({
       let savedNoteId = noteId;
 
       if (noteId) {
-        await updateNote({
+        const updated = await updateNote({
           id: noteId,
           title: title.trim(),
           content: content.trim(),
@@ -242,6 +243,11 @@ export function useNoteEditorDocument({
           attachments,
           accountId,
         });
+        if (!updated) {
+          HapticService.error();
+          Alert.alert('Error', 'Failed to save note locally. Please try again.');
+          return;
+        }
         setHasChanges(false);
         setIsEditing(false);
         HapticService.success();
@@ -258,61 +264,127 @@ export function useNoteEditorDocument({
           attachments,
           accountId,
         });
-        savedNoteId = newNote?.id;
+        if (!newNote?.id) {
+          HapticService.error();
+          Alert.alert('Error', 'Failed to save note locally. Please try again.');
+          return;
+        }
+        savedNoteId = newNote.id;
         HapticService.success();
-        // Navigate back immediately for new notes - don't wait for sync
-        navigation.goBack();
       }
 
-      // Defer GitHub sync to after UI update to prevent app from getting stuck
       if (repo && savedNoteId) {
-        // Fire-and-forget sync - don't await
-        void (async () => {
-          try {
-            const existingForColor = getNoteByIdRef.current(savedNoteId);
-            const syncParams = {
-              repo,
-              branch,
-              filePath: existingFilePath ?? (folderPath ? `${folderPath}/${slugifyLocal(title.trim())}${getExtensionForFormat(noteFormat)}` : undefined),
-              title: title.trim(),
-              content: content.trim(),
-              format: noteFormat,
-              accountId,
-              tags,
-              color: existingForColor?.color ?? null,
-              knownSha: commit,
-            };
+        githubActivity.begin('Pushing note…');
+        try {
+          const existingForColor = getNoteByIdRef.current(savedNoteId);
+          const syncParams = {
+            repo,
+            branch,
+            filePath: existingFilePath ?? (folderPath ? `${folderPath}/${slugifyLocal(title.trim())}${getExtensionForFormat(noteFormat)}` : undefined),
+            title: title.trim(),
+            content: content.trim(),
+            format: noteFormat,
+            accountId,
+            tags,
+            color: existingForColor?.color ?? null,
+            knownSha: commit,
+          };
 
-            const syncResult = await syncNoteToGitHub(syncParams);
+          const syncResult = await syncNoteToGitHub(syncParams);
 
-            if (syncResult.success && syncResult.filePath) {
-              await updateNote({
-                id: savedNoteId,
-                filePath: syncResult.filePath,
-                ...(syncResult.finalContent != null && syncResult.finalContent !== content.trim()
-                  ? { content: syncResult.finalContent }
-                  : {}),
-              });
-            } else {
-              await NoteSyncQueueService.enqueueNoteUpsert(syncParams, savedNoteId);
+          if (syncResult.success && syncResult.filePath) {
+            const updated = await updateNote({
+              id: savedNoteId,
+              filePath: syncResult.filePath,
+              ...(syncResult.finalContent != null && syncResult.finalContent !== content.trim()
+                ? { content: syncResult.finalContent }
+                : {}),
+            });
+            if (!updated) {
+              Alert.alert(
+                'Partial Save',
+                'Your note was pushed to GitHub but local metadata could not be updated.',
+                [{ text: 'OK' }],
+              );
             }
-          } catch (error) {
-            console.warn('[useNoteEditorDocument] syncNoteToGitHub failed:', error);
-            const existingForColor = getNoteByIdRef.current(savedNoteId);
-            const syncParams = {
-              repo,
-              branch,
-              filePath: existingFilePath ?? (folderPath ? `${folderPath}/${slugifyLocal(title.trim())}${getExtensionForFormat(noteFormat)}` : undefined),
-              title: title.trim(),
-              content: content.trim(),
-              format: noteFormat,
-              accountId,
-              tags,
-              color: existingForColor?.color ?? null,
-            };
-            await NoteSyncQueueService.enqueueNoteUpsert(syncParams, savedNoteId);
+          } else {
+            const error = syncResult.error!;
+            if (error.includes('Conflict') || error.includes('conflict')) {
+              Alert.alert(
+                'Sync Conflict',
+                'This note was modified on GitHub since you last loaded it. Pull to get the latest version and resolve the conflict.',
+                [{ text: 'OK' }],
+              );
+            } else if (error.includes('not authenticated') || error.includes('401') || error.includes('403')) {
+              Alert.alert(
+                'Authentication Required',
+                'Please check your GitHub credentials in Settings.',
+                [{ text: 'OK' }],
+              );
+            } else if (error.includes('Invalid repo') || error.includes('invalid repo')) {
+              Alert.alert(
+                'Invalid Repository',
+                'The repository path is invalid. Please check your settings.',
+                [{ text: 'OK' }],
+              );
+            } else if (error.includes('exceeding 5 MB') || error.includes('too large')) {
+              Alert.alert(
+                'File Too Large',
+                'This note exceeds the 5 MB size limit and cannot be synced.',
+                [{ text: 'OK' }],
+              );
+            } else {
+              try {
+                await NoteSyncQueueService.enqueueNoteUpsert(syncParams, savedNoteId);
+                Alert.alert(
+                  'Note Saved Locally',
+                  'Your note was saved but could not be pushed to GitHub yet. It will sync automatically when connection is restored.',
+                  [{ text: 'OK' }],
+                );
+              } catch {
+                Alert.alert(
+                  'Save Failed',
+                  'Your note was saved locally but could not be queued for sync. Please try again.',
+                  [{ text: 'OK' }],
+                );
+              }
+            }
           }
-        })();
+        } catch (error) {
+          console.warn('[useNoteEditorDocument] syncNoteToGitHub threw:', error);
+          const existingForColor = getNoteByIdRef.current(savedNoteId);
+          const syncParams = {
+            repo,
+            branch,
+            filePath: existingFilePath ?? (folderPath ? `${folderPath}/${slugifyLocal(title.trim())}${getExtensionForFormat(noteFormat)}` : undefined),
+            title: title.trim(),
+            content: content.trim(),
+            format: noteFormat,
+            accountId,
+            tags,
+            color: existingForColor?.color ?? null,
+          };
+          try {
+            await NoteSyncQueueService.enqueueNoteUpsert(syncParams, savedNoteId);
+            Alert.alert(
+              'Note Saved Locally',
+              'Your note was saved but could not be pushed to GitHub yet. It will sync automatically when connection is restored.',
+              [{ text: 'OK' }],
+            );
+          } catch {
+            Alert.alert(
+              'Save Failed',
+              'Your note was saved locally but could not be queued for sync. Please try again.',
+              [{ text: 'OK' }],
+            );
+          }
+        } finally {
+          githubActivity.end();
+        }
+      }
+
+      if (!noteId) {
+        navigation.goBack();
       }
     } catch {
       HapticService.error();

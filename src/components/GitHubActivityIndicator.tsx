@@ -1,16 +1,27 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTokens } from '../contexts/ThemeContext';
 import { useGitHubActivityStore } from '../stores/githubActivityStore';
+import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 
 export function GitHubActivityIndicator() {
   const { colors, radii, spacing, type } = useTokens();
   const visible = useGitHubActivityStore((s) => s.visible);
   const label = useGitHubActivityStore((s) => s.label);
+  const [pendingCount, setPendingCount] = useState(0);
 
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(-12)).current;
+
+  useEffect(() => {
+    const refreshPending = () => {
+      NoteSyncQueueService.pendingCount().then(setPendingCount);
+    };
+    refreshPending();
+    const unsubscribe = NoteSyncQueueService.subscribe(refreshPending);
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     Animated.parallel([
@@ -33,6 +44,7 @@ export function GitHubActivityIndicator() {
     <Animated.View
       pointerEvents="none"
       style={[styles.root, { opacity, transform: [{ translateY }] }]}
+      testID="github-activity-indicator"
     >
       <SafeAreaView edges={['top']} style={styles.safe}>
         <View
@@ -54,6 +66,7 @@ export function GitHubActivityIndicator() {
             numberOfLines={1}
           >
             {label ?? 'Syncing with GitHub…'}
+            {pendingCount > 0 ? ` (${pendingCount} pending)` : ''}
           </Text>
         </View>
       </SafeAreaView>

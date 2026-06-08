@@ -19,7 +19,6 @@ import { useResponsive } from '../hooks/useResponsive';
 import { getMarkdownStyles } from '../utils/preview';
 import { useRenderStyle } from '../stores/renderStyleStore';
 import { GitHubActivityIndicator } from '../components/GitHubActivityIndicator';
-import { githubActivity } from '../stores/githubActivityStore';
 import { CanvasPickerModal } from '../components/editor/CanvasPickerModal';
 import { EditorHeader } from '../components/editor/EditorHeader';
 import { EditorToolbar } from '../components/editor/EditorToolbar';
@@ -162,14 +161,7 @@ function NoteEditorScreenInner() {
     <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: colors.surface }]}> 
       {document.isSaving ? <GitHubActivityIndicator /> : null}
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
-        <EditorHeader noteId={noteId} isSaving={document.isSaving} onCancel={document.handleCancelEdit} onSave={async () => {
-          githubActivity.begin('Saving note…');
-          try {
-            await document.handleSave();
-          } finally {
-            githubActivity.end();
-          }
-        }} />
+        <EditorHeader noteId={noteId} isSaving={document.isSaving} onCancel={document.handleCancelEdit} onSave={document.handleSave} />
 
         <EditorToolbar
           canUndo={document.canUndo}
