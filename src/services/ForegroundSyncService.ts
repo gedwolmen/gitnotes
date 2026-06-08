@@ -18,6 +18,7 @@ import { pullAllFromRepos } from './RepoPullService';
  *   - coalesces overlapping triggers via `inFlight` and a 2-second debounce
  *     so that AppState→active and online→online firing together don't queue
  *     two pulls back-to-back
+ *   - backs off after failures to prevent continuous UI blocking
  */
 
 const COALESCE_WINDOW_MS = 2000;
@@ -36,6 +37,11 @@ let currentSyncFrequentlyEnabled = true;
 
 let lastNetReachable: boolean | null = null;
 let lastAppState: AppStateStatus = AppState.currentState;
+
+let consecutiveFailures = 0;
+let lastFailedAt = 0;
+const BASE_BACKOFF_MS = 30_000;
+const MAX_BACKOFF_MS = 300_000;
 
 const listeners = new Set<Listener>();
 
@@ -58,10 +64,6 @@ async function shouldPull(): Promise<boolean> {
   return reachable;
 }
 
-// Hard upper-bound on a single pull tick. If a `pullAllFromRepos()` call hangs
-// (network stall, frozen XHR), this watchdog releases `inFlight` so the next
-// tick can run. Without it, one bad tick wedges the foreground watcher for
-// the rest of the session (#620 / #623).
 const PULL_WATCHDOG_MS = 60_000;
 
 async function runPull(reason: string): Promise<void> {
@@ -78,6 +80,14 @@ async function runPull(reason: string): Promise<void> {
     return;
   }
 
+  if (consecutiveFailures > 0) {
+    const backoffMs = Math.min(BASE_BACKOFF_MS * Math.pow(2, consecutiveFailures - 1), MAX_BACKOFF_MS);
+    if (Date.now() - lastFailedAt < backoffMs) {
+      if (__DEV__) console.log(`[ForegroundSync] skip (${reason}): backoff ${Math.round(backoffMs / 1000)}s`);
+      return;
+    }
+  }
+
   inFlight = true;
   lastRunAt = Date.now();
   notify();
@@ -91,8 +101,10 @@ async function runPull(reason: string): Promise<void> {
   });
 
   const startedAt = Date.now();
+  let success = false;
   try {
     await Promise.race([pullAllFromRepos(), watchdogPromise]);
+    success = true;
     if (__DEV__) {
       console.log(`[ForegroundSync] pull (${reason}) ok in ${Date.now() - startedAt}ms`);
     }
@@ -102,6 +114,12 @@ async function runPull(reason: string): Promise<void> {
     if (watchdog !== null) clearTimeout(watchdog);
     inFlight = false;
     lastRunAt = Date.now();
+    if (success) {
+      consecutiveFailures = 0;
+    } else {
+      consecutiveFailures++;
+      lastFailedAt = Date.now();
+    }
     notify();
   }
 }
@@ -155,9 +173,6 @@ export function startForegroundWatcher(config: ForegroundSyncConfig): void {
       const reachable = state.isInternetReachable ?? state.isConnected ?? false;
       handleNetInfo(reachable);
     });
-    // Seed the last-known reachability so the very first event isn't
-    // misread as "came online" (otherwise the watcher would pull every
-    // mount on a connected device).
     NetInfo.fetch()
       .then((state) => {
         lastNetReachable = state.isInternetReachable ?? state.isConnected ?? false;
@@ -202,17 +217,17 @@ export function subscribeForegroundSync(listener: Listener): () => void {
   };
 }
 
-// Test-only: manual trigger so unit tests don't have to fake AppState/NetInfo.
 export async function __runPullForTest(reason = 'test'): Promise<void> {
   await runPull(reason);
 }
 
-// Test-only: reset internal state so each test starts fresh.
 export function __resetForegroundSyncForTest(): void {
   stopForegroundWatcher();
   inFlight = false;
   lastRunAt = 0;
   currentIntervalSeconds = 0;
   currentSyncFrequentlyEnabled = true;
+  consecutiveFailures = 0;
+  lastFailedAt = 0;
   listeners.clear();
 }
