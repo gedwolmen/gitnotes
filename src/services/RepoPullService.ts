@@ -17,6 +17,41 @@ import { ConflictResolverService } from './conflict/ConflictResolverService';
 import { useConflictStore } from '../stores/conflictStore';
 import { NoteSyncQueueService } from './NoteSyncQueueService';
 
+async function hasUnpushedCommits(repoPath: string, branch: string): Promise<boolean> {
+  try {
+    const localRef = `refs/heads/${branch}`;
+    const remoteRef = `refs/remotes/origin/${branch}`;
+    const mergeBase = await GitFsService.findMergeBase({ repoPath, ref1: localRef, ref2: remoteRef });
+    if (mergeBase === null) return true;
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+async function handleCorruptionErrors<T>(fn: () => Promise<T>, repoPath: string, branch: string, token?: string): Promise<T> {
+  try {
+    return await fn();
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    const isMissingObject = /Could not find|not foundobject|NotFoundError/i.test(errorMsg);
+    if (isMissingObject) {
+      console.warn(`[RepoPullService] corruption detected during operation, re-cloning...`);
+      const hasLocalCommits = await hasUnpushedCommits(repoPath, branch);
+      if (hasLocalCommits) {
+        throw new Error(
+          `Clone corruption detected in ${repoPath}@${branch} with unpushed local commits. ` +
+          `Please push your changes or reset before continuing.`,
+        );
+      }
+      await GitFsService.removeRepo({ repoPath });
+      await GitFsService.clone({ repoPath, branch, token: token ?? undefined });
+      return fn();
+    }
+    throw error;
+  }
+}
+
 /**
  * Picks the read transport for a repo based on the user's per-repo
  * SyncEngineService toggle. In 'clone' mode the working copy is cloned
@@ -72,15 +107,23 @@ async function getRepoReader(
           const remoteRefName = `refs/remotes/origin/${branch}`;
           return {
             mode,
-            listTree: () => GitFsService.listTree({ repoPath, ref: remoteRefName }),
+            listTree: () => handleCorruptionErrors(() => GitFsService.listTree({ repoPath, ref: remoteRefName }), repoPath, branch, token),
             readFile: (path: string) =>
-              GitFsService.readFile({ repoPath, ref: remoteRefName, filepath: path }),
+              handleCorruptionErrors(() => GitFsService.readFile({ repoPath, ref: remoteRefName, filepath: path }), repoPath, branch, token),
           };
         }
         const errorMsg = result.error ?? '';
          const isMissingObject = /Could not find|not foundobject|NotFoundError/i.test(errorMsg);
                 if (isMissingObject) {
                   console.warn(`[RepoPullService] clone appears corrupted (${errorMsg}), re-cloning...`);
+                  // Check for local commits before removing - don't lose unpushed work
+                  const hasLocalCommits = await hasUnpushedCommits(repoPath, branch);
+                  if (hasLocalCommits) {
+                    throw new Error(
+                      `Clone corruption detected in ${repoPath}@${branch} with unpushed local commits. ` +
+                      `Please push your changes or reset before continuing.`,
+                    );
+                  }
                   await GitFsService.removeRepo({ repoPath });
                   await GitFsService.clone({ repoPath, branch, token });
                   return {
@@ -98,9 +141,9 @@ async function getRepoReader(
     }
     return {
       mode,
-      listTree: () => GitFsService.listTree({ repoPath, ref: branch }),
+      listTree: () => handleCorruptionErrors(() => GitFsService.listTree({ repoPath, ref: branch }), repoPath, branch, token),
       readFile: (path: string) =>
-        GitFsService.readFile({ repoPath, ref: branch, filepath: path }),
+        handleCorruptionErrors(() => GitFsService.readFile({ repoPath, ref: branch, filepath: path }), repoPath, branch, token),
     };
   }
   return {

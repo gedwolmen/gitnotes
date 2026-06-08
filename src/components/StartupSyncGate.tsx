@@ -61,11 +61,11 @@ export function StartupSyncGate({ children }: { children: React.ReactNode }) {
     let drainInFlight = false;
     const drainAndPull = async () => {
       if (drainInFlight) return;
+      if (isForegroundSyncInFlight()) return;
       drainInFlight = true;
       try {
         await GitHubService.initialize();
         if (!GitHubService.isAuthenticated()) return;
-        // First drain pending local changes (push), then pull remote changes.
         await NoteSyncQueueService.drain();
         await pullAllFromRepos();
       } catch (error) {
@@ -77,7 +77,7 @@ export function StartupSyncGate({ children }: { children: React.ReactNode }) {
 
     drainAndPull();
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') drainAndPull();
+      if (state === 'active' && !isForegroundSyncInFlight()) drainAndPull();
     });
     return () => sub.remove();
   }, [refreshNotes]);
