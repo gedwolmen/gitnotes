@@ -348,7 +348,7 @@ export async function deleteNoteFromGitHub(params: {
       author,
       token: tokenForPush,
       push,
-      onProgress: (phase, loaded, total) => githubActivity.setProgress({ phase, loaded, total }),
+      onProgress: (progress) => githubActivity.setProgress(progress),
     });
   }
 
@@ -498,7 +498,7 @@ export async function syncNoteToGitHub(params: {
       author,
       token: tokenForPush,
       push,
-      onProgress: (phase, loaded, total) => githubActivity.setProgress({ phase, loaded, total }),
+      onProgress: (progress) => githubActivity.setProgress(progress),
     });
     if (writeResult.success) {
       return { success: true, filePath: targetPath, finalContent };

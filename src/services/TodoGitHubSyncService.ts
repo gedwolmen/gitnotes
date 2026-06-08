@@ -113,7 +113,7 @@ export async function syncTodoToGitHub(params: {
       message,
       author,
       token: tokenForPush,
-      onProgress: (phase, loaded, total) => githubActivity.setProgress({ phase, loaded, total }),
+      onProgress: (progress) => githubActivity.setProgress(progress),
     });
     if (writeResult.success) {
       return { success: true, filePath: targetPath };
@@ -181,7 +181,7 @@ export async function deleteTodoFromGitHub(params: {
       message: `Delete todo: ${text || filePath}`,
       author,
       token: tokenForPush,
-      onProgress: (phase, loaded, total) => githubActivity.setProgress({ phase, loaded, total }),
+      onProgress: (progress) => githubActivity.setProgress(progress),
     });
   }
 

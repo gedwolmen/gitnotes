@@ -53,7 +53,7 @@ export async function syncTemplateToGitHub(params: {
       message,
       author: resolveAuthor(),
       token: tokenForPush,
-      onProgress: (phase, loaded, total) => githubActivity.setProgress({ phase, loaded, total }),
+      onProgress: (progress) => githubActivity.setProgress(progress),
     });
     if (writeResult.success) return { success: true, filePath: targetPath };
     return { success: false, error: writeResult.error };
@@ -96,7 +96,7 @@ export async function deleteTemplateFromGitHub(params: {
       message: `Delete template ${name}`,
       author: resolveAuthor(),
       token: tokenForPush,
-      onProgress: (phase, loaded, total) => githubActivity.setProgress({ phase, loaded, total }),
+      onProgress: (progress) => githubActivity.setProgress(progress),
     });
   }
 
