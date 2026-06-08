@@ -12,6 +12,11 @@ import {
 } from './notesShared';
 
 function compareNotes(a: Note, b: Note, mode: SortMode): number {
+  const aPinned = a.isPinned ? 1 : 0;
+  const bPinned = b.isPinned ? 1 : 0;
+  if (aPinned !== bPinned) {
+    return bPinned - aPinned;
+  }
   const dir = mode.direction === 'asc' ? 1 : -1;
   switch (mode.field) {
     case 'modified':
