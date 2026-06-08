@@ -23,15 +23,14 @@ async function hasUnpushedCommits(repoPath: string, branch: string): Promise<boo
     const remoteRef = `refs/remotes/origin/${branch}`;
     const localOid = await GitFsService.getCommitOid({ repoPath, ref: localRef });
     const remoteOid = await GitFsService.getCommitOid({ repoPath, ref: remoteRef });
-    if (localOid === null) return true;
-    if (remoteOid === null) return true;
+    if (localOid === null || remoteOid === null) return false;
     if (localOid === remoteOid) return false;
     const mergeBase = await GitFsService.findMergeBase({ repoPath, ref1: localRef, ref2: remoteRef });
-    if (mergeBase === null) return true;
-    if (mergeBase !== remoteOid) return true;
-    return localOid !== remoteOid;
-  } catch {
+    if (mergeBase === null) return false;
+    if (localOid === mergeBase) return false;
     return true;
+  } catch {
+    return false;
   }
 }
 
