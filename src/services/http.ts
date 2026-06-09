@@ -16,6 +16,7 @@ const http: AxiosInstance = axios.create({
     Accept: 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2022-11-28',
   },
+  timeout: 120_000,
 });
 
 export function setAuthToken(token: string | null): void {

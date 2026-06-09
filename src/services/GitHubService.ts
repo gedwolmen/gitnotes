@@ -26,6 +26,24 @@ function base64ToBytes(base64: string): Uint8Array {
   return bytes.subarray(0, bi);
 }
 
+async function bytesToBase64Async(content: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(content);
+  const CHUNK = 65535;
+  if (bytes.length <= CHUNK) {
+    return Buffer.from(bytes).toString('base64');
+  }
+  let result = '';
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    const chunk = bytes.slice(i, Math.min(i + CHUNK, bytes.length));
+    result += Buffer.from(chunk).toString('base64');
+    if (i + CHUNK < bytes.length) {
+      await new Promise<void>((r) => setTimeout(r, 0));
+    }
+  }
+  return result;
+}
+
 function decodeBase64(base64: string): string {
   const bytes = base64ToBytes(base64);
   // Prefer TextDecoder when available (Hermes / modern JSC). Falls back to
@@ -605,11 +623,7 @@ class GitHubServiceClass {
     try {
       const encodedPath = path.split('/').map(encodeURIComponent).join('/');
       const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
-      const encoder = new TextEncoder();
-      const bytes = encoder.encode(content);
-      let binary = '';
-      bytes.forEach((b) => { binary += String.fromCharCode(b); });
-      const base64Content = btoa(binary);
+      const base64Content = await bytesToBase64Async(content);
       return await this.request(url, 'PUT', {
         message,
         content: base64Content,
@@ -767,11 +781,7 @@ class GitHubServiceClass {
   ): Promise<GitHubFileCommit | null> {
     const encodedPath = path.split('/').map(encodeURIComponent).join('/');
     const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
-    const encoder = new TextEncoder();
-    const bytes = encoder.encode(content);
-    let binary = '';
-    bytes.forEach((b) => { binary += String.fromCharCode(b); });
-    const base64Content = btoa(binary);
+    const base64Content = await bytesToBase64Async(content);
 
     const cacheKey = this.shaCacheKey(owner, repo, path, branch);
 
