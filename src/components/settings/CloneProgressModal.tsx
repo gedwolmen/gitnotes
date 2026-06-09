@@ -48,7 +48,7 @@ export function CloneProgressModal({ progress, onCancel, onRetry }: CloneProgres
           <Text style={{ color: colors.textSecondary, fontSize: type.xs, marginBottom: spacing[4] }}>
             Tip: Large repos may fail due to network issues. Try again or use a smaller repo first.
           </Text>
-          <View style={{ flexDirection: 'row', gap: spacing[3] }}>
+          <View style={{ flexDirection: 'row', gap: spacing[4], marginTop: spacing[2] }}>
             <Button label="Cancel" onPress={onCancel} variant="secondary" style={{ flex: 1 }} />
             {onRetry && (
               <Button label="Retry" onPress={onRetry} variant="primary" style={{ flex: 1 }} />
