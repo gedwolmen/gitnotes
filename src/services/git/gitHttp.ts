@@ -1,4 +1,108 @@
-import httpWeb from 'isomorphic-git/http/web';
-import type { HttpClient } from 'isomorphic-git';
+import type { GitHttpRequest, GitHttpResponse, HttpClient } from 'isomorphic-git';
 
-export const gitHttp: HttpClient = httpWeb;
+const FETCH_TIMEOUT_MS = 600_000;
+
+async function* yieldOnce(bytes: Uint8Array): AsyncIterableIterator<Uint8Array> {
+  yield bytes;
+}
+
+async function consumeBody(
+  body: GitHttpRequest['body'],
+): Promise<Uint8Array | undefined> {
+  if (!body) return undefined;
+  const chunks: Uint8Array[] = [];
+  for await (const chunk of body as Iterable<Uint8Array> | AsyncIterable<Uint8Array>) {
+    chunks.push(chunk);
+  }
+  let total = 0;
+  for (const c of chunks) total += c.length;
+  const merged = new Uint8Array(total);
+  let off = 0;
+  for (const c of chunks) {
+    merged.set(c, off);
+    off += c.length;
+  }
+  return merged;
+}
+
+export const gitHttp: HttpClient = {
+  async request(req: GitHttpRequest): Promise<GitHttpResponse> {
+    const body = await consumeBody(req.body);
+
+    const headers: Record<string, string> = { ...req.headers };
+    if (req.onAuth) {
+      const credentials = await req.onAuth();
+      if (credentials) {
+        const token = credentials.password || credentials.token;
+        if (token) {
+          const auth = Buffer.from(`x-access-token:${token}`).toString('base64');
+          headers['Authorization'] = `Basic ${auth}`;
+        }
+      }
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+    let response: Response;
+    try {
+      response = await fetch(req.url, {
+        method: req.method ?? 'GET',
+        headers,
+        body: body as BodyInit | undefined,
+        signal: controller.signal,
+      });
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        throw new Error(`Git HTTP request timed out after ${FETCH_TIMEOUT_MS}ms: ${req.url}`);
+      }
+      throw fetchError;
+    }
+
+    if (response.status === 401 && req.onAuth) {
+      const credentials = await req.onAuth();
+      if (credentials) {
+        const token = credentials.password || credentials.token;
+        if (token) {
+          const auth = Buffer.from(`x-access-token:${token}`).toString('base64');
+          headers['Authorization'] = `Basic ${auth}`;
+          clearTimeout(timeoutId);
+          response = await fetch(req.url, {
+            method: req.method ?? 'GET',
+            headers,
+            body: body as BodyInit | undefined,
+            signal: controller.signal,
+          });
+        }
+      }
+    }
+
+    let buffer: ArrayBuffer;
+    try {
+      buffer = await response.arrayBuffer();
+    } catch (arrayBufferError) {
+      clearTimeout(timeoutId);
+      if (arrayBufferError instanceof Error && arrayBufferError.name === 'AbortError') {
+        throw new Error(`Git HTTP response body read timed out after ${FETCH_TIMEOUT_MS}ms: ${req.url}`);
+      }
+      throw arrayBufferError;
+    }
+    clearTimeout(timeoutId);
+    const bytes = new Uint8Array(buffer);
+
+    const responseHeaders: Record<string, string> = {};
+    response.headers.forEach((value, key) => {
+      responseHeaders[key] = value;
+    });
+
+    return {
+      url: response.url || req.url,
+      method: req.method,
+      headers: responseHeaders,
+      statusCode: response.status,
+      statusMessage: response.statusText,
+      body: yieldOnce(bytes),
+    };
+  },
+};
