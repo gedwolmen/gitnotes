@@ -15,6 +15,10 @@ jest.mock('isomorphic-git', () => {
       oid: 'oid',
       blob: new TextEncoder().encode('hello body'),
     })),
+    readCommit: jest.fn(async (..._args: any[]) => ({
+      oid: 'oid-deadbeef',
+      commit: { message: 'test commit', parent: [], tree: 'abc123' },
+    })),
     TREE: jest.fn((opts: { ref: string }) => ({ __tree: opts.ref })),
   };
   (globalThis as any).__isomorphicGitMocks = mocks;
@@ -27,6 +31,7 @@ jest.mock('isomorphic-git', () => {
       walk: mocks.walk,
       resolveRef: mocks.resolveRef,
       readBlob: mocks.readBlob,
+      readCommit: mocks.readCommit,
     },
     TREE: mocks.TREE,
   };
@@ -40,12 +45,13 @@ function getGitMocks() {
     walk: jest.Mock;
     resolveRef: jest.Mock;
     readBlob: jest.Mock;
+    readCommit: jest.Mock;
     TREE: jest.Mock;
   };
 }
 
 jest.mock('expo-file-system/legacy', () => {
-  const fsStore = new Map<string, { type: 'file' | 'dir' }>();
+  const fsStore = new Map<string, { type: 'file' | 'dir'; content?: string }>();
   (globalThis as any).__gitFsServiceTestFsStore = fsStore;
   return {
     __esModule: true,
@@ -60,6 +66,11 @@ jest.mock('expo-file-system/legacy', () => {
     },
     async makeDirectoryAsync(uri: string) {
       fsStore.set(uri.replace(/\/$/, ''), { type: 'dir' });
+    },
+    async readAsStringAsync(uri: string) {
+      const e = fsStore.get(uri);
+      if (!e || e.type !== 'file') throw new Error('File not found');
+      return e.content ?? '';
     },
   };
 });
@@ -183,7 +194,7 @@ describe('GitFsService', () => {
 
   test('isCloned reflects the on-disk presence of <root>/.git/HEAD', async () => {
     expect(await GitFsService.isCloned({ repoPath: 'me/repo' })).toBe(false);
-    getFsStore().set('file:///doc/GitNotes/me/repo/.git/HEAD', { type: 'file' });
+    getFsStore().set('file:///doc/GitNotes/me/repo/.git/HEAD', { type: 'file', content: 'ref: refs/heads/main' });
     expect(await GitFsService.isCloned({ repoPath: 'me/repo' })).toBe(true);
   });
 

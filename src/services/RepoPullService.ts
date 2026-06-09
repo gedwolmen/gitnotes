@@ -39,7 +39,7 @@ async function handleCorruptionErrors<T>(fn: () => Promise<T>, repoPath: string,
     return await fn();
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    const isMissingObject = /Could not find|not foundobject|NotFoundError/i.test(errorMsg);
+    const isMissingObject = /Could not find|not foundobject|NotFoundError|Packfile trailer mismatch/i.test(errorMsg);
     if (isMissingObject) {
       console.warn(`[RepoPullService] corruption detected during operation, re-cloning...`);
       const hasLocalCommits = await hasUnpushedCommits(repoPath, branch);

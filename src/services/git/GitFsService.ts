@@ -188,7 +188,10 @@ export class GitFsService {
       });
     } catch (fetchError) {
       clearRepoCache(opts.repoPath);
-      await cleanCorruptedPackfiles(opts.repoPath);
+      const msg = fetchError instanceof Error ? fetchError.message : String(fetchError);
+      if (/Packfile trailer mismatch|Could not find|not foundobject|NotFoundError/i.test(msg)) {
+        await cleanCorruptedPackfiles(opts.repoPath);
+      }
       throw fetchError;
     }
   }
@@ -321,10 +324,14 @@ export class GitFsService {
   static async isCloned(opts: RepoLocator): Promise<boolean> {
     const info = parseRepoPath(opts.repoPath);
     if (!info) return false;
-    const dir = repoDirVirtual(info.owner, info.repo);
+    const fsRoot = clonesRoot();
+    const head = `${fsRoot}${info.owner}/${info.repo}/.git/HEAD`;
     try {
-      await git.resolveRef({ fs: makeRepoFs(), dir, ref: 'HEAD' });
-      return true;
+      const stat = await FileSystem.getInfoAsync(head);
+      if (!stat.exists || stat.isDirectory) return false;
+      const content = await FileSystem.readAsStringAsync(head);
+      const trimmed = content.trim();
+      return trimmed.startsWith('ref: ') || /^[a-f0-9]{40}$/.test(trimmed);
     } catch {
       return false;
     }
