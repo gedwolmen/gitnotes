@@ -1,4 +1,3 @@
-import React from 'react';
 import { Text, View } from 'react-native';
 import { Button, Modal } from '../ui';
 import { useTheme, useTokens } from '../../contexts/ThemeContext';
@@ -8,24 +7,21 @@ export interface CloneProgress {
   phase: string;
   loaded: number;
   total: number | null;
+  error?: string;
 }
 
 interface CloneProgressModalProps {
   progress: CloneProgress | null;
   onCancel: () => void;
+  onRetry?: () => void;
 }
 
-/**
- * Blocking bottom-sheet shown while a repo clone is in flight (#538).
- * Background blur + dismissOnBackdrop=false so the user can't navigate
- * away mid-clone — the only escape is the Cancel button, which signals
- * the abort flag the SettingsScreen owns.
- */
-export function CloneProgressModal({ progress, onCancel }: CloneProgressModalProps) {
+export function CloneProgressModal({ progress, onCancel, onRetry }: CloneProgressModalProps) {
   const { colors } = useTheme();
   const { spacing, type } = useTokens();
 
   const visible = progress !== null;
+  const hasError = progress?.error !== undefined;
   const pct =
     progress && progress.total && progress.total > 0
       ? Math.min(1, progress.loaded / progress.total)
@@ -41,35 +37,55 @@ export function CloneProgressModal({ progress, onCancel }: CloneProgressModalPro
       contentStyle={{ padding: spacing[5], paddingBottom: spacing[6] + 18 }}
     >
       <Text style={{ color: colors.text, fontSize: type.lg, fontWeight: '600', marginBottom: spacing[1] }}>
-        Cloning {progress?.repoName ?? ''}
-      </Text>
-      <Text style={{ color: colors.textSecondary, fontSize: type.sm, marginBottom: spacing[4] }}>
-        {progress?.phase ?? 'Preparing…'} · {pctLabel}
+        {hasError ? 'Clone Failed' : `Cloning ${progress?.repoName ?? ''}`}
       </Text>
 
-      <View
-        style={{
-          height: 6,
-          borderRadius: 999,
-          overflow: 'hidden',
-          backgroundColor: colors.border,
-          marginBottom: spacing[5],
-        }}
-      >
-        <View
-          style={{
-            height: '100%',
-            width: pct !== null ? `${Math.round(pct * 100)}%` : '40%',
-            backgroundColor: colors.primary,
-          }}
-        />
-      </View>
+      {hasError ? (
+        <>
+          <Text style={{ color: colors.error, fontSize: type.sm, marginBottom: spacing[3] }}>
+            {progress.error}
+          </Text>
+          <Text style={{ color: colors.textSecondary, fontSize: type.xs, marginBottom: spacing[4] }}>
+            Tip: Large repos may fail due to network issues. Try again or use a smaller repo first.
+          </Text>
+          <View style={{ flexDirection: 'row', gap: spacing[3] }}>
+            <Button label="Cancel" onPress={onCancel} variant="secondary" style={{ flex: 1 }} />
+            {onRetry && (
+              <Button label="Retry" onPress={onRetry} variant="primary" style={{ flex: 1 }} />
+            )}
+          </View>
+        </>
+      ) : (
+        <>
+          <Text style={{ color: colors.textSecondary, fontSize: type.sm, marginBottom: spacing[4] }}>
+            {progress?.phase ?? 'Preparing…'} · {pctLabel}
+          </Text>
 
-      <Button testID="clone-progress.button.cancel" label="Cancel" onPress={onCancel} variant="secondary" />
+          <View
+            style={{
+              height: 6,
+              borderRadius: 999,
+              overflow: 'hidden',
+              backgroundColor: colors.border,
+              marginBottom: spacing[5],
+            }}
+          >
+            <View
+              style={{
+                height: '100%',
+                width: pct !== null ? `${Math.round(pct * 100)}%` : '40%',
+                backgroundColor: colors.primary,
+              }}
+            />
+          </View>
 
-      <Text style={{ color: colors.textSecondary, fontSize: type.xs, textAlign: 'center', marginTop: spacing[3] }}>
-        Cloning may take 1–10 minutes depending on repo size
-      </Text>
+          <Button testID="clone-progress.button.cancel" label="Cancel" onPress={onCancel} variant="secondary" />
+
+          <Text style={{ color: colors.textSecondary, fontSize: type.xs, textAlign: 'center', marginTop: spacing[3] }}>
+            Cloning may take 1–10 minutes depending on repo size
+          </Text>
+        </>
+      )}
     </Modal>
   );
 }

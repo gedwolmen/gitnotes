@@ -181,7 +181,7 @@ export default function SettingsScreen() {
     HapticService.success();
   }, []);
 
-  const handleEnableCloneMode = useCallback(async (repo: GitRepository) => {
+  const handleEnableCloneMode = useCallback(async (repo: GitRepository, isRetry = false) => {
     if (!GitHubService.isAuthenticated()) {
       Alert.alert('GitHub required', 'Connect a GitHub account before enabling clone mode.');
       return;
@@ -198,7 +198,6 @@ export default function SettingsScreen() {
           branch,
           token,
           onProgress: (phase, loaded, total) => {
-            // #538: throw to abort isomorphic-git mid-clone when user taps Cancel.
             if (cloneAbortedRef.current) {
               throw new Error('CLONE_CANCELLED');
             }
@@ -207,8 +206,6 @@ export default function SettingsScreen() {
         });
       }
       if (cloneAbortedRef.current) {
-        // Partial clone may have written some files between the last onProgress
-        // tick and the throw — wipe so a retry starts clean.
         await GitFsService.removeRepo({ repoPath: repo.path }).catch(() => undefined);
         return;
       }
@@ -240,23 +237,61 @@ export default function SettingsScreen() {
         },
       ]);
     } catch (error) {
-      await GitFsService.removeRepo({ repoPath: repo.path }).catch(() => undefined);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       if (cloneAbortedRef.current) return;
+      if (/Packfile trailer mismatch|packfile may be corrupted/i.test(errorMessage) && !isRetry) {
+        await GitFsService.removeRepo({ repoPath: repo.path }).catch(() => undefined);
+        setCloneProgress({
+          repoName: repo.name,
+          phase: 'Retrying with smaller clone...',
+          loaded: 0,
+          total: null,
+          error: `Clone failed: ${errorMessage}\n\nRetrying with minimal settings...`,
+        });
+        setTimeout(() => {
+          handleEnableCloneMode(repo, true).catch((retryError) => {
+            setCloneProgress({
+              repoName: repo.name,
+              phase: 'Clone failed',
+              loaded: 0,
+              total: null,
+              error: retryError instanceof Error ? retryError.message : String(retryError),
+            });
+          });
+        }, 1500);
+        return;
+      }
+      await GitFsService.removeRepo({ repoPath: repo.path }).catch(() => undefined);
       HapticService.error();
-      Alert.alert('Clone failed', error instanceof Error ? error.message : String(error));
+      setCloneProgress({
+        repoName: repo.name,
+        phase: 'Clone failed',
+        loaded: 0,
+        total: null,
+        error: errorMessage,
+      });
     } finally {
-      setCloningRepo(null);
-      setCloneProgress(null);
     }
   }, [refreshLfsPending]);
 
   const handleCancelClone = useCallback(() => {
     cloneAbortedRef.current = true;
-    // Don't clear progress here — the running clone will hit the next
-    // onProgress, throw, fall into the finally, and clear state itself.
-    // Updating the modal copy gives immediate feedback while that unwinds.
-    setCloneProgress((prev) => (prev ? { ...prev, phase: 'Cancelling…' } : prev));
-  }, []);
+    if (cloneProgress?.error) {
+      setCloneProgress(null);
+    } else {
+      setCloneProgress((prev) => (prev ? { ...prev, phase: 'Cancelling…' } : prev));
+    }
+  }, [cloneProgress]);
+
+  const handleRetryClone = useCallback(() => {
+    if (cloningRepo) {
+      const repo = repositories.find((r) => r.path === cloningRepo);
+      if (repo) {
+        setCloneProgress(null);
+        handleEnableCloneMode(repo, true).catch(() => {});
+      }
+    }
+  }, [cloningRepo, repositories, handleEnableCloneMode]);
 
   const handleDownloadLfsObjects = useCallback(async (repo: GitRepository) => {
     const token = (await AuthService.getToken()) ?? undefined;
@@ -626,7 +661,7 @@ export default function SettingsScreen() {
       <ModelSelector visible={showModelSelector} onClose={() => setShowModelSelector(false)} />
       <ProviderConfigModal visible={showProviderConfig} provider={editingProvider} onClose={() => { setShowProviderConfig(false); setEditingProvider(undefined); }} />
       <ChatRepoPickerModal visible={showChatRepoPicker} onClose={() => setShowChatRepoPicker(false)} onSelected={() => setShowChatRepoPicker(false)} />
-      <CloneProgressModal progress={cloneProgress} onCancel={handleCancelClone} />
+      <CloneProgressModal progress={cloneProgress} onCancel={handleCancelClone} onRetry={handleRetryClone} />
       </View>
       <ScreenHeader title="Settings" />
     </SafeAreaView>
