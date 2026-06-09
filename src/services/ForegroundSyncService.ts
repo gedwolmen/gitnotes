@@ -102,12 +102,12 @@ async function runPull(reason: string): Promise<void> {
 
   const startedAt = Date.now();
   let success = false;
-  const PULL_TIMEOUT_MS = 120_000;
+  const PULL_TIMEOUT_MS = 600_000;
   try {
     await Promise.race([
       pullAllFromRepos(),
       new Promise<void>((_, reject) =>
-        setTimeout(() => reject(new Error('Pull timed out after 120s')), PULL_TIMEOUT_MS)
+        setTimeout(() => reject(new Error(`Pull timed out after ${PULL_TIMEOUT_MS}ms`)), PULL_TIMEOUT_MS)
       ),
     ]);
     success = true;
