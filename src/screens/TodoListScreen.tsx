@@ -30,6 +30,7 @@ import { TodoEditorModal } from '../components/todos/TodoEditorModal';
 import { SwipeableListItem } from '../components/list/SwipeableListItem';
 import { BulkActionBar } from '../components/list/BulkActionBar';
 import { useResponsive } from '../hooks/useResponsive';
+import { useGitHubActivityStore } from '../stores/githubActivityStore';
 
 export default function TodoListScreen() {
   const { colors, isDark } = useTheme();
@@ -44,6 +45,7 @@ export default function TodoListScreen() {
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isRefreshingRef = useRef(false);
+  const gitOperationActiveRef = useRef(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [todoText, setTodoText] = useState('');
@@ -65,6 +67,7 @@ export default function TodoListScreen() {
 
   const selectionMode = selectedIds.size > 0;
   const isFocused = useIsFocused();
+  const { inflight } = useGitHubActivityStore();
 
   // Reset refresh state when screen loses focus (tab switch, stack push, etc.)
   useEffect(() => {
@@ -73,6 +76,17 @@ export default function TodoListScreen() {
       setIsRefreshing(false);
     }
   }, [isFocused]);
+
+  useEffect(() => {
+    if (inflight > 0) {
+      gitOperationActiveRef.current = true;
+    } else if (gitOperationActiveRef.current) {
+      const timer = setTimeout(() => {
+        gitOperationActiveRef.current = false;
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [inflight]);
 
   const toggleSelected = useCallback((id: string) => {
     setSelectedIds((previous) => {
@@ -336,6 +350,7 @@ export default function TodoListScreen() {
 
   const handlePullToRefresh = useCallback(async () => {
     if (isRefreshingRef.current) return;
+    if (inflight > 0) return;
     isRefreshingRef.current = true;
     setIsRefreshing(true);
     HapticService.light();
@@ -449,12 +464,14 @@ export default function TodoListScreen() {
         ListEmptyComponent={<TodosEmptyState isFiltered={hasActiveFilters} />}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={handlePullToRefresh}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-          />
+          gitOperationActiveRef.current ? undefined : (
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handlePullToRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          )
         }
       />
       </View>

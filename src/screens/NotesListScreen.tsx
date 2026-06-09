@@ -37,6 +37,7 @@ import { useNotesListNoteActions } from '../components/notes/useNotesListNoteAct
 import { SwipeableListItem } from '../components/list/SwipeableListItem';
 import { BulkActionBar } from '../components/list/BulkActionBar';
 import { useResponsive } from '../hooks/useResponsive';
+import { useGitHubActivityStore } from '../stores/githubActivityStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -67,6 +68,7 @@ export default function NotesListScreen() {
 
   const listRef = useRef<FlatList<Note>>(null);
   const isPullRefreshingRef = useRef(false);
+  const gitOperationActiveRef = useRef(false);
 
   const [showViewModePicker, setShowViewModePicker] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -81,6 +83,7 @@ export default function NotesListScreen() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
   const isFocused = useIsFocused();
+  const { inflight } = useGitHubActivityStore();
 
   // Reset refresh state when screen loses focus (tab switch, stack push, etc.)
   useEffect(() => {
@@ -89,6 +92,17 @@ export default function NotesListScreen() {
       setIsPullRefreshing(false);
     }
   }, [isFocused]);
+
+  useEffect(() => {
+    if (inflight > 0) {
+      gitOperationActiveRef.current = true;
+    } else if (gitOperationActiveRef.current) {
+      const timer = setTimeout(() => {
+        gitOperationActiveRef.current = false;
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [inflight]);
 
   const selectionMode = selectedIds.size > 0;
 
@@ -261,6 +275,8 @@ export default function NotesListScreen() {
 
   const handlePullToRefresh = useCallback(async () => {
     if (isPullRefreshingRef.current) return;
+    // Disable pull-to-refresh when git operations are in progress to prevent data loss
+    if (inflight > 0) return;
     isPullRefreshingRef.current = true;
     setIsPullRefreshing(true);
     HapticService.light();
@@ -471,13 +487,15 @@ export default function NotesListScreen() {
         }}
         columnWrapperStyle={viewMode !== 'journal' && columnCount > 1 ? { gap: 8 } : undefined}
         refreshControl={
-          <RefreshControl
-            testID="notes-list.swipe.pull-refresh"
-            refreshing={isPullRefreshing}
-            onRefresh={handlePullToRefresh}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-          />
+          gitOperationActiveRef.current ? undefined : (
+            <RefreshControl
+              testID="notes-list.swipe.pull-refresh"
+              refreshing={isPullRefreshing}
+              onRefresh={handlePullToRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          )
         }
         ListEmptyComponent={<NotesEmptyState isFiltered={!!searchQuery || activeFilterCount > 0} />}
       />
