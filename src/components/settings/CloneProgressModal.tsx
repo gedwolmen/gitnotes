@@ -66,6 +66,10 @@ export function CloneProgressModal({ progress, onCancel }: CloneProgressModalPro
       </View>
 
       <Button testID="clone-progress.button.cancel" label="Cancel" onPress={onCancel} variant="secondary" />
+
+      <Text style={{ color: colors.textSecondary, fontSize: type.xs, textAlign: 'center', marginTop: spacing[3] }}>
+        Cloning may take 1–10 minutes depending on repo size
+      </Text>
     </Modal>
   );
 }
