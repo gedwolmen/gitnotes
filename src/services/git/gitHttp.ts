@@ -1,6 +1,6 @@
 import type { GitHttpRequest, GitHttpResponse, HttpClient } from 'isomorphic-git';
 
-const FETCH_TIMEOUT_MS = 120_000; // 2 minute timeout per request
+const FETCH_TIMEOUT_MS = 600_000; // 10 minute timeout per request - large repos need more time
 
 async function* yieldOnce(bytes: Uint8Array): AsyncIterableIterator<Uint8Array> {
   yield bytes;

@@ -78,6 +78,20 @@ function authedRemote(owner: string, repo: string): string {
   return `https://github.com/${owner}/${repo}.git`;
 }
 
+// Cache object for isomorphic-git operations - improves performance for large repos
+const repoCaches = new Map<string, object>();
+
+function getRepoCache(repoPath: string): object {
+  if (!repoCaches.has(repoPath)) {
+    repoCaches.set(repoPath, {});
+  }
+  return repoCaches.get(repoPath)!;
+}
+
+function clearRepoCache(repoPath: string): void {
+  repoCaches.delete(repoPath);
+}
+
 /**
  * Remove corrupted packfiles from a repo's .git/objects/pack directory.
  * When a fetch times out, partial packfile data may be left on disk, causing
@@ -134,6 +148,7 @@ export class GitFsService {
       onProgress: opts.onProgress
         ? (event) => opts.onProgress!(event.phase, event.loaded, event.total ?? null)
         : undefined,
+      cache: getRepoCache(opts.repoPath),
     });
 
     // isomorphic-git has no smudge filter pipeline, so any LFS-tracked
@@ -164,6 +179,7 @@ export class GitFsService {
       depth: opts.depth ?? 1,
       tags: false,
       onAuth: ensureToken(opts.token),
+      cache: getRepoCache(opts.repoPath),
     });
   }
 
@@ -199,6 +215,7 @@ export class GitFsService {
         depth: opts.depth ?? 1,
         tags: false,
         onAuth: ensureToken(opts.token),
+        cache: getRepoCache(opts.repoPath),
       });
       await git.fastForward({
         fs,
@@ -308,6 +325,7 @@ export class GitFsService {
     const dir = `${fsRoot}${info.owner}/${info.repo}`;
     await FileSystem.deleteAsync(dir, { idempotent: true });
     await LfsService.clearRepo(opts.repoPath).catch(() => undefined);
+    clearRepoCache(opts.repoPath);
   }
 
   /** Absolute on-disk URI of a repo's working tree. */
