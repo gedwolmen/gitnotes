@@ -78,6 +78,31 @@ function authedRemote(owner: string, repo: string): string {
   return `https://github.com/${owner}/${repo}.git`;
 }
 
+/**
+ * Remove corrupted packfiles from a repo's .git/objects/pack directory.
+ * When a fetch times out, partial packfile data may be left on disk, causing
+ * "Packfile trailer mismatch" errors on subsequent operations. Cleaning these
+ * before clone/fetch prevents the error.
+ */
+async function cleanCorruptedPackfiles(repoPath: string): Promise<void> {
+  const info = parseRepoPath(repoPath);
+  if (!info) return;
+  const packDir = `${clonesRoot()}${info.owner}/${info.repo}/.git/objects/pack`;
+  try {
+    const stat = await FileSystem.getInfoAsync(packDir);
+    if (stat.exists && stat.isDirectory) {
+      const files = await FileSystem.readDirectoryAsync(packDir);
+      for (const file of files) {
+        if (file.endsWith('.pack') || file.endsWith('.idx')) {
+          await FileSystem.deleteAsync(`${packDir}/${file}`, { idempotent: true });
+        }
+      }
+    }
+  } catch {
+    // If pack dir doesn't exist or can't be read, no cleanup needed
+  }
+}
+
 export class GitFsService {
   /**
    * Clone a repo into the per-app document directory. Defaults to depth=1
@@ -94,6 +119,8 @@ export class GitFsService {
     // git.clone's own mkdir of the repo dir succeeds on a clean install.
     const fsRoot = clonesRoot();
     await FileSystem.makeDirectoryAsync?.(`${fsRoot}${info.owner}/`, { intermediates: true });
+
+    await cleanCorruptedPackfiles(opts.repoPath);
 
     await git.clone({
       fs: makeRepoFs(),
@@ -126,6 +153,8 @@ export class GitFsService {
     if (!info) throw new Error(`Invalid repo path: ${opts.repoPath}`);
     const dir = repoDirVirtual(info.owner, info.repo);
 
+    await cleanCorruptedPackfiles(opts.repoPath);
+
     await git.fetch({
       fs: makeRepoFs(),
       http: gitHttp,
@@ -157,6 +186,8 @@ export class GitFsService {
     if (!info) return { ok: false, reason: 'unknown', error: `Invalid repo path: ${opts.repoPath}` };
     const dir = repoDirVirtual(info.owner, info.repo);
     const fs = makeRepoFs();
+
+    await cleanCorruptedPackfiles(opts.repoPath);
 
     try {
       await git.fetch({
