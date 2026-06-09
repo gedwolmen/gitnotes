@@ -30,6 +30,7 @@ let netInfoUnsub: NetInfoSubscription | null = null;
 let intervalHandle: ReturnType<typeof setInterval> | null = null;
 
 let inFlight = false;
+let externalSyncCount = 0;
 let lastRunAt = 0;
 
 let currentIntervalSeconds = 0;
@@ -101,8 +102,14 @@ async function runPull(reason: string): Promise<void> {
 
   const startedAt = Date.now();
   let success = false;
+  const PULL_TIMEOUT_MS = 120_000;
   try {
-    await pullAllFromRepos();
+    await Promise.race([
+      pullAllFromRepos(),
+      new Promise<void>((_, reject) =>
+        setTimeout(() => reject(new Error('Pull timed out after 120s')), PULL_TIMEOUT_MS)
+      ),
+    ]);
     success = true;
     if (__DEV__) {
       console.log(`[ForegroundSync] pull (${reason}) ok in ${Date.now() - startedAt}ms`);
@@ -209,7 +216,23 @@ export function stopForegroundWatcher(): void {
 }
 
 export function isForegroundSyncInFlight(): boolean {
-  return inFlight;
+  return inFlight || externalSyncCount > 0;
+}
+
+export function acquireExternalSync(): () => void {
+  externalSyncCount++;
+  if (externalSyncCount === 1) {
+    notify();
+  }
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    externalSyncCount--;
+    if (externalSyncCount === 0) {
+      notify();
+    }
+  };
 }
 
 export function subscribeForegroundSync(listener: Listener): () => void {
@@ -226,6 +249,7 @@ export async function __runPullForTest(reason = 'test'): Promise<void> {
 export function __resetForegroundSyncForTest(): void {
   stopForegroundWatcher();
   inFlight = false;
+  externalSyncCount = 0;
   lastRunAt = 0;
   currentIntervalSeconds = 0;
   currentSyncFrequentlyEnabled = true;

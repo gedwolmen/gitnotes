@@ -118,7 +118,7 @@ async function getRepoReader(
           };
         }
         const errorMsg = result.error ?? '';
-         const isMissingObject = /Could not find|not foundobject|NotFoundError/i.test(errorMsg);
+const isMissingObject = /Could not find|not foundobject|NotFoundError|Packfile trailer mismatch/i.test(errorMsg);
                 if (isMissingObject) {
                   console.warn(`[RepoPullService] clone appears corrupted (${errorMsg}), re-cloning...`);
                   // Check for local commits before removing - don't lose unpushed work

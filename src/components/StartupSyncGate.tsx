@@ -6,6 +6,7 @@ import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import {
   isForegroundSyncInFlight,
   subscribeForegroundSync,
+  acquireExternalSync,
 } from '../services/ForegroundSyncService';
 import { useNotes } from '../contexts/NoteContext';
 import { useCanvases } from '../contexts/CanvasContext';
@@ -38,6 +39,7 @@ export function StartupSyncGate({ children }: { children: React.ReactNode }) {
     if (isForegroundSyncInFlight()) return;
 
     isSyncing.current = true;
+    const releaseExternalSync = acquireExternalSync();
     const targetSignature = repoSignature;
 
     (async () => {
@@ -54,6 +56,7 @@ export function StartupSyncGate({ children }: { children: React.ReactNode }) {
         ]);
         lastSyncedSignature.current = targetSignature;
         isSyncing.current = false;
+        releaseExternalSync();
       }
     })();
   }, [repoSignature, repositories.length, refreshNotes, refreshCanvases, refreshTodos]);
@@ -65,6 +68,7 @@ export function StartupSyncGate({ children }: { children: React.ReactNode }) {
       if (isSyncing.current) return;
       if (isForegroundSyncInFlight()) return;
       drainInFlight = true;
+      const releaseExternalSync = acquireExternalSync();
       try {
         await GitHubService.initialize();
         if (!GitHubService.isAuthenticated()) return;
@@ -74,6 +78,7 @@ export function StartupSyncGate({ children }: { children: React.ReactNode }) {
         console.warn('[SyncDrain] Failed:', error);
       } finally {
         drainInFlight = false;
+        releaseExternalSync();
       }
     };
 
