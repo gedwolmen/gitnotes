@@ -38,7 +38,8 @@ export default function ChatThreadListScreen() {
       setStorageAdapter,
   } = useChatStore();
 
-  const { chatRepoOwner, chatRepoName, chatRepoBranch } = useAIStore();
+  const { chatRepoOwner, chatRepoName, chatRepoBranch, selectedModelId } = useAIStore();
+  const availableModels = useAIStore((s) => s.getAvailableModels());
   const [isPullRefreshing, setIsPullRefreshing] = useState(false);
   const isPullRefreshingRef = useRef(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -102,6 +103,10 @@ export default function ChatThreadListScreen() {
   const handleNewChat = () => {
     if (!chatRepoOwner || !chatRepoName || !chatRepoBranch) {
       Alert.alert('Configuration Required', 'Please set up a chat repository in AI settings first.');
+      return;
+    }
+    if (!selectedModelId || availableModels.length === 0) {
+      Alert.alert('AI Not Configured', 'Please set up an AI model in Settings before starting a chat.');
       return;
     }
     const thread = createThread({

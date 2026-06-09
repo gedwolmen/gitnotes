@@ -123,6 +123,10 @@ export function AddScheduledLearningScreen() {
       Alert.alert('Day required', 'Please select at least one day.');
       return;
     }
+    if (availableModels.length === 0) {
+      Alert.alert('AI Not Configured', 'Please set up an AI model in Settings before creating a scheduled learning note.');
+      return;
+    }
 
     const timeStr = selectedTime.toLocaleTimeString('en-US', {
       hour: '2-digit',
