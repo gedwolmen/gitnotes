@@ -136,20 +136,25 @@ export class GitFsService {
 
     await cleanCorruptedPackfiles(opts.repoPath);
 
-    await git.clone({
-      fs: makeRepoFs(),
-      http: gitHttp,
-      dir,
-      url: authedRemote(info.owner, info.repo),
-      ref: opts.branch,
-      singleBranch: true,
-      depth: opts.depth ?? 1,
-      onAuth: ensureToken(opts.token),
-      onProgress: opts.onProgress
-        ? (event) => opts.onProgress!(event.phase, event.loaded, event.total ?? null)
-        : undefined,
-      cache: getRepoCache(opts.repoPath),
-    });
+    try {
+      await git.clone({
+        fs: makeRepoFs(),
+        http: gitHttp,
+        dir,
+        url: authedRemote(info.owner, info.repo),
+        ref: opts.branch,
+        singleBranch: true,
+        depth: opts.depth ?? 1,
+        onAuth: ensureToken(opts.token),
+        onProgress: opts.onProgress
+          ? (event) => opts.onProgress!(event.phase, event.loaded, event.total ?? null)
+          : undefined,
+        cache: getRepoCache(opts.repoPath),
+      });
+    } catch (cloneError) {
+      clearRepoCache(opts.repoPath);
+      throw cloneError;
+    }
 
     // isomorphic-git has no smudge filter pipeline, so any LFS-tracked
     // binaries land on disk as ~130-byte pointer text files. Scan now and
@@ -168,19 +173,22 @@ export class GitFsService {
     if (!info) throw new Error(`Invalid repo path: ${opts.repoPath}`);
     const dir = repoDirVirtual(info.owner, info.repo);
 
-    await cleanCorruptedPackfiles(opts.repoPath);
-
-    await git.fetch({
-      fs: makeRepoFs(),
-      http: gitHttp,
-      dir,
-      ref: opts.branch,
-      singleBranch: true,
-      depth: opts.depth ?? 1,
-      tags: false,
-      onAuth: ensureToken(opts.token),
-      cache: getRepoCache(opts.repoPath),
-    });
+    try {
+      await git.fetch({
+        fs: makeRepoFs(),
+        http: gitHttp,
+        dir,
+        ref: opts.branch,
+        singleBranch: true,
+        depth: opts.depth ?? 1,
+        tags: false,
+        onAuth: ensureToken(opts.token),
+        cache: getRepoCache(opts.repoPath),
+      });
+    } catch (fetchError) {
+      clearRepoCache(opts.repoPath);
+      throw fetchError;
+    }
   }
 
   /**
@@ -202,8 +210,6 @@ export class GitFsService {
     if (!info) return { ok: false, reason: 'unknown', error: `Invalid repo path: ${opts.repoPath}` };
     const dir = repoDirVirtual(info.owner, info.repo);
     const fs = makeRepoFs();
-
-    await cleanCorruptedPackfiles(opts.repoPath);
 
     try {
       await git.fetch({
@@ -232,6 +238,7 @@ export class GitFsService {
       }
       return { ok: true };
     } catch (e) {
+      clearRepoCache(opts.repoPath);
       const message = e instanceof Error ? e.message : String(e);
       // isomorphic-git surfaces fast-forward failure as MergeNotSupportedError
       // / FastForwardError; treat both as "diverged".
@@ -313,8 +320,16 @@ export class GitFsService {
     if (!info) return false;
     const fsRoot = clonesRoot();
     const head = `${fsRoot}${info.owner}/${info.repo}/.git/HEAD`;
-    const stat = await FileSystem.getInfoAsync(head);
-    return !!stat.exists && !stat.isDirectory;
+    try {
+      const stat = await FileSystem.getInfoAsync(head);
+      if (!stat.exists || stat.isDirectory) return false;
+      const content = await FileSystem.readAsStringAsync(head);
+      // Verify HEAD contains a valid ref or commit hash
+      const trimmed = content.trim();
+      return trimmed.startsWith('ref: ') || /^[a-f0-9]{40}$/.test(trimmed);
+    } catch {
+      return false;
+    }
   }
 
   /** Drop the on-disk clone for a repo. Idempotent. */
