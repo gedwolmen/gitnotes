@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Alert, View, Text, StyleSheet, ActivityIndicator, RefreshControl, FlatList } from 'react-native';
+import { Alert, View, Text, StyleSheet, ActivityIndicator, RefreshControl, FlatList, TouchableOpacity } from 'react-native';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -60,6 +60,7 @@ export default function NotesListScreen() {
     refreshNotes,
     togglePin,
     error,
+    clearError,
     createNote,
     updateNote,
   } = useNotes();
@@ -446,7 +447,10 @@ export default function NotesListScreen() {
 
       {error ? (
         <View style={[styles.errorBanner, { backgroundColor: colors.error + '20', borderLeftColor: colors.error }]}>
-          <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+          <Text style={[styles.errorText, { color: colors.error }]} numberOfLines={2}>{error}</Text>
+          <TouchableOpacity onPress={clearError} style={[styles.errorRetryBtn, { borderColor: colors.error }]}>
+            <Text style={[styles.errorRetryText, { color: colors.error }]}>Dismiss</Text>
+          </TouchableOpacity>
         </View>
       ) : null}
 
@@ -627,7 +631,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderLeftWidth: 4,
   },
-  errorText: { fontSize: 13 },
+  errorText: { fontSize: 13, flex: 1 },
+  errorRetryBtn: {
+    marginLeft: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  errorRetryText: { fontSize: 13, fontWeight: '600' },
   actionWithBadge: { position: 'relative' },
   badge: {
     position: 'absolute',

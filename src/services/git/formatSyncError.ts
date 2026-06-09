@@ -51,6 +51,14 @@ const MATCHERS: Matcher[] = [
     needles: ['network', 'fetch', 'econn', 'timeout', 'offline'],
     message: "No connection. Will retry when you're back online.",
   },
+  {
+    needles: ['packfile trailer mismatch', 'packfile may be corrupted'],
+    message: 'Sync stalled. Pull to recover.',
+  },
+  {
+    needles: ['internal error caused this command to fail', 'isomorphic-git'],
+    message: 'Sync failed. Pull to retry.',
+  },
 ];
 
 function fallbackFor(op?: SyncOp): string {
