@@ -50,18 +50,27 @@ export function __resetBranchCacheForTests(): void {
   sessionCache.clear();
 }
 
+const FETCH_TIMEOUT_MS = 30_000;
+
 export async function fetchGitHubDefaultBranch(repoPath: string): Promise<string | null> {
   const info = parseRepoPath(repoPath);
   if (!info) return null;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
     const response = await fetch(
       `${GITHUB_API_BASE}/repos/${info.owner}/${info.repo}`,
-      { headers: { Accept: 'application/vnd.github.v3+json' } },
+      { headers: { Accept: 'application/vnd.github.v3+json' }, signal: controller.signal },
     );
-    if (!response.ok) return null;
+    if (!response.ok) {
+      clearTimeout(timeoutId);
+      return null;
+    }
     const json = (await response.json()) as { default_branch?: string };
+    clearTimeout(timeoutId);
     return json.default_branch ?? null;
   } catch {
+    clearTimeout(timeoutId);
     return null;
   }
 }

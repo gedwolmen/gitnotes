@@ -12,23 +12,88 @@ class FsError extends Error {
   }
 }
 
-function base64ToBytes(b64: string): Uint8Array {
-  const binary = globalThis.atob(b64);
-  const out = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
-  return out;
+async function base64ToBytesAsync(b64: string): Promise<Uint8Array> {
+  // Decode base64 in 4-char aligned chunks without calling atob on the full string.
+  // atob materializes the entire decoded string synchronously, blocking the JS thread.
+  const CHUNK_CHARS = 65535; // Must be multiple of 4 for base64 boundary alignment
+  const cleaned = b64.replace(/[^A-Za-z0-9+/=]/g, '');
+  const totalChars = cleaned.length;
+
+  if (totalChars === 0) return new Uint8Array(0);
+
+  // Quick path for small inputs (no yielding needed)
+  if (totalChars <= CHUNK_CHARS) {
+    return _decodeBase64Chunk(cleaned);
+  }
+
+  // Chunked decoding with yields
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  const resultParts: Uint8Array[] = [];
+
+  for (let i = 0; i < totalChars; i += CHUNK_CHARS) {
+    const end = Math.min(i + CHUNK_CHARS, totalChars);
+    // Align to 4-char boundary
+    let alignedEnd = end;
+    while (alignedEnd > i && (alignedEnd - i) % 4 !== 0) alignedEnd--;
+    if (alignedEnd <= i) alignedEnd = Math.min(i + 4, totalChars); // fallback
+
+    const chunkStr = cleaned.slice(i, alignedEnd);
+    const decoded = _decodeBase64Chunk(chunkStr);
+    resultParts.push(decoded);
+
+    if (alignedEnd < totalChars) {
+      await new Promise<void>((r) => setTimeout(r, 0));
+    }
+    // Move past any padding bytes at chunk boundary
+    i = alignedEnd - 1;
+  }
+
+  // Concatenate all parts
+  const totalLen = resultParts.reduce((s, p) => s + p.length, 0);
+  const result = new Uint8Array(totalLen);
+  let offset = 0;
+  for (const p of resultParts) {
+    result.set(p, offset);
+    offset += p.length;
+  }
+  return result;
 }
 
-/**
- * Encode a Uint8Array as base64 using the global `Buffer` polyfill (installed
- * via src/polyfills.ts for isomorphic-git). Buffer's base64 path is implemented
- * in optimized native code and avoids the per-byte String.fromCharCode + btoa
- * loop the previous hand-rolled encoder did — that loop was the single biggest
- * CPU hog during a clone, freezing the JS thread and stalling taps for ~30s on
- * repos with non-trivial packfile sizes.
- */
-function bytesToBase64(bytes: Uint8Array): string {
-  return Buffer.from(bytes).toString('base64');
+function _decodeBase64Chunk(b64: string): Uint8Array {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  const cleaned = b64.replace(/[^A-Za-z0-9+/=]/g, '');
+  let outLen = Math.floor((cleaned.length / 4) * 3);
+  if (cleaned.endsWith('==')) outLen -= 2;
+  else if (cleaned.endsWith('=')) outLen -= 1;
+  const bytes = new Uint8Array(Math.max(0, outLen));
+  let bi = 0;
+  for (let i = 0; i < cleaned.length; i += 4) {
+    const c1 = chars.indexOf(cleaned[i]);
+    const c2 = chars.indexOf(cleaned[i + 1]);
+    const c3 = cleaned[i + 2] === '=' ? 64 : chars.indexOf(cleaned[i + 2]);
+    const c4 = cleaned[i + 3] === '=' ? 64 : chars.indexOf(cleaned[i + 3]);
+    if (c1 < 0 || c2 < 0) break;
+    bytes[bi++] = (c1 << 2) | (c2 >> 4);
+    if (c3 !== 64 && c3 >= 0) bytes[bi++] = ((c2 & 15) << 4) | (c3 >> 2);
+    if (c4 !== 64 && c4 >= 0) bytes[bi++] = ((c3 & 3) << 6) | c4;
+  }
+  return bytes.subarray(0, bi);
+}
+
+async function bytesToBase64Async(bytes: Uint8Array): Promise<string> {
+  const CHUNK = 65535;
+  if (bytes.length <= CHUNK) {
+    return Buffer.from(bytes).toString('base64');
+  }
+  let result = '';
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    const chunk = bytes.slice(i, Math.min(i + CHUNK, bytes.length));
+    result += Buffer.from(chunk).toString('base64');
+    if (i + CHUNK < bytes.length) {
+      await new Promise<void>((r) => setTimeout(r, 0));
+    }
+  }
+  return result;
 }
 
 function joinUri(root: string, virtualPath: string): string {
@@ -125,7 +190,7 @@ export function makeGitFs(root: string): PromiseFsClient {
       const b64 = await FileSystem.readAsStringAsync(uri, {
         encoding: FileSystem.EncodingType.Base64,
       });
-      return base64ToBytes(b64);
+      return await base64ToBytesAsync(b64);
     },
 
     async writeFile(
@@ -156,7 +221,7 @@ export function makeGitFs(root: string): PromiseFsClient {
         await FileSystem.writeAsStringAsync(uri, data);
         await maybeYield();
       } else {
-        const b64 = bytesToBase64(data);
+        const b64 = await bytesToBase64Async(data);
         await FileSystem.writeAsStringAsync(uri, b64, {
           encoding: FileSystem.EncodingType.Base64,
         });

@@ -1,5 +1,7 @@
 import type { GitHttpRequest, GitHttpResponse, HttpClient } from 'isomorphic-git';
 
+const FETCH_TIMEOUT_MS = 120_000; // 2 minute timeout per request
+
 async function* yieldOnce(bytes: Uint8Array): AsyncIterableIterator<Uint8Array> {
   yield bytes;
 }
@@ -40,13 +42,38 @@ async function consumeBody(
 export const gitHttp: HttpClient = {
   async request(req: GitHttpRequest): Promise<GitHttpResponse> {
     const body = await consumeBody(req.body);
-    const response = await fetch(req.url, {
-      method: req.method ?? 'GET',
-      headers: req.headers ?? {},
-      body: body as BodyInit | undefined,
-    });
 
-    const buffer = await response.arrayBuffer();
+    // Apply timeout to prevent indefinite hangs on slow/dropped connections
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+    let response: Response;
+    try {
+      response = await fetch(req.url, {
+        method: req.method ?? 'GET',
+        headers: req.headers ?? {},
+        body: body as BodyInit | undefined,
+        signal: controller.signal,
+      });
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        throw new Error(`Git HTTP request timed out after ${FETCH_TIMEOUT_MS}ms: ${req.url}`);
+      }
+      throw fetchError;
+    }
+
+    let buffer: ArrayBuffer;
+    try {
+      buffer = await response.arrayBuffer();
+    } catch (arrayBufferError) {
+      clearTimeout(timeoutId);
+      if (arrayBufferError instanceof Error && arrayBufferError.name === 'AbortError') {
+        throw new Error(`Git HTTP response body read timed out after ${FETCH_TIMEOUT_MS}ms: ${req.url}`);
+      }
+      throw arrayBufferError;
+    }
+    clearTimeout(timeoutId);
     const bytes = new Uint8Array(buffer);
 
     const headers: Record<string, string> = {};

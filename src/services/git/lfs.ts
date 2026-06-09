@@ -162,6 +162,8 @@ interface BatchResponse {
  */
 async function requestBatchDownload(opts: DownloadOpts): Promise<BatchObject> {
   const url = `https://github.com/${opts.owner}/${opts.repo}.git/info/lfs/objects/batch`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 120_000);
   const res = await fetch(url, {
     method: 'POST',
     headers: {
@@ -174,6 +176,7 @@ async function requestBatchDownload(opts: DownloadOpts): Promise<BatchObject> {
       transfers: ['basic'],
       objects: [{ oid: opts.oid, size: opts.size }],
     }),
+    signal: controller.signal,
   });
   if (res.status === 403) {
     throw new Error('LFS access denied — check your PAT permissions.');
@@ -182,6 +185,7 @@ async function requestBatchDownload(opts: DownloadOpts): Promise<BatchObject> {
     throw new Error(`LFS batch request failed (${res.status}).`);
   }
   const data = (await res.json()) as BatchResponse;
+  clearTimeout(timeoutId);
   const obj = data.objects?.[0];
   if (!obj) throw new Error('LFS batch response missing object.');
   if (obj.error) {
@@ -191,16 +195,21 @@ async function requestBatchDownload(opts: DownloadOpts): Promise<BatchObject> {
   return obj;
 }
 
-function arrayBufferToBase64(buf: ArrayBuffer): string {
+async function arrayBufferToBase64Async(buf: ArrayBuffer): Promise<string> {
   const bytes = new Uint8Array(buf);
-  let bin = '';
-  // Chunk the conversion so a multi-MB binary doesn't blow the JS string
-  // arg-list limit on String.fromCharCode.
-  const CHUNK = 0x8000;
-  for (let i = 0; i < bytes.length; i += CHUNK) {
-    bin += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + CHUNK)));
+  const CHUNK = 65535;
+  if (bytes.length <= CHUNK) {
+    return Buffer.from(bytes).toString('base64');
   }
-  return globalThis.btoa(bin);
+  let result = '';
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    const chunk = bytes.slice(i, Math.min(i + CHUNK, bytes.length));
+    result += Buffer.from(chunk).toString('base64');
+    if (i + CHUNK < bytes.length) {
+      await new Promise<void>((r) => setTimeout(r, 0));
+    }
+  }
+  return result;
 }
 
 /**
@@ -338,21 +347,26 @@ export class LfsService {
       throw new Error('LFS server did not return a download URL.');
     }
 
-    let res: Response;
+let res: Response;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120_000);
     try {
       res = await fetch(action.href, {
         method: 'GET',
         headers: action.header ?? {},
+        signal: controller.signal,
       });
     } catch {
+      clearTimeout(timeoutId);
       throw new Error("Couldn't download LFS file — try again.");
     }
+    clearTimeout(timeoutId);
     if (!res.ok) {
-      throw new Error(`Couldn't download LFS file (${res.status}).`);
+      throw new Error(`LFS file (${res.status}).`);
     }
 
     const ab = await res.arrayBuffer();
-    const b64 = arrayBufferToBase64(ab);
+    const b64 = await arrayBufferToBase64Async(ab);
     await FileSystem.writeAsStringAsync(opts.fileUri, b64, {
       encoding: FileSystem.EncodingType.Base64,
     });
