@@ -153,6 +153,7 @@ export class GitFsService {
       });
     } catch (cloneError) {
       clearRepoCache(opts.repoPath);
+      await GitFsService.removeRepo({ repoPath: opts.repoPath }).catch(() => undefined);
       throw cloneError;
     }
 
@@ -187,6 +188,7 @@ export class GitFsService {
       });
     } catch (fetchError) {
       clearRepoCache(opts.repoPath);
+      await cleanCorruptedPackfiles(opts.repoPath);
       throw fetchError;
     }
   }
@@ -250,6 +252,7 @@ export class GitFsService {
       ) {
         return { ok: false, reason: 'diverged', error: message };
       }
+      await cleanCorruptedPackfiles(opts.repoPath);
       return { ok: false, reason: 'unknown', error: message };
     }
   }
@@ -318,15 +321,10 @@ export class GitFsService {
   static async isCloned(opts: RepoLocator): Promise<boolean> {
     const info = parseRepoPath(opts.repoPath);
     if (!info) return false;
-    const fsRoot = clonesRoot();
-    const head = `${fsRoot}${info.owner}/${info.repo}/.git/HEAD`;
+    const dir = repoDirVirtual(info.owner, info.repo);
     try {
-      const stat = await FileSystem.getInfoAsync(head);
-      if (!stat.exists || stat.isDirectory) return false;
-      const content = await FileSystem.readAsStringAsync(head);
-      // Verify HEAD contains a valid ref or commit hash
-      const trimmed = content.trim();
-      return trimmed.startsWith('ref: ') || /^[a-f0-9]{40}$/.test(trimmed);
+      await git.resolveRef({ fs: makeRepoFs(), dir, ref: 'HEAD' });
+      return true;
     } catch {
       return false;
     }

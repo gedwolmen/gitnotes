@@ -240,11 +240,8 @@ export default function SettingsScreen() {
         },
       ]);
     } catch (error) {
-      if (cloneAbortedRef.current) {
-        // User cancelled; clean up partial state silently.
-        await GitFsService.removeRepo({ repoPath: repo.path }).catch(() => undefined);
-        return;
-      }
+      await GitFsService.removeRepo({ repoPath: repo.path }).catch(() => undefined);
+      if (cloneAbortedRef.current) return;
       HapticService.error();
       Alert.alert('Clone failed', error instanceof Error ? error.message : String(error));
     } finally {
