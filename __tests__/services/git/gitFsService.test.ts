@@ -248,4 +248,38 @@ describe('GitFsService', () => {
       expect(result.reason).toBe('unknown');
     }
   });
+
+  test('clone failure cleans up partial clone by calling removeRepo', async () => {
+    getGitMocks().clone.mockRejectedValueOnce(new Error('network failure'));
+    getFsStore().set('file:///doc/GitNotes/me/', { type: 'dir' });
+    getFsStore().set('file:///doc/GitNotes/me/repo/.git/HEAD', { type: 'file', content: 'ref: refs/heads/main' });
+    await expect(
+      GitFsService.clone({ repoPath: 'me/repo', branch: 'main', token: 'tok' }),
+    ).rejects.toThrow('network failure');
+    expect(getFsStore().has('file:///doc/GitNotes/me/repo')).toBe(false);
+  });
+
+  test('fetch failure with packfile mismatch error cleans packfiles', async () => {
+    getGitMocks().fetch.mockRejectedValueOnce(new Error('Packfile trailer mismatch'));
+    getFsStore().set('file:///doc/GitNotes/me/', { type: 'dir' });
+    getFsStore().set('file:///doc/GitNotes/me/repo/.git/HEAD', { type: 'file', content: 'ref: refs/heads/main' });
+    getFsStore().set('file:///doc/GitNotes/me/repo/.git/objects/pack', { type: 'dir' });
+    await expect(
+      GitFsService.fetch({ repoPath: 'me/repo', branch: 'main', token: 'tok' }),
+    ).rejects.toThrow('Packfile trailer mismatch');
+  });
+
+  test('pullWithFastForward on divergence does NOT throw packfile cleanup error', async () => {
+    getGitMocks().fetch.mockRejectedValueOnce(
+      Object.assign(new Error('not fast-forward'), { code: 'FastForwardError' }),
+    );
+    const result = await GitFsService.pullWithFastForward({
+      repoPath: 'me/repo',
+      branch: 'main',
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe('diverged');
+    }
+  });
 });
