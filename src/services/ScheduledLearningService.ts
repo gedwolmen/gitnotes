@@ -94,6 +94,9 @@ export class ScheduledLearningService {
         messages: [{ role: 'user', content: userPrompt }],
       });
 
+      // Strip AI thinking tags (e.g. <think>...</think>) from the response
+      const cleanedContent = result.text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
       const now = new Date();
       const dateStr = now.toLocaleDateString('en-US', {
         month: 'short',
@@ -106,7 +109,7 @@ export class ScheduledLearningService {
 
       await noteStore.createNote({
         title,
-        content: result.text,
+        content: cleanedContent,
         tags: ['scheduled-learning', ...item.tags],
         folderPath,
         repo: item.repoPath ?? undefined,
