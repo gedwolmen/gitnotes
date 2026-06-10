@@ -88,5 +88,8 @@ yarn-error.log*
 .claude/worktrees/
 .claude/
 
+# OpenCode
+.omo/
+
 # App Store screenshots (local marketing assets)
 appstore_screenshots/
