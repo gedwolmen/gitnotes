@@ -1,5 +1,5 @@
 import { Buffer } from 'buffer';
-import { getAdapter, isGitHostKind } from '../src/services/git/hostAdapters';
+import { getAdapter, isGitHostKind, isSupportedGitHostKind } from '../src/services/git/hostAdapters';
 import { setActiveGitHostKind, getActiveGitHostKind } from '../src/services/git/gitHttp';
 import { ensureToken } from '../src/services/git/GitFsService';
 import { parseRepoPathAt } from '../src/utils/gitPathParser';
@@ -18,6 +18,14 @@ describe('git host adapters', () => {
       expect(a.kind).toBe('gitea');
       expect(a.displayName()).toBe('Gitea');
       // Gitea has no canonical default — always self-hosted.
+      expect(a.defaultBaseUrl()).toBe('');
+    });
+
+    test('returns the GitLab adapter for "gitlab"', () => {
+      const a = getAdapter('gitlab');
+      expect(a.kind).toBe('gitlab');
+      expect(a.displayName()).toBe('GitLab');
+      // GitLab has no canonical default — always self-hosted.
       expect(a.defaultBaseUrl()).toBe('');
     });
 
@@ -111,6 +119,64 @@ describe('git host adapters', () => {
       const decoded = Buffer.from(`${username}:${password}`).toString('base64');
       const back = Buffer.from(decoded, 'base64').toString('utf-8');
       expect(back).toBe('oauth2:gt_abc');
+    });
+  });
+
+  describe('GitLab adapter — remote URL', () => {
+    test('builds a self-hosted URL from the given baseUrl (no encoding on the clone URL)', () => {
+      const url = getAdapter('gitlab').buildRemoteUrl({
+        baseUrl: 'https://gitlab.example.com',
+        owner: 'my-group',
+        repo: 'my-project',
+      });
+      // GitLab's git smart-http transport handles the path verbatim;
+      // percent-encoding is the REST API's concern, not ours.
+      expect(url).toBe('https://gitlab.example.com/my-group/my-project.git');
+    });
+
+    test('builds a nested-namespace URL (group/subgroup/project)', () => {
+      const url = getAdapter('gitlab').buildRemoteUrl({
+        baseUrl: 'https://gitlab.example.com',
+        owner: 'my-group/my-subgroup',
+        repo: 'my-project',
+      });
+      expect(url).toBe('https://gitlab.example.com/my-group/my-subgroup/my-project.git');
+    });
+
+    test('strips trailing slashes from baseUrl', () => {
+      const url = getAdapter('gitlab').buildRemoteUrl({
+        baseUrl: 'https://gitlab.example.org//',
+        owner: 'me',
+        repo: 'notes',
+      });
+      expect(url).toBe('https://gitlab.example.org/me/notes.git');
+    });
+
+    test('without baseUrl returns an obviously-bogus URL (caller must provide one)', () => {
+      const url = getAdapter('gitlab').buildRemoteUrl({ owner: 'me', repo: 'notes' });
+      // We do NOT silently default to gitlab.com; that's not a
+      // canonical GitLab instance. The .invalid TLD per RFC 2606
+      // makes a misconfigured call fail loudly at the network layer
+      // rather than cloning from the wrong host.
+      expect(url).toBe('https://gitlab.example.invalid/me/notes.git');
+    });
+  });
+
+  describe('GitLab adapter — Basic auth', () => {
+    test('uses the empty-string username with the PAT as the password', () => {
+      const { username, password } = getAdapter('gitlab').buildBasicAuth({ token: 'glpat_abc' });
+      expect(username).toBe('');
+      expect(password).toBe('glpat_abc');
+    });
+
+    test('the encoded header decodes back to ":<token>" (no user prefix)', () => {
+      const { username, password } = getAdapter('gitlab').buildBasicAuth({ token: 'glpat_abc' });
+      const decoded = Buffer.from(`${username}:${password}`).toString('base64');
+      const back = Buffer.from(decoded, 'base64').toString('utf-8');
+      // The leading empty username + colon is the GitLab convention
+      // that makes a "just a token" Basic header unambiguous in
+      // network captures.
+      expect(back).toBe(':glpat_abc');
     });
   });
 });
@@ -210,6 +276,21 @@ describe('ensureToken — host-correct Basic auth credentials', () => {
     expect(getAdapter('gitea').buildBasicAuth({ token: 'gt_abc' })).toEqual({
       username: 'oauth2',
       password: 'gt_abc',
+    });
+  });
+
+  test('GitLab active host → :<token> (empty username + PAT password)', () => {
+    setActiveGitHostKind('gitlab');
+    const onAuth = ensureToken('glpat_abc');
+    expect(onAuth).toBeDefined();
+    const creds = onAuth!('https://gitlab.example.com/group/project.git', {
+      username: '',
+      password: '',
+    });
+    expect(creds).toEqual({ username: '', password: 'glpat_abc' });
+    expect(getAdapter('gitlab').buildBasicAuth({ token: 'glpat_abc' })).toEqual({
+      username: '',
+      password: 'glpat_abc',
     });
   });
 

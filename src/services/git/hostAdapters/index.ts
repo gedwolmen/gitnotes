@@ -1,6 +1,7 @@
 import type { GitHostAdapter, GitHostKind, SupportedGitHostKind } from './types';
 import { githubAdapter } from './github';
 import { giteaAdapter } from './gitea';
+import { gitlabAdapter } from './gitlab';
 
 /**
  * Returns the adapter for the given host kind. Throws for unknown
@@ -19,11 +20,12 @@ export function getAdapter(kind: GitHostKind): GitHostAdapter {
       return githubAdapter;
     case 'gitea':
       return giteaAdapter;
-    // 'gitlab' deliberately not yet wired — the contents API differs
-    // enough that shipping it would dilute the phase-1 PR. See
-    // AGENT.md / phase-2 plan.
     case 'gitlab':
-      throw new Error('GitLab adapter is not yet implemented (planned for phase 3)');
+      // **Clone mode only.** The Contents API for read/write of
+      // individual files in API-mode sync is still GitHub-only;
+      // adding GitLab's Repository Files API is the phase 3 work
+      // tracked in AGENT.md.
+      return gitlabAdapter;
     default: {
       const exhaustive: never = kind;
       throw new Error(`No adapter registered for host kind: ${String(exhaustive)}`);
@@ -36,10 +38,10 @@ export function isGitHostKind(value: string): value is GitHostKind {
 }
 
 export function isSupportedGitHostKind(value: string): value is SupportedGitHostKind {
-  return value === 'github' || value === 'gitea';
+  return value === 'github' || value === 'gitea' || value === 'gitlab';
 }
 
-export { githubAdapter, giteaAdapter };
+export { githubAdapter, giteaAdapter, gitlabAdapter };
 export type {
   GitHostAdapter,
   GitHostKind,
