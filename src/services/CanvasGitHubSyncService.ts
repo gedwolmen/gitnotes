@@ -8,8 +8,13 @@ import { resolveBranch } from './git/branchResolver';
 import { getContentsAdapter } from './git/hostAdapters/contents';
 
 /** Chokepoint for phase-3 per-repo host info; see NoteGitHubSyncService. */
-function getApiContentsAdapter() {
-  return getContentsAdapter('github');
+function getApiContentsAdapter(repoPath: string) {
+  return getApiContentsAdapterAsync(repoPath);
+}
+
+async function getApiContentsAdapterAsync(repoPath: string) {
+  const hostKind = await SyncEngineService.getHostKind(repoPath);
+  return getContentsAdapter(hostKind);
 }
 
 async function resolveToken(accountId?: string): Promise<string | undefined> {
@@ -83,7 +88,7 @@ export async function syncCanvasToGitHub(params: {
   }
 
   try {
-    const result = await getApiContentsAdapter().updateFile(
+    const result = await (await getApiContentsAdapterAsync(repoPath)).updateFile(
       repoInfo.owner,
       repoInfo.repo,
       targetPath,
@@ -146,7 +151,7 @@ export async function deleteCanvasFromGitHub(params: {
   }
 
   try {
-    const contents = getApiContentsAdapter();
+    const contents = await getApiContentsAdapterAsync(repoPath);
     // not-found = remote already gone, treat as success so the local
     // row deletes cleanly. error = couldn't reach GitHub, hold the row
     // (#567 fix A) so the next pull doesn't re-import the upstream copy.

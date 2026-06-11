@@ -17,6 +17,12 @@ jest.mock('../src/services/GitHubService', () => ({
 jest.mock('../src/services/SyncEngineService', () => ({
   SyncEngineService: {
     getMode: jest.fn(async () => 'api'),
+    // Per-repo host kind — required by the Phase C8 per-repo
+    // dispatch in the sync services' chokepoint helper. The
+    // default 'github' matches the test's pre-Phase-C8
+    // behaviour; switching to 'gitea' or 'gitlab' here would
+    // exercise the other contents adapters.
+    getHostKind: jest.fn(async () => 'github' as const),
   },
 }));
 

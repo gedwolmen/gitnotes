@@ -9,8 +9,13 @@ import { getContentsAdapter } from './git/hostAdapters/contents';
 import { githubActivity } from '../stores/githubActivityStore';
 
 /** Chokepoint for phase-3 per-repo host info; see NoteGitHubSyncService. */
-function getApiContentsAdapter() {
-  return getContentsAdapter('github');
+function getApiContentsAdapter(repoPath: string) {
+  return getApiContentsAdapterAsync(repoPath);
+}
+
+async function getApiContentsAdapterAsync(repoPath: string) {
+  const hostKind = await SyncEngineService.getHostKind(repoPath);
+  return getContentsAdapter(hostKind);
 }
 
 function resolveAuthor() {
@@ -66,7 +71,7 @@ export async function syncTemplateToGitHub(params: {
   }
 
   try {
-    const result = await getApiContentsAdapter().updateFile(
+    const result = await (await getApiContentsAdapterAsync(repoPath)).updateFile(
       info.owner, info.repo, targetPath, body, message, branch, undefined,
     );
     if (!result) return { success: false, error: 'GitHub API returned no result' };
@@ -108,7 +113,7 @@ export async function deleteTemplateFromGitHub(params: {
 
   let resolvedSha = sha;
   if (!resolvedSha) {
-    const contents = getApiContentsAdapter();
+    const contents = await getApiContentsAdapterAsync(repoPath);
     const lookup = await contents.getFileSha(info.owner, info.repo, filePath, branch);
     if (lookup.kind === 'not-found') {
       // File already gone on the remote — treat as success.
@@ -123,7 +128,7 @@ export async function deleteTemplateFromGitHub(params: {
   }
 
   try {
-    const result = await getApiContentsAdapter().deleteFile(
+    const result = await (await getApiContentsAdapterAsync(repoPath)).deleteFile(
       info.owner, info.repo, filePath, `Delete template ${name}`, resolvedSha, branch,
     );
     if (!result) return { success: false, error: 'GitHub API returned no result' };

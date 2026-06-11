@@ -9,8 +9,13 @@ import { getContentsAdapter } from './git/hostAdapters/contents';
 import { githubActivity } from '../stores/githubActivityStore';
 
 /** Chokepoint for phase-3 per-repo host info; see NoteGitHubSyncService. */
-function getApiContentsAdapter() {
-  return getContentsAdapter('github');
+function getApiContentsAdapter(repoPath: string) {
+  return getApiContentsAdapterAsync(repoPath);
+}
+
+async function getApiContentsAdapterAsync(repoPath: string) {
+  const hostKind = await SyncEngineService.getHostKind(repoPath);
+  return getContentsAdapter(hostKind);
 }
 
 async function resolveToken(accountId?: string): Promise<string | undefined> {
@@ -92,7 +97,7 @@ export async function syncTodoToGitHub(params: {
         fileExists = false;
       }
     } else {
-      const sha = await getApiContentsAdapter().getFileShaOrNull(repoInfo.owner, repoInfo.repo, targetPath, targetBranch, opts);
+      const sha = await (await getApiContentsAdapterAsync(repoPath)).getFileShaOrNull(repoInfo.owner, repoInfo.repo, targetPath, targetBranch, opts);
       fileExists = sha !== null;
     }
   } catch (error) {
@@ -128,7 +133,7 @@ export async function syncTodoToGitHub(params: {
   }
 
   try {
-    const result = await getApiContentsAdapter().updateFile(
+    const result = await (await getApiContentsAdapterAsync(repoPath)).updateFile(
       repoInfo.owner,
       repoInfo.repo,
       targetPath,
@@ -192,7 +197,7 @@ export async function deleteTodoFromGitHub(params: {
   }
 
   try {
-    const contents = getApiContentsAdapter();
+    const contents = await getApiContentsAdapterAsync(repoPath);
     // not-found = remote already gone, treat as success so the local
     // row deletes cleanly. error = couldn't reach GitHub, hold the row
     // (#567 fix A) so the next pull doesn't re-import the upstream copy.

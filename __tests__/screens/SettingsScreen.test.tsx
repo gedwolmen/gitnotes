@@ -162,6 +162,11 @@ jest.mock('../../src/services/SyncEngineService', () => ({
   SyncEngineService: {
     getMode: jest.fn(async () => 'api' as const),
     setMode: jest.fn(async () => undefined),
+    // Per-repo host kind — see the Phase C8 per-repo dispatch
+    // in the sync services' chokepoint helper. SettingsScreen
+    // doesn't directly read this, but listing it keeps the
+    // mock shape aligned with the other tests.
+    getHostKind: jest.fn(async () => 'github' as const),
   },
 }));
 

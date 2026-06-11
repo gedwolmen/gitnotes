@@ -35,7 +35,10 @@ jest.mock('../src/services/AuthService', () => ({
 }));
 
 jest.mock('../src/services/SyncEngineService', () => ({
-  SyncEngineService: { getMode: jest.fn(async () => 'clone') },
+  SyncEngineService: {
+    getMode: jest.fn(async () => 'clone'),
+    getHostKind: jest.fn(async () => 'github' as const),
+  },
 }));
 
 jest.mock('../src/services/git/GitFsService', () => ({

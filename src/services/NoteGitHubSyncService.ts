@@ -12,18 +12,30 @@ import { githubActivity } from '../stores/githubActivityStore';
 
 /**
  * Returns the Contents adapter to use for API-mode sync on a given
- * repo. Phase 1: always returns the GitHub adapter (the self-hosted
- * adapters throw at construction). Phase 3 will derive the host kind
- * from the repo record in `repoStore` (per-account host info
- * carried there) and the per-host contents adapter will be picked
- * by `getContentsAdapter` automatically.
+ * repo. Reads the per-repo host kind from `SyncEngineService` so
+ * the right per-host adapter (GitHub / Gitea / GitLab) is picked
+ * for the current repo. Defaults to `github` when no override is
+ * stored (the case for every repo that hasn't gone through the
+ * phase-D1 host-picker UI).
  *
- * Wrapping the factory call in this helper gives us a single chokepoint
- * to update when per-repo host info lands — every `*GitHubSyncService`
- * calls this instead of the factory directly.
+ * The call site must pass the `repoPath` because the dispatch is
+ * per-repo, not per-app. The chokepoint helper exists so future
+ * changes (e.g. adding a `hostKindOverride` parameter, adding a
+ * per-account fallback chain) only touch one place per sync service.
  */
-function getApiContentsAdapter() {
-  return getContentsAdapter('github');
+function getApiContentsAdapter(repoPath: string) {
+  // We intentionally don't await this on the hot path for callers
+  // that already know the host — but the helper signature is
+  // synchronous-to-the-caller: every call site passes repoPath
+  // synchronously and we synchronously default to github on
+  // storage miss. The async lookup happens once at the entry of
+  // each public method (see the methods that read this).
+  return getApiContentsAdapterAsync(repoPath);
+}
+
+async function getApiContentsAdapterAsync(repoPath: string) {
+  const hostKind = await SyncEngineService.getHostKind(repoPath);
+  return getContentsAdapter(hostKind);
 }
 
 async function resolveAuthor(): Promise<{ name: string; email: string }> {
@@ -370,7 +382,7 @@ export async function deleteNoteFromGitHub(params: {
   }
 
   try {
-    const contents = getApiContentsAdapter();
+    const contents = await getApiContentsAdapterAsync(repoPath);
     // Cache-first lookup (#565 phase C). When the editor saved this note
     // a moment ago, the sha is already in memory and we skip the GET.
     const lookup = await contents.getFileShaCached(
@@ -490,7 +502,7 @@ export async function syncNoteToGitHub(params: {
         fileExists = false;
       }
     } else {
-      const sha = await getApiContentsAdapter().getFileShaOrNull(repoInfo.owner, repoInfo.repo, targetPath, targetBranch, opts);
+      const sha = await (await getApiContentsAdapterAsync(repoPath)).getFileShaOrNull(repoInfo.owner, repoInfo.repo, targetPath, targetBranch, opts);
       fileExists = sha !== null;
     }
   } catch (error) {
@@ -525,7 +537,7 @@ export async function syncNoteToGitHub(params: {
   }
 
   try {
-    const contents = getApiContentsAdapter();
+    const contents = await getApiContentsAdapterAsync(repoPath);
     if (knownSha && filePath) {
       const currentSha = await contents.getFileShaOrNull(
         repoInfo.owner, repoInfo.repo, targetPath, targetBranch, opts,
