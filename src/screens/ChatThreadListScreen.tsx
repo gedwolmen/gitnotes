@@ -39,7 +39,6 @@ export default function ChatThreadListScreen() {
   } = useChatStore();
 
   const { chatRepoOwner, chatRepoName, chatRepoBranch, selectedModelId } = useAIStore();
-  const availableModels = useAIStore((s) => s.getAvailableModels());
   const [isPullRefreshing, setIsPullRefreshing] = useState(false);
   const isPullRefreshingRef = useRef(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -105,6 +104,12 @@ export default function ChatThreadListScreen() {
       Alert.alert('Configuration Required', 'Please set up a chat repository in AI settings first.');
       return;
     }
+    // Read the latest available models from the store on demand rather than
+    // subscribing via a selector. Subscribing to a function that returns a
+    // fresh array each call (`getAvailableModels()`) makes `useSyncExternalStore`
+    // see a new snapshot reference on every render, which triggers React's
+    // "getSnapshot should be cached" warning and an infinite re-render loop.
+    const availableModels = useAIStore.getState().getAvailableModels();
     if (!selectedModelId || availableModels.length === 0) {
       Alert.alert('AI Not Configured', 'Please set up an AI model in Settings before starting a chat.');
       return;
