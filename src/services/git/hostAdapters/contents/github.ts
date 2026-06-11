@@ -39,10 +39,11 @@ function toContentsSha(result: { kind: 'found'; sha: string } | { kind: 'not-fou
   return { kind: 'error', status: result.status, message: result.message };
 }
 
-function toContentsFileCommit(commit: { content?: { sha?: string } | null; commit?: { sha?: string } | null } | null): ContentsFileCommit {
+function toContentsFileCommit(commit: { content?: { sha?: string } | null; commit?: { sha?: string } | null } | null): ContentsFileCommit | null {
+  if (!commit) return null;
   return {
-    sha: commit?.content?.sha ?? '',
-    commitSha: commit?.commit?.sha ?? '',
+    sha: commit.content?.sha ?? '',
+    commitSha: commit.commit?.sha ?? '',
   };
 }
 
