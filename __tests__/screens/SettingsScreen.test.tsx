@@ -167,8 +167,42 @@ jest.mock('../../src/services/SyncEngineService', () => ({
     // doesn't directly read this, but listing it keeps the
     // mock shape aligned with the other tests.
     getHostKind: jest.fn(async () => 'github' as const),
+    setHostKind: jest.fn(async () => undefined),
   },
 }));
+
+jest.mock('../../src/services/AccountStorage', () => ({
+  AccountStorage: {
+    // Per-account host persistence. Called by the
+    // per-repo "Edit host" flow (Phase D2.3) when the
+    // user saves a new host choice. The baseUrl is
+    // account-scoped; the kind is persisted to both
+    // SyncEngineService (per-repo dispatch) and the
+    // active account record (host origin for Basic
+    // auth + remote URL building).
+    updateAccountHost: jest.fn(async () => undefined),
+  },
+}));
+
+jest.mock('../../src/components/HostPicker', () => {
+  const React = require('react');
+  const { View, Text, Pressable } = require('react-native');
+  return {
+    HostPicker: ({ value, onChange, testID }: any) => (
+      <View testID={testID || 'host-picker'}>
+        <Pressable testID="host-picker-github" onPress={() => onChange({ ...value, hostKind: 'github' })}>
+          <Text>github</Text>
+        </Pressable>
+        <Pressable testID="host-picker-gitea" onPress={() => onChange({ ...value, hostKind: 'gitea' })}>
+          <Text>gitea</Text>
+        </Pressable>
+        <Pressable testID="host-picker-gitlab" onPress={() => onChange({ ...value, hostKind: 'gitlab' })}>
+          <Text>gitlab</Text>
+        </Pressable>
+      </View>
+    ),
+  };
+});
 
 jest.mock('../../src/services/git/GitFsService', () => ({
   GitFsService: {

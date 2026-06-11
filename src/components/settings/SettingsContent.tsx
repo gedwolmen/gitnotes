@@ -58,6 +58,17 @@ type SettingsContentProps = {
   repositories: GitRepository[];
   syncingRepo: string | null;
   syncModes: Record<string, 'api' | 'clone'>;
+  /**
+   * Per-repo host kind + baseUrl. Read from
+   * `SyncEngineService.getHostKind(repoPath)` in the screen's
+   * per-repo data-loading effect. `baseUrl` is undefined for
+   * github.com and GitHub Enterprise without an explicit URL;
+   * self-hosted Gitea / GitLab always carry one.
+   */
+  hostKinds: Record<string, 'github' | 'gitea' | 'gitlab'>;
+  hostBaseUrls: Record<string, string | undefined>;
+  /** Open the host-edit modal for the given repo path. */
+  onEditHost: (repo: GitRepository) => void;
   cloningRepo: string | null;
   templatesRepoPref: TemplateRepoPreference | null;
   isSyncingExistingTemplates: boolean;
@@ -149,6 +160,9 @@ export function SettingsContent(props: SettingsContentProps) {
     onRemoveRepo,
     onEnableCloneMode,
     onDisableCloneMode,
+    hostKinds,
+    hostBaseUrls,
+    onEditHost,
     lfsPending,
     lfsDownloadingRepo,
     onDownloadLfsObjects,
@@ -470,6 +484,31 @@ export function SettingsContent(props: SettingsContentProps) {
                   <Text style={[styles.repoName, { color: colors.text }]} numberOfLines={1}>{repo.name}</Text>
                   <Text style={[styles.repoPath, { color: colors.textSecondary }]} numberOfLines={1}>
                     {isClone ? 'Clone (local working tree)' : 'GitHub API (per-file)'}
+                  </Text>
+                </GroupRow>
+                <GroupRow
+                  testID={`host-row-${repo.path}`}
+                  leading={<Ionicons name="server-outline" size={18} color={colors.textSecondary} />}
+                  trailing={
+                    <TouchableOpacity
+                      testID={`host-row-edit-${repo.path}`}
+                      onPress={() => onEditHost(repo)}
+                      style={{ padding: 4 }}
+                    >
+                      <Ionicons name="create-outline" size={18} color={colors.primary} />
+                    </TouchableOpacity>
+                  }
+                >
+                  <Text style={[styles.settingLabel, { color: colors.textSecondary }]}>Host</Text>
+                  <Text style={[styles.repoPath, { color: colors.text, marginTop: 2 }]} numberOfLines={1}>
+                    {(() => {
+                      const kind = hostKinds[repo.path] ?? 'github';
+                      const baseUrl = hostBaseUrls[repo.path];
+                      if (kind === 'github' && !baseUrl) return 'GitHub.com';
+                      if (kind === 'gitea') return `Gitea (${baseUrl ?? 'no baseUrl'})`;
+                      if (kind === 'gitlab') return `GitLab (${baseUrl ?? 'no baseUrl'})`;
+                      return `GitHub Enterprise (${baseUrl})`;
+                    })()}
                   </Text>
                 </GroupRow>
                 {isClone && lfs && lfs.count > 0 ? (

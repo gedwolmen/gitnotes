@@ -1313,6 +1313,33 @@
     "platform": ["ios", "android"]
   },
   {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "modal",
+    "action": "openHostEditor",
+    "testID": "settings.host-picker",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "cancelHostEdit",
+    "testID": "settings.edit-host.cancel",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
+    "file": "src/screens/SettingsScreen.tsx",
+    "component": "SettingsContent",
+    "elementType": "button",
+    "action": "saveHostEdit",
+    "testID": "settings.edit-host.save",
+    "flowId": "settings",
+    "platform": ["ios", "android"]
+  },
+  {
     "file": "src/components/settings/ImportSection.tsx",
     "component": "ImportSection",
     "elementType": "button",

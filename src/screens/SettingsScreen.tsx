@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, View } from 'react-native';
+import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -23,6 +23,7 @@ import { SyncEngineService, type SyncEngineMode } from '../services/SyncEngineSe
 import { GitFsService } from '../services/git/GitFsService';
 import { CloneMigrationService } from '../services/git/CloneMigrationService';
 import { LfsService } from '../services/git/lfs';
+import { AccountStorage } from '../services/AccountStorage';
 import { AuthService } from '../services/AuthService';
 import { OnboardingService } from '../services/OnboardingService';
 import { HapticService } from '../utils/haptics';
@@ -36,8 +37,11 @@ import { ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../compone
 import { SettingsContent } from '../components/settings/SettingsContent';
 import { SettingsModals } from '../components/settings/SettingsModals';
 import { CloneProgressModal, type CloneProgress } from '../components/settings/CloneProgressModal';
+import { HostPicker, type HostPickerValue } from '../components/HostPicker';
+import { Modal } from '../components/ui';
 import { settingsStyles as styles } from '../components/settings/settingsStyles';
 import type { GitRepository } from '../services/GitService';
+import type { GitHostKind } from '../services/git/hostAdapters';
 
 export default function SettingsScreen() {
   const { theme, colors, setTheme, style: uiStyle, setStyle } = useTheme();
@@ -94,6 +98,23 @@ export default function SettingsScreen() {
   const [templatesRepoPref, setTemplatesRepoPref] = useState<TemplateRepoPreference | null>(null);
   const [showTemplatesRepoPicker, setShowTemplatesRepoPicker] = useState(false);
   const [syncModes, setSyncModes] = useState<Record<string, SyncEngineMode>>({});
+  // Per-repo host info. Loaded in the same effect that loads
+  // `syncModes` (so the per-repo section has both pieces of
+  // info in one render). `hostBaseUrls` is undefined for
+  // github.com without an enterprise baseUrl — the SettingsContent
+  // row renders "GitHub.com" for that case.
+  const [hostKinds, setHostKinds] = useState<Record<string, GitHostKind>>({});
+  const [hostBaseUrls, setHostBaseUrls] = useState<Record<string, string | undefined>>({});
+  // Per-repo host editor. `editingHostRepo` is the repo whose
+  // host the user is editing; the `hostValue` is the current
+  // HostPicker form state. Saved on close via
+  // `handleSaveHost` which persists to both `SyncEngineService`
+  // (per-repo dispatch) and `AccountStorage` (account-level).
+  const [editingHostRepo, setEditingHostRepo] = useState<GitRepository | null>(null);
+  const [hostValue, setHostValue] = useState<HostPickerValue>({
+    hostKind: 'github',
+    baseUrl: undefined,
+  });
   const [cloningRepo, setCloningRepo] = useState<string | null>(null);
   const [cloneProgress, setCloneProgress] = useState<CloneProgress | null>(null);
   const cloneAbortedRef = useRef(false);
@@ -108,16 +129,69 @@ export default function SettingsScreen() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const next: Record<string, SyncEngineMode> = {};
+      const nextModes: Record<string, SyncEngineMode> = {};
+      const nextKinds: Record<string, GitHostKind> = {};
+      const nextBaseUrls: Record<string, string | undefined> = {};
       for (const repo of repositories) {
-        next[repo.path] = await SyncEngineService.getMode(repo.path);
+        nextModes[repo.path] = await SyncEngineService.getMode(repo.path);
+        nextKinds[repo.path] = await SyncEngineService.getHostKind(repo.path);
+        // The SyncEngineService map only stores the kind (the
+        // default is github, no baseUrl). The baseUrl lives
+        // on the per-account record in AccountStorage — we
+        // only have one active account at a time, so the
+        // per-repo display reads the active account's
+        // baseUrl. For the multi-account case this would
+        // need per-repo baseUrl storage in SyncEngineService.
+        const account = accounts.find((a) => a.id === activeAccountId);
+        nextBaseUrls[repo.path] = account?.baseUrl;
       }
-      if (!cancelled) setSyncModes(next);
+      if (!cancelled) {
+        setSyncModes(nextModes);
+        setHostKinds(nextKinds);
+        setHostBaseUrls(nextBaseUrls);
+      }
     })();
     return () => {
       cancelled = true;
     };
   }, [repositories]);
+
+  // Open the host-editor modal for a repo. Pre-fills the
+  // HostPicker with the current value (per-repo kind +
+  // active-account baseUrl). The user changes the picker
+  // and we save on close.
+  const handleEditHost = useCallback(
+    (repo: GitRepository) => {
+      const currentKind = hostKinds[repo.path] ?? 'github';
+      const account = accounts.find((a) => a.id === activeAccountId);
+      setHostValue({
+        hostKind: currentKind,
+        baseUrl: account?.baseUrl,
+      });
+      setEditingHostRepo(repo);
+    },
+    [hostKinds, accounts, activeAccountId],
+  );
+
+  // Save the host choice. Two writes: SyncEngineService for
+  // the per-repo dispatch (so api-mode sync picks the right
+  // contents adapter), AccountStorage for the account-level
+  // baseUrl (so the per-host Basic auth header has the right
+  // origin). Both writes go through the defensive-normalise
+  // path so trailing slashes get stripped, etc.
+  const handleSaveHost = useCallback(
+    async (next: HostPickerValue) => {
+      if (!editingHostRepo) return;
+      await SyncEngineService.setHostKind(editingHostRepo.path, next.hostKind);
+      if (activeAccountId) {
+        await AccountStorage.updateAccountHost(activeAccountId, next.hostKind, next.baseUrl);
+      }
+      setHostKinds((prev) => ({ ...prev, [editingHostRepo.path]: next.hostKind }));
+      setHostBaseUrls((prev) => ({ ...prev, [editingHostRepo.path]: next.baseUrl }));
+      setEditingHostRepo(null);
+    },
+    [editingHostRepo, activeAccountId],
+  );
 
   const refreshLfsPending = useCallback(async (repoPaths: string[]) => {
     const next: Record<string, { count: number; bytes: number }> = {};
@@ -589,6 +663,9 @@ export default function SettingsScreen() {
         onRemoveRepo={handleRemoveRepo}
         onEnableCloneMode={(repo) => void handleEnableCloneMode(repo)}
         onDisableCloneMode={handleDisableCloneMode}
+        hostKinds={hostKinds}
+        hostBaseUrls={hostBaseUrls}
+        onEditHost={handleEditHost}
         lfsPending={lfsPending}
         lfsDownloadingRepo={lfsDownloadingRepo}
         onDownloadLfsObjects={(repo) => void handleDownloadLfsObjects(repo)}
@@ -659,6 +736,39 @@ export default function SettingsScreen() {
         onSaveToken={() => void handleSaveToken()}
       />
       <ModelSelector visible={showModelSelector} onClose={() => setShowModelSelector(false)} />
+      <Modal
+        visible={editingHostRepo !== null}
+        onRequestClose={() => setEditingHostRepo(null)}
+      >
+        {editingHostRepo ? (
+          <>
+            <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600', marginBottom: 12 }}>
+              Edit host for {editingHostRepo.name}
+            </Text>
+            <HostPicker
+              value={hostValue}
+              onChange={setHostValue}
+              testID="settings.host-picker"
+            />
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12, marginTop: 16 }}>
+              <TouchableOpacity
+                testID="settings.edit-host.cancel"
+                onPress={() => setEditingHostRepo(null)}
+                style={{ paddingVertical: 8, paddingHorizontal: 16 }}
+              >
+                <Text style={{ color: colors.textSecondary, fontWeight: '500' }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                testID="settings.edit-host.save"
+                onPress={() => void handleSaveHost(hostValue)}
+                style={{ paddingVertical: 8, paddingHorizontal: 16, backgroundColor: colors.primary, borderRadius: 6 }}
+              >
+                <Text style={{ color: colors.text, fontWeight: '600' }}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        ) : null}
+      </Modal>
       <ProviderConfigModal visible={showProviderConfig} provider={editingProvider} onClose={() => { setShowProviderConfig(false); setEditingProvider(undefined); }} />
       <ChatRepoPickerModal visible={showChatRepoPicker} onClose={() => setShowChatRepoPicker(false)} onSelected={() => setShowChatRepoPicker(false)} />
       <CloneProgressModal progress={cloneProgress} onCancel={handleCancelClone} onRetry={handleRetryClone} />
