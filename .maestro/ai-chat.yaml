@@ -13,27 +13,27 @@ appId: com.xaventra.gitnotes
 - runFlow:
     when:
       visible:
-        text: "Cancel"
+        text: 'Cancel'
     commands:
-      - tapOn: "Cancel"
+      - tapOn: 'Cancel'
       - waitForAnimationToEnd:
           timeout: 800
 
 - runFlow:
     when:
       visible:
-        text: "Back"
+        text: 'Back'
     commands:
-      - tapOn: "Back"
+      - tapOn: 'Back'
       - waitForAnimationToEnd:
           timeout: 900
 
 - runFlow:
     when:
       visible:
-        text: "Back"
+        text: 'Back'
     commands:
-      - tapOn: "Back"
+      - tapOn: 'Back'
       - waitForAnimationToEnd:
           timeout: 900
 
@@ -42,14 +42,14 @@ appId: com.xaventra.gitnotes
 - runFlow:
     when:
       notVisible:
-        id: "tab-bar.*tab.press-NotesTab"
+        id: 'tab-bar.*tab.press-NotesTab'
     commands:
       - runFlow:
           when:
             visible:
-              text: "Back"
+              text: 'Back'
           commands:
-            - tapOn: "Back"
+            - tapOn: 'Back'
             - waitForAnimationToEnd:
                 timeout: 1000
       - launchApp:
@@ -59,20 +59,20 @@ appId: com.xaventra.gitnotes
 - runFlow:
     when:
       notVisible:
-        id: "tab-bar.*tab.press-NotesTab"
+        id: 'tab-bar.*tab.press-NotesTab'
     commands:
       - runFlow:
           when:
             visible:
-              text: "Back"
+              text: 'Back'
           commands:
-            - tapOn: "Back"
+            - tapOn: 'Back'
             - waitForAnimationToEnd:
                 timeout: 1000
 - assertVisible:
-    id: "tab-bar.*tab.press-NotesTab"
+    id: 'tab-bar.*tab.press-NotesTab'
 - tapOn:
-    id: "tab-bar.*tab.press-NotesTab"
+    id: 'tab-bar.*tab.press-NotesTab'
 - waitForAnimationToEnd:
     timeout: 1500
 
@@ -80,7 +80,7 @@ appId: com.xaventra.gitnotes
 - runFlow:
     when:
       notVisible:
-        id: "floating-ai.button.navigate-chat"
+        id: 'floating-ai.button.navigate-chat'
     commands:
       - launchApp:
           clearState: false
@@ -89,31 +89,31 @@ appId: com.xaventra.gitnotes
       - runFlow:
           when:
             visible:
-              text: "Back"
+              text: 'Back'
           commands:
-            - tapOn: "Back"
+            - tapOn: 'Back'
             - waitForAnimationToEnd:
                 timeout: 900
       - runFlow:
           when:
             notVisible:
-              id: "tab-bar.*tab.press-NotesTab"
+              id: 'tab-bar.*tab.press-NotesTab'
           commands:
             - launchApp:
                 clearState: false
             - waitForAnimationToEnd:
                 timeout: 1200
       - tapOn:
-          id: "tab-bar.*tab.press-NotesTab"
+          id: 'tab-bar.*tab.press-NotesTab'
       - waitForAnimationToEnd:
           timeout: 1200
 
 - tapOn:
-    id: "floating-ai.button.navigate-chat"
+    id: 'floating-ai.button.navigate-chat'
 - waitForAnimationToEnd:
     timeout: 1500
 
 # ChatThreadList shows either a list of past chats or an empty
 # sparkle-decorated state. Either way the screen renders without crash.
 - assertVisible:
-    text: ".*[Cc]hat.*|.*[Mm]odel.*|.*[Aa]I.*|.*[Ss]tart.*|.*New.*"
+    text: '.*[Cc]hat.*|.*[Mm]odel.*|.*[Aa]I.*|.*[Ss]tart.*|.*New.*'

@@ -6,25 +6,25 @@ appId: com.xaventra.gitnotes
 - launchApp:
     clearState: false
 - tapOn:
-    id: "tab-bar.*tab.press-NotesTab"
+    id: 'tab-bar.*tab.press-NotesTab'
 - waitForAnimationToEnd:
     timeout: 1500
 
 # Long-press the first list card. Avoids depending on a specific
 # note title, which depends on the active sort order.
 - longPressOn:
-    id: "notes-list.button.press-card-0"
+    id: 'notes-list.button.press-card-0'
 - waitForAnimationToEnd:
     timeout: 1000
 
 - assertVisible:
-    id: "notes-context-menu.item.toggle-pin"
+    id: 'notes-context-menu.item.toggle-pin'
 - assertVisible:
-    id: "notes-context-menu.item.share"
+    id: 'notes-context-menu.item.share'
 
 # Dismiss by tapping the close item or outside.
 - tapOn:
-    id: "notes-context-menu.item.close"
+    id: 'notes-context-menu.item.close'
     optional: true
 - swipe:
     direction: DOWN

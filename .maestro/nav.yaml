@@ -6,23 +6,23 @@ appId: com.xaventra.gitnotes
     clearState: false
 
 - tapOn:
-    id: "tab-bar.*tab.press-HomeTab"
+    id: 'tab-bar.*tab.press-HomeTab'
 - assertVisible:
-    text: ".*GitNot.*"
+    text: '.*GitNot.*'
 
 - tapOn:
-    id: "tab-bar.*tab.press-NotesTab"
-- assertVisible: "Notes"
-- assertVisible: "Search notes..."
+    id: 'tab-bar.*tab.press-NotesTab'
+- assertVisible: 'Notes'
+- assertVisible: 'Search notes...'
 
 - tapOn:
-    id: "tab-bar.*tab.press-ExploreTab"
-- assertVisible: "Explore"
+    id: 'tab-bar.*tab.press-ExploreTab'
+- assertVisible: 'Explore'
 
 - tapOn:
-    id: "tab-bar.*tab.press-TodosTab"
-- assertVisible: "Todos"
+    id: 'tab-bar.*tab.press-TodosTab'
+- assertVisible: 'Todos'
 
 - tapOn:
-    id: "tab-bar.*tab.press-SettingsTab"
-- assertVisible: "Settings"
+    id: 'tab-bar.*tab.press-SettingsTab'
+- assertVisible: 'Settings'

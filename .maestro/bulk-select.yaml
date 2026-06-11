@@ -6,24 +6,24 @@ appId: com.xaventra.gitnotes
 - launchApp:
     clearState: false
 - tapOn:
-    id: "tab-bar.*tab.press-NotesTab"
+    id: 'tab-bar.*tab.press-NotesTab'
 - waitForAnimationToEnd:
     timeout: 1500
 
 # Swipe left on the first note to trigger the slide-left auto-toggle.
 - swipe:
-    start: "85%, 35%"
-    end: "20%, 35%"
+    start: '85%, 35%'
+    end: '20%, 35%'
     duration: 400
 - assertVisible:
-    id: "bulk-action-bar.container"
+    id: 'bulk-action-bar.container'
 - assertVisible:
-    text: ".*1 note.*selected.*"
+    text: '.*1 note.*selected.*'
 - assertVisible:
-    id: "bulk-action-bar.button.delete"
+    id: 'bulk-action-bar.button.delete'
 
 # Cancel selection.
 - tapOn:
-    id: "bulk-action-bar.button.cancel"
+    id: 'bulk-action-bar.button.cancel'
 - assertNotVisible:
-    id: "bulk-action-bar.container"
+    id: 'bulk-action-bar.container'

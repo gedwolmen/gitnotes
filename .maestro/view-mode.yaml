@@ -6,12 +6,12 @@ appId: com.xaventra.gitnotes
 - launchApp:
     clearState: false
 - tapOn:
-    id: "tab-bar.*tab.press-NotesTab"
+    id: 'tab-bar.*tab.press-NotesTab'
 - waitForAnimationToEnd:
     timeout: 1500
 
 - tapOn:
-    id: "notes-list.icon-button.view-mode"
+    id: 'notes-list.icon-button.view-mode'
 - waitForAnimationToEnd:
     timeout: 1000
 
@@ -19,21 +19,21 @@ appId: com.xaventra.gitnotes
 # accessibility label gets concatenated by iOS, so we match loosely
 # with regex.
 - assertVisible:
-    text: ".*Journal.*"
+    text: '.*Journal.*'
 
 - tapOn:
-    text: ".*Journal.*"
+    text: '.*Journal.*'
 - waitForAnimationToEnd:
     timeout: 1500
 
 # Switch back to List so we leave a deterministic state.
 - tapOn:
-    id: "notes-list.icon-button.view-mode"
+    id: 'notes-list.icon-button.view-mode'
 - waitForAnimationToEnd:
     timeout: 1000
 - tapOn:
-    text: ".*List.*"
+    text: '.*List.*'
 - waitForAnimationToEnd:
     timeout: 1000
 
-- assertVisible: "Notes"
+- assertVisible: 'Notes'
