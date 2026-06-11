@@ -14,10 +14,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useRepos } from '../contexts/RepoContext';
+import { useAuth } from '../contexts/AuthContext';
 import { GitService, GitBranch, GitRepositoryFolder } from '../services/GitService';
 import { GitHubService, GitHubContent } from '../services/GitHubService';
 import { HapticService } from '../utils/haptics';
+import { AccountStorage } from '../services/AccountStorage';
 import { Modal } from './ui';
+import { HostPicker, type HostPickerValue } from './HostPicker';
 import { parseRepoPath } from '../utils/gitPathParser';
 
 interface RepoFolderPickerModalProps {
@@ -29,7 +32,7 @@ interface RepoFolderPickerModalProps {
   onClose: () => void;
 }
 
-type PickerView = 'main' | 'repo' | 'branch' | 'folder';
+type PickerView = 'main' | 'host' | 'repo' | 'branch' | 'folder';
 
 export default function RepoFolderPickerModal({
   visible,
@@ -41,6 +44,7 @@ export default function RepoFolderPickerModal({
 }: RepoFolderPickerModalProps) {
   const { colors } = useTheme();
   const { repositories } = useRepos();
+  const { activeAccountId, accounts } = useAuth();
 
   const [view, setView] = useState<PickerView>('main');
   const [isLoading, setIsLoading] = useState(false);
@@ -48,6 +52,39 @@ export default function RepoFolderPickerModal({
   const [repoSearch, setRepoSearch] = useState('');
   const [branches, setBranches] = useState<GitBranch[]>([]);
   const [branchInput, setBranchInput] = useState('');
+
+  // Per-active-account host info. Read from the active
+  // account on mount and on activeAccountId change; writes
+  // go through `AccountStorage.updateAccountHost` so the
+  // per-repo dispatch in `SyncEngineService` (Phase C8) has
+  // a real source of truth to read from. The `hostValue`
+  // is local state for the form; the persisted value lives
+  // in `AccountStorage`.
+  const activeAccount = useMemo(
+    () => accounts.find((a) => a.id === activeAccountId) ?? null,
+    [accounts, activeAccountId],
+  );
+  const [hostValue, setHostValue] = useState<HostPickerValue>({
+    hostKind: 'github',
+    baseUrl: undefined,
+  });
+  useEffect(() => {
+    if (activeAccount) {
+      setHostValue({
+        hostKind: activeAccount.hostKind ?? 'github',
+        baseUrl: activeAccount.baseUrl,
+      });
+    }
+  }, [activeAccount]);
+  const handleHostChange = useCallback(
+    async (next: HostPickerValue) => {
+      setHostValue(next);
+      if (activeAccountId) {
+        await AccountStorage.updateAccountHost(activeAccountId, next.hostKind, next.baseUrl);
+      }
+    },
+    [activeAccountId],
+  );
 
   const [currentFolderPath, setCurrentFolderPath] = useState('');
   const [folderItems, setFolderItems] = useState<GitHubContent[]>([]);
@@ -93,6 +130,10 @@ export default function RepoFolderPickerModal({
   const goToRepoView = useCallback(() => {
     setRepoSearch('');
     setView('repo');
+  }, []);
+
+  const goToHostView = useCallback(() => {
+    setView('host');
   }, []);
 
   const goToBranchView = useCallback(async () => {
@@ -300,7 +341,15 @@ export default function RepoFolderPickerModal({
             <View style={styles.backButton} />
           )}
           <Text style={[styles.sheetTitle, { color: colors.text }]} numberOfLines={1}>
-            {view === 'repo' ? 'Select Repository' : view === 'branch' ? 'Select Branch' : view === 'folder' ? 'Select Folder' : 'Git Context'}
+            {view === 'repo'
+              ? 'Select Repository'
+              : view === 'branch'
+                ? 'Select Branch'
+                : view === 'folder'
+                  ? 'Select Folder'
+                  : view === 'host'
+                    ? 'Select Host'
+                    : 'Git Context'}
           </Text>
           <TouchableOpacity onPress={handleClose}>
             <Ionicons name="close" size={24} color={colors.textSecondary} />
@@ -309,6 +358,20 @@ export default function RepoFolderPickerModal({
 
         {view === 'main' && (
           <View style={styles.content}>
+            <TouchableOpacity style={styles.selector} onPress={goToHostView}>
+              <Text style={[styles.selectorLabel, { color: colors.textSecondary }]}>Host</Text>
+              <View style={[styles.selectorValue, { backgroundColor: colors.surface, borderColor: colors.primary }]}>
+                <Text style={[styles.valueText, { color: colors.text }]}>
+                  {hostValue.hostKind === 'github'
+                    ? 'GitHub.com'
+                    : `${hostValue.hostKind === 'gitea' ? 'Gitea' : 'GitLab'}${
+                        hostValue.baseUrl ? ` (${hostValue.baseUrl})` : ''
+                      }`}
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+              </View>
+            </TouchableOpacity>
+
             <TouchableOpacity style={styles.selector} onPress={goToRepoView}>
               <Text style={[styles.selectorLabel, { color: colors.textSecondary }]}>Repository</Text>
               <View style={[styles.selectorValue, { backgroundColor: colors.surface, borderColor: repoPath ? colors.primary : colors.border }]}>
@@ -349,6 +412,35 @@ export default function RepoFolderPickerModal({
                 <Text style={[styles.clearButtonText, { color: colors.error }]}>Clear Selection</Text>
               </TouchableOpacity>
             )}
+          </View>
+        )}
+
+        {view === 'host' && (
+          <View style={styles.content}>
+            <Text style={[styles.selectorLabel, { color: colors.textSecondary, marginBottom: 12 }]}>
+              Choose the Git host this account points at. The repo list, branch picker, and folder browser will use the matching adapter.
+            </Text>
+            <HostPicker
+              value={hostValue}
+              onChange={handleHostChange}
+              testID="repo-folder-picker.host"
+            />
+            <TouchableOpacity
+              style={[
+                styles.selectorValue,
+                {
+                  backgroundColor: colors.primary,
+                  borderColor: colors.primary,
+                  marginTop: 16,
+                  alignItems: 'center',
+                  paddingVertical: 12,
+                },
+              ]}
+              onPress={() => setView('main')}
+              testID="repo-folder-picker.host.done"
+            >
+              <Text style={[styles.valueText, { color: colors.text, fontWeight: '600' }]}>Done</Text>
+            </TouchableOpacity>
           </View>
         )}
 
