@@ -101,3 +101,180 @@ describe('AccountStorage', () => {
     expect(await AccountStorage.getActiveToken()).toBe('legacy-tok');
   });
 });
+
+/**
+ * Regression tests for the host-adapter schema extension
+ * (`hostKind` + `baseUrl` per account). The new fields are
+ * optional for backward compatibility — accounts persisted
+ * before this refactor lack them and must be coerced to the
+ * `'github'` default on read. The tests below cover that
+ * coercion, the explicit-persistence path, and the
+ * `updateAccountHost` / `getAccount` helpers.
+ */
+describe('AccountStorage — host info', () => {
+  beforeEach(async () => {
+    await AsyncStorage.clear?.();
+  });
+
+  it('addAccount persists hostKind + baseUrl when supplied', async () => {
+    const acc = await AccountStorage.addAccount('tok-1', profile, {
+      hostKind: 'gitea',
+      baseUrl: 'https://gitea.example.com/',
+    });
+    expect(acc.hostKind).toBe('gitea');
+    expect(acc.baseUrl).toBe('https://gitea.example.com');
+    // Trailing slashes are stripped on persist so the host
+    // adapter's `apiBaseFor` doesn't have to repeat the work.
+    const reloaded = await AccountStorage.getAccount(acc.id);
+    expect(reloaded?.hostKind).toBe('gitea');
+    expect(reloaded?.baseUrl).toBe('https://gitea.example.com');
+  });
+
+  it('addAccount defaults hostKind to "github" when omitted (backward compat)', async () => {
+    // The in-memory return is already normalised — callers
+    // don't need to know whether the caller passed `hostKind`
+    // or relied on the default. Same shape as `getAccount`.
+    const acc = await AccountStorage.addAccount('tok-1', profile);
+    expect(acc.hostKind).toBe('github');
+    const reloaded = await AccountStorage.getAccount(acc.id);
+    expect(reloaded?.hostKind).toBe('github');
+  });
+
+  it('legacy accounts persisted without hostKind coerce to "github" on read', async () => {
+    // Simulate a record written by a build before the
+    // host-adapter refactor — the `hostKind` field is
+    // absent on disk. The normalisation must default it
+    // to `'github'` on read.
+    const raw = [
+      {
+        id: 'acc-legacy',
+        login: 'legacy-user',
+        name: 'Legacy',
+        email: '',
+        avatarUrl: '',
+        addedAt: 1,
+        // no hostKind, no baseUrl
+      },
+    ];
+    await AsyncStorage.setItem('@gitnotes:accounts', JSON.stringify(raw));
+    const reloaded = await AccountStorage.getAccount('acc-legacy');
+    expect(reloaded?.hostKind).toBe('github');
+  });
+
+  it('coerces an invalid hostKind string to "github" on read', async () => {
+    // Simulate a record persisted by a future build with a
+    // host we don't support yet (e.g. bitbucket). The
+    // normalisation must drop the unsupported value rather
+    // than throw.
+    const raw = [
+      {
+        id: 'acc-foreign',
+        login: 'someone',
+        name: 'Someone',
+        email: '',
+        avatarUrl: '',
+        addedAt: 1,
+        hostKind: 'bitbucket',
+        baseUrl: 'https://bitbucket.example.com',
+      },
+    ];
+    await AsyncStorage.setItem('@gitnotes:accounts', JSON.stringify(raw));
+    const list = await AccountStorage.listAccounts();
+    expect(list).toHaveLength(1);
+    expect(list[0].hostKind).toBe('github');
+    // baseUrl is dropped for the github fallback so the host
+    // adapter's defaultBaseUrl() wins.
+    expect(list[0].baseUrl).toBeUndefined();
+  });
+
+  it('drops baseUrl when hostKind is github.com and baseUrl is empty', async () => {
+    // Persist a record that was written with an empty
+    // baseUrl on github (defensive: the field is meaningless
+    // for github.com without an enterprise instance).
+    const raw = [
+      {
+        id: 'acc-gh-no-base',
+        login: 'noent',
+        name: 'No Ent',
+        email: '',
+        avatarUrl: '',
+        addedAt: 1,
+        hostKind: 'github',
+        baseUrl: '',
+      },
+    ];
+    await AsyncStorage.setItem('@gitnotes:accounts', JSON.stringify(raw));
+    const list = await AccountStorage.listAccounts();
+    expect(list[0].baseUrl).toBeUndefined();
+  });
+
+  it('keeps baseUrl for self-hosted hosts (gitea, gitlab)', async () => {
+    const raw = [
+      {
+        id: 'acc-gitea',
+        login: 'gitea-user',
+        name: 'Gitea',
+        email: '',
+        avatarUrl: '',
+        addedAt: 1,
+        hostKind: 'gitea',
+        baseUrl: 'https://gitea.example.com',
+      },
+      {
+        id: 'acc-gitlab',
+        login: 'gitlab-user',
+        name: 'GitLab',
+        email: '',
+        avatarUrl: '',
+        addedAt: 2,
+        hostKind: 'gitlab',
+        baseUrl: 'https://gitlab.example.com',
+      },
+    ];
+    await AsyncStorage.setItem('@gitnotes:accounts', JSON.stringify(raw));
+    const list = await AccountStorage.listAccounts();
+    expect(list[0].hostKind).toBe('gitea');
+    expect(list[0].baseUrl).toBe('https://gitea.example.com');
+    expect(list[1].hostKind).toBe('gitlab');
+    expect(list[1].baseUrl).toBe('https://gitlab.example.com');
+  });
+
+  it('updateAccountHost rewrites the host info on an existing account', async () => {
+    const acc = await AccountStorage.addAccount('tok-1', profile);
+    // The in-memory return is normalised — `hostKind` defaults
+    // to `'github'` even when the caller didn't pass it.
+    expect(acc.hostKind).toBe('github');
+
+    const updated = await AccountStorage.updateAccountHost(acc.id, 'gitlab', 'https://gitlab.example.com');
+    expect(updated?.hostKind).toBe('gitlab');
+    expect(updated?.baseUrl).toBe('https://gitlab.example.com');
+
+    const reloaded = await AccountStorage.getAccount(acc.id);
+    expect(reloaded?.hostKind).toBe('gitlab');
+    expect(reloaded?.baseUrl).toBe('https://gitlab.example.com');
+  });
+
+  it('updateAccountHost returns null for an unknown id', async () => {
+    const result = await AccountStorage.updateAccountHost('acc-does-not-exist', 'github');
+    expect(result).toBeNull();
+  });
+
+  it('getAccount returns null for an unknown id', async () => {
+    const result = await AccountStorage.getAccount('acc-does-not-exist');
+    expect(result).toBeNull();
+  });
+
+  it('re-adding the same login updates host info rather than creating a duplicate', async () => {
+    const first = await AccountStorage.addAccount('tok-1', profile, {
+      hostKind: 'github',
+    });
+    const second = await AccountStorage.addAccount('tok-2', profile, {
+      hostKind: 'gitea',
+      baseUrl: 'https://gitea.example.com',
+    });
+    expect(second.id).toBe(first.id);
+    // Host info from the re-add wins over the existing record.
+    expect(second.hostKind).toBe('gitea');
+    expect(second.baseUrl).toBe('https://gitea.example.com');
+  });
+});
