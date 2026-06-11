@@ -1,5 +1,7 @@
 import { Buffer } from 'buffer';
 import { getAdapter, isGitHostKind } from '../src/services/git/hostAdapters';
+import { setActiveGitHostKind, getActiveGitHostKind } from '../src/services/git/gitHttp';
+import { ensureToken } from '../src/services/git/GitFsService';
 import { parseRepoPathAt } from '../src/utils/gitPathParser';
 
 describe('git host adapters', () => {
@@ -143,5 +145,84 @@ describe('parseRepoPathAt', () => {
       owner: 'octocat',
       repo: 'hello',
     });
+  });
+});
+
+/**
+ * Integration test for the actual auth chain that reaches the wire:
+ *
+ *   1. `setActiveGitHostKind('gitea')` mirrors what `GitFsService`
+ *      does right before every clone / fetch / push.
+ *   2. `ensureToken(token)` reads the active host and returns the
+ *      host-correct `{ username, password }` pair for the
+ *      `onAuth` callback.
+ *   3. isomorphic-git then base64-encodes that pair into the
+ *      `Authorization: Basic <b64>` header (see
+ *      `calculateBasicAuthHeader` in isomorphic-git's source).
+ *
+ * This test asserts the decoded credential pair, not just the
+ * username literal, because the failure mode we want to catch is
+ * "wrong username for this host" — a Gitea server will reject
+ * `x-access-token:tok` even though `tok` itself is a valid Gitea
+ * PAT. (Earlier in this PR, the host-adapter abstraction was wired
+ * incorrectly: `applyAuth` inside the HttpClient was dead code, and
+ * `ensureToken` hardcoded the GitHub username. This test would
+ * have caught it.)
+ */
+describe('ensureToken — host-correct Basic auth credentials', () => {
+  test('returns undefined when no token is provided (no auth attempted)', () => {
+    setActiveGitHostKind('github');
+    expect(ensureToken(undefined)).toBeUndefined();
+    setActiveGitHostKind('gitea');
+    expect(ensureToken(undefined)).toBeUndefined();
+  });
+
+  test('GitHub active host → x-access-token:<token>', () => {
+    setActiveGitHostKind('github');
+    const onAuth = ensureToken('ghp_abc');
+    expect(onAuth).toBeDefined();
+    const creds = onAuth!('https://github.com/octocat/hello.git', {
+      username: '',
+      password: '',
+    });
+    expect(creds).toEqual({ username: 'x-access-token', password: 'ghp_abc' });
+    // The wire form that isomorphic-git will encode:
+    expect(`Basic ${Buffer.from('x-access-token:ghp_abc').toString('base64')}`).toBe(
+      `Basic ${Buffer.from(`${creds!.username}:${creds!.password}`).toString('base64')}`,
+    );
+  });
+
+  test('Gitea active host → oauth2:<token> (regression test for phase-1 bug)', () => {
+    setActiveGitHostKind('gitea');
+    const onAuth = ensureToken('gt_abc');
+    expect(onAuth).toBeDefined();
+    const creds = onAuth!('https://gitea.example.com/me/notes.git', {
+      username: '',
+      password: '',
+    });
+    // The bug the phase-1 commit accidentally shipped was
+    // `x-access-token` regardless of host. This assertion fails
+    // loudly if anyone reverts `ensureToken` to a hardcoded
+    // username.
+    expect(creds).toEqual({ username: 'oauth2', password: 'gt_abc' });
+    // Cross-check with the adapter directly so the test fails
+    // with a meaningful message if either side drifts.
+    expect(getAdapter('gitea').buildBasicAuth({ token: 'gt_abc' })).toEqual({
+      username: 'oauth2',
+      password: 'gt_abc',
+    });
+  });
+
+  test('host context is module-level — last setActiveGitHostKind wins', () => {
+    setActiveGitHostKind('github');
+    expect(getActiveGitHostKind()).toBe('github');
+    setActiveGitHostKind('gitea');
+    expect(getActiveGitHostKind()).toBe('gitea');
+    // And ensureToken follows the most recent set.
+    const creds = ensureToken('tok')!('https://example.com/o/r.git', {
+      username: '',
+      password: '',
+    });
+    expect(creds.username).toBe('oauth2');
   });
 });

@@ -2,7 +2,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import git, { TREE } from 'isomorphic-git';
 import { parseRepoPath } from '../../utils/gitPathParser';
 import { makeGitFs } from './gitFs';
-import { gitHttp, setActiveGitHostKind } from './gitHttp';
+import { gitHttp, setActiveGitHostKind, getActiveGitHostKind } from './gitHttp';
 import { LfsService } from './lfs';
 import { getAdapter, type GitHostKind } from './hostAdapters';
 
@@ -76,14 +76,21 @@ function makeRepoFs() {
   return makeGitFs(clonesRoot());
 }
 
-function ensureToken(token: string | undefined) {
-  // isomorphic-git's `onAuth` requires a username/password pair. The
-  // host-specific Basic auth convention (sentinel username + token
-  // password) is built inside `gitHttp` from the active host kind —
-  // see `hostAdapters/`. We return the same shape on every host so
-  // the same onAuth callback works for GitHub, Gitea, Forgejo, etc.
+export function ensureToken(token: string | undefined) {
+  // isomorphic-git's `onAuth` callback must return a
+  // `{ username, password }` pair; the library then base64-encodes
+  // `username:password` into a Basic auth header itself. The
+  // *correct* username to return depends on the host: GitHub wants
+  // `x-access-token`, Gitea/Forgejo want `oauth2`. We delegate to
+  // the active adapter so the host-specific convention lives in
+  // one place (see `hostAdapters/`). The host is set on the
+  // module-level `activeHostKind` in `gitHttp.ts` immediately
+  // before each clone / fetch / push, so the lookup here picks up
+  // whatever the most recent call site configured.
   if (!token) return undefined;
-  return () => ({ username: 'x-access-token', password: token });
+  const kind = getActiveGitHostKind();
+  const { username, password } = getAdapter(kind).buildBasicAuth({ token });
+  return () => ({ username, password });
 }
 
 function authedRemote(hostKind: GitHostKind, baseUrl: string | undefined, owner: string, repo: string): string {

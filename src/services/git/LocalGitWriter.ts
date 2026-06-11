@@ -2,9 +2,10 @@ import * as FileSystem from 'expo-file-system/legacy';
 import git from 'isomorphic-git';
 import { parseRepoPath } from '../../utils/gitPathParser';
 import { makeGitFs as buildGitFs } from './gitFs';
-import { gitHttp } from './gitHttp';
+import { gitHttp, setActiveGitHostKind } from './gitHttp';
 import { formatSyncError } from './formatSyncError';
-import { GitFsService } from './GitFsService';
+import { GitFsService, ensureToken } from './GitFsService';
+import type { GitHostKind } from './hostAdapters';
 
 const CLONES_SUBDIR = 'GitNotes/';
 
@@ -29,6 +30,17 @@ interface BaseOpts {
   branch: string;
   message: string;
   author: AuthorInfo;
+  /**
+   * Host kind for the Basic auth convention used when pushing
+   * upstream. Defaults to `'github'`. The shared `ensureToken`
+   * helper in `GitFsService` reads the module-level active host
+   * context (set by the most recent clone / fetch), so callers
+   * don't strictly need to pass this for the typical
+   * clone-then-push flow — but it's accepted explicitly for
+   * callers that issue pushes without a prior GitFsService call.
+   */
+  hostKind?: GitHostKind;
+  baseUrl?: string;
 }
 
 interface WriteOpts extends BaseOpts {
@@ -65,9 +77,12 @@ function makeRepoFs() {
   return buildGitFs(clonesRoot());
 }
 
-function tokenAuth(token: string | undefined) {
-  if (!token) return undefined;
-  return () => ({ username: 'x-access-token', password: token });
+function bindHostContext(opts: { hostKind?: GitHostKind; baseUrl?: string }): void {
+  // Make the active host context correct for the upcoming
+  // git.push / git.fetch call. `ensureToken` consults the same
+  // context, so a single set here covers both auth and any
+  // host-aware URL building we add later.
+  setActiveGitHostKind(opts.hostKind ?? 'github');
 }
 
 function isCorruptionError(errorMsg: string): boolean {
@@ -167,7 +182,7 @@ async function ensureOnBranch(
     singleBranch: true,
     depth: 1,
     tags: false,
-    onAuth: tokenAuth(token),
+    onAuth: ensureToken(token),
   });
   await git.checkout({ fs, dir, ref: branch });
 }
@@ -204,7 +219,8 @@ export class LocalGitWriter {
    * Returns the same `{ success, filePath?, error? }` shape the existing
    * Contents-API writers return.
    */
-static async writeAndCommit(opts: WriteOpts): Promise<LocalGitWriterResult> {
+  static async writeAndCommit(opts: WriteOpts): Promise<LocalGitWriterResult> {
+    bindHostContext(opts);
     const info = parseRepoPath(opts.repoPath);
     if (!info) return { success: false, error: `Invalid repo path: ${opts.repoPath}` };
 
@@ -247,7 +263,7 @@ static async writeAndCommit(opts: WriteOpts): Promise<LocalGitWriterResult> {
               http: gitHttp,
               ref: opts.branch,
               remoteRef: opts.branch,
-              onAuth: tokenAuth(opts.token),
+              onAuth: ensureToken(opts.token),
             });
           } catch (pushError) {
             const raw = pushError instanceof Error ? pushError.message : String(pushError);
@@ -288,7 +304,7 @@ static async writeAndCommit(opts: WriteOpts): Promise<LocalGitWriterResult> {
                   http: gitHttp,
                   ref: opts.branch,
                   remoteRef: opts.branch,
-                  onAuth: tokenAuth(opts.token),
+                  onAuth: ensureToken(opts.token),
                 });
                 return { success: true, filePath: opts.filePath };
               } else if (ffResult.reason === 'diverged') {
@@ -320,7 +336,7 @@ static async writeAndCommit(opts: WriteOpts): Promise<LocalGitWriterResult> {
                   http: gitHttp,
                   ref: opts.branch,
                   remoteRef: opts.branch,
-                  onAuth: tokenAuth(opts.token),
+                  onAuth: ensureToken(opts.token),
                 });
                 return { success: true, filePath: opts.filePath };
               }
@@ -331,7 +347,7 @@ static async writeAndCommit(opts: WriteOpts): Promise<LocalGitWriterResult> {
               http: gitHttp,
               ref: opts.branch,
               remoteRef: opts.branch,
-              onAuth: tokenAuth(opts.token),
+              onAuth: ensureToken(opts.token),
             });
           }
         }
@@ -355,7 +371,8 @@ static async writeAndCommit(opts: WriteOpts): Promise<LocalGitWriterResult> {
    * Push gets one auto-retry after a fresh pull when the server returns
    * a fast-forward / push-rejected error.
    */
-static async deleteAndCommit(opts: DeleteOpts): Promise<LocalGitWriterResult> {
+  static async deleteAndCommit(opts: DeleteOpts): Promise<LocalGitWriterResult> {
+    bindHostContext(opts);
     const info = parseRepoPath(opts.repoPath);
     if (!info) return { success: false, error: `Invalid repo path: ${opts.repoPath}` };
 
@@ -407,7 +424,7 @@ static async deleteAndCommit(opts: DeleteOpts): Promise<LocalGitWriterResult> {
               http: gitHttp,
               ref: opts.branch,
               remoteRef: opts.branch,
-              onAuth: tokenAuth(opts.token),
+              onAuth: ensureToken(opts.token),
             });
           } catch (pushError) {
             const raw = pushError instanceof Error ? pushError.message : String(pushError);
@@ -445,7 +462,7 @@ static async deleteAndCommit(opts: DeleteOpts): Promise<LocalGitWriterResult> {
                   http: gitHttp,
                   ref: opts.branch,
                   remoteRef: opts.branch,
-                  onAuth: tokenAuth(opts.token),
+                  onAuth: ensureToken(opts.token),
                 });
                 return { success: true, filePath: opts.filePath };
               } else {
@@ -458,7 +475,7 @@ static async deleteAndCommit(opts: DeleteOpts): Promise<LocalGitWriterResult> {
               http: gitHttp,
               ref: opts.branch,
               remoteRef: opts.branch,
-              onAuth: tokenAuth(opts.token),
+              onAuth: ensureToken(opts.token),
             });
           }
         }
@@ -479,9 +496,14 @@ static async deleteAndCommit(opts: DeleteOpts): Promise<LocalGitWriterResult> {
    * B.1). On non-fast-forward rejection we pull once and retry the push,
    * mirroring the pattern in `writeAndCommit` / `deleteAndCommit`.
    */
-static async push(opts: { repoPath: string; branch: string; token?: string }): Promise<
-    LocalGitWriterResult
-  > {
+  static async push(opts: {
+    repoPath: string;
+    branch: string;
+    token?: string;
+    hostKind?: GitHostKind;
+    baseUrl?: string;
+  }): Promise<LocalGitWriterResult> {
+    bindHostContext(opts);
     const info = parseRepoPath(opts.repoPath);
     if (!info) return { success: false, error: `Invalid repo path: ${opts.repoPath}` };
 
@@ -495,7 +517,7 @@ static async push(opts: { repoPath: string; branch: string; token?: string }): P
         http: gitHttp,
         ref: opts.branch,
         remoteRef: opts.branch,
-        onAuth: tokenAuth(opts.token),
+        onAuth: ensureToken(opts.token),
       });
       return { success: true };
     } catch (pushError) {
@@ -538,7 +560,7 @@ static async push(opts: { repoPath: string; branch: string; token?: string }): P
           http: gitHttp,
           ref: opts.branch,
           remoteRef: opts.branch,
-          onAuth: tokenAuth(opts.token),
+          onAuth: ensureToken(opts.token),
         });
         return { success: true };
       } catch (retryError) {

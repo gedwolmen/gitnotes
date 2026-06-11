@@ -1,6 +1,5 @@
 import type { GitHttpRequest, GitHttpResponse, HttpClient } from 'isomorphic-git';
 import type { GitHostKind } from './hostAdapters';
-import { getAdapter } from './hostAdapters';
 
 const FETCH_TIMEOUT_MS = 600_000;
 
@@ -28,28 +27,35 @@ async function consumeBody(
 }
 
 /**
- * Build the `Authorization: Basic <b64>` header for a given host +
- * token. Centralised here so every isomorphic-git call site uses the
- * same convention and adding a new host only touches `hostAdapters/`.
- */
-function buildAuthHeader(kind: GitHostKind, token: string | undefined): string | null {
-  if (!token) return null;
-  const { username, password } = getAdapter(kind).buildBasicAuth({ token });
-  return `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
-}
-
-/**
  * Module-level "active host" context. Set by `GitFsService` (and
  * `LocalGitWriter`) right before kicking off a clone / fetch / push,
- * read by the auth helper below. Defaults to GitHub so any direct
- * test of `gitHttp` outside the normal flow still works the way it
- * did before this refactor.
+ * read by `ensureToken` in `GitFsService.ts` so the onAuth callback
+ * returns the host-correct `{ username, password }` pair.
  *
  * This is intentionally module-scoped rather than threaded through
  * every isomorphic-git call: isomorphic-git's `HttpClient` interface
- * is a flat `request({ url, headers, body, onAuth })` shape with no
- * per-call context hook, and clone-mode is a single-host-at-a-time
- * flow (you don't push to GitHub and Gitea in the same operation).
+ * is a flat `request({ url, headers, body })` shape with no per-call
+ * context hook, and clone-mode is a single-host-at-a-time flow (you
+ * don't push to GitHub and Gitea in the same operation).
+ *
+ * Auth flow (isomorphic-git 1.37+):
+ *   1. Caller passes an `onAuth` callback to `git.clone/fetch/push`.
+ *   2. isomorphic-git receives a 401 from the host, invokes
+ *      `onAuth(url, auth)` to acquire credentials, then builds the
+ *      `Authorization: Basic <b64>` header itself from whatever
+ *      `{ username, password }` the callback returns.
+ *   3. isomorphic-git then calls our `http.request({ headers })` with
+ *      that pre-populated header, which we just pass through to
+ *      `fetch()`.
+ *
+ * The earlier version of this file tried to invoke `req.onAuth()`
+ * from inside the HTTP client and re-run `fetch()` on 401. That code
+ * path has been dead since isomorphic-git 1.37 removed `onAuth` from
+ * the `GitHttpRequest` type — the type errors in `tsc` were a symptom
+ * of this dead code, not a real auth bug. The host-correct
+ * credentials now live in `ensureToken` and ride into the
+ * request via the Authorization header that isomorphic-git itself
+ * injects.
  */
 let activeHostKind: GitHostKind = 'github';
 
@@ -61,23 +67,10 @@ export function getActiveGitHostKind(): GitHostKind {
   return activeHostKind;
 }
 
-function applyAuth(headers: Record<string, string>, token: string | undefined): void {
-  const auth = buildAuthHeader(activeHostKind, token);
-  if (auth) headers['Authorization'] = auth;
-}
-
 export const gitHttp: HttpClient = {
   async request(req: GitHttpRequest): Promise<GitHttpResponse> {
     const body = await consumeBody(req.body);
-
     const headers: Record<string, string> = { ...req.headers };
-    if (req.onAuth) {
-      const credentials = await req.onAuth();
-      if (credentials) {
-        const token = credentials.password || credentials.token;
-        applyAuth(headers, token);
-      }
-    }
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -96,23 +89,6 @@ export const gitHttp: HttpClient = {
         throw new Error(`Git HTTP request timed out after ${FETCH_TIMEOUT_MS}ms: ${req.url}`);
       }
       throw fetchError;
-    }
-
-    if (response.status === 401 && req.onAuth) {
-      const credentials = await req.onAuth();
-      if (credentials) {
-        const token = credentials.password || credentials.token;
-        if (token) {
-          applyAuth(headers, token);
-          clearTimeout(timeoutId);
-          response = await fetch(req.url, {
-            method: req.method ?? 'GET',
-            headers,
-            body: body as BodyInit | undefined,
-            signal: controller.signal,
-          });
-        }
-      }
     }
 
     let buffer: ArrayBuffer;
