@@ -10,6 +10,40 @@ import type { GitHostKind } from './hostAdapters';
 const CLONES_SUBDIR = 'GitNotes/';
 
 /**
+ * # Host context threading
+ *
+ * Every public method on this class (`writeAndCommit`, `deleteAndCommit`,
+ * `push`) accepts an optional `hostKind` + `baseUrl` on its opts. When
+ * the caller doesn't pass one, the method falls back to
+ * `setActiveGitHostKind(hostKind ?? 'github')` and `ensureToken()`
+ * consults the same module-level state in `gitHttp.ts`.
+ *
+ * **Why this is implicit today**: the 10+ existing call sites
+ * (`NoteGitHubSyncService`, `TodoGitHubSyncService`,
+ * `CanvasGitHubSyncService`, `TemplateGitHubSyncService`,
+ * `NoteSyncQueueService`, `ConflictResolverScreen`,
+ * `CloneMigrationService`) all rely on the host kind being set by
+ * the *most recent* `GitFsService.clone/fetch` call against the same
+ * `repoPath`. For the typical clone-then-push flow that's correct.
+ *
+ * **Why this is a phase-2 follow-up**: the storage layer doesn't
+ * currently persist host info per-repo — the call sites have no
+ * source of truth to read from. The plan is:
+ *   1. `AccountStorage` learns `hostKind` + `baseUrl` per account
+ *      (storage layer)
+ *   2. `GitRepository` in `repoStore` carries the host info
+ *   3. Every LocalGitWriter call site threads `hostKind` and
+ *      `baseUrl` explicitly from the repo record
+ *
+ * Until then, this implicit dependency works in practice but is
+ * brittle if a future code path does e.g. a clone against GitHub
+ * followed by a write to a Gitea repo before any fetch. If you
+ * need to add a new call site, prefer passing `hostKind` + `baseUrl`
+ * explicitly when you have them; otherwise document the implicit
+ * dependency in the caller's docstring.
+ */
+
+/**
  * Result shape kept identical to the existing GitHub-Contents-API write paths
  * (`NoteGitHubSyncResult`, `TodoGitHubSyncResult`, …) so callers can swap
  * transports behind the SyncEngine flag without juggling shapes.
