@@ -1,18 +1,23 @@
 import type { ContentsAdapter } from './types';
 import type { GitHostKind } from '../types';
 import { githubContentsAdapter } from './github';
+import { giteaContentsAdapter } from './gitea';
 
 /**
- * Resolve the Contents adapter for a given host kind. Phase 1
- * supports only GitHub; self-hosted adapters throw a clear error
- * that the caller can surface to the user (e.g. "API-mode sync is
- * not yet available for Gitea — switch to clone mode in Settings").
+ * Resolve the Contents adapter for a given host kind.
+ *
+ * Phase 1 of this PR (the original commit) only wired `github`;
+ * the gitea adapter landed in a follow-up commit. GitLab is
+ * still pending (its Repository Files API is meaningfully
+ * different from GitHub's and Gitea's) and the factory throws
+ * for it with a clear error message the caller can surface.
  */
 export function getContentsAdapter(kind: GitHostKind): ContentsAdapter {
   switch (kind) {
     case 'github':
       return githubContentsAdapter;
     case 'gitea':
+      return giteaContentsAdapter;
     case 'gitlab':
       throw new Error(
         `API-mode sync (Contents adapter) is not yet implemented for ${kind}. ` +
@@ -25,5 +30,5 @@ export function getContentsAdapter(kind: GitHostKind): ContentsAdapter {
   }
 }
 
-export { githubContentsAdapter };
+export { githubContentsAdapter, giteaContentsAdapter };
 export type { ContentsAdapter } from './types';
