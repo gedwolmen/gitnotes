@@ -21,7 +21,12 @@ function ChatThreadCardImpl({ thread, onPress, onLongPress }: ChatThreadCardProp
   const timeAgo = formatDistanceToNow(thread.updatedAt, { addSuffix: true });
 
   return (
-    <TouchableOpacity activeOpacity={0.7} onPress={onPress} onLongPress={onLongPress}>
+    <TouchableOpacity
+      activeOpacity={0.7}
+      onPress={onPress}
+      onLongPress={onLongPress}
+      testID="chat-thread-list.button.thread-press"
+    >
       <Surface elevation="raised" radius="md" style={styles.container}>
         <View style={styles.content}>
           <View style={styles.header}>

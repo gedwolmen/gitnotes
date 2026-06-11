@@ -872,20 +872,20 @@
     "platform": ["ios", "android"]
   },
   {
-    "file": "src/screens/ChatThreadListScreen.tsx",
-    "component": "ChatThreadListScreen",
-    "elementType": "icon-button",
-    "action": "handleRenameThread",
-    "testID": "chat-thread-list.icon-button.rename",
+    "file": "src/components/chat/ChatThreadContextMenu.tsx",
+    "component": "ChatThreadContextMenu",
+    "elementType": "menu-item",
+    "action": "onRename",
+    "testID": "chat-thread-context-menu.item.rename",
     "flowId": "chat",
     "platform": ["ios", "android"]
   },
   {
-    "file": "src/screens/ChatThreadListScreen.tsx",
-    "component": "ChatThreadListScreen",
-    "elementType": "icon-button",
-    "action": "handleDeleteThread",
-    "testID": "chat-thread-list.icon-button.delete",
+    "file": "src/components/chat/ChatThreadContextMenu.tsx",
+    "component": "ChatThreadContextMenu",
+    "elementType": "menu-item",
+    "action": "onDelete",
+    "testID": "chat-thread-context-menu.item.delete",
     "flowId": "chat",
     "platform": ["ios", "android"]
   },
@@ -1877,7 +1877,8 @@
     "action": "setBranch",
     "testID": "chat-repo-picker.input.branch",
     "flowId": "chat",
-    "platform": ["ios", "android"]
+    "platform": ["ios", "android"],
+    "na": true
   },
   {
     "file": "src/components/ai/ChatRepoPickerModal.tsx",
