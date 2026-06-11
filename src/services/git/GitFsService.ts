@@ -2,8 +2,9 @@ import * as FileSystem from 'expo-file-system/legacy';
 import git, { TREE } from 'isomorphic-git';
 import { parseRepoPath } from '../../utils/gitPathParser';
 import { makeGitFs } from './gitFs';
-import { gitHttp } from './gitHttp';
+import { gitHttp, setActiveGitHostKind } from './gitHttp';
 import { LfsService } from './lfs';
+import { getAdapter, type GitHostKind } from './hostAdapters';
 
 const CLONES_SUBDIR = 'GitNotes/';
 
@@ -22,6 +23,15 @@ export interface GitTreeEntry {
 interface RepoLocator {
   /** "owner/repo" — same canonical shape as GitRepository.path */
   repoPath: string;
+  /**
+   * Which Git host this repo lives on. Defaults to `github` for
+   * backward compatibility with existing call sites that don't
+   * know about other hosts yet. When the broader app learns to
+   * store host info per-repo, this becomes required.
+   */
+  hostKind?: GitHostKind;
+  /** Required when hostKind is not 'github' — the self-hosted base URL. */
+  baseUrl?: string;
 }
 
 interface CloneOpts extends RepoLocator {
@@ -67,15 +77,17 @@ function makeRepoFs() {
 }
 
 function ensureToken(token: string | undefined) {
-  // GitHub PAT auth via Basic with a sentinel username. Same convention the
-  // existing GitHubService uses through Authorization: Bearer; isomorphic-git
-  // wants a username/password pair.
+  // isomorphic-git's `onAuth` requires a username/password pair. The
+  // host-specific Basic auth convention (sentinel username + token
+  // password) is built inside `gitHttp` from the active host kind —
+  // see `hostAdapters/`. We return the same shape on every host so
+  // the same onAuth callback works for GitHub, Gitea, Forgejo, etc.
   if (!token) return undefined;
   return () => ({ username: 'x-access-token', password: token });
 }
 
-function authedRemote(owner: string, repo: string): string {
-  return `https://github.com/${owner}/${repo}.git`;
+function authedRemote(hostKind: GitHostKind, baseUrl: string | undefined, owner: string, repo: string): string {
+  return getAdapter(hostKind).buildRemoteUrl({ baseUrl, owner, repo });
 }
 
 /**
@@ -113,6 +125,9 @@ export class GitFsService {
     const info = parseRepoPath(opts.repoPath);
     if (!info) throw new Error(`Invalid repo path: ${opts.repoPath}`);
 
+    const hostKind = opts.hostKind ?? 'github';
+    setActiveGitHostKind(hostKind);
+
     const dir = repoDirVirtual(info.owner, info.repo);
     // expo-file-system won't auto-create ancestors when isomorphic-git first
     // touches the working tree. Pre-create the clones root + owner segment so
@@ -127,7 +142,7 @@ export class GitFsService {
         fs: makeRepoFs(),
         http: gitHttp,
         dir,
-        url: authedRemote(info.owner, info.repo),
+        url: authedRemote(hostKind, opts.baseUrl, info.owner, info.repo),
         ref: opts.branch,
         singleBranch: true,
         depth: opts.depth ?? 1,
@@ -156,6 +171,8 @@ export class GitFsService {
   static async fetch(opts: FetchOpts): Promise<void> {
     const info = parseRepoPath(opts.repoPath);
     if (!info) throw new Error(`Invalid repo path: ${opts.repoPath}`);
+    const hostKind = opts.hostKind ?? 'github';
+    setActiveGitHostKind(hostKind);
     const dir = repoDirVirtual(info.owner, info.repo);
 
     try {
@@ -195,6 +212,8 @@ export class GitFsService {
   > {
     const info = parseRepoPath(opts.repoPath);
     if (!info) return { ok: false, reason: 'unknown', error: `Invalid repo path: ${opts.repoPath}` };
+    const hostKind = opts.hostKind ?? 'github';
+    setActiveGitHostKind(hostKind);
     const dir = repoDirVirtual(info.owner, info.repo);
     const fs = makeRepoFs();
 
@@ -391,9 +410,13 @@ export class GitFsService {
     message: string;
     author: { name: string; email: string };
     token?: string;
+    hostKind?: GitHostKind;
+    baseUrl?: string;
   }): Promise<{ sha: string } | { error: string }> {
     const info = parseRepoPath(opts.repoPath);
     if (!info) return { error: `Invalid repo path: ${opts.repoPath}` };
+    const hostKind = opts.hostKind ?? 'github';
+    setActiveGitHostKind(hostKind);
     const dir = repoDirVirtual(info.owner, info.repo);
     const fs = makeRepoFs();
 

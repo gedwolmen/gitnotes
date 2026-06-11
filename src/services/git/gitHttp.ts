@@ -1,4 +1,6 @@
 import type { GitHttpRequest, GitHttpResponse, HttpClient } from 'isomorphic-git';
+import type { GitHostKind } from './hostAdapters';
+import { getAdapter } from './hostAdapters';
 
 const FETCH_TIMEOUT_MS = 600_000;
 
@@ -25,6 +27,45 @@ async function consumeBody(
   return merged;
 }
 
+/**
+ * Build the `Authorization: Basic <b64>` header for a given host +
+ * token. Centralised here so every isomorphic-git call site uses the
+ * same convention and adding a new host only touches `hostAdapters/`.
+ */
+function buildAuthHeader(kind: GitHostKind, token: string | undefined): string | null {
+  if (!token) return null;
+  const { username, password } = getAdapter(kind).buildBasicAuth({ token });
+  return `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
+}
+
+/**
+ * Module-level "active host" context. Set by `GitFsService` (and
+ * `LocalGitWriter`) right before kicking off a clone / fetch / push,
+ * read by the auth helper below. Defaults to GitHub so any direct
+ * test of `gitHttp` outside the normal flow still works the way it
+ * did before this refactor.
+ *
+ * This is intentionally module-scoped rather than threaded through
+ * every isomorphic-git call: isomorphic-git's `HttpClient` interface
+ * is a flat `request({ url, headers, body, onAuth })` shape with no
+ * per-call context hook, and clone-mode is a single-host-at-a-time
+ * flow (you don't push to GitHub and Gitea in the same operation).
+ */
+let activeHostKind: GitHostKind = 'github';
+
+export function setActiveGitHostKind(kind: GitHostKind): void {
+  activeHostKind = kind;
+}
+
+export function getActiveGitHostKind(): GitHostKind {
+  return activeHostKind;
+}
+
+function applyAuth(headers: Record<string, string>, token: string | undefined): void {
+  const auth = buildAuthHeader(activeHostKind, token);
+  if (auth) headers['Authorization'] = auth;
+}
+
 export const gitHttp: HttpClient = {
   async request(req: GitHttpRequest): Promise<GitHttpResponse> {
     const body = await consumeBody(req.body);
@@ -34,10 +75,7 @@ export const gitHttp: HttpClient = {
       const credentials = await req.onAuth();
       if (credentials) {
         const token = credentials.password || credentials.token;
-        if (token) {
-          const auth = Buffer.from(`x-access-token:${token}`).toString('base64');
-          headers['Authorization'] = `Basic ${auth}`;
-        }
+        applyAuth(headers, token);
       }
     }
 
@@ -65,8 +103,7 @@ export const gitHttp: HttpClient = {
       if (credentials) {
         const token = credentials.password || credentials.token;
         if (token) {
-          const auth = Buffer.from(`x-access-token:${token}`).toString('base64');
-          headers['Authorization'] = `Basic ${auth}`;
+          applyAuth(headers, token);
           clearTimeout(timeoutId);
           response = await fetch(req.url, {
             method: req.method ?? 'GET',

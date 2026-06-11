@@ -1,7 +1,7 @@
-import { parseRepoPath } from '../../utils/gitPathParser';
+import { parseRepoPathAt } from '../../utils/gitPathParser';
 import { GitFsService } from './GitFsService';
+import { getAdapter, type GitHostKind } from './hostAdapters';
 
-const GITHUB_API_BASE = 'https://api.github.com';
 const FALLBACK_BRANCH = 'main';
 
 const sessionCache = new Map<string, string>();
@@ -10,7 +10,7 @@ const sessionCache = new Map<string, string>();
  * Best-effort resolution of the branch to use for a repo. Order:
  *   1. `hint` (caller-provided, usually `repo.branch` / `note.branch`)
  *   2. Local clone HEAD (clone-mode repos)
- *   3. GitHub API `default_branch`
+ *   3. Host REST API `default_branch` (GitHub, Gitea, Forgejo, …)
  *   4. Hard fallback: 'main'
  *
  * Fixes #543: hardcoded `branch || 'main'` literals broke clone-mode
@@ -19,6 +19,7 @@ const sessionCache = new Map<string, string>();
 export async function resolveBranch(
   repoPath: string,
   hint?: string | null,
+  context?: { hostKind?: GitHostKind; baseUrl?: string },
 ): Promise<string> {
   if (hint) return hint;
 
@@ -31,7 +32,7 @@ export async function resolveBranch(
     return local;
   }
 
-  const remote = await fetchGitHubDefaultBranch(repoPath);
+  const remote = await fetchDefaultBranch(repoPath, context);
   if (remote) {
     sessionCache.set(repoPath, remote);
     return remote;
@@ -52,25 +53,33 @@ export function __resetBranchCacheForTests(): void {
 
 const FETCH_TIMEOUT_MS = 30_000;
 
-export async function fetchGitHubDefaultBranch(repoPath: string): Promise<string | null> {
-  const info = parseRepoPath(repoPath);
+/**
+ * Host-agnostic default-branch lookup. Dispatches to the registered
+ * adapter for the host (or the GitHub adapter by default). The old
+ * `fetchGitHubDefaultBranch` export is kept as a thin alias so the
+ * handful of external callers in tests / other services keep
+ * compiling unchanged.
+ */
+export async function fetchDefaultBranch(
+  repoPath: string,
+  context?: { hostKind?: GitHostKind; baseUrl?: string },
+): Promise<string | null> {
+  const hostKind: GitHostKind = context?.hostKind ?? 'github';
+  const info = parseRepoPathAt(repoPath, context?.baseUrl);
   if (!info) return null;
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  try {
-    const response = await fetch(
-      `${GITHUB_API_BASE}/repos/${info.owner}/${info.repo}`,
-      { headers: { Accept: 'application/vnd.github.v3+json' }, signal: controller.signal },
-    );
-    if (!response.ok) {
-      clearTimeout(timeoutId);
-      return null;
-    }
-    const json = (await response.json()) as { default_branch?: string };
-    clearTimeout(timeoutId);
-    return json.default_branch ?? null;
-  } catch {
-    clearTimeout(timeoutId);
-    return null;
-  }
+  return getAdapter(hostKind).fetchDefaultBranch({
+    baseUrl: context?.baseUrl,
+    owner: info.owner,
+    repo: info.repo,
+    timeoutMs: FETCH_TIMEOUT_MS,
+  });
+}
+
+/**
+ * @deprecated Use `fetchDefaultBranch(repoPath, { hostKind: 'github' })` instead.
+ * Retained for backward compatibility with existing call sites and
+ * tests that hardcode the GitHub.com code path.
+ */
+export async function fetchGitHubDefaultBranch(repoPath: string): Promise<string | null> {
+  return fetchDefaultBranch(repoPath, { hostKind: 'github' });
 }
