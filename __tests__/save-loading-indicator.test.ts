@@ -266,6 +266,14 @@ import NoteEditorScreen from '../src/screens/NoteEditorScreen';
 import NotesListScreen from '../src/screens/NotesListScreen';
 
 describe('save/loading indicator', () => {
+  // 5s default jest timeout is too tight for these tests under
+  // CI load (this file's full suite takes ~11s; the first
+  // `it()` consistently hits the 5s wall at the act + waitFor
+  // around the deferred resolve). Verified to pass in isolation
+  // locally but flake in the full CI run.
+  jest.setTimeout(15_000);
+
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockRouteParams.noteId = undefined;
