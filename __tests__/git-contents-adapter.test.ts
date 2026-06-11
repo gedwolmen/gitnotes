@@ -59,6 +59,43 @@ describe('GitHubContentsAdapter — shape contract', () => {
     expect(r).toEqual({ sha: '', commitSha: '' });
   });
 
+  test('updateFile passes undefined opts through (not {}) when caller omits them', async () => {
+    // The original NoteGitHubSyncService called
+    // `GitHubService.updateFile(..., 'main', undefined)` and the
+    // existing template-github-sync test asserts the exact `undefined`
+    // shape. The adapter must preserve this — converting `undefined`
+    // to `{}` would fail the existing test even though the wrapped
+    // call is semantically equivalent.
+    const spy = jest.spyOn(GitHubService, 'updateFile').mockResolvedValueOnce({
+      content: { sha: 'x' },
+      commit: { sha: 'y' },
+    } as any);
+    await githubContentsAdapter.updateFile('o', 'r', 'p.md', 'body', 'msg', 'main');
+    expect(spy).toHaveBeenCalledWith('o', 'r', 'p.md', 'body', 'msg', 'main', undefined);
+
+    // When opts has real fields, the adapter passes the populated
+    // object through so callers can override the token.
+    spy.mockResolvedValueOnce({ content: { sha: 'x' }, commit: { sha: 'y' } } as any);
+    await githubContentsAdapter.updateFile('o', 'r', 'p.md', 'body', 'msg', 'main', {
+      tokenOverride: 'override',
+    });
+    expect(spy).toHaveBeenLastCalledWith('o', 'r', 'p.md', 'body', 'msg', 'main', {
+      tokenOverride: 'override',
+    });
+  });
+
+  test('deleteFile returns null when GitHubService throws (preserves #567 contract)', async () => {
+    // The original deleteFile throws on terminal failure. The
+    // adapter must NOT swallow that into a ContentsFileCommit —
+    // existing callers (todo-delete-sync) rely on the throw to
+    // distinguish "could not delete" from "deleted nothing because
+    // already gone".
+    jest.spyOn(GitHubService, 'deleteFile').mockRejectedValueOnce(new Error('boom'));
+    await expect(
+      githubContentsAdapter.deleteFile('o', 'r', 'p.md', 'msg', 'sha', 'main'),
+    ).rejects.toThrow('boom');
+  });
+
   test('getRepoPrivacy wraps the boolean in { isPrivate }', async () => {
     jest.spyOn(GitHubService, 'getRepoPrivacy').mockResolvedValueOnce(true);
     expect(await githubContentsAdapter.getRepoPrivacy('o', 'r')).toEqual({ isPrivate: true });

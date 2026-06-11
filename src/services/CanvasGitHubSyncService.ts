@@ -5,6 +5,12 @@ import { AuthService } from './AuthService';
 import { SyncEngineService } from './SyncEngineService';
 import { LocalGitWriter } from './git/LocalGitWriter';
 import { resolveBranch } from './git/branchResolver';
+import { getContentsAdapter } from './git/hostAdapters/contents';
+
+/** Chokepoint for phase-3 per-repo host info; see NoteGitHubSyncService. */
+function getApiContentsAdapter() {
+  return getContentsAdapter('github');
+}
 
 async function resolveToken(accountId?: string): Promise<string | undefined> {
   if (!accountId) return undefined;
@@ -77,7 +83,7 @@ export async function syncCanvasToGitHub(params: {
   }
 
   try {
-    const result = await GitHubService.updateFile(
+    const result = await getApiContentsAdapter().updateFile(
       repoInfo.owner,
       repoInfo.repo,
       targetPath,
@@ -140,10 +146,11 @@ export async function deleteCanvasFromGitHub(params: {
   }
 
   try {
+    const contents = getApiContentsAdapter();
     // not-found = remote already gone, treat as success so the local
     // row deletes cleanly. error = couldn't reach GitHub, hold the row
     // (#567 fix A) so the next pull doesn't re-import the upstream copy.
-    const lookup = await GitHubService.getFileSha(repoInfo.owner, repoInfo.repo, filePath, targetBranch, opts);
+    const lookup = await contents.getFileSha(repoInfo.owner, repoInfo.repo, filePath, targetBranch, opts);
     if (lookup.kind === 'not-found') {
       return { success: true, filePath };
     }
@@ -151,7 +158,7 @@ export async function deleteCanvasFromGitHub(params: {
       return { success: false, error: lookup.message };
     }
 
-    const result = await GitHubService.deleteFile(
+    const result = await contents.deleteFile(
       repoInfo.owner,
       repoInfo.repo,
       filePath,

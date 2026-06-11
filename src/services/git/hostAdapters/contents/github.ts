@@ -115,7 +115,13 @@ export class GitHubContentsAdapter implements ContentsAdapter {
       content,
       message,
       branch ?? 'main',
-      { ...opts },
+      // Preserve the `undefined`-when-empty shape that the
+      // original code passed to GitHubService directly. The
+      // existing template-github-sync test asserts this exact
+      // shape with `toHaveBeenCalledWith` — spreading an
+      // empty/undefined object would coerce to `{}` and fail
+      // the matcher.
+      opts && Object.keys(opts).length > 0 ? { ...opts } : undefined,
     );
     return toContentsFileCommit(result);
   }
@@ -139,7 +145,7 @@ export class GitHubContentsAdapter implements ContentsAdapter {
       message,
       sha,
       branch ?? 'main',
-      opts,
+      opts && Object.keys(opts).length > 0 ? opts : undefined,
     );
     return toContentsFileCommit(result);
   }
