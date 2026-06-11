@@ -109,6 +109,7 @@ jest.mock('../../src/services/NoteGitHubSyncService', () => ({
 
 jest.mock('../../src/stores/githubActivityStore', () => ({
   githubActivity: { begin: jest.fn(), end: jest.fn() },
+  useGitHubActivityStore: () => ({ inflight: 0 }),
 }));
 
 jest.mock('../../src/hooks/useResponsive', () => ({

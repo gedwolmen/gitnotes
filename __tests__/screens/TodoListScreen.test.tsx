@@ -131,6 +131,7 @@ jest.mock('../../src/services/RepoPullService', () => ({
 
 jest.mock('../../src/stores/githubActivityStore', () => ({
   githubActivity: { begin: jest.fn(), end: jest.fn() },
+  useGitHubActivityStore: () => ({ inflight: 0 }),
 }));
 
 jest.mock('../../src/components/ui', () => ({

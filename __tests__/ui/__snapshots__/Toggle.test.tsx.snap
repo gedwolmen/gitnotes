@@ -46,7 +46,7 @@ exports[`Toggle snapshots both states: toggle-off 1`] = `
           "borderRadius": 999,
         },
         {
-          "shadowColor": "#FFFFFF",
+          "shadowColor": "#BFBFBF",
           "shadowOffset": {
             "height": 2,
             "width": 2,
@@ -55,6 +55,7 @@ exports[`Toggle snapshots both states: toggle-off 1`] = `
           "shadowRadius": 4,
         },
         {
+          "backgroundColor": "#F5F5F5",
           "height": 30,
           "justifyContent": "center",
           "padding": 4,
@@ -78,7 +79,7 @@ exports[`Toggle snapshots both states: toggle-off 1`] = `
             "borderRadius": 999,
           },
           {
-            "shadowColor": "#BFBFBF",
+            "shadowColor": "#FFFFFF",
             "shadowOffset": {
               "height": -2,
               "width": -2,
@@ -188,7 +189,7 @@ exports[`Toggle snapshots both states: toggle-on 1`] = `
           "borderRadius": 999,
         },
         {
-          "shadowColor": "#FFFFFF",
+          "shadowColor": "#BFBFBF",
           "shadowOffset": {
             "height": 2,
             "width": 2,
@@ -197,6 +198,7 @@ exports[`Toggle snapshots both states: toggle-on 1`] = `
           "shadowRadius": 4,
         },
         {
+          "backgroundColor": "#F5F5F5",
           "height": 30,
           "justifyContent": "center",
           "padding": 4,
@@ -220,7 +222,7 @@ exports[`Toggle snapshots both states: toggle-on 1`] = `
             "borderRadius": 999,
           },
           {
-            "shadowColor": "#BFBFBF",
+            "shadowColor": "#FFFFFF",
             "shadowOffset": {
               "height": -2,
               "width": -2,

@@ -28,6 +28,7 @@ jest.mock('@react-native-community/netinfo', () => {
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: jest.fn() }),
+  useIsFocused: () => true,
 }));
 
 jest.mock('@expo/vector-icons', () => ({

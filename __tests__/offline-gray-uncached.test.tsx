@@ -33,6 +33,7 @@ jest.mock('@expo/vector-icons', () => {
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate }),
+  useIsFocused: () => true,
 }));
 
 jest.mock('../src/contexts/NoteContext', () => ({
@@ -82,6 +83,7 @@ jest.mock('../src/utils/haptics', () => ({
 }));
 jest.mock('../src/stores/githubActivityStore', () => ({
   githubActivity: { begin: jest.fn(), end: jest.fn() },
+  useGitHubActivityStore: () => ({ inflight: 0 }),
 }));
 
 import { Alert, StyleSheet } from 'react-native';

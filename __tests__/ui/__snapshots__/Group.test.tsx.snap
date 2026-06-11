@@ -11,20 +11,30 @@ exports[`Group snapshots a 2-row group 1`] = `
     ]
   }
 >
-  <Text
+  <View
     style={
       {
-        "color": "#6E6E73",
-        "fontSize": 14,
-        "fontWeight": "600",
-        "letterSpacing": 0.6,
+        "alignItems": "center",
+        "flexDirection": "row",
+        "gap": 8,
         "marginLeft": 12,
-        "textTransform": "uppercase",
       }
     }
   >
-    A
-  </Text>
+    <Text
+      style={
+        {
+          "color": "#6E6E73",
+          "fontSize": 14,
+          "fontWeight": "600",
+          "letterSpacing": 0.6,
+          "textTransform": "uppercase",
+        }
+      }
+    >
+      A
+    </Text>
+  </View>
   <View
     style={
       [
@@ -41,9 +51,13 @@ exports[`Group snapshots a 2-row group 1`] = `
           "shadowOpacity": 1,
           "shadowRadius": 8,
         },
-        {
-          "overflow": "hidden",
-        },
+        [
+          undefined,
+          {
+            "marginTop": 8,
+            "overflow": "hidden",
+          },
+        ],
       ]
     }
   >
@@ -105,7 +119,7 @@ exports[`Group snapshots a 2-row group 1`] = `
       style={
         {
           "backgroundColor": "#BFBFBF",
-          "height": 1,
+          "height": 0.5,
           "marginLeft": 16,
           "opacity": 0.18,
         }

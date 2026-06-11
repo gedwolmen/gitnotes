@@ -5,6 +5,7 @@ jest.mock('@react-native-community/netinfo', () => ({
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: jest.fn(), goBack: jest.fn(), canGoBack: () => true }),
+  useIsFocused: () => true,
 }));
 
 jest.mock('@expo/vector-icons', () => {
