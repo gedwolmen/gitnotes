@@ -7,7 +7,24 @@ import { SyncEngineService } from './SyncEngineService';
 import { LocalGitWriter } from './git/LocalGitWriter';
 import { GitFsService } from './git/GitFsService';
 import { resolveBranch } from './git/branchResolver';
+import { getContentsAdapter } from './git/hostAdapters/contents';
 import { githubActivity } from '../stores/githubActivityStore';
+
+/**
+ * Returns the Contents adapter to use for API-mode sync on a given
+ * repo. Phase 1: always returns the GitHub adapter (the self-hosted
+ * adapters throw at construction). Phase 3 will derive the host kind
+ * from the repo record in `repoStore` (per-account host info
+ * carried there) and the per-host contents adapter will be picked
+ * by `getContentsAdapter` automatically.
+ *
+ * Wrapping the factory call in this helper gives us a single chokepoint
+ * to update when per-repo host info lands — every `*GitHubSyncService`
+ * calls this instead of the factory directly.
+ */
+function getApiContentsAdapter() {
+  return getContentsAdapter('github');
+}
 
 async function resolveAuthor(): Promise<{ name: string; email: string }> {
   const user = GitHubService.getUser();
@@ -353,9 +370,10 @@ export async function deleteNoteFromGitHub(params: {
   }
 
   try {
+    const contents = getApiContentsAdapter();
     // Cache-first lookup (#565 phase C). When the editor saved this note
     // a moment ago, the sha is already in memory and we skip the GET.
-    const lookup = await GitHubService.getFileShaCached(
+    const lookup = await contents.getFileShaCached(
       repoInfo.owner,
       repoInfo.repo,
       filePath,
@@ -372,7 +390,7 @@ export async function deleteNoteFromGitHub(params: {
       return { success: false, error: lookup.message };
     }
 
-    const result = await GitHubService.deleteFile(
+    const result = await contents.deleteFile(
       repoInfo.owner,
       repoInfo.repo,
       filePath,
@@ -472,7 +490,7 @@ export async function syncNoteToGitHub(params: {
         fileExists = false;
       }
     } else {
-      const sha = await GitHubService.getFileShaOrNull(repoInfo.owner, repoInfo.repo, targetPath, targetBranch, opts);
+      const sha = await getApiContentsAdapter().getFileShaOrNull(repoInfo.owner, repoInfo.repo, targetPath, targetBranch, opts);
       fileExists = sha !== null;
     }
   } catch (error) {
@@ -507,8 +525,9 @@ export async function syncNoteToGitHub(params: {
   }
 
   try {
+    const contents = getApiContentsAdapter();
     if (knownSha && filePath) {
-      const currentSha = await GitHubService.getFileShaOrNull(
+      const currentSha = await contents.getFileShaOrNull(
         repoInfo.owner, repoInfo.repo, targetPath, targetBranch, opts,
       );
       if (currentSha && currentSha !== knownSha) {
@@ -516,7 +535,7 @@ export async function syncNoteToGitHub(params: {
       }
     }
 
-    const result = await GitHubService.updateFile(
+    const result = await contents.updateFile(
       repoInfo.owner,
       repoInfo.repo,
       targetPath,
