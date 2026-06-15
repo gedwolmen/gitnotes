@@ -6,41 +6,41 @@ appId: com.xaventra.gitnotes
 - launchApp:
     clearState: false
 - tapOn:
-    id: "tab-bar.*tab.press-NotesTab"
+    id: 'tab-bar.*tab.press-NotesTab'
 - waitForAnimationToEnd:
     timeout: 1500
 
 # Self-seed a probe note we can pin so we don't depend on render.yaml
 # having run first.
 - tapOn:
-    id: "notes-list.icon-button.add"
+    id: 'notes-list.icon-button.add'
 - waitForAnimationToEnd:
     timeout: 1500
 - tapOn:
-    id: "note-editor-form.input.title"
-- inputText: "Maestro pin probe"
+    id: 'note-editor-form.input.title'
+- inputText: 'Maestro pin probe'
 - pressKey: Enter
 - tapOn:
-    id: "note-editor.button.save"
+    id: 'note-editor.button.save'
 - waitForAnimationToEnd:
     timeout: 2500
 
-- longPressOn: "Maestro pin probe"
+- longPressOn: 'Maestro pin probe'
 - waitForAnimationToEnd:
     timeout: 1000
 
 # Context menu offers Pin / Pin to top.
 - assertVisible:
-    text: ".*[Pp]in.*"
+    text: '.*[Pp]in.*'
 - tapOn:
-    text: ".*[Pp]in.*"
+    text: '.*[Pp]in.*'
 - waitForAnimationToEnd:
     timeout: 1000
 
 # Re-open menu and unpin to leave state clean.
-- longPressOn: "Maestro pin probe"
+- longPressOn: 'Maestro pin probe'
 - waitForAnimationToEnd:
     timeout: 1000
 - tapOn:
-    text: ".*[Uu]npin.*|.*[Pp]in.*"
+    text: '.*[Uu]npin.*|.*[Pp]in.*'
     optional: true

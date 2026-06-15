@@ -5,14 +5,14 @@ appId: com.xaventra.gitnotes
 - launchApp:
     clearState: false
 - tapOn:
-    id: "tab-bar.*tab.press-SettingsTab"
+    id: 'tab-bar.*tab.press-SettingsTab'
 - waitForAnimationToEnd:
     timeout: 1200
 
-- assertVisible: "Dark Mode"
-- tapOn: "Dark Mode"
+- assertVisible: 'Dark Mode'
+- tapOn: 'Dark Mode'
 - waitForAnimationToEnd:
     timeout: 800
-- tapOn: "Dark Mode"
+- tapOn: 'Dark Mode'
 - waitForAnimationToEnd:
     timeout: 800

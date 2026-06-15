@@ -8,55 +8,55 @@ appId: com.xaventra.gitnotes
 - launchApp:
     clearState: false
 - tapOn:
-    id: "tab-bar.*tab.press-HomeTab"
+    id: 'tab-bar.*tab.press-HomeTab'
 - tapOn:
-    text: ".*Canvases.*"
+    text: '.*Canvases.*'
 - waitForAnimationToEnd:
     timeout: 1500
 
 # Tap empty-state CTA if no canvases, otherwise the header "+" button.
 - runFlow:
     when:
-      visible: "Create Canvas"
+      visible: 'Create Canvas'
     commands:
       - tapOn:
-          id: "canvas-list.button.create"
+          id: 'canvas-list.button.create'
 - runFlow:
     when:
-      notVisible: "Create Canvas"
+      notVisible: 'Create Canvas'
     commands:
       - tapOn:
-          id: "canvas-list.icon-button.new-canvas"
+          id: 'canvas-list.icon-button.new-canvas'
 - waitForAnimationToEnd:
     timeout: 1200
 - assertVisible:
-    text: ".*Phone.*1080.*"
+    text: '.*Phone.*1080.*'
 
 # Per-row testID from #648 + un-folded overlay from #652.
 - tapOn:
-    id: "canvas-list.button.pick-size-phone"
+    id: 'canvas-list.button.pick-size-phone'
 - waitForAnimationToEnd:
     timeout: 1500
 
 # Editor open. Set a unique title and save.
 - assertVisible:
-    id: "canvas-editor.input.title"
+    id: 'canvas-editor.input.title'
 - tapOn:
-    id: "canvas-editor.input.title"
-- inputText: "Maestro canvas one"
+    id: 'canvas-editor.input.title'
+- inputText: 'Maestro canvas one'
 # hideKeyboard occasionally fails on this build; tap a static area
 # (status bar) to dismiss the keyboard before tapping save.
 - tapOn:
-    point: "50%, 5%"
+    point: '50%, 5%'
 - waitForAnimationToEnd:
     timeout: 700
 - tapOn:
-    id: "canvas-editor.button.save"
+    id: 'canvas-editor.button.save'
 - waitForAnimationToEnd:
     timeout: 2000
 
 # Land back on the canvases list and verify the new entry.
 - assertVisible:
-    text: ".*Canvases.*"
+    text: '.*Canvases.*'
 - assertVisible:
-    text: ".*Maestro canvas one.*"
+    text: '.*Maestro canvas one.*'

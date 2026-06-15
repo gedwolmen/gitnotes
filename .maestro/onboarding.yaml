@@ -12,57 +12,57 @@ appId: com.xaventra.gitnotes
 - runFlow:
     when:
       visible:
-        text: ".*Allow.*"
+        text: '.*Allow.*'
     commands:
       - tapOn:
           text: "Don't Allow"
           optional: true
       - tapOn:
-          text: ".*Don.t Allow.*"
+          text: '.*Don.t Allow.*'
           optional: true
       - waitForAnimationToEnd:
           timeout: 800
 
 - assertVisible:
-    text: ".*Welcome to GitNot.*"
+    text: '.*Welcome to GitNot.*'
 
 # Walk the four info steps via Next.
 - tapOn:
-    id: "onboarding.button.next"
+    id: 'onboarding.button.next'
 - waitForAnimationToEnd:
     timeout: 500
 - tapOn:
-    id: "onboarding.button.next"
+    id: 'onboarding.button.next'
 - waitForAnimationToEnd:
     timeout: 500
 - tapOn:
-    id: "onboarding.button.next"
+    id: 'onboarding.button.next'
 - waitForAnimationToEnd:
     timeout: 500
 - tapOn:
-    id: "onboarding.button.next"
+    id: 'onboarding.button.next'
 - waitForAnimationToEnd:
     timeout: 800
 
 # Token step — skip without entering anything; the same Next button
 # becomes "Skip for Now" when the field is blank.
 - assertVisible:
-    text: ".*Connect GitHub.*"
+    text: '.*Connect GitHub.*'
 - tapOn:
-    id: "onboarding.button.next"
+    id: 'onboarding.button.next'
 - waitForAnimationToEnd:
     timeout: 1500
 
 # AI step — skip.
 - assertVisible:
-    text: ".*GitNot.s AI.*"
+    text: '.*GitNot.s AI.*'
 - tapOn:
-    id: "onboarding.button.skip-ai"
+    id: 'onboarding.button.skip-ai'
 - waitForAnimationToEnd:
     timeout: 1500
 
 # Land on Home.
 - assertVisible:
-    id: "tab-bar.*tab.press-HomeTab"
+    id: 'tab-bar.*tab.press-HomeTab'
 - assertVisible:
-    text: ".*Create New Note.*|.*New Journal.*"
+    text: '.*Create New Note.*|.*New Journal.*'

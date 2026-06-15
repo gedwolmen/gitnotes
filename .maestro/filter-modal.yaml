@@ -4,25 +4,25 @@ appId: com.xaventra.gitnotes
 - launchApp:
     clearState: false
 - tapOn:
-    id: "tab-bar.*tab.press-NotesTab"
+    id: 'tab-bar.*tab.press-NotesTab'
 - waitForAnimationToEnd:
     timeout: 1500
 
 - tapOn:
-    id: "notes-list.icon-button.filters"
+    id: 'notes-list.icon-button.filters'
 - waitForAnimationToEnd:
     timeout: 1200
 
 # The filter sheet section labels.
-- assertVisible: "Filter Notes"
+- assertVisible: 'Filter Notes'
 - assertVisible:
-    text: ".*NOTE TYPE.*"
+    text: '.*NOTE TYPE.*'
 - assertVisible:
-    text: ".*REPOSITORY.*"
+    text: '.*REPOSITORY.*'
 
 # Close via the Done button.
-- tapOn: "Done"
+- tapOn: 'Done'
 - waitForAnimationToEnd:
     timeout: 1000
 
-- assertVisible: "Notes"
+- assertVisible: 'Notes'

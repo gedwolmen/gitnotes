@@ -17,16 +17,16 @@ appId: com.xaventra.gitnotes
 - runFlow:
     when:
       visible:
-        text: ".*Allow.*|.*Don.t Allow.*|.*Paste.*|.*Clipboard.*"
+        text: '.*Allow.*|.*Don.t Allow.*|.*Paste.*|.*Clipboard.*'
     commands:
       - tapOn:
           text: "Don't Allow"
           optional: true
       - tapOn:
-          text: ".*Don.t Allow.*"
+          text: '.*Don.t Allow.*'
           optional: true
       - tapOn:
-          text: "Allow"
+          text: 'Allow'
           optional: true
       - waitForAnimationToEnd:
           timeout: 800
@@ -36,29 +36,29 @@ appId: com.xaventra.gitnotes
 # Token is loaded from sim clipboard (pre-loaded by run script).
 # --------------------------------------------------------------------
 - assertVisible:
-    text: ".*Welcome to GitNot.*"
+    text: '.*Welcome to GitNot.*'
 
 # Step 1
 - tapOn:
-    id: "onboarding.button.next"
+    id: 'onboarding.button.next'
 - waitForAnimationToEnd:
     timeout: 800
 
 # Step 2
 - tapOn:
-    id: "onboarding.button.next"
+    id: 'onboarding.button.next'
 - waitForAnimationToEnd:
     timeout: 800
 
 # Step 3
 - tapOn:
-    id: "onboarding.button.next"
+    id: 'onboarding.button.next'
 - waitForAnimationToEnd:
     timeout: 800
 
 # Step 4
 - tapOn:
-    id: "onboarding.button.next"
+    id: 'onboarding.button.next'
 - waitForAnimationToEnd:
     timeout: 800
 
@@ -68,28 +68,28 @@ appId: com.xaventra.gitnotes
 # paste button is tapped. We handle it both times.
 # --------------------------------------------------------------------
 - assertVisible:
-    text: ".*Connect GitHub.*"
+    text: '.*Connect GitHub.*'
 - assertVisible:
-    id: "onboarding.button.paste-token"
+    id: 'onboarding.button.paste-token'
 
 # Dismiss dialog BEFORE paste (covers the "before" case).
 - runFlow:
     when:
       visible:
-        text: ".*Allow.*|.*Don.t Allow.*|.*Paste.*|.*Clipboard.*"
+        text: '.*Allow.*|.*Don.t Allow.*|.*Paste.*|.*Clipboard.*'
     commands:
       - tapOn:
           text: "Don't Allow"
           optional: true
       - tapOn:
-          text: ".*Don.t Allow.*"
+          text: '.*Don.t Allow.*'
           optional: true
       - waitForAnimationToEnd:
           timeout: 600
 
 # Tap "Paste from Clipboard" — triggers Clipboard.getString().
 - tapOn:
-    id: "onboarding.button.paste-token"
+    id: 'onboarding.button.paste-token'
 - waitForAnimationToEnd:
     timeout: 1500
 
@@ -97,13 +97,13 @@ appId: com.xaventra.gitnotes
 - runFlow:
     when:
       visible:
-        text: ".*Allow.*|.*Don.t Allow.*|.*Paste.*|.*Clipboard.*"
+        text: '.*Allow.*|.*Don.t Allow.*|.*Paste.*|.*Clipboard.*'
     commands:
       - tapOn:
           text: "Don't Allow"
           optional: true
       - tapOn:
-          text: ".*Don.t Allow.*"
+          text: '.*Don.t Allow.*'
           optional: true
       - waitForAnimationToEnd:
           timeout: 600
@@ -112,7 +112,7 @@ appId: com.xaventra.gitnotes
 - waitForAnimationToEnd:
     timeout: 1000
 - tapOn:
-    id: "onboarding.button.next"
+    id: 'onboarding.button.next'
 - waitForAnimationToEnd:
     timeout: 4000
 
@@ -120,9 +120,9 @@ appId: com.xaventra.gitnotes
 # AI step — skip.
 # --------------------------------------------------------------------
 - assertVisible:
-    text: ".*GitNot.s AI.*"
+    text: '.*GitNot.s AI.*'
 - tapOn:
-    id: "onboarding.button.skip-ai"
+    id: 'onboarding.button.skip-ai'
 - waitForAnimationToEnd:
     timeout: 2000
 
@@ -130,49 +130,49 @@ appId: com.xaventra.gitnotes
 # Phase 3: Land on Home, navigate to Settings, trigger clone.
 # --------------------------------------------------------------------
 - assertVisible:
-    id: "tab-bar.*tab.press-HomeTab"
+    id: 'tab-bar.*tab.press-HomeTab'
 - waitForAnimationToEnd:
     timeout: 2000
 
 # Navigate to Settings — wait for Home tab to be enabled first.
 - tapOn:
-    id: "tab-bar.*tab.press-SettingsTab"
+    id: 'tab-bar.*tab.press-SettingsTab'
 - waitForAnimationToEnd:
     timeout: 2500
 - assertVisible:
-    text: ".*Settings.*"
+    text: '.*Settings.*'
 
 # Scroll to and open Add Repository modal.
 - scrollUntilVisible:
     element:
-      id: "settings.button.repo-picker"
+      id: 'settings.button.repo-picker'
     direction: DOWN
     speed: 30
     timeout: 10000
     visibilityPercentage: 30
 - tapOn:
-    id: "settings.button.repo-picker"
+    id: 'settings.button.repo-picker'
 - waitForAnimationToEnd:
     timeout: 2000
 
 # Type repo path.
 - assertVisible:
-    id: "settings-modals.input.manual-repo"
+    id: 'settings-modals.input.manual-repo'
 - tapOn:
-    id: "settings-modals.input.manual-repo"
-- inputText: "vidwadeseram/test-notes"
+    id: 'settings-modals.input.manual-repo'
+- inputText: 'vidwadeseram/test-notes'
 - waitForAnimationToEnd:
     timeout: 500
 
 # Add.
 - tapOn:
-    id: "settings-modals.button.add-manual-repo"
+    id: 'settings-modals.button.add-manual-repo'
 - waitForAnimationToEnd:
     timeout: 2500
 
 # Dismiss leftover modal.
 - tapOn:
-    point: "10%,20%"
+    point: '10%,20%'
     optional: true
 - waitForAnimationToEnd:
     timeout: 1000
@@ -180,17 +180,17 @@ appId: com.xaventra.gitnotes
 # Find the Clone toggle and start clone.
 - scrollUntilVisible:
     element:
-      id: "settings.toggle.sync-engine-enable-vidwadeseram-test-notes"
+      id: 'settings.toggle.sync-engine-enable-vidwadeseram-test-notes'
     direction: DOWN
     speed: 30
     timeout: 10000
     visibilityPercentage: 30
 - tapOn:
-    id: "settings.toggle.sync-engine-enable-vidwadeseram-test-notes"
+    id: 'settings.toggle.sync-engine-enable-vidwadeseram-test-notes'
 
 # Wait for CloneProgressModal to appear.
 - assertVisible:
-    id: "clone-progress.button.cancel"
+    id: 'clone-progress.button.cancel'
 - waitForAnimationToEnd:
     timeout: 1000
 
@@ -199,7 +199,7 @@ appId: com.xaventra.gitnotes
 # even during clone (pre-fix:30s+ lag due to JS thread saturation).
 # --------------------------------------------------------------------
 - tapOn:
-    id: "clone-progress.button.cancel"
+    id: 'clone-progress.button.cancel'
 - waitForAnimationToEnd:
     timeout: 2000
 
@@ -207,7 +207,7 @@ appId: com.xaventra.gitnotes
 - runFlow:
     when:
       visible:
-        id: "clone-progress.button.cancel"
+        id: 'clone-progress.button.cancel'
     commands:
       - waitForAnimationToEnd:
           timeout: 3000

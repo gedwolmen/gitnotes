@@ -6,56 +6,56 @@ appId: com.xaventra.gitnotes
 - launchApp:
     clearState: false
 - tapOn:
-    id: "tab-bar.*tab.press-TodosTab"
+    id: 'tab-bar.*tab.press-TodosTab'
 - waitForAnimationToEnd:
     timeout: 1500
 
 - tapOn:
-    id: "todo-list.icon-button.add"
+    id: 'todo-list.icon-button.add'
 - waitForAnimationToEnd:
     timeout: 1500
 
 - tapOn:
-    id: "todo-editor.input.title"
-- inputText: "Field probe"
+    id: 'todo-editor.input.title'
+- inputText: 'Field probe'
 - pressKey: Enter
 
 # Priority — three chips share a testID.
 - tapOn:
-    id: "todo-editor.button.priority"
+    id: 'todo-editor.button.priority'
     index: 0
 - waitForAnimationToEnd:
     timeout: 200
 - tapOn:
-    id: "todo-editor.button.priority"
+    id: 'todo-editor.button.priority'
     index: 2
 - waitForAnimationToEnd:
     timeout: 200
 - tapOn:
-    id: "todo-editor.button.priority"
+    id: 'todo-editor.button.priority'
     index: 1
 - waitForAnimationToEnd:
     timeout: 200
 
 # Notes (multi-line).
 - tapOn:
-    id: "todo-editor.input.notes"
-- inputText: "probe notes"
+    id: 'todo-editor.input.notes'
+- inputText: 'probe notes'
 - pressKey: Enter
 
 # Due-date open + dismiss without picking.
 - tapOn:
-    id: "todo-editor.button.add-deadline"
+    id: 'todo-editor.button.add-deadline'
     optional: true
 - waitForAnimationToEnd:
     timeout: 800
 - tapOn:
-    id: "todo-editor.button.date-picker"
+    id: 'todo-editor.button.date-picker'
     optional: true
 - waitForAnimationToEnd:
     timeout: 800
 
 - tapOn:
-    id: "todo-editor.button.cancel"
+    id: 'todo-editor.button.cancel'
 - waitForAnimationToEnd:
     timeout: 1000

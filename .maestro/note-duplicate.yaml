@@ -6,29 +6,29 @@ appId: com.xaventra.gitnotes
 - launchApp:
     clearState: false
 - tapOn:
-    id: "tab-bar.*tab.press-NotesTab"
+    id: 'tab-bar.*tab.press-NotesTab'
 - waitForAnimationToEnd:
     timeout: 1500
 
 # Reset sort to Newest Modified so the seed sits at the top.
 - tapOn:
-    id: "sort-picker-trigger"
+    id: 'sort-picker-trigger'
     optional: true
 - tapOn:
-    id: "sort-option-modified-desc"
+    id: 'sort-option-modified-desc'
     optional: true
 - waitForAnimationToEnd:
     timeout: 800
 
 - longPressOn:
-    id: "notes-list.button.press-card-0"
+    id: 'notes-list.button.press-card-0'
 - waitForAnimationToEnd:
     timeout: 1000
 
 - assertVisible:
-    id: "notes-context-menu.item.duplicate"
+    id: 'notes-context-menu.item.duplicate'
 - tapOn:
-    id: "notes-context-menu.item.duplicate"
+    id: 'notes-context-menu.item.duplicate'
 - waitForAnimationToEnd:
     timeout: 2000
 
@@ -36,6 +36,6 @@ appId: com.xaventra.gitnotes
 # rename pattern, so just verify two list cards exist (we already had
 # >=2 before — point is no crash).
 - assertVisible:
-    id: "notes-list.button.press-card-0"
+    id: 'notes-list.button.press-card-0'
 - assertVisible:
-    id: "notes-list.button.press-card-1"
+    id: 'notes-list.button.press-card-1'

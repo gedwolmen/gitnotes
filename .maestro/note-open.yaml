@@ -6,42 +6,42 @@ appId: com.xaventra.gitnotes
 - launchApp:
     clearState: false
 - tapOn:
-    id: "tab-bar.*tab.press-NotesTab"
+    id: 'tab-bar.*tab.press-NotesTab'
 - waitForAnimationToEnd:
     timeout: 1500
 
 # Open the first note in the list — order-independent.
 - tapOn:
-    id: "notes-list.button.press-card-0"
+    id: 'notes-list.button.press-card-0'
 - waitForAnimationToEnd:
     timeout: 2000
 
 # Viewer header buttons should be visible.
 - assertVisible:
-    id: "note-viewer.button.back"
+    id: 'note-viewer.button.back'
 - assertVisible:
-    id: "note-viewer.button.edit"
+    id: 'note-viewer.button.edit'
 
 # Switch to edit; the editor "Cancel" button should appear.
 - tapOn:
-    id: "note-viewer.button.edit"
+    id: 'note-viewer.button.edit'
 - waitForAnimationToEnd:
     timeout: 1200
 - assertVisible:
-    id: "note-editor.button.cancel"
+    id: 'note-editor.button.cancel'
 - assertVisible:
-    id: "note-editor.button.save"
+    id: 'note-editor.button.save'
 
 # Cancel back to viewer (no changes).
 - tapOn:
-    id: "note-editor.button.cancel"
+    id: 'note-editor.button.cancel'
 - waitForAnimationToEnd:
     timeout: 1200
 - assertVisible:
-    id: "note-viewer.button.back"
+    id: 'note-viewer.button.back'
 - tapOn:
-    id: "note-viewer.button.back"
+    id: 'note-viewer.button.back'
 - waitForAnimationToEnd:
     timeout: 1000
 
-- assertVisible: "Notes"
+- assertVisible: 'Notes'

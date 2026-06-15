@@ -5,24 +5,24 @@ appId: com.xaventra.gitnotes
 - launchApp:
     clearState: false
 - tapOn:
-    id: "tab-bar.*tab.press-HomeTab"
+    id: 'tab-bar.*tab.press-HomeTab'
 - waitForAnimationToEnd:
     timeout: 1500
 
 - assertVisible:
-    text: ".*New Journal.*"
+    text: '.*New Journal.*'
 - tapOn:
-    text: ".*New Journal.*"
+    text: '.*New Journal.*'
 - waitForAnimationToEnd:
     timeout: 2000
 
 - assertVisible:
-    id: "note-editor-form.input.title"
+    id: 'note-editor-form.input.title'
 - assertVisible:
-    id: "note-editor.button.save"
+    id: 'note-editor.button.save'
 
 # Cancel — leaves no junk note.
 - tapOn:
-    id: "note-editor.button.cancel"
+    id: 'note-editor.button.cancel'
 - waitForAnimationToEnd:
     timeout: 1000
