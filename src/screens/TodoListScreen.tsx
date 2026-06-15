@@ -45,7 +45,7 @@ export default function TodoListScreen() {
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isRefreshingRef = useRef(false);
-  const gitOperationActiveRef = useRef(false);
+  const [gitOperationActive, setGitOperationActive] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [todoText, setTodoText] = useState('');
@@ -79,13 +79,13 @@ export default function TodoListScreen() {
 
   useEffect(() => {
     if (inflight > 0) {
-      gitOperationActiveRef.current = true;
-    } else if (gitOperationActiveRef.current) {
-      const timer = setTimeout(() => {
-        gitOperationActiveRef.current = false;
-      }, 500);
-      return () => clearTimeout(timer);
+      setGitOperationActive(true);
+      return;
     }
+    const timer = setTimeout(() => {
+      setGitOperationActive(false);
+    }, 500);
+    return () => clearTimeout(timer);
   }, [inflight]);
 
   const toggleSelected = useCallback((id: string) => {
@@ -464,7 +464,7 @@ export default function TodoListScreen() {
         ListEmptyComponent={<TodosEmptyState isFiltered={hasActiveFilters} />}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          gitOperationActiveRef.current ? undefined : (
+          gitOperationActive ? undefined : (
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={handlePullToRefresh}
