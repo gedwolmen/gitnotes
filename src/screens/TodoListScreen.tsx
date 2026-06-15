@@ -350,7 +350,7 @@ export default function TodoListScreen() {
 
   const handlePullToRefresh = useCallback(async () => {
     if (isRefreshingRef.current) return;
-    if (inflight > 0) return;
+    if (useGitHubActivityStore.getState().inflight > 0) return;
     isRefreshingRef.current = true;
     setIsRefreshing(true);
     HapticService.light();

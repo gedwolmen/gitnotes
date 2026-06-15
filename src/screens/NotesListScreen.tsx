@@ -275,8 +275,7 @@ export default function NotesListScreen() {
 
   const handlePullToRefresh = useCallback(async () => {
     if (isPullRefreshingRef.current) return;
-    // Disable pull-to-refresh when git operations are in progress to prevent data loss
-    if (inflight > 0) return;
+    if (useGitHubActivityStore.getState().inflight > 0) return;
     isPullRefreshingRef.current = true;
     setIsPullRefreshing(true);
     HapticService.light();
