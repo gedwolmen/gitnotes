@@ -439,7 +439,7 @@ export class OrgContentParser {
 
   private static parseTimestampToken(token: string): NeorgTimestamp | null {
     const trimmed = token.trim();
-    const match = trimmed.match(/^([<\[])(\d{4}-\d{2}-\d{2})(?:\s+[^>\]]+)?([>\]])$/);
+    const match = trimmed.match(/^([<[])(\d{4}-\d{2}-\d{2})(?:\s+[^>\]]+)?([>\]])$/);
     if (!match) {
       return null;
     }

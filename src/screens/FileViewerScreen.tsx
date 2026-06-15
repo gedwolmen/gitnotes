@@ -164,7 +164,7 @@ export default function FileViewerScreen() {
               blocks={parsedNeorg}
               format={mode === 'org' ? 'org' : 'neorg'}
               currentNotePath={path}
-              onOpenNote={(targetPath: string, fragment?: string) => {
+              onOpenNote={(targetPath: string, _fragment?: string) => {
                 const targetTitle = targetPath.split('/').pop() ?? targetPath;
                 navigation.navigate('FileViewer', {
                   owner,

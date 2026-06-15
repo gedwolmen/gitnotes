@@ -25,10 +25,6 @@ type OpenAICompatibleProvider = {
   chatModel: (modelId: string) => LanguageModel;
 };
 
-type LlamaDownloadProgress = {
-  percentage?: number;
-};
-
 const DEFAULT_ON_DEVICE_MODELS: AIModelConfig[] = [
   {
     id: 'apple-foundation',
@@ -61,11 +57,11 @@ async function buildProviderInstance(providerConfig: AIProviderConfig): Promise<
       }
       case 'openai-compatible': {
         if (!providerConfig.baseURL) {
-          throw new Error(`Provider \"${providerConfig.name}\" is missing a base URL`);
+          throw new Error(`Provider "${providerConfig.name}" is missing a base URL`);
         }
 
         if (!providerConfig.apiKey) {
-          throw new Error(`Provider \"${providerConfig.name}\" is missing an API key`);
+          throw new Error(`Provider "${providerConfig.name}" is missing an API key`);
         }
 
         // Static import (not `await import(...)`). Expo's `async-require`
@@ -89,7 +85,7 @@ async function buildProviderInstance(providerConfig: AIProviderConfig): Promise<
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown provider initialization error';
-    throw new Error(`Failed to build provider \"${providerConfig.name}\": ${message}`);
+    throw new Error(`Failed to build provider "${providerConfig.name}": ${message}`);
   }
 }
 
@@ -146,7 +142,7 @@ export async function initializeModel(
       case 'openai-compatible': {
         if (!providerConfig) {
           throw new Error(
-            `OpenAI-compatible model \"${modelConfig.name}\" requires provider configuration`
+            `OpenAI-compatible model "${modelConfig.name}" requires provider configuration`
           );
         }
 
@@ -163,7 +159,7 @@ export async function initializeModel(
       throw error;
     }
     const message = error instanceof Error ? error.message : 'Unknown model initialization error';
-    throw new Error(`Failed to initialize model \"${modelConfig.name}\": ${message}`);
+    throw new Error(`Failed to initialize model "${modelConfig.name}": ${message}`);
   }
 }
 
@@ -485,7 +481,7 @@ export async function downloadModel(
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown download error';
-    throw new Error(`Failed to download model \"${modelConfig.name}\": ${message}`);
+    throw new Error(`Failed to download model "${modelConfig.name}": ${message}`);
   }
 }
 
@@ -513,6 +509,6 @@ export async function getModelStatus(modelConfig: AIModelConfig): Promise<ModelS
     return 'ready';
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown model status error';
-    throw new Error(`Failed to get status for model \"${modelConfig.name}\": ${message}`);
+    throw new Error(`Failed to get status for model "${modelConfig.name}": ${message}`);
   }
 }

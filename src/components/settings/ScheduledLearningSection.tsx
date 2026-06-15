@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -7,11 +7,7 @@ import { Group, GroupRow, Toggle } from '../ui';
 import { HintIcon } from '../ui/HintIcon';
 import { useScheduledLearningStore } from '../../stores/scheduledLearningStore';
 import { settingsStyles as styles } from './settingsStyles';
-import {
-  DAY_OF_WEEK_OPTIONS,
-  formatDaysOfWeek,
-  WORD_COUNT_OPTIONS,
-} from '../../models/ScheduledLearning';
+import { formatDaysOfWeek, WORD_COUNT_OPTIONS } from '../../models/ScheduledLearning';
 import { ScheduledLearningService } from '../../services/ScheduledLearningService';
 import type { RootStackParamList } from '../../navigation/types';
 

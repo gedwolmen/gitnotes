@@ -86,7 +86,7 @@ interface AndroidOverlayProps {
 }
 
 function AndroidShadowOverlays(props: AndroidOverlayProps) {
-  const { offset, blur, shadow, inset, radius } = props;
+  const { offset, blur, shadow, radius } = props;
   const spread = blur;
 
   return (

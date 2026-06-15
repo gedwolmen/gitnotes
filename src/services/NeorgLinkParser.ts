@@ -1,5 +1,4 @@
 import { NeorgLink, LinkType, LinkParseResult } from '../models/NeorgLink';
-import { CANVAS_LINK_PREFIX } from '../models/Canvas';
 
 export class NeorgLinkParser {
   private static linkPattern = /\{([^}]+)\}(?:\[([^\]]+)\])?/g;

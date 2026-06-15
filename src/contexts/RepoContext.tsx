@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { GitRepository, GitService } from '../services/GitService';
+import { GitRepository } from '../services/GitService';
 import { useRepoStore } from '../stores/repoStore';
 
 interface RepoContextType {

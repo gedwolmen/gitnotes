@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { GitHubService, GitHubRepository, GitHubContent, GitHubIssue, GitHubPullRequest, GitHubMilestone } from '../services/GitHubService';
+import { GitHubService } from '../services/GitHubService';
 
 const STALE_TIMES = {
   repos: 5 * 60 * 1000,

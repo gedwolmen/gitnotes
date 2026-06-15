@@ -52,16 +52,6 @@ export default function SyncStatusScreen() {
     [navigation],
   );
 
-  const handleDismiss = useCallback(
-    (repoPath: string, branch: string) => {
-      const cs = conflicts.find((c) => c.repoPath === repoPath && c.branch === branch);
-      if (cs && cs.files.every((f) => f.autoResolved)) {
-        removeConflict(repoPath, branch);
-      }
-    },
-    [conflicts, removeConflict],
-  );
-
   const renderItem = useCallback(
     ({ item }: { item: FileConflict & { repoPath: string; branch: string } }) => (
       <TouchableOpacity

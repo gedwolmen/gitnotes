@@ -178,7 +178,6 @@ export default function NotesListScreen() {
     handleNotePress,
     handleColorSelect,
     handleDeleteNote,
-    handleDeleteFromSwipe,
     handleNoteLongPress,
     handleTogglePin,
     handleExport,

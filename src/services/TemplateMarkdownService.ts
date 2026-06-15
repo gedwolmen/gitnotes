@@ -13,7 +13,7 @@ export function templateSlug(name: string): string {
 
 function quoteIfNeeded(value: string): string {
   if (value === '') return "''";
-  if (/[:#\-?&*!|>'"%@`,\[\]{}]/.test(value) || /^\s|\s$/.test(value)) {
+  if (/[:#-?&*!|>'"%@`,[\]{}]/.test(value) || /^\s|\s$/.test(value)) {
     return `'${value.replace(/'/g, "''")}'`;
   }
   return value;
