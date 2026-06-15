@@ -4,6 +4,12 @@ export interface OpenRouterKeyInfo {
   usage: number | null;
 }
 
+interface OpenRouterKeyResponse {
+  is_free_tier?: unknown;
+  limit?: unknown;
+  usage?: unknown;
+}
+
 export function isOpenRouterBaseURL(baseURL: string): boolean {
   if (!baseURL) return false;
   try {
@@ -28,8 +34,8 @@ export async function checkOpenRouterKey(
       headers: { Authorization: `Bearer ${apiKey}` },
     });
     if (!res.ok) return null;
-    const json = await res.json();
-    const data = (json as any)?.data;
+    const json: { data?: OpenRouterKeyResponse } = await res.json();
+    const data = json.data;
     if (!data || typeof data !== 'object') return null;
 
     return {

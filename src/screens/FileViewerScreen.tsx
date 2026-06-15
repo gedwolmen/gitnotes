@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useMarkdown } from 'react-native-marked';
 
@@ -67,7 +68,7 @@ function MarkdownBody({ value, styles: mdStyles }: { value: string; styles: Retu
 }
 
 export default function FileViewerScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'FileViewer'>>();
   const route = useRoute<RouteProp<RootStackParamList, 'FileViewer'>>();
   const { owner, repo, branch, path, title, size } = route.params;
   const { colors, isDark } = useTheme();
@@ -165,17 +166,13 @@ export default function FileViewerScreen() {
               currentNotePath={path}
               onOpenNote={(targetPath: string, fragment?: string) => {
                 const targetTitle = targetPath.split('/').pop() ?? targetPath;
-                (navigation as any).navigate(
-                  'FileViewer' as never,
-                  {
-                    owner,
-                    repo,
-                    branch,
-                    path: targetPath,
-                    title: targetTitle,
-                    fragment,
-                  } as never,
-                );
+                navigation.navigate('FileViewer', {
+                  owner,
+                  repo,
+                  branch,
+                  path: targetPath,
+                  title: targetTitle,
+                });
                 return true;
               }}
             />

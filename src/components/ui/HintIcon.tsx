@@ -5,9 +5,11 @@ import { useTranslation } from 'react-i18next';
 import { Modal } from './Modal';
 import { useTokens } from '../../contexts/ThemeContext';
 
+type IoniconName = keyof typeof Ionicons.glyphMap;
+
 export interface HintIconProps {
   hintKey: string;
-  iconName?: string;
+  iconName?: IoniconName;
   testID?: string;
   iconSize?: number;
 }
@@ -30,7 +32,7 @@ export function HintIcon(props: HintIconProps) {
         accessibilityLabel={hintText}
       >
         <Ionicons
-          name={iconName as any}
+          name={iconName}
           size={iconSize}
           color={colors.textSecondary}
           style={styles.icon}
@@ -45,7 +47,7 @@ export function HintIcon(props: HintIconProps) {
       >
         <View style={styles.iconBadge}>
           <Ionicons
-            name={iconName as any}
+            name={iconName}
             size={20}
             color={colors.primary}
           />
