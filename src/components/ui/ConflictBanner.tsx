@@ -1,8 +1,10 @@
 import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useConflictStore } from '../../stores/conflictStore';
+import type { RootStackParamList } from '../../navigation/types';
 
 const WARNING = '#f59e0b';
 const WARNING_DARK = '#d97706';
@@ -10,11 +12,11 @@ const WARNING_DARK = '#d97706';
 export function ConflictBanner() {
   const unresolvedCount = useConflictStore((s) => s.totalUnresolvedFiles());
   const conflicts = useConflictStore((s) => s.conflicts);
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const handlePress = useCallback(() => {
     if (conflicts.length > 0) {
-      (navigation as any).navigate('SyncStatus');
+      navigation.navigate('SyncStatus');
     }
   }, [conflicts, navigation]);
 

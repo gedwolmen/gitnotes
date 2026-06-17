@@ -1,24 +1,26 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Alert } from 'react-native';
+import type { RouteProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../contexts/ThemeContext';
-import { useNavigation } from '@react-navigation/native';
 import { useConflictStore } from '../stores/conflictStore';
 import { ConflictResolverService } from '../services/conflict/ConflictResolverService';
 import { GitFsService } from '../services/git/GitFsService';
 import { LocalGitWriter } from '../services/git/LocalGitWriter';
 import { AuthService } from '../services/AuthService';
 import type { FileConflict } from '../services/conflict/types';
+import type { RootStackParamList } from '../navigation/types';
 
 type Tab = 'merged' | 'local' | 'remote';
+type Nav = NativeStackNavigationProp<RootStackParamList, 'ConflictResolver'>;
+type ConflictRoute = RouteProp<RootStackParamList, 'ConflictResolver'>;
 
-export default function ConflictResolverScreen({ route }: { route: any }) {
-  const { repoPath, branch, filePath } = route.params as {
-    repoPath: string;
-    branch: string;
-    filePath: string;
-  };
+export default function ConflictResolverScreen() {
+  const route = useRoute<ConflictRoute>();
+  const { repoPath, branch, filePath } = route.params;
   const { colors } = useTheme();
-  const navigation = useNavigation();
+  const navigation = useNavigation<Nav>();
 
   const conflict = useConflictStore((s) => s.getConflict(repoPath, branch));
   const updateConflict = useConflictStore((s) => s.updateConflict);
@@ -144,7 +146,7 @@ export default function ConflictResolverScreen({ route }: { route: any }) {
         }
 
         await removeConflict(repoPath, branch);
-        (navigation as any).goBack();
+        navigation.goBack();
       } catch (e) {
         Alert.alert('Error', e instanceof Error ? e.message : String(e));
       } finally {
@@ -175,7 +177,7 @@ export default function ConflictResolverScreen({ route }: { route: any }) {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => (navigation as any).goBack()}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={[styles.backButton, { color: colors.primary }]}>Back</Text>
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>

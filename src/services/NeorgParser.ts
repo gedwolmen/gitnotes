@@ -1,4 +1,4 @@
-import { NeorgDocument, NeorgMetadata, NeorgParseResult, NeorgParseOptions } from '../models/NeorgDocument';
+import { NeorgMetadata, NeorgParseResult, NeorgParseOptions } from '../models/NeorgDocument';
 
 const METADATA_START = '@document.meta';
 const METADATA_END = '@end';

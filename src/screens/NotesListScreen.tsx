@@ -68,7 +68,7 @@ export default function NotesListScreen() {
 
   const listRef = useRef<FlatList<Note>>(null);
   const isPullRefreshingRef = useRef(false);
-  const gitOperationActiveRef = useRef(false);
+  const [gitOperationActive, setGitOperationActive] = useState(false);
 
   const [showViewModePicker, setShowViewModePicker] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -95,13 +95,13 @@ export default function NotesListScreen() {
 
   useEffect(() => {
     if (inflight > 0) {
-      gitOperationActiveRef.current = true;
-    } else if (gitOperationActiveRef.current) {
-      const timer = setTimeout(() => {
-        gitOperationActiveRef.current = false;
-      }, 500);
-      return () => clearTimeout(timer);
+      setGitOperationActive(true);
+      return;
     }
+    const timer = setTimeout(() => {
+      setGitOperationActive(false);
+    }, 500);
+    return () => clearTimeout(timer);
   }, [inflight]);
 
   const selectionMode = selectedIds.size > 0;
@@ -178,7 +178,6 @@ export default function NotesListScreen() {
     handleNotePress,
     handleColorSelect,
     handleDeleteNote,
-    handleDeleteFromSwipe,
     handleNoteLongPress,
     handleTogglePin,
     handleExport,
@@ -275,8 +274,7 @@ export default function NotesListScreen() {
 
   const handlePullToRefresh = useCallback(async () => {
     if (isPullRefreshingRef.current) return;
-    // Disable pull-to-refresh when git operations are in progress to prevent data loss
-    if (inflight > 0) return;
+    if (useGitHubActivityStore.getState().inflight > 0) return;
     isPullRefreshingRef.current = true;
     setIsPullRefreshing(true);
     HapticService.light();
@@ -487,7 +485,7 @@ export default function NotesListScreen() {
         }}
         columnWrapperStyle={viewMode !== 'journal' && columnCount > 1 ? { gap: 8 } : undefined}
         refreshControl={
-          gitOperationActiveRef.current ? undefined : (
+          gitOperationActive ? undefined : (
             <RefreshControl
               testID="notes-list.swipe.pull-refresh"
               refreshing={isPullRefreshing}

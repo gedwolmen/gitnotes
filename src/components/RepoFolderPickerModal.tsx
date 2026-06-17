@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useRepos } from '../contexts/RepoContext';
-import { GitService, GitBranch, GitRepositoryFolder } from '../services/GitService';
+import { GitService, GitBranch } from '../services/GitService';
 import { GitHubService, GitHubContent } from '../services/GitHubService';
 import { HapticService } from '../utils/haptics';
 import { Modal } from './ui';

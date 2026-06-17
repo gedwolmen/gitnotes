@@ -8,22 +8,22 @@ appId: com.xaventra.gitnotes
 - launchApp:
     clearState: false
 - tapOn:
-    id: "tab-bar.*tab.press-SettingsTab"
+    id: 'tab-bar.*tab.press-SettingsTab'
 - waitForAnimationToEnd:
     timeout: 1000
 
 - scrollUntilVisible:
     element:
-      id: "settings.button.sync-repo"
+      id: 'settings.button.sync-repo'
     direction: DOWN
     speed: 30
     timeout: 8000
     visibilityPercentage: 30
 
 - assertVisible:
-    id: "settings.button.sync-repo"
+    id: 'settings.button.sync-repo'
 - tapOn:
-    id: "settings.button.sync-repo"
+    id: 'settings.button.sync-repo'
 - waitForAnimationToEnd:
     timeout: 8000
 
@@ -31,4 +31,4 @@ appId: com.xaventra.gitnotes
 # loading, this assertion would fail; long timeout above lets it
 # settle on a small repo.
 - assertVisible:
-    id: "settings.button.sync-repo"
+    id: 'settings.button.sync-repo'

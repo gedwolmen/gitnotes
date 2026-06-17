@@ -1,9 +1,11 @@
 import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, SafeAreaView } from 'react-native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNavigation } from '@react-navigation/native';
 import { useConflictStore } from '../stores/conflictStore';
 import type { FileConflict } from '../services/conflict/types';
+import type { RootStackParamList } from '../navigation/types';
 
 function formatChip(format: string): string {
   switch (format) {
@@ -26,7 +28,7 @@ function kindLabel(kind: string): string {
 
 export default function SyncStatusScreen() {
   const { colors } = useTheme();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const conflicts = useConflictStore((s) => s.conflicts);
   const removeConflict = useConflictStore((s) => s.removeConflict);
 
@@ -41,23 +43,13 @@ export default function SyncStatusScreen() {
 
   const handleFilePress = useCallback(
     (item: FileConflict & { repoPath: string; branch: string }) => {
-      (navigation as any).navigate('ConflictResolver', {
+      navigation.navigate('ConflictResolver', {
         repoPath: item.repoPath,
         branch: item.branch,
         filePath: item.path,
       });
     },
     [navigation],
-  );
-
-  const handleDismiss = useCallback(
-    (repoPath: string, branch: string) => {
-      const cs = conflicts.find((c) => c.repoPath === repoPath && c.branch === branch);
-      if (cs && cs.files.every((f) => f.autoResolved)) {
-        removeConflict(repoPath, branch);
-      }
-    },
-    [conflicts, removeConflict],
   );
 
   const renderItem = useCallback(
@@ -92,7 +84,7 @@ export default function SyncStatusScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => (navigation as any).goBack()}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={[styles.backButton, { color: colors.primary }]}>Back</Text>
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.text }]}>Sync Conflicts</Text>

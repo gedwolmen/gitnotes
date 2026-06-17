@@ -25,21 +25,20 @@ async function consumeBody(
   return merged;
 }
 
+/**
+ * Custom HTTP client for isomorphic-git.
+ *
+ * Auth: callers pass `onAuth` to `git.clone/fetch/push`; the
+ * isomorphic-git manager invokes it on 401, builds the
+ * `Authorization` header itself, and calls our `http.request` with
+ * the header already set. `onAuth` is NOT a field on
+ * `GitHttpRequest`, so this client never sees it. We only add a
+ * long fetch timeout for large packfiles.
+ */
 export const gitHttp: HttpClient = {
   async request(req: GitHttpRequest): Promise<GitHttpResponse> {
     const body = await consumeBody(req.body);
-
     const headers: Record<string, string> = { ...req.headers };
-    if (req.onAuth) {
-      const credentials = await req.onAuth();
-      if (credentials) {
-        const token = credentials.password || credentials.token;
-        if (token) {
-          const auth = Buffer.from(`x-access-token:${token}`).toString('base64');
-          headers['Authorization'] = `Basic ${auth}`;
-        }
-      }
-    }
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -58,24 +57,6 @@ export const gitHttp: HttpClient = {
         throw new Error(`Git HTTP request timed out after ${FETCH_TIMEOUT_MS}ms: ${req.url}`);
       }
       throw fetchError;
-    }
-
-    if (response.status === 401 && req.onAuth) {
-      const credentials = await req.onAuth();
-      if (credentials) {
-        const token = credentials.password || credentials.token;
-        if (token) {
-          const auth = Buffer.from(`x-access-token:${token}`).toString('base64');
-          headers['Authorization'] = `Basic ${auth}`;
-          clearTimeout(timeoutId);
-          response = await fetch(req.url, {
-            method: req.method ?? 'GET',
-            headers,
-            body: body as BodyInit | undefined,
-            signal: controller.signal,
-          });
-        }
-      }
     }
 
     let buffer: ArrayBuffer;

@@ -482,12 +482,12 @@ export class NeorgContentParser {
     const indentLevel = this.getIndentLevel(spaces, indentWidth);
     const content = indentMatch[2];
 
-    const uncheckedMatch = content.match(/^\-\s*\[\s\]\s*(.*)$/);
+    const uncheckedMatch = content.match(/^-\s*\[\s\]\s*(.*)$/);
     if (uncheckedMatch) {
       return { text: uncheckedMatch[1].trim(), checked: false, indentLevel };
     }
 
-    const checkedMatch = content.match(/^\-\s*\[x\]\s*(.*)$/i);
+    const checkedMatch = content.match(/^-\s*\[x\]\s*(.*)$/i);
     if (checkedMatch) {
       return { text: checkedMatch[1].trim(), checked: true, indentLevel };
     }

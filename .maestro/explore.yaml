@@ -4,19 +4,19 @@ appId: com.xaventra.gitnotes
 - launchApp:
     clearState: false
 - tapOn:
-    id: "tab-bar.*tab.press-ExploreTab"
+    id: 'tab-bar.*tab.press-ExploreTab'
 - waitForAnimationToEnd:
     timeout: 1500
 
-- assertVisible: "Explore"
+- assertVisible: 'Explore'
 - assertVisible:
-    text: ".*test-notes.*"
+    text: '.*test-notes.*'
 
 - tapOn:
-    text: ".*test-notes.*"
+    text: '.*test-notes.*'
 - waitForAnimationToEnd:
     timeout: 2500
 
 # Inside a repo we expect at minimum the notes/ folder to be visible.
 - assertVisible:
-    text: ".*notes.*"
+    text: '.*notes.*'

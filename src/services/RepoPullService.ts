@@ -410,7 +410,6 @@ async function pullNotesFromRepo(
     //     on the remote," which is a legitimate signal to wipe local copies.
     //     Transient failures throw and are caught below, returning 0 without
     //     running this pass.
-    const beforeCount = allNotes.length;
     allNotes = allNotes.filter((n) => {
       if (n.repo !== repoPath) return true;
       if (n.branch !== branch) return true;

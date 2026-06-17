@@ -6,30 +6,30 @@ appId: com.xaventra.gitnotes
 - launchApp:
     clearState: false
 - tapOn:
-    id: "tab-bar.*tab.press-SettingsTab"
+    id: 'tab-bar.*tab.press-SettingsTab'
 - waitForAnimationToEnd:
     timeout: 1000
 
 - scrollUntilVisible:
     element:
-      id: "settings.button.language-picker"
+      id: 'settings.button.language-picker'
     direction: DOWN
     speed: 30
     timeout: 8000
     visibilityPercentage: 30
 
 - tapOn:
-    id: "settings.button.language-picker"
+    id: 'settings.button.language-picker'
 - waitForAnimationToEnd:
     timeout: 1000
 
 # Language sheet exposes options. Pick "System Default" again to leave
 # state unchanged regardless of starting language.
 - assertVisible:
-    text: ".*[Ss]ystem.*"
+    text: '.*[Ss]ystem.*'
 - tapOn:
-    text: ".*[Ss]ystem.*"
+    text: '.*[Ss]ystem.*'
 - waitForAnimationToEnd:
     timeout: 1000
 
-- assertVisible: "Settings"
+- assertVisible: 'Settings'

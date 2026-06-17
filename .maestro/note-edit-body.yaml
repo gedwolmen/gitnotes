@@ -12,70 +12,69 @@ appId: com.xaventra.gitnotes
     timeout: 1500
 
 - tapOn:
-    id: "tab-bar.*tab.press-NotesTab"
+    id: 'tab-bar.*tab.press-NotesTab'
 - waitForAnimationToEnd:
     timeout: 1200
 
 # Reset sort to most-recent so we know the new note lands on top.
 - tapOn:
-    id: "sort-picker-trigger"
+    id: 'sort-picker-trigger'
     optional: true
 - tapOn:
-    id: "sort-option-modified-desc"
+    id: 'sort-option-modified-desc'
     optional: true
 - waitForAnimationToEnd:
     timeout: 800
 
 # Create a probe note we can edit.
 - tapOn:
-    id: "notes-list.icon-button.add"
+    id: 'notes-list.icon-button.add'
 - waitForAnimationToEnd:
     timeout: 1500
 - tapOn:
-    id: "note-editor-form.input.title"
-- inputText: "Body editor probe"
+    id: 'note-editor-form.input.title'
+- inputText: 'Body editor probe'
 - pressKey: Enter
 - tapOn:
-    id: "note-editor.button.save"
+    id: 'note-editor.button.save'
 - waitForAnimationToEnd:
     timeout: 2000
 
 # Re-open it for editing.
 - tapOn:
-    id: "notes-list.button.press-card-0"
+    id: 'notes-list.button.press-card-0'
 - waitForAnimationToEnd:
     timeout: 1500
 - tapOn:
-    id: "note-viewer.button.edit"
+    id: 'note-viewer.button.edit'
 - waitForAnimationToEnd:
     timeout: 1500
 
 # Body field: type fast. Anything before #644 deadlocks here.
 - tapOn:
-    id: "note-editor-form.input.content"
+    id: 'note-editor-form.input.content'
 - waitForAnimationToEnd:
     timeout: 500
-- inputText: "Line one of the body. Some inline `code`. **Bold**. _italic_."
+- inputText: 'Line one of the body. Some inline `code`. **Bold**. _italic_.'
 - pressKey: Enter
-- inputText: "- bullet a"
+- inputText: '- bullet a'
 - pressKey: Enter
-- inputText: "- bullet b"
+- inputText: '- bullet b'
 - pressKey: Enter
-- inputText: "- bullet c"
+- inputText: '- bullet c'
 - pressKey: Enter
-- inputText: "Final paragraph after a list."
+- inputText: 'Final paragraph after a list.'
 
 # Save and confirm we land back on the viewer with rendered body.
 # Pre-#644 the editor froze on the rapid input above and never made
 # it here. Post-fix the rendered body is visible.
 - tapOn:
-    id: "note-editor.button.save"
+    id: 'note-editor.button.save'
 - waitForAnimationToEnd:
     timeout: 3000
 
 - assertVisible:
-    text: ".*Final paragraph after a list.*"
-
+    text: '.*Final paragraph after a list.*'
 # No cleanup — just-edited notes race with their upload queue and
 # bulk-delete leaves a tombstoned remnant. The probe lives on the
 # real test-notes repo and is overwritten each run by its title.

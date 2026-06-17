@@ -9,25 +9,25 @@ appId: com.xaventra.gitnotes
 - launchApp:
     clearState: false
 - tapOn:
-    id: "tab-bar.*tab.press-NotesTab"
+    id: 'tab-bar.*tab.press-NotesTab'
 - waitForAnimationToEnd:
     timeout: 1500
 
 # Create a uniquely named note.
 - tapOn:
-    id: "notes-list.icon-button.add"
+    id: 'notes-list.icon-button.add'
 - waitForAnimationToEnd:
     timeout: 1500
 - tapOn:
-    id: "note-editor-form.input.title"
-- inputText: "Maestro persistence probe"
+    id: 'note-editor-form.input.title'
+- inputText: 'Maestro persistence probe'
 - pressKey: Enter
 - tapOn:
-    id: "note-editor.button.save"
+    id: 'note-editor.button.save'
 - waitForAnimationToEnd:
     timeout: 2500
 - assertVisible:
-    text: ".*Maestro persistence probe.*"
+    text: '.*Maestro persistence probe.*'
 
 # Wait for the create to upload to GitHub before deleting — otherwise
 # the delete runs first and the upload re-creates the row.
@@ -37,42 +37,42 @@ appId: com.xaventra.gitnotes
 # Delete it via swipe + bulk-delete.
 - swipe:
     from:
-      text: ".*Maestro persistence probe.*"
+      text: '.*Maestro persistence probe.*'
     direction: LEFT
 - waitForAnimationToEnd:
     timeout: 600
 - tapOn:
-    id: "bulk-action-bar.button.delete"
+    id: 'bulk-action-bar.button.delete'
 - waitForAnimationToEnd:
     timeout: 1500
 - runFlow:
     when:
       visible:
-        text: ".*This cannot be undone.*"
+        text: '.*This cannot be undone.*'
     commands:
       - tapOn:
-          text: "^Delete$"
+          text: '^Delete$'
       - waitForAnimationToEnd:
           timeout: 1500
 - assertNotVisible:
-    text: ".*Maestro persistence probe.*"
+    text: '.*Maestro persistence probe.*'
 
 # Force-quit and relaunch. The note should stay gone.
 - stopApp
 - launchApp:
     clearState: false
 - tapOn:
-    id: "tab-bar.*tab.press-NotesTab"
+    id: 'tab-bar.*tab.press-NotesTab'
 - waitForAnimationToEnd:
     timeout: 3000
 
 # Pull-to-refresh to force the same path the bug travels.
 - swipe:
-    start: "50%, 30%"
-    end: "50%, 90%"
+    start: '50%, 30%'
+    end: '50%, 90%'
     duration: 600
 - waitForAnimationToEnd:
     timeout: 4000
 
 - assertNotVisible:
-    text: ".*Maestro persistence probe.*"
+    text: '.*Maestro persistence probe.*'

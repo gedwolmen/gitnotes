@@ -47,19 +47,12 @@ const BASE_SCALE = 1.0;
 const MIN_SCALE = 0.25;
 const MAX_SCALE = 2.5;
 
-function getNodeDisplayTitle(title: string, maxLen = 10): string {
-  if (title.length <= maxLen) return title;
-  return title.slice(0, maxLen - 1) + '…';
-}
-
 export default function GraphViewScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
   const { notes } = useNotes();
   const { setViewMode } = useViewMode();
   const setChatRepo = useAIStore((s) => s.setChatRepo);
-  const headerHeight = useScreenHeaderHeight();
-  const tabBarHeight = useTabBarHeight();
   const { width: screenWidth } = Dimensions.get('window');
 
   const canvasWidth = CANVAS_SIZE;
@@ -229,7 +222,7 @@ export default function GraphViewScreen() {
       }
     }
 
-    return simNodes.map(({ vx, vy, ...node }) => node);
+    return simNodes.map(({ vx: _vx, vy: _vy, ...node }) => node);
   }, [nodes, edges, canvasWidth, canvasHeight]);
 
   const centerGraph = useCallback(() => {
@@ -319,13 +312,6 @@ export default function GraphViewScreen() {
     return node.connections.size > 0 && node.connections.size <= 2;
   }, []);
 
-  const getNodeScale = useCallback((node: GraphNode): number => {
-    if (node.id === selectedNodeId) return 1.15;
-    if (isOrphanNode(node)) return 0.85;
-    if (isWeaklyConnectedNode(node)) return 0.95;
-    return 1.0;
-  }, [selectedNodeId, isOrphanNode, isWeaklyConnectedNode]);
-
   const handleNodePress = useCallback((nodeId: string) => {
     setSelectedNodeId(nodeId);
   }, []);
@@ -390,7 +376,6 @@ export default function GraphViewScreen() {
 
     // Calculate approximate size based on content length
     const baseWidth = 100;
-    const baseHeight = 60;
     const charWidth = 7;
     const lineHeight = 18;
 
@@ -441,24 +426,6 @@ export default function GraphViewScreen() {
     });
     return path;
   }, [edges, localNodes]);
-
-  const highlightedEdgeIds = useMemo(() => {
-    if (!selectedNodeId) return new Set<string>();
-    const highlighted = new Set<string>();
-    const selectedNode = localNodes.find((n) => n.id === selectedNodeId);
-    if (selectedNode) {
-      edges.forEach((edge) => {
-        if (edge.from === selectedNodeId || edge.to === selectedNodeId) {
-          highlighted.add(`${edge.from}-${edge.to}`);
-        }
-      });
-      selectedNode.connections.forEach((connId) => {
-        highlighted.add(`${selectedNodeId}-${connId}`);
-        highlighted.add(`${connId}-${selectedNodeId}`);
-      });
-    }
-    return highlighted;
-  }, [selectedNodeId, localNodes, edges]);
 
   const pinchGesture = Gesture.Pinch()
     .onUpdate((e) => {

@@ -7,32 +7,32 @@ appId: com.xaventra.gitnotes
 - launchApp:
     clearState: false
 - tapOn:
-    id: "tab-bar.*tab.press-SettingsTab"
+    id: 'tab-bar.*tab.press-SettingsTab'
 - waitForAnimationToEnd:
     timeout: 1000
 
 # Theme + Updated UI toggles are at the top.
 - assertVisible:
-    id: "settings.toggle.theme"
+    id: 'settings.toggle.theme'
 - tapOn:
-    id: "settings.toggle.theme"
+    id: 'settings.toggle.theme'
 - waitForAnimationToEnd:
     timeout: 500
 - tapOn:
-    id: "settings.toggle.theme"
+    id: 'settings.toggle.theme'
 - waitForAnimationToEnd:
     timeout: 500
 
 # Sync section: scroll until "Sync frequently" lands in view, toggle.
 - scrollUntilVisible:
     element:
-      text: ".*Sync frequently.*"
+      text: '.*Sync frequently.*'
     direction: DOWN
     speed: 30
     timeout: 8000
     visibilityPercentage: 30
 
 - assertVisible:
-    text: ".*Sync frequently.*"
+    text: '.*Sync frequently.*'
 - assertVisible:
-    text: ".*Background Sync.*"
+    text: '.*Background Sync.*'
