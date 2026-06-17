@@ -58,7 +58,10 @@ appId: com.xaventra.gitnotes
       - pressKey: Enter
       - tapOn:
           id: 'provider-config.input.api-key'
-      - inputText: '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'
+      # SECURITY: never hardcode the OpenRouter key. Provide it via env so it
+      # doesn't end up in the repo or git history. Run with:
+      #   OPENROUTER_E2E_API_KEY=<key> maestro test .maestro/ai-openrouter-e2e.yaml
+      - inputText: '${OPENROUTER_E2E_API_KEY}'
       - pressKey: Enter
       - hideKeyboard
       - tapOn:
