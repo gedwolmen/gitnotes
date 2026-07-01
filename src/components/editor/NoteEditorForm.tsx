@@ -88,6 +88,7 @@ export function NoteEditorForm({
         value={title}
         onChangeText={onTitleChange}
         maxLength={100}
+        autoCapitalize="sentences"
         returnKeyType="next"
         // Pressing Return on the keyboard hops into the body editor (#628)
         // — gives a deterministic way to leave the title field even when the

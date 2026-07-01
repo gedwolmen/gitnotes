@@ -114,6 +114,8 @@ export default function TemplateSelector({ visible, onClose, onSelect }: Templat
               onChangeText={setSearchQuery}
               placeholder="Search templates..."
               placeholderTextColor={colors.textSecondary}
+              autoCapitalize="none"
+              autoCorrect={false}
             />
           </View>
         </View>

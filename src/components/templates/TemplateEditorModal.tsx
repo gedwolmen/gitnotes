@@ -94,6 +94,7 @@ export function TemplateEditorModal({
             onChangeText={onNameChange}
             placeholder="My template"
             placeholderTextColor={colors.textSecondary}
+            autoCapitalize="sentences"
             style={[styles.nameInput, { color: colors.text, backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}
             maxLength={60}
           />
@@ -127,6 +128,7 @@ export function TemplateEditorModal({
             onChangeText={onDescriptionChange}
             placeholder="e.g. Weekly retrospective"
             placeholderTextColor={colors.textSecondary}
+            autoCapitalize="sentences"
             style={[styles.nameInput, { color: colors.text, backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}
             maxLength={120}
           />
@@ -138,6 +140,7 @@ export function TemplateEditorModal({
             onChangeText={onTitleChange}
             placeholder="e.g. Standup - "
             placeholderTextColor={colors.textSecondary}
+            autoCapitalize="sentences"
             style={[styles.nameInput, { color: colors.text, backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}
             maxLength={80}
           />
@@ -183,6 +186,7 @@ export function TemplateEditorModal({
             onChangeText={onContentChange}
             placeholder={'## Heading\n\nWrite something...'}
             placeholderTextColor={colors.textSecondary}
+            autoCapitalize="sentences"
             multiline
             textAlignVertical="top"
             style={[styles.contentInput, { color: colors.text, backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}

@@ -274,6 +274,8 @@ export default function FolderSelectionDialog({
               placeholderTextColor={colors.textSecondary}
               value={newFolderName}
               onChangeText={setNewFolderName}
+              autoCapitalize="none"
+              autoCorrect={false}
               autoFocus
               maxLength={50}
             />

@@ -273,8 +273,6 @@ const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(fun
         placeholderTextColor={colors.textSecondary}
         multiline
         textAlignVertical="top"
-        autoCorrect={false}
-        spellCheck={false}
         selection={selection}
         onSelectionChange={(e) => {
           const { start, end } = e.nativeEvent.selection;

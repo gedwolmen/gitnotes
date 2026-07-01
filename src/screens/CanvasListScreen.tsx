@@ -231,6 +231,7 @@ export default function CanvasListScreen() {
               onChangeText={setCanvasTitle}
               placeholder="Canvas name"
               placeholderTextColor={colors.textSecondary}
+              autoCapitalize="sentences"
               maxLength={60}
             />
 
