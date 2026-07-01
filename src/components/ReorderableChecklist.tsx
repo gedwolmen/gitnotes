@@ -218,6 +218,7 @@ const ChecklistRow = memo(function ChecklistRow({
         onChangeText={(text) => onTextChange(index, text)}
         placeholder="List item"
         placeholderTextColor={colors.textSecondary}
+        autoCapitalize="sentences"
         style={[
           styles.input,
           {

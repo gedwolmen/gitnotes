@@ -534,6 +534,8 @@ export default function MoveNoteDialog({ visible, note, onClose, onMoved }: Move
                 onChangeText={setNewFolderName}
                 placeholder="Folder name"
                 placeholderTextColor={colors.textSecondary}
+                autoCapitalize="none"
+                autoCorrect={false}
                 onSubmitEditing={handleCreateFolder}
                 returnKeyType="done"
                 autoFocus

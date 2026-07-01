@@ -164,6 +164,7 @@ export function ChatInputBar({
           }}
           placeholder="Type a message..."
           placeholderTextColor={colors.textSecondary}
+          autoCapitalize="sentences"
           multiline
           value={text}
           onChangeText={handleTextChange}

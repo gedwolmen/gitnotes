@@ -108,6 +108,7 @@ export function TodoEditorModal({
               onChangeText={onChangeText}
               placeholder="What needs to be done?"
               placeholderTextColor={colors.textSecondary}
+              autoCapitalize="sentences"
               returnKeyType="done"
             />
 
@@ -119,6 +120,7 @@ export function TodoEditorModal({
               onChangeText={onChangeNotes}
               placeholder="Additional notes..."
               placeholderTextColor={colors.textSecondary}
+              autoCapitalize="sentences"
               multiline
               numberOfLines={3}
             />

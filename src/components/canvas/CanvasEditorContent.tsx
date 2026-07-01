@@ -1022,6 +1022,7 @@ export default function CanvasEditorContent() {
           onChangeText={setTitle}
           placeholder="Canvas Title"
           placeholderTextColor={colors.textSecondary}
+          autoCapitalize="sentences"
         />
         <TouchableOpacity testID="canvas-editor.button.save" onPress={saveCanvas} style={styles.saveBtn}>
           <Text style={styles.saveBtnText}>Save</Text>
@@ -1167,6 +1168,7 @@ export default function CanvasEditorContent() {
               value={textInput}
               onChangeText={setTextInput}
               autoFocus
+              autoCapitalize="sentences"
               placeholder="Type here..."
               placeholderTextColor={colors.textSecondary}
             />
