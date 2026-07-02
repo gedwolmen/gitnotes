@@ -34,24 +34,30 @@ jest.mock('../src/contexts/ThemeContext', () => ({
   useScreenHeaderHeight: () => 56,
 }));
 
-const mockCreateItem = jest.fn(async (input: any) => ({
-  id: 'sl-new',
-  ...input,
-  isEnabled: true,
-  lastGeneratedAt: null,
-  dayLastGeneratedAt: {},
-  questionerPrompts: input.questionerPrompts ?? [],
-  questionerFolders: input.questionerFolders ?? [],
-  questionerNoteFolder: null,
-  createdAt: Date.now(),
-  updatedAt: Date.now(),
-}));
 const mockScheduleNotification = jest.fn(async () => 'notif-id');
 
-jest.mock('../src/stores/scheduledLearningStore', () => ({
-  useScheduledLearningStore: (selector: any) =>
-    selector({ createItem: mockCreateItem }),
-}));
+jest.mock('../src/stores/scheduledLearningStore', () => {
+  const createItem = jest.fn(async (input: any) => ({
+    id: 'sl-new',
+    ...input,
+    isEnabled: true,
+    lastGeneratedAt: null,
+    dayLastGeneratedAt: {},
+    questionerPrompts: input.questionerPrompts ?? [],
+    questionerFolders: input.questionerFolders ?? [],
+    questionerNoteFolder: null,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  }));
+  const deleteItem = jest.fn(async () => true);
+  const store = { createItem, deleteItem };
+  (global as any).__mockScheduledLearningStore = store;
+  const useStore: any = (selector: any) => selector(store);
+  useStore.getState = () => store;
+  return {
+    useScheduledLearningStore: useStore,
+  };
+});
 
 jest.mock('../src/stores/aiStore', () => ({
   useAIStore: (selector: any) =>
@@ -79,10 +85,22 @@ jest.mock('../src/contexts/RepoContext', () => ({
 
 jest.mock('../src/services/ScheduledLearningService', () => {
   const mockSchedule = jest.fn(async () => 'notif-id');
-  // expose for test access
+  const mockGenerate = jest.fn(async () => ({
+    id: 'note-from-generate',
+    title: 'mock note',
+    content: 'content',
+    tags: [],
+    format: 'markdown',
+    createdAt: 0,
+    updatedAt: 0,
+  }));
   (global as any).__mockScheduleNotification = mockSchedule;
+  (global as any).__mockGenerateNow = mockGenerate;
   return {
-    ScheduledLearningService: { scheduleNotification: mockSchedule },
+    ScheduledLearningService: {
+      scheduleNotification: mockSchedule,
+      generateNow: mockGenerate,
+    },
   };
 });
 
@@ -119,9 +137,13 @@ jest.mock('@react-navigation/native', () => ({
 import { AddScheduledLearningScreen } from '../src/components/settings/AddScheduledLearningScreen';
 
 beforeEach(() => {
-  mockCreateItem.mockClear();
+  const __mc = (global as any).__mockScheduledLearningStore?.createItem as jest.Mock | undefined; if (__mc) __mc.mockClear();
   mockScheduleNotification.mockClear();
   mockGoBack.mockClear();
+  const gen = (global as any).__mockGenerateNow as jest.Mock | undefined;
+  if (gen) gen.mockClear();
+  const del = (global as any).__mockScheduledLearningStore?.deleteItem as jest.Mock | undefined;
+  if (del) del.mockClear();
   jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
 });
 
@@ -236,7 +258,7 @@ describe('AddScheduledLearningScreen questioner flows', () => {
       'scheduledLearning.questioner.folderRequiredTitle',
       expect.any(String),
     );
-    expect(mockCreateItem).not.toHaveBeenCalled();
+    expect(((global as any).__mockScheduledLearningStore?.createItem as jest.Mock).mock.calls.length).toBe(0);
   });
 
   it('blocks save when prompt source has no prompts added', async () => {
@@ -255,7 +277,7 @@ describe('AddScheduledLearningScreen questioner flows', () => {
       'scheduledLearning.questioner.promptRequiredTitle',
       expect.any(String),
     );
-    expect(mockCreateItem).not.toHaveBeenCalled();
+    expect(((global as any).__mockScheduledLearningStore?.createItem as jest.Mock).mock.calls.length).toBe(0);
   });
 
   it('persists multi prompts and multi folders to createItem on save', async () => {
@@ -276,8 +298,8 @@ describe('AddScheduledLearningScreen questioner flows', () => {
     await waitFor(() => {
       fireEvent.press(getByText('Add Schedule'));
     });
-    await waitFor(() => expect(mockCreateItem).toHaveBeenCalled());
-    const call = mockCreateItem.mock.calls[0][0];
+    await waitFor(() => expect(((global as any).__mockScheduledLearningStore?.createItem as jest.Mock)).toHaveBeenCalled());
+    const call = ((global as any).__mockScheduledLearningStore?.createItem as jest.Mock).mock.calls[0][0];
     expect(call.type).toBe('questioner');
     expect(call.questionerSource).toBe('prompt');
     expect(call.questionerPrompts).toEqual(['Algebra basics', 'Geometry shapes']);
@@ -302,12 +324,93 @@ describe('AddScheduledLearningScreen questioner flows', () => {
     await waitFor(() => {
       fireEvent.press(getByText('Add Schedule'));
     });
-    await waitFor(() => expect(mockCreateItem).toHaveBeenCalled());
-    const call = mockCreateItem.mock.calls[0][0];
+    await waitFor(() => expect(((global as any).__mockScheduledLearningStore?.createItem as jest.Mock)).toHaveBeenCalled());
+    const call = ((global as any).__mockScheduledLearningStore?.createItem as jest.Mock).mock.calls[0][0];
     expect(call.questionerSource).toBe('folder');
     expect(call.questionerFolders).toEqual([
       { repoPath: 'owner/repo-a', folderPath: 'notes/math' },
       { repoPath: 'owner/repo-b', folderPath: 'notes/physics' },
     ]);
+  });
+
+  it('generates the note immediately on save and schedules a reminder notification', async () => {
+    // Reset mock call history from any previous test
+    const mockSchedule = (global as any).__mockScheduleNotification as jest.Mock;
+    const mockGenerate = (global as any).__mockGenerateNow as jest.Mock;
+    mockSchedule.mockClear();
+    mockGenerate.mockClear();
+
+    const { getByPlaceholderText, getByTestId, getByText } = render(
+      <AddScheduledLearningScreen />,
+    );
+    fireEvent.changeText(getByPlaceholderText('Add a topic tag...'), 'topic');
+    fireEvent.press(getByTestId('add-tag-button'));
+    fireEvent.press(getByText('Questioner Notes'));
+    fireEvent.press(getByText('From Prompt'));
+    const promptInput = getByPlaceholderText(
+      'scheduledLearning.questioner.promptPlaceholder',
+    );
+    fireEvent.changeText(promptInput, 'Algebra basics');
+    fireEvent.press(getByTestId('questioner-add-prompt'));
+
+    await waitFor(() => {
+      fireEvent.press(getByText('Add Schedule'));
+    });
+
+    await waitFor(() => expect(mockGenerate).toHaveBeenCalled());
+    expect(mockGenerate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'questioner',
+        questionerPrompts: ['Algebra basics'],
+      }),
+    );
+
+    await waitFor(() => expect(mockSchedule).toHaveBeenCalled());
+    const scheduleCall = mockSchedule.mock.calls[0];
+    expect(scheduleCall[0]).toEqual(
+      expect.objectContaining({
+        type: 'questioner',
+        questionerPrompts: ['Algebra basics'],
+      }),
+    );
+    expect(scheduleCall[1]).toBe('note-from-generate');
+  });
+
+  it('surfaces an alert and lets the user delete the schedule if generation fails', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    alertSpy.mockClear();
+    const mockGenerate = (global as any).__mockGenerateNow as jest.Mock;
+    mockGenerate.mockClear();
+    mockGenerate.mockResolvedValueOnce(null);
+    const mockDelete = (global as any).__mockScheduledLearningStore.deleteItem as jest.Mock;
+    mockDelete.mockClear();
+
+    const { getByPlaceholderText, getByTestId, getByText } = render(
+      <AddScheduledLearningScreen />,
+    );
+    fireEvent.changeText(getByPlaceholderText('Add a topic tag...'), 'topic');
+    fireEvent.press(getByTestId('add-tag-button'));
+    fireEvent.press(getByText('Questioner Notes'));
+    fireEvent.press(getByText('From Prompt'));
+    fireEvent.changeText(
+      getByPlaceholderText('scheduledLearning.questioner.promptPlaceholder'),
+      'Algebra basics',
+    );
+    fireEvent.press(getByTestId('questioner-add-prompt'));
+
+    await waitFor(() => {
+      fireEvent.press(getByText('Add Schedule'));
+    });
+
+    await waitFor(() => expect(alertSpy).toHaveBeenCalled(), { timeout: 3000 });
+    const args = alertSpy.mock.calls[0];
+    expect(args[0]).toBe('scheduledLearning.questioner.generateFailedTitle');
+    expect(args[1]).toBe('scheduledLearning.questioner.generateFailedBody');
+    const buttons = args[2] as Array<{ text: string; onPress?: () => void; style?: string }>;
+    expect(buttons.length).toBe(2);
+    expect(buttons[0].text).toBe('common.cancel');
+    expect(buttons[1].text).toBe('common.delete');
+    buttons[1].onPress?.();
+    await waitFor(() => expect(mockDelete).toHaveBeenCalled());
   });
 });

@@ -215,7 +215,9 @@
       "promptRequiredTitle": "프롬프트 필요",
       "promptRequiredBody": "생성할 내용을 정의하려면 프롬프트를 하나 이상 추가하세요.",
       "folderRequiredTitle": "폴더 필요",
-      "folderRequiredBody": "저장소에서 폴더를 하나 이상 선택하세요."
+      "folderRequiredBody": "저장소에서 폴더를 하나 이상 선택하세요.",
+      "generateFailedTitle": "노트를 생성할 수 없습니다",
+      "generateFailedBody": "AI가 지금 노트를 만들 수 없습니다(모델 없음, 인터넷 없음 또는 모델 오류). 취소를 눌러 일정을 유지하고 나중에 다시 시도하거나 삭제하세요."
     }
   }
 }

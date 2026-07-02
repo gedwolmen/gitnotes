@@ -236,12 +236,41 @@ export function AddScheduledLearningScreen() {
     });
 
     if (newItem) {
-      void ScheduledLearningService.scheduleNotification(newItem);
+      // Generate the note now so the user can read it immediately and the
+      // scheduled notification acts as a reminder rather than a generator.
+      const createdNote = await ScheduledLearningService.generateNow(newItem);
+      if (createdNote) {
+        await ScheduledLearningService.scheduleNotification(newItem, createdNote.id);
+        // Reset form and pop back; the user can find the generated note in
+        // the notes list (or in the repo/folder they picked).
+        resetForm();
+        navigation.goBack();
+        return;
+      }
+
+      // Generation failed (e.g. no AI model, model misconfigured, network).
+      // Surface the error and let the user decide whether to keep the
+      // schedule, retry, or remove it.
+      Alert.alert(
+        t('scheduledLearning.questioner.generateFailedTitle'),
+        t('scheduledLearning.questioner.generateFailedBody'),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          {
+            text: t('common.delete'),
+            style: 'destructive',
+            onPress: async () => {
+              await useScheduledLearningStore.getState().deleteItem(newItem.id);
+            },
+          },
+        ],
+      );
+      return;
     }
 
     resetForm();
     navigation.goBack();
-  }, [tags, description, selectedDays, selectedTime, selectedModel, selectedFolderPath, selectedRepoPath, selectedBranch, selectedWordCount, repeat, learningType, questionerSource, questionerPrompts, questionerFolders, createItem, resetForm, navigation]);
+  }, [tags, description, selectedDays, selectedTime, selectedModel, selectedFolderPath, selectedRepoPath, selectedBranch, selectedWordCount, repeat, learningType, questionerSource, questionerPrompts, questionerFolders, createItem, resetForm, navigation, t]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>

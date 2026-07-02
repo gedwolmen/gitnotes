@@ -251,4 +251,33 @@ describeLive('Live questioner integration (Minimax + GitHub)', () => {
     expect(result.text.length).toBeGreaterThan(0);
     console.log('[live] folder source reply length:', result.text.length);
   });
+
+  it('end-to-end: generates a questioner note via the real Minimax API', async () => {
+    // Build a prompt context using the same code path the production service uses.
+    const item: ScheduledLearningItem = {
+      ...baseItem(),
+      questionerSource: 'tags',
+      tags: ['algebra', 'geometry'],
+    };
+    const ctx = ScheduledLearningService.buildQuestionerPromptContext(item, []);
+    expect(ctx).toContain('algebra, geometry');
+
+    // Simulate the full service: send to Minimax, strip <think> tags, build the
+    // marker-wrapped content the production service would persist.
+    const provider = buildMinimaxProvider(env!.MINIMAX_API_KEY);
+    const model = provider.chatModel('MiniMax-M2.7') as any;
+    const result = await generateText({
+      model,
+      system: 'You are an educational question generator. Create exactly 2 short numbered questions. No answers.',
+      messages: [{ role: 'user', content: ctx }],
+    });
+
+    const cleaned = result.text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    const marker = `<!-- sl-item-id: ${item.id} -->`;
+    const noteContent = `${marker}\n${cleaned}`;
+
+    expect(cleaned.length).toBeGreaterThan(0);
+    expect(noteContent.startsWith(marker)).toBe(true);
+    console.log('[live] generated note preview:', cleaned.slice(0, 120).replace(/\n/g, ' '));
+  });
 });

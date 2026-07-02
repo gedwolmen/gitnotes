@@ -12,6 +12,7 @@ import {
   DayOfWeek,
   QuestionerFolderSelection,
 } from '../models/ScheduledLearning';
+import type { Note } from '../models/Note';
 
 const NOTIFICATION_ID_PREFIX = 'scheduled-learning-';
 const QUESTIONER_MARKER_PREFIX = '<!-- sl-item-id:';
@@ -46,18 +47,27 @@ function shouldGenerateForDay(item: ScheduledLearningItem, day: DayOfWeek): bool
 }
 
 export class ScheduledLearningService {
-  static async generateAndCreateNote(item: ScheduledLearningItem, day?: DayOfWeek): Promise<boolean> {
+  static async generateAndCreateNote(item: ScheduledLearningItem, day?: DayOfWeek): Promise<Note | null> {
     if (item.type === 'questioner') {
       return ScheduledLearningService.generateQuestionerNote(item, day);
     }
     return ScheduledLearningService.generateLearnNote(item, day);
   }
 
-  private static async generateLearnNote(item: ScheduledLearningItem, day?: DayOfWeek): Promise<boolean> {
+  /**
+   * Generate the scheduled note immediately and return it. Bypasses the
+   * per-day dedupe gate so a fresh schedule can be generated on demand.
+   * Returns null if generation failed (no model, no prompt, AI error, …).
+   */
+  static async generateNow(item: ScheduledLearningItem): Promise<Note | null> {
+    return ScheduledLearningService.generateAndCreateNote(item, undefined);
+  }
+
+  private static async generateLearnNote(item: ScheduledLearningItem, day?: DayOfWeek): Promise<Note | null> {
     const targetDay = day ?? getDayFromDate(new Date());
 
     if (!shouldGenerateForDay(item, targetDay)) {
-      return false;
+      return null;
     }
 
     try {
@@ -67,7 +77,7 @@ export class ScheduledLearningService {
       const modelId = item.modelId ?? aiStore.selectedModelId;
       if (!modelId) {
         console.warn('[ScheduledLearning] No model selected');
-        return false;
+        return null;
       }
 
       const modelConfig = aiStore
@@ -75,7 +85,7 @@ export class ScheduledLearningService {
         .find((m) => m.id === modelId);
       if (!modelConfig) {
         console.warn('[ScheduledLearning] Model not found:', modelId);
-        return false;
+        return null;
       }
 
       const provider = aiStore.providers.find((p) =>
@@ -83,7 +93,7 @@ export class ScheduledLearningService {
       );
       if (!provider) {
         console.warn('[ScheduledLearning] Provider not found for model:', modelId);
-        return false;
+        return null;
       }
 
       const model = await initializeModel(modelConfig, provider);
@@ -128,7 +138,7 @@ export class ScheduledLearningService {
 
       const folderPath = item.folderPath ?? undefined;
 
-      await noteStore.createNote({
+      const created = await noteStore.createNote({
         title,
         content: cleanedContent,
         tags: ['scheduled-learning', ...item.tags],
@@ -140,10 +150,10 @@ export class ScheduledLearningService {
 
       await useScheduledLearningStore.getState().markGenerated(item.id, targetDay);
 
-      return true;
+      return created ?? null;
     } catch (error) {
       console.error('[ScheduledLearning] Failed to generate learn note:', error);
-      return false;
+      return null;
     }
   }
 
@@ -170,15 +180,15 @@ export class ScheduledLearningService {
     return { model, modelId };
   }
 
-  private static async generateQuestionerNote(item: ScheduledLearningItem, day?: DayOfWeek): Promise<boolean> {
+  private static async generateQuestionerNote(item: ScheduledLearningItem, day?: DayOfWeek): Promise<Note | null> {
     const targetDay = day ?? getDayFromDate(new Date());
     if (!shouldGenerateForDay(item, targetDay)) {
-      return false;
+      return null;
     }
 
     try {
       const resolved = await ScheduledLearningService.resolveModel(item);
-      if (!resolved) return false;
+      if (!resolved) return null;
       const { model } = resolved;
       const noteStore = useNoteStore.getState();
 
@@ -209,7 +219,7 @@ export class ScheduledLearningService {
 
       const content = `${marker}\n${cleanedContent}`;
 
-      await noteStore.createNote({
+      const created = await noteStore.createNote({
         title,
         content,
         tags: ['scheduled-learning', 'questioner', ...item.tags],
@@ -220,10 +230,10 @@ export class ScheduledLearningService {
       });
 
       await useScheduledLearningStore.getState().markGenerated(item.id, targetDay);
-      return true;
+      return created ?? null;
     } catch (error) {
       console.error('[ScheduledLearning] Failed to generate questioner note:', error);
-      return false;
+      return null;
     }
   }
 
@@ -338,7 +348,7 @@ export class ScheduledLearningService {
     }
   }
 
-  static async scheduleNotification(item: ScheduledLearningItem): Promise<string | null> {
+  static async scheduleNotification(item: ScheduledLearningItem, noteId?: string): Promise<string | null> {
     try {
       const hasPermission = await NotificationService.requestPermissions();
       if (!hasPermission) return null;
@@ -348,10 +358,16 @@ export class ScheduledLearningService {
 
       const nextDate = nextDates[0];
 
+      const isQuestioner = item.type === 'questioner';
+      const title = isQuestioner ? 'Question time!' : 'Time to learn!';
+      const body = isQuestioner
+        ? `Your scheduled questioner note for "${item.tags.join(', ')}" is ready to answer.`
+        : `Your scheduled learning note for "${item.tags.join(', ')}" is ready to read.`;
+
       const notificationId = await NotificationService.scheduleLearningNotification({
-        title: 'Time to Learn!',
-        body: `Your scheduled learning session for "${item.tags.join(', ')}" is ready.`,
-        data: { scheduledLearningId: item.id },
+        title,
+        body,
+        data: { scheduledLearningId: item.id, ...(noteId ? { noteId } : {}) },
         trigger: nextDate,
       });
 

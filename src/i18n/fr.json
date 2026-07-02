@@ -215,7 +215,9 @@
       "promptRequiredTitle": "Prompt requis",
       "promptRequiredBody": "Ajoutez au moins un prompt pour définir ce qu'il faut générer.",
       "folderRequiredTitle": "Dossier requis",
-      "folderRequiredBody": "Choisissez au moins un dossier dans un dépôt."
+      "folderRequiredBody": "Choisissez au moins un dossier dans un dépôt.",
+      "generateFailedTitle": "Impossible de générer la note",
+      "generateFailedBody": "L'IA n'a pas pu créer votre note (pas de modèle, pas d'internet ou erreur du modèle). Annuler pour conserver le planning et réessayer, ou supprimer."
     }
   }
 }
