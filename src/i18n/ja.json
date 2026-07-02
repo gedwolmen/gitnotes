@@ -215,7 +215,9 @@
       "promptRequiredTitle": "プロンプトが必要です",
       "promptRequiredBody": "生成内容を定義するために、少なくとも1つのプロンプトを追加してください。",
       "folderRequiredTitle": "フォルダが必要です",
-      "folderRequiredBody": "リポジトリから少なくとも1つのフォルダを選択してください。"
+      "folderRequiredBody": "リポジトリから少なくとも1つのフォルダを選択してください。",
+      "generateFailedTitle": "ノートを生成できませんでした",
+      "generateFailedBody": "AIが今ノートを作成できませんでした(モデルなし、インターネットなし、モデルエラー)。キャンセルでスケジュールを保持して再試行、削除で削除します。"
     }
   }
 }

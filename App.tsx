@@ -67,7 +67,17 @@ export default function App() {
       if (data?.scheduledLearningId) {
         const items = useScheduledLearningStore.getState().items;
         const item = items.find((i) => i.id === data.scheduledLearningId);
-        if (item && item.isEnabled) {
+        if (!item) return;
+        if (data?.noteId) {
+          // Note was already generated at save time; the notification is a
+          // reminder to read it. Reschedule the next reminder at the next
+          // scheduled time.
+          await ScheduledLearningService.scheduleNotification(item, String(data.noteId));
+          return;
+        }
+        if (item.isEnabled) {
+          // Backwards-compat: legacy notifications without noteId still
+          // generate on demand.
           await ScheduledLearningService.generateAndCreateNote(item);
           await ScheduledLearningService.scheduleNotification(item);
         }

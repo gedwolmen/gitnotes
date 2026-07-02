@@ -215,7 +215,9 @@
       "promptRequiredTitle": "Prompt requerido",
       "promptRequiredBody": "Añade al menos un prompt para definir qué generar.",
       "folderRequiredTitle": "Carpeta requerida",
-      "folderRequiredBody": "Elige al menos una carpeta de un repositorio."
+      "folderRequiredBody": "Elige al menos una carpeta de un repositorio.",
+      "generateFailedTitle": "No se pudo generar la nota",
+      "generateFailedBody": "La IA no pudo crear tu nota ahora (sin modelo, sin internet o error del modelo). Cancelar para mantener el horario y volver a intentarlo, o elimínalo."
     }
   }
 }
