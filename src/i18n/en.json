@@ -29,7 +29,8 @@
     "remove": "Remove",
     "skip": "Skip",
     "copy": "Copy",
-    "paste": "Paste"
+    "paste": "Paste",
+    "select": "Select"
   },
   "notes": {
     "title": "Notes",
@@ -194,5 +195,28 @@
       "scheduledLearning": "Schedule daily reviews of notes with specific tags. The app sends reminders to help you learn and remember your notes."
     },
     "title": "Hint"
+  },
+  "scheduledLearning": {
+    "questioner": {
+      "tagSourceDescription": "Generate questions based on topic tags",
+      "promptSourceDescription": "Generate questions from one or more custom prompts",
+      "folderSourceDescription": "Generate questions from notes in selected folders",
+      "addPrompt": "Add prompt",
+      "promptPlaceholder": "Describe what questions to generate...",
+      "promptsEmpty": "No prompts added yet.",
+      "promptsHelp": "Tap a prompt to remove it. Multiple prompts become separate question sections.",
+      "addFolder": "Add folder",
+      "pickRepoAndFolder": "Pick a repo & folder",
+      "selectedFoldersEmpty": "No folders selected yet.",
+      "selectedFoldersHelp": "Tap a folder to remove it. Pick folders across different repos.",
+      "folderPromptRequired": "Please add at least one prompt.",
+      "folderRequired": "Please pick at least one folder.",
+      "tagsRequiredTitle": "Tags required",
+      "tagsRequiredBody": "Please add at least one tag for the learning topic.",
+      "dayRequiredTitle": "Day required",
+      "dayRequiredBody": "Please select at least one day.",
+      "aiNotConfiguredTitle": "AI Not Configured",
+      "aiNotConfiguredBody": "Please set up an AI model in Settings before creating a scheduled learning note."
+    }
   }
 }

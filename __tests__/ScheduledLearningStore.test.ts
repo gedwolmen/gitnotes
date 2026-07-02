@@ -129,15 +129,36 @@ describe('ScheduledLearningStore', () => {
         wordCount: 300,
         repeat: 'daily',
         questionerSource: 'prompt',
-        questionerPrompt: 'Generate Newton laws questions',
-        questionerNoteFolder: null,
+        questionerPrompts: ['Generate Newton laws questions'],
+        questionerFolders: [],
       });
 
       expect(newItem).not.toBeNull();
       expect(newItem?.type).toBe('questioner');
       expect(newItem?.repeat).toBe('daily');
       expect(newItem?.questionerSource).toBe('prompt');
-      expect(newItem?.questionerPrompt).toBe('Generate Newton laws questions');
+      expect(newItem?.questionerPrompts).toEqual(['Generate Newton laws questions']);
+    });
+
+    it('creates a questioner item with multiple folders across repos', async () => {
+      const newItem = await useScheduledLearningStore.getState().createItem({
+        type: 'questioner',
+        tags: ['mix'],
+        daysOfWeek: ['wednesday'],
+        time: '09:00',
+        wordCount: 500,
+        questionerSource: 'folder',
+        questionerPrompts: [],
+        questionerFolders: [
+          { repoPath: 'owner/repo-a', folderPath: 'notes/math' },
+          { repoPath: 'owner/repo-b', folderPath: 'notes/physics' },
+        ],
+      });
+
+      expect(newItem?.questionerFolders).toEqual([
+        { repoPath: 'owner/repo-a', folderPath: 'notes/math' },
+        { repoPath: 'owner/repo-b', folderPath: 'notes/physics' },
+      ]);
     });
   });
 

@@ -29,7 +29,8 @@
     "remove": "Retirer",
     "skip": "Passer",
     "copy": "Copier",
-    "paste": "Coller"
+    "paste": "Coller",
+    "select": "Sélectionner"
   },
   "notes": {
     "title": "Notes",
@@ -189,5 +190,28 @@
       "scheduledLearning": "Les fournisseurs IA vous permettent de connecter différents services IA. Apple Intelligence utilise le traitement sur appareil pour la confidentialité."
     },
     "title": "Hint"
+  },
+  "scheduledLearning": {
+    "questioner": {
+      "tagSourceDescription": "Génère des questions à partir des étiquettes de sujets",
+      "promptSourceDescription": "Génère des questions à partir d'un ou plusieurs prompts personnalisés",
+      "folderSourceDescription": "Génère des questions à partir des notes dans les dossiers sélectionnés",
+      "addPrompt": "Ajouter un prompt",
+      "promptPlaceholder": "Décrivez quelles questions générer...",
+      "promptsEmpty": "Aucun prompt ajouté pour l'instant.",
+      "promptsHelp": "Touchez un prompt pour le supprimer. Plusieurs prompts deviennent des sections de questions séparées.",
+      "addFolder": "Ajouter un dossier",
+      "pickRepoAndFolder": "Choisir un dépôt et un dossier",
+      "selectedFoldersEmpty": "Aucun dossier sélectionné pour l'instant.",
+      "selectedFoldersHelp": "Touchez un dossier pour le supprimer. Choisissez des dossiers dans différents dépôts.",
+      "folderPromptRequired": "Ajoutez au moins un prompt.",
+      "folderRequired": "Choisissez au moins un dossier.",
+      "tagsRequiredTitle": "Étiquettes requises",
+      "tagsRequiredBody": "Ajoutez au moins une étiquette pour le sujet d'apprentissage.",
+      "dayRequiredTitle": "Jour requis",
+      "dayRequiredBody": "Sélectionnez au moins un jour.",
+      "aiNotConfiguredTitle": "IA non configurée",
+      "aiNotConfiguredBody": "Configurez un modèle IA dans les Paramètres avant de créer une note d'apprentissage planifiée."
+    }
   }
 }

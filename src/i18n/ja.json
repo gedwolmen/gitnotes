@@ -29,7 +29,8 @@
     "remove": "削除",
     "skip": "スキップ",
     "copy": "コピー",
-    "paste": "貼り付け"
+    "paste": "貼り付け",
+    "select": "選択"
   },
   "notes": {
     "title": "ノート",
@@ -189,5 +190,28 @@
       "scheduledLearning": "AIプロバイダーはさまざまなAIサービスを接続できます。Apple Intelligenceはプライバシーのためオンデバイス処理を使用します。"
     },
     "title": "Hint"
+  },
+  "scheduledLearning": {
+    "questioner": {
+      "tagSourceDescription": "トピックタグに基づいて問題を生成",
+      "promptSourceDescription": "1つ以上のカスタムプロンプトから問題を生成",
+      "folderSourceDescription": "選択したフォルダのノートから問題を生成",
+      "addPrompt": "プロンプトを追加",
+      "promptPlaceholder": "生成する問題について説明...",
+      "promptsEmpty": "プロンプトはまだ追加されていません。",
+      "promptsHelp": "プロンプトをタップして削除します。複数のプロンプトは別々の問題セクションになります。",
+      "addFolder": "フォルダを追加",
+      "pickRepoAndFolder": "リポジトリとフォルダを選択",
+      "selectedFoldersEmpty": "まだフォルダが選択されていません。",
+      "selectedFoldersHelp": "フォルダをタップして削除します。複数のリポジトリからフォルダを選択できます。",
+      "folderPromptRequired": "少なくとも1つのプロンプトを追加してください。",
+      "folderRequired": "少なくとも1つのフォルダを選択してください。",
+      "tagsRequiredTitle": "タグが必要です",
+      "tagsRequiredBody": "学習トピックに少なくとも1つのタグを追加してください。",
+      "dayRequiredTitle": "曜日が必要です",
+      "dayRequiredBody": "少なくとも1つの曜日を選択してください。",
+      "aiNotConfiguredTitle": "AIが設定されていません",
+      "aiNotConfiguredBody": "スケジュール学習ノートを作成する前に、設定でAIモデルを構成してください。"
+    }
   }
 }

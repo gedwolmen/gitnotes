@@ -4,7 +4,14 @@ import { useNoteStore } from '../stores/noteStore';
 import { useScheduledLearningStore } from '../stores/scheduledLearningStore';
 import { initializeModel } from './AIService';
 import { NotificationService } from './NotificationService';
-import { ScheduledLearningItem, getNextScheduledDates, DayOfWeek } from '../models/ScheduledLearning';
+import {
+  ScheduledLearningItem,
+  getNextScheduledDates,
+  getQuestionerPrompts,
+  getQuestionerFolders,
+  DayOfWeek,
+  QuestionerFolderSelection,
+} from '../models/ScheduledLearning';
 
 const NOTIFICATION_ID_PREFIX = 'scheduled-learning-';
 const QUESTIONER_MARKER_PREFIX = '<!-- sl-item-id:';
@@ -175,26 +182,10 @@ export class ScheduledLearningService {
       const { model } = resolved;
       const noteStore = useNoteStore.getState();
 
-      let promptContext = '';
-      const source = item.questionerSource ?? 'tags';
-
-      if (source === 'tags') {
-        promptContext = `topic tags: ${item.tags.join(', ')}`;
-      } else if (source === 'prompt') {
-        promptContext = `the following prompt: ${item.questionerPrompt || item.tags.join(', ')}`;
-      } else if (source === 'folder') {
-        const folderPath = item.questionerNoteFolder;
-        if (folderPath) {
-          const folderNotes = noteStore.notes.filter((n) => n.folderPath === folderPath);
-          const noteSummaries = folderNotes
-            .slice(0, 10)
-            .map((n) => `Title: ${n.title}\nContent preview: ${n.content.substring(0, 300)}`)
-            .join('\n\n---\n\n');
-          promptContext = `the following notes from folder "${folderPath}":\n\n${noteSummaries || '(no notes found in folder)'}`;
-        } else {
-          promptContext = `topic tags: ${item.tags.join(', ')}`;
-        }
-      }
+      const promptContext = ScheduledLearningService.buildQuestionerPromptContext(
+        item,
+        noteStore.notes,
+      );
 
       const wordCount = item.wordCount;
       const descriptionText = item.description ? `\n\nAdditional context: ${item.description}` : '';
@@ -234,6 +225,62 @@ export class ScheduledLearningService {
       console.error('[ScheduledLearning] Failed to generate questioner note:', error);
       return false;
     }
+  }
+
+  static buildQuestionerPromptContext(
+    item: ScheduledLearningItem,
+    notes: ReadonlyArray<{ folderPath?: string | null; repo?: string | null; title: string; content: string }>,
+  ): string {
+    const source = item.questionerSource ?? 'tags';
+    if (source === 'tags') {
+      if (item.tags.length === 0) {
+        return 'no topic tags';
+      }
+      return `topic tags: ${item.tags.join(', ')}`;
+    }
+    if (source === 'prompt') {
+      const prompts = getQuestionerPrompts(item);
+      if (prompts.length === 0) {
+        return item.tags.length > 0 ? `topic tags: ${item.tags.join(', ')}` : 'no prompt';
+      }
+      if (prompts.length === 1) {
+        return `the following prompt: ${prompts[0]}`;
+      }
+      const numbered = prompts.map((p, i) => `${i + 1}. ${p}`).join('\n');
+      return `the following prompts (one section per prompt):\n${numbered}`;
+    }
+    const folders = getQuestionerFolders(item);
+    if (folders.length === 0) {
+      return item.tags.length > 0 ? `topic tags: ${item.tags.join(', ')}` : 'no folder selected';
+    }
+    const blocks = folders
+      .map((folder) =>
+        ScheduledLearningService.summarizeFolderForPrompt(folder, notes),
+      )
+      .filter((block) => block.length > 0);
+    if (blocks.length === 0) {
+      return `the following notes from folder(s): ${folders.map((f) => f.folderPath).join(', ')}\n\n(no notes found in selected folders)`;
+    }
+    const header = folders.length === 1
+      ? `the following notes from folder "${folders[0].folderPath}"${folders[0].repoPath ? ` in repo "${folders[0].repoPath}"` : ''}`
+      : `the following notes across ${folders.length} folders:\n${folders.map((f) => `- ${f.repoPath ?? 'unknown'}:${f.folderPath}`).join('\n')}`;
+    return `${header}\n\n${blocks.join('\n\n---\n\n')}`;
+  }
+
+  private static summarizeFolderForPrompt(
+    folder: QuestionerFolderSelection,
+    notes: ReadonlyArray<{ folderPath?: string | null; repo?: string | null; title: string; content: string }>,
+  ): string {
+    const folderNotes = notes.filter((n) => {
+      if (n.folderPath !== folder.folderPath) return false;
+      if (folder.repoPath && n.repo && n.repo !== folder.repoPath) return false;
+      return true;
+    });
+    if (folderNotes.length === 0) return '';
+    return folderNotes
+      .slice(0, 10)
+      .map((n) => `Title: ${n.title}\nContent preview: ${n.content.substring(0, 300)}`)
+      .join('\n\n---\n\n');
   }
 
   static async gradeQuestionerNote(noteId: string): Promise<boolean> {

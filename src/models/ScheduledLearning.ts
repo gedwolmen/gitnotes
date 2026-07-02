@@ -35,6 +35,11 @@ export const QUESTIONER_SOURCE_OPTIONS: { value: QuestionerSource; label: string
   { value: 'folder', label: 'From Note Folder', description: 'Generate questions from notes in a folder' },
 ];
 
+export interface QuestionerFolderSelection {
+  repoPath: string;
+  folderPath: string;
+}
+
 export interface ScheduledLearningItem {
   id: string;
   type: ScheduledLearningType;
@@ -56,7 +61,8 @@ export interface ScheduledLearningItem {
   // Key is DayOfWeek value, value is timestamp of last generation for that day.
   dayLastGeneratedAt: Partial<Record<DayOfWeek, number>>;
   questionerSource: QuestionerSource | null;
-  questionerPrompt: string;
+  questionerPrompts: string[];
+  questionerFolders: QuestionerFolderSelection[];
   questionerNoteFolder: string | null;
   createdAt: number;
   updatedAt: number;
@@ -77,12 +83,23 @@ export interface ScheduledLearningCreateInput {
   wordCount: number;
   repeat?: ScheduledLearningRepeat;
   questionerSource?: QuestionerSource | null;
+  questionerPrompts?: string[];
+  questionerFolders?: QuestionerFolderSelection[];
   questionerPrompt?: string;
   questionerNoteFolder?: string | null;
 }
 
 export function createScheduledLearningItem(input: ScheduledLearningCreateInput): ScheduledLearningItem {
   const now = Date.now();
+  const legacyPrompt = (input.questionerPrompt ?? '').trim();
+  const questionerPrompts = input.questionerPrompts
+    ? input.questionerPrompts.map((p) => p.trim()).filter((p) => p.length > 0)
+    : legacyPrompt.length > 0
+      ? [legacyPrompt]
+      : [];
+  const questionerFolders = (input.questionerFolders ?? []).filter(
+    (f) => !!f.repoPath && !!f.folderPath,
+  );
   return {
     id: generateId(),
     type: input.type ?? 'learn',
@@ -102,7 +119,8 @@ export function createScheduledLearningItem(input: ScheduledLearningCreateInput)
     lastGeneratedAt: null,
     dayLastGeneratedAt: {},
     questionerSource: input.questionerSource ?? null,
-    questionerPrompt: input.questionerPrompt ?? '',
+    questionerPrompts,
+    questionerFolders,
     questionerNoteFolder: input.questionerNoteFolder ?? null,
     createdAt: now,
     updatedAt: now,
@@ -113,11 +131,27 @@ export function updateScheduledLearningItem(
   existing: ScheduledLearningItem,
   updates: Partial<Omit<ScheduledLearningCreateInput, 'tags'> & { tags?: string[] }>
 ): ScheduledLearningItem {
-  return {
+  const next: ScheduledLearningItem = {
     ...existing,
     ...updates,
     updatedAt: Date.now(),
   };
+  if (updates.questionerPrompts) {
+    next.questionerPrompts = updates.questionerPrompts
+      .map((p) => p.trim())
+      .filter((p) => p.length > 0);
+  } else if (updates.questionerPrompt !== undefined && existing.questionerPrompts.length === 0) {
+    const legacy = updates.questionerPrompt.trim();
+    if (legacy.length > 0) {
+      next.questionerPrompts = [legacy];
+    }
+  }
+  if (updates.questionerFolders) {
+    next.questionerFolders = updates.questionerFolders.filter(
+      (f) => !!f.repoPath && !!f.folderPath,
+    );
+  }
+  return next;
 }
 
 function generateId(): string {
@@ -199,4 +233,18 @@ export function formatDaysOfWeek(days: DayOfWeek[], repeat?: ScheduledLearningRe
     return `${days.length} days/week`;
   }
   return days.map((d) => DAY_OF_WEEK_OPTIONS.find((opt) => opt.value === d)?.short ?? d[0]).join(', ');
+}
+
+export function getQuestionerPrompts(item: ScheduledLearningItem): string[] {
+  if (item.questionerPrompts.length > 0) return item.questionerPrompts;
+  const legacy = item.questionerNoteFolder ? '' : (item as unknown as { questionerPrompt?: string }).questionerPrompt ?? '';
+  return legacy.trim().length > 0 ? [legacy.trim()] : [];
+}
+
+export function getQuestionerFolders(item: ScheduledLearningItem): QuestionerFolderSelection[] {
+  if (item.questionerFolders.length > 0) return item.questionerFolders;
+  if (item.questionerNoteFolder && item.repoPath) {
+    return [{ repoPath: item.repoPath, folderPath: item.questionerNoteFolder }];
+  }
+  return [];
 }

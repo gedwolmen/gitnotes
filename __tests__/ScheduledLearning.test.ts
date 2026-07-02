@@ -168,11 +168,12 @@ describe('ScheduledLearning model', () => {
       });
       expect(item.type).toBe('learn');
       expect(item.questionerSource).toBeNull();
-      expect(item.questionerPrompt).toBe('');
+      expect(item.questionerPrompts).toEqual([]);
+      expect(item.questionerFolders).toEqual([]);
       expect(item.questionerNoteFolder).toBeNull();
     });
 
-    it('creates questioner item with source fields', () => {
+    it('creates questioner item with prompt source', () => {
       const item = createScheduledLearningItem({
         type: 'questioner',
         tags: ['physics'],
@@ -181,13 +182,13 @@ describe('ScheduledLearning model', () => {
         wordCount: 300,
         repeat: 'daily',
         questionerSource: 'prompt',
-        questionerPrompt: 'Generate physics questions about Newton laws',
+        questionerPrompts: ['Generate physics questions about Newton laws'],
       });
 
       expect(item.type).toBe('questioner');
       expect(item.repeat).toBe('daily');
       expect(item.questionerSource).toBe('prompt');
-      expect(item.questionerPrompt).toBe('Generate physics questions about Newton laws');
+      expect(item.questionerPrompts).toEqual(['Generate physics questions about Newton laws']);
     });
 
     it('creates questioner item with folder source', () => {
@@ -198,12 +199,126 @@ describe('ScheduledLearning model', () => {
         time: '08:00',
         wordCount: 500,
         questionerSource: 'folder',
-        questionerNoteFolder: 'notes/math',
+        questionerFolders: [{ repoPath: 'owner/repo', folderPath: 'notes/math' }],
       });
 
       expect(item.type).toBe('questioner');
       expect(item.questionerSource).toBe('folder');
-      expect(item.questionerNoteFolder).toBe('notes/math');
+      expect(item.questionerFolders).toEqual([{ repoPath: 'owner/repo', folderPath: 'notes/math' }]);
+    });
+  });
+
+  describe('multi questioner inputs', () => {
+    it('accepts multiple prompts and trims empties', () => {
+      const item = createScheduledLearningItem({
+        type: 'questioner',
+        tags: ['mix'],
+        daysOfWeek: ['monday'],
+        time: '08:00',
+        wordCount: 250,
+        questionerSource: 'prompt',
+        questionerPrompts: ['  topic A  ', '', 'topic B', '   '],
+      });
+      expect(item.questionerPrompts).toEqual(['topic A', 'topic B']);
+    });
+
+    it('drops folder entries missing repo or folder', () => {
+      const item = createScheduledLearningItem({
+        type: 'questioner',
+        tags: ['mix'],
+        daysOfWeek: ['monday'],
+        time: '08:00',
+        wordCount: 250,
+        questionerSource: 'folder',
+        questionerFolders: [
+          { repoPath: 'owner/repo', folderPath: 'notes/a' },
+          { repoPath: '', folderPath: 'notes/b' },
+          { repoPath: 'owner/repo', folderPath: '' },
+          { repoPath: 'owner/repo2', folderPath: 'notes/c' },
+        ],
+      });
+      expect(item.questionerFolders).toEqual([
+        { repoPath: 'owner/repo', folderPath: 'notes/a' },
+        { repoPath: 'owner/repo2', folderPath: 'notes/c' },
+      ]);
+    });
+
+    it('migrates legacy questionerPrompt to questionerPrompts', () => {
+      const item = createScheduledLearningItem({
+        type: 'questioner',
+        tags: ['legacy'],
+        daysOfWeek: ['monday'],
+        time: '08:00',
+        wordCount: 250,
+        questionerSource: 'prompt',
+        questionerPrompt: '  legacy prompt text  ',
+      });
+      expect(item.questionerPrompts).toEqual(['legacy prompt text']);
+    });
+
+    it('prefers explicit questionerPrompts over legacy questionerPrompt', () => {
+      const item = createScheduledLearningItem({
+        type: 'questioner',
+        tags: ['legacy'],
+        daysOfWeek: ['monday'],
+        time: '08:00',
+        wordCount: 250,
+        questionerSource: 'prompt',
+        questionerPrompt: 'legacy',
+        questionerPrompts: ['newer'],
+      });
+      expect(item.questionerPrompts).toEqual(['newer']);
+    });
+  });
+
+  describe('updateScheduledLearningItem multi-field handling', () => {
+    it('trims and dedupes updated prompts', () => {
+      const original = createScheduledLearningItem({
+        type: 'questioner',
+        tags: ['x'],
+        daysOfWeek: ['monday'],
+        time: '08:00',
+        wordCount: 250,
+        questionerSource: 'prompt',
+        questionerPrompts: ['first'],
+      });
+      const updated = updateScheduledLearningItem(original, {
+        questionerPrompts: ['  second  ', '', 'first', 'third   '],
+      });
+      expect(updated.questionerPrompts).toEqual(['second', 'first', 'third']);
+    });
+
+    it('drops invalid folder entries on update', () => {
+      const original = createScheduledLearningItem({
+        type: 'questioner',
+        tags: ['x'],
+        daysOfWeek: ['monday'],
+        time: '08:00',
+        wordCount: 250,
+        questionerSource: 'folder',
+        questionerFolders: [{ repoPath: 'owner/a', folderPath: 'notes/a' }],
+      });
+      const updated = updateScheduledLearningItem(original, {
+        questionerFolders: [
+          { repoPath: '', folderPath: 'x' },
+          { repoPath: 'owner/b', folderPath: 'notes/b' },
+        ],
+      });
+      expect(updated.questionerFolders).toEqual([{ repoPath: 'owner/b', folderPath: 'notes/b' }]);
+    });
+
+    it('preserves questionerPrompts when not in update payload', () => {
+      const original = createScheduledLearningItem({
+        type: 'questioner',
+        tags: ['x'],
+        daysOfWeek: ['monday'],
+        time: '08:00',
+        wordCount: 250,
+        questionerSource: 'prompt',
+        questionerPrompts: ['keep me'],
+      });
+      const updated = updateScheduledLearningItem(original, { description: 'new' });
+      expect(updated.questionerPrompts).toEqual(['keep me']);
     });
   });
 });
