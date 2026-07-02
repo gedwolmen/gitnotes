@@ -29,7 +29,8 @@
     "remove": "Eliminar",
     "skip": "Omitir",
     "copy": "Copiar",
-    "paste": "Pegar"
+    "paste": "Pegar",
+    "select": "Seleccionar"
   },
   "notes": {
     "title": "Notas",
@@ -189,5 +190,32 @@
       "scheduledLearning": "Los proveedores IA te permiten conectar diferentes servicios de IA. Apple Intelligence usa procesamiento en el dispositivo para mayor privacidad."
     },
     "title": "Hint"
+  },
+  "scheduledLearning": {
+    "questioner": {
+      "tagSourceDescription": "Genera preguntas basadas en etiquetas de temas",
+      "promptSourceDescription": "Genera preguntas desde uno o varios prompts personalizados",
+      "folderSourceDescription": "Genera preguntas a partir de notas en carpetas seleccionadas",
+      "addPrompt": "Añadir prompt",
+      "promptPlaceholder": "Describe qué preguntas generar...",
+      "promptsEmpty": "Aún no se han añadido prompts.",
+      "promptsHelp": "Toca un prompt para eliminarlo. Múltiples prompts se convierten en secciones de preguntas separadas.",
+      "addFolder": "Añadir carpeta",
+      "pickRepoAndFolder": "Elige un repositorio y carpeta",
+      "selectedFoldersEmpty": "Aún no hay carpetas seleccionadas.",
+      "selectedFoldersHelp": "Toca una carpeta para eliminarla. Elige carpetas en distintos repositorios.",
+      "folderPromptRequired": "Añade al menos un prompt.",
+      "folderRequired": "Elige al menos una carpeta.",
+      "tagsRequiredTitle": "Etiquetas requeridas",
+      "tagsRequiredBody": "Añade al menos una etiqueta para el tema de aprendizaje.",
+      "dayRequiredTitle": "Día requerido",
+      "dayRequiredBody": "Selecciona al menos un día.",
+      "aiNotConfiguredTitle": "IA no configurada",
+      "aiNotConfiguredBody": "Configura un modelo IA en Ajustes antes de crear una nota de aprendizaje programado.",
+      "promptRequiredTitle": "Prompt requerido",
+      "promptRequiredBody": "Añade al menos un prompt para definir qué generar.",
+      "folderRequiredTitle": "Carpeta requerida",
+      "folderRequiredBody": "Elige al menos una carpeta de un repositorio."
+    }
   }
 }

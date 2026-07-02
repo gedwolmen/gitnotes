@@ -29,7 +29,8 @@
     "remove": "Entfernen",
     "skip": "Überspringen",
     "copy": "Kopieren",
-    "paste": "Einfügen"
+    "paste": "Einfügen",
+    "select": "Auswählen"
   },
   "notes": {
     "title": "Notizen",
@@ -189,5 +190,32 @@
       "scheduledLearning": "KI-Anbieter ermöglichen dir, verschiedene KI-Dienste zu verbinden. Apple Intelligence nutzt On-Device-Verarbeitung für Datenschutz."
     },
     "title": "Hint"
+  },
+  "scheduledLearning": {
+    "questioner": {
+      "tagSourceDescription": "Generiert Fragen basierend auf Themen-Tags",
+      "promptSourceDescription": "Generiert Fragen aus einem oder mehreren benutzerdefinierten Prompts",
+      "folderSourceDescription": "Generiert Fragen aus Notizen in ausgewählten Ordnern",
+      "addPrompt": "Prompt hinzufügen",
+      "promptPlaceholder": "Beschreibe, welche Fragen generiert werden sollen...",
+      "promptsEmpty": "Noch keine Prompts hinzugefügt.",
+      "promptsHelp": "Tippe auf einen Prompt, um ihn zu entfernen. Mehrere Prompts werden zu separaten Fragenabschnitten.",
+      "addFolder": "Ordner hinzufügen",
+      "pickRepoAndFolder": "Wähle ein Repo und einen Ordner",
+      "selectedFoldersEmpty": "Noch keine Ordner ausgewählt.",
+      "selectedFoldersHelp": "Tippe auf einen Ordner, um ihn zu entfernen. Wähle Ordner aus verschiedenen Repos.",
+      "folderPromptRequired": "Bitte mindestens einen Prompt hinzufügen.",
+      "folderRequired": "Bitte mindestens einen Ordner auswählen.",
+      "tagsRequiredTitle": "Tags erforderlich",
+      "tagsRequiredBody": "Bitte mindestens ein Tag für das Lernthema hinzufügen.",
+      "dayRequiredTitle": "Tag erforderlich",
+      "dayRequiredBody": "Bitte mindestens einen Tag auswählen.",
+      "aiNotConfiguredTitle": "KI nicht konfiguriert",
+      "aiNotConfiguredBody": "Bitte richte ein KI-Modell in den Einstellungen ein, bevor du eine geplante Lernnotiz erstellst.",
+      "promptRequiredTitle": "Prompt erforderlich",
+      "promptRequiredBody": "Bitte füge mindestens einen Prompt hinzu, um festzulegen, was generiert werden soll.",
+      "folderRequiredTitle": "Ordner erforderlich",
+      "folderRequiredBody": "Bitte wähle mindestens einen Ordner aus einem Repository."
+    }
   }
 }

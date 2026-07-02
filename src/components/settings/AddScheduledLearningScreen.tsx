@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Button, Group, GroupRow, Modal, Input, ScreenHeader, useScreenHeaderHeight } from '../ui';
 import { useScheduledLearningStore } from '../../stores/scheduledLearningStore';
@@ -28,6 +29,7 @@ type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
 export function AddScheduledLearningScreen() {
   const navigation = useNavigation<Navigation>();
+  const { t } = useTranslation();
   const { colors, isDark, tokens } = useTheme();
   const { spacing, type } = tokens;
   const insets = useSafeAreaInsets();
@@ -45,6 +47,7 @@ export function AddScheduledLearningScreen() {
   const [showWordCountPicker, setShowWordCountPicker] = useState(false);
   const [showModelPicker, setShowModelPicker] = useState(false);
   const [showRepoFolderPicker, setShowRepoFolderPicker] = useState(false);
+  const [showQuestionerFolderPicker, setShowQuestionerFolderPicker] = useState(false);
 
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
@@ -56,8 +59,13 @@ export function AddScheduledLearningScreen() {
   const [repeat, setRepeat] = useState<ScheduledLearningRepeat>('weekly');
   const [learningType, setLearningType] = useState<ScheduledLearningType>('learn');
   const [questionerSource, setQuestionerSource] = useState<QuestionerSource>('tags');
-  const [questionerPrompt, setQuestionerPrompt] = useState('');
-  const [questionerNoteFolder, setQuestionerNoteFolder] = useState<string | null>(null);
+  const [questionerPrompts, setQuestionerPrompts] = useState<string[]>([]);
+  const [questionerPromptDraft, setQuestionerPromptDraft] = useState('');
+  const [questionerFolders, setQuestionerFolders] = useState<
+    { repoPath: string; folderPath: string }[]
+  >([]);
+  const [questionerFolderRepo, setQuestionerFolderRepo] = useState<string | null>(null);
+  const [questionerFolderBranch, setQuestionerFolderBranch] = useState<string | null>(null);
 
   const [selectedRepoPath, setSelectedRepoPath] = useState<string | null>(null);
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
@@ -77,8 +85,11 @@ export function AddScheduledLearningScreen() {
     setRepeat('weekly');
     setLearningType('learn');
     setQuestionerSource('tags');
-    setQuestionerPrompt('');
-    setQuestionerNoteFolder(null);
+    setQuestionerPrompts([]);
+    setQuestionerPromptDraft('');
+    setQuestionerFolders([]);
+    setQuestionerFolderRepo(null);
+    setQuestionerFolderBranch(null);
     setSelectedRepoPath(null);
     setSelectedBranch(null);
     setSelectedFolderPath(null);
@@ -127,18 +138,78 @@ export function AddScheduledLearningScreen() {
     setTagInput('');
   }, [canAddTag, normalizedTagInput]);
 
+  const normalizedPromptDraft = questionerPromptDraft.trim();
+  const canAddPrompt = normalizedPromptDraft.length > 0;
+
+  const handleAddPrompt = useCallback(() => {
+    if (!canAddPrompt) return;
+    setQuestionerPrompts((prev) =>
+      prev.includes(normalizedPromptDraft) ? prev : [...prev, normalizedPromptDraft],
+    );
+    setQuestionerPromptDraft('');
+  }, [canAddPrompt, normalizedPromptDraft]);
+
+  const handleRemovePrompt = useCallback((prompt: string) => {
+    setQuestionerPrompts((prev) => prev.filter((p) => p !== prompt));
+  }, []);
+
+  const handleRemoveFolder = useCallback((index: number) => {
+    setQuestionerFolders((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const handleQuestionerFolderSelect = useCallback(
+    (repoPath: string | null, branch: string | null, folderPath: string | null) => {
+      if (repoPath && folderPath) {
+        setQuestionerFolderRepo(repoPath);
+        setQuestionerFolderBranch(branch ?? null);
+        setQuestionerFolders((prev) => {
+          const exists = prev.some(
+            (f) => f.repoPath === repoPath && f.folderPath === folderPath,
+          );
+          if (exists) return prev;
+          return [...prev, { repoPath, folderPath }];
+        });
+      }
+    },
+    [],
+  );
+
+  const openQuestionerFolderPicker = useCallback(() => {
+    if (!questionerFolderRepo) {
+      setShowQuestionerFolderPicker(true);
+      return;
+    }
+    setShowQuestionerFolderPicker(true);
+  }, [questionerFolderRepo]);
+
   const handleAdd = useCallback(async () => {
     if (tags.length === 0) {
-      Alert.alert('Tags required', 'Please add at least one tag for the learning topic.');
+      Alert.alert(t('scheduledLearning.questioner.tagsRequiredTitle'), t('scheduledLearning.questioner.tagsRequiredBody'));
       return;
     }
     if (selectedDays.length === 0) {
-      Alert.alert('Day required', 'Please select at least one day.');
+      Alert.alert(t('scheduledLearning.questioner.dayRequiredTitle'), t('scheduledLearning.questioner.dayRequiredBody'));
       return;
     }
     if (availableModels.length === 0) {
-      Alert.alert('AI Not Configured', 'Please set up an AI model in Settings before creating a scheduled learning note.');
+      Alert.alert(t('scheduledLearning.questioner.aiNotConfiguredTitle'), t('scheduledLearning.questioner.aiNotConfiguredBody'));
       return;
+    }
+    if (learningType === 'questioner') {
+      if (questionerSource === 'prompt' && questionerPrompts.length === 0) {
+        Alert.alert(
+          t('scheduledLearning.questioner.promptRequiredTitle'),
+          t('scheduledLearning.questioner.promptRequiredBody'),
+        );
+        return;
+      }
+      if (questionerSource === 'folder' && questionerFolders.length === 0) {
+        Alert.alert(
+          t('scheduledLearning.questioner.folderRequiredTitle'),
+          t('scheduledLearning.questioner.folderRequiredBody'),
+        );
+        return;
+      }
     }
 
     const timeStr = selectedTime.toLocaleTimeString('en-US', {
@@ -160,8 +231,8 @@ export function AddScheduledLearningScreen() {
       wordCount: selectedWordCount,
       repeat,
       questionerSource: learningType === 'questioner' ? questionerSource : undefined,
-      questionerPrompt: learningType === 'questioner' ? questionerPrompt : undefined,
-      questionerNoteFolder: learningType === 'questioner' ? questionerNoteFolder : undefined,
+      questionerPrompts: learningType === 'questioner' ? questionerPrompts : undefined,
+      questionerFolders: learningType === 'questioner' ? questionerFolders : undefined,
     });
 
     if (newItem) {
@@ -170,7 +241,7 @@ export function AddScheduledLearningScreen() {
 
     resetForm();
     navigation.goBack();
-  }, [tags, description, selectedDays, selectedTime, selectedModel, selectedFolderPath, selectedRepoPath, selectedBranch, selectedWordCount, repeat, learningType, questionerSource, questionerPrompt, questionerNoteFolder, createItem, resetForm, navigation]);
+  }, [tags, description, selectedDays, selectedTime, selectedModel, selectedFolderPath, selectedRepoPath, selectedBranch, selectedWordCount, repeat, learningType, questionerSource, questionerPrompts, questionerFolders, createItem, resetForm, navigation]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
@@ -230,6 +301,7 @@ export function AddScheduledLearningScreen() {
               <TouchableOpacity
                 onPress={handleAddTag}
                 disabled={!canAddTag}
+                testID="add-tag-button"
                 style={{
                   width: 44,
                   height: 44,
@@ -415,25 +487,135 @@ export function AddScheduledLearningScreen() {
               })}
 
               {questionerSource === 'prompt' ? (
-                <Input
-                  containerStyle={{ borderWidth: 1, borderColor: colors.border, borderRadius: 18 }}
-                  value={questionerPrompt}
-                  onChangeText={setQuestionerPrompt}
-                  placeholder="Describe what questions to generate..."
-                  multiline
-                  multilineMinHeight={80}
-                />
+                <View style={{ gap: spacing[2] }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing[2] }}>
+                    <Input
+                      containerStyle={{ flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 18 }}
+                      value={questionerPromptDraft}
+                      onChangeText={setQuestionerPromptDraft}
+                      placeholder={t('scheduledLearning.questioner.promptPlaceholder')}
+                      multiline
+                      multilineMinHeight={80}
+                    />
+                    <TouchableOpacity
+                      onPress={handleAddPrompt}
+                      disabled={!canAddPrompt}
+                      testID="questioner-add-prompt"
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 18,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: canAddPrompt ? colors.primary : colors.surfaceSecondary,
+                        borderWidth: 1,
+                        borderColor: canAddPrompt ? colors.primary : colors.border,
+                        opacity: canAddPrompt ? 1 : 0.7,
+                      }}
+                    >
+                      <Ionicons name="add" size={22} color={canAddPrompt ? '#fff' : colors.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+
+                  {questionerPrompts.length > 0 ? (
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] }}>
+                      {questionerPrompts.map((prompt, promptIdx) => (
+                        <TouchableOpacity
+                          key={`prompt-${promptIdx}-${prompt}`}
+                          onPress={() => handleRemovePrompt(prompt)}
+                          testID={`questioner-prompt-${promptIdx}`}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: spacing[1],
+                            backgroundColor: colors.primary + '16',
+                            borderWidth: 1,
+                            borderColor: colors.primary + '28',
+                            paddingHorizontal: spacing[3],
+                            paddingVertical: spacing[2],
+                            borderRadius: 999,
+                            maxWidth: '100%',
+                          }}
+                        >
+                          <Text
+                            numberOfLines={2}
+                            style={{ color: colors.primary, fontSize: type.sm, fontWeight: '600', flexShrink: 1 }}
+                          >
+                            {prompt}
+                          </Text>
+                          <Ionicons name="close-circle" size={16} color={colors.primary} />
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  ) : null}
+                </View>
               ) : null}
 
               {questionerSource === 'folder' ? (
-                <Input
-                  containerStyle={{ borderWidth: 1, borderColor: colors.border, borderRadius: 18 }}
-                  value={questionerNoteFolder ?? ''}
-                  onChangeText={(text) => setQuestionerNoteFolder(text || null)}
-                  placeholder="Enter folder path (e.g. notes/physics)"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
+                <View style={{ gap: spacing[3] }}>
+                  <TouchableOpacity
+                    onPress={openQuestionerFolderPicker}
+                    testID="questioner-pick-folder"
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      paddingHorizontal: spacing[3],
+                      paddingVertical: spacing[3],
+                      minHeight: 48,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      borderRadius: 16,
+                      backgroundColor: colors.surfaceSecondary,
+                    }}
+                  >
+                    <Text style={[styles.settingLabel, { color: colors.text }]}>
+                      {questionerFolderRepo ? t('scheduledLearning.questioner.addFolder') : t('scheduledLearning.questioner.pickRepoAndFolder')}
+                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Text style={[styles.settingValue, { color: colors.textSecondary }]} numberOfLines={1}>
+                        {questionerFolderRepo
+                          ? `${questionerFolderRepo.split('/').pop() ?? questionerFolderRepo}${questionerFolderBranch ? ` · ${questionerFolderBranch}` : ''}`
+                          : t('common.select')}
+                      </Text>
+                      <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
+                    </View>
+                  </TouchableOpacity>
+
+                  {questionerFolders.length > 0 ? (
+                    <View style={{ gap: spacing[2] }}>
+                      {questionerFolders.map((folder, idx) => (
+                        <TouchableOpacity
+                          key={`${folder.repoPath}:${folder.folderPath}:${idx}`}
+                          onPress={() => handleRemoveFolder(idx)}
+                          testID={`questioner-folder-${idx}`}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: spacing[2],
+                            paddingHorizontal: spacing[3],
+                            paddingVertical: spacing[2],
+                            borderRadius: 12,
+                            borderWidth: 1,
+                            borderColor: colors.primary + '40',
+                            backgroundColor: colors.primary + '10',
+                          }}
+                        >
+                          <Ionicons name="folder-outline" size={18} color={colors.primary} />
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ color: colors.text, fontSize: type.sm, fontWeight: '600' }} numberOfLines={1}>
+                              {folder.folderPath}
+                            </Text>
+                            <Text style={{ color: colors.textSecondary, fontSize: type.xs }} numberOfLines={1}>
+                              {folder.repoPath}
+                            </Text>
+                          </View>
+                          <Ionicons name="close-circle" size={18} color={colors.primary} />
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  ) : null}
+                </View>
               ) : null}
             </View>
           </Group>
@@ -621,6 +803,15 @@ export function AddScheduledLearningScreen() {
         folderPath={selectedFolderPath}
         onSelect={handleRepoFolderSelect}
         onClose={() => setShowRepoFolderPicker(false)}
+      />
+
+      <RepoFolderPickerModal
+        visible={showQuestionerFolderPicker}
+        repoPath={questionerFolderRepo}
+        branch={questionerFolderBranch}
+        folderPath={null}
+        onSelect={handleQuestionerFolderSelect}
+        onClose={() => setShowQuestionerFolderPicker(false)}
       />
     </SafeAreaView>
   );

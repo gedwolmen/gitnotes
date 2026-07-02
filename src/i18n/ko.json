@@ -29,7 +29,8 @@
     "remove": "제거",
     "skip": "건너뛰기",
     "copy": "복사",
-    "paste": "붙여넣기"
+    "paste": "붙여넣기",
+    "select": "선택"
   },
   "notes": {
     "title": "노트",
@@ -189,5 +190,32 @@
       "scheduledLearning": "AI 공급자를 사용하면 다양한 AI 서비스를 연결할 수 있습니다. Apple Intelligence는 개인정보 보호를 위해 온디바이스 처리를 사용합니다."
     },
     "title": "Hint"
+  },
+  "scheduledLearning": {
+    "questioner": {
+      "tagSourceDescription": "주제 태그를 기반으로 문제 생성",
+      "promptSourceDescription": "하나 이상의 사용자 지정 프롬프트에서 문제 생성",
+      "folderSourceDescription": "선택한 폴더의 노트에서 문제 생성",
+      "addPrompt": "프롬프트 추가",
+      "promptPlaceholder": "생성할 문제 설명...",
+      "promptsEmpty": "아직 추가된 프롬프트가 없습니다.",
+      "promptsHelp": "프롬프트를 탭하여 제거하세요. 여러 프롬프트는 별도의 문제 섹션이 됩니다.",
+      "addFolder": "폴더 추가",
+      "pickRepoAndFolder": "저장소 및 폴더 선택",
+      "selectedFoldersEmpty": "선택한 폴더가 없습니다.",
+      "selectedFoldersHelp": "폴더를 탭하여 제거하세요. 여러 저장소에서 폴더를 선택할 수 있습니다.",
+      "folderPromptRequired": "프롬프트를 하나 이상 추가하세요.",
+      "folderRequired": "폴더를 하나 이상 선택하세요.",
+      "tagsRequiredTitle": "태그 필요",
+      "tagsRequiredBody": "학습 주제에 대해 하나 이상의 태그를 추가하세요.",
+      "dayRequiredTitle": "요일 필요",
+      "dayRequiredBody": "요일을 하나 이상 선택하세요.",
+      "aiNotConfiguredTitle": "AI가 구성되지 않음",
+      "aiNotConfiguredBody": "예약된 학습 노트를 만들기 전에 설정에서 AI 모델을 구성하세요.",
+      "promptRequiredTitle": "프롬프트 필요",
+      "promptRequiredBody": "생성할 내용을 정의하려면 프롬프트를 하나 이상 추가하세요.",
+      "folderRequiredTitle": "폴더 필요",
+      "folderRequiredBody": "저장소에서 폴더를 하나 이상 선택하세요."
+    }
   }
 }
