@@ -211,7 +211,11 @@
       "dayRequiredTitle": "Jour requis",
       "dayRequiredBody": "Sélectionnez au moins un jour.",
       "aiNotConfiguredTitle": "IA non configurée",
-      "aiNotConfiguredBody": "Configurez un modèle IA dans les Paramètres avant de créer une note d'apprentissage planifiée."
+      "aiNotConfiguredBody": "Configurez un modèle IA dans les Paramètres avant de créer une note d'apprentissage planifiée.",
+      "promptRequiredTitle": "Prompt requis",
+      "promptRequiredBody": "Ajoutez au moins un prompt pour définir ce qu'il faut générer.",
+      "folderRequiredTitle": "Dossier requis",
+      "folderRequiredBody": "Choisissez au moins un dossier dans un dépôt."
     }
   }
 }

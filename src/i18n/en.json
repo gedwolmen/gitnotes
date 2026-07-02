@@ -216,7 +216,11 @@
       "dayRequiredTitle": "Day required",
       "dayRequiredBody": "Please select at least one day.",
       "aiNotConfiguredTitle": "AI Not Configured",
-      "aiNotConfiguredBody": "Please set up an AI model in Settings before creating a scheduled learning note."
+      "aiNotConfiguredBody": "Please set up an AI model in Settings before creating a scheduled learning note.",
+      "promptRequiredTitle": "Prompt required",
+      "promptRequiredBody": "Please add at least one prompt to define what to generate.",
+      "folderRequiredTitle": "Folder required",
+      "folderRequiredBody": "Please pick at least one folder from a repository."
     }
   }
 }

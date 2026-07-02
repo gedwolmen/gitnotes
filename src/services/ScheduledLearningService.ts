@@ -273,7 +273,7 @@ export class ScheduledLearningService {
   ): string {
     const folderNotes = notes.filter((n) => {
       if (n.folderPath !== folder.folderPath) return false;
-      if (folder.repoPath && n.repo && n.repo !== folder.repoPath) return false;
+      if (folder.repoPath && n.repo !== folder.repoPath) return false;
       return true;
     });
     if (folderNotes.length === 0) return '';

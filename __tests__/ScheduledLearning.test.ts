@@ -3,6 +3,8 @@ import {
   updateScheduledLearningItem,
   getNextScheduledDates,
   formatDaysOfWeek,
+  getQuestionerPrompts,
+  getQuestionerFolders,
   DAY_OF_WEEK_OPTIONS,
 } from '../src/models/ScheduledLearning';
 
@@ -319,6 +321,72 @@ describe('ScheduledLearning model', () => {
       });
       const updated = updateScheduledLearningItem(original, { description: 'new' });
       expect(updated.questionerPrompts).toEqual(['keep me']);
+    });
+  });
+
+  describe('legacy item migration', () => {
+    function legacyItem(extra: Record<string, unknown> = {}) {
+      return {
+        id: 'sl-legacy',
+        type: 'questioner' as const,
+        tags: ['x'],
+        description: '',
+        daysOfWeek: ['monday' as const],
+        time: '08:00',
+        modelId: null,
+        folderId: null,
+        folderName: null,
+        folderPath: null,
+        repoPath: null,
+        branch: null,
+        wordCount: 250,
+        repeat: 'weekly' as const,
+        isEnabled: true,
+        lastGeneratedAt: null,
+        dayLastGeneratedAt: {},
+        questionerSource: 'prompt' as const,
+        questionerNoteFolder: null,
+        // pre-PR2 fields
+        questionerPrompt: 'legacy prompt',
+        ...extra,
+      };
+    }
+
+    it('updateScheduledLearningItem tolerates legacy items without the new arrays', () => {
+      const legacy = legacyItem() as unknown as Parameters<typeof updateScheduledLearningItem>[0];
+      expect(() => updateScheduledLearningItem(legacy, { description: 'safe update' })).not.toThrow();
+      const updated = updateScheduledLearningItem(legacy, { description: 'safe update' });
+      expect(updated.questionerPrompts).toEqual([]);
+      expect(updated.questionerFolders).toEqual([]);
+      expect(updated.description).toBe('safe update');
+    });
+
+    it('updateScheduledLearningItem migrates legacy questionerPrompt into questionerPrompts', () => {
+      const legacy = legacyItem() as unknown as Parameters<typeof updateScheduledLearningItem>[0];
+      const updated = updateScheduledLearningItem(legacy, {
+        questionerPrompt: 'migrate me',
+      });
+      expect(updated.questionerPrompts).toEqual(['migrate me']);
+    });
+
+    it('getQuestionerPrompts tolerates missing/legacy item shape', () => {
+      const legacy = legacyItem() as unknown as Parameters<typeof getQuestionerPrompts>[0];
+      expect(getQuestionerPrompts(legacy)).toEqual(['legacy prompt']);
+    });
+
+    it('getQuestionerPrompts falls back to single legacy prompt then to empty array', () => {
+      const noLegacy = legacyItem({ questionerPrompt: undefined }) as unknown as Parameters<typeof getQuestionerPrompts>[0];
+      expect(getQuestionerPrompts(noLegacy)).toEqual([]);
+    });
+
+    it('getQuestionerFolders tolerates legacy items and builds from questionerNoteFolder+repoPath', () => {
+      const legacy = legacyItem({
+        repoPath: 'owner/repo',
+        questionerNoteFolder: 'notes/x',
+      }) as unknown as Parameters<typeof getQuestionerFolders>[0];
+      expect(getQuestionerFolders(legacy)).toEqual([
+        { repoPath: 'owner/repo', folderPath: 'notes/x' },
+      ]);
     });
   });
 });

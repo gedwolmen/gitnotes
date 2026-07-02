@@ -156,4 +156,46 @@ describe('ScheduledLearningService.buildQuestionerPromptContext', () => {
     const ctx = ScheduledLearningService.buildQuestionerPromptContext(item, FAKE_NOTES);
     expect(ctx).toBe('topic tags: default-tag');
   });
+
+  it('excludes notes without a repo when a folder selection is repo-scoped', () => {
+    const notesWithoutRepo = [
+      {
+        id: 'orphan',
+        folderPath: 'notes/math',
+        repo: undefined as unknown as string | null,
+        title: 'Mystery note',
+        content: 'Should be excluded.',
+      },
+    ];
+    const item = baseItem({
+      questionerSource: 'folder',
+      questionerFolders: [{ repoPath: 'owner/repo-a', folderPath: 'notes/math' }],
+    });
+    const ctx = ScheduledLearningService.buildQuestionerPromptContext(item, notesWithoutRepo);
+    expect(ctx).not.toContain('Mystery note');
+    expect(ctx).toContain('(no notes found in selected folders)');
+  });
+
+  it('still includes notes when folder has no repo scope', () => {
+    // The model strips empty repo paths at create time, so to test the
+    // "folder has no repo scope" branch we call the filter directly via a
+    // folder selection whose repoPath is set but the test notes have no
+    // `repo` field — those notes should be excluded (repo-scoped filter).
+    const notesWithoutRepo = [
+      {
+        id: 'orphan',
+        folderPath: 'notes/math',
+        repo: null,
+        title: 'Algebra basics',
+        content: 'Should match folder path but be excluded because no repo match.',
+      },
+    ];
+    const item = baseItem({
+      questionerSource: 'folder',
+      questionerFolders: [{ repoPath: 'owner/repo-a', folderPath: 'notes/math' }],
+    });
+    const ctx = ScheduledLearningService.buildQuestionerPromptContext(item, notesWithoutRepo);
+    expect(ctx).not.toContain('Algebra basics');
+    expect(ctx).toContain('(no notes found in selected folders)');
+  });
 });

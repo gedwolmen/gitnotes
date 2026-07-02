@@ -197,11 +197,17 @@ export function AddScheduledLearningScreen() {
     }
     if (learningType === 'questioner') {
       if (questionerSource === 'prompt' && questionerPrompts.length === 0) {
-        Alert.alert(t('scheduledLearning.questioner.folderPromptRequired'), t('scheduledLearning.questioner.folderPromptRequired'));
+        Alert.alert(
+          t('scheduledLearning.questioner.promptRequiredTitle'),
+          t('scheduledLearning.questioner.promptRequiredBody'),
+        );
         return;
       }
       if (questionerSource === 'folder' && questionerFolders.length === 0) {
-        Alert.alert(t('scheduledLearning.questioner.folderRequired'), t('scheduledLearning.questioner.folderRequired'));
+        Alert.alert(
+          t('scheduledLearning.questioner.folderRequiredTitle'),
+          t('scheduledLearning.questioner.folderRequiredBody'),
+        );
         return;
       }
     }
@@ -513,11 +519,11 @@ export function AddScheduledLearningScreen() {
 
                   {questionerPrompts.length > 0 ? (
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] }}>
-                      {questionerPrompts.map((prompt) => (
+                      {questionerPrompts.map((prompt, promptIdx) => (
                         <TouchableOpacity
-                          key={prompt}
+                          key={`prompt-${promptIdx}-${prompt}`}
                           onPress={() => handleRemovePrompt(prompt)}
-                          testID={`questioner-prompt-${prompt}`}
+                          testID={`questioner-prompt-${promptIdx}`}
                           style={{
                             flexDirection: 'row',
                             alignItems: 'center',

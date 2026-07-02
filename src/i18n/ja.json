@@ -211,7 +211,11 @@
       "dayRequiredTitle": "曜日が必要です",
       "dayRequiredBody": "少なくとも1つの曜日を選択してください。",
       "aiNotConfiguredTitle": "AIが設定されていません",
-      "aiNotConfiguredBody": "スケジュール学習ノートを作成する前に、設定でAIモデルを構成してください。"
+      "aiNotConfiguredBody": "スケジュール学習ノートを作成する前に、設定でAIモデルを構成してください。",
+      "promptRequiredTitle": "プロンプトが必要です",
+      "promptRequiredBody": "生成内容を定義するために、少なくとも1つのプロンプトを追加してください。",
+      "folderRequiredTitle": "フォルダが必要です",
+      "folderRequiredBody": "リポジトリから少なくとも1つのフォルダを選択してください。"
     }
   }
 }

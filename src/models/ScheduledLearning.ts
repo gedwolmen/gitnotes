@@ -131,8 +131,13 @@ export function updateScheduledLearningItem(
   existing: ScheduledLearningItem,
   updates: Partial<Omit<ScheduledLearningCreateInput, 'tags'> & { tags?: string[] }>
 ): ScheduledLearningItem {
-  const next: ScheduledLearningItem = {
+  const safeExisting = {
     ...existing,
+    questionerPrompts: existing.questionerPrompts ?? [],
+    questionerFolders: existing.questionerFolders ?? [],
+  };
+  const next: ScheduledLearningItem = {
+    ...safeExisting,
     ...updates,
     updatedAt: Date.now(),
   };
@@ -140,7 +145,10 @@ export function updateScheduledLearningItem(
     next.questionerPrompts = updates.questionerPrompts
       .map((p) => p.trim())
       .filter((p) => p.length > 0);
-  } else if (updates.questionerPrompt !== undefined && existing.questionerPrompts.length === 0) {
+  } else if (
+    updates.questionerPrompt !== undefined &&
+    safeExisting.questionerPrompts.length === 0
+  ) {
     const legacy = updates.questionerPrompt.trim();
     if (legacy.length > 0) {
       next.questionerPrompts = [legacy];
@@ -236,13 +244,16 @@ export function formatDaysOfWeek(days: DayOfWeek[], repeat?: ScheduledLearningRe
 }
 
 export function getQuestionerPrompts(item: ScheduledLearningItem): string[] {
-  if (item.questionerPrompts.length > 0) return item.questionerPrompts;
-  const legacy = item.questionerNoteFolder ? '' : (item as unknown as { questionerPrompt?: string }).questionerPrompt ?? '';
+  const prompts = Array.isArray(item.questionerPrompts) ? item.questionerPrompts : [];
+  if (prompts.length > 0) return prompts;
+  const legacyField = (item as unknown as { questionerPrompt?: unknown }).questionerPrompt;
+  const legacy = typeof legacyField === 'string' && !item.questionerNoteFolder ? legacyField : '';
   return legacy.trim().length > 0 ? [legacy.trim()] : [];
 }
 
 export function getQuestionerFolders(item: ScheduledLearningItem): QuestionerFolderSelection[] {
-  if (item.questionerFolders.length > 0) return item.questionerFolders;
+  const folders = Array.isArray(item.questionerFolders) ? item.questionerFolders : [];
+  if (folders.length > 0) return folders;
   if (item.questionerNoteFolder && item.repoPath) {
     return [{ repoPath: item.repoPath, folderPath: item.questionerNoteFolder }];
   }

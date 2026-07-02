@@ -211,7 +211,11 @@
       "dayRequiredTitle": "Tag erforderlich",
       "dayRequiredBody": "Bitte mindestens einen Tag auswählen.",
       "aiNotConfiguredTitle": "KI nicht konfiguriert",
-      "aiNotConfiguredBody": "Bitte richte ein KI-Modell in den Einstellungen ein, bevor du eine geplante Lernnotiz erstellst."
+      "aiNotConfiguredBody": "Bitte richte ein KI-Modell in den Einstellungen ein, bevor du eine geplante Lernnotiz erstellst.",
+      "promptRequiredTitle": "Prompt erforderlich",
+      "promptRequiredBody": "Bitte füge mindestens einen Prompt hinzu, um festzulegen, was generiert werden soll.",
+      "folderRequiredTitle": "Ordner erforderlich",
+      "folderRequiredBody": "Bitte wähle mindestens einen Ordner aus einem Repository."
     }
   }
 }

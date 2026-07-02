@@ -211,7 +211,11 @@
       "dayRequiredTitle": "요일 필요",
       "dayRequiredBody": "요일을 하나 이상 선택하세요.",
       "aiNotConfiguredTitle": "AI가 구성되지 않음",
-      "aiNotConfiguredBody": "예약된 학습 노트를 만들기 전에 설정에서 AI 모델을 구성하세요."
+      "aiNotConfiguredBody": "예약된 학습 노트를 만들기 전에 설정에서 AI 모델을 구성하세요.",
+      "promptRequiredTitle": "프롬프트 필요",
+      "promptRequiredBody": "생성할 내용을 정의하려면 프롬프트를 하나 이상 추가하세요.",
+      "folderRequiredTitle": "폴더 필요",
+      "folderRequiredBody": "저장소에서 폴더를 하나 이상 선택하세요."
     }
   }
 }

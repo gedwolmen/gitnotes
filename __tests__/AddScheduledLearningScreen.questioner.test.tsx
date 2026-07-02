@@ -183,7 +183,7 @@ describe('AddScheduledLearningScreen questioner flows', () => {
     fireEvent.changeText(promptInput, 'Algebra basics');
     fireEvent.press(getByTestId('questioner-add-prompt'));
     expect(queryByText('Algebra basics')).toBeTruthy();
-    fireEvent.press(getByTestId('questioner-prompt-Algebra basics'));
+    fireEvent.press(getByTestId('questioner-prompt-0'));
     expect(queryByText('Algebra basics')).toBeNull();
   });
 
@@ -233,7 +233,7 @@ describe('AddScheduledLearningScreen questioner flows', () => {
       fireEvent.press(getByText('Add Schedule'));
     });
     expect(alertSpy).toHaveBeenCalledWith(
-      'scheduledLearning.questioner.folderRequired',
+      'scheduledLearning.questioner.folderRequiredTitle',
       expect.any(String),
     );
     expect(mockCreateItem).not.toHaveBeenCalled();
@@ -252,7 +252,7 @@ describe('AddScheduledLearningScreen questioner flows', () => {
       fireEvent.press(getByText('Add Schedule'));
     });
     expect(alertSpy).toHaveBeenCalledWith(
-      'scheduledLearning.questioner.folderPromptRequired',
+      'scheduledLearning.questioner.promptRequiredTitle',
       expect.any(String),
     );
     expect(mockCreateItem).not.toHaveBeenCalled();
