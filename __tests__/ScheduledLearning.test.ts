@@ -107,6 +107,17 @@ describe('ScheduledLearning model', () => {
       dates.forEach((d) => expect(d).toBeInstanceOf(Date));
     });
 
+    it('returns single next-day date for daily repeat', () => {
+      const dates = getNextScheduledDates(['monday'], '09:00', 'daily');
+      expect(dates.length).toBe(1);
+      expect(dates[0]).toBeInstanceOf(Date);
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      expect(dates[0].getDate()).toBe(tomorrow.getDate());
+      expect(dates[0].getHours()).toBe(9);
+      expect(dates[0].getMinutes()).toBe(0);
+    });
+
     it('sets correct time on dates', () => {
       const dates = getNextScheduledDates(['tuesday'], '14:30', 'weekly');
       expect(dates.length).toBe(1);
@@ -139,6 +150,60 @@ describe('ScheduledLearning model', () => {
     it('returns short labels for 2-4 days', () => {
       expect(formatDaysOfWeek(['monday', 'wednesday'])).toBe('M, W');
       expect(formatDaysOfWeek(['tuesday', 'thursday', 'friday'])).toBe('T, T, F');
+    });
+
+    it('returns "Every day" for daily repeat regardless of days', () => {
+      expect(formatDaysOfWeek(['monday'], 'daily')).toBe('Every day');
+      expect(formatDaysOfWeek([], 'daily')).toBe('Every day');
+    });
+  });
+
+  describe('type and questioner fields', () => {
+    it('defaults type to learn', () => {
+      const item = createScheduledLearningItem({
+        tags: ['test'],
+        daysOfWeek: ['monday'],
+        time: '09:00',
+        wordCount: 500,
+      });
+      expect(item.type).toBe('learn');
+      expect(item.questionerSource).toBeNull();
+      expect(item.questionerPrompt).toBe('');
+      expect(item.questionerNoteFolder).toBeNull();
+    });
+
+    it('creates questioner item with source fields', () => {
+      const item = createScheduledLearningItem({
+        type: 'questioner',
+        tags: ['physics'],
+        daysOfWeek: ['tuesday'],
+        time: '10:00',
+        wordCount: 300,
+        repeat: 'daily',
+        questionerSource: 'prompt',
+        questionerPrompt: 'Generate physics questions about Newton laws',
+      });
+
+      expect(item.type).toBe('questioner');
+      expect(item.repeat).toBe('daily');
+      expect(item.questionerSource).toBe('prompt');
+      expect(item.questionerPrompt).toBe('Generate physics questions about Newton laws');
+    });
+
+    it('creates questioner item with folder source', () => {
+      const item = createScheduledLearningItem({
+        type: 'questioner',
+        tags: ['math'],
+        daysOfWeek: ['wednesday'],
+        time: '08:00',
+        wordCount: 500,
+        questionerSource: 'folder',
+        questionerNoteFolder: 'notes/math',
+      });
+
+      expect(item.type).toBe('questioner');
+      expect(item.questionerSource).toBe('folder');
+      expect(item.questionerNoteFolder).toBe('notes/math');
     });
   });
 });
