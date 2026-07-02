@@ -15,11 +15,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useRepos } from '../contexts/RepoContext';
 import { GitService, GitBranch } from '../services/GitService';
-import { GitHubService, GitHubContent } from '../services/GitHubService';
+import { GitHubService } from '../services/GitHubService';
 import { HapticService } from '../utils/haptics';
 import { Modal } from './ui';
 import { parseRepoPath } from '../utils/gitPathParser';
-import { GIT_HOST_LABELS, type GitHostProvider } from '../services/git/GitHost';
+import {
+  GIT_HOST_LABELS,
+  type GitHostContent,
+  type GitHostProvider,
+} from '../services/git/GitHost';
+import { getGitHostService } from '../services/git/gitHostFactory';
 
 interface RepoFolderPickerModalProps {
   visible: boolean;
@@ -56,10 +61,18 @@ export default function RepoFolderPickerModal({
   const [branchInput, setBranchInput] = useState('');
 
   const [currentFolderPath, setCurrentFolderPath] = useState('');
-  const [folderItems, setFolderItems] = useState<GitHubContent[]>([]);
+  const [folderItems, setFolderItems] = useState<GitHostContent[]>([]);
   const [isLoadingFolders, setIsLoadingFolders] = useState(false);
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+
+  // Resolve the host from the currently-selected repo. Falls back to
+  // 'github' for legacy entries that predate the provider field, and
+  // for the initial render before any repo is picked.
+  const selectedProvider: GitHostProvider = useMemo(() => {
+    const found = repositories.find((r) => r.path === repoPath);
+    return (found?.provider ?? 'github') as GitHostProvider;
+  }, [repositories, repoPath]);
 
   const parsedRepo = useMemo(() => repoPath ? parseRepoPath(repoPath) : null, [repoPath]);
 
@@ -120,15 +133,16 @@ export default function RepoFolderPickerModal({
     if (!parsedRepo) return;
     setIsLoadingFolders(true);
     try {
-      const contents = await GitHubService.getRepoContents(
+      const host = getGitHostService(selectedProvider);
+      const contents = await host.listContents(
         parsedRepo.owner,
         parsedRepo.repo,
         path,
         branch || undefined
       );
       const filtered = contents
-        .filter((item: GitHubContent) => item.type === 'dir' || item.type === 'file')
-        .filter((item: GitHubContent) => {
+        .filter((item) => item.type === 'dir' || item.type === 'file')
+        .filter((item) => {
           if (item.name === '.gitkeep') return false;
           if (item.type === 'file') {
             const ext = item.name.toLowerCase().slice(item.name.lastIndexOf('.'));
@@ -137,7 +151,7 @@ export default function RepoFolderPickerModal({
           }
           return true;
         })
-        .sort((a: GitHubContent, b: GitHubContent) => {
+        .sort((a, b) => {
           if (a.type !== b.type) return a.type === 'dir' ? -1 : 1;
           return a.name.localeCompare(b.name);
         });
@@ -160,7 +174,8 @@ export default function RepoFolderPickerModal({
       setIsLoadingFolders(false);
       return;
     }
-    GitHubService.getRepoContents(
+    const host = getGitHostService(selectedProvider);
+    host.listContents(
       parsedRepo.owner,
       parsedRepo.repo,
       initialPath,
@@ -168,8 +183,8 @@ export default function RepoFolderPickerModal({
     )
       .then((contents) => {
         const filtered = contents
-          .filter((item: GitHubContent) => item.type === 'dir' || item.type === 'file')
-          .filter((item: GitHubContent) => {
+          .filter((item) => item.type === 'dir' || item.type === 'file')
+          .filter((item) => {
             if (item.name === '.gitkeep') return false;
             if (item.type === 'file') {
               const ext = item.name.toLowerCase().slice(item.name.lastIndexOf('.'));
@@ -178,7 +193,7 @@ export default function RepoFolderPickerModal({
             }
             return true;
           })
-          .sort((a: GitHubContent, b: GitHubContent) => {
+          .sort((a, b) => {
             if (a.type !== b.type) return a.type === 'dir' ? -1 : 1;
             return a.name.localeCompare(b.name);
           });
@@ -191,7 +206,7 @@ export default function RepoFolderPickerModal({
       .finally(() => {
         setIsLoadingFolders(false);
       });
-  }, [folderPath, parsedRepo, branch]);
+  }, [folderPath, parsedRepo, branch, selectedProvider]);
 
   const handleRepoSelect = useCallback((path: string) => {
     HapticService.selection();
@@ -218,6 +233,18 @@ export default function RepoFolderPickerModal({
     const name = newFolderName.trim();
     if (!name || !parsedRepo) return;
 
+    // Folder creation in the picker is only wired up for GitHub today;
+    // GitLab/Gitea/Forgejo don't share GitHubService.createFolder's
+    // contract. Surface a clear error and bail out instead of silently
+    // calling the wrong host.
+    if (selectedProvider !== 'github') {
+      Alert.alert(
+        'Unsupported on this host',
+        `Creating folders from the picker is currently only supported on ${GIT_HOST_LABELS.github}. Open the repository in ${GIT_HOST_LABELS[selectedProvider]} and create the folder there.`,
+      );
+      return;
+    }
+
     setIsLoading(true);
     try {
       const folderPath = currentFolderPath ? `${currentFolderPath}/${name}` : name;
@@ -243,7 +270,7 @@ export default function RepoFolderPickerModal({
     } finally {
       setIsLoading(false);
     }
-  }, [newFolderName, currentFolderPath, parsedRepo, branch, repoPath, loadFolderContents, onSelect]);
+  }, [newFolderName, currentFolderPath, parsedRepo, branch, repoPath, loadFolderContents, onSelect, selectedProvider, repositories]);
 
   const navigateUp = useCallback(() => {
     HapticService.light();

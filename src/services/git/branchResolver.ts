@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { parseRepoPath } from '../../utils/gitPathParser';
 import { GitFsService } from './GitFsService';
 
@@ -87,8 +88,10 @@ export async function fetchGitLabDefaultBranch(repoPath: string): Promise<string
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
+    const storedBase = await AsyncStorage.getItem('@gitnotes:gitlab_base_url');
+    const baseUrl = (storedBase || GITLAB_API_BASE).replace(/\/+$/, '');
     const response = await fetch(
-      `${GITLAB_API_BASE}/projects/${encodeURIComponent(`${info.owner}/${info.repo}`)}`,
+      `${baseUrl}/projects/${encodeURIComponent(`${info.owner}/${info.repo}`)}`,
       { signal: controller.signal },
     );
     if (!response.ok) {

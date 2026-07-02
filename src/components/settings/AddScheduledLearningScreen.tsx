@@ -67,7 +67,10 @@ export function AddScheduledLearningScreen() {
   >([]);
   const [questionerFolderRepo, setQuestionerFolderRepo] = useState<string | null>(null);
   const [questionerFolderBranch, setQuestionerFolderBranch] = useState<string | null>(null);
-  const [questionerFolderProvider, setQuestionerFolderProvider] = useState<GitHostProvider | null>(null);
+  // Setter is used to track the active questioner-folder host so the
+  // picker can pre-load the right host service; the value is read
+  // indirectly through the folders list.
+  const [, setQuestionerFolderProvider] = useState<GitHostProvider | null>(null);
 
   const [selectedRepoPath, setSelectedRepoPath] = useState<string | null>(null);
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null);

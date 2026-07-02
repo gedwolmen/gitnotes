@@ -31,11 +31,6 @@ interface GitHubTreeResponse {
   tree?: GitHubTreeEntryRaw[];
 }
 
-interface GitHubFileResponse {
-  content?: string;
-  encoding?: string;
-}
-
 /**
  * Adapts the existing GitHubService to the GitHostService interface.
  *
@@ -88,14 +83,19 @@ export class GitHubHostService implements GitHostService {
     repo: string,
     ref: string,
   ): Promise<GitHostTreeEntry[]> {
-    const url = `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(
-      ref,
-    )}?recursive=1`;
-    const data = await GitHubServiceStatic.rawGet<GitHubTreeResponse>(url);
-    if (!data?.tree || !Array.isArray(data.tree)) return [];
-    return data.tree
-      .filter((e: GitHubTreeEntryRaw) => (e.type === 'tree' || e.type === 'blob') && Boolean(e.path))
-      .map((e: GitHubTreeEntryRaw) => ({ path: e.path, type: e.type as 'tree' | 'blob', sha: e.sha, size: e.size }));
+    try {
+      // Delegate to GitHubService.getTreeRecursive so the tree walker
+      // uses the active auth token (GitHubService.rawGet is
+      // unauthenticated and would fail for private repos).
+      const tree = await GitHubService.getTreeRecursive(owner, repo, ref);
+      if (!Array.isArray(tree)) return [];
+      return tree
+        .filter((e) => (e.type === 'tree' || e.type === 'blob') && Boolean(e.path))
+        .map((e) => ({ path: e.path, type: e.type as 'tree' | 'blob', sha: e.sha, size: e.size }));
+    } catch (error) {
+      console.warn('[GitHubHostService] getTreeRecursive failed:', error);
+      return [];
+    }
   }
 
   async listContents(
@@ -126,16 +126,15 @@ export class GitHubHostService implements GitHostService {
     path: string,
     ref?: string,
   ): Promise<string | null> {
-    const data = await GitHubServiceStatic.rawGet<GitHubFileResponse>(
-      `https://api.github.com/repos/${owner}/${repo}/contents/${path
-        .split('/')
-        .map(encodeURIComponent)
-        .join('/')}${ref ? `?ref=${encodeURIComponent(ref)}` : ''}`,
-    );
-    if (!data?.content) return null;
     try {
-      return Buffer.from(data.content, 'base64').toString('utf-8');
-    } catch {
+      // Delegate to GitHubService.getFileContent so the read uses the
+      // active auth token. rawGet is unauthenticated and would fail
+      // for private repos (#733 image uploads rely on this path).
+      // getFileContent already returns a decoded string, or null
+      // when the path is missing / a directory / unreadable.
+      return await GitHubService.getFileContent(owner, repo, path, ref);
+    } catch (error) {
+      console.warn('[GitHubHostService] getFileText failed:', error);
       return null;
     }
   }

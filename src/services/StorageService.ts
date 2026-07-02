@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Note, NoteCreateInput, NoteUpdateInput, createNote, updateNote } from '../models/Note';
 import { Folder, FolderCreateInput, createFolder, updateFolder } from '../models/Folder';
 import { GitRepository } from './GitService';
+import type { GitHostProvider } from './git/GitHost';
 import { Todo, TodoCreateInput, TodoUpdateInput, createTodoItem, applyTodoUpdate } from '../models/Todo';
 import { Canvas, CanvasCreateInput, CanvasUpdateInput, createCanvas, updateCanvas } from '../models/Canvas';
 import { NOTE_INDEX_KEY, noteKey, getBootValue } from './StorageBootstrap';
@@ -285,7 +286,10 @@ export class StorageService {
     }
   }
 
-  static async removeRepository(path: string, provider: string = 'github'): Promise<void> {
+  static async removeRepository(
+    path: string,
+    provider: GitHostProvider = 'github',
+  ): Promise<void> {
     const repos = await this.getSavedRepositories();
     const filtered = repos.filter(
       (r) => !(r.path === path && (r.provider ?? 'github') === provider),
