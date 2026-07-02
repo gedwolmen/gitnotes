@@ -1,6 +1,0 @@
-appId: org.gitnotes.app
-name: Onboarding Flow
----
-- tapOn:
-    text: "Skip"
-    optional: true
