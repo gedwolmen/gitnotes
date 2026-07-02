@@ -219,5 +219,14 @@
       "generateFailedTitle": "Notiz konnte nicht erstellt werden",
       "generateFailedBody": "Die KI konnte die Notiz jetzt nicht erstellen (kein Modell, kein Internet oder Modellfehler). Abbrechen, um den Plan zu behalten und später erneut zu versuchen, oder löschen."
     }
+  },
+  "addRepo": {
+    "title": "Repository hinzufügen",
+    "providerLabel": "Anbieter",
+    "pathLabel": "Pfad",
+    "invalidTitle": "Ungültiger Pfad",
+    "invalidBody": "Verwende das Format «{{example}}».",
+    "failedTitle": "Repository konnte nicht hinzugefügt werden",
+    "failedBody": "Unbekannter Fehler"
   }
 }

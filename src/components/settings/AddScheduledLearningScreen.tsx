@@ -23,6 +23,7 @@ import {
 } from '../../models/ScheduledLearning';
 import { ScheduledLearningService } from '../../services/ScheduledLearningService';
 import RepoFolderPickerModal from '../RepoFolderPickerModal';
+import type { GitHostProvider } from '../../services/git/GitHost';
 import type { RootStackParamList } from '../../navigation/types';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
@@ -62,10 +63,11 @@ export function AddScheduledLearningScreen() {
   const [questionerPrompts, setQuestionerPrompts] = useState<string[]>([]);
   const [questionerPromptDraft, setQuestionerPromptDraft] = useState('');
   const [questionerFolders, setQuestionerFolders] = useState<
-    { repoPath: string; folderPath: string }[]
+    { repoPath: string; folderPath: string; provider?: GitHostProvider }[]
   >([]);
   const [questionerFolderRepo, setQuestionerFolderRepo] = useState<string | null>(null);
   const [questionerFolderBranch, setQuestionerFolderBranch] = useState<string | null>(null);
+  const [questionerFolderProvider, setQuestionerFolderProvider] = useState<GitHostProvider | null>(null);
 
   const [selectedRepoPath, setSelectedRepoPath] = useState<string | null>(null);
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
@@ -90,6 +92,7 @@ export function AddScheduledLearningScreen() {
     setQuestionerFolders([]);
     setQuestionerFolderRepo(null);
     setQuestionerFolderBranch(null);
+    setQuestionerFolderProvider(null);
     setSelectedRepoPath(null);
     setSelectedBranch(null);
     setSelectedFolderPath(null);
@@ -158,16 +161,22 @@ export function AddScheduledLearningScreen() {
   }, []);
 
   const handleQuestionerFolderSelect = useCallback(
-    (repoPath: string | null, branch: string | null, folderPath: string | null) => {
+    (
+      repoPath: string | null,
+      branch: string | null,
+      folderPath: string | null,
+      provider?: GitHostProvider,
+    ) => {
       if (repoPath && folderPath) {
         setQuestionerFolderRepo(repoPath);
         setQuestionerFolderBranch(branch ?? null);
+        setQuestionerFolderProvider(provider ?? null);
         setQuestionerFolders((prev) => {
           const exists = prev.some(
             (f) => f.repoPath === repoPath && f.folderPath === folderPath,
           );
           if (exists) return prev;
-          return [...prev, { repoPath, folderPath }];
+          return [...prev, { repoPath, folderPath, provider: provider ?? undefined }];
         });
       }
     },

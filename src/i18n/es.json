@@ -219,5 +219,14 @@
       "generateFailedTitle": "No se pudo generar la nota",
       "generateFailedBody": "La IA no pudo crear tu nota ahora (sin modelo, sin internet o error del modelo). Cancelar para mantener el horario y volver a intentarlo, o elimínalo."
     }
+  },
+  "addRepo": {
+    "title": "Añadir repositorio",
+    "providerLabel": "Proveedor",
+    "pathLabel": "Ruta",
+    "invalidTitle": "Ruta inválida",
+    "invalidBody": "Usa el formato «{{example}}».",
+    "failedTitle": "No se pudo añadir el repositorio",
+    "failedBody": "Error desconocido"
   }
 }

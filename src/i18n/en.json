@@ -224,5 +224,14 @@
       "generateFailedTitle": "Could not generate the note",
       "generateFailedBody": "The AI could not create your note right now (no model, no internet, or model error). Cancel to keep the schedule and try again later, or delete it."
     }
+  },
+  "addRepo": {
+    "title": "Add repository",
+    "providerLabel": "Host",
+    "pathLabel": "Path",
+    "invalidTitle": "Invalid path",
+    "invalidBody": "Use the format «{{example}}».",
+    "failedTitle": "Could not add the repository",
+    "failedBody": "Unknown error"
   }
 }

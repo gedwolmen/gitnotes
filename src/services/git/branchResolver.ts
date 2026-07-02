@@ -2,6 +2,7 @@ import { parseRepoPath } from '../../utils/gitPathParser';
 import { GitFsService } from './GitFsService';
 
 const GITHUB_API_BASE = 'https://api.github.com';
+const GITLAB_API_BASE = 'https://gitlab.com/api/v4';
 const FALLBACK_BRANCH = 'main';
 
 const sessionCache = new Map<string, string>();
@@ -61,6 +62,34 @@ export async function fetchGitHubDefaultBranch(repoPath: string): Promise<string
     const response = await fetch(
       `${GITHUB_API_BASE}/repos/${info.owner}/${info.repo}`,
       { headers: { Accept: 'application/vnd.github.v3+json' }, signal: controller.signal },
+    );
+    if (!response.ok) {
+      clearTimeout(timeoutId);
+      return null;
+    }
+    const json = (await response.json()) as { default_branch?: string };
+    clearTimeout(timeoutId);
+    return json.default_branch ?? null;
+  } catch {
+    clearTimeout(timeoutId);
+    return null;
+  }
+}
+
+/**
+ * Resolve the default branch of a GitLab project by its
+ * "namespace/project" path. GitLab exposes the project directly via the
+ * encoded path, so this works for gitlab.com and self-hosted instances.
+ */
+export async function fetchGitLabDefaultBranch(repoPath: string): Promise<string | null> {
+  const info = parseRepoPath(repoPath);
+  if (!info) return null;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const response = await fetch(
+      `${GITLAB_API_BASE}/projects/${encodeURIComponent(`${info.owner}/${info.repo}`)}`,
+      { signal: controller.signal },
     );
     if (!response.ok) {
       clearTimeout(timeoutId);

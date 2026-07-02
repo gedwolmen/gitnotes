@@ -882,7 +882,34 @@ class GitHubServiceClass {
     const nextUrl = parseNextLink(linkHeader);
     return { data: response.data, nextUrl };
   }
+
+  /**
+   * Public unauthenticated GET. Used by the GitHost adapter for read-only
+   * metadata fetches that don't need to be tied to the singleton token
+   * (so the adapter can be used for public GitHub repos in the future).
+   * Returns `null` on any failure.
+   */
+  static async rawGet<T = unknown>(url: string): Promise<T | null> {
+    try {
+      const res = await fetch(url, { headers: { Accept: 'application/vnd.github.v3+json' } });
+      if (!res.ok) return null;
+      return (await res.json()) as T;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Public unauthenticated GET returning the repo metadata, or null. */
+  static async getRepoMeta(owner: string, repo: string): Promise<{ default_branch?: string } | null> {
+    return GitHubServiceClass.rawGet<{ default_branch?: string }>(
+      `https://api.github.com/repos/${owner}/${repo}`,
+    );
+  }
 }
+
+// Re-export the class under a stable name so the GitHost adapter can
+// call static helpers without going through the singleton.
+export const GitHubServiceStatic = GitHubServiceClass;
 
 export interface TokenOpts {
   /** Per-call GitHub token override; bypasses the singleton active-account header. */

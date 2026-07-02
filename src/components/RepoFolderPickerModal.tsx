@@ -19,13 +19,19 @@ import { GitHubService, GitHubContent } from '../services/GitHubService';
 import { HapticService } from '../utils/haptics';
 import { Modal } from './ui';
 import { parseRepoPath } from '../utils/gitPathParser';
+import { GIT_HOST_LABELS, type GitHostProvider } from '../services/git/GitHost';
 
 interface RepoFolderPickerModalProps {
   visible: boolean;
   repoPath: string | null;
   branch: string | null;
   folderPath: string | null;
-  onSelect: (repoPath: string | null, branch: string | null, folderPath: string | null) => void;
+  onSelect: (
+    repoPath: string | null,
+    branch: string | null,
+    folderPath: string | null,
+    provider?: GitHostProvider,
+  ) => void;
   onClose: () => void;
 }
 
@@ -189,21 +195,24 @@ export default function RepoFolderPickerModal({
 
   const handleRepoSelect = useCallback((path: string) => {
     HapticService.selection();
-    onSelect(path, null, null);
+    const provider = repositories.find((r) => r.path === path)?.provider;
+    onSelect(path, null, null, provider);
     setView('main');
-  }, [onSelect]);
+  }, [onSelect, repositories]);
 
   const handleBranchSelect = useCallback((branchName: string) => {
     HapticService.selection();
-    onSelect(repoPath, branchName, null);
+    const provider = repositories.find((r) => r.path === repoPath)?.provider;
+    onSelect(repoPath, branchName, null, provider);
     setView('main');
-  }, [onSelect, repoPath]);
+  }, [onSelect, repoPath, repositories]);
 
   const handleFolderSelect = useCallback((path: string) => {
     HapticService.selection();
-    onSelect(repoPath, branch, path);
+    const provider = repositories.find((r) => r.path === repoPath)?.provider;
+    onSelect(repoPath, branch, path, provider);
     setView('main');
-  }, [onSelect, repoPath, branch]);
+  }, [onSelect, repoPath, branch, repositories]);
 
   const handleCreateFolder = useCallback(async () => {
     const name = newFolderName.trim();
@@ -223,9 +232,10 @@ export default function RepoFolderPickerModal({
         setShowNewFolderModal(false);
         setNewFolderName('');
         loadFolderContents(currentFolderPath);
-        onSelect(repoPath, branch, folderPath);
+        const provider = repositories.find((r) => r.path === repoPath)?.provider;
+        onSelect(repoPath, branch, folderPath, provider);
       } else {
-        Alert.alert('Error', 'Failed to create folder on GitHub.');
+        Alert.alert('Error', 'Failed to create folder on the remote.');
       }
     } catch (error) {
       console.warn('[RepoFolderPicker] handleCreateFolder failed:', error);
@@ -401,6 +411,23 @@ export default function RepoFolderPickerModal({
                         {item.path}
                       </Text>
                     </View>
+                    {item.provider && item.provider !== 'github' ? (
+                      <View
+                        testID={`repo-provider-badge-${item.provider}`}
+                        style={{
+                          paddingHorizontal: 8,
+                          paddingVertical: 2,
+                          borderRadius: 999,
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                          backgroundColor: colors.surface,
+                        }}
+                      >
+                        <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '600' }}>
+                          {GIT_HOST_LABELS[item.provider] ?? item.provider}
+                        </Text>
+                      </View>
+                    ) : null}
                   </TouchableOpacity>
                 )}
               />

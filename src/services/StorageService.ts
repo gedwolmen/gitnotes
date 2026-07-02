@@ -285,9 +285,11 @@ export class StorageService {
     }
   }
 
-  static async removeRepository(path: string): Promise<void> {
+  static async removeRepository(path: string, provider: string = 'github'): Promise<void> {
     const repos = await this.getSavedRepositories();
-    const filtered = repos.filter(r => r.path !== path);
+    const filtered = repos.filter(
+      (r) => !(r.path === path && (r.provider ?? 'github') === provider),
+    );
     await this.saveRepositories(filtered);
   }
 
