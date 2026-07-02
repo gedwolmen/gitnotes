@@ -140,6 +140,10 @@ export function getNextScheduledDates(
 
   const dayIndices = daysOfWeek.map(getDayOfWeekIndex).sort((a, b) => a - b);
 
+  if (repeat !== 'daily' && dayIndices.length === 0) {
+    return dates;
+  }
+
   if (repeat === 'daily') {
     const nextDate = new Date(now);
     nextDate.setDate(now.getDate() + 1);

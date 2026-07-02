@@ -140,7 +140,7 @@ export class ScheduledLearningService {
     }
   }
 
-  private static async resolveModel(item: ScheduledLearningItem) {
+  private static async resolveModel(item: { modelId: string | null }) {
     const aiStore = useAIStore.getState();
     const modelId = item.modelId ?? aiStore.selectedModelId;
     if (!modelId) {
@@ -260,14 +260,16 @@ export class ScheduledLearningService {
       }
 
       const resolved = await ScheduledLearningService.resolveModel(
-        item ?? { modelId: null } as ScheduledLearningItem
+        item ?? { modelId: null }
       );
       if (!resolved) return false;
       const { model } = resolved;
 
+      const contentForGrading = note.content.replace(/\n\n---\n\n## Grading & Corrections[\s\S]*$/, '');
+
       const systemPrompt = `You are an expert grader. The user has answered questions in a note. For each question:\n1. Evaluate if the answer is correct\n2. Provide feedback on the answer\n3. If incorrect or incomplete, provide the correct answer with explanation\n4. Give an overall grade at the end\n\nFormat your grading in clear markdown with sections for each question.`;
 
-      const userPrompt = `Grade the following questions and answers:\n\n${note.content}`;
+      const userPrompt = `Grade the following questions and answers:\n\n${contentForGrading}`;
 
       const result = await generateText({
         model,
@@ -278,7 +280,7 @@ export class ScheduledLearningService {
       const cleanedGrading = result.text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 
       const gradingSection = `\n\n---\n\n## Grading & Corrections\n\n${cleanedGrading}`;
-      const updatedContent = note.content + gradingSection;
+      const updatedContent = contentForGrading + gradingSection;
 
       await noteStore.updateNote({ id: noteId, content: updatedContent });
 
