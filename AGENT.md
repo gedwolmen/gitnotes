@@ -229,7 +229,6 @@ BottomTabs
 
 - `__tests__/` alongside source, `*.test.ts|tsx`
 - `@react-native/jest-preset` + `@testing-library/react-native`
-- E2E: `e2e/` with Maestro
 
 ---
 

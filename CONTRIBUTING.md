@@ -66,20 +66,6 @@ yarn test --watch
 yarn test --coverage
 ```
 
-### Running E2E Tests
-
-We use Maestro for end-to-end testing.
-
-```bash
-# iOS E2E tests
-yarn e2e:ios:smoke
-yarn e2e:ios:full
-
-# Android E2E tests
-yarn e2e:android:smoke
-yarn e2e:android:full
-```
-
 ## Commit Guidelines
 
 We follow [Conventional Commits](https://www.conventionalcommits.org/) specification:
