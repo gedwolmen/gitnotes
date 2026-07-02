@@ -219,5 +219,14 @@
       "generateFailedTitle": "Impossible de générer la note",
       "generateFailedBody": "L'IA n'a pas pu créer votre note (pas de modèle, pas d'internet ou erreur du modèle). Annuler pour conserver le planning et réessayer, ou supprimer."
     }
+  },
+  "addRepo": {
+    "title": "Ajouter un dépôt",
+    "providerLabel": "Hébergeur",
+    "pathLabel": "Chemin",
+    "invalidTitle": "Chemin invalide",
+    "invalidBody": "Utilisez le format «{{example}}».",
+    "failedTitle": "Impossible d'ajouter le dépôt",
+    "failedBody": "Erreur inconnue"
   }
 }

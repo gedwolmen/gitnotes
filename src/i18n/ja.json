@@ -219,5 +219,14 @@
       "generateFailedTitle": "ノートを生成できませんでした",
       "generateFailedBody": "AIが今ノートを作成できませんでした(モデルなし、インターネットなし、モデルエラー)。キャンセルでスケジュールを保持して再試行、削除で削除します。"
     }
+  },
+  "addRepo": {
+    "title": "リポジトリを追加",
+    "providerLabel": "ホスト",
+    "pathLabel": "パス",
+    "invalidTitle": "無効なパス",
+    "invalidBody": "「{{example}}」形式で入力してください。",
+    "failedTitle": "リポジトリを追加できませんでした",
+    "failedBody": "不明なエラー"
   }
 }

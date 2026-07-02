@@ -2,7 +2,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StorageService } from './StorageService';
 import { GitHubService } from './GitHubService';
 import { parseRepoPath } from '../utils/gitPathParser';
-import { fetchGitHubDefaultBranch } from './git/branchResolver';
+import { fetchGitHubDefaultBranch, fetchGitLabDefaultBranch } from './git/branchResolver';
+import type { GitHostProvider } from './git/GitHost';
+import { getGitHostService } from './git/gitHostFactory';
 
 export interface GitRepository {
   id: string;
@@ -10,6 +12,8 @@ export interface GitRepository {
   path: string;
   branch?: string;
   commit?: string;
+  /** Which host this repository lives on. Defaults to 'github' for legacy entries. */
+  provider?: GitHostProvider;
 }
 
 export interface GitBranch {
@@ -65,18 +69,32 @@ export class GitService {
     }
   }
 
-  static async addRepository(path: string, name?: string): Promise<GitRepository> {
+  static async addRepository(
+    path: string,
+    name?: string,
+    provider: GitHostProvider = 'github',
+  ): Promise<GitRepository> {
     try {
       const repoName = name || path.split('/').pop() || path;
       // Capture the remote's actual default branch at add-time so clone +
       // sync paths don't fall back to a hardcoded 'main' (#543). Best-effort:
       // offline / 404 leaves `branch` undefined; the resolver re-tries lazily.
-      const branch = (await fetchGitHubDefaultBranch(path)) ?? undefined;
+      let branch: string | undefined;
+      if (provider === 'gitlab') {
+        branch = (await fetchGitLabDefaultBranch(path)) ?? undefined;
+      } else if (provider === 'github') {
+        branch = (await fetchGitHubDefaultBranch(path)) ?? undefined;
+      } else {
+        // Gitea / Forgejo reuse the GitHub resolver for now — both expose
+        // the same `/repos/:owner/:repo` default-branch shape.
+        branch = (await fetchGitHubDefaultBranch(path)) ?? undefined;
+      }
       const repo: GitRepository = {
-        id: Date.now().toString(),
+        id: `${provider}:${Date.now()}`,
         name: repoName,
         path: path,
         branch,
+        provider,
       };
 
       await StorageService.addRepository(repo);
@@ -176,33 +194,28 @@ export class GitService {
     }
   }
 
-  static async getBranches(repoPath: string): Promise<GitBranch[]> {
-    const cacheKey = `branches_${repoPath.replace(/[^a-zA-Z0-9]/g, '_')}`;
-    
+  static async getBranches(repoPath: string, provider: GitHostProvider = 'github'): Promise<GitBranch[]> {
+    const cacheKey = `branches_${provider}_${repoPath.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
     // Check cache first
     const cached = await this.getCachedData<GitBranch[]>(cacheKey);
     if (cached) return cached;
 
     const repoInfo = parseRepoPath(repoPath);
-    
     if (repoInfo) {
-      // Try GitHub API. Branches list is alphabetical, so determining
-      // "current" requires the repo's default_branch, fetched in parallel.
-      const branchesUrl = `${GITHUB_API_BASE}/repos/${repoInfo.owner}/${repoInfo.repo}/branches`;
-      const repoUrl = `${GITHUB_API_BASE}/repos/${repoInfo.owner}/${repoInfo.repo}`;
-      const [branches, repoMeta] = await Promise.all([
-        this.fetchFromGitHub<Array<{ name: string }>>(branchesUrl),
-        this.fetchFromGitHub<{ default_branch?: string }>(repoUrl),
-      ]);
-
-      if (branches) {
-        const defaultBranch = repoMeta?.default_branch;
-        const result = branches.map((b) => ({
-          name: b.name,
-          isCurrent: defaultBranch ? b.name === defaultBranch : false,
-        }));
-        await this.setCachedData(cacheKey, result);
-        return result;
+      try {
+        const host = getGitHostService(provider);
+        const hostBranches = await host.listBranches(repoInfo.owner, repoInfo.repo);
+        if (hostBranches.length > 0) {
+          const result = hostBranches.map((b) => ({
+            name: b.name,
+            isCurrent: b.isDefault ?? false,
+          }));
+          await this.setCachedData(cacheKey, result);
+          return result;
+        }
+      } catch (error) {
+        console.warn('[GitService] host listBranches failed:', error);
       }
     }
 
@@ -257,9 +270,13 @@ export class GitService {
     ];
   }
 
-  static async getRepositoryFolders(repoPath: string, branch?: string): Promise<GitRepositoryFolder[]> {
+  static async getRepositoryFolders(
+    repoPath: string,
+    branch?: string,
+    provider: GitHostProvider = 'github',
+  ): Promise<GitRepositoryFolder[]> {
     const branchKey = branch || 'HEAD';
-    const cacheKey = `repo_folders_${repoPath.replace(/[^a-zA-Z0-9]/g, '_')}_${branchKey.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    const cacheKey = `repo_folders_${provider}_${repoPath.replace(/[^a-zA-Z0-9]/g, '_')}_${branchKey.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
     const cached = await this.getCachedData<GitRepositoryFolder[]>(cacheKey);
     if (cached && cached.length > 0) return cached;
@@ -270,14 +287,12 @@ export class GitService {
     }
 
     let tree: { path: string; type: 'blob' | 'tree'; sha: string }[] = [];
-    if (GitHubService.isAuthenticated()) {
-      tree = await GitHubService.getTreeRecursive(repoInfo.owner, repoInfo.repo, branchKey);
-    }
-    if (tree.length === 0) {
-      const treeRef = encodeURIComponent(branchKey);
-      const url = `${GITHUB_API_BASE}/repos/${repoInfo.owner}/${repoInfo.repo}/git/trees/${treeRef}?recursive=1`;
-      const treeResponse = await this.fetchFromGitHub<GitHubTreeResponse>(url);
-      tree = (treeResponse?.tree ?? []) as { path: string; type: 'blob' | 'tree'; sha: string }[];
+    try {
+      const host = getGitHostService(provider);
+      const hostTree = await host.getTreeRecursive(repoInfo.owner, repoInfo.repo, branchKey);
+      tree = hostTree.map((e) => ({ path: e.path, type: e.type, sha: e.sha }));
+    } catch (error) {
+      console.warn('[GitService] host getTreeRecursive failed:', error);
     }
 
     if (tree.length === 0) {
@@ -306,7 +321,7 @@ export class GitService {
   static async clearCache(): Promise<void> {
     try {
       const keys = await AsyncStorage.getAllKeys();
-      const cacheKeys = keys.filter(k => k.startsWith(CACHE_PREFIX));
+      const cacheKeys = keys.filter((k) => k.startsWith(CACHE_PREFIX));
       await AsyncStorage.removeMany(cacheKeys);
       this.memCache.clear();
     } catch (error) {
@@ -317,9 +332,13 @@ export class GitService {
   // Targeted invalidator used after a successful repo pull so the editor
   // folder dropdown reflects the freshly fetched tree instead of a stale
   // (TTL-bound) snapshot.
-  static async invalidateRepoFoldersCache(repoPath: string, branch?: string): Promise<void> {
+  static async invalidateRepoFoldersCache(
+    repoPath: string,
+    branch?: string,
+    provider: GitHostProvider = 'github',
+  ): Promise<void> {
     const branchKey = branch || 'HEAD';
-    const cacheKey = `repo_folders_${repoPath.replace(/[^a-zA-Z0-9]/g, '_')}_${branchKey.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    const cacheKey = `repo_folders_${provider}_${repoPath.replace(/[^a-zA-Z0-9]/g, '_')}_${branchKey.replace(/[^a-zA-Z0-9]/g, '_')}`;
     this.memCache.delete(cacheKey);
     try {
       await AsyncStorage.removeItem(CACHE_PREFIX + cacheKey);

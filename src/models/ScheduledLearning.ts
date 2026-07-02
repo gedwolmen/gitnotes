@@ -1,5 +1,7 @@
 export type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 
+import type { GitHostProvider } from '../services/git/GitHost';
+
 export const DAY_OF_WEEK_OPTIONS: { value: DayOfWeek; label: string; short: string }[] = [
   { value: 'monday', label: 'Monday', short: 'M' },
   { value: 'tuesday', label: 'Tuesday', short: 'T' },
@@ -38,6 +40,8 @@ export const QUESTIONER_SOURCE_OPTIONS: { value: QuestionerSource; label: string
 export interface QuestionerFolderSelection {
   repoPath: string;
   folderPath: string;
+  /** Host the repo lives on; defaults to 'github' for legacy entries. */
+  provider?: GitHostProvider;
 }
 
 export interface ScheduledLearningItem {

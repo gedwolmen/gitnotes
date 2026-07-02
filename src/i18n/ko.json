@@ -219,5 +219,14 @@
       "generateFailedTitle": "노트를 생성할 수 없습니다",
       "generateFailedBody": "AI가 지금 노트를 만들 수 없습니다(모델 없음, 인터넷 없음 또는 모델 오류). 취소를 눌러 일정을 유지하고 나중에 다시 시도하거나 삭제하세요."
     }
+  },
+  "addRepo": {
+    "title": "저장소 추가",
+    "providerLabel": "호스트",
+    "pathLabel": "경로",
+    "invalidTitle": "잘못된 경로",
+    "invalidBody": "«{{example}}» 형식을 사용하세요.",
+    "failedTitle": "저장소를 추가할 수 없습니다",
+    "failedBody": "알 수 없는 오류"
   }
 }
