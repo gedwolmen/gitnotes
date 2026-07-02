@@ -12,8 +12,13 @@ import { useAIStore } from '../../stores/aiStore';
 import { settingsStyles as styles } from './settingsStyles';
 import {
   type DayOfWeek,
+  type ScheduledLearningType,
+  type ScheduledLearningRepeat,
+  type QuestionerSource,
   DAY_OF_WEEK_OPTIONS,
   WORD_COUNT_OPTIONS,
+  SCHEDULED_LEARNING_TYPE_OPTIONS,
+  QUESTIONER_SOURCE_OPTIONS,
 } from '../../models/ScheduledLearning';
 import { ScheduledLearningService } from '../../services/ScheduledLearningService';
 import RepoFolderPickerModal from '../RepoFolderPickerModal';
@@ -48,7 +53,11 @@ export function AddScheduledLearningScreen() {
   const [selectedTime, setSelectedTime] = useState(new Date());
   const [selectedModel, setSelectedModel] = useState<string | null>(selectedModelId);
   const [selectedWordCount, setSelectedWordCount] = useState(500);
-  const [repeat, setRepeat] = useState<'weekly' | 'one-time'>('weekly');
+  const [repeat, setRepeat] = useState<ScheduledLearningRepeat>('weekly');
+  const [learningType, setLearningType] = useState<ScheduledLearningType>('learn');
+  const [questionerSource, setQuestionerSource] = useState<QuestionerSource>('tags');
+  const [questionerPrompt, setQuestionerPrompt] = useState('');
+  const [questionerNoteFolder, setQuestionerNoteFolder] = useState<string | null>(null);
 
   const [selectedRepoPath, setSelectedRepoPath] = useState<string | null>(null);
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
@@ -66,6 +75,10 @@ export function AddScheduledLearningScreen() {
     setSelectedModel(selectedModelId);
     setSelectedWordCount(500);
     setRepeat('weekly');
+    setLearningType('learn');
+    setQuestionerSource('tags');
+    setQuestionerPrompt('');
+    setQuestionerNoteFolder(null);
     setSelectedRepoPath(null);
     setSelectedBranch(null);
     setSelectedFolderPath(null);
@@ -135,6 +148,7 @@ export function AddScheduledLearningScreen() {
     });
 
     const newItem = await createItem({
+      type: learningType,
       tags,
       description,
       daysOfWeek: selectedDays,
@@ -145,6 +159,9 @@ export function AddScheduledLearningScreen() {
       branch: selectedBranch,
       wordCount: selectedWordCount,
       repeat,
+      questionerSource: learningType === 'questioner' ? questionerSource : undefined,
+      questionerPrompt: learningType === 'questioner' ? questionerPrompt : undefined,
+      questionerNoteFolder: learningType === 'questioner' ? questionerNoteFolder : undefined,
     });
 
     if (newItem) {
@@ -153,7 +170,7 @@ export function AddScheduledLearningScreen() {
 
     resetForm();
     navigation.goBack();
-  }, [tags, description, selectedDays, selectedTime, selectedModel, selectedFolderPath, selectedRepoPath, selectedBranch, selectedWordCount, repeat, createItem, resetForm, navigation]);
+  }, [tags, description, selectedDays, selectedTime, selectedModel, selectedFolderPath, selectedRepoPath, selectedBranch, selectedWordCount, repeat, learningType, questionerSource, questionerPrompt, questionerNoteFolder, createItem, resetForm, navigation]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
@@ -168,6 +185,37 @@ export function AddScheduledLearningScreen() {
           gap: spacing[4],
         }}
       >
+        <Group title="Type">
+          <View style={{ padding: spacing[4], gap: spacing[3] }}>
+            {SCHEDULED_LEARNING_TYPE_OPTIONS.map((opt) => {
+              const isSelected = learningType === opt.value;
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  onPress={() => setLearningType(opt.value)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: spacing[3],
+                    padding: spacing[4],
+                    borderRadius: 16,
+                    backgroundColor: isSelected ? colors.primary + '16' : colors.surfaceSecondary,
+                    borderWidth: 1,
+                    borderColor: isSelected ? colors.primary : colors.border,
+                  }}
+                >
+                  <Ionicons name={opt.icon as any} size={24} color={isSelected ? colors.primary : colors.textSecondary} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: isSelected ? colors.primary : colors.text, fontSize: type.sm, fontWeight: '600' }}>{opt.label}</Text>
+                    <Text style={{ color: colors.textSecondary, fontSize: type.xs, marginTop: 2 }}>{opt.description}</Text>
+                  </View>
+                  {isSelected ? <Ionicons name="checkmark-circle" size={22} color={colors.primary} /> : null}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </Group>
+
         <Group title="Topic" footer={tags.length > 0 ? 'Tap a tag to remove it.' : undefined}>
           <View style={{ padding: spacing[4], gap: spacing[3] }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
@@ -271,6 +319,20 @@ export function AddScheduledLearningScreen() {
             </View>
             <View style={{ flexDirection: 'row', gap: spacing[2] }}>
               <TouchableOpacity
+                onPress={() => setRepeat('daily')}
+                style={{
+                  flex: 1,
+                  paddingVertical: spacing[3],
+                  borderRadius: 16,
+                  alignItems: 'center',
+                  backgroundColor: repeat === 'daily' ? colors.primary : colors.surfaceSecondary,
+                  borderWidth: 1,
+                  borderColor: repeat === 'daily' ? colors.primary : colors.border,
+                }}
+              >
+                <Text style={{ color: repeat === 'daily' ? '#fff' : colors.text, fontSize: type.sm, fontWeight: '600' }}>Daily</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
                 onPress={() => setRepeat('weekly')}
                 style={{
                   flex: 1,
@@ -322,6 +384,60 @@ export function AddScheduledLearningScreen() {
             </TouchableOpacity>
           </View>
         </Group>
+
+        {learningType === 'questioner' ? (
+          <Group title="Questioner Source">
+            <View style={{ paddingHorizontal: spacing[4], paddingVertical: spacing[3], gap: spacing[3] }}>
+              {QUESTIONER_SOURCE_OPTIONS.map((opt) => {
+                const isSelected = questionerSource === opt.value;
+                return (
+                  <TouchableOpacity
+                    key={opt.value}
+                    onPress={() => setQuestionerSource(opt.value)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: spacing[3],
+                      padding: spacing[3],
+                      borderRadius: 14,
+                      backgroundColor: isSelected ? colors.primary + '16' : colors.surfaceSecondary,
+                      borderWidth: 1,
+                      borderColor: isSelected ? colors.primary : colors.border,
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: isSelected ? colors.primary : colors.text, fontSize: type.sm, fontWeight: '600' }}>{opt.label}</Text>
+                      <Text style={{ color: colors.textSecondary, fontSize: type.xs, marginTop: 2 }}>{opt.description}</Text>
+                    </View>
+                    {isSelected ? <Ionicons name="checkmark-circle" size={20} color={colors.primary} /> : null}
+                  </TouchableOpacity>
+                );
+              })}
+
+              {questionerSource === 'prompt' ? (
+                <Input
+                  containerStyle={{ borderWidth: 1, borderColor: colors.border, borderRadius: 18 }}
+                  value={questionerPrompt}
+                  onChangeText={setQuestionerPrompt}
+                  placeholder="Describe what questions to generate..."
+                  multiline
+                  multilineMinHeight={80}
+                />
+              ) : null}
+
+              {questionerSource === 'folder' ? (
+                <Input
+                  containerStyle={{ borderWidth: 1, borderColor: colors.border, borderRadius: 18 }}
+                  value={questionerNoteFolder ?? ''}
+                  onChangeText={(text) => setQuestionerNoteFolder(text || null)}
+                  placeholder="Enter folder path (e.g. notes/physics)"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              ) : null}
+            </View>
+          </Group>
+        ) : null}
 
         <Group title="Generation">
           <View style={{ paddingHorizontal: spacing[4], paddingVertical: spacing[3], gap: spacing[3] }}>

@@ -28,6 +28,7 @@ import { NoteViewer } from '../components/editor/NoteViewer';
 import { useNoteEditorDocument } from '../components/editor/useNoteEditorDocument';
 import { useNoteEditorPreview } from '../components/editor/useNoteEditorPreview';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
+import { ScheduledLearningService } from '../services/ScheduledLearningService';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'NoteEditor'>;
 type NoteEditorRouteProp = RouteProp<RootStackParamList, 'NoteEditor'>;
@@ -56,6 +57,7 @@ function NoteEditorScreenInner() {
   const [showCanvasModal, setShowCanvasModal] = React.useState(false);
   const [showCanvasPicker, setShowCanvasPicker] = React.useState(false);
   const [showFolderDialog, setShowFolderDialog] = React.useState(false);
+  const [isGrading, setIsGrading] = React.useState(false);
 
   const document = useNoteEditorDocument({
     noteId,
@@ -94,6 +96,24 @@ function NoteEditorScreenInner() {
     initialAnchor,
   });
   const isPdfNote = document.noteFormat === 'pdf';
+
+  const isQuestionerNote = React.useMemo(
+    () => document.tags?.includes('questioner') ?? false,
+    [document.tags],
+  );
+
+  const handleGradeAnswers = React.useCallback(async () => {
+    if (!noteId || isGrading) return;
+    setIsGrading(true);
+    try {
+      const success = await ScheduledLearningService.gradeQuestionerNote(noteId);
+      if (!success) {
+        console.warn('[NoteEditor] Grading failed');
+      }
+    } finally {
+      setIsGrading(false);
+    }
+  }, [noteId, isGrading]);
 
   // ── NOT FOUND (deep link to a noteId that isn't on this device) ──
   if (document.notFound) {
@@ -153,6 +173,9 @@ function NoteEditorScreenInner() {
           previewScrollRef={preview.previewScrollRef}
           onPreviewScroll={preview.handlePreviewScroll}
           onPreviewContentSizeChange={preview.handlePreviewContentSizeChange}
+          isQuestionerNote={isQuestionerNote}
+          isGrading={isGrading}
+          onGradeAnswers={isQuestionerNote ? handleGradeAnswers : undefined}
         />
     );
   }

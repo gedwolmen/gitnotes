@@ -20,8 +20,24 @@ export const WORD_COUNT_OPTIONS = [
   { value: 2000, label: '2000 words' },
 ];
 
+export type ScheduledLearningType = 'learn' | 'questioner';
+export type ScheduledLearningRepeat = 'daily' | 'weekly' | 'one-time';
+export type QuestionerSource = 'tags' | 'prompt' | 'folder';
+
+export const SCHEDULED_LEARNING_TYPE_OPTIONS: { value: ScheduledLearningType; label: string; description: string; icon: string }[] = [
+  { value: 'learn', label: 'Learning Notes', description: 'AI generates educational content on your topics', icon: 'school-outline' },
+  { value: 'questioner', label: 'Questioner Notes', description: 'AI creates questions you can answer and get graded', icon: 'help-circle-outline' },
+];
+
+export const QUESTIONER_SOURCE_OPTIONS: { value: QuestionerSource; label: string; description: string }[] = [
+  { value: 'tags', label: 'From Tags', description: 'Generate questions based on topic tags' },
+  { value: 'prompt', label: 'From Prompt', description: 'Generate questions from a custom prompt' },
+  { value: 'folder', label: 'From Note Folder', description: 'Generate questions from notes in a folder' },
+];
+
 export interface ScheduledLearningItem {
   id: string;
+  type: ScheduledLearningType;
   tags: string[];
   description: string;
   daysOfWeek: DayOfWeek[];
@@ -33,17 +49,21 @@ export interface ScheduledLearningItem {
   repoPath: string | null;    // e.g. "owner/repo" - the GitHub repo
   branch: string | null;      // e.g. "main" - the branch
   wordCount: number;
-  repeat: 'weekly' | 'one-time';
+  repeat: ScheduledLearningRepeat;
   isEnabled: boolean;
   lastGeneratedAt: number | null;  // Legacy: overall last generation time (still used for one-time)
   // Per-day tracking: which days have had their most recent generation.
   // Key is DayOfWeek value, value is timestamp of last generation for that day.
   dayLastGeneratedAt: Partial<Record<DayOfWeek, number>>;
+  questionerSource: QuestionerSource | null;
+  questionerPrompt: string;
+  questionerNoteFolder: string | null;
   createdAt: number;
   updatedAt: number;
 }
 
 export interface ScheduledLearningCreateInput {
+  type?: ScheduledLearningType;
   tags: string[];
   description?: string;
   daysOfWeek: DayOfWeek[];
@@ -55,13 +75,17 @@ export interface ScheduledLearningCreateInput {
   repoPath?: string | null;
   branch?: string | null;
   wordCount: number;
-  repeat?: 'weekly' | 'one-time';
+  repeat?: ScheduledLearningRepeat;
+  questionerSource?: QuestionerSource | null;
+  questionerPrompt?: string;
+  questionerNoteFolder?: string | null;
 }
 
 export function createScheduledLearningItem(input: ScheduledLearningCreateInput): ScheduledLearningItem {
   const now = Date.now();
   return {
     id: generateId(),
+    type: input.type ?? 'learn',
     tags: input.tags,
     description: input.description ?? '',
     daysOfWeek: input.daysOfWeek,
@@ -77,6 +101,9 @@ export function createScheduledLearningItem(input: ScheduledLearningCreateInput)
     isEnabled: true,
     lastGeneratedAt: null,
     dayLastGeneratedAt: {},
+    questionerSource: input.questionerSource ?? null,
+    questionerPrompt: input.questionerPrompt ?? '',
+    questionerNoteFolder: input.questionerNoteFolder ?? null,
     createdAt: now,
     updatedAt: now,
   };
@@ -105,7 +132,7 @@ export function getDayOfWeekIndex(day: DayOfWeek): number {
 export function getNextScheduledDates(
   daysOfWeek: DayOfWeek[],
   time: string,
-  repeat: 'weekly' | 'one-time'
+  repeat: ScheduledLearningRepeat
 ): Date[] {
   const now = new Date();
   const [hours, minutes] = time.split(':').map(Number);
@@ -113,7 +140,12 @@ export function getNextScheduledDates(
 
   const dayIndices = daysOfWeek.map(getDayOfWeekIndex).sort((a, b) => a - b);
 
-  if (repeat === 'one-time') {
+  if (repeat === 'daily') {
+    const nextDate = new Date(now);
+    nextDate.setDate(now.getDate() + 1);
+    nextDate.setHours(hours, minutes, 0, 0);
+    dates.push(nextDate);
+  } else if (repeat === 'one-time') {
     let daysUntilClosest = Infinity;
     let closestIndex = -1;
 
@@ -154,7 +186,8 @@ export function getNextScheduledDates(
   return dates;
 }
 
-export function formatDaysOfWeek(days: DayOfWeek[]): string {
+export function formatDaysOfWeek(days: DayOfWeek[], repeat?: ScheduledLearningRepeat): string {
+  if (repeat === 'daily') return 'Every day';
   if (days.length === 0) return 'No days selected';
   if (days.length === 1) return DAY_OF_WEEK_OPTIONS.find((d) => d.value === days[0])?.label ?? days[0];
   if (days.length === 7) return 'Every day';

@@ -65,7 +65,7 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
         items.map((item) => (
           <GroupRow
             key={item.id}
-            leading={<Ionicons name="school-outline" size={18} color={colors.primary} />}
+            leading={<Ionicons name={item.type === 'questioner' ? 'help-circle-outline' : 'school-outline'} size={18} color={colors.primary} />}
             trailing={
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <Toggle
@@ -87,7 +87,7 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
               {item.tags.join(', ')}
             </Text>
             <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
-              {formatDaysOfWeek(item.daysOfWeek)} at {item.time} · {formatWordCount(item.wordCount)}
+              {formatDaysOfWeek(item.daysOfWeek, item.repeat)} at {item.time} · {item.type === 'questioner' ? 'Questions' : 'Learn'} · {formatWordCount(item.wordCount)}
             </Text>
           </GroupRow>
         ))

@@ -46,6 +46,11 @@ const INFO_STEPS = [
     description: 'Pin important notes, use checklists, and track your progress.',
     icon: 'rocket-outline' as const,
   },
+  {
+    title: 'Scheduled Learning',
+    description: 'Let AI generate daily or weekly learning notes on your topics. You can also get Questioner notes with questions you answer and get graded — perfect for active recall and spaced repetition.',
+    icon: 'help-circle-outline' as const,
+  },
 ];
 
 const TOKEN_STEP = INFO_STEPS.length;

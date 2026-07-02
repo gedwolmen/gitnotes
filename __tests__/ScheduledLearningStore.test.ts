@@ -119,6 +119,26 @@ describe('ScheduledLearningStore', () => {
       expect(result).toBeNull();
       expect(useScheduledLearningStore.getState().error).toBe('Failed to create scheduled learning item');
     });
+
+    it('creates a questioner item with all fields', async () => {
+      const newItem = await useScheduledLearningStore.getState().createItem({
+        type: 'questioner',
+        tags: ['physics'],
+        daysOfWeek: ['tuesday'],
+        time: '10:00',
+        wordCount: 300,
+        repeat: 'daily',
+        questionerSource: 'prompt',
+        questionerPrompt: 'Generate Newton laws questions',
+        questionerNoteFolder: null,
+      });
+
+      expect(newItem).not.toBeNull();
+      expect(newItem?.type).toBe('questioner');
+      expect(newItem?.repeat).toBe('daily');
+      expect(newItem?.questionerSource).toBe('prompt');
+      expect(newItem?.questionerPrompt).toBe('Generate Newton laws questions');
+    });
   });
 
   describe('updateItem', () => {
@@ -241,6 +261,21 @@ describe('ScheduledLearningStore', () => {
 
       const updated = useScheduledLearningStore.getState().items.find((i) => i.id === newItem!.id);
       expect(updated?.lastGeneratedAt).not.toBeNull();
+      expect(updated?.lastGeneratedAt).toBeGreaterThan(0);
+    });
+
+    it('marks daily item as generated', async () => {
+      const newItem = await useScheduledLearningStore.getState().createItem({
+        tags: ['daily-test'],
+        daysOfWeek: ['monday'],
+        time: '09:00',
+        wordCount: 500,
+        repeat: 'daily',
+      });
+
+      await useScheduledLearningStore.getState().markGenerated(newItem!.id);
+
+      const updated = useScheduledLearningStore.getState().items.find((i) => i.id === newItem!.id);
       expect(updated?.lastGeneratedAt).toBeGreaterThan(0);
     });
   });

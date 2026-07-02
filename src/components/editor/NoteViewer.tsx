@@ -40,6 +40,9 @@ interface NoteViewerProps {
   previewScrollRef: React.RefObject<ScrollView | null>;
   onPreviewScroll: (event: any) => void;
   onPreviewContentSizeChange: () => void;
+  isQuestionerNote?: boolean;
+  isGrading?: boolean;
+  onGradeAnswers?: () => void;
 }
 
 export function NoteViewer({
@@ -72,6 +75,9 @@ export function NoteViewer({
   previewScrollRef,
   onPreviewScroll,
   onPreviewContentSizeChange,
+  isQuestionerNote,
+  isGrading,
+  onGradeAnswers,
 }: NoteViewerProps) {
   const { colors } = useTheme();
   const isPdfNote = noteFormat === 'pdf';
@@ -125,6 +131,26 @@ export function NoteViewer({
           </IconButton>
         ) : null}
       </View>
+
+      {isQuestionerNote && onGradeAnswers ? (
+        <View style={[styles.gradingBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+          <TouchableOpacity
+            testID="note-viewer.button.grade-answers"
+            onPress={onGradeAnswers}
+            disabled={isGrading}
+            style={[styles.gradeButton, { backgroundColor: colors.primary, opacity: isGrading ? 0.7 : 1 }]}
+          >
+            {isGrading ? (
+              <Text style={[styles.gradeButtonText, { color: '#fff' }]}>Grading...</Text>
+            ) : (
+              <>
+                <Ionicons name="checkmark-done" size={16} color="#fff" />
+                <Text style={[styles.gradeButtonText, { color: '#fff' }]}>Grade My Answers</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      ) : null}
 
       <NotePreviewPane
         noteFormat={noteFormat}
@@ -241,5 +267,23 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 1.5,
     marginRight: 10,
+  },
+  gradingBar: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+  },
+  gradeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+  },
+  gradeButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

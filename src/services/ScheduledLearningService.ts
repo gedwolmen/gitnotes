@@ -7,7 +7,10 @@ import { NotificationService } from './NotificationService';
 import { ScheduledLearningItem, getNextScheduledDates, DayOfWeek } from '../models/ScheduledLearning';
 
 const NOTIFICATION_ID_PREFIX = 'scheduled-learning-';
+const QUESTIONER_MARKER_PREFIX = '<!-- sl-item-id:';
+const QUESTIONER_MARKER_SUFFIX = ' -->';
 
+const MS_23_HOURS = 23 * 60 * 60 * 1000;
 const MS_24_HOURS = 24 * 60 * 60 * 1000;
 const MS_6_DAYS = 6 * MS_24_HOURS;
 
@@ -19,6 +22,10 @@ function getDayFromDate(date: Date): DayOfWeek {
 function shouldGenerateForDay(item: ScheduledLearningItem, day: DayOfWeek): boolean {
   if (item.repeat === 'one-time') {
     return item.lastGeneratedAt === null;
+  }
+  if (item.repeat === 'daily') {
+    if (item.lastGeneratedAt === null) return true;
+    return Date.now() - item.lastGeneratedAt >= MS_23_HOURS;
   }
   const lastGen = item.dayLastGeneratedAt[day];
   if (lastGen === undefined) {
@@ -33,6 +40,13 @@ function shouldGenerateForDay(item: ScheduledLearningItem, day: DayOfWeek): bool
 
 export class ScheduledLearningService {
   static async generateAndCreateNote(item: ScheduledLearningItem, day?: DayOfWeek): Promise<boolean> {
+    if (item.type === 'questioner') {
+      return ScheduledLearningService.generateQuestionerNote(item, day);
+    }
+    return ScheduledLearningService.generateLearnNote(item, day);
+  }
+
+  private static async generateLearnNote(item: ScheduledLearningItem, day?: DayOfWeek): Promise<boolean> {
     const targetDay = day ?? getDayFromDate(new Date());
 
     if (!shouldGenerateForDay(item, targetDay)) {
@@ -121,7 +135,156 @@ export class ScheduledLearningService {
 
       return true;
     } catch (error) {
-      console.error('[ScheduledLearning] Failed to generate note:', error);
+      console.error('[ScheduledLearning] Failed to generate learn note:', error);
+      return false;
+    }
+  }
+
+  private static async resolveModel(item: ScheduledLearningItem) {
+    const aiStore = useAIStore.getState();
+    const modelId = item.modelId ?? aiStore.selectedModelId;
+    if (!modelId) {
+      console.warn('[ScheduledLearning] No model selected');
+      return null;
+    }
+    const modelConfig = aiStore.getAvailableModels().find((m) => m.id === modelId);
+    if (!modelConfig) {
+      console.warn('[ScheduledLearning] Model not found:', modelId);
+      return null;
+    }
+    const provider = aiStore.providers.find((p) =>
+      p.models.some((m) => m.id === modelId)
+    );
+    if (!provider) {
+      console.warn('[ScheduledLearning] Provider not found for model:', modelId);
+      return null;
+    }
+    const model = await initializeModel(modelConfig, provider);
+    return { model, modelId };
+  }
+
+  private static async generateQuestionerNote(item: ScheduledLearningItem, day?: DayOfWeek): Promise<boolean> {
+    const targetDay = day ?? getDayFromDate(new Date());
+    if (!shouldGenerateForDay(item, targetDay)) {
+      return false;
+    }
+
+    try {
+      const resolved = await ScheduledLearningService.resolveModel(item);
+      if (!resolved) return false;
+      const { model } = resolved;
+      const noteStore = useNoteStore.getState();
+
+      let promptContext = '';
+      const source = item.questionerSource ?? 'tags';
+
+      if (source === 'tags') {
+        promptContext = `topic tags: ${item.tags.join(', ')}`;
+      } else if (source === 'prompt') {
+        promptContext = `the following prompt: ${item.questionerPrompt || item.tags.join(', ')}`;
+      } else if (source === 'folder') {
+        const folderPath = item.questionerNoteFolder;
+        if (folderPath) {
+          const folderNotes = noteStore.notes.filter((n) => n.folderPath === folderPath);
+          const noteSummaries = folderNotes
+            .slice(0, 10)
+            .map((n) => `Title: ${n.title}\nContent preview: ${n.content.substring(0, 300)}`)
+            .join('\n\n---\n\n');
+          promptContext = `the following notes from folder "${folderPath}":\n\n${noteSummaries || '(no notes found in folder)'}`;
+        } else {
+          promptContext = `topic tags: ${item.tags.join(', ')}`;
+        }
+      }
+
+      const wordCount = item.wordCount;
+      const descriptionText = item.description ? `\n\nAdditional context: ${item.description}` : '';
+      const marker = `${QUESTIONER_MARKER_PREFIX} ${item.id}${QUESTIONER_MARKER_SUFFIX}`;
+
+      const systemPrompt = `You are an educational question generator. Create a set of questions that test knowledge on the given topic. Format the questions in markdown with clear numbering and sections. Include a mix of question types (short answer, explanation, problem-solving). Leave space after each question for the user to write their answer. Do NOT provide answers - only questions.`;
+
+      const userPrompt = `Generate questions based on ${promptContext}${descriptionText}\n\nRequirements:\n- Approximately ${wordCount} words total\n- Mix of difficulty levels\n- Clear, well-structured questions in markdown\n- Leave space for answers after each question\n- Include a section header like "## Questions" at the top`;
+
+      const result = await generateText({
+        model,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+      });
+
+      const cleanedContent = result.text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const title = `Questions: ${item.tags.join(', ')} - ${dateStr}`;
+
+      const content = `${marker}\n${cleanedContent}`;
+
+      await noteStore.createNote({
+        title,
+        content,
+        tags: ['scheduled-learning', 'questioner', ...item.tags],
+        folderPath: item.folderPath ?? undefined,
+        repo: item.repoPath ?? undefined,
+        branch: item.branch ?? undefined,
+        format: 'markdown',
+      });
+
+      await useScheduledLearningStore.getState().markGenerated(item.id, targetDay);
+      return true;
+    } catch (error) {
+      console.error('[ScheduledLearning] Failed to generate questioner note:', error);
+      return false;
+    }
+  }
+
+  static async gradeQuestionerNote(noteId: string): Promise<boolean> {
+    try {
+      const noteStore = useNoteStore.getState();
+      const note = noteStore.getNoteById(noteId);
+      if (!note) {
+        console.warn('[ScheduledLearning] Note not found for grading:', noteId);
+        return false;
+      }
+
+      const isQuestioner = note.tags?.includes('questioner');
+      if (!isQuestioner) {
+        console.warn('[ScheduledLearning] Note is not a questioner note:', noteId);
+        return false;
+      }
+
+      const markerMatch = note.content.match(/<!-- sl-item-id:\s*(\S+)\s*-->/);
+      const slItemId = markerMatch ? markerMatch[1] : null;
+
+      let item: ScheduledLearningItem | undefined;
+      if (slItemId) {
+        item = useScheduledLearningStore.getState().items.find((i) => i.id === slItemId);
+      }
+
+      const resolved = await ScheduledLearningService.resolveModel(
+        item ?? { modelId: null } as ScheduledLearningItem
+      );
+      if (!resolved) return false;
+      const { model } = resolved;
+
+      const systemPrompt = `You are an expert grader. The user has answered questions in a note. For each question:\n1. Evaluate if the answer is correct\n2. Provide feedback on the answer\n3. If incorrect or incomplete, provide the correct answer with explanation\n4. Give an overall grade at the end\n\nFormat your grading in clear markdown with sections for each question.`;
+
+      const userPrompt = `Grade the following questions and answers:\n\n${note.content}`;
+
+      const result = await generateText({
+        model,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+      });
+
+      const cleanedGrading = result.text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
+      const gradingSection = `\n\n---\n\n## Grading & Corrections\n\n${cleanedGrading}`;
+      const updatedContent = note.content + gradingSection;
+
+      await noteStore.updateNote({ id: noteId, content: updatedContent });
+
+      return true;
+    } catch (error) {
+      console.error('[ScheduledLearning] Failed to grade questioner note:', error);
       return false;
     }
   }
