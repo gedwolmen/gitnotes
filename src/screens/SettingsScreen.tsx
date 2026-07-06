@@ -38,8 +38,10 @@ import { SettingsModals } from '../components/settings/SettingsModals';
 import { CloneProgressModal, type CloneProgress } from '../components/settings/CloneProgressModal';
 import { settingsStyles as styles } from '../components/settings/settingsStyles';
 import type { GitRepository } from '../services/GitService';
+import { useTranslation } from 'react-i18next';
 
 export default function SettingsScreen() {
+  const { t } = useTranslation();
   const { theme, colors, setTheme, style: uiStyle, setStyle } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const headerHeight = useScreenHeaderHeight();
@@ -663,7 +665,7 @@ export default function SettingsScreen() {
       <ChatRepoPickerModal visible={showChatRepoPicker} onClose={() => setShowChatRepoPicker(false)} onSelected={() => setShowChatRepoPicker(false)} />
       <CloneProgressModal progress={cloneProgress} onCancel={handleCancelClone} onRetry={handleRetryClone} />
       </View>
-      <ScreenHeader title="Settings" />
+      <ScreenHeader title={t('settings.title')} />
     </SafeAreaView>
   );
 }

@@ -23,6 +23,7 @@ import { RootStackParamList } from '../navigation/types';
 import { EmptyState, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
 import SearchBar from '../components/SearchBar';
+import { useTranslation } from 'react-i18next';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -41,6 +42,7 @@ function classifyFile(name: string): 'pdf' | 'json' | 'image' | 'video' | 'text'
 type ExploreView = 'repoList' | 'repoDetail' | 'fileTree';
 
 export default function ExploreScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
   const headerHeight = useScreenHeaderHeight();
@@ -162,19 +164,19 @@ export default function ExploreScreen() {
             testID="explore.search-bar.repo-search"
             value={repoSearch}
             onChangeText={setRepoSearch}
-            placeholder="Search repositories…"
+            placeholder={t('explore.searchRepos')}
           />
         </View>
         {loadingRepos ? (
           <View style={s.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={[s.loadingText, { color: colors.textSecondary }]}>Loading repos…</Text>
+            <Text style={[s.loadingText, { color: colors.textSecondary }]}>{t('explore.loadingRepos')}</Text>
           </View>
         ) : filteredRepos.length === 0 ? (
           <EmptyState
             icon="git-branch-outline"
-            title={repos.length === 0 ? 'No repositories' : 'No matches'}
-            subtitle={repos.length === 0 ? 'Add a repo in Settings to get started' : 'Try a different search'}
+            title={repos.length === 0 ? t('explore.emptyTitleNoRepos') : t('explore.emptyTitleNoMatches')}
+            subtitle={repos.length === 0 ? t('explore.emptySubtitleNoRepos') : t('explore.emptySubtitleNoMatches')}
           />
         ) : (
           <FlatList
@@ -187,7 +189,7 @@ export default function ExploreScreen() {
             }
           />
         )}
-        <ScreenHeader title="Explore" />
+        <ScreenHeader title={t('explore.title')} />
       </SafeAreaView>
     );
   }
@@ -234,7 +236,7 @@ export default function ExploreScreen() {
             activeOpacity={0.8}
           >
             <Ionicons name="folder-open-outline" size={20} color="#fff" />
-            <Text style={s.fileTreeButtonText}>Browse Files</Text>
+            <Text style={s.fileTreeButtonText}>{t('explore.browseFiles')}</Text>
           </TouchableOpacity>
         </View>
         <ScreenHeader title={selectedRepo.name} onBack={handleBack} />

@@ -31,8 +31,10 @@ import { SwipeableListItem } from '../components/list/SwipeableListItem';
 import { BulkActionBar } from '../components/list/BulkActionBar';
 import { useResponsive } from '../hooks/useResponsive';
 import { useGitHubActivityStore } from '../stores/githubActivityStore';
+import { useTranslation } from 'react-i18next';
 
 export default function TodoListScreen() {
+  const { t } = useTranslation();
   const { colors, isDark } = useTheme();
   const headerHeight = useScreenHeaderHeight();
   const tabBarHeight = useTabBarHeight();
@@ -132,13 +134,14 @@ export default function TodoListScreen() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
     if (isDeletingRef.current) return;
+    const noun = ids.length === 1 ? t('todos.todo') : t('todos.todos_');
     Alert.alert(
-      `Delete ${ids.length} ${ids.length === 1 ? 'todo' : 'todos'}?`,
-      'This cannot be undone.',
+      t('todos.deleteBulkConfirm', { count: ids.length, noun }),
+      t('common.cannotBeUndone'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             if (isDeletingRef.current) return;
@@ -164,7 +167,7 @@ export default function TodoListScreen() {
         },
       ],
     );
-  }, [selectedIds, deleteTodo, clearSelection]);
+  }, [selectedIds, deleteTodo, clearSelection, t]);
 
   const resetForm = useCallback(() => {
     setTodoText('');
@@ -181,12 +184,12 @@ export default function TodoListScreen() {
 
   const handleAddTodo = useCallback(async () => {
     if (!todoText.trim()) {
-      Alert.alert('Error', 'Please enter a todo text');
+      Alert.alert(t('common.error'), t('todos.errorTextRequired'));
       return;
     }
 
     if (!todoRepo) {
-      Alert.alert('Repository Required', 'Please select a repository before saving.');
+      Alert.alert(t('todos.repositoryRequired'), t('todos.selectRepository'));
       return;
     }
 
@@ -397,7 +400,7 @@ export default function TodoListScreen() {
   const activeFilterChips: FilterChip[] = useMemo(() => {
     const chips: FilterChip[] = [];
     if (filterCompleted) {
-      chips.push({ id: 'status-active', label: 'Active only', type: 'status' });
+      chips.push({ id: 'status-active', label: t('todos.activeOnly'), type: 'status' });
     }
     for (const tag of filter.state.selectedTags) {
       chips.push({ id: `tag-${tag}`, label: tag, type: 'tag' });
@@ -412,7 +415,7 @@ export default function TodoListScreen() {
       chips.push({ id: 'folder', label: filter.state.selectedFolder, type: 'folder' });
     }
     return chips;
-  }, [filterCompleted, filter.state, filter.state.selectedTags, filter.state.selectedRepo, filter.state.selectedBranch, filter.state.selectedFolder]);
+  }, [filterCompleted, filter.state, filter.state.selectedTags, filter.state.selectedRepo, filter.state.selectedBranch, filter.state.selectedFolder, t]);
 
   const handleRemoveTodoFilterChip = useCallback(
     (id: string) => {
@@ -521,14 +524,14 @@ export default function TodoListScreen() {
 
       <BulkActionBar
         count={selectedIds.size}
-        itemNoun="todo"
+        itemNoun={t('todos.todo')}
         bottomOffset={tabBarHeight + 12}
         onCancel={clearSelection}
         onDelete={handleBulkDelete}
       />
 
       <ScreenHeader
-        title="Todos"
+        title={t('todos.title')}
         actions={
           <>
             <IconButton
@@ -536,7 +539,7 @@ export default function TodoListScreen() {
               testID="todo-list.icon-button.filter-completed"
               active={filterCompleted}
               onPress={() => setFilterCompleted(!filterCompleted)}
-              accessibilityLabel="Toggle completed filter"
+              accessibilityLabel={t('todos.toggleCompletedA11y')}
             >
               <Ionicons
                 name={filterCompleted ? 'eye-off' : 'eye'}
@@ -549,7 +552,7 @@ export default function TodoListScreen() {
               testID="todo-list.icon-button.filters"
               active={filter.activeCount > 0}
               onPress={() => setShowFilterModal(true)}
-              accessibilityLabel="Filters"
+              accessibilityLabel={t('common.filters')}
             >
               <Ionicons
                 name="funnel-outline"
@@ -569,7 +572,7 @@ export default function TodoListScreen() {
                 }
                 setShowAddModal(true);
               }}
-              accessibilityLabel="Add todo"
+              accessibilityLabel={t('todos.addTodoA11y')}
             >
               <Ionicons name="add" size={20} color={colors.accent} />
             </IconButton>
