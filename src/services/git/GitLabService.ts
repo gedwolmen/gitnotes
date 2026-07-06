@@ -3,8 +3,10 @@ import type {
   GitHostBranch,
   GitHostContent,
   GitHostService,
+  GitHostShaResult,
   GitHostTreeEntry,
   GitHostUser,
+  GitHostWriteService,
 } from './GitHost';
 
 const GITLAB_USER_KEY = '@gitnotes:gitlab_user';
@@ -59,7 +61,7 @@ interface GitLabBranch {
  * works against self-hosted GitLab instances; the default is
  * `https://gitlab.com/api/v4`.
  */
-export class GitLabService implements GitHostService {
+export class GitLabService implements GitHostService, GitHostWriteService {
   readonly provider = 'gitlab' as const;
 
   private token: string | null = null;
@@ -150,6 +152,27 @@ export class GitLabService implements GitHostService {
       return (await res.json()) as T;
     } catch (error) {
       console.warn('[GitLabService] fetch failed:', error);
+      return null;
+    }
+  }
+
+  private async authedFetchRaw(
+    url: string,
+    init: RequestInit = {},
+  ): Promise<{ status: number; body: any } | null> {
+    if (!this.token) return null;
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      ...((init.headers as Record<string, string> | undefined) ?? {}),
+      'PRIVATE-TOKEN': this.token,
+    };
+    try {
+      const res = await fetch(url, { ...init, headers });
+      if (res.status === 204) return { status: 204, body: null };
+      const body = await res.json().catch(() => null);
+      return { status: res.status, body };
+    } catch (error) {
+      console.warn('[GitLabService] authedFetchRaw failed:', error);
       return null;
     }
   }
@@ -266,6 +289,153 @@ export class GitLabService implements GitHostService {
     } catch {
       return null;
     }
+  }
+
+  // ── Write operations (GitHostWriteService) ──────────────────────
+
+  async getFileSha(
+    owner: string,
+    repo: string,
+    path: string,
+    ref?: string,
+  ): Promise<GitHostShaResult> {
+    const projId = this.encodedProjectId(owner, repo);
+    const branch = ref || (await this.getDefaultBranch(owner, repo)) || 'main';
+    const encodedPath = encodeURIComponent(path);
+    const url = `${this.baseUrl}/projects/${projId}/repository/files/${encodedPath}?ref=${encodeURIComponent(branch)}`;
+    const result = await this.authedFetchRaw(url);
+    if (!result) return { kind: 'error', message: 'Network error' };
+    if (result.status === 404) return { kind: 'not-found' };
+    if (result.status >= 200 && result.status < 300 && result.body?.blob_id) {
+      return { kind: 'found', sha: result.body.blob_id };
+    }
+    return { kind: 'error', message: `Unexpected status: ${result.status}` };
+  }
+
+  async getFileShaOrNull(
+    owner: string,
+    repo: string,
+    path: string,
+    ref?: string,
+  ): Promise<string | null> {
+    const result = await this.getFileSha(owner, repo, path, ref);
+    return result.kind === 'found' ? (result.sha ?? null) : null;
+  }
+
+  async updateFile(
+    owner: string,
+    repo: string,
+    path: string,
+    content: string,
+    commitMessage: string,
+    branch: string,
+    knownSha?: string,
+  ): Promise<string> {
+    const projId = this.encodedProjectId(owner, repo);
+    const encodedPath = encodeURIComponent(path);
+    const base64Content = Buffer.from(content, 'utf-8').toString('base64');
+    const body: Record<string, string> = {
+      branch,
+      content: base64Content,
+      encoding: 'base64',
+      commit_message: commitMessage,
+    };
+    let currentSha: string | null = knownSha ?? null;
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const method = currentSha ? 'PUT' : 'POST';
+      const url = `${this.baseUrl}/projects/${projId}/repository/files/${encodedPath}`;
+      const payload = { ...body };
+      if (currentSha) payload.sha = currentSha;
+
+      const result = await this.authedFetchRaw(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (result && result.status >= 200 && result.status < 300) {
+        const shaResult = await this.getFileSha(owner, repo, path, branch);
+        if (shaResult.kind === 'found' && shaResult.sha) return shaResult.sha;
+        throw new Error('GitLab updateFile succeeded but could not resolve SHA');
+      }
+
+      if (result?.status === 409 && attempt < 2) {
+        const shaResult = await this.getFileSha(owner, repo, path, branch);
+        currentSha = shaResult.kind === 'found' ? (shaResult.sha ?? null) : null;
+        continue;
+      }
+
+      throw new Error(`GitLab updateFile failed: ${result?.status ?? 'unknown'}`);
+    }
+
+    throw new Error('GitLab updateFile exhausted retries');
+  }
+
+  async deleteFile(
+    owner: string,
+    repo: string,
+    path: string,
+    commitMessage: string,
+    _sha: string,
+    branch: string,
+  ): Promise<void> {
+    const projId = this.encodedProjectId(owner, repo);
+    const encodedPath = encodeURIComponent(path);
+    const url = `${this.baseUrl}/projects/${projId}/repository/files/${encodedPath}`;
+    const result = await this.authedFetchRaw(url, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ branch, commit_message: commitMessage }),
+    });
+    if (!result || result.status >= 400) {
+      throw new Error(`GitLab deleteFile failed: ${result?.status ?? 'unknown'}`);
+    }
+  }
+
+  async uploadBinaryFile(
+    owner: string,
+    repo: string,
+    path: string,
+    base64Content: string,
+    commitMessage: string,
+    branch: string,
+  ): Promise<string> {
+    const projId = this.encodedProjectId(owner, repo);
+    const encodedPath = encodeURIComponent(path);
+    const url = `${this.baseUrl}/projects/${projId}/repository/files/${encodedPath}`;
+    const body: Record<string, string> = {
+      branch,
+      content: base64Content,
+      encoding: 'base64',
+      commit_message: commitMessage,
+    };
+    const shaResult = await this.getFileSha(owner, repo, path, branch);
+    if (shaResult.kind === 'found' && shaResult.sha) body.sha = shaResult.sha;
+    const method = body.sha ? 'PUT' : 'POST';
+
+    const result = await this.authedFetchRaw(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!result || result.status >= 400) {
+      throw new Error(`GitLab uploadBinaryFile failed: ${result?.status ?? 'unknown'}`);
+    }
+    const baseUrl = this.baseUrl.replace(/\/api\/v4$/, '');
+    return `${baseUrl}/${owner}/${repo}/-/raw/${branch}/${path}`;
+  }
+
+  async getRepoPrivacy(
+    owner: string,
+    repo: string,
+  ): Promise<boolean | null> {
+    const projId = this.encodedProjectId(owner, repo);
+    const result = await this.authedFetch<{ visibility?: string }>(
+      `${this.baseUrl}/projects/${projId}`,
+    );
+    if (!result) return null;
+    return result.visibility === 'private';
   }
 }
 

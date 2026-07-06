@@ -8,13 +8,16 @@ import { LocalGitWriter } from './git/LocalGitWriter';
 import { GitFsService } from './git/GitFsService';
 import { resolveBranch } from './git/branchResolver';
 import { githubActivity } from '../stores/githubActivityStore';
+import { getGitHostService } from './git/gitHostFactory';
+import { FEATURE_USE_MULTI_HOST_WRITE } from './featureFlags';
+import type { GitHostProvider } from './git/GitHost';
 
-async function resolveAuthor(): Promise<{ name: string; email: string }> {
-  const user = GitHubService.getUser();
-  return {
-    name: user?.name || user?.login || 'gitnotes',
-    email: user?.email || `${user?.login ?? 'gitnotes'}@users.noreply.github.com`,
-  };
+async function resolveAuthor(provider: GitHostProvider = 'github'): Promise<{ name: string; email: string }> {
+  const host = getGitHostService(provider);
+  const user = await host.getAuthenticatedUser();
+  const name = user?.login || 'gitnotes';
+  const email = user?.email || `${name}@users.noreply.gitnotes`;
+  return { name, email };
 }
 
 async function resolveToken(accountId?: string): Promise<string | undefined> {
@@ -234,7 +237,7 @@ async function uploadLocalImages(
   repo: string,
   branch: string,
   noteSlug: string,
-  opts?: { tokenOverride?: string },
+  opts?: { tokenOverride?: string; provider?: GitHostProvider },
 ): Promise<string> {
   const imageRegex = /(!\[[^\]]*\]\()([^)]+)(\))/g;
   let updatedContent = content;
@@ -258,7 +261,9 @@ async function uploadLocalImages(
   // pin a `?token=` raw URL because GitHub's signed download URLs expire
   // after a few minutes — once persisted in markdown they 404 forever
   // (#733).
-  const isPrivate = await GitHubService.getRepoPrivacy(owner, repo, opts);
+  const isPrivate = FEATURE_USE_MULTI_HOST_WRITE
+    ? await getGitHostService(opts?.provider).getRepoPrivacy(owner, repo)
+    : await GitHubService.getRepoPrivacy(owner, repo, opts);
   // Conservative default on lookup failure: assume private. A public repo
   // misclassified as private still renders correctly via the auth path; the
   // reverse silently 404s for the user.
@@ -278,25 +283,39 @@ async function uploadLocalImages(
       const imageName = sanitizeImageName(img.uri);
       const imagePath = `notes/images/${noteSlug}/${imageName}`;
 
-      const uploadResult = await GitHubService.uploadBinaryFile(
-        owner,
-        repo,
-        imagePath,
-        base64,
-        `Upload image: ${imageName}`,
-        branch,
-      );
-
-      if (uploadResult) {
+      if (FEATURE_USE_MULTI_HOST_WRITE) {
+        const host = getGitHostService(opts?.provider);
+        const rawUrl = await host.uploadBinaryFile(
+          owner, repo, imagePath, base64, `Upload image: ${imageName}`, branch,
+        );
         const persistedUrl = usePrivateScheme
           ? `gitnotes://repo-image/${owner}/${repo}/${encodeURIComponent(branch)}/${imagePath}`
-          : `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${imagePath}`;
+          : rawUrl;
         updatedContent = updatedContent.replace(
           `${img.fullPrefix}${img.uri}${img.fullSuffix}`,
           `${img.fullPrefix}${persistedUrl}${img.fullSuffix}`,
         );
       } else {
-        console.warn('[NoteGitHubSync] Failed to upload image:', imageName);
+        const uploadResult = await GitHubService.uploadBinaryFile(
+          owner,
+          repo,
+          imagePath,
+          base64,
+          `Upload image: ${imageName}`,
+          branch,
+        );
+
+        if (uploadResult) {
+          const persistedUrl = usePrivateScheme
+            ? `gitnotes://repo-image/${owner}/${repo}/${encodeURIComponent(branch)}/${imagePath}`
+            : `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${imagePath}`;
+          updatedContent = updatedContent.replace(
+            `${img.fullPrefix}${img.uri}${img.fullSuffix}`,
+            `${img.fullPrefix}${persistedUrl}${img.fullSuffix}`,
+          );
+        } else {
+          console.warn('[NoteGitHubSync] Failed to upload image:', imageName);
+        }
       }
     } catch (error) {
       console.warn('[NoteGitHubSync] Error uploading image:', img.uri, error);
@@ -312,6 +331,7 @@ export async function deleteNoteFromGitHub(params: {
   filePath: string;
   title?: string;
   accountId?: string;
+  provider?: GitHostProvider;
   /**
    * Clone-mode only. When false, the delete commit is created locally
    * but the push to origin is deferred. The drain in
@@ -350,6 +370,31 @@ export async function deleteNoteFromGitHub(params: {
       push,
       onProgress: (progress) => githubActivity.setProgress(progress),
     });
+  }
+
+  if (FEATURE_USE_MULTI_HOST_WRITE) {
+    try {
+      const host = getGitHostService(params.provider);
+      const lookup = await host.getFileSha(repoInfo.owner, repoInfo.repo, filePath, targetBranch);
+      if (lookup.kind === 'not-found') {
+        return { success: true, filePath };
+      }
+      if (lookup.kind === 'error') {
+        return { success: false, error: lookup.message };
+      }
+      await host.deleteFile(
+        repoInfo.owner, repoInfo.repo, filePath,
+        `Delete note: ${title || filePath}`,
+        lookup.sha!, targetBranch,
+      );
+      return { success: true, filePath };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      if (/404/.test(message)) {
+        return { success: true, filePath };
+      }
+      return { success: false, error: message };
+    }
   }
 
   try {
@@ -403,6 +448,7 @@ export async function syncNoteToGitHub(params: {
   content: string;
   format?: NoteFormat;
   accountId?: string;
+  provider?: GitHostProvider;
   tags?: string[];
   color?: NoteColor | null;
   /**
@@ -447,7 +493,7 @@ export async function syncNoteToGitHub(params: {
   let finalContent = applyNoteTagsToContent(content, format, tags);
   finalContent = applyNoteColorToContent(finalContent, format, color);
   try {
-    finalContent = await uploadLocalImages(finalContent, repoInfo.owner, repoInfo.repo, targetBranch, noteSlug, opts);
+    finalContent = await uploadLocalImages(finalContent, repoInfo.owner, repoInfo.repo, targetBranch, noteSlug, { ...opts, provider: params.provider });
   } catch (error) {
     console.warn('[NoteGitHubSync] Image upload failed, syncing note without images:', error);
   }
@@ -472,8 +518,14 @@ export async function syncNoteToGitHub(params: {
         fileExists = false;
       }
     } else {
-      const sha = await GitHubService.getFileShaOrNull(repoInfo.owner, repoInfo.repo, targetPath, targetBranch, opts);
-      fileExists = sha !== null;
+      if (FEATURE_USE_MULTI_HOST_WRITE) {
+        const host = getGitHostService(params.provider);
+        const sha = await host.getFileShaOrNull(repoInfo.owner, repoInfo.repo, targetPath, targetBranch);
+        fileExists = sha !== null;
+      } else {
+        const sha = await GitHubService.getFileShaOrNull(repoInfo.owner, repoInfo.repo, targetPath, targetBranch, opts);
+        fileExists = sha !== null;
+      }
     }
   } catch (error) {
     console.warn('[NoteGitHubSync] fileExists check failed:', error);
@@ -487,7 +539,7 @@ export async function syncNoteToGitHub(params: {
   // identical to what the Contents API would publish — that means a user can
   // flip modes without their next pull seeing churn.
   if (mode === 'clone') {
-    const author = await resolveAuthor();
+    const author = await resolveAuthor(params.provider);
     const tokenForPush = tokenOverride ?? (await AuthService.getToken()) ?? undefined;
     const writeResult = await LocalGitWriter.writeAndCommit({
       repoPath,
@@ -504,6 +556,29 @@ export async function syncNoteToGitHub(params: {
       return { success: true, filePath: targetPath, finalContent };
     }
     return { success: false, error: writeResult.error };
+  }
+
+  if (FEATURE_USE_MULTI_HOST_WRITE) {
+    try {
+      const host = getGitHostService(params.provider);
+      if (knownSha && filePath) {
+        const currentSha = await host.getFileShaOrNull(
+          repoInfo.owner, repoInfo.repo, targetPath, targetBranch,
+        );
+        if (currentSha && currentSha !== knownSha) {
+          return { success: false, error: `Conflict: ${targetPath} was modified on GitHub since you last loaded it. Pull to get the latest version.` };
+        }
+      }
+      await host.updateFile(
+        repoInfo.owner, repoInfo.repo, targetPath, finalContent, message, targetBranch, knownSha,
+      );
+      return { success: true, filePath: targetPath, finalContent };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
   }
 
   try {

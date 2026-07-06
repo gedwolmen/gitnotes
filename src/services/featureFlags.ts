@@ -1,0 +1,1 @@
+export const FEATURE_USE_MULTI_HOST_WRITE = false;

@@ -37,8 +37,8 @@ let bootCache: Map<string, string | null> | null = null;
 export async function bootstrapStorage(): Promise<Map<string, string | null>> {
   if (bootCache) return bootCache;
 
-  const result = await AsyncStorage.getMany([...STARTUP_KEYS]);
-  bootCache = new Map(STARTUP_KEYS.map((key, i) => [key, result[i]]));
+  const result = await AsyncStorage.multiGet([...STARTUP_KEYS]);
+  bootCache = new Map(result);
   return bootCache;
 }
 

@@ -115,6 +115,65 @@ export interface GitHostService {
   ): Promise<string | null>;
 }
 
+// ── Write operations ────────────────────────────────────────────────
+
+export interface GitHostShaResult {
+  kind: 'found' | 'not-found' | 'error';
+  sha?: string;
+  message?: string;
+}
+
+export interface GitHostWriteService {
+  getFileSha(
+    owner: string,
+    repo: string,
+    path: string,
+    ref?: string,
+  ): Promise<GitHostShaResult>;
+
+  getFileShaOrNull(
+    owner: string,
+    repo: string,
+    path: string,
+    ref?: string,
+  ): Promise<string | null>;
+
+  updateFile(
+    owner: string,
+    repo: string,
+    path: string,
+    content: string,
+    commitMessage: string,
+    branch: string,
+    knownSha?: string,
+  ): Promise<string>;
+
+  deleteFile(
+    owner: string,
+    repo: string,
+    path: string,
+    commitMessage: string,
+    sha: string,
+    branch: string,
+  ): Promise<void>;
+
+  uploadBinaryFile(
+    owner: string,
+    repo: string,
+    path: string,
+    base64Content: string,
+    commitMessage: string,
+    branch: string,
+  ): Promise<string>;
+
+  getRepoPrivacy(
+    owner: string,
+    repo: string,
+  ): Promise<boolean | null>;
+}
+
+export type GitHostFullService = GitHostService & GitHostWriteService;
+
 /** Helper to compose the stable id for a repo. */
 export function makeRepoId(provider: GitHostProvider, owner: string, repo: string): string {
   return `${provider}:${owner}/${repo}`;
