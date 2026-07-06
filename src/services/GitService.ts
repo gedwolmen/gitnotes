@@ -322,7 +322,7 @@ export class GitService {
     try {
       const keys = await AsyncStorage.getAllKeys();
       const cacheKeys = keys.filter((k) => k.startsWith(CACHE_PREFIX));
-      await AsyncStorage.removeMany(cacheKeys);
+      await AsyncStorage.multiRemove(cacheKeys);
       this.memCache.clear();
     } catch (error) {
       console.warn('[GitService] Failed to clear cache:', error);

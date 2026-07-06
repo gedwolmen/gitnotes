@@ -16,6 +16,9 @@ import { AuthService } from './AuthService';
 import { ConflictResolverService } from './conflict/ConflictResolverService';
 import { useConflictStore } from '../stores/conflictStore';
 import { NoteSyncQueueService } from './NoteSyncQueueService';
+import { getGitHostService } from './git/gitHostFactory';
+import { FEATURE_USE_MULTI_HOST_WRITE } from './featureFlags';
+import type { GitHostProvider } from './git/GitHost';
 
 async function hasUnpushedCommits(repoPath: string, branch: string): Promise<boolean> {
   try {
@@ -70,6 +73,7 @@ async function getRepoReader(
   owner: string,
   repo: string,
   branch: string,
+  provider?: GitHostProvider,
 ): Promise<{
   mode: 'api' | 'clone';
   listTree: () => Promise<{ path: string; type: 'blob' | 'tree'; sha: string; size?: number }[]>;
@@ -151,6 +155,17 @@ const isMissingObject = /Could not find|not foundobject|NotFoundError|Packfile t
         handleCorruptionErrors(() => GitFsService.readFile({ repoPath, ref: branch, filepath: path }), repoPath, branch, token),
     };
   }
+  if (FEATURE_USE_MULTI_HOST_WRITE) {
+    const host = getGitHostService(provider);
+    return {
+      mode,
+      listTree: async () => {
+        const entries = await host.getTreeRecursive(owner, repo, branch);
+        return entries.map((e) => ({ path: e.path, type: e.type, sha: e.sha, size: e.size }));
+      },
+      readFile: (path: string) => host.getFileText(owner, repo, path, branch),
+    };
+  }
   return {
     mode,
     listTree: () => GitHubService.getTreeRecursiveOrThrow(owner, repo, branch),
@@ -163,7 +178,27 @@ async function fetchDirectoryFiles(
   repo: string,
   dirPath: string,
   branch: string,
+  provider?: GitHostProvider,
 ): Promise<{ path: string; content: string }[]> {
+  if (FEATURE_USE_MULTI_HOST_WRITE) {
+    const host = getGitHostService(provider);
+    const contents = await host.listContents(owner, repo, dirPath, branch);
+    const files = contents.filter((item) => item.type === 'file' && item.downloadUrl);
+
+    const results: { path: string; content: string }[] = [];
+    for (const file of files) {
+      try {
+        const content = await host.getFileText(owner, repo, file.path, branch);
+        if (content) {
+          results.push({ path: file.path, content });
+        }
+      } catch (error) {
+        console.warn(`[RepoPullService] Failed to fetch ${file.path}:`, error);
+      }
+    }
+    return results;
+  }
+
   const contents = await GitHubService.getRepoContents(owner, repo, dirPath, branch);
   const files = contents.filter((item) => item.type === 'file' && item.download_url);
 
@@ -281,9 +316,10 @@ async function pullNotesFromRepo(
   repo: string,
   repoPath: string,
   branch: string,
+  provider?: GitHostProvider,
 ): Promise<number> {
   try {
-    const reader = await getRepoReader(repoPath, owner, repo, branch);
+    const reader = await getRepoReader(repoPath, owner, repo, branch, provider);
     // Use the strict listTree contract so an actual API/clone failure (auth /
     // rate-limit / network / fsck) throws and is caught below, returning early
     // *without* running the reconciliation pass. A successful fetch that
@@ -444,13 +480,14 @@ async function pullCanvasesFromRepo(
   repo: string,
   repoPath: string,
   branch: string,
+  provider?: GitHostProvider,
 ): Promise<number> {
   let pulled = 0;
   let files: { path: string; content: string }[] = [];
   let directoryExists = false;
 
   try {
-    files = await fetchDirectoryFiles(owner, repo, 'canvases', branch);
+    files = await fetchDirectoryFiles(owner, repo, 'canvases', branch, provider);
     directoryExists = true;
   } catch {
     // Directory doesn't exist remotely (404) — treat as all canvases deleted.
@@ -541,13 +578,14 @@ async function pullTodosFromRepo(
   repo: string,
   repoPath: string,
   branch: string,
+  provider?: GitHostProvider,
 ): Promise<number> {
   let pulled = 0;
   let files: { path: string; content: string }[] = [];
   let directoryExists = false;
 
   try {
-    files = await fetchDirectoryFiles(owner, repo, 'todos', branch);
+    files = await fetchDirectoryFiles(owner, repo, 'todos', branch, provider);
     directoryExists = true;
   } catch {
     directoryExists = false;
@@ -639,24 +677,50 @@ async function pullTemplatesFromRepo(
   owner: string,
   repo: string,
   branch: string,
+  provider?: GitHostProvider,
 ): Promise<number> {
   try {
-    const tree = await GitHubService.getTreeRecursiveOrThrow(owner, repo, branch);
-    const blobs = tree.filter((item) => {
-      if (item.type !== 'blob') return false;
-      if (!item.path.startsWith('templates/')) return false;
-      const ext = item.path.split('.').pop()?.toLowerCase();
-      return TEMPLATE_EXTS.includes(ext as (typeof TEMPLATE_EXTS)[number]);
-    });
+    let tree: { type: string; path: string }[];
+    let blobs: { type: string; path: string }[];
+    let fetched: ({ path: string; content: string } | null)[];
 
-    const fetched = await fetchInBatches(
-      blobs,
-      async (b) => {
-        const content = await GitHubService.getFileContent(owner, repo, b.path, branch);
-        return content === null ? null : { path: b.path, content };
-      },
-      FILE_FETCH_CONCURRENCY,
-    );
+    if (FEATURE_USE_MULTI_HOST_WRITE) {
+      const host = getGitHostService(provider);
+      const entries = await host.getTreeRecursive(owner, repo, branch);
+      tree = entries;
+      blobs = tree.filter((item) => {
+        if (item.type !== 'blob') return false;
+        if (!item.path.startsWith('templates/')) return false;
+        const ext = item.path.split('.').pop()?.toLowerCase();
+        return TEMPLATE_EXTS.includes(ext as (typeof TEMPLATE_EXTS)[number]);
+      });
+
+      fetched = await fetchInBatches(
+        blobs,
+        async (b) => {
+          const content = await host.getFileText(owner, repo, b.path, branch);
+          return content === null ? null : { path: b.path, content };
+        },
+        FILE_FETCH_CONCURRENCY,
+      );
+    } else {
+      tree = await GitHubService.getTreeRecursiveOrThrow(owner, repo, branch);
+      blobs = tree.filter((item) => {
+        if (item.type !== 'blob') return false;
+        if (!item.path.startsWith('templates/')) return false;
+        const ext = item.path.split('.').pop()?.toLowerCase();
+        return TEMPLATE_EXTS.includes(ext as (typeof TEMPLATE_EXTS)[number]);
+      });
+
+      fetched = await fetchInBatches(
+        blobs,
+        async (b) => {
+          const content = await GitHubService.getFileContent(owner, repo, b.path, branch);
+          return content === null ? null : { path: b.path, content };
+        },
+        FILE_FETCH_CONCURRENCY,
+      );
+    }
 
     const remote: NoteTemplate[] = [];
     for (const f of fetched) {
@@ -726,9 +790,9 @@ export async function pullFromSingleRepo(repoPath: string): Promise<PullResult> 
   const branch = await resolveBranch(repo.path, repo.branch);
 
   const [notes, canvases, todos] = await Promise.all([
-    pullNotesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch),
-    pullCanvasesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch),
-    pullTodosFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch),
+    pullNotesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider),
+    pullCanvasesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider),
+    pullTodosFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider),
   ]);
 
   const pref = await TemplateRepoPreferenceService.get();
@@ -755,9 +819,9 @@ export async function pullAllFromRepos(): Promise<PullResult> {
     const branch = await resolveBranch(repo.path, repo.branch);
 
     const [notes, canvases, todos] = await Promise.all([
-      pullNotesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch),
-      pullCanvasesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch),
-      pullTodosFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch),
+      pullNotesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider),
+      pullCanvasesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider),
+      pullTodosFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider),
     ]);
 
     totalNotes += notes;

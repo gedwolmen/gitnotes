@@ -90,12 +90,13 @@ export function BiometricLockProvider({ children }: BiometricLockProviderProps) 
 
   useEffect(() => {
     (async () => {
-      const result = await AsyncStorage.getMany([
+      const result = await AsyncStorage.multiGet([
         STORAGE_KEY_ENABLED,
         STORAGE_KEY_TIMEOUT,
       ]);
-      const enabled = result[STORAGE_KEY_ENABLED] === 'true';
-      const timeout = result[STORAGE_KEY_TIMEOUT] ? (Number(result[STORAGE_KEY_TIMEOUT]) as LockTimeout) : 300_000;
+      const values = Object.fromEntries(result);
+      const enabled = values[STORAGE_KEY_ENABLED] === 'true';
+      const timeout = values[STORAGE_KEY_TIMEOUT] ? (Number(values[STORAGE_KEY_TIMEOUT]) as LockTimeout) : 300_000;
       setIsLockEnabledState(enabled);
       setLockTimeoutState(timeout);
       if (enabled) {

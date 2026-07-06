@@ -3,8 +3,10 @@ import type {
   GitHostBranch,
   GitHostContent,
   GitHostService,
+  GitHostShaResult,
   GitHostTreeEntry,
   GitHostUser,
+  GitHostWriteService,
 } from './GitHost';
 
 export interface GiteaLikeUser {
@@ -50,7 +52,7 @@ export interface GiteaLikeTreeEntry {
  * share one class and only differentiate by `provider` label and base
  * URL.
  */
-export class GiteaLikeHostService implements GitHostService {
+export class GiteaLikeHostService implements GitHostService, GitHostWriteService {
   readonly provider: 'gitea' | 'forgejo';
 
   private token: string | null = null;
@@ -151,6 +153,29 @@ export class GiteaLikeHostService implements GitHostService {
       return (await res.json()) as T;
     } catch (error) {
       console.warn(`[${this.provider}] fetch failed:`, error);
+      return null;
+    }
+  }
+
+  private async authedFetchRaw(
+    url: string,
+    init: RequestInit = {},
+  ): Promise<{ status: number; body: any } | null> {
+    if (!this.token) return null;
+    try {
+      const res = await fetch(url, {
+        ...init,
+        headers: {
+          Accept: 'application/json',
+          Authorization: `token ${this.token}`,
+          ...((init.headers as Record<string, string> | undefined) ?? {}),
+        },
+      });
+      if (res.status === 204) return { status: 204, body: null };
+      const body = await res.json().catch(() => null);
+      return { status: res.status, body };
+    } catch (error) {
+      console.warn(`[${this.provider}] authedFetchRaw failed:`, error);
       return null;
     }
   }
@@ -257,5 +282,136 @@ export class GiteaLikeHostService implements GitHostService {
     } catch {
       return null;
     }
+  }
+
+  // ── Write operations (GitHostWriteService) ──────────────────────
+
+  async getFileSha(
+    owner: string,
+    repo: string,
+    path: string,
+    ref?: string,
+  ): Promise<GitHostShaResult> {
+    const branch = ref || (await this.getDefaultBranch(owner, repo)) || 'main';
+    const url = `${this.baseUrl}/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(branch)}`;
+    const result = await this.authedFetchRaw(url);
+    if (!result) return { kind: 'error', message: 'Network error' };
+    if (result.status === 404) return { kind: 'not-found' };
+    if (result.status >= 200 && result.status < 300 && result.body?.sha) {
+      return { kind: 'found', sha: result.body.sha };
+    }
+    return { kind: 'error', message: `Unexpected status: ${result.status}` };
+  }
+
+  async getFileShaOrNull(
+    owner: string,
+    repo: string,
+    path: string,
+    ref?: string,
+  ): Promise<string | null> {
+    const result = await this.getFileSha(owner, repo, path, ref);
+    return result.kind === 'found' ? (result.sha ?? null) : null;
+  }
+
+  async updateFile(
+    owner: string,
+    repo: string,
+    path: string,
+    content: string,
+    commitMessage: string,
+    branch: string,
+    knownSha?: string,
+  ): Promise<string> {
+    const url = `${this.baseUrl}/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
+    const base64Content = Buffer.from(content, 'utf-8').toString('base64');
+    let currentSha: string | null = knownSha ?? null;
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const body: Record<string, string> = {
+        content: base64Content,
+        message: commitMessage,
+        branch,
+      };
+      if (currentSha) body.sha = currentSha;
+
+      const result = await this.authedFetchRaw(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (result && result.status >= 200 && result.status < 300) {
+        if (result.body?.content?.sha) return result.body.content.sha;
+        throw new Error(`${this.provider} updateFile succeeded but no sha in response`);
+      }
+
+      if (result?.status === 409 && attempt < 2) {
+        const shaResult = await this.getFileSha(owner, repo, path, branch);
+        currentSha = shaResult.kind === 'found' ? (shaResult.sha ?? null) : null;
+        continue;
+      }
+
+      throw new Error(`${this.provider} updateFile failed: ${result?.status ?? 'unknown'}`);
+    }
+
+    throw new Error(`${this.provider} updateFile exhausted retries`);
+  }
+
+  async deleteFile(
+    owner: string,
+    repo: string,
+    path: string,
+    commitMessage: string,
+    sha: string,
+    branch: string,
+  ): Promise<void> {
+    const url = `${this.baseUrl}/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
+    const result = await this.authedFetchRaw(url, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: commitMessage, sha, branch }),
+    });
+    if (!result || result.status >= 400) {
+      throw new Error(`${this.provider} deleteFile failed: ${result?.status ?? 'unknown'}`);
+    }
+  }
+
+  async uploadBinaryFile(
+    owner: string,
+    repo: string,
+    path: string,
+    base64Content: string,
+    commitMessage: string,
+    branch: string,
+  ): Promise<string> {
+    const url = `${this.baseUrl}/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
+    const body: Record<string, string> = {
+      content: base64Content,
+      message: commitMessage,
+      branch,
+    };
+    const shaResult = await this.getFileSha(owner, repo, path, branch);
+    if (shaResult.kind === 'found' && shaResult.sha) body.sha = shaResult.sha;
+
+    const result = await this.authedFetchRaw(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!result || result.status >= 400) {
+      throw new Error(`${this.provider} uploadBinaryFile failed: ${result?.status ?? 'unknown'}`);
+    }
+    const base = this.baseUrl.replace(/\/api\/v1$/, '');
+    return `${base}/${owner}/${repo}/raw/branch/${branch}/${path}`;
+  }
+
+  async getRepoPrivacy(
+    owner: string,
+    repo: string,
+  ): Promise<boolean | null> {
+    const url = `${this.baseUrl}/repos/${owner}/${repo}`;
+    const result = await this.authedFetch<{ private: boolean }>(url);
+    if (!result) return null;
+    return result.private;
   }
 }

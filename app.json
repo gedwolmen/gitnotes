@@ -2,7 +2,7 @@
   "expo": {
     "name": "GitNotēs",
     "slug": "gitnotes",
-    "version": "1.1.2",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -24,10 +24,7 @@
       "bundleIdentifier": "com.xaventra.gitnotes",
       "buildNumber": "8",
       "scheme": "gitnotes",
-      "icon": {
-        "light": "./assets/icon.png",
-        "dark": "./assets/icon-dark.png"
-      },
+      "icon": "./assets/icon.png",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "GitNotēs needs access to your photo library to attach images to notes.",
         "NSMicrophoneUsageDescription": "GitNotēs needs access to your microphone for voice-to-text note input.",
@@ -75,6 +72,21 @@
       "expo-sharing",
       "expo-background-task",
       [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "imageWidth": 800,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff",
+          "dark": {
+            "image": "./assets/splash-dark.png",
+            "imageWidth": 800,
+            "resizeMode": "contain",
+            "backgroundColor": "#0E0E0E"
+          }
+        }
+      ],
+      [
         "expo-speech-recognition",
         {
           "microphonePermission": "GitNotēs needs access to your microphone for voice-to-text note input.",
@@ -90,6 +102,18 @@
       "eas": {
         "projectId": "af214cbc-3668-4913-9ea4-7227bc068a96"
       }
+    },
+    "svgAppIcon": {
+      "foregroundPath": "./icon.svg",
+      "backgroundPath": "./icon-background.svg",
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "force": false,
+      "iosOutputPath": "./ios/GitNots/Images.xcassets/AppIcon.appiconset",
+      "androidOutputPath": "./android/app/src/main/res",
+      "logLevel": "info"
     }
   }
 }
