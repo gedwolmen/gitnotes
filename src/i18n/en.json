@@ -233,5 +233,22 @@
     "invalidBody": "Use the format «{{example}}».",
     "failedTitle": "Could not add the repository",
     "failedBody": "Unknown error"
+  },
+  "gitProviders": {
+    "title": "Git Providers",
+    "footer": "Connect a personal access token for each host you want to sync with. Tokens are stored in the device keystore.",
+    "connectTitle": "Connect {{host}}",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "disconnectTitle": "Disconnect {{host}}?",
+    "disconnectBody": "Remove the saved token for {{host}}{{login}}? Existing repositories on this host will stop syncing.",
+    "tokenLabel": "Personal access token",
+    "tokenPlaceholder": "Paste your token",
+    "baseUrlLabel": "API base URL",
+    "baseUrlHelp": "Override for self-hosted {{host}} instances.",
+    "invalidTokenTitle": "Invalid token",
+    "invalidTokenBody": "Could not authenticate with that token. Check the value and try again.",
+    "failedTitle": "Could not save the token",
+    "failedBody": "Unknown error"
   }
 }

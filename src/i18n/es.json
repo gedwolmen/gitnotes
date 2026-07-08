@@ -228,5 +228,22 @@
     "invalidBody": "Usa el formato «{{example}}».",
     "failedTitle": "No se pudo añadir el repositorio",
     "failedBody": "Error desconocido"
+  },
+  "gitProviders": {
+    "title": "Proveedores de Git",
+    "footer": "Conecta un token de acceso personal para cada host con el que quieras sincronizar. Los tokens se guardan en el almacén seguro del dispositivo.",
+    "connectTitle": "Conectar {{host}}",
+    "connect": "Conectar",
+    "disconnect": "Desconectar",
+    "disconnectTitle": "¿Desconectar {{host}}?",
+    "disconnectBody": "¿Eliminar el token guardado de {{host}}{{login}}? Los repositorios existentes en este host dejarán de sincronizarse.",
+    "tokenLabel": "Token de acceso personal",
+    "tokenPlaceholder": "Pega tu token",
+    "baseUrlLabel": "URL base de la API",
+    "baseUrlHelp": "Anula la URL para instancias autoalojadas de {{host}}.",
+    "invalidTokenTitle": "Token inválido",
+    "invalidTokenBody": "No se pudo autenticar con ese token. Comprueba el valor e inténtalo de nuevo.",
+    "failedTitle": "No se pudo guardar el token",
+    "failedBody": "Error desconocido"
   }
 }

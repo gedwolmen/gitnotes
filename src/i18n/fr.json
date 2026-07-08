@@ -228,5 +228,22 @@
     "invalidBody": "Utilisez le format «{{example}}».",
     "failedTitle": "Impossible d'ajouter le dépôt",
     "failedBody": "Erreur inconnue"
+  },
+  "gitProviders": {
+    "title": "Hébergeurs Git",
+    "footer": "Connectez un jeton d'accès personnel pour chaque hébergeur avec lequel vous souhaitez synchroniser. Les jetons sont stockés dans le coffre de l'appareil.",
+    "connectTitle": "Connecter {{host}}",
+    "connect": "Connecter",
+    "disconnect": "Déconnecter",
+    "disconnectTitle": "Déconnecter {{host}} ?",
+    "disconnectBody": "Supprimer le jeton enregistré pour {{host}}{{login}} ? Les dépôts existants sur cet hébergeur cesseront de se synchroniser.",
+    "tokenLabel": "Jeton d'accès personnel",
+    "tokenPlaceholder": "Collez votre jeton",
+    "baseUrlLabel": "URL de base de l'API",
+    "baseUrlHelp": "Remplacer pour les instances auto-hébergées de {{host}}.",
+    "invalidTokenTitle": "Jeton invalide",
+    "invalidTokenBody": "Impossible de s'authentifier avec ce jeton. Vérifiez la valeur et réessayez.",
+    "failedTitle": "Impossible d'enregistrer le jeton",
+    "failedBody": "Erreur inconnue"
   }
 }
