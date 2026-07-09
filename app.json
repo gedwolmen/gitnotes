@@ -6,15 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff",
-      "dark": {
-        "image": "./assets/splash-dark.png",
-        "resizeMode": "contain",
-        "backgroundColor": "#0E0E0E"
-      }
+  
     },
     "assetBundlePatterns": [
       "**/*"
@@ -102,18 +94,6 @@
       "eas": {
         "projectId": "af214cbc-3668-4913-9ea4-7227bc068a96"
       }
-    },
-    "svgAppIcon": {
-      "foregroundPath": "./icon.svg",
-      "backgroundPath": "./icon-background.svg",
-      "platforms": [
-        "android",
-        "ios"
-      ],
-      "force": false,
-      "iosOutputPath": "./ios/GitNots/Images.xcassets/AppIcon.appiconset",
-      "androidOutputPath": "./android/app/src/main/res",
-      "logLevel": "info"
     }
   }
 }
