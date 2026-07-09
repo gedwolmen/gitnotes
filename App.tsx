@@ -19,6 +19,7 @@ import { ThemeProvider } from './src/contexts/ThemeContext';
 import { FolderProvider } from './src/contexts/FolderContext';
 import { ViewModeProvider } from './src/contexts/ViewModeContext';
 import { AuthProvider } from './src/contexts/AuthContext';
+import { HostAuthProvider } from './src/contexts/HostAuthContext';
 import { TodoProvider } from './src/contexts/TodoContext';
 import { CanvasProvider } from './src/contexts/CanvasContext';
 import { RepoProvider } from './src/contexts/RepoContext';
@@ -134,7 +135,8 @@ export default function App() {
     <SafeAreaProvider>
       <ThemeProvider>
         <AuthProvider>
-          <RepoProvider>
+          <HostAuthProvider>
+            <RepoProvider>
             <FolderProvider>
               <NoteProvider>
                 <BacklinksProvider>
@@ -156,6 +158,7 @@ export default function App() {
               </NoteProvider>
             </FolderProvider>
           </RepoProvider>
+          </HostAuthProvider>
         </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>

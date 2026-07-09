@@ -228,5 +228,22 @@
     "invalidBody": "«{{example}}» 형식을 사용하세요.",
     "failedTitle": "저장소를 추가할 수 없습니다",
     "failedBody": "알 수 없는 오류"
+  },
+  "gitProviders": {
+    "title": "Git 제공자",
+    "footer": "동기화하려는 각 호스트의 개인 액세스 토큰을 연결하세요. 토큰은 기기 키스토어에 저장됩니다.",
+    "connectTitle": "{{host}} 연결",
+    "connect": "연결",
+    "disconnect": "연결 해제",
+    "disconnectTitle": "{{host}} 연결을 해제하시겠어요?",
+    "disconnectBody": "{{host}}{{login}}의 저장된 토큰을 삭제할까요? 이 호스트의 기존 저장소는 동기화가 중지됩니다.",
+    "tokenLabel": "개인 액세스 토큰",
+    "tokenPlaceholder": "토큰 붙여넣기",
+    "baseUrlLabel": "API 기본 URL",
+    "baseUrlHelp": "자체 호스팅된 {{host}} 인스턴스용으로 재정의합니다.",
+    "invalidTokenTitle": "잘못된 토큰",
+    "invalidTokenBody": "해당 토큰으로 인증할 수 없습니다. 값을 확인하고 다시 시도하세요.",
+    "failedTitle": "토큰을 저장할 수 없습니다",
+    "failedBody": "알 수 없는 오류"
   }
 }

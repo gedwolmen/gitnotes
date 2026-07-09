@@ -228,5 +228,22 @@
     "invalidBody": "「{{example}}」形式で入力してください。",
     "failedTitle": "リポジトリを追加できませんでした",
     "failedBody": "不明なエラー"
+  },
+  "gitProviders": {
+    "title": "Git プロバイダー",
+    "footer": "同期したいホストごとに個人アクセストークンを接続してください。トークンは端末のキーストアに保存されます。",
+    "connectTitle": "{{host}} を接続",
+    "connect": "接続",
+    "disconnect": "切断",
+    "disconnectTitle": "{{host}} を切断しますか?",
+    "disconnectBody": "{{host}}{{login}} の保存済みトークンを削除しますか?このホストの既存リポジトリは同期されなくなります。",
+    "tokenLabel": "個人アクセストークン",
+    "tokenPlaceholder": "トークンを貼り付け",
+    "baseUrlLabel": "API ベース URL",
+    "baseUrlHelp": "セルフホストの {{host}} インスタンス用に上書きします。",
+    "invalidTokenTitle": "無効なトークン",
+    "invalidTokenBody": "そのトークンで認証できませんでした。値を確認して再試行してください。",
+    "failedTitle": "トークンを保存できませんでした",
+    "failedBody": "不明なエラー"
   }
 }

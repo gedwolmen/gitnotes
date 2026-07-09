@@ -228,5 +228,22 @@
     "invalidBody": "Verwende das Format «{{example}}».",
     "failedTitle": "Repository konnte nicht hinzugefügt werden",
     "failedBody": "Unbekannter Fehler"
+  },
+  "gitProviders": {
+    "title": "Git-Anbieter",
+    "footer": "Verbinde einen persönlichen Zugriffstoken für jeden Anbieter, mit dem du synchronisieren möchtest. Token werden im Geräte-Tresor gespeichert.",
+    "connectTitle": "{{host}} verbinden",
+    "connect": "Verbinden",
+    "disconnect": "Trennen",
+    "disconnectTitle": "{{host}} trennen?",
+    "disconnectBody": "Gespeicherten Token für {{host}}{{login}} entfernen? Bestehende Repositories auf diesem Anbieter werden nicht mehr synchronisiert.",
+    "tokenLabel": "Persönlicher Zugriffstoken",
+    "tokenPlaceholder": "Token einfügen",
+    "baseUrlLabel": "API-Basis-URL",
+    "baseUrlHelp": "Für selbstgehostete {{host}}-Instanzen überschreiben.",
+    "invalidTokenTitle": "Ungültiger Token",
+    "invalidTokenBody": "Authentifizierung mit diesem Token fehlgeschlagen. Wert prüfen und erneut versuchen.",
+    "failedTitle": "Token konnte nicht gespeichert werden",
+    "failedBody": "Unbekannter Fehler"
   }
 }
