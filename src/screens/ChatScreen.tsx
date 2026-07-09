@@ -17,11 +17,13 @@ import { ChatConfirmationCard } from '../components/chat/ChatConfirmationCard';
 import { ChatErrorCard } from '../components/chat/ChatErrorCard';
 import { useChatScreenController } from '../components/chat/useChatScreenController';
 import { useAIStore } from '../stores/aiStore';
+import { useTranslation } from 'react-i18next';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'ChatScreen'>;
 type ChatScreenRouteProp = RouteProp<RootStackParamList, 'ChatScreen'>;
 
 export default function ChatScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<ChatScreenRouteProp>();
   const { colors, spacing, type } = useTokens();
@@ -132,10 +134,10 @@ export default function ChatScreen() {
               );
             }}
             ListEmptyComponent={
-              <View style={[styles.emptyState, { padding: spacing[6] }]}> 
-                <Text style={{ color: colors.text, fontSize: type.xl, fontWeight: '700', marginBottom: spacing[2] }}>Start the conversation</Text>
+              <View style={[styles.emptyState, { padding: spacing[6] }]}>
+                <Text style={{ color: colors.text, fontSize: type.xl, fontWeight: '700', marginBottom: spacing[2] }}>{t('chat.startConversation')}</Text>
                 <Text style={{ color: colors.textSecondary, fontSize: type.md, textAlign: 'center' }}>
-                  Ask about your notes, attach context, or let GitNotes AI make changes for you.
+                  {t('chat.emptyStateBody')}
                 </Text>
               </View>
             }

@@ -199,7 +199,7 @@ export function SettingsContent(props: SettingsContentProps) {
   );
   const providerAvailability = useProvidersAvailability(visibleProviders);
   const intervalLabel =
-    SYNC_INTERVAL_OPTIONS.find((opt) => opt.value === syncIntervalSeconds)?.label ?? 'Every minute';
+    SYNC_INTERVAL_OPTIONS.find((opt) => opt.value === syncIntervalSeconds)?.label ?? t('settings.everyMinute');
 
   useEffect(() => {
     getLanguagePreference().then(setLanguagePref);

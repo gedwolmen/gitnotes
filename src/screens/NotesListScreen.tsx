@@ -38,10 +38,12 @@ import { SwipeableListItem } from '../components/list/SwipeableListItem';
 import { BulkActionBar } from '../components/list/BulkActionBar';
 import { useResponsive } from '../hooks/useResponsive';
 import { useGitHubActivityStore } from '../stores/githubActivityStore';
+import { useTranslation } from 'react-i18next';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function NotesListScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
   const { authState } = useAuth();
@@ -200,13 +202,14 @@ export default function NotesListScreen() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
     if (isDeletingRef.current) return;
+    const noun = ids.length === 1 ? t('notes.note') : t('notes.notes_');
     Alert.alert(
-      `Delete ${ids.length} ${ids.length === 1 ? 'note' : 'notes'}?`,
-      'This cannot be undone.',
+      t('notes.deleteBulkConfirm', { count: ids.length, noun }),
+      t('common.cannotBeUndone'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             if (isDeletingRef.current) return;
@@ -234,7 +237,7 @@ export default function NotesListScreen() {
         },
       ],
     );
-  }, [selectedIds, deleteNote, clearSelection]);
+  }, [selectedIds, deleteNote, clearSelection, t]);
 
   useEffect(() => {
     if (authState.token) GitHubService.setToken(authState.token);
@@ -463,7 +466,7 @@ export default function NotesListScreen() {
         <View style={[styles.errorBanner, { backgroundColor: colors.error + '20', borderLeftColor: colors.error }]}>
           <Text style={[styles.errorText, { color: colors.error }]} numberOfLines={2}>{error}</Text>
           <TouchableOpacity onPress={clearError} style={[styles.errorRetryBtn, { borderColor: colors.error }]}>
-            <Text style={[styles.errorRetryText, { color: colors.error }]}>Dismiss</Text>
+            <Text style={[styles.errorRetryText, { color: colors.error }]}>{t('common.dismiss')}</Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -542,7 +545,7 @@ export default function NotesListScreen() {
 
       <BulkActionBar
         count={selectedIds.size}
-        itemNoun="note"
+        itemNoun={t('notes.note')}
         bottomOffset={tabBarHeight + 12}
         onCancel={clearSelection}
         onDelete={handleBulkDelete}
@@ -550,7 +553,7 @@ export default function NotesListScreen() {
       
 
       <ScreenHeader
-        title="Notes"
+        title={t('notes.title')}
         actions={
           <>
             <IconButton
@@ -560,7 +563,7 @@ export default function NotesListScreen() {
                 HapticService.light();
                 setShowViewModePicker((previous) => !previous);
               }}
-              accessibilityLabel="View mode"
+              accessibilityLabel={t('common.viewMode')}
             >
               <Ionicons name={VIEW_MODE_ICONS[viewMode]} size={18} color={colors.textSecondary} />
             </IconButton>
@@ -573,7 +576,7 @@ export default function NotesListScreen() {
                   HapticService.light();
                   setShowFilterModal(true);
                 }}
-                accessibilityLabel="Filters"
+                accessibilityLabel={t('common.filters')}
               >
                 <Ionicons
                   name="funnel-outline"
@@ -594,7 +597,7 @@ export default function NotesListScreen() {
                 active={pendingSync > 0}
                 disabled={isManualSyncing}
                 onPress={handleManualSync}
-                accessibilityLabel="Sync"
+                accessibilityLabel={t('common.sync')}
               >
                 {isManualSyncing ? (
                   <ActivityIndicator size="small" color={colors.primary} />
@@ -625,7 +628,7 @@ export default function NotesListScreen() {
                 }
                 navigation.navigate('NoteEditor', {});
               }}
-              accessibilityLabel="Add note"
+              accessibilityLabel={t('notes.addNoteA11y')}
             >
               <Ionicons name="add" size={20} color={colors.accent} />
             </IconButton>

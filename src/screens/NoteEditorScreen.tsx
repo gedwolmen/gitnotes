@@ -28,6 +28,7 @@ import { NoteViewer } from '../components/editor/NoteViewer';
 import { useNoteEditorDocument } from '../components/editor/useNoteEditorDocument';
 import { useNoteEditorPreview } from '../components/editor/useNoteEditorPreview';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
+import { useTranslation } from 'react-i18next';
 import { ScheduledLearningService } from '../services/ScheduledLearningService';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'NoteEditor'>;
@@ -42,6 +43,7 @@ export default function NoteEditorScreen() {
 }
 
 function NoteEditorScreenInner() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<NoteEditorRouteProp>();
   const { colors, isDark } = useTheme();
@@ -123,18 +125,18 @@ function NoteEditorScreenInner() {
         style={[styles.notFoundContainer, { backgroundColor: colors.background }]}
         edges={['top', 'bottom']}
       >
-        <Text style={[styles.notFoundTitle, { color: colors.text }]}>Note not found</Text>
+        <Text style={[styles.notFoundTitle, { color: colors.text }]}>{t('notes.notFoundTitle')}</Text>
         <Text style={[styles.notFoundBody, { color: colors.textSecondary }]}>
           {noteId
-            ? `No note with id "${noteId}" exists on this device.`
-            : 'This note isn’t on this device.'}
+            ? t('notes.notFoundWithId', { id: noteId })
+            : t('notes.notFoundOffline')}
         </Text>
         <Pressable
           testID="note-editor.button.back-to-notes"
           onPress={() => navigation.navigate('MainTabs', { screen: 'NotesTab' })}
           style={[styles.notFoundButton, { backgroundColor: colors.primary }]}
         >
-          <Text style={styles.notFoundButtonText}>Back to Notes</Text>
+          <Text style={styles.notFoundButtonText}>{t('notes.backToNotes')}</Text>
         </Pressable>
       </SafeAreaView>
     );

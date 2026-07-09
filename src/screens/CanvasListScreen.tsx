@@ -25,18 +25,21 @@ import { EntityFilterModal } from '../components/EntityFilterModal';
 import { ActiveFilterStrip } from '../components/ActiveFilterStrip';
 import { useEntityFilter } from '../hooks/useEntityFilter';
 import { useResponsive } from '../hooks/useResponsive';
+import { useTranslation } from 'react-i18next';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-const CANVAS_PRESETS = [
-  { label: 'Phone', desc: '1080 × 1920', w: 1080, h: 1920 },
-  { label: 'Tablet', desc: '1536 × 2048', w: 1536, h: 2048 },
-  { label: 'Landscape', desc: '1920 × 1080', w: 1920, h: 1080 },
-  { label: 'Square', desc: '1024 × 1024', w: 1024, h: 1024 },
-  { label: 'A4', desc: '794 × 1123', w: 794, h: 1123 },
-];
+const CANVAS_PRESET_KEYS = ['canvases.presets.phone', 'canvases.presets.tablet', 'canvases.presets.landscape', 'canvases.presets.square', 'canvases.presets.a4'] as const;
+const CANVAS_PRESET_DIMS: Record<(typeof CANVAS_PRESET_KEYS)[number], { w: number; h: number; desc: string }> = {
+  'canvases.presets.phone': { w: 1080, h: 1920, desc: '1080 × 1920' },
+  'canvases.presets.tablet': { w: 1536, h: 2048, desc: '1536 × 2048' },
+  'canvases.presets.landscape': { w: 1920, h: 1080, desc: '1920 × 1080' },
+  'canvases.presets.square': { w: 1024, h: 1024, desc: '1024 × 1024' },
+  'canvases.presets.a4': { w: 794, h: 1123, desc: '794 × 1123' },
+};
 
 export default function CanvasListScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
   const headerHeight = useScreenHeaderHeight();
@@ -91,16 +94,16 @@ export default function CanvasListScreen() {
 
   const handleDelete = useCallback(
     (canvas: Canvas) => {
-      Alert.alert('Delete Canvas?', `"${canvas.title}" will be permanently deleted.`, [
-        { text: 'Cancel', style: 'cancel' },
+      Alert.alert(t('canvases.deleteConfirmTitle'), t('canvases.deleteConfirmBody', { title: canvas.title }), [
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: () => deleteCanvas(canvas.id),
         },
       ]);
     },
-    [deleteCanvas],
+    [deleteCanvas, t],
   );
 
   const renderCanvas = useCallback(
@@ -125,7 +128,7 @@ export default function CanvasListScreen() {
             <View style={styles.cardHeader}>
               <Ionicons name="easel-outline" size={18} color={colors.primary} />
               <Text style={[styles.cardTitle, { color: colors.text }]} numberOfLines={1}>
-                {item.title || 'Untitled Canvas'}
+                {item.title || t('canvases.untitled')}
               </Text>
             </View>
             <Text style={[styles.cardMeta, { color: colors.textSecondary }]}>
@@ -159,7 +162,7 @@ export default function CanvasListScreen() {
         </TouchableOpacity>
       );
     },
-    [colors, handleOpen, handleDelete],
+    [colors, handleOpen, handleDelete, t],
   );
 
   return (
@@ -169,7 +172,7 @@ export default function CanvasListScreen() {
           testID="canvas-list.search-bar.search"
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholder="Search canvases..."
+          placeholder={t('canvases.searchPlaceholder')}
         />
       </View>
 
@@ -193,16 +196,16 @@ export default function CanvasListScreen() {
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Ionicons name="easel-outline" size={48} color={colors.textSecondary} />
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>No Canvases Yet</Text>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>{t('canvases.emptyTitle')}</Text>
             <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-              Create a canvas to draw, chart, and diagram.
+              {t('canvases.emptySubtitle')}
             </Text>
             <TouchableOpacity
               testID="canvas-list.button.create"
               style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
               onPress={handleCreate}
             >
-              <Text style={styles.emptyBtnText}>Create Canvas</Text>
+              <Text style={styles.emptyBtnText}>{t('canvases.createCanvas')}</Text>
             </TouchableOpacity>
           </View>
         }
@@ -222,36 +225,40 @@ export default function CanvasListScreen() {
           onPress={() => setShowSizePicker(false)}
         >
           <View style={[styles.sizeModal, { backgroundColor: colors.surface }]} onStartShouldSetResponder={() => true}>
-            <Text style={[styles.sizeTitle, { color: colors.text }]}>New Canvas</Text>
+            <Text style={[styles.sizeTitle, { color: colors.text }]}>{t('canvases.newCanvas')}</Text>
 
             <TextInput
               testID="canvas-list.input.title"
               style={[styles.titleInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
               value={canvasTitle}
               onChangeText={setCanvasTitle}
-              placeholder="Canvas name"
+              placeholder={t('canvases.namePlaceholder')}
               placeholderTextColor={colors.textSecondary}
               autoCapitalize="sentences"
               maxLength={60}
             />
 
-            {CANVAS_PRESETS.map((preset) => (
-              <TouchableOpacity
-                key={preset.label}
-                testID={`canvas-list.button.pick-size-${preset.label.toLowerCase()}`}
-                accessible
-                accessibilityRole="button"
-                accessibilityLabel={`${preset.label}, ${preset.desc}`}
-                style={[styles.sizeOption, { borderColor: colors.border }]}
-                onPress={() => handlePickSize(preset.w, preset.h)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.sizeLabel, { color: colors.text }]}>{preset.label}</Text>
-                <Text style={[styles.sizeDesc, { color: colors.textSecondary }]}>{preset.desc}</Text>
-              </TouchableOpacity>
-            ))}
+            {CANVAS_PRESET_KEYS.map((key) => {
+              const dims = CANVAS_PRESET_DIMS[key];
+              const label = t(key);
+              return (
+                <TouchableOpacity
+                  key={key}
+                  testID={`canvas-list.button.pick-size-${label.toLowerCase()}`}
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityLabel={`${label}, ${dims.desc}`}
+                  style={[styles.sizeOption, { borderColor: colors.border }]}
+                  onPress={() => handlePickSize(dims.w, dims.h)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.sizeLabel, { color: colors.text }]}>{label}</Text>
+                  <Text style={[styles.sizeDesc, { color: colors.textSecondary }]}>{dims.desc}</Text>
+                </TouchableOpacity>
+              );
+            })}
 
-            <Text style={[styles.sizeSubtitle, { color: colors.textSecondary }]}>Custom Size</Text>
+            <Text style={[styles.sizeSubtitle, { color: colors.textSecondary }]}>{t('canvases.customSize')}</Text>
             <View style={styles.customRow}>
               <TextInput
                 testID="canvas-list.input.custom-width"
@@ -259,7 +266,7 @@ export default function CanvasListScreen() {
                 value={customW}
                 onChangeText={setCustomW}
                 keyboardType="number-pad"
-                placeholder="Width"
+                placeholder={t('canvases.widthPlaceholder')}
                 placeholderTextColor={colors.textSecondary}
                 maxLength={4}
               />
@@ -270,7 +277,7 @@ export default function CanvasListScreen() {
                 value={customH}
                 onChangeText={setCustomH}
                 keyboardType="number-pad"
-                placeholder="Height"
+                placeholder={t('canvases.heightPlaceholder')}
                 placeholderTextColor={colors.textSecondary}
                 maxLength={4}
               />
@@ -280,21 +287,21 @@ export default function CanvasListScreen() {
               style={[styles.customBtn, { backgroundColor: colors.primary }]}
               onPress={handleCustomSize}
             >
-              <Text style={styles.customBtnText}>Create Custom</Text>
+              <Text style={styles.customBtnText}>{t('canvases.createCustom')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.sizeCancel, { borderColor: colors.border }]}
               onPress={() => setShowSizePicker(false)}
             >
-              <Text style={[styles.sizeCancelText, { color: colors.textSecondary }]}>Cancel</Text>
+              <Text style={[styles.sizeCancelText, { color: colors.textSecondary }]}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
       </Modal>
       <ScreenHeader
-        title="Canvases"
-        badge="BETA"
+        title={t('canvases.title')}
+        badge={t('common.beta')}
         actions={
           <>
             <IconButton
@@ -302,7 +309,7 @@ export default function CanvasListScreen() {
               testID="canvas-list.icon-button.filters"
               active={filter.activeCount > 0}
               onPress={() => setShowFilterModal(true)}
-              accessibilityLabel="Filters"
+              accessibilityLabel={t('common.filters')}
             >
               <Ionicons
                 name="funnel-outline"
@@ -310,7 +317,7 @@ export default function CanvasListScreen() {
                 color={filter.activeCount > 0 ? colors.accent : colors.textSecondary}
               />
             </IconButton>
-            <IconButton size="sm" testID="canvas-list.icon-button.new-canvas" onPress={handleCreate} accessibilityLabel="New canvas">
+            <IconButton size="sm" testID="canvas-list.icon-button.new-canvas" onPress={handleCreate} accessibilityLabel={t('canvases.newCanvasA11y')}>
               <Ionicons name="add" size={20} color={colors.accent} />
             </IconButton>
           </>

@@ -30,17 +30,19 @@ import { buildPinnedFeed, buildRecentFeed, RecentItem } from '../utils/recentIte
 import { HomeNoteContextMenu } from '../components/home/HomeNoteContextMenu';
 import ColorPicker from '../components/ColorPicker';
 import { ShareFormat } from '../services/ShareService';
+import { useTranslation } from 'react-i18next';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type EditableNoteFormat = Exclude<NoteFormat, 'pdf' | 'json'>;
 
-const FORMAT_OPTIONS: { label: string; value: EditableNoteFormat; ext: string }[] = [
-  { label: 'Markdown', value: 'markdown', ext: '.md' },
-  { label: 'Org Mode', value: 'org', ext: '.org' },
-  { label: 'Neorg', value: 'neorg', ext: '.norg' },
+const FORMAT_OPTIONS: { labelKey: string; value: EditableNoteFormat; ext: string }[] = [
+  { labelKey: 'home.format.markdown', value: 'markdown', ext: '.md' },
+  { labelKey: 'home.format.org', value: 'org', ext: '.org' },
+  { labelKey: 'home.format.neorg', value: 'neorg', ext: '.norg' },
 ];
 
 export default function HomeScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
   const { notes, togglePin, updateNote, deleteNote } = useNotes();
@@ -174,11 +176,11 @@ export default function HomeScreen() {
       const note = item.data;
       if (note && 'isPinned' in note) {
         if (!(await togglePin(note.id))) {
-          Alert.alert('Error', 'Failed to update pin status');
+          Alert.alert(t('common.error'), t('errors.failedUpdatePinBody'));
         }
       }
     },
-    [togglePin],
+    [togglePin, t],
   );
 
   const handleShare = useCallback(async (note: Note, format: ShareFormat) => {
@@ -186,13 +188,13 @@ export default function HomeScreen() {
     try {
       const ok = await ShareService.shareInFormat(note, format);
       if (!ok) {
-        Alert.alert('Error', 'Failed to export note');
+        Alert.alert(t('errors.exportFailedTitle'), t('errors.exportFailedBody'));
       }
     } catch (error) {
       console.error('[HomeScreen] Share/export error:', error);
-      Alert.alert('Error', 'Failed to export note');
+      Alert.alert(t('errors.exportFailedTitle'), t('errors.exportFailedBody'));
     }
-  }, []);
+  }, [t]);
 
   const handlePickColor = useCallback((item: RecentItem) => {
     setContextMenuItem(null);
@@ -210,33 +212,34 @@ export default function HomeScreen() {
         const updated = await updateNote({ id: note.id, color });
         if (!updated) {
           HapticService.error();
-          Alert.alert('Error', 'Failed to update note color');
+          Alert.alert(t('errors.failedUpdateColorTitle'), t('errors.failedUpdateColorBody'));
           return;
         }
         HapticService.success();
       } catch {
         HapticService.error();
-        Alert.alert('Error', 'Failed to update note color');
+        Alert.alert(t('errors.failedUpdateColorTitle'), t('errors.failedUpdateColorBody'));
       }
     },
-    [colorPickerItem, updateNote],
+    [colorPickerItem, updateNote, t],
   );
 
   const handleDelete = useCallback(
     async (item: RecentItem) => {
       const note = item.data;
       if (!('id' in note) || !note.id) return;
+      const title = note.title || t('common.untitled');
       Alert.alert(
-        `Delete "${note.title || 'Untitled'}"?`,
-        'This cannot be undone.',
+        t('notes.deleteConfirm', { title }),
+        t('common.cannotBeUndone'),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: 'Delete',
+            text: t('common.delete'),
             style: 'destructive',
             onPress: async () => {
               if (!(await deleteNote(note.id as string))) {
-                Alert.alert('Error', 'Failed to delete note');
+                Alert.alert(t('errors.failedDeleteNoteTitle'), t('errors.failedDeleteNoteBody'));
               } else {
                 HapticService.success();
               }
@@ -245,7 +248,7 @@ export default function HomeScreen() {
         ],
       );
     },
-    [deleteNote],
+    [deleteNote, t],
   );
 
   return (
@@ -273,8 +276,8 @@ export default function HomeScreen() {
               <Ionicons name="document-text" size={120} color="#FFFFFF" />
             </View>
             <View style={styles.bentoHeroContent}>
-              <Text style={styles.bentoHeroTitle}>New Note</Text>
-              <Text style={styles.bentoHeroSubtitle}>Blank note</Text>
+              <Text style={styles.bentoHeroTitle}>{t('notes.newNote')}</Text>
+              <Text style={styles.bentoHeroSubtitle}>{t('home.bento.blankNote')}</Text>
             </View>
           </Pressable>
 
@@ -294,7 +297,7 @@ export default function HomeScreen() {
             </View>
             <View style={styles.bentoHeroContent}>
               <Text style={styles.bentoHeroTitle} numberOfLines={1}>
-                {hasTodaysJournal ? "Today's Journal" : 'New Journal'}
+                {hasTodaysJournal ? t('home.bento.todaysJournal') : t('home.bento.newJournal')}
               </Text>
               <Text style={styles.bentoHeroSubtitle} numberOfLines={1}>
                 {todaysJournalTitle.replace('Journal ', '')}
@@ -316,8 +319,8 @@ export default function HomeScreen() {
               <Ionicons name="copy-outline" size={22} color={colors.primary} />
             </View>
             <View style={styles.bentoTileContent}>
-              <Text style={[styles.bentoTileTitle, { color: colors.text }]}>From Template</Text>
-              <Text style={[styles.bentoTileSubtitle, { color: colors.textSecondary }]}>Quick start</Text>
+              <Text style={[styles.bentoTileTitle, { color: colors.text }]}>{t('home.bento.fromTemplate')}</Text>
+              <Text style={[styles.bentoTileSubtitle, { color: colors.textSecondary }]}>{t('home.bento.fromTemplateSub')}</Text>
             </View>
           </Pressable>
           <Pressable
@@ -333,12 +336,12 @@ export default function HomeScreen() {
             </View>
             <View style={styles.bentoTileContent}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={[styles.bentoTileTitle, { color: colors.text }]}>Canvases</Text>
+                <Text style={[styles.bentoTileTitle, { color: colors.text }]}>{t('canvases.title')}</Text>
                 <View style={{ backgroundColor: '#3B82F6', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 5 }}>
-                  <Text style={{ color: '#ffffff', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 }}>BETA</Text>
+                  <Text style={{ color: '#ffffff', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 }}>{t('common.beta')}</Text>
                 </View>
               </View>
-              <Text style={[styles.bentoTileSubtitle, { color: colors.textSecondary }]}>Visual notes</Text>
+              <Text style={[styles.bentoTileSubtitle, { color: colors.textSecondary }]}>{t('home.bento.canvasesSub')}</Text>
             </View>
           </Pressable>
         </View>
@@ -348,7 +351,7 @@ export default function HomeScreen() {
       <BentoRecent items={recentItems} onOpen={handleOpenRecentItem} onLongPress={handleLongPressRecentItem} />
 
       <Modal visible={showFormatPicker} onRequestClose={handleFormatPickerClose} fullWidth>
-        <Text style={[styles.modalTitle, { color: colors.text }]}>Choose Note Format</Text>
+        <Text style={[styles.modalTitle, { color: colors.text }]}>{t('home.format.pickerTitle')}</Text>
         <View style={{ gap: 10 }}>
           {FORMAT_OPTIONS.map((option) => (
             <Card
@@ -358,7 +361,7 @@ export default function HomeScreen() {
               padding={14}
             >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={[styles.formatLabel, { color: colors.text }]}>{option.label}</Text>
+                <Text style={[styles.formatLabel, { color: colors.text }]}>{t(option.labelKey)}</Text>
                 <Text style={[styles.formatExt, { color: colors.textSecondary }]}>{option.ext}</Text>
               </View>
             </Card>
@@ -376,10 +379,10 @@ export default function HomeScreen() {
             size={22}
             color={pickerRemember ? colors.accent : colors.textSecondary}
           />
-          <Text style={[styles.rememberLabel, { color: colors.text }]}>Remember my choice</Text>
+          <Text style={[styles.rememberLabel, { color: colors.text }]}>{t('home.format.remember')}</Text>
         </TouchableOpacity>
         <View style={{ marginTop: 12 }}>
-          <Button variant="ghost" fullWidth label="Cancel" testID="home.button.close-format-picker" onPress={handleFormatPickerClose} />
+          <Button variant="ghost" fullWidth label={t('common.cancel')} testID="home.button.close-format-picker" onPress={handleFormatPickerClose} />
         </View>
       </Modal>
 
@@ -407,7 +410,7 @@ export default function HomeScreen() {
         onSelect={handleColorSelect}
       />
       </ScrollView>
-      <ScreenHeader title="GitNotēs" subtitle="Your development notes, organized." />
+      <ScreenHeader title={t('home.appTitle')} subtitle={t('home.subtitle')} />
     </SafeAreaView>
   );
 }

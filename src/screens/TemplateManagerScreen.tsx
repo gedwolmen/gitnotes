@@ -26,8 +26,10 @@ import { TemplateListItem } from '../components/templates/TemplateListItem';
 import { TemplatesEmptyState } from '../components/templates/TemplatesEmptyState';
 import { DEFAULT_ICON } from '../components/templates/templateManagerShared';
 import { styles } from '../components/templates/templateManagerStyles';
+import { useTranslation } from 'react-i18next';
 
 export default function TemplateManagerScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation();
   const { colors } = useTheme();
   const headerHeight = useScreenHeaderHeight({ subtitle: true });
@@ -295,15 +297,15 @@ export default function TemplateManagerScreen() {
         onRemoveTag={handleRemoveTag}
       />
       <ScreenHeader
-        title="Templates"
+        title={t('settings.templates')}
         subtitle={
           templatesRepoPref
-            ? `${allTemplates.length} total · ${customCount} custom · ${templatesRepoPref.repoPath}`
+            ? t('templates.subtitle', { total: allTemplates.length, custom: customCount, repo: templatesRepoPref.repoPath })
             : `${allTemplates.length} total · ${customCount} custom`
         }
         onBack={handleBack}
         actions={
-          <IconButton size="sm" testID="template-manager.icon-button.new-template" onPress={handleOpenCreate} accessibilityLabel="New template">
+          <IconButton size="sm" testID="template-manager.icon-button.new-template" onPress={handleOpenCreate} accessibilityLabel={t('templates.newTemplateA11y')}>
             <Ionicons name="add" size={20} color={colors.accent} />
           </IconButton>
         }
