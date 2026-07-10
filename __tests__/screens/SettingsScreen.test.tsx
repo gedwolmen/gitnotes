@@ -71,18 +71,49 @@ jest.mock('../../src/contexts/ThemeContext', () => ({
   }),
 }));
 
-jest.mock('../../src/contexts/AuthContext', () => ({
-  useAuth: () => ({
+jest.mock('../../src/contexts/AuthContext', () => {
+  const fn = () => ({
     authState: { isAuthenticated: false, token: null },
     accounts: [],
     activeAccountId: null,
+    accountSummaries: [],
     setToken: jest.fn(async () => true),
     clearToken: jest.fn(async () => undefined),
     addAccount: jest.fn(async () => null),
     removeAccount: jest.fn(async () => undefined),
     switchAccount: jest.fn(async () => undefined),
-  }),
-}));
+    switchToHost: jest.fn(async () => true),
+    disconnectHost: jest.fn(async () => undefined),
+    connectHost: jest.fn(async () => ({ ok: true })),
+  });
+  return {
+    useAuth: fn,
+    useAccounts: fn,
+    AccountsProvider: ({ children }: any) => children,
+  };
+});
+
+jest.mock('../../src/contexts/AccountsContext', () => {
+  const fn = () => ({
+    authState: { isAuthenticated: false, token: null },
+    accounts: [],
+    activeAccountId: null,
+    accountSummaries: [],
+    setToken: jest.fn(async () => true),
+    clearToken: jest.fn(async () => undefined),
+    addAccount: jest.fn(async () => null),
+    removeAccount: jest.fn(async () => undefined),
+    switchAccount: jest.fn(async () => undefined),
+    switchToHost: jest.fn(async () => true),
+    disconnectHost: jest.fn(async () => undefined),
+    connectHost: jest.fn(async () => ({ ok: true })),
+  });
+  return {
+    useAuth: fn,
+    useAccounts: fn,
+    AccountsProvider: ({ children }: any) => children,
+  };
+});
 
 const stableRepositories: any[] = [];
 jest.mock('../../src/contexts/RepoContext', () => ({
@@ -368,10 +399,10 @@ describe('SettingsScreen', () => {
     expect(getByText('Version')).toBeTruthy();
   });
 
-  it('shows GitHub Account section for unauthenticated users', () => {
+  it('shows Accounts entry pointing to Connect host when unauthenticated', () => {
     const { getByText } = render(<SettingsScreen />);
-    expect(getByText('GitHub Account')).toBeTruthy();
-    expect(getByText('Connect GitHub')).toBeTruthy();
+    expect(getByText('Accounts')).toBeTruthy();
+    expect(getByText('Connect host')).toBeTruthy();
   });
 
   it('shows Updated UI toggle', () => {

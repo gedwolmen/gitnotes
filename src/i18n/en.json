@@ -143,6 +143,50 @@
     "confirm": "Confirm",
     "notSet": "Not set"
   },
+  "accounts": {
+    "title": "Accounts",
+    "active": "Active",
+    "switchTo": "Switch to",
+    "disconnect": "Disconnect",
+    "addAnotherHost": "Add another host",
+    "connectFirstHost": "Connect a host",
+    "connectedHosts": "Connected hosts",
+    "noHosts": "This account isn't connected to any git hosts yet.",
+    "notFound": "Account not found.",
+    "removeTitle": "Remove account?",
+    "removeBody": "This will remove {{login}} and every host connection saved on this device.",
+    "removeAccount": "Remove account",
+    "disconnectTitle": "Disconnect host?",
+    "disconnectBody": "{{label}} will be removed from this account. You can reconnect any time.",
+    "removeActiveConnection": "Disconnect active host",
+    "settings": {
+      "accountsGroup": "Accounts"
+    }
+  },
+  "connectHost": {
+    "title": "Connect a git host",
+    "providerLabel": "Host",
+    "instanceUrlLabel": "Self-hosted URL (optional)",
+    "tokenLabel": "Personal access token",
+    "tokenPlaceholder": "Paste token…",
+    "test": "Test",
+    "save": "Save",
+    "show": "Show",
+    "hide": "Hide",
+    "connectHost": "Connect host",
+    "success": {
+      "testTitle": "Success",
+      "testBody": "Token accepted. Press Save to keep it."
+    },
+    "error": {
+      "tokenRequired": "Please enter a token.",
+      "invalidUrl": "Please enter a valid http(s) URL.",
+      "invalidToken": "Token rejected",
+      "invalidTokenBody": "The host did not accept this token. Check scopes and try again.",
+      "networkTitle": "Connection failed",
+      "networkBody": "Could not reach the host. Check your network and try again."
+    }
+  },
   "ai": {
     "availability": {
       "iosOnly": "iOS only — not available on Android",

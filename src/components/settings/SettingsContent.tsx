@@ -22,6 +22,8 @@ import { TIMEOUT_OPTIONS, type BiometricKind, type LockTimeout } from '../../con
 import { SYNC_INTERVAL_OPTIONS, type SyncIntervalSeconds } from '../../hooks/useForegroundSyncSettings';
 import { useProvidersAvailability } from '../../hooks/useProviderAvailability';
 import { describeAvailability } from '../../services/ai/providerAvailabilityCopy';
+import type { GitHostProvider } from '../../services/git/GitHost';
+import { GIT_HOST_LABELS } from '../../services/git/GitHost';
 
 type ThemeColors = {
   background: string;
@@ -39,6 +41,18 @@ type Account = {
   login: string;
   name?: string | null;
   avatarUrl?: string | null;
+};
+
+type AccountSummaryViewModel = {
+  accountId: string;
+  account: Account;
+  hosts: Array<{
+    id: string;
+    provider: GitHostProvider;
+    hostLogin: string;
+    instanceBaseUrl: string | null;
+  }>;
+  activeHostId: string | null;
 };
 
 type AuthState = {
@@ -73,6 +87,11 @@ type SettingsContentProps = {
   onSwitchAccount: (id: string) => void | Promise<void>;
   onRemoveAccount: (id: string, login: string) => void;
   onRemoveToken: () => void;
+  /** New: per-account detail (manages host connections). */
+  onOpenAccount: (accountId: string) => void;
+  /** New: open Connect Host modal. Optional preset focuses the host picker. */
+  onAddHost: (preset?: GitHostProvider) => void;
+  accountSummaries: AccountSummaryViewModel[];
   onOpenRepoPicker: () => void;
   onSyncRepo: (repo: GitRepository) => void;
   onRemoveRepo: (repo: GitRepository) => void;
@@ -126,6 +145,7 @@ export function SettingsContent(props: SettingsContentProps) {
     accounts,
     activeAccountId,
     authState,
+    accountSummaries,
     repositories,
     syncingRepo,
     syncModes,
@@ -144,6 +164,8 @@ export function SettingsContent(props: SettingsContentProps) {
     onSwitchAccount,
     onRemoveAccount,
     onRemoveToken,
+    onOpenAccount,
+    onAddHost,
     onOpenRepoPicker,
     onSyncRepo,
     onRemoveRepo,
@@ -320,77 +342,94 @@ export function SettingsContent(props: SettingsContentProps) {
         ) : null}
       </Group>
 
-      <Group title={accounts.length >= 2 ? 'GitHub Accounts' : 'GitHub Account'}>
-        {authState.isAuthenticated ? (
+      <Group title={accountSummaries.length >= 2 ? 'Accounts' : 'Accounts'}>
+        {accountSummaries.length === 0 ? (
+          // No accounts AND no legacy authState: show the unified host picker
+          // entry. This is the new first-run path — any host works.
+          <GroupRow
+            testID="settings.button.connect-host"
+            onPress={() => onAddHost()}
+            leading={<Ionicons name="add-circle-outline" size={20} color={colors.primary} />}
+            trailing={<Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
+          >
+            <Text style={[styles.settingLabel, { color: colors.primary }]}>
+              {t('connectHost.connectHost')}
+            </Text>
+          </GroupRow>
+        ) : (
           <>
-            {accounts.length >= 2 ? (
-              accounts.map((account) => {
-                const isActive = account.id === activeAccountId;
-                return (
-                  <GroupRow
-                    testID={`settings.button.switch-account`}
-                    key={account.id}
-                    onPress={isActive ? undefined : () => void onSwitchAccount(account.id)}
-                    disabled={isActive}
-                    leading={account.avatarUrl ? <Image source={{ uri: account.avatarUrl }} style={styles.avatar} /> : null}
-                    trailing={
-                      <TouchableOpacity testID={`settings.button.remove-account`} onPress={() => onRemoveAccount(account.id, account.login)} style={{ paddingHorizontal: 8 }}>
-                        <Ionicons name="trash-outline" size={18} color={colors.error} />
-                      </TouchableOpacity>
-                    }
-                  >
-                    <Text style={[styles.settingLabel, { color: colors.text }]}>
-                      {account.name || account.login}
-                      {isActive ? '  ·  Active' : ''}
-                    </Text>
-                    <Text style={[styles.settingValue, { color: colors.textSecondary }]}>@{account.login}</Text>
-                  </GroupRow>
-                );
-              })
-            ) : (
-              <GroupRow
-                leading={authState.user?.avatar_url ? <Image source={{ uri: authState.user.avatar_url }} style={styles.avatar} /> : null}
-              >
-                <Text style={[styles.settingLabel, { color: colors.text }]}>{authState.user?.name || authState.user?.login}</Text>
-                <Text style={[styles.settingValue, { color: colors.textSecondary }]}>@{authState.user?.login}</Text>
-              </GroupRow>
-            )}
+            {accountSummaries.map((summary) => {
+              const isActive = summary.accountId === activeAccountId;
+              return (
+                <GroupRow
+                  key={summary.accountId}
+                  testID="settings.button.account"
+                  onPress={() => onOpenAccount(summary.accountId)}
+                  leading={summary.account.avatarUrl ? <Image source={{ uri: summary.account.avatarUrl }} style={styles.avatar} /> : null}
+                  trailing={
+                    <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                      <View style={{ flexDirection: 'row', gap: 4, flexWrap: 'wrap' }}>
+                        {summary.hosts.map((host) => (
+                          <View
+                            key={host.id}
+                            style={{
+                              paddingHorizontal: 6,
+                              paddingVertical: 2,
+                              borderRadius: 8,
+                              backgroundColor:
+                                host.id === summary.activeHostId ? colors.primary : colors.surface,
+                              borderWidth: 1,
+                              borderColor:
+                                host.id === summary.activeHostId ? colors.primary : colors.border,
+                            }}
+                          >
+                            <Text
+                              style={{
+                                fontSize: 11,
+                                color:
+                                  host.id === summary.activeHostId
+                                    ? '#fff'
+                                    : colors.textSecondary,
+                                fontWeight: '600',
+                              }}
+                            >
+                              {GIT_HOST_LABELS[host.provider]}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+                    </View>
+                  }
+                >
+                  <Text style={[styles.settingLabel, { color: colors.text }]}>
+                    {summary.account.name || summary.account.login}
+                    {isActive ? ` · ${t('accounts.active')}` : ''}
+                  </Text>
+                  <Text style={[styles.settingValue, { color: colors.textSecondary }]}>@{summary.account.login}</Text>
+                </GroupRow>
+              );
+            })}
 
             <GroupRow
-              testID="settings.button.connect-token"
-              onPress={onOpenConnectToken}
-              leading={<Ionicons name="key-outline" size={20} color={colors.text} />}
+              testID="settings.button.connect-host"
+              onPress={() => onAddHost()}
+              leading={<Ionicons name="add-circle-outline" size={20} color={colors.primary} />}
               trailing={<Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
             >
-              <Text style={[styles.settingLabel, { color: colors.text }]}>
-                {accounts.length >= 2 ? 'Replace Active Token' : 'Change Token'}
+              <Text style={[styles.settingLabel, { color: colors.primary }]}>
+                {t('connectHost.connectHost')}
               </Text>
             </GroupRow>
 
-            <GroupRow
-              testID="settings.button.add-account"
-              onPress={onOpenAddAccount}
-              leading={<Ionicons name="person-add-outline" size={20} color={colors.text} />}
-              trailing={<Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
-            >
-              <Text style={[styles.settingLabel, { color: colors.text }]}>Add another account</Text>
-            </GroupRow>
-
-            {accounts.length < 2 ? (
+            {accountSummaries.length < 2 ? (
               <GroupRow testID="settings.button.remove-token" onPress={onRemoveToken}>
-                <Text style={[styles.settingLabel, { color: colors.error }]}>Remove GitHub Account</Text>
+                <Text style={[styles.settingLabel, { color: colors.error }]}>
+                  {t('accounts.removeActiveConnection')}
+                </Text>
               </GroupRow>
             ) : null}
           </>
-        ) : (
-          <GroupRow
-            testID="settings.button.connect-github"
-            onPress={onOpenConnectToken}
-            leading={<Ionicons name="logo-github" size={20} color={colors.text} />}
-            trailing={<Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
-          >
-            <Text style={[styles.settingLabel, { color: colors.text }]}>Connect GitHub</Text>
-          </GroupRow>
         )}
       </Group>
 

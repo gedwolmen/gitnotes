@@ -7,6 +7,7 @@ import { Modal } from './ui';
 import { useRepoStore } from '../stores/repoStore';
 import type { GitHostProvider } from '../services/git/GitHost';
 import { GIT_HOST_LABELS } from '../services/git/GitHost';
+import { useAccounts } from '../contexts/AccountsContext';
 
 type ThemeColors = {
   background: string;
@@ -25,7 +26,7 @@ interface AddRepoModalProps {
   colors: ThemeColors;
 }
 
-const PROVIDERS: GitHostProvider[] = ['github', 'gitlab', 'gitea', 'forgejo'];
+const ALL_PROVIDERS: GitHostProvider[] = ['github', 'gitlab', 'gitea', 'forgejo'];
 
 function pathExampleFor(provider: GitHostProvider): string {
   return provider === 'gitlab' ? 'namespace/project' : 'owner/repo';
@@ -42,9 +43,45 @@ export function AddRepoModal({ visible, onClose, onAdded, colors }: AddRepoModal
   const { tokens } = useTheme();
   const { spacing, type } = tokens;
   const addRepository = useRepoStore((s) => s.addRepository);
-  const [provider, setProvider] = useState<GitHostProvider>('github');
+  const { accountSummaries, activeHostId } = useAccounts();
+
+  const availableProviders = useMemo<GitHostProvider[]>(() => {
+    const providers = new Set<GitHostProvider>();
+    for (const summary of accountSummaries) {
+      for (const host of summary.hosts) providers.add(host.provider);
+    }
+    // Empty-state default: show every provider so the picker still serves as
+    // an entry point to add a connection.
+    if (providers.size === 0) return ALL_PROVIDERS;
+    return Array.from(providers);
+  }, [accountSummaries]);
+
+  const initialProvider: GitHostProvider = useMemo(() => {
+    const active = accountSummaries
+      .flatMap((s) => s.hosts.map((h) => ({ host: h, account: s.account })))
+      .find((entry) => entry.host.id === activeHostId);
+    return active?.host.provider ?? availableProviders[0] ?? 'github';
+  }, [accountSummaries, activeHostId, availableProviders]);
+
+  const [provider, setProvider] = useState<GitHostProvider>(initialProvider);
   const [path, setPath] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Sync the picker with the active host when the modal re-opens or the
+  // connection state changes underneath.
+  React.useEffect(() => {
+    if (visible) {
+      setProvider(initialProvider);
+      setPath('');
+    }
+     
+  }, [visible, initialProvider]);
+
+  const hasTokenForProvider = useMemo(() => {
+    return accountSummaries.some((summary) =>
+      summary.hosts.some((host) => host.provider === provider),
+    );
+  }, [accountSummaries, provider]);
 
   const isValid = useMemo(() => /^\S+\/\S+$/.test(path.trim()), [path]);
 
@@ -63,6 +100,15 @@ export function AddRepoModal({ visible, onClose, onAdded, colors }: AddRepoModal
       onAdded?.(repo.path, provider);
       setPath('');
       onClose();
+      if (!hasTokenForProvider) {
+        // Soft warning: the repo is recorded but syncing will need a token
+        // for the matching host before writes succeed.
+        Alert.alert(
+          t('addRepo.noHostTitle') ?? 'No host connected',
+          (t('addRepo.noHostBody', { provider: GIT_HOST_LABELS[provider] }) ??
+            `Connect a ${GIT_HOST_LABELS[provider]} account before syncing ${GIT_HOST_LABELS[provider]} repositories.`) as string,
+        );
+      }
     } catch (error) {
       Alert.alert(
         t('addRepo.failedTitle'),
@@ -71,7 +117,7 @@ export function AddRepoModal({ visible, onClose, onAdded, colors }: AddRepoModal
     } finally {
       setIsSubmitting(false);
     }
-  }, [addRepository, path, isValid, provider, onAdded, onClose, t]);
+  }, [addRepository, path, isValid, provider, onAdded, onClose, t, hasTokenForProvider]);
 
   return (
     <Modal
@@ -93,7 +139,7 @@ export function AddRepoModal({ visible, onClose, onAdded, colors }: AddRepoModal
         {t('addRepo.providerLabel')}
       </Text>
       <View style={{ flexDirection: 'row', gap: spacing[2], marginBottom: spacing[3] }}>
-        {PROVIDERS.map((p) => {
+        {availableProviders.map((p) => {
           const isSelected = provider === p;
           return (
             <TouchableOpacity

@@ -18,7 +18,7 @@ import { NoteProvider } from './src/contexts/NoteContext';
 import { ThemeProvider } from './src/contexts/ThemeContext';
 import { FolderProvider } from './src/contexts/FolderContext';
 import { ViewModeProvider } from './src/contexts/ViewModeContext';
-import { AuthProvider } from './src/contexts/AuthContext';
+import { AccountsProvider } from './src/contexts/AccountsContext';
 import { TodoProvider } from './src/contexts/TodoContext';
 import { CanvasProvider } from './src/contexts/CanvasContext';
 import { RepoProvider } from './src/contexts/RepoContext';
@@ -133,7 +133,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
     <SafeAreaProvider>
       <ThemeProvider>
-        <AuthProvider>
+        <AccountsProvider>
           <RepoProvider>
             <FolderProvider>
               <NoteProvider>
@@ -156,7 +156,7 @@ export default function App() {
               </NoteProvider>
             </FolderProvider>
           </RepoProvider>
-        </AuthProvider>
+        </AccountsProvider>
       </ThemeProvider>
     </SafeAreaProvider>
     </QueryClientProvider>

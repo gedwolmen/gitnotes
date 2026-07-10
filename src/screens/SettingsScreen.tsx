@@ -29,9 +29,11 @@ import { HapticService } from '../utils/haptics';
 import { useTemplateStore } from '../stores/templateStore';
 import { useAIStore } from '../stores/aiStore';
 import type { AIProviderConfig } from '../models/AIProvider';
+import type { GitHostProvider } from '../services/git/GitHost';
 import { ModelSelector } from '../components/ai/ModelSelector';
 import { ProviderConfigModal } from '../components/ai/ProviderConfigModal';
 import { ChatRepoPickerModal } from '../components/ai/ChatRepoPickerModal';
+import { ConnectHostModal } from '../components/ConnectHostModal';
 import { ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { SettingsContent } from '../components/settings/SettingsContent';
 import { SettingsModals } from '../components/settings/SettingsModals';
@@ -47,7 +49,7 @@ export default function SettingsScreen() {
   const { clearAllNotes, refreshNotes } = useNotes();
   const { refreshCanvases } = useCanvases();
   const { refreshTodos } = useTodos();
-  const { authState, accounts, activeAccountId, setToken, clearToken, addAccount, removeAccount, switchAccount } = useAuth();
+  const { authState, accounts, activeAccountId, accountSummaries, setToken, clearToken, addAccount, removeAccount, switchAccount } = useAuth();
   const { repositories, addRepository: addRepo, removeRepository: removeRepo } = useRepos();
   const {
     isLockEnabled: isBiometricLockEnabled,
@@ -86,6 +88,8 @@ export default function SettingsScreen() {
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [tokenVisible, setTokenVisible] = useState(false);
   const [tokenModalMode, setTokenModalMode] = useState<'connect' | 'add'>('connect');
+  const [showConnectHostModal, setShowConnectHostModal] = useState(false);
+  const [connectHostPreset, setConnectHostPreset] = useState<GitHostProvider | undefined>(undefined);
   const [showModelSelector, setShowModelSelector] = useState(false);
   const [showProviderConfig, setShowProviderConfig] = useState(false);
   const [showChatRepoPicker, setShowChatRepoPicker] = useState(false);
@@ -565,6 +569,22 @@ export default function SettingsScreen() {
         uiStyle={uiStyle}
         accounts={accounts}
         activeAccountId={activeAccountId}
+        accountSummaries={accountSummaries.map((s) => ({
+          accountId: s.account.id,
+          account: {
+            id: s.account.id,
+            login: s.account.login,
+            name: s.account.name,
+            avatarUrl: s.account.avatarUrl,
+          },
+          hosts: s.hosts.map((h) => ({
+            id: h.id,
+            provider: h.provider,
+            hostLogin: h.hostLogin,
+            instanceBaseUrl: h.instanceBaseUrl,
+          })),
+          activeHostId: s.activeHostId,
+        }))}
         authState={authState}
         repositories={repositories}
         syncingRepo={syncingRepo}
@@ -584,6 +604,11 @@ export default function SettingsScreen() {
         onSwitchAccount={handleSwitchAccount}
         onRemoveAccount={handleRemoveAccount}
         onRemoveToken={handleRemoveToken}
+        onOpenAccount={(accountId) => navigation.navigate('Accounts', { accountId })}
+        onAddHost={(preset) => {
+          setConnectHostPreset(preset);
+          setShowConnectHostModal(true);
+        }}
         onOpenRepoPicker={() => void openRepoPicker()}
         onSyncRepo={(repo) => void handleSyncRepo(repo)}
         onRemoveRepo={handleRemoveRepo}
@@ -662,6 +687,12 @@ export default function SettingsScreen() {
       <ProviderConfigModal visible={showProviderConfig} provider={editingProvider} onClose={() => { setShowProviderConfig(false); setEditingProvider(undefined); }} />
       <ChatRepoPickerModal visible={showChatRepoPicker} onClose={() => setShowChatRepoPicker(false)} onSelected={() => setShowChatRepoPicker(false)} />
       <CloneProgressModal progress={cloneProgress} onCancel={handleCancelClone} onRetry={handleRetryClone} />
+      <ConnectHostModal
+        visible={showConnectHostModal}
+        onClose={() => { setShowConnectHostModal(false); setConnectHostPreset(undefined); }}
+        presetProvider={connectHostPreset}
+        colors={colors}
+      />
       </View>
       <ScreenHeader title="Settings" />
     </SafeAreaView>

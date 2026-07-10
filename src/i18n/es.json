@@ -228,5 +228,46 @@
     "invalidBody": "Usa el formato «{{example}}».",
     "failedTitle": "No se pudo añadir el repositorio",
     "failedBody": "Error desconocido"
+  },
+  "accounts": {
+    "title": "Accounts",
+    "active": "Active",
+    "switchTo": "Switch to",
+    "disconnect": "Disconnect",
+    "addAnotherHost": "Add another host",
+    "connectFirstHost": "Connect a host",
+    "connectedHosts": "Connected hosts",
+    "noHosts": "No hosts connected yet.",
+    "notFound": "Account not found.",
+    "removeTitle": "Remove account?",
+    "removeBody": "This will remove the account and all host connections.",
+    "removeAccount": "Remove account",
+    "disconnectTitle": "Disconnect host?",
+    "disconnectBody": "The host connection will be removed.",
+    "removeActiveConnection": "Disconnect active host"
+  },
+  "connectHost": {
+    "title": "Connect a git host",
+    "providerLabel": "Host",
+    "instanceUrlLabel": "Self-hosted URL",
+    "tokenLabel": "Personal access token",
+    "tokenPlaceholder": "Paste token…",
+    "test": "Test",
+    "save": "Save",
+    "show": "Show",
+    "hide": "Hide",
+    "connectHost": "Connect host",
+    "success": {
+      "testTitle": "Success",
+      "testBody": "Token accepted."
+    },
+    "error": {
+      "tokenRequired": "Please enter a token.",
+      "invalidUrl": "Please enter a valid URL.",
+      "invalidToken": "Token rejected",
+      "invalidTokenBody": "The host did not accept this token.",
+      "networkTitle": "Connection failed",
+      "networkBody": "Could not reach the host."
+    }
   }
 }
