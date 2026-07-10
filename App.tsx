@@ -19,6 +19,7 @@ import { ThemeProvider } from './src/contexts/ThemeContext';
 import { FolderProvider } from './src/contexts/FolderContext';
 import { ViewModeProvider } from './src/contexts/ViewModeContext';
 import { AccountsProvider } from './src/contexts/AccountsContext';
+import { HostAuthProvider } from './src/contexts/HostAuthContext';
 import { TodoProvider } from './src/contexts/TodoContext';
 import { CanvasProvider } from './src/contexts/CanvasContext';
 import { RepoProvider } from './src/contexts/RepoContext';
@@ -134,28 +135,30 @@ export default function App() {
     <SafeAreaProvider>
       <ThemeProvider>
         <AccountsProvider>
-          <RepoProvider>
-            <FolderProvider>
-              <NoteProvider>
-                <BacklinksProvider>
-                  <TodoProvider>
-                    <CanvasProvider>
-                      <ViewModeProvider>
-                        <BiometricLockProvider>
-                          <StatusBar style="auto" />
-                          <StartupSyncGate>
-                            <AppNavigator />
-                          </StartupSyncGate>
-                          <GitHubActivityIndicator />
-                          <BiometricLockScreen />
-                        </BiometricLockProvider>
-                      </ViewModeProvider>
-                    </CanvasProvider>
-                  </TodoProvider>
-                </BacklinksProvider>
-              </NoteProvider>
-            </FolderProvider>
-          </RepoProvider>
+          <HostAuthProvider>
+            <RepoProvider>
+              <FolderProvider>
+                <NoteProvider>
+                  <BacklinksProvider>
+                    <TodoProvider>
+                      <CanvasProvider>
+                        <ViewModeProvider>
+                          <BiometricLockProvider>
+                            <StatusBar style="auto" />
+                            <StartupSyncGate>
+                              <AppNavigator />
+                            </StartupSyncGate>
+                            <GitHubActivityIndicator />
+                            <BiometricLockScreen />
+                          </BiometricLockProvider>
+                        </ViewModeProvider>
+                      </CanvasProvider>
+                    </TodoProvider>
+                  </BacklinksProvider>
+                </NoteProvider>
+              </FolderProvider>
+            </RepoProvider>
+          </HostAuthProvider>
         </AccountsProvider>
       </ThemeProvider>
     </SafeAreaProvider>

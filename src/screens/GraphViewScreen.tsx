@@ -9,6 +9,7 @@ import Animated, { useSharedValue, useAnimatedStyle, runOnJS } from 'react-nativ
 
 import { useNotes } from '../contexts/NoteContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useTranslation } from 'react-i18next';
 import { useViewMode } from '../contexts/ViewModeContext';
 import { useAIStore } from '../stores/aiStore';
 import { Note } from '../models/Note';
@@ -48,6 +49,7 @@ const MIN_SCALE = 0.25;
 const MAX_SCALE = 2.5;
 
 export default function GraphViewScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
   const { notes } = useNotes();
@@ -466,7 +468,7 @@ export default function GraphViewScreen() {
   return (
     <SafeAreaView edges={[]} style={[styles.container, { backgroundColor: colors.background }]}>
       <ScreenHeader
-        title="Graph View"
+        title={t('notes.graphView')}
         onBack={handleCloseScreen}
       />
 
@@ -475,7 +477,7 @@ export default function GraphViewScreen() {
           <SearchBar
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Search nodes..."
+            placeholder={t('notes.searchGraph')}
           />
         </View>
       )}
@@ -485,10 +487,10 @@ export default function GraphViewScreen() {
           <View style={styles.emptyContainer}>
             <Ionicons name="git-network-outline" size={64} color={colors.textSecondary} />
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              No notes to display
+              {t('notes.noNotesToDisplay')}
             </Text>
             <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-              Create notes with [[wiki links]] to see connections
+              {t('notes.createWithWikiLinksGraph')}
             </Text>
           </View>
         ) : (

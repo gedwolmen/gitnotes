@@ -139,6 +139,7 @@ const railStyles = StyleSheet.create({
 export default function TabNavigator() {
   const { isTablet } = useResponsive();
   const { style, colors } = useTheme();
+  const { t } = useTranslation();
   const useNeumorphicBar = !isTablet && style === 'neumorphic';
 
   return (
@@ -165,32 +166,32 @@ export default function TabNavigator() {
       <Tab.Screen
         name="HomeTab"
         component={HomeScreen}
-        options={{ title: 'Home' }}
+        options={{ title: t('tabs.home') }}
       />
       <Tab.Screen
         name="NotesTab"
         component={NotesListScreen}
-        options={{ title: 'Notes' }}
+        options={{ title: t('tabs.notes') }}
       />
       <Tab.Screen
         name="ExploreTab"
         component={ExploreScreen}
-        options={{ title: 'Explore' }}
+        options={{ title: t('tabs.explore') }}
       />
       <Tab.Screen
         name="TodosTab"
         component={TodoListScreen}
-        options={{ title: 'Todos' }}
+        options={{ title: t('tabs.todos') }}
       />
       <Tab.Screen
         name="SettingsTab"
         component={SettingsScreen}
-        options={{ title: 'Settings' }}
+        options={{ title: t('tabs.settings') }}
       />
       <Tab.Screen
         name="CanvasList"
         component={CanvasListScreen}
-        options={{ title: 'Canvases', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+        options={{ title: t('canvases.title'), tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
       />
     </Tab.Navigator>
   );

@@ -14,6 +14,7 @@ import {
 } from '../../i18n';
 import { ImportSection } from './ImportSection';
 import { ScheduledLearningSection } from './ScheduledLearningSection';
+import { GitProvidersSection } from './GitProvidersSection';
 import { settingsStyles as styles } from './settingsStyles';
 import type { GitRepository } from '../../services/GitService';
 import type { TemplateRepoPreference } from '../../services/TemplateRepoPreferenceService';
@@ -220,7 +221,7 @@ export function SettingsContent(props: SettingsContentProps) {
   );
   const providerAvailability = useProvidersAvailability(visibleProviders);
   const intervalLabel =
-    SYNC_INTERVAL_OPTIONS.find((opt) => opt.value === syncIntervalSeconds)?.label ?? 'Every minute';
+    SYNC_INTERVAL_OPTIONS.find((opt) => opt.value === syncIntervalSeconds)?.label ?? t('settings.everyMinute');
 
   useEffect(() => {
     getLanguagePreference().then(setLanguagePref);
@@ -432,6 +433,8 @@ export function SettingsContent(props: SettingsContentProps) {
           </>
         )}
       </Group>
+
+      <GitProvidersSection colors={colors} />
 
       <Group title="Repositories">
         {repositories.length === 0 ? (

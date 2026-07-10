@@ -18,10 +18,12 @@ import { BulkActionBar } from '../components/list/BulkActionBar';
 import { ChatThreadCard } from '../components/chat/ChatThreadCard';
 import { ChatThreadContextMenu } from '../components/chat/ChatThreadContextMenu';
 import { HapticService } from '../utils/haptics';
+import { useTranslation } from 'react-i18next';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function ChatThreadListScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NavigationProp>();
   const { colors, spacing } = useTokens();
   const headerHeight = useScreenHeaderHeight();
@@ -101,7 +103,7 @@ export default function ChatThreadListScreen() {
 
   const handleNewChat = () => {
     if (!chatRepoOwner || !chatRepoName || !chatRepoBranch) {
-      Alert.alert('Configuration Required', 'Please set up a chat repository in AI settings first.');
+      Alert.alert(t('chat.configRequiredTitle'), t('chat.configRequiredBody'));
       return;
     }
     // Read the latest available models from the store on demand rather than
@@ -111,7 +113,7 @@ export default function ChatThreadListScreen() {
     // "getSnapshot should be cached" warning and an infinite re-render loop.
     const availableModels = useAIStore.getState().getAvailableModels();
     if (!selectedModelId || availableModels.length === 0) {
-      Alert.alert('AI Not Configured', 'Please set up an AI model in Settings before starting a chat.');
+      Alert.alert(t('chat.aiNotConfiguredTitle'), t('chat.aiNotConfiguredBody'));
       return;
     }
     const thread = createThread({
@@ -144,25 +146,25 @@ export default function ChatThreadListScreen() {
   const handleRenameThread = (thread: ChatThreadSummary) => {
     setLongPressedThread(null);
     Alert.prompt(
-      'Rename Chat',
-      'Enter a new title for this chat',
+      t('chat.renameTitle'),
+      t('chat.renameBody'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Save',
+          text: t('common.save'),
           onPress: async (newTitle?: string) => {
             if (!newTitle) {
               return;
             }
 
-            const trimmedTitle = newTitle.trim() || 'New Chat';
+            const trimmedTitle = newTitle.trim() || t('chat.defaultNewChatTitle');
             renameThread({ threadId: thread.id, title: trimmedTitle });
 
             if (!chatRepoOwner || !chatRepoName || !chatRepoBranch) {
               return;
             }
 
-            githubActivity.begin('Renaming chat…');
+            githubActivity.begin(t('chat.renaming'));
             try {
               const storedThread = await ChatStorageService.loadThread(chatRepoOwner, chatRepoName, thread.id, chatRepoBranch);
               if (storedThread) {
@@ -174,7 +176,7 @@ export default function ChatThreadListScreen() {
               }
               HapticService.success();
             } catch (err: any) {
-              Alert.alert('Rename failed', err?.message || 'Could not rename chat.');
+              Alert.alert(t('chat.renameFailed'), err?.message || t('chat.couldNotRename'));
               HapticService.error();
             } finally {
               githubActivity.end();
@@ -191,7 +193,7 @@ export default function ChatThreadListScreen() {
     if (!chatRepoOwner || !chatRepoName || !chatRepoBranch) {
       return;
     }
-    githubActivity.begin('Deleting chat…');
+    githubActivity.begin(t('chat.deleting'));
     try {
       const deleted = await deleteThread({
         owner: chatRepoOwner,
@@ -200,13 +202,13 @@ export default function ChatThreadListScreen() {
         threadId: thread.id,
       });
       if (!deleted) {
-        Alert.alert('Delete failed', useChatStore.getState().error ?? storeError ?? 'Could not delete chat.');
+        Alert.alert(t('chat.deleteFailed'), useChatStore.getState().error ?? storeError ?? t('chat.couldNotDelete'));
         HapticService.error();
         return;
       }
       HapticService.success();
     } catch (err: any) {
-      Alert.alert('Delete failed', err?.message || 'Could not delete chat.');
+      Alert.alert(t('chat.deleteFailed'), err?.message || t('chat.couldNotDelete'));
       HapticService.error();
     } finally {
       githubActivity.end();
@@ -217,16 +219,16 @@ export default function ChatThreadListScreen() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
     Alert.alert(
-      `Delete ${ids.length} ${ids.length === 1 ? 'chat' : 'chats'}?`,
-      'This cannot be undone.',
+      t('chat.deleteBulkConfirm', { count: ids.length }),
+      t('common.cannotBeUndone'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             if (!chatRepoOwner || !chatRepoName || !chatRepoBranch) return;
-            githubActivity.begin('Deleting chats…');
+            githubActivity.begin(t('chat.deletingMany'));
             try {
               let deletedCount = 0;
               for (const threadId of ids) {
@@ -238,10 +240,8 @@ export default function ChatThreadListScreen() {
                 });
                 if (!deleted) {
                   setSelectedIds(new Set());
-                  const fallbackMessage = deletedCount > 0
-                    ? `Deleted ${deletedCount} ${deletedCount === 1 ? 'chat' : 'chats'}, then hit a sync conflict. Pull and try again.`
-                    : 'Could not delete chats.';
-                  Alert.alert('Delete failed', useChatStore.getState().error ?? storeError ?? fallbackMessage);
+                  const fallbackMessage = t('chat.couldNotDeleteMany');
+                  Alert.alert(t('chat.deleteFailed'), useChatStore.getState().error ?? storeError ?? fallbackMessage);
                   HapticService.error();
                   return;
                 }
@@ -250,7 +250,7 @@ export default function ChatThreadListScreen() {
               HapticService.success();
               setSelectedIds(new Set());
             } catch (err: any) {
-              Alert.alert('Delete failed', err?.message || 'Could not delete chats.');
+              Alert.alert(t('chat.deleteFailed'), err?.message || t('chat.couldNotDeleteMany'));
               HapticService.error();
             } finally {
               githubActivity.end();
@@ -259,7 +259,7 @@ export default function ChatThreadListScreen() {
         },
       ],
     );
-  }, [chatRepoOwner, chatRepoName, chatRepoBranch, deleteThread, selectedIds]);
+  }, [chatRepoOwner, chatRepoName, chatRepoBranch, deleteThread, selectedIds, t, storeError]);
 
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 
@@ -303,8 +303,8 @@ export default function ChatThreadListScreen() {
       <EmptyState
         icon="sparkles"
         iconColor={colors.primary}
-        title="Start your first AI chat"
-        subtitle="Tap New Chat above to send your first prompt."
+        title={t('chat.emptyTitle')}
+        subtitle={t('chat.emptySubtitle')}
       />
     );
   };
@@ -315,7 +315,7 @@ export default function ChatThreadListScreen() {
         <View style={[styles.headerControls, { paddingHorizontal: spacing[4], paddingTop: spacing[4], paddingBottom: spacing[3] }]}>
           <Button
             testID="chat-thread-list.button.new-chat"
-            label="New Chat"
+            label={t('chat.newChat')}
             onPress={handleNewChat}
             variant="primary"
             leadingIcon={<Ionicons name="add" size={20} color={colors.accent} />}
@@ -354,15 +354,15 @@ export default function ChatThreadListScreen() {
 
       <BulkActionBar
         count={selectedIds.size}
-        itemNoun="chat"
+        itemNoun={t('chat.chat')}
         bottomOffset={Math.max(tabBarHeight + 4, 8)}
         onCancel={clearSelection}
         onDelete={handleBulkDelete}
       />
 
       <ScreenHeader
-        title="GitNotes AI"
-        badge="BETA"
+        title={t('chat.title')}
+        badge={t('common.beta')}
         onBack={() => navigation.goBack()}
       />
     </SafeAreaView>
