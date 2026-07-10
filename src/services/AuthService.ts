@@ -1,4 +1,10 @@
-import AccountStorage, { StoredAccount } from './AccountStorage';
+import AccountStorage, { HostConnection, StoredAccount } from './AccountStorage';
+import { gitLabService } from './git/GitLabService';
+import {
+  giteaHostService,
+  forgejoHostService,
+} from './git/gitHostFactory';
+import type { GitHostProvider } from './git/GitHost';
 
 export interface GitHubUser {
   id: number;
@@ -17,6 +23,41 @@ export interface AuthState {
 export type TokenValidity =
   | { ok: true; user: GitHubUser }
   | { ok: false; reason: 'invalid' | 'network' };
+
+export interface HostConnectionSummary {
+  id: string;
+  accountId: string;
+  provider: GitHostProvider;
+  hostLogin: string;
+  hostUserId: number;
+  name: string;
+  email: string | null;
+  avatarUrl: string | null;
+  instanceBaseUrl: string | null;
+  addedAt: number;
+}
+
+export interface AccountSummary {
+  account: StoredAccount;
+  hosts: HostConnectionSummary[];
+  activeHostId: string | null;
+}
+
+interface GitLabUser {
+  id: number;
+  username: string;
+  name: string;
+  email?: string | null;
+  avatar_url?: string | null;
+}
+
+interface GiteaLikeUser {
+  id: number;
+  login: string;
+  full_name?: string;
+  email?: string;
+  avatar_url?: string;
+}
 
 function profileFromUser(user: GitHubUser) {
   return {
@@ -37,46 +78,163 @@ function userFromAccount(account: StoredAccount): GitHubUser {
   };
 }
 
+function toHostSummary(conn: HostConnection): HostConnectionSummary {
+  return {
+    id: conn.id,
+    accountId: conn.accountId,
+    provider: conn.provider,
+    hostLogin: conn.hostLogin,
+    hostUserId: conn.hostUserId,
+    name: conn.name,
+    email: conn.email,
+    avatarUrl: conn.avatarUrl,
+    instanceBaseUrl: conn.instanceBaseUrl,
+    addedAt: conn.addedAt,
+  };
+}
+
+/**
+ * Best-effort conversion of a non-GitHub host's verify-time user payload into
+ * a `GitHubUser` shape so legacy UI (avatar / name fields) keeps rendering.
+ */
+function userFromHost(
+  provider: GitHostProvider,
+  raw:
+    | {
+        id: number;
+        login?: string;
+        username?: string;
+        name?: string;
+        email?: string | null;
+        avatar_url?: string | null;
+      }
+    | null,
+): GitHubUser | null {
+  if (!raw) return null;
+  const login = raw.login ?? (raw as { username?: string }).username;
+  if (!login) return null;
+  return {
+    id: raw.id ?? 0,
+    login,
+    name: raw.name ?? login,
+    email: raw.email ?? '',
+    avatar_url: raw.avatar_url ?? '',
+  };
+}
+
+export interface ConnectHostInput {
+  provider: GitHostProvider;
+  token: string;
+  instanceBaseUrl?: string | null;
+  /** When supplied, attach to this existing account; otherwise create one. */
+  accountId?: string;
+}
+
+export interface ConnectHostResult {
+  account: StoredAccount;
+  host: HostConnectionSummary;
+}
+
+/**
+ * Verifies a token against the chosen host's API. Returns the resolved
+ * user on success and `null` on failure (invalid token OR network error).
+ * Use `validateHostToken` for finer-grained failures.
+ */
+export async function validateHostToken(
+  provider: GitHostProvider,
+  token: string,
+  instanceBaseUrl?: string | null,
+): Promise<{ ok: true; user: GitHubUser } | { ok: false; reason: 'invalid' | 'network' }> {
+  if (provider === 'github') {
+    return validateGitHubToken(token);
+  }
+  if (provider === 'gitlab') {
+    const user = await gitLabService.setToken(token, instanceBaseUrl ?? undefined);
+    if (!user) return { ok: false, reason: 'invalid' };
+    return { ok: true, user: userFromHost('gitlab', user as GitLabUser)! };
+  }
+  if (provider === 'gitea') {
+    const user = await giteaHostService.setToken(token, instanceBaseUrl ?? undefined);
+    if (!user) return { ok: false, reason: 'invalid' };
+    return { ok: true, user: userFromHost('gitea', user as GiteaLikeUser)! };
+  }
+  if (provider === 'forgejo') {
+    const user = await forgejoHostService.setToken(token, instanceBaseUrl ?? undefined);
+    if (!user) return { ok: false, reason: 'invalid' };
+    return { ok: true, user: userFromHost('forgejo', user as GiteaLikeUser)! };
+  }
+  return { ok: false, reason: 'invalid' };
+}
+
 export class AuthService {
+  // ── Legacy single-account flow (kept for back-compat) ──────────────
+
   static async checkAuthState(): Promise<AuthState> {
+    const summary = await this.getActiveSummary();
+    if (!summary) return { isAuthenticated: false, user: null, token: null };
     const token = await AccountStorage.getActiveToken();
     if (!token) return { isAuthenticated: false, user: null, token: null };
-    const active = await AccountStorage.getActiveAccount();
-    if (active) {
-      return { isAuthenticated: true, user: userFromAccount(active), token };
-    }
-    const user = await this.getUser(token);
-    return { isAuthenticated: !!user, user, token };
-  }
-
-  static async setToken(token: string): Promise<AuthState> {
-    const user = await this.getUser(token);
-    if (!user) return { isAuthenticated: false, user: null, token: null };
-    await AccountStorage.addAccount(token, profileFromUser(user));
+    // Use the host's identity when available (handles self-hosted GitLab etc),
+    // falling back to the account profile for legacy single-host installs.
+    const host = summary.hosts.find((h) => h.id === summary.activeHostId) ?? summary.hosts[0];
+    const user: GitHubUser = host
+      ? {
+          id: host.hostUserId,
+          login: host.hostLogin,
+          name: host.name ?? host.hostLogin,
+          email: host.email ?? '',
+          avatar_url: host.avatarUrl ?? '',
+        }
+      : userFromAccount(summary.account);
     return { isAuthenticated: true, user, token };
   }
 
   /**
-   * Add another account without changing the currently-active one. Returns
-   * the persisted account, or null if the token is invalid.
+   * @deprecated prefer `connectHost({ provider: 'github', token })`. Kept so
+   * existing call sites compile unchanged.
+   */
+  static async setToken(token: string): Promise<AuthState> {
+    const result = await this.connectHost({ provider: 'github', token });
+    if (!result) return { isAuthenticated: false, user: null, token: null };
+    const summary = await this.getActiveSummary();
+    const isAuth = !!summary;
+    const activeToken = await AccountStorage.getActiveToken();
+    const user = summary
+      ? {
+          id: result.host.hostUserId,
+          login: result.host.hostLogin,
+          name: result.host.name ?? result.host.hostLogin,
+          email: result.host.email ?? '',
+          avatar_url: result.host.avatarUrl ?? '',
+        }
+      : null;
+    return { isAuthenticated: isAuth && !!activeToken, user, token: activeToken };
+  }
+
+  /**
+   * @deprecated prefer `connectHost({ provider: 'github', token, accountId })`.
+   * Adds a GitHub token without making it active.
    */
   static async addAccount(token: string): Promise<StoredAccount | null> {
-    const user = await this.getUser(token);
-    if (!user) return null;
-    const accountsBefore = await AccountStorage.listAccounts();
-    const account = await AccountStorage.addAccount(token, profileFromUser(user));
-    if (accountsBefore.length > 0) {
-      const currentActive = await AccountStorage.getActiveAccountId();
-      if (!currentActive) {
-        await AccountStorage.setActiveAccountId(account.id);
-      }
-    }
-    return account;
+    const result = await this.connectHost({ provider: 'github', token });
+    return result?.account ?? null;
   }
 
   static async clearToken(): Promise<void> {
-    const id = await AccountStorage.getActiveAccountId();
-    if (id) await AccountStorage.removeAccount(id);
+    // Disconnect the currently active host (legacy semantic: clear active).
+    const activeHostId = await AccountStorage.getActiveHostId();
+    if (activeHostId) {
+      await AccountStorage.removeHostConnection(activeHostId);
+    }
+    const activeAccountId = await AccountStorage.getActiveAccountId();
+    if (activeAccountId) {
+      const account = (await AccountStorage.listAccounts()).find(
+        (a) => a.id === activeAccountId,
+      );
+      if (account && account.hostIds.length === 0) {
+        await AccountStorage.removeAccount(activeAccountId);
+      }
+    }
     await AccountStorage.deleteLegacy();
   }
 
@@ -100,15 +258,23 @@ export class AuthService {
     return AccountStorage.getActiveAccountId();
   }
 
+  /**
+   * @deprecated kept for callers that pre-date multi-host. Use `switchToHost`
+   * or `switchAccount`. Returns a synthetic AuthState derived from the active
+   * host; underlying account is unchanged.
+   */
   static async setActiveAccount(id: string): Promise<AuthState> {
     const accounts = await AccountStorage.listAccounts();
     const account = accounts.find((a) => a.id === id);
-    if (!account) return { isAuthenticated: false, user: null, token: null };
+    if (!account || account.hostIds.length === 0) {
+      return { isAuthenticated: false, user: null, token: null };
+    }
     await AccountStorage.setActiveAccountId(id);
-    const token = await AccountStorage.getTokenById(id);
+    await AccountStorage.setActiveHostId(account.hostIds[0]);
+    const token = await AccountStorage.getActiveToken();
     return {
       isAuthenticated: !!token,
-      user: token ? userFromAccount(account) : null,
+      user: account ? userFromAccount(account) : null,
       token,
     };
   }
@@ -139,43 +305,66 @@ export class AuthService {
    * don't wipe valid tokens just because the device is offline.
    */
   static async validateToken(token: string): Promise<TokenValidity> {
-    try {
-      const response = await fetch('https://api.github.com/user', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/vnd.github.v3+json',
-        },
-      });
-      if (response.status === 401 || response.status === 403) {
-        return { ok: false, reason: 'invalid' };
-      }
-      if (!response.ok) {
-        return { ok: false, reason: 'network' };
-      }
-      const user = (await response.json()) as GitHubUser;
-      return { ok: true, user };
-    } catch {
-      return { ok: false, reason: 'network' };
-    }
+    return validateGitHubToken(token);
   }
 
   /**
-   * Validates every stored account's token against GitHub. Removes accounts
-   * whose tokens are explicitly rejected (401/403). Network/server errors
-   * leave accounts intact.
+   * Validates every stored account's GitHub token. Removes accounts whose
+   * tokens are explicitly rejected (401/403). Network/server errors leave
+   * accounts intact.
+   *
+   * Two account shapes are supported:
+   *  - Multi-host: account has `hostIds[]`; we validate each GitHub host
+   *    connection's token. If every host is bad, the account goes.
+   *  - Legacy single-host: account has no host connections but does have a
+   *    token persisted under the per-account key. We validate that token
+   *    and remove the account on rejection — preserving the old behaviour.
    */
   static async validateAllAccounts(): Promise<{ removed: string[] }> {
     const accounts = await AccountStorage.listAccounts();
     const removed: string[] = [];
     for (const account of accounts) {
-      const token = await AccountStorage.getTokenById(account.id);
-      if (!token) {
-        await AccountStorage.removeAccount(account.id);
-        removed.push(account.id);
+      const hosts = (await AccountStorage.listHostConnections()).filter(
+        (h) => h.accountId === account.id,
+      );
+      if (hosts.length === 0) {
+        // Legacy single-host account.
+        const token = await AccountStorage.getTokenById(account.id);
+        if (!token) {
+          await AccountStorage.removeAccount(account.id);
+          removed.push(account.id);
+          continue;
+        }
+        const result = await validateGitHubToken(token);
+        if (!result.ok && result.reason === 'invalid') {
+          await AccountStorage.removeAccount(account.id);
+          removed.push(account.id);
+        }
         continue;
       }
-      const result = await this.validateToken(token);
-      if (!result.ok && result.reason === 'invalid') {
+
+      let anyHostsLeft = false;
+      for (const host of hosts) {
+        const token = await AccountStorage.getHostToken(host.id);
+        if (!token) {
+          await AccountStorage.removeHostConnection(host.id);
+          continue;
+        }
+        if (host.provider !== 'github') {
+          // We don't currently revalidate non-GitHub tokens at boot; the
+          // design treats them as user-managed and removes only on explicit
+          // UX disconnect.
+          anyHostsLeft = true;
+          continue;
+        }
+        const result = await validateGitHubToken(token);
+        if (!result.ok && result.reason === 'invalid') {
+          await AccountStorage.removeHostConnection(host.id);
+        } else if (result.ok) {
+          anyHostsLeft = true;
+        }
+      }
+      if (!anyHostsLeft) {
         await AccountStorage.removeAccount(account.id);
         removed.push(account.id);
       }
@@ -188,6 +377,157 @@ export class AuthService {
       Authorization: `Bearer ${token}`,
       Accept: 'application/vnd.github.v3+json',
     };
+  }
+
+  // ── Multi-host flow ────────────────────────────────────────────────
+
+  static async connectHost(input: ConnectHostInput): Promise<ConnectHostResult | null> {
+    const verification = await validateHostToken(
+      input.provider,
+      input.token,
+      input.instanceBaseUrl ?? null,
+    );
+    if (!verification.ok) return null;
+    const verified = verification.user;
+
+    let account: StoredAccount | null = null;
+    if (input.accountId) {
+      const all = await AccountStorage.listAccounts();
+      account = all.find((a) => a.id === input.accountId) ?? null;
+    }
+    if (!account) {
+      // For GitHub, match by login so re-connecting the same GitHub identity
+      // doesn't create a duplicate account. For other providers we also match
+      // by login, but since logins can collide across hosts (e.g. someone has
+      // the same username on GitHub and GitLab.com) we additionally require
+      // there to be no existing host on this account for the same provider
+      // instance — if there is, we attach to the same account.
+      const all = await AccountStorage.listAccounts();
+      account = all.find((a) => a.login === verified.login) ?? null;
+      if (!account) {
+        account = await AccountStorage.addAccount(input.token, profileFromUser(verified));
+      }
+    }
+
+    const instanceBaseUrl = input.instanceBaseUrl?.trim() || null;
+
+    const host = await AccountStorage.upsertHostConnection({
+      accountId: account.id,
+      provider: input.provider,
+      instanceBaseUrl,
+      hostLogin: verified.login,
+      hostUserId: verified.id,
+      name: verified.name ?? verified.login,
+      email: verified.email ?? null,
+      avatarUrl: verified.avatar_url ?? null,
+      token: input.token,
+    });
+
+    // If this is the first host on the account, or there's no active host,
+    // make it active.
+    const currentActiveHostId = await AccountStorage.getActiveHostId();
+    if (!currentActiveHostId) {
+      await AccountStorage.setActiveAccountId(account.id);
+      await AccountStorage.setActiveHostId(host.id);
+    }
+
+    return { account, host: toHostSummary(host) };
+  }
+
+  static async disconnectHost(hostId: string): Promise<void> {
+    await AccountStorage.removeHostConnection(hostId);
+  }
+
+  static async listAccountSummaries(): Promise<AccountSummary[]> {
+    const accounts = await AccountStorage.listAccounts();
+    const hosts = await AccountStorage.listHostConnections();
+    const activeHostId = await AccountStorage.getActiveHostId();
+    return accounts.map((account) => {
+      const accountHosts = hosts
+        .filter((h) => h.accountId === account.id)
+        .map(toHostSummary);
+      return {
+        account,
+        hosts: accountHosts,
+        activeHostId: accountHosts.some((h) => h.id === activeHostId)
+          ? activeHostId
+          : accountHosts[0]?.id ?? null,
+      };
+    });
+  }
+
+  static async getActiveSummary(): Promise<AccountSummary | null> {
+    const summaries = await this.listAccountSummaries();
+    return summaries.find((s) => s.activeHostId) ?? summaries[0] ?? null;
+  }
+
+  static async switchToHost(
+    hostId: string,
+  ): Promise<{ ok: true; summary: AccountSummary } | { ok: false; reason: 'not-found' | 'no-token' }> {
+    const hosts = await AccountStorage.listHostConnections();
+    const host = hosts.find((h) => h.id === hostId);
+    if (!host) return { ok: false, reason: 'not-found' };
+    const token = await AccountStorage.getHostToken(host.id);
+    if (!token) return { ok: false, reason: 'no-token' };
+    await AccountStorage.setActiveAccountId(host.accountId);
+    await AccountStorage.setActiveHostId(host.id);
+    const summaries = await this.listAccountSummaries();
+    const summary = summaries.find((s) => s.account.id === host.accountId);
+    if (!summary) return { ok: false, reason: 'not-found' };
+    return { ok: true, summary };
+  }
+
+  static async switchAccount(
+    accountId: string,
+  ): Promise<{ ok: true; summary: AccountSummary } | { ok: false; reason: 'no-hosts' | 'not-found' }> {
+    const accounts = await AccountStorage.listAccounts();
+    const account = accounts.find((a) => a.id === accountId);
+    if (!account) return { ok: false, reason: 'not-found' };
+    if (account.hostIds.length === 0) return { ok: false, reason: 'no-hosts' };
+    // Pick first host with a token; fall back to hostIds[0] even if no token
+    // (caller can prompt re-auth).
+    const hosts = await AccountStorage.listHostConnections();
+    let chosen: HostConnection | null = null;
+    for (const hostId of account.hostIds) {
+      const host = hosts.find((h) => h.id === hostId);
+      if (!host) continue;
+      const token = await AccountStorage.getHostToken(host.id);
+      if (token) {
+        chosen = host;
+        break;
+      }
+      if (!chosen) chosen = host;
+    }
+    if (!chosen) return { ok: false, reason: 'no-hosts' };
+    await AccountStorage.setActiveAccountId(account.id);
+    await AccountStorage.setActiveHostId(chosen.id);
+    const summaries = await this.listAccountSummaries();
+    const summary = summaries.find((s) => s.account.id === accountId);
+    if (!summary) return { ok: false, reason: 'not-found' };
+    return { ok: true, summary };
+  }
+}
+
+async function validateGitHubToken(
+  token: string,
+): Promise<TokenValidity> {
+  try {
+    const response = await fetch('https://api.github.com/user', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github.v3+json',
+      },
+    });
+    if (response.status === 401 || response.status === 403) {
+      return { ok: false, reason: 'invalid' };
+    }
+    if (!response.ok) {
+      return { ok: false, reason: 'network' };
+    }
+    const user = (await response.json()) as GitHubUser;
+    return { ok: true, user };
+  } catch {
+    return { ok: false, reason: 'network' };
   }
 }
 

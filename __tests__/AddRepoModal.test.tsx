@@ -57,6 +57,27 @@ jest.mock('../src/components/ui', () => {
   };
 });
 
+jest.mock('../src/contexts/AccountsContext', () => ({
+  useAccounts: () => ({
+    accountSummaries: [],
+    accounts: [],
+    activeHostId: null,
+    activeAccountId: null,
+    isAuthenticated: false,
+    isLoading: false,
+    refreshAccounts: async () => undefined,
+    connectHost: async () => ({ ok: true }),
+    disconnectHost: async () => undefined,
+    switchToHost: async () => true,
+    switchAccount: async () => true,
+    removeAccount: async () => undefined,
+    testToken: async () => ({ ok: true }),
+    setToken: async () => true,
+    clearToken: async () => undefined,
+    addAccount: async () => null,
+  }),
+}));
+
 jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
 
 import { AddRepoModal } from '../src/components/AddRepoModal';
