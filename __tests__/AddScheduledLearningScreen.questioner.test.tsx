@@ -413,4 +413,112 @@ describe('AddScheduledLearningScreen questioner flows', () => {
     buttons[1].onPress?.();
     await waitFor(() => expect(mockDelete).toHaveBeenCalled());
   });
+
+  it('shows "Generating…" on the submit button while generation is in flight', async () => {
+    // Make generation take long enough for us to observe the intermediate
+    // "Generating…" state before it flips to "Schedule Added".
+    const mockGenerate = (global as any).__mockGenerateNow as jest.Mock;
+    mockGenerate.mockClear();
+    let resolveGenerate: (value: any) => void = () => undefined;
+    mockGenerate.mockImplementationOnce(
+      () => new Promise((resolve) => {
+        resolveGenerate = resolve;
+      }),
+    );
+
+    const { getByPlaceholderText, getByTestId, getByText, queryByText } = render(
+      <AddScheduledLearningScreen />,
+    );
+    fireEvent.changeText(getByPlaceholderText('Add a topic tag...'), 'topic');
+    fireEvent.press(getByTestId('add-tag-button'));
+
+    // Fire-and-forget: handleAdd is async and we want to inspect the
+    // intermediate button state before letting the promise resolve.
+    fireEvent.press(getByText('Add Schedule'));
+
+    await waitFor(() => expect(queryByText('Generating…')).not.toBeNull());
+    expect(queryByText('Add Schedule')).toBeNull();
+    expect(queryByText('Schedule Added')).toBeNull();
+
+    // Now let generation finish and the button should flip to the
+    // "Schedule Added" confirmation.
+    resolveGenerate({
+      id: 'note-from-generate',
+      title: 'mock note',
+      content: 'content',
+      tags: [],
+      format: 'markdown',
+      createdAt: 0,
+      updatedAt: 0,
+    });
+
+    await waitFor(() => expect(queryByText('Schedule Added')).not.toBeNull());
+    expect(queryByText('Generating…')).toBeNull();
+  });
+
+  it('disables the submit button while generating and after success', async () => {
+    const mockGenerate = (global as any).__mockGenerateNow as jest.Mock;
+    mockGenerate.mockClear();
+    let resolveGenerate: (value: any) => void = () => undefined;
+    mockGenerate.mockImplementationOnce(
+      () => new Promise((resolve) => {
+        resolveGenerate = resolve;
+      }),
+    );
+
+    const { getByPlaceholderText, getByTestId, getByText, getByTestId: getByTID } = render(
+      <AddScheduledLearningScreen />,
+    );
+    fireEvent.changeText(getByPlaceholderText('Add a topic tag...'), 'topic');
+    fireEvent.press(getByTestId('add-tag-button'));
+
+    const submitButton = getByTID('add-schedule-submit');
+    expect(submitButton.props.accessibilityState?.disabled ?? submitButton.props.disabled).toBeFalsy();
+
+    fireEvent.press(submitButton);
+
+    await waitFor(() =>
+      expect(
+        submitButton.props.accessibilityState?.disabled ?? submitButton.props.disabled,
+      ).toBe(true),
+    );
+
+    resolveGenerate({
+      id: 'note-from-generate',
+      title: 'mock note',
+      content: 'content',
+      tags: [],
+      format: 'markdown',
+      createdAt: 0,
+      updatedAt: 0,
+    });
+
+    await waitFor(() => expect(getByText('Schedule Added')).not.toBeNull());
+    expect(
+      getByTID('add-schedule-submit').props.accessibilityState?.disabled ??
+        getByTID('add-schedule-submit').props.disabled,
+    ).toBe(true);
+  });
+
+  it('re-enables the submit button when generation fails so the user can retry', async () => {
+    const mockGenerate = (global as any).__mockGenerateNow as jest.Mock;
+    mockGenerate.mockClear();
+    mockGenerate.mockResolvedValueOnce(null);
+
+    const { getByPlaceholderText, getByTestId, getByText, getByTestId: getByTID } = render(
+      <AddScheduledLearningScreen />,
+    );
+    fireEvent.changeText(getByPlaceholderText('Add a topic tag...'), 'topic');
+    fireEvent.press(getByTestId('add-tag-button'));
+
+    fireEvent.press(getByText('Add Schedule'));
+
+    // After the failure alert is shown the button should be back to its
+    // idle "Add Schedule" label and be re-enabled.
+    await waitFor(() => expect(getByText('Add Schedule')).not.toBeNull(), { timeout: 3000 });
+    const submitButton = getByTID('add-schedule-submit');
+    expect(
+      submitButton.props.accessibilityState?.disabled ?? submitButton.props.disabled,
+    ).toBeFalsy();
+  });
 });

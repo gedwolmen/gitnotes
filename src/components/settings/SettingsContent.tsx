@@ -24,6 +24,7 @@ import { useProvidersAvailability } from '../../hooks/useProviderAvailability';
 import { describeAvailability } from '../../services/ai/providerAvailabilityCopy';
 import type { GitHostProvider } from '../../services/git/GitHost';
 import { GIT_HOST_LABELS } from '../../services/git/GitHost';
+import { useTokens } from '../../contexts/ThemeContext';
 
 type ThemeColors = {
   background: string;
@@ -85,11 +86,14 @@ type SettingsContentProps = {
   onOpenConnectToken: () => void;
   onOpenAddAccount: () => void;
   onSwitchAccount: (id: string) => void | Promise<void>;
-  onRemoveAccount: (id: string, login: string) => void;
+onRemoveAccount: (id: string, login: string) => void;
   onRemoveToken: () => void;
-  /** New: per-account detail (manages host connections). */
-  onOpenAccount: (accountId: string) => void;
-  /** New: open Connect Host modal. Optional preset focuses the host picker. */
+  /**
+   * Disconnect a single host connection. Confirmation flow lives in the
+   * parent screen — this just fires the request.
+   */
+  onDisconnectHost: (hostId: string) => void;
+  /** Open Connect Host modal. Optional preset focuses the host picker. */
   onAddHost: (preset?: GitHostProvider) => void;
   accountSummaries: AccountSummaryViewModel[];
   onOpenRepoPicker: () => void;
@@ -164,7 +168,7 @@ export function SettingsContent(props: SettingsContentProps) {
     onSwitchAccount,
     onRemoveAccount,
     onRemoveToken,
-    onOpenAccount,
+    onDisconnectHost,
     onAddHost,
     onOpenRepoPicker,
     onSyncRepo,
@@ -199,8 +203,11 @@ export function SettingsContent(props: SettingsContentProps) {
     syncFrequentlyEnabled,
     syncIntervalSeconds,
     onToggleSyncFrequently,
-    onSetSyncIntervalSeconds,
+onSetSyncIntervalSeconds,
   } = props;
+  // Tokens hook gives us spacing/radii/type so the styled disconnect
+  // button matches the rest of the app without hardcoded values.
+  const { spacing, radii, type } = useTokens();
   const { t } = useTranslation();
   const [languagePref, setLanguagePref] = useState<string>('system');
   const [showTimeoutPicker, setShowTimeoutPicker] = useState(false);
@@ -361,53 +368,128 @@ export function SettingsContent(props: SettingsContentProps) {
             {accountSummaries.map((summary) => {
               const isActive = summary.accountId === activeAccountId;
               return (
-                <GroupRow
-                  key={summary.accountId}
-                  testID="settings.button.account"
-                  onPress={() => onOpenAccount(summary.accountId)}
-                  leading={summary.account.avatarUrl ? <Image source={{ uri: summary.account.avatarUrl }} style={styles.avatar} /> : null}
-                  trailing={
-                    <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-                      <View style={{ flexDirection: 'row', gap: 4, flexWrap: 'wrap' }}>
-                        {summary.hosts.map((host) => (
+                <React.Fragment key={summary.accountId}>
+                  <GroupRow
+                    testID="settings.row.account"
+                    leading={summary.account.avatarUrl ? <Image source={{ uri: summary.account.avatarUrl }} style={styles.avatar} /> : null}
+                  >
+                    <Text style={[styles.settingLabel, { color: colors.text }]}>
+                      {summary.account.name || summary.account.login}
+                      {isActive ? ` · ${t('accounts.active')}` : ''}
+                    </Text>
+                    <Text style={[styles.settingValue, { color: colors.textSecondary }]}>@{summary.account.login}</Text>
+                  </GroupRow>
+                  {/* Host rows live directly below the account row so the
+                      info (provider + login@url) is visible at a glance and
+                      the disconnect action sits next to the data it
+                      operates on. */}
+                  {summary.hosts.map((host) => {
+                    const isHostActive = host.id === summary.activeHostId;
+                    const idLabel = host.instanceBaseUrl
+                      ? `${host.hostLogin}@${host.instanceBaseUrl.replace(/^https?:\/\//, '')}`
+                      : host.hostLogin;
+                    return (
+                      <View
+                        key={host.id}
+                        testID={`settings.row.host.${host.id}`}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          paddingHorizontal: spacing[4],
+                          paddingVertical: spacing[3],
+                          gap: spacing[3],
+                        }}
+                      >
+                        {/* Info column — kept narrow on the left so the
+                            styled button has room to breathe on the right. */}
+                        <View style={{ flex: 1, minWidth: 0 }}>
                           <View
-                            key={host.id}
                             style={{
-                              paddingHorizontal: 6,
-                              paddingVertical: 2,
-                              borderRadius: 8,
-                              backgroundColor:
-                                host.id === summary.activeHostId ? colors.primary : colors.surface,
-                              borderWidth: 1,
-                              borderColor:
-                                host.id === summary.activeHostId ? colors.primary : colors.border,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: spacing[2],
                             }}
                           >
                             <Text
+                              numberOfLines={1}
                               style={{
-                                fontSize: 11,
-                                color:
-                                  host.id === summary.activeHostId
-                                    ? '#fff'
-                                    : colors.textSecondary,
+                                fontSize: type.sm,
                                 fontWeight: '600',
+                                color: colors.text,
                               }}
                             >
                               {GIT_HOST_LABELS[host.provider]}
                             </Text>
+                            {isHostActive ? (
+                              <View
+                                style={{
+                                  paddingHorizontal: 6,
+                                  paddingVertical: 1,
+                                  borderRadius: 6,
+                                  backgroundColor: colors.primary,
+                                }}
+                              >
+                                <Text
+                                  style={{
+                                    color: '#ffffff',
+                                    fontSize: 9,
+                                    fontWeight: '800',
+                                    letterSpacing: 0.6,
+                                  }}
+                                >
+                                  ACTIVE
+                                </Text>
+                              </View>
+                            ) : null}
                           </View>
-                        ))}
+                          <Text
+                            numberOfLines={1}
+                            style={{
+                              fontSize: type.xs,
+                              color: colors.textSecondary,
+                              fontFamily: 'Menlo',
+                              marginTop: 3,
+                            }}
+                          >
+                            {idLabel}
+                          </Text>
+                        </View>
+                        {/* Styled disconnect button — outlined in error
+                            color with an unlink icon. Distinct from the
+                            account row's neutral chrome so the destructive
+                            intent is obvious without being alarming. */}
+                        <TouchableOpacity
+                          onPress={() => onDisconnectHost(host.id)}
+                          testID={`settings.button.disconnect-host.${host.id}`}
+                          activeOpacity={0.75}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 6,
+                            paddingHorizontal: spacing[3],
+                            paddingVertical: spacing[2],
+                            borderRadius: radii.md,
+                            borderWidth: 1,
+                            borderColor: colors.error,
+                            backgroundColor: 'transparent',
+                          }}
+                        >
+                          <Ionicons name="unlink-outline" size={15} color={colors.error} />
+                          <Text
+                            style={{
+                              color: colors.error,
+                              fontSize: type.xs,
+                              fontWeight: '700',
+                              letterSpacing: 0.2,
+                            }}
+                          >
+                            {t('accounts.disconnect')}
+                          </Text>
+                        </TouchableOpacity>
                       </View>
-                      <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-                    </View>
-                  }
-                >
-                  <Text style={[styles.settingLabel, { color: colors.text }]}>
-                    {summary.account.name || summary.account.login}
-                    {isActive ? ` · ${t('accounts.active')}` : ''}
-                  </Text>
-                  <Text style={[styles.settingValue, { color: colors.textSecondary }]}>@{summary.account.login}</Text>
-                </GroupRow>
+                    );
+                  })}
+                </React.Fragment>
               );
             })}
 
