@@ -29,7 +29,7 @@ import { HapticService } from '../utils/haptics';
 import { useTemplateStore } from '../stores/templateStore';
 import { useAIStore } from '../stores/aiStore';
 import type { AIProviderConfig } from '../models/AIProvider';
-import type { GitHostProvider } from '../services/git/GitHost';
+import { GIT_HOST_LABELS, type GitHostProvider } from '../services/git/GitHost';
 import { ModelSelector } from '../components/ai/ModelSelector';
 import { ProviderConfigModal } from '../components/ai/ProviderConfigModal';
 import { ChatRepoPickerModal } from '../components/ai/ChatRepoPickerModal';
@@ -51,7 +51,7 @@ export default function SettingsScreen() {
   const { clearAllNotes, refreshNotes } = useNotes();
   const { refreshCanvases } = useCanvases();
   const { refreshTodos } = useTodos();
-  const { authState, accounts, activeAccountId, accountSummaries, setToken, clearToken, addAccount, removeAccount, switchAccount } = useAuth();
+  const { authState, accounts, activeAccountId, accountSummaries, setToken, clearToken, addAccount, removeAccount, switchAccount, disconnectHost } = useAuth();
   const { repositories, addRepository: addRepo, removeRepository: removeRepo } = useRepos();
   const {
     isLockEnabled: isBiometricLockEnabled,
@@ -532,6 +532,52 @@ export default function SettingsScreen() {
     ]);
   }, [clearToken]);
 
+  // Native-only "Connected hosts" UI: a single Alert lists each connected
+  // host as a button; tapping one shows the disconnect confirmation Alert.
+  // Triggered by the styled "Disconnect" button next to each host row in
+  // SettingsContent. Looks up the host across all account summaries so the
+  // caller only needs the host id, then shows the OS-native confirmation
+  // Alert — which is the right primitive for a destructive confirm gate.
+  const handleDisconnectHost = useCallback((hostId: string) => {
+    // Find the host across accounts so the label in the confirmation Alert
+    // matches what the user just tapped on.
+    let label = hostId;
+    for (const summary of accountSummaries) {
+      const host = summary.hosts.find((h) => h.id === hostId);
+      if (host) {
+        label = host.instanceBaseUrl
+          ? `${GIT_HOST_LABELS[host.provider]} · ${host.instanceBaseUrl} (${host.hostLogin})`
+          : `${GIT_HOST_LABELS[host.provider]} · ${host.hostLogin}`;
+        break;
+      }
+    }
+
+    HapticService.warning();
+    Alert.alert(
+      t('accounts.disconnectTitle'),
+      t('accounts.disconnectBody', { label }),
+      [
+        { text: t('common.cancel'), style: 'cancel' as const },
+        {
+          text: t('accounts.disconnect'),
+          style: 'destructive' as const,
+          onPress: async () => {
+            try {
+              await disconnectHost(hostId);
+              HapticService.success();
+            } catch (err) {
+              HapticService.error();
+              Alert.alert(
+                t('accounts.disconnectFailedTitle'),
+                err instanceof Error ? err.message : t('accounts.disconnectFailedBody'),
+              );
+            }
+          },
+        },
+      ],
+    );
+  }, [accountSummaries, disconnectHost, t]);
+
   const handleResetOnboarding = useCallback(() => {
     HapticService.warning();
     Alert.alert('Reset Onboarding', 'This will show the onboarding screen on next app launch.', [
@@ -606,7 +652,7 @@ export default function SettingsScreen() {
         onSwitchAccount={handleSwitchAccount}
         onRemoveAccount={handleRemoveAccount}
         onRemoveToken={handleRemoveToken}
-        onOpenAccount={(accountId) => navigation.navigate('Accounts', { accountId })}
+        onDisconnectHost={handleDisconnectHost}
         onAddHost={(preset) => {
           setConnectHostPreset(preset);
           setShowConnectHostModal(true);

@@ -426,11 +426,39 @@ export class AccountStorage {
       }
       return a;
     });
-    if (mutated) await this.writeAccounts(updated);
 
+    // Drop accounts whose host list is now empty — they have nothing to
+    // manage, so leaving them as ghost rows in Settings just shows a stale
+    // account row (avatar + name) that only goes away on app reload.
+    const accountsToKeep = updated.filter((a) => a.hostIds.length > 0);
+    const removedAccountIds = updated
+      .filter((a) => a.hostIds.length === 0)
+      .map((a) => a.id);
+    if (removedAccountIds.length > 0) {
+      mutated = true;
+    }
+    if (mutated) await this.writeAccounts(accountsToKeep);
+
+    // Migrate the active pointers so they don't dangle onto deleted rows.
+    const activeAccountId = await this.getActiveAccountId();
     const activeHostId = await this.getActiveHostId();
-    if (activeHostId === hostId) {
-      await this.setActiveHostId(remaining[0]?.id ?? null);
+    const activeAccountWasRemoved =
+      !!activeAccountId && removedAccountIds.includes(activeAccountId);
+
+    if (activeAccountWasRemoved) {
+      const next = accountsToKeep[0];
+      if (next) {
+        await this.setActiveAccountId(next.id);
+        await this.setActiveHostId(next.hostIds[0] ?? null);
+      } else {
+        await this.setActiveAccountId(null);
+        await this.setActiveHostId(null);
+      }
+    } else if (activeHostId === hostId) {
+      // The disconnected host was active but the owning account is still
+      // alive — pick the first remaining host on that account.
+      const stillActive = accountsToKeep.find((a) => a.id === activeAccountId);
+      await this.setActiveHostId(stillActive?.hostIds[0] ?? null);
     }
   }
 

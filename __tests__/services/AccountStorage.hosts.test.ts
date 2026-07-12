@@ -142,7 +142,11 @@ describe('AccountStorage HostConnection model', () => {
     expect((await AccountStorage.listHostConnections())).toHaveLength(2);
   });
 
-  it('removeHostConnection drops the host but keeps the account', async () => {
+  it('removeHostConnection drops the host AND the owning account when it has no other hosts', async () => {
+    // Disconnecting the last host from an account should remove the account
+    // entirely — otherwise Settings would show a stale "ghost" row (avatar +
+    // name) for an account with no hosts to manage, which only cleared on
+    // app reload.
     const account = await AccountStorage.addAccount('gh-tok', {
       login: 'octocat',
       name: 'Octo',
@@ -161,8 +165,47 @@ describe('AccountStorage HostConnection model', () => {
       token: 'gh-tok',
     });
     await AccountStorage.removeHostConnection(host.id);
-    expect((await AccountStorage.listHostConnections())).toHaveLength(0);
-    expect((await AccountStorage.listAccounts())[0].hostIds).toHaveLength(0);
+    expect(await AccountStorage.listHostConnections()).toHaveLength(0);
+    expect(await AccountStorage.listAccounts()).toHaveLength(0);
+  });
+
+  it('removeHostConnection keeps the account when it still has other hosts', async () => {
+    // Sanity check: disconnecting ONE host from an account that has more
+    // should leave the account in place — only fully-empty accounts are
+    // garbage-collected by the new removeHostConnection logic.
+    const account = await AccountStorage.addAccount('gh-tok', {
+      login: 'octocat',
+      name: 'Octo',
+      email: 'o@e.com',
+      avatarUrl: '',
+    });
+    const hostA = await AccountStorage.upsertHostConnection({
+      accountId: account.id,
+      provider: 'github',
+      instanceBaseUrl: null,
+      hostLogin: 'octocat',
+      hostUserId: 42,
+      name: 'Octo',
+      email: 'o@e.com',
+      avatarUrl: '',
+      token: 'gh-tok',
+    });
+    await AccountStorage.upsertHostConnection({
+      accountId: account.id,
+      provider: 'gitlab',
+      instanceBaseUrl: null,
+      hostLogin: 'octocat',
+      hostUserId: 43,
+      name: 'Octo',
+      email: 'o@e.com',
+      avatarUrl: '',
+      token: 'gl-tok',
+    });
+    await AccountStorage.removeHostConnection(hostA.id);
+    const remaining = await AccountStorage.listAccounts();
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0].hostIds).toHaveLength(1);
+    expect(remaining[0].hostIds[0]).not.toBe(hostA.id);
   });
 
   it('listAccounts sanitises legacy rows that lack hostIds', async () => {

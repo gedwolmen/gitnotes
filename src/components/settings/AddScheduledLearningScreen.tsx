@@ -1,5 +1,5 @@
-import { useState, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native/datetimepicker';
@@ -49,6 +49,10 @@ export function AddScheduledLearningScreen() {
   const [showModelPicker, setShowModelPicker] = useState(false);
   const [showRepoFolderPicker, setShowRepoFolderPicker] = useState(false);
   const [showQuestionerFolderPicker, setShowQuestionerFolderPicker] = useState(false);
+  // Tracks the Add Schedule button's submit lifecycle so we can show
+  // "Generating..." while the AI note is being produced and "Schedule
+  // Added" once the save + generation succeed, before navigating back.
+  const [submitState, setSubmitState] = useState<'idle' | 'generating' | 'added'>('idle');
 
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
@@ -194,7 +198,28 @@ export function AddScheduledLearningScreen() {
     setShowQuestionerFolderPicker(true);
   }, [questionerFolderRepo]);
 
+  // Once the schedule has been successfully created and the note generated,
+  // sit on the "Schedule Added" confirmation briefly so the user can see it,
+  // then pop back to the previous screen. We keep the previous-screen check
+  // to avoid double-navigating if the user hits the system back button
+  // during the beat.
+  useEffect(() => {
+    if (submitState !== 'added') return;
+    const timer = setTimeout(() => {
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+      }
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [submitState, navigation]);
+
   const handleAdd = useCallback(async () => {
+    // Guard against double-submits while the AI generation + notification
+    // scheduling are in flight. The button is also visually disabled in
+    // those states so this is mostly belt-and-braces.
+    if (submitState !== 'idle') {
+      return;
+    }
     if (tags.length === 0) {
       Alert.alert(t('scheduledLearning.questioner.tagsRequiredTitle'), t('scheduledLearning.questioner.tagsRequiredBody'));
       return;
@@ -230,6 +255,12 @@ export function AddScheduledLearningScreen() {
       hour12: false,
     });
 
+    // Flip into the "Generating..." state up front so the button reflects
+    // the in-flight work while createItem + generateNow + scheduleNotification
+    // resolve. A subsequent success transition flips it to "Schedule Added"
+    // for a brief beat before we navigate back.
+    setSubmitState('generating');
+
     const newItem = await createItem({
       type: learningType,
       tags,
@@ -253,10 +284,12 @@ export function AddScheduledLearningScreen() {
       const createdNote = await ScheduledLearningService.generateNow(newItem);
       if (createdNote) {
         await ScheduledLearningService.scheduleNotification(newItem, createdNote.id);
-        // Reset form and pop back; the user can find the generated note in
-        // the notes list (or in the repo/folder they picked).
+        // Show the "Schedule Added" confirmation on the button for a short
+        // beat so the user gets visual feedback before the screen pops.
+        // The useEffect below handles the actual navigation back once that
+        // confirmation has been visible long enough to read.
+        setSubmitState('added');
         resetForm();
-        navigation.goBack();
         return;
       }
 
@@ -277,12 +310,16 @@ export function AddScheduledLearningScreen() {
           },
         ],
       );
+      // The schedule record was created but the note couldn't be generated;
+      // re-enable the button so the user can dismiss the alert and decide.
+      setSubmitState('idle');
       return;
     }
 
-    resetForm();
-    navigation.goBack();
-  }, [tags, description, selectedDays, selectedTime, selectedModel, selectedFolderPath, selectedRepoPath, selectedBranch, selectedWordCount, repeat, learningType, questionerSource, questionerPrompts, questionerFolders, createItem, resetForm, navigation, t]);
+    // createItem returned nothing — treat as a soft failure and let the
+    // user retry rather than silently navigating back.
+    setSubmitState('idle');
+  }, [submitState, tags, description, selectedDays, selectedTime, selectedModel, selectedFolderPath, selectedRepoPath, selectedBranch, selectedWordCount, repeat, learningType, questionerSource, questionerPrompts, questionerFolders, createItem, resetForm, t]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
@@ -734,14 +771,28 @@ export function AddScheduledLearningScreen() {
 
         <Button
           onPress={handleAdd}
+          disabled={submitState !== 'idle'}
           fullWidth
           style={{
-            backgroundColor: colors.primary,
+            backgroundColor: submitState === 'added' ? '#22c55e' : colors.primary,
             minHeight: 54,
+            opacity: submitState === 'generating' ? 0.85 : 1,
           }}
           textStyle={{ color: '#fff', fontWeight: '700' }}
+          leadingIcon={
+            submitState === 'generating' ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : submitState === 'added' ? (
+              <Ionicons name="checkmark-circle" size={20} color="#fff" />
+            ) : null
+          }
+          testID="add-schedule-submit"
         >
-          Add Schedule
+          {submitState === 'generating'
+            ? 'Generating…'
+            : submitState === 'added'
+              ? 'Schedule Added'
+              : 'Add Schedule'}
         </Button>
       </ScrollView>
 
