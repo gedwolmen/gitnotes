@@ -251,6 +251,38 @@ describe('NoteSyncQueueService', () => {
       expect(items[0].nextRetryAt!).toBeGreaterThanOrEqual(before + 500);
     });
 
+    test.each([
+      ['authentication', '401 Unauthorized'],
+      ['permission', '403 Forbidden'],
+      ['conflict', '409 Conflict'],
+    ])('drops %s failures without retaining a queue entry', async (_kind, error) => {
+      (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: false, error });
+
+      await NoteSyncQueueService.enqueueNoteUpsert({
+        repo: 'r', branch: 'main', filePath: 'a', title: 'A', content: '', format: 'markdown',
+      });
+
+      const result = await NoteSyncQueueService.drain();
+
+      expect(result.failed).toBe(0);
+      expect(result.remaining).toBe(0);
+      expect(await NoteSyncQueueService.pendingCount()).toBe(0);
+    });
+
+    test('retains transient failures for retry', async () => {
+      (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: false, error: '503 Service Unavailable' });
+
+      await NoteSyncQueueService.enqueueNoteUpsert({
+        repo: 'r', branch: 'main', filePath: 'a', title: 'A', content: '', format: 'markdown',
+      });
+
+      const result = await NoteSyncQueueService.drain();
+
+      expect(result.failed).toBe(1);
+      expect(result.remaining).toBe(1);
+      expect((await NoteSyncQueueService.getAll())[0].attempts).toBe(1);
+    });
+
     test('drops items after MAX_ATTEMPTS', async () => {
       (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: false, error: 'fatal' });
 
