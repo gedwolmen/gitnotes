@@ -13,11 +13,44 @@ import { HapticService } from '../../utils/haptics';
 import { useUndo } from '../../utils/useUndo';
 import { syncNoteToGitHub } from '../../services/NoteGitHubSyncService';
 import { NoteSyncQueueService } from '../../services/NoteSyncQueueService';
+import { classifyGitHubSyncError, isRetryableFailure } from '../../services/git/syncFailure';
 import { githubActivity } from '../../stores/githubActivityStore';
 import { canvasToLink } from '../../models/Canvas';
 import { getExtensionForFormat, extractCanvasJsonRefs, slugifyLocal } from './editorShared';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'NoteEditor'>;
+
+function showDurableSyncFailureAlert(kind: ReturnType<typeof classifyGitHubSyncError>['kind']): void {
+  switch (kind) {
+    case 'authentication':
+      Alert.alert('Authentication Required', 'Reconnect your GitHub account in Settings', [{ text: 'OK' }]);
+      return;
+    case 'permission':
+    case 'saml':
+      Alert.alert(
+        'Permission Required',
+        'This token cannot write to this repository. Check your token permissions in Settings.',
+        [{ text: 'OK' }],
+      );
+      return;
+    case 'conflict':
+      Alert.alert('Sync Conflict', 'This note was modified on GitHub. Pull to get the latest version.', [{ text: 'OK' }]);
+      return;
+    case 'not_found':
+      Alert.alert('Invalid Repository', 'The repository path is invalid. Please check your settings.', [{ text: 'OK' }]);
+      return;
+    default:
+      return;
+  }
+}
+
+function syncStatusForError(message: string): number | undefined {
+  const statusMatch = message.match(/\b(401|403|404|409|429|5\d{2})\b/);
+  if (statusMatch?.[1]) return Number(statusMatch[1]);
+  if (/not authenticated/i.test(message)) return 401;
+  if (/conflict/i.test(message)) return 409;
+  return undefined;
+}
 
 interface NoteEditorDocumentParams {
   noteId?: string;
@@ -309,31 +342,11 @@ export function useNoteEditorDocument({
             }
           } else {
             const error = syncResult.error!;
-            if (error.includes('Conflict') || error.includes('conflict')) {
-              Alert.alert(
-                'Sync Conflict',
-                'This note was modified on GitHub since you last loaded it. Pull to get the latest version and resolve the conflict.',
-                [{ text: 'OK' }],
-              );
-            } else if (error.includes('not authenticated') || error.includes('401') || error.includes('403')) {
-              Alert.alert(
-                'Authentication Required',
-                'Please check your GitHub credentials in Settings.',
-                [{ text: 'OK' }],
-              );
-            } else if (error.includes('Invalid repo') || error.includes('invalid repo')) {
-              Alert.alert(
-                'Invalid Repository',
-                'The repository path is invalid. Please check your settings.',
-                [{ text: 'OK' }],
-              );
-            } else if (error.includes('exceeding 5 MB') || error.includes('too large')) {
-              Alert.alert(
-                'File Too Large',
-                'This note exceeds the 5 MB size limit and cannot be synced.',
-                [{ text: 'OK' }],
-              );
-            } else {
+            const failure = classifyGitHubSyncError(
+              new Error(error),
+              syncStatusForError(error),
+            );
+            if (isRetryableFailure(failure)) {
               try {
                 await NoteSyncQueueService.enqueueNoteUpsert(syncParams, savedNoteId);
                 Alert.alert(
@@ -348,6 +361,8 @@ export function useNoteEditorDocument({
                   [{ text: 'OK' }],
                 );
               }
+            } else {
+              showDurableSyncFailureAlert(failure.kind);
             }
           }
         } catch (error) {
@@ -364,19 +379,28 @@ export function useNoteEditorDocument({
             tags,
             color: existingForColor?.color ?? null,
           };
-          try {
-            await NoteSyncQueueService.enqueueNoteUpsert(syncParams, savedNoteId);
-            Alert.alert(
-              'Note Saved Locally',
-              'Your note was saved but could not be pushed to GitHub yet. It will sync automatically when connection is restored.',
-              [{ text: 'OK' }],
-            );
-          } catch {
-            Alert.alert(
-              'Save Failed',
-              'Your note was saved locally but could not be queued for sync. Please try again.',
-              [{ text: 'OK' }],
-            );
+          const thrownMessage = error instanceof Error ? error.message : String(error);
+          const failure = classifyGitHubSyncError(
+            error,
+            syncStatusForError(thrownMessage),
+          );
+          if (!isRetryableFailure(failure)) {
+            showDurableSyncFailureAlert(failure.kind);
+          } else {
+            try {
+              await NoteSyncQueueService.enqueueNoteUpsert(syncParams, savedNoteId);
+              Alert.alert(
+                'Note Saved Locally',
+                'Your note was saved but could not be pushed to GitHub yet. It will sync automatically when connection is restored.',
+                [{ text: 'OK' }],
+              );
+            } catch {
+              Alert.alert(
+                'Save Failed',
+                'Your note was saved locally but could not be queued for sync. Please try again.',
+                [{ text: 'OK' }],
+              );
+            }
           }
         } finally {
           githubActivity.end();
