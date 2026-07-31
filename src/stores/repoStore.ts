@@ -5,6 +5,11 @@ import { useNoteStore } from './noteStore';
 import { useCanvasStore } from './canvasStore';
 import { useTodoStore } from './todoStore';
 import type { GitHostProvider } from '../services/git/GitHost';
+import { getActiveGitHost } from '../services/git/activeHost';
+import {
+  checkGitHubRepoAccess,
+  RepoAccessPreflightError,
+} from '../services/git/repoAccessPreflight';
 
 interface RepoState {
   repositories: GitRepository[];
@@ -34,6 +39,18 @@ export const useRepoStore = create<RepoState & RepoActions>()((set, get) => ({
   },
 
   addRepository: async (path, name, provider = 'github') => {
+    if (provider === 'github') {
+      const activeHost = await getActiveGitHost();
+      if (activeHost?.provider === 'github') {
+        const access = await checkGitHubRepoAccess(path, activeHost.token);
+        if (access.kind !== 'ok' && access.kind !== 'transient') {
+          throw new RepoAccessPreflightError(access);
+        }
+        if (access.kind === 'transient') {
+          console.warn('[RepoStore] GitHub repository access preflight was inconclusive:', access.message);
+        }
+      }
+    }
     const repo = await GitService.addRepository(path, name, provider);
     const updated = await StorageService.getSavedRepositories();
     set({ repositories: updated });
