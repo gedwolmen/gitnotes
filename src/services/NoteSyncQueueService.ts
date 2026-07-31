@@ -8,6 +8,7 @@ import { StorageService } from './StorageService';
 import { SyncEngineService } from './SyncEngineService';
 import { AuthService } from './AuthService';
 import { LocalGitWriter } from './git/LocalGitWriter';
+import { classifyGitHubSyncError, isRetryableFailure } from './git/syncFailure';
 import { NoteColor, NoteFormat } from '../models/Note';
 
 const QUEUE_KEY = '@gitnotes:sync_queue_v1';
@@ -25,6 +26,15 @@ const BACKOFF_CAP_MS = 30_000;
  */
 function backoffMsForAttempts(attempts: number): number {
   return Math.min(BACKOFF_BASE_MS * 2 ** Math.max(0, attempts - 1), BACKOFF_CAP_MS);
+}
+
+function syncStatusForError(message: string | undefined): number | undefined {
+  if (!message) return undefined;
+  const statusMatch = message.match(/\b(401|403|404|409|429|5\d{2})\b/);
+  if (statusMatch?.[1]) return Number(statusMatch[1]);
+  if (/not authenticated/i.test(message)) return 401;
+  if (/conflict/i.test(message)) return 409;
+  return undefined;
 }
 
 export interface NoteUpsertParams {
@@ -330,7 +340,16 @@ class NoteSyncQueueServiceClass {
             });
 
       if (!result.success) {
-        recordFailure(item, result.error);
+        const failure = classifyGitHubSyncError(
+          new Error(result.error ?? 'Unknown GitHub sync failure'),
+          syncStatusForError(result.error),
+        );
+        if (!isRetryableFailure(failure)) {
+          console.warn('[NoteSyncQueue] dropped durable failure:', failure.kind);
+          droppedIds.add(item.id);
+        } else {
+          recordFailure(item, result.error);
+        }
         continue;
       }
 

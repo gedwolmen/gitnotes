@@ -289,7 +289,7 @@
     "branch": "Branch: {{branch}}",
     "branchDefault": "main",
     "addGitHubAccount": "Add GitHub Account",
-    "tokenDescription": "Fine-grained Personal Access Token with read/write access to your repositories.",
+    "tokenDescription": "Fine-grained Personal Access Token with Contents: Read and write access to your repositories.",
     "openGithubTokenSettings": "Open GitHub token settings",
     "hideToken": "Hide token",
     "showToken": "Show token",
@@ -381,6 +381,9 @@
     "show": "Show",
     "hide": "Hide",
     "connectHost": "Connect host",
+    "help": {
+      "github": "Fine-grained tokens need Contents: Read and write for each repository. Classic tokens need the repo scope."
+    },
     "success": {
       "testTitle": "Success",
       "testBody": "Token accepted. Press Save to keep it."

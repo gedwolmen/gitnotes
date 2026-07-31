@@ -352,6 +352,18 @@ export function ConnectHostModal({
             </TouchableOpacity>
           </View>
 
+          {provider === 'github' ? (
+            <Text
+              style={{
+                color: colors.textSecondary,
+                fontSize: 12,
+                marginBottom: spacing[2],
+              }}
+            >
+              {t('connectHost.help.github')}
+            </Text>
+          ) : null}
+
           <View style={[styles.row, { marginTop: spacing[2] }]}>
             <TouchableOpacity
               onPress={onClose}

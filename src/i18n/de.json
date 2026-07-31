@@ -257,6 +257,9 @@
     "show": "Show",
     "hide": "Hide",
     "connectHost": "Connect host",
+    "help": {
+      "github": "Feingranulare Tokens benötigen „Contents: Read and write“ für jedes Repository. Klassische Tokens benötigen den Bereich „repo“."
+    },
     "success": {
       "testTitle": "Success",
       "testBody": "Token accepted."

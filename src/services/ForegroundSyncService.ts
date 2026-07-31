@@ -2,6 +2,7 @@ import { AppState, type AppStateStatus, type NativeEventSubscription } from 'rea
 import NetInfo, { type NetInfoSubscription } from '@react-native-community/netinfo';
 import { GitHubService } from './GitHubService';
 import { StorageService } from './StorageService';
+import { NoteSyncQueueService } from './NoteSyncQueueService';
 import { pullAllFromRepos } from './RepoPullService';
 
 /**
@@ -95,6 +96,7 @@ async function runPull(reason: string): Promise<void> {
 
   let watchdogTimedOut = false;
   let watchdog: ReturnType<typeof setTimeout> | null = null;
+  let pullTimeout: ReturnType<typeof setTimeout> | null = null;
   watchdog = setTimeout(() => {
     watchdogTimedOut = true;
     console.warn(`[ForegroundSync] pull (${reason}) exceeded ${PULL_WATCHDOG_MS}ms`);
@@ -105,10 +107,20 @@ async function runPull(reason: string): Promise<void> {
   const PULL_TIMEOUT_MS = 600_000;
   try {
     await Promise.race([
-      pullAllFromRepos(),
-      new Promise<void>((_, reject) =>
-        setTimeout(() => reject(new Error(`Pull timed out after ${PULL_TIMEOUT_MS}ms`)), PULL_TIMEOUT_MS)
-      ),
+      (async () => {
+        try {
+          await NoteSyncQueueService.drain();
+        } catch (error) {
+          console.warn(`[ForegroundSync] drain (${reason}) failed:`, error);
+        }
+        await pullAllFromRepos();
+      })(),
+      new Promise<void>((_, reject) => {
+        pullTimeout = setTimeout(
+          () => reject(new Error(`Pull timed out after ${PULL_TIMEOUT_MS}ms`)),
+          PULL_TIMEOUT_MS,
+        );
+      }),
     ]);
     success = true;
     if (__DEV__) {
@@ -118,6 +130,7 @@ async function runPull(reason: string): Promise<void> {
     console.warn(`[ForegroundSync] pull (${reason}) failed after ${Date.now() - startedAt}ms:`, error);
   } finally {
     if (watchdog !== null) clearTimeout(watchdog);
+    if (pullTimeout !== null) clearTimeout(pullTimeout);
     inFlight = false;
     lastRunAt = Date.now();
     if (watchdogTimedOut) {

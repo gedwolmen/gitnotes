@@ -41,6 +41,7 @@ import { CloneProgressModal, type CloneProgress } from '../components/settings/C
 import { settingsStyles as styles } from '../components/settings/settingsStyles';
 import type { GitRepository } from '../services/GitService';
 import { useTranslation } from 'react-i18next';
+import { RepoAccessPreflightError } from '../services/git/repoAccessPreflight';
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
@@ -456,6 +457,10 @@ export default function SettingsScreen() {
     } catch (error) {
       console.warn('[SettingsScreen] handleSelectGithubRepo failed:', error);
       HapticService.error();
+      if (error instanceof RepoAccessPreflightError) {
+        Alert.alert('Repository Access', error.message);
+        return;
+      }
       Alert.alert('Error', 'Failed to add repository.');
     } finally {
       setIsAddingRepo(false);
@@ -475,6 +480,10 @@ export default function SettingsScreen() {
     } catch (error) {
       console.warn('[SettingsScreen] handleAddManualRepo failed:', error);
       HapticService.error();
+      if (error instanceof RepoAccessPreflightError) {
+        Alert.alert('Repository Access', error.message);
+        return;
+      }
       Alert.alert('Error', 'Failed to add repository.');
     } finally {
       setIsAddingRepo(false);

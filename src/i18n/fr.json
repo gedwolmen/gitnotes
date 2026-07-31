@@ -257,6 +257,9 @@
     "show": "Show",
     "hide": "Hide",
     "connectHost": "Connect host",
+    "help": {
+      "github": "Les jetons à granularité fine nécessitent l’autorisation « Contents: Read and write » pour chaque dépôt. Les jetons classiques nécessitent la portée repo."
+    },
     "success": {
       "testTitle": "Success",
       "testBody": "Token accepted."

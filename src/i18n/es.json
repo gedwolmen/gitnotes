@@ -257,6 +257,9 @@
     "show": "Show",
     "hide": "Hide",
     "connectHost": "Connect host",
+    "help": {
+      "github": "Los tokens de grano fino necesitan «Contents: Read and write» para cada repositorio. Los tokens clásicos necesitan el ámbito repo."
+    },
     "success": {
       "testTitle": "Success",
       "testBody": "Token accepted."

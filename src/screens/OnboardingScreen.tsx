@@ -131,7 +131,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
 
             <Text style={[styles.title, { color: colors.text }]}>Connect GitHub</Text>
             <Text style={[styles.description, { color: colors.textSecondary }]}>
-              Enter a Fine-grained Personal Access Token to link your notes to GitHub repositories. Create one with read/write access to your chosen repositories. You can skip this and add it later in Settings.
+              Enter a Fine-grained Personal Access Token with Contents: Read and write access to each repository, or a classic token with the repo scope. You can skip this and add it later in Settings.
             </Text>
 
             <Button

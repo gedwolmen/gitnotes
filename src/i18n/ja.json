@@ -257,6 +257,9 @@
     "show": "Show",
     "hide": "Hide",
     "connectHost": "Connect host",
+    "help": {
+      "github": "きめ細かいトークンには、各リポジトリの「Contents: Read and write」権限が必要です。クラシックトークンには repo スコープが必要です。"
+    },
     "success": {
       "testTitle": "Success",
       "testBody": "Token accepted."

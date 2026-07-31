@@ -1,4 +1,5 @@
-import { renderHook } from '@testing-library/react-native';
+import { renderHook, act } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 
 jest.mock('expo-image-picker', () => ({}));
 
@@ -6,6 +7,7 @@ jest.mock('../../src/services/GitService', () => ({
   GitService: {
     commit: jest.fn(),
     push: jest.fn(),
+    getBranches: jest.fn(async () => []),
     getRepositoryFolders: jest.fn(async () => []),
   },
 }));
@@ -15,7 +17,7 @@ jest.mock('../../src/services/NoteGitHubSyncService', () => ({
 }));
 
 jest.mock('../../src/services/NoteSyncQueueService', () => ({
-  NoteSyncQueueService: { enqueue: jest.fn() },
+  NoteSyncQueueService: { enqueue: jest.fn(), enqueueNoteUpsert: jest.fn() },
 }));
 
 jest.mock('../../src/utils/haptics', () => ({
@@ -23,6 +25,8 @@ jest.mock('../../src/utils/haptics', () => ({
 }));
 
 import { useNoteEditorDocument } from '../../src/components/editor/useNoteEditorDocument';
+import { syncNoteToGitHub } from '../../src/services/NoteGitHubSyncService';
+import { NoteSyncQueueService } from '../../src/services/NoteSyncQueueService';
 
 const baseParams = {
   initialFormat: 'markdown' as const,
@@ -84,5 +88,33 @@ describe('useNoteEditorDocument notFound (issue #669)', () => {
       }),
     );
     expect(result.current.notFound).toBe(false);
+  });
+
+  test('shows actionable auth failure and does not enqueue the locally saved note', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: false, error: 'GitHub not authenticated' });
+    const createNote = jest.fn(async () => ({ id: 'new-note-1' }));
+
+    const { result } = renderHook(() =>
+      useNoteEditorDocument({
+        ...baseParams,
+        initialRepo: 'owner/repo',
+        initialTitle: 'A note',
+        createNote,
+        getNoteById: () => undefined,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.handleSave();
+    });
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Authentication Required',
+      'Reconnect your GitHub account in Settings',
+      [{ text: 'OK' }],
+    );
+    expect(NoteSyncQueueService.enqueueNoteUpsert).not.toHaveBeenCalled();
+    alertSpy.mockRestore();
   });
 });
