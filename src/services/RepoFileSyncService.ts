@@ -75,8 +75,10 @@ class RepoFileSyncServiceClass {
 
     for (const item of contents) {
       if (item.type === 'dir') {
+        if (item.path === 'thoughts' || item.path.startsWith('thoughts/')) continue;
         await this.syncDirectory(owner, repo, item.path, repoPath, branch, result);
       } else if (item.type === 'file') {
+        if (item.path.startsWith('thoughts/')) continue;
         const format = detectFormat(item.name);
         if (!format) continue;
 
