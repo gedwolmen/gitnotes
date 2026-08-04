@@ -29,7 +29,7 @@ function showDurableSyncFailureAlert(kind: ReturnType<typeof classifyGitHubSyncE
     case 'saml':
       Alert.alert(
         'Permission Required',
-        'This token cannot write to this repository. Check your token permissions in Settings.',
+        'This token cannot write to this repository. Check repository permissions in Settings.',
         [{ text: 'OK' }],
       );
       return;
@@ -336,7 +336,7 @@ export function useNoteEditorDocument({
             const error = syncResult.error!;
             const failure = classifyGitHubSyncError(
               new Error(error),
-              syncStatusForError(error),
+              syncResult.status ?? syncStatusForError(error),
             );
             if (isRetryableFailure(failure)) {
               try {

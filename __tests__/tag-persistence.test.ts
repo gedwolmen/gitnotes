@@ -17,6 +17,9 @@ jest.mock('../src/services/GitHubService', () => ({
   GitHubService: {
     isAuthenticated: jest.fn(() => true),
     updateFile: jest.fn(),
+    deleteFile: jest.fn(),
+    getFileShaOrNull: jest.fn(async () => null),
+    getFileShaCached: jest.fn(async () => ({ kind: 'found', sha: 'old-sha' })),
     getSavedRepositories: jest.fn(),
     getTreeRecursive: jest.fn(),
     getTreeRecursiveOrThrow: jest.fn(),
@@ -35,7 +38,7 @@ jest.mock('../src/services/StorageService', () => ({
 }));
 
 import { canPersistNoteTags } from '../src/utils/noteTagSupport';
-import { syncNoteToGitHub } from '../src/services/NoteGitHubSyncService';
+import { deleteNoteFromGitHub, syncNoteToGitHub } from '../src/services/NoteGitHubSyncService';
 import { pullFromSingleRepo } from '../src/services/RepoPullService';
 import { GitHubService } from '../src/services/GitHubService';
 import { StorageService } from '../src/services/StorageService';
@@ -67,6 +70,43 @@ describe('tag persistence', () => {
       'main',
       { expectExists: false }
     );
+  });
+
+  test('returns the terminal GitHub status when updating a note is forbidden', async () => {
+    (GitHubService.updateFile as jest.Mock).mockRejectedValue({
+      status: 403,
+      message: 'Permission denied',
+    });
+
+    await expect(syncNoteToGitHub({
+      repo: 'org/repo',
+      branch: 'main',
+      title: 'Forbidden Note',
+      content: 'hello world',
+      format: 'markdown',
+    })).resolves.toMatchObject({
+      success: false,
+      error: 'Permission denied',
+      status: 403,
+    });
+  });
+
+  test('returns the terminal GitHub status when deleting a note is forbidden', async () => {
+    (GitHubService.deleteFile as jest.Mock).mockRejectedValue({
+      status: 403,
+      message: 'Permission denied',
+    });
+
+    await expect(deleteNoteFromGitHub({
+      repo: 'org/repo',
+      branch: 'main',
+      filePath: 'notes/forbidden.md',
+      title: 'Forbidden Note',
+    })).resolves.toMatchObject({
+      success: false,
+      error: 'Permission denied',
+      status: 403,
+    });
   });
 
   test('restores tags from repo content on refresh', async () => {

@@ -10,6 +10,7 @@ import { resolveBranch } from './git/branchResolver';
 import { githubActivity } from '../stores/githubActivityStore';
 import { getGitHostService } from './git/gitHostFactory';
 import { FEATURE_USE_MULTI_HOST_WRITE } from './featureFlags';
+import { extractHttpErrorDetails, syncStatusForError } from './git/syncFailure';
 import type { GitHostProvider } from './git/GitHost';
 
 async function resolveAuthor(provider: GitHostProvider = 'github'): Promise<{ name: string; email: string }> {
@@ -31,6 +32,16 @@ export interface NoteGitHubSyncResult {
   filePath?: string;
   finalContent?: string;
   error?: string;
+  status?: number;
+}
+
+function failedSyncResult(error: unknown): NoteGitHubSyncResult {
+  const details = extractHttpErrorDetails(error);
+  const message = details.message ?? 'Unknown error';
+  const status = details.status ?? syncStatusForError(message);
+  return status === undefined
+    ? { success: false, error: message }
+    : { success: false, error: message, status };
 }
 
 export function canPersistNoteTags(format?: string): boolean {
@@ -389,11 +400,11 @@ export async function deleteNoteFromGitHub(params: {
       );
       return { success: true, filePath };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      if (/404/.test(message)) {
+      const details = extractHttpErrorDetails(error);
+      if (details.status === 404 || /404/.test(details.message ?? '')) {
         return { success: true, filePath };
       }
-      return { success: false, error: message };
+      return failedSyncResult(error);
     }
   }
 
@@ -432,11 +443,11 @@ export async function deleteNoteFromGitHub(params: {
     }
     return { success: false, error: 'GitHub API returned no result' };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    if (/404/.test(message)) {
+    const details = extractHttpErrorDetails(error);
+    if (details.status === 404 || /404/.test(details.message ?? '')) {
       return { success: true, filePath };
     }
-    return { success: false, error: message };
+    return failedSyncResult(error);
   }
 }
 
@@ -574,10 +585,7 @@ export async function syncNoteToGitHub(params: {
       );
       return { success: true, filePath: targetPath, finalContent };
     } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
+      return failedSyncResult(error);
     }
   }
 
@@ -606,9 +614,6 @@ export async function syncNoteToGitHub(params: {
     }
     return { success: false, error: 'GitHub API returned no result' };
   } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    return failedSyncResult(error);
   }
 }

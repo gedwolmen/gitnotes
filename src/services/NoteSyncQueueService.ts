@@ -333,7 +333,7 @@ class NoteSyncQueueServiceClass {
       if (!result.success) {
         const failure = classifyGitHubSyncError(
           new Error(result.error ?? 'Unknown GitHub sync failure'),
-          syncStatusForError(result.error),
+          result.status ?? syncStatusForError(result.error),
         );
         if (!isRetryableFailure(failure)) {
           console.warn('[NoteSyncQueue] dropped durable failure:', failure.kind);
