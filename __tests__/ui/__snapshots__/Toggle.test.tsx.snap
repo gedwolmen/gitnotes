@@ -39,12 +39,9 @@ exports[`Toggle snapshots both states: toggle-off 1`] = `
   }
 >
   <View
+    className="bg-surface rounded-full"
     style={
       [
-        {
-          "backgroundColor": "#FFFFFF",
-          "borderRadius": 999,
-        },
         {
           "shadowColor": "#BFBFBF",
           "shadowOffset": {
@@ -57,7 +54,6 @@ exports[`Toggle snapshots both states: toggle-off 1`] = `
         {
           "backgroundColor": "#F5F5F5",
           "height": 30,
-          "justifyContent": "center",
           "padding": 4,
           "width": 52,
         },
@@ -182,12 +178,9 @@ exports[`Toggle snapshots both states: toggle-on 1`] = `
   }
 >
   <View
+    className="bg-surface rounded-full"
     style={
       [
-        {
-          "backgroundColor": "#FFFFFF",
-          "borderRadius": 999,
-        },
         {
           "shadowColor": "#BFBFBF",
           "shadowOffset": {
@@ -200,7 +193,6 @@ exports[`Toggle snapshots both states: toggle-on 1`] = `
         {
           "backgroundColor": "#F5F5F5",
           "height": 30,
-          "justifyContent": "center",
           "padding": 4,
           "width": 52,
         },

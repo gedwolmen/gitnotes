@@ -9,16 +9,6 @@ import { IconButton } from './IconButton';
 export const SCREEN_HEADER_BASE_HEIGHT = 60;
 export const SCREEN_HEADER_SUBTITLE_HEIGHT = 88;
 
-/**
- * Total reserved space for the floating ScreenHeader, including the
- * top safe-area inset. Use as `paddingTop` on the screen's first
- * scroll/list container so content can scroll behind the bar without
- * being permanently hidden under it.
- *
- * Pass `{ subtitle: true }` when the screen's ScreenHeader has a
- * subtitle; the extra height keeps two-line headers from clipping
- * content.
- */
 export function useScreenHeaderHeight(opts?: { subtitle?: boolean }): number {
   const insets = useSafeAreaInsets();
   const base = opts?.subtitle ? SCREEN_HEADER_SUBTITLE_HEIGHT : SCREEN_HEADER_BASE_HEIGHT;
@@ -44,8 +34,6 @@ export function ScreenHeader(props: ScreenHeaderProps) {
     <View
       style={[
         {
-          flexDirection: 'row',
-          alignItems: 'center',
           paddingHorizontal: spacing[4],
           paddingTop: spacing[3],
           paddingBottom: spacing[3],
@@ -53,42 +41,25 @@ export function ScreenHeader(props: ScreenHeaderProps) {
         },
         style,
       ]}
+      className="flex-row items-center"
     >
       {onBack && (
         <IconButton size="sm" onPress={onBack} accessibilityLabel="Back">
           <Ionicons name="arrow-back" size={18} color={colors.accent} />
         </IconButton>
       )}
-      <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
+      <View className="flex-1">
+        <View className="flex-row items-center gap-2">
           <Text
-            style={{
-              color: colors.text,
-              fontSize: type['2xl'],
-              fontWeight: '700',
-              flexShrink: 1,
-            }}
+            className="text-2xl font-bold flex-shrink-1"
+            style={{ color: colors.text }}
             numberOfLines={1}
           >
             {title}
           </Text>
           {badge && (
-            <View
-              style={{
-                backgroundColor: '#3B82F6',
-                paddingHorizontal: spacing[2],
-                paddingVertical: 2,
-                borderRadius: 6,
-              }}
-            >
-              <Text
-                style={{
-                  color: '#ffffff',
-                  fontSize: 10,
-                  fontWeight: '800',
-                  letterSpacing: 0.5,
-                }}
-              >
+            <View className="bg-blue-500 px-2 py-0.5 rounded-md">
+              <Text className="text-white text-[10px] font-extrabold" style={{ letterSpacing: 0.5 }}>
                 {badge}
               </Text>
             </View>
@@ -96,11 +67,8 @@ export function ScreenHeader(props: ScreenHeaderProps) {
         </View>
         {subtitle && (
           <Text
-            style={{
-              color: colors.textSecondary,
-              fontSize: type.sm,
-              marginTop: 2,
-            }}
+            className="text-sm mt-0.5"
+            style={{ color: colors.textSecondary }}
             numberOfLines={1}
           >
             {subtitle}
@@ -108,25 +76,20 @@ export function ScreenHeader(props: ScreenHeaderProps) {
         )}
       </View>
       {actions && (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
+        <View className="flex-row items-center gap-2">
           {actions}
         </View>
       )}
     </View>
   );
 
-  // Android fallback: use solid semi-transparent background instead of blur
   if (Platform.OS === 'android') {
     return (
       <View
         pointerEvents="box-none"
+        className="absolute top-0 left-0 right-0 z-10"
         style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
           paddingTop: insets.top,
-          zIndex: 10,
           backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)',
         }}
       >
@@ -140,14 +103,8 @@ export function ScreenHeader(props: ScreenHeaderProps) {
       pointerEvents="box-none"
       intensity={60}
       tint={isDark ? 'dark' : 'light'}
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        paddingTop: insets.top,
-        zIndex: 10,
-      }}
+      className="absolute top-0 left-0 right-0 z-10"
+      style={{ paddingTop: insets.top }}
     >
       {headerContent}
     </BlurView>

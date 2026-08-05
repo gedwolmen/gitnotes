@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -27,35 +27,18 @@ export function ConflictBanner() {
     : `${unresolvedCount} files need merge`;
 
   return (
-    <TouchableOpacity onPress={handlePress} activeOpacity={0.7}>
+    <Pressable onPress={handlePress} className="active:opacity-70">
       <View
-        style={[
-          styles.banner,
-          { backgroundColor: `${WARNING}20`, borderColor: `${WARNING}33` },
-        ]}
+        className="mx-4 mb-3 px-3.5 py-2.5 rounded-[14px] border"
+        style={{ backgroundColor: `${WARNING}20`, borderColor: `${WARNING}33` }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View className="flex-row items-center">
           <Ionicons name="warning" size={16} color={WARNING_DARK} />
-          <Text style={[styles.text, { color: WARNING_DARK, marginLeft: 6 }]}>
+          <Text className="text-sm font-semibold ml-1.5" style={{ color: WARNING_DARK }}>
             {label} — Tap to resolve
           </Text>
         </View>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  banner: {
-    marginHorizontal: 16,
-    marginBottom: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  text: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-});
