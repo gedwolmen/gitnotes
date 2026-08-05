@@ -7,7 +7,6 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { NoteTemplateIcon } from '../../services/TemplateService';
 import { TEMPLATE_MAX_TAGS, TEMPLATE_MAX_TAG_LENGTH } from '../../utils/templateTags';
 import { ICON_OPTIONS } from './templateManagerShared';
-import { styles } from './templateManagerStyles';
 
 interface TemplateEditorModalProps {
   visible: boolean;
@@ -58,28 +57,28 @@ export function TemplateEditorModal({
   const tagLimitReached = draftTags.length >= TEMPLATE_MAX_TAGS;
 
   return (
-    <Modal visible={visible} onRequestClose={onClose} contentStyle={styles.modalSurface}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.editorContainer}>
-        <Text style={[styles.editorTitle, { color: colors.text }]}>{editingId ? 'Edit template' : 'New template'}</Text>
+    <Modal visible={visible} onRequestClose={onClose} contentStyle={{ width: '100%', maxWidth: 480, flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1 pt-3 px-5 pb-3">
+        <Text className="text-[22px] font-bold mb-[18px]" style={{ color: colors.text }}>{editingId ? 'Edit template' : 'New template'}</Text>
 
         <ScrollView
-          style={styles.editorScroll}
-          contentContainerStyle={styles.editorScrollContent}
+          className="flex-1"
+          contentContainerClassName="pb-6"
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View testID="template-editor.view.preview-card" style={[styles.previewCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <View style={[styles.previewIcon, { backgroundColor: colors.primary + '20' }]}>
+          <View testID="template-editor.view.preview-card" className="flex-row items-center gap-3 p-3 rounded-sm border mb-4" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
+            <View className="w-11 h-11 rounded-sm items-center justify-center" style={{ backgroundColor: colors.primary + '20' }}>
               <Ionicons name={draftIcon} size={22} color={colors.primary} />
             </View>
-            <View style={styles.previewMeta}>
-              <Text style={[styles.previewName, { color: colors.text }]} numberOfLines={1}>{previewName}</Text>
-              <Text style={[styles.previewDesc, { color: colors.textSecondary }]} numberOfLines={2}>{previewDescription}</Text>
+            <View className="flex-1 min-w-0">
+              <Text className="text-[15px] font-bold" style={{ color: colors.text }} numberOfLines={1}>{previewName}</Text>
+              <Text className="text-xs mt-0.5" style={{ color: colors.textSecondary }} numberOfLines={2}>{previewDescription}</Text>
               {draftTags.length > 0 ? (
-                <View style={styles.previewTags}>
+                <View className="flex-row flex-wrap gap-1 mt-1.5">
                   {draftTags.map((tag) => (
-                    <View key={`preview-${tag}`} style={[styles.previewTagChip, { backgroundColor: colors.surfaceSecondary }]}>
-                      <Text style={[styles.previewTagText, { color: colors.textSecondary }]}>{tag}</Text>
+                    <View key={`preview-${tag}`} className="rounded px-1.5 py-0.5" style={{ backgroundColor: colors.surfaceSecondary }}>
+                      <Text className="text-[11px]" style={{ color: colors.textSecondary }}>{tag}</Text>
                     </View>
                   ))}
                 </View>
@@ -87,7 +86,7 @@ export function TemplateEditorModal({
             </View>
           </View>
 
-          <Text style={[styles.label, { color: colors.textSecondary }]}>Name</Text>
+          <Text className="text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: colors.textSecondary, letterSpacing: 0.4 }}>Name</Text>
           <TextInput
             testID="template-editor.input.name"
             value={draftName}
@@ -95,12 +94,13 @@ export function TemplateEditorModal({
             placeholder="My template"
             placeholderTextColor={colors.textSecondary}
             autoCapitalize="sentences"
-            style={[styles.nameInput, { color: colors.text, backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}
+            className="border rounded-[10px] px-3 py-2.5 text-[15px]"
+            style={{ color: colors.text, backgroundColor: colors.surfaceSecondary, borderColor: colors.border }}
             maxLength={60}
           />
 
-          <Text style={[styles.label, { color: colors.textSecondary, marginTop: 14 }]}>Icon</Text>
-          <View style={styles.iconGrid} testID="template-editor.view.icon-grid">
+          <Text className="text-xs font-semibold uppercase tracking-wide mb-1.5 mt-3.5" style={{ color: colors.textSecondary, letterSpacing: 0.4 }}>Icon</Text>
+          <View className="flex-row flex-wrap gap-2" testID="template-editor.view.icon-grid">
             {ICON_OPTIONS.map((icon) => {
               const selected = icon === draftIcon;
               return (
@@ -110,10 +110,11 @@ export function TemplateEditorModal({
                   accessibilityLabel={`Select ${icon} icon`}
                   accessibilityState={{ selected }}
                   onPress={() => onIconChange(icon)}
-                  style={[
-                    styles.iconCell,
-                    { backgroundColor: selected ? colors.primary : colors.surfaceSecondary, borderColor: selected ? colors.primary : colors.border },
-                  ]}
+                  className="w-10 h-10 rounded-[10px] border items-center justify-center"
+                  style={{
+                    backgroundColor: selected ? colors.primary : colors.surfaceSecondary,
+                    borderColor: selected ? colors.primary : colors.border,
+                  }}
                 >
                   <Ionicons name={icon} size={20} color={selected ? '#fff' : colors.textSecondary} />
                 </TouchableOpacity>
@@ -121,7 +122,7 @@ export function TemplateEditorModal({
             })}
           </View>
 
-          <Text style={[styles.label, { color: colors.textSecondary, marginTop: 14 }]}>Description</Text>
+          <Text className="text-xs font-semibold uppercase tracking-wide mb-1.5 mt-3.5" style={{ color: colors.textSecondary, letterSpacing: 0.4 }}>Description</Text>
           <TextInput
             testID="template-editor.input.description"
             value={draftDescription}
@@ -129,11 +130,12 @@ export function TemplateEditorModal({
             placeholder="e.g. Weekly retrospective"
             placeholderTextColor={colors.textSecondary}
             autoCapitalize="sentences"
-            style={[styles.nameInput, { color: colors.text, backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}
+            className="border rounded-[10px] px-3 py-2.5 text-[15px]"
+            style={{ color: colors.text, backgroundColor: colors.surfaceSecondary, borderColor: colors.border }}
             maxLength={120}
           />
 
-          <Text style={[styles.label, { color: colors.textSecondary, marginTop: 14 }]}>Default note title (optional)</Text>
+          <Text className="text-xs font-semibold uppercase tracking-wide mb-1.5 mt-3.5" style={{ color: colors.textSecondary, letterSpacing: 0.4 }}>Default note title (optional)</Text>
           <TextInput
             testID="template-editor.input.title"
             value={draftTitle}
@@ -141,23 +143,25 @@ export function TemplateEditorModal({
             placeholder="e.g. Standup - "
             placeholderTextColor={colors.textSecondary}
             autoCapitalize="sentences"
-            style={[styles.nameInput, { color: colors.text, backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}
+            className="border rounded-[10px] px-3 py-2.5 text-[15px]"
+            style={{ color: colors.text, backgroundColor: colors.surfaceSecondary, borderColor: colors.border }}
             maxLength={80}
           />
 
-          <Text style={[styles.label, { color: colors.textSecondary, marginTop: 14 }]}>Tags</Text>
+          <Text className="text-xs font-semibold uppercase tracking-wide mb-1.5 mt-3.5" style={{ color: colors.textSecondary, letterSpacing: 0.4 }}>Tags</Text>
           {draftTags.length > 0 ? (
-            <View style={styles.tagChipRow} testID="template-tag-chips">
+            <View className="flex-row flex-wrap gap-1.5 mb-2" testID="template-tag-chips">
               {draftTags.map((tag) => (
                 <TouchableOpacity
                   key={tag}
                   testID={`template-tag-chip-${tag}`}
                   accessibilityLabel={`Remove tag ${tag}`}
                   onPress={() => onRemoveTag(tag)}
-                  style={[styles.tagChip, { backgroundColor: colors.primary + '20', borderColor: colors.primary + '40' }]}
+                  className="flex-row items-center gap-1 px-2.5 py-1 rounded-[14px] border"
+                  style={{ backgroundColor: colors.primary + '20', borderColor: colors.primary + '40' }}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.tagChipText, { color: colors.primary }]}>{tag}</Text>
+                  <Text className="text-[13px] font-medium" style={{ color: colors.primary }}>{tag}</Text>
                   <Ionicons name="close" size={14} color={colors.primary} />
                 </TouchableOpacity>
               ))}
@@ -175,11 +179,12 @@ export function TemplateEditorModal({
             autoCorrect={false}
             editable={!tagLimitReached}
             maxLength={TEMPLATE_MAX_TAG_LENGTH + 1}
-            style={[styles.nameInput, { color: colors.text, backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}
+            className="border rounded-[10px] px-3 py-2.5 text-[15px]"
+            style={{ color: colors.text, backgroundColor: colors.surfaceSecondary, borderColor: colors.border }}
             returnKeyType="done"
           />
 
-          <Text style={[styles.label, { color: colors.textSecondary, marginTop: 14 }]}>Initial content</Text>
+          <Text className="text-xs font-semibold uppercase tracking-wide mb-1.5 mt-3.5" style={{ color: colors.textSecondary, letterSpacing: 0.4 }}>Initial content</Text>
           <TextInput
             testID="template-editor.input.content"
             value={draftContent}
@@ -189,16 +194,17 @@ export function TemplateEditorModal({
             autoCapitalize="sentences"
             multiline
             textAlignVertical="top"
-            style={[styles.contentInput, { color: colors.text, backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}
+            className="border rounded-[10px] px-3 py-2.5 text-sm min-h-[220px] font-mono"
+            style={{ color: colors.text, backgroundColor: colors.surfaceSecondary, borderColor: colors.border }}
           />
         </ScrollView>
 
-        <View style={styles.editorActions}>
-          <TouchableOpacity testID="template-editor.button.close" onPress={onClose} style={[styles.btn, { borderColor: colors.border }]}>
-            <Text style={[styles.btnText, { color: colors.textSecondary }]}>Cancel</Text>
+        <View className="flex-row justify-end gap-2.5 mt-3">
+          <TouchableOpacity testID="template-editor.button.close" onPress={onClose} className="px-4 py-2.5 rounded-[10px] border" style={{ borderColor: colors.border }}>
+            <Text className="text-[15px] font-semibold" style={{ color: colors.textSecondary }}>Cancel</Text>
           </TouchableOpacity>
-          <TouchableOpacity testID="template-editor.button.save" onPress={onSave} style={[styles.btn, styles.btnPrimary, { backgroundColor: colors.primary }]}>
-            <Text style={[styles.btnText, { color: '#fff' }]}>{editingId ? 'Save changes' : 'Create'}</Text>
+          <TouchableOpacity testID="template-editor.button.save" onPress={onSave} className="px-4 py-2.5 rounded-[10px]" style={{ backgroundColor: colors.primary }}>
+            <Text className="text-[15px] font-semibold" style={{ color: '#fff' }}>{editingId ? 'Save changes' : 'Create'}</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
