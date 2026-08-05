@@ -3,6 +3,7 @@ type SystemPromptContext = {
   noteCount: number;
   todoCount: number;
   actionMode: 'auto' | 'confirm';
+  memoryBlock?: string;
 };
 
 const BASE_PROMPT =
@@ -20,6 +21,12 @@ export function buildSystemPrompt(context: SystemPromptContext): string {
   if (context.attachedContexts) {
     sections.push(
       `=== User-Provided Context ===\n${context.attachedContexts}\n=== End Context ===`
+    );
+  }
+
+  if (context.memoryBlock) {
+    sections.push(
+      `=== User memory (thought dumps) ===\n${context.memoryBlock}\n=== End memory ===`
     );
   }
 
