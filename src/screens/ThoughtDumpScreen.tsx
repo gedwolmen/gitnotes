@@ -11,6 +11,7 @@ import { ThoughtDumpService } from '../services/ThoughtDumpService';
 import { ThoughtDump } from '../models/ThoughtDump';
 import { ScreenHeader, Button, Input, EmptyState, Modal } from '../components/ui';
 import { useScreenHeaderHeight } from '../components/ui';
+import { indexDump, removeDump } from '../services/ai/thoughtDumpIndexing';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -56,6 +57,7 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
       if (dump) {
         setText('');
         setDumps((prev) => [dump, ...prev]);
+        indexDump(dump);
         onDumpChange?.(dump);
       } else {
         Alert.alert(t('common.error'), t('thoughtDump.error'));
@@ -79,6 +81,7 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
       });
       if (success) {
         setDumps((prev) => prev.filter((d) => d.id !== target.id));
+        removeDump(target.filePath);
         onDumpChange?.(target);
       } else {
         Alert.alert(t('common.error'), t('thoughtDump.error'));

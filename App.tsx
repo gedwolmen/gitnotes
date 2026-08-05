@@ -41,6 +41,7 @@ import { startForegroundWatcher } from './src/services/ForegroundSyncService';
 import { startScheduledLearningBackgroundTask } from './src/services/ScheduledLearningBackgroundService';
 import { loadForegroundSyncConfig } from './src/hooks/useForegroundSyncSettings';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { reconcileThoughtDumps } from './src/services/ai/thoughtDumpIndexing';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -93,6 +94,7 @@ export default function App() {
       console.warn('[App] foreground sync watcher start failed:', error);
     }
     void startScheduledLearningBackgroundTask();
+    void reconcileThoughtDumps().catch(() => {});
   }, []);
 
   useEffect(() => {
