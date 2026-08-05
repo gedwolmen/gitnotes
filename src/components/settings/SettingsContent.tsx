@@ -1,11 +1,14 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Linking, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, Linking, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import Constants from 'expo-constants';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { Group, GroupRow, Modal, Toggle } from '../ui';
 import { HintIcon } from '../ui/HintIcon';
+import { aiMemoryIndex } from '../../services/ai/AIMemoryIndexService';
+import { HapticService } from '../../utils/haptics';
 import {
   SUPPORTED_LANGUAGES,
   getLanguagePreference,
@@ -213,6 +216,7 @@ onSetSyncIntervalSeconds,
   const [showTimeoutPicker, setShowTimeoutPicker] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [showIntervalPicker, setShowIntervalPicker] = useState(false);
+  const [showResetAIMemoryModal, setShowResetAIMemoryModal] = useState(false);
   // Drop providers whose `supportedPlatforms` excludes the current OS so a
   // provider that physically can't run here (e.g. on-device Llama on iOS) is
   // hidden entirely instead of showing as a permanently-disabled row.
@@ -234,6 +238,32 @@ onSetSyncIntervalSeconds,
   }, []);
 
   const currentLangLabel = t(`settings.languageOptions.${languagePref}`);
+
+  const handleResetAIMemory = useCallback(async () => {
+    HapticService.warning();
+    setShowResetAIMemoryModal(true);
+  }, []);
+
+  const confirmResetAIMemory = useCallback(async () => {
+    try {
+      await aiMemoryIndex.clear();
+      const manifestUri = `${FileSystem.documentDirectory}thought-dump-manifest.json`;
+      try {
+        const exists = await FileSystem.getInfoAsync(manifestUri);
+        if (exists.exists) {
+          await FileSystem.deleteAsync(manifestUri);
+        }
+      } catch {
+      }
+      HapticService.success();
+      Alert.alert(t('settings.resetAIMemorySuccess'));
+    } catch {
+      HapticService.error();
+      Alert.alert(t('common.error'));
+    } finally {
+      setShowResetAIMemoryModal(false);
+    }
+  }, [t]);
 
   return (
     <>
@@ -783,6 +813,12 @@ onSetSyncIntervalSeconds,
             </GroupRow>
           </Group>
 
+          <Group>
+            <GroupRow testID="settings.button.reset-ai-memory" onPress={handleResetAIMemory}>
+              <Text style={[styles.settingLabel, { color: colors.error }]}>{t('settings.resetAIMemory')}</Text>
+            </GroupRow>
+          </Group>
+
           <Group title={t('settings.providers')}>
             {visibleProviders.map((provider) => {
               const availability = providerAvailability[provider.id];
@@ -934,6 +970,36 @@ onSetSyncIntervalSeconds,
           );
         })}
       </Group>
+    </Modal>
+
+    <Modal
+      visible={showResetAIMemoryModal}
+      onRequestClose={() => setShowResetAIMemoryModal(false)}
+      bottomSheet
+      contentStyle={{ padding: 16, paddingBottom: 34 }}
+    >
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <Text style={{ color: colors.text, fontSize: 17, fontWeight: '600' }}>{t('settings.resetAIMemoryConfirm')}</Text>
+        <TouchableOpacity onPress={() => setShowResetAIMemoryModal(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Ionicons name="close" size={22} color={colors.textSecondary} />
+        </TouchableOpacity>
+      </View>
+      <Text style={{ color: colors.textSecondary, fontSize: 15, marginBottom: 20 }}>
+        {t('settings.resetAIMemoryMessage')}
+      </Text>
+      <TouchableOpacity
+        testID="settings.button.confirm-reset-ai-memory"
+        onPress={() => { void confirmResetAIMemory(); }}
+        style={{ backgroundColor: colors.error, padding: 14, borderRadius: 8, alignItems: 'center' }}
+      >
+        <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>{t('common.reset')}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => setShowResetAIMemoryModal(false)}
+        style={{ marginTop: 12, padding: 14, borderRadius: 8, alignItems: 'center', backgroundColor: colors.surface }}
+      >
+        <Text style={{ color: colors.text, fontSize: 16 }}>{t('common.cancel')}</Text>
+      </TouchableOpacity>
     </Modal>
     </>
   );

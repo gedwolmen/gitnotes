@@ -137,7 +137,11 @@
     "unavailable": "No disponible",
     "auto": "Auto",
     "confirm": "Confirmar",
-    "notSet": "No configurado"
+    "notSet": "No configurado",
+    "resetAIMemory": "Restablecer memoria de IA",
+    "resetAIMemoryConfirm": "Restablecer memoria de IA",
+    "resetAIMemoryMessage": "Los archivos de thought-dump y los chats se conservan. Solo se borra la memoria de la IA.",
+    "resetAIMemorySuccess": "Memoria de IA borrada"
   },
   "ai": {
     "availability": {

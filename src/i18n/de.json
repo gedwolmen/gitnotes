@@ -137,7 +137,11 @@
     "unavailable": "Nicht verfügbar",
     "auto": "Automatisch",
     "confirm": "Bestätigen",
-    "notSet": "Nicht festgelegt"
+    "notSet": "Nicht festgelegt",
+    "resetAIMemory": "KI-Speicher zurücksetzen",
+    "resetAIMemoryConfirm": "KI-Speicher zurücksetzen",
+    "resetAIMemoryMessage": "Thought-Dump-Dateien und Chats werden beibehalten. Nur der KI-Speicher wird gelöscht.",
+    "resetAIMemorySuccess": "KI-Speicher gelöscht"
   },
   "ai": {
     "availability": {

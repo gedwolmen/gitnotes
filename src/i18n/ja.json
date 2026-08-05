@@ -137,7 +137,11 @@
     "unavailable": "利用不可",
     "auto": "自動",
     "confirm": "確認",
-    "notSet": "未設定"
+    "notSet": "未設定",
+    "resetAIMemory": "AI メモリをリセット",
+    "resetAIMemoryConfirm": "AI メモリをリセット",
+    "resetAIMemoryMessage": "ソートダンプファイルとチャットは保持されます。AI メモリのみがクリアされます。",
+    "resetAIMemorySuccess": "AI メモリがクリアされました"
   },
   "ai": {
     "availability": {

@@ -137,7 +137,11 @@
     "unavailable": "Indisponible",
     "auto": "Auto",
     "confirm": "Confirmer",
-    "notSet": "Non défini"
+    "notSet": "Non défini",
+    "resetAIMemory": "Réinitialiser la mémoire IA",
+    "resetAIMemoryConfirm": "Réinitialiser la mémoire IA",
+    "resetAIMemoryMessage": "Les fichiers thought-dump et les discussions sont conservés. Seule la mémoire IA est effacée.",
+    "resetAIMemorySuccess": "Mémoire IA effacée"
   },
   "ai": {
     "availability": {

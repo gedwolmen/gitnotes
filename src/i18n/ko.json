@@ -137,7 +137,11 @@
     "unavailable": "사용할 수 없음",
     "auto": "자동",
     "confirm": "확인",
-    "notSet": "설정되지 않음"
+    "notSet": "설정되지 않음",
+    "resetAIMemory": "AI 메모리 재설정",
+    "resetAIMemoryConfirm": "AI 메모리 재설정",
+    "resetAIMemoryMessage": "Thought-dump 파일과 채팅은 유지됩니다. AI 메모리만 삭제됩니다.",
+    "resetAIMemorySuccess": "AI 메모리가 삭제되었습니다"
   },
   "ai": {
     "availability": {
