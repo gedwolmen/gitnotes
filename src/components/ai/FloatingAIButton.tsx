@@ -1,6 +1,14 @@
-import React, { useEffect } from 'react';
-import { StyleSheet, Dimensions } from 'react-native';
+import { useEffect, useState } from 'react';
+import { AccessibilityInfo, Dimensions, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import {
+  Blur,
+  Canvas,
+  Circle,
+  ColorMatrix,
+  Group,
+  Paint,
+} from '@shopify/react-native-skia';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -14,9 +22,18 @@ import { useAIStore } from '../../stores/aiStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import { HapticService } from '../../utils/haptics';
 import { Surface } from '../ui/Surface';
-import { RootStackParamList } from '../../navigation/types';
+import type { RootStackParamList } from '../../navigation/types';
 
 const BUTTON_SIZE = 56;
+const LIQUID_CANVAS_SIZE = 88;
+const LIQUID_CANVAS_INSET = (LIQUID_CANVAS_SIZE - BUTTON_SIZE) / 2;
+const LIQUID_CENTER = LIQUID_CANVAS_SIZE / 2;
+const GOOEY_ALPHA_MATRIX = [
+  1, 0, 0, 0, 0,
+  0, 1, 0, 0, 0,
+  0, 0, 1, 0, 0,
+  0, 0, 0, 18, -7,
+];
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const STORAGE_KEY = 'ai-button-position';
@@ -28,6 +45,7 @@ interface FloatingAIButtonProps {
 export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
   const { isEnabled } = useAIStore();
   const { colors } = useTheme();
+  const [reduceMotionEnabled, setReduceMotionEnabled] = useState(true);
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const navigateToChatThreadList = () => navigation.navigate('ChatThreadList');
 
@@ -39,6 +57,22 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
   
   const savedTranslateX = useSharedValue(initialX);
   const savedTranslateY = useSharedValue(initialY);
+
+  useEffect(() => {
+    let isMounted = true;
+    AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (isMounted) setReduceMotionEnabled(enabled);
+    });
+    const subscription = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      setReduceMotionEnabled,
+    );
+
+    return () => {
+      isMounted = false;
+      subscription.remove();
+    };
+  }, []);
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY).then((pos) => {
@@ -115,15 +149,43 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
   return (
     <Animated.View style={[styles.container, animatedStyle]}>
       <GestureDetector gesture={composedGesture}>
-        <Animated.View>
-          <Surface
-            testID="floating-ai.button.navigate-chat"
-            elevation="raised"
-            radius="pill"
-            style={[styles.button, { backgroundColor: colors.primary }]}
-          >
-            <Ionicons name="sparkles" size={24} color="#FFFFFF" />
-          </Surface>
+        <Animated.View
+          testID={reduceMotionEnabled ? undefined : 'floating-ai.button.navigate-chat'}
+          style={styles.button}
+        >
+          {reduceMotionEnabled ? (
+            <Surface
+              testID="floating-ai.button.navigate-chat"
+              elevation="raised"
+              radius="pill"
+              style={[styles.button, { backgroundColor: colors.primary }]}
+            >
+              <Ionicons name="sparkles" size={24} color="#FFFFFF" />
+            </Surface>
+          ) : (
+            <>
+              <Canvas
+                pointerEvents="none"
+                testID="floating-ai.button.liquid"
+                style={styles.liquidCanvas}
+              >
+                <Group
+                  color={colors.primary}
+                  layer={
+                    <Paint>
+                      <Blur blur={4} />
+                      <ColorMatrix matrix={GOOEY_ALPHA_MATRIX} />
+                    </Paint>
+                  }
+                >
+                  <Circle cx={LIQUID_CENTER} cy={LIQUID_CENTER} r={BUTTON_SIZE / 2} />
+                  <Circle cx={LIQUID_CENTER + 30} cy={LIQUID_CENTER - 12} r={10} />
+                  <Circle cx={LIQUID_CENTER - 15} cy={LIQUID_CENTER + 29} r={9} />
+                </Group>
+              </Canvas>
+              <Ionicons name="sparkles" size={24} color={colors.surface} />
+            </>
+          )}
         </Animated.View>
       </GestureDetector>
     </Animated.View>
@@ -140,5 +202,12 @@ const styles = StyleSheet.create({
     height: BUTTON_SIZE,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  liquidCanvas: {
+    position: 'absolute',
+    width: LIQUID_CANVAS_SIZE,
+    height: LIQUID_CANVAS_SIZE,
+    top: -LIQUID_CANVAS_INSET,
+    left: -LIQUID_CANVAS_INSET,
   },
 });
