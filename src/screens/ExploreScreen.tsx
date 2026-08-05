@@ -134,16 +134,17 @@ export default function ExploreScreen() {
     ({ item }: { item: GitRepository }) => (
       <TouchableOpacity
         testID="explore.button.select-repo"
-        style={[s.repoItem, { borderBottomColor: colors.border + '30' }]}
+        className="flex-row items-center px-4 py-3"
+        style={{ borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border + '30' }}
         onPress={() => handleSelectRepo(item)}
         activeOpacity={0.7}
       >
-        <Ionicons name="git-branch" size={20} color={colors.primary} style={s.itemIcon} />
-        <View style={s.repoInfo}>
-          <Text style={[s.repoName, { color: colors.text }]} numberOfLines={1}>
+        <Ionicons name="git-branch" size={20} color={colors.primary} style={{ marginRight: 12 }} />
+        <View className="flex-1 gap-0.5">
+          <Text className="text-base font-medium" style={{ color: colors.text }} numberOfLines={1}>
             {item.name}
           </Text>
-          <Text style={[s.repoPath, { color: colors.textSecondary }]} numberOfLines={1}>
+          <Text className="text-xs" style={{ color: colors.textSecondary }} numberOfLines={1}>
             {item.path}
           </Text>
         </View>
@@ -155,11 +156,11 @@ export default function ExploreScreen() {
 
   if (view === 'repoList') {
     return (
-      <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['bottom']}>
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['bottom']}>
         <View style={{ paddingTop: headerHeight }}>
           <OfflineBanner />
         </View>
-        <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 }}>
+        <View className="px-4 pt-2 pb-3">
           <SearchBar
             testID="explore.search-bar.repo-search"
             value={repoSearch}
@@ -168,9 +169,9 @@ export default function ExploreScreen() {
           />
         </View>
         {loadingRepos ? (
-          <View style={s.loadingContainer}>
+          <View className="flex-1 items-center justify-center gap-3">
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={[s.loadingText, { color: colors.textSecondary }]}>{t('explore.loadingRepos')}</Text>
+            <Text className="text-sm" style={{ color: colors.textSecondary }}>{t('explore.loadingRepos')}</Text>
           </View>
         ) : filteredRepos.length === 0 ? (
           <EmptyState
@@ -198,45 +199,46 @@ export default function ExploreScreen() {
     const parsed = parseRepoPath(selectedRepo.path);
 
     return (
-      <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['bottom']}>
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['bottom']}>
         <View style={{ paddingTop: headerHeight }}>
           <OfflineBanner />
         </View>
 
-        <View style={[s.detailCard, { backgroundColor: colors.surface, borderColor: colors.border + '30' }]}>
-          <View style={s.detailTop}>
-            <View style={[s.detailIconWrap, { backgroundColor: colors.primary + '15' }]}>
+        <View className="mx-4 mt-4 rounded-sm border p-4" style={{ backgroundColor: colors.surface, borderColor: colors.border + '30' }}>
+          <View className="flex-row items-center gap-3.5">
+            <View className="w-13 h-13 rounded-sm items-center justify-center" style={{ backgroundColor: colors.primary + '15', width: 52, height: 52, borderRadius: 14 }}>
               <Ionicons name="git-branch" size={28} color={colors.primary} />
             </View>
-            <View style={s.detailInfo}>
-              <Text style={[s.detailName, { color: colors.text }]} numberOfLines={1}>
+            <View className="flex-1 gap-1">
+              <Text className="text-lg font-semibold" style={{ color: colors.text }} numberOfLines={1}>
                 {parsed ? `${parsed.owner}/${parsed.repo}` : selectedRepo.name}
               </Text>
-              <Text style={[s.detailPath, { color: colors.textSecondary }]} numberOfLines={1}>
+              <Text className="text-xs" style={{ color: colors.textSecondary }} numberOfLines={1}>
                 {selectedRepo.path}
               </Text>
             </View>
           </View>
 
           {selectedRepo.branch && (
-            <View style={s.detailMeta}>
+            <View className="flex-row items-center gap-1.5 mt-3 pt-3 border-t" style={{ borderTopColor: 'rgba(150,150,150,0.2)', borderWidth: StyleSheet.hairlineWidth }}>
               <Ionicons name="git-branch-outline" size={14} color={colors.textSecondary} />
-              <Text style={[s.detailMetaText, { color: colors.textSecondary }]}>
+              <Text className="text-xs" style={{ color: colors.textSecondary }}>
                 {selectedRepo.branch}
               </Text>
             </View>
           )}
         </View>
 
-        <View style={s.detailActions}>
+        <View className="px-4 mt-6">
           <TouchableOpacity
             testID="explore.button.open-file-tree"
-            style={[s.fileTreeButton, { backgroundColor: colors.primary }]}
+            className="flex-row items-center justify-center py-3.5 rounded-md gap-2"
+            style={{ backgroundColor: colors.primary }}
             onPress={handleOpenFileTree}
             activeOpacity={0.8}
           >
             <Ionicons name="folder-open-outline" size={20} color="#fff" />
-            <Text style={s.fileTreeButtonText}>{t('explore.browseFiles')}</Text>
+            <Text className="text-white text-base font-semibold">{t('explore.browseFiles')}</Text>
           </TouchableOpacity>
         </View>
         <ScreenHeader title={selectedRepo.name} onBack={handleBack} />
@@ -246,24 +248,25 @@ export default function ExploreScreen() {
 
   if (view === 'fileTree' && repoInfo) {
     return (
-      <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
-        <View style={[s.header, { borderBottomColor: colors.border + '40' }]}>
-          <TouchableOpacity testID="explore.button.back" onPress={handleBack} style={s.headerBtn}>
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['top', 'bottom']}>
+        <View className="flex-row items-center px-3 py-2.5 gap-2" style={{ borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border + '40' }}>
+          <TouchableOpacity testID="explore.button.back" className="w-9 h-9 items-center justify-center" onPress={handleBack}>
             <Ionicons name="arrow-back" size={22} color={colors.primary} />
           </TouchableOpacity>
-          <View style={[s.repoSelector, { backgroundColor: colors.surface }]}>
+          <View className="flex-1 flex-row items-center px-2.5 py-2 rounded-sm gap-1.5" style={{ backgroundColor: colors.surface }}>
             <Ionicons name="git-branch" size={16} color={colors.primary} />
-            <Text style={[s.repoSelectorText, { color: colors.text }]} numberOfLines={1}>
+            <Text className="flex-1 text-sm font-medium" style={{ color: colors.text }} numberOfLines={1}>
               {repoInfo.owner}/{repoInfo.repo}
             </Text>
           </View>
-          <View style={s.headerBtnPlaceholder} />
+          <View className="w-9" />
         </View>
         <OfflineBanner />
 
         <ScrollView
-          style={[s.treeScroll, { backgroundColor: colors.background }]}
-          contentContainerStyle={[s.treeContent, { backgroundColor: colors.background }]}
+          className="flex-1"
+          style={{ backgroundColor: colors.background }}
+          contentContainerStyle={{ paddingBottom: 32, backgroundColor: colors.background }}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
           }
@@ -303,123 +306,4 @@ export default function ExploreScreen() {
   return null;
 }
 
-const s = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: 8,
-  },
-  headerTitle: { fontSize: 20, fontWeight: '700', flex: 1 },
-  headerBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  headerBtnPlaceholder: { width: 36 },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 16,
-    marginVertical: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    gap: 8,
-  },
-  searchInput: { flex: 1, fontSize: 15 },
-  itemIcon: { marginRight: 12 },
-  repoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  repoInfo: { flex: 1, gap: 2 },
-  repoName: { fontSize: 15, fontWeight: '500' },
-  repoPath: { fontSize: 13 },
-  repoSelector: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 6,
-  },
-  repoSelectorText: { flex: 1, fontSize: 14, fontWeight: '500' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  loadingText: { fontSize: 14 },
-  emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingTop: 60, gap: 8 },
-  emptyTitle: { fontSize: 18, fontWeight: '600', marginTop: 8 },
-  emptySubtext: { fontSize: 14, textAlign: 'center' },
 
-  detailCard: {
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 16,
-  },
-  detailTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  detailIconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  detailInfo: {
-    flex: 1,
-    gap: 3,
-  },
-  detailName: {
-    fontSize: 17,
-    fontWeight: '600',
-  },
-  detailPath: {
-    fontSize: 13,
-  },
-  detailMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(150,150,150,0.2)',
-  },
-  detailMetaText: {
-    fontSize: 13,
-  },
-
-  detailActions: {
-    paddingHorizontal: 16,
-    marginTop: 24,
-  },
-  fileTreeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
-    gap: 8,
-  },
-  fileTreeButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-
-  treeScroll: {
-    flex: 1,
-  },
-  treeContent: {
-    paddingBottom: 32,
-  },
-});

@@ -2,7 +2,6 @@ import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ActivityIndicator,
   Linking,
   KeyboardAvoidingView,
@@ -110,27 +109,27 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
   const isAIStep = currentStep === AI_STEP;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.header}>
+        <View className="flex-row justify-end px-5 pt-2.5">
           <Button variant="ghost" label="Skip" testID="onboarding.button.skip" onPress={handleSkip} />
         </View>
 
         {isTokenStep ? (
           <ScrollView
-            style={styles.contentNoAlign}
-            contentContainerStyle={styles.tokenScrollContent}
+            className="flex-1 px-10"
+            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', gap: 16, paddingBottom: 40 }}
             keyboardShouldPersistTaps="handled"
           >
-            <Surface elevation="raised" radius="pill" style={styles.iconContainer}>
+            <Surface elevation="raised" radius="pill" className="w-[140px] h-[140px] items-center justify-center mb-6">
               <Ionicons name="logo-github" size={72} color={colors.accent} />
             </Surface>
 
-            <Text style={[styles.title, { color: colors.text }]}>Connect GitHub</Text>
-            <Text style={[styles.description, { color: colors.textSecondary }]}>
+            <Text className="text-[28px] font-bold text-center" style={{ color: colors.text }}>Connect GitHub</Text>
+            <Text className="text-base text-center leading-6" style={{ color: colors.textSecondary }}>
               Enter a Fine-grained Personal Access Token with Contents: Read and write access to each repository, or a classic token with the repo scope. You can skip this and add it later in Settings.
             </Text>
 
@@ -158,7 +157,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
 
             <TouchableOpacity
               testID="onboarding.button.paste-token"
-              style={styles.pasteButton}
+              className="flex-row items-center gap-2 py-3 px-4"
               onPress={async () => {
                 const text = await Clipboard.getString();
                 if (text) {
@@ -168,40 +167,40 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
               }}
             >
               <Ionicons name="clipboard-outline" size={16} color={colors.accent} />
-              <Text style={[styles.pasteButtonText, { color: colors.accent }]}>Paste from Clipboard</Text>
+              <Text className="text-sm font-medium" style={{ color: colors.accent }}>Paste from Clipboard</Text>
             </TouchableOpacity>
 
             {tokenError ? (
-              <Text style={styles.errorText}>{tokenError}</Text>
+              <Text className="text-[13px] text-center mt-2" style={{ color: '#FF3B30' }}>{tokenError}</Text>
             ) : null}
           </ScrollView>
         ) : isAIStep ? (
-          <View style={styles.contentCentered}>
-            <Surface elevation="raised" radius="pill" style={styles.iconContainer}>
+          <View className="flex-1 px-10 items-center">
+            <Surface elevation="raised" radius="pill" className="w-[140px] h-[140px] items-center justify-center mb-6">
               <Ionicons name="sparkles-outline" size={72} color={colors.accent} />
             </Surface>
-            <Text style={[styles.title, { color: colors.text }]}>GitNotēs AI</Text>
-            <Text style={[styles.description, { color: colors.textSecondary }]}>
+            <Text className="text-[28px] font-bold text-center" style={{ color: colors.text }}>GitNotēs AI</Text>
+            <Text className="text-base text-center leading-6" style={{ color: colors.textSecondary }}>
               Chat over your notes, todos, and canvases. AI can read context and apply edits when you allow it.
             </Text>
-            <Text style={[styles.helperText, { color: colors.textSecondary }]}>
+            <Text className="text-[13px] text-center leading-[18px] mt-2 opacity-80" style={{ color: colors.textSecondary }}>
               You can turn this on or off anytime in Settings → AI.
             </Text>
           </View>
         ) : (
-          <View style={styles.contentCentered}>
-            <Surface elevation="raised" radius="pill" style={styles.iconContainer}>
+          <View className="flex-1 px-10 items-center">
+            <Surface elevation="raised" radius="pill" className="w-[140px] h-[140px] items-center justify-center mb-6">
               <Ionicons name={INFO_STEPS[currentStep].icon} size={72} color={colors.accent} />
             </Surface>
-            <Text style={[styles.title, { color: colors.text }]}>{INFO_STEPS[currentStep].title}</Text>
-            <Text style={[styles.description, { color: colors.textSecondary }]}>
+            <Text className="text-[28px] font-bold text-center" style={{ color: colors.text }}>{INFO_STEPS[currentStep].title}</Text>
+            <Text className="text-base text-center leading-6" style={{ color: colors.textSecondary }}>
               {INFO_STEPS[currentStep].description}
             </Text>
           </View>
         )}
 
-        <View style={styles.footer}>
-          <View style={styles.dots}>
+        <View className="px-5 pb-10">
+          <View className="flex-row justify-center mb-6">
             {Array.from({ length: TOTAL_STEPS }).map((_, index) => (
               <Surface
                 key={index}
@@ -221,7 +220,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
           </View>
 
           {isAIStep ? (
-            <View style={styles.aiButtons}>
+            <View className="w-full">
               <Button
                 variant="primary"
                 fullWidth
@@ -261,87 +260,3 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 40,
-    alignItems: 'stretch',
-  },
-  contentNoAlign: {
-    flex: 1,
-    paddingHorizontal: 40,
-  },
-  contentCentered: {
-    flex: 1,
-    paddingHorizontal: 40,
-    alignItems: 'center',
-  },
-  tokenScrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 16,
-    paddingBottom: 40,
-  },
-  iconContainer: {
-    width: 140,
-    height: 140,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  description: {
-    fontSize: 16,
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  helperText: {
-    fontSize: 13,
-    textAlign: 'center',
-    lineHeight: 18,
-    marginTop: 8,
-    opacity: 0.8,
-  },
-  aiButtons: {
-    width: '100%',
-  },
-  pasteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  pasteButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  errorText: {
-    color: '#FF3B30',
-    fontSize: 13,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  footer: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
-  dots: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 24,
-  },
-});

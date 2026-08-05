@@ -282,7 +282,7 @@ onSetSyncIntervalSeconds,
       >
         <GroupRow
           trailing={
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View className="flex-row items-center gap-2">
               <Toggle
                 testID="settings.toggle.neu"
                 value={uiStyle === 'neumorphic'}
@@ -296,7 +296,7 @@ onSetSyncIntervalSeconds,
         </GroupRow>
         <GroupRow
           trailing={
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View className="flex-row items-center gap-2">
               <Toggle
                 testID="settings.toggle.theme"
                 value={theme === 'dark'}
@@ -326,7 +326,7 @@ onSetSyncIntervalSeconds,
           testID="settings.button.language-picker"
           onPress={() => setShowLanguagePicker(true)}
           trailing={
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <View className="flex-row items-center gap-1">
               <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
                 {currentLangLabel}
               </Text>
@@ -341,7 +341,7 @@ onSetSyncIntervalSeconds,
       <Group title={t('settings.security')}>
         <GroupRow
           trailing={
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View className="flex-row items-center gap-2">
               <Toggle
                 testID="settings.toggle.biometric-lock"
                 value={isBiometricLockEnabled}
@@ -352,7 +352,7 @@ onSetSyncIntervalSeconds,
             </View>
           }
         >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View className="flex-row items-center gap-2">
             <Ionicons
             name={biometricKind === 'face' ? 'scan-outline' : 'finger-print-outline'}
               size={20}
@@ -366,7 +366,7 @@ onSetSyncIntervalSeconds,
             testID="settings.button.timeout-picker"
             onPress={() => setShowTimeoutPicker(true)}
             trailing={
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <View className="flex-row items-center gap-1">
                 <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
                   {TIMEOUT_OPTIONS.find((o) => o.value === lockTimeout)?.label ?? '5 minutes'}
                 </Text>
@@ -422,24 +422,10 @@ onSetSyncIntervalSeconds,
                       <View
                         key={host.id}
                         testID={`settings.row.host.${host.id}`}
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          paddingHorizontal: spacing[4],
-                          paddingVertical: spacing[3],
-                          gap: spacing[3],
-                        }}
+                        className="flex-row items-center px-4 py-3 gap-3"
                       >
-                        {/* Info column — kept narrow on the left so the
-                            styled button has room to breathe on the right. */}
-                        <View style={{ flex: 1, minWidth: 0 }}>
-                          <View
-                            style={{
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              gap: spacing[2],
-                            }}
-                          >
+                        <View className="flex-1 min-w-0">
+                          <View className="flex-row items-center gap-2">
                             <Text
                               numberOfLines={1}
                               style={{
@@ -492,17 +478,8 @@ onSetSyncIntervalSeconds,
                           onPress={() => onDisconnectHost(host.id)}
                           testID={`settings.button.disconnect-host.${host.id}`}
                           activeOpacity={0.75}
-                          style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            gap: 6,
-                            paddingHorizontal: spacing[3],
-                            paddingVertical: spacing[2],
-                            borderRadius: radii.md,
-                            borderWidth: 1,
-                            borderColor: colors.error,
-                            backgroundColor: 'transparent',
-                          }}
+                          className="flex-row items-center gap-1.5 px-3 py-2 border"
+                          style={{ borderRadius: radii.md, borderColor: colors.error }}
                         >
                           <Ionicons name="unlink-outline" size={15} color={colors.error} />
                           <Text
@@ -548,7 +525,7 @@ onSetSyncIntervalSeconds,
       <Group title="Repositories">
         {repositories.length === 0 ? (
           <GroupRow>
-            <View style={{ alignItems: 'center', gap: 6, paddingVertical: 8 }}>
+            <View className="items-center gap-1.5 py-2">
               <Ionicons name="code-slash-outline" size={32} color={colors.textSecondary} />
               <Text style={[styles.emptyReposText, { color: colors.textSecondary }]}>No repositories added yet</Text>
             </View>
@@ -559,7 +536,7 @@ onSetSyncIntervalSeconds,
               key={repo.id}
               leading={<Ionicons name="git-branch-outline" size={18} color={colors.primary} />}
               trailing={
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <View className="flex-row items-center gap-1">
                   {syncingRepo === repo.path ? (
                     <ActivityIndicator size="small" color={colors.primary} style={{ marginHorizontal: 8 }} />
                   ) : (
@@ -703,7 +680,7 @@ onSetSyncIntervalSeconds,
       <Group title="Sync">
         <GroupRow
           trailing={
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View className="flex-row items-center gap-2">
               <Toggle
                 testID="settings.toggle.sync-frequently"
                 value={syncFrequentlyEnabled}
@@ -713,7 +690,7 @@ onSetSyncIntervalSeconds,
             </View>
           }
         >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View className="flex-row items-center gap-2">
             <Ionicons name="sync-outline" size={20} color={colors.text} />
             <View style={{ flex: 1 }}>
               <Text style={[styles.settingLabel, { color: colors.text }]}>Sync frequently</Text>
@@ -728,7 +705,7 @@ onSetSyncIntervalSeconds,
           onPress={syncFrequentlyEnabled ? () => setShowIntervalPicker(true) : undefined}
           disabled={!syncFrequentlyEnabled}
           trailing={
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <View className="flex-row items-center gap-1">
               <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{intervalLabel}</Text>
               <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
             </View>
@@ -745,7 +722,7 @@ onSetSyncIntervalSeconds,
         </GroupRow>
         <GroupRow
           trailing={
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View className="flex-row items-center gap-2">
               <Toggle
                 testID="settings.toggle.background-sync"
                 value={isBackgroundSyncEnabled}
@@ -755,7 +732,7 @@ onSetSyncIntervalSeconds,
             </View>
           }
         >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View className="flex-row items-center gap-2">
             <Ionicons name="cloud-download-outline" size={20} color={colors.text} />
             <Text style={[styles.settingLabel, { color: colors.text }]}>Background Sync</Text>
           </View>
@@ -785,7 +762,7 @@ onSetSyncIntervalSeconds,
       </Group>
 
       <Group title={t('settings.artificialIntelligence')}>
-        <GroupRow trailing={<View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <GroupRow trailing={<View className="flex-row items-center gap-2">
           <Toggle testID="settings.toggle.ai" value={isAIEnabled} onValueChange={onToggleAI} />
           <HintIcon hintKey="hints.settings.enableAI" testID="hint.enable-ai" />
         </View>}>
@@ -799,13 +776,13 @@ onSetSyncIntervalSeconds,
             <GroupRow testID="settings.button.model-selector" onPress={onOpenModelSelector} trailing={<Text style={[styles.settingValue, { color: colors.textSecondary }]}>{selectedModelName}</Text>}>
               <Text style={[styles.settingLabel, { color: colors.text }]}>Model</Text>
             </GroupRow>
-            <GroupRow testID="settings.button.toggle-action-mode" onPress={onToggleActionMode} trailing={<View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <GroupRow testID="settings.button.toggle-action-mode" onPress={onToggleActionMode} trailing={<View className="flex-row items-center gap-1">
               <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{actionMode === 'auto' ? 'Auto' : 'Confirm'}</Text>
               <HintIcon hintKey={actionMode === 'auto' ? 'hints.settings.actionModeAuto' : 'hints.settings.actionModeConfirm'} testID="hint.action-mode" />
             </View>}>
               <Text style={[styles.settingLabel, { color: colors.text }]}>Action Mode</Text>
             </GroupRow>
-            <GroupRow testID="settings.button.chat-repo-picker" onPress={onOpenChatRepoPicker} trailing={<View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <GroupRow testID="settings.button.chat-repo-picker" onPress={onOpenChatRepoPicker} trailing={<View className="flex-row items-center gap-1">
               <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{chatStorageLabel}</Text>
               <HintIcon hintKey="hints.settings.chatStorage" testID="hint.chat-storage" />
             </View>}>
@@ -880,7 +857,7 @@ onSetSyncIntervalSeconds,
       bottomSheet
       contentStyle={{ padding: 16, paddingBottom: 34 }}
     >
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+      <View className="flex-row justify-between items-center mb-3">
         <Text style={{ color: colors.text, fontSize: 17, fontWeight: '600' }}>Lock Timeout</Text>
         <TouchableOpacity onPress={() => setShowTimeoutPicker(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Ionicons name="close" size={22} color={colors.textSecondary} />
@@ -911,7 +888,7 @@ onSetSyncIntervalSeconds,
       bottomSheet
       contentStyle={{ padding: 16, paddingBottom: 34 }}
     >
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+      <View className="flex-row justify-between items-center mb-3">
         <Text style={{ color: colors.text, fontSize: 17, fontWeight: '600' }}>Sync interval</Text>
         <TouchableOpacity onPress={() => setShowIntervalPicker(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Ionicons name="close" size={22} color={colors.textSecondary} />
@@ -943,7 +920,7 @@ onSetSyncIntervalSeconds,
       bottomSheet
       contentStyle={{ padding: 16, paddingBottom: 34 }}
     >
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+      <View className="flex-row justify-between items-center mb-3">
         <Text style={{ color: colors.text, fontSize: 17, fontWeight: '600' }}>{t('settings.language')}</Text>
         <TouchableOpacity onPress={() => setShowLanguagePicker(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Ionicons name="close" size={22} color={colors.textSecondary} />
@@ -978,7 +955,7 @@ onSetSyncIntervalSeconds,
       bottomSheet
       contentStyle={{ padding: 16, paddingBottom: 34 }}
     >
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+      <View className="flex-row justify-between items-center mb-3">
         <Text style={{ color: colors.text, fontSize: 17, fontWeight: '600' }}>{t('settings.resetAIMemoryConfirm')}</Text>
         <TouchableOpacity onPress={() => setShowResetAIMemoryModal(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Ionicons name="close" size={22} color={colors.textSecondary} />
@@ -990,13 +967,15 @@ onSetSyncIntervalSeconds,
       <TouchableOpacity
         testID="settings.button.confirm-reset-ai-memory"
         onPress={() => { void confirmResetAIMemory(); }}
-        style={{ backgroundColor: colors.error, padding: 14, borderRadius: 8, alignItems: 'center' }}
+        className="rounded-lg items-center py-3.5"
+        style={{ backgroundColor: colors.error }}
       >
         <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>{t('common.reset')}</Text>
       </TouchableOpacity>
       <TouchableOpacity
         onPress={() => setShowResetAIMemoryModal(false)}
-        style={{ marginTop: 12, padding: 14, borderRadius: 8, alignItems: 'center', backgroundColor: colors.surface }}
+        className="mt-3 py-3.5 rounded-lg items-center"
+        style={{ backgroundColor: colors.surface }}
       >
         <Text style={{ color: colors.text, fontSize: 16 }}>{t('common.cancel')}</Text>
       </TouchableOpacity>

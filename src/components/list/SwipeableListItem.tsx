@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { TouchableOpacity } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
@@ -73,8 +73,8 @@ export function SwipeableListItem({
     <GestureDetector gesture={pan}>
       <Animated.View
         testID={`swipeable-${itemId}`}
+        className="rounded-sm"
         style={[
-          styles.itemWrap,
           selected && {
             shadowColor: colors.error,
             shadowOpacity: 0.55,
@@ -90,11 +90,5 @@ export function SwipeableListItem({
     </GestureDetector>
   );
 }
-
-const styles = StyleSheet.create({
-  itemWrap: {
-    borderRadius: 12,
-  },
-});
 
 export default SwipeableListItem;

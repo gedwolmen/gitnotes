@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
 
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -122,21 +122,23 @@ function NoteEditorScreenInner() {
     return (
       <SafeAreaView
         testID="note-editor.view.not-found"
-        style={[styles.notFoundContainer, { backgroundColor: colors.background }]}
+        className="flex-1 items-center justify-center px-8"
+        style={{ backgroundColor: colors.background }}
         edges={['top', 'bottom']}
       >
-        <Text style={[styles.notFoundTitle, { color: colors.text }]}>{t('notes.notFoundTitle')}</Text>
-        <Text style={[styles.notFoundBody, { color: colors.textSecondary }]}>
+        <Text className="text-xl font-semibold mb-3" style={{ color: colors.text }}>{t('notes.notFoundTitle')}</Text>
+        <Text className="text-base text-center mb-6" style={{ color: colors.textSecondary }}>
           {noteId
             ? t('notes.notFoundWithId', { id: noteId })
             : t('notes.notFoundOffline')}
         </Text>
         <Pressable
           testID="note-editor.button.back-to-notes"
+          className="px-5 py-3 rounded-full"
+          style={{ backgroundColor: colors.primary }}
           onPress={() => navigation.navigate('MainTabs', { screen: 'NotesTab' })}
-          style={[styles.notFoundButton, { backgroundColor: colors.primary }]}
         >
-          <Text style={styles.notFoundButtonText}>{t('notes.backToNotes')}</Text>
+          <Text className="text-white text-base font-semibold">{t('notes.backToNotes')}</Text>
         </Pressable>
       </SafeAreaView>
     );
@@ -183,9 +185,9 @@ function NoteEditorScreenInner() {
   }
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: colors.surface }]}> 
+    <SafeAreaView edges={['top', 'bottom']} className="flex-1" style={{ backgroundColor: colors.surface }}> 
       {document.isSaving ? <GitHubActivityIndicator /> : null}
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
         <EditorHeader noteId={noteId} isSaving={document.isSaving} onCancel={document.handleCancelEdit} onSave={document.handleSave} />
 
         <EditorToolbar
@@ -200,8 +202,8 @@ function NoteEditorScreenInner() {
         />
 
         {sideBySide ? (
-          <View style={styles.sideBySideContainer}>
-            <View style={styles.sideBySideEditor}>
+          <View className="flex-1 flex-row">
+            <View className="flex-1">
               <NoteEditorForm
                 repo={document.repo}
                 branch={document.branch}
@@ -227,7 +229,7 @@ function NoteEditorScreenInner() {
                 onContentChange={document.handleContentChange}
               />
             </View>
-            <View style={styles.sideBySidePreview}>
+            <View className="flex-1">
               <NotePreviewPane
                 noteFormat={document.noteFormat}
                 previewContent={preview.previewContent}
@@ -317,47 +319,4 @@ function NoteEditorScreenInner() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  flex: {
-    flex: 1,
-  },
-  sideBySideContainer: {
-    flex: 1,
-    flexDirection: 'row',
-  },
-  sideBySideEditor: {
-    flex: 1,
-  },
-  sideBySidePreview: {
-    flex: 1,
-  },
-  notFoundContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-  },
-  notFoundTitle: {
-    fontSize: 22,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  notFoundBody: {
-    fontSize: 15,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  notFoundButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 999,
-  },
-  notFoundButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-});
+
