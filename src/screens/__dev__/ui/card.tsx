@@ -6,7 +6,7 @@ const Card = React.forwardRef<React.ComponentRef<typeof View>, ViewProps & { cla
   ({ className, ...props }, ref) => (
     <View
       ref={ref}
-      className={cn('rounded-xl border border-gray-200 bg-white shadow-sm', className)}
+      className={cn('rounded-lg border border-border bg-card', className)}
       {...props}
     />
   )
@@ -14,15 +14,15 @@ const Card = React.forwardRef<React.ComponentRef<typeof View>, ViewProps & { cla
 Card.displayName = 'Card';
 
 const CardHeader = ({ className, ...props }: ViewProps & { className?: string }) => (
-  <View className={cn('flex flex-col space-y-1.5 p-6', className)} {...props} />
+  <View className={cn('flex flex-col gap-2 p-4', className)} {...props} />
 );
 
 const CardTitle = ({ className, ...props }: TextProps & { className?: string }) => (
-  <Text className={cn('text-lg font-semibold leading-none tracking-tight text-gray-900', className)} {...props} />
+  <Text className={cn('text-lg font-semibold leading-none tracking-tight text-text', className)} {...props} />
 );
 
 const CardContent = ({ className, ...props }: ViewProps & { className?: string }) => (
-  <View className={cn('p-6 pt-0', className)} {...props} />
+  <View className={cn('p-4 pt-0', className)} {...props} />
 );
 
 export { Card, CardHeader, CardTitle, CardContent };

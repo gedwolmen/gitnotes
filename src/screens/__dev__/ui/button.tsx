@@ -9,17 +9,17 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: 'bg-primary',
-        destructive: 'bg-red-500',
-        outline: 'border border-gray-300 bg-white',
-        secondary: 'bg-gray-200',
+        destructive: 'bg-error',
+        outline: 'border border-border bg-surface',
+        secondary: 'bg-surface-secondary',
         ghost: 'bg-transparent',
         link: 'bg-transparent',
       },
       size: {
-        default: 'h-10 px-4',
-        sm: 'h-8 px-3',
-        lg: 'h-12 px-6',
-        icon: 'h-10 w-10',
+        default: 'h-11 px-5',
+        sm: 'h-9 px-3',
+        lg: 'h-14 px-6',
+        icon: 'h-11 w-11',
       },
     },
     defaultVariants: {
