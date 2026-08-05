@@ -19,7 +19,6 @@ import SearchBar from '../SearchBar';
 import { HapticService } from '../../utils/haptics';
 import * as ChatStorageService from '../../services/ChatStorageService';
 import { Modal, Button, Surface } from '../ui';
-
 interface ChatRepoPickerModalProps {
   visible: boolean;
   onClose: () => void;
@@ -139,37 +138,37 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
       bottomSheet
       contentStyle={{ height: '85%' }}
     >
-      <View style={styles.sheet}>
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <View style={styles.headerSide} />
-          <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
-            Choose Chat Storage
+      <View className="flex-1">
+        <View className="flex-row items-center justify-between px-4 py-3.5 border-b border-border" style={{ borderBottomWidth: StyleSheet.hairlineWidth }}>
+          <View className="w-8 items-end" />
+          <Text className="flex-1 text-md font-semibold text-center text-text" numberOfLines={1}>
+            Choose Chat storage
           </Text>
           <TouchableOpacity
             testID="chat-repo-picker.button.close"
             onPress={onClose}
             disabled={isInitializing}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={styles.headerSide}
+            className="w-8 items-end"
           >
             <Ionicons name="close" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
-        <View style={styles.body}>
-          <Text style={[styles.description, { color: colors.textSecondary }]}>
+        <View className="flex-1 px-4 pt-4">
+          <Text className="text-sm mb-4 text-text-secondary" style={{ lineHeight: 20 }}>
             Select a GitHub repository to store your AI chat conversations.
           </Text>
 
           {repositories.length === 0 ? (
-            <View style={styles.emptyState}>
+            <View className="items-center py-10">
               <Ionicons
                 name="folder-open-outline"
                 size={48}
                 color={colors.textSecondary}
                 style={{ marginBottom: spacing[4] }}
               />
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              <Text className="text-md text-center mb-6 text-text-secondary">
                 No repositories found. Add a repository in Settings first.
               </Text>
               {onGoToSettings && (
@@ -180,7 +179,7 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
             </View>
           ) : (
             <>
-              <View style={styles.searchContainer}>
+              <View className="mb-3">
                 <SearchBar
                   value={searchQuery}
                   onChangeText={setSearchQuery}
@@ -189,8 +188,8 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
               </View>
 
               <ScrollView
-                style={styles.repoList}
-                contentContainerStyle={styles.repoListContent}
+                className="flex-1"
+                contentContainerStyle={{ paddingBottom: 8 }}
                 keyboardShouldPersistTaps="handled"
               >
                 {filteredRepos.map((repo) => {
@@ -200,21 +199,21 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
                       key={repo.path}
                       testID={`chat-repo-picker.button.select-repo`}
                       onPress={() => handleSelectRepo(repo.path)}
-                      style={{ marginBottom: spacing[2] }}
+                      className="mb-2"
                     >
                       <Surface
                         elevation="flat"
                         inset={isSelected}
                         radius="md"
+                        className="flex-row items-center justify-between p-3.5"
                         style={[
-                          styles.repoItem,
                           isSelected && { borderColor: colors.primary, borderWidth: 1 },
                           !isSelected && { borderWidth: 1, borderColor: 'transparent' },
                         ]}
                       >
-                        <View style={styles.repoInfo}>
+                        <View className="flex-1 mr-2">
                           <Text
-                            style={[styles.repoName, { color: colors.text }]}
+                            className="text-md font-medium text-text"
                             numberOfLines={1}
                           >
                             {repo.path.includes('/') ? repo.path : repo.name}
@@ -228,18 +227,18 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
                   );
                 })}
                 {filteredRepos.length === 0 && (
-                  <Text style={[styles.noResults, { color: colors.textSecondary }]}>
+                  <Text className="text-center py-5 text-sm text-text-secondary">
                     No matching repositories
                   </Text>
                 )}
               </ScrollView>
 
               {selectedRepoPath && (
-                <View style={styles.branchConfig}>
-                  <Text style={[styles.branchLabel, { color: colors.text }]}>Branch:</Text>
+                <View className="flex-row items-center mt-3 mb-1">
+                  <Text className="text-md font-medium mr-2.5 text-text">Branch:</Text>
                   <TouchableOpacity
                     testID="chat-repo-picker.button.select-branch"
-                    style={[styles.branchPicker, { borderColor: colors.border }]}
+                    className="flex-1 flex-row items-center justify-between px-3 py-2.5 rounded-lg border border-border min-h-11"
                     onPress={() => setShowBranchPicker(true)}
                     disabled={loadingBranches}
                   >
@@ -247,7 +246,7 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
                       <ActivityIndicator size="small" color={colors.primary} />
                     ) : (
                       <>
-                        <Text style={[styles.branchPickerText, { color: colors.text }]}>{branch}</Text>
+                        <Text className="text-md flex-1 text-text">{branch}</Text>
                         <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
                       </>
                     )}
@@ -259,25 +258,26 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
         </View>
 
         <View
-          style={[
-            styles.footer,
-            {
-              borderTopColor: colors.border,
-              paddingBottom: Math.max(insets.bottom, 16),
-            },
-          ]}
+          className="px-4 pt-3 pb-1 border-t border-border"
+          style={{
+            borderTopWidth: StyleSheet.hairlineWidth,
+            paddingBottom: Math.max(insets.bottom, 16),
+          }}
         >
           {initError && (
             <View
-              style={[
-                styles.errorRow,
-                { backgroundColor: colors.error + '1A', borderColor: colors.error },
-              ]}
+              className="flex-row items-start gap-2 p-2.5 rounded-lg mb-2.5"
+              style={{
+                backgroundColor: colors.error + '1A',
+                borderWidth: StyleSheet.hairlineWidth,
+                borderColor: colors.error,
+              }}
             >
               <Ionicons name="alert-circle" size={18} color={colors.error} />
               <Text
                 testID="chat-repo-picker.text.error"
-                style={[styles.errorText, { color: colors.error }]}
+                className="flex-1 text-sm text-error"
+                style={{ lineHeight: 18 }}
               >
                 {initError}
               </Text>
@@ -300,8 +300,8 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
 
       {/* Branch Picker Modal */}
       <Modal visible={showBranchPicker} onRequestClose={() => setShowBranchPicker(false)} bottomSheet contentStyle={{ height: '50%' }}>
-        <View style={[styles.branchModalHeader, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.branchModalTitle, { color: colors.text }]}>Select Branch</Text>
+        <View className="flex-row items-center justify-between px-4 py-3.5 border-b border-border" style={{ borderBottomWidth: StyleSheet.hairlineWidth }}>
+          <Text className="text-md font-semibold text-text">Select Branch</Text>
           <TouchableOpacity onPress={() => setShowBranchPicker(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Ionicons name="close" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
@@ -309,22 +309,23 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
         <FlatList
           data={branches}
           keyExtractor={(item) => item.name}
-          contentContainerStyle={styles.branchListContent}
+          contentContainerStyle={{ paddingBottom: 8 }}
           keyboardShouldPersistTaps="handled"
           renderItem={({ item }) => {
             const isSelected = item.name === branch;
             return (
               <TouchableOpacity
                 testID={`chat-repo-picker.button.branch-${item.name}`}
-                style={[styles.branchItem, { borderBottomColor: colors.border }]}
+                className="flex-row items-center justify-between px-4 py-3.5 border-b border-border"
+                style={{ borderBottomWidth: StyleSheet.hairlineWidth }}
                 onPress={() => handleBranchSelect(item.name)}
               >
-                <View style={styles.branchItemLeft}>
+                <View className="flex-row items-center gap-2.5 flex-1">
                   <Ionicons name="git-branch-outline" size={18} color={isSelected ? colors.primary : colors.textSecondary} />
-                  <Text style={[styles.branchItemText, { color: colors.text }]}>{item.name}</Text>
+                  <Text className="text-md text-text">{item.name}</Text>
                   {item.isCurrent && (
-                    <View style={[styles.currentBadge, { backgroundColor: colors.primary + '20' }]}>
-                      <Text style={[styles.currentBadgeText, { color: colors.primary }]}>default</Text>
+                    <View className="px-1.5 py-0.5 rounded" style={{ backgroundColor: colors.primary + '20' }}>
+                      <Text className="text-xs font-semibold text-primary">default</Text>
                     </View>
                   )}
                 </View>
@@ -337,161 +338,3 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  sheet: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  headerSide: {
-    width: 32,
-    alignItems: 'flex-end',
-  },
-  title: {
-    flex: 1,
-    fontSize: 17,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  body: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-  },
-  description: {
-    fontSize: 14,
-    marginBottom: 16,
-    lineHeight: 20,
-  },
-  searchContainer: {
-    marginBottom: 12,
-  },
-  repoList: {
-    flex: 1,
-  },
-  repoListContent: {
-    paddingBottom: 8,
-  },
-  repoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 14,
-  },
-  repoInfo: {
-    flex: 1,
-    marginRight: 8,
-  },
-  repoName: {
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  branchConfig: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  branchLabel: {
-    fontSize: 15,
-    marginRight: 10,
-    fontWeight: '500',
-  },
-  footer: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 4,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  errorRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: StyleSheet.hairlineWidth,
-    marginBottom: 10,
-  },
-  errorText: {
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyText: {
-    fontSize: 15,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  noResults: {
-    textAlign: 'center',
-    paddingVertical: 20,
-    fontSize: 14,
-  },
-  branchPicker: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    minHeight: 44,
-  },
-  branchPickerText: {
-    fontSize: 15,
-    flex: 1,
-  },
-  branchModalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  branchModalTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-  },
-  branchListContent: {
-    paddingBottom: 8,
-  },
-  branchItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  branchItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    flex: 1,
-  },
-  branchItemText: {
-    fontSize: 15,
-  },
-  currentBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  currentBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-});

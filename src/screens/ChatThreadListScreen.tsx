@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { View, StyleSheet, ActivityIndicator, Alert, FlatList, RefreshControl } from 'react-native';
+import { View, ActivityIndicator, Alert, FlatList, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -293,7 +293,7 @@ export default function ChatThreadListScreen() {
   const renderEmptyState = () => {
     if (isLoading) {
       return (
-        <View style={styles.centerContainer}>
+        <View className="flex-1 justify-center items-center pt-16">
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       );
@@ -310,9 +310,9 @@ export default function ChatThreadListScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-      <View style={{ flex: 1, paddingTop: headerHeight }}>
-        <View style={[styles.headerControls, { paddingHorizontal: spacing[4], paddingTop: spacing[4], paddingBottom: spacing[3] }]}>
+    <SafeAreaView className="flex-1 bg-background" edges={[]}>
+      <View className="flex-1" style={{ paddingTop: headerHeight }}>
+        <View className="px-4 pt-4 pb-3">
           <Button
             testID="chat-thread-list.button.new-chat"
             label={t('chat.newChat')}
@@ -368,16 +368,3 @@ export default function ChatThreadListScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  headerControls: {},
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: 64,
-  },
-});

@@ -20,10 +20,10 @@ export function ChatErrorCard({ message, colors, spacing, type, canRetry, isStre
     <Surface
       elevation="raised"
       radius="md"
-      style={{ marginHorizontal: spacing[4], marginBottom: spacing[3], padding: spacing[4], borderWidth: 1, borderColor: '#d66b6b' }}
+      className="mx-4 mb-3 p-4 border border-error"
     >
-      <Text style={{ color: colors.text, fontSize: type.md, fontWeight: '600', marginBottom: spacing[2] }}>{message}</Text>
-      <View style={{ flexDirection: 'row', gap: spacing[2] }}>
+      <Text className="text-md font-semibold mb-2 text-text">{message}</Text>
+      <View className="flex-row gap-2">
         <Button testID="chat-error.button.retry" variant="primary" onPress={onRetry} disabled={!canRetry || isStreaming}>Retry</Button>
         <Button testID="chat-error.button.dismiss" variant="secondary" onPress={onDismiss}>Dismiss</Button>
       </View>

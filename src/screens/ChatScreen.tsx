@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
+import { FlatList, KeyboardAvoidingView, Platform, Text, View } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -96,13 +96,13 @@ export default function ChatScreen() {
   const errorMessage = localError || storeError;
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]} edges={['top', 'left', 'right']}>
+    <SafeAreaView className="flex-1 bg-bg" edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView
-        style={styles.keyboardAvoidingView}
+        className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
       >
-        <View style={styles.content}>
+        <View className="flex-1">
           <FlatList
             ref={flatListRef}
             data={messages}
@@ -134,9 +134,9 @@ export default function ChatScreen() {
               );
             }}
             ListEmptyComponent={
-              <View style={[styles.emptyState, { padding: spacing[6] }]}>
-                <Text style={{ color: colors.text, fontSize: type.xl, fontWeight: '700', marginBottom: spacing[2] }}>{t('chat.startConversation')}</Text>
-                <Text style={{ color: colors.textSecondary, fontSize: type.md, textAlign: 'center' }}>
+              <View className="flex-1 justify-center items-center" style={{ padding: spacing[6] }}>
+                <Text className="text-xl font-bold mb-2 text-text">{t('chat.startConversation')}</Text>
+                <Text className="text-md text-center text-text-secondary">
                   {t('chat.emptyStateBody')}
                 </Text>
               </View>
@@ -212,10 +212,3 @@ export default function ChatScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
-  keyboardAvoidingView: { flex: 1 },
-  content: { flex: 1 },
-  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-});
