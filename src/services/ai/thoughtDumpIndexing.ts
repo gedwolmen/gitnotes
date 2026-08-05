@@ -43,13 +43,17 @@ export function simpleHash(text: string): string {
   return String(hash);
 }
 
-let embedderResolved = false;
+let lastEmbedderFingerprint: string | null = null;
 
 async function ensureEmbedderResolved(): Promise<void> {
-  if (embedderResolved) return;
   const { providers, getSelectedModel } = useAIStore.getState();
-  await aiMemoryIndex.resolveEmbedder(providers, getSelectedModel());
-  embedderResolved = true;
+  const model = getSelectedModel();
+  const providerId = model?.providerId ?? 'none';
+  const modelId = model?.id ?? 'none';
+  const fingerprint = `${providerId}:${modelId}`;
+  if (fingerprint === lastEmbedderFingerprint) return;
+  await aiMemoryIndex.resolveEmbedder(providers, model);
+  lastEmbedderFingerprint = fingerprint;
 }
 
 function runIdle(fn: () => Promise<void>): void {

@@ -230,8 +230,24 @@ const fsStore = (FileSystem as unknown as { __store: Map<string, string> }).__st
 beforeEach(async () => {
   fsStore.clear();
   jest.clearAllMocks();
+  jest.restoreAllMocks();
+
   const entries = (require('../src/services/ai/AIMemoryIndexService') as { __entries: Map<string, string> }).__entries;
   entries.clear();
+
+  (ThoughtDumpService.create as jest.Mock).mockImplementation(async (text: string) => ({
+    id: 'test-dump-id',
+    text,
+    createdAt: new Date().toISOString(),
+    filePath: `thoughts/20240101-000000-test-d.md`,
+  }));
+  (ThoughtDumpService.list as jest.Mock).mockResolvedValue([]);
+  (ThoughtDumpService.delete as jest.Mock).mockResolvedValue(true);
+
+  const { indexDump: idxMock, removeDump: rmMock, reconcile: recMock } = require('../src/services/ai/thoughtDumpIndexing');
+  idxMock.mockReset();
+  rmMock.mockReset();
+  recMock.mockReset();
 });
 
 describe('e2e: FAB -> thought dump -> memory -> reset', () => {
@@ -298,11 +314,8 @@ describe('e2e: FAB -> thought dump -> memory -> reset', () => {
 
     const { getByTestId } = render(React.createElement(ThoughtDumpScreen, {}));
 
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 0));
-    });
+    const input = await waitFor(() => getByTestId('thought-dump-input'));
 
-    const input = getByTestId('thought-dump-input');
     await act(async () => {
       fireEvent.changeText(input, 'My e2e test thought');
     });
@@ -397,11 +410,7 @@ describe('e2e: FAB -> thought dump -> memory -> reset', () => {
     const ThoughtDumpScreen = require('../src/screens/ThoughtDumpScreen').default;
     const screen = render(React.createElement(ThoughtDumpScreen, {}));
 
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 0));
-    });
-
-    const input = screen.getByTestId('thought-dump-input');
+    const input = await waitFor(() => screen.getByTestId('thought-dump-input'));
     await act(async () => {
       fireEvent.changeText(input, 'full loop thought');
     });

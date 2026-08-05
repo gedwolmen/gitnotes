@@ -114,11 +114,13 @@ const makeDump = (overrides?: Partial<ThoughtDump>): ThoughtDump => ({
 
 describe('ThoughtDumpScreen', () => {
   beforeEach(() => {
+    jest.restoreAllMocks();
     jest.clearAllMocks();
-    mockList.mockResolvedValue([]);
-    mockCreate.mockResolvedValue(null);
-    mockDelete.mockResolvedValue(true);
-    mockGetSavedRepositories.mockResolvedValue([
+    
+    mockList.mockImplementation(async () => []);
+    mockCreate.mockImplementation(async () => null);
+    mockDelete.mockImplementation(async () => true);
+    mockGetSavedRepositories.mockImplementation(async () => [
       { path: 'owner/repo', branch: 'main' },
     ]);
   });

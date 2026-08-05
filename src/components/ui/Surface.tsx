@@ -32,7 +32,7 @@ function detectPlatform(): TokenPlatform {
 }
 
 export function Surface(props: SurfaceProps) {
-  const { elevation = 'raised', inset = false, radius = 'md', style, children, testID, ...rest } = props;
+  const { elevation = 'raised', inset = false, radius = 'md', style, children, testID, className, ...rest } = props;
   const { style: themeStyle } = useTheme();
   const { colors, radii } = useTokens();
   const platform = detectPlatform();
@@ -58,7 +58,7 @@ export function Surface(props: SurfaceProps) {
     <View
       {...rest}
       testID={testID}
-      className={cn('bg-surface', RADIUS_CLASS[radius])}
+      className={cn(className, 'bg-surface', RADIUS_CLASS[radius])}
       style={[elevationStyles.outer as ViewStyle, style]}
     >
       <View
