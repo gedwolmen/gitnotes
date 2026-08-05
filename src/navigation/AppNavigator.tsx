@@ -29,6 +29,7 @@ import ThoughtDumpScreen from '../screens/ThoughtDumpScreen';
 import { RootStackParamList } from './types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAIStore } from '../stores/aiStore';
+import { useAIHubStore } from '../stores/aiHubStore';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -65,7 +66,9 @@ export default function AppNavigator() {
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
   const chatRepoOwner = useAIStore((state) => state.chatRepoOwner);
   const chatRepoName = useAIStore((state) => state.chatRepoName);
-  const [showChatRepoPicker, setShowChatRepoPicker] = useState(false);
+  const showChatRepoPicker = useAIHubStore((state) => state.pickerVisible);
+  const openChatRepoPicker = useAIHubStore((state) => state.openChatRepoPicker);
+  const closeChatRepoPicker = useAIHubStore((state) => state.closeChatRepoPicker);
   const [currentRouteName, setCurrentRouteName] = useState<string | undefined>(undefined);
 
   const baseTheme = isDark ? DarkTheme : DefaultTheme;
@@ -87,29 +90,29 @@ export default function AppNavigator() {
     setCurrentRouteName(routeName);
 
     if (routeName === 'ChatThreadList' && !hasChatRepo) {
-      setShowChatRepoPicker(true);
+      openChatRepoPicker();
     }
-  }, [hasChatRepo, navigationRef]);
+  }, [hasChatRepo, navigationRef, openChatRepoPicker]);
 
   const handleCloseChatRepoPicker = useCallback(() => {
-    setShowChatRepoPicker(false);
+    closeChatRepoPicker();
 
     if (navigationRef.isReady() && navigationRef.getCurrentRoute()?.name === 'ChatThreadList' && !hasChatRepo && navigationRef.canGoBack()) {
       navigationRef.goBack();
     }
-  }, [hasChatRepo, navigationRef]);
+  }, [hasChatRepo, navigationRef, closeChatRepoPicker]);
 
   const handleChatRepoSelected = useCallback(() => {
-    setShowChatRepoPicker(false);
-  }, []);
+    closeChatRepoPicker();
+  }, [closeChatRepoPicker]);
 
   const handleGoToSettings = useCallback(() => {
-    setShowChatRepoPicker(false);
+    closeChatRepoPicker();
 
     if (navigationRef.isReady()) {
       navigationRef.navigate('MainTabs', { screen: 'SettingsTab' });
     }
-  }, [navigationRef]);
+  }, [navigationRef, closeChatRepoPicker]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
