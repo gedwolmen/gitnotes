@@ -41,6 +41,7 @@ jest.mock('react-native-reanimated', () => {
       mockSharedValues.push(sharedValue);
       return sharedValue;
     },
+    useDerivedValue: (callback: () => unknown) => ({ value: callback() }),
     useAnimatedStyle: (callback: () => Record<string, unknown>) => callback(),
     withSpring: (value: unknown) => value,
     runOnJS: (callback: (...args: unknown[]) => unknown) => callback,
@@ -49,6 +50,7 @@ jest.mock('react-native-reanimated', () => {
 
 jest.mock('react-native-gesture-handler', () => {
   const gesture = () => ({
+    onStart: gesture,
     onUpdate: gesture,
     onEnd: gesture,
   });
