@@ -519,5 +519,15 @@
     "invalidTokenBody": "そのトークンで認証できませんでした。値を確認して再試行してください。",
     "failedTitle": "トークンを保存できませんでした",
     "failedBody": "不明なエラー"
+  },
+  "thoughtDump": {
+    "title": "思考ダンプ",
+    "placeholder": "何を考えていますか？",
+    "save": "保存",
+    "delete": "削除",
+    "confirmDelete": "この思考ダンプを削除しますか？元に戻すことはできません。",
+    "empty": "思考ダンプはまだありません",
+    "error": "エラーが発生しました。もう一度お試しください。",
+    "justNow": "たった今"
   }
 }

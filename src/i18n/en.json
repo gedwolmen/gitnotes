@@ -733,5 +733,15 @@
     "invalidTokenBody": "Could not authenticate with that token. Check the value and try again.",
     "failedTitle": "Could not save the token",
     "failedBody": "Unknown error"
+  },
+  "thoughtDump": {
+    "title": "Thought Dump",
+    "placeholder": "What's on your mind?",
+    "save": "Save",
+    "delete": "Delete",
+    "confirmDelete": "Delete this thought dump? This cannot be undone.",
+    "empty": "No thought dumps yet",
+    "error": "Something went wrong. Please try again.",
+    "justNow": "just now"
   }
 }

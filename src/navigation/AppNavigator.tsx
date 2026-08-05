@@ -25,6 +25,7 @@ import NeumorphicGallery from '../screens/__dev__/NeumorphicGallery';
 import { FloatingAIButton } from '../components/ai/FloatingAIButton';
 import { ChatRepoPickerModal } from '../components/ai/ChatRepoPickerModal';
 import { AddScheduledLearningScreen } from '../components/settings/AddScheduledLearningScreen';
+import ThoughtDumpScreen from '../screens/ThoughtDumpScreen';
 import { RootStackParamList } from './types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAIStore } from '../stores/aiStore';
@@ -53,6 +54,7 @@ const linking: LinkingOptions<RootStackParamList> = {
       CanvasEditor: 'canvas/:canvasId',
       ChatThreadList: 'chat',
       ChatScreen: 'chat/:threadId',
+      ThoughtDump: 'thought-dump',
       NeumorphicGallery: '__dev__/neumorphic',
     },
   },
@@ -198,6 +200,11 @@ export default function AppNavigator() {
             <Stack.Screen
               name="AddScheduledLearning"
               component={AddScheduledLearningScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="ThoughtDump"
+              component={ThoughtDumpScreen}
               options={{ headerShown: false }}
             />
             {__DEV__ && (

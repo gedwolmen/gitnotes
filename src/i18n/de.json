@@ -519,5 +519,15 @@
     "invalidTokenBody": "Authentifizierung mit diesem Token fehlgeschlagen. Wert prüfen und erneut versuchen.",
     "failedTitle": "Token konnte nicht gespeichert werden",
     "failedBody": "Unbekannter Fehler"
+  },
+  "thoughtDump": {
+    "title": "Gedankenablage",
+    "placeholder": "Was beschäftigt dich?",
+    "save": "Speichern",
+    "delete": "Löschen",
+    "confirmDelete": "Diese Gedankenablage löschen? Dies kann nicht rückgängig gemacht werden.",
+    "empty": "Noch keine Gedankenablagen",
+    "error": "Etwas ist schiefgelaufen. Bitte erneut versuchen.",
+    "justNow": "gerade eben"
   }
 }

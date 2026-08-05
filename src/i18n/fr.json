@@ -519,5 +519,15 @@
     "invalidTokenBody": "Impossible de s'authentifier avec ce jeton. Vérifiez la valeur et réessayez.",
     "failedTitle": "Impossible d'enregistrer le jeton",
     "failedBody": "Erreur inconnue"
+  },
+  "thoughtDump": {
+    "title": "Vidage de pensées",
+    "placeholder": "Qu'avez-vous en tête ?",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "confirmDelete": "Supprimer ce vidage de pensées ? Cette action est irréversible.",
+    "empty": "Aucun vidage de pensées pour le moment",
+    "error": "Une erreur s'est produite. Veuillez réessayer.",
+    "justNow": "à l'instant"
   }
 }
