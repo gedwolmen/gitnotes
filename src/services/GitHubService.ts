@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import http, { setAuthToken, clearAuthToken } from './http';
 import AuthService from './AuthService';
+import { extractHttpErrorDetails } from './git/syncFailure';
 
 const USER_KEY = '@gitnotes:github_user';
 
@@ -813,7 +814,8 @@ class GitHubServiceClass {
         if (newSha) this.shaCache.set(cacheKey, newSha);
         return response;
       } catch (error) {
-        const status = (error as { status?: number })?.status;
+        const details = extractHttpErrorDetails(error);
+        const status = details.status;
         if (status === 409 && attempt < 2) {
           this.shaCache.delete(cacheKey);
           try {
@@ -830,9 +832,13 @@ class GitHubServiceClass {
           this.shaCache.delete(cacheKey);
           return { content: { sha: '' }, commit: { sha: '' } } as GitHubFileCommit;
         }
-        if (attempt === 2) {
+        if (attempt === 2 && status !== undefined && status >= 400) {
           console.warn('[GitHubService] Failed to update file:', error);
-          return null;
+          const message = details.message ?? (error instanceof Error ? error.message : 'GitHub update failed');
+          throw Object.assign(new Error(message), {
+            status,
+            ...(details.headers ? { headers: details.headers } : {}),
+          });
         }
       }
     }

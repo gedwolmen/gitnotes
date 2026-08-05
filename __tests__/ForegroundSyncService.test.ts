@@ -29,13 +29,28 @@ jest.mock('../src/services/RepoPullService', () => ({
   pullAllFromRepos: jest.fn(),
 }));
 
+let mockAppStateChangeListener: ((state: AppStateStatus) => void) | undefined;
+
+jest.mock('react-native', () => ({
+  AppState: {
+    currentState: 'background',
+    addEventListener: jest.fn((_event: string, listener: (state: AppStateStatus) => void) => {
+      mockAppStateChangeListener = listener;
+      return { remove: jest.fn() };
+    }),
+  },
+}));
+
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 import NetInfo, { NetInfoStateType, type NetInfoState } from '@react-native-community/netinfo';
+import type { AppStateStatus } from 'react-native';
 import { GitHubService } from '../src/services/GitHubService';
 import { NoteSyncQueueService } from '../src/services/NoteSyncQueueService';
 import {
   __resetForegroundSyncForTest,
   __runPullForTest,
+  isForegroundSyncInFlight,
+  startForegroundWatcher,
 } from '../src/services/ForegroundSyncService';
 import { pullAllFromRepos } from '../src/services/RepoPullService';
 import { StorageService } from '../src/services/StorageService';
@@ -80,6 +95,7 @@ describe('ForegroundSyncService', () => {
     jest.setSystemTime(10_000);
     jest.clearAllMocks();
     __resetForegroundSyncForTest();
+    mockAppStateChangeListener = undefined;
     authMock.mockReturnValue(true);
     reposMock.mockResolvedValue([repository]);
     netInfoFetchMock.mockResolvedValue(reachableState);
@@ -158,6 +174,57 @@ describe('ForegroundSyncService', () => {
     await __runPullForTest('second');
 
     expect(drainMock).toHaveBeenCalledTimes(2);
+    expect(pullMock).toHaveBeenCalledTimes(2);
+  });
+
+  test('keeps later AppState cycles from starting while a timed-out pull remains pending', async () => {
+    let resolvePull: ((result: PullResult) => void) | undefined;
+    pullMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolvePull = resolve;
+        }),
+    );
+    startForegroundWatcher({ syncFrequentlyEnabled: false, syncIntervalSeconds: 0 });
+
+    mockAppStateChangeListener?.('active');
+    await jest.advanceTimersByTimeAsync(0);
+    expect(pullMock).toHaveBeenCalledTimes(1);
+
+    await jest.advanceTimersByTimeAsync(600_000);
+    expect(isForegroundSyncInFlight()).toBe(false);
+    await jest.advanceTimersByTimeAsync(30_000);
+
+    mockAppStateChangeListener?.('background');
+    mockAppStateChangeListener?.('active');
+    await jest.advanceTimersByTimeAsync(0);
+    expect(pullMock).toHaveBeenCalledTimes(1);
+
+    resolvePull?.(pullResult);
+    await jest.advanceTimersByTimeAsync(0);
+  });
+
+  test('allows AppState cycles after timed-out background pull completes', async () => {
+    let resolvePull: ((result: PullResult) => void) | undefined;
+    pullMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolvePull = resolve;
+        }),
+    );
+    startForegroundWatcher({ syncFrequentlyEnabled: false, syncIntervalSeconds: 0 });
+
+    mockAppStateChangeListener?.('active');
+    await jest.advanceTimersByTimeAsync(0);
+    await jest.advanceTimersByTimeAsync(600_000);
+    resolvePull?.(pullResult);
+    await jest.advanceTimersByTimeAsync(0);
+    await jest.advanceTimersByTimeAsync(30_000);
+
+    mockAppStateChangeListener?.('background');
+    mockAppStateChangeListener?.('active');
+    await jest.advanceTimersByTimeAsync(0);
+
     expect(pullMock).toHaveBeenCalledTimes(2);
   });
 });

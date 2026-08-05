@@ -8,6 +8,7 @@ import { useRepoStore } from '../stores/repoStore';
 import type { GitHostProvider } from '../services/git/GitHost';
 import { GIT_HOST_LABELS } from '../services/git/GitHost';
 import { useAccounts } from '../contexts/AccountsContext';
+import { RepoAccessPreflightError } from '../services/git/repoAccessPreflight';
 
 type ThemeColors = {
   background: string;
@@ -94,29 +95,43 @@ export function AddRepoModal({ visible, onClose, onAdded, colors }: AddRepoModal
       );
       return;
     }
-    setIsSubmitting(true);
-    try {
-      const repo = await addRepository(trimmed, undefined, provider);
-      onAdded?.(repo.path, provider);
-      setPath('');
-      onClose();
-      if (!hasTokenForProvider) {
-        // Soft warning: the repo is recorded but syncing will need a token
-        // for the matching host before writes succeed.
+    const attemptAdd = async (allowUnverifiedWrite: boolean): Promise<void> => {
+      setIsSubmitting(true);
+      try {
+        const repo = allowUnverifiedWrite
+          ? await addRepository(trimmed, undefined, provider, { allowUnverifiedWrite: true })
+          : await addRepository(trimmed, undefined, provider);
+        onAdded?.(repo.path, provider);
+        setPath('');
+        onClose();
+        if (!hasTokenForProvider) {
+          Alert.alert(
+            t('addRepo.noHostTitle') ?? 'No host connected',
+            (t('addRepo.noHostBody', { provider: GIT_HOST_LABELS[provider] }) ??
+              `Connect a ${GIT_HOST_LABELS[provider]} account before syncing ${GIT_HOST_LABELS[provider]} repositories.`) as string,
+          );
+        }
+      } catch (error) {
+        if (error instanceof RepoAccessPreflightError && error.canRetry && !allowUnverifiedWrite) {
+          Alert.alert(
+            'Write access not verified',
+            'Write access not verified. This repository may be read-only. Add anyway?',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Add anyway', onPress: () => void attemptAdd(true) },
+            ],
+          );
+          return;
+        }
         Alert.alert(
-          t('addRepo.noHostTitle') ?? 'No host connected',
-          (t('addRepo.noHostBody', { provider: GIT_HOST_LABELS[provider] }) ??
-            `Connect a ${GIT_HOST_LABELS[provider]} account before syncing ${GIT_HOST_LABELS[provider]} repositories.`) as string,
+          t('addRepo.failedTitle'),
+          error instanceof Error ? error.message : t('addRepo.failedBody'),
         );
+      } finally {
+        setIsSubmitting(false);
       }
-    } catch (error) {
-      Alert.alert(
-        t('addRepo.failedTitle'),
-        error instanceof Error ? error.message : t('addRepo.failedBody'),
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
+    };
+    await attemptAdd(false);
   }, [addRepository, path, isValid, provider, onAdded, onClose, t, hasTokenForProvider]);
 
   return (

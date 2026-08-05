@@ -13,7 +13,7 @@ import { HapticService } from '../../utils/haptics';
 import { useUndo } from '../../utils/useUndo';
 import { syncNoteToGitHub } from '../../services/NoteGitHubSyncService';
 import { NoteSyncQueueService } from '../../services/NoteSyncQueueService';
-import { classifyGitHubSyncError, isRetryableFailure } from '../../services/git/syncFailure';
+import { classifyGitHubSyncError, isRetryableFailure, syncStatusForError } from '../../services/git/syncFailure';
 import { githubActivity } from '../../stores/githubActivityStore';
 import { canvasToLink } from '../../models/Canvas';
 import { getExtensionForFormat, extractCanvasJsonRefs, slugifyLocal } from './editorShared';
@@ -29,7 +29,7 @@ function showDurableSyncFailureAlert(kind: ReturnType<typeof classifyGitHubSyncE
     case 'saml':
       Alert.alert(
         'Permission Required',
-        'This token cannot write to this repository. Check your token permissions in Settings.',
+        'This token cannot write to this repository. Check repository permissions in Settings.',
         [{ text: 'OK' }],
       );
       return;
@@ -42,14 +42,6 @@ function showDurableSyncFailureAlert(kind: ReturnType<typeof classifyGitHubSyncE
     default:
       return;
   }
-}
-
-function syncStatusForError(message: string): number | undefined {
-  const statusMatch = message.match(/\b(401|403|404|409|429|5\d{2})\b/);
-  if (statusMatch?.[1]) return Number(statusMatch[1]);
-  if (/not authenticated/i.test(message)) return 401;
-  if (/conflict/i.test(message)) return 409;
-  return undefined;
 }
 
 interface NoteEditorDocumentParams {
@@ -344,7 +336,7 @@ export function useNoteEditorDocument({
             const error = syncResult.error!;
             const failure = classifyGitHubSyncError(
               new Error(error),
-              syncStatusForError(error),
+              syncResult.status ?? syncStatusForError(error),
             );
             if (isRetryableFailure(failure)) {
               try {

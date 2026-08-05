@@ -1,6 +1,8 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
+import type { AlertButton } from 'react-native';
+import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 
 const stableColors = {
   background: '#fff',
@@ -78,12 +80,14 @@ jest.mock('../src/contexts/AccountsContext', () => ({
   }),
 }));
 
-jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
 
 import { AddRepoModal } from '../src/components/AddRepoModal';
+import { RepoAccessPreflightError } from '../src/services/git/repoAccessPreflight';
 
 beforeEach(() => {
   mockAddRepository.mockClear();
+  alertSpy.mockClear();
 });
 
 describe('AddRepoModal', () => {
@@ -132,5 +136,35 @@ describe('AddRepoModal', () => {
     await waitFor(() => expect(mockAddRepository).toHaveBeenCalled());
     expect(mockAddRepository).toHaveBeenCalledWith('inkscape/inkscape', undefined, 'gitlab');
     expect(onAdded).toHaveBeenCalledWith('inkscape/inkscape', 'gitlab');
+  });
+
+  it('confirms and retries when write access is unverified', async () => {
+    mockAddRepository.mockRejectedValueOnce(new RepoAccessPreflightError({
+      kind: 'write_unverified',
+      message: 'Write access not verified. Do you want to add anyway?',
+    }, true));
+    const { getByTestId } = render(
+      <AddRepoModal visible onClose={() => {}} colors={stableColors} />,
+    );
+
+    fireEvent.changeText(getByTestId('add-repo-path-input'), 'octo/notes');
+    fireEvent.press(getByTestId('add-repo-submit'));
+
+    await waitFor(() => expect(alertSpy).toHaveBeenCalledWith(
+      'Write access not verified',
+      'Write access not verified. This repository may be read-only. Add anyway?',
+      expect.any(Array),
+    ));
+    const confirmationButtons = alertSpy.mock.calls[alertSpy.mock.calls.length - 1]?.[2];
+    await act(async () => {
+      confirmationButtons?.find((button: AlertButton) => button.text === 'Add anyway')?.onPress?.();
+    });
+
+    await waitFor(() => expect(mockAddRepository).toHaveBeenLastCalledWith(
+      'octo/notes',
+      undefined,
+      'github',
+      { allowUnverifiedWrite: true },
+    ));
   });
 });

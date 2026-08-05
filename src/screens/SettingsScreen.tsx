@@ -43,6 +43,17 @@ import type { GitRepository } from '../services/GitService';
 import { useTranslation } from 'react-i18next';
 import { RepoAccessPreflightError } from '../services/git/repoAccessPreflight';
 
+function confirmUnverifiedWrite(onConfirm: () => void): void {
+  Alert.alert(
+    'Write access not verified',
+    'Write access not verified. This repository may be read-only. Add anyway?',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Add anyway', onPress: onConfirm },
+    ],
+  );
+}
+
 export default function SettingsScreen() {
   const { t } = useTranslation();
   const { theme, colors, setTheme, style: uiStyle, setStyle } = useTheme();
@@ -448,46 +459,68 @@ export default function SettingsScreen() {
       setShowRepoPickerModal(false);
       return;
     }
-    setIsAddingRepo(true);
-    try {
-      await addRepo(repo.full_name, repo.name);
-      HapticService.success();
-      setShowRepoPickerModal(false);
-      autoSyncAfterAdd(repo.full_name, repo.name);
-    } catch (error) {
-      console.warn('[SettingsScreen] handleSelectGithubRepo failed:', error);
-      HapticService.error();
-      if (error instanceof RepoAccessPreflightError) {
-        Alert.alert('Repository Access', error.message);
-        return;
+    const attemptAdd = async (allowUnverifiedWrite: boolean): Promise<void> => {
+      setIsAddingRepo(true);
+      try {
+        if (allowUnverifiedWrite) {
+          await addRepo(repo.full_name, repo.name, 'github', { allowUnverifiedWrite: true });
+        } else {
+          await addRepo(repo.full_name, repo.name);
+        }
+        HapticService.success();
+        setShowRepoPickerModal(false);
+        autoSyncAfterAdd(repo.full_name, repo.name);
+      } catch (error) {
+        if (error instanceof RepoAccessPreflightError && error.canRetry && !allowUnverifiedWrite) {
+          confirmUnverifiedWrite(() => void attemptAdd(true));
+          return;
+        }
+        console.warn('[SettingsScreen] handleSelectGithubRepo failed:', error);
+        HapticService.error();
+        if (error instanceof RepoAccessPreflightError) {
+          Alert.alert('Repository Access', error.message);
+          return;
+        }
+        Alert.alert('Error', 'Failed to add repository.');
+      } finally {
+        setIsAddingRepo(false);
       }
-      Alert.alert('Error', 'Failed to add repository.');
-    } finally {
-      setIsAddingRepo(false);
-    }
+    };
+    await attemptAdd(false);
   }, [addRepo, autoSyncAfterAdd, repositories]);
 
   const handleAddManualRepo = useCallback(async () => {
     const value = manualRepoInput.trim();
     if (!value) return;
-    setIsAddingRepo(true);
-    try {
-      await addRepo(value);
-      setManualRepoInput('');
-      HapticService.success();
-      setShowRepoPickerModal(false);
-      autoSyncAfterAdd(value, value);
-    } catch (error) {
-      console.warn('[SettingsScreen] handleAddManualRepo failed:', error);
-      HapticService.error();
-      if (error instanceof RepoAccessPreflightError) {
-        Alert.alert('Repository Access', error.message);
-        return;
+    const attemptAdd = async (allowUnverifiedWrite: boolean): Promise<void> => {
+      setIsAddingRepo(true);
+      try {
+        if (allowUnverifiedWrite) {
+          await addRepo(value, { allowUnverifiedWrite: true });
+        } else {
+          await addRepo(value);
+        }
+        setManualRepoInput('');
+        HapticService.success();
+        setShowRepoPickerModal(false);
+        autoSyncAfterAdd(value, value);
+      } catch (error) {
+        if (error instanceof RepoAccessPreflightError && error.canRetry && !allowUnverifiedWrite) {
+          confirmUnverifiedWrite(() => void attemptAdd(true));
+          return;
+        }
+        console.warn('[SettingsScreen] handleAddManualRepo failed:', error);
+        HapticService.error();
+        if (error instanceof RepoAccessPreflightError) {
+          Alert.alert('Repository Access', error.message);
+          return;
+        }
+        Alert.alert('Error', 'Failed to add repository.');
+      } finally {
+        setIsAddingRepo(false);
       }
-      Alert.alert('Error', 'Failed to add repository.');
-    } finally {
-      setIsAddingRepo(false);
-    }
+    };
+    await attemptAdd(false);
   }, [addRepo, autoSyncAfterAdd, manualRepoInput]);
 
   const handleRemoveRepo = useCallback((repo: GitRepository) => {

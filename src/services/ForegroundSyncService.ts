@@ -31,6 +31,8 @@ let netInfoUnsub: NetInfoSubscription | null = null;
 let intervalHandle: ReturnType<typeof setInterval> | null = null;
 
 let inFlight = false;
+let pendingBackgroundWork = false;
+let backgroundWork: Promise<void> | null = null;
 let externalSyncCount = 0;
 let lastRunAt = 0;
 
@@ -73,6 +75,10 @@ async function runPull(reason: string): Promise<void> {
     if (__DEV__) console.log(`[ForegroundSync] skip (${reason}): already in flight`);
     return;
   }
+  if (pendingBackgroundWork) {
+    if (__DEV__) console.log(`[ForegroundSync] skip (${reason}): background work still pending`);
+    return;
+  }
   if (Date.now() - lastRunAt < COALESCE_WINDOW_MS) {
     if (__DEV__) console.log(`[ForegroundSync] skip (${reason}): coalesce window`);
     return;
@@ -105,19 +111,26 @@ async function runPull(reason: string): Promise<void> {
   const startedAt = Date.now();
   let success = false;
   const PULL_TIMEOUT_MS = 600_000;
+  backgroundWork = (async () => {
+    try {
+      await NoteSyncQueueService.drain();
+    } catch (error) {
+      console.warn(`[ForegroundSync] drain (${reason}) failed:`, error);
+    }
+    await pullAllFromRepos();
+  })().finally(() => {
+    pendingBackgroundWork = false;
+    backgroundWork = null;
+  });
   try {
     await Promise.race([
-      (async () => {
-        try {
-          await NoteSyncQueueService.drain();
-        } catch (error) {
-          console.warn(`[ForegroundSync] drain (${reason}) failed:`, error);
-        }
-        await pullAllFromRepos();
-      })(),
+      backgroundWork,
       new Promise<void>((_, reject) => {
         pullTimeout = setTimeout(
-          () => reject(new Error(`Pull timed out after ${PULL_TIMEOUT_MS}ms`)),
+          () => {
+            pendingBackgroundWork = true;
+            reject(new Error(`Pull timed out after ${PULL_TIMEOUT_MS}ms`));
+          },
           PULL_TIMEOUT_MS,
         );
       }),
@@ -262,6 +275,8 @@ export async function __runPullForTest(reason = 'test'): Promise<void> {
 export function __resetForegroundSyncForTest(): void {
   stopForegroundWatcher();
   inFlight = false;
+  pendingBackgroundWork = false;
+  backgroundWork = null;
   externalSyncCount = 0;
   lastRunAt = 0;
   currentIntervalSeconds = 0;
