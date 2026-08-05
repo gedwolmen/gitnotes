@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { useTokens } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/types';
 import { ThoughtDumpService } from '../services/ThoughtDumpService';
+import { StorageService } from '../services/StorageService';
 import { ThoughtDump } from '../models/ThoughtDump';
 import { ScreenHeader, Button, Input, EmptyState, Modal } from '../components/ui';
 import { useScreenHeaderHeight } from '../components/ui';
@@ -30,10 +31,17 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ThoughtDump | null>(null);
+  const [repoPath, setRepoPath] = useState('');
+  const [branch, setBranch] = useState<string | undefined>();
 
   const loadDumps = useCallback(async () => {
     setIsLoading(true);
     try {
+      const repos = await StorageService.getSavedRepositories();
+      if (repos.length > 0) {
+        setRepoPath(repos[0].path);
+        setBranch(repos[0].branch);
+      }
       const result = await ThoughtDumpService.list();
       setDumps(result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     } catch {
@@ -76,7 +84,8 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
 
     try {
       const success = await ThoughtDumpService.delete(target.id, {
-        repoPath: '',
+        repoPath,
+        branch,
         filePath: target.filePath,
       });
       if (success) {

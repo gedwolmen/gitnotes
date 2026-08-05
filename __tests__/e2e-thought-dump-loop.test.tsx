@@ -217,7 +217,7 @@ jest.mock('../src/services/ai/systemPrompt', () => ({
   }),
 }));
 
-import { fireEvent, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import { aiMemoryIndex } from '../src/services/ai/AIMemoryIndexService';
 import { ThoughtDumpService } from '../src/services/ThoughtDumpService';
@@ -298,11 +298,19 @@ describe('e2e: FAB -> thought dump -> memory -> reset', () => {
 
     const { getByTestId } = render(React.createElement(ThoughtDumpScreen, {}));
 
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
     const input = getByTestId('thought-dump-input');
-    fireEvent.changeText(input, 'My e2e test thought');
+    await act(async () => {
+      fireEvent.changeText(input, 'My e2e test thought');
+    });
 
     const saveButton = getByTestId('thought-dump-save');
-    fireEvent.press(saveButton);
+    await act(async () => {
+      fireEvent.press(saveButton);
+    });
 
     await waitFor(() => {
       expect(ThoughtDumpService.create).toHaveBeenCalledWith('My e2e test thought');
@@ -389,11 +397,19 @@ describe('e2e: FAB -> thought dump -> memory -> reset', () => {
     const ThoughtDumpScreen = require('../src/screens/ThoughtDumpScreen').default;
     const screen = render(React.createElement(ThoughtDumpScreen, {}));
 
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
     const input = screen.getByTestId('thought-dump-input');
-    fireEvent.changeText(input, 'full loop thought');
+    await act(async () => {
+      fireEvent.changeText(input, 'full loop thought');
+    });
 
     const saveButton = screen.getByTestId('thought-dump-save');
-    fireEvent.press(saveButton);
+    await act(async () => {
+      fireEvent.press(saveButton);
+    });
 
     await waitFor(() => {
       expect(ThoughtDumpService.create).toHaveBeenCalledWith('full loop thought');

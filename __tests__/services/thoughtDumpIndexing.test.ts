@@ -30,11 +30,21 @@ jest.mock('../../src/services/ai/AIMemoryIndexService', () => {
   const clear = jest.fn(async () => {});
   const isStale = jest.fn(() => false);
   const embed = jest.fn(async (texts: string[]) => texts.map(() => [0.5, 0.5]));
+  const resolveEmbedder = jest.fn(async () => {});
   return {
-    aiMemoryIndex: { upsert, remove, clear, isStale, embed },
-    AIMemoryIndexService: jest.fn(() => ({ upsert, remove, clear, isStale, embed })),
+    aiMemoryIndex: { upsert, remove, clear, isStale, embed, resolveEmbedder },
+    AIMemoryIndexService: jest.fn(() => ({ upsert, remove, clear, isStale, embed, resolveEmbedder })),
   };
 });
+
+jest.mock('../../src/stores/aiStore', () => ({
+  useAIStore: {
+    getState: () => ({
+      providers: [],
+      getSelectedModel: () => undefined,
+    }),
+  },
+}));
 
 jest.mock('../../src/services/ThoughtDumpService', () => ({
   ThoughtDumpService: {

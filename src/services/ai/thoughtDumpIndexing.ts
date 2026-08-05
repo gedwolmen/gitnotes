@@ -2,6 +2,7 @@ import { InteractionManager } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import { aiMemoryIndex } from './AIMemoryIndexService';
 import { ThoughtDumpService } from '../ThoughtDumpService';
+import { useAIStore } from '../../stores/aiStore';
 import type { ThoughtDump } from '../../models/ThoughtDump';
 
 const MANIFEST_FILENAME = 'thought-dump-manifest.json';
@@ -42,6 +43,15 @@ export function simpleHash(text: string): string {
   return String(hash);
 }
 
+let embedderResolved = false;
+
+async function ensureEmbedderResolved(): Promise<void> {
+  if (embedderResolved) return;
+  const { providers, getSelectedModel } = useAIStore.getState();
+  await aiMemoryIndex.resolveEmbedder(providers, getSelectedModel());
+  embedderResolved = true;
+}
+
 function runIdle(fn: () => Promise<void>): void {
   InteractionManager.runAfterInteractions(() => {
     fn().catch((err) => {
@@ -52,6 +62,7 @@ function runIdle(fn: () => Promise<void>): void {
 
 export function indexDump(dump: ThoughtDump): void {
   runIdle(async () => {
+    await ensureEmbedderResolved();
     const hash = simpleHash(dump.text);
     await aiMemoryIndex.upsert(dump.filePath, dump.text);
     const manifest = await loadManifest();
@@ -70,6 +81,7 @@ export function removeDump(filePath: string): void {
 }
 
 export async function reconcile(repoPath?: string, branch?: string): Promise<void> {
+  await ensureEmbedderResolved();
   const dumps = await ThoughtDumpService.list(
     repoPath ? { repoPath, branch } : undefined,
   );

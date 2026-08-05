@@ -4,6 +4,7 @@ import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 
 import ThoughtDumpScreen from '../src/screens/ThoughtDumpScreen';
 import { ThoughtDumpService } from '../src/services/ThoughtDumpService';
+import { StorageService } from '../src/services/StorageService';
 import type { ThoughtDump } from '../src/models/ThoughtDump';
 
 jest.mock('../src/services/ThoughtDumpService', () => ({
@@ -11,6 +12,12 @@ jest.mock('../src/services/ThoughtDumpService', () => ({
     create: jest.fn(),
     list: jest.fn(),
     delete: jest.fn(),
+  },
+}));
+
+jest.mock('../src/services/StorageService', () => ({
+  StorageService: {
+    getSavedRepositories: jest.fn(),
   },
 }));
 
@@ -95,6 +102,7 @@ jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
 const mockCreate = ThoughtDumpService.create as jest.MockedFunction<typeof ThoughtDumpService.create>;
 const mockList = ThoughtDumpService.list as jest.MockedFunction<typeof ThoughtDumpService.list>;
 const mockDelete = ThoughtDumpService.delete as jest.MockedFunction<typeof ThoughtDumpService.delete>;
+const mockGetSavedRepositories = StorageService.getSavedRepositories as jest.MockedFunction<typeof StorageService.getSavedRepositories>;
 
 const makeDump = (overrides?: Partial<ThoughtDump>): ThoughtDump => ({
   id: 'dump-1',
@@ -110,6 +118,9 @@ describe('ThoughtDumpScreen', () => {
     mockList.mockResolvedValue([]);
     mockCreate.mockResolvedValue(null);
     mockDelete.mockResolvedValue(true);
+    mockGetSavedRepositories.mockResolvedValue([
+      { path: 'owner/repo', branch: 'main' },
+    ]);
   });
 
   it('renders empty state when no dumps', async () => {
@@ -222,7 +233,8 @@ describe('ThoughtDumpScreen', () => {
 
     await waitFor(() => {
       expect(mockDelete).toHaveBeenCalledWith('dump-1', {
-        repoPath: '',
+        repoPath: 'owner/repo',
+        branch: 'main',
         filePath: 'thoughts/2025-01-01T10-00-00.md',
       });
     });
