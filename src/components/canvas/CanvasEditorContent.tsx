@@ -158,9 +158,9 @@ function expandBounds(bounds: CanvasBounds | null, x: number, y: number): Canvas
   };
 }
 
-function assertNeverElement(element: CanvasElement): CanvasElement {
+function assertNeverElement(_element: never): never {
   'worklet';
-  return element;
+  throw new TypeError('Unsupported canvas element type');
 }
 
 export function getCanvasContentBounds(elements: CanvasElement[]): CanvasBounds | null {
@@ -261,71 +261,6 @@ export function moveCanvasElement(el: CanvasElement, dx: number, dy: number): Ca
     default:
       return assertNeverElement(el);
   }
-}
-
-function AnimatedCanvasElement({ element, children }: { element: CanvasElement; children: React.ReactNode }) {
-  const progress = useSharedValue(0);
-  const anim = element.animation;
-
-  React.useEffect(() => {
-    if (!anim) {
-      progress.value = 0;
-      return;
-    }
-    const half = anim.duration / 2;
-    const forwardBack = withSequence(withTiming(1, { duration: half }), withTiming(0, { duration: half }));
-    const loopCount = anim.loop ? -1 : 1;
-
-    if (anim.type === 'spin') {
-      progress.value = withRepeat(withTiming(1, { duration: anim.duration }), loopCount, false);
-    } else {
-      progress.value = withRepeat(forwardBack, loopCount, false);
-    }
-
-    return () => {
-      cancelAnimation(progress);
-    };
-  }, [anim, progress]);
-
-  const center = elementCenter(element);
-  const cx = center.x;
-  const cy = center.y;
-
-  const transform = useDerivedValue(() => {
-    if (!anim) return [{ translateX: 0 }, { translateY: 0 }, { rotate: 0 }, { scale: 1 }];
-    const p = progress.value;
-    switch (anim.type) {
-      case 'pulse':
-        return [
-          { translateX: cx }, { translateY: cy },
-          { scale: 1 + 0.1 * p },
-          { translateX: -cx }, { translateY: -cy },
-        ];
-      case 'fade':
-        return [{ translateX: 0 }];
-      case 'spin':
-        return [
-          { translateX: cx }, { translateY: cy },
-          { rotate: p * Math.PI * 2 },
-          { translateX: -cx }, { translateY: -cy },
-        ];
-      case 'translate':
-        return [{ translateX: 20 * p }];
-      default:
-        return [{ translateX: 0 }];
-    }
-  });
-
-  const opacity = useDerivedValue(() => {
-    if (!anim || anim.type !== 'fade') return 1;
-    return 1 - 0.7 * progress.value;
-  });
-
-  return (
-    <Group transform={transform} opacity={opacity}>
-      {children}
-    </Group>
-  );
 }
 
 export default function CanvasEditorContent() {
@@ -579,7 +514,7 @@ export default function CanvasEditorContent() {
       setElements((prev) => prev.filter((el) => !idsToErase.includes(el.id)));
       setSelectedIds((prev) => prev.filter((id) => !idsToErase.includes(id)));
     }
-  }, [eraserHitTest, saveHistory]);
+  }, [eraserHitTest, saveHistory, selectedId]);
 
   const startTextPlacement = useCallback((pt: Point) => {
     setTextPosition(pt);
@@ -712,46 +647,9 @@ export default function CanvasEditorContent() {
     if (!dragStartRef.current) return;
     const dx = pt.x - dragStartRef.current.x;
     const dy = pt.y - dragStartRef.current.y;
-
-    if (gestureModeRef.current === 'RESIZE' && resizeHandleRef.current && resizeOriginalRef.current) {
-      const orig = resizeOriginalRef.current;
-      const aspect = orig.w / orig.h;
-      let newW: number;
-      let newH: number;
-      const handle = resizeHandleRef.current;
-
-      if (handle === 'br' || handle === 'tr') {
-        newW = Math.max(40, orig.w + dx);
-      } else {
-        newW = Math.max(40, orig.w - dx);
-      }
-      newH = Math.max(40, newW / aspect);
-
-      const selectedId = selectedIds[0];
-      setElements((prev) => prev.map((el) => {
-        if (el.id !== selectedId || el.type !== 'image') return el;
-        let newX = orig.x;
-        let newY = orig.y;
-        if (handle === 'bl' || handle === 'tl') newX = orig.x + orig.w - newW;
-        if (handle === 'tl' || handle === 'tr') newY = orig.y + orig.h - newH;
-        return { ...el, x: newX, y: newY, width: newW, height: newH };
-      }));
-      return;
-    }
-
-    if (gestureModeRef.current === 'LASSO') {
-      lassoPointsRef.current = [...lassoPointsRef.current, pt];
-      setLassoRenderTick((t) => t + 1);
-      return;
-    }
-
-    if (gestureModeRef.current === 'MOVE' && selectedIds.length > 0) {
-      setElements((prev) => prev.map((el) =>
-        selectedIds.includes(el.id) ? moveCanvasElement(el, dx, dy) : el
-      ));
-      dragStartRef.current = pt;
-    }
-  }, [selectedIds]);
+    setElements((prev) => prev.map((el) => (el.id === selectedId ? moveCanvasElement(el, dx, dy) : el)));
+    dragStartRef.current = pt;
+  }, [selectedId]);
 
   const endSelection = useCallback(() => {
     if (gestureModeRef.current === 'LASSO' && lassoPointsRef.current.length >= 3) {
