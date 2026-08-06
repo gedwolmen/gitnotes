@@ -10,6 +10,7 @@ import {
   DEFAULT_SCENE,
   Canvas,
 } from '../src/models/Canvas';
+import type { CanvasImage, CanvasText } from '../src/models/Canvas';
 
 describe('Canvas link helpers', () => {
   test('CANVAS_LINK_PREFIX is "canvas:"', () => {
@@ -120,5 +121,55 @@ describe('createCanvas / updateCanvas', () => {
     expect(u.title).toBe('Keep');
     expect(u.tags).toEqual(['a', 'b']);
     expect(u.repo).toBe('me/repo');
+  });
+
+  test('createCanvas preserves legacy elements without animation', () => {
+    const legacyElement: CanvasText = {
+      type: 'text',
+      id: 'legacy-text',
+      text: 'Legacy scene',
+      x: 10,
+      y: 20,
+      fontSize: 16,
+      color: '#000000',
+    };
+
+    const canvas = createCanvas({
+      title: 'Legacy',
+      scene: { version: 1, elements: [legacyElement] },
+    });
+
+    expect(canvas.scene.version).toBe(1);
+    expect(canvas.scene.elements).toEqual([legacyElement]);
+  });
+
+  test('createCanvas preserves image and animated elements', () => {
+    const image: CanvasImage = {
+      type: 'image',
+      id: 'image-1',
+      data: 'base64-jpeg-data',
+      mimeType: 'image/jpeg',
+      x: 30,
+      y: 40,
+      width: 200,
+      height: 150,
+    };
+    const animatedElement: CanvasText = {
+      type: 'text',
+      id: 'animated-text',
+      text: 'Animated',
+      x: 50,
+      y: 60,
+      fontSize: 18,
+      color: '#FFFFFF',
+      animation: { type: 'pulse', duration: 1000, loop: true },
+    };
+
+    const canvas = createCanvas({
+      title: 'Media',
+      scene: { elements: [image, animatedElement] },
+    });
+
+    expect(canvas.scene.elements).toEqual([image, animatedElement]);
   });
 });

@@ -137,7 +137,7 @@ export class ExportService {
         acc[element.type] += 1;
         return acc;
       },
-      { stroke: 0, shape: 0, text: 0, chart: 0 },
+      { stroke: 0, shape: 0, text: 0, chart: 0, image: 0 },
     );
 
     const snippets = canvas.scene.elements
@@ -159,6 +159,7 @@ export class ExportService {
       `- ${counts.shape} shape${counts.shape === 1 ? '' : 's'}`,
       `- ${counts.text} text block${counts.text === 1 ? '' : 's'}`,
       `- ${counts.chart} chart${counts.chart === 1 ? '' : 's'}`,
+      `- ${counts.image} image${counts.image === 1 ? '' : 's'}`,
       snippets.length ? `Text snippets: ${snippets.join(', ')}` : 'Text snippets: None',
     ].join('\n');
   }

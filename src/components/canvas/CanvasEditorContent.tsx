@@ -146,37 +146,43 @@ function expandBounds(bounds: CanvasBounds | null, x: number, y: number): Canvas
   };
 }
 
+function assertNeverElement(_element: never): never {
+  'worklet';
+  throw new TypeError('Unsupported canvas element type');
+}
+
 export function getCanvasContentBounds(elements: CanvasElement[]): CanvasBounds | null {
   'worklet';
 
   let bounds: CanvasBounds | null = null;
 
   for (const el of elements) {
-    if (el.type === 'stroke') {
-      for (const point of el.points) {
-        bounds = expandBounds(bounds, point.x - el.width / 2, point.y - el.width / 2);
-        bounds = expandBounds(bounds, point.x + el.width / 2, point.y + el.width / 2);
+    switch (el.type) {
+      case 'stroke':
+        for (const point of el.points) {
+          bounds = expandBounds(bounds, point.x - el.width / 2, point.y - el.width / 2);
+          bounds = expandBounds(bounds, point.x + el.width / 2, point.y + el.width / 2);
+        }
+        break;
+      case 'shape': {
+        const pad = el.width / 2;
+        bounds = expandBounds(bounds, Math.min(el.x1, el.x2) - pad, Math.min(el.y1, el.y2) - pad);
+        bounds = expandBounds(bounds, Math.max(el.x1, el.x2) + pad, Math.max(el.y1, el.y2) + pad);
+        break;
       }
-      continue;
-    }
-
-    if (el.type === 'shape') {
-      const pad = el.width / 2;
-      bounds = expandBounds(bounds, Math.min(el.x1, el.x2) - pad, Math.min(el.y1, el.y2) - pad);
-      bounds = expandBounds(bounds, Math.max(el.x1, el.x2) + pad, Math.max(el.y1, el.y2) + pad);
-      continue;
-    }
-
-    if (el.type === 'text') {
-      const textWidth = Math.max(1, el.text.length * el.fontSize * 0.6);
-      bounds = expandBounds(bounds, el.x, el.y - el.fontSize);
-      bounds = expandBounds(bounds, el.x + textWidth, el.y);
-      continue;
-    }
-
-    if (el.type === 'chart') {
-      bounds = expandBounds(bounds, el.x, el.y);
-      bounds = expandBounds(bounds, el.x + el.width, el.y + el.height);
+      case 'text': {
+        const textWidth = Math.max(1, el.text.length * el.fontSize * 0.6);
+        bounds = expandBounds(bounds, el.x, el.y - el.fontSize);
+        bounds = expandBounds(bounds, el.x + textWidth, el.y);
+        break;
+      }
+      case 'chart':
+      case 'image':
+        bounds = expandBounds(bounds, el.x, el.y);
+        bounds = expandBounds(bounds, el.x + el.width, el.y + el.height);
+        break;
+      default:
+        assertNeverElement(el);
     }
   }
 
@@ -226,6 +232,23 @@ export function clampCanvasTranslation(
     translateX: minTx <= maxTx ? Math.min(maxTx, Math.max(minTx, translateX)) : fit.translateX,
     translateY: minTy <= maxTy ? Math.min(maxTy, Math.max(minTy, translateY)) : fit.translateY,
   };
+}
+
+export function moveCanvasElement(el: CanvasElement, dx: number, dy: number): CanvasElement {
+  'worklet';
+
+  switch (el.type) {
+    case 'stroke':
+      return { ...el, points: el.points.map((point) => ({ x: point.x + dx, y: point.y + dy })) };
+    case 'shape':
+      return { ...el, x1: el.x1 + dx, y1: el.y1 + dy, x2: el.x2 + dx, y2: el.y2 + dy };
+    case 'text':
+    case 'chart':
+    case 'image':
+      return { ...el, x: el.x + dx, y: el.y + dy };
+    default:
+      return assertNeverElement(el);
+  }
 }
 
 export default function CanvasEditorContent() {
@@ -425,22 +448,6 @@ export default function CanvasEditorContent() {
     }
   }, [eraserHitTest, saveHistory, selectedId]);
 
-  const moveElement = useCallback((el: CanvasElement, dx: number, dy: number): CanvasElement => {
-    if (el.type === 'stroke') {
-      return { ...el, points: el.points.map((p) => ({ x: p.x + dx, y: p.y + dy })) };
-    }
-    if (el.type === 'shape') {
-      return { ...el, x1: el.x1 + dx, y1: el.y1 + dy, x2: el.x2 + dx, y2: el.y2 + dy };
-    }
-    if (el.type === 'text') {
-      return { ...el, x: el.x + dx, y: el.y + dy };
-    }
-    if (el.type === 'chart') {
-      return { ...el, x: el.x + dx, y: el.y + dy };
-    }
-    return el;
-  }, []);
-
   const startTextPlacement = useCallback((pt: Point) => {
     setTextPosition(pt);
     setTextInput('');
@@ -462,9 +469,9 @@ export default function CanvasEditorContent() {
     if (!dragStartRef.current || !selectedId) return;
     const dx = pt.x - dragStartRef.current.x;
     const dy = pt.y - dragStartRef.current.y;
-    setElements((prev) => prev.map((el) => (el.id === selectedId ? moveElement(el, dx, dy) : el)));
+    setElements((prev) => prev.map((el) => (el.id === selectedId ? moveCanvasElement(el, dx, dy) : el)));
     dragStartRef.current = pt;
-  }, [moveElement, selectedId]);
+  }, [selectedId]);
 
   const endSelection = useCallback(() => {
     dragStartRef.current = null;
