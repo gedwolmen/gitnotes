@@ -144,7 +144,7 @@ export function ImportSection() {
         disabled={isImporting}
         leading={<Ionicons name="logo-google" size={20} color={colors.text} />}
         trailing={
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View className="flex-row items-center gap-2">
             <Chip label="BETA" />
             {importing === 'google' ? (
               <ActivityIndicator size="small" color={colors.primary} />
@@ -162,7 +162,7 @@ export function ImportSection() {
         disabled={isImporting}
         leading={<Ionicons name="logo-apple" size={20} color={colors.text} />}
         trailing={
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View className="flex-row items-center gap-2">
             <Chip label="BETA" />
             {importing === 'apple' ? (
               <ActivityIndicator size="small" color={colors.primary} />

@@ -117,4 +117,36 @@ describe('useNoteEditorDocument notFound (issue #669)', () => {
     expect(NoteSyncQueueService.enqueueNoteUpsert).not.toHaveBeenCalled();
     alertSpy.mockRestore();
   });
+
+  test('shows the repository permission alert for a generic 403 sync failure', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    (syncNoteToGitHub as jest.Mock).mockResolvedValue({
+      success: false,
+      error: 'Permission denied',
+      status: 403,
+    });
+    const createNote = jest.fn(async () => ({ id: 'new-note-1' }));
+
+    const { result } = renderHook(() =>
+      useNoteEditorDocument({
+        ...baseParams,
+        initialRepo: 'owner/repo',
+        initialTitle: 'A note',
+        createNote,
+        getNoteById: () => undefined,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.handleSave();
+    });
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Permission Required',
+      'This token cannot write to this repository. Check repository permissions in Settings.',
+      [{ text: 'OK' }],
+    );
+    expect(NoteSyncQueueService.enqueueNoteUpsert).not.toHaveBeenCalled();
+    alertSpy.mockRestore();
+  });
 });

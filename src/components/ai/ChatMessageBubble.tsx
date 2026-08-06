@@ -116,8 +116,8 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
 
   if (message.role === 'system') {
     return (
-      <View style={{ alignItems: 'center', marginVertical: spacing[2] }}>
-        <Text style={{ color: '#888', fontStyle: 'italic', fontSize: type.sm }}>
+      <View className="items-center my-2">
+        <Text className="italic text-sm" style={{ color: '#888' }}>
           {message.content}
         </Text>
       </View>
@@ -128,16 +128,15 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
 
   if (isStreamingPlaceholder) {
     return (
-      <View style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', height: type.md * 1.4, paddingHorizontal: spacing[2], marginVertical: spacing[1] }}>
+      <View className="self-start flex-row items-center px-2 my-1" style={{ height: type.md * 1.4 }}>
         {[0, 1, 2].map((i) => (
           <View
             key={i}
+            className="rounded-full opacity-70"
             style={{
               width: 6,
               height: 6,
-              borderRadius: 3,
               backgroundColor: colors.textSecondary,
-              opacity: 0.7,
               marginRight: i < 2 ? 4 : 0,
             }}
           />

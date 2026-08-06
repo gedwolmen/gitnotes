@@ -1,9 +1,65 @@
 import { describe, expect, test } from '@jest/globals';
 import {
   classifyGitHubSyncError,
+  extractHttpErrorDetails,
   isRetryableFailure,
+  syncStatusForError,
   type GitHubSyncFailure,
 } from '../src/services/git/syncFailure';
+
+describe('extractHttpErrorDetails', () => {
+  test('extracts the status, headers, and response message from an Axios-style error', () => {
+    // Given: GitHub returned structured response details through Axios.
+    const error = {
+      response: {
+        status: 403,
+        headers: { 'x-github-sso': 'https://github.com/orgs/example/sso' },
+        data: { message: 'SAML required' },
+      },
+    };
+
+    // When: the error is normalized for sync handling.
+    const details = extractHttpErrorDetails(error);
+
+    // Then: all response metadata is preserved for classification.
+    expect(details).toEqual({
+      status: 403,
+      headers: { 'x-github-sso': 'https://github.com/orgs/example/sso' },
+      message: 'SAML required',
+    });
+  });
+
+  test('extracts status and message from a plain Error', () => {
+    // Given: a plain error carries a status assigned by the caller.
+    const error = Object.assign(new Error('Not found'), { status: 404 });
+
+    // When: the error is normalized for sync handling.
+    const details = extractHttpErrorDetails(error);
+
+    // Then: the plain error details are preserved.
+    expect(details).toEqual({ status: 404, message: 'Not found' });
+  });
+
+  test('uses a thrown string as the message', () => {
+    // Given: a transport layer throws a string.
+    const error = 'Network timeout';
+
+    // When: the value is normalized for sync handling.
+    const details = extractHttpErrorDetails(error);
+
+    // Then: the string remains available as the user-safe message.
+    expect(details).toEqual({ message: 'Network timeout' });
+  });
+
+  test.each([null, undefined, 403, true])('returns empty details for %p', (error) => {
+    // Given: the thrown value has no HTTP error shape.
+    // When: the value is normalized for sync handling.
+    const details = extractHttpErrorDetails(error);
+
+    // Then: normalization is safe and does not invent details.
+    expect(details).toEqual({});
+  });
+});
 
 describe('classifyGitHubSyncError', () => {
   test('classifies authentication failures from status 401', () => {
@@ -35,6 +91,19 @@ describe('classifyGitHubSyncError', () => {
     expect(failure.status).toBe(403);
   });
 
+  test('classifies a GitHub SSO header as SAML regardless of message content', () => {
+    // Given: GitHub requires organization SSO but returns a neutral message.
+    const error = new Error('Resource not accessible');
+
+    // When: the response header is supplied for classification.
+    const failure = classifyGitHubSyncError(error, 403, {
+      'X-GitHub-SSO': 'https://github.com/orgs/example/sso',
+    });
+
+    // Then: the SSO remediation category takes precedence.
+    expect(failure.kind).toBe('saml');
+  });
+
   test('classifies rate-limit failures from a 403 signal', () => {
     // Given: GitHub returned a rate-limit response using status 403.
     const error = new Error('GitHub API rate limit exceeded');
@@ -45,6 +114,28 @@ describe('classifyGitHubSyncError', () => {
     // Then: the caller can retry after the limit resets.
     expect(failure.kind).toBe('rate_limit');
     expect(failure.retryable).toBe(true);
+  });
+
+  test('classifies an exhausted rate-limit header as rate limited regardless of message content', () => {
+    // Given: GitHub reports zero requests remaining with a neutral message.
+    const error = new Error('Resource not accessible');
+
+    // When: the response header is supplied for classification.
+    const failure = classifyGitHubSyncError(error, 403, { 'x-ratelimit-remaining': '0' });
+
+    // Then: the sync can retry after the quota resets.
+    expect(failure.kind).toBe('rate_limit');
+  });
+
+  test('classifies a retry-after header as rate limited regardless of message content', () => {
+    // Given: GitHub requests a delay before retrying with a neutral message.
+    const error = new Error('Resource not accessible');
+
+    // When: the response header is supplied for classification.
+    const failure = classifyGitHubSyncError(error, 403, { 'retry-after': '60' });
+
+    // Then: the failure is classified as rate limited.
+    expect(failure.kind).toBe('rate_limit');
   });
 
   test('classifies status 429 as a retryable rate-limit failure', () => {
@@ -152,5 +243,31 @@ describe('isRetryableFailure', () => {
 
     // Then: policy follows the category, not caller-provided metadata.
     expect(result).toBe(retryable);
+  });
+});
+
+describe('syncStatusForError', () => {
+  test.each([
+    ['GitHub API error: 401', 401],
+    ['GitHub API error: 403', 403],
+    ['not authenticated', 401],
+    ['sync conflict', 409],
+    ['rate limit exceeded', 403],
+  ])('maps %p to status %i', (message, status) => {
+    // Given: a sync failure message with a recognizable status signal.
+    // When: the message is mapped to an HTTP status.
+    const resolvedStatus = syncStatusForError(message);
+
+    // Then: the shared classifier receives the matching status.
+    expect(resolvedStatus).toBe(status);
+  });
+
+  test('returns undefined when a message has no status signal', () => {
+    // Given: a message without a known HTTP status signal.
+    // When: the message is mapped to an HTTP status.
+    const resolvedStatus = syncStatusForError('Unexpected GitHub response');
+
+    // Then: no status is inferred.
+    expect(resolvedStatus).toBeUndefined();
   });
 });

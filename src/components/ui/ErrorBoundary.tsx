@@ -1,5 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 
 interface ErrorBoundaryProps {
@@ -43,10 +43,15 @@ function DefaultFallback({ onRetry }: { onRetry: () => void }) {
   const { colors } = useTheme();
 
   return (
-    <View style={styles.container}>
-      <Text style={[styles.title, { color: colors.text }]}>Something went wrong</Text>
-      <Pressable onPress={onRetry} style={[styles.button, { backgroundColor: colors.primary }]}>
-        <Text style={[styles.buttonText, { color: '#fff' }]}>Retry</Text>
+    <View className="items-center justify-center p-6 gap-3 min-h-[120px]">
+      <Text className="text-base font-semibold text-center" style={{ color: colors.text }}>
+        Something went wrong
+      </Text>
+      <Pressable
+        onPress={onRetry}
+        className="rounded-full px-4 py-2.5 bg-primary"
+      >
+        <Text className="text-sm font-semibold text-white">Retry</Text>
       </Pressable>
     </View>
   );
@@ -55,27 +60,3 @@ function DefaultFallback({ onRetry }: { onRetry: () => void }) {
 export function ErrorBoundary(props: ErrorBoundaryProps) {
   return <ErrorBoundaryBase {...props} />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    gap: 12,
-    minHeight: 120,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  button: {
-    borderRadius: 999,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  buttonText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-});

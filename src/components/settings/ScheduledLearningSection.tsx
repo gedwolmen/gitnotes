@@ -6,7 +6,6 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Group, GroupRow, Toggle } from '../ui';
 import { HintIcon } from '../ui/HintIcon';
 import { useScheduledLearningStore } from '../../stores/scheduledLearningStore';
-import { settingsStyles as styles } from './settingsStyles';
 import { formatDaysOfWeek, WORD_COUNT_OPTIONS } from '../../models/ScheduledLearning';
 import { ScheduledLearningService } from '../../services/ScheduledLearningService';
 import type { RootStackParamList } from '../../navigation/types';
@@ -51,7 +50,7 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
       {items.length === 0 ? (
         <GroupRow
           leading={
-            <Text style={[styles.emptyReposText, { color: colors.textSecondary }]}>
+            <Text style={{ fontSize: 15, fontWeight: '500', color: colors.textSecondary }}>
               No scheduled learning set up
             </Text>
           }
@@ -67,7 +66,7 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
             key={item.id}
             leading={<Ionicons name={item.type === 'questioner' ? 'help-circle-outline' : 'school-outline'} size={18} color={colors.primary} />}
             trailing={
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <View className="flex-row items-center gap-1">
                 <Toggle
                   testID={`scheduled-learning.toggle-${item.id}`}
                   value={item.isEnabled}
@@ -83,10 +82,10 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
               </View>
             }
           >
-            <Text style={[styles.settingLabel, { color: colors.text }]} numberOfLines={1}>
+            <Text className="text-base" style={{ color: colors.text }} numberOfLines={1}>
               {item.tags.join(', ')}
             </Text>
-            <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
+            <Text className="text-[15px]" style={{ color: colors.textSecondary }}>
               {formatDaysOfWeek(item.daysOfWeek, item.repeat)} at {item.time} · {item.type === 'questioner' ? 'Questions' : 'Learn'} · {formatWordCount(item.wordCount)}
             </Text>
           </GroupRow>
@@ -98,7 +97,7 @@ export function ScheduledLearningSection({ colors }: ScheduledLearningSectionPro
         onPress={() => navigation.navigate('AddScheduledLearning')}
         leading={<Ionicons name="add" size={20} color={colors.primary} />}
       >
-        <Text style={[styles.settingLabel, { color: colors.primary, fontWeight: '600' }]}>
+        <Text className="text-base font-semibold" style={{ color: colors.primary }}>
           Add Schedule
         </Text>
       </GroupRow>

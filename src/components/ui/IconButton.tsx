@@ -72,11 +72,10 @@ export function IconButton(props: IconButtonProps) {
             {
               width: dim,
               height: dim,
-              alignItems: 'center',
-              justifyContent: 'center',
             },
             style,
           ]}
+          className="items-center justify-center"
         >
           {children}
         </Pressable>
@@ -107,12 +106,11 @@ export function IconButton(props: IconButtonProps) {
             {
               width: dim,
               height: dim,
-              alignItems: 'center',
-              justifyContent: 'center',
               padding: spacing[2],
             },
             style,
           ]}
+          className="items-center justify-center"
         >
           {children}
         </Surface>

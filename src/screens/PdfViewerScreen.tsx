@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
   Linking,
@@ -214,22 +213,25 @@ export default function PdfViewerScreen() {
   };
 
   return (
-    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
+    <SafeAreaView edges={['top']} className="flex-1" style={{ backgroundColor: colors.background }}>
+      <View
+        className="flex-row items-center px-2 py-2 border-b border-border bg-surface"
+        style={{ borderBottomWidth: 0.5, borderBottomColor: colors.border, backgroundColor: colors.surface }}
+      >
         <TouchableOpacity
           testID="pdf-viewer.icon-button.back"
           onPress={() => { HapticService.light(); navigation.goBack(); }}
-          style={styles.iconButton}
+          className="p-2"
         >
           <Ionicons name="arrow-back" size={24} color={colors.primary} />
         </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
+        <Text className="flex-1 text-base font-semibold text-center mx-2" style={{ color: colors.text }} numberOfLines={1}>
           {title || path.split('/').pop()}
         </Text>
         <TouchableOpacity
           testID="pdf-viewer.icon-button.invert"
           onPress={toggleInvert}
-          style={styles.iconButton}
+          className="p-2"
           disabled={!localUri}
           accessibilityLabel={inverted ? 'Restore PDF colors' : 'Invert PDF colors'}
         >
@@ -242,7 +244,7 @@ export default function PdfViewerScreen() {
         <TouchableOpacity
           testID="pdf-viewer.icon-button.open-external"
           onPress={handleOpenExternal}
-          style={styles.iconButton}
+          className="p-2"
           disabled={!localUri}
         >
           <Ionicons
@@ -254,14 +256,14 @@ export default function PdfViewerScreen() {
       </View>
 
       {error ? (
-        <View style={styles.center}>
+        <View className="flex-1 items-center justify-center p-6">
           <Ionicons name="alert-circle-outline" size={48} color={colors.error} />
-          <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+          <Text className="mt-3 text-sm text-center" style={{ color: colors.error }}>{error}</Text>
         </View>
       ) : !localUri ? (
-        <View style={styles.center}>
+        <View className="flex-1 items-center justify-center p-6">
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading PDF…</Text>
+          <Text className="mt-3 text-sm" style={{ color: colors.textSecondary }}>Loading PDF…</Text>
         </View>
       ) : (
         // Wrapper acts as the blend stacking context for the invert overlay.
@@ -303,38 +305,4 @@ export default function PdfViewerScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  iconButton: {
-    padding: 8,
-  },
-  title: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginHorizontal: 8,
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-  },
-  errorText: {
-    marginTop: 12,
-    fontSize: 14,
-    textAlign: 'center',
-  },
-});
+

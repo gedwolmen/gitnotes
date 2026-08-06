@@ -32,40 +32,27 @@ export function ChatLoadingStrip({ visible, model, provider, startedAt, onCancel
       accessible
       accessibilityLiveRegion="polite"
       accessibilityLabel={`Generating with ${pillLabel}, ${(elapsedMs / 1000).toFixed(1)} seconds elapsed`}
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: colors.elevated,
-        borderTopWidth: 1,
-        borderTopColor: colors.border,
-        paddingHorizontal: spacing[3],
-        paddingVertical: spacing[2],
-        gap: spacing[2],
-      }}
+      className="flex-row items-center bg-elevated border-t border-border px-3 py-2 gap-2"
     >
       <View
+        className="flex-shrink rounded-sm px-2 py-1"
         style={{
-          flexShrink: 1,
           backgroundColor: colors.accent + '20',
-          borderRadius: radii.sm,
-          paddingHorizontal: spacing[2],
-          paddingVertical: spacing[1],
           maxWidth: '60%',
         }}
       >
         <Text
           numberOfLines={1}
           ellipsizeMode="tail"
-          style={{ fontSize: type.xs, color: colors.accent, fontWeight: '600' }}
+          className="text-xs font-semibold text-accent"
         >
           {pillLabel}
         </Text>
       </View>
 
       <Text
+        className="text-xs text-text-secondary"
         style={{
-          fontSize: type.xs,
-          color: colors.textSecondary,
           fontVariant: ['tabular-nums'],
           fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: undefined }),
         }}
@@ -73,7 +60,7 @@ export function ChatLoadingStrip({ visible, model, provider, startedAt, onCancel
         {(elapsedMs / 1000).toFixed(1)}s
       </Text>
 
-      <View style={{ flex: 1 }} />
+      <View className="flex-1" />
 
       <Pressable
         testID="chat.status.cancel"
@@ -81,10 +68,10 @@ export function ChatLoadingStrip({ visible, model, provider, startedAt, onCancel
         accessibilityLabel="Cancel AI response"
         onPress={onCancel}
         hitSlop={8}
-        style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[1] }}
+        className="flex-row items-center gap-1"
       >
         <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
-        <Text style={{ fontSize: type.xs, color: colors.textSecondary }}>Cancel</Text>
+        <Text className="text-xs text-text-secondary">Cancel</Text>
       </Pressable>
     </View>
   );

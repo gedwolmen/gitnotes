@@ -10,7 +10,6 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { Button, Group, GroupRow, Modal, Input, ScreenHeader, useScreenHeaderHeight } from '../ui';
 import { useScheduledLearningStore } from '../../stores/scheduledLearningStore';
 import { useAIStore } from '../../stores/aiStore';
-import { settingsStyles as styles } from './settingsStyles';
 import {
   type DayOfWeek,
   type ScheduledLearningType,
@@ -324,7 +323,7 @@ export function AddScheduledLearningScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
       <ScrollView
-        style={styles.scrollContent}
+        className="flex-1"
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
@@ -526,9 +525,9 @@ export function AddScheduledLearningScreen() {
                 backgroundColor: colors.surfaceSecondary,
               }}
             >
-              <Text style={[styles.settingLabel, { color: colors.text }]}>Time</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{formatTime(selectedTime)}</Text>
+              <Text className="text-base" style={{ color: colors.text }}>Time</Text>
+              <View className="flex-row items-center gap-1">
+                <Text className="text-[15px]" style={{ color: colors.textSecondary }}>{formatTime(selectedTime)}</Text>
                 <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
               </View>
             </TouchableOpacity>
@@ -647,11 +646,11 @@ export function AddScheduledLearningScreen() {
                       backgroundColor: colors.surfaceSecondary,
                     }}
                   >
-                    <Text style={[styles.settingLabel, { color: colors.text }]}>
+                    <Text className="text-base" style={{ color: colors.text }}>
                       {questionerFolderRepo ? t('scheduledLearning.questioner.addFolder') : t('scheduledLearning.questioner.pickRepoAndFolder')}
                     </Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <Text style={[styles.settingValue, { color: colors.textSecondary }]} numberOfLines={1}>
+                    <View className="flex-row items-center gap-1">
+                      <Text className="text-[15px]" style={{ color: colors.textSecondary }} numberOfLines={1}>
                         {questionerFolderRepo
                           ? `${questionerFolderRepo.split('/').pop() ?? questionerFolderRepo}${questionerFolderBranch ? ` · ${questionerFolderBranch}` : ''}`
                           : t('common.select')}
@@ -716,9 +715,9 @@ export function AddScheduledLearningScreen() {
                 backgroundColor: colors.surfaceSecondary,
               }}
             >
-              <Text style={[styles.settingLabel, { color: colors.text }]}>Target length</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{formatWordCount(selectedWordCount)}</Text>
+              <Text className="text-base" style={{ color: colors.text }}>Target length</Text>
+              <View className="flex-row items-center gap-1">
+                <Text className="text-[15px]" style={{ color: colors.textSecondary }}>{formatWordCount(selectedWordCount)}</Text>
                 <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
               </View>
             </TouchableOpacity>
@@ -738,9 +737,9 @@ export function AddScheduledLearningScreen() {
                 backgroundColor: colors.surfaceSecondary,
               }}
             >
-              <Text style={[styles.settingLabel, { color: colors.text }]}>AI Model</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Text style={[styles.settingValue, { color: colors.textSecondary }]} numberOfLines={1}>{getModelName(selectedModel)}</Text>
+              <Text className="text-base" style={{ color: colors.text }}>AI Model</Text>
+              <View className="flex-row items-center gap-1">
+                <Text className="text-[15px]" style={{ color: colors.textSecondary }} numberOfLines={1}>{getModelName(selectedModel)}</Text>
                 <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
               </View>
             </TouchableOpacity>
@@ -760,9 +759,9 @@ export function AddScheduledLearningScreen() {
                 backgroundColor: colors.surfaceSecondary,
               }}
             >
-              <Text style={[styles.settingLabel, { color: colors.text }]}>Git Context</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1, justifyContent: 'flex-end' }}>
-                <Text style={[styles.settingValue, { color: colors.textSecondary, flexShrink: 1 }]} numberOfLines={1}>{getRepoDisplayText()}</Text>
+              <Text className="text-base" style={{ color: colors.text }}>Git Context</Text>
+              <View className="flex-row items-center gap-1 flex-1 justify-end">
+                <Text className="text-[15px] flex-shrink" style={{ color: colors.textSecondary }} numberOfLines={1}>{getRepoDisplayText()}</Text>
                 <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
               </View>
             </TouchableOpacity>
@@ -807,7 +806,7 @@ export function AddScheduledLearningScreen() {
         bottomSheet
         contentStyle={{ padding: 16, paddingBottom: 34 }}
       >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <View className="flex-row justify-between items-center mb-4">
           <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>Select Time</Text>
           <TouchableOpacity onPress={() => setShowTimePicker(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Ionicons name="close" size={22} color={colors.textSecondary} />
@@ -834,7 +833,7 @@ export function AddScheduledLearningScreen() {
         bottomSheet
         contentStyle={{ padding: 16, paddingBottom: 34 }}
       >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <View className="flex-row justify-between items-center mb-4">
           <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>Select Word Count</Text>
           <TouchableOpacity onPress={() => setShowWordCountPicker(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Ionicons name="close" size={22} color={colors.textSecondary} />
@@ -864,7 +863,7 @@ export function AddScheduledLearningScreen() {
         bottomSheet
         contentStyle={{ padding: 16, paddingBottom: 34 }}
       >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <View className="flex-row justify-between items-center mb-4">
           <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>Select AI Model</Text>
           <TouchableOpacity onPress={() => setShowModelPicker(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Ionicons name="close" size={22} color={colors.textSecondary} />

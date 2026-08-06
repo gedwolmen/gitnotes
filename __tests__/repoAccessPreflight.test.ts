@@ -14,10 +14,16 @@ describe('checkGitHubRepoAccess', () => {
     fetchSpy.mockRestore();
   });
 
-  it('returns ok for an accessible writable repository', async () => {
-    fetchSpy.mockResolvedValue(new Response(JSON.stringify({ permissions: { push: true } }), { status: 200 }));
+  it('returns verified write access from the accepted permissions header', async () => {
+    fetchSpy.mockResolvedValue(new Response('{}', {
+      status: 200,
+      headers: { 'x-accepted-github-permissions': 'contents:write' },
+    }));
 
-    await expect(checkGitHubRepoAccess('octo/notes', token)).resolves.toEqual({ kind: 'ok' });
+    await expect(checkGitHubRepoAccess('octo/notes', token)).resolves.toEqual({
+      kind: 'ok',
+      writeVerified: true,
+    });
     expect(fetchSpy).toHaveBeenCalledWith('https://api.github.com/repos/octo/notes', {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -26,10 +32,40 @@ describe('checkGitHubRepoAccess', () => {
     });
   });
 
-  it('returns ok when GitHub omits permissions', async () => {
+  it('returns write_unverified for read-only accepted permissions', async () => {
+    fetchSpy.mockResolvedValue(new Response('{}', {
+      status: 200,
+      headers: { 'x-accepted-github-permissions': 'contents:read' },
+    }));
+
+    await expect(checkGitHubRepoAccess('octo/notes', token)).resolves.toMatchObject({
+      kind: 'write_unverified',
+    });
+  });
+
+  it('falls back to permissions.push when the accepted permissions header is absent', async () => {
+    fetchSpy.mockResolvedValue(new Response(JSON.stringify({ permissions: { push: true } }), { status: 200 }));
+
+    await expect(checkGitHubRepoAccess('octo/notes', token)).resolves.toEqual({
+      kind: 'ok',
+      writeVerified: true,
+    });
+  });
+
+  it('returns write_unverified when permissions.push is false', async () => {
+    fetchSpy.mockResolvedValue(new Response(JSON.stringify({ permissions: { push: false } }), { status: 200 }));
+
+    await expect(checkGitHubRepoAccess('octo/notes', token)).resolves.toMatchObject({
+      kind: 'write_unverified',
+    });
+  });
+
+  it('returns write_unverified when GitHub provides no permissions information', async () => {
     fetchSpy.mockResolvedValue(new Response(JSON.stringify({ private: true }), { status: 200 }));
 
-    await expect(checkGitHubRepoAccess('octo/notes', token)).resolves.toEqual({ kind: 'ok' });
+    await expect(checkGitHubRepoAccess('octo/notes', token)).resolves.toMatchObject({
+      kind: 'write_unverified',
+    });
   });
 
   it('returns no_access for a repository that is not visible', async () => {
@@ -38,22 +74,22 @@ describe('checkGitHubRepoAccess', () => {
     await expect(checkGitHubRepoAccess('octo/notes', token)).resolves.toMatchObject({ kind: 'no_access' });
   });
 
-  it('returns no_write when the repository denies push permission', async () => {
+  it('returns no_access when GitHub denies repository access', async () => {
     fetchSpy.mockResolvedValue(new Response(JSON.stringify({ permissions: { push: false } }), { status: 403 }));
 
-    await expect(checkGitHubRepoAccess('octo/notes', token)).resolves.toMatchObject({ kind: 'no_write' });
+    await expect(checkGitHubRepoAccess('octo/notes', token)).resolves.toMatchObject({ kind: 'no_access' });
   });
 
-  it('returns saml_required for a SAML-protected organization', async () => {
+  it('returns no_access for a SAML-protected organization', async () => {
     fetchSpy.mockResolvedValue(new Response(JSON.stringify({ message: 'SAML enforcement is required' }), { status: 403 }));
 
-    await expect(checkGitHubRepoAccess('octo/notes', token)).resolves.toMatchObject({ kind: 'saml_required' });
+    await expect(checkGitHubRepoAccess('octo/notes', token)).resolves.toMatchObject({ kind: 'no_access' });
   });
 
-  it('returns rate_limited for a rate-limited response', async () => {
+  it('returns transient for a rate-limited response', async () => {
     fetchSpy.mockResolvedValue(new Response('{}', { status: 429 }));
 
-    await expect(checkGitHubRepoAccess('octo/notes', token)).resolves.toMatchObject({ kind: 'rate_limited' });
+    await expect(checkGitHubRepoAccess('octo/notes', token)).resolves.toMatchObject({ kind: 'transient' });
   });
 
   it('returns transient for a network failure', async () => {

@@ -1,11 +1,17 @@
 import React, { useEffect, useMemo } from 'react';
 import { GitRepository } from '../services/GitService';
-import { useRepoStore } from '../stores/repoStore';
+import { useRepoStore, type AddRepositoryOptions } from '../stores/repoStore';
+import type { GitHostProvider } from '../services/git/GitHost';
 
 interface RepoContextType {
   repositories: GitRepository[];
   isLoading: boolean;
-  addRepository: (path: string, name?: string) => Promise<GitRepository>;
+  addRepository: (
+    path: string,
+    nameOrOptions?: string | AddRepositoryOptions,
+    provider?: GitHostProvider,
+    options?: AddRepositoryOptions,
+  ) => Promise<GitRepository>;
   removeRepository: (path: string) => Promise<void>;
   refreshRepos: () => Promise<void>;
 }

@@ -25,35 +25,16 @@ export function Group(props: GroupProps) {
   return (
     <View style={[{ gap: spacing[2] }, style]}>
       {title && (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2], marginLeft: spacing[3] }}>
+        <View className="flex-row items-center gap-2 ml-3">
           <Text
-            style={{
-              color: colors.textSecondary,
-              fontSize: type.sm,
-              fontWeight: '600',
-              textTransform: 'uppercase',
-              letterSpacing: 0.6,
-            }}
+            className="text-sm font-semibold uppercase tracking-wide"
+            style={{ color: colors.textSecondary, letterSpacing: 0.6 }}
           >
             {title}
           </Text>
           {badge && (
-            <View
-              style={{
-                backgroundColor: '#3B82F6',
-                paddingHorizontal: spacing[2],
-                paddingVertical: 2,
-                borderRadius: 6,
-              }}
-            >
-              <Text
-                style={{
-                  color: '#ffffff',
-                  fontSize: 10,
-                  fontWeight: '800',
-                  letterSpacing: 0.5,
-                }}
-              >
+            <View className="bg-blue-500 px-2 py-0.5 rounded-md">
+              <Text className="text-white text-[10px] font-extrabold" style={{ letterSpacing: 0.5 }}>
                 {badge}
               </Text>
             </View>
@@ -85,12 +66,8 @@ export function Group(props: GroupProps) {
       </Surface>
       {footer && (
         <Text
-          style={{
-            color: colors.textSecondary,
-            fontSize: type.xs,
-            marginHorizontal: spacing[3],
-            marginTop: spacing[1],
-          }}
+          className="text-xs mx-3 mt-1"
+          style={{ color: colors.textSecondary }}
         >
           {footer}
         </Text>
@@ -118,19 +95,17 @@ export function GroupRow(props: GroupRowProps) {
     <View
       style={[
         {
-          flexDirection: 'row',
-          alignItems: 'center',
           paddingHorizontal: spacing[4],
           paddingVertical: spacing[3],
-          minHeight: 48,
           gap: spacing[3],
           opacity: disabled ? 0.5 : 1,
         },
         style,
       ]}
+      className="flex-row items-center min-h-[48px]"
     >
       {leading}
-      <View style={{ flex: 1 }}>{children}</View>
+      <View className="flex-1">{children}</View>
       {trailing}
     </View>
   );

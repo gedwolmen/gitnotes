@@ -2,10 +2,10 @@
 
 exports[`Button snapshots primary in light + dark: primary-dark 1`] = `
 <View
+  className=""
   style={
     [
       {
-        "alignSelf": "auto",
         "opacity": 1,
       },
       {
@@ -50,12 +50,9 @@ exports[`Button snapshots primary in light + dark: primary-dark 1`] = `
     onStartShouldSetResponder={[Function]}
   >
     <View
+      className="bg-surface rounded-md"
       style={
         [
-          {
-            "backgroundColor": "#000000",
-            "borderRadius": 18,
-          },
           {
             "shadowColor": "#000000",
             "shadowOffset": {
@@ -67,11 +64,7 @@ exports[`Button snapshots primary in light + dark: primary-dark 1`] = `
           },
           [
             {
-              "alignItems": "center",
-              "justifyContent": "center",
               "minHeight": 44,
-              "paddingHorizontal": 20,
-              "paddingVertical": 12,
             },
             undefined,
           ],
@@ -105,29 +98,26 @@ exports[`Button snapshots primary in light + dark: primary-dark 1`] = `
         }
       />
       <View
-        style={
-          {
-            "alignItems": "center",
-            "flexDirection": "row",
-            "gap": 8,
-            "justifyContent": "center",
-          }
-        }
+        className="py-3 px-5 items-center justify-center"
       >
-        <Text
-          style={
-            [
-              {
-                "color": "#F2F2F7",
-                "fontSize": 16,
-                "fontWeight": "600",
-              },
-              undefined,
-            ]
-          }
+        <View
+          className="flex-row items-center justify-center gap-2"
         >
-          Save
-        </Text>
+          <Text
+            style={
+              [
+                {
+                  "color": "#F2F2F7",
+                  "fontSize": 16,
+                  "fontWeight": "600",
+                },
+                undefined,
+              ]
+            }
+          >
+            Save
+          </Text>
+        </View>
       </View>
     </View>
   </View>
@@ -136,10 +126,10 @@ exports[`Button snapshots primary in light + dark: primary-dark 1`] = `
 
 exports[`Button snapshots primary in light + dark: primary-light 1`] = `
 <View
+  className=""
   style={
     [
       {
-        "alignSelf": "auto",
         "opacity": 1,
       },
       {
@@ -184,12 +174,9 @@ exports[`Button snapshots primary in light + dark: primary-light 1`] = `
     onStartShouldSetResponder={[Function]}
   >
     <View
+      className="bg-surface rounded-md"
       style={
         [
-          {
-            "backgroundColor": "#FFFFFF",
-            "borderRadius": 18,
-          },
           {
             "shadowColor": "#BFBFBF",
             "shadowOffset": {
@@ -201,11 +188,7 @@ exports[`Button snapshots primary in light + dark: primary-light 1`] = `
           },
           [
             {
-              "alignItems": "center",
-              "justifyContent": "center",
               "minHeight": 44,
-              "paddingHorizontal": 20,
-              "paddingVertical": 12,
             },
             undefined,
           ],
@@ -239,29 +222,26 @@ exports[`Button snapshots primary in light + dark: primary-light 1`] = `
         }
       />
       <View
-        style={
-          {
-            "alignItems": "center",
-            "flexDirection": "row",
-            "gap": 8,
-            "justifyContent": "center",
-          }
-        }
+        className="py-3 px-5 items-center justify-center"
       >
-        <Text
-          style={
-            [
-              {
-                "color": "#1C1C1E",
-                "fontSize": 16,
-                "fontWeight": "600",
-              },
-              undefined,
-            ]
-          }
+        <View
+          className="flex-row items-center justify-center gap-2"
         >
-          Save
-        </Text>
+          <Text
+            style={
+              [
+                {
+                  "color": "#1C1C1E",
+                  "fontSize": 16,
+                  "fontWeight": "600",
+                },
+                undefined,
+              ]
+            }
+          >
+            Save
+          </Text>
+        </View>
       </View>
     </View>
   </View>

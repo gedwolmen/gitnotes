@@ -37,9 +37,6 @@ export function Chip(props: ChipProps) {
     >
       {leading}
       {label !== undefined && (
-        // Always colors.text — accent on light surfaces fails WCAG AA at
-        // type.sm (14pt). Active state is signaled by inset Surface + the
-        // accent-colored leading icon. (See #221.)
         <Text
           style={{
             color: colors.text,

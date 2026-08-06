@@ -1,3 +1,34 @@
+jest.mock('nativewind', () => ({
+  cssInterop: () => {},
+  rem: (v: number) => v,
+  useColorScheme: () => ({ colorScheme: 'light', setColorScheme: jest.fn() }),
+  NativeWindStyleSheet: { setDimensions: jest.fn(), setDirection: jest.fn(), setAppearance: jest.fn() },
+}));
+
+jest.mock('react-native-css', () => ({
+  cssInterop: () => {},
+  useUnstableNativeVariable: (name: string) => undefined,
+}));
+
+jest.mock('@rn-primitives/slot', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const Slot = React.forwardRef(({ children, ...props }: { children?: React.ReactNode }, ref: React.Ref<unknown>) =>
+    React.createElement(View, { ...props, ref }, children)
+  );
+  Slot.displayName = 'Slot';
+  return { __esModule: true, Slot };
+});
+
+jest.mock('@rn-primitives/portal', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    PortalHost: ({ children }: { children?: React.ReactNode }) => React.createElement(View, null, children),
+    Portal: ({ children }: { children?: React.ReactNode }) => React.createElement(View, null, children),
+  };
+});
+
 // Mocks for the @testing-library/react-native render path.
 
 // expo-crypto ships ESM; the jest transform pipeline can't load it. The

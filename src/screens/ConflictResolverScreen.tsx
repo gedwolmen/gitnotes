@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, Alert } from 'react-native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -11,6 +11,8 @@ import { LocalGitWriter } from '../services/git/LocalGitWriter';
 import { AuthService } from '../services/AuthService';
 import type { FileConflict } from '../services/conflict/types';
 import type { RootStackParamList } from '../navigation/types';
+import { ScreenHeader } from '../components/ui';
+import { cn } from '../lib/utils';
 
 type Tab = 'merged' | 'local' | 'remote';
 type Nav = NativeStackNavigationProp<RootStackParamList, 'ConflictResolver'>;
@@ -158,9 +160,9 @@ export default function ConflictResolverScreen() {
 
   if (!file || !conflict) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.emptyState}>
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
+        <View className="flex-1 items-center justify-center">
+          <Text className="text-base" style={{ color: colors.textSecondary }}>
             Conflict not found
           </Text>
         </View>
@@ -175,33 +177,29 @@ export default function ConflictResolverScreen() {
   ];
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={[styles.backButton, { color: colors.primary }]}>Back</Text>
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
-          {filePath}
-        </Text>
-        <View style={{ width: 50 }} />
-      </View>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
+      <ScreenHeader
+        title={filePath}
+        onBack={() => navigation.goBack()}
+      />
 
-      <View style={[styles.tabBar, { backgroundColor: `${colors.text}08` }]}>
+      <View
+        className="flex-row p-1 mx-4 mt-2 rounded-[10px]"
+        style={{ backgroundColor: `${colors.text}08` }}
+      >
         {tabs.map((tab) => (
           <TouchableOpacity
             key={tab.key}
             onPress={() => setActiveTab(tab.key)}
-            style={[
-              styles.tab,
-              activeTab === tab.key && styles.tabActive,
-              activeTab === tab.key && { backgroundColor: `${colors.primary ?? colors.text}15` },
-            ]}
+            className={cn(
+              'flex-1 py-2 items-center rounded-lg',
+              activeTab === tab.key && 'bg-opacity-10'
+            )}
+            style={activeTab === tab.key ? { backgroundColor: `${colors.primary ?? colors.text}15` } : undefined}
           >
             <Text
-              style={[
-                styles.tabLabel,
-                { color: activeTab === tab.key ? (colors.primary ?? colors.text) : colors.textSecondary },
-              ]}
+              className="text-sm font-semibold"
+              style={{ color: activeTab === tab.key ? (colors.primary ?? colors.text) : colors.textSecondary }}
             >
               {tab.label}
             </Text>
@@ -209,28 +207,33 @@ export default function ConflictResolverScreen() {
         ))}
       </View>
 
-      <ScrollView style={styles.contentArea} contentContainerStyle={{ padding: 16 }}>
-        <Text style={[styles.contentText, { color: colors.text }]}>{displayContent}</Text>
+      <ScrollView className="flex-1" contentContainerClassName="p-4">
+        <Text className="font-mono text-sm leading-[22px]" style={{ color: colors.text }}>{displayContent}</Text>
       </ScrollView>
 
-      <View style={[styles.actions, { borderTopColor: colors.border }]}>
+      <View
+        className="flex-row gap-2 px-4 py-3 border-t"
+        style={{ borderTopWidth: 0.5, borderTopColor: colors.border }}
+      >
         {isBinary || isDeleteVsModify ? (
           <>
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: `${colors.error ?? '#ef4444'}15` }]}
+              className="flex-1 py-3 rounded-[10px] items-center"
+              style={{ backgroundColor: `${colors.error ?? '#ef4444'}15` }}
               onPress={handleKeepLocal}
               disabled={isResolving}
             >
-              <Text style={[styles.actionBtnText, { color: colors.error ?? '#ef4444' }]}>
+              <Text className="text-sm font-bold" style={{ color: colors.error ?? '#ef4444' }}>
                 Keep mine
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: `${colors.primary ?? colors.text}15` }]}
+              className="flex-1 py-3 rounded-[10px] items-center"
+              style={{ backgroundColor: `${colors.primary ?? colors.text}15` }}
               onPress={handleKeepRemote}
               disabled={isResolving}
             >
-              <Text style={[styles.actionBtnText, { color: colors.primary ?? colors.text }]}>
+              <Text className="text-sm font-bold" style={{ color: colors.primary ?? colors.text }}>
                 Keep theirs
               </Text>
             </TouchableOpacity>
@@ -238,29 +241,32 @@ export default function ConflictResolverScreen() {
         ) : (
           <>
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: `${colors.error ?? '#ef4444'}15` }]}
+              className="flex-1 py-3 rounded-[10px] items-center"
+              style={{ backgroundColor: `${colors.error ?? '#ef4444'}15` }}
               onPress={handleKeepLocal}
               disabled={isResolving}
             >
-              <Text style={[styles.actionBtnText, { color: colors.error ?? '#ef4444' }]}>
+              <Text className="text-sm font-bold" style={{ color: colors.error ?? '#ef4444' }}>
                 Keep mine
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: `${colors.primary ?? colors.text}15` }]}
+              className="flex-1 py-3 rounded-[10px] items-center"
+              style={{ backgroundColor: `${colors.primary ?? colors.text}15` }}
               onPress={handleKeepRemote}
               disabled={isResolving}
             >
-              <Text style={[styles.actionBtnText, { color: colors.primary ?? colors.text }]}>
+              <Text className="text-sm font-bold" style={{ color: colors.primary ?? colors.text }}>
                 Keep theirs
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionBtn, styles.primaryBtn, { backgroundColor: colors.primary ?? colors.text }]}
+              className="flex-1 py-3 rounded-[10px] items-center"
+              style={{ backgroundColor: colors.primary ?? colors.text }}
               onPress={handleSaveMerged}
               disabled={isResolving}
             >
-              <Text style={[styles.actionBtnText, { color: '#ffffff' }]}>
+              <Text className="text-sm font-bold" style={{ color: '#ffffff' }}>
                 Save merged
               </Text>
             </TouchableOpacity>
@@ -270,46 +276,3 @@ export default function ConflictResolverScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  backButton: { fontSize: 16, fontWeight: '600' },
-  title: { fontSize: 16, fontWeight: '700', flex: 1, textAlign: 'center', marginHorizontal: 8 },
-  tabBar: {
-    flexDirection: 'row',
-    padding: 4,
-    marginHorizontal: 16,
-    marginTop: 8,
-    borderRadius: 10,
-  },
-  tab: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
-  tabActive: {},
-  tabLabel: { fontSize: 14, fontWeight: '600' },
-  contentArea: { flex: 1 },
-  contentText: { fontFamily: 'monospace', fontSize: 14, lineHeight: 22 },
-  actions: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  actionBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  primaryBtn: {},
-  actionBtnText: { fontSize: 14, fontWeight: '700' },
-  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyText: { fontSize: 16 },
-});

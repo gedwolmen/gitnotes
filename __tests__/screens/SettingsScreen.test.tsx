@@ -1,7 +1,11 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { Alert } from 'react-native';
+import type { AlertButton } from 'react-native';
+import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 
 import SettingsScreen from '../../src/screens/SettingsScreen';
+import { RepoAccessPreflightError } from '../../src/services/git/repoAccessPreflight';
 
 const mockNavigate = jest.fn();
 
@@ -116,8 +120,14 @@ jest.mock('../../src/contexts/AccountsContext', () => {
 });
 
 const stableRepositories: any[] = [];
+const mockAddRepository = jest.fn<(
+  path: string,
+  options?: unknown,
+  provider?: unknown,
+  retryOptions?: unknown,
+) => Promise<{ id: string; name: string; path: string }>>();
 jest.mock('../../src/contexts/RepoContext', () => ({
-  useRepos: () => ({ repositories: stableRepositories, addRepository: jest.fn(), removeRepository: jest.fn() }),
+  useRepos: () => ({ repositories: stableRepositories, addRepository: mockAddRepository, removeRepository: jest.fn() }),
 }));
 
 jest.mock('../../src/contexts/NoteContext', () => ({
@@ -325,9 +335,19 @@ jest.mock('../../src/components/ai/ChatRepoPickerModal', () => ({
   ChatRepoPickerModal: () => null,
 }));
 
-jest.mock('../../src/components/settings/SettingsModals', () => ({
-  SettingsModals: () => null,
-}));
+jest.mock('../../src/components/settings/SettingsModals', () => {
+  const { Pressable, Text, TextInput, View } = require('react-native');
+  return {
+    SettingsModals: ({ onAddManualRepo, onSetManualRepoInput }: any) => (
+      <View>
+        <TextInput testID="test-manual-repo-input" onChangeText={onSetManualRepoInput} />
+        <Pressable testID="test-add-manual-repo" onPress={onAddManualRepo}>
+          <Text>Add manual repository</Text>
+        </Pressable>
+      </View>
+    ),
+  };
+});
 
 jest.mock('../../src/components/settings/settingsStyles', () => {
   const { StyleSheet } = require('react-native');
@@ -369,12 +389,16 @@ jest.mock('../../src/components/SearchBar', () => {
 });
 
 describe('SettingsScreen', () => {
+  const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+
   beforeEach(() => {
     mockTheme = 'light';
     mockUiStyle = 'flat';
     mockNavigate.mockClear();
     mockSetTheme.mockClear();
     mockSetStyle.mockClear();
+    mockAddRepository.mockReset();
+    alertSpy.mockClear();
   });
 
   it('renders without crashing', () => {
@@ -420,5 +444,49 @@ describe('SettingsScreen', () => {
     const { getByText } = render(<SettingsScreen />);
     expect(getByText('Data')).toBeTruthy();
     expect(getByText('Clear All Notes')).toBeTruthy();
+  });
+
+  it('confirms and retries when write access is unverified', async () => {
+    mockAddRepository
+      .mockRejectedValueOnce(new RepoAccessPreflightError({
+        kind: 'write_unverified',
+        message: 'Write access not verified. Do you want to add anyway?',
+      }, true))
+      .mockResolvedValueOnce({ id: 'github:1', name: 'notes', path: 'octo/notes' });
+    const { getByTestId } = render(<SettingsScreen />);
+
+    fireEvent.changeText(getByTestId('test-manual-repo-input'), 'octo/notes');
+    fireEvent.press(getByTestId('test-add-manual-repo'));
+
+    await waitFor(() => expect(alertSpy).toHaveBeenCalledWith(
+      'Write access not verified',
+      'Write access not verified. This repository may be read-only. Add anyway?',
+      expect.any(Array),
+    ));
+    const confirmationButtons = alertSpy.mock.calls[alertSpy.mock.calls.length - 1]?.[2];
+    await act(async () => {
+      confirmationButtons?.find((button: AlertButton) => button.text === 'Add anyway')?.onPress?.();
+    });
+
+    await waitFor(() => expect(mockAddRepository).toHaveBeenLastCalledWith(
+      'octo/notes',
+      { allowUnverifiedWrite: true },
+    ));
+  });
+
+  it('does not retry when unverified write confirmation is cancelled', async () => {
+    mockAddRepository.mockRejectedValueOnce(new RepoAccessPreflightError({
+      kind: 'write_unverified',
+      message: 'Write access not verified. Do you want to add anyway?',
+    }, true));
+    const { getByTestId } = render(<SettingsScreen />);
+
+    fireEvent.changeText(getByTestId('test-manual-repo-input'), 'octo/notes');
+    fireEvent.press(getByTestId('test-add-manual-repo'));
+
+    await waitFor(() => expect(alertSpy).toHaveBeenCalled());
+    const confirmationButtons = alertSpy.mock.calls[alertSpy.mock.calls.length - 1]?.[2];
+    confirmationButtons?.find((button: AlertButton) => button.text === 'Cancel')?.onPress?.();
+    expect(mockAddRepository).toHaveBeenCalledTimes(1);
   });
 });

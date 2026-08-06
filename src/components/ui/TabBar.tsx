@@ -40,11 +40,8 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
     return (
       <View
         pointerEvents="box-none"
+        className="absolute left-0 right-0 bottom-0"
         style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
           paddingHorizontal: spacing[6],
           paddingBottom: insets.bottom + spacing[3],
           paddingTop: spacing[4],
@@ -52,14 +49,8 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
         }}
       >
         <View
+          className="flex-row items-center justify-around py-2 px-3 rounded-full overflow-hidden"
           style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-around',
-            paddingVertical: spacing[2],
-            paddingHorizontal: spacing[3],
-            borderRadius: 999,
-            overflow: 'hidden',
             backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)',
           }}
         >
@@ -101,10 +92,9 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
                   style={{
                     width: 48,
                     height: 40,
-                    alignItems: 'center',
-                    justifyContent: 'center',
                     backgroundColor: 'transparent',
                   }}
+                  className="items-center justify-center"
                 >
                   <Ionicons
                     name={isFocused ? config.focused : config.outline}
@@ -123,11 +113,8 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
   return (
     <View
       pointerEvents="box-none"
+      className="absolute left-0 right-0 bottom-0"
       style={{
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        bottom: 0,
         paddingHorizontal: spacing[6],
         paddingBottom: insets.bottom + spacing[3],
         paddingTop: spacing[4],
@@ -138,15 +125,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
         intensity={60}
         tint={isDark ? 'dark' : 'light'}
         pointerEvents="box-none"
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-around',
-          paddingVertical: spacing[2],
-          paddingHorizontal: spacing[3],
-          borderRadius: 999,
-          overflow: 'hidden',
-        }}
+        className="flex-row items-center justify-around py-2 px-3 rounded-full overflow-hidden"
       >
         {state.routes.map((route, index) => {
           const isFocused = state.index === index;
@@ -186,10 +165,9 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
                 style={{
                   width: 48,
                   height: 40,
-                  alignItems: 'center',
-                  justifyContent: 'center',
                   backgroundColor: 'transparent',
                 }}
+                className="items-center justify-center"
               >
                 <Ionicons
                   name={isFocused ? config.focused : config.outline}

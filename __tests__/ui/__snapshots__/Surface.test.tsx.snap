@@ -2,12 +2,9 @@
 
 exports[`Surface snapshots a raised neumorphic Surface with a Text child 1`] = `
 <View
+  className="bg-surface rounded-md"
   style={
     [
-      {
-        "backgroundColor": "#FFFFFF",
-        "borderRadius": 18,
-      },
       {
         "shadowColor": "#BFBFBF",
         "shadowOffset": {

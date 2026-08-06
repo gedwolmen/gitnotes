@@ -137,7 +137,11 @@
     "unavailable": "Nicht verfügbar",
     "auto": "Automatisch",
     "confirm": "Bestätigen",
-    "notSet": "Nicht festgelegt"
+    "notSet": "Nicht festgelegt",
+    "resetAIMemory": "KI-Speicher zurücksetzen",
+    "resetAIMemoryConfirm": "KI-Speicher zurücksetzen",
+    "resetAIMemoryMessage": "Thought-Dump-Dateien und Chats werden beibehalten. Nur der KI-Speicher wird gelöscht.",
+    "resetAIMemorySuccess": "KI-Speicher gelöscht"
   },
   "ai": {
     "availability": {
@@ -519,5 +523,15 @@
     "invalidTokenBody": "Authentifizierung mit diesem Token fehlgeschlagen. Wert prüfen und erneut versuchen.",
     "failedTitle": "Token konnte nicht gespeichert werden",
     "failedBody": "Unbekannter Fehler"
+  },
+  "thoughtDump": {
+    "title": "Gedankenablage",
+    "placeholder": "Was beschäftigt dich?",
+    "save": "Speichern",
+    "delete": "Löschen",
+    "confirmDelete": "Diese Gedankenablage löschen? Dies kann nicht rückgängig gemacht werden.",
+    "empty": "Noch keine Gedankenablagen",
+    "error": "Etwas ist schiefgelaufen. Bitte erneut versuchen.",
+    "justNow": "gerade eben"
   }
 }

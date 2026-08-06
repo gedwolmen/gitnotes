@@ -7,6 +7,7 @@ import {
   Platform as TokenPlatform,
 } from '../../theme/elevation';
 import { Radius } from '../../theme/tokens';
+import { cn } from '../../lib/utils';
 
 export interface SurfaceProps extends Omit<ViewProps, 'style'> {
   elevation?: ElevationTier | 'flat';
@@ -17,6 +18,13 @@ export interface SurfaceProps extends Omit<ViewProps, 'style'> {
   testID?: string;
 }
 
+const RADIUS_CLASS: Record<Radius, string> = {
+  sm: 'rounded-sm',
+  md: 'rounded-md',
+  lg: 'rounded-lg',
+  pill: 'rounded-full',
+};
+
 function detectPlatform(): TokenPlatform {
   if (Platform.OS === 'ios') return 'ios';
   if (Platform.OS === 'android') return 'android';
@@ -24,7 +32,7 @@ function detectPlatform(): TokenPlatform {
 }
 
 export function Surface(props: SurfaceProps) {
-  const { elevation = 'raised', inset = false, radius = 'md', style, children, testID, ...rest } = props;
+  const { elevation = 'raised', inset = false, radius = 'md', style, children, testID, className, ...rest } = props;
   const { style: themeStyle } = useTheme();
   const { colors, radii } = useTokens();
   const platform = detectPlatform();
@@ -43,11 +51,6 @@ export function Surface(props: SurfaceProps) {
   }, [elevation, inset, themeStyle, colors, platform]);
 
   const borderRadius = radii[radius];
-  const baseStyle: ViewStyle = {
-    backgroundColor: colors.surface,
-    borderRadius,
-  };
-
   const androidOverlays = elevationStyles.androidOverlays;
   const showOverlays = platform === 'android' && androidOverlays !== undefined;
 
@@ -55,7 +58,8 @@ export function Surface(props: SurfaceProps) {
     <View
       {...rest}
       testID={testID}
-      style={[baseStyle, elevationStyles.outer as ViewStyle, style]}
+      className={cn(className, 'bg-surface', RADIUS_CLASS[radius])}
+      style={[elevationStyles.outer as ViewStyle, style]}
     >
       <View
         pointerEvents="none"

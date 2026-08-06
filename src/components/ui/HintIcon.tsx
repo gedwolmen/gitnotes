@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { Modal } from './Modal';
@@ -35,7 +35,7 @@ export function HintIcon(props: HintIconProps) {
           name={iconName}
           size={iconSize}
           color={colors.textSecondary}
-          style={styles.icon}
+          style={{ opacity: 0.7 }}
         />
       </Pressable>
 
@@ -45,7 +45,9 @@ export function HintIcon(props: HintIconProps) {
         dismissOnBackdrop
         contentStyle={{ padding: spacing[6], paddingBottom: spacing[5] }}
       >
-        <View style={styles.iconBadge}>
+        <View className="w-12 h-12 rounded-full items-center justify-center self-center mb-4"
+          style={{ backgroundColor: 'rgba(123, 140, 222, 0.12)' }}
+        >
           <Ionicons
             name={iconName}
             size={20}
@@ -53,20 +55,23 @@ export function HintIcon(props: HintIconProps) {
           />
         </View>
 
-        <Text style={[styles.hintTitle, { color: colors.text }]}>
+        <Text className="text-xl font-bold text-center mb-3" style={{ color: colors.text }}>
           {t('hints.title')}
         </Text>
 
-        <Text style={[styles.hintText, { color: colors.text, fontSize: type.md }]}>
+        <Text
+          className="text-center mb-6 leading-6"
+          style={{ color: colors.text, fontSize: type.md }}
+        >
           {hintText}
         </Text>
 
         <TouchableOpacity
           testID={`${testID}-close`}
           onPress={() => setVisible(false)}
-          style={[styles.okBtn, { backgroundColor: colors.primary }]}
+          className="py-3.5 rounded-xl items-center bg-primary"
         >
-          <Text style={[styles.okBtnText, { color: colors.surface }]}>
+          <Text className="text-base font-semibold" style={{ color: colors.surface }}>
             {t('common.ok')}
           </Text>
         </TouchableOpacity>
@@ -74,39 +79,3 @@ export function HintIcon(props: HintIconProps) {
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  icon: {
-    opacity: 0.7,
-  },
-  iconBadge: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(123, 140, 222, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  hintTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  hintText: {
-    lineHeight: 24,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  okBtn: {
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  okBtnText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});

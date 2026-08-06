@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { View, StyleSheet, Alert, Platform, RefreshControl } from 'react-native';
+import { View, Alert, Platform, RefreshControl } from 'react-native';
 import { FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -429,7 +429,7 @@ export default function TodoListScreen() {
   );
 
   return (
-    <SafeAreaView edges={[]} style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={[]} className="flex-1" style={{ backgroundColor: colors.background }}>
       <View style={{ flex: 1 }}>
       <View style={{ paddingTop: headerHeight }}>
         <OfflineBanner />
@@ -462,7 +462,7 @@ export default function TodoListScreen() {
         key={`todos-${columnCount}`}
         extraData={filteredTodos}
         removeClippedSubviews={false}
-        contentContainerStyle={{ ...styles.listContent, paddingBottom: tabBarHeight + 16, flexGrow: 1 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: tabBarHeight + 16, flexGrow: 1 }}
         columnWrapperStyle={columnCount > 1 ? { gap: 8 } : undefined}
         ListEmptyComponent={<TodosEmptyState isFiltered={hasActiveFilters} />}
         showsVerticalScrollIndicator={false}
@@ -583,12 +583,4 @@ export default function TodoListScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  listContent: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-});
+

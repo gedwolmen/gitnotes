@@ -16,9 +16,18 @@ interface RepoState {
   isLoading: boolean;
 }
 
+export type AddRepositoryOptions = {
+  readonly allowUnverifiedWrite?: boolean;
+};
+
 interface RepoActions {
   loadRepos: () => Promise<void>;
-  addRepository: (path: string, name?: string, provider?: GitHostProvider) => Promise<GitRepository>;
+  addRepository: (
+    path: string,
+    nameOrOptions?: string | AddRepositoryOptions,
+    provider?: GitHostProvider,
+    options?: AddRepositoryOptions,
+  ) => Promise<GitRepository>;
   removeRepository: (path: string, provider?: GitHostProvider) => Promise<void>;
   refreshRepos: () => Promise<void>;
 }
@@ -38,20 +47,35 @@ export const useRepoStore = create<RepoState & RepoActions>()((set, get) => ({
     }
   },
 
-  addRepository: async (path, name, provider = 'github') => {
-    if (provider === 'github') {
+  addRepository: async (path, nameOrOptions, provider, options) => {
+    const name = typeof nameOrOptions === 'string' ? nameOrOptions : undefined;
+    const resolvedOptions = typeof nameOrOptions === 'object' ? nameOrOptions : options;
+    const resolvedProvider = provider ?? 'github';
+    if (resolvedProvider === 'github') {
       const activeHost = await getActiveGitHost();
       if (activeHost?.provider === 'github') {
         const access = await checkGitHubRepoAccess(path, activeHost.token);
-        if (access.kind !== 'ok' && access.kind !== 'transient') {
-          throw new RepoAccessPreflightError(access);
-        }
-        if (access.kind === 'transient') {
-          console.warn('[RepoStore] GitHub repository access preflight was inconclusive:', access.message);
+        switch (access.kind) {
+          case 'ok':
+            break;
+          case 'write_unverified':
+            if (!resolvedOptions?.allowUnverifiedWrite) {
+              throw new RepoAccessPreflightError(access, true);
+            }
+            break;
+          case 'no_access':
+            throw new RepoAccessPreflightError(access);
+          case 'transient':
+            console.warn('[RepoStore] GitHub repository access preflight was inconclusive:', access.message);
+            break;
+          default: {
+            const exhaustiveCheck: never = access;
+            return exhaustiveCheck;
+          }
         }
       }
     }
-    const repo = await GitService.addRepository(path, name, provider);
+    const repo = await GitService.addRepository(path, name, resolvedProvider);
     const updated = await StorageService.getSavedRepositories();
     set({ repositories: updated });
     return repo;

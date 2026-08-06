@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
@@ -71,68 +70,69 @@ export default function RenderStyleSettingsScreen() {
   );
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+    <SafeAreaView edges={['top', 'bottom']} className="flex-1" style={{ backgroundColor: colors.background }}>
+      <View className="flex-row items-center justify-between px-4 py-3 border-b" style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Note rendering</Text>
-        <View style={{ width: 24 }} />
+        <Text className="text-[17px] font-semibold" style={{ color: colors.text }}>Note rendering</Text>
+        <View className="w-6" />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Storage</Text>
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+      <ScrollView contentContainerClassName="pb-8">
+        <Text className="text-xs font-semibold uppercase tracking-wide px-4 mt-4 mb-2" style={{ color: colors.textSecondary, letterSpacing: 0.5 }}>Storage</Text>
+        <View className="rounded-sm mx-3 py-1" style={{ backgroundColor: colors.surface }}>
           {binding ? (
             <>
-              <View style={styles.row}>
+              <View className="flex-row items-center gap-3 px-4 py-3">
                 <Ionicons name="cloud-outline" size={18} color={colors.textSecondary} />
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.rowLabel, { color: colors.text }]}>{binding.owner}/{binding.name}</Text>
-                  <Text style={[styles.rowSubLabel, { color: colors.textSecondary }]}>
+                <View className="flex-1">
+                  <Text className="text-[15px] font-medium" style={{ color: colors.text }}>{binding.owner}/{binding.name}</Text>
+                  <Text className="text-xs mt-0.5" style={{ color: colors.textSecondary }}>
                     settings/render.json on {binding.branch}
                   </Text>
                 </View>
                 {isLoading ? <ActivityIndicator color={colors.primary} /> : null}
               </View>
-              <TouchableOpacity style={styles.row} onPress={() => setShowRepoPicker(true)}>
+              <TouchableOpacity className="flex-row items-center gap-3 px-4 py-3" onPress={() => setShowRepoPicker(true)}>
                 <Ionicons name="repeat" size={18} color={colors.primary} />
-                <Text style={[styles.rowLabel, { color: colors.primary }]}>Change repo</Text>
+                <Text className="text-[15px] font-medium" style={{ color: colors.primary }}>Change repo</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.row} onPress={handleClearBinding}>
+              <TouchableOpacity className="flex-row items-center gap-3 px-4 py-3" onPress={handleClearBinding}>
                 <Ionicons name="close-circle-outline" size={18} color={colors.error} />
-                <Text style={[styles.rowLabel, { color: colors.error }]}>Disconnect</Text>
+                <Text className="text-[15px] font-medium" style={{ color: colors.error }}>Disconnect</Text>
               </TouchableOpacity>
             </>
           ) : (
-            <TouchableOpacity style={styles.row} onPress={() => setShowRepoPicker(true)}>
+            <TouchableOpacity className="flex-row items-center gap-3 px-4 py-3" onPress={() => setShowRepoPicker(true)}>
               <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
-              <Text style={[styles.rowLabel, { color: colors.primary }]}>Pick a repo for render styles</Text>
+              <Text className="text-[15px] font-medium" style={{ color: colors.primary }}>Pick a repo for render styles</Text>
             </TouchableOpacity>
           )}
-          {error ? <Text style={[styles.error, { color: colors.error }]}>{error}</Text> : null}
-          <Text style={[styles.helperText, { color: colors.textSecondary }]}>
+          {error ? <Text className="text-xs px-4 pt-1" style={{ color: colors.error }}>{error}</Text> : null}
+          <Text className="text-xs leading-[18px] px-4 pt-2 pb-3" style={{ color: colors.textSecondary }}>
             Styles persist to {binding ? `${binding.owner}/${binding.name}/settings/render.json` : 'a repo of your choice'} so they sync across devices. Active overrides: {overrideCount}.
           </Text>
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Formats</Text>
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+        <Text className="text-xs font-semibold uppercase tracking-wide px-4 mt-4 mb-2" style={{ color: colors.textSecondary, letterSpacing: 0.5 }}>Formats</Text>
+        <View className="rounded-sm mx-3 py-1" style={{ backgroundColor: colors.surface }}>
           {RENDER_FORMATS.map((fmt) => {
             const hasOverrides = !!settings.formats[fmt] && Object.keys(settings.formats[fmt] ?? {}).length > 0;
             const isBeta = fmt === 'neorg';
             return (
               <TouchableOpacity
                 key={fmt}
-                style={[styles.formatRow, { borderBottomColor: colors.border }]}
+                className="flex-row items-center px-4 py-3.5 border-b"
+                style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}
                 onPress={() => navigation.navigate('RenderStyleEditor', { format: fmt })}
               >
-                <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <Text style={[styles.rowLabel, { color: colors.text }]}>{formatLabel(fmt)}</Text>
+                <View className="flex-1">
+                  <View className="flex-row items-center gap-2 flex-wrap">
+                    <Text className="text-[15px] font-medium" style={{ color: colors.text }}>{formatLabel(fmt)}</Text>
                     {isBeta ? <Chip label="BETA" /> : null}
                   </View>
-                  <Text style={[styles.rowSubLabel, { color: colors.textSecondary }]}>
+                  <Text className="text-xs mt-0.5" style={{ color: colors.textSecondary }}>
                     {hasOverrides ? 'Custom overrides applied' : 'Theme defaults'}
                   </Text>
                 </View>
@@ -142,7 +142,7 @@ export default function RenderStyleSettingsScreen() {
           })}
         </View>
 
-        <Text style={[styles.helperText, { color: colors.textSecondary, paddingHorizontal: 16 }]}>
+        <Text className="text-xs leading-[18px] px-4 pt-2 pb-3" style={{ color: colors.textSecondary }}>
           Tip: pick the same repo where you store notes so render styles travel with the content.
         </Text>
       </ScrollView>
@@ -179,55 +179,63 @@ function RepoPickerSheet(props: RepoPickerProps) {
   const { colors } = useTheme();
 
   return (
-    <View style={[styles.sheetOverlay, { backgroundColor: colors.background + 'cc' }]}>
-      <View style={[styles.sheet, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <View style={[styles.sheetHeader, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.sheetTitle, { color: colors.text }]}>Pick a repo</Text>
+    <View
+      className="absolute inset-0 justify-end"
+      style={{ backgroundColor: colors.background + 'cc' }}
+    >
+      <View
+        className="border-tl-2xl border-tr-2xl border max-h-[80%]"
+        style={{ backgroundColor: colors.surface, borderColor: colors.border, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}
+      >
+        <View className="flex-row justify-between items-center px-4 py-3.5 border-b" style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}>
+          <Text className="text-base font-semibold" style={{ color: colors.text }}>Pick a repo</Text>
           <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Ionicons name="close" size={22} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
-        <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
+        <ScrollView contentContainerClassName="pb-6">
           {discovering ? (
-            <View style={styles.discoveringRow}>
+            <View className="flex-row items-center gap-3 px-4 py-3">
               <ActivityIndicator color={colors.primary} />
-              <Text style={[styles.rowSubLabel, { color: colors.textSecondary }]}>Scanning for existing settings/render.json…</Text>
+              <Text className="text-xs mt-0.5" style={{ color: colors.textSecondary }}>Scanning for existing settings/render.json…</Text>
             </View>
           ) : null}
 
           {discovered.length > 0 ? (
             <>
-              <Text style={[styles.sectionTitle, { color: colors.textSecondary, marginTop: 12 }]}>
+              <Text className="text-xs font-semibold uppercase tracking-wide px-4 mt-3 mb-2" style={{ color: colors.textSecondary, letterSpacing: 0.5 }}>
                 {discovered.length === 1 ? 'Existing render styles repo found' : `${discovered.length} repos already host render styles`}
               </Text>
               {discovered.map((d) => (
                 <TouchableOpacity
                   key={`${d.owner}/${d.name}`}
-                  style={[styles.formatRow, { borderBottomColor: colors.border }]}
+                  className="flex-row items-center px-4 py-3.5 border-b"
+                  style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}
                   onPress={() => onSelect(d.owner, d.name, d.branch)}
                 >
                   <Ionicons name="cloud-done-outline" size={18} color={colors.primary} />
-                  <Text style={[styles.rowLabel, { color: colors.text, flex: 1, marginLeft: 8 }]}>{d.label}</Text>
+                  <Text className="text-[15px] font-medium flex-1 ml-2" style={{ color: colors.text }}>{d.label}</Text>
                   <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
                 </TouchableOpacity>
               ))}
             </>
           ) : null}
 
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary, marginTop: 16 }]}>Your repos</Text>
+          <Text className="text-xs font-semibold uppercase tracking-wide px-4 mt-4 mb-2" style={{ color: colors.textSecondary, letterSpacing: 0.5 }}>Your repos</Text>
           {repositories.length === 0 ? (
-            <Text style={[styles.helperText, { color: colors.textSecondary }]}>
+            <Text className="text-xs leading-[18px] px-4 pt-2 pb-3" style={{ color: colors.textSecondary }}>
               Add a repo from Settings → Repositories first.
             </Text>
           ) : (
             repositories.map((r) => (
               <TouchableOpacity
                 key={`${r.owner}/${r.name}`}
-                style={[styles.formatRow, { borderBottomColor: colors.border }]}
+                className="flex-row items-center px-4 py-3.5 border-b"
+                style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}
                 onPress={() => onSelect(r.owner, r.name, 'main')}
               >
                 <Ionicons name="git-branch-outline" size={18} color={colors.text} />
-                <Text style={[styles.rowLabel, { color: colors.text, flex: 1, marginLeft: 8 }]}>{r.label}</Text>
+                <Text className="text-[15px] font-medium flex-1 ml-2" style={{ color: colors.text }}>{r.label}</Text>
                 <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
               </TouchableOpacity>
             ))
@@ -237,38 +245,3 @@ function RepoPickerSheet(props: RepoPickerProps) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  headerTitle: { fontSize: 17, fontWeight: '600' },
-  scrollContent: { paddingBottom: 32 },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    paddingHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  section: { borderRadius: 12, marginHorizontal: 12, paddingVertical: 4 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12 },
-  formatRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1 },
-  rowLabel: { fontSize: 15, fontWeight: '500' },
-  rowSubLabel: { fontSize: 12, marginTop: 2 },
-  helperText: { fontSize: 12, lineHeight: 18, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 },
-  error: { fontSize: 12, paddingHorizontal: 16, paddingTop: 4 },
-  sheetOverlay: { ...StyleSheet.absoluteFill, justifyContent: 'flex-end' },
-  sheet: { borderTopLeftRadius: 16, borderTopRightRadius: 16, borderWidth: 1, maxHeight: '80%' },
-  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1 },
-  sheetTitle: { fontSize: 16, fontWeight: '600' },
-  discoveringRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12 },
-});

@@ -4,6 +4,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 import * as Haptics from 'expo-haptics';
 import { Surface } from './Surface';
 import { useTokens } from '../../contexts/ThemeContext';
+import { cn } from '../../lib/utils';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
 
@@ -39,7 +40,7 @@ export function Button(props: ButtonProps) {
     testID,
     children,
   } = props;
-  const { colors, radii, spacing, type } = useTokens();
+  const { colors, type } = useTokens();
   const [isPressed, setIsPressed] = useState(false);
   const scale = useSharedValue(1);
 
@@ -58,10 +59,6 @@ export function Button(props: ButtonProps) {
     transform: [{ scale: scale.value }],
   }));
 
-  // Primary button text uses colors.text, not colors.accent — accent on
-  // a light Surface fails WCAG AA body-text contrast (~3:1). The button's
-  // raised Surface + the accent-colored leading icon carry the "primary"
-  // affordance instead. (See #221.)
   const textColor = colors.text;
   const isGhost = variant === 'ghost';
 
@@ -88,7 +85,10 @@ export function Button(props: ButtonProps) {
   ) : children;
 
   const content = (
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: iconAlign === 'edge' ? spacing[3] : spacing[2] }}>
+    <View className={cn(
+      'flex-row items-center justify-center',
+      iconAlign === 'edge' ? 'gap-3' : 'gap-2'
+    )}>
       {leadingIcon}
       {labelNode}
       {childrenNode}
@@ -108,15 +108,13 @@ export function Button(props: ButtonProps) {
         style={({ pressed }) => [
           {
             opacity: disabled ? 0.4 : pressed ? 0.7 : 1,
-            paddingVertical: spacing[2],
-            paddingHorizontal: spacing[3],
-            borderRadius: radii.md,
-            alignItems: 'center',
-            justifyContent: 'center',
-            alignSelf: fullWidth ? 'stretch' : 'auto',
           },
           style,
         ]}
+        className={cn(
+          'py-2 px-3 rounded-md items-center justify-center',
+          fullWidth && 'self-stretch'
+        )}
       >
         {content}
       </Pressable>
@@ -124,7 +122,7 @@ export function Button(props: ButtonProps) {
   }
 
   return (
-    <Animated.View style={[{ alignSelf: fullWidth ? 'stretch' : 'auto', opacity: disabled ? 0.5 : 1 }, animatedStyle]}>
+    <Animated.View style={[{ opacity: disabled ? 0.5 : 1 }, animatedStyle]} className={cn(fullWidth && 'self-stretch')}>
       <Pressable
         testID={testID}
         onPress={disabled ? undefined : onPress}
@@ -139,16 +137,14 @@ export function Button(props: ButtonProps) {
           inset={isPressed}
           style={[
             {
-              paddingVertical: spacing[3],
-              paddingHorizontal: spacing[5],
-              alignItems: 'center',
-              justifyContent: 'center',
               minHeight: 44,
             },
             style,
           ]}
         >
-          {content}
+          <View className="py-3 px-5 items-center justify-center">
+            {content}
+          </View>
         </Surface>
       </Pressable>
     </Animated.View>

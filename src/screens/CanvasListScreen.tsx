@@ -2,7 +2,6 @@ import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   FlatList,
   Alert,
@@ -120,33 +119,34 @@ export default function CanvasListScreen() {
       return (
         <TouchableOpacity
           testID="canvas-list.button.open"
-          style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          className="flex-row items-center p-3.5 rounded-md border mb-2.5"
+          style={{ backgroundColor: colors.surface, borderColor: colors.border }}
           onPress={() => handleOpen(item.id)}
           activeOpacity={0.7}
         >
-          <View style={styles.cardContent}>
-            <View style={styles.cardHeader}>
+          <View className="flex-1">
+            <View className="flex-row items-center gap-2 mb-1">
               <Ionicons name="easel-outline" size={18} color={colors.primary} />
-              <Text style={[styles.cardTitle, { color: colors.text }]} numberOfLines={1}>
+              <Text className="text-base font-semibold flex-1" style={{ color: colors.text }} numberOfLines={1}>
                 {item.title || t('canvases.untitled')}
               </Text>
             </View>
-            <Text style={[styles.cardMeta, { color: colors.textSecondary }]}>
+            <Text className="text-xs mb-1" style={{ color: colors.textSecondary }}>
               {elementCount} element{elementCount !== 1 ? 's' : ''} · {dateStr}
             </Text>
             {item.repo && (
-              <View style={styles.repoBadge}>
+              <View className="flex-row items-center gap-1 mt-1">
                 <Ionicons name="git-branch-outline" size={12} color={colors.primary} />
-                <Text style={[styles.repoBadgeText, { color: colors.primary }]} numberOfLines={1}>
+                <Text className="text-xs font-medium" style={{ color: colors.primary }} numberOfLines={1}>
                   {item.repo.split('/').pop()}{item.branch ? ` · ${item.branch}` : ''}
                 </Text>
               </View>
             )}
             {item.tags.length > 0 && (
-              <View style={styles.tagRow}>
+              <View className="flex-row gap-1.5 flex-wrap">
                 {item.tags.slice(0, 3).map((tag) => (
-                  <View key={tag} style={[styles.tagChip, { backgroundColor: colors.primary + '18' }]}>
-                    <Text style={[styles.tagText, { color: colors.primary }]}>{tag}</Text>
+                  <View key={tag} className="px-2 py-0.5 rounded-sm" style={{ backgroundColor: colors.primary + '18' }}>
+                    <Text className="text-xs font-medium" style={{ color: colors.primary }}>{tag}</Text>
                   </View>
                 ))}
               </View>
@@ -154,8 +154,8 @@ export default function CanvasListScreen() {
           </View>
           <TouchableOpacity
             testID="canvas-list.button.delete"
+            className="p-3"
             onPress={() => handleDelete(item)}
-            style={styles.deleteBtn}
           >
             <Ionicons name="trash-outline" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
@@ -166,8 +166,8 @@ export default function CanvasListScreen() {
   );
 
   return (
-    <SafeAreaView edges={['bottom']} style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.searchBarContainer, { paddingTop: headerHeight + 8 }]}>
+    <SafeAreaView edges={['bottom']} className="flex-1" style={{ backgroundColor: colors.background }}>
+      <View className="px-4 py-2" style={{ paddingTop: headerHeight + 8 }}>
         <SearchBar
           testID="canvas-list.search-bar.search"
           value={searchQuery}
@@ -191,21 +191,22 @@ export default function CanvasListScreen() {
         renderItem={renderCanvas}
         numColumns={columnCount}
         key={`canvases-${columnCount}`}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
         columnWrapperStyle={columnCount > 1 ? { gap: 8 } : undefined}
         ListEmptyComponent={
-          <View style={styles.emptyState}>
+          <View className="items-center justify-center pt-15 px-6">
             <Ionicons name="easel-outline" size={48} color={colors.textSecondary} />
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>{t('canvases.emptyTitle')}</Text>
-            <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+            <Text className="text-xl font-bold mt-4 mb-1.5" style={{ color: colors.text }}>{t('canvases.emptyTitle')}</Text>
+            <Text className="text-base text-center mb-5" style={{ color: colors.textSecondary }}>
               {t('canvases.emptySubtitle')}
             </Text>
             <TouchableOpacity
               testID="canvas-list.button.create"
-              style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
+              className="px-6 py-3 rounded-sm"
+              style={{ backgroundColor: colors.primary }}
               onPress={handleCreate}
             >
-              <Text style={styles.emptyBtnText}>{t('canvases.createCanvas')}</Text>
+              <Text className="text-white text-base font-semibold">{t('canvases.createCanvas')}</Text>
             </TouchableOpacity>
           </View>
         }
@@ -219,17 +220,19 @@ export default function CanvasListScreen() {
       >
         <TouchableOpacity
           testID="canvas-list.overlay.size-picker"
-          style={styles.sizeOverlay}
+          className="flex-1 justify-center items-center p-6"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
           activeOpacity={1}
           accessible={false}
           onPress={() => setShowSizePicker(false)}
         >
-          <View style={[styles.sizeModal, { backgroundColor: colors.surface }]} onStartShouldSetResponder={() => true}>
-            <Text style={[styles.sizeTitle, { color: colors.text }]}>{t('canvases.newCanvas')}</Text>
+          <View className="w-full rounded-lg p-5" style={{ backgroundColor: colors.surface }} onStartShouldSetResponder={() => true}>
+            <Text className="text-lg font-bold text-center mb-3" style={{ color: colors.text }}>{t('canvases.newCanvas')}</Text>
 
             <TextInput
               testID="canvas-list.input.title"
-              style={[styles.titleInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
+              className="border rounded-sm px-3 py-2.5 text-base mb-3.5"
+              style={{ backgroundColor: colors.background, color: colors.text, borderColor: colors.border }}
               value={canvasTitle}
               onChangeText={setCanvasTitle}
               placeholder={t('canvases.namePlaceholder')}
@@ -248,21 +251,23 @@ export default function CanvasListScreen() {
                   accessible
                   accessibilityRole="button"
                   accessibilityLabel={`${label}, ${dims.desc}`}
-                  style={[styles.sizeOption, { borderColor: colors.border }]}
+                  className="flex-row justify-between items-center py-3 px-4 rounded-sm border mb-2"
+                  style={{ borderColor: colors.border }}
                   onPress={() => handlePickSize(dims.w, dims.h)}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.sizeLabel, { color: colors.text }]}>{label}</Text>
-                  <Text style={[styles.sizeDesc, { color: colors.textSecondary }]}>{dims.desc}</Text>
+                  <Text className="text-base font-semibold" style={{ color: colors.text }}>{label}</Text>
+                  <Text className="text-xs font-mono" style={{ color: colors.textSecondary }}>{dims.desc}</Text>
                 </TouchableOpacity>
               );
             })}
 
-            <Text style={[styles.sizeSubtitle, { color: colors.textSecondary }]}>{t('canvases.customSize')}</Text>
-            <View style={styles.customRow}>
+            <Text className="text-xs font-semibold uppercase mt-2 mb-2" style={{ color: colors.textSecondary }}>{t('canvases.customSize')}</Text>
+            <View className="flex-row items-center gap-2 mb-3">
               <TextInput
                 testID="canvas-list.input.custom-width"
-                style={[styles.customInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
+                className="flex-1 border rounded-sm px-3 py-2.5 text-base font-mono"
+                style={{ backgroundColor: colors.background, color: colors.text, borderColor: colors.border }}
                 value={customW}
                 onChangeText={setCustomW}
                 keyboardType="number-pad"
@@ -270,10 +275,11 @@ export default function CanvasListScreen() {
                 placeholderTextColor={colors.textSecondary}
                 maxLength={4}
               />
-              <Text style={[styles.customX, { color: colors.textSecondary }]}>×</Text>
+              <Text className="text-lg font-semibold" style={{ color: colors.textSecondary }}>×</Text>
               <TextInput
                 testID="canvas-list.input.custom-height"
-                style={[styles.customInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
+                className="flex-1 border rounded-sm px-3 py-2.5 text-base font-mono"
+                style={{ backgroundColor: colors.background, color: colors.text, borderColor: colors.border }}
                 value={customH}
                 onChangeText={setCustomH}
                 keyboardType="number-pad"
@@ -284,17 +290,19 @@ export default function CanvasListScreen() {
             </View>
 
             <TouchableOpacity
-              style={[styles.customBtn, { backgroundColor: colors.primary }]}
+              className="py-3 rounded-sm items-center mb-2"
+              style={{ backgroundColor: colors.primary }}
               onPress={handleCustomSize}
             >
-              <Text style={styles.customBtnText}>{t('canvases.createCustom')}</Text>
+              <Text className="text-white text-base font-semibold">{t('canvases.createCustom')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.sizeCancel, { borderColor: colors.border }]}
+              className="py-3 rounded-sm border items-center"
+              style={{ borderColor: colors.border }}
               onPress={() => setShowSizePicker(false)}
             >
-              <Text style={[styles.sizeCancelText, { color: colors.textSecondary }]}>{t('common.cancel')}</Text>
+              <Text className="text-base" style={{ color: colors.textSecondary }}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -327,208 +335,4 @@ export default function CanvasListScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-  },
-  createBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-    gap: 4,
-  },
-  createBtnText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  searchBarContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  listContent: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 10,
-  },
-  cardContent: {
-    flex: 1,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    flex: 1,
-  },
-  cardMeta: {
-    fontSize: 13,
-    marginBottom: 4,
-  },
-  repoBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
-  },
-  repoBadgeText: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  tagRow: {
-    flexDirection: 'row',
-    gap: 6,
-    flexWrap: 'wrap',
-  },
-  tagChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  tagText: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  deleteBtn: {
-    padding: 12,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 60,
-    paddingHorizontal: 24,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginTop: 16,
-    marginBottom: 6,
-  },
-  emptySubtitle: {
-    fontSize: 15,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  emptyBtn: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
-  },
-  emptyBtnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  sizeOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  sizeModal: {
-    width: '100%',
-    borderRadius: 16,
-    padding: 20,
-  },
-  sizeTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  titleInput: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-    marginBottom: 14,
-  },
-  sizeOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    borderWidth: 1,
-    marginBottom: 8,
-  },
-  sizeLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  sizeDesc: {
-    fontSize: 13,
-    fontFamily: 'monospace',
-  },
-  sizeSubtitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  customRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-  },
-  customInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-    fontFamily: 'monospace',
-  },
-  customX: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  customBtn: {
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  customBtnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  sizeCancel: {
-    paddingVertical: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  sizeCancelText: {
-    fontSize: 15,
-  },
-});
+

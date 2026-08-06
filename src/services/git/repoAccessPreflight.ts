@@ -1,18 +1,19 @@
-import { classifyGitHubSyncError } from './syncFailure';
+import { classifyGitHubSyncError, extractHttpErrorDetails } from './syncFailure';
 import { parseRepoPath } from '../../utils/gitPathParser';
 
 export type RepoAccessResult =
-  | { readonly kind: 'ok' }
+  | { readonly kind: 'ok'; readonly writeVerified: true }
+  | { readonly kind: 'write_unverified'; readonly message: string }
   | { readonly kind: 'no_access'; readonly message: string }
-  | { readonly kind: 'no_write'; readonly message: string }
-  | { readonly kind: 'saml_required'; readonly message: string }
-  | { readonly kind: 'rate_limited'; readonly message: string }
   | { readonly kind: 'transient'; readonly message: string };
 
 export class RepoAccessPreflightError extends Error {
   readonly name = 'RepoAccessPreflightError';
 
-  constructor(readonly result: Exclude<RepoAccessResult, { readonly kind: 'ok' }>) {
+  constructor(
+    readonly result: Exclude<RepoAccessResult, { readonly kind: 'ok' }>,
+    readonly canRetry: boolean = false,
+  ) {
     super(result.message);
   }
 }
@@ -41,18 +42,34 @@ function failure(kind: Exclude<RepoAccessResult['kind'], 'ok'>, message: string)
   return { kind, message };
 }
 
-function classifyResponse(status: number, details: RepoResponse): RepoAccessResult {
-  const classified = classifyGitHubSyncError({ message: details.message }, status);
+const RESPONSE_HEADER_NAMES = [
+  'x-github-sso',
+  'x-accepted-github-permissions',
+  'x-ratelimit-remaining',
+] as const;
+
+function captureResponseHeaders(headers: Headers): Record<string, string> {
+  const captured: Record<string, string> = {};
+  RESPONSE_HEADER_NAMES.forEach((name) => {
+    const value = headers.get(name);
+    if (value !== null) captured[name] = value;
+  });
+  return captured;
+}
+
+function acceptedPermissionsVerifyWrite(value: string): boolean {
+  return /\bcontents\s*[:=]\s*write\b/i.test(value);
+}
+
+function classifyResponse(errorDetails: ReturnType<typeof extractHttpErrorDetails>): RepoAccessResult {
+  const classified = classifyGitHubSyncError(errorDetails);
   switch (classified.kind) {
     case 'not_found':
     case 'authentication':
-      return failure('no_access', 'This GitHub repository is not accessible with the current account.');
     case 'saml':
-      return failure('saml_required', 'GitHub requires SAML SSO authorization for this repository.');
-    case 'rate_limit':
-      return failure('rate_limited', 'GitHub is rate limiting requests. Please try again later.');
     case 'permission':
-      return failure('no_write', 'The current GitHub account cannot write to this repository.');
+      return failure('no_access', 'This GitHub repository is not accessible with the current account.');
+    case 'rate_limit':
     case 'server':
     case 'network':
     case 'unknown':
@@ -65,7 +82,7 @@ function classifyResponse(status: number, details: RepoResponse): RepoAccessResu
   }
 }
 
-export async function checkGitHubRepoAccess(repoPath: string, token: string): Promise<RepoAccessResult> {
+export async function preflightGitHubRepoAccess(repoPath: string, token: string): Promise<RepoAccessResult> {
   const parsed = parseRepoPath(repoPath);
   if (!parsed) return failure('no_access', 'The GitHub repository path is invalid or inaccessible.');
 
@@ -77,21 +94,36 @@ export async function checkGitHubRepoAccess(repoPath: string, token: string): Pr
         Accept: 'application/vnd.github.v3+json',
       },
     });
-    let details: RepoResponse = {};
+    let responseBody: unknown;
     try {
-      details = responseDetails(await response.json());
+      responseBody = await response.json();
     } catch {
       if (response.ok) return failure('transient', 'GitHub repository access could not be verified right now.');
     }
 
+    const details = responseDetails(responseBody);
+    const errorDetails = extractHttpErrorDetails({
+      response: {
+        data: responseBody,
+        status: response.status,
+        headers: captureResponseHeaders(response.headers),
+      },
+    });
+
     if (response.ok) {
-      if (details.permissions?.push === false) {
-        return failure('no_write', 'The current GitHub account cannot write to this repository.');
+      const acceptedPermissions = errorDetails.headers?.['x-accepted-github-permissions'];
+      const writeVerified = acceptedPermissions !== undefined
+        ? acceptedPermissionsVerifyWrite(acceptedPermissions)
+        : details.permissions?.push === true;
+      if (writeVerified) {
+        return { kind: 'ok', writeVerified: true };
       }
-      return { kind: 'ok' };
+      return failure('write_unverified', 'Write access not verified. Do you want to add anyway?');
     }
-    return classifyResponse(response.status, details);
+    return classifyResponse(errorDetails);
   } catch {
     return failure('transient', 'GitHub repository access could not be verified right now.');
   }
 }
+
+export const checkGitHubRepoAccess = preflightGitHubRepoAccess;

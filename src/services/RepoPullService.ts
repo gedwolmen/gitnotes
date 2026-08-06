@@ -331,6 +331,7 @@ async function pullNotesFromRepo(
       if (item.type !== 'blob') return false;
       if (!item.path.startsWith('notes/')) return false;
       if (item.path.startsWith('notes/images/')) return false;
+      if (item.path.startsWith('thoughts/')) return false;
       const ext = item.path.split('.').pop()?.toLowerCase();
       return NOTE_EXTS.includes(ext as (typeof NOTE_EXTS)[number]);
     });

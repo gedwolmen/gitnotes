@@ -269,6 +269,23 @@ describe('NoteSyncQueueService', () => {
       expect(await NoteSyncQueueService.pendingCount()).toBe(0);
     });
 
+    test('drops a generic 403 failure using its structured status', async () => {
+      (syncNoteToGitHub as jest.Mock).mockResolvedValue({
+        success: false,
+        error: 'Permission denied',
+        status: 403,
+      });
+
+      await NoteSyncQueueService.enqueueNoteUpsert({
+        repo: 'r', branch: 'main', filePath: 'a', title: 'A', content: '', format: 'markdown',
+      });
+
+      const result = await NoteSyncQueueService.drain();
+
+      expect(result.remaining).toBe(0);
+      expect(await NoteSyncQueueService.pendingCount()).toBe(0);
+    });
+
     test('retains transient failures for retry', async () => {
       (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: false, error: '503 Service Unavailable' });
 

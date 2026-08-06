@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
@@ -120,39 +119,42 @@ export default function FileViewerScreen() {
   );
 
   return (
-    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
+    <SafeAreaView edges={['top']} className="flex-1" style={{ backgroundColor: colors.background }}>
+      <View
+        className="flex-row items-center px-2 py-2 border-b"
+        style={{ borderBottomWidth: 0.5, borderBottomColor: colors.border, backgroundColor: colors.surface }}
+      >
         <TouchableOpacity
           testID="file-viewer.icon-button.back"
           onPress={() => { HapticService.light(); navigation.goBack(); }}
-          style={styles.iconButton}
+          className="p-2 w-10"
         >
           <Ionicons name="arrow-back" size={24} color={colors.primary} />
         </TouchableOpacity>
-        <View style={styles.headerTextContainer}>
-          <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
+        <View className="flex-1 px-1">
+          <Text className="text-base font-semibold" style={{ color: colors.text }} numberOfLines={1}>
             {title || fileName}
           </Text>
-          <Text style={[styles.metaLine, { color: colors.textSecondary }]} numberOfLines={1}>
+          <Text className="text-[11px] mt-0.5" style={{ color: colors.textSecondary }} numberOfLines={1}>
             {[mode.toUpperCase(), formatBytes(size), branch ?? 'main'].filter(Boolean).join(' · ')}
           </Text>
         </View>
-        <View style={styles.iconButton} />
+        <View className="p-2 w-10" />
       </View>
 
       {error ? (
-        <View style={styles.center}>
+        <View className="flex-1 items-center justify-center p-6 gap-3">
           <Ionicons name="alert-circle-outline" size={48} color={colors.error} />
-          <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+          <Text className="text-sm text-center" style={{ color: colors.error }}>{error}</Text>
         </View>
       ) : content == null ? (
-        <View style={styles.center}>
+        <View className="flex-1 items-center justify-center p-6 gap-3">
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
         <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
+          className="flex-1"
+          contentContainerClassName="p-4 pb-10"
           showsVerticalScrollIndicator
         >
           {mode === 'markdown' ? (
@@ -178,10 +180,8 @@ export default function FileViewerScreen() {
             />
           ) : (
             <Text
-              style={[
-                mode === 'code' ? styles.codeText : styles.plainText,
-                { color: colors.text },
-              ]}
+              className={mode === 'code' ? 'text-[13px] leading-[18px] font-mono' : 'text-sm leading-5'}
+              style={{ color: colors.text }}
               selectable
             >
               {renderContent}
@@ -192,30 +192,3 @@ export default function FileViewerScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  iconButton: { padding: 8, width: 40 },
-  headerTextContainer: { flex: 1, paddingHorizontal: 4 },
-  title: { fontSize: 16, fontWeight: '600' },
-  metaLine: { fontSize: 11, marginTop: 2 },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    gap: 12,
-  },
-  errorText: { fontSize: 14, textAlign: 'center' },
-  scroll: { flex: 1 },
-  scrollContent: { padding: 16, paddingBottom: 40 },
-  plainText: { fontSize: 14, lineHeight: 20 },
-  codeText: { fontSize: 13, lineHeight: 18, fontFamily: 'Menlo' },
-});
