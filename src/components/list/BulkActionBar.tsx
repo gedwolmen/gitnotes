@@ -27,82 +27,44 @@ export function BulkActionBar({
   return (
     <View
       testID="bulk-action-bar.container"
+      className="absolute left-3 right-3 flex-row items-center gap-3 py-2.5 px-3 rounded-sm"
       style={[
-        styles.bar,
         {
           backgroundColor: colors.surface,
           borderColor: colors.border,
           bottom: bottomOffset,
+          borderWidth: StyleSheet.hairlineWidth,
+          shadowColor: '#000',
+          shadowOpacity: 0.12,
+          shadowRadius: 12,
+          shadowOffset: { width: 0, height: 4 },
+          elevation: 6,
         },
       ]}
     >
       <TouchableOpacity
         testID="bulk-action-bar.button.cancel"
-        style={styles.cancelBtn}
+        className="w-8 h-8 rounded-full items-center justify-center"
         onPress={onCancel}
         accessibilityLabel="Cancel selection"
       >
         <Ionicons name="close" size={18} color={colors.textSecondary} />
       </TouchableOpacity>
-      <Text style={[styles.count, { color: colors.text }]} numberOfLines={1}>
+      <Text className="flex-1 text-sm font-semibold" style={{ color: colors.text }} numberOfLines={1}>
         {count} {noun} selected
       </Text>
       <TouchableOpacity
         testID="bulk-action-bar.button.delete"
-        style={[styles.deleteBtn, { backgroundColor: colors.error }]}
+        className="flex-row items-center gap-1.5 px-3.5 py-2 rounded-sm"
+        style={{ backgroundColor: colors.error }}
         onPress={onDelete}
         accessibilityLabel={`Delete ${count} ${noun}`}
       >
         <Ionicons name="trash" size={16} color="#FFFFFF" />
-        <Text style={styles.deleteText}>Delete</Text>
+        <Text className="text-white text-sm font-semibold">Delete</Text>
       </TouchableOpacity>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  bar: {
-    position: 'absolute',
-    left: 12,
-    right: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 14,
-    borderWidth: StyleSheet.hairlineWidth,
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-  },
-  cancelBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  count: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  deleteBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
-  deleteText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-});
 
 export default BulkActionBar;

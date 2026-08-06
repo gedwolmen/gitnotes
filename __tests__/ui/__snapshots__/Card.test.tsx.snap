@@ -2,12 +2,9 @@
 
 exports[`Card snapshots non-interactive light 1`] = `
 <View
+  className="bg-surface rounded-lg"
   style={
     [
-      {
-        "backgroundColor": "#FFFFFF",
-        "borderRadius": 24,
-      },
       {
         "shadowColor": "#BFBFBF",
         "shadowOffset": {

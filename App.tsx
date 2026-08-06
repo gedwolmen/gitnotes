@@ -1,3 +1,4 @@
+import './global.css';
 import './src/polyfills';
 import './src/i18n';
 import 'react-native-gesture-handler';
@@ -16,6 +17,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { NoteProvider } from './src/contexts/NoteContext';
 import { ThemeProvider } from './src/contexts/ThemeContext';
+import { NativeWindThemeProvider } from './src/theme/nativewind';
 import { FolderProvider } from './src/contexts/FolderContext';
 import { ViewModeProvider } from './src/contexts/ViewModeContext';
 import { AccountsProvider } from './src/contexts/AccountsContext';
@@ -41,6 +43,7 @@ import { startForegroundWatcher } from './src/services/ForegroundSyncService';
 import { startScheduledLearningBackgroundTask } from './src/services/ScheduledLearningBackgroundService';
 import { loadForegroundSyncConfig } from './src/hooks/useForegroundSyncSettings';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { reconcileThoughtDumps } from './src/services/ai/thoughtDumpIndexing';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -93,6 +96,7 @@ export default function App() {
       console.warn('[App] foreground sync watcher start failed:', error);
     }
     void startScheduledLearningBackgroundTask();
+    void reconcileThoughtDumps().catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -120,11 +124,13 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <StatusBar style="auto" />
-        <OnboardingScreen
-          onComplete={handleOnboardingComplete}
-          onSkip={handleOnboardingSkip}
-        />
+        <NativeWindThemeProvider>
+          <StatusBar style="auto" />
+          <OnboardingScreen
+            onComplete={handleOnboardingComplete}
+            onSkip={handleOnboardingSkip}
+          />
+        </NativeWindThemeProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );
@@ -134,6 +140,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
     <SafeAreaProvider>
       <ThemeProvider>
+        <NativeWindThemeProvider>
         <AccountsProvider>
           <HostAuthProvider>
             <RepoProvider>
@@ -160,6 +167,7 @@ export default function App() {
             </RepoProvider>
           </HostAuthProvider>
         </AccountsProvider>
+        </NativeWindThemeProvider>
       </ThemeProvider>
     </SafeAreaProvider>
     </QueryClientProvider>

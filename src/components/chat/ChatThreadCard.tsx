@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { formatDistanceToNow } from 'date-fns';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -22,12 +22,12 @@ function ChatThreadCardImpl({ thread, onPress, onLongPress }: ChatThreadCardProp
 
   return (
     <TouchableOpacity activeOpacity={0.7} onPress={onPress} onLongPress={onLongPress}>
-      <Surface elevation="raised" radius="md" style={styles.container}>
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <Ionicons name="chatbubble-outline" size={18} color={colors.primary} style={styles.icon} />
+      <Surface elevation="raised" radius="md" className="p-3">
+        <View className="flex-1">
+          <View className="flex-row items-center mb-1">
+            <Ionicons name="chatbubble-outline" size={18} color={colors.primary} className="mr-2" />
             <Text
-              style={[styles.title, { color: colors.text, fontSize: typography.md }]}
+              className="flex-1 font-semibold text-md text-text"
               numberOfLines={1}
             >
               {thread.title}
@@ -36,18 +36,19 @@ function ChatThreadCardImpl({ thread, onPress, onLongPress }: ChatThreadCardProp
 
           {thread.preview && (
             <Text
-              style={[styles.preview, { color: colors.textSecondary, fontSize: typography.sm }]}
+              className="mb-2 text-sm text-text-secondary"
+              style={{ lineHeight: 18 }}
               numberOfLines={2}
             >
               {thread.preview}
             </Text>
           )}
 
-          <View style={styles.footer}>
-            <Text style={[styles.time, { color: colors.textSecondary, fontSize: typography.xs }]}>
+          <View className="flex-row justify-between items-center">
+            <Text className="text-xs text-text-secondary">
               {timeAgo}
             </Text>
-            <Text style={[styles.messageCount, { color: colors.primary, fontSize: typography.xs }]}>
+            <Text className="text-xs font-semibold text-primary">
               {thread.messageCount} messages
             </Text>
           </View>
@@ -58,39 +59,5 @@ function ChatThreadCardImpl({ thread, onPress, onLongPress }: ChatThreadCardProp
 }
 
 export const ChatThreadCard = memo(ChatThreadCardImpl);
-
-const styles = StyleSheet.create({
-  container: {
-    padding: 12,
-  },
-  content: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  icon: {
-    marginRight: 8,
-  },
-  title: {
-    flex: 1,
-    fontWeight: '600',
-  },
-  preview: {
-    marginBottom: 8,
-    lineHeight: 18,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  time: {},
-  messageCount: {
-    fontWeight: '600',
-  },
-});
 
 export default ChatThreadCard;

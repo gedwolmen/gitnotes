@@ -137,7 +137,11 @@
     "unavailable": "No disponible",
     "auto": "Auto",
     "confirm": "Confirmar",
-    "notSet": "No configurado"
+    "notSet": "No configurado",
+    "resetAIMemory": "Restablecer memoria de IA",
+    "resetAIMemoryConfirm": "Restablecer memoria de IA",
+    "resetAIMemoryMessage": "Los archivos de thought-dump y los chats se conservan. Solo se borra la memoria de la IA.",
+    "resetAIMemorySuccess": "Memoria de IA borrada"
   },
   "ai": {
     "availability": {
@@ -519,5 +523,15 @@
     "invalidTokenBody": "No se pudo autenticar con ese token. Comprueba el valor e inténtalo de nuevo.",
     "failedTitle": "No se pudo guardar el token",
     "failedBody": "Error desconocido"
+  },
+  "thoughtDump": {
+    "title": "Vaciado de pensamientos",
+    "placeholder": "¿Qué tienes en mente?",
+    "save": "Guardar",
+    "delete": "Eliminar",
+    "confirmDelete": "¿Eliminar este vaciado de pensamientos? No se puede deshacer.",
+    "empty": "Aún no hay vaciados de pensamientos",
+    "error": "Algo salió mal. Inténtalo de nuevo.",
+    "justNow": "ahora mismo"
   }
 }

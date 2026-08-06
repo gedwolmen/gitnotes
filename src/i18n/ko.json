@@ -137,7 +137,11 @@
     "unavailable": "사용할 수 없음",
     "auto": "자동",
     "confirm": "확인",
-    "notSet": "설정되지 않음"
+    "notSet": "설정되지 않음",
+    "resetAIMemory": "AI 메모리 재설정",
+    "resetAIMemoryConfirm": "AI 메모리 재설정",
+    "resetAIMemoryMessage": "Thought-dump 파일과 채팅은 유지됩니다. AI 메모리만 삭제됩니다.",
+    "resetAIMemorySuccess": "AI 메모리가 삭제되었습니다"
   },
   "ai": {
     "availability": {
@@ -519,5 +523,15 @@
     "invalidTokenBody": "해당 토큰으로 인증할 수 없습니다. 값을 확인하고 다시 시도하세요.",
     "failedTitle": "토큰을 저장할 수 없습니다",
     "failedBody": "알 수 없는 오류"
+  },
+  "thoughtDump": {
+    "title": "생각 덤프",
+    "placeholder": "무슨 생각을 하고 계신가요?",
+    "save": "저장",
+    "delete": "삭제",
+    "confirmDelete": "이 생각 덤프를 삭제하시겠습니까? 되돌릴 수 없습니다.",
+    "empty": "아직 생각 덤프가 없습니다",
+    "error": "문제가 발생했습니다. 다시 시도해 주세요.",
+    "justNow": "방금 전"
   }
 }

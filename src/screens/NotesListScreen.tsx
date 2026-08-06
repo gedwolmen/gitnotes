@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Alert, View, Text, StyleSheet, ActivityIndicator, RefreshControl, FlatList, TouchableOpacity } from 'react-native';
+import { Alert, View, Text, ActivityIndicator, RefreshControl, FlatList, TouchableOpacity } from 'react-native';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -420,14 +420,14 @@ export default function NotesListScreen() {
   // rely on the RefreshControl spinner instead of blocking the UI.
   if (isLoading && notes.length === 0) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+      <View className="flex-1 items-center justify-center" style={{ backgroundColor: colors.background }}>
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <SafeAreaView edges={[]} style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={[]} className="flex-1" style={{ backgroundColor: colors.background }}>
       {isDeleting ? <GitHubActivityIndicator /> : null}
       <View style={{ flex: 1 }}>
       <View style={{ paddingTop: headerHeight }}>
@@ -463,10 +463,10 @@ export default function NotesListScreen() {
       />
 
       {error ? (
-        <View style={[styles.errorBanner, { backgroundColor: colors.error + '20', borderLeftColor: colors.error }]}>
-          <Text style={[styles.errorText, { color: colors.error }]} numberOfLines={2}>{error}</Text>
-          <TouchableOpacity onPress={clearError} style={[styles.errorRetryBtn, { borderColor: colors.error }]}>
-            <Text style={[styles.errorRetryText, { color: colors.error }]}>{t('common.dismiss')}</Text>
+        <View className="mx-3 mb-1 p-2.5 rounded-sm border-l-4" style={{ backgroundColor: colors.error + '20', borderLeftColor: colors.error }}>
+          <Text className="text-xs flex-1" style={{ color: colors.error }} numberOfLines={2}>{error}</Text>
+          <TouchableOpacity onPress={clearError} className="ml-3 px-3 py-1.5 rounded-md border" style={{ borderColor: colors.error }}>
+            <Text className="text-xs font-semibold" style={{ color: colors.error }}>{t('common.dismiss')}</Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -567,7 +567,7 @@ export default function NotesListScreen() {
             >
               <Ionicons name={VIEW_MODE_ICONS[viewMode]} size={18} color={colors.textSecondary} />
             </IconButton>
-            <View style={styles.actionWithBadge}>
+            <View className="relative">
               <IconButton
                 size="sm"
                 testID="notes-list.icon-button.filters"
@@ -585,12 +585,12 @@ export default function NotesListScreen() {
                 />
               </IconButton>
               {activeFilterCount > 0 ? (
-                <View style={[styles.badge, { backgroundColor: colors.primary }]}>
-                  <Text style={styles.badgeText}>{activeFilterCount}</Text>
+                <View className="absolute top-0.5 right-0.5 min-w-3.5 h-3.5 px-0.5 rounded-full items-center justify-center" style={{ backgroundColor: colors.primary }}>
+                  <Text className="text-white font-bold" style={{ fontSize: 9 }}>{activeFilterCount}</Text>
                 </View>
               ) : null}
             </View>
-            <View style={styles.actionWithBadge}>
+            <View className="relative">
               <IconButton
                 size="sm"
                 testID="notes-list.icon-button.sync"
@@ -610,8 +610,8 @@ export default function NotesListScreen() {
                 )}
               </IconButton>
               {pendingSync > 0 ? (
-                <View style={[styles.badge, { backgroundColor: colors.primary }]}>
-                  <Text style={styles.badgeText}>{pendingSync}</Text>
+                <View className="absolute top-0.5 right-0.5 min-w-3.5 h-3.5 px-0.5 rounded-full items-center justify-center" style={{ backgroundColor: colors.primary }}>
+                  <Text className="text-white font-bold" style={{ fontSize: 9 }}>{pendingSync}</Text>
                 </View>
               ) : null}
             </View>
@@ -640,36 +640,4 @@ export default function NotesListScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorBanner: {
-    marginHorizontal: 12,
-    marginBottom: 4,
-    padding: 10,
-    borderRadius: 8,
-    borderLeftWidth: 4,
-  },
-  errorText: { fontSize: 13, flex: 1 },
-  errorRetryBtn: {
-    marginLeft: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  errorRetryText: { fontSize: 13, fontWeight: '600' },
-  actionWithBadge: { position: 'relative' },
-  badge: {
-    position: 'absolute',
-    top: 2,
-    right: 2,
-    minWidth: 14,
-    height: 14,
-    paddingHorizontal: 3,
-    borderRadius: 7,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  badgeText: { color: '#fff', fontSize: 9, fontWeight: '700' },
-});
+

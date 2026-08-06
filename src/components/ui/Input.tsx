@@ -37,8 +37,6 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(props, ref
       testID={surfaceTestID}
       style={[
         {
-          flexDirection: 'row',
-          alignItems: multiline ? 'flex-start' : 'center',
           paddingHorizontal: spacing[3],
           paddingVertical: multiline ? spacing[3] : spacing[2],
           minHeight: multiline ? multilineMinHeight : 44,
@@ -47,8 +45,9 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(props, ref
         },
         containerStyle,
       ]}
+      className="flex-row items-center"
     >
-      {leading && <View style={{ marginRight: spacing[2] }}>{leading}</View>}
+      {leading && <View className="mr-2">{leading}</View>}
       <TextInput
         ref={ref}
         multiline={multiline}
@@ -73,7 +72,7 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(props, ref
           inputStyle,
         ]}
       />
-      {trailing && <View style={{ marginLeft: spacing[2] }}>{trailing}</View>}
+      {trailing && <View className="ml-2">{trailing}</View>}
     </Surface>
   );
 });

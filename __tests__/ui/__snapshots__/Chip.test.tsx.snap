@@ -2,12 +2,9 @@
 
 exports[`Chip snapshots inactive + active: chip-active 1`] = `
 <View
+  className="bg-surface rounded-full"
   style={
     [
-      {
-        "backgroundColor": "#FFFFFF",
-        "borderRadius": 999,
-      },
       {
         "shadowColor": "#FFFFFF",
         "shadowOffset": {
@@ -72,12 +69,9 @@ exports[`Chip snapshots inactive + active: chip-active 1`] = `
 
 exports[`Chip snapshots inactive + active: chip-inactive 1`] = `
 <View
+  className="bg-surface rounded-full"
   style={
     [
-      {
-        "backgroundColor": "#FFFFFF",
-        "borderRadius": 999,
-      },
       {
         "shadowColor": "#BFBFBF",
         "shadowOffset": {

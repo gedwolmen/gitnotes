@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { StyleSheet, Dimensions } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { AccessibilityInfo, Dimensions, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, {
@@ -8,13 +8,21 @@ import Animated, {
   withSpring,
   runOnJS,
 } from 'react-native-reanimated';
-import { type NavigationProp, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAIStore } from '../../stores/aiStore';
+import { useAIHubStore } from '../../stores/aiHubStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import { HapticService } from '../../utils/haptics';
 import { Surface } from '../ui/Surface';
-import { RootStackParamList } from '../../navigation/types';
+import type { RootStackParamList } from '../../navigation/types';
+import {
+  FloatingAIHubMenu,
+  MENU_SPRING,
+  type HubItemId,
+  type MenuDirection,
+} from './FloatingAIHubMenu';
 
 const BUTTON_SIZE = 56;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -28,8 +36,11 @@ interface FloatingAIButtonProps {
 export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
   const { isEnabled } = useAIStore();
   const { colors } = useTheme();
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  const navigateToChatThreadList = () => navigation.navigate('ChatThreadList');
+  const [reduceMotionEnabled, setReduceMotionEnabled] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [horizontalDirection, setHorizontalDirection] = useState<MenuDirection>(-1);
+  const [verticalDirection, setVerticalDirection] = useState<MenuDirection>(-1);
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const initialX = SCREEN_WIDTH - BUTTON_SIZE - 24;
   const initialY = SCREEN_HEIGHT - BUTTON_SIZE - 100;
@@ -39,6 +50,23 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
   
   const savedTranslateX = useSharedValue(initialX);
   const savedTranslateY = useSharedValue(initialY);
+  const menuProgress = useSharedValue(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (isMounted) setReduceMotionEnabled(enabled);
+    });
+    const subscription = AccessibilityInfo.addEventListener(
+      'reduceMotionChanged',
+      setReduceMotionEnabled,
+    );
+
+    return () => {
+      isMounted = false;
+      subscription.remove();
+    };
+  }, []);
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY).then((pos) => {
@@ -56,11 +84,62 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
     });
   }, [translateX, translateY, savedTranslateX, savedTranslateY]);
 
+  useEffect(() => {
+    menuProgress.value = reduceMotionEnabled
+      ? menuOpen ? 1 : 0
+      : withSpring(menuOpen ? 1 : 0, MENU_SPRING);
+  }, [menuOpen, menuProgress, reduceMotionEnabled]);
+
   const savePosition = (x: number, y: number) => {
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ x, y })).catch(() => { return; });
   };
 
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+
+  const handleTap = useCallback(() => {
+    closeMenu();
+    HapticService.success();
+    useAIHubStore.getState().goNewChat(navigation);
+  }, [closeMenu, navigation]);
+
+  const handleLongPress = useCallback(() => {
+    HapticService.selection();
+    if (menuOpen) {
+      closeMenu();
+      return;
+    }
+
+    setHorizontalDirection(translateX.value < SCREEN_WIDTH / 2 ? 1 : -1);
+    setVerticalDirection(translateY.value < SCREEN_HEIGHT / 2 ? 1 : -1);
+    setMenuOpen(true);
+  }, [closeMenu, menuOpen, translateX, translateY]);
+
+  const handleMenuItemPress = useCallback((itemId: HubItemId) => {
+    setMenuOpen(false);
+    HapticService.selection();
+    const hub = useAIHubStore.getState();
+    switch (itemId) {
+      case 'new-chat':
+        hub.goNewChat(navigation);
+        return;
+      case 'chat-history':
+        hub.goChatHistory(navigation);
+        return;
+      case 'ai-settings':
+        hub.goAISettings(navigation);
+        return;
+      case 'thought-dump':
+        hub.goThoughtDump(navigation);
+        return;
+      default:
+        return itemId;
+    }
+  }, [navigation]);
+
   const panGesture = Gesture.Pan()
+    .onStart(() => {
+      runOnJS(closeMenu)();
+    })
     .onUpdate((event) => {
       translateX.value = savedTranslateX.value + event.translationX;
       translateY.value = savedTranslateY.value + event.translationY;
@@ -92,13 +171,6 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
       runOnJS(savePosition)(snapX, snapY);
     });
 
-  const tapGesture = Gesture.Tap().onEnd(() => {
-    runOnJS(HapticService.success)();
-    runOnJS(navigateToChatThreadList)();
-  });
-
-  const composedGesture = Gesture.Exclusive(panGesture, tapGesture);
-
   const animatedStyle = useAnimatedStyle(() => {
     return {
       transform: [
@@ -113,20 +185,55 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
   }
 
   return (
-    <Animated.View style={[styles.container, animatedStyle]}>
-      <GestureDetector gesture={composedGesture}>
-        <Animated.View>
-          <Surface
+    <>
+      {menuOpen && (
+        <Pressable
+          testID="floating-ai.hub.backdrop"
+          accessible={false}
+          onPress={closeMenu}
+          style={styles.backdrop}
+        />
+      )}
+      <Animated.View style={[styles.container, animatedStyle]} pointerEvents="box-none">
+        <FloatingAIHubMenu
+          menuOpen={menuOpen}
+          reduceMotionEnabled={reduceMotionEnabled}
+          horizontalDirection={horizontalDirection}
+          verticalDirection={verticalDirection}
+          progress={menuProgress}
+          primaryColor={colors.primary}
+          iconColor={colors.surface}
+          labelColor={colors.text}
+          surfaceColor={colors.elevated}
+          onItemPress={handleMenuItemPress}
+        />
+
+        <GestureDetector gesture={panGesture}>
+          <Pressable
             testID="floating-ai.button.navigate-chat"
-            elevation="raised"
-            radius="pill"
-            style={[styles.button, { backgroundColor: colors.primary }]}
+            accessibilityRole="button"
+            accessibilityLabel={menuOpen ? 'Close AI hub' : 'Start a new AI chat'}
+            accessibilityState={{ expanded: menuOpen }}
+            onPress={handleTap}
+            onLongPress={handleLongPress}
+            delayLongPress={450}
+            style={styles.button}
           >
-            <Ionicons name="sparkles" size={24} color="#FFFFFF" />
-          </Surface>
-        </Animated.View>
-      </GestureDetector>
-    </Animated.View>
+            {reduceMotionEnabled ? (
+              <Surface
+                elevation="raised"
+                radius="pill"
+                style={[styles.button, { backgroundColor: colors.primary }]}
+              >
+                <Ionicons name="sparkles" size={24} color="#FFFFFF" />
+              </Surface>
+            ) : (
+              <Ionicons name="sparkles" size={24} color={colors.surface} />
+            )}
+          </Pressable>
+        </GestureDetector>
+      </Animated.View>
+    </>
   );
 }
 
@@ -134,6 +241,13 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     zIndex: 9999,
+    width: BUTTON_SIZE,
+    height: BUTTON_SIZE,
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFill,
+    zIndex: 9998,
+    backgroundColor: 'rgba(0,0,0,0.18)',
   },
   button: {
     width: BUTTON_SIZE,

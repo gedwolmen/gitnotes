@@ -9,8 +9,6 @@ module.exports = function (api) {
   if (isProduction) {
     plugins.push(['transform-remove-console', { exclude: ['error', 'warn'] }]);
   }
-  // react-native-worklets/plugin must be the LAST plugin per the
-  // react-native-worklets / Reanimated 4 docs.
   plugins.push('react-native-worklets/plugin');
 
   return {

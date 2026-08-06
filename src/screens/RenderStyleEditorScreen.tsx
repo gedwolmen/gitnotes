@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TextInput,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
@@ -52,24 +51,26 @@ function ColorField({ label, value, onChange }: ColorFieldProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
 
   return (
-    <View style={styles.fieldRow}>
-      <Text style={[styles.fieldLabel, { color: colors.text }]}>{label}</Text>
-      <View style={styles.fieldRight}>
+    <View className="flex-row items-center justify-between px-4 py-2.5 gap-3">
+      <Text className="text-sm flex-1" style={{ color: colors.text }}>{label}</Text>
+      <View className="flex-row items-center gap-2">
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`pick color for ${label}`}
           onPress={() => setPickerOpen(true)}
-          style={({ pressed }) => [
-            styles.swatch,
-            {
-              backgroundColor: value || colors.background,
-              borderColor: colors.border,
-              opacity: pressed ? 0.7 : 1,
-            },
-          ]}
+          style={({ pressed }) => ({
+            width: 22,
+            height: 22,
+            borderRadius: 6,
+            borderWidth: 1,
+            backgroundColor: value || colors.background,
+            borderColor: colors.border,
+            opacity: pressed ? 0.7 : 1,
+          })}
         />
         <TextInput
-          style={[styles.fieldInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+          className="w-[110px] text-[13px] border rounded-lg px-2.5 py-1.5"
+          style={{ color: colors.text, borderColor: colors.border, backgroundColor: colors.background }}
           placeholder="#rrggbb"
           placeholderTextColor={colors.textSecondary}
           autoCapitalize="none"
@@ -173,29 +174,29 @@ export default function RenderStyleEditorScreen() {
   const sample = useMemo(() => sampleFor(format), [format]);
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+    <SafeAreaView edges={['top', 'bottom']} className="flex-1" style={{ backgroundColor: colors.background }}>
+      <View className="flex-row items-center justify-between px-4 py-3 border-b" style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}>
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>{formatLabel(format)}</Text>
+        <Text className="text-[17px] font-semibold" style={{ color: colors.text }}>{formatLabel(format)}</Text>
         <TouchableOpacity onPress={handleSave} disabled={isSaving || !dirty}>
           {isSaving ? (
             <ActivityIndicator color={colors.primary} />
           ) : (
-            <Text style={[styles.headerAction, { color: dirty ? colors.primary : colors.textSecondary }]}>Save</Text>
+            <Text className="text-[15px] font-semibold" style={{ color: dirty ? colors.primary : colors.textSecondary }}>Save</Text>
           )}
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Live preview</Text>
-        <View style={[styles.preview, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <ScrollView contentContainerClassName="pb-8">
+        <Text className="text-xs font-semibold uppercase tracking-wide px-4 mt-4 mb-2" style={{ color: colors.textSecondary, letterSpacing: 0.5 }}>Live preview</Text>
+        <View className="rounded-sm mx-3 p-4 border" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
           <MarkdownPreview value={sample} format={format} overrides={localOverrides} />
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Headings</Text>
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+        <Text className="text-xs font-semibold uppercase tracking-wide px-4 mt-4 mb-2" style={{ color: colors.textSecondary, letterSpacing: 0.5 }}>Headings</Text>
+        <View className="rounded-sm mx-3 py-1" style={{ backgroundColor: colors.surface }}>
           <ColorField
             label="H1 color"
             value={localOverrides.h1?.color}
@@ -213,8 +214,8 @@ export default function RenderStyleEditorScreen() {
           />
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Body</Text>
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+        <Text className="text-xs font-semibold uppercase tracking-wide px-4 mt-4 mb-2" style={{ color: colors.textSecondary, letterSpacing: 0.5 }}>Body</Text>
+        <View className="rounded-sm mx-3 py-1" style={{ backgroundColor: colors.surface }}>
           <ColorField
             label="Body text color"
             value={localOverrides.body?.color}
@@ -227,8 +228,8 @@ export default function RenderStyleEditorScreen() {
           />
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Code</Text>
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+        <Text className="text-xs font-semibold uppercase tracking-wide px-4 mt-4 mb-2" style={{ color: colors.textSecondary, letterSpacing: 0.5 }}>Code</Text>
+        <View className="rounded-sm mx-3 py-1" style={{ backgroundColor: colors.surface }}>
           <ColorField
             label="Code block bg"
             value={localOverrides.codeBlock?.background}
@@ -251,8 +252,8 @@ export default function RenderStyleEditorScreen() {
           />
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Blockquote / divider</Text>
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+        <Text className="text-xs font-semibold uppercase tracking-wide px-4 mt-4 mb-2" style={{ color: colors.textSecondary, letterSpacing: 0.5 }}>Blockquote / divider</Text>
+        <View className="rounded-sm mx-3 py-1" style={{ backgroundColor: colors.surface }}>
           <ColorField
             label="Blockquote bar color"
             value={localOverrides.blockquote?.bar}
@@ -270,8 +271,8 @@ export default function RenderStyleEditorScreen() {
           />
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Table</Text>
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+        <Text className="text-xs font-semibold uppercase tracking-wide px-4 mt-4 mb-2" style={{ color: colors.textSecondary, letterSpacing: 0.5 }}>Table</Text>
+        <View className="rounded-sm mx-3 py-1" style={{ backgroundColor: colors.surface }}>
           <ColorField
             label="Border color"
             value={localOverrides.table?.border}
@@ -289,8 +290,8 @@ export default function RenderStyleEditorScreen() {
           />
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Math</Text>
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+        <Text className="text-xs font-semibold uppercase tracking-wide px-4 mt-4 mb-2" style={{ color: colors.textSecondary, letterSpacing: 0.5 }}>Math</Text>
+        <View className="rounded-sm mx-3 py-1" style={{ backgroundColor: colors.surface }}>
           <ColorField
             label="Text color"
             value={localOverrides.math?.textColor}
@@ -303,8 +304,8 @@ export default function RenderStyleEditorScreen() {
           />
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Frontmatter</Text>
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+        <Text className="text-xs font-semibold uppercase tracking-wide px-4 mt-4 mb-2" style={{ color: colors.textSecondary, letterSpacing: 0.5 }}>Frontmatter</Text>
+        <View className="rounded-sm mx-3 py-1" style={{ backgroundColor: colors.surface }}>
           <ColorField
             label="Background"
             value={localOverrides.frontmatter?.bg}
@@ -322,8 +323,8 @@ export default function RenderStyleEditorScreen() {
           />
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Checkbox</Text>
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+        <Text className="text-xs font-semibold uppercase tracking-wide px-4 mt-4 mb-2" style={{ color: colors.textSecondary, letterSpacing: 0.5 }}>Checkbox</Text>
+        <View className="rounded-sm mx-3 py-1" style={{ backgroundColor: colors.surface }}>
           <ColorField
             label="Checked color"
             value={localOverrides.checkbox?.checkedColor}
@@ -341,8 +342,8 @@ export default function RenderStyleEditorScreen() {
           />
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Image caption</Text>
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+        <Text className="text-xs font-semibold uppercase tracking-wide px-4 mt-4 mb-2" style={{ color: colors.textSecondary, letterSpacing: 0.5 }}>Image caption</Text>
+        <View className="rounded-sm mx-3 py-1" style={{ backgroundColor: colors.surface }}>
           <ColorField
             label="Caption color"
             value={localOverrides.imageCaption?.color}
@@ -355,8 +356,8 @@ export default function RenderStyleEditorScreen() {
           />
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Wiki link</Text>
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+        <Text className="text-xs font-semibold uppercase tracking-wide px-4 mt-4 mb-2" style={{ color: colors.textSecondary, letterSpacing: 0.5 }}>Wiki link</Text>
+        <View className="rounded-sm mx-3 py-1" style={{ backgroundColor: colors.surface }}>
           <ColorField
             label="Link color"
             value={localOverrides.wikiLink?.color}
@@ -364,8 +365,8 @@ export default function RenderStyleEditorScreen() {
           />
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Syntax highlight</Text>
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+        <Text className="text-xs font-semibold uppercase tracking-wide px-4 mt-4 mb-2" style={{ color: colors.textSecondary, letterSpacing: 0.5 }}>Syntax highlight</Text>
+        <View className="rounded-sm mx-3 py-1" style={{ backgroundColor: colors.surface }}>
           <ColorField
             label="Keyword"
             value={localOverrides.syntaxHighlight?.keyword}
@@ -393,51 +394,20 @@ export default function RenderStyleEditorScreen() {
           />
         </View>
 
-        <TouchableOpacity style={[styles.resetButton, { borderColor: colors.border }]} onPress={handleReset}>
+        <TouchableOpacity
+          className="flex-row items-center justify-center gap-2 mx-3 mt-4 py-3 rounded-sm border"
+          style={{ borderColor: colors.border }}
+          onPress={handleReset}
+        >
           <Ionicons name="refresh-outline" size={16} color={colors.error} />
-          <Text style={[styles.resetButtonText, { color: colors.error }]}>Reset {formatLabel(format)} to defaults</Text>
+          <Text className="text-sm font-semibold" style={{ color: colors.error }}>Reset {formatLabel(format)} to defaults</Text>
         </TouchableOpacity>
 
-        {error ? <Text style={[styles.error, { color: colors.error }]}>{error}</Text> : null}
-        <Text style={[styles.helperText, { color: colors.textSecondary }]}>
+        {error ? <Text className="text-xs px-4 pt-2" style={{ color: colors.error }}>{error}</Text> : null}
+        <Text className="text-xs leading-[18px] px-4 pt-3" style={{ color: colors.textSecondary }}>
           Save pushes settings/render.json to {binding ? `${binding.owner}/${binding.name}` : 'the bound repo'}. Other devices pick it up on next launch.
         </Text>
       </ScrollView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  headerTitle: { fontSize: 17, fontWeight: '600' },
-  headerAction: { fontSize: 15, fontWeight: '600' },
-  scrollContent: { paddingBottom: 32 },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    paddingHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  section: { borderRadius: 12, marginHorizontal: 12, paddingVertical: 4 },
-  preview: { borderRadius: 12, marginHorizontal: 12, padding: 16, borderWidth: 1 },
-  fieldRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10, gap: 12 },
-  fieldLabel: { fontSize: 14, flex: 1 },
-  fieldRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  swatch: { width: 22, height: 22, borderRadius: 6, borderWidth: 1 },
-  fieldInput: { width: 110, fontSize: 13, borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
-  resetButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginHorizontal: 12, marginTop: 16, paddingVertical: 12, borderRadius: 12, borderWidth: 1 },
-  resetButtonText: { fontSize: 14, fontWeight: '600' },
-  helperText: { fontSize: 12, lineHeight: 18, paddingHorizontal: 16, paddingTop: 12 },
-  error: { fontSize: 12, paddingHorizontal: 16, paddingTop: 8 },
-});

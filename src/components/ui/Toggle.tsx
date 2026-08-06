@@ -53,10 +53,10 @@ export function Toggle(props: ToggleProps) {
         style={{
           width: TRACK_WIDTH,
           height: TRACK_HEIGHT,
-          justifyContent: 'center',
           padding: 4,
           backgroundColor: colors.surfaceSecondary,
         }}
+        className="justify-center"
       >
         <Animated.View
           pointerEvents="none"

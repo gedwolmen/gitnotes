@@ -12,6 +12,7 @@ module.exports = {
   ],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   moduleNameMapper: {
+    '\\.(css)$': '<rootDir>/__mocks__/styleMock.js',
     '^expo-blur$': '<rootDir>/__mocks__/expo-blur.ts',
     '^expo-file-system/legacy$': '<rootDir>/__mocks__/expo-file-system-legacy.ts',
     '^expo-secure-store$': '<rootDir>/__mocks__/expo-secure-store.ts',
@@ -19,10 +20,9 @@ module.exports = {
   setupFiles: ['<rootDir>/jest.setup.ts'],
   testPathIgnorePatterns: [
     '/node_modules/',
-    '/.worktrees/',
   ],
   transformIgnorePatterns: [
-    'node_modules/(?!(react-native|@react-native|@react-navigation|expo|expo-[^/]+|@expo|react-native-reanimated|@shopify)/)',
+    'node_modules/(?!(react-native|@react-native|@react-navigation|expo|expo-[^/]+|@expo|react-native-reanimated|@shopify|nativewind|react-native-css|@rn-primitives|class-variance-authority|tailwind-merge|tailwindcss-animate)/)',
   ],
   collectCoverage: true,
   coveragePathIgnorePatterns: [

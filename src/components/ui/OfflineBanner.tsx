@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
 
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -12,27 +12,12 @@ export function OfflineBanner() {
 
   return (
     <View
-      style={[
-        styles.banner,
-        { backgroundColor: `${colors.error}20`, borderColor: `${colors.error}33` },
-      ]}
+      className="mx-4 mb-3 px-3.5 py-2.5 rounded-[14px] border"
+      style={{ backgroundColor: `${colors.error}20`, borderColor: `${colors.error}33` }}
     >
-      <Text style={[styles.text, { color: colors.error }]}>You're offline — changes won't sync</Text>
+      <Text className="text-sm font-semibold" style={{ color: colors.error }}>
+        You're offline — changes won't sync
+      </Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  banner: {
-    marginHorizontal: 16,
-    marginBottom: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  text: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-});

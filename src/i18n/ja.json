@@ -137,7 +137,11 @@
     "unavailable": "利用不可",
     "auto": "自動",
     "confirm": "確認",
-    "notSet": "未設定"
+    "notSet": "未設定",
+    "resetAIMemory": "AI メモリをリセット",
+    "resetAIMemoryConfirm": "AI メモリをリセット",
+    "resetAIMemoryMessage": "ソートダンプファイルとチャットは保持されます。AI メモリのみがクリアされます。",
+    "resetAIMemorySuccess": "AI メモリがクリアされました"
   },
   "ai": {
     "availability": {
@@ -519,5 +523,15 @@
     "invalidTokenBody": "そのトークンで認証できませんでした。値を確認して再試行してください。",
     "failedTitle": "トークンを保存できませんでした",
     "failedBody": "不明なエラー"
+  },
+  "thoughtDump": {
+    "title": "思考ダンプ",
+    "placeholder": "何を考えていますか？",
+    "save": "保存",
+    "delete": "削除",
+    "confirmDelete": "この思考ダンプを削除しますか？元に戻すことはできません。",
+    "empty": "思考ダンプはまだありません",
+    "error": "エラーが発生しました。もう一度お試しください。",
+    "justNow": "たった今"
   }
 }

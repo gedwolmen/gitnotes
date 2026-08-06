@@ -4,6 +4,7 @@ import { GitHubService } from './GitHubService';
 import { StorageService } from './StorageService';
 import { NoteSyncQueueService } from './NoteSyncQueueService';
 import { pullAllFromRepos } from './RepoPullService';
+import { reconcileThoughtDumps } from './ai/thoughtDumpIndexing';
 
 /**
  * Foreground auto-pull driver: pulls every tracked repo when the app becomes
@@ -139,6 +140,9 @@ async function runPull(reason: string): Promise<void> {
     if (__DEV__) {
       console.log(`[ForegroundSync] pull (${reason}) ok in ${Date.now() - startedAt}ms`);
     }
+    void reconcileThoughtDumps().catch((err) => {
+      if (__DEV__) console.warn('[ForegroundSync] thought dump reconcile failed:', err);
+    });
   } catch (error) {
     console.warn(`[ForegroundSync] pull (${reason}) failed after ${Date.now() - startedAt}ms:`, error);
   } finally {

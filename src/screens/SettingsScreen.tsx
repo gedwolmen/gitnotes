@@ -38,7 +38,6 @@ import { ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../compone
 import { SettingsContent } from '../components/settings/SettingsContent';
 import { SettingsModals } from '../components/settings/SettingsModals';
 import { CloneProgressModal, type CloneProgress } from '../components/settings/CloneProgressModal';
-import { settingsStyles as styles } from '../components/settings/settingsStyles';
 import type { GitRepository } from '../services/GitService';
 import { useTranslation } from 'react-i18next';
 import { RepoAccessPreflightError } from '../services/git/repoAccessPreflight';
@@ -649,7 +648,7 @@ export default function SettingsScreen() {
   const chatStorageLabel = chatRepoName ? (chatRepoOwner ? `${chatRepoOwner}/${chatRepoName}` : chatRepoName) : 'Not set';
 
   return (
-    <SafeAreaView edges={[]} style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={[]} className="flex-1" style={{ backgroundColor: colors.background }}>
       <View style={{ flex: 1 }}>
       <SettingsContent
         colors={colors}

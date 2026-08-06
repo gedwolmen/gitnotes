@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Pressable, LayoutChangeEvent } from 'react-native';
+import { View, Text, TouchableOpacity, Dimensions, Pressable, LayoutChangeEvent } from 'react-native';
 import { Canvas, Skia, Path } from '@shopify/react-native-skia';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -466,14 +466,14 @@ export default function GraphViewScreen() {
   }));
 
   return (
-    <SafeAreaView edges={[]} style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={[]} className="flex-1" style={{ backgroundColor: colors.background }}>
       <ScreenHeader
         title={t('notes.graphView')}
         onBack={handleCloseScreen}
       />
 
       {notes.length > 0 && (
-        <View style={[styles.searchContainer, { backgroundColor: colors.surface }]}>
+        <View className="px-4 py-2" style={{ backgroundColor: colors.surface }}>
           <SearchBar
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -482,20 +482,20 @@ export default function GraphViewScreen() {
         </View>
       )}
 
-      <View style={styles.content} onLayout={handleContainerLayout}>
+      <View className="flex-1" onLayout={handleContainerLayout}>
         {notes.length === 0 ? (
-          <View style={styles.emptyContainer}>
+          <View className="flex-1 items-center justify-center p-8">
             <Ionicons name="git-network-outline" size={64} color={colors.textSecondary} />
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+            <Text className="text-lg font-semibold mt-4" style={{ color: colors.textSecondary }}>
               {t('notes.noNotesToDisplay')}
             </Text>
-            <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+            <Text className="text-sm text-center mt-2" style={{ color: colors.textSecondary }}>
               {t('notes.createWithWikiLinksGraph')}
             </Text>
           </View>
         ) : (
           <GestureDetector gesture={composedGesture}>
-            <Animated.View style={[styles.canvasWrapper, animatedStyle]}>
+            <Animated.View className="flex-1" style={animatedStyle}>
               <View style={{ width: canvasWidth, height: canvasHeight }}>
                 <Canvas style={{ width: canvasWidth, height: canvasHeight }}>
                   <Path
@@ -518,38 +518,55 @@ export default function GraphViewScreen() {
                       onPress={() => handleNodePress(node.id)}
                       onLongPress={() => handleNodeLongPress(node)}
                       onPressIn={() => handleNodeDragStart(node.id)}
-                      style={[
-                        styles.nodeCard,
-                        {
-                          left: node.x - dims.width / 2,
-                          top: node.y - dims.height / 2,
-                          width: dims.width,
-                          height: dims.height,
-                          opacity: nodeAlpha,
-                          borderColor: isHighlighted ? colors.primary : getNodeColor(node),
-                          backgroundColor: colors.surface,
-                        },
-                      ]}
+                      style={{
+                        position: 'absolute',
+                        left: node.x - dims.width / 2,
+                        top: node.y - dims.height / 2,
+                        width: dims.width,
+                        height: dims.height,
+                        opacity: nodeAlpha,
+                        borderRadius: 12,
+                        borderWidth: 2,
+                        padding: 10,
+                        borderColor: isHighlighted ? colors.primary : getNodeColor(node),
+                        backgroundColor: colors.surface,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.25,
+                        shadowRadius: 4,
+                        elevation: 5,
+                      }}
                     >
-                      <Text style={[styles.nodeCardTitle, { color: colors.text }]} numberOfLines={1}>
+                      <Text className="text-[13px] font-bold mb-1" style={{ color: colors.text }} numberOfLines={1}>
                         {node.note.title}
                       </Text>
-                      <Text style={[styles.nodeCardContent, { color: colors.textSecondary }]} numberOfLines={isExpanded ? 10 : 3}>
+                      <Text className="text-[11px] leading-[15px] flex-1" style={{ color: colors.textSecondary }} numberOfLines={isExpanded ? 10 : 3}>
                         {dims.displayContent}
                       </Text>
                       {dims.isLong && (
                         <TouchableOpacity
-                          style={[styles.expandButton, { backgroundColor: getNodeColor(node) }]}
+                          className="self-end px-2 py-1 rounded-lg mt-1"
+                          style={{ backgroundColor: getNodeColor(node) }}
                           onPress={() => toggleNodeExpanded(node.id)}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
-                          <Text style={styles.expandButtonText}>
+                          <Text className="text-white text-[11px] font-bold">
                             {isExpanded ? '▲' : '▼'}
                           </Text>
                         </TouchableOpacity>
                       )}
-                      <View style={[styles.nodeBadge, { backgroundColor: colors.surface }]}>
-                        <Text style={[styles.nodeBadgeText, { color: colors.text }]}>
+                      <View
+                        className="absolute -top-2 -right-2 min-w-[20px] h-5 rounded-full items-center justify-center px-1 border-2"
+                        style={{
+                          backgroundColor: colors.surface,
+                          shadowColor: '#000',
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.2,
+                          shadowRadius: 2,
+                          elevation: 3,
+                        }}
+                      >
+                        <Text className="text-[10px] font-bold" style={{ color: colors.text }}>
                           {node.connections.size}
                         </Text>
                       </View>
@@ -562,164 +579,54 @@ export default function GraphViewScreen() {
         )}
 
         {selectedNode && (
-          <View style={[styles.nodeInfo, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <View style={styles.nodeInfoHeader}>
-              <View style={[styles.nodeColorDot, { backgroundColor: getNodeColor(selectedNode) }]} />
-              <Text style={[styles.nodeTitle, { color: colors.text }]} numberOfLines={1}>
+          <View
+            className="absolute bottom-2 left-4 right-4 p-4 rounded-2xl border"
+            style={{
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.15,
+              shadowRadius: 8,
+              elevation: 5,
+            }}
+          >
+            <View className="flex-row items-center gap-2.5">
+              <View className="w-3 h-3 rounded-full" style={{ backgroundColor: getNodeColor(selectedNode) }} />
+              <Text className="text-[17px] font-bold flex-1" style={{ color: colors.text }} numberOfLines={1}>
                 {selectedNode.note.title}
               </Text>
             </View>
-            <Text style={[styles.nodeMeta, { color: colors.textSecondary }]}>
+            <Text className="text-[13px] mt-1.5 ml-[22px]" style={{ color: colors.textSecondary }}>
               {selectedNode.connections.size} connection{selectedNode.connections.size !== 1 ? 's' : ''}
             </Text>
-            <View style={styles.nodeInfoActions}>
+            <View className="flex-row gap-2.5 mt-3.5">
               <TouchableOpacity
-                style={[styles.openButton, { backgroundColor: colors.primary }]}
+                className="flex-1 py-3 px-5 rounded-[10px] items-center"
+                style={{ backgroundColor: colors.primary }}
                 onPress={handleOpenNote}
               >
-                <Text style={styles.openButtonText}>Open Note</Text>
+                <Text className="text-white font-bold text-[15px]">Open Note</Text>
               </TouchableOpacity>
             </View>
           </View>
         )}
       </View>
 
-      <View style={[styles.legend, { backgroundColor: colors.surface }]}>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
-          <Text style={[styles.legendText, { color: colors.textSecondary }]}>Notes</Text>
+      <View className="flex-row items-center justify-center py-2 px-4 gap-3" style={{ backgroundColor: colors.surface }}>
+        <View className="flex-row items-center gap-1.5">
+          <View className="w-2.5 h-2.5 rounded-[5px]" style={{ backgroundColor: colors.primary }} />
+          <Text className="text-xs" style={{ color: colors.textSecondary }}>Notes</Text>
         </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendLine, { backgroundColor: colors.border }]} />
-          <Text style={[styles.legendText, { color: colors.textSecondary }]}>Links</Text>
+        <View className="flex-row items-center gap-1.5">
+          <View className="w-5 h-0.5" style={{ backgroundColor: colors.border }} />
+          <Text className="text-xs" style={{ color: colors.textSecondary }}>Links</Text>
         </View>
-        <Text style={[styles.hintText, { color: colors.textSecondary }]}>·</Text>
-        <Text style={[styles.hintText, { color: colors.textSecondary }]}>
+        <Text className="text-[11px]" style={{ color: colors.textSecondary }}>·</Text>
+        <Text className="text-[11px]" style={{ color: colors.textSecondary }}>
           Drag nodes to move them
         </Text>
       </View>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  closeButton: { padding: 8 },
-  content: { flex: 1 },
-  searchContainer: { paddingHorizontal: 16, paddingVertical: 8 },
-  canvasWrapper: { flex: 1 },
-  nodeCard: {
-    position: 'absolute',
-    borderRadius: 12,
-    borderWidth: 2,
-    padding: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  nodeCardTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  nodeCardContent: {
-    fontSize: 11,
-    lineHeight: 15,
-    flex: 1,
-  },
-  expandButton: {
-    alignSelf: 'flex-end',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    marginTop: 4,
-  },
-  expandButtonText: {
-    color: '#ffffff',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  nodeBadge: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 4,
-    borderWidth: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 3,
-  },
-  nodeBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-  },
-  emptyText: { fontSize: 18, fontWeight: '600', marginTop: 16 },
-  emptySubtext: { fontSize: 14, textAlign: 'center', marginTop: 8 },
-  nodeInfo: {
-    position: 'absolute',
-    bottom: 8,
-    left: 16,
-    right: 16,
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  nodeInfoHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  nodeColorDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  nodeTitle: { fontSize: 17, fontWeight: '700', flex: 1 },
-  nodeMeta: { fontSize: 13, marginTop: 6, marginLeft: 22 },
-  nodeInfoActions: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 14,
-  },
-  openButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  openButtonText: { color: '#ffffff', fontWeight: '700', fontSize: 15 },
-  legend: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    gap: 12,
-  },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  legendDot: { width: 10, height: 10, borderRadius: 5 },
-  legendLine: { width: 20, height: 2 },
-  legendText: { fontSize: 12 },
-  hintText: { fontSize: 11 },
-});

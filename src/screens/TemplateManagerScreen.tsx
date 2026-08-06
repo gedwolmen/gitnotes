@@ -25,7 +25,6 @@ import { TemplateEditorModal } from '../components/templates/TemplateEditorModal
 import { TemplateListItem } from '../components/templates/TemplateListItem';
 import { TemplatesEmptyState } from '../components/templates/TemplatesEmptyState';
 import { DEFAULT_ICON } from '../components/templates/templateManagerShared';
-import { styles } from '../components/templates/templateManagerStyles';
 import { useTranslation } from 'react-i18next';
 
 export default function TemplateManagerScreen() {
@@ -240,10 +239,11 @@ export default function TemplateManagerScreen() {
   const customCount = customTemplates.length;
 
   return (
-    <SafeAreaView edges={['bottom']} style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={['bottom']} className="flex-1" style={{ backgroundColor: colors.background }}>
       <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: headerHeight }]}
+        className="flex-1"
+        contentContainerClassName="p-4 pb-10 gap-2.5 flex-grow"
+        style={{ paddingTop: headerHeight }}
         keyboardShouldPersistTaps="handled"
         refreshControl={
           templatesRepoPref ? (
@@ -254,11 +254,12 @@ export default function TemplateManagerScreen() {
         <TouchableOpacity
           testID="template-manager.button.create"
           onPress={handleOpenCreate}
-          style={[styles.createCta, { backgroundColor: colors.primary }]}
+          className="flex-row items-center justify-center py-3 rounded-sm gap-1.5 mb-2"
+          style={{ backgroundColor: colors.primary }}
           activeOpacity={0.8}
         >
           <Ionicons name="add" size={18} color="#fff" />
-          <Text style={styles.createCtaText}>New template</Text>
+          <Text className="text-white text-[15px] font-semibold">New template</Text>
         </TouchableOpacity>
 
         {allTemplates.length === 0

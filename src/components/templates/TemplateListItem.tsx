@@ -4,7 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '../../contexts/ThemeContext';
 import { NoteTemplate } from '../../services/TemplateService';
-import { styles } from './templateManagerStyles';
 
 interface TemplateListItemProps {
   template: NoteTemplate;
@@ -20,25 +19,26 @@ export function TemplateListItem({ template, pinned, onTogglePin, onEdit, onDele
   return (
     <View
       testID={`template-list-item.button.press-${template.id}`}
-      style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
+      className="flex-row items-center p-3 rounded-sm border gap-3"
+      style={{ backgroundColor: colors.surface, borderColor: colors.border }}
     >
-      <View style={[styles.iconWrap, { backgroundColor: colors.primary + '20' }]}>
+      <View className="w-9 h-9 rounded-[10px] items-center justify-center" style={{ backgroundColor: colors.primary + '20' }}>
         <Ionicons name={template.icon} size={20} color={colors.primary} />
       </View>
-      <View style={styles.rowMeta}>
-        <Text style={[styles.rowName, { color: colors.text }]} numberOfLines={1}>
+      <View className="flex-1 min-w-0">
+        <Text className="text-[15px] font-semibold" style={{ color: colors.text }} numberOfLines={1}>
           {template.name}
         </Text>
-        <Text style={[styles.rowDesc, { color: colors.textSecondary }]} numberOfLines={1}>
+        <Text className="text-xs mt-0.5" style={{ color: colors.textSecondary }} numberOfLines={1}>
           {template.isCustom ? 'Custom' : 'Built-in'}
           {template.description ? ` · ${template.description}` : ''}
         </Text>
       </View>
-      <View style={styles.rowActions}>
+      <View className="flex-row items-center gap-1">
         <TouchableOpacity
           testID={`template-list-item.icon-button.pin-${template.id}`}
           onPress={() => onTogglePin(template)}
-          style={styles.actionBtn}
+          className="p-2"
           accessibilityLabel={pinned ? 'Unpin template' : 'Pin template'}
         >
           <Ionicons
@@ -52,7 +52,7 @@ export function TemplateListItem({ template, pinned, onTogglePin, onEdit, onDele
             <TouchableOpacity
               testID={`template-list-item.icon-button.edit-${template.id}`}
               onPress={() => onEdit(template)}
-              style={styles.actionBtn}
+              className="p-2"
               accessibilityLabel="Edit template"
             >
               <Ionicons name="create-outline" size={20} color={colors.textSecondary} />
@@ -60,7 +60,7 @@ export function TemplateListItem({ template, pinned, onTogglePin, onEdit, onDele
             <TouchableOpacity
               testID={`template-list-item.icon-button.delete-${template.id}`}
               onPress={() => onDelete(template)}
-              style={styles.actionBtn}
+              className="p-2"
               accessibilityLabel="Delete template"
             >
               <Ionicons name="trash-outline" size={20} color={colors.error} />

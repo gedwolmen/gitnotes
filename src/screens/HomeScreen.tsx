@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Pressable, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -252,10 +252,10 @@ export default function HomeScreen() {
   );
 
   return (
-    <SafeAreaView edges={[]} style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: headerHeight, paddingBottom: tabBarHeight + 20 }]} showsVerticalScrollIndicator={false}>
-      <View style={styles.bentoGrid}>
-        <View style={styles.bentoRow}>
+    <SafeAreaView edges={[]} className="flex-1" style={{ backgroundColor: colors.background }}>
+      <ScrollView className="flex-1" contentContainerStyle={{ padding: 20, paddingTop: headerHeight, paddingBottom: tabBarHeight + 20 }} showsVerticalScrollIndicator={false}>
+      <View className="gap-3 mt-2 mb-6">
+        <View className="flex-row items-stretch gap-3 overflow-hidden">
           <Pressable
             testID="home.button.create-note"
             onPress={handleCreateNote}
@@ -265,19 +265,18 @@ export default function HomeScreen() {
               setShowFormatPicker(true);
             }}
             style={({ pressed }) => [
-              styles.bentoHero,
-              { backgroundColor: colors.primary, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
+              { flex: 1, minWidth: 0, height: 130, borderRadius: 20, padding: 16, overflow: 'hidden', justifyContent: 'flex-end', backgroundColor: colors.primary, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
             ]}
           >
-            <View style={styles.bentoHeroBadge}>
+            <View className="absolute top-4 left-4 w-9 h-9 rounded-full bg-white items-center justify-center">
               <Ionicons name="document-text" size={18} color={colors.primary} />
             </View>
-            <View style={[styles.bentoHeroBgIcon, { top: -50, right: -50, opacity: 0.3 }]}>
+            <View className="absolute" style={{ top: -50, right: -50, opacity: 0.3 }}>
               <Ionicons name="document-text" size={120} color="#FFFFFF" />
             </View>
-            <View style={styles.bentoHeroContent}>
-              <Text style={styles.bentoHeroTitle}>{t('notes.newNote')}</Text>
-              <Text style={styles.bentoHeroSubtitle}>{t('home.bento.blankNote')}</Text>
+            <View className="gap-1">
+              <Text className="text-xl font-bold text-white" style={{ letterSpacing: -0.3 }}>{t('notes.newNote')}</Text>
+              <Text className="text-xs font-medium text-white opacity-80">{t('home.bento.blankNote')}</Text>
             </View>
           </Pressable>
 
@@ -285,63 +284,60 @@ export default function HomeScreen() {
             testID="home.button.open-journal"
             onPress={handleOpenTodaysJournal}
             style={({ pressed }) => [
-              styles.bentoHero,
-              { backgroundColor: colors.primary, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
+              { flex: 1, minWidth: 0, height: 130, borderRadius: 20, padding: 16, overflow: 'hidden', justifyContent: 'flex-end', backgroundColor: colors.primary, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
             ]}
           >
-            <View style={styles.bentoHeroBadge}>
+            <View className="absolute top-4 left-4 w-9 h-9 rounded-full bg-white items-center justify-center">
               <Ionicons name="journal-outline" size={18} color={colors.primary} />
             </View>
-            <View style={[styles.bentoHeroBgIcon, { top: -50, right: -50, opacity: 0.3 }]}>
+            <View className="absolute" style={{ top: -50, right: -50, opacity: 0.3 }}>
               <Ionicons name="journal-outline" size={120} color="#FFFFFF" />
             </View>
-            <View style={styles.bentoHeroContent}>
-              <Text style={styles.bentoHeroTitle} numberOfLines={1}>
+            <View className="gap-1">
+              <Text className="text-xl font-bold text-white" style={{ letterSpacing: -0.3 }} numberOfLines={1}>
                 {hasTodaysJournal ? t('home.bento.todaysJournal') : t('home.bento.newJournal')}
               </Text>
-              <Text style={styles.bentoHeroSubtitle} numberOfLines={1}>
+              <Text className="text-xs font-medium text-white opacity-80" numberOfLines={1}>
                 {todaysJournalTitle.replace('Journal ', '')}
               </Text>
             </View>
           </Pressable>
         </View>
 
-        <View style={styles.bentoRow}>
+        <View className="flex-row items-stretch gap-3 overflow-hidden">
           <Pressable
             testID="home.button.open-templates"
             onPress={handleOpenTemplates}
             style={({ pressed }) => [
-              styles.bentoTile,
-              { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
+              { flex: 1, height: 130, borderRadius: 20, paddingLeft: 16, paddingRight: 16, paddingBottom: 16, paddingTop: 20, borderWidth: 0.5, justifyContent: 'space-between', overflow: 'hidden', backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
             ]}
           >
-            <View style={[styles.bentoTileBadge, { backgroundColor: colors.primary + '1F' }]}>
+            <View className="w-10 h-10 rounded-md items-center justify-center" style={{ backgroundColor: colors.primary + '1F' }}>
               <Ionicons name="copy-outline" size={22} color={colors.primary} />
             </View>
-            <View style={styles.bentoTileContent}>
-              <Text style={[styles.bentoTileTitle, { color: colors.text }]}>{t('home.bento.fromTemplate')}</Text>
-              <Text style={[styles.bentoTileSubtitle, { color: colors.textSecondary }]}>{t('home.bento.fromTemplateSub')}</Text>
+            <View className="gap-0.5">
+              <Text className="text-base font-bold" style={{ color: colors.text, letterSpacing: -0.2 }}>{t('home.bento.fromTemplate')}</Text>
+              <Text className="text-xs font-medium" style={{ color: colors.textSecondary }}>{t('home.bento.fromTemplateSub')}</Text>
             </View>
           </Pressable>
           <Pressable
             testID="home.button.navigate"
             onPress={() => navigation.navigate('MainTabs', { screen: 'CanvasList' })}
             style={({ pressed }) => [
-              styles.bentoTile,
-              { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
+              { flex: 1, height: 130, borderRadius: 20, paddingLeft: 16, paddingRight: 16, paddingBottom: 16, paddingTop: 20, borderWidth: 0.5, justifyContent: 'space-between', overflow: 'hidden', backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
             ]}
           >
-            <View style={[styles.bentoTileBadge, { backgroundColor: colors.accent + '1F' }]}>
+            <View className="w-10 h-10 rounded-md items-center justify-center" style={{ backgroundColor: colors.accent + '1F' }}>
               <Ionicons name="easel-outline" size={22} color={colors.accent} />
             </View>
-            <View style={styles.bentoTileContent}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={[styles.bentoTileTitle, { color: colors.text }]}>{t('canvases.title')}</Text>
-                <View style={{ backgroundColor: '#3B82F6', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 5 }}>
-                  <Text style={{ color: '#ffffff', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 }}>{t('common.beta')}</Text>
+            <View className="gap-0.5">
+              <View className="flex-row items-center gap-1.5">
+                <Text className="text-base font-bold" style={{ color: colors.text, letterSpacing: -0.2 }}>{t('canvases.title')}</Text>
+                <View className="bg-blue-500 px-1.5 py-0.5 rounded">
+                  <Text className="text-white font-extrabold" style={{ fontSize: 9, letterSpacing: 0.5 }}>{t('common.beta')}</Text>
                 </View>
               </View>
-              <Text style={[styles.bentoTileSubtitle, { color: colors.textSecondary }]}>{t('home.bento.canvasesSub')}</Text>
+              <Text className="text-xs font-medium" style={{ color: colors.textSecondary }}>{t('home.bento.canvasesSub')}</Text>
             </View>
           </Pressable>
         </View>
@@ -351,7 +347,7 @@ export default function HomeScreen() {
       <BentoRecent items={recentItems} onOpen={handleOpenRecentItem} onLongPress={handleLongPressRecentItem} />
 
       <Modal visible={showFormatPicker} onRequestClose={handleFormatPickerClose} fullWidth>
-        <Text style={[styles.modalTitle, { color: colors.text }]}>{t('home.format.pickerTitle')}</Text>
+        <Text className="text-lg font-bold text-center mb-4" style={{ color: colors.text }}>{t('home.format.pickerTitle')}</Text>
         <View style={{ gap: 10 }}>
           {FORMAT_OPTIONS.map((option) => (
             <Card
@@ -360,16 +356,16 @@ export default function HomeScreen() {
               onPress={() => handleSelectFormat(option.value)}
               padding={14}
             >
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={[styles.formatLabel, { color: colors.text }]}>{t(option.labelKey)}</Text>
-                <Text style={[styles.formatExt, { color: colors.textSecondary }]}>{option.ext}</Text>
+              <View className="flex-row justify-between items-center">
+                <Text className="text-base font-medium" style={{ color: colors.text }}>{t(option.labelKey)}</Text>
+                <Text className="text-sm font-mono" style={{ color: colors.textSecondary }}>{option.ext}</Text>
               </View>
             </Card>
           ))}
         </View>
         <TouchableOpacity
           testID="home.checkbox.picker-remember"
-          style={styles.rememberRow}
+          className="flex-row items-center gap-2 py-3 px-1"
           onPress={() => setPickerRemember((v) => !v)}
           accessibilityRole="checkbox"
           accessibilityState={{ checked: pickerRemember }}
@@ -379,7 +375,7 @@ export default function HomeScreen() {
             size={22}
             color={pickerRemember ? colors.accent : colors.textSecondary}
           />
-          <Text style={[styles.rememberLabel, { color: colors.text }]}>{t('home.format.remember')}</Text>
+          <Text className="text-sm" style={{ color: colors.text }}>{t('home.format.remember')}</Text>
         </TouchableOpacity>
         <View style={{ marginTop: 12 }}>
           <Button variant="ghost" fullWidth label={t('common.cancel')} testID="home.button.close-format-picker" onPress={handleFormatPickerClose} />
@@ -415,231 +411,4 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-  },
-  content: {
-    padding: 20,
-  },
-  bentoGrid: {
-    gap: 12,
-    marginTop: 8,
-    marginBottom: 24,
-  },
-  bentoHeroBadge: {
-    position: 'absolute',
-    top: 16,
-    left: 16,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bentoHeroBgIcon: {
-    position: 'absolute',
-  },
-  bentoHeroContent: {
-    gap: 4,
-  },
-  bentoHeroTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: -0.3,
-  },
-  bentoHeroSubtitle: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#FFFFFF',
-    opacity: 0.78,
-  },
-bentoRow: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    gap: 12,
-    overflow: 'hidden',
-  },
-  bentoHero: {
-    flex: 1,
-    minWidth: 0,
-    height: 130,
-    borderRadius: 20,
-    padding: 16,
-    overflow: 'hidden',
-    justifyContent: 'flex-end',
-  },
-  bentoTile: {
-    flex: 1,
-    height: 130,
-    borderRadius: 20,
-    paddingLeft: 16,
-    paddingRight: 16,
-    paddingBottom: 16,
-    paddingTop: 20,
-    borderWidth: StyleSheet.hairlineWidth,
-    justifyContent: 'space-between',
-    overflow: 'hidden',
-  },
-  bentoTileBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bentoTileContent: {
-    gap: 2,
-  },
-  bentoTileTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: -0.2,
-  },
-  bentoTileSubtitle: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  buttonText: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  secondaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 2,
-    marginBottom: 24,
-  },
-  secondaryButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  recentSection: {
-    marginTop: 8,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    marginBottom: 12,
-  },
-  recentNote: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  recentNoteContent: {
-    flex: 1,
-  },
-  recentNoteTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  recentNotePreview: {
-    fontSize: 13,
-  },
-  gitIndicator: {
-    marginLeft: 8,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  modalContent: {
-    width: '100%',
-    borderRadius: 16,
-    padding: 20,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  formatOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    borderWidth: 1,
-    marginBottom: 10,
-  },
-  formatLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  formatExt: {
-    fontSize: 14,
-    fontFamily: 'monospace',
-  },
-  cancelButton: {
-    paddingVertical: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    marginTop: 4,
-    alignItems: 'center',
-  },
-  cancelText: {
-    fontSize: 15,
-  },
-  titleTablet: {
-    fontSize: 40,
-    marginBottom: 16,
-  },
-  recentGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  recentNoteTablet: {
-    width: '48%',
-    marginHorizontal: 0,
-  },
-  rememberRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-  },
-  rememberLabel: {
-    fontSize: 14,
-  },
-});
+

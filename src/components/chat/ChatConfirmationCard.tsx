@@ -19,15 +19,15 @@ export function ChatConfirmationCard({ pendingConfirmation, colors, spacing, typ
     <Surface
       elevation="raised"
       radius="md"
-      style={{ marginHorizontal: spacing[4], marginBottom: spacing[3], padding: spacing[4], borderWidth: 1, borderColor: colors.accent }}
+      className="mx-4 mb-3 p-4 border border-accent"
     >
-      <Text style={{ color: colors.text, fontSize: type.lg, fontWeight: '700', marginBottom: spacing[2] }}>
+      <Text className="text-lg font-bold mb-2 text-text">
         {pendingConfirmation.description}
       </Text>
-      <Text style={{ color: colors.textSecondary, fontSize: type.sm, marginBottom: spacing[3] }}>
+      <Text className="text-sm mb-3 text-text-secondary">
         {JSON.stringify(pendingConfirmation.details, null, 2)}
       </Text>
-      <View style={{ flexDirection: 'row', gap: spacing[2] }}>
+      <View className="flex-row gap-2">
         <Button testID="chat-confirmation.button.apply" variant="primary" onPress={onApply} style={{ flex: 1 }}>Apply</Button>
         <Button testID="chat-confirmation.button.cancel" variant="secondary" onPress={onCancel} style={{ flex: 1 }}>Cancel</Button>
       </View>
