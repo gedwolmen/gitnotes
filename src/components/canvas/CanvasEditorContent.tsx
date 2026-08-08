@@ -25,9 +25,11 @@ import {
   Fill,
   Group,
   Skia,
+  Image as SkiaImage,
   matchFont,
   Text as SkiaText,
 } from '@shopify/react-native-skia';
+import type { SkImage } from '@shopify/react-native-skia';
 import type { SkPath } from '@shopify/react-native-skia';
 import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useDerivedValue, useSharedValue, withSpring } from 'react-native-reanimated';
@@ -335,6 +337,7 @@ export default function CanvasEditorContent() {
   const contentBounds = useMemo(() => getCanvasContentBounds(elements), [elements]);
   const shouldAutoFitRef = useRef(true);
   const didAutoFitRef = useRef(!!canvasId);
+  const imageCacheRef = useRef<Map<string, SkImage | null>>(new Map());
 
   const setZoom = useCallback(
     (next: number) => {
@@ -377,6 +380,26 @@ export default function CanvasEditorContent() {
       }),
     [],
   );
+
+  useEffect(() => {
+    const currentIds = new Set(elements.filter((el): el is CanvasImage => el.type === 'image').map((el) => el.id));
+    const cache = imageCacheRef.current;
+    for (const [id, img] of cache) {
+      if (!currentIds.has(id)) {
+        if (img) img.dispose();
+        cache.delete(id);
+      }
+    }
+  }, [elements]);
+
+  useEffect(() => {
+    return () => {
+      for (const img of imageCacheRef.current.values()) {
+        if (img) img.dispose();
+      }
+      imageCacheRef.current.clear();
+    };
+  }, []);
 
   useEffect(() => {
     if (!canvasSize) return;
@@ -1205,6 +1228,35 @@ export default function CanvasEditorContent() {
             </Group>
           );
         }
+      }
+
+      if (el.type === 'image') {
+        let skImage = imageCacheRef.current.get(el.id);
+        if (skImage === undefined) {
+          try {
+            const data = Skia.Data.fromBase64(el.data);
+            skImage = Skia.Image.MakeImageFromEncoded(data) ?? null;
+          } catch {
+            skImage = null;
+          }
+          imageCacheRef.current.set(el.id, skImage);
+        }
+        if (skImage) {
+          return (
+            <Group key={el.id ?? idx}>
+              <SkiaImage image={skImage} x={el.x} y={el.y} width={el.width} height={el.height} fit="fill" />
+              {isSelected && (
+                <Rect x={el.x - 2} y={el.y - 2} width={el.width + 4} height={el.height + 4} color="#007AFF" style="stroke" strokeWidth={2} />
+              )}
+            </Group>
+          );
+        }
+        return (
+          <Group key={el.id ?? idx}>
+            <Rect x={el.x} y={el.y} width={el.width} height={el.height} color="#CCCCCC" />
+            <Rect x={el.x} y={el.y} width={el.width} height={el.height} color="#999999" style="stroke" strokeWidth={1} />
+          </Group>
+        );
       }
 
       return null;
