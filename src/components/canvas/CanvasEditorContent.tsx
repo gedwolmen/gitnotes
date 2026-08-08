@@ -32,7 +32,7 @@ import {
 import type { SkImage } from '@shopify/react-native-skia';
 import type { SkPath } from '@shopify/react-native-skia';
 import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
-import Animated, { runOnJS, useAnimatedStyle, useDerivedValue, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { cancelAnimation, runOnJS, useAnimatedStyle, useDerivedValue, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { useCanvases } from '../../contexts/CanvasContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import {
@@ -261,6 +261,71 @@ export function moveCanvasElement(el: CanvasElement, dx: number, dy: number): Ca
     default:
       return assertNeverElement(el);
   }
+}
+
+function AnimatedCanvasElement({ element, children }: { element: CanvasElement; children: React.ReactNode }) {
+  const progress = useSharedValue(0);
+  const anim = element.animation;
+
+  React.useEffect(() => {
+    if (!anim) {
+      progress.value = 0;
+      return;
+    }
+    const half = anim.duration / 2;
+    const forwardBack = withSequence(withTiming(1, { duration: half }), withTiming(0, { duration: half }));
+    const loopCount = anim.loop ? -1 : 1;
+
+    if (anim.type === 'spin') {
+      progress.value = withRepeat(withTiming(1, { duration: anim.duration }), loopCount, false);
+    } else {
+      progress.value = withRepeat(forwardBack, loopCount, false);
+    }
+
+    return () => {
+      cancelAnimation(progress);
+    };
+  }, [anim, progress]);
+
+  const center = elementCenter(element);
+  const cx = center.x;
+  const cy = center.y;
+
+  const transform = useDerivedValue(() => {
+    if (!anim) return [{ translateX: 0 }, { translateY: 0 }, { rotate: 0 }, { scale: 1 }];
+    const p = progress.value;
+    switch (anim.type) {
+      case 'pulse':
+        return [
+          { translateX: cx }, { translateY: cy },
+          { scale: 1 + 0.1 * p },
+          { translateX: -cx }, { translateY: -cy },
+        ];
+      case 'fade':
+        return [{ translateX: 0 }];
+      case 'spin':
+        return [
+          { translateX: cx }, { translateY: cy },
+          { rotate: p * Math.PI * 2 },
+          { translateX: -cx }, { translateY: -cy },
+        ];
+      case 'translate':
+        return [{ translateX: 20 * p }];
+      default:
+        return [{ translateX: 0 }];
+    }
+  });
+
+  const opacity = useDerivedValue(() => {
+    if (!anim || anim.type !== 'fade') return 1;
+    return 1 - 0.7 * progress.value;
+  });
+
+  return (
+    <Group transform={transform} opacity={opacity}>
+      {children}
+    </Group>
+  );
 }
 
 export default function CanvasEditorContent() {
@@ -1502,7 +1567,14 @@ export default function CanvasEditorContent() {
               <Animated.View style={[{ width: canvasSize.width, height: canvasSize.height }, canvasAnimStyle]}>
                 <Canvas style={{ width: canvasSize.width, height: canvasSize.height }}>
                   <Fill color="white" />
-                  {elements.map(renderElement)}
+                  {elements.map((el, idx) => {
+                    const rendered = renderElement(el, idx);
+                    if (!rendered) return null;
+                    if (el.animation) {
+                      return <AnimatedCanvasElement key={`anim-${el.id ?? idx}`} element={el}>{rendered}</AnimatedCanvasElement>;
+                    }
+                    return rendered;
+                  })}
                   <Path path={activeStrokePath} color={activeStrokeColor} style="stroke" strokeWidth={activeStrokeWidth} strokeCap="round" strokeJoin="round" />
                   <Path path={activeLinePath} color={activeShapeStrokeColor} style="stroke" strokeWidth={activeShapeStrokeWidth} />
                   <Path path={activeArrowPath} color={activeShapeStrokeColor} style="stroke" strokeWidth={activeShapeStrokeWidth} />
