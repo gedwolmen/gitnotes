@@ -375,6 +375,7 @@ export default function CanvasEditorContent() {
   const resizeOriginalRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
   const gestureModeRef = useRef<'RESIZE' | 'MOVE' | 'LASSO' | null>(null);
   const lassoPointsRef = useRef<Point[]>([]);
+  const [lassoRenderTick, setLassoRenderTick] = useState(0);
 
   const textFont = useMemo(
     () =>
@@ -675,6 +676,7 @@ export default function CanvasEditorContent() {
 
     if (gestureModeRef.current === 'LASSO') {
       lassoPointsRef.current = [...lassoPointsRef.current, pt];
+      setLassoRenderTick((t) => t + 1);
       return;
     }
 
@@ -701,6 +703,7 @@ export default function CanvasEditorContent() {
     resizeOriginalRef.current = null;
     gestureModeRef.current = null;
     lassoPointsRef.current = [];
+    setLassoRenderTick(0);
   }, [elements]);
 
   const commitActiveDrawing = useCallback((element: CanvasStroke | CanvasShape | null) => {
@@ -1533,6 +1536,22 @@ export default function CanvasEditorContent() {
                     <Oval x={activeShapeX} y={activeShapeY} width={activeShapeWidth} height={activeShapeHeight} style="stroke" strokeWidth={activeEllipseStrokeWidth} color={activeShapeStrokeColor} />
                   </Group>
                 </Canvas>
+                {lassoRenderTick > 0 && lassoPointsRef.current.length >= 2 && (
+                  <Canvas
+                    style={{ position: 'absolute', top: 0, left: 0, width: canvasSize.width, height: canvasSize.height }}
+                    pointerEvents="none"
+                  >
+                    {(() => {
+                      const pts = lassoPointsRef.current;
+                      const p = Skia.Path.Make();
+                      p.moveTo(pts[0].x, pts[0].y);
+                      for (let i = 1; i < pts.length; i++) {
+                        p.lineTo(pts[i].x, pts[i].y);
+                      }
+                      return <Path path={p} color="#007AFF" style="stroke" strokeWidth={1.5} strokeCap="round" />;
+                    })()}
+                  </Canvas>
+                )}
               </Animated.View>
             </GestureDetector>
           )}
