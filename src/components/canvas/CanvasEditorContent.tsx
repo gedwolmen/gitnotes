@@ -370,6 +370,8 @@ export default function CanvasEditorContent() {
   const [branch, setBranch] = useState<string | undefined>(existingCanvas?.branch);
   const accountId = existingCanvas?.accountId ?? activeAccountId ?? undefined;
   const dragStartRef = useRef<Point | null>(null);
+  const resizeHandleRef = useRef<'tl' | 'tr' | 'bl' | 'br' | null>(null);
+  const resizeOriginalRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
 
   const textFont = useMemo(
     () =>
@@ -484,6 +486,9 @@ export default function CanvasEditorContent() {
     if (el.type === 'chart') {
       return px >= el.x - pad && px <= el.x + el.width + pad && py >= el.y - pad && py <= el.y + el.height + pad;
     }
+    if (el.type === 'image') {
+      return px >= el.x - pad && px <= el.x + el.width + pad && py >= el.y - pad && py <= el.y + el.height + pad;
+    }
     return false;
   }, []);
 
@@ -534,14 +539,12 @@ export default function CanvasEditorContent() {
       if (result.canceled || !result.assets?.[0]?.base64) return;
 
       const asset = result.assets[0];
-      let base64Data = asset.base64;
+      let base64Data: string = asset.base64!;
       let srcW = asset.width;
       let srcH = asset.height;
 
       const MAX_BYTES = 512 * 1024;
-      let quality = 80;
-      while (base64Data.length > MAX_BYTES * 1.33 && quality > 20) {
-        quality -= 10;
+      while (base64Data.length > MAX_BYTES * 1.33) {
         const data = Skia.Data.fromBase64(base64Data);
         const skImage = Skia.Image.MakeImageFromEncoded(data);
         if (!skImage) break;
@@ -558,7 +561,7 @@ export default function CanvasEditorContent() {
             Skia.Paint()
           );
           const resized = surface.makeImageSnapshot();
-          base64Data = resized.encodeToBase64('png');
+          base64Data = resized.encodeToBase64();
           srcW = halfW;
           srcH = halfH;
         } finally {
@@ -588,8 +591,34 @@ export default function CanvasEditorContent() {
     }
   }, [saveHistory]);
 
+  const checkResizeHandle = useCallback((el: CanvasElement, px: number, py: number): 'tl' | 'tr' | 'bl' | 'br' | null => {
+    if (el.type !== 'image') return null;
+    const hs = 12;
+    if (Math.abs(px - el.x) <= hs && Math.abs(py - el.y) <= hs) return 'tl';
+    if (Math.abs(px - (el.x + el.width)) <= hs && Math.abs(py - el.y) <= hs) return 'tr';
+    if (Math.abs(px - el.x) <= hs && Math.abs(py - (el.y + el.height)) <= hs) return 'bl';
+    if (Math.abs(px - (el.x + el.width)) <= hs && Math.abs(py - (el.y + el.height)) <= hs) return 'br';
+    return null;
+  }, []);
+
   const startSelection = useCallback((pt: Point) => {
     dragStartRef.current = pt;
+    if (selectedId) {
+      const selEl = elements.find((e) => e.id === selectedId);
+      if (selEl) {
+        const handle = checkResizeHandle(selEl, pt.x, pt.y);
+        if (handle) {
+          resizeHandleRef.current = handle;
+          resizeOriginalRef.current = selEl.type === 'image'
+            ? { x: selEl.x, y: selEl.y, w: selEl.width, h: selEl.height }
+            : null;
+          saveHistory();
+          return;
+        }
+      }
+    }
+    resizeHandleRef.current = null;
+    resizeOriginalRef.current = null;
     for (let i = elements.length - 1; i >= 0; i--) {
       if (hitTest(elements[i], pt.x, pt.y)) {
         setSelectedId(elements[i].id);
@@ -597,18 +626,56 @@ export default function CanvasEditorContent() {
       }
     }
     setSelectedId(null);
-  }, [elements, hitTest]);
+  }, [elements, hitTest, selectedId, checkResizeHandle, saveHistory]);
 
   const updateSelection = useCallback((pt: Point) => {
     if (!dragStartRef.current || !selectedId) return;
     const dx = pt.x - dragStartRef.current.x;
     const dy = pt.y - dragStartRef.current.y;
+
+    if (resizeHandleRef.current && resizeOriginalRef.current) {
+      const orig = resizeOriginalRef.current;
+      const aspect = orig.w / orig.h;
+      let newW: number;
+      let newH: number;
+      const handle = resizeHandleRef.current;
+
+      if (handle === 'br') {
+        newW = Math.max(40, orig.w + dx);
+        newH = Math.max(40, newW / aspect);
+      } else if (handle === 'bl') {
+        newW = Math.max(40, orig.w - dx);
+        newH = Math.max(40, newW / aspect);
+      } else if (handle === 'tr') {
+        newW = Math.max(40, orig.w + dx);
+        newH = Math.max(40, newW / aspect);
+      } else {
+        newW = Math.max(40, orig.w - dx);
+        newH = Math.max(40, newW / aspect);
+      }
+
+      setElements((prev) => prev.map((el) => {
+        if (el.id !== selectedId || el.type !== 'image') return el;
+        let newX = orig.x;
+        let newY = orig.y;
+        if (handle === 'bl' || handle === 'tl') newX = orig.x + orig.w - newW;
+        if (handle === 'tl' || handle === 'tr') newY = orig.y;
+        if (handle === 'bl' || handle === 'br') newY = orig.y;
+        if (handle === 'tl') newY = orig.y + orig.h - newH;
+        if (handle === 'tr') newY = orig.y + orig.h - newH;
+        return { ...el, x: newX, y: newY, width: newW, height: newH };
+      }));
+      return;
+    }
+
     setElements((prev) => prev.map((el) => (el.id === selectedId ? moveCanvasElement(el, dx, dy) : el)));
     dragStartRef.current = pt;
   }, [selectedId]);
 
   const endSelection = useCallback(() => {
     dragStartRef.current = null;
+    resizeHandleRef.current = null;
+    resizeOriginalRef.current = null;
   }, []);
 
   const commitActiveDrawing = useCallback((element: CanvasStroke | CanvasShape | null) => {
@@ -1246,7 +1313,17 @@ export default function CanvasEditorContent() {
             <Group key={el.id ?? idx}>
               <SkiaImage image={skImage} x={el.x} y={el.y} width={el.width} height={el.height} fit="fill" />
               {isSelected && (
-                <Rect x={el.x - 2} y={el.y - 2} width={el.width + 4} height={el.height + 4} color="#007AFF" style="stroke" strokeWidth={2} />
+                <Group>
+                  <Rect x={el.x - 2} y={el.y - 2} width={el.width + 4} height={el.height + 4} color="#007AFF" style="stroke" strokeWidth={2} />
+                  <Rect x={el.x - 4} y={el.y - 4} width={8} height={8} color="#FFFFFF" />
+                  <Rect x={el.x - 4} y={el.y - 4} width={8} height={8} color="#007AFF" style="stroke" strokeWidth={1} />
+                  <Rect x={el.x + el.width - 4} y={el.y - 4} width={8} height={8} color="#FFFFFF" />
+                  <Rect x={el.x + el.width - 4} y={el.y - 4} width={8} height={8} color="#007AFF" style="stroke" strokeWidth={1} />
+                  <Rect x={el.x - 4} y={el.y + el.height - 4} width={8} height={8} color="#FFFFFF" />
+                  <Rect x={el.x - 4} y={el.y + el.height - 4} width={8} height={8} color="#007AFF" style="stroke" strokeWidth={1} />
+                  <Rect x={el.x + el.width - 4} y={el.y + el.height - 4} width={8} height={8} color="#FFFFFF" />
+                  <Rect x={el.x + el.width - 4} y={el.y + el.height - 4} width={8} height={8} color="#007AFF" style="stroke" strokeWidth={1} />
+                </Group>
               )}
             </Group>
           );
