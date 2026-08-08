@@ -45,6 +45,9 @@ import {
 import GitContextPicker from '../GitContextPicker';
 import { syncCanvasToGitHub } from '../../services/CanvasGitHubSyncService';
 import { useAuth } from '../../contexts/AuthContext';
+import { renderSceneToPng } from '../../utils/canvasPngExport';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import type { RootStackParamList } from '../../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'CanvasEditor'>;
@@ -303,6 +306,7 @@ export default function CanvasEditorContent() {
   const [textModalVisible, setTextModalVisible] = useState(false);
   const [textInput, setTextInput] = useState('');
   const [textPosition, setTextPosition] = useState<Point | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const scale = useSharedValue(1);
   const translateX = useSharedValue(0);
@@ -879,6 +883,36 @@ export default function CanvasEditorContent() {
     navigation.goBack();
   }, [canvasId, title, elements, canvasSize, cw, repo, branch, existingCanvas, updateCanvas, createCanvas, navigation, accountId]);
 
+  const handleExportPng = useCallback(async () => {
+    if (exporting) return;
+    setExporting(true);
+    const fileName = `canvas-export-${Date.now()}.png`;
+    const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
+    try {
+      const pngBytes = await renderSceneToPng(elements, canvasSize?.width ?? cw, canvasSize?.height ?? 600);
+      if (!pngBytes) {
+        Alert.alert('Nothing to export', 'Add elements to the canvas before exporting.');
+        return;
+      }
+      const base64 = Array.from(pngBytes).map(b => String.fromCharCode(b)).join('');
+      await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, { mimeType: 'image/png' });
+      } else {
+        Alert.alert('Sharing unavailable', 'Sharing is not available on this device.');
+      }
+    } catch (error) {
+      Alert.alert('Export failed', error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      try {
+        await FileSystem.deleteAsync(fileUri, { idempotent: true });
+      } catch {
+        // cleanup failure is non-fatal
+      }
+      setExporting(false);
+    }
+  }, [exporting, elements, canvasSize, cw]);
+
   const renderElement = useCallback(
     (el: CanvasElement, idx: number) => {
       const isSelected = el.id === selectedId;
@@ -1094,6 +1128,16 @@ export default function CanvasEditorContent() {
           </TouchableOpacity>
           <TouchableOpacity testID="canvas-editor.toolbar.reset-view" style={styles.toolBtn} onPress={resetView}>
             <Ionicons name="refresh" size={20} color={colors.text} />
+          </TouchableOpacity>
+          <View style={styles.separator} />
+          <TouchableOpacity
+            testID="canvas-editor.toolbar.export-png"
+            style={[styles.toolBtn, exporting && { opacity: 0.5 }]}
+            onPress={handleExportPng}
+            disabled={exporting}
+          >
+            <Ionicons name="download-outline" size={20} color={colors.text} />
+            <Text style={[styles.toolBtnLabel, { color: colors.text, fontSize: 10 }]}>PNG</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
