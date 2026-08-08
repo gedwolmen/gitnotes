@@ -51,6 +51,7 @@ import { syncCanvasToGitHub } from '../../services/CanvasGitHubSyncService';
 import { useAuth } from '../../contexts/AuthContext';
 import { renderSceneToPng } from '../../utils/canvasPngExport';
 import { parseChartLabels, parseChartValues } from '../../utils/chartParsing';
+import { pointInPolygon, elementCenter } from '../../utils/canvasSelection';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as ImagePicker from 'expo-image-picker';
@@ -372,6 +373,8 @@ export default function CanvasEditorContent() {
   const dragStartRef = useRef<Point | null>(null);
   const resizeHandleRef = useRef<'tl' | 'tr' | 'bl' | 'br' | null>(null);
   const resizeOriginalRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
+  const gestureModeRef = useRef<'RESIZE' | 'MOVE' | 'LASSO' | null>(null);
+  const lassoPointsRef = useRef<Point[]>([]);
 
   const textFont = useMemo(
     () =>
@@ -510,7 +513,7 @@ export default function CanvasEditorContent() {
       setElements((prev) => prev.filter((el) => !idsToErase.includes(el.id)));
       setSelectedIds((prev) => prev.filter((id) => !idsToErase.includes(id)));
     }
-  }, [eraserHitTest, saveHistory, selectedId]);
+  }, [eraserHitTest, saveHistory]);
 
   const startTextPlacement = useCallback((pt: Point) => {
     setTextPosition(pt);
@@ -601,11 +604,15 @@ export default function CanvasEditorContent() {
 
   const startSelection = useCallback((pt: Point) => {
     dragStartRef.current = pt;
-    if (selectedId) {
-      const selEl = elements.find((e) => e.id === selectedId);
+    lassoPointsRef.current = [];
+    gestureModeRef.current = null;
+
+    for (const sid of selectedIds) {
+      const selEl = elements.find((e) => e.id === sid);
       if (selEl) {
         const handle = checkResizeHandle(selEl, pt.x, pt.y);
         if (handle) {
+          gestureModeRef.current = 'RESIZE';
           resizeHandleRef.current = handle;
           resizeOriginalRef.current = selEl.type === 'image'
             ? { x: selEl.x, y: selEl.y, w: selEl.width, h: selEl.height }
@@ -615,8 +622,7 @@ export default function CanvasEditorContent() {
         }
       }
     }
-    resizeHandleRef.current = null;
-    resizeOriginalRef.current = null;
+
     for (let i = elements.length - 1; i >= 0; i--) {
       if (hitTest(elements[i], pt.x, pt.y)) {
         const hitId = elements[i].id;
@@ -631,52 +637,54 @@ export default function CanvasEditorContent() {
         return;
       }
     }
-    setSelectedId(null);
-  }, [elements, hitTest, selectedId, checkResizeHandle, saveHistory]);
+
+    setSelectedIds([]);
+    gestureModeRef.current = 'LASSO';
+  }, [elements, hitTest, selectedIds, checkResizeHandle, saveHistory]);
 
   const updateSelection = useCallback((pt: Point) => {
     if (!dragStartRef.current) return;
     const dx = pt.x - dragStartRef.current.x;
     const dy = pt.y - dragStartRef.current.y;
 
-    if (resizeHandleRef.current && resizeOriginalRef.current) {
+    if (gestureModeRef.current === 'RESIZE' && resizeHandleRef.current && resizeOriginalRef.current) {
       const orig = resizeOriginalRef.current;
       const aspect = orig.w / orig.h;
       let newW: number;
       let newH: number;
       const handle = resizeHandleRef.current;
 
-      if (handle === 'br') {
+      if (handle === 'br' || handle === 'tr') {
         newW = Math.max(40, orig.w + dx);
-        newH = Math.max(40, newW / aspect);
-      } else if (handle === 'bl') {
-        newW = Math.max(40, orig.w - dx);
-        newH = Math.max(40, newW / aspect);
-      } else if (handle === 'tr') {
-        newW = Math.max(40, orig.w + dx);
-        newH = Math.max(40, newW / aspect);
       } else {
         newW = Math.max(40, orig.w - dx);
-        newH = Math.max(40, newW / aspect);
       }
+      newH = Math.max(40, newW / aspect);
 
+      const selectedId = selectedIds[0];
       setElements((prev) => prev.map((el) => {
         if (el.id !== selectedId || el.type !== 'image') return el;
         let newX = orig.x;
         let newY = orig.y;
         if (handle === 'bl' || handle === 'tl') newX = orig.x + orig.w - newW;
-        if (handle === 'tl' || handle === 'tr') newY = orig.y;
-        if (handle === 'bl' || handle === 'br') newY = orig.y;
-        if (handle === 'tl') newY = orig.y + orig.h - newH;
-        if (handle === 'tr') newY = orig.y + orig.h - newH;
+        if (handle === 'tl' || handle === 'tr') newY = orig.y + orig.h - newH;
         return { ...el, x: newX, y: newY, width: newW, height: newH };
       }));
       return;
     }
 
-    setElements((prev) => prev.map((el) => (el.id === selectedId ? moveCanvasElement(el, dx, dy) : el)));
-    dragStartRef.current = pt;
-  }, [selectedId]);
+    if (gestureModeRef.current === 'LASSO') {
+      lassoPointsRef.current = [...lassoPointsRef.current, pt];
+      return;
+    }
+
+    if (gestureModeRef.current === 'MOVE' && selectedIds.length > 0) {
+      setElements((prev) => prev.map((el) =>
+        selectedIds.includes(el.id) ? moveCanvasElement(el, dx, dy) : el
+      ));
+      dragStartRef.current = pt;
+    }
+  }, [selectedIds]);
 
   const endSelection = useCallback(() => {
     if (gestureModeRef.current === 'LASSO' && lassoPointsRef.current.length >= 3) {
@@ -691,7 +699,9 @@ export default function CanvasEditorContent() {
     dragStartRef.current = null;
     resizeHandleRef.current = null;
     resizeOriginalRef.current = null;
-  }, []);
+    gestureModeRef.current = null;
+    lassoPointsRef.current = [];
+  }, [elements]);
 
   const commitActiveDrawing = useCallback((element: CanvasStroke | CanvasShape | null) => {
     if (element) {
@@ -951,27 +961,27 @@ export default function CanvasEditorContent() {
   }, [chartPosition, chartTitle, chartType, chartLabelsInput, chartValuesInput, saveHistory]);
 
   const applyAnimation = useCallback(() => {
-    if (!selectedId) return;
+    if (selectedIds.length === 0) return;
     const duration = Math.max(500, Math.min(5000, parseInt(animDuration, 10) || 2000));
     saveHistory();
     setElements((prev) => prev.map((el) =>
-      el.id === selectedId
+      selectedIds.includes(el.id)
         ? { ...el, animation: { type: animType, duration, loop: animLoop } }
         : el
     ));
     setAnimModalVisible(false);
-  }, [selectedId, animType, animDuration, animLoop, saveHistory]);
+  }, [selectedIds, animType, animDuration, animLoop, saveHistory]);
 
   const removeAnimation = useCallback(() => {
-    if (!selectedId) return;
+    if (selectedIds.length === 0) return;
     saveHistory();
     setElements((prev) => prev.map((el) => {
-      if (el.id !== selectedId) return el;
+      if (!selectedIds.includes(el.id)) return el;
       const { animation: _removed, ...rest } = el as typeof el & { animation?: unknown };
       return rest as typeof el;
     }));
     setAnimModalVisible(false);
-  }, [selectedId, saveHistory]);
+  }, [selectedIds, saveHistory]);
 
   // Select tool pan gesture - ONLY for moving selected elements
   const selectPanGesture = useMemo(
@@ -1415,7 +1425,7 @@ export default function CanvasEditorContent() {
           <TouchableOpacity testID="canvas-editor.toolbar.clear-all" style={styles.toolBtn} onPress={clearAll}>
             <Ionicons name="trash-outline" size={20} color={colors.text} />
           </TouchableOpacity>
-          {selectedId && (
+          {selectedIds.length > 0 && (
             <TouchableOpacity testID="canvas-editor.toolbar.animate" style={styles.toolBtn} onPress={() => setAnimModalVisible(true)}>
               <Ionicons name="play-outline" size={20} color={colors.text} />
             </TouchableOpacity>
