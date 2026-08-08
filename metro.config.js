@@ -16,6 +16,7 @@ config.resolver.blockList = [
   /.*\/\.worktrees\/.*/,
   /.*\/\.claude\/worktrees\/.*/,
 ];
+config.resolver.unstable_conditionNames = ['require', 'default'];
 config.watchFolders = [__dirname];
 
 const isoGitUmd = path.resolve(
