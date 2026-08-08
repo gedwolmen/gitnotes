@@ -14,7 +14,7 @@ import {
   matchFont,
 } from '@shopify/react-native-skia';
 
-import { CanvasChart, CanvasScene, CanvasShape, CanvasStroke, CanvasText } from '../models/Canvas';
+import { CanvasChart, CanvasImage, CanvasScene, CanvasShape, CanvasStroke, CanvasText } from '../models/Canvas';
 import { isImageElement } from '../models/Canvas';
 
 interface CanvasThumbnailProps {
