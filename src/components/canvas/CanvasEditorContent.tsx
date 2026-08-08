@@ -378,7 +378,15 @@ export default function CanvasEditorContent() {
 
   const saveHistory = useCallback(() => {
     setHistory((prev) => {
-      const next = [...prev, JSON.stringify(elements)];
+      // Strip base64 image data from history snapshots to avoid
+      // multiplying ~512KB per image across 40 undo entries.
+      // Image data is preserved in the current elements array.
+      const stripped = elements.map(el =>
+        el.type === 'image'
+          ? { ...el, data: '[image-stripped]' }
+          : el
+      );
+      const next = [...prev, JSON.stringify(stripped)];
       return next.length > 40 ? next.slice(-40) : next;
     });
   }, [elements]);
@@ -387,10 +395,20 @@ export default function CanvasEditorContent() {
     setHistory((prev) => {
       if (prev.length === 0) return prev;
       const last = prev[prev.length - 1];
-      setElements(JSON.parse(last));
+      const restored = JSON.parse(last) as CanvasElement[];
+      // Rehydrate stripped image data from current elements
+      setElements(restored.map(el => {
+        if (el.type === 'image' && el.data === '[image-stripped]') {
+          const current = elements.find(e => e.id === el.id);
+          return current && current.type === 'image'
+            ? { ...el, data: current.data }
+            : el;
+        }
+        return el;
+      }));
       return prev.slice(0, -1);
     });
-  }, []);
+  }, [elements]);
 
   const clearAll = useCallback(() => {
     saveHistory();
