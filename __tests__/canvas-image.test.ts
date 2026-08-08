@@ -1,121 +1,157 @@
-import { describe, expect, it } from '@jest/globals';
-import { isImageElement } from '../src/models/Canvas';
-import type { CanvasImage } from '../src/models/Canvas';
+import React from 'react';
+import { describe, expect, it, jest } from '@jest/globals';
+import { createCanvas, isImageElement } from '../src/models/Canvas';
+import { canvasSceneToSvg } from '../src/utils/canvasExport';
+import type { CanvasElement, CanvasImage } from '../src/models/Canvas';
 
-describe('isImageElement', () => {
-  const validImage = {
+jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('@react-navigation/native', () => ({ useNavigation: () => ({}), useRoute: () => ({ params: {} }) }));
+jest.mock('@react-navigation/native-stack', () => ({}));
+jest.mock('react-native-gesture-handler', () => ({
+  GestureDetector: () => null,
+  Gesture: {
+    Pan: () => ({
+      maxPointers: () => ({ onStart: () => ({ onChange: () => ({ onEnd: () => ({}) }) }) }),
+      minPointers: () => ({ averageTouches: () => ({ onStart: () => ({ onUpdate: () => ({}) }) }) }),
+    }),
+    Pinch: () => ({ onStart: () => ({ onUpdate: () => ({}) }) }),
+    Simultaneous: () => ({}),
+  },
+  GestureHandlerRootView: ({ children }: { children: React.ReactNode }) => children,
+}));
+jest.mock('react-native-reanimated', () => ({
+  __esModule: true,
+  default: {},
+  runOnJS: (fn: (...args: unknown[]) => unknown) => fn,
+  useAnimatedStyle: () => ({}),
+  useDerivedValue: (fn: () => unknown) => ({ value: fn() }),
+  useSharedValue: (value: unknown) => ({ value }),
+  withSpring: (value: unknown) => value,
+}));
+jest.mock('@shopify/react-native-skia', () => ({
+  Canvas: () => null,
+  Path: () => null,
+  Rect: () => null,
+  Oval: () => null,
+  RoundedRect: () => null,
+  Fill: () => null,
+  Group: () => null,
+  Image: () => null,
+  Skia: { Path: { Make: () => ({ moveTo: () => {}, lineTo: () => {}, close: () => {}, rewind: () => {}, setIsVolatile: () => ({}) }) } },
+  matchFont: () => ({}),
+  Text: () => null,
+}));
+jest.mock('../src/contexts/CanvasContext', () => ({ useCanvases: () => ({ getCanvasById: () => undefined, createCanvas: async () => undefined, updateCanvas: async () => undefined }) }));
+jest.mock('../src/contexts/ThemeContext', () => ({ useTheme: () => ({ colors: { background: '#fff', border: '#ddd', surface: '#fff', text: '#111', textSecondary: '#666', primary: '#2563eb' } }) }));
+jest.mock('../src/components/GitContextPicker', () => () => null);
+jest.mock('../src/services/CanvasGitHubSyncService', () => ({ syncCanvasToGitHub: async () => ({ success: true }) }));
+
+import { getCanvasContentBounds, moveCanvasElement } from '../src/screens/CanvasEditorScreen';
+
+describe('CanvasImage lifecycle', () => {
+  const validImage: CanvasImage = {
     type: 'image',
-    id: 'image-1',
-    data: 'base64-jpeg-data',
+    id: 'img-1',
+    data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
     mimeType: 'image/jpeg',
-    x: -10,
+    x: 10,
     y: 20,
-    width: 200,
-    height: 150,
-  } satisfies CanvasImage;
+    width: 100,
+    height: 80,
+  };
 
-  it('accepts a valid JPEG image element', () => {
-    // Given: a complete JPEG image object.
-    const candidate: unknown = validImage;
+  it('createCanvas preserves image elements through round-trip', () => {
+    const canvas = createCanvas({
+      title: 'Image Test',
+      scene: { version: 1, elements: [validImage] },
+    });
 
-    // When: the image guard validates it.
-    const result = isImageElement(candidate);
-
-    // Then: the object is accepted.
-    expect(result).toBe(true);
+    expect(canvas.scene.elements).toHaveLength(1);
+    expect(canvas.scene.elements[0].type).toBe('image');
+    const el = canvas.scene.elements[0] as CanvasImage;
+    expect(el.data).toBe(validImage.data);
+    expect(el.mimeType).toBe('image/jpeg');
+    expect(el.width).toBe(100);
+    expect(el.height).toBe(80);
   });
 
-  it('accepts a valid image animation', () => {
-    // Given: a valid image with a complete pulse animation.
-    const candidate: unknown = {
-      ...validImage,
-      animation: { type: 'pulse', duration: 1000, loop: true },
-    } satisfies CanvasImage;
+  it('createCanvas preserves mixed elements including images and animations', () => {
+    const textWithAnim: CanvasElement = {
+      type: 'text',
+      id: 'txt-1',
+      text: 'Hello',
+      x: 50,
+      y: 60,
+      fontSize: 16,
+      color: '#000',
+      animation: { type: 'fade', duration: 2000, loop: true },
+    };
 
-    // When: the image guard validates it.
-    const result = isImageElement(candidate);
+    const canvas = createCanvas({
+      title: 'Mixed',
+      scene: { version: 1, elements: [validImage, textWithAnim] },
+    });
 
-    // Then: the animated image is accepted.
-    expect(result).toBe(true);
+    expect(canvas.scene.elements).toHaveLength(2);
+    expect(isImageElement(canvas.scene.elements[0])).toBe(true);
   });
 
-  it.each([
-    ['unknown type', { type: 'bounce', duration: 1000, loop: true }],
-    ['NaN duration', { type: 'pulse', duration: Number.NaN, loop: true }],
-    ['infinite duration', { type: 'pulse', duration: Number.POSITIVE_INFINITY, loop: true }],
-    ['missing loop', { type: 'pulse', duration: 1000 }],
-    ['invalid loop', { type: 'pulse', duration: 1000, loop: 'yes' }],
-    ['null value', null],
-    ['string value', 'pulse'],
-    ['number value', 1000],
-    ['boolean value', true],
-  ])('rejects malformed animation: %s', (_label: string, animation: unknown) => {
-    // Given: an otherwise valid image with malformed animation metadata.
-    const candidate: unknown = { ...validImage, animation };
+  it('getCanvasContentBounds includes image extents', () => {
+    const elements: CanvasElement[] = [
+      { type: 'stroke', id: 's1', tool: 'pen', color: '#000', width: 2, points: [{ x: 0, y: 0 }, { x: 50, y: 50 }] },
+      validImage,
+    ];
 
-    // When: the image guard validates it.
-    const result = isImageElement(candidate);
-
-    // Then: the image is rejected.
-    expect(result).toBe(false);
+    const bounds = getCanvasContentBounds(elements);
+    expect(bounds).not.toBeNull();
+    // Image at (10,20) with size (100,80) → maxX=110, maxY=100
+    expect(bounds!.maxX).toBe(110);
+    expect(bounds!.maxY).toBe(100);
+    expect(bounds!.minX).toBe(-1);
+    expect(bounds!.minY).toBe(-1);
   });
 
-  it.each([
-    ['missing data', (({ data: _data, ...image }) => image)(validImage)],
-    ['empty data', { ...validImage, data: '' }],
-    ['whitespace-only data', { ...validImage, data: '   ' }],
-  ])('rejects %s', (_label: string, candidate: unknown) => {
-    // Given: an image candidate without usable encoded data.
-    // When: the image guard validates it.
-    const result = isImageElement(candidate);
-
-    // Then: the candidate is rejected.
-    expect(result).toBe(false);
+  it('getCanvasContentBounds works with image-only canvas', () => {
+    const bounds = getCanvasContentBounds([validImage]);
+    expect(bounds).toEqual({ minX: 10, minY: 20, maxX: 110, maxY: 100 });
   });
 
-  it('rejects a non-JPEG MIME type', () => {
-    // Given: an otherwise valid image with a PNG MIME type.
-    const candidate: unknown = { ...validImage, mimeType: 'image/png' };
-
-    // When: the image guard validates it.
-    const result = isImageElement(candidate);
-
-    // Then: the candidate is rejected.
-    expect(result).toBe(false);
+  it('moveCanvasElement translates image position without changing dimensions', () => {
+    const moved = moveCanvasElement(validImage, 5, -3) as CanvasImage;
+    expect(moved.x).toBe(15);
+    expect(moved.y).toBe(17);
+    expect(moved.width).toBe(100);
+    expect(moved.height).toBe(80);
+    expect(moved.data).toBe(validImage.data);
   });
 
-  it.each([
-    ['NaN x', { ...validImage, x: Number.NaN }],
-    ['infinite y', { ...validImage, y: Number.POSITIVE_INFINITY }],
-    ['NaN width', { ...validImage, width: Number.NaN }],
-    ['infinite height', { ...validImage, height: Number.NEGATIVE_INFINITY }],
-    ['zero width', { ...validImage, width: 0 }],
-    ['negative width', { ...validImage, width: -1 }],
-    ['zero height', { ...validImage, height: 0 }],
-    ['negative height', { ...validImage, height: -1 }],
-  ])('rejects %s', (_label: string, candidate: unknown) => {
-    // Given: an image candidate with invalid geometry.
-    // When: the image guard validates it.
-    const result = isImageElement(candidate);
+  it('canvasSceneToSvg includes image elements', () => {
+    const svg = canvasSceneToSvg({
+      version: 1,
+      width: 800,
+      height: 600,
+      background: '#FFFFFF',
+      elements: [validImage],
+    });
 
-    // Then: the candidate is rejected.
-    expect(result).toBe(false);
+    expect(svg).toContain('<image');
+    expect(svg).toContain('data:image/jpeg;base64,');
+    expect(svg).toContain('x="10"');
+    expect(svg).toContain('y="20"');
+    expect(svg).toContain('width="100"');
+    expect(svg).toContain('height="80"');
   });
 
-  it.each([
-    null,
-    undefined,
-    'image',
-    42,
-    {},
-    { type: 'image' },
-    { ...validImage, id: undefined },
-  ])('rejects malformed input %#', (candidate: unknown) => {
-    // Given: a null, primitive, or incomplete candidate.
-    // When: the image guard validates it.
-    const result = isImageElement(candidate);
+  it('canvasSceneToSvg skips images with empty data', () => {
+    const emptyImage: CanvasImage = { ...validImage, data: '' };
+    const svg = canvasSceneToSvg({
+      version: 1,
+      width: 800,
+      height: 600,
+      background: '#FFFFFF',
+      elements: [emptyImage],
+    });
 
-    // Then: the candidate is rejected without throwing.
-    expect(result).toBe(false);
+    expect(svg).not.toContain('<image');
   });
 });

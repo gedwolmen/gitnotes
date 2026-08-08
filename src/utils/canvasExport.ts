@@ -1,4 +1,4 @@
-import { CanvasScene, CanvasStroke, CanvasShape, CanvasText, CanvasChart } from '../models/Canvas';
+import { CanvasScene, CanvasStroke, CanvasShape, CanvasText, CanvasChart, CanvasImage } from '../models/Canvas';
 
 function strokeToSvgPath(stroke: CanvasStroke): string {
   if (!stroke.points || stroke.points.length === 0) return '';
@@ -113,6 +113,11 @@ function chartToSvgElement(chart: CanvasChart): string {
   return svg;
 }
 
+function imageToSvgElement(image: CanvasImage): string {
+  if (!image.data) return '';
+  return `<image href="data:${image.mimeType};base64,${image.data}" x="${image.x}" y="${image.y}" width="${image.width}" height="${image.height}" preserveAspectRatio="none"/>`;
+}
+
 function escapeXml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
@@ -140,6 +145,11 @@ export function canvasSceneToSvg(scene: CanvasScene): string {
       svgElements.push(textToSvgElement(el));
     } else if (el.type === 'chart') {
       svgElements.push(chartToSvgElement(el));
+    } else if (el.type === 'image') {
+      const svg = imageToSvgElement(el);
+      if (svg) {
+        svgElements.push(svg);
+      }
     }
   });
 
