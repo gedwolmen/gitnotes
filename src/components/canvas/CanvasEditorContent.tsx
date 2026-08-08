@@ -42,7 +42,6 @@ import {
   CanvasShape,
   CanvasText,
   CanvasChart,
-  CanvasImage,
   DEFAULT_SCENE,
   slugifyCanvasTitle,
 } from '../../models/Canvas';
@@ -50,6 +49,7 @@ import GitContextPicker from '../GitContextPicker';
 import { syncCanvasToGitHub } from '../../services/CanvasGitHubSyncService';
 import { useAuth } from '../../contexts/AuthContext';
 import { renderSceneToPng } from '../../utils/canvasPngExport';
+import { parseChartLabels, parseChartValues } from '../../utils/chartParsing';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import type { RootStackParamList } from '../../navigation/types';
@@ -71,7 +71,6 @@ const TOOLS: { key: string; icon?: ToolIconName; label?: string }[] = [
   { key: 'ellipse', icon: 'ellipse-outline' as ToolIconName },
   { key: 'diamond', icon: 'diamond-outline' as ToolIconName },
   { key: 'text', label: 'T' },
-  { key: 'image', icon: 'image-outline' as ToolIconName },
   { key: 'chart', icon: 'bar-chart-outline' as ToolIconName },
   { key: 'select', icon: 'hand-left-outline' as ToolIconName },
 ];
@@ -313,6 +312,12 @@ export default function CanvasEditorContent() {
   const [textInput, setTextInput] = useState('');
   const [textPosition, setTextPosition] = useState<Point | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [chartModalVisible, setChartModalVisible] = useState(false);
+  const [chartPosition, setChartPosition] = useState<Point | null>(null);
+  const [chartTitle, setChartTitle] = useState('Chart');
+  const [chartType, setChartType] = useState<'bar' | 'line' | 'pie'>('bar');
+  const [chartLabelsInput, setChartLabelsInput] = useState('A, B, C');
+  const [chartValuesInput, setChartValuesInput] = useState('10, 20, 30');
 
   const scale = useSharedValue(1);
   const translateX = useSharedValue(0);
@@ -518,78 +523,6 @@ export default function CanvasEditorContent() {
     setChartModalVisible(true);
   }, []);
 
-  const startImagePlacement = useCallback(async (pt: Point) => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        base64: true,
-        quality: 0.8,
-      });
-      if (result.canceled || !result.assets?.[0]?.base64) return;
-
-      const asset = result.assets[0];
-      let base64Data: string = asset.base64!;
-      let srcW = asset.width;
-      let srcH = asset.height;
-
-      const MAX_BYTES = 512 * 1024;
-      while (base64Data.length > MAX_BYTES * 1.33) {
-        const data = Skia.Data.fromBase64(base64Data);
-        const skImage = Skia.Image.MakeImageFromEncoded(data);
-        if (!skImage) break;
-        const halfW = Math.max(1, Math.floor(skImage.width() / 2));
-        const halfH = Math.max(1, Math.floor(skImage.height() / 2));
-        if (halfW < 256 || halfH < 256) break;
-        const surface = Skia.Surface.MakeOffscreen(halfW, halfH);
-        if (!surface) break;
-        try {
-          const canvas = surface.getCanvas();
-          canvas.drawImageRect(skImage,
-            { x: 0, y: 0, width: skImage.width(), height: skImage.height() },
-            { x: 0, y: 0, width: halfW, height: halfH },
-            Skia.Paint()
-          );
-          const resized = surface.makeImageSnapshot();
-          base64Data = resized.encodeToBase64();
-          srcW = halfW;
-          srcH = halfH;
-        } finally {
-          surface.dispose();
-        }
-      }
-
-      const maxDim = 200;
-      const scale = Math.min(maxDim / srcW, maxDim / srcH, 1);
-      const displayW = Math.round(srcW * scale);
-      const displayH = Math.round(srcH * scale);
-
-      saveHistory();
-      const el: CanvasImage = {
-        type: 'image',
-        id: `img-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
-        data: base64Data,
-        mimeType: 'image/jpeg',
-        x: pt.x - displayW / 2,
-        y: pt.y - displayH / 2,
-        width: displayW,
-        height: displayH,
-      };
-      setElements((prev) => [...prev, el]);
-    } catch (error) {
-      Alert.alert('Image error', error instanceof Error ? error.message : 'Failed to load image');
-    }
-  }, [saveHistory]);
-
-  const checkResizeHandle = useCallback((el: CanvasElement, px: number, py: number): 'tl' | 'tr' | 'bl' | 'br' | null => {
-    if (el.type !== 'image') return null;
-    const hs = 12;
-    if (Math.abs(px - el.x) <= hs && Math.abs(py - el.y) <= hs) return 'tl';
-    if (Math.abs(px - (el.x + el.width)) <= hs && Math.abs(py - el.y) <= hs) return 'tr';
-    if (Math.abs(px - el.x) <= hs && Math.abs(py - (el.y + el.height)) <= hs) return 'bl';
-    if (Math.abs(px - (el.x + el.width)) <= hs && Math.abs(py - (el.y + el.height)) <= hs) return 'br';
-    return null;
-  }, []);
-
   const startSelection = useCallback((pt: Point) => {
     dragStartRef.current = pt;
     lassoPointsRef.current = [];
@@ -760,11 +693,6 @@ export default function CanvasEditorContent() {
             return;
           }
 
-          if (tool === 'image') {
-            runOnJS(startImagePlacement)(pt);
-            return;
-          }
-
           // Don't draw if in select mode - let the select gesture handle it
           if (tool === 'select') {
             return;
@@ -864,7 +792,7 @@ export default function CanvasEditorContent() {
             }
           }
         }),
-    [tool, color, size, filled, saveHistory, startTextPlacement, startChartPlacement, startImagePlacement, commitActiveDrawing, activeDrawingElement, activeStrokePath, eraseElementsAtPoint],
+    [tool, color, size, filled, saveHistory, startTextPlacement, startChartPlacement, commitActiveDrawing, activeDrawingElement, activeStrokePath, eraseElementsAtPoint],
   );
 
   const addTextElement = useCallback(() => {
@@ -912,29 +840,6 @@ export default function CanvasEditorContent() {
     setElements((prev) => [...prev, el]);
     setChartModalVisible(false);
   }, [chartPosition, chartTitle, chartType, chartLabelsInput, chartValuesInput, saveHistory]);
-
-  const applyAnimation = useCallback(() => {
-    if (selectedIds.length === 0) return;
-    const duration = Math.max(500, Math.min(5000, parseInt(animDuration, 10) || 2000));
-    saveHistory();
-    setElements((prev) => prev.map((el) =>
-      selectedIds.includes(el.id)
-        ? { ...el, animation: { type: animType, duration, loop: animLoop } }
-        : el
-    ));
-    setAnimModalVisible(false);
-  }, [selectedIds, animType, animDuration, animLoop, saveHistory]);
-
-  const removeAnimation = useCallback(() => {
-    if (selectedIds.length === 0) return;
-    saveHistory();
-    setElements((prev) => prev.map((el) => {
-      if (!selectedIds.includes(el.id)) return el;
-      const { animation: _removed, ...rest } = el as typeof el & { animation?: unknown };
-      return rest as typeof el;
-    }));
-    setAnimModalVisible(false);
-  }, [selectedIds, saveHistory]);
 
   // Select tool pan gesture - ONLY for moving selected elements
   const selectPanGesture = useMemo(
@@ -1583,50 +1488,6 @@ export default function CanvasEditorContent() {
               </TouchableOpacity>
               <TouchableOpacity testID="canvas-editor.button.add-chart" style={styles.modalBtn} onPress={addChartElement}>
                 <Text style={{ color: colors.primary, fontWeight: '600' }}>Add</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal visible={animModalVisible} transparent animationType="fade" onRequestClose={() => setAnimModalVisible(false)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Animate Element</Text>
-            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-              {(['pulse', 'fade', 'spin', 'translate'] as const).map((t) => (
-                <TouchableOpacity
-                  key={t}
-                  style={[styles.toolBtn, animType === t && styles.toolBtnActive]}
-                  onPress={() => setAnimType(t)}
-                >
-                  <Text style={[styles.toolBtnLabel, { color: animType === t ? colors.primary : colors.text }]}>{t}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <TextInput
-              style={styles.modalInput}
-              value={animDuration}
-              onChangeText={setAnimDuration}
-              placeholder="Duration (ms): 500-5000"
-              placeholderTextColor={colors.textSecondary}
-              keyboardType="number-pad"
-            />
-            <TouchableOpacity
-              style={[styles.toolBtn, animLoop && styles.toolBtnActive, { alignSelf: 'flex-start', marginBottom: 8 }]}
-              onPress={() => setAnimLoop(!animLoop)}
-            >
-              <Text style={[styles.toolBtnLabel, { color: animLoop ? colors.primary : colors.text }]}>Loop {animLoop ? 'ON' : 'OFF'}</Text>
-            </TouchableOpacity>
-            <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.modalBtn} onPress={removeAnimation}>
-                <Text style={{ color: '#FF3B30' }}>Remove</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.modalBtn} onPress={() => setAnimModalVisible(false)}>
-                <Text style={{ color: colors.textSecondary }}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity testID="canvas-editor.button.apply-animation" style={styles.modalBtn} onPress={applyAnimation}>
-                <Text style={{ color: colors.primary, fontWeight: '600' }}>Apply</Text>
               </TouchableOpacity>
             </View>
           </View>
