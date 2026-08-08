@@ -50,11 +50,8 @@ import GitContextPicker from '../GitContextPicker';
 import { syncCanvasToGitHub } from '../../services/CanvasGitHubSyncService';
 import { useAuth } from '../../contexts/AuthContext';
 import { renderSceneToPng } from '../../utils/canvasPngExport';
-import { parseChartLabels, parseChartValues } from '../../utils/chartParsing';
-import { pointInPolygon, elementCenter } from '../../utils/canvasSelection';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import * as ImagePicker from 'expo-image-picker';
 import type { RootStackParamList } from '../../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'CanvasEditor'>;
@@ -316,16 +313,6 @@ export default function CanvasEditorContent() {
   const [textInput, setTextInput] = useState('');
   const [textPosition, setTextPosition] = useState<Point | null>(null);
   const [exporting, setExporting] = useState(false);
-  const [chartModalVisible, setChartModalVisible] = useState(false);
-  const [chartPosition, setChartPosition] = useState<Point | null>(null);
-  const [chartTitle, setChartTitle] = useState('Chart');
-  const [chartType, setChartType] = useState<'bar' | 'line' | 'pie'>('bar');
-  const [chartLabelsInput, setChartLabelsInput] = useState('A, B, C');
-  const [chartValuesInput, setChartValuesInput] = useState('10, 20, 30');
-  const [animModalVisible, setAnimModalVisible] = useState(false);
-  const [animType, setAnimType] = useState<'pulse' | 'fade' | 'spin' | 'translate'>('pulse');
-  const [animDuration, setAnimDuration] = useState('2000');
-  const [animLoop, setAnimLoop] = useState(true);
 
   const scale = useSharedValue(1);
   const translateX = useSharedValue(0);
