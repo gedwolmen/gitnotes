@@ -39,6 +39,7 @@ import {
   CanvasStroke,
   CanvasShape,
   CanvasText,
+  CanvasChart,
   DEFAULT_SCENE,
   slugifyCanvasTitle,
 } from '../../models/Canvas';
@@ -46,6 +47,7 @@ import GitContextPicker from '../GitContextPicker';
 import { syncCanvasToGitHub } from '../../services/CanvasGitHubSyncService';
 import { useAuth } from '../../contexts/AuthContext';
 import { renderSceneToPng } from '../../utils/canvasPngExport';
+import { parseChartLabels, parseChartValues } from '../../utils/chartParsing';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import type { RootStackParamList } from '../../navigation/types';
@@ -67,6 +69,7 @@ const TOOLS: { key: string; icon?: ToolIconName; label?: string }[] = [
   { key: 'ellipse', icon: 'ellipse-outline' as ToolIconName },
   { key: 'diamond', icon: 'diamond-outline' as ToolIconName },
   { key: 'text', label: 'T' },
+  { key: 'chart', icon: 'bar-chart-outline' as ToolIconName },
   { key: 'select', icon: 'hand-left-outline' as ToolIconName },
 ];
 
@@ -307,6 +310,12 @@ export default function CanvasEditorContent() {
   const [textInput, setTextInput] = useState('');
   const [textPosition, setTextPosition] = useState<Point | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [chartModalVisible, setChartModalVisible] = useState(false);
+  const [chartPosition, setChartPosition] = useState<Point | null>(null);
+  const [chartTitle, setChartTitle] = useState('Chart');
+  const [chartType, setChartType] = useState<'bar' | 'line' | 'pie'>('bar');
+  const [chartLabelsInput, setChartLabelsInput] = useState('A, B, C');
+  const [chartValuesInput, setChartValuesInput] = useState('10, 20, 30');
 
   const scale = useSharedValue(1);
   const translateX = useSharedValue(0);
@@ -476,6 +485,15 @@ export default function CanvasEditorContent() {
     setTextModalVisible(true);
   }, []);
 
+  const startChartPlacement = useCallback((pt: Point) => {
+    setChartPosition(pt);
+    setChartTitle('Chart');
+    setChartType('bar');
+    setChartLabelsInput('A, B, C');
+    setChartValuesInput('10, 20, 30');
+    setChartModalVisible(true);
+  }, []);
+
   const startSelection = useCallback((pt: Point) => {
     dragStartRef.current = pt;
     for (let i = elements.length - 1; i >= 0; i--) {
@@ -598,6 +616,11 @@ export default function CanvasEditorContent() {
             return;
           }
 
+          if (tool === 'chart') {
+            runOnJS(startChartPlacement)(pt);
+            return;
+          }
+
           // Don't draw if in select mode - let the select gesture handle it
           if (tool === 'select') {
             return;
@@ -697,7 +720,7 @@ export default function CanvasEditorContent() {
             }
           }
         }),
-    [tool, color, size, filled, saveHistory, startTextPlacement, commitActiveDrawing, activeDrawingElement, activeStrokePath, eraseElementsAtPoint],
+    [tool, color, size, filled, saveHistory, startTextPlacement, startChartPlacement, commitActiveDrawing, activeDrawingElement, activeStrokePath, eraseElementsAtPoint],
   );
 
   const addTextElement = useCallback(() => {
@@ -715,6 +738,36 @@ export default function CanvasEditorContent() {
     setElements((prev) => [...prev, el]);
     setTextModalVisible(false);
   }, [textPosition, textInput, color, saveHistory]);
+
+  const addChartElement = useCallback(() => {
+    if (!chartPosition) return;
+    const labels = parseChartLabels(chartLabelsInput);
+    const values = parseChartValues(chartValuesInput);
+    if (labels.length === 0 || values.length === 0) {
+      Alert.alert('Invalid data', 'Please enter at least one label and one value.');
+      return;
+    }
+    const maxLen = Math.max(labels.length, values.length);
+    const paddedLabels = [...labels];
+    const paddedValues = [...values];
+    while (paddedLabels.length < maxLen) paddedLabels.push(`Label ${paddedLabels.length + 1}`);
+    while (paddedValues.length < maxLen) paddedValues.push(0);
+    saveHistory();
+    const el: CanvasChart = {
+      type: 'chart',
+      id: uid(),
+      chartType: chartType,
+      title: chartTitle.trim() || 'Chart',
+      labels: paddedLabels,
+      values: paddedValues,
+      x: chartPosition.x,
+      y: chartPosition.y,
+      width: 300,
+      height: 200,
+    };
+    setElements((prev) => [...prev, el]);
+    setChartModalVisible(false);
+  }, [chartPosition, chartTitle, chartType, chartLabelsInput, chartValuesInput, saveHistory]);
 
   // Select tool pan gesture - ONLY for moving selected elements
   const selectPanGesture = useMemo(
@@ -1246,6 +1299,55 @@ export default function CanvasEditorContent() {
                 <Text style={{ color: colors.textSecondary }}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity testID="canvas-editor.button.add-text" style={styles.modalBtn} onPress={addTextElement}>
+                <Text style={{ color: colors.primary, fontWeight: '600' }}>Add</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={chartModalVisible} transparent animationType="fade" onRequestClose={() => setChartModalVisible(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Insert Chart</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={chartTitle}
+              onChangeText={setChartTitle}
+              placeholder="Chart title"
+              placeholderTextColor={colors.textSecondary}
+            />
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+              {(['bar', 'line', 'pie'] as const).map((t) => (
+                <TouchableOpacity
+                  key={t}
+                  style={[styles.toolBtn, chartType === t && styles.toolBtnActive]}
+                  onPress={() => setChartType(t)}
+                >
+                  <Text style={[styles.toolBtnLabel, { color: chartType === t ? colors.primary : colors.text }]}>{t}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TextInput
+              style={styles.modalInput}
+              value={chartLabelsInput}
+              onChangeText={setChartLabelsInput}
+              placeholder="Labels: A, B, C"
+              placeholderTextColor={colors.textSecondary}
+            />
+            <TextInput
+              style={styles.modalInput}
+              value={chartValuesInput}
+              onChangeText={setChartValuesInput}
+              placeholder="Values: 10, 20, 30"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="numeric"
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalBtn} onPress={() => setChartModalVisible(false)}>
+                <Text style={{ color: colors.textSecondary }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity testID="canvas-editor.button.add-chart" style={styles.modalBtn} onPress={addChartElement}>
                 <Text style={{ color: colors.primary, fontWeight: '600' }}>Add</Text>
               </TouchableOpacity>
             </View>
