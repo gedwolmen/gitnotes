@@ -1295,17 +1295,7 @@ export default function CanvasEditorContent() {
             <Group key={el.id ?? idx}>
               <SkiaImage image={skImage} x={el.x} y={el.y} width={el.width} height={el.height} fit="fill" />
               {isSelected && (
-                <Group>
-                  <Rect x={el.x - 2} y={el.y - 2} width={el.width + 4} height={el.height + 4} color="#007AFF" style="stroke" strokeWidth={2} />
-                  <Rect x={el.x - 4} y={el.y - 4} width={8} height={8} color="#FFFFFF" />
-                  <Rect x={el.x - 4} y={el.y - 4} width={8} height={8} color="#007AFF" style="stroke" strokeWidth={1} />
-                  <Rect x={el.x + el.width - 4} y={el.y - 4} width={8} height={8} color="#FFFFFF" />
-                  <Rect x={el.x + el.width - 4} y={el.y - 4} width={8} height={8} color="#007AFF" style="stroke" strokeWidth={1} />
-                  <Rect x={el.x - 4} y={el.y + el.height - 4} width={8} height={8} color="#FFFFFF" />
-                  <Rect x={el.x - 4} y={el.y + el.height - 4} width={8} height={8} color="#007AFF" style="stroke" strokeWidth={1} />
-                  <Rect x={el.x + el.width - 4} y={el.y + el.height - 4} width={8} height={8} color="#FFFFFF" />
-                  <Rect x={el.x + el.width - 4} y={el.y + el.height - 4} width={8} height={8} color="#007AFF" style="stroke" strokeWidth={1} />
-                </Group>
+                <Rect x={el.x - 2} y={el.y - 2} width={el.width + 4} height={el.height + 4} color="#007AFF" style="stroke" strokeWidth={2} />
               )}
             </Group>
           );
