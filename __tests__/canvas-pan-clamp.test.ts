@@ -58,6 +58,7 @@ jest.mock('../src/contexts/CanvasContext', () => ({ useCanvases: () => ({ getCan
 jest.mock('../src/contexts/ThemeContext', () => ({ useTheme: () => ({ colors: { background: '#fff', border: '#ddd', surface: '#fff', text: '#111', textSecondary: '#666', primary: '#2563eb' } }) }));
 jest.mock('../src/components/GitContextPicker', () => () => null);
 jest.mock('../src/services/CanvasGitHubSyncService', () => ({ syncCanvasToGitHub: async () => ({ success: true }) }));
+jest.mock('expo-image-picker', () => ({ launchImageLibraryAsync: async () => ({ canceled: true, assets: null }) }));
 
 import {
   clampCanvasTranslation,
