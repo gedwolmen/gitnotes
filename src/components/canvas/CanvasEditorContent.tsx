@@ -263,6 +263,71 @@ export function moveCanvasElement(el: CanvasElement, dx: number, dy: number): Ca
   }
 }
 
+function AnimatedCanvasElement({ element, children }: { element: CanvasElement; children: React.ReactNode }) {
+  const progress = useSharedValue(0);
+  const anim = element.animation;
+
+  React.useEffect(() => {
+    if (!anim) {
+      progress.value = 0;
+      return;
+    }
+    const half = anim.duration / 2;
+    const forwardBack = withSequence(withTiming(1, { duration: half }), withTiming(0, { duration: half }));
+    const loopCount = anim.loop ? -1 : 1;
+
+    if (anim.type === 'spin') {
+      progress.value = withRepeat(withTiming(1, { duration: anim.duration }), loopCount, false);
+    } else {
+      progress.value = withRepeat(forwardBack, loopCount, false);
+    }
+
+    return () => {
+      cancelAnimation(progress);
+    };
+  }, [anim, progress]);
+
+  const center = elementCenter(element);
+  const cx = center.x;
+  const cy = center.y;
+
+  const transform = useDerivedValue(() => {
+    if (!anim) return [{ translateX: 0 }, { translateY: 0 }, { rotate: 0 }, { scale: 1 }];
+    const p = progress.value;
+    switch (anim.type) {
+      case 'pulse':
+        return [
+          { translateX: cx }, { translateY: cy },
+          { scale: 1 + 0.1 * p },
+          { translateX: -cx }, { translateY: -cy },
+        ];
+      case 'fade':
+        return [{ translateX: 0 }];
+      case 'spin':
+        return [
+          { translateX: cx }, { translateY: cy },
+          { rotate: p * Math.PI * 2 },
+          { translateX: -cx }, { translateY: -cy },
+        ];
+      case 'translate':
+        return [{ translateX: 20 * p }];
+      default:
+        return [{ translateX: 0 }];
+    }
+  });
+
+  const opacity = useDerivedValue(() => {
+    if (!anim || anim.type !== 'fade') return 1;
+    return 1 - 0.7 * progress.value;
+  });
+
+  return (
+    <Group transform={transform} opacity={opacity}>
+      {children}
+    </Group>
+  );
+}
+
 export default function CanvasEditorContent() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteType>();
