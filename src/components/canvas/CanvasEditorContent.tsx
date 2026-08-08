@@ -318,6 +318,10 @@ export default function CanvasEditorContent() {
   const [chartType, setChartType] = useState<'bar' | 'line' | 'pie'>('bar');
   const [chartLabelsInput, setChartLabelsInput] = useState('A, B, C');
   const [chartValuesInput, setChartValuesInput] = useState('10, 20, 30');
+  const [animModalVisible, setAnimModalVisible] = useState(false);
+  const [animType, setAnimType] = useState<'pulse' | 'fade' | 'spin' | 'translate'>('pulse');
+  const [animDuration, setAnimDuration] = useState('2000');
+  const [animLoop, setAnimLoop] = useState(true);
 
   const scale = useSharedValue(1);
   const translateX = useSharedValue(0);
@@ -841,6 +845,29 @@ export default function CanvasEditorContent() {
     setChartModalVisible(false);
   }, [chartPosition, chartTitle, chartType, chartLabelsInput, chartValuesInput, saveHistory]);
 
+  const applyAnimation = useCallback(() => {
+    if (!selectedId) return;
+    const duration = Math.max(500, Math.min(5000, parseInt(animDuration, 10) || 2000));
+    saveHistory();
+    setElements((prev) => prev.map((el) =>
+      el.id === selectedId
+        ? { ...el, animation: { type: animType, duration, loop: animLoop } }
+        : el
+    ));
+    setAnimModalVisible(false);
+  }, [selectedId, animType, animDuration, animLoop, saveHistory]);
+
+  const removeAnimation = useCallback(() => {
+    if (!selectedId) return;
+    saveHistory();
+    setElements((prev) => prev.map((el) => {
+      if (el.id !== selectedId) return el;
+      const { animation: _removed, ...rest } = el as typeof el & { animation?: unknown };
+      return rest as typeof el;
+    }));
+    setAnimModalVisible(false);
+  }, [selectedId, saveHistory]);
+
   // Select tool pan gesture - ONLY for moving selected elements
   const selectPanGesture = useMemo(
     () =>
@@ -1283,7 +1310,7 @@ export default function CanvasEditorContent() {
           <TouchableOpacity testID="canvas-editor.toolbar.clear-all" style={styles.toolBtn} onPress={clearAll}>
             <Ionicons name="trash-outline" size={20} color={colors.text} />
           </TouchableOpacity>
-          {selectedIds.length > 0 && (
+          {selectedId && (
             <TouchableOpacity testID="canvas-editor.toolbar.animate" style={styles.toolBtn} onPress={() => setAnimModalVisible(true)}>
               <Ionicons name="play-outline" size={20} color={colors.text} />
             </TouchableOpacity>
@@ -1488,6 +1515,50 @@ export default function CanvasEditorContent() {
               </TouchableOpacity>
               <TouchableOpacity testID="canvas-editor.button.add-chart" style={styles.modalBtn} onPress={addChartElement}>
                 <Text style={{ color: colors.primary, fontWeight: '600' }}>Add</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={animModalVisible} transparent animationType="fade" onRequestClose={() => setAnimModalVisible(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Animate Element</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+              {(['pulse', 'fade', 'spin', 'translate'] as const).map((t) => (
+                <TouchableOpacity
+                  key={t}
+                  style={[styles.toolBtn, animType === t && styles.toolBtnActive]}
+                  onPress={() => setAnimType(t)}
+                >
+                  <Text style={[styles.toolBtnLabel, { color: animType === t ? colors.primary : colors.text }]}>{t}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TextInput
+              style={styles.modalInput}
+              value={animDuration}
+              onChangeText={setAnimDuration}
+              placeholder="Duration (ms): 500-5000"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="number-pad"
+            />
+            <TouchableOpacity
+              style={[styles.toolBtn, animLoop && styles.toolBtnActive, { alignSelf: 'flex-start', marginBottom: 8 }]}
+              onPress={() => setAnimLoop(!animLoop)}
+            >
+              <Text style={[styles.toolBtnLabel, { color: animLoop ? colors.primary : colors.text }]}>Loop {animLoop ? 'ON' : 'OFF'}</Text>
+            </TouchableOpacity>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalBtn} onPress={removeAnimation}>
+                <Text style={{ color: '#FF3B30' }}>Remove</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalBtn} onPress={() => setAnimModalVisible(false)}>
+                <Text style={{ color: colors.textSecondary }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity testID="canvas-editor.button.apply-animation" style={styles.modalBtn} onPress={applyAnimation}>
+                <Text style={{ color: colors.primary, fontWeight: '600' }}>Apply</Text>
               </TouchableOpacity>
             </View>
           </View>
