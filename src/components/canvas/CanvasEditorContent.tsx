@@ -375,6 +375,7 @@ export default function CanvasEditorContent() {
   const resizeOriginalRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
   const gestureModeRef = useRef<'RESIZE' | 'MOVE' | 'LASSO' | null>(null);
   const lassoPointsRef = useRef<Point[]>([]);
+  const [lassoRenderTick, setLassoRenderTick] = useState(0);
 
   const textFont = useMemo(
     () =>
@@ -675,6 +676,7 @@ export default function CanvasEditorContent() {
 
     if (gestureModeRef.current === 'LASSO') {
       lassoPointsRef.current = [...lassoPointsRef.current, pt];
+      setLassoRenderTick((t) => t + 1);
       return;
     }
 
@@ -701,6 +703,7 @@ export default function CanvasEditorContent() {
     resizeOriginalRef.current = null;
     gestureModeRef.current = null;
     lassoPointsRef.current = [];
+    setLassoRenderTick(0);
   }, [elements]);
 
   const commitActiveDrawing = useCallback((element: CanvasStroke | CanvasShape | null) => {
