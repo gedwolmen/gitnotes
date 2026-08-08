@@ -42,6 +42,7 @@ import {
   CanvasShape,
   CanvasText,
   CanvasChart,
+  CanvasImage,
   DEFAULT_SCENE,
   slugifyCanvasTitle,
 } from '../../models/Canvas';
@@ -52,6 +53,7 @@ import { renderSceneToPng } from '../../utils/canvasPngExport';
 import { parseChartLabels, parseChartValues } from '../../utils/chartParsing';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import * as ImagePicker from 'expo-image-picker';
 import type { RootStackParamList } from '../../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'CanvasEditor'>;
@@ -71,6 +73,7 @@ const TOOLS: { key: string; icon?: ToolIconName; label?: string }[] = [
   { key: 'ellipse', icon: 'ellipse-outline' as ToolIconName },
   { key: 'diamond', icon: 'diamond-outline' as ToolIconName },
   { key: 'text', label: 'T' },
+  { key: 'image', icon: 'image-outline' as ToolIconName },
   { key: 'chart', icon: 'bar-chart-outline' as ToolIconName },
   { key: 'select', icon: 'hand-left-outline' as ToolIconName },
 ];
@@ -527,6 +530,70 @@ export default function CanvasEditorContent() {
     setChartModalVisible(true);
   }, []);
 
+  const startImagePlacement = useCallback(async (pt: Point) => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        base64: true,
+        quality: 0.8,
+      });
+      if (result.canceled || !result.assets?.[0]?.base64) return;
+
+      const asset = result.assets[0];
+      let base64Data = asset.base64;
+      let srcW = asset.width;
+      let srcH = asset.height;
+
+      const MAX_BYTES = 512 * 1024;
+      let quality = 80;
+      while (base64Data.length > MAX_BYTES * 1.33 && quality > 20) {
+        quality -= 10;
+        const data = Skia.Data.fromBase64(base64Data);
+        const skImage = Skia.Image.MakeImageFromEncoded(data);
+        if (!skImage) break;
+        const halfW = Math.max(1, Math.floor(skImage.width() / 2));
+        const halfH = Math.max(1, Math.floor(skImage.height() / 2));
+        if (halfW < 256 || halfH < 256) break;
+        const surface = Skia.Surface.MakeOffscreen(halfW, halfH);
+        if (!surface) break;
+        try {
+          const canvas = surface.getCanvas();
+          canvas.drawImageRect(skImage,
+            { x: 0, y: 0, width: skImage.width(), height: skImage.height() },
+            { x: 0, y: 0, width: halfW, height: halfH },
+            Skia.Paint()
+          );
+          const resized = surface.makeImageSnapshot();
+          base64Data = resized.encodeToBase64('png');
+          srcW = halfW;
+          srcH = halfH;
+        } finally {
+          surface.dispose();
+        }
+      }
+
+      const maxDim = 200;
+      const scale = Math.min(maxDim / srcW, maxDim / srcH, 1);
+      const displayW = Math.round(srcW * scale);
+      const displayH = Math.round(srcH * scale);
+
+      saveHistory();
+      const el: CanvasImage = {
+        type: 'image',
+        id: `img-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+        data: base64Data,
+        mimeType: 'image/jpeg',
+        x: pt.x - displayW / 2,
+        y: pt.y - displayH / 2,
+        width: displayW,
+        height: displayH,
+      };
+      setElements((prev) => [...prev, el]);
+    } catch (error) {
+      Alert.alert('Image error', error instanceof Error ? error.message : 'Failed to load image');
+    }
+  }, [saveHistory]);
+
   const startSelection = useCallback((pt: Point) => {
     dragStartRef.current = pt;
     lassoPointsRef.current = [];
@@ -697,6 +764,11 @@ export default function CanvasEditorContent() {
             return;
           }
 
+          if (tool === 'image') {
+            runOnJS(startImagePlacement)(pt);
+            return;
+          }
+
           // Don't draw if in select mode - let the select gesture handle it
           if (tool === 'select') {
             return;
@@ -796,7 +868,7 @@ export default function CanvasEditorContent() {
             }
           }
         }),
-    [tool, color, size, filled, saveHistory, startTextPlacement, startChartPlacement, commitActiveDrawing, activeDrawingElement, activeStrokePath, eraseElementsAtPoint],
+    [tool, color, size, filled, saveHistory, startTextPlacement, startChartPlacement, startImagePlacement, commitActiveDrawing, activeDrawingElement, activeStrokePath, eraseElementsAtPoint],
   );
 
   const addTextElement = useCallback(() => {
