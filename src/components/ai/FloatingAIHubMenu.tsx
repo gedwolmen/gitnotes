@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   Blur,
@@ -13,8 +13,7 @@ import Animated, {
   useDerivedValue,
   type SharedValue,
 } from 'react-native-reanimated';
-import { RADII, SPACING, TYPE } from '../../theme/tokens';
-import { Surface } from '../ui/Surface';
+import { RADII } from '../../theme/tokens';
 
 const BUTTON_SIZE = 56;
 const LIQUID_CANVAS_SIZE = 296;
@@ -73,8 +72,6 @@ function LiquidSatellite({
 
 interface HubMenuItemProps extends MenuGeometryProps {
   readonly iconColor: string;
-  readonly labelColor: string;
-  readonly surfaceColor: string;
   readonly onPress: (itemId: HubItemId) => void;
 }
 
@@ -84,8 +81,6 @@ function HubMenuItem({
   verticalDirection,
   progress,
   iconColor,
-  labelColor,
-  surfaceColor,
   onPress,
 }: HubMenuItemProps) {
   const animatedStyle = useAnimatedStyle(() => ({
@@ -107,21 +102,6 @@ function HubMenuItem({
         style={styles.satelliteButton}
       >
         <Ionicons name={item.icon} size={22} color={iconColor} />
-        <Surface
-          elevation="floating"
-          radius="pill"
-          style={[
-            styles.satelliteLabel,
-            horizontalDirection === -1
-              ? styles.satelliteLabelLeft
-              : styles.satelliteLabelRight,
-            { backgroundColor: surfaceColor },
-          ]}
-        >
-          <Text style={[styles.satelliteLabelText, { color: labelColor }]}>
-            {item.label}
-          </Text>
-        </Surface>
       </Pressable>
     </Animated.View>
   );
@@ -148,8 +128,6 @@ export function FloatingAIHubMenu({
   progress,
   primaryColor,
   iconColor,
-  labelColor,
-  surfaceColor,
   onItemPress,
 }: FloatingAIHubMenuProps) {
   return (
@@ -191,8 +169,6 @@ export function FloatingAIHubMenu({
           verticalDirection={verticalDirection}
           progress={progress}
           iconColor={iconColor}
-          labelColor={labelColor}
-          surfaceColor={surfaceColor}
           onPress={onItemPress}
         />
       ))}
@@ -222,22 +198,5 @@ const styles = StyleSheet.create({
     borderRadius: RADII.pill,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  satelliteLabel: {
-    position: 'absolute',
-    top: SPACING[1],
-    minHeight: 40,
-    justifyContent: 'center',
-    paddingHorizontal: SPACING[3],
-  },
-  satelliteLabelLeft: {
-    right: SATELLITE_SIZE + SPACING[2],
-  },
-  satelliteLabelRight: {
-    left: SATELLITE_SIZE + SPACING[2],
-  },
-  satelliteLabelText: {
-    fontSize: TYPE.sm,
-    fontWeight: '600',
   },
 });
