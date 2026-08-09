@@ -158,9 +158,9 @@ function expandBounds(bounds: CanvasBounds | null, x: number, y: number): Canvas
   };
 }
 
-function assertNeverElement(_element: never): never {
+function assertNeverElement(element: CanvasElement): CanvasElement {
   'worklet';
-  throw new TypeError('Unsupported canvas element type');
+  return element;
 }
 
 export function getCanvasContentBounds(elements: CanvasElement[]): CanvasBounds | null {

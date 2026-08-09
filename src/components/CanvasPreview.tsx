@@ -20,7 +20,7 @@ import {
 import { useCanvases } from '../contexts/CanvasContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/types';
-import { CanvasChart, CanvasImage, CanvasShape, CanvasStroke, CanvasText } from '../models/Canvas';
+import { CanvasChart, CanvasShape, CanvasStroke, CanvasText } from '../models/Canvas';
 import { isImageElement } from '../models/Canvas';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
