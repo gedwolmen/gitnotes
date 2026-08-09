@@ -25,12 +25,14 @@ import {
   Fill,
   Group,
   Skia,
+  Image as SkiaImage,
   matchFont,
   Text as SkiaText,
 } from '@shopify/react-native-skia';
+import type { SkImage } from '@shopify/react-native-skia';
 import type { SkPath } from '@shopify/react-native-skia';
 import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
-import Animated, { runOnJS, useAnimatedStyle, useDerivedValue, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { cancelAnimation, runOnJS, useAnimatedStyle, useDerivedValue, useSharedValue, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { useCanvases } from '../../contexts/CanvasContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import {
@@ -39,12 +41,20 @@ import {
   CanvasStroke,
   CanvasShape,
   CanvasText,
+  CanvasChart,
+  CanvasImage,
   DEFAULT_SCENE,
   slugifyCanvasTitle,
 } from '../../models/Canvas';
 import GitContextPicker from '../GitContextPicker';
 import { syncCanvasToGitHub } from '../../services/CanvasGitHubSyncService';
 import { useAuth } from '../../contexts/AuthContext';
+import { renderSceneToPng } from '../../utils/canvasPngExport';
+import { parseChartLabels, parseChartValues } from '../../utils/chartParsing';
+import { pointInPolygon, elementCenter } from '../../utils/canvasSelection';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
+import * as ImagePicker from 'expo-image-picker';
 import type { RootStackParamList } from '../../navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'CanvasEditor'>;
@@ -64,6 +74,8 @@ const TOOLS: { key: string; icon?: ToolIconName; label?: string }[] = [
   { key: 'ellipse', icon: 'ellipse-outline' as ToolIconName },
   { key: 'diamond', icon: 'diamond-outline' as ToolIconName },
   { key: 'text', label: 'T' },
+  { key: 'image', icon: 'image-outline' as ToolIconName },
+  { key: 'chart', icon: 'bar-chart-outline' as ToolIconName },
   { key: 'select', icon: 'hand-left-outline' as ToolIconName },
 ];
 
@@ -146,37 +158,43 @@ function expandBounds(bounds: CanvasBounds | null, x: number, y: number): Canvas
   };
 }
 
+function assertNeverElement(element: CanvasElement): CanvasElement {
+  'worklet';
+  return element;
+}
+
 export function getCanvasContentBounds(elements: CanvasElement[]): CanvasBounds | null {
   'worklet';
 
   let bounds: CanvasBounds | null = null;
 
   for (const el of elements) {
-    if (el.type === 'stroke') {
-      for (const point of el.points) {
-        bounds = expandBounds(bounds, point.x - el.width / 2, point.y - el.width / 2);
-        bounds = expandBounds(bounds, point.x + el.width / 2, point.y + el.width / 2);
+    switch (el.type) {
+      case 'stroke':
+        for (const point of el.points) {
+          bounds = expandBounds(bounds, point.x - el.width / 2, point.y - el.width / 2);
+          bounds = expandBounds(bounds, point.x + el.width / 2, point.y + el.width / 2);
+        }
+        break;
+      case 'shape': {
+        const pad = el.width / 2;
+        bounds = expandBounds(bounds, Math.min(el.x1, el.x2) - pad, Math.min(el.y1, el.y2) - pad);
+        bounds = expandBounds(bounds, Math.max(el.x1, el.x2) + pad, Math.max(el.y1, el.y2) + pad);
+        break;
       }
-      continue;
-    }
-
-    if (el.type === 'shape') {
-      const pad = el.width / 2;
-      bounds = expandBounds(bounds, Math.min(el.x1, el.x2) - pad, Math.min(el.y1, el.y2) - pad);
-      bounds = expandBounds(bounds, Math.max(el.x1, el.x2) + pad, Math.max(el.y1, el.y2) + pad);
-      continue;
-    }
-
-    if (el.type === 'text') {
-      const textWidth = Math.max(1, el.text.length * el.fontSize * 0.6);
-      bounds = expandBounds(bounds, el.x, el.y - el.fontSize);
-      bounds = expandBounds(bounds, el.x + textWidth, el.y);
-      continue;
-    }
-
-    if (el.type === 'chart') {
-      bounds = expandBounds(bounds, el.x, el.y);
-      bounds = expandBounds(bounds, el.x + el.width, el.y + el.height);
+      case 'text': {
+        const textWidth = Math.max(1, el.text.length * el.fontSize * 0.6);
+        bounds = expandBounds(bounds, el.x, el.y - el.fontSize);
+        bounds = expandBounds(bounds, el.x + textWidth, el.y);
+        break;
+      }
+      case 'chart':
+      case 'image':
+        bounds = expandBounds(bounds, el.x, el.y);
+        bounds = expandBounds(bounds, el.x + el.width, el.y + el.height);
+        break;
+      default:
+        assertNeverElement(el);
     }
   }
 
@@ -226,6 +244,88 @@ export function clampCanvasTranslation(
     translateX: minTx <= maxTx ? Math.min(maxTx, Math.max(minTx, translateX)) : fit.translateX,
     translateY: minTy <= maxTy ? Math.min(maxTy, Math.max(minTy, translateY)) : fit.translateY,
   };
+}
+
+export function moveCanvasElement(el: CanvasElement, dx: number, dy: number): CanvasElement {
+  'worklet';
+
+  switch (el.type) {
+    case 'stroke':
+      return { ...el, points: el.points.map((point) => ({ x: point.x + dx, y: point.y + dy })) };
+    case 'shape':
+      return { ...el, x1: el.x1 + dx, y1: el.y1 + dy, x2: el.x2 + dx, y2: el.y2 + dy };
+    case 'text':
+    case 'chart':
+    case 'image':
+      return { ...el, x: el.x + dx, y: el.y + dy };
+    default:
+      return assertNeverElement(el);
+  }
+}
+
+function AnimatedCanvasElement({ element, children }: { element: CanvasElement; children: React.ReactNode }) {
+  const progress = useSharedValue(0);
+  const anim = element.animation;
+
+  React.useEffect(() => {
+    if (!anim) {
+      progress.value = 0;
+      return;
+    }
+    const half = anim.duration / 2;
+    const forwardBack = withSequence(withTiming(1, { duration: half }), withTiming(0, { duration: half }));
+    const loopCount = anim.loop ? -1 : 1;
+
+    if (anim.type === 'spin') {
+      progress.value = withRepeat(withTiming(1, { duration: anim.duration }), loopCount, false);
+    } else {
+      progress.value = withRepeat(forwardBack, loopCount, false);
+    }
+
+    return () => {
+      cancelAnimation(progress);
+    };
+  }, [anim, progress]);
+
+  const center = elementCenter(element);
+  const cx = center.x;
+  const cy = center.y;
+
+  const transform = useDerivedValue(() => {
+    if (!anim) return [{ translateX: 0 }, { translateY: 0 }, { rotate: 0 }, { scale: 1 }];
+    const p = progress.value;
+    switch (anim.type) {
+      case 'pulse':
+        return [
+          { translateX: cx }, { translateY: cy },
+          { scale: 1 + 0.1 * p },
+          { translateX: -cx }, { translateY: -cy },
+        ];
+      case 'fade':
+        return [{ translateX: 0 }];
+      case 'spin':
+        return [
+          { translateX: cx }, { translateY: cy },
+          { rotate: p * Math.PI * 2 },
+          { translateX: -cx }, { translateY: -cy },
+        ];
+      case 'translate':
+        return [{ translateX: 20 * p }];
+      default:
+        return [{ translateX: 0 }];
+    }
+  });
+
+  const opacity = useDerivedValue(() => {
+    if (!anim || anim.type !== 'fade') return 1;
+    return 1 - 0.7 * progress.value;
+  });
+
+  return (
+    <Group transform={transform} opacity={opacity}>
+      {children}
+    </Group>
+  );
 }
 
 export default function CanvasEditorContent() {
@@ -280,6 +380,17 @@ export default function CanvasEditorContent() {
   const [textModalVisible, setTextModalVisible] = useState(false);
   const [textInput, setTextInput] = useState('');
   const [textPosition, setTextPosition] = useState<Point | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [chartModalVisible, setChartModalVisible] = useState(false);
+  const [chartPosition, setChartPosition] = useState<Point | null>(null);
+  const [chartTitle, setChartTitle] = useState('Chart');
+  const [chartType, setChartType] = useState<'bar' | 'line' | 'pie'>('bar');
+  const [chartLabelsInput, setChartLabelsInput] = useState('A, B, C');
+  const [chartValuesInput, setChartValuesInput] = useState('10, 20, 30');
+  const [animModalVisible, setAnimModalVisible] = useState(false);
+  const [animType, setAnimType] = useState<'pulse' | 'fade' | 'spin' | 'translate'>('pulse');
+  const [animDuration, setAnimDuration] = useState('2000');
+  const [animLoop, setAnimLoop] = useState(true);
 
   const scale = useSharedValue(1);
   const translateX = useSharedValue(0);
@@ -292,6 +403,7 @@ export default function CanvasEditorContent() {
   const contentBounds = useMemo(() => getCanvasContentBounds(elements), [elements]);
   const shouldAutoFitRef = useRef(true);
   const didAutoFitRef = useRef(!!canvasId);
+  const imageCacheRef = useRef<Map<string, SkImage | null>>(new Map());
 
   const setZoom = useCallback(
     (next: number) => {
@@ -318,12 +430,17 @@ export default function CanvasEditorContent() {
       { scale: scale.value },
     ],
   }));
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const { activeAccountId } = useAuth();
   const [repo, setRepo] = useState<string | undefined>(existingCanvas?.repo);
   const [branch, setBranch] = useState<string | undefined>(existingCanvas?.branch);
   const accountId = existingCanvas?.accountId ?? activeAccountId ?? undefined;
   const dragStartRef = useRef<Point | null>(null);
+  const resizeHandleRef = useRef<'tl' | 'tr' | 'bl' | 'br' | null>(null);
+  const resizeOriginalRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
+  const gestureModeRef = useRef<'RESIZE' | 'MOVE' | 'LASSO' | null>(null);
+  const lassoPointsRef = useRef<Point[]>([]);
+  const [lassoRenderTick, setLassoRenderTick] = useState(0);
 
   const textFont = useMemo(
     () =>
@@ -334,6 +451,26 @@ export default function CanvasEditorContent() {
       }),
     [],
   );
+
+  useEffect(() => {
+    const currentIds = new Set(elements.filter((el): el is CanvasImage => el.type === 'image').map((el) => el.id));
+    const cache = imageCacheRef.current;
+    for (const [id, img] of cache) {
+      if (!currentIds.has(id)) {
+        if (img) img.dispose();
+        cache.delete(id);
+      }
+    }
+  }, [elements]);
+
+  useEffect(() => {
+    return () => {
+      for (const img of imageCacheRef.current.values()) {
+        if (img) img.dispose();
+      }
+      imageCacheRef.current.clear();
+    };
+  }, []);
 
   useEffect(() => {
     if (!canvasSize) return;
@@ -355,7 +492,15 @@ export default function CanvasEditorContent() {
 
   const saveHistory = useCallback(() => {
     setHistory((prev) => {
-      const next = [...prev, JSON.stringify(elements)];
+      // Strip base64 image data from history snapshots to avoid
+      // multiplying ~512KB per image across 40 undo entries.
+      // Image data is preserved in the current elements array.
+      const stripped = elements.map(el =>
+        el.type === 'image'
+          ? { ...el, data: '[image-stripped]' }
+          : el
+      );
+      const next = [...prev, JSON.stringify(stripped)];
       return next.length > 40 ? next.slice(-40) : next;
     });
   }, [elements]);
@@ -364,15 +509,25 @@ export default function CanvasEditorContent() {
     setHistory((prev) => {
       if (prev.length === 0) return prev;
       const last = prev[prev.length - 1];
-      setElements(JSON.parse(last));
+      const restored = JSON.parse(last) as CanvasElement[];
+      // Rehydrate stripped image data from current elements
+      setElements(restored.map(el => {
+        if (el.type === 'image' && el.data === '[image-stripped]') {
+          const current = elements.find(e => e.id === el.id);
+          return current && current.type === 'image'
+            ? { ...el, data: current.data }
+            : el;
+        }
+        return el;
+      }));
       return prev.slice(0, -1);
     });
-  }, []);
+  }, [elements]);
 
   const clearAll = useCallback(() => {
     saveHistory();
     setElements([]);
-    setSelectedId(null);
+    setSelectedIds([]);
   }, [saveHistory]);
 
   const hitTest = useCallback((el: CanvasElement, px: number, py: number, pad = 8): boolean => {
@@ -400,6 +555,9 @@ export default function CanvasEditorContent() {
     if (el.type === 'chart') {
       return px >= el.x - pad && px <= el.x + el.width + pad && py >= el.y - pad && py <= el.y + el.height + pad;
     }
+    if (el.type === 'image') {
+      return px >= el.x - pad && px <= el.x + el.width + pad && py >= el.y - pad && py <= el.y + el.height + pad;
+    }
     return false;
   }, []);
 
@@ -419,27 +577,9 @@ export default function CanvasEditorContent() {
     if (idsToErase.length > 0) {
       saveHistory();
       setElements((prev) => prev.filter((el) => !idsToErase.includes(el.id)));
-      if (selectedId && idsToErase.includes(selectedId)) {
-        setSelectedId(null);
-      }
+      setSelectedIds((prev) => prev.filter((id) => !idsToErase.includes(id)));
     }
-  }, [eraserHitTest, saveHistory, selectedId]);
-
-  const moveElement = useCallback((el: CanvasElement, dx: number, dy: number): CanvasElement => {
-    if (el.type === 'stroke') {
-      return { ...el, points: el.points.map((p) => ({ x: p.x + dx, y: p.y + dy })) };
-    }
-    if (el.type === 'shape') {
-      return { ...el, x1: el.x1 + dx, y1: el.y1 + dy, x2: el.x2 + dx, y2: el.y2 + dy };
-    }
-    if (el.type === 'text') {
-      return { ...el, x: el.x + dx, y: el.y + dy };
-    }
-    if (el.type === 'chart') {
-      return { ...el, x: el.x + dx, y: el.y + dy };
-    }
-    return el;
-  }, []);
+  }, [eraserHitTest, saveHistory]);
 
   const startTextPlacement = useCallback((pt: Point) => {
     setTextPosition(pt);
@@ -447,28 +587,189 @@ export default function CanvasEditorContent() {
     setTextModalVisible(true);
   }, []);
 
+  const startChartPlacement = useCallback((pt: Point) => {
+    setChartPosition(pt);
+    setChartTitle('Chart');
+    setChartType('bar');
+    setChartLabelsInput('A, B, C');
+    setChartValuesInput('10, 20, 30');
+    setChartModalVisible(true);
+  }, []);
+
+  const startImagePlacement = useCallback(async (pt: Point) => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        base64: true,
+        quality: 0.8,
+      });
+      if (result.canceled || !result.assets?.[0]?.base64) return;
+
+      const asset = result.assets[0];
+      let base64Data: string = asset.base64!;
+      let srcW = asset.width;
+      let srcH = asset.height;
+
+      const MAX_BYTES = 512 * 1024;
+      while (base64Data.length > MAX_BYTES * 1.33) {
+        const data = Skia.Data.fromBase64(base64Data);
+        const skImage = Skia.Image.MakeImageFromEncoded(data);
+        if (!skImage) break;
+        const halfW = Math.max(1, Math.floor(skImage.width() / 2));
+        const halfH = Math.max(1, Math.floor(skImage.height() / 2));
+        if (halfW < 256 || halfH < 256) break;
+        const surface = Skia.Surface.MakeOffscreen(halfW, halfH);
+        if (!surface) break;
+        try {
+          const canvas = surface.getCanvas();
+          canvas.drawImageRect(skImage,
+            { x: 0, y: 0, width: skImage.width(), height: skImage.height() },
+            { x: 0, y: 0, width: halfW, height: halfH },
+            Skia.Paint()
+          );
+          const resized = surface.makeImageSnapshot();
+          base64Data = resized.encodeToBase64();
+          srcW = halfW;
+          srcH = halfH;
+        } finally {
+          surface.dispose();
+        }
+      }
+
+      const maxDim = 200;
+      const scale = Math.min(maxDim / srcW, maxDim / srcH, 1);
+      const displayW = Math.round(srcW * scale);
+      const displayH = Math.round(srcH * scale);
+
+      saveHistory();
+      const el: CanvasImage = {
+        type: 'image',
+        id: `img-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+        data: base64Data,
+        mimeType: 'image/jpeg',
+        x: pt.x - displayW / 2,
+        y: pt.y - displayH / 2,
+        width: displayW,
+        height: displayH,
+      };
+      setElements((prev) => [...prev, el]);
+    } catch (error) {
+      Alert.alert('Image error', error instanceof Error ? error.message : 'Failed to load image');
+    }
+  }, [saveHistory]);
+
+  const checkResizeHandle = useCallback((el: CanvasElement, px: number, py: number): 'tl' | 'tr' | 'bl' | 'br' | null => {
+    if (el.type !== 'image') return null;
+    const hs = 12;
+    if (Math.abs(px - el.x) <= hs && Math.abs(py - el.y) <= hs) return 'tl';
+    if (Math.abs(px - (el.x + el.width)) <= hs && Math.abs(py - el.y) <= hs) return 'tr';
+    if (Math.abs(px - el.x) <= hs && Math.abs(py - (el.y + el.height)) <= hs) return 'bl';
+    if (Math.abs(px - (el.x + el.width)) <= hs && Math.abs(py - (el.y + el.height)) <= hs) return 'br';
+    return null;
+  }, []);
+
   const startSelection = useCallback((pt: Point) => {
     dragStartRef.current = pt;
+    lassoPointsRef.current = [];
+    gestureModeRef.current = null;
+
+    for (const sid of selectedIds) {
+      const selEl = elements.find((e) => e.id === sid);
+      if (selEl) {
+        const handle = checkResizeHandle(selEl, pt.x, pt.y);
+        if (handle) {
+          gestureModeRef.current = 'RESIZE';
+          resizeHandleRef.current = handle;
+          resizeOriginalRef.current = selEl.type === 'image'
+            ? { x: selEl.x, y: selEl.y, w: selEl.width, h: selEl.height }
+            : null;
+          saveHistory();
+          return;
+        }
+      }
+    }
+
     for (let i = elements.length - 1; i >= 0; i--) {
       if (hitTest(elements[i], pt.x, pt.y)) {
-        setSelectedId(elements[i].id);
+        const hitId = elements[i].id;
+        if (selectedIds.includes(hitId)) {
+          gestureModeRef.current = 'MOVE';
+          saveHistory();
+        } else {
+          setSelectedIds([hitId]);
+          gestureModeRef.current = 'MOVE';
+          saveHistory();
+        }
         return;
       }
     }
-    setSelectedId(null);
-  }, [elements, hitTest]);
+
+    setSelectedIds([]);
+    gestureModeRef.current = 'LASSO';
+  }, [elements, hitTest, selectedIds, checkResizeHandle, saveHistory]);
 
   const updateSelection = useCallback((pt: Point) => {
-    if (!dragStartRef.current || !selectedId) return;
+    if (!dragStartRef.current) return;
     const dx = pt.x - dragStartRef.current.x;
     const dy = pt.y - dragStartRef.current.y;
-    setElements((prev) => prev.map((el) => (el.id === selectedId ? moveElement(el, dx, dy) : el)));
-    dragStartRef.current = pt;
-  }, [moveElement, selectedId]);
+
+    if (gestureModeRef.current === 'RESIZE' && resizeHandleRef.current && resizeOriginalRef.current) {
+      const orig = resizeOriginalRef.current;
+      const aspect = orig.w / orig.h;
+      let newW: number;
+      let newH: number;
+      const handle = resizeHandleRef.current;
+
+      if (handle === 'br' || handle === 'tr') {
+        newW = Math.max(40, orig.w + dx);
+      } else {
+        newW = Math.max(40, orig.w - dx);
+      }
+      newH = Math.max(40, newW / aspect);
+
+      const selectedId = selectedIds[0];
+      setElements((prev) => prev.map((el) => {
+        if (el.id !== selectedId || el.type !== 'image') return el;
+        let newX = orig.x;
+        let newY = orig.y;
+        if (handle === 'bl' || handle === 'tl') newX = orig.x + orig.w - newW;
+        if (handle === 'tl' || handle === 'tr') newY = orig.y + orig.h - newH;
+        return { ...el, x: newX, y: newY, width: newW, height: newH };
+      }));
+      return;
+    }
+
+    if (gestureModeRef.current === 'LASSO') {
+      lassoPointsRef.current = [...lassoPointsRef.current, pt];
+      setLassoRenderTick((t) => t + 1);
+      return;
+    }
+
+    if (gestureModeRef.current === 'MOVE' && selectedIds.length > 0) {
+      setElements((prev) => prev.map((el) =>
+        selectedIds.includes(el.id) ? moveCanvasElement(el, dx, dy) : el
+      ));
+      dragStartRef.current = pt;
+    }
+  }, [selectedIds]);
 
   const endSelection = useCallback(() => {
+    if (gestureModeRef.current === 'LASSO' && lassoPointsRef.current.length >= 3) {
+      const polygon = lassoPointsRef.current;
+      const newSelected = elements
+        .filter((el) => pointInPolygon(elementCenter(el), polygon))
+        .map((el) => el.id);
+      if (newSelected.length > 0) {
+        setSelectedIds(newSelected);
+      }
+    }
     dragStartRef.current = null;
-  }, []);
+    resizeHandleRef.current = null;
+    resizeOriginalRef.current = null;
+    gestureModeRef.current = null;
+    lassoPointsRef.current = [];
+    setLassoRenderTick(0);
+  }, [elements]);
 
   const commitActiveDrawing = useCallback((element: CanvasStroke | CanvasShape | null) => {
     if (element) {
@@ -566,6 +867,16 @@ export default function CanvasEditorContent() {
           // Text tool is handled via long-press or tap, not pan
           if (tool === 'text') {
             runOnJS(startTextPlacement)(pt);
+            return;
+          }
+
+          if (tool === 'chart') {
+            runOnJS(startChartPlacement)(pt);
+            return;
+          }
+
+          if (tool === 'image') {
+            runOnJS(startImagePlacement)(pt);
             return;
           }
 
@@ -668,7 +979,7 @@ export default function CanvasEditorContent() {
             }
           }
         }),
-    [tool, color, size, filled, saveHistory, startTextPlacement, commitActiveDrawing, activeDrawingElement, activeStrokePath, eraseElementsAtPoint],
+    [tool, color, size, filled, saveHistory, startTextPlacement, startChartPlacement, startImagePlacement, commitActiveDrawing, activeDrawingElement, activeStrokePath, eraseElementsAtPoint],
   );
 
   const addTextElement = useCallback(() => {
@@ -687,6 +998,59 @@ export default function CanvasEditorContent() {
     setTextModalVisible(false);
   }, [textPosition, textInput, color, saveHistory]);
 
+  const addChartElement = useCallback(() => {
+    if (!chartPosition) return;
+    const labels = parseChartLabels(chartLabelsInput);
+    const values = parseChartValues(chartValuesInput);
+    if (labels.length === 0 || values.length === 0) {
+      Alert.alert('Invalid data', 'Please enter at least one label and one value.');
+      return;
+    }
+    const maxLen = Math.max(labels.length, values.length);
+    const paddedLabels = [...labels];
+    const paddedValues = [...values];
+    while (paddedLabels.length < maxLen) paddedLabels.push(`Label ${paddedLabels.length + 1}`);
+    while (paddedValues.length < maxLen) paddedValues.push(0);
+    saveHistory();
+    const el: CanvasChart = {
+      type: 'chart',
+      id: uid(),
+      chartType: chartType,
+      title: chartTitle.trim() || 'Chart',
+      labels: paddedLabels,
+      values: paddedValues,
+      x: chartPosition.x,
+      y: chartPosition.y,
+      width: 300,
+      height: 200,
+    };
+    setElements((prev) => [...prev, el]);
+    setChartModalVisible(false);
+  }, [chartPosition, chartTitle, chartType, chartLabelsInput, chartValuesInput, saveHistory]);
+
+  const applyAnimation = useCallback(() => {
+    if (selectedIds.length === 0) return;
+    const duration = Math.max(500, Math.min(5000, parseInt(animDuration, 10) || 2000));
+    saveHistory();
+    setElements((prev) => prev.map((el) =>
+      selectedIds.includes(el.id)
+        ? { ...el, animation: { type: animType, duration, loop: animLoop } }
+        : el
+    ));
+    setAnimModalVisible(false);
+  }, [selectedIds, animType, animDuration, animLoop, saveHistory]);
+
+  const removeAnimation = useCallback(() => {
+    if (selectedIds.length === 0) return;
+    saveHistory();
+    setElements((prev) => prev.map((el) => {
+      if (!selectedIds.includes(el.id)) return el;
+      const { animation: _removed, ...rest } = el as typeof el & { animation?: unknown };
+      return rest as typeof el;
+    }));
+    setAnimModalVisible(false);
+  }, [selectedIds, saveHistory]);
+
   // Select tool pan gesture - ONLY for moving selected elements
   const selectPanGesture = useMemo(
     () =>
@@ -694,7 +1058,7 @@ export default function CanvasEditorContent() {
         .maxPointers(1)
         .onStart((e) => {
           'worklet';
-          if (tool !== 'select' || !selectedId) return;
+          if (tool !== 'select') return;
           const pt = { x: e.x, y: e.y };
           runOnJS(startSelection)(pt);
         })
@@ -708,7 +1072,7 @@ export default function CanvasEditorContent() {
           'worklet';
           runOnJS(endSelection)();
         }),
-    [tool, selectedId, startSelection, updateSelection, endSelection],
+    [tool, selectedIds, startSelection, updateSelection, endSelection],
   );
 
   // Two-finger pinch for zoom
@@ -854,9 +1218,39 @@ export default function CanvasEditorContent() {
     navigation.goBack();
   }, [canvasId, title, elements, canvasSize, cw, repo, branch, existingCanvas, updateCanvas, createCanvas, navigation, accountId]);
 
+  const handleExportPng = useCallback(async () => {
+    if (exporting) return;
+    setExporting(true);
+    const fileName = `canvas-export-${Date.now()}.png`;
+    const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
+    try {
+      const pngBytes = await renderSceneToPng(elements, canvasSize?.width ?? cw, canvasSize?.height ?? 600);
+      if (!pngBytes) {
+        Alert.alert('Nothing to export', 'Add elements to the canvas before exporting.');
+        return;
+      }
+      const base64 = Array.from(pngBytes).map(b => String.fromCharCode(b)).join('');
+      await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, { mimeType: 'image/png' });
+      } else {
+        Alert.alert('Sharing unavailable', 'Sharing is not available on this device.');
+      }
+    } catch (error) {
+      Alert.alert('Export failed', error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      try {
+        await FileSystem.deleteAsync(fileUri, { idempotent: true });
+      } catch {
+        // cleanup failure is non-fatal
+      }
+      setExporting(false);
+    }
+  }, [exporting, elements, canvasSize, cw]);
+
   const renderElement = useCallback(
     (el: CanvasElement, idx: number) => {
-      const isSelected = el.id === selectedId;
+      const isSelected = selectedIds.includes(el.id);
 
       if (el.type === 'stroke') {
         const path = buildStrokePath(el.points);
@@ -996,9 +1390,48 @@ export default function CanvasEditorContent() {
         }
       }
 
+      if (el.type === 'image') {
+        let skImage = imageCacheRef.current.get(el.id);
+        if (skImage === undefined) {
+          try {
+            const data = Skia.Data.fromBase64(el.data);
+            skImage = Skia.Image.MakeImageFromEncoded(data) ?? null;
+          } catch {
+            skImage = null;
+          }
+          imageCacheRef.current.set(el.id, skImage);
+        }
+        if (skImage) {
+          return (
+            <Group key={el.id ?? idx}>
+              <SkiaImage image={skImage} x={el.x} y={el.y} width={el.width} height={el.height} fit="fill" />
+              {isSelected && (
+                <Group>
+                  <Rect x={el.x - 2} y={el.y - 2} width={el.width + 4} height={el.height + 4} color="#007AFF" style="stroke" strokeWidth={2} />
+                  <Rect x={el.x - 4} y={el.y - 4} width={8} height={8} color="#FFFFFF" />
+                  <Rect x={el.x - 4} y={el.y - 4} width={8} height={8} color="#007AFF" style="stroke" strokeWidth={1} />
+                  <Rect x={el.x + el.width - 4} y={el.y - 4} width={8} height={8} color="#FFFFFF" />
+                  <Rect x={el.x + el.width - 4} y={el.y - 4} width={8} height={8} color="#007AFF" style="stroke" strokeWidth={1} />
+                  <Rect x={el.x - 4} y={el.y + el.height - 4} width={8} height={8} color="#FFFFFF" />
+                  <Rect x={el.x - 4} y={el.y + el.height - 4} width={8} height={8} color="#007AFF" style="stroke" strokeWidth={1} />
+                  <Rect x={el.x + el.width - 4} y={el.y + el.height - 4} width={8} height={8} color="#FFFFFF" />
+                  <Rect x={el.x + el.width - 4} y={el.y + el.height - 4} width={8} height={8} color="#007AFF" style="stroke" strokeWidth={1} />
+                </Group>
+              )}
+            </Group>
+          );
+        }
+        return (
+          <Group key={el.id ?? idx}>
+            <Rect x={el.x} y={el.y} width={el.width} height={el.height} color="#CCCCCC" />
+            <Rect x={el.x} y={el.y} width={el.width} height={el.height} color="#999999" style="stroke" strokeWidth={1} />
+          </Group>
+        );
+      }
+
       return null;
     },
-    [selectedId, textFont],
+    [selectedIds, textFont],
   );
 
   return (
@@ -1044,7 +1477,7 @@ export default function CanvasEditorContent() {
                 key={key}
                 testID="canvas-editor.toolbar.set-tool"
                 style={[styles.toolBtn, isActive && styles.toolBtnActive]}
-                onPress={() => { setTool(key); setSelectedId(null); }}
+                onPress={() => { setTool(key); setSelectedIds([]); }}
               >
                 {icon ? <Ionicons name={icon} size={20} color={iconColor} /> : <Text style={[styles.toolBtnLabel, { color: iconColor }]}>{label}</Text>}
               </TouchableOpacity>
@@ -1060,6 +1493,11 @@ export default function CanvasEditorContent() {
           <TouchableOpacity testID="canvas-editor.toolbar.clear-all" style={styles.toolBtn} onPress={clearAll}>
             <Ionicons name="trash-outline" size={20} color={colors.text} />
           </TouchableOpacity>
+          {selectedIds.length > 0 && (
+            <TouchableOpacity testID="canvas-editor.toolbar.animate" style={styles.toolBtn} onPress={() => setAnimModalVisible(true)}>
+              <Ionicons name="play-outline" size={20} color={colors.text} />
+            </TouchableOpacity>
+          )}
           <View style={styles.separator} />
           <TouchableOpacity testID="canvas-editor.toolbar.zoom-out" style={styles.toolBtn} onPress={() => setZoom(scale.value - 0.25)}>
             <Text style={[styles.toolBtnLabel, { color: colors.text }]}>-</Text>
@@ -1069,6 +1507,16 @@ export default function CanvasEditorContent() {
           </TouchableOpacity>
           <TouchableOpacity testID="canvas-editor.toolbar.reset-view" style={styles.toolBtn} onPress={resetView}>
             <Ionicons name="refresh" size={20} color={colors.text} />
+          </TouchableOpacity>
+          <View style={styles.separator} />
+          <TouchableOpacity
+            testID="canvas-editor.toolbar.export-png"
+            style={[styles.toolBtn, exporting && { opacity: 0.5 }]}
+            onPress={handleExportPng}
+            disabled={exporting}
+          >
+            <Ionicons name="download-outline" size={20} color={colors.text} />
+            <Text style={[styles.toolBtnLabel, { color: colors.text, fontSize: 10 }]}>PNG</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -1119,7 +1567,14 @@ export default function CanvasEditorContent() {
               <Animated.View style={[{ width: canvasSize.width, height: canvasSize.height }, canvasAnimStyle]}>
                 <Canvas style={{ width: canvasSize.width, height: canvasSize.height }}>
                   <Fill color="white" />
-                  {elements.map(renderElement)}
+                  {elements.map((el, idx) => {
+                    const rendered = renderElement(el, idx);
+                    if (!rendered) return null;
+                    if (el.animation) {
+                      return <AnimatedCanvasElement key={`anim-${el.id ?? idx}`} element={el}>{rendered}</AnimatedCanvasElement>;
+                    }
+                    return rendered;
+                  })}
                   <Path path={activeStrokePath} color={activeStrokeColor} style="stroke" strokeWidth={activeStrokeWidth} strokeCap="round" strokeJoin="round" />
                   <Path path={activeLinePath} color={activeShapeStrokeColor} style="stroke" strokeWidth={activeShapeStrokeWidth} />
                   <Path path={activeArrowPath} color={activeShapeStrokeColor} style="stroke" strokeWidth={activeShapeStrokeWidth} />
@@ -1153,6 +1608,22 @@ export default function CanvasEditorContent() {
                     <Oval x={activeShapeX} y={activeShapeY} width={activeShapeWidth} height={activeShapeHeight} style="stroke" strokeWidth={activeEllipseStrokeWidth} color={activeShapeStrokeColor} />
                   </Group>
                 </Canvas>
+                {lassoRenderTick > 0 && lassoPointsRef.current.length >= 2 && (
+                  <Canvas
+                    style={{ position: 'absolute', top: 0, left: 0, width: canvasSize.width, height: canvasSize.height }}
+                    pointerEvents="none"
+                  >
+                    {(() => {
+                      const pts = lassoPointsRef.current;
+                      const p = Skia.Path.Make();
+                      p.moveTo(pts[0].x, pts[0].y);
+                      for (let i = 1; i < pts.length; i++) {
+                        p.lineTo(pts[i].x, pts[i].y);
+                      }
+                      return <Path path={p} color="#007AFF" style="stroke" strokeWidth={1.5} strokeCap="round" />;
+                    })()}
+                  </Canvas>
+                )}
               </Animated.View>
             </GestureDetector>
           )}
@@ -1178,6 +1649,99 @@ export default function CanvasEditorContent() {
               </TouchableOpacity>
               <TouchableOpacity testID="canvas-editor.button.add-text" style={styles.modalBtn} onPress={addTextElement}>
                 <Text style={{ color: colors.primary, fontWeight: '600' }}>Add</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={chartModalVisible} transparent animationType="fade" onRequestClose={() => setChartModalVisible(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Insert Chart</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={chartTitle}
+              onChangeText={setChartTitle}
+              placeholder="Chart title"
+              placeholderTextColor={colors.textSecondary}
+            />
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+              {(['bar', 'line', 'pie'] as const).map((t) => (
+                <TouchableOpacity
+                  key={t}
+                  style={[styles.toolBtn, chartType === t && styles.toolBtnActive]}
+                  onPress={() => setChartType(t)}
+                >
+                  <Text style={[styles.toolBtnLabel, { color: chartType === t ? colors.primary : colors.text }]}>{t}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TextInput
+              style={styles.modalInput}
+              value={chartLabelsInput}
+              onChangeText={setChartLabelsInput}
+              placeholder="Labels: A, B, C"
+              placeholderTextColor={colors.textSecondary}
+            />
+            <TextInput
+              style={styles.modalInput}
+              value={chartValuesInput}
+              onChangeText={setChartValuesInput}
+              placeholder="Values: 10, 20, 30"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="numeric"
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalBtn} onPress={() => setChartModalVisible(false)}>
+                <Text style={{ color: colors.textSecondary }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity testID="canvas-editor.button.add-chart" style={styles.modalBtn} onPress={addChartElement}>
+                <Text style={{ color: colors.primary, fontWeight: '600' }}>Add</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={animModalVisible} transparent animationType="fade" onRequestClose={() => setAnimModalVisible(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Animate Element</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+              {(['pulse', 'fade', 'spin', 'translate'] as const).map((t) => (
+                <TouchableOpacity
+                  key={t}
+                  style={[styles.toolBtn, animType === t && styles.toolBtnActive]}
+                  onPress={() => setAnimType(t)}
+                >
+                  <Text style={[styles.toolBtnLabel, { color: animType === t ? colors.primary : colors.text }]}>{t}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TextInput
+              style={styles.modalInput}
+              value={animDuration}
+              onChangeText={setAnimDuration}
+              placeholder="Duration (ms): 500-5000"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="number-pad"
+            />
+            <TouchableOpacity
+              style={[styles.toolBtn, animLoop && styles.toolBtnActive, { alignSelf: 'flex-start', marginBottom: 8 }]}
+              onPress={() => setAnimLoop(!animLoop)}
+            >
+              <Text style={[styles.toolBtnLabel, { color: animLoop ? colors.primary : colors.text }]}>Loop {animLoop ? 'ON' : 'OFF'}</Text>
+            </TouchableOpacity>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalBtn} onPress={removeAnimation}>
+                <Text style={{ color: '#FF3B30' }}>Remove</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalBtn} onPress={() => setAnimModalVisible(false)}>
+                <Text style={{ color: colors.textSecondary }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity testID="canvas-editor.button.apply-animation" style={styles.modalBtn} onPress={applyAnimation}>
+                <Text style={{ color: colors.primary, fontWeight: '600' }}>Apply</Text>
               </TouchableOpacity>
             </View>
           </View>

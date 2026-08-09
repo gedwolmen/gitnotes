@@ -12,6 +12,7 @@ import {
   Fill,
   Group,
   Skia,
+  Image as SkiaImage,
   Text as SkiaText,
   matchFont,
 } from '@shopify/react-native-skia';
@@ -20,6 +21,7 @@ import { useCanvases } from '../contexts/CanvasContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/types';
 import { CanvasChart, CanvasShape, CanvasStroke, CanvasText } from '../models/Canvas';
+import { isImageElement } from '../models/Canvas';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -313,6 +315,29 @@ export default function CanvasPreview({ canvasId }: CanvasPreviewProps) {
           </Group>
         );
       }
+    }
+
+    if (isImageElement(el)) {
+      try {
+        const data = Skia.Data.fromBase64(el.data);
+        const skImage = Skia.Image.MakeImageFromEncoded(data);
+        if (skImage) {
+          return (
+            <SkiaImage
+              key={el.id ?? idx}
+              image={skImage}
+              x={el.x}
+              y={el.y}
+              width={el.width}
+              height={el.height}
+              fit="fill"
+            />
+          );
+        }
+      } catch {
+        // intentionally empty — fall through to placeholder rect
+      }
+      return <Rect key={el.id ?? idx} x={el.x} y={el.y} width={el.width} height={el.height} color="#CCCCCC" />;
     }
 
     return null;

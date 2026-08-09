@@ -1,3 +1,11 @@
+export type AnimationType = 'pulse' | 'fade' | 'spin' | 'translate';
+
+export interface CanvasAnimation {
+  type: AnimationType;
+  duration: number;
+  loop: boolean;
+}
+
 export interface CanvasStroke {
   type: 'stroke';
   id: string;
@@ -5,6 +13,7 @@ export interface CanvasStroke {
   color: string;
   width: number;
   points: { x: number; y: number }[];
+  animation?: CanvasAnimation;
 }
 
 export interface CanvasShape {
@@ -18,6 +27,7 @@ export interface CanvasShape {
   y1: number;
   x2: number;
   y2: number;
+  animation?: CanvasAnimation;
 }
 
 export interface CanvasText {
@@ -28,6 +38,7 @@ export interface CanvasText {
   y: number;
   fontSize: number;
   color: string;
+  animation?: CanvasAnimation;
 }
 
 export interface CanvasChart {
@@ -41,9 +52,58 @@ export interface CanvasChart {
   y: number;
   width: number;
   height: number;
+  animation?: CanvasAnimation;
 }
 
-export type CanvasElement = CanvasStroke | CanvasShape | CanvasText | CanvasChart;
+export interface CanvasImage {
+  type: 'image';
+  id: string;
+  data: string;
+  mimeType: 'image/jpeg';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  animation?: CanvasAnimation;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object';
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function isCanvasAnimation(value: unknown): value is CanvasAnimation {
+  if (!isRecord(value)) return false;
+
+  return (value.type === 'pulse'
+      || value.type === 'fade'
+      || value.type === 'spin'
+      || value.type === 'translate')
+    && isFiniteNumber(value.duration)
+    && typeof value.loop === 'boolean';
+}
+
+export function isImageElement(el: unknown): el is CanvasImage {
+  if (!isRecord(el)) return false;
+
+  return el.type === 'image'
+    && typeof el.id === 'string'
+    && typeof el.data === 'string'
+    && el.data.trim().length > 0
+    && el.mimeType === 'image/jpeg'
+    && isFiniteNumber(el.x)
+    && isFiniteNumber(el.y)
+    && isFiniteNumber(el.width)
+    && el.width > 0
+    && isFiniteNumber(el.height)
+    && el.height > 0
+    && (el.animation === undefined || isCanvasAnimation(el.animation));
+}
+
+export type CanvasElement = CanvasStroke | CanvasShape | CanvasText | CanvasChart | CanvasImage;
 
 export interface CanvasScene {
   version: number;

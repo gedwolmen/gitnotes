@@ -58,6 +58,13 @@ export class StorageService {
     return newQueue.then(() => queueCapture as Promise<T>).then((r) => r as T);
   }
 
+  /**
+   * Canvas scenes may contain base64-encoded image data.
+   * Typical image: ~200-500KB after JPEG transcode at quality 80, 2048px max.
+   * Canvas with 5 images: ~1-2.5MB total JSON payload.
+   * AsyncStorage handles this natively on iOS and Android.
+   * Undo history strips base64 data to avoid 40× multiplication (see CanvasEditorContent.saveHistory).
+   */
   private static async readAllCanvasesRaw(): Promise<Canvas[]> {
     try {
       const boot = getBootValue('@gitnotes:canvases');
