@@ -204,7 +204,7 @@ export default function ExploreScreen() {
           <OfflineBanner />
         </View>
 
-        <View className="mx-4 mt-4 rounded-sm border p-4" style={{ backgroundColor: colors.surface, borderColor: colors.border + '30' }}>
+        <View className="mx-4 mt-4 rounded-sm border p-4" style={{ paddingTop: headerHeight + 16, backgroundColor: colors.surface, borderColor: colors.border + '30' }}>
           <View className="flex-row items-center gap-3.5">
             <View className="w-13 h-13 rounded-sm items-center justify-center" style={{ backgroundColor: colors.primary + '15', width: 52, height: 52, borderRadius: 14 }}>
               <Ionicons name="git-branch" size={28} color={colors.primary} />
