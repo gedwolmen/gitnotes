@@ -1,3 +1,4 @@
+import React from 'react';
 import CanvasEditorContent from '../components/canvas/CanvasEditorContent';
 
 export {
