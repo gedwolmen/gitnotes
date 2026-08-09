@@ -160,7 +160,7 @@ export default function ExploreScreen() {
         <View style={{ paddingTop: headerHeight }}>
           <OfflineBanner />
         </View>
-        <View className="px-4 pt-2 pb-3">
+        <View className="px-4 pb-3" style={{ paddingTop: headerHeight + 8 }}>
           <SearchBar
             testID="explore.search-bar.repo-search"
             value={repoSearch}
