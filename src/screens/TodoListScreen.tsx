@@ -430,8 +430,8 @@ export default function TodoListScreen() {
 
   return (
     <SafeAreaView edges={[]} className="flex-1" style={{ backgroundColor: colors.background }}>
-      <View style={{ flex: 1 }}>
-      <View style={{ paddingTop: headerHeight }}>
+      <View style={{ flex: 1, paddingTop: headerHeight }}>
+      <View>
         <OfflineBanner />
         <ConflictBanner />
       </View>
@@ -582,5 +582,4 @@ export default function TodoListScreen() {
     </SafeAreaView>
   );
 }
-
 
