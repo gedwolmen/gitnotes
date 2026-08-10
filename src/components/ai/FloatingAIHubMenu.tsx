@@ -40,10 +40,10 @@ interface HubItem {
 }
 
 const HUB_ITEMS = [
-  { id: 'new-chat', label: 'New chat', icon: 'add', x: 68, y: 90 },
-  { id: 'chat-history', label: 'Chat history', icon: 'chatbubbles-outline', x: 100, y: 55 },
-  { id: 'ai-settings', label: 'AI settings', icon: 'options-outline', x: 100, y: 5 },
-  { id: 'thought-dump', label: 'Thought dump', icon: 'bulb-outline', x: 68, y: -55 },
+  { id: 'new-chat', label: 'New chat', icon: 'add', x: 58, y: 85 },
+  { id: 'chat-history', label: 'Chat history', icon: 'chatbubbles-outline', x: 80, y: 43 },
+  { id: 'ai-settings', label: 'AI settings', icon: 'options-outline', x: 90, y: 1 },
+  { id: 'thought-dump', label: 'Thought dump', icon: 'bulb-outline', x: 80, y: -41 },
 ] as const satisfies readonly HubItem[];
 
 interface MenuGeometryProps {
