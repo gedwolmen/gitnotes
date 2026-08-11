@@ -6,12 +6,12 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '../contexts/ThemeContext';
 import { ScreenHeader, IconButton, useScreenHeaderHeight } from '../components/ui';
+import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { useTemplateStore } from '../stores/templateStore';
 import { NoteTemplate, NoteTemplateIcon } from '../services/TemplateService';
 import { HapticService } from '../utils/haptics';
