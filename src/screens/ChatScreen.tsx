@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Text, View } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { ChatMessageBubble } from '../components/ai/ChatMessageBubble';
@@ -10,6 +9,7 @@ import { ChatLoadingStrip } from '../components/ai/ChatLoadingStrip';
 import ContextPickerModal from '../components/ai/ContextPickerModal';
 import VoiceInputModal from '../components/VoiceInputModal';
 import { ScreenHeader, useScreenHeaderHeight } from '../components/ui';
+import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { useTokens } from '../contexts/ThemeContext';
 import type { ChatMessage } from '../models/Chat';
 import type { RootStackParamList } from '../navigation/types';
