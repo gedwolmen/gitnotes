@@ -5,10 +5,23 @@ jest.mock('nativewind', () => ({
   NativeWindStyleSheet: { setDimensions: jest.fn(), setDirection: jest.fn(), setAppearance: jest.fn() },
 }));
 
-jest.mock('react-native-css', () => ({
-  cssInterop: () => {},
-  useUnstableNativeVariable: (name: string) => undefined,
-}));
+jest.mock('react-native-css', () => {
+  const React = require('react');
+
+  return {
+    cssInterop: () => {},
+    styled: <Component>(component: Component): Component => component,
+    useCssElement: (
+      Component: React.ElementType,
+      props: Record<string, unknown>,
+      mapping: Readonly<Record<string, unknown>>,
+    ) => {
+      void mapping;
+      return React.createElement(Component, props);
+    },
+    useUnstableNativeVariable: (name: string) => undefined,
+  };
+});
 
 jest.mock('@rn-primitives/slot', () => {
   const React = require('react');
@@ -290,9 +303,11 @@ jest.mock('react-native-gesture-handler', () => {
     activeOffsetX: () => mockGesture(),
     activeOffsetY: () => mockGesture(),
     failOffsetY: () => mockGesture(),
+    onBegin: () => mockGesture(),
     onStart: () => mockGesture(),
     onUpdate: () => mockGesture(),
     onEnd: () => mockGesture(),
+    onFinalize: () => mockGesture(),
     runOnJS: () => mockGesture(),
   });
   return {
