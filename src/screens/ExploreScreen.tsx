@@ -9,7 +9,6 @@ import {
   ScrollView,
   RefreshControl,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,6 +20,7 @@ import { parseRepoPath } from '../utils/gitPathParser';
 import RepoFileTree, { TreeNode } from '../components/RepoFileTree';
 import { RootStackParamList } from '../navigation/types';
 import { EmptyState, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
+import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
 import SearchBar from '../components/SearchBar';
 import { useTranslation } from 'react-i18next';
@@ -160,7 +160,7 @@ export default function ExploreScreen() {
         <View style={{ paddingTop: headerHeight }}>
           <OfflineBanner />
         </View>
-        <View className="px-4 pb-3" style={{ paddingTop: headerHeight + 8 }}>
+        <View className="px-4 pt-2 pb-3">
           <SearchBar
             testID="explore.search-bar.repo-search"
             value={repoSearch}
@@ -204,7 +204,7 @@ export default function ExploreScreen() {
           <OfflineBanner />
         </View>
 
-        <View className="mx-4 mt-4 rounded-sm border p-4" style={{ paddingTop: headerHeight + 16, backgroundColor: colors.surface, borderColor: colors.border + '30' }}>
+        <View className="mx-4 mt-4 rounded-sm border p-4" style={{ backgroundColor: colors.surface, borderColor: colors.border + '30' }}>
           <View className="flex-row items-center gap-3.5">
             <View className="w-13 h-13 rounded-sm items-center justify-center" style={{ backgroundColor: colors.primary + '15', width: 52, height: 52, borderRadius: 14 }}>
               <Ionicons name="git-branch" size={28} color={colors.primary} />
@@ -305,5 +305,3 @@ export default function ExploreScreen() {
 
   return null;
 }
-
-

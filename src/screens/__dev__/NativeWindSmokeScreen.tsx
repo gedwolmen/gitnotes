@@ -1,12 +1,12 @@
 import '../../../global.css';
 import { useState } from 'react';
 import { View, Text, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from './ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { Input } from './ui/input';
 import { NativeWindThemeProvider } from '../../theme/nativewind';
 import { useTokens } from '../../contexts/ThemeContext';
+import { SafeAreaView } from '../../components/ui/SafeAreaView';
 
 export default function NativeWindSmokeScreen() {
   const [text, setText] = useState('');

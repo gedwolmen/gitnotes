@@ -8,7 +8,6 @@ import {
   Modal,
   TextInput,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,6 +19,7 @@ import { RootStackParamList } from '../navigation/types';
 import { Canvas } from '../models/Canvas';
 import SearchBar from '../components/SearchBar';
 import { ScreenHeader, IconButton, useScreenHeaderHeight } from '../components/ui';
+import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { EntityFilterModal } from '../components/EntityFilterModal';
 import { ActiveFilterStrip } from '../components/ActiveFilterStrip';
 import { useEntityFilter } from '../hooks/useEntityFilter';
@@ -334,5 +334,4 @@ export default function CanvasListScreen() {
     </SafeAreaView>
   );
 }
-
 

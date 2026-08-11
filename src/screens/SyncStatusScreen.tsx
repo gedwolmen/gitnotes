@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNavigation } from '@react-navigation/native';
@@ -7,6 +7,7 @@ import { useConflictStore } from '../stores/conflictStore';
 import type { FileConflict } from '../services/conflict/types';
 import type { RootStackParamList } from '../navigation/types';
 import { ScreenHeader } from '../components/ui';
+import { SafeAreaView } from '../components/ui/SafeAreaView';
 
 function formatChip(format: string): string {
   switch (format) {

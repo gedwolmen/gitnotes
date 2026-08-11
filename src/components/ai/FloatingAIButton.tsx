@@ -1,16 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AccessibilityInfo, Dimensions, Pressable, StyleSheet } from 'react-native';
+import { AccessibilityInfo, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { GestureDetector, Gesture } from 'react-native-gesture-handler';
+import { GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  useSharedValue,
   useAnimatedStyle,
+  useSharedValue,
   withSpring,
-  runOnJS,
 } from 'react-native-reanimated';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAIStore } from '../../stores/aiStore';
 import { useAIHubStore } from '../../stores/aiHubStore';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -18,19 +16,20 @@ import { HapticService } from '../../utils/haptics';
 import { Surface } from '../ui/Surface';
 import type { RootStackParamList } from '../../navigation/types';
 import {
-  FloatingAIHubMenu,
-  MENU_SPRING,
+  FLOATING_AI_BUTTON_SIZE,
+  resolveFloatingAIButtonPlacement,
   type HubItemId,
   type MenuDirection,
+} from './floatingAIButtonGeometry';
+import {
+  FloatingAIHubMenu,
+  MENU_SPRING,
 } from './FloatingAIHubMenu';
-
-const BUTTON_SIZE = 56;
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-const STORAGE_KEY = 'ai-button-position';
+import { useFloatingAIButtonPosition } from './useFloatingAIButtonPosition';
+import { useFloatingAIButtonPanGesture } from './useFloatingAIButtonPanGesture';
 
 interface FloatingAIButtonProps {
-  currentRouteName?: string;
+  readonly currentRouteName?: string;
 }
 
 export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
@@ -41,15 +40,16 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
   const [horizontalDirection, setHorizontalDirection] = useState<MenuDirection>(-1);
   const [verticalDirection, setVerticalDirection] = useState<MenuDirection>(-1);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-
-  const initialX = SCREEN_WIDTH - BUTTON_SIZE - 24;
-  const initialY = SCREEN_HEIGHT - BUTTON_SIZE - 100;
-
-  const translateX = useSharedValue(initialX);
-  const translateY = useSharedValue(initialY);
-  
-  const savedTranslateX = useSharedValue(initialX);
-  const savedTranslateY = useSharedValue(initialY);
+  const position = useFloatingAIButtonPosition();
+  const {
+    geometry,
+    translateX,
+    translateY,
+    savedTranslateX,
+    savedTranslateY,
+    markPositionInteractionStarted,
+    savePosition,
+  } = position;
   const menuProgress = useSharedValue(0);
 
   useEffect(() => {
@@ -69,50 +69,62 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
   }, []);
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then((pos) => {
-      if (pos) {
-        try {
-          const { x, y } = JSON.parse(pos);
-          translateX.value = x;
-          translateY.value = y;
-          savedTranslateX.value = x;
-          savedTranslateY.value = y;
-        } catch (e) {
-          console.warn('Failed to restore FAB position:', e);
-        }
-      }
-    });
-  }, [translateX, translateY, savedTranslateX, savedTranslateY]);
-
-  useEffect(() => {
     menuProgress.value = reduceMotionEnabled
       ? menuOpen ? 1 : 0
       : withSpring(menuOpen ? 1 : 0, MENU_SPRING);
   }, [menuOpen, menuProgress, reduceMotionEnabled]);
 
-  const savePosition = (x: number, y: number) => {
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ x, y })).catch(() => { return; });
-  };
-
   const closeMenu = useCallback(() => setMenuOpen(false), []);
 
+  useEffect(() => {
+    closeMenu();
+  }, [closeMenu, geometry]);
+
   const handleTap = useCallback(() => {
+    if (menuOpen) {
+      closeMenu();
+      return;
+    }
+
     closeMenu();
     HapticService.success();
     useAIHubStore.getState().goNewChat(navigation);
-  }, [closeMenu, navigation]);
+  }, [closeMenu, menuOpen, navigation]);
 
   const handleLongPress = useCallback(() => {
+    markPositionInteractionStarted();
     HapticService.selection();
     if (menuOpen) {
       closeMenu();
       return;
     }
 
-    setHorizontalDirection(translateX.value < SCREEN_WIDTH / 2 ? 1 : -1);
-    setVerticalDirection(translateY.value < SCREEN_HEIGHT / 2 ? 1 : -1);
+    const currentPosition = { x: translateX.value, y: translateY.value };
+    const placement = resolveFloatingAIButtonPlacement(currentPosition, geometry);
+    translateX.value = placement.position.x;
+    translateY.value = placement.position.y;
+    savedTranslateX.value = placement.position.x;
+    savedTranslateY.value = placement.position.y;
+    if (
+      placement.position.x !== currentPosition.x
+      || placement.position.y !== currentPosition.y
+    ) {
+      savePosition(placement.position);
+    }
+    setHorizontalDirection(placement.horizontalDirection);
+    setVerticalDirection(placement.verticalDirection);
     setMenuOpen(true);
-  }, [closeMenu, menuOpen, translateX, translateY]);
+  }, [
+    closeMenu,
+    geometry,
+    markPositionInteractionStarted,
+    menuOpen,
+    savedTranslateX,
+    savedTranslateY,
+    savePosition,
+    translateX,
+    translateY,
+  ]);
 
   const handleMenuItemPress = useCallback((itemId: HubItemId) => {
     setMenuOpen(false);
@@ -136,40 +148,11 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
     }
   }, [navigation]);
 
-  const panGesture = Gesture.Pan()
-    .onStart(() => {
-      runOnJS(closeMenu)();
-    })
-    .onUpdate((event) => {
-      translateX.value = savedTranslateX.value + event.translationX;
-      translateY.value = savedTranslateY.value + event.translationY;
-    })
-    .onEnd(() => {
-      const distanceToLeft = translateX.value;
-      const distanceToRight = SCREEN_WIDTH - BUTTON_SIZE - translateX.value;
-      
-      const snapX = distanceToLeft < distanceToRight ? 16 : SCREEN_WIDTH - BUTTON_SIZE - 16;
-      
-      const minY = 60;
-      const maxY = SCREEN_HEIGHT - BUTTON_SIZE - 100;
-      const snapY = Math.min(Math.max(translateY.value, minY), maxY);
-
-      translateX.value = withSpring(snapX, {
-        mass: 1,
-        damping: 15,
-        stiffness: 120,
-      });
-      translateY.value = withSpring(snapY, {
-        mass: 1,
-        damping: 15,
-        stiffness: 120,
-      });
-
-      savedTranslateX.value = snapX;
-      savedTranslateY.value = snapY;
-
-      runOnJS(savePosition)(snapX, snapY);
-    });
+  const panGesture = useFloatingAIButtonPanGesture(position, {
+    closeMenu,
+    setHorizontalDirection,
+    setVerticalDirection,
+  });
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
@@ -241,8 +224,8 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     zIndex: 9999,
-    width: BUTTON_SIZE,
-    height: BUTTON_SIZE,
+    width: FLOATING_AI_BUTTON_SIZE,
+    height: FLOATING_AI_BUTTON_SIZE,
   },
   backdrop: {
     ...StyleSheet.absoluteFill,
@@ -250,8 +233,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.18)',
   },
   button: {
-    width: BUTTON_SIZE,
-    height: BUTTON_SIZE,
+    width: FLOATING_AI_BUTTON_SIZE,
+    height: FLOATING_AI_BUTTON_SIZE,
     justifyContent: 'center',
     alignItems: 'center',
   },

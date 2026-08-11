@@ -2,7 +2,6 @@ import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { View, Alert, Platform, RefreshControl } from 'react-native';
 import { FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 
 import { requireRepo } from '../utils/requireRepo';
@@ -15,6 +14,7 @@ import { HapticService } from '../utils/haptics';
 import { syncTodoToGitHub } from '../services/TodoGitHubSyncService';
 import { pullAllFromRepos } from '../services/RepoPullService';
 import { IconButton, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
+import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
 import { ConflictBanner } from '../components/ui/ConflictBanner';
 import { EntityFilterModal } from '../components/EntityFilterModal';
@@ -582,4 +582,3 @@ export default function TodoListScreen() {
     </SafeAreaView>
   );
 }
-

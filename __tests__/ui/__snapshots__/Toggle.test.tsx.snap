@@ -39,7 +39,7 @@ exports[`Toggle snapshots both states: toggle-off 1`] = `
   }
 >
   <View
-    className="bg-surface rounded-full"
+    className="justify-center bg-surface rounded-full"
     style={
       [
         {
@@ -178,7 +178,7 @@ exports[`Toggle snapshots both states: toggle-on 1`] = `
   }
 >
   <View
-    className="bg-surface rounded-full"
+    className="justify-center bg-surface rounded-full"
     style={
       [
         {

@@ -3,7 +3,6 @@ import { View, Text, Pressable, KeyboardAvoidingView, Platform } from 'react-nat
 
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useNotes } from '../contexts/NoteContext';
 import { useCanvases } from '../contexts/CanvasContext';
@@ -19,6 +18,7 @@ import { useResponsive } from '../hooks/useResponsive';
 import { getMarkdownStyles } from '../utils/preview';
 import { useRenderStyle } from '../stores/renderStyleStore';
 import { GitHubActivityIndicator } from '../components/GitHubActivityIndicator';
+import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { CanvasPickerModal } from '../components/editor/CanvasPickerModal';
 import { EditorHeader } from '../components/editor/EditorHeader';
 import { EditorToolbar } from '../components/editor/EditorToolbar';
@@ -318,5 +318,3 @@ function NoteEditorScreenInner() {
     </SafeAreaView>
   );
 }
-
-

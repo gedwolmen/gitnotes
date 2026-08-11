@@ -6,7 +6,6 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +17,7 @@ import { GitHubService } from '../services/GitHubService';
 import { NeorgContentParser } from '../services/NeorgContentParser';
 import { OrgContentParser } from '../services/OrgContentParser';
 import StructuredRenderer from '../components/StructuredRenderer';
+import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { JsonRenderer } from '../components/JsonRenderer';
 import { HapticService } from '../utils/haptics';
 import { getMarkdownStyles, stripTopMetadata } from '../utils/preview';

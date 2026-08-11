@@ -7,7 +7,6 @@ import {
   ScrollView,
 } from 'react-native';
 import { Image, ImageLoadEventData } from 'expo-image';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -16,6 +15,7 @@ import { RootStackParamList } from '../navigation/types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { HapticService } from '../utils/haptics';
+import { SafeAreaView } from '../components/ui/SafeAreaView';
 
 function encodeRepoPath(path: string): string {
   return path.split('/').map((seg) => encodeURIComponent(seg)).join('/');

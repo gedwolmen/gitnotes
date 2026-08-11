@@ -6,7 +6,6 @@ import {
   ActivityIndicator,
   Linking,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
@@ -18,6 +17,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { HapticService } from '../utils/haptics';
 import { PositionMemoryService } from '../services/PositionMemoryService';
+import { SafeAreaView } from '../components/ui/SafeAreaView';
 
 function encodeRepoPath(path: string): string {
   return path
@@ -304,5 +304,3 @@ export default function PdfViewerScreen() {
     </SafeAreaView>
   );
 }
-
-

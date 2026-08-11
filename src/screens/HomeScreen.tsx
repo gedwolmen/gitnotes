@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Pressable, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +14,7 @@ import { NoteFormat, NoteColor, Note } from '../models/Note';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { HapticService } from '../utils/haptics';
 import TemplateSelector from '../components/TemplateSelector';
+import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { NoteTemplate } from '../services/TemplateService';
 import { NoteFormatPreferenceService } from '../services/NoteFormatPreferenceService';
 import {
@@ -410,5 +410,4 @@ export default function HomeScreen() {
     </SafeAreaView>
   );
 }
-
 

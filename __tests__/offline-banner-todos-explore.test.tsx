@@ -1,5 +1,6 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 // Mock netinfo at the source so any indirect import resolves.
 jest.mock('@react-native-community/netinfo', () => {
@@ -207,6 +208,45 @@ describe('OfflineBanner mounted on TodoListScreen and ExploreScreen', () => {
   });
 
   describe('ExploreScreen', () => {
+    it('positions the repo-list search after one header reservation and local spacing', () => {
+      // Given
+      setOffline();
+
+      // When
+      const { UNSAFE_getAllByType } = render(<ExploreScreen />);
+      const headerReservation = UNSAFE_getAllByType(View).find(
+        (node) => StyleSheet.flatten(node.props.style)?.paddingTop === 60,
+      );
+      const searchWrapper = UNSAFE_getAllByType(View).find(
+        (node) => node.props.className?.includes('px-4') && node.props.className?.includes('pb-3'),
+      );
+
+      // Then
+      expect(headerReservation?.findAllByType(Text).some((node) => node.props.children === BANNER_TEXT)).toBe(true);
+      expect(StyleSheet.flatten(searchWrapper?.props.style)?.paddingTop).toBeUndefined();
+      expect(searchWrapper?.props.className).toContain('pt-2');
+    });
+
+    it('positions the repo-detail card after one header reservation without internal header padding', () => {
+      // Given
+      setOffline();
+      const { getByTestId, UNSAFE_getAllByType } = render(<ExploreScreen />);
+
+      // When
+      fireEvent.press(getByTestId('explore.button.select-repo'));
+      const headerReservation = UNSAFE_getAllByType(View).find(
+        (node) => StyleSheet.flatten(node.props.style)?.paddingTop === 60,
+      );
+      const repoCard = UNSAFE_getAllByType(View).find(
+        (node) => node.props.className?.includes('mx-4 mt-4 rounded-sm border p-4'),
+      );
+
+      // Then
+      expect(headerReservation?.findAllByType(Text).some((node) => node.props.children === BANNER_TEXT)).toBe(true);
+      expect(repoCard?.props.className).toContain('p-4');
+      expect(StyleSheet.flatten(repoCard?.props.style)).not.toHaveProperty('paddingTop');
+    });
+
     it('renders banner when offline', () => {
       setOffline();
       const { getByText } = render(<ExploreScreen />);

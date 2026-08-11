@@ -176,7 +176,7 @@ exports[`NativeWind theme parity matches the pre-migration key-kit snapshots in 
     </Text>
   </View>
   <View
-    className="bg-surface rounded-md"
+    className="flex-row items-center bg-surface rounded-md"
     style={
       [
         {
@@ -426,7 +426,7 @@ exports[`NativeWind theme parity matches the pre-migration key-kit snapshots in 
     </Text>
   </View>
   <View
-    className="bg-surface rounded-md"
+    className="flex-row items-center bg-surface rounded-md"
     style={
       [
         {

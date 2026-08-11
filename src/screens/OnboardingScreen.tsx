@@ -10,7 +10,6 @@ import {
   TouchableOpacity,
   Clipboard,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { OnboardingService } from '../services/OnboardingService';
@@ -18,6 +17,7 @@ import { AuthService } from '../services/AuthService';
 import { GitHubService } from '../services/GitHubService';
 import { useAIStore } from '../stores/aiStore';
 import { Button, Input, Surface } from '../components/ui';
+import { SafeAreaView } from '../components/ui/SafeAreaView';
 
 interface OnboardingScreenProps {
   onComplete: () => void;

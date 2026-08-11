@@ -16,8 +16,8 @@ import { Note } from '../models/Note';
 import { buildBacklinkIndex } from '../services/BacklinksService';
 import { parseWikiLinks } from '../utils/wikiLinksParser';
 import { RootStackParamList } from '../navigation/types';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
+import { SafeAreaView } from '../components/ui/SafeAreaView';
 import SearchBar from '../components/SearchBar';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
