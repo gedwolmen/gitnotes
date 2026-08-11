@@ -53,7 +53,13 @@ jest.mock('react-native-gesture-handler', () => {
     GestureDetector: ({ children }: any) => children,
     Gesture: {
       Pan: () => ({
-        onStart: () => ({ onUpdate: () => ({ onEnd: () => ({}) }) }),
+        onBegin: () => ({
+          onStart: () => ({
+            onUpdate: () => ({
+              onEnd: () => ({ onFinalize: () => ({}) }),
+            }),
+          }),
+        }),
       }),
     },
     PanGestureHandler: React.forwardRef((props: any, ref: any) =>
@@ -93,8 +99,12 @@ jest.mock('../src/utils/haptics', () => ({
   },
 }));
 
+const mockPositionRestoreResolvers: Array<(value: null) => void> = [];
+
 jest.mock('@react-native-async-storage/async-storage', () => ({
-  getItem: jest.fn(async () => null),
+  getItem: jest.fn(() => new Promise<null>((resolve) => {
+    mockPositionRestoreResolvers.push(resolve);
+  })),
   setItem: jest.fn(async () => {}),
   removeItem: jest.fn(async () => {}),
 }));
@@ -217,7 +227,7 @@ jest.mock('../src/services/ai/systemPrompt', () => ({
   }),
 }));
 
-import { act, fireEvent, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import { aiMemoryIndex } from '../src/services/ai/AIMemoryIndexService';
 import { ThoughtDumpService } from '../src/services/ThoughtDumpService';
@@ -227,7 +237,30 @@ import { useAIHubStore } from '../src/stores/aiHubStore';
 
 const fsStore = (FileSystem as unknown as { __store: Map<string, string> }).__store;
 
+async function renderInitializedFloatingAIButton() {
+  const React = require('react');
+  const { FloatingAIButton } = require('../src/components/ai/FloatingAIButton');
+  const AsyncStorage = require('@react-native-async-storage/async-storage');
+  const { AccessibilityInfo } = require('react-native');
+  const rendered = render(React.createElement(FloatingAIButton));
+  const restoreResult: unknown = AsyncStorage.getItem.mock.results.at(-1)?.value;
+  const resolveRestore = mockPositionRestoreResolvers.shift();
+  if (resolveRestore === undefined) {
+    throw new RangeError('Expected position restore resolver');
+  }
+  const reduceMotionResult: unknown = (
+    AccessibilityInfo.isReduceMotionEnabled.mock.results.at(-1)?.value
+  );
+  await act(async () => {
+    resolveRestore(null);
+    if (restoreResult instanceof Promise) await restoreResult;
+    if (reduceMotionResult instanceof Promise) await reduceMotionResult;
+  });
+  return rendered;
+}
+
 beforeEach(async () => {
+  mockPositionRestoreResolvers.length = 0;
   fsStore.clear();
   jest.clearAllMocks();
   jest.restoreAllMocks();
@@ -251,16 +284,12 @@ beforeEach(async () => {
 });
 
 describe('e2e: FAB -> thought dump -> memory -> reset', () => {
-  it('long-press FAB opens hub menu with thought-dump item', () => {
-    const React = require('react');
-    const { render } = require('@testing-library/react-native');
-    const { FloatingAIButton } = require('../src/components/ai/FloatingAIButton');
-
+  it('long-press FAB opens hub menu with thought-dump item', async () => {
     const mockNavigation = { navigate: jest.fn(), goBack: jest.fn() };
     const { useNavigation } = require('@react-navigation/native');
     (useNavigation as jest.Mock).mockReturnValue(mockNavigation);
 
-    const { getByTestId, queryByTestId } = render(React.createElement(FloatingAIButton));
+    const { getByTestId, queryByTestId } = await renderInitializedFloatingAIButton();
 
     const fab = getByTestId('floating-ai.button.navigate-chat');
     expect(fab).toBeTruthy();
@@ -275,16 +304,12 @@ describe('e2e: FAB -> thought dump -> memory -> reset', () => {
     expect(getByTestId('floating-ai.hub.ai-settings')).toBeTruthy();
   });
 
-  it('tapping thought-dump menu item calls goThoughtDump navigation', () => {
-    const React = require('react');
-    const { render } = require('@testing-library/react-native');
-    const { FloatingAIButton } = require('../src/components/ai/FloatingAIButton');
-
+  it('tapping thought-dump menu item calls goThoughtDump navigation', async () => {
     const mockNavigation = { navigate: jest.fn(), goBack: jest.fn() };
     const { useNavigation } = require('@react-navigation/native');
     (useNavigation as jest.Mock).mockReturnValue(mockNavigation);
 
-    const { getByTestId } = render(React.createElement(FloatingAIButton));
+    const { getByTestId } = await renderInitializedFloatingAIButton();
 
     const fab = getByTestId('floating-ai.button.navigate-chat');
     fireEvent(fab, 'onLongPress');
@@ -382,13 +407,12 @@ describe('e2e: FAB -> thought dump -> memory -> reset', () => {
   it('full loop: long-press FAB -> thought dump item -> save -> index -> chat memory -> reset', async () => {
     const React = require('react');
     const { render } = require('@testing-library/react-native');
-    const { FloatingAIButton } = require('../src/components/ai/FloatingAIButton');
 
     const mockNavigation = { navigate: jest.fn(), goBack: jest.fn() };
     const { useNavigation } = require('@react-navigation/native');
     (useNavigation as jest.Mock).mockReturnValue(mockNavigation);
 
-    const { getByTestId } = render(React.createElement(FloatingAIButton));
+    const { getByTestId } = await renderInitializedFloatingAIButton();
 
     const fab = getByTestId('floating-ai.button.navigate-chat');
     fireEvent(fab, 'onLongPress');
