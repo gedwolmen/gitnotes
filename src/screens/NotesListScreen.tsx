@@ -11,7 +11,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useRepos } from '../contexts/RepoContext';
 import { RootStackParamList } from '../navigation/types';
 import { Note } from '../models/Note';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { GitHubService } from '../services/GitHubService';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import { pullAllFromRepos } from '../services/RepoPullService';
@@ -19,6 +18,7 @@ import ColorPicker from '../components/ColorPicker';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
 import { ConflictBanner } from '../components/ui/ConflictBanner';
 import { IconButton, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
+import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { requireRepo } from '../utils/requireRepo';
 import { HapticService } from '../utils/haptics';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
@@ -639,5 +639,4 @@ export default function NotesListScreen() {
     </SafeAreaView>
   );
 }
-
 
