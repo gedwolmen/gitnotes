@@ -4,7 +4,7 @@ import { getActiveGitHost } from '../../src/services/git/activeHost';
 import { gitHubHostService } from '../../src/services/git/gitHostFactory';
 import { checkGitHubRepoAccess } from '../../src/services/git/repoAccessPreflight';
 import { useRepoStore } from '../../src/stores/repoStore';
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { beforeEach, describe, expect, it } from '@jest/globals';
 
 jest.mock('../../src/services/GitService', () => ({
   GitService: { addRepository: jest.fn() },
