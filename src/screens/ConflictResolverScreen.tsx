@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, SafeAreaView, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -12,6 +12,7 @@ import { AuthService } from '../services/AuthService';
 import type { FileConflict } from '../services/conflict/types';
 import type { RootStackParamList } from '../navigation/types';
 import { ScreenHeader } from '../components/ui';
+import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { cn } from '../lib/utils';
 
 type Tab = 'merged' | 'local' | 'remote';
