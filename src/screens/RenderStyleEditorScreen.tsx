@@ -9,7 +9,6 @@ import {
   Alert,
   Pressable,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -18,6 +17,7 @@ import type { RouteProp } from '@react-navigation/native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useRenderStyleStore } from '../stores/renderStyleStore';
 import StructuredRenderer from '../components/StructuredRenderer';
+import { SafeAreaView } from '../components/ui/SafeAreaView';
 import HexColorPickerModal from '../components/HexColorPickerModal';
 import { NeorgContentParser } from '../services/NeorgContentParser';
 import { OrgContentParser } from '../services/OrgContentParser';
