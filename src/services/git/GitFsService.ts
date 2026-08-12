@@ -114,32 +114,48 @@ export class GitFsService {
     if (!info) throw new Error(`Invalid repo path: ${opts.repoPath}`);
 
     const dir = repoDirVirtual(info.owner, info.repo);
-    // expo-file-system won't auto-create ancestors when isomorphic-git first
-    // touches the working tree. Pre-create the clones root + owner segment so
-    // git.clone's own mkdir of the repo dir succeeds on a clean install.
     const fsRoot = clonesRoot();
     await FileSystem.makeDirectoryAsync?.(`${fsRoot}${info.owner}/`, { intermediates: true });
 
     await cleanCorruptedPackfiles(opts.repoPath);
 
-    try {
-      await git.clone({
-        fs: makeRepoFs(),
-        http: gitHttp,
-        dir,
-        url: authedRemote(info.owner, info.repo),
-        ref: opts.branch,
-        singleBranch: true,
-        depth: opts.depth ?? 1,
-        onAuth: ensureToken(opts.token),
-        onProgress: opts.onProgress
-          ? (event) => opts.onProgress!(event.phase, event.loaded, event.total ?? null)
-          : undefined,
-      });
-    } catch (cloneError) {
-      await GitFsService.removeRepo({ repoPath: opts.repoPath }).catch(() => undefined);
-      throw cloneError;
+    // Retry clone once on packfile corruption. Memory pressure or partial
+    // downloads can leave isomorphic-git with a corrupt packfile; the
+    // streaming fix in gitHttp reduces the frequency dramatically but doesn't
+    // eliminate it entirely. One retry is sufficient for the vast majority of
+    // transient corruption; we cap at 1 to avoid retry storms (issue #790).
+    const MAX_CLONE_RETRIES = 1;
+    let lastError: unknown;
+    for (let attempt = 0; attempt <= MAX_CLONE_RETRIES; attempt++) {
+      try {
+        await git.clone({
+          fs: makeRepoFs(),
+          http: gitHttp,
+          dir,
+          url: authedRemote(info.owner, info.repo),
+          ref: opts.branch,
+          singleBranch: true,
+          depth: opts.depth ?? 1,
+          onAuth: ensureToken(opts.token),
+          onProgress: opts.onProgress
+            ? (event) => opts.onProgress!(event.phase, event.loaded, event.total ?? null)
+            : undefined,
+        });
+        lastError = undefined;
+        break;
+      } catch (cloneError) {
+        lastError = cloneError;
+        await GitFsService.removeRepo({ repoPath: opts.repoPath }).catch(() => undefined);
+        const msg = cloneError instanceof Error ? cloneError.message : String(cloneError);
+        const isCorruption = /Packfile trailer mismatch|Could not find|not foundobject|NotFoundError|internal error caused this command to fail/i.test(msg);
+        if (!isCorruption || attempt === MAX_CLONE_RETRIES) {
+          throw cloneError;
+        }
+        await FileSystem.makeDirectoryAsync?.(`${fsRoot}${info.owner}/`, { intermediates: true }).catch(() => undefined);
+        await cleanCorruptedPackfiles(opts.repoPath);
+      }
     }
+    if (lastError) throw lastError;
 
     // isomorphic-git has no smudge filter pipeline, so any LFS-tracked
     // binaries land on disk as ~130-byte pointer text files. Scan now and

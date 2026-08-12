@@ -30,6 +30,8 @@ import { buildPinnedFeed, buildRecentFeed, RecentItem } from '../utils/recentIte
 import { HomeNoteContextMenu } from '../components/home/HomeNoteContextMenu';
 import ColorPicker from '../components/ColorPicker';
 import { ShareFormat } from '../services/ShareService';
+import { syncNoteToGitHub } from '../services/NoteGitHubSyncService';
+import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import { useTranslation } from 'react-i18next';
 import { DailyQuoteCard } from '../components/home/DailyQuoteCard';
 import { useDailyQuote } from '../hooks/useDailyQuote';
@@ -208,8 +210,8 @@ export default function HomeScreen() {
     async (color: NoteColor | null) => {
       const item = colorPickerItem;
       setColorPickerItem(null);
-      if (!item || item.kind === 'canvas' || !('color' in item.data)) return;
-      const note = item.data;
+      if (!item || item.kind === 'canvas') return;
+      const note = item.data as Note;
       if (!note.id) return;
       try {
         const updated = await updateNote({ id: note.id, color });
@@ -219,6 +221,29 @@ export default function HomeScreen() {
           return;
         }
         HapticService.success();
+        if (updated.repo && updated.filePath && (updated.content ?? '').trim()) {
+          const syncParams = {
+            repo: updated.repo,
+            branch: updated.branch,
+            filePath: updated.filePath,
+            title: updated.title,
+            content: updated.content,
+            format: updated.format,
+            tags: updated.tags,
+            color,
+          };
+          try {
+            const result = await syncNoteToGitHub(syncParams);
+            if (!result.success) {
+              await NoteSyncQueueService.enqueueNoteUpsert(syncParams, updated.id);
+            } else if (result.finalContent && result.finalContent !== updated.content) {
+              await updateNote({ id: updated.id, content: result.finalContent });
+            }
+          } catch (error) {
+            console.warn('[HomeScreen] sync after color update failed:', error);
+            await NoteSyncQueueService.enqueueNoteUpsert(syncParams, updated.id);
+          }
+        }
       } catch {
         HapticService.error();
         Alert.alert(t('errors.failedUpdateColorTitle'), t('errors.failedUpdateColorBody'));
