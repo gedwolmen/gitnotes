@@ -3,6 +3,7 @@ import { View, Alert, Platform, RefreshControl } from 'react-native';
 import { FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { requireRepo } from '../utils/requireRepo';
 import { useTodos } from '../contexts/TodoContext';
@@ -33,6 +34,8 @@ import { useResponsive } from '../hooks/useResponsive';
 import { useGitHubActivityStore } from '../stores/githubActivityStore';
 import { useTranslation } from 'react-i18next';
 
+const FILTER_COMPLETED_PERSISTENCE_KEY = '@gitnotes:filters:todo-completed';
+
 export default function TodoListScreen() {
   const { t } = useTranslation();
   const { colors, isDark } = useTheme();
@@ -59,12 +62,13 @@ export default function TodoListScreen() {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showReminderPicker, setShowReminderPicker] = useState(false);
   const [filterCompleted, setFilterCompleted] = useState(false);
+  const [filterCompletedHydrated, setFilterCompletedHydrated] = useState(false);
   const [todoRepo, setTodoRepo] = useState<string | undefined>(undefined);
   const [todoBranch, setTodoBranch] = useState<string | undefined>(undefined);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const isDeletingRef = useRef(false);
 
-  const filter = useEntityFilter<Todo>(todos);
+  const filter = useEntityFilter<Todo>(todos, '@gitnotes:filters:todo-entity');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
   const selectionMode = selectedIds.size > 0;
@@ -78,6 +82,19 @@ export default function TodoListScreen() {
       setIsRefreshing(false);
     }
   }, [isFocused]);
+
+  useEffect(() => {
+    AsyncStorage.getItem(FILTER_COMPLETED_PERSISTENCE_KEY)
+      .then((raw) => {
+        if (raw === 'true') setFilterCompleted(true);
+      })
+      .finally(() => setFilterCompletedHydrated(true));
+  }, []);
+
+  useEffect(() => {
+    if (!filterCompletedHydrated) return;
+    AsyncStorage.setItem(FILTER_COMPLETED_PERSISTENCE_KEY, String(filterCompleted)).catch(() => {});
+  }, [filterCompleted, filterCompletedHydrated]);
 
   useEffect(() => {
     if (inflight > 0) {
@@ -128,6 +145,7 @@ export default function TodoListScreen() {
       }
     },
     entityName: 'todo',
+    persistenceKey: '@gitnotes:filters:todo-list',
   });
 
   const handleBulkDelete = useCallback(() => {
@@ -566,7 +584,7 @@ export default function TodoListScreen() {
               onPress={() => {
                 if (!requireRepo(repositories.length > 0, {
                   kind: 'todo',
-                  onOpenSettings: () => navigation.getParent()?.navigate('SettingsTab' as never),
+                  onOpenSettings: () => navigation.navigate('MainTabs', { screen: 'SettingsTab' }),
                 })) {
                   return;
                 }

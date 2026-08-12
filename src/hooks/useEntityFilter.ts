@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { GitRepository } from '../services/GitService';
 
 export interface FilterableItem {
@@ -43,12 +44,60 @@ function folderCandidates(item: FilterableItem): string[] {
   return out;
 }
 
-export function useEntityFilter<T extends FilterableItem>(items: T[]): UseEntityFilterReturn<T> {
+export function useEntityFilter<T extends FilterableItem>(
+  items: T[],
+  persistenceKey?: string,
+): UseEntityFilterReturn<T> {
   const [selectedRepo, setSelectedRepoState] = useState<GitRepository | null>(null);
   const [selectedBranch, setSelectedBranchState] = useState<string | null>(null);
   const [selectedFolder, setSelectedFolderState] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedAccountId, setSelectedAccountIdState] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(!persistenceKey);
+
+  useEffect(() => {
+    if (!persistenceKey) return;
+
+    AsyncStorage.getItem(persistenceKey)
+      .then((raw) => {
+        if (!raw) return;
+        try {
+          const persistedState: EntityFilterState = JSON.parse(raw);
+          setSelectedRepoState(persistedState.selectedRepo);
+          setSelectedBranchState(persistedState.selectedBranch);
+          setSelectedFolderState(persistedState.selectedFolder);
+          setSelectedTags(persistedState.selectedTags);
+          setSelectedAccountIdState(persistedState.selectedAccountId);
+        } catch {
+          setSelectedRepoState(null);
+          setSelectedBranchState(null);
+          setSelectedFolderState(null);
+          setSelectedTags([]);
+          setSelectedAccountIdState(null);
+        }
+      })
+      .finally(() => setHydrated(true));
+  }, [persistenceKey]);
+
+  useEffect(() => {
+    if (!persistenceKey || !hydrated) return;
+    const state: EntityFilterState = {
+      selectedRepo,
+      selectedBranch,
+      selectedFolder,
+      selectedTags,
+      selectedAccountId,
+    };
+    AsyncStorage.setItem(persistenceKey, JSON.stringify(state)).catch(() => {});
+  }, [
+    hydrated,
+    persistenceKey,
+    selectedAccountId,
+    selectedBranch,
+    selectedFolder,
+    selectedRepo,
+    selectedTags,
+  ]);
 
   const setSelectedRepo = useCallback((repo: GitRepository | null) => {
     setSelectedRepoState(repo);

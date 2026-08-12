@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { SortMode } from '../types/SortTypes';
 
 const DEFAULT_SORT_MODE: SortMode = { field: 'modified', direction: 'desc' };
@@ -15,6 +16,7 @@ export interface UseEntityListConfig<T> {
   initialSearchQuery?: string;
   initialSortMode?: SortMode;
   initialFilters?: EntityListFilters;
+  persistenceKey?: string;
 }
 
 export interface UseEntityListReturn<T> {
@@ -58,6 +60,7 @@ export function useEntityList<T>(config: UseEntityListConfig<T>): UseEntityListR
     initialSearchQuery = '',
     initialSortMode = DEFAULT_SORT_MODE,
     initialFilters = {},
+    persistenceKey,
   } = config;
 
   void entityName;
@@ -66,6 +69,28 @@ export function useEntityList<T>(config: UseEntityListConfig<T>): UseEntityListR
   const [sortMode, setSortMode] = useState<SortMode>(initialSortMode);
   const [filters, setFilters] = useState<EntityListFilters>(initialFilters);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [hydrated, setHydrated] = useState(!persistenceKey);
+
+  useEffect(() => {
+    if (!persistenceKey) return;
+
+    AsyncStorage.getItem(persistenceKey)
+      .then((raw) => {
+        if (!raw) return;
+        try {
+          const persistedFilters: EntityListFilters = JSON.parse(raw);
+          setFilters({ ...initialFilters, ...persistedFilters });
+        } catch {
+          setFilters(initialFilters);
+        }
+      })
+      .finally(() => setHydrated(true));
+  }, [persistenceKey]);
+
+  useEffect(() => {
+    if (!persistenceKey || !hydrated) return;
+    AsyncStorage.setItem(persistenceKey, JSON.stringify(filters)).catch(() => {});
+  }, [filters, hydrated, persistenceKey]);
 
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
 
