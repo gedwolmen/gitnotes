@@ -87,6 +87,10 @@
       "title": "일일의 명언"
     },
     "dailyQuoteDescription": "홈에 개인 철학자 명언 표시",
+    "aiPersonalization": {
+      "title": "내 노트로 AI 맞춤화"
+    },
+    "aiPersonalizationDescription": "끄면 AI가 데이터 보호를 위해 노트나 일지를 읽지 않습니다",
     "security": "보안",
     "appearance": "모양",
     "updatedUI": "업데이트된 UI",

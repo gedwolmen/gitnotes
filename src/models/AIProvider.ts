@@ -41,6 +41,7 @@ export interface AISettings {
   chatRepoAccountId: string | null;
   providers: AIProviderConfig[];
   dailyQuoteEnabled: boolean;
+  aiPersonalizationEnabled: boolean;
 }
 
 export interface AIContextItem {

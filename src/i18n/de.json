@@ -87,6 +87,10 @@
       "title": "Tägliches Zitat"
     },
     "dailyQuoteDescription": "Philosophisches Zitat auf Startseite",
+    "aiPersonalization": {
+      "title": "KI mit meinen Notizen personalisieren"
+    },
+    "aiPersonalizationDescription": "Wenn aus, liest die KI keine Notizen oder Tagebücher zum Datenschutz",
     "security": "Sicherheit",
     "appearance": "Erscheinungsbild",
     "updatedUI": "Aktualisierte Oberfläche",
