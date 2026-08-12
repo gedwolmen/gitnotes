@@ -26,16 +26,28 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 const quotes: QuoteRow[] = quotesJson as QuoteRow[];
 
-const GENERIC_DESCRIPTION = 'A timeless reflection to carry with you today.';
+type FallbackReason = 'disabled' | 'no_model' | 'no_journals' | 'ai_failed' | 'error';
 
-function makeFallback(): DailyQuote {
+const FALLBACK_DESCRIPTIONS: Record<FallbackReason, string> = {
+  disabled:
+    'Daily Quote feature is disabled. Enable it in Settings → AI for personalized quotes.',
+  no_model:
+    'No AI model selected. Choose a model in Settings → AI to enable personalization.',
+  no_journals:
+    'No journal entries yet. Write in your journal to get quotes tailored to your reflections.',
+  ai_failed:
+    'Could not generate a personalized quote. Showing a random selection from the collection.',
+  error: 'Encountered an error. Showing a random quote from the collection.',
+};
+
+function makeFallbackQuote(reason: FallbackReason): DailyQuote {
   const random = quotes[Math.floor(Math.random() * quotes.length)];
   return {
     quoteId: random.id,
     text: random.text,
     author: random.author,
     tags: random.tags,
-    description: GENERIC_DESCRIPTION,
+    description: FALLBACK_DESCRIPTIONS[reason],
     generatedAt: Date.now(),
   };
 }
@@ -47,12 +59,12 @@ class DailyQuoteServiceClass {
       if (cached) return cached;
 
       const aiStore = useAIStore.getState();
-      if (!aiStore.dailyQuoteEnabled) return makeFallback();
+      if (!aiStore.dailyQuoteEnabled) return makeFallbackQuote('disabled');
 
       const selectedModel = aiStore.getSelectedModel();
-      if (!selectedModel) return makeFallback();
+      if (!selectedModel) return makeFallbackQuote('no_model');
 
-      if (journals.length === 0) return makeFallback();
+      if (journals.length === 0) return makeFallbackQuote('no_journals');
 
       const aiQuote = await this.generateAIQuote(journals, allNotes).catch(() => null);
       if (aiQuote) {
@@ -60,10 +72,10 @@ class DailyQuoteServiceClass {
         return aiQuote;
       }
 
-      return makeFallback();
+      return makeFallbackQuote('ai_failed');
     } catch (error) {
       console.error('[DailyQuoteService] Error:', error);
-      return makeFallback();
+      return makeFallbackQuote('error');
     }
   }
 
