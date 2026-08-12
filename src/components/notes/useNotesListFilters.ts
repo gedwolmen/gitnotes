@@ -32,9 +32,15 @@ interface UseNotesListFiltersArgs {
   notes: Note[];
   filteredNotes: Note[];
   searchQuery: string;
+  persistenceKey?: string;
 }
 
-export function useNotesListFilters({ notes, filteredNotes, searchQuery }: UseNotesListFiltersArgs) {
+export function useNotesListFilters({
+  notes,
+  filteredNotes,
+  searchQuery,
+  persistenceKey,
+}: UseNotesListFiltersArgs) {
   const {
     filteredData,
     filters: rawFilters,
@@ -48,6 +54,7 @@ export function useNotesListFilters({ notes, filteredNotes, searchQuery }: UseNo
     sortFn: compareNotes,
     initialFilters: INITIAL_NOTES_LIST_FILTERS,
     filterFn: (note, filters) => noteMatchesListFilters(note, filters as NotesListFilters),
+    persistenceKey,
   });
 
   const filters = rawFilters as NotesListFilters;

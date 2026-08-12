@@ -49,7 +49,7 @@ export default function HomeScreen() {
   const { canvases } = useCanvases();
   const { repositories } = useRepos();
   const openSettings = useCallback(() => {
-    navigation.getParent()?.navigate('SettingsTab' as never);
+    navigation.navigate('MainTabs', { screen: 'SettingsTab' });
   }, [navigation]);
   const { isTablet, deviceType } = useResponsive();
   const headerHeight = useScreenHeaderHeight({ subtitle: true });
@@ -410,4 +410,3 @@ export default function HomeScreen() {
     </SafeAreaView>
   );
 }
-

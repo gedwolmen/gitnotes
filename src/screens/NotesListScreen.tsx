@@ -140,7 +140,7 @@ export default function NotesListScreen() {
     handleSelectFolder,
     handleToggleTag,
     handleToggleColor,
-  } = useNotesListFilters({ notes, filteredNotes, searchQuery });
+  } = useNotesListFilters({ notes, filteredNotes, searchQuery, persistenceKey: '@gitnotes:filters:notes-list' });
 
   const activeFilterChips: FilterChip[] = useMemo(() => {
     const chips: FilterChip[] = [];
@@ -622,7 +622,7 @@ export default function NotesListScreen() {
                 HapticService.medium();
                 if (!requireRepo(repositories.length > 0, {
                   kind: 'note',
-                  onOpenSettings: () => navigation.getParent()?.navigate('SettingsTab' as never),
+                  onOpenSettings: () => navigation.navigate('MainTabs', { screen: 'SettingsTab' }),
                 })) {
                   return;
                 }
@@ -639,4 +639,3 @@ export default function NotesListScreen() {
     </SafeAreaView>
   );
 }
-

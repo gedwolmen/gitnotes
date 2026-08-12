@@ -1,6 +1,9 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEntityList } from '../src/hooks/useEntityList';
 import { SortMode } from '../src/types/SortTypes';
+
+jest.mock('@react-native-async-storage/async-storage');
 
 type Item = {
   id: string;
@@ -217,6 +220,35 @@ describe('useEntityList', () => {
 
     await waitFor(() => {
       expect(result.current.isRefreshing).toBe(false);
+    });
+  });
+
+  test('restores persisted filters before saving subsequent changes', async () => {
+    const storageKey = '@gitnotes:filters:test-list';
+    jest.mocked(AsyncStorage.getItem).mockResolvedValue(JSON.stringify({ category: 'personal' }));
+
+    const { result } = renderHook(() =>
+      useEntityList<Item>({
+        data: items,
+        searchFields: ['title'],
+        entityName: 'notes',
+        initialFilters: { category: 'work' },
+        persistenceKey: storageKey,
+      }),
+    );
+
+    expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+
+    await waitFor(() => {
+      expect(result.current.filters).toEqual({ category: 'personal' });
+    });
+
+    act(() => {
+      result.current.setFilters({ category: 'work' });
+    });
+
+    await waitFor(() => {
+      expect(AsyncStorage.setItem).toHaveBeenLastCalledWith(storageKey, JSON.stringify({ category: 'work' }));
     });
   });
 });
