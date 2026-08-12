@@ -22,6 +22,7 @@
     "icons:regenerate": "node scripts/regenerate-assets.js"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.38",
     "@ai-sdk/openai-compatible": "^2.0.48",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-ai/apple": "0.12.0",
