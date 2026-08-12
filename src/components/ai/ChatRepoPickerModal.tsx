@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,17 +14,30 @@ import { useTokens } from '../../contexts/ThemeContext';
 import { useRepoStore } from '../../stores/repoStore';
 import { useAIStore } from '../../stores/aiStore';
 import { GitService, GitBranch } from '../../services/GitService';
+import { GitHubService, GitHubRepository } from '../../services/GitHubService';
 import { LastUsedRepoService } from '../../services/LastUsedRepoService';
 import SearchBar from '../SearchBar';
 import { HapticService } from '../../utils/haptics';
 import * as ChatStorageService from '../../services/ChatStorageService';
 import { Modal, Button, Surface } from '../ui';
+
 interface ChatRepoPickerModalProps {
   visible: boolean;
   onClose: () => void;
   onSelected: () => void;
   onGoToSettings?: () => void;
 }
+
+/**
+ * A repo row shown in the picker list. May be an already-added local repo, or
+ * a GitHub repo the user hasn't added yet. Tapping an unadded one auto-adds
+ * it and proceeds to branch selection.
+ */
+type DisplayRepo = {
+  readonly path: string;
+  readonly name: string;
+  readonly isAdded: boolean;
+};
 
 export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
   visible,
@@ -35,6 +48,7 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
   const { colors, spacing } = useTokens();
   const insets = useSafeAreaInsets();
   const repositories = useRepoStore((state) => state.repositories);
+  const addRepository = useRepoStore((state) => state.addRepository);
   const setChatRepo = useAIStore((state) => state.setChatRepo);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -46,7 +60,75 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
   const [isInitializing, setIsInitializing] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
 
-  // Auto-select repo when modal opens: single repo → select it, multiple → last used
+  // Fetch GitHub repos when the modal opens — covers fresh-account users who
+  // added a token but never manually added any repo in Settings.
+  const [githubRepos, setGithubRepos] = useState<GitHubRepository[]>([]);
+  const [isLoadingGithubRepos, setIsLoadingGithubRepos] = useState(false);
+  const [isAddingRepoPath, setIsAddingRepoPath] = useState<string | null>(null);
+  const [githubFetchError, setGithubFetchError] = useState<string | null>(null);
+
+  const isAuthenticated = GitHubService.isAuthenticated();
+  // Ref so each modal-open triggers exactly one fetch, even if auth state
+  // happens to change between renders while the modal is visible.
+  const didFetchGithubRef = useRef(false);
+
+  const fetchGithubRepos = useCallback(async () => {
+    if (!GitHubService.isAuthenticated()) return;
+    setIsLoadingGithubRepos(true);
+    setGithubFetchError(null);
+    try {
+      const repos = await GitHubService.getRepositories();
+      setGithubRepos(repos);
+    } catch (error) {
+      console.warn('[ChatRepoPickerModal] Failed to fetch GitHub repos:', error);
+      setGithubRepos([]);
+      setGithubFetchError('Could not load GitHub repos. Check network or token.');
+    } finally {
+      setIsLoadingGithubRepos(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!visible) {
+      didFetchGithubRef.current = false;
+      return;
+    }
+    if (didFetchGithubRef.current) return;
+    didFetchGithubRef.current = true;
+    void fetchGithubRepos();
+  }, [visible, fetchGithubRepos]);
+
+  // Build the merged display list: added (local) repos first, then GitHub
+  // repos that haven't been added yet. Duplicates are excluded by path.
+  const displayRepos = useMemo<DisplayRepo[]>(() => {
+    const addedPaths = new Set(repositories.map((r) => r.path));
+    const added: DisplayRepo[] = repositories.map((r) => ({
+      path: r.path.includes('/') ? r.path : r.name,
+      name: r.name,
+      isAdded: true,
+    }));
+    const available: DisplayRepo[] = githubRepos
+      .filter((gr) => !addedPaths.has(gr.full_name))
+      .map((gr) => ({
+        path: gr.full_name,
+        name: gr.name,
+        isAdded: false,
+      }));
+    return [...added, ...available];
+  }, [repositories, githubRepos]);
+
+  const filteredRepos = useMemo(() => {
+    if (!searchQuery.trim()) return displayRepos;
+    const query = searchQuery.toLowerCase();
+    return displayRepos.filter(
+      (repo) =>
+        repo.name.toLowerCase().includes(query) ||
+        repo.path.toLowerCase().includes(query),
+    );
+  }, [displayRepos, searchQuery]);
+
+  // Auto-select repo when modal opens: single added repo → select it,
+  // multiple → last used. Only runs once per modal open.
   const didAutoSelectRef = useRef(false);
   useEffect(() => {
     if (!visible) {
@@ -69,16 +151,6 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
     });
   }, [visible, repositories]);
 
-  const filteredRepos = useMemo(() => {
-    if (!searchQuery.trim()) return repositories;
-    const query = searchQuery.toLowerCase();
-    return repositories.filter(
-      (repo) =>
-        repo.name.toLowerCase().includes(query) ||
-        repo.path.toLowerCase().includes(query)
-    );
-  }, [repositories, searchQuery]);
-
   const handleSelectRepo = async (path: string) => {
     setSelectedRepoPath(path);
     setInitError(null);
@@ -96,6 +168,27 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
     HapticService.selection();
   };
 
+  /**
+   * Called when the user taps an unadded GitHub repo in the list. Auto-adds
+   * it to the store then immediately proceeds to branch selection — the same
+   * flow as picking an already-added repo, just with a transparent add step.
+   */
+  const handlePickUnaddedGithubRepo = async (fullName: string) => {
+    setIsAddingRepoPath(fullName);
+    setInitError(null);
+    try {
+      await addRepository(fullName, undefined, 'github', { allowUnverifiedWrite: true });
+      HapticService.success();
+      await handleSelectRepo(fullName);
+    } catch (error) {
+      HapticService.error();
+      const detail = error instanceof Error ? error.message : 'Unknown error';
+      setInitError(`Couldn't add ${fullName}. ${detail}`);
+    } finally {
+      setIsAddingRepoPath(null);
+    }
+  };
+
   const handleBranchSelect = (branchName: string) => {
     setBranch(branchName);
     setShowBranchPicker(false);
@@ -106,11 +199,13 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
   const handleConfirm = async () => {
     if (!selectedRepoPath) return;
 
+    // For newly-added repos, the repoStore entry may not exist in the
+    // pre-merge `repositories` snapshot yet (addRepository updates the
+    // store but the modal may have rendered with a stale closure). Fall
+    // back to parsing selectedRepoPath so we never bail out silently.
     const repo = repositories.find((r) => r.path === selectedRepoPath);
-    if (!repo) return;
-
-    const owner = repo.path.split('/')[0] || '';
-    const name = repo.path.split('/')[1] || repo.name;
+    const owner = repo?.path.split('/')[0] || selectedRepoPath.split('/')[0] || '';
+    const name = repo?.path.split('/')[1] || selectedRepoPath.split('/')[1] || repo?.name || '';
 
     setIsInitializing(true);
     setInitError(null);
@@ -124,12 +219,65 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
       HapticService.error();
       const detail = error instanceof Error ? error.message : 'Unknown error';
       setInitError(
-        `Couldn't write to ${repo.path}/chats/. ${detail}. Check network and repository write access, then tap Retry.`,
+        `Couldn't write to ${selectedRepoPath}/chats/. ${detail}. Check network and repository write access, then tap Retry.`,
       );
     } finally {
       setIsInitializing(false);
     }
   };
+
+  const renderRepoRow = (repo: DisplayRepo) => {
+    const isSelected = repo.path === selectedRepoPath;
+    const isAddingThis = isAddingRepoPath === repo.path;
+    const disabled = isAddingThis || isInitializing || isAddingRepoPath !== null;
+    return (
+      <TouchableOpacity
+        key={`${repo.isAdded ? 'added' : 'avail'}:${repo.path}`}
+        testID="chat-repo-picker.button.select-repo"
+        onPress={() =>
+          repo.isAdded
+            ? handleSelectRepo(repo.path)
+            : void handlePickUnaddedGithubRepo(repo.path)
+        }
+        disabled={disabled}
+        className="mb-2"
+        style={disabled && !isAddingThis ? { opacity: 0.5 } : undefined}
+      >
+        <Surface
+          elevation="flat"
+          inset={isSelected}
+          radius="md"
+          className="flex-row items-center justify-between p-3.5"
+          style={[
+            isSelected && { borderColor: colors.primary, borderWidth: 1 },
+            !isSelected && { borderWidth: 1, borderColor: 'transparent' },
+          ]}
+        >
+          <View className="flex-1 mr-2">
+            <Text
+              className="text-md font-medium text-text"
+              numberOfLines={1}
+              style={!repo.isAdded ? { color: colors.text } : undefined}
+            >
+              {repo.path}
+            </Text>
+          </View>
+          {isAddingThis ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : isSelected ? (
+            <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
+          ) : repo.isAdded ? (
+            <Ionicons name="document-outline" size={20} color={colors.textSecondary} />
+          ) : (
+            <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
+          )}
+        </Surface>
+      </TouchableOpacity>
+    );
+  };
+
+  const isEmpty = repositories.length === 0 && githubRepos.length === 0 && !isLoadingGithubRepos;
+  const noLocalButHasGithub = repositories.length === 0 && githubRepos.length > 0;
 
   return (
     <Modal
@@ -140,7 +288,23 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
     >
       <View className="flex-1">
         <View className="flex-row items-center justify-between px-4 py-3.5 border-b border-border" style={{ borderBottomWidth: StyleSheet.hairlineWidth }}>
-          <View className="w-8 items-end" />
+          <View className="w-8 items-end">
+            {(visible && (isLoadingGithubRepos || isAuthenticated)) && (
+              <TouchableOpacity
+                testID="chat-repo-picker.button.refresh"
+                onPress={() => void fetchGithubRepos()}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                disabled={isLoadingGithubRepos}
+                accessibilityLabel="Refresh repositories"
+              >
+                <Ionicons
+                  name="refresh-outline"
+                  size={22}
+                  color={isLoadingGithubRepos ? colors.textSecondary : colors.primary}
+                />
+              </TouchableOpacity>
+            )}
+          </View>
           <Text className="flex-1 text-md font-semibold text-center text-text" numberOfLines={1}>
             Choose Chat storage
           </Text>
@@ -160,7 +324,7 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
             Select a GitHub repository to store your AI chat conversations.
           </Text>
 
-          {repositories.length === 0 ? (
+          {isEmpty && isAuthenticated ? (
             <View className="items-center py-10">
               <Ionicons
                 name="folder-open-outline"
@@ -168,8 +332,59 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
                 color={colors.textSecondary}
                 style={{ marginBottom: spacing[4] }}
               />
+              <Text className="text-md text-center mb-2 text-text-secondary">
+                No repositories found on your GitHub account.
+              </Text>
+              {githubFetchError && (
+                <Text className="text-sm text-center mb-4 text-error">
+                  {githubFetchError}
+                </Text>
+              )}
+              <Text className="text-sm text-center mb-6 text-text-secondary">
+                Create a repository on GitHub, then tap the refresh icon above — or go to Settings to add one manually.
+              </Text>
+              <View className="flex-row gap-2">
+                <TouchableOpacity
+                  testID="chat-repo-picker.button.retry-fetch"
+                  onPress={() => void fetchGithubRepos()}
+                  disabled={isLoadingGithubRepos}
+                  style={{
+                    flex: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    paddingHorizontal: 16,
+                    paddingVertical: 12,
+                    borderRadius: 12,
+                    backgroundColor: colors.primary,
+                    opacity: isLoadingGithubRepos ? 0.6 : 1,
+                  }}
+                >
+                  {isLoadingGithubRepos ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Ionicons name="refresh-outline" size={18} color="#fff" />
+                  )}
+                  <Text style={{ color: '#fff', fontSize: 15, fontWeight: '600' }}>Reload</Text>
+                </TouchableOpacity>
+                {onGoToSettings && (
+                  <Button variant="secondary" onPress={onGoToSettings}>
+                    Go to Settings
+                  </Button>
+                )}
+              </View>
+            </View>
+          ) : isEmpty && !isAuthenticated ? (
+            <View className="items-center py-10">
+              <Ionicons
+                name="lock-closed-outline"
+                size={48}
+                color={colors.textSecondary}
+                style={{ marginBottom: spacing[4] }}
+              />
               <Text className="text-md text-center mb-6 text-text-secondary">
-                No repositories found. Add a repository in Settings first.
+                Connect your GitHub account in Settings to choose a repository.
               </Text>
               {onGoToSettings && (
                 <Button variant="primary" onPress={onGoToSettings}>
@@ -187,45 +402,18 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
                 />
               </View>
 
+              {noLocalButHasGithub && !searchQuery.trim() && (
+                <Text className="text-xs font-semibold uppercase tracking-wide mb-2 text-text-secondary">
+                  Available on GitHub — tap to add
+                </Text>
+              )}
+
               <ScrollView
                 className="flex-1"
                 contentContainerStyle={{ paddingBottom: 8 }}
                 keyboardShouldPersistTaps="handled"
               >
-                {filteredRepos.map((repo) => {
-                  const isSelected = repo.path === selectedRepoPath;
-                  return (
-                    <TouchableOpacity
-                      key={repo.path}
-                      testID={`chat-repo-picker.button.select-repo`}
-                      onPress={() => handleSelectRepo(repo.path)}
-                      className="mb-2"
-                    >
-                      <Surface
-                        elevation="flat"
-                        inset={isSelected}
-                        radius="md"
-                        className="flex-row items-center justify-between p-3.5"
-                        style={[
-                          isSelected && { borderColor: colors.primary, borderWidth: 1 },
-                          !isSelected && { borderWidth: 1, borderColor: 'transparent' },
-                        ]}
-                      >
-                        <View className="flex-1 mr-2">
-                          <Text
-                            className="text-md font-medium text-text"
-                            numberOfLines={1}
-                          >
-                            {repo.path.includes('/') ? repo.path : repo.name}
-                          </Text>
-                        </View>
-                        {isSelected && (
-                          <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
-                        )}
-                      </Surface>
-                    </TouchableOpacity>
-                  );
-                })}
+                {filteredRepos.map(renderRepoRow)}
                 {filteredRepos.length === 0 && (
                   <Text className="text-center py-5 text-sm text-text-secondary">
                     No matching repositories
