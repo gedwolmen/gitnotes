@@ -1,4 +1,4 @@
-export type AIProviderType = 'apple' | 'llama' | 'openai-compatible';
+export type AIProviderType = 'apple' | 'llama' | 'openai-compatible' | 'anthropic';
 
 export type ProviderPlatform = 'ios' | 'android';
 
