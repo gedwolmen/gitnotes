@@ -202,7 +202,9 @@
       "actionModeConfirm": "AIはノートを作成や削除などの書き込み操作の前に確認を求めます。",
       "chatStorage": "AIチャット会話を保存するリポジトリを選びます。",
       "providers": "AIプロバイダーはさまざまなAIサービスを接続できます。Apple Intelligenceはプライバシーのためオンデバイス処理を使用します。",
-      "scheduledLearning": "AIプロバイダーはさまざまなAIサービスを接続できます。Apple Intelligenceはプライバシーのためオンデバイス処理を使用します。"
+      "scheduledLearning": "AIプロバイダーはさまざまなAIサービスを接続できます。Apple Intelligenceはプライバシーのためオンデバイス処理を使用します。",
+      "dailyQuote": "ホーム画面に日替わりの哲学的な名言を表示します。最近の日記の振り返りに基づいてパーソナライズされます。",
+      "aiPersonalization": "有効にすると、AIはノートと日記を読んでパーソナライズされた応答を提供します。プライバシーのためにオフにすると、AIは現在のチャットコンテキストのみを使用します。"
     },
     "title": "Hint"
   },

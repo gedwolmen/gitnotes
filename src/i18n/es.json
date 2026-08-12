@@ -202,7 +202,9 @@
       "actionModeConfirm": "La IA pide confirmación antes de realizar operaciones de escritura como crear o eliminar notas.",
       "chatStorage": "Elige en qué repositorio almacenar las conversaciones de chat IA.",
       "providers": "Los proveedores IA te permiten conectar diferentes servicios de IA. Apple Intelligence usa procesamiento en el dispositivo para mayor privacidad.",
-      "scheduledLearning": "Los proveedores IA te permiten conectar diferentes servicios de IA. Apple Intelligence usa procesamiento en el dispositivo para mayor privacidad."
+      "scheduledLearning": "Los proveedores IA te permiten conectar diferentes servicios de IA. Apple Intelligence usa procesamiento en el dispositivo para mayor privacidad.",
+      "dailyQuote": "Muestra una cita filosófica diaria en tu pantalla de inicio, personalizada según tus reflexiones recientes de diario.",
+      "aiPersonalization": "Cuando está activada, la IA lee tus notas y diarios para ofrecer respuestas personalizadas. Desactiva para mayor privacidad — la IA solo usará el contexto del chat actual."
     },
     "title": "Hint"
   },

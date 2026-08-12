@@ -721,7 +721,9 @@
       "actionModeConfirm": "AI asks for confirmation before performing write operations like creating or deleting notes.",
       "chatStorage": "Choose which repository to store AI chat conversations in.",
       "providers": "AI providers allow you to connect different AI services. Apple Intelligence uses on-device processing for privacy.",
-      "scheduledLearning": "Schedule daily reviews of notes with specific tags. The app sends reminders to help you learn and remember your notes."
+      "scheduledLearning": "Schedule daily reviews of notes with specific tags. The app sends reminders to help you learn and remember your notes.",
+      "dailyQuote": "Shows a daily philosopher quote on your Home screen, personalized based on your recent journal reflections.",
+      "aiPersonalization": "When enabled, AI reads your notes and journals to provide personalized responses. Turn off for data privacy — AI will only use the current chat context."
     },
     "title": "Hint"
   },
