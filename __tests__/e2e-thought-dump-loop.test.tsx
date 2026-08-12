@@ -191,6 +191,7 @@ jest.mock('@react-navigation/native', () => ({
     navigate: jest.fn(),
     goBack: jest.fn(),
   })),
+  useRoute: jest.fn(() => ({ params: {} })),
 }));
 
 jest.mock('react-native-safe-area-context', () => {
