@@ -10,6 +10,7 @@
   },
   "common": {
     "beta": "BETA",
+    "new": "NEW",
     "untitled": "Untitled",
     "cannotBeUndone": "This cannot be undone.",
     "later": "Later",
@@ -68,7 +69,8 @@
       "newJournal": "New Journal",
       "fromTemplate": "From Template",
       "fromTemplateSub": "Quick start",
-      "canvasesSub": "Visual notes"
+      "canvasesSub": "Visual notes",
+      "thoughtDumpSub": "Capture fleeting thoughts, raw ideas, and stream-of-consciousness dumps. They stay as searchable Markdown files in your repo and feed AI context."
     }
   },
   "notes": {

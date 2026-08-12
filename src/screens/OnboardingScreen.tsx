@@ -46,6 +46,11 @@ const INFO_STEPS = [
     icon: 'rocket-outline' as const,
   },
   {
+    title: 'Dump Your Thoughts',
+    description: "Thought Dump lets you capture fleeting ideas, half-formed questions, and stream-of-consciousness reflections as Markdown files in your repo. They're indexed for smart search and feed context into your AI chats.",
+    icon: 'bulb-outline' as const,
+  },
+  {
     title: 'Scheduled Learning',
     description: 'Let AI generate daily or weekly learning notes on your topics. You can also get Questioner notes with questions you answer and get graded — perfect for active recall and spaced repetition.',
     icon: 'help-circle-outline' as const,

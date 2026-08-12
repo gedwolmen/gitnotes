@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNotes } from '../contexts/NoteContext';
 import { dailyQuoteService, type DailyQuote } from '../services/DailyQuoteService';
+import { useAIStore } from '../stores/aiStore';
 
 interface UseDailyQuoteReturn {
   quote: DailyQuote | null;
@@ -14,6 +15,8 @@ export function useDailyQuote(): UseDailyQuoteReturn {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { notes } = useNotes();
+  const aiIsLoading = useAIStore((s) => s.isLoading);
+  const selectedModelId = useAIStore((s) => s.selectedModelId);
 
   const notesRef = useRef(notes); // ref so callbacks don't depend on unstable notes array
   notesRef.current = notes;
@@ -33,8 +36,8 @@ export function useDailyQuote(): UseDailyQuoteReturn {
     } finally {
       setIsLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- notes read via ref
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- notes read via ref, aiIsLoading intentional dep
+  }, [aiIsLoading, selectedModelId]);
 
   const refresh = useCallback(async () => {
     try {
@@ -55,8 +58,9 @@ export function useDailyQuote(): UseDailyQuoteReturn {
   }, []);
 
   useEffect(() => {
+    if (aiIsLoading) return; // Wait for AI store hydration
     loadQuote();
-  }, [loadQuote]);
+  }, [aiIsLoading, loadQuote]);
 
   return { quote, isLoading, error, refresh };
 }
