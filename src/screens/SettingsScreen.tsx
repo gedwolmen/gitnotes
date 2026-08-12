@@ -718,7 +718,7 @@ export default function SettingsScreen() {
         onToggleActionMode={() => { void setActionMode(actionMode === 'auto' ? 'confirm' : 'auto'); }}
         onOpenChatRepoPicker={() => { setShowTemplatesRepoPicker(false); setShowChatRepoPicker(true); }}
         onProviderPress={(provider) => {
-          if (provider.type === 'openai-compatible') {
+          if (provider.type === 'openai-compatible' || provider.type === 'anthropic') {
             setEditingProvider(provider);
             setShowProviderConfig(true);
           } else {
