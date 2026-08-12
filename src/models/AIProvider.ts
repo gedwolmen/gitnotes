@@ -10,6 +10,7 @@ export interface AIModelConfig {
   requiresDownload: boolean;
   downloadSize?: string;
   isDownloaded?: boolean;
+  supportsVision?: boolean;
 }
 
 export interface AIProviderConfig {
