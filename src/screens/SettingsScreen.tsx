@@ -774,7 +774,12 @@ export default function SettingsScreen() {
       />
       <ModelSelector visible={showModelSelector} onClose={() => setShowModelSelector(false)} />
       <ProviderConfigModal visible={showProviderConfig} provider={editingProvider} onClose={() => { setShowProviderConfig(false); setEditingProvider(undefined); }} />
-      <ChatRepoPickerModal visible={showChatRepoPicker} onClose={() => setShowChatRepoPicker(false)} onSelected={() => setShowChatRepoPicker(false)} />
+      <ChatRepoPickerModal
+        visible={showChatRepoPicker}
+        onClose={() => setShowChatRepoPicker(false)}
+        onSelected={() => setShowChatRepoPicker(false)}
+        onGoToSettings={() => { setShowChatRepoPicker(false); void openRepoPicker(); }}
+      />
       <CloneProgressModal progress={cloneProgress} onCancel={handleCancelClone} onRetry={handleRetryClone} />
       <ConnectHostModal
         visible={showConnectHostModal}
