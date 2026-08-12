@@ -19,12 +19,49 @@ GitNotēs supports 4 AI provider types, each backed by a different SDK:
 |------|------|
 | `src/models/AIProvider.ts` | Type definitions (`AIProviderType`, `AIProviderConfig`, `AIModelConfig`) |
 | `src/services/AIService.ts` | Provider instantiation (`buildProviderInstance`, `initializeModel`) |
+| `src/services/ai/providerFactory.ts` | Provider registry and factory pattern |
 | `src/services/ai/providerAvailability.ts` | Runtime availability checks |
 | `src/services/ai/modelLimits.ts` | Context window limits per provider |
 | `src/services/ai/providerQuirks.ts` | Provider-specific workarounds |
-| `src/services/ai/anthropicDefaults.ts` | Anthropic-specific constants |
+| `src/services/ai/anthropicDefaults.ts` | Anthropic-specific constants and default models |
+| `src/services/ai/modelDiscoveryService.ts` | Lazy model discovery with caching |
 | `src/components/ai/ProviderConfigModal.tsx` | UI for configuring providers |
 | `src/stores/aiStore.ts` | Default providers and state management |
+
+## Auto-Discovery of Models (Anthropic)
+
+Anthropic providers automatically discover available models via the API when a user adds or updates their API key. This enables users to access new model releases without manual configuration.
+
+### How it works
+
+1. User enters Anthropic API key in Settings → AI → Anthropic
+2. `aiStore.updateProvider` detects the API key change
+3. Calls `discoverModelsIfNeeded(provider)` asynchronously
+4. Fetches available models from `/v1/models` endpoint
+5. Caches results in AsyncStorage for 24 hours
+6. Updates provider.models with discovered models
+7. Persists to settings
+
+### Caching
+
+- **Cache key**: `anthropic-models-cache-{providerId}`
+- **Cache TTL**: 24 hours
+- **SDK version tracking**: Cache invalidates on `@ai-sdk/anthropic` version changes
+- **Fallback**: If discovery fails, uses `ANTHROPIC_DEFAULT_MODELS` from `anthropicDefaults.ts`
+
+### Manual Refresh
+
+Users can manually refresh the model list via `aiStore.refreshProviderModels(providerId)`. Useful for:
+- Detecting newly released models
+- Clearing stale cache
+- Debugging model availability
+
+### Implementation
+
+See `src/services/ai/modelDiscoveryService.ts` for the full implementation. Key functions:
+- `discoverModelsIfNeeded(provider)`: Main entry point, handles caching and fallback
+- `clearCachedModels(providerId)`: Remove cache for specific provider
+- `clearAllCachedModels()`: Remove all Anthropic model caches
 
 ## Provider Construction Flow
 

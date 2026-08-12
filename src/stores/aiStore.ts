@@ -5,6 +5,7 @@ import { AIActionMode, AIModelConfig, AIProviderConfig, AISettings } from '../mo
 import { setChatRepoAccount } from '../services/ChatStorageService';
 import { resolveProviderAvailability } from '../services/ai/providerAvailability';
 import { ANTHROPIC_DEFAULT_MODELS, ANTHROPIC_DEFAULT_PROVIDER_ID } from '../services/ai/anthropicDefaults';
+import { discoverModelsIfNeeded } from '../services/ai/modelDiscoveryService';
 
 const AI_SETTINGS_STORAGE_KEY = 'ai-settings';
 const AI_PROVIDER_KEY_PREFIX = 'ai-provider-key-';
@@ -30,6 +31,7 @@ interface AIActions {
   selectModel: (modelId: string | null) => Promise<void>;
   addProvider: (provider: AIProviderConfig) => Promise<void>;
   updateProvider: (providerId: string, updates: Partial<AIProviderConfig>) => Promise<void>;
+  refreshProviderModels: (providerId: string) => Promise<void>;
   removeProvider: (providerId: string) => Promise<void>;
   setChatRepo: (owner: string | null, name: string | null, branch?: string, accountId?: string | null) => Promise<void>;
   getAvailableModels: () => AIModelConfig[];
@@ -249,6 +251,8 @@ export const useAIStore = create<AIState & AIActions>()((set, get) => ({
   },
 
   updateProvider: async (providerId, updates) => {
+    const previousProvider = get().providers.find(p => p.id === providerId);
+    
     set((state) => ({
       providers: state.providers.map((provider) =>
         provider.id === providerId
@@ -262,6 +266,47 @@ export const useAIStore = create<AIState & AIActions>()((set, get) => ({
       error: null,
     }));
     await get().persistSettings();
+
+    const updatedProvider = get().providers.find(p => p.id === providerId);
+    const apiKeyWasAddedOrChanged = previousProvider && updates.apiKey && updates.apiKey !== previousProvider.apiKey;
+    
+    if (updatedProvider?.type === 'anthropic' && apiKeyWasAddedOrChanged) {
+      discoverModelsIfNeeded(updatedProvider).then(discoveredModels => {
+        if (discoveredModels.length > 0) {
+          set((currentState) => ({
+            providers: currentState.providers.map(p =>
+              p.id === providerId ? { ...p, models: discoveredModels } : p
+            ),
+          }));
+          get().persistSettings();
+        }
+      }).catch(err => {
+        console.warn('[AI Store] Model discovery failed:', err);
+      });
+    }
+  },
+
+  refreshProviderModels: async (providerId) => {
+    const provider = get().providers.find(p => p.id === providerId);
+    if (!provider || provider.type !== 'anthropic') {
+      return;
+    }
+
+    try {
+      const discoveredModels = await discoverModelsIfNeeded(provider);
+      
+      if (discoveredModels.length > 0) {
+        set((state) => ({
+          providers: state.providers.map(p =>
+            p.id === providerId ? { ...p, models: discoveredModels } : p
+          ),
+        }));
+        await get().persistSettings();
+      }
+    } catch (err) {
+      console.warn('[AI Store] Manual model refresh failed:', err);
+      set({ error: 'Failed to refresh models' });
+    }
   },
 
   removeProvider: async (providerId) => {
