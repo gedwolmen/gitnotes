@@ -12,14 +12,11 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useNotes } from '../../contexts/NoteContext';
-import { useRepos } from '../../contexts/RepoContext';
 import {
   Button,
   Group,
-  GroupRow,
   Modal,
   ScreenHeader,
   useScreenHeaderHeight,
@@ -72,14 +69,12 @@ const TARGET_OPTIONS: {
 
 export function AddReminderScreen() {
   const navigation = useNavigation<Navigation>();
-  const { t } = useTranslation();
   const { colors, isDark, tokens } = useTheme();
   const { spacing, type } = tokens;
   const insets = useSafeAreaInsets();
   const headerHeight = useScreenHeaderHeight();
   const createItem = useReminderStore((s) => s.createItem);
   const { notes } = useNotes();
-  const { repositories } = useRepos();
 
   const [entityType, setEntityType] = useState<ReminderEntityType | null>(null);
   const [noteId, setNoteId] = useState<string | null>(null);
@@ -167,7 +162,7 @@ export function AddReminderScreen() {
     return () => clearTimeout(timer);
   }, [submitState, navigation]);
 
-  const buildEntityLabel = (): string => {
+  const buildEntityLabel = useCallback((): string => {
     switch (entityType) {
       case 'note':
         return noteTitle || 'Untitled note';
@@ -180,7 +175,7 @@ export function AddReminderScreen() {
       default:
         return '';
     }
-  };
+  }, [entityType, noteTitle, folderPath, repoPath, tag]);
 
   const handleAdd = useCallback(async () => {
     if (submitState !== 'idle') return;
@@ -241,16 +236,15 @@ export function AddReminderScreen() {
     submitState,
     entityType,
     noteId,
-    noteTitle,
     repoPath,
     folderPath,
     tag,
-    branch,
     selectedDays,
     selectedTime,
     repeat,
     createItem,
     resetForm,
+    buildEntityLabel,
   ]);
 
   const clearTarget = useCallback(() => {
@@ -305,7 +299,7 @@ export function AddReminderScreen() {
                     borderRadius: 16,
                     backgroundColor: isSelected
                       ? colors.primary + '16'
-                      : (colors as any).surfaceSecondary ?? colors.surface,
+                      : colors.surfaceSecondary,
                     borderWidth: 1,
                     borderColor: isSelected ? colors.primary : colors.border,
                   }}
@@ -410,7 +404,7 @@ export function AddReminderScreen() {
                   backgroundColor:
                     repeat === 'daily'
                       ? colors.primary
-                      : (colors as any).surfaceSecondary ?? colors.surface,
+                      : colors.surfaceSecondary,
                   borderWidth: 1,
                   borderColor:
                     repeat === 'daily' ? colors.primary : colors.border,
@@ -436,7 +430,7 @@ export function AddReminderScreen() {
                   backgroundColor:
                     repeat === 'weekly'
                       ? colors.primary
-                      : (colors as any).surfaceSecondary ?? colors.surface,
+                      : colors.surfaceSecondary,
                   borderWidth: 1,
                   borderColor:
                     repeat === 'weekly' ? colors.primary : colors.border,
@@ -462,7 +456,7 @@ export function AddReminderScreen() {
                   backgroundColor:
                     repeat === 'one-time'
                       ? colors.primary
-                      : (colors as any).surfaceSecondary ?? colors.surface,
+                      : colors.surfaceSecondary,
                   borderWidth: 1,
                   borderColor:
                     repeat === 'one-time' ? colors.primary : colors.border,
@@ -497,7 +491,7 @@ export function AddReminderScreen() {
                         justifyContent: 'center',
                         backgroundColor: isSelected
                           ? colors.primary
-                          : (colors as any).surfaceSecondary ?? colors.surface,
+                          : colors.surfaceSecondary,
                         borderWidth: 1,
                         borderColor: isSelected
                           ? colors.primary
@@ -533,7 +527,7 @@ export function AddReminderScreen() {
                 borderColor: colors.border,
                 borderRadius: 16,
                 backgroundColor:
-                  (colors as any).surfaceSecondary ?? colors.surface,
+                  colors.surfaceSecondary,
               }}
             >
               <Text
