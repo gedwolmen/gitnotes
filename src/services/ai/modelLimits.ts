@@ -1,25 +1,12 @@
 import type { AIModelConfig } from '../../models/AIProvider';
 import { BYTES_PER_TOKEN } from './config';
+import { getFactory } from './providerFactory';
 
 export interface ModelContextLimit {
   totalTokens: number;
-  /** Tokens reserved for system prompt + assistant output. */
   reservedTokens: number;
-  /** Display label used in warnings. */
   label: string;
 }
-
-const APPLE_LIMIT: ModelContextLimit = {
-  totalTokens: 4096,
-  reservedTokens: 1500,
-  label: 'Apple on-device (4K total)',
-};
-
-const LLAMA_DEFAULT_LIMIT: ModelContextLimit = {
-  totalTokens: 8192,
-  reservedTokens: 2000,
-  label: 'on-device Llama (~8K)',
-};
 
 const SMOLLM_LIMIT: ModelContextLimit = {
   totalTokens: 65536,
@@ -27,26 +14,15 @@ const SMOLLM_LIMIT: ModelContextLimit = {
   label: 'SmolLM3 (64K)',
 };
 
-const CLAUDE_LIMIT: ModelContextLimit = {
-  totalTokens: 200000,
-  reservedTokens: 10000,
-  label: 'Claude (200K total)',
-};
-
 export function getModelContextLimit(model: AIModelConfig): ModelContextLimit | null {
-  if (model.providerType === 'apple') {
-    return APPLE_LIMIT;
-  }
   if (model.providerType === 'llama') {
     if (/smol/i.test(model.id) || /smol/i.test(model.name)) {
       return SMOLLM_LIMIT;
     }
-    return LLAMA_DEFAULT_LIMIT;
   }
-  if (model.providerType === 'anthropic') {
-    return CLAUDE_LIMIT;
-  }
-  return null;
+
+  const factory = getFactory(model.providerType);
+  return factory.contextLimit || null;
 }
 
 /** Rough token estimate from byte length. See `BYTES_PER_TOKEN`. */

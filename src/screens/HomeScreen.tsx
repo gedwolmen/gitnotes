@@ -63,6 +63,7 @@ export default function HomeScreen() {
   const [pickerRemember, setPickerRemember] = useState<boolean>(false);
   const [contextMenuItem, setContextMenuItem] = useState<RecentItem | null>(null);
   const [colorPickerItem, setColorPickerItem] = useState<RecentItem | null>(null);
+  const { quote, isLoading, refresh } = useDailyQuote();
 
   const { quote, isLoading: quoteLoading, refresh: quoteRefresh } = useDailyQuote();
 
