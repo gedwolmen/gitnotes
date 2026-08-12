@@ -20,7 +20,8 @@ import { Group, GroupRow } from '../ui';
 import { AIProviderConfig, AIModelConfig } from '../../models/AIProvider';
 import { useAIStore } from '../../stores/aiStore';
 import { checkOpenRouterKey, isOpenRouterBaseURL } from '../../services/ai/openrouterPreflight';
-import { isAnthropicBaseURL } from '../../services/ai/anthropicDefaults';
+import { isAnthropicBaseURL, isAnthropicProviderType } from '../../services/ai/anthropicDefaults';
+import { getFactory } from '../../services/ai/providerFactory';
 
 interface ProviderConfigModalProps {
   visible: boolean;
@@ -98,25 +99,10 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
       }
 
       if (isAnthropicBaseURL(normalizedBaseURL)) {
-        const response = await axios.get('https://api.anthropic.com/v1/models', {
-          headers,
-          timeout: 10000,
-        });
-        const modelsData = response.data?.data || response.data;
-        if (Array.isArray(modelsData)) {
-          const providerId = provider?.id || `custom-${Date.now()}`;
-          const discoveredModels: AIModelConfig[] = modelsData.map((m: any) => ({
-            id: String(m.id),
-            name: String(m.display_name || m.id),
-            providerId,
-            providerType: 'anthropic' as const,
-            requiresDownload: false,
-          }));
-          setTestedModels(discoveredModels);
-          Alert.alert('Success', `Connected to Anthropic and discovered ${discoveredModels.length} models.`);
-        } else {
-          throw new Error('Unexpected response format from Anthropic API.');
-        }
+        const providerId = provider?.id || `custom-${Date.now()}`;
+        const result = await getFactory('anthropic').testConnection(normalizedBaseURL, apiKey.trim(), providerId);
+        setTestedModels(result.models);
+        Alert.alert('Success', result.message);
       } else if (isMiniMaxBaseURL(normalizedBaseURL)) {
         const response = await axios.post(
           `${normalizedBaseURL}/v1/text/chatcompletion_v2`,

@@ -1,11 +1,8 @@
 import { generateText, streamText } from 'ai';
 import type { LanguageModel, ModelMessage, Tool } from 'ai';
 import { Platform } from 'react-native';
-import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
-import { createAnthropic } from '@ai-sdk/anthropic';
 import type { AIModelConfig, AIProviderConfig } from '../models/AIProvider';
 import { chatTools } from './ai/tools';
-import { buildQuirkedFetch } from './ai/providerQuirks';
 import {
   ProviderUnavailableError,
   resolveProviderAvailability,
@@ -14,6 +11,7 @@ import {
   extractErrorDetails,
   humanizeStreamError,
 } from './ai/aiServiceErrors';
+import { getFactory, validateNetworkProviderFields } from './ai/providerFactory';
 
 type OnDeviceAvailability = {
   apple: boolean;
@@ -47,52 +45,9 @@ const DEFAULT_ON_DEVICE_MODELS: AIModelConfig[] = [
 
 async function buildProviderInstance(providerConfig: AIProviderConfig): Promise<unknown> {
   try {
-    switch (providerConfig.type) {
-      case 'apple': {
-        const { apple } = await import('@react-native-ai/apple');
-        return apple;
-      }
-      case 'llama': {
-        const { llama } = await import('@react-native-ai/llama');
-        return llama;
-      }
-      case 'openai-compatible': {
-        if (!providerConfig.baseURL) {
-          throw new Error(`Provider "${providerConfig.name}" is missing a base URL`);
-        }
-
-        if (!providerConfig.apiKey) {
-          throw new Error(`Provider "${providerConfig.name}" is missing an API key`);
-        }
-
-        // Static import (not `await import(...)`). Expo's `async-require`
-        // path went through the web HMR helper on iPad and threw
-        // `Cannot read property 'reload' of undefined` (it tried
-        // `window.location.reload`), surfacing in the chat panel as
-        // "Failed to build provider 'Openrouter'". A static import bypasses
-        // the dynamic loader and ships @ai-sdk/openai-compatible directly
-        // in the main bundle.
-        const quirkedFetch = buildQuirkedFetch(providerConfig.baseURL);
-
-        return createOpenAICompatible({
-          name: providerConfig.id,
-          baseURL: providerConfig.baseURL,
-          apiKey: providerConfig.apiKey,
-          ...(quirkedFetch ? { fetch: quirkedFetch } : {}),
-        });
-      }
-      case 'anthropic': {
-        if (!providerConfig.apiKey) {
-          throw new Error(`Provider "${providerConfig.name}" is missing an API key`);
-        }
-        return createAnthropic({
-          apiKey: providerConfig.apiKey,
-          ...(providerConfig.baseURL ? { baseURL: providerConfig.baseURL } : {}),
-        });
-      }
-      default:
-        throw new Error(`Unsupported AI provider type: ${(providerConfig as AIProviderConfig).type}`);
-    }
+    const factory = getFactory(providerConfig.type);
+    validateNetworkProviderFields(providerConfig, factory);
+    return factory.build(providerConfig);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown provider initialization error';
     throw new Error(`Failed to build provider "${providerConfig.name}": ${message}`);
