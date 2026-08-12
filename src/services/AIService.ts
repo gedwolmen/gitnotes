@@ -45,6 +45,18 @@ const DEFAULT_ON_DEVICE_MODELS: AIModelConfig[] = [
   },
 ];
 
+export function validateNetworkProviderFields(
+  config: AIProviderConfig,
+  options: { requiresBaseURL: boolean },
+): void {
+  if (!config.apiKey) {
+    throw new Error(`Provider "${config.name}" is missing an API key`);
+  }
+  if (options.requiresBaseURL && !config.baseURL) {
+    throw new Error(`Provider "${config.name}" is missing a base URL`);
+  }
+}
+
 async function buildProviderInstance(providerConfig: AIProviderConfig): Promise<unknown> {
   try {
     switch (providerConfig.type) {
@@ -57,13 +69,7 @@ async function buildProviderInstance(providerConfig: AIProviderConfig): Promise<
         return llama;
       }
       case 'openai-compatible': {
-        if (!providerConfig.baseURL) {
-          throw new Error(`Provider "${providerConfig.name}" is missing a base URL`);
-        }
-
-        if (!providerConfig.apiKey) {
-          throw new Error(`Provider "${providerConfig.name}" is missing an API key`);
-        }
+        validateNetworkProviderFields(providerConfig, { requiresBaseURL: true });
 
         // Static import (not `await import(...)`). Expo's `async-require`
         // path went through the web HMR helper on iPad and threw
@@ -72,21 +78,20 @@ async function buildProviderInstance(providerConfig: AIProviderConfig): Promise<
         // "Failed to build provider 'Openrouter'". A static import bypasses
         // the dynamic loader and ships @ai-sdk/openai-compatible directly
         // in the main bundle.
-        const quirkedFetch = buildQuirkedFetch(providerConfig.baseURL);
+        const quirkedFetch = buildQuirkedFetch(providerConfig.baseURL!);
 
         return createOpenAICompatible({
           name: providerConfig.id,
-          baseURL: providerConfig.baseURL,
-          apiKey: providerConfig.apiKey,
+          baseURL: providerConfig.baseURL!,
+          apiKey: providerConfig.apiKey!,
           ...(quirkedFetch ? { fetch: quirkedFetch } : {}),
         });
       }
       case 'anthropic': {
-        if (!providerConfig.apiKey) {
-          throw new Error(`Provider "${providerConfig.name}" is missing an API key`);
-        }
+        validateNetworkProviderFields(providerConfig, { requiresBaseURL: false });
+
         return createAnthropic({
-          apiKey: providerConfig.apiKey,
+          apiKey: providerConfig.apiKey!,
           ...(providerConfig.baseURL ? { baseURL: providerConfig.baseURL } : {}),
         });
       }
