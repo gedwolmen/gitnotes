@@ -221,12 +221,12 @@ describe('FloatingAIButton', () => {
     await waitFor(() => {
       expect(AsyncStorage.getItem).toHaveBeenCalledWith('ai-button-position');
       expect(mockSharedValues[0]?.value).toBe(16);
-      expect(mockSharedValues[1]?.value).toBe(97);
+      expect(mockSharedValues[1]?.value).toBe(108);
       expect(mockSharedValues[2]?.value).toBe(16);
-      expect(mockSharedValues[3]?.value).toBe(97);
+      expect(mockSharedValues[3]?.value).toBe(108);
       expect(AsyncStorage.setItem).toHaveBeenLastCalledWith(
         'ai-button-position',
-        JSON.stringify({ x: 16, y: 97 }),
+        JSON.stringify({ x: 16, y: 108 }),
       );
     });
   });
@@ -239,9 +239,9 @@ describe('FloatingAIButton', () => {
 
     await waitFor(() => {
       expect(mockSharedValues[0]?.value).toBe(248);
-      expect(mockSharedValues[1]?.value).toBe(167);
+      expect(mockSharedValues[1]?.value).toBe(156);
       expect(mockSharedValues[2]?.value).toBe(248);
-      expect(mockSharedValues[3]?.value).toBe(167);
+      expect(mockSharedValues[3]?.value).toBe(156);
     });
   });
 
@@ -259,8 +259,8 @@ describe('FloatingAIButton', () => {
   });
 
   it.each([
-    { tabBarHeight: 40, expectedY: 287 },
-    { tabBarHeight: 148, expectedY: 239 },
+    { tabBarHeight: 40, expectedY: 276 },
+    { tabBarHeight: 148, expectedY: 228 },
   ])(
     'uses max(tabBarHeight, 100) bottom clearance for height $tabBarHeight',
     async ({ tabBarHeight, expectedY }) => {
@@ -279,19 +279,19 @@ describe('FloatingAIButton', () => {
   it('re-normalizes the saved and rendered position when the viewport shrinks', async () => {
     await AsyncStorage.setItem('ai-button-position', JSON.stringify({ x: 260, y: 324 }));
     const { rerender } = render(<FloatingAIButton currentRouteName="Home" />);
-    await waitFor(() => expect(mockSharedValues[1]?.value).toBe(287));
+    await waitFor(() => expect(mockSharedValues[1]?.value).toBe(276));
 
     mockWindowDimensions = { width: 280, height: 360, scale: 2, fontScale: 1 };
     rerender(<FloatingAIButton currentRouteName="Home" />);
 
     await waitFor(() => {
       expect(mockSharedValues[0]?.value).toBe(208);
-      expect(mockSharedValues[1]?.value).toBe(167);
+      expect(mockSharedValues[1]?.value).toBe(156);
       expect(mockSharedValues[2]?.value).toBe(208);
-      expect(mockSharedValues[3]?.value).toBe(167);
+      expect(mockSharedValues[3]?.value).toBe(156);
       expect(AsyncStorage.setItem).toHaveBeenLastCalledWith(
         'ai-button-position',
-        JSON.stringify({ x: 208, y: 167 }),
+        JSON.stringify({ x: 208, y: 156 }),
       );
     });
   });
@@ -310,9 +310,9 @@ describe('FloatingAIButton', () => {
 
     await waitFor(() => {
       expect(mockSharedValues[0]?.value).toBe(208);
-      expect(mockSharedValues[1]?.value).toBe(167);
+      expect(mockSharedValues[1]?.value).toBe(156);
       expect(mockSharedValues[2]?.value).toBe(208);
-      expect(mockSharedValues[3]?.value).toBe(167);
+      expect(mockSharedValues[3]?.value).toBe(156);
     });
 
     expect(mockPanBegin).toBeDefined();
@@ -332,20 +332,20 @@ describe('FloatingAIButton', () => {
     await flushRunOnJSCallbacks();
 
     expect(mockSharedValues[0]?.value).toBe(208);
-    expect(mockSharedValues[1]?.value).toBe(117);
+    expect(mockSharedValues[1]?.value).toBe(104);
     expect(mockSharedValues[2]?.value).toBe(208);
-    expect(mockSharedValues[3]?.value).toBe(117);
+    expect(mockSharedValues[3]?.value).toBe(104);
     expect(AsyncStorage.setItem).toHaveBeenCalledTimes(1);
     expect(AsyncStorage.setItem).toHaveBeenCalledWith(
       'ai-button-position',
-      JSON.stringify({ x: 208, y: 117 }),
+      JSON.stringify({ x: 208, y: 104 }),
     );
   });
 
   it('does not normalize or persist a canceled endpoint before latest-geometry recovery', async () => {
     const { rerender } = render(<FloatingAIButton currentRouteName="Home" />);
     await waitFor(() => expect(mockPanBegin).toBeDefined());
-    await waitFor(() => expect(mockSharedValues[1]?.value).toBe(287));
+    await waitFor(() => expect(mockSharedValues[1]?.value).toBe(276));
     jest.mocked(AsyncStorage.setItem).mockClear();
 
     act(() => {
@@ -357,29 +357,29 @@ describe('FloatingAIButton', () => {
     rerender(<FloatingAIButton currentRouteName="Home" />);
 
     expect(mockSharedValues[0]?.value).toBe(68);
-    expect(mockSharedValues[1]?.value).toBe(247);
+    expect(mockSharedValues[1]?.value).toBe(236);
     expect(mockSharedValues[2]?.value).toBe(248);
-    expect(mockSharedValues[3]?.value).toBe(287);
+    expect(mockSharedValues[3]?.value).toBe(276);
 
     act(() => mockPanEnd?.(false));
 
     expect(mockSharedValues[0]?.value).toBe(68);
-    expect(mockSharedValues[1]?.value).toBe(247);
+    expect(mockSharedValues[1]?.value).toBe(236);
     expect(mockSharedValues[2]?.value).toBe(248);
-    expect(mockSharedValues[3]?.value).toBe(287);
+    expect(mockSharedValues[3]?.value).toBe(276);
     expect(AsyncStorage.setItem).not.toHaveBeenCalled();
 
     act(() => mockPanFinalize?.(false));
     await flushRunOnJSCallbacks();
 
     expect(mockSharedValues[0]?.value).toBe(208);
-    expect(mockSharedValues[1]?.value).toBe(167);
+    expect(mockSharedValues[1]?.value).toBe(156);
     expect(mockSharedValues[2]?.value).toBe(208);
-    expect(mockSharedValues[3]?.value).toBe(167);
+    expect(mockSharedValues[3]?.value).toBe(156);
     expect(AsyncStorage.setItem).toHaveBeenCalledTimes(1);
     expect(AsyncStorage.setItem).toHaveBeenCalledWith(
       'ai-button-position',
-      JSON.stringify({ x: 208, y: 167 }),
+      JSON.stringify({ x: 208, y: 156 }),
     );
   });
 
@@ -422,12 +422,12 @@ describe('FloatingAIButton', () => {
     });
 
     expect(mockSharedValues[0]?.value).toBe(16);
-    expect(mockSharedValues[1]?.value).toBe(287);
+    expect(mockSharedValues[1]?.value).toBe(276);
     expect(mockSharedValues[2]?.value).toBe(16);
-    expect(mockSharedValues[3]?.value).toBe(287);
+    expect(mockSharedValues[3]?.value).toBe(276);
     expect(mockSpringCalls).toEqual([
       [16, expect.objectContaining({ overshootClamping: true })],
-      [287, expect.objectContaining({ overshootClamping: true })],
+      [276, expect.objectContaining({ overshootClamping: true })],
     ]);
   });
 
@@ -448,12 +448,12 @@ describe('FloatingAIButton', () => {
 
     // Then
     expect(mockSharedValues[0]?.value).toBe(16);
-    expect(mockSharedValues[1]?.value).toBe(97);
+    expect(mockSharedValues[1]?.value).toBe(108);
     expect(mockSharedValues[2]?.value).toBe(16);
-    expect(mockSharedValues[3]?.value).toBe(97);
+    expect(mockSharedValues[3]?.value).toBe(108);
     expect(AsyncStorage.setItem).toHaveBeenLastCalledWith(
       'ai-button-position',
-      JSON.stringify({ x: 16, y: 97 }),
+      JSON.stringify({ x: 16, y: 108 }),
     );
     expect(getByTestId('floating-ai.button.navigate-chat').props.accessibilityState).toEqual({
       expanded: true,
@@ -476,9 +476,9 @@ describe('FloatingAIButton', () => {
     // Then
     await waitFor(() => {
       expect(mockSharedValues[0]?.value).toBe(248);
-      expect(mockSharedValues[1]?.value).toBe(287);
+      expect(mockSharedValues[1]?.value).toBe(276);
       expect(mockSharedValues[2]?.value).toBe(248);
-      expect(mockSharedValues[3]?.value).toBe(287);
+      expect(mockSharedValues[3]?.value).toBe(276);
     });
   });
 
