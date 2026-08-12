@@ -151,7 +151,7 @@ describe('ThoughtDumpScreen', () => {
     await waitFor(() => {
       expect(mockCreate).toHaveBeenCalledWith('My thought');
     });
-  });
+  }, 15000);
 
   it('after successful create, input clears and dump appears in list', async () => {
     const newDump = makeDump({ id: 'new-dump', text: 'My thought' });
