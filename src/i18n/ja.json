@@ -173,8 +173,7 @@
   "home": {
     "title": "ホーム",
     "dailyQuote": {
-      "title": "今日の名言",
-      "loading": "名言を検索中..."
+      "loading": "名言を検索中…"
     }
   },
   "hints": {
