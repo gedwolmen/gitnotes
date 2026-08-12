@@ -809,6 +809,7 @@ onSetSyncIntervalSeconds,
                 onValueChange={onToggleAiPersonalization}
                 disabled={!isAIEnabled}
               />
+              <HintIcon hintKey="hints.settings.aiPersonalization" testID="hint.ai-personalization" />
             </View>
           }
         >

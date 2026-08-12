@@ -202,7 +202,9 @@
       "actionModeConfirm": "KI fragt vor dem Ausführen von Schreiboperationen wie Erstellen oder Löschen von Notizen nach Bestätigung.",
       "chatStorage": "Wähle, in welchem Repository KI-Chat-Unterhaltungen gespeichert werden sollen.",
       "providers": "KI-Anbieter ermöglichen dir, verschiedene KI-Dienste zu verbinden. Apple Intelligence nutzt On-Device-Verarbeitung für Datenschutz.",
-      "scheduledLearning": "KI-Anbieter ermöglichen dir, verschiedene KI-Dienste zu verbinden. Apple Intelligence nutzt On-Device-Verarbeitung für Datenschutz."
+      "scheduledLearning": "KI-Anbieter ermöglichen dir, verschiedene KI-Dienste zu verbinden. Apple Intelligence nutzt On-Device-Verarbeitung für Datenschutz.",
+      "dailyQuote": "Zeigt ein tägliches Philosophenzitat auf deinem Startbildschirm, personalisiert basierend auf deinen letzten Tagebuch-Reflexionen.",
+      "aiPersonalization": "Wenn aktiviert, liest die KI deine Notizen und Tagebücher, um personalisierte Antworten zu liefern. Deaktivieren für Datenschutz — KI verwendet nur den aktuellen Chat-Kontext."
     },
     "title": "Hint"
   },
