@@ -173,8 +173,7 @@
   "home": {
     "title": "Accueil",
     "dailyQuote": {
-      "title": "Sagesse du Jour",
-      "loading": "Recherche de votre citation..."
+      "loading": "Recherche de votre citation…"
     }
   },
   "hints": {

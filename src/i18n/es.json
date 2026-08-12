@@ -173,8 +173,7 @@
   "home": {
     "title": "Inicio",
     "dailyQuote": {
-      "title": "Sabiduría Diaria",
-      "loading": "Buscando tu cita..."
+      "loading": "Buscando tu cita…"
     }
   },
   "hints": {

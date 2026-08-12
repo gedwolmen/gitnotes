@@ -173,8 +173,7 @@
   "home": {
     "title": "홈",
     "dailyQuote": {
-      "title": "오늘의 지혜",
-      "loading": "명언을 찾는 중..."
+      "loading": "명언을 찾는 중…"
     }
   },
   "hints": {

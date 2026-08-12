@@ -173,8 +173,7 @@
   "home": {
     "title": "Start",
     "dailyQuote": {
-      "title": "Tägliche Weisheit",
-      "loading": "Zitat wird gesucht..."
+      "loading": "Zitat wird gesucht…"
     }
   },
   "hints": {
