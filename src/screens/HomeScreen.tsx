@@ -378,20 +378,20 @@ export default function HomeScreen() {
             navigation.navigate('ThoughtDump');
           }}
           style={({ pressed }) => [
-            { width: '100%', height: 130, borderRadius: 20, paddingLeft: 16, paddingRight: 16, paddingBottom: 16, paddingTop: 20, justifyContent: 'space-between', overflow: 'hidden', backgroundColor: colors.accent, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
+            { width: '100%', minHeight: 130, borderRadius: 20, padding: 16, justifyContent: 'space-between', overflow: 'hidden', backgroundColor: colors.accent, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
           ]}
         >
           <View className="w-10 h-10 rounded-md items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
             <Ionicons name="bulb-outline" size={22} color="#FFFFFF" />
           </View>
-          <View className="gap-0.5">
+          <View style={{ gap: 6 }}>
             <View className="flex-row items-center gap-1.5">
               <Text className="text-base font-bold" style={{ color: '#FFFFFF', letterSpacing: -0.2 }}>{t('thoughtDump.title')}</Text>
               <View className="bg-emerald-500 px-1.5 py-0.5 rounded">
                 <Text className="text-white font-extrabold" style={{ fontSize: 9, letterSpacing: 0.5 }}>{t('common.new')}</Text>
               </View>
             </View>
-            <Text className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.85)' }} numberOfLines={2}>
+            <Text className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.85)' }} numberOfLines={3}>
               {t('home.bento.thoughtDumpSub')}
             </Text>
           </View>
