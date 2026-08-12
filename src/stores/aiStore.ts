@@ -85,22 +85,13 @@ const createDefaultProviders = (): AIProviderConfig[] => [
     name: 'Anthropic',
     isEnabled: false,
     addedAt: 0,
-    models: [
-      {
-        id: 'claude-sonnet-4-20250514',
-        name: 'Claude Sonnet 4',
-        providerId: ANTHROPIC_DEFAULT_PROVIDER_ID,
-        providerType: 'anthropic',
-        requiresDownload: false,
-      },
-      {
-        id: 'claude-haiku-3-5-20241022',
-        name: 'Claude Haiku 3.5',
-        providerId: ANTHROPIC_DEFAULT_PROVIDER_ID,
-        providerType: 'anthropic',
-        requiresDownload: false,
-      },
-    ],
+    models: ANTHROPIC_DEFAULT_MODELS.map((m) => ({
+      id: m.id,
+      name: m.name,
+      providerId: ANTHROPIC_DEFAULT_PROVIDER_ID,
+      providerType: 'anthropic',
+      requiresDownload: false,
+    })),
   },
 ];
 
