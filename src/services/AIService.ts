@@ -2,6 +2,7 @@ import { generateText, streamText } from 'ai';
 import type { LanguageModel, ModelMessage, Tool } from 'ai';
 import { Platform } from 'react-native';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import { createAnthropic } from '@ai-sdk/anthropic';
 import type { AIModelConfig, AIProviderConfig } from '../models/AIProvider';
 import { chatTools } from './ai/tools';
 import { buildQuirkedFetch } from './ai/providerQuirks';
@@ -80,6 +81,15 @@ async function buildProviderInstance(providerConfig: AIProviderConfig): Promise<
           ...(quirkedFetch ? { fetch: quirkedFetch } : {}),
         });
       }
+      case 'anthropic': {
+        if (!providerConfig.apiKey) {
+          throw new Error(`Provider "${providerConfig.name}" is missing an API key`);
+        }
+        return createAnthropic({
+          apiKey: providerConfig.apiKey,
+          ...(providerConfig.baseURL ? { baseURL: providerConfig.baseURL } : {}),
+        });
+      }
       default:
         throw new Error(`Unsupported AI provider type: ${(providerConfig as AIProviderConfig).type}`);
     }
@@ -143,6 +153,16 @@ export async function initializeModel(
         if (!providerConfig) {
           throw new Error(
             `OpenAI-compatible model "${modelConfig.name}" requires provider configuration`
+          );
+        }
+
+        const provider = await buildProviderInstance(providerConfig);
+        return (provider as OpenAICompatibleProvider).chatModel(modelConfig.id);
+      }
+      case 'anthropic': {
+        if (!providerConfig) {
+          throw new Error(
+            `Anthropic model "${modelConfig.name}" requires provider configuration`
           );
         }
 

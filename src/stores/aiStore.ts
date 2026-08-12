@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { AIActionMode, AIModelConfig, AIProviderConfig, AISettings } from '../models/AIProvider';
 import { setChatRepoAccount } from '../services/ChatStorageService';
 import { resolveProviderAvailability } from '../services/ai/providerAvailability';
+import { ANTHROPIC_DEFAULT_MODELS, ANTHROPIC_DEFAULT_PROVIDER_ID } from '../services/ai/anthropicDefaults';
 
 const AI_SETTINGS_STORAGE_KEY = 'ai-settings';
 const AI_PROVIDER_KEY_PREFIX = 'ai-provider-key-';
@@ -19,6 +20,7 @@ interface AIState {
   providers: AIProviderConfig[];
   isLoading: boolean;
   error: string | null;
+  dailyQuoteEnabled: boolean;
 }
 
 interface AIActions {
@@ -34,6 +36,7 @@ interface AIActions {
   getSelectedModel: () => AIModelConfig | undefined;
   persistSettings: () => Promise<void>;
   loadSettings: () => Promise<void>;
+  toggleDailyQuote: () => Promise<void>;
 }
 
 const createDefaultProviders = (): AIProviderConfig[] => [
@@ -76,6 +79,29 @@ const createDefaultProviders = (): AIProviderConfig[] => [
       },
     ],
   },
+  {
+    id: ANTHROPIC_DEFAULT_PROVIDER_ID,
+    type: 'anthropic',
+    name: 'Anthropic',
+    isEnabled: false,
+    addedAt: 0,
+    models: [
+      {
+        id: 'claude-sonnet-4-20250514',
+        name: 'Claude Sonnet 4',
+        providerId: ANTHROPIC_DEFAULT_PROVIDER_ID,
+        providerType: 'anthropic',
+        requiresDownload: false,
+      },
+      {
+        id: 'claude-haiku-3-5-20241022',
+        name: 'Claude Haiku 3.5',
+        providerId: ANTHROPIC_DEFAULT_PROVIDER_ID,
+        providerType: 'anthropic',
+        requiresDownload: false,
+      },
+    ],
+  },
 ];
 
 const createDefaultSettings = (): AISettings => ({
@@ -87,6 +113,7 @@ const createDefaultSettings = (): AISettings => ({
   chatRepoBranch: 'main',
   chatRepoAccountId: null,
   providers: createDefaultProviders(),
+  dailyQuoteEnabled: true,
 });
 
 const getProviderApiKeyStorageKey = (providerId: string) => `${AI_PROVIDER_KEY_PREFIX}${providerId}`;
@@ -277,6 +304,11 @@ export const useAIStore = create<AIState & AIActions>()((set, get) => ({
     await get().persistSettings();
   },
 
+  toggleDailyQuote: async () => {
+    set((state) => ({ dailyQuoteEnabled: !state.dailyQuoteEnabled, error: null }));
+    await get().persistSettings();
+  },
+
   getAvailableModels: () =>
     get()
       .providers.filter((provider) => provider.isEnabled)
@@ -311,6 +343,7 @@ export const useAIStore = create<AIState & AIActions>()((set, get) => ({
         chatRepoBranch,
         chatRepoAccountId,
         providers,
+        dailyQuoteEnabled,
       } = get();
 
       await Promise.all(
@@ -335,6 +368,7 @@ export const useAIStore = create<AIState & AIActions>()((set, get) => ({
         chatRepoBranch,
         chatRepoAccountId,
         providers: providers.map(stripProviderApiKey),
+        dailyQuoteEnabled,
       };
 
       await AsyncStorage.setItem(AI_SETTINGS_STORAGE_KEY, JSON.stringify(settingsToPersist));

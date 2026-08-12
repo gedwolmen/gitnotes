@@ -32,7 +32,7 @@
 - Folders, tags, colors, pins, wiki-links, backlinks, custom templates
 - Multiple GitHub accounts; per-repo API or full-clone sync modes
 - Importers for Google Keep and Apple Notes
-- Optional AI chat layer (OpenAI-compatible providers, Apple Intelligence, on-device Llama)
+- Optional AI chat layer (Anthropic, OpenAI-compatible providers, Apple Intelligence, on-device Llama)
 - Biometric lock, multilingual UI (EN, ES, FR, DE, JA, KO), light / dark / system themes
 
 ## Stack

@@ -16,6 +16,7 @@ module.exports = {
     '^expo-blur$': '<rootDir>/__mocks__/expo-blur.ts',
     '^expo-file-system/legacy$': '<rootDir>/__mocks__/expo-file-system-legacy.ts',
     '^expo-secure-store$': '<rootDir>/__mocks__/expo-secure-store.ts',
+    '^@ai-sdk/anthropic$': '<rootDir>/__mocks__/ai-sdk-anthropic.ts',
   },
   setupFiles: ['<rootDir>/jest.setup.ts'],
   testPathIgnorePatterns: [

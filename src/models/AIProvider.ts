@@ -1,4 +1,4 @@
-export type AIProviderType = 'apple' | 'llama' | 'openai-compatible';
+export type AIProviderType = 'apple' | 'llama' | 'openai-compatible' | 'anthropic';
 
 export type ProviderPlatform = 'ios' | 'android';
 
@@ -39,6 +39,7 @@ export interface AISettings {
   chatRepoBranch: string;
   chatRepoAccountId: string | null;
   providers: AIProviderConfig[];
+  dailyQuoteEnabled: boolean;
 }
 
 export interface AIContextItem {

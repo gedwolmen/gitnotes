@@ -50,6 +50,10 @@
   },
   "home": {
     "title": "Home",
+    "dailyQuote": {
+      "title": "Daily Wisdom",
+      "loading": "Finding your quote..."
+    },
     "appTitle": "GitNotēs",
     "subtitle": "Your development notes, organized.",
     "format": {
@@ -214,6 +218,10 @@
   },
   "settings": {
     "title": "Settings",
+    "dailyQuote": {
+      "title": "Daily Quote"
+    },
+    "dailyQuoteDescription": "Show a personal philosopher quote on Home",
     "security": "Security",
     "appearance": "Appearance",
     "updatedUI": "Updated UI",

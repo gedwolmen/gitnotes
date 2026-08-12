@@ -120,6 +120,8 @@ onRemoveAccount: (id: string, login: string) => void;
   onOpenChatRepoPicker: () => void;
   onProviderPress: (provider: AIProviderConfig) => void;
   onAddProvider: () => void;
+  dailyQuoteEnabled: boolean;
+  onToggleDailyQuote: () => void;
   isBiometricLockEnabled: boolean;
   isBiometricAvailable: boolean;
   biometricKind: BiometricKind;
@@ -194,6 +196,8 @@ export function SettingsContent(props: SettingsContentProps) {
     onOpenChatRepoPicker,
     onProviderPress,
     onAddProvider,
+    dailyQuoteEnabled,
+    onToggleDailyQuote,
     isBiometricLockEnabled,
     isBiometricAvailable,
     biometricKind,
@@ -767,6 +771,29 @@ onSetSyncIntervalSeconds,
           <HintIcon hintKey="hints.settings.enableAI" testID="hint.enable-ai" />
         </View>}>
           <Text style={[styles.settingLabel, { color: colors.text }]}>Enable Artificial Intelligence</Text>
+        </GroupRow>
+        <GroupRow
+          testID="settings.row.daily-quote"
+          trailing={
+            <View className="flex-row items-center gap-2">
+              <Toggle
+                testID="settings.toggle.daily-quote"
+                value={isAIEnabled ? dailyQuoteEnabled : false}
+                onValueChange={onToggleDailyQuote}
+                disabled={!isAIEnabled}
+              />
+              <HintIcon hintKey="hints.settings.dailyQuote" testID="hint.daily-quote" />
+            </View>
+          }
+        >
+          <View>
+            <Text style={[styles.settingLabel, { color: colors.text }]}>
+              {t('settings.dailyQuote.title', { defaultValue: 'Daily Quote' })}
+            </Text>
+            <Text style={[styles.settingValue, { color: colors.textSecondary, fontSize: 12, marginTop: 2 }]}>
+              {t('settings.dailyQuoteDescription', { defaultValue: 'Show a personal philosopher quote on Home' })}
+            </Text>
+          </View>
         </GroupRow>
       </Group>
 

@@ -148,6 +148,7 @@ export async function resolveProviderAvailability(
   } else if (provider.type === 'llama') {
     value = await probeLlama();
   } else {
+    // 'openai-compatible' and 'anthropic' providers are always considered available (network-based)
     value = { kind: 'available' };
   }
 
