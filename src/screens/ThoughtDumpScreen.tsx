@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, FlatList, Alert, Text } from 'react-native';
+import { View, StyleSheet, FlatList, Alert, Text, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useTokens } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/types';
@@ -12,6 +13,7 @@ import { StorageService } from '../services/StorageService';
 import { ThoughtDump } from '../models/ThoughtDump';
 import { ScreenHeader, Button, Input, EmptyState, Modal } from '../components/ui';
 import { useScreenHeaderHeight } from '../components/ui';
+import VoiceInputModal from '../components/VoiceInputModal';
 import { indexDump, removeDump } from '../services/ai/thoughtDumpIndexing';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -33,6 +35,7 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
   const [deleteTarget, setDeleteTarget] = useState<ThoughtDump | null>(null);
   const [repoPath, setRepoPath] = useState('');
   const [branch, setBranch] = useState<string | undefined>();
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
 
   const loadDumps = useCallback(async () => {
     setIsLoading(true);
@@ -54,6 +57,11 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
   useEffect(() => {
     loadDumps();
   }, [loadDumps]);
+
+  const handleVoiceDone = useCallback((spokenText: string) => {
+    setText((prev) => (prev ? `${prev} ${spokenText}` : spokenText));
+    setShowVoiceModal(false);
+  }, []);
 
   const handleSave = async () => {
     const trimmed = text.trim();
@@ -159,15 +167,32 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
             placeholderTextColor={colors.textSecondary}
             multilineMinHeight={100}
           />
-          <View style={{ marginTop: spacing[2] }}>
-            <Button
-              testID="thought-dump-save"
-              label={t('thoughtDump.save')}
-              variant="primary"
-              onPress={handleSave}
-              disabled={isSaving || text.trim().length === 0}
-              fullWidth
-            />
+          <View style={styles.actionRow}>
+            <Pressable
+              testID="thought-dump-voice"
+              accessibilityRole="button"
+              accessibilityLabel="Voice input"
+              onPress={() => setShowVoiceModal(true)}
+              style={[
+                styles.micButton,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <Ionicons name="mic" size={20} color={colors.primary} />
+            </Pressable>
+            <View style={{ flex: 1, marginLeft: spacing[2] }}>
+              <Button
+                testID="thought-dump-save"
+                label={t('thoughtDump.save')}
+                variant="primary"
+                onPress={handleSave}
+                disabled={isSaving || text.trim().length === 0}
+                fullWidth
+              />
+            </View>
           </View>
         </View>
 
@@ -207,6 +232,12 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
         </View>
       </Modal>
 
+      <VoiceInputModal
+        visible={showVoiceModal}
+        onDone={handleVoiceDone}
+        onClose={() => setShowVoiceModal(false)}
+      />
+
       <ScreenHeader
         title={t('thoughtDump.title')}
         onBack={() => navigation.goBack()}
@@ -242,5 +273,18 @@ const styles = StyleSheet.create({
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    marginTop: 8,
+  },
+  micButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
