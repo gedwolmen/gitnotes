@@ -45,15 +45,23 @@ export const MENU_SPRING = {
 interface HubItemContent {
   readonly label: string;
   readonly icon: keyof typeof Ionicons.glyphMap;
+  readonly sizeTier: 'large' | 'medium' | 'small';
+  readonly colorGroup: 'primary' | 'accent' | 'muted';
 }
 
 const HUB_ITEM_CONTENT = {
-  'new-chat': { label: 'New chat', icon: 'add' },
-  'voice-dump': { label: 'Voice dump', icon: 'mic' },
-  'chat-history': { label: 'Chat history', icon: 'chatbubbles-outline' },
-  'ai-settings': { label: 'AI settings', icon: 'options-outline' },
-  'thought-dump': { label: 'Thought dump', icon: 'bulb-outline' },
+  'new-chat': { label: 'New chat', icon: 'add', sizeTier: 'large', colorGroup: 'primary' },
+  'voice-dump': { label: 'Voice dump', icon: 'mic', sizeTier: 'large', colorGroup: 'primary' },
+  'chat-history': { label: 'Chat history', icon: 'chatbubbles-outline', sizeTier: 'small', colorGroup: 'muted' },
+  'ai-settings': { label: 'AI settings', icon: 'options-outline', sizeTier: 'small', colorGroup: 'muted' },
+  'thought-dump': { label: 'Thought dump', icon: 'bulb-outline', sizeTier: 'medium', colorGroup: 'accent' },
 } as const satisfies Record<HubItemId, HubItemContent>;
+
+const SIZE_TIERS = {
+  large: { size: 56, iconSize: 24 },
+  medium: { size: 50, iconSize: 22 },
+  small: { size: 46, iconSize: 18 },
+} as const;
 
 interface MenuGeometryProps {
   readonly item: FloatingAIHubItem;
@@ -82,6 +90,9 @@ function LiquidSatellite({
 interface HubMenuItemProps extends MenuGeometryProps {
   readonly iconColor: string;
   readonly onPress: (itemId: HubItemId) => void;
+  readonly primaryColor: string;
+  readonly accentColor: string;
+  readonly mutedColor: string;
 }
 
 function HubMenuItem({
@@ -91,8 +102,18 @@ function HubMenuItem({
   progress,
   iconColor,
   onPress,
+  primaryColor,
+  accentColor,
+  mutedColor,
 }: HubMenuItemProps) {
   const content = HUB_ITEM_CONTENT[item.id];
+  const tier = SIZE_TIERS[content.sizeTier];
+  const backgroundColor =
+    content.colorGroup === 'primary'
+      ? primaryColor
+      : content.colorGroup === 'accent'
+        ? accentColor
+        : mutedColor;
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: progress.value,
     transform: [
@@ -102,16 +123,36 @@ function HubMenuItem({
     ],
   }));
 
+  const buttonStyle = {
+    width: tier.size,
+    height: tier.size,
+    borderRadius: RADII.pill,
+    backgroundColor,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  };
+
+  const anchorStyle = {
+    width: FLOATING_AI_HUB_SATELLITE_SIZE,
+    height: FLOATING_AI_HUB_SATELLITE_SIZE,
+    position: 'absolute' as const,
+    left: (FLOATING_AI_BUTTON_SIZE - FLOATING_AI_HUB_SATELLITE_SIZE) / 2,
+    top: (FLOATING_AI_BUTTON_SIZE - FLOATING_AI_HUB_SATELLITE_SIZE) / 2,
+    zIndex: 2,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  };
+
   return (
-    <Animated.View style={[styles.satelliteAnchor, animatedStyle]}>
+    <Animated.View style={[anchorStyle, animatedStyle]}>
       <Pressable
         testID={`floating-ai.hub.${item.id}`}
         accessibilityRole="button"
         accessibilityLabel={content.label}
         onPress={() => onPress(item.id)}
-        style={styles.satelliteButton}
+        style={buttonStyle}
       >
-        <Ionicons name={content.icon} size={22} color={iconColor} />
+        <Ionicons name={content.icon} size={tier.iconSize} color={iconColor} />
       </Pressable>
     </Animated.View>
   );
@@ -127,6 +168,8 @@ interface FloatingAIHubMenuProps {
   readonly iconColor: string;
   readonly labelColor: string;
   readonly surfaceColor: string;
+  readonly accentColor: string;
+  readonly mutedColor: string;
   readonly onItemPress: (itemId: HubItemId) => void;
 }
 
@@ -138,6 +181,8 @@ export function FloatingAIHubMenu({
   progress,
   primaryColor,
   iconColor,
+  accentColor,
+  mutedColor,
   onItemPress,
 }: FloatingAIHubMenuProps) {
   return (
@@ -183,6 +228,9 @@ export function FloatingAIHubMenu({
           verticalDirection={verticalDirection}
           progress={progress}
           iconColor={iconColor}
+          primaryColor={primaryColor}
+          accentColor={accentColor}
+          mutedColor={mutedColor}
           onPress={onItemPress}
         />
       ))}
