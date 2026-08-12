@@ -26,7 +26,7 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 const quotes: QuoteRow[] = quotesJson as QuoteRow[];
 
-type FallbackReason = 'disabled' | 'no_model' | 'no_journals' | 'ai_failed' | 'error';
+type FallbackReason = 'disabled' | 'no_model' | 'no_journals' | 'ai_failed' | 'error' | 'personalization_off';
 
 const FALLBACK_DESCRIPTIONS: Record<FallbackReason, string> = {
   disabled:
@@ -38,6 +38,8 @@ const FALLBACK_DESCRIPTIONS: Record<FallbackReason, string> = {
   ai_failed:
     'Could not generate a personalized quote. Showing a random selection from the collection.',
   error: 'Encountered an error. Showing a random quote from the collection.',
+  personalization_off:
+    'AI personalization is off for data safety. Showing a random quote from the collection.',
 };
 
 function makeFallbackQuote(reason: FallbackReason): DailyQuote {
@@ -60,6 +62,7 @@ class DailyQuoteServiceClass {
 
       const aiStore = useAIStore.getState();
       if (!aiStore.dailyQuoteEnabled) return makeFallbackQuote('disabled');
+      if (!aiStore.aiPersonalizationEnabled) return makeFallbackQuote('personalization_off');
 
       const selectedModel = aiStore.getSelectedModel();
       if (!selectedModel) return makeFallbackQuote('no_model');

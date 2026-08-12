@@ -22,6 +22,7 @@ interface AIState {
   isLoading: boolean;
   error: string | null;
   dailyQuoteEnabled: boolean;
+  aiPersonalizationEnabled: boolean;
 }
 
 interface AIActions {
@@ -39,6 +40,7 @@ interface AIActions {
   persistSettings: () => Promise<void>;
   loadSettings: () => Promise<void>;
   toggleDailyQuote: () => Promise<void>;
+  toggleAiPersonalization: () => Promise<void>;
 }
 
 const createDefaultProviders = (): AIProviderConfig[] => [
@@ -107,6 +109,7 @@ const createDefaultSettings = (): AISettings => ({
   chatRepoAccountId: null,
   providers: createDefaultProviders(),
   dailyQuoteEnabled: true,
+  aiPersonalizationEnabled: true,
 });
 
 const getProviderApiKeyStorageKey = (providerId: string) => `${AI_PROVIDER_KEY_PREFIX}${providerId}`;
@@ -345,6 +348,11 @@ export const useAIStore = create<AIState & AIActions>()((set, get) => ({
     await get().persistSettings();
   },
 
+  toggleAiPersonalization: async () => {
+    set((state) => ({ aiPersonalizationEnabled: !state.aiPersonalizationEnabled, error: null }));
+    await get().persistSettings();
+  },
+
   getAvailableModels: () =>
     get()
       .providers.filter((provider) => provider.isEnabled)
@@ -380,6 +388,7 @@ export const useAIStore = create<AIState & AIActions>()((set, get) => ({
         chatRepoAccountId,
         providers,
         dailyQuoteEnabled,
+        aiPersonalizationEnabled,
       } = get();
 
       await Promise.all(
@@ -405,6 +414,7 @@ export const useAIStore = create<AIState & AIActions>()((set, get) => ({
         chatRepoAccountId,
         providers: providers.map(stripProviderApiKey),
         dailyQuoteEnabled,
+        aiPersonalizationEnabled,
       };
 
       await AsyncStorage.setItem(AI_SETTINGS_STORAGE_KEY, JSON.stringify(settingsToPersist));

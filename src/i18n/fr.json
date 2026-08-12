@@ -87,6 +87,10 @@
       "title": "Citation Quotidienne"
     },
     "dailyQuoteDescription": "Citation philosophique sur l'accueil",
+    "aiPersonalization": {
+      "title": "Personnaliser l'IA avec mes notes"
+    },
+    "aiPersonalizationDescription": "Si désactivé, l'IA ne lit pas vos notes ni journaux pour votre sécurité",
     "security": "Sécurité",
     "appearance": "Apparence",
     "updatedUI": "Interface mise à jour",

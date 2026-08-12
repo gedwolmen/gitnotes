@@ -122,6 +122,8 @@ onRemoveAccount: (id: string, login: string) => void;
   onAddProvider: () => void;
   dailyQuoteEnabled: boolean;
   onToggleDailyQuote: () => void;
+  aiPersonalizationEnabled: boolean;
+  onToggleAiPersonalization: () => void;
   isBiometricLockEnabled: boolean;
   isBiometricAvailable: boolean;
   biometricKind: BiometricKind;
@@ -198,6 +200,8 @@ export function SettingsContent(props: SettingsContentProps) {
     onAddProvider,
     dailyQuoteEnabled,
     onToggleDailyQuote,
+    aiPersonalizationEnabled,
+    onToggleAiPersonalization,
     isBiometricLockEnabled,
     isBiometricAvailable,
     biometricKind,
@@ -792,6 +796,28 @@ onSetSyncIntervalSeconds,
             </Text>
             <Text style={[styles.settingValue, { color: colors.textSecondary, fontSize: 12, marginTop: 2 }]}>
               {t('settings.dailyQuoteDescription', { defaultValue: 'Show a personal philosopher quote on Home' })}
+            </Text>
+          </View>
+        </GroupRow>
+        <GroupRow
+          testID="settings.row.ai-personalization"
+          trailing={
+            <View className="flex-row items-center gap-2">
+              <Toggle
+                testID="settings.toggle.ai-personalization"
+                value={isAIEnabled ? aiPersonalizationEnabled : false}
+                onValueChange={onToggleAiPersonalization}
+                disabled={!isAIEnabled}
+              />
+            </View>
+          }
+        >
+          <View>
+            <Text style={[styles.settingLabel, { color: colors.text }]}>
+              {t('settings.aiPersonalization.title', { defaultValue: 'Personalize AI with my notes' })}
+            </Text>
+            <Text style={[styles.settingValue, { color: colors.textSecondary, fontSize: 12, marginTop: 2 }]}>
+              {t('settings.aiPersonalizationDescription', { defaultValue: "When off, AI won't read your notes or journals for data safety" })}
             </Text>
           </View>
         </GroupRow>

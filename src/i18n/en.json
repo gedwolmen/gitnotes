@@ -221,6 +221,10 @@
       "title": "Daily Quote"
     },
     "dailyQuoteDescription": "Show a personal philosopher quote on Home",
+    "aiPersonalization": {
+      "title": "Personalize AI with my notes"
+    },
+    "aiPersonalizationDescription": "When off, AI won't read your notes or journals for data safety",
     "security": "Security",
     "appearance": "Appearance",
     "updatedUI": "Updated UI",

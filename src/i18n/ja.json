@@ -87,6 +87,10 @@
       "title": "毎日の名言"
     },
     "dailyQuoteDescription": "ホームに哲学者の名言を表示",
+    "aiPersonalization": {
+      "title": "ノートでAIをパーソナライズ"
+    },
+    "aiPersonalizationDescription": "オフにするとAIはノートや日記を読みません（データ保護）",
     "security": "セキュリティ",
     "appearance": "外観",
     "updatedUI": "新しいUI",
