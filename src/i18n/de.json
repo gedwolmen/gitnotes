@@ -543,6 +543,9 @@
     "confirmDelete": "Diese Gedankenablage löschen? Dies kann nicht rückgängig gemacht werden.",
     "empty": "Noch keine Gedankenablagen",
     "error": "Etwas ist schiefgelaufen. Bitte erneut versuchen.",
-    "justNow": "gerade eben"
+    "justNow": "gerade eben",
+    "voiceInput": "Spracheingabe",
+    "voiceUnavailable": "Spracheingabe nicht verfügbar",
+    "voiceDump": "Sprachablage"
   }
 }

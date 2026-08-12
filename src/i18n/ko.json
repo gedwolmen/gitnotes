@@ -543,6 +543,9 @@
     "confirmDelete": "이 생각 덤프를 삭제하시겠습니까? 되돌릴 수 없습니다.",
     "empty": "아직 생각 덤프가 없습니다",
     "error": "문제가 발생했습니다. 다시 시도해 주세요.",
-    "justNow": "방금 전"
+    "justNow": "방금 전",
+    "voiceInput": "음성 입력",
+    "voiceUnavailable": "음성 입력을 사용할 수 없습니다",
+    "voiceDump": "음성 덤프"
   }
 }

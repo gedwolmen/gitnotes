@@ -181,7 +181,7 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
             <Pressable
               testID="thought-dump-voice"
               accessibilityRole="button"
-              accessibilityLabel="Voice input"
+              accessibilityLabel={t('thoughtDump.voiceInput')}
               onPress={() => setShowVoiceModal(true)}
               style={[
                 styles.micButton,

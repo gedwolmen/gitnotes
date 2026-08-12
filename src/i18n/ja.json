@@ -543,6 +543,9 @@
     "confirmDelete": "この思考ダンプを削除しますか？元に戻すことはできません。",
     "empty": "思考ダンプはまだありません",
     "error": "エラーが発生しました。もう一度お試しください。",
-    "justNow": "たった今"
+    "justNow": "たった今",
+    "voiceInput": "音声入力",
+    "voiceUnavailable": "音声入力を利用できません",
+    "voiceDump": "音声ダンプ"
   }
 }
