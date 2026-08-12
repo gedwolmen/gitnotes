@@ -85,16 +85,10 @@ async function buildProviderInstance(providerConfig: AIProviderConfig): Promise<
         if (!providerConfig.apiKey) {
           throw new Error(`Provider "${providerConfig.name}" is missing an API key`);
         }
-
-        const anthropicConfig: any = {
+        return createAnthropic({
           apiKey: providerConfig.apiKey,
-        };
-
-        if (providerConfig.baseURL) {
-          anthropicConfig.baseURL = providerConfig.baseURL;
-        }
-
-        return createAnthropic(anthropicConfig);
+          ...(providerConfig.baseURL ? { baseURL: providerConfig.baseURL } : {}),
+        });
       }
       default:
         throw new Error(`Unsupported AI provider type: ${(providerConfig as AIProviderConfig).type}`);
