@@ -34,22 +34,22 @@ const DIRECTION_CASES = [
   {
     horizontalDirection: 1,
     verticalDirection: 1,
-    expectedBounds: { minX: 16, maxX: 162, minY: 97, maxY: 243 },
+    expectedBounds: { minX: 16, maxX: 142, minY: 108, maxY: 224 },
   },
   {
     horizontalDirection: 1,
     verticalDirection: -1,
-    expectedBounds: { minX: 16, maxX: 162, minY: 141, maxY: 287 },
+    expectedBounds: { minX: 16, maxX: 142, minY: 160, maxY: 276 },
   },
   {
     horizontalDirection: -1,
     verticalDirection: 1,
-    expectedBounds: { minX: 102, maxX: 248, minY: 97, maxY: 243 },
+    expectedBounds: { minX: 122, maxX: 248, minY: 108, maxY: 224 },
   },
   {
     horizontalDirection: -1,
     verticalDirection: -1,
-    expectedBounds: { minX: 102, maxX: 248, minY: 141, maxY: 287 },
+    expectedBounds: { minX: 122, maxX: 248, minY: 160, maxY: 276 },
   },
 ] as const satisfies readonly DirectionCase[];
 
@@ -134,7 +134,7 @@ describe('floating AI hub geometry', () => {
     // Given
     const asymmetricGeometry: FloatingButtonGeometry = {
       ...STANDARD_GEOMETRY,
-      leftClearance: 150,
+      leftClearance: 140,
     };
 
     // When
@@ -144,7 +144,7 @@ describe('floating AI hub geometry', () => {
     );
 
     // Then
-    expect(placement.position.x).toBe(150);
+    expect(placement.position.x).toBe(140);
     expect(placement.horizontalDirection).toBe(1);
   });
 
