@@ -143,6 +143,9 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
       case 'thought-dump':
         hub.goThoughtDump(navigation);
         return;
+      case 'voice-dump':
+        hub.goVoiceDump(navigation);
+        return;
       default:
         return itemId;
     }
