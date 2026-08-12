@@ -78,8 +78,8 @@ jest.mock('../src/components/settings/ImportSection', () => ({
   ImportSection: () => null,
 }));
 
-jest.mock('../src/components/settings/ScheduledLearningSection', () => ({
-  ScheduledLearningSection: () => null,
+jest.mock('../src/components/settings/ReminderSection', () => ({
+  ReminderSection: () => null,
 }));
 
 jest.mock('../src/components/ui', () => {
