@@ -23,7 +23,7 @@ import {
   type MenuDirection,
 } from './floatingAIButtonGeometry';
 
-const LIQUID_CANVAS_SIZE = 296;
+const LIQUID_CANVAS_SIZE = 340;
 const LIQUID_CANVAS_INSET = (
   LIQUID_CANVAS_SIZE - FLOATING_AI_BUTTON_SIZE
 ) / 2;
