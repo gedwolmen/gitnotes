@@ -16,7 +16,7 @@ import {
   type LanguageCode,
 } from '../../i18n';
 import { ImportSection } from './ImportSection';
-import { ScheduledLearningSection } from './ScheduledLearningSection';
+import { ReminderSection } from './ReminderSection';
 import { settingsStyles as styles } from './settingsStyles';
 import type { GitRepository } from '../../services/GitService';
 import type { TemplateRepoPreference } from '../../services/TemplateRepoPreferenceService';
@@ -916,7 +916,7 @@ onSetSyncIntervalSeconds,
             </GroupRow>
           </Group>
 
-          <ScheduledLearningSection colors={colors} />
+          <ReminderSection colors={colors} />
         </>
       ) : null}
 
