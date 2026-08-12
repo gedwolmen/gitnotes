@@ -378,23 +378,20 @@ export default function HomeScreen() {
             navigation.navigate('ThoughtDump');
           }}
           style={({ pressed }) => [
-            { width: '100%', height: 120, borderRadius: 20, padding: 16, overflow: 'hidden', justifyContent: 'flex-end', backgroundColor: colors.accent, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
+            { width: '100%', height: 130, borderRadius: 20, paddingLeft: 16, paddingRight: 16, paddingBottom: 16, paddingTop: 20, justifyContent: 'space-between', overflow: 'hidden', backgroundColor: colors.accent, opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
           ]}
         >
-          <View className="absolute top-4 left-4 w-9 h-9 rounded-full bg-white items-center justify-center">
-            <Ionicons name="bulb-outline" size={18} color={colors.accent} />
+          <View className="w-10 h-10 rounded-md items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
+            <Ionicons name="bulb-outline" size={22} color="#FFFFFF" />
           </View>
-          <View className="absolute" style={{ top: -50, right: -50, opacity: 0.3 }}>
-            <Ionicons name="bulb-outline" size={120} color="#FFFFFF" />
-          </View>
-          <View className="absolute top-4 right-4 bg-emerald-500 px-1.5 py-0.5 rounded">
-            <Text className="text-white font-extrabold" style={{ fontSize: 9, letterSpacing: 0.5 }}>{t('common.new')}</Text>
-          </View>
-          <View className="gap-1">
-            <Text className="text-xl font-bold text-white" style={{ letterSpacing: -0.3 }} numberOfLines={1}>
-              {t('thoughtDump.title')}
-            </Text>
-            <Text className="text-xs font-medium text-white opacity-80" numberOfLines={2}>
+          <View className="gap-0.5">
+            <View className="flex-row items-center gap-1.5">
+              <Text className="text-base font-bold" style={{ color: '#FFFFFF', letterSpacing: -0.2 }}>{t('thoughtDump.title')}</Text>
+              <View className="bg-emerald-500 px-1.5 py-0.5 rounded">
+                <Text className="text-white font-extrabold" style={{ fontSize: 9, letterSpacing: 0.5 }}>{t('common.new')}</Text>
+              </View>
+            </View>
+            <Text className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.85)' }} numberOfLines={2}>
               {t('home.bento.thoughtDumpSub')}
             </Text>
           </View>
