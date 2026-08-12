@@ -545,6 +545,9 @@
     "confirmDelete": "Supprimer ce vidage de pensées ? Cette action est irréversible.",
     "empty": "Aucun vidage de pensées pour le moment",
     "error": "Une erreur s'est produite. Veuillez réessayer.",
-    "justNow": "à l'instant"
+    "justNow": "à l'instant",
+    "voiceInput": "Saisie vocale",
+    "voiceUnavailable": "Saisie vocale non disponible",
+    "voiceDump": "Vidage vocal"
   }
 }

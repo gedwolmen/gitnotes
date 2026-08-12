@@ -761,6 +761,9 @@
     "confirmDelete": "Delete this thought dump? This cannot be undone.",
     "empty": "No thought dumps yet",
     "error": "Something went wrong. Please try again.",
-    "justNow": "just now"
+    "justNow": "just now",
+    "voiceInput": "Voice input",
+    "voiceUnavailable": "Voice input not available",
+    "voiceDump": "Voice dump"
   }
 }

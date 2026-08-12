@@ -32,11 +32,29 @@ jest.mock('react-native-safe-area-context', () => ({
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ goBack: jest.fn() }),
+  useRoute: () => ({ params: {} }),
 }));
 
 jest.mock('@expo/vector-icons', () => ({
   Ionicons: () => null,
 }));
+
+jest.mock('../src/components/VoiceInputModal', () => {
+  const React = require('react');
+  const { View, TouchableOpacity, Text } = require('react-native');
+  return {
+    __esModule: true,
+    default: ({ visible, onClose }: any) =>
+      visible ? (
+        <View testID="voice-input-modal">
+          <TouchableOpacity testID="voice-input-modal.button.close-unavailable" onPress={onClose}>
+            <Text>close</Text>
+          </TouchableOpacity>
+          <Text>Voice Input Modal Mock</Text>
+        </View>
+      ) : null,
+  };
+});
 
 jest.mock('../src/contexts/ThemeContext', () => ({
   useTokens: () => ({
@@ -268,6 +286,34 @@ describe('ThoughtDumpScreen', () => {
 
     await waitFor(() => {
       expect(queryByTestId('modal')).toBeNull();
+    });
+  });
+
+  it('renders voice input button with correct accessibility label', async () => {
+    const { getByTestId, getByLabelText } = render(<ThoughtDumpScreen />);
+
+    await waitFor(() => {
+      const voiceButton = getByTestId('thought-dump-voice');
+      expect(voiceButton).toBeTruthy();
+    });
+
+    const voiceButton = getByLabelText('thoughtDump.voiceInput');
+    expect(voiceButton).toBeTruthy();
+  });
+
+  it('pressing voice button opens VoiceInputModal', async () => {
+    const { getByTestId, queryByTestId } = render(<ThoughtDumpScreen />);
+
+    await waitFor(() => {
+      expect(getByTestId('thought-dump-voice')).toBeTruthy();
+    });
+
+    expect(queryByTestId('voice-input-modal')).toBeNull();
+
+    fireEvent.press(getByTestId('thought-dump-voice'));
+
+    await waitFor(() => {
+      expect(getByTestId('voice-input-modal.button.close-unavailable')).toBeTruthy();
     });
   });
 });

@@ -545,6 +545,9 @@
     "confirmDelete": "¿Eliminar este vaciado de pensamientos? No se puede deshacer.",
     "empty": "Aún no hay vaciados de pensamientos",
     "error": "Algo salió mal. Inténtalo de nuevo.",
-    "justNow": "ahora mismo"
+    "justNow": "ahora mismo",
+    "voiceInput": "Entrada de voz",
+    "voiceUnavailable": "Entrada de voz no disponible",
+    "voiceDump": "Vaciado de voz"
   }
 }

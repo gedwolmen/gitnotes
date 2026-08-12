@@ -155,7 +155,7 @@ jest.mock('react-native-gesture-handler', () => {
 import { FloatingAIButton } from '../src/components/ai/FloatingAIButton';
 import { useAIHubStore } from '../src/stores/aiHubStore';
 
-type HubHelper = 'goNewChat' | 'goChatHistory' | 'goAISettings' | 'goThoughtDump';
+type HubHelper = 'goNewChat' | 'goChatHistory' | 'goAISettings' | 'goThoughtDump' | 'goVoiceDump';
 interface HubActionCase {
   readonly itemId: string;
   readonly label: string;
@@ -164,6 +164,7 @@ interface HubActionCase {
 
 const HUB_ACTION_CASES = [
   { itemId: 'new-chat', label: 'New chat', helper: 'goNewChat' },
+  { itemId: 'voice-dump', label: 'Voice dump', helper: 'goVoiceDump' },
   { itemId: 'chat-history', label: 'Chat history', helper: 'goChatHistory' },
   { itemId: 'ai-settings', label: 'AI settings', helper: 'goAISettings' },
   { itemId: 'thought-dump', label: 'Thought dump', helper: 'goThoughtDump' },
@@ -232,7 +233,7 @@ describe('FloatingAIButton liquid hub', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it('shows all four hub items after a long press without navigating', async () => {
+  it('shows all five hub items after a long press without navigating', async () => {
     const { getByRole, getByTestId } = await renderInitializedFloatingAIButton();
 
     fireEvent(getByTestId('floating-ai.button.navigate-chat'), 'longPress');

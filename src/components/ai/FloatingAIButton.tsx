@@ -143,6 +143,9 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
       case 'thought-dump':
         hub.goThoughtDump(navigation);
         return;
+      case 'voice-dump':
+        hub.goVoiceDump(navigation);
+        return;
       default:
         return itemId;
     }
@@ -188,6 +191,8 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
           iconColor={colors.surface}
           labelColor={colors.text}
           surfaceColor={colors.elevated}
+          accentColor={colors.accent}
+          mutedColor={colors.textSecondary}
           onItemPress={handleMenuItemPress}
         />
 

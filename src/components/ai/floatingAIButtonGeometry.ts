@@ -1,7 +1,7 @@
 export const FLOATING_AI_BUTTON_SIZE = 56;
 export const FLOATING_AI_HUB_SATELLITE_SIZE = 52;
 
-export type HubItemId = 'new-chat' | 'chat-history' | 'ai-settings' | 'thought-dump';
+export type HubItemId = 'new-chat' | 'voice-dump' | 'chat-history' | 'ai-settings' | 'thought-dump';
 export type MenuDirection = -1 | 1;
 
 export interface FloatingAIHubItem {
@@ -11,10 +11,11 @@ export interface FloatingAIHubItem {
 }
 
 export const FLOATING_AI_HUB_ITEMS = [
-  { id: 'new-chat', x: 70, y: 102 },
-  { id: 'chat-history', x: 96, y: 52 },
-  { id: 'ai-settings', x: 108, y: 2 },
-  { id: 'thought-dump', x: 96, y: -50 },
+  { id: 'thought-dump', x: 64, y: -110 },
+  { id: 'ai-settings', x: 104, y: -58 },
+  { id: 'chat-history', x: 114, y: 0 },
+  { id: 'voice-dump', x: 104, y: 58 },
+  { id: 'new-chat', x: 64, y: 110 },
 ] as const satisfies readonly FloatingAIHubItem[];
 
 export interface FloatingButtonPosition {

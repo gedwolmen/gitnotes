@@ -34,22 +34,22 @@ const DIRECTION_CASES = [
   {
     horizontalDirection: 1,
     verticalDirection: 1,
-    expectedBounds: { minX: 16, maxX: 142, minY: 108, maxY: 224 },
+    expectedBounds: { minX: 16, maxX: 136, minY: 168, maxY: 216 },
   },
   {
     horizontalDirection: 1,
     verticalDirection: -1,
-    expectedBounds: { minX: 16, maxX: 142, minY: 160, maxY: 276 },
+    expectedBounds: { minX: 16, maxX: 136, minY: 168, maxY: 216 },
   },
   {
     horizontalDirection: -1,
     verticalDirection: 1,
-    expectedBounds: { minX: 122, maxX: 248, minY: 108, maxY: 224 },
+    expectedBounds: { minX: 128, maxX: 248, minY: 168, maxY: 216 },
   },
   {
     horizontalDirection: -1,
     verticalDirection: -1,
-    expectedBounds: { minX: 122, maxX: 248, minY: 160, maxY: 276 },
+    expectedBounds: { minX: 128, maxX: 248, minY: 168, maxY: 216 },
   },
 ] as const satisfies readonly DirectionCase[];
 
@@ -130,7 +130,7 @@ describe('floating AI hub geometry', () => {
     },
   );
 
-  it('preserves the snapped edge and flips expansion when the center preference cannot fit', () => {
+  it('preserves the snapped edge when the center preference cannot fit', () => {
     // Given
     const asymmetricGeometry: FloatingButtonGeometry = {
       ...STANDARD_GEOMETRY,
@@ -145,7 +145,7 @@ describe('floating AI hub geometry', () => {
 
     // Then
     expect(placement.position.x).toBe(140);
-    expect(placement.horizontalDirection).toBe(1);
+    expect(placement.horizontalDirection).toBe(-1);
   });
 
   it.each([

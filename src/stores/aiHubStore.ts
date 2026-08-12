@@ -19,6 +19,7 @@ interface AIHubActions {
   goChatHistory: (navigation: NavigationProp) => void;
   goAISettings: (navigation: NavigationProp) => void;
   goThoughtDump: (navigation: NavigationProp) => void;
+  goVoiceDump: (navigation: NavigationProp) => void;
 }
 
 export const useAIHubStore = create<AIHubState & AIHubActions>()((set, get) => ({
@@ -66,5 +67,9 @@ export const useAIHubStore = create<AIHubState & AIHubActions>()((set, get) => (
 
   goThoughtDump: (navigation) => {
     navigation.navigate('ThoughtDump');
+  },
+
+  goVoiceDump: (navigation) => {
+    navigation.navigate('ThoughtDump', { openVoiceOnMount: true });
   },
 }));
