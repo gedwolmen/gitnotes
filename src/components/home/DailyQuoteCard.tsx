@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginTop: 4,
     marginLeft: TYPOGRAPHY_LEFT,
-    width: '100%',
+    marginRight: 0,
   },
   loadingText: {
     fontSize: 13,
