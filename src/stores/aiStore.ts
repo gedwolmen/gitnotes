@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { AIActionMode, AIModelConfig, AIProviderConfig, AISettings } from '../models/AIProvider';
 import { setChatRepoAccount } from '../services/ChatStorageService';
 import { resolveProviderAvailability } from '../services/ai/providerAvailability';
+import { ANTHROPIC_DEFAULT_MODELS, ANTHROPIC_DEFAULT_PROVIDER_ID } from '../services/ai/anthropicDefaults';
 
 const AI_SETTINGS_STORAGE_KEY = 'ai-settings';
 const AI_PROVIDER_KEY_PREFIX = 'ai-provider-key-';
@@ -79,7 +80,7 @@ const createDefaultProviders = (): AIProviderConfig[] => [
     ],
   },
   {
-    id: 'anthropic-default',
+    id: ANTHROPIC_DEFAULT_PROVIDER_ID,
     type: 'anthropic',
     name: 'Anthropic',
     isEnabled: false,
@@ -88,18 +89,18 @@ const createDefaultProviders = (): AIProviderConfig[] => [
       {
         id: 'claude-sonnet-4-20250514',
         name: 'Claude Sonnet 4',
-        providerId: 'anthropic-default',
+        providerId: ANTHROPIC_DEFAULT_PROVIDER_ID,
         providerType: 'anthropic',
         requiresDownload: false,
       },
       {
         id: 'claude-haiku-3-5-20241022',
         name: 'Claude Haiku 3.5',
-        providerId: 'anthropic-default',
+        providerId: ANTHROPIC_DEFAULT_PROVIDER_ID,
         providerType: 'anthropic',
         requiresDownload: false,
       },
-      ],
+    ],
   },
 ];
 

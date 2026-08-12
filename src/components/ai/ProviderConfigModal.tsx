@@ -20,6 +20,7 @@ import { Group, GroupRow } from '../ui';
 import { AIProviderConfig, AIModelConfig } from '../../models/AIProvider';
 import { useAIStore } from '../../stores/aiStore';
 import { checkOpenRouterKey, isOpenRouterBaseURL } from '../../services/ai/openrouterPreflight';
+import { isAnthropicBaseURL } from '../../services/ai/anthropicDefaults';
 
 interface ProviderConfigModalProps {
   visible: boolean;
@@ -47,11 +48,6 @@ function normalizeMiniMaxBaseURL(value: string): string {
   return trimmed
     .replace(/\/anthropic(?:\/v1\/messages)?$/i, '')
     .replace(/\/v1\/text\/chatcompletion_v2$/i, '');
-}
-
-function isAnthropicBaseURL(value: string): boolean {
-  if (!value) return false;
-  return /api\.anthropic\.com/i.test(value);
 }
 
 export function ProviderConfigModal({ visible, onClose, provider }: ProviderConfigModalProps) {
