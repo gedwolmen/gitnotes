@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { View, StyleSheet, FlatList, Alert, Text, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -25,8 +26,10 @@ interface Props {
 export default function ThoughtDumpScreen({ onDumpChange }: Props) {
   const { t } = useTranslation();
   const navigation = useNavigation<NavigationProp>();
+  const route = useRoute<RouteProp<RootStackParamList, 'ThoughtDump'>>();
   const { colors, spacing } = useTokens();
   const headerHeight = useScreenHeaderHeight();
+  const hasAutoOpenedVoiceRef = useRef(false);
 
   const [text, setText] = useState('');
   const [dumps, setDumps] = useState<ThoughtDump[]>([]);
@@ -57,6 +60,13 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
   useEffect(() => {
     loadDumps();
   }, [loadDumps]);
+
+  useEffect(() => {
+    if (route.params?.openVoiceOnMount && !hasAutoOpenedVoiceRef.current) {
+      hasAutoOpenedVoiceRef.current = true;
+      setShowVoiceModal(true);
+    }
+  }, [route.params?.openVoiceOnMount]);
 
   const handleVoiceDone = useCallback((spokenText: string) => {
     setText((prev) => (prev ? `${prev} ${spokenText}` : spokenText));
