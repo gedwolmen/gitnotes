@@ -49,6 +49,7 @@ interface HubItemContent {
 
 const HUB_ITEM_CONTENT = {
   'new-chat': { label: 'New chat', icon: 'add' },
+  'voice-dump': { label: 'Voice dump', icon: 'mic' },
   'chat-history': { label: 'Chat history', icon: 'chatbubbles-outline' },
   'ai-settings': { label: 'AI settings', icon: 'options-outline' },
   'thought-dump': { label: 'Thought dump', icon: 'bulb-outline' },
