@@ -83,6 +83,10 @@
   },
   "settings": {
     "title": "Einstellungen",
+    "dailyQuote": {
+      "title": "Tägliches Zitat"
+    },
+    "dailyQuoteDescription": "Philosophisches Zitat auf Startseite",
     "security": "Sicherheit",
     "appearance": "Erscheinungsbild",
     "updatedUI": "Aktualisierte Oberfläche",
@@ -167,7 +171,11 @@
     "searchRepos": "Repositorys suchen..."
   },
   "home": {
-    "title": "Start"
+    "title": "Start",
+    "dailyQuote": {
+      "title": "Tägliche Weisheit",
+      "loading": "Zitat wird gesucht..."
+    }
   },
   "hints": {
     "settings": {

@@ -83,6 +83,10 @@
   },
   "settings": {
     "title": "Ajustes",
+    "dailyQuote": {
+      "title": "Cita Diaria"
+    },
+    "dailyQuoteDescription": "Mostrar cita filosófica personal en Inicio",
     "security": "Seguridad",
     "appearance": "Apariencia",
     "updatedUI": "IU actualizada",
@@ -167,7 +171,11 @@
     "searchRepos": "Buscar repositorios..."
   },
   "home": {
-    "title": "Inicio"
+    "title": "Inicio",
+    "dailyQuote": {
+      "title": "Sabiduría Diaria",
+      "loading": "Buscando tu cita..."
+    }
   },
   "hints": {
     "settings": {

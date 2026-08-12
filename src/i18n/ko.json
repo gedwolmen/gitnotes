@@ -83,6 +83,10 @@
   },
   "settings": {
     "title": "설정",
+    "dailyQuote": {
+      "title": "일일의 명언"
+    },
+    "dailyQuoteDescription": "홈에 개인 철학자 명언 표시",
     "security": "보안",
     "appearance": "모양",
     "updatedUI": "업데이트된 UI",
@@ -167,7 +171,11 @@
     "searchRepos": "저장소 검색..."
   },
   "home": {
-    "title": "홈"
+    "title": "홈",
+    "dailyQuote": {
+      "title": "오늘의 지혜",
+      "loading": "명언을 찾는 중..."
+    }
   },
   "hints": {
     "settings": {

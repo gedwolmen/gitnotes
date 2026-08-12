@@ -83,6 +83,10 @@
   },
   "settings": {
     "title": "設定",
+    "dailyQuote": {
+      "title": "毎日の名言"
+    },
+    "dailyQuoteDescription": "ホームに哲学者の名言を表示",
     "security": "セキュリティ",
     "appearance": "外観",
     "updatedUI": "新しいUI",
@@ -167,7 +171,11 @@
     "searchRepos": "リポジトリを検索..."
   },
   "home": {
-    "title": "ホーム"
+    "title": "ホーム",
+    "dailyQuote": {
+      "title": "今日の名言",
+      "loading": "名言を検索中..."
+    }
   },
   "hints": {
     "settings": {

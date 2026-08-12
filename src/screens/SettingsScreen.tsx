@@ -87,6 +87,8 @@ export default function SettingsScreen() {
   const chatRepoName = useAIStore((state) => state.chatRepoName);
   const providers = useAIStore((state) => state.providers);
   const toggleAI = useAIStore((state) => state.toggleAI);
+  const dailyQuoteEnabled = useAIStore((state) => state.dailyQuoteEnabled);
+  const toggleDailyQuote = useAIStore((state) => state.toggleDailyQuote);
   const setActionMode = useAIStore((state) => state.setActionMode);
 
   const [showRepoPickerModal, setShowRepoPickerModal] = useState(false);
@@ -714,6 +716,8 @@ export default function SettingsScreen() {
         onResetOnboarding={handleResetOnboarding}
         onManageTemplates={() => navigation.navigate('TemplateManager' as never)}
         onToggleAI={() => { void toggleAI(); }}
+        dailyQuoteEnabled={dailyQuoteEnabled}
+        onToggleDailyQuote={() => { void toggleDailyQuote(); }}
         onOpenModelSelector={() => setShowModelSelector(true)}
         onToggleActionMode={() => { void setActionMode(actionMode === 'auto' ? 'confirm' : 'auto'); }}
         onOpenChatRepoPicker={() => { setShowTemplatesRepoPicker(false); setShowChatRepoPicker(true); }}

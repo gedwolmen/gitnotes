@@ -83,6 +83,10 @@
   },
   "settings": {
     "title": "Réglages",
+    "dailyQuote": {
+      "title": "Citation Quotidienne"
+    },
+    "dailyQuoteDescription": "Citation philosophique sur l'accueil",
     "security": "Sécurité",
     "appearance": "Apparence",
     "updatedUI": "Interface mise à jour",
@@ -167,7 +171,11 @@
     "searchRepos": "Rechercher des dépôts..."
   },
   "home": {
-    "title": "Accueil"
+    "title": "Accueil",
+    "dailyQuote": {
+      "title": "Sagesse du Jour",
+      "loading": "Recherche de votre citation..."
+    }
   },
   "hints": {
     "settings": {
