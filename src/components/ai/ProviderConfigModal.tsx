@@ -50,6 +50,11 @@ function normalizeMiniMaxBaseURL(value: string): string {
     .replace(/\/v1\/text\/chatcompletion_v2$/i, '');
 }
 
+function isAnthropicBaseURL(value: string): boolean {
+  if (!value) return false;
+  return /api\.anthropic\.com/i.test(value);
+}
+
 export function ProviderConfigModal({ visible, onClose, provider }: ProviderConfigModalProps) {
   const { colors } = useTheme();
   const { spacing } = useTokens();
