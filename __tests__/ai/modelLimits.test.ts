@@ -37,6 +37,14 @@ const openai: AIModelConfig = {
   requiresDownload: false,
 };
 
+const claude: AIModelConfig = {
+  id: 'claude-sonnet-4-20250514',
+  name: 'Claude Sonnet 4',
+  providerId: 'anthropic-default',
+  providerType: 'anthropic',
+  requiresDownload: false,
+};
+
 describe('estimateTokensFromBytes', () => {
   test('uses 4 bytes-per-token heuristic and rounds up', () => {
     expect(estimateTokensFromBytes(0)).toBe(0);
@@ -65,6 +73,13 @@ describe('getModelContextLimit', () => {
 
   test('openai-compatible has no enforced limit (returns null)', () => {
     expect(getModelContextLimit(openai)).toBeNull();
+  });
+
+  test('anthropic (Claude) uses 200K limit', () => {
+    const limit = getModelContextLimit(claude);
+    expect(limit).not.toBeNull();
+    expect(limit?.totalTokens).toBe(200000);
+    expect(limit?.label).toBe('Claude (200K total)');
   });
 });
 
