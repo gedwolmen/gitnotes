@@ -104,6 +104,7 @@ export class AIMemoryIndexService {
     selectedModel?: AIModelConfig,
   ): Promise<void> {
     for (const provider of providers) {
+      // Anthropic does not provide embedding models — only openai-compatible providers have /v1/embeddings
       if (!provider.isEnabled || provider.type !== 'openai-compatible') continue;
       if (!provider.baseURL || !provider.apiKey) continue;
 

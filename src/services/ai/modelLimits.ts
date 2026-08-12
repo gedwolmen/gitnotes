@@ -27,6 +27,12 @@ const SMOLLM_LIMIT: ModelContextLimit = {
   label: 'SmolLM3 (64K)',
 };
 
+const CLAUDE_LIMIT: ModelContextLimit = {
+  totalTokens: 200000,
+  reservedTokens: 10000,
+  label: 'Claude (200K total)',
+};
+
 export function getModelContextLimit(model: AIModelConfig): ModelContextLimit | null {
   if (model.providerType === 'apple') {
     return APPLE_LIMIT;
@@ -36,6 +42,9 @@ export function getModelContextLimit(model: AIModelConfig): ModelContextLimit | 
       return SMOLLM_LIMIT;
     }
     return LLAMA_DEFAULT_LIMIT;
+  }
+  if (model.providerType === 'anthropic') {
+    return CLAUDE_LIMIT;
   }
   return null;
 }

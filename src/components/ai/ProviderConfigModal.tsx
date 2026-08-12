@@ -49,6 +49,11 @@ function normalizeMiniMaxBaseURL(value: string): string {
     .replace(/\/v1\/text\/chatcompletion_v2$/i, '');
 }
 
+function isAnthropicBaseURL(value: string): boolean {
+  if (!value) return false;
+  return /api\.anthropic\.com/i.test(value);
+}
+
 export function ProviderConfigModal({ visible, onClose, provider }: ProviderConfigModalProps) {
   const { colors } = useTheme();
   const { spacing } = useTokens();
@@ -88,10 +93,35 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
       const normalizedBaseURL = normalizeMiniMaxBaseURL(baseURL);
       const headers: Record<string, string> = {};
       if (apiKey.trim()) {
-        headers['Authorization'] = `Bearer ${apiKey.trim()}`;
+        if (isAnthropicBaseURL(normalizedBaseURL)) {
+          headers['x-api-key'] = apiKey.trim();
+          headers['anthropic-version'] = '2023-06-01';
+        } else {
+          headers['Authorization'] = `Bearer ${apiKey.trim()}`;
+        }
       }
 
-      if (isMiniMaxBaseURL(normalizedBaseURL)) {
+      if (isAnthropicBaseURL(normalizedBaseURL)) {
+        const response = await axios.get('https://api.anthropic.com/v1/models', {
+          headers,
+          timeout: 10000,
+        });
+        const modelsData = response.data?.data || response.data;
+        if (Array.isArray(modelsData)) {
+          const providerId = provider?.id || `custom-${Date.now()}`;
+          const discoveredModels: AIModelConfig[] = modelsData.map((m: any) => ({
+            id: String(m.id),
+            name: String(m.display_name || m.id),
+            providerId,
+            providerType: 'anthropic' as const,
+            requiresDownload: false,
+          }));
+          setTestedModels(discoveredModels);
+          Alert.alert('Success', `Connected to Anthropic and discovered ${discoveredModels.length} models.`);
+        } else {
+          throw new Error('Unexpected response format from Anthropic API.');
+        }
+      } else if (isMiniMaxBaseURL(normalizedBaseURL)) {
         const response = await axios.post(
           `${normalizedBaseURL}/v1/text/chatcompletion_v2`,
           {
@@ -171,7 +201,7 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
       return;
     }
 
-    if (!isBuiltIn && !baseURL.trim()) {
+    if (!isBuiltIn && !baseURL.trim() && provider?.type !== 'anthropic') {
       Alert.alert('Validation Error', 'Base URL is required.');
       return;
     }
@@ -212,7 +242,7 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
 
     const baseProvider: AIProviderConfig = {
       id: providerId,
-      type: isBuiltIn ? provider!.type : 'openai-compatible',
+      type: isBuiltIn ? provider!.type : (isAnthropicBaseURL(normalizedBaseURL ?? '') ? 'anthropic' : 'openai-compatible'),
       name: name.trim(),
       isEnabled: provider?.isEnabled ?? true,
       addedAt: provider?.addedAt || Date.now(),
