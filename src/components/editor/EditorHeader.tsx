@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { useTheme } from '../../contexts/ThemeContext';
 import { Button } from '../ui';
@@ -13,6 +13,9 @@ interface EditorHeaderProps {
 
 export function EditorHeader({ noteId, isSaving, onCancel, onSave }: EditorHeaderProps) {
   const { colors } = useTheme();
+  const saveTrailingIcon = isSaving ? (
+    <ActivityIndicator testID="note-editor.button.save-spinner" size="small" color={colors.textSecondary} />
+  ) : null;
 
   return (
     <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
@@ -27,6 +30,8 @@ export function EditorHeader({ noteId, isSaving, onCancel, onSave }: EditorHeade
           testID="note-editor.button.save"
           onPress={onSave}
           disabled={isSaving}
+          trailingIcon={saveTrailingIcon}
+          style={isSaving ? styles.saveButtonBusy : undefined}
           textStyle={[styles.headerButtonText, styles.saveButtonText, isSaving && styles.disabledButton]}
         />
       </View>
@@ -66,5 +71,10 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.5,
+  },
+  saveButtonBusy: {
+    backgroundColor: 'rgba(120, 120, 120, 0.12)',
+    borderRadius: 6,
+    paddingHorizontal: 4,
   },
 });
