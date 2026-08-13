@@ -130,17 +130,6 @@ export const create_questioner_note = tool({
   execute: async (params) => params,
 });
 
-export const gradeQuestionerNoteParameters = z.object({
-  noteId: z.string(),
-});
-
-export const grade_questioner_answers = tool({
-  description:
-    "Grade a questioner note by appending '## Grading & Corrections' with the AI evaluation to the same note. Uses the chat-selected AI model.",
-  inputSchema: gradeQuestionerNoteParameters,
-  execute: async (params) => params,
-});
-
 export const findNotesParameters = z.object({
   query: z.string(),
   tags: z.array(z.string()).optional(),
@@ -236,7 +225,6 @@ export const chatTools = {
   search_todos,
   get_todos,
   create_questioner_note,
-  grade_questioner_answers,
   find_notes,
   find_todos,
   summarize_notes,
