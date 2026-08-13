@@ -92,6 +92,7 @@ jest.mock('../src/components/ui', () => {
       </Pressable>
     ),
     useScreenHeaderHeight: () => 60,
+    useTabBarHeight: () => 50,
   };
 });
 

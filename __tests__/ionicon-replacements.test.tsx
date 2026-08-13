@@ -3,7 +3,6 @@ import path from 'path';
 
 const TARGET_FILES = [
   '../src/screens/CanvasEditorScreen.tsx',
-  '../src/components/CanvasModal.tsx',
   '../src/components/NoteCard.tsx',
 ];
 
