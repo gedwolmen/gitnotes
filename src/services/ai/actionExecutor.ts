@@ -1,8 +1,10 @@
+import { generateText } from 'ai';
 import { Note, NoteCreateInput, NoteFormat, NoteUpdateInput } from '../../models/Note';
 import { TodoCreateInput, TodoPriority, TodoUpdateInput } from '../../models/Todo';
 import { useNoteStore } from '../../stores/noteStore';
 import { useTodoStore } from '../../stores/todoStore';
 import { useAIStore } from '../../stores/aiStore';
+import { initializeModel } from '../AIService';
 import { GITHUB_ITEM_STATES, GitHubItemState, GitHubService } from '../GitHubService';
 import { NoteSyncQueueService } from '../NoteSyncQueueService';
 
@@ -35,6 +37,11 @@ const GITHUB_TOOL_NAMES = new Set<string>([
   'get_pull_request_diff',
   'review_pull_request',
 ]);
+
+const GRADE_QUESTIONER_PROMPT =
+  "You are a grading assistant for a quiz note. The note contains questions and the user's answers below them. " +
+  'For each question in order: judge the answer (correct / partially correct / incorrect), state the correct ' +
+  'answer or missing key points, and keep it brief and constructive. Output markdown. Do not add new questions.';
 
 function getStringArg(args: Record<string, unknown>, key: string): string {
   const value = args[key];
@@ -275,8 +282,7 @@ export async function executeToolCall(
         const content = getStringArg(args, 'content');
         const sourceNotes = getOptionalStringArrayArg(args, 'sourceNotes') ?? [];
         const userTags = getOptionalStringArrayArg(args, 'tags') ?? [];
-        // Force the 'questioner' tag — NoteEditorScreen shows the
-        // Grade Answers button only for notes carrying it.
+        // Force the 'questioner' tag — grade_questioner_answers refuses notes lacking it.
         const tags = Array.from(new Set([...userTags, 'questioner']));
         const format = getOptionalNoteFormatArg(args, 'format');
         const questionCount = (content.match(/\?/g) || []).length;
@@ -321,14 +327,89 @@ export async function executeToolCall(
         });
       }
 
-      case 'grade_questioner_answers':
-        // Cached-schema safety net: the tool was removed from chatTools in PR #836
-        // (ScheduledLearningService deleted), but a client may still send it.
-        return {
-          success: false,
-          requiresConfirmation: false,
-          error: 'Grade questioner answers feature was replaced by the Reminder system in PR #836.',
-        };
+      case 'grade_questioner_answers': {
+        const noteId = getStringArg(args, 'noteId');
+        const note = useNoteStore.getState().getNoteById(noteId);
+        if (!note) {
+          return { success: false, requiresConfirmation: false, error: 'Note not found.' };
+        }
+        if (!note.tags.includes('questioner')) {
+          return {
+            success: false,
+            requiresConfirmation: false,
+            error: "Note doesn't have the 'questioner' tag required for grading.",
+          };
+        }
+
+        if (mode === 'confirm') {
+          return buildConfirmationResult({
+            type: 'grade_questioner_answers',
+            description: `Grade answers in note: '${note.title}'`,
+            targetId: noteId,
+            details: { noteId, title: note.title },
+          });
+        }
+
+        const gradeAiState = useAIStore.getState();
+        const modelConfig = gradeAiState.getSelectedModel();
+        if (!modelConfig) {
+          return {
+            success: false,
+            requiresConfirmation: false,
+            error: 'Select an AI model in Settings → AI before grading.',
+          };
+        }
+        const providerConfig = gradeAiState.providers.find((p) => p.id === modelConfig.providerId);
+
+        const gradingMarker = '## Grading & Corrections';
+        const markerIndex = note.content.indexOf(gradingMarker);
+        const body = (markerIndex >= 0 ? note.content.slice(0, markerIndex) : note.content)
+          .replace(/\n+---\n*\s*$/, '')
+          .trimEnd();
+
+        const model = await initializeModel(modelConfig, providerConfig);
+        const { text: grading } = await generateText({
+          model,
+          system: GRADE_QUESTIONER_PROMPT,
+          prompt: body,
+        });
+        if (!grading.trim()) {
+          return { success: false, requiresConfirmation: false, error: 'Grading produced an empty response.' };
+        }
+
+        const updatedContent = `${body}\n\n---\n\n${gradingMarker}\n\n${grading.trim()}\n`;
+        const gradedNote = await useNoteStore.getState().updateNote({ id: noteId, content: updatedContent });
+        if (!gradedNote) {
+          return { success: false, requiresConfirmation: false, error: 'Failed to save the grading.' };
+        }
+
+        if (repoPath) {
+          try {
+            await NoteSyncQueueService.enqueueNoteUpsert(
+              {
+                repo: repoPath,
+                branch,
+                filePath: gradedNote.filePath,
+                title: gradedNote.title,
+                content: gradedNote.content,
+                format: gradedNote.format ?? 'markdown',
+                tags: gradedNote.tags,
+                color: null,
+              },
+              gradedNote.id,
+            );
+            void NoteSyncQueueService.drain();
+          } catch (error) {
+            console.warn('[actionExecutor] grade_questioner_answers sync enqueue failed:', error);
+          }
+        }
+
+        return buildSuccessResult({
+          noteId,
+          graded: true,
+          gradingAppended: grading.trim().length,
+        });
+      }
 
       case 'find_notes': {
         const query = getStringArg(args, 'query').trim().toLowerCase();

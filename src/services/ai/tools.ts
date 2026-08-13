@@ -125,8 +125,19 @@ export const createQuestionerNoteParameters = z.object({
 
 export const create_questioner_note = tool({
   description:
-    "Create a quiz-style note with open questions on a topic for the user to answer then have graded. The result is automatically tagged 'questioner' so the Grade Answers button appears in the editor.",
+    "Create a quiz-style note with open questions on a topic for the user to answer. The result is automatically tagged 'questioner'; use grade_questioner_answers later to grade the user's answers.",
   inputSchema: createQuestionerNoteParameters,
+  execute: async (params) => params,
+});
+
+export const gradeQuestionerNoteParameters = z.object({
+  noteId: z.string(),
+});
+
+export const grade_questioner_answers = tool({
+  description:
+    "Grade a questioner note with the currently selected AI model — strips any previous grading section and appends a fresh '## Grading & Corrections' block. The note must carry the 'questioner' tag.",
+  inputSchema: gradeQuestionerNoteParameters,
   execute: async (params) => params,
 });
 
@@ -225,6 +236,7 @@ export const chatTools = {
   search_todos,
   get_todos,
   create_questioner_note,
+  grade_questioner_answers,
   find_notes,
   find_todos,
   summarize_notes,

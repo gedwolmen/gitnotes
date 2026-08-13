@@ -2,7 +2,8 @@ import { generateText, streamText } from 'ai';
 import type { LanguageModel, ModelMessage, Tool } from 'ai';
 import { Platform } from 'react-native';
 import type { AIModelConfig, AIProviderConfig } from '../models/AIProvider';
-import { chatTools } from './ai/tools';
+import { chatTools, githubTools } from './ai/tools';
+import { useAIStore } from '../stores/aiStore';
 import {
   ProviderUnavailableError,
   resolveProviderAvailability,
@@ -83,7 +84,13 @@ export async function initializeModel(
         }
 
         const { createAppleProvider } = await import('@react-native-ai/apple');
-        const provider = createAppleProvider({ availableTools: chatTools as any });
+        // Mirror buildChatToolsMap() in the controller — the runtime rejects
+        // tool calls whose names aren't in this set (bug: GitHub tools only
+        // registered here if this conditional matches streamText's tools).
+        const availableTools = useAIStore.getState().githubToolsEnabled
+          ? { ...chatTools, ...githubTools }
+          : chatTools;
+        const provider = createAppleProvider({ availableTools: availableTools as any });
 
         return provider() as LanguageModel;
       }
