@@ -91,6 +91,10 @@
       "title": "Personalizar IA con mis notas"
     },
     "aiPersonalizationDescription": "Cuando está desactivado, la IA no lee tus notas ni diarios por seguridad",
+    "githubTools": {
+      "title": "Herramientas de GitHub",
+      "description": "Permite que la IA gestione issues, PRs y repositorios con tu cuenta activa de GitHub."
+    },
     "security": "Seguridad",
     "appearance": "Apariencia",
     "updatedUI": "IU actualizada",
@@ -163,7 +167,13 @@
   "chat": {
     "askAI": "Preguntar a IA",
     "typeMessage": "Escribe un mensaje...",
-    "thinking": "Pensando..."
+    "thinking": "Pensando...",
+    "hints": {
+      "summarizeIssues": "Resume mis issues abiertos",
+      "showRepos": "Muestra mis repositorios",
+      "createIssue": "Crear un issue",
+      "listPRs": "Lista los PR abiertos"
+    }
   },
   "errors": {
     "somethingWrong": "Algo salió mal",
@@ -204,7 +214,8 @@
       "providers": "Los proveedores IA te permiten conectar diferentes servicios de IA. Apple Intelligence usa procesamiento en el dispositivo para mayor privacidad.",
       "scheduledLearning": "Los proveedores IA te permiten conectar diferentes servicios de IA. Apple Intelligence usa procesamiento en el dispositivo para mayor privacidad.",
       "dailyQuote": "Muestra una cita filosófica diaria en tu pantalla de inicio, personalizada según tus reflexiones recientes de diario.",
-      "aiPersonalization": "Cuando está activada, la IA lee tus notas y diarios para ofrecer respuestas personalizadas. Desactiva para mayor privacidad — la IA solo usará el contexto del chat actual."
+      "aiPersonalization": "Cuando está activada, la IA lee tus notas y diarios para ofrecer respuestas personalizadas. Desactiva para mayor privacidad — la IA solo usará el contexto del chat actual.",
+      "githubTools": "Cuando está activado, tu agente de IA puede listar tus repositorios, crear issues, abrir pull requests, revisar cambios de diff y publicar reseñas usando tu cuenta de GitHub conectada. Usa el mismo token que ya configuraste."
     },
     "title": "Hint"
   },
@@ -332,6 +343,12 @@
     "aiDescription": "Chat over your notes, todos, and canvases. AI can read context and apply edits when you allow it.",
     "aiHelper": "You can turn this on or off anytime in Settings → AI.",
     "aiEnable": "Enable AI",
+    "githubTools": {
+      "title": "Herramientas del agente de GitHub",
+      "body": "Tu IA ahora puede listar repositorios, crear issues, abrir pull requests, revisar cambios y publicar reseñas de PR usando tu cuenta de GitHub conectada. Todas las operaciones de escritura respetan tu configuración de modo de acción.",
+      "enable": "Activar herramientas de GitHub",
+      "bodyReminder": "Puedes activar o desactivar esto en cualquier momento en Configuración → IA → Herramientas de GitHub."
+    },
     "skipForNow": "Skip for Now"
   },
   "renderStyle": {

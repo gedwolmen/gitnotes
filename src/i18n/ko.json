@@ -91,6 +91,10 @@
       "title": "내 노트로 AI 맞춤화"
     },
     "aiPersonalizationDescription": "끄면 AI가 데이터 보호를 위해 노트나 일지를 읽지 않습니다",
+    "githubTools": {
+      "title": "GitHub 도구",
+      "description": "활성 GitHub 계정으로 AI가 이슈, PR, 저장소를 관리하도록 합니다."
+    },
     "security": "보안",
     "appearance": "모양",
     "updatedUI": "업데이트된 UI",
@@ -163,7 +167,13 @@
   "chat": {
     "askAI": "AI에게 묻기",
     "typeMessage": "메시지 입력...",
-    "thinking": "생각 중..."
+    "thinking": "생각 중...",
+    "hints": {
+      "summarizeIssues": "열린 이슈를 요약해 줘",
+      "showRepos": "내 저장소를 보여 줘",
+      "createIssue": "이슈를 만들어 줘",
+      "listPRs": "열린 PR 목록을 보여 줘"
+    }
   },
   "errors": {
     "somethingWrong": "문제가 발생했습니다",
@@ -204,7 +214,8 @@
       "providers": "AI 공급자를 사용하면 다양한 AI 서비스를 연결할 수 있습니다. Apple Intelligence는 개인정보 보호를 위해 온디바이스 처리를 사용합니다.",
       "scheduledLearning": "AI 공급자를 사용하면 다양한 AI 서비스를 연결할 수 있습니다. Apple Intelligence는 개인정보 보호를 위해 온디바이스 처리를 사용합니다.",
       "dailyQuote": "홈 화면에 일일 철학자 명언을 표시합니다. 최근 일기 성찰을 기반으로 맞춤화됩니다.",
-      "aiPersonalization": "활성화하면 AI가 노트와 일기를 읽어 맞춤화된 응답을 제공합니다. 데이터 프라이버시를 위해 끄면 AI는 현재 채팅 컨텍스트만 사용합니다."
+      "aiPersonalization": "활성화하면 AI가 노트와 일기를 읽어 맞춤화된 응답을 제공합니다. 데이터 프라이버시를 위해 끄면 AI는 현재 채팅 컨텍스트만 사용합니다.",
+      "githubTools": "활성화하면 AI 에이전트가 연결된 GitHub 계정으로 저장소 목록 보기, 이슈 생성, 풀 리퀘스트 열기, diff 변경 검토, 리뷰 게시를 할 수 있습니다. 이미 설정한 동일한 토큰을 사용합니다."
     },
     "title": "Hint"
   },
@@ -332,6 +343,12 @@
     "aiDescription": "Chat over your notes, todos, and canvases. AI can read context and apply edits when you allow it.",
     "aiHelper": "You can turn this on or off anytime in Settings → AI.",
     "aiEnable": "Enable AI",
+    "githubTools": {
+      "title": "GitHub 에이전트 도구",
+      "body": "연결된 GitHub 계정으로 AI가 저장소 목록 보기, 이슈 생성, 풀 리퀘스트 열기, 변경 사항 검토, PR 리뷰 게시를 할 수 있습니다. 모든 쓰기 작업은 액션 모드 설정을 따릅니다.",
+      "enable": "GitHub 도구 활성화",
+      "bodyReminder": "설정 → AI → GitHub 도구에서 언제든지 켜거나 끌 수 있습니다."
+    },
     "skipForNow": "Skip for Now"
   },
   "renderStyle": {
