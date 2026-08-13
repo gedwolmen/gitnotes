@@ -164,6 +164,7 @@ jest.mock('@shopify/react-native-skia', () => {
     Paint: ({ children }: { children: ReactNode }) => children,
     Blur: MockView,
     ColorMatrix: MockView,
+    DashPathEffect: ({ children }: { children?: ReactNode }) => children ?? null,
   };
 });
 

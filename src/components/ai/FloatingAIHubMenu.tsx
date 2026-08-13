@@ -5,6 +5,7 @@ import {
   Canvas,
   Circle,
   ColorMatrix,
+  DashPathEffect,
   Group,
   Paint,
 } from '@shopify/react-native-skia';
@@ -28,6 +29,9 @@ const LIQUID_CANVAS_INSET = (
   LIQUID_CANVAS_SIZE - FLOATING_AI_BUTTON_SIZE
 ) / 2;
 const LIQUID_CENTER = LIQUID_CANVAS_SIZE / 2;
+export const HOLD_RING_RADIUS = FLOATING_AI_BUTTON_SIZE / 2 + 6;
+const HOLD_RING_STROKE_WIDTH = 3.5;
+export const HOLD_RING_CIRCUMFERENCE = 2 * Math.PI * HOLD_RING_RADIUS;
 const GOOEY_ALPHA_MATRIX = [
   1, 0, 0, 0, 0,
   0, 1, 0, 0, 0,
@@ -164,6 +168,8 @@ interface FloatingAIHubMenuProps {
   readonly horizontalDirection: MenuDirection;
   readonly verticalDirection: MenuDirection;
   readonly progress: SharedValue<number>;
+  readonly holdProgress?: SharedValue<number>;
+  readonly hintProgress?: SharedValue<number>;
   readonly primaryColor: string;
   readonly iconColor: string;
   readonly labelColor: string;
@@ -179,12 +185,27 @@ export function FloatingAIHubMenu({
   horizontalDirection,
   verticalDirection,
   progress,
+  holdProgress,
+  hintProgress,
   primaryColor,
   iconColor,
   accentColor,
   mutedColor,
   onItemPress,
 }: FloatingAIHubMenuProps) {
+  const canvasProgress = useDerivedValue(
+    () => Math.max(progress.value, hintProgress?.value ?? 0),
+  );
+  const ringIntervals = useDerivedValue(
+    () => [
+      (holdProgress?.value ?? 0) * HOLD_RING_CIRCUMFERENCE,
+      HOLD_RING_CIRCUMFERENCE,
+    ],
+  );
+  const ringOpacity = useDerivedValue(
+    () => Math.min(1, (holdProgress?.value ?? 0) * 3),
+  );
+
   return (
     <>
       {!reduceMotionEnabled && (
@@ -213,10 +234,25 @@ export function FloatingAIHubMenu({
                 item={item}
                 horizontalDirection={horizontalDirection}
                 verticalDirection={verticalDirection}
-                progress={progress}
+                progress={canvasProgress}
               />
             ))}
           </Group>
+
+          <Circle
+            cx={LIQUID_CENTER}
+            cy={LIQUID_CENTER}
+            r={HOLD_RING_RADIUS}
+            color={primaryColor}
+            style="stroke"
+            strokeWidth={HOLD_RING_STROKE_WIDTH}
+            strokeCap="round"
+            opacity={ringOpacity}
+            origin={{ x: LIQUID_CENTER, y: LIQUID_CENTER }}
+            transform={[{ rotate: -Math.PI / 2 }]}
+          >
+            <DashPathEffect intervals={ringIntervals} />
+          </Circle>
         </Canvas>
       )}
 
