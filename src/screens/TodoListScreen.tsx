@@ -33,6 +33,7 @@ import { BulkActionBar } from '../components/list/BulkActionBar';
 import { useResponsive } from '../hooks/useResponsive';
 import { useGitHubActivityStore } from '../stores/githubActivityStore';
 import { useTranslation } from 'react-i18next';
+import { LastSelectionPreferenceService } from '../services/LastSelectionPreferenceService';
 
 const FILTER_COMPLETED_PERSISTENCE_KEY = '@gitnotes:filters:todo-completed';
 
@@ -67,6 +68,15 @@ export default function TodoListScreen() {
   const [todoBranch, setTodoBranch] = useState<string | undefined>(undefined);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const isDeletingRef = useRef(false);
+
+  useEffect(() => {
+    if (!showAddModal) return;
+    if (todoRepo) return;
+    void LastSelectionPreferenceService.get('todo').then((sel) => {
+      if (!todoRepo && sel.repo) setTodoRepo(sel.repo);
+      if (!todoBranch && sel.branch) setTodoBranch(sel.branch);
+    });
+  }, [showAddModal, todoRepo, todoBranch]);
 
   const filter = useEntityFilter<Todo>(todos, '@gitnotes:filters:todo-entity');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());

@@ -8,6 +8,7 @@ import { Folder } from '../../models/Folder';
 import { Attachment, createAttachment } from '../../models/Attachment';
 import { Note, NoteFormat, NoteGitHubLink } from '../../models/Note';
 import { GitService } from '../../services/GitService';
+import { LastSelectionPreferenceService } from '../../services/LastSelectionPreferenceService';
 import { HapticService } from '../../utils/haptics';
 import { useUndo } from '../../utils/useUndo';
 import { syncNoteToGitHub } from '../../services/NoteGitHubSyncService';
@@ -95,6 +96,16 @@ export function useNoteEditorDocument({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [repoFolders, setRepoFolders] = useState<Folder[]>([]);
   const [notFound, setNotFound] = useState(false);
+
+  useEffect(() => {
+    if (noteId) return;
+    if (initialRepo || initialBranch || initialFolderPath) return;
+    void LastSelectionPreferenceService.get('note').then((sel) => {
+      if (!repo && sel.repo) setRepo(sel.repo);
+      if (!branch && sel.branch) setBranch(sel.branch);
+      if (!folderPath && sel.folder) setFolderPath(sel.folder);
+    });
+  }, [noteId, initialRepo, initialBranch, initialFolderPath]);
 
   const allFolders = useMemo(() => {
     const merged = new Map<string, Folder>();
@@ -225,7 +236,10 @@ export function useNoteEditorDocument({
   const handleFolderSelect = useCallback((folder: Folder | null) => {
     setFolderPath(folder?.path);
     setHasChanges(true);
-  }, []);
+    if (repo) {
+      void LastSelectionPreferenceService.set('note', { repo, branch, folder: folder?.path });
+    }
+  }, [repo, branch]);
 
   const handleTagsChange = useCallback((newTags: string[]) => {
     setTags(newTags);

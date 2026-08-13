@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { GitBranch, GitService } from '../services/GitService';
 import { LastUsedRepoService } from '../services/LastUsedRepoService';
+import { LastSelectionPreferenceService, SelectionEntityType } from '../services/LastSelectionPreferenceService';
 import { useRepos } from '../contexts/RepoContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { HapticService } from '../utils/haptics';
@@ -21,6 +22,7 @@ interface GitContextPickerProps {
   repo?: string;
   branch?: string;
   commit?: string;
+  entityType?: SelectionEntityType;
   onRepoChange: (repo: string | undefined) => void;
   onBranchChange: (branch: string | undefined) => void;
   onCommitChange: (commit: string | undefined) => void;
@@ -31,6 +33,7 @@ type SheetView = 'main' | 'repo' | 'branch';
 export default function GitContextPicker({
   repo,
   branch,
+  entityType,
   onRepoChange,
   onBranchChange,
   onCommitChange,
@@ -117,9 +120,12 @@ export default function GitContextPicker({
       onBranchChange(undefined);
       onCommitChange(undefined);
       void LastUsedRepoService.set(path);
+      if (entityType) {
+        void LastSelectionPreferenceService.set(entityType, { repo: path });
+      }
       setView('main');
     },
-    [onRepoChange, onBranchChange, onCommitChange],
+    [onRepoChange, onBranchChange, onCommitChange, entityType],
   );
 
   // Auto-fill the repo when opening this picker for a new note/canvas/etc.
@@ -153,9 +159,12 @@ export default function GitContextPicker({
     (name: string) => {
       HapticService.selection();
       onBranchChange(name);
+      if (entityType && repo) {
+        void LastSelectionPreferenceService.set(entityType, { repo, branch: name });
+      }
       setView('main');
     },
-    [onBranchChange],
+    [onBranchChange, entityType, repo],
   );
 
   const isListView = view !== 'main';
