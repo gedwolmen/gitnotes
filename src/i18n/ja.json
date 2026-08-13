@@ -172,7 +172,12 @@
       "summarizeIssues": "未完了のIssueをまとめて",
       "showRepos": "リポジトリを表示して",
       "createIssue": "Issueを作成して",
-      "listPRs": "オープンなPRを一覧表示して"
+      "listPRs": "オープンなPRを一覧表示して",
+      "askAboutNotes": "Ask about my notes",
+      "createQuiz": "Create a quiz",
+      "gradeAnswers": "Grade my answers",
+      "searchEverything": "Search everything",
+      "summarizeTopic": "Summarize a topic"
     }
   },
   "errors": {

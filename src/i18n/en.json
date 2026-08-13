@@ -210,7 +210,12 @@
       "summarizeIssues": "Summarize my open issues",
       "showRepos": "Show my repos",
       "createIssue": "Create an issue",
-      "listPRs": "List open PRs"
+      "listPRs": "List open PRs",
+      "askAboutNotes": "Ask about my notes",
+      "createQuiz": "Create a quiz",
+      "gradeAnswers": "Grade my answers",
+      "searchEverything": "Search everything",
+      "summarizeTopic": "Summarize a topic"
     }
   },
   "explore": {

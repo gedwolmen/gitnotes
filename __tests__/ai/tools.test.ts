@@ -13,19 +13,27 @@ import {
 } from '../../src/services/ai/tools';
 
 describe('chatTools registry', () => {
-  test('exposes all 10 expected tools', () => {
+  test('exposes all 18 expected tools', () => {
     expect(Object.keys(chatTools).sort()).toEqual(
       [
         'create_note',
+        'create_questioner_note',
         'create_todo',
         'delete_note',
         'delete_todo',
+        'distill_thought_dump',
         'edit_note',
         'edit_todo',
+        'find_notes',
+        'find_todos',
+        'generate_daily_brief',
         'get_note',
         'get_todos',
+        'grade_questioner_answers',
+        'link_notes',
         'search_notes',
         'search_todos',
+        'summarize_notes',
       ].sort(),
     );
   });

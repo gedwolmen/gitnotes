@@ -115,6 +115,115 @@ export const get_todos = tool({
   execute: async (params) => params,
 });
 
+export const createQuestionerNoteParameters = z.object({
+  topic: z.string(),
+  content: z.string(),
+  sourceNotes: z.array(z.string()).optional(),
+  tags: z.array(z.string()).optional(),
+  format: z.enum(['markdown', 'neorg', 'org']).optional(),
+});
+
+export const create_questioner_note = tool({
+  description:
+    "Create a quiz-style note with open questions on a topic for the user to answer then have graded. The result is automatically tagged 'questioner' so the Grade Answers button appears in the editor.",
+  inputSchema: createQuestionerNoteParameters,
+  execute: async (params) => params,
+});
+
+export const gradeQuestionerNoteParameters = z.object({
+  noteId: z.string(),
+});
+
+export const grade_questioner_answers = tool({
+  description:
+    "Grade a questioner note by appending '## Grading & Corrections' with the AI evaluation to the same note. Uses the chat-selected AI model.",
+  inputSchema: gradeQuestionerNoteParameters,
+  execute: async (params) => params,
+});
+
+export const findNotesParameters = z.object({
+  query: z.string(),
+  tags: z.array(z.string()).optional(),
+  excludeTags: z.array(z.string()).optional(),
+  folderPath: z.string().optional(),
+  sortBy: z.enum(['recent', 'alphabetical']).optional(),
+  limit: z.number().int().positive().optional(),
+});
+
+export const find_notes = tool({
+  description: 'Richer note search with full-text + tag inclusion/exclusion + folder scope + sort + limit.',
+  inputSchema: findNotesParameters,
+  execute: async (params) => params,
+});
+
+export const findTodosParameters = z.object({
+  query: z.string().optional(),
+  status: z.enum(['all', 'pending', 'completed']).optional(),
+  priority: z.enum(['low', 'medium', 'high']).optional(),
+  tags: z.array(z.string()).optional(),
+  dueBefore: z.string().optional(),
+  sortBy: z.enum(['due', 'priority', 'recent']).optional(),
+});
+
+export const find_todos = tool({
+  description: 'Richer todo search with status/priority/tags/due-before + sort.',
+  inputSchema: findTodosParameters,
+  execute: async (params) => params,
+});
+
+export const summarizeNotesParameters = z.object({
+  noteIds: z.array(z.string()),
+  content: z.string(),
+  outputTitle: z.string().optional(),
+  outputTags: z.array(z.string()).optional(),
+  format: z.enum(['markdown', 'neorg', 'org']).optional(),
+});
+
+export const summarize_notes = tool({
+  description:
+    'Persist a summary note composed from multiple source notes. The agent synthesizes the summary in its response; this tool saves it with a source-note-ids marker.',
+  inputSchema: summarizeNotesParameters,
+  execute: async (params) => params,
+});
+
+export const distillThoughtDumpParameters = z.object({
+  sourceNoteIds: z.array(z.string()),
+  content: z.string(),
+  outputTitle: z.string(),
+  outputTags: z.array(z.string()).optional(),
+});
+
+export const distill_thought_dump = tool({
+  description:
+    'Distill raw thought-dump content into a clean, themed note. Creates one distilled note per call — loop for multiple.',
+  inputSchema: distillThoughtDumpParameters,
+  execute: async (params) => params,
+});
+
+export const linkNotesParameters = z.object({
+  noteIds: z.array(z.string()).min(2),
+  relationship: z.enum(['related', 'sequence', 'contradicts']).optional(),
+});
+
+export const link_notes = tool({
+  description:
+    "Add wiki-link cross-references between 2+ notes. Appends a '## Related' section with [[name]] links to each targeted note.",
+  inputSchema: linkNotesParameters,
+  execute: async (params) => params,
+});
+
+export const generateDailyBriefParameters = z.object({
+  content: z.string(),
+  topics: z.array(z.string()).optional(),
+  outputTags: z.array(z.string()).optional(),
+});
+
+export const generate_daily_brief = tool({
+  description: "Create a dated daily brief note aggregating today's open todos and recent notes.",
+  inputSchema: generateDailyBriefParameters,
+  execute: async (params) => params,
+});
+
 export const chatTools = {
   create_note,
   edit_note,
@@ -126,6 +235,14 @@ export const chatTools = {
   delete_todo,
   search_todos,
   get_todos,
+  create_questioner_note,
+  grade_questioner_answers,
+  find_notes,
+  find_todos,
+  summarize_notes,
+  distill_thought_dump,
+  link_notes,
+  generate_daily_brief,
 };
 
 export const listReposParameters = z.object({});

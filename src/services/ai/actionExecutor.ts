@@ -1,10 +1,11 @@
-import { NoteCreateInput, NoteFormat, NoteUpdateInput } from '../../models/Note';
+import { Note, NoteCreateInput, NoteFormat, NoteUpdateInput } from '../../models/Note';
 import { TodoCreateInput, TodoPriority, TodoUpdateInput } from '../../models/Todo';
 import { useNoteStore } from '../../stores/noteStore';
 import { useTodoStore } from '../../stores/todoStore';
 import { useAIStore } from '../../stores/aiStore';
 import { GITHUB_ITEM_STATES, GitHubItemState, GitHubService } from '../GitHubService';
 import { NoteSyncQueueService } from '../NoteSyncQueueService';
+import { ScheduledLearningService } from '../ScheduledLearningService';
 
 export interface ProposedChange {
   type: string;
@@ -164,6 +165,45 @@ function buildExcerpt(content: string): string {
   return content.length > 100 ? `${content.slice(0, 100)}...` : content;
 }
 
+/**
+ * Enqueue a note upsert so it is pushed to GitHub on the next queue drain.
+ * Other app sessions pick it up via the foreground pull watcher (typically
+ * within the configured interval).
+ *
+ * Omit filePath so syncNoteToGitHub derives `notes/${slug}${ext}` and
+ * treats this as a brand-new file (#732). Pre-computing a bare
+ * `${slug}${ext}` here both pointed the file at repo root and tripped the
+ * updateFile "remote was deleted" guard, leaving the queue stuck with
+ * "GitHub API returned no result". The store-side Note record gets its
+ * filePath populated from the sync result on success (see
+ * applyPostSyncStorageUpdate), so mirror the manual-note path in
+ * useNoteEditorDocument.
+ */
+async function enqueueNoteSync(
+  createInput: NoteCreateInput,
+  noteId: string,
+  repoPath: string,
+  branch: string,
+): Promise<void> {
+  try {
+    await NoteSyncQueueService.enqueueNoteUpsert(
+      {
+        repo: repoPath,
+        branch,
+        title: createInput.title,
+        content: createInput.content,
+        format: createInput.format,
+        tags: createInput.tags ?? [],
+        color: null,
+      },
+      noteId,
+    );
+    void NoteSyncQueueService.drain();
+  } catch (error) {
+    console.warn('[actionExecutor] enqueueNoteUpsert failed:', error);
+  }
+}
+
 export async function executeToolCall(
   toolName: string,
   args: Record<string, unknown>,
@@ -180,14 +220,17 @@ export async function executeToolCall(
       };
     }
 
+    // Chat-thread repo context: attaching repo/branch to created notes
+    // keeps them visible under the same repo and lets the sync queue
+    // push them (see enqueueNoteSync).
+    const aiState = useAIStore.getState();
+    const repoOwner = aiState.chatRepoOwner ?? undefined;
+    const repoName = aiState.chatRepoName ?? undefined;
+    const repoPath = repoOwner && repoName ? `${repoOwner}/${repoName}` : undefined;
+    const branch = aiState.chatRepoBranch || 'main';
+
     switch (toolName) {
       case 'create_note': {
-        const aiState = useAIStore.getState();
-        const repoOwner = aiState.chatRepoOwner ?? undefined;
-        const repoName = aiState.chatRepoName ?? undefined;
-        const repoPath = repoOwner && repoName ? `${repoOwner}/${repoName}` : undefined;
-        const branch = aiState.chatRepoBranch || 'main';
-
         const input: NoteCreateInput = {
           title: getStringArg(args, 'title'),
           content: getStringArg(args, 'content'),
@@ -213,36 +256,8 @@ export async function executeToolCall(
           return { success: false, requiresConfirmation: false, error: 'Failed to create note.' };
         }
 
-        // Enqueue an upsert so the note is pushed to GitHub on the next
-        // queue drain. Other app sessions pick it up via the foreground
-        // pull watcher (typically within the configured interval).
-        //
-        // Omit filePath so syncNoteToGitHub derives `notes/${slug}${ext}`
-        // and treats this as a brand-new file (#732). Pre-computing a
-        // bare `${slug}${ext}` here both pointed the file at repo root
-        // and tripped the updateFile "remote was deleted" guard, leaving
-        // the queue stuck with "GitHub API returned no result". The
-        // store-side Note record gets its filePath populated from the
-        // sync result on success (see applyPostSyncStorageUpdate), so
-        // mirror the manual-note path in useNoteEditorDocument.
         if (repoPath) {
-          try {
-            await NoteSyncQueueService.enqueueNoteUpsert(
-              {
-                repo: repoPath,
-                branch,
-                title: input.title,
-                content: input.content,
-                format: input.format,
-                tags: input.tags ?? [],
-                color: null,
-              },
-              created.id,
-            );
-            void NoteSyncQueueService.drain();
-          } catch (error) {
-            console.warn('[actionExecutor] enqueueNoteUpsert failed:', error);
-          }
+          await enqueueNoteSync(input, created.id, repoPath, branch);
         }
 
         // Return a slim summary; the previous full-Note dump filled the
@@ -252,6 +267,443 @@ export async function executeToolCall(
           title: created.title,
           format: created.format,
           repo: created.repo,
+          synced: Boolean(repoPath),
+        });
+      }
+
+      case 'create_questioner_note': {
+        const topic = getStringArg(args, 'topic');
+        const content = getStringArg(args, 'content');
+        const sourceNotes = getOptionalStringArrayArg(args, 'sourceNotes') ?? [];
+        const userTags = getOptionalStringArrayArg(args, 'tags') ?? [];
+        // Force the 'questioner' tag — NoteEditorScreen shows the
+        // Grade Answers button only for notes carrying it.
+        const tags = Array.from(new Set([...userTags, 'questioner']));
+        const format = getOptionalNoteFormatArg(args, 'format');
+        const questionCount = (content.match(/\?/g) || []).length;
+
+        const sourceList = sourceNotes.length
+          ? `## Sources\n\n${sourceNotes.map((id) => `- ${id}`).join('\n')}\n\n`
+          : '';
+        const marker = `<!-- sl-item-id: chat-gen-${Date.now()} -->\n`;
+
+        const input: NoteCreateInput = {
+          title: topic,
+          content: `${marker}${sourceList}${content}`,
+          tags,
+          format: format ?? 'markdown',
+          ...(repoPath ? { repo: repoPath, branch } : {}),
+        };
+
+        if (mode === 'confirm') {
+          return buildConfirmationResult({
+            type: 'create_questioner_note',
+            description: `Create questioner note on: ${topic}`,
+            details: { topic, tags, questionCount },
+          });
+        }
+
+        const created = await useNoteStore.getState().createNote(input);
+        if (!created) {
+          return { success: false, requiresConfirmation: false, error: 'Failed to create questioner note.' };
+        }
+        if (repoPath) {
+          await enqueueNoteSync(input, created.id, repoPath, branch);
+        }
+
+        return buildSuccessResult({
+          noteId: created.id,
+          title: created.title,
+          format: created.format,
+          repo: created.repo,
+          synced: Boolean(repoPath),
+          questionCount,
+          tag: 'questioner',
+        });
+      }
+
+      case 'grade_questioner_answers': {
+        const noteId = getStringArg(args, 'noteId');
+        const note = useNoteStore.getState().getNoteById(noteId);
+        if (!note) {
+          return { success: false, requiresConfirmation: false, error: 'Note not found.' };
+        }
+        if (!note.tags.includes('questioner')) {
+          return {
+            success: false,
+            requiresConfirmation: false,
+            error: "Note doesn't have the 'questioner' tag required for grading.",
+          };
+        }
+
+        if (mode === 'confirm') {
+          return buildConfirmationResult({
+            type: 'grade_questioner_answers',
+            description: `Grade answers in note: '${note.title}'`,
+            targetId: noteId,
+            details: { noteId, title: note.title },
+          });
+        }
+
+        const contentLenBefore = (useNoteStore.getState().getNoteById(noteId)?.content ?? '').length;
+        const graded = await ScheduledLearningService.gradeQuestionerNote(noteId);
+        if (!graded) {
+          return {
+            success: false,
+            requiresConfirmation: false,
+            error: 'Grading failed. Check your AI model is configured.',
+          };
+        }
+        const contentLenAfter = (useNoteStore.getState().getNoteById(noteId)?.content ?? '').length;
+        return buildSuccessResult({
+          noteId,
+          graded: true,
+          gradingAppended: Math.max(0, contentLenAfter - contentLenBefore),
+        });
+      }
+
+      case 'find_notes': {
+        const query = getStringArg(args, 'query').trim().toLowerCase();
+        const requiredTags = getOptionalStringArrayArg(args, 'tags');
+        const excludeTags = getOptionalStringArrayArg(args, 'excludeTags');
+        const folderPath = getOptionalStringArg(args, 'folderPath');
+        const sortBy = getOptionalStringArg(args, 'sortBy') ?? 'recent';
+        if (!['recent', 'alphabetical'].includes(sortBy)) {
+          throw new Error("Invalid 'sortBy' — must be recent or alphabetical");
+        }
+        const limit =
+          args.limit === undefined ? 20 : Math.max(1, Math.min(100, getNumberArg(args, 'limit')));
+
+        const filtered = useNoteStore.getState().notes.filter((note) => {
+          if (
+            query &&
+            !(
+              note.title.toLowerCase().includes(query) ||
+              note.content.toLowerCase().includes(query) ||
+              note.tags.some((tag) => tag.toLowerCase().includes(query))
+            )
+          ) {
+            return false;
+          }
+          if (requiredTags && !requiredTags.every((tag) => note.tags.includes(tag))) {
+            return false;
+          }
+          if (excludeTags && excludeTags.some((tag) => note.tags.includes(tag))) {
+            return false;
+          }
+          if (folderPath && !(note.folderPath ?? '').startsWith(folderPath)) {
+            return false;
+          }
+          return true;
+        });
+
+        filtered.sort((a, b) => {
+          if (sortBy === 'alphabetical') {
+            return a.title.localeCompare(b.title);
+          }
+          return b.updatedAt - a.updatedAt;
+        });
+
+        return buildSuccessResult({
+          matches: filtered.slice(0, limit).map((note) => ({
+            id: note.id,
+            title: note.title,
+            tags: note.tags,
+            folderPath: note.folderPath ?? null,
+            excerpt: buildExcerpt(note.content),
+            updatedAt: note.updatedAt,
+          })),
+          total: filtered.length,
+        });
+      }
+
+      case 'find_todos': {
+        const query = getOptionalStringArg(args, 'query')?.trim().toLowerCase() ?? '';
+        const status = getOptionalStringArg(args, 'status') ?? 'all';
+        if (!['all', 'pending', 'completed'].includes(status)) {
+          throw new Error("Invalid 'status' — must be all, pending, or completed");
+        }
+        const priority = getOptionalTodoPriorityArg(args, 'priority');
+        const tags = getOptionalStringArrayArg(args, 'tags');
+        const dueBeforeRaw = getOptionalStringArg(args, 'dueBefore');
+        const dueBeforeMs = dueBeforeRaw ? Date.parse(dueBeforeRaw) : NaN;
+        if (dueBeforeRaw && Number.isNaN(dueBeforeMs)) {
+          throw new Error("Invalid 'dueBefore' — must be a parseable date string");
+        }
+        const sortBy = getOptionalStringArg(args, 'sortBy') ?? 'recent';
+        if (!['due', 'priority', 'recent'].includes(sortBy)) {
+          throw new Error("Invalid 'sortBy' — must be due, priority, or recent");
+        }
+
+        const priorityRank: Record<TodoPriority, number> = { high: 0, medium: 1, low: 2 };
+
+        const filtered = useTodoStore.getState().todos.filter((todo) => {
+          if (status === 'pending' && todo.completed) {
+            return false;
+          }
+          if (status === 'completed' && !todo.completed) {
+            return false;
+          }
+          if (priority && todo.priority !== priority) {
+            return false;
+          }
+          if (tags && !tags.every((tag) => (todo.tags ?? []).includes(tag))) {
+            return false;
+          }
+          if (dueBeforeRaw && (!todo.dueDate || todo.dueDate > dueBeforeMs)) {
+            return false;
+          }
+          if (
+            query &&
+            !(
+              todo.text.toLowerCase().includes(query) ||
+              (todo.notes?.toLowerCase().includes(query) ?? false) ||
+              (todo.tags?.some((tag) => tag.toLowerCase().includes(query)) ?? false)
+            )
+          ) {
+            return false;
+          }
+          return true;
+        });
+
+        filtered.sort((a, b) => {
+          if (sortBy === 'due') {
+            const aDue = a.dueDate ?? Number.MAX_SAFE_INTEGER;
+            const bDue = b.dueDate ?? Number.MAX_SAFE_INTEGER;
+            return aDue - bDue;
+          }
+          if (sortBy === 'priority') {
+            return priorityRank[a.priority ?? 'medium'] - priorityRank[b.priority ?? 'medium'];
+          }
+          return b.createdAt - a.createdAt;
+        });
+
+        return buildSuccessResult({
+          matches: filtered.map((todo) => ({
+            id: todo.id,
+            text: todo.text,
+            completed: todo.completed,
+            priority: todo.priority ?? null,
+            dueDate: todo.dueDate ?? null,
+            tags: todo.tags ?? [],
+          })),
+          total: filtered.length,
+          filterApplied: { status, priority: priority ?? null, query },
+        });
+      }
+
+      case 'summarize_notes': {
+        const noteIds = getOptionalStringArrayArg(args, 'noteIds') ?? [];
+        if (noteIds.length === 0) {
+          return { success: false, requiresConfirmation: false, error: 'noteIds must be non-empty' };
+        }
+        const content = getStringArg(args, 'content');
+        const outputTags = getOptionalStringArrayArg(args, 'outputTags') ?? [];
+        const format = getOptionalNoteFormatArg(args, 'format');
+
+        const noteStore = useNoteStore.getState();
+        const sources = noteIds
+          .map((id) => noteStore.getNoteById(id))
+          .filter((found): found is Note => found !== undefined);
+        if (sources.length === 0) {
+          return { success: false, requiresConfirmation: false, error: 'None of the source notes exist.' };
+        }
+
+        const title = getOptionalStringArg(args, 'outputTitle') ?? `Summary (${sources.length} notes)`;
+        const tags = Array.from(new Set([...outputTags, 'summary']));
+        const marker = `<!-- source-note-ids: ${noteIds.join(',')} -->\n`;
+        const sourceListMd = `## Sources\n\n${sources
+          .map((source) => `- ${source.title} (${source.id})`)
+          .join('\n')}\n\n`;
+
+        const input: NoteCreateInput = {
+          title,
+          content: `${marker}${sourceListMd}${content}`,
+          tags,
+          format: format ?? 'markdown',
+          ...(repoPath ? { repo: repoPath, branch } : {}),
+        };
+
+        if (mode === 'confirm') {
+          return buildConfirmationResult({
+            type: 'summarize_notes',
+            description: `Summarize ${sources.length} notes into '${title}'`,
+            details: { sourceCount: sources.length, title, tags },
+          });
+        }
+
+        const created = await useNoteStore.getState().createNote(input);
+        if (!created) {
+          return { success: false, requiresConfirmation: false, error: 'Failed to create summary note.' };
+        }
+        if (repoPath) {
+          await enqueueNoteSync(input, created.id, repoPath, branch);
+        }
+
+        return buildSuccessResult({
+          noteId: created.id,
+          title: created.title,
+          sourceCount: sources.length,
+          synced: Boolean(repoPath),
+        });
+      }
+
+      case 'distill_thought_dump': {
+        const sourceIds = getOptionalStringArrayArg(args, 'sourceNoteIds') ?? [];
+        if (sourceIds.length === 0) {
+          return { success: false, requiresConfirmation: false, error: 'sourceNoteIds must be non-empty' };
+        }
+        const content = getStringArg(args, 'content');
+        const title = getStringArg(args, 'outputTitle');
+        const userTags = getOptionalStringArrayArg(args, 'outputTags') ?? [];
+        const tags = Array.from(new Set([...userTags, 'distilled']));
+        const marker = `<!-- distilled-from: ${sourceIds.join(',')} -->\n`;
+
+        const input: NoteCreateInput = {
+          title,
+          content: `${marker}${content}`,
+          tags,
+          format: 'markdown',
+          ...(repoPath ? { repo: repoPath, branch } : {}),
+        };
+
+        if (mode === 'confirm') {
+          return buildConfirmationResult({
+            type: 'distill_thought_dump',
+            description: `Distill ${sourceIds.length} thought-dumps into '${title}'`,
+            details: { sourceIds, title, tags },
+          });
+        }
+
+        const created = await useNoteStore.getState().createNote(input);
+        if (!created) {
+          return { success: false, requiresConfirmation: false, error: 'Failed to create distilled note.' };
+        }
+        if (repoPath) {
+          await enqueueNoteSync(input, created.id, repoPath, branch);
+        }
+
+        return buildSuccessResult({
+          noteId: created.id,
+          title: created.title,
+          sourceIds,
+          synced: Boolean(repoPath),
+        });
+      }
+
+      case 'link_notes': {
+        const ids = getOptionalStringArrayArg(args, 'noteIds') ?? [];
+        if (ids.length < 2) {
+          return { success: false, requiresConfirmation: false, error: 'link_notes requires at least 2 noteIds' };
+        }
+        const relationship = getOptionalStringArg(args, 'relationship') ?? 'related';
+        if (!['related', 'sequence', 'contradicts'].includes(relationship)) {
+          throw new Error("Invalid 'relationship' — must be related, sequence, or contradicts");
+        }
+        const heading =
+          relationship === 'contradicts'
+            ? '## Contradicts'
+            : relationship === 'sequence'
+              ? '## Sequence'
+              : '## Related';
+
+        const noteStore = useNoteStore.getState();
+        const targets = ids
+          .map((id) => noteStore.getNoteById(id))
+          .filter((found): found is Note => found !== undefined);
+        if (targets.length < 2) {
+          return { success: false, requiresConfirmation: false, error: 'At least 2 of the given noteIds must exist' };
+        }
+
+        if (mode === 'confirm') {
+          return buildConfirmationResult({
+            type: 'link_notes',
+            description: `Cross-link ${targets.length} notes with '${heading.replace('## ', '')}' references`,
+            details: { noteIds: targets.map((note) => note.id), relationship },
+          });
+        }
+
+        let linked = 0;
+        for (const self of targets) {
+          const siblings = targets.filter((note) => note.id !== self.id);
+          const linkBlock =
+            `\n\n<!-- linked-by-chat: ${new Date().toISOString().slice(0, 10)} -->\n` +
+            `${heading}\n\n${siblings.map((sibling) => `- [[${sibling.title}]]`).join('\n')}`;
+          const updated = await noteStore.updateNote({
+            id: self.id,
+            content: self.content + linkBlock,
+          });
+
+          if (repoPath && updated) {
+            try {
+              await NoteSyncQueueService.enqueueNoteUpsert(
+                {
+                  repo: repoPath,
+                  branch,
+                  title: updated.title,
+                  content: updated.content,
+                  format: updated.format ?? 'markdown',
+                  tags: updated.tags,
+                  color: null,
+                },
+                updated.id,
+              );
+            } catch (error) {
+              console.warn('[actionExecutor] link_notes sync enqueue failed:', error);
+            }
+          }
+          linked += 1;
+        }
+
+        if (repoPath) {
+          try {
+            void NoteSyncQueueService.drain();
+          } catch {
+            // Drain is best-effort — the queue retries on its next trigger.
+          }
+        }
+
+        return buildSuccessResult({
+          linked,
+          noteIds: targets.map((note) => note.id),
+        });
+      }
+
+      case 'generate_daily_brief': {
+        const content = getStringArg(args, 'content');
+        const userTags = getOptionalStringArrayArg(args, 'outputTags') ?? [];
+        const tags = Array.from(new Set([...userTags, 'daily-brief']));
+        const today = new Date().toISOString().slice(0, 10);
+        const title = `Daily Brief: ${today}`;
+        const marker = `<!-- daily-brief: ${today} -->\n`;
+
+        const input: NoteCreateInput = {
+          title,
+          content: `${marker}${content}`,
+          tags,
+          format: 'markdown',
+          ...(repoPath ? { repo: repoPath, branch } : {}),
+        };
+
+        if (mode === 'confirm') {
+          return buildConfirmationResult({
+            type: 'generate_daily_brief',
+            description: `Create daily brief for ${today}`,
+            details: { date: today, tags },
+          });
+        }
+
+        const created = await useNoteStore.getState().createNote(input);
+        if (!created) {
+          return { success: false, requiresConfirmation: false, error: 'Failed to create daily brief.' };
+        }
+        if (repoPath) {
+          await enqueueNoteSync(input, created.id, repoPath, branch);
+        }
+
+        return buildSuccessResult({
+          noteId: created.id,
+          date: today,
           synced: Boolean(repoPath),
         });
       }
