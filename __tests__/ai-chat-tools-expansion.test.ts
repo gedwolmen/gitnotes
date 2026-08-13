@@ -40,12 +40,6 @@ jest.mock('../src/stores/aiStore', () => {
   };
 });
 
-jest.mock('../src/services/ScheduledLearningService', () => ({
-  ScheduledLearningService: {
-    gradeQuestionerNote: jest.fn(),
-  },
-}));
-
 jest.mock('../src/services/NoteSyncQueueService', () => ({
   NoteSyncQueueService: {
     enqueueNoteUpsert: jest.fn(async () => undefined),
@@ -61,14 +55,12 @@ import {
   findNotesParameters,
   findTodosParameters,
   generateDailyBriefParameters,
-  gradeQuestionerNoteParameters,
   linkNotesParameters,
   summarizeNotesParameters,
 } from '../src/services/ai/tools';
 import { useNoteStore } from '../src/stores/noteStore';
 import { useTodoStore } from '../src/stores/todoStore';
 import { useAIStore } from '../src/stores/aiStore';
-import { ScheduledLearningService } from '../src/services/ScheduledLearningService';
 import { NoteSyncQueueService } from '../src/services/NoteSyncQueueService';
 
 type StoreMock<T> = { getState: () => T; __state: T };
@@ -88,8 +80,6 @@ const aiState = (useAIStore as unknown as StoreMock<{
   chatRepoName: string | null;
   chatRepoBranch: string;
 }>).__state;
-
-const gradeQuestionerNote = ScheduledLearningService.gradeQuestionerNote as jest.Mock;
 
 function makeNote(overrides: Record<string, unknown>): Record<string, unknown> {
   return {
@@ -114,7 +104,6 @@ beforeEach(() => {
   noteState.updateNote.mockClear();
   (NoteSyncQueueService.enqueueNoteUpsert as jest.Mock).mockClear();
   (NoteSyncQueueService.drain as jest.Mock).mockClear();
-  gradeQuestionerNote.mockReset();
 });
 
 describe('chat-tools expansion — schema validation', () => {
@@ -131,12 +120,6 @@ describe('chat-tools expansion — schema validation', () => {
       schema: createQuestionerNoteParameters,
       valid: { topic: 'Type theory', content: 'Q1? Q2?', sourceNotes: ['n1'], tags: ['study'] },
       invalid: { topic: 'Type theory' },
-    },
-    {
-      label: 'gradeQuestionerNoteParameters',
-      schema: gradeQuestionerNoteParameters,
-      valid: { noteId: 'n1' },
-      invalid: { noteId: 42 },
     },
     {
       label: 'findNotesParameters',
@@ -184,7 +167,7 @@ describe('chat-tools expansion — schema validation', () => {
     expect(() => schema.parse(invalid)).toThrow();
   });
 
-  test('chatTools exposes all 8 new tools alongside the original 10', () => {
+  test('chatTools exposes all 7 new tools alongside the original 10', () => {
     expect(Object.keys(chatTools).sort()).toEqual(
       [
         'create_note',
@@ -198,7 +181,6 @@ describe('chat-tools expansion — schema validation', () => {
         'search_todos',
         'get_todos',
         'create_questioner_note',
-        'grade_questioner_answers',
         'find_notes',
         'find_todos',
         'summarize_notes',
@@ -343,27 +325,18 @@ describe('chat-tools expansion — write tools respect confirm mode', () => {
     },
   );
 
-  test('grade_questioner_answers in confirm mode targets the questioner note', async () => {
-    noteState.notes = [makeNote({ id: 'q1', title: 'Quiz', tags: ['questioner'] })];
+  test.each(['auto', 'confirm'] as const)(
+    'grade_questioner_answers (%s mode) returns a clean error — feature removed in #836',
+    async (mode) => {
+      noteState.notes = [makeNote({ id: 'q1', title: 'Quiz', tags: ['questioner'] })];
 
-    const result = await executeToolCall('grade_questioner_answers', { noteId: 'q1' }, 'confirm');
+      const result = await executeToolCall('grade_questioner_answers', { noteId: 'q1' }, mode);
 
-    expect(result.success).toBe(true);
-    expect(result.requiresConfirmation).toBe(true);
-    expect(result.proposedChanges?.type).toBe('grade_questioner_answers');
-    expect(result.proposedChanges?.targetId).toBe('q1');
-    expect(gradeQuestionerNote).not.toHaveBeenCalled();
-  });
-
-  test('grade_questioner_answers rejects notes without the questioner tag', async () => {
-    noteState.notes = [makeNote({ id: 'p1', title: 'Plain', tags: [] })];
-
-    const result = await executeToolCall('grade_questioner_answers', { noteId: 'p1' }, 'auto');
-
-    expect(result.success).toBe(false);
-    expect(result.error).toMatch(/questioner/);
-    expect(gradeQuestionerNote).not.toHaveBeenCalled();
-  });
+      expect(result.success).toBe(false);
+      expect(result.requiresConfirmation).toBe(false);
+      expect(result.error).toMatch(/replaced by the Reminder system in PR #836/);
+    },
+  );
 });
 
 describe('chat-tools expansion — create_questioner_note forces the questioner tag', () => {
@@ -392,47 +365,6 @@ describe('chat-tools expansion — create_questioner_note forces the questioner 
 
     const input = noteState.createNote.mock.calls[0][0] as { tags: string[] };
     expect(input.tags).toEqual(['questioner']);
-  });
-});
-
-describe('chat-tools expansion — grade_questioner_answers delegation', () => {
-  test('delegates to ScheduledLearningService and reports appended content length', async () => {
-    const questioner = makeNote({ id: 'q1', title: 'Quiz', tags: ['questioner'], content: 'Q?' });
-    noteState.notes = [questioner];
-    const appended = '\n## Grading & Corrections\nWell done.';
-    gradeQuestionerNote.mockImplementation(async (noteId: string) => {
-      questioner.content = `${questioner.content}${appended}`;
-      void noteId;
-      return true;
-    });
-
-    const result = await executeToolCall('grade_questioner_answers', { noteId: 'q1' }, 'auto');
-
-    expect(gradeQuestionerNote).toHaveBeenCalledWith('q1');
-    expect(result.success).toBe(true);
-    expect(result.data).toEqual({
-      noteId: 'q1',
-      graded: true,
-      gradingAppended: appended.length,
-    });
-  });
-
-  test('surfaces an error when the grading service returns false', async () => {
-    noteState.notes = [makeNote({ id: 'q2', title: 'Quiz', tags: ['questioner'], content: 'Q?' })];
-    gradeQuestionerNote.mockResolvedValue(false);
-
-    const result = await executeToolCall('grade_questioner_answers', { noteId: 'q2' }, 'auto');
-
-    expect(result.success).toBe(false);
-    expect(result.error).toMatch(/Grading failed/);
-  });
-
-  test('errors when the note does not exist', async () => {
-    const result = await executeToolCall('grade_questioner_answers', { noteId: 'missing' }, 'auto');
-
-    expect(result.success).toBe(false);
-    expect(result.error).toBe('Note not found.');
-    expect(gradeQuestionerNote).not.toHaveBeenCalled();
   });
 });
 

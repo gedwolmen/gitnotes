@@ -13,7 +13,7 @@ import {
 } from '../../src/services/ai/tools';
 
 describe('chatTools registry', () => {
-  test('exposes all 18 expected tools', () => {
+  test('exposes all 17 expected tools', () => {
     expect(Object.keys(chatTools).sort()).toEqual(
       [
         'create_note',
@@ -29,7 +29,6 @@ describe('chatTools registry', () => {
         'generate_daily_brief',
         'get_note',
         'get_todos',
-        'grade_questioner_answers',
         'link_notes',
         'search_notes',
         'search_todos',

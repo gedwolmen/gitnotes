@@ -5,7 +5,6 @@ import { useTodoStore } from '../../stores/todoStore';
 import { useAIStore } from '../../stores/aiStore';
 import { GITHUB_ITEM_STATES, GitHubItemState, GitHubService } from '../GitHubService';
 import { NoteSyncQueueService } from '../NoteSyncQueueService';
-import { ScheduledLearningService } from '../ScheduledLearningService';
 
 export interface ProposedChange {
   type: string;
@@ -322,45 +321,14 @@ export async function executeToolCall(
         });
       }
 
-      case 'grade_questioner_answers': {
-        const noteId = getStringArg(args, 'noteId');
-        const note = useNoteStore.getState().getNoteById(noteId);
-        if (!note) {
-          return { success: false, requiresConfirmation: false, error: 'Note not found.' };
-        }
-        if (!note.tags.includes('questioner')) {
-          return {
-            success: false,
-            requiresConfirmation: false,
-            error: "Note doesn't have the 'questioner' tag required for grading.",
-          };
-        }
-
-        if (mode === 'confirm') {
-          return buildConfirmationResult({
-            type: 'grade_questioner_answers',
-            description: `Grade answers in note: '${note.title}'`,
-            targetId: noteId,
-            details: { noteId, title: note.title },
-          });
-        }
-
-        const contentLenBefore = (useNoteStore.getState().getNoteById(noteId)?.content ?? '').length;
-        const graded = await ScheduledLearningService.gradeQuestionerNote(noteId);
-        if (!graded) {
-          return {
-            success: false,
-            requiresConfirmation: false,
-            error: 'Grading failed. Check your AI model is configured.',
-          };
-        }
-        const contentLenAfter = (useNoteStore.getState().getNoteById(noteId)?.content ?? '').length;
-        return buildSuccessResult({
-          noteId,
-          graded: true,
-          gradingAppended: Math.max(0, contentLenAfter - contentLenBefore),
-        });
-      }
+      case 'grade_questioner_answers':
+        // Cached-schema safety net: the tool was removed from chatTools in PR #836
+        // (ScheduledLearningService deleted), but a client may still send it.
+        return {
+          success: false,
+          requiresConfirmation: false,
+          error: 'Grade questioner answers feature was replaced by the Reminder system in PR #836.',
+        };
 
       case 'find_notes': {
         const query = getStringArg(args, 'query').trim().toLowerCase();
