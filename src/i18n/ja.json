@@ -91,6 +91,10 @@
       "title": "ノートでAIをパーソナライズ"
     },
     "aiPersonalizationDescription": "オフにするとAIはノートや日記を読みません（データ保護）",
+    "githubTools": {
+      "title": "GitHubツール",
+      "description": "アクティブなGitHubアカウントを使って、AIにIssue・PR・リポジトリを管理させます。"
+    },
     "security": "セキュリティ",
     "appearance": "外観",
     "updatedUI": "新しいUI",
@@ -163,7 +167,13 @@
   "chat": {
     "askAI": "AIに質問",
     "typeMessage": "メッセージを入力...",
-    "thinking": "思考中..."
+    "thinking": "思考中...",
+    "hints": {
+      "summarizeIssues": "未完了のIssueをまとめて",
+      "showRepos": "リポジトリを表示して",
+      "createIssue": "Issueを作成して",
+      "listPRs": "オープンなPRを一覧表示して"
+    }
   },
   "errors": {
     "somethingWrong": "問題が発生しました",
@@ -204,7 +214,8 @@
       "providers": "AIプロバイダーはさまざまなAIサービスを接続できます。Apple Intelligenceはプライバシーのためオンデバイス処理を使用します。",
       "scheduledLearning": "AIプロバイダーはさまざまなAIサービスを接続できます。Apple Intelligenceはプライバシーのためオンデバイス処理を使用します。",
       "dailyQuote": "ホーム画面に日替わりの哲学的な名言を表示します。最近の日記の振り返りに基づいてパーソナライズされます。",
-      "aiPersonalization": "有効にすると、AIはノートと日記を読んでパーソナライズされた応答を提供します。プライバシーのためにオフにすると、AIは現在のチャットコンテキストのみを使用します。"
+      "aiPersonalization": "有効にすると、AIはノートと日記を読んでパーソナライズされた応答を提供します。プライバシーのためにオフにすると、AIは現在のチャットコンテキストのみを使用します。",
+      "githubTools": "有効にすると、AIエージェントが接続済みのGitHubアカウントを使って、リポジトリの一覧表示、Issueの作成、プルリクエストの作成、差分の変更レビュー、レビューの投稿を行えます。設定済みの同じトークンを使用します。"
     },
     "title": "Hint"
   },
@@ -332,6 +343,12 @@
     "aiDescription": "Chat over your notes, todos, and canvases. AI can read context and apply edits when you allow it.",
     "aiHelper": "You can turn this on or off anytime in Settings → AI.",
     "aiEnable": "Enable AI",
+    "githubTools": {
+      "title": "GitHubエージェントツール",
+      "body": "接続済みのGitHubアカウントを使って、AIがリポジトリの一覧表示、Issueの作成、プルリクエストの作成、変更のレビュー、PRレビューの投稿を行えるようになりました。すべての書き込み操作はアクションモードの設定に従います。",
+      "enable": "GitHubツールを有効にする",
+      "bodyReminder": "設定 → AI → GitHubツールから、いつでもオン・オフを切り替えられます。"
+    },
     "skipForNow": "Skip for Now"
   },
   "renderStyle": {

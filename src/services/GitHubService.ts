@@ -213,6 +213,10 @@ export interface GitHubPathCommitDates {
   createdAt?: number;
 }
 
+export type GitHubItemState = 'open' | 'closed' | 'all';
+
+export const GITHUB_ITEM_STATES: GitHubItemState[] = ['open', 'closed', 'all'];
+
 /**
  * Tristate result of a sha lookup so callers can distinguish
  * "definitely gone" from "couldn't tell". Critical for delete paths —
@@ -391,10 +395,14 @@ class GitHubServiceClass {
     }
   }
 
-  async getIssues(owner: string, repo: string): Promise<GitHubIssue[]> {
+  async getIssues(
+    owner: string,
+    repo: string,
+    state: GitHubItemState = 'open',
+  ): Promise<GitHubIssue[]> {
     try {
       const data = await this.request(
-        `https://api.github.com/repos/${owner}/${repo}/issues?state=open&per_page=50`
+        `https://api.github.com/repos/${owner}/${repo}/issues?state=${state}&per_page=50`
       );
       return Array.isArray(data) ? data : [];
     } catch (error) {
@@ -403,10 +411,14 @@ class GitHubServiceClass {
     }
   }
 
-  async getPullRequests(owner: string, repo: string): Promise<GitHubPullRequest[]> {
+  async getPullRequests(
+    owner: string,
+    repo: string,
+    state: GitHubItemState = 'open',
+  ): Promise<GitHubPullRequest[]> {
     try {
       const data = await this.request(
-        `https://api.github.com/repos/${owner}/${repo}/pulls?state=open&per_page=50`
+        `https://api.github.com/repos/${owner}/${repo}/pulls?state=${state}&per_page=50`
       );
       return Array.isArray(data) ? data : [];
     } catch (error) {

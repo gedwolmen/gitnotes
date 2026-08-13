@@ -39,11 +39,11 @@ type ToolListItem = {
   completed?: boolean;
 };
 
-function buildChatToolsMap(enabled: boolean = useAIStore.getState().githubToolsEnabled) {
+export function buildChatToolsMap(enabled: boolean = useAIStore.getState().githubToolsEnabled) {
   return enabled ? { ...chatTools, ...githubTools } : chatTools;
 }
 
-function sanitizeToolName(raw: string | undefined, knownToolNames: ReadonlySet<string>): string | null {
+export function sanitizeToolName(raw: string | undefined, knownToolNames: ReadonlySet<string>): string | null {
   const trimmed = raw?.trim();
   if (!trimmed) return null;
   if (knownToolNames.has(trimmed)) return trimmed;
