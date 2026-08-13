@@ -145,6 +145,89 @@ describe('GitHubService agent-tool methods', () => {
     });
   });
 
+  describe('getIssues', () => {
+    test('defaults to state=open in the request URL when state is omitted', async () => {
+      mockHttpRequest.mockResolvedValueOnce({ data: [] });
+
+      const issues = await GitHubService.getIssues('octo', 'notes');
+
+      expect(mockHttpRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: 'https://api.github.com/repos/octo/notes/issues?state=open&per_page=50',
+        }),
+      );
+      expect(issues).toEqual([]);
+    });
+
+    test('passes the requested state into the request URL', async () => {
+      mockHttpRequest.mockResolvedValueOnce({
+        data: [
+          {
+            id: 5,
+            number: 5,
+            title: 'Fixed crash',
+            body: '',
+            state: 'closed',
+            html_url: 'https://github.com/octo/notes/issues/5',
+            milestone: null,
+            labels: [],
+            assignees: [],
+            created_at: '2026-01-01T00:00:00Z',
+            updated_at: '2026-01-01T00:00:00Z',
+          },
+        ],
+      });
+
+      const issues = await GitHubService.getIssues('octo', 'notes', 'closed');
+
+      expect(mockHttpRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: 'https://api.github.com/repos/octo/notes/issues?state=closed&per_page=50',
+        }),
+      );
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.state).toBe('closed');
+    });
+
+    test('passes state=all into the request URL', async () => {
+      mockHttpRequest.mockResolvedValueOnce({ data: [] });
+
+      await GitHubService.getIssues('octo', 'notes', 'all');
+
+      expect(mockHttpRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: expect.stringContaining('state=all'),
+        }),
+      );
+    });
+  });
+
+  describe('getPullRequests', () => {
+    test('defaults to state=open in the request URL when state is omitted', async () => {
+      mockHttpRequest.mockResolvedValueOnce({ data: [] });
+
+      await GitHubService.getPullRequests('octo', 'notes');
+
+      expect(mockHttpRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: 'https://api.github.com/repos/octo/notes/pulls?state=open&per_page=50',
+        }),
+      );
+    });
+
+    test('passes the requested state into the request URL', async () => {
+      mockHttpRequest.mockResolvedValueOnce({ data: [] });
+
+      await GitHubService.getPullRequests('octo', 'notes', 'closed');
+
+      expect(mockHttpRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: 'https://api.github.com/repos/octo/notes/pulls?state=closed&per_page=50',
+        }),
+      );
+    });
+  });
+
   describe('getPullRequestDiff', () => {
     test('maps the files endpoint response into a diff shape', async () => {
       mockHttpRequest.mockResolvedValueOnce({
@@ -379,6 +462,76 @@ describe('executeToolCall - GitHub tools enabled', () => {
         url: 'https://github.com/a/b',
       },
     ]);
+  });
+
+  test('list_issues passes a valid state through to the service', async () => {
+    const getIssuesSpy = jest.spyOn(GitHubService, 'getIssues').mockResolvedValue([]);
+
+    const result = await executeToolCall(
+      'list_issues',
+      { owner: 'octo', repo: 'notes', state: 'closed' },
+      'auto',
+    );
+
+    expect(getIssuesSpy).toHaveBeenCalledWith('octo', 'notes', 'closed');
+    expect(result.success).toBe(true);
+    expect(result.requiresConfirmation).toBe(false);
+    expect(result.data).toEqual([]);
+  });
+
+  test('list_issues defaults to open when state is omitted', async () => {
+    const getIssuesSpy = jest.spyOn(GitHubService, 'getIssues').mockResolvedValue([]);
+
+    const result = await executeToolCall('list_issues', { owner: 'octo', repo: 'notes' }, 'auto');
+
+    expect(getIssuesSpy).toHaveBeenCalledWith('octo', 'notes', 'open');
+    expect(result.success).toBe(true);
+  });
+
+  test('list_issues rejects an invalid state without calling the service', async () => {
+    const getIssuesSpy = jest.spyOn(GitHubService, 'getIssues');
+
+    const result = await executeToolCall(
+      'list_issues',
+      { owner: 'octo', repo: 'notes', state: 'bogus' },
+      'auto',
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.requiresConfirmation).toBe(false);
+    expect(result.error).toMatch(/Invalid 'state'/);
+    expect(getIssuesSpy).not.toHaveBeenCalled();
+  });
+
+  test('list_pull_requests passes a valid state through to the service', async () => {
+    const getPullRequestsSpy = jest
+      .spyOn(GitHubService, 'getPullRequests')
+      .mockResolvedValue([]);
+
+    const result = await executeToolCall(
+      'list_pull_requests',
+      { owner: 'octo', repo: 'notes', state: 'all' },
+      'auto',
+    );
+
+    expect(getPullRequestsSpy).toHaveBeenCalledWith('octo', 'notes', 'all');
+    expect(result.success).toBe(true);
+    expect(result.requiresConfirmation).toBe(false);
+  });
+
+  test('list_pull_requests rejects an invalid state without calling the service', async () => {
+    const getPullRequestsSpy = jest.spyOn(GitHubService, 'getPullRequests');
+
+    const result = await executeToolCall(
+      'list_pull_requests',
+      { owner: 'octo', repo: 'notes', state: 'merged' },
+      'auto',
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.requiresConfirmation).toBe(false);
+    expect(result.error).toMatch(/Invalid 'state'/);
+    expect(getPullRequestsSpy).not.toHaveBeenCalled();
   });
 });
 

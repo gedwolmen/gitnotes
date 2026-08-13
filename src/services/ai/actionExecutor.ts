@@ -3,7 +3,7 @@ import { TodoCreateInput, TodoPriority, TodoUpdateInput } from '../../models/Tod
 import { useNoteStore } from '../../stores/noteStore';
 import { useTodoStore } from '../../stores/todoStore';
 import { useAIStore } from '../../stores/aiStore';
-import { GitHubService } from '../GitHubService';
+import { GITHUB_ITEM_STATES, GitHubItemState, GitHubService } from '../GitHubService';
 import { NoteSyncQueueService } from '../NoteSyncQueueService';
 
 export interface ProposedChange {
@@ -105,6 +105,17 @@ function getOptionalTodoPriorityArg(args: Record<string, unknown>, key: string):
     throw new Error(`Invalid '${key}'`);
   }
   return value as TodoPriority;
+}
+
+function getOptionalItemStateArg(args: Record<string, unknown>, key: string): GitHubItemState | undefined {
+  const value = getOptionalStringArg(args, key);
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!GITHUB_ITEM_STATES.includes(value as GitHubItemState)) {
+    throw new Error(`Invalid '${key}' — must be open, closed, or all`);
+  }
+  return value as GitHubItemState;
 }
 
 function getOptionalDueDateArg(args: Record<string, unknown>, key: string): number | undefined {
@@ -431,7 +442,8 @@ export async function executeToolCall(
       case 'list_issues': {
         const owner = getStringArg(args, 'owner');
         const repo = getStringArg(args, 'repo');
-        const issues = await GitHubService.getIssues(owner, repo);
+        const state = getOptionalItemStateArg(args, 'state') ?? 'open';
+        const issues = await GitHubService.getIssues(owner, repo, state);
         return buildSuccessResult(
           issues.map((i) => ({
             number: i.number,
@@ -473,7 +485,8 @@ export async function executeToolCall(
       case 'list_pull_requests': {
         const owner = getStringArg(args, 'owner');
         const repo = getStringArg(args, 'repo');
-        const prs = await GitHubService.getPullRequests(owner, repo);
+        const state = getOptionalItemStateArg(args, 'state') ?? 'open';
+        const prs = await GitHubService.getPullRequests(owner, repo, state);
         return buildSuccessResult(
           prs.map((p) => ({
             number: p.number,
