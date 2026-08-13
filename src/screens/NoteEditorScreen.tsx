@@ -10,7 +10,6 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { RootStackParamList } from '../navigation/types';
 import VoiceInputModal from '../components/VoiceInputModal';
-import CanvasModal from '../components/CanvasModal';
 import FolderSelectionDialog from '../components/FolderSelectionDialog';
 import { useFolders } from '../contexts/FolderContext';
 import { useRepos } from '../contexts/RepoContext';
@@ -56,7 +55,6 @@ function NoteEditorScreenInner() {
   const { folders } = useFolders();
   const { repositories } = useRepos();
   const [showVoiceModal, setShowVoiceModal] = React.useState(false);
-  const [showCanvasModal, setShowCanvasModal] = React.useState(false);
   const [showCanvasPicker, setShowCanvasPicker] = React.useState(false);
   const [showFolderDialog, setShowFolderDialog] = React.useState(false);
   const [isGrading, setIsGrading] = React.useState(false);
@@ -196,7 +194,7 @@ function NoteEditorScreenInner() {
           onUndo={document.handleUndo}
           onRedo={document.handleRedo}
           onVoiceInput={() => setShowVoiceModal(true)}
-          onInsertCanvas={() => setShowCanvasModal(true)}
+          onInsertCanvas={() => navigation.navigate('CanvasEditor', {})}
           onInsertImage={document.handlePickImage}
           onLinkCanvas={() => setShowCanvasPicker(true)}
         />
@@ -223,8 +221,8 @@ function NoteEditorScreenInner() {
                 onNoteFormatChange={document.handleNoteFormatChange}
                 onTagsChange={document.handleTagsChange}
                 onEditCanvasJson={(uri) => {
-                  document.handleEditCanvasJson(uri);
-                  setShowCanvasModal(true);
+                  void uri;
+                  navigation.navigate('CanvasEditor', {});
                 }}
                 onContentChange={document.handleContentChange}
               />
@@ -268,8 +266,8 @@ function NoteEditorScreenInner() {
             onNoteFormatChange={document.handleNoteFormatChange}
             onTagsChange={document.handleTagsChange}
             onEditCanvasJson={(uri) => {
-              document.handleEditCanvasJson(uri);
-              setShowCanvasModal(true);
+              void uri;
+              navigation.navigate('CanvasEditor', {});
             }}
             onContentChange={document.handleContentChange}
           />
@@ -283,19 +281,6 @@ function NoteEditorScreenInner() {
           setShowVoiceModal(false);
         }}
         onClose={() => setShowVoiceModal(false)}
-      />
-
-      <CanvasModal
-        visible={showCanvasModal}
-        onSave={(payload) => {
-          document.handleCanvasSave(payload);
-          setShowCanvasModal(false);
-        }}
-        onClose={() => {
-          setShowCanvasModal(false);
-          document.setCanvasEditJsonUri(undefined);
-        }}
-        editJsonUri={document.canvasEditJsonUri}
       />
 
       <CanvasPickerModal

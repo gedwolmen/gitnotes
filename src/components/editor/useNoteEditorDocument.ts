@@ -7,7 +7,6 @@ import { RootStackParamList } from '../../navigation/types';
 import { Folder } from '../../models/Folder';
 import { Attachment, createAttachment } from '../../models/Attachment';
 import { Note, NoteFormat, NoteGitHubLink } from '../../models/Note';
-import { CanvasSavePayload } from '../CanvasModal';
 import { GitService } from '../../services/GitService';
 import { HapticService } from '../../utils/haptics';
 import { useUndo } from '../../utils/useUndo';
@@ -95,7 +94,6 @@ export function useNoteEditorDocument({
   const [tags, setTags] = useState<string[]>(initialTags ?? []);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [repoFolders, setRepoFolders] = useState<Folder[]>([]);
-  const [canvasEditJsonUri, setCanvasEditJsonUri] = useState<string | undefined>(undefined);
   const [notFound, setNotFound] = useState(false);
 
   const allFolders = useMemo(() => {
@@ -465,50 +463,6 @@ export function useNoteEditorDocument({
     }
   }, [content, setContent]);
 
-  const handleCanvasSave = useCallback((payload: CanvasSavePayload) => {
-    const pngAttachment = createAttachment({
-      uri: payload.uri,
-      type: 'image',
-      name: payload.name,
-      mimeType: 'image/png',
-      size: payload.size,
-      width: payload.width,
-      height: payload.height,
-    });
-    const jsonAttachment = createAttachment({
-      uri: payload.jsonUri,
-      type: 'file',
-      name: payload.jsonName,
-      mimeType: 'application/json',
-    });
-
-    if (canvasEditJsonUri) {
-      const cleanOldJson = canvasEditJsonUri.split('?')[0];
-      const cleanOldPng = cleanOldJson.replace(/\.json$/i, '.png');
-      const cacheBustPng = `${payload.uri}?v=${Date.now()}`;
-      let next = content;
-
-      if (next.includes(cleanOldPng)) {
-        next = next.split(cleanOldPng).join(cacheBustPng);
-      } else if (next.includes(cleanOldJson)) {
-        next = next.split(cleanOldJson).join(cacheBustPng);
-      }
-
-      setContent(next);
-    } else {
-      setAttachments((previous) => [...previous, pngAttachment, jsonAttachment]);
-      setContent(content + `\n![${payload.name}](${payload.uri})\n`);
-    }
-
-    setHasChanges(true);
-    setCanvasEditJsonUri(undefined);
-  }, [canvasEditJsonUri, content, setContent]);
-
-  const handleEditCanvasJson = useCallback((src: string) => {
-    const clean = src.split('?')[0];
-    setCanvasEditJsonUri(clean.replace(/\.png$/i, '.json'));
-  }, []);
-
   const handleLinkCanvas = useCallback((canvasId: string, canvasTitle: string) => {
     const link = canvasToLink({ id: canvasId });
     const linkText = noteFormat === 'neorg'
@@ -586,10 +540,8 @@ export function useNoteEditorDocument({
     repoFolders,
     selectedFolderId,
     canvasJsonRefs,
-    canvasEditJsonUri,
     editorPlaceholder,
     setIsEditing,
-    setCanvasEditJsonUri,
     handleTitleChange,
     handleContentChange,
     handleRepoChange,
@@ -603,8 +555,6 @@ export function useNoteEditorDocument({
     handleUndo,
     handleRedo,
     handleVoiceDone,
-    handleCanvasSave,
-    handleEditCanvasJson,
     handleLinkCanvas,
     handlePickImage,
   };
