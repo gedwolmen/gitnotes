@@ -97,13 +97,15 @@ export function getExtensionForFormat(format?: NoteFormat): string {
 }
 
 export function extractCanvasJsonRefs(content: string): string[] {
-  const re = /!\[[^\]]*\]\((file:[^)]+\/canvas-drawings\/canvas-[^)]+\.(?:json|png))\)/g;
+  const re = /(?:!\[[^\]]*\]\((file:[^)]*canvas-drawings\/canvas-[^)]*\.(?:json|png))\)|\{(file:[^}]*canvas-drawings\/canvas-[^}]*\.(?:json|png))\}|\[\[(file:[^\]]*canvas-drawings\/canvas-[^\]]*\.(?:json|png))\]\])/g;
   const out: string[] = [];
   const seen = new Set<string>();
   let match: RegExpExecArray | null;
 
   while ((match = re.exec(content)) !== null) {
-    const clean = match[1].split('?')[0].replace(/\.png$/i, '.json');
+    const raw = match[1] || match[2] || match[3];
+    if (!raw) continue;
+    const clean = raw.split('?')[0].replace(/\.png$/i, '.json');
     if (!seen.has(clean)) {
       seen.add(clean);
       out.push(clean);

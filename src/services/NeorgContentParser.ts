@@ -322,6 +322,20 @@ export class NeorgContentParser {
         flushTable();
         flushDefinitions();
 
+        const norgImageMatch = trimmed.match(/^\{([^}]+)\}(?:\[([^\]]*)\])?$/);
+        if (norgImageMatch) {
+          const target = norgImageMatch[1];
+          const isImageExt = /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(target);
+          const isRejectedPrefix = /^(canvas:|https?:\/\/|mailto:)/i.test(target);
+          if (isImageExt && !isRejectedPrefix) {
+            blocks.push({
+              type: 'image',
+              image: { path: target, caption: norgImageMatch[2]?.trim() || undefined },
+            });
+            continue;
+          }
+        }
+
         pendingParagraphLines.push(trimmed);
       }
 

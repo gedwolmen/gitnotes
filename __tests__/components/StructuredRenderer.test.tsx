@@ -158,12 +158,19 @@ describe('StructuredRenderer', () => {
     expect(getByText('A footnote definition.')).toBeTruthy();
   });
 
-  test('renders image placeholder', () => {
+  test('renders image with caption', () => {
     const { getByText } = renderBlocks([
       { type: 'image', image: { path: '/img/photo.png', caption: 'A photo' } },
     ]);
-    expect(getByText(/photo\.png/)).toBeTruthy();
     expect(getByText('A photo')).toBeTruthy();
+  });
+
+  test('renders image without caption', () => {
+    const { queryByText, toJSON } = renderBlocks([
+      { type: 'image', image: { path: '/img/photo.png' } },
+    ]);
+    expect(queryByText('A photo')).toBeNull();
+    expect(toJSON()).toBeTruthy();
   });
 
   test('renders math block via KatexView', () => {

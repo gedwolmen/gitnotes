@@ -512,13 +512,18 @@ export function useNoteEditorDocument({
 
       setAttachments((previous) => [...previous, newAttachment]);
       setHasChanges(true);
-      setContent(content + `\n![${newAttachment.name}](${newAttachment.uri})\n`);
+      const imageRef = noteFormat === 'neorg'
+        ? `\n{${newAttachment.uri}}[${newAttachment.name}]\n`
+        : noteFormat === 'org'
+          ? `\n[[file:${newAttachment.uri}]][${newAttachment.name}]\n`
+          : `\n![${newAttachment.name}](${newAttachment.uri})\n`;
+      setContent(content + imageRef);
       HapticService.success();
     } catch (error) {
       console.error('Image picker error:', error);
       Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
-  }, [content, setContent]);
+  }, [content, noteFormat, setContent]);
 
   const canvasJsonRefs = useMemo(() => extractCanvasJsonRefs(content), [content]);
 

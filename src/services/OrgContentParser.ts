@@ -279,6 +279,20 @@ export class OrgContentParser {
         flushDefinitions();
         flushTable();
         flushFixedWidth();
+
+        const orgImageMatch = trimmed.match(/^\[\[file:([^\]]+)\]\](?:\[([^\]]*)\])?$/);
+        if (orgImageMatch) {
+          const filePath = orgImageMatch[1];
+          const isImageExt = /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(filePath);
+          if (isImageExt) {
+            blocks.push({
+              type: 'image',
+              image: { path: filePath, caption: orgImageMatch[2]?.trim() || undefined },
+            });
+            continue;
+          }
+        }
+
         pendingParagraphLines.push(trimmed);
       }
 
