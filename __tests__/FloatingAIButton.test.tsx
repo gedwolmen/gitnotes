@@ -7,6 +7,8 @@ import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 const mockNavigate = jest.fn();
 const mockSharedValues: Array<{ value: unknown }> = [];
 const mockSpringCalls: Array<readonly [unknown, unknown]> = [];
+const mockTimingCalls: Array<readonly [unknown, unknown]> = [];
+const mockCancelled: Array<{ value: unknown }> = [];
 const mockRunOnJSCallbacks: Array<() => void> = [];
 let mockPanBegin: (() => void) | undefined;
 let mockPanStart: (() => void) | undefined;
@@ -50,6 +52,15 @@ async function flushRunOnJSCallbacks(): Promise<void> {
   await act(async () => {
     for (const callback of callbacks) callback();
     await Promise.resolve();
+  });
+}
+
+async function waitForEntranceSpring(): Promise<void> {
+  await waitFor(() => {
+    expect(mockSpringCalls).toContainEqual([
+      1,
+      expect.objectContaining({ stiffness: 240 }),
+    ]);
   });
 }
 
@@ -109,6 +120,16 @@ jest.mock('react-native-reanimated', () => {
       mockSpringCalls.push([value, config]);
       return value;
     },
+    withTiming: (value: unknown, config: unknown) => {
+      mockTimingCalls.push([value, config]);
+      return value;
+    },
+    withDelay: (_delay: unknown, animation: unknown) => animation,
+    withSequence: (...animations: unknown[]) => animations[animations.length - 1],
+    withRepeat: (animation: unknown) => animation,
+    cancelAnimation: (sharedValue: { value: unknown }) => {
+      mockCancelled.push(sharedValue);
+    },
     runOnJS: (callback: (...args: unknown[]) => unknown) => (
       (...args: unknown[]) => {
         mockRunOnJSCallbacks.push(() => callback(...args));
@@ -164,6 +185,7 @@ jest.mock('@shopify/react-native-skia', () => {
     Paint: ({ children }: { children: ReactNode }) => children,
     Blur: MockView,
     ColorMatrix: MockView,
+    DashPathEffect: ({ children }: { children?: ReactNode }) => children ?? null,
   };
 });
 
@@ -174,6 +196,8 @@ describe('FloatingAIButton', () => {
     jest.clearAllMocks();
     mockSharedValues.length = 0;
     mockSpringCalls.length = 0;
+    mockTimingCalls.length = 0;
+    mockCancelled.length = 0;
     mockRunOnJSCallbacks.length = 0;
     mockPanBegin = undefined;
     mockPanStart = undefined;
@@ -451,7 +475,7 @@ describe('FloatingAIButton', () => {
     expect(mockSharedValues[1]?.value).toBe(168);
     expect(mockSharedValues[2]?.value).toBe(16);
     expect(mockSharedValues[3]?.value).toBe(168);
-    expect(AsyncStorage.setItem).toHaveBeenLastCalledWith(
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(
       'ai-button-position',
       JSON.stringify({ x: 16, y: 168 }),
     );
@@ -511,5 +535,80 @@ describe('FloatingAIButton', () => {
       expect(getByTestId('floating-ai.button.navigate-chat')).toBeTruthy();
       expect(queryByTestId('floating-ai.button.liquid')).toBeNull();
     });
+  });
+
+  it('advertises tap-and-hold affordances via the accessibility hint', async () => {
+    const { getByTestId } = render(<FloatingAIButton currentRouteName="Home" />);
+    await waitFor(() => {
+      expect(AccessibilityInfo.isReduceMotionEnabled).toHaveBeenCalledTimes(1);
+    });
+    const trigger = getByTestId('floating-ai.button.navigate-chat');
+
+    expect(trigger.props.accessibilityHint).toContain('Press and hold');
+
+    fireEvent(trigger, 'longPress');
+
+    expect(getByTestId('floating-ai.button.navigate-chat').props.accessibilityHint).toContain(
+      'close',
+    );
+  });
+
+  it('fills the hold ring on press-in and drains it on early release', async () => {
+    const { getByTestId } = render(<FloatingAIButton currentRouteName="Home" />);
+    await waitForEntranceSpring();
+    const trigger = getByTestId('floating-ai.button.navigate-chat');
+
+    fireEvent(trigger, 'pressIn');
+
+    expect(mockTimingCalls).toContainEqual([1, { duration: 450 }]);
+
+    fireEvent(trigger, 'pressOut');
+
+    expect(mockTimingCalls[mockTimingCalls.length - 1]).toEqual([0, { duration: 150 }]);
+  });
+
+  it('absorbs the ring and records discovery when the long press opens the hub', async () => {
+    const { getByTestId } = render(<FloatingAIButton currentRouteName="Home" />);
+    await waitForEntranceSpring();
+    const trigger = getByTestId('floating-ai.button.navigate-chat');
+
+    fireEvent(trigger, 'pressIn');
+    fireEvent(trigger, 'longPress');
+
+    expect(mockTimingCalls[mockTimingCalls.length - 1]).toEqual([0, { duration: 200 }]);
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith('ai-hub-discovered', 'true');
+  });
+
+  it('cancels affordance animations when a pan begins', async () => {
+    const { getByTestId } = render(<FloatingAIButton currentRouteName="Home" />);
+    await waitFor(() => expect(mockPanBegin).toBeDefined());
+    await waitForEntranceSpring();
+    const trigger = getByTestId('floating-ai.button.navigate-chat');
+
+    fireEvent(trigger, 'pressIn');
+
+    act(() => {
+      mockPanBegin?.();
+    });
+    await flushRunOnJSCallbacks();
+
+    expect(mockCancelled.length).toBeGreaterThan(0);
+    // Shared value creation order: positions 0-5, menuProgress 6, entrance 7,
+    // press 8, hold 9, hint 10.
+    expect(mockSharedValues[9]?.value).toBe(0);
+  });
+
+  it('skips the hold ring timing when Reduce Motion is enabled', async () => {
+    jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
+
+    const { getByTestId } = render(<FloatingAIButton currentRouteName="Home" />);
+    await waitFor(() => {
+      expect(AccessibilityInfo.isReduceMotionEnabled).toHaveBeenCalledTimes(1);
+    });
+    const trigger = getByTestId('floating-ai.button.navigate-chat');
+
+    fireEvent(trigger, 'pressIn');
+
+    expect(mockTimingCalls).toEqual([]);
   });
 });

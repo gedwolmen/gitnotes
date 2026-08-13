@@ -109,8 +109,13 @@ jest.mock('react-native-reanimated', () => {
     View,
     useSharedValue: (initial: unknown) => ({ value: initial }),
     useAnimatedStyle: (cb: () => Record<string, unknown>) => cb(),
+    useDerivedValue: (cb: () => unknown) => ({ value: cb() }),
     withSpring: (v: unknown) => v,
     withTiming: (v: unknown) => v,
+    withDelay: (_d: unknown, anim: unknown) => anim,
+    withSequence: (...anims: unknown[]) => anims[anims.length - 1],
+    withRepeat: (anim: unknown) => anim,
+    cancelAnimation: () => {},
     runOnJS: (fn: (...args: unknown[]) => unknown) => fn,
   };
 });

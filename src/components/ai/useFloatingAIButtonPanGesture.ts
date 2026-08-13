@@ -17,6 +17,7 @@ interface FloatingAIButtonPanActions {
   readonly closeMenu: () => void;
   readonly setHorizontalDirection: (direction: MenuDirection) => void;
   readonly setVerticalDirection: (direction: MenuDirection) => void;
+  readonly cancelAffordances: () => void;
 }
 
 export function useFloatingAIButtonPanGesture(
@@ -38,6 +39,7 @@ export function useFloatingAIButtonPanGesture(
     .onBegin(() => {
       dragActive.value = true;
       runOnJS(markPositionInteractionStarted)();
+      runOnJS(actions.cancelAffordances)();
     })
     .onStart(() => {
       runOnJS(actions.closeMenu)();

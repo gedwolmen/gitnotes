@@ -42,6 +42,11 @@ jest.mock('react-native-reanimated', () => {
     useAnimatedStyle: jest.fn((fn: () => any) => fn()),
     useDerivedValue: jest.fn((fn: () => any) => ({ value: fn() })),
     withSpring: jest.fn((val: any) => val),
+    withTiming: jest.fn((val: any) => val),
+    withDelay: jest.fn((_delay: any, animation: any) => animation),
+    withSequence: jest.fn((...animations: any[]) => animations[animations.length - 1]),
+    withRepeat: jest.fn((animation: any) => animation),
+    cancelAnimation: jest.fn(() => {}),
     runOnJS: jest.fn((fn: any) => fn),
   };
 });
@@ -81,6 +86,7 @@ jest.mock('@shopify/react-native-skia', () => {
     Paint: noop,
     Blur: noop,
     ColorMatrix: noop,
+    DashPathEffect: ({ children }: any) => children ?? null,
   };
 });
 
@@ -238,14 +244,24 @@ import { useAIHubStore } from '../src/stores/aiHubStore';
 
 const fsStore = (FileSystem as unknown as { __store: Map<string, string> }).__store;
 
+const POSITION_STORAGE_KEY = 'ai-button-position';
+
 async function renderInitializedFloatingAIButton() {
   const React = require('react');
   const { FloatingAIButton } = require('../src/components/ai/FloatingAIButton');
   const AsyncStorage = require('@react-native-async-storage/async-storage');
   const { AccessibilityInfo } = require('react-native');
   const rendered = render(React.createElement(FloatingAIButton));
-  const restoreResult: unknown = AsyncStorage.getItem.mock.results.at(-1)?.value;
-  const resolveRestore = mockPositionRestoreResolvers.shift();
+  // Key by storage key, not call order: multiple hooks read AsyncStorage on mount
+  // (position restore + hub-discovery flag), so the restore call is not guaranteed last.
+  const restoreCallIndex: number = (
+    AsyncStorage.getItem.mock.calls as readonly unknown[][]
+  ).findIndex((call: readonly unknown[]) => call[0] === POSITION_STORAGE_KEY);
+  if (restoreCallIndex === -1) {
+    throw new RangeError('Expected position restore getItem call');
+  }
+  const restoreResult: unknown = AsyncStorage.getItem.mock.results.at(restoreCallIndex)?.value;
+  const resolveRestore = mockPositionRestoreResolvers[restoreCallIndex];
   if (resolveRestore === undefined) {
     throw new RangeError('Expected position restore resolver');
   }

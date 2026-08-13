@@ -7,6 +7,8 @@ import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 const mockNavigate = jest.fn();
 const mockCreateThread = jest.fn(() => ({ id: 'thread-from-fab' }));
 const mockRunOnJSCallbacks: Array<() => void> = [];
+const mockDashIntervals: unknown[] = [];
+const mockTimingCalls: Array<[unknown, unknown]> = [];
 let mockAIState = {
   isEnabled: true,
   chatRepoOwner: 'owner',
@@ -93,6 +95,10 @@ jest.mock('@shopify/react-native-skia', () => {
     Paint: ({ children }: { children: ReactNode }) => children,
     Blur: MockView,
     ColorMatrix: MockView,
+    DashPathEffect: (props: { intervals?: unknown; children?: ReactNode }) => {
+      mockDashIntervals.push(props.intervals);
+      return props.children ?? null;
+    },
   };
 });
 
@@ -106,6 +112,14 @@ jest.mock('react-native-reanimated', () => {
     useDerivedValue: (callback: () => unknown) => ({ value: callback() }),
     useAnimatedStyle: (callback: () => Record<string, unknown>) => callback(),
     withSpring: (value: unknown) => value,
+    withTiming: (value: unknown, config: unknown) => {
+      mockTimingCalls.push([value, config]);
+      return value;
+    },
+    withDelay: (_delay: unknown, animation: unknown) => animation,
+    withSequence: (...animations: unknown[]) => animations[animations.length - 1],
+    withRepeat: (animation: unknown) => animation,
+    cancelAnimation: () => {},
     runOnJS: (callback: (...args: readonly unknown[]) => unknown) => (
       (...args: readonly unknown[]) => {
         mockRunOnJSCallbacks.push(() => callback(...args));
@@ -153,6 +167,7 @@ jest.mock('react-native-gesture-handler', () => {
 });
 
 import { FloatingAIButton } from '../src/components/ai/FloatingAIButton';
+import { HOLD_RING_CIRCUMFERENCE } from '../src/components/ai/FloatingAIHubMenu';
 import { useAIHubStore } from '../src/stores/aiHubStore';
 
 type HubHelper = 'goNewChat' | 'goChatHistory' | 'goAISettings' | 'goThoughtDump' | 'goVoiceDump';
@@ -186,6 +201,8 @@ describe('FloatingAIButton liquid hub', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     mockRunOnJSCallbacks.length = 0;
+    mockDashIntervals.length = 0;
+    mockTimingCalls.length = 0;
     mockPanCallbacks.begin = undefined;
     mockPanCallbacks.start = undefined;
     mockPanCallbacks.update = undefined;
@@ -319,5 +336,31 @@ describe('FloatingAIButton liquid hub', () => {
 
     await waitFor(() => expect(queryByTestId('floating-ai.hub.new-chat')).toBeNull());
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('draws the hold ring with the full circumference as dash cycle', async () => {
+    jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
+
+    await renderInitializedFloatingAIButton();
+
+    await waitFor(() => {
+      expect(mockDashIntervals.some((entry) => {
+        const intervals = entry as { value: number[] };
+        return (
+          intervals.value[0] === 0
+          && intervals.value[1] === HOLD_RING_CIRCUMFERENCE
+        );
+      })).toBe(true);
+    });
+  });
+
+  it('marks the hub discovered after a long press', async () => {
+    const { getByTestId } = await renderInitializedFloatingAIButton();
+
+    fireEvent(getByTestId('floating-ai.button.navigate-chat'), 'longPress');
+
+    await waitFor(() => {
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith('ai-hub-discovered', 'true');
+    });
   });
 });

@@ -27,6 +27,11 @@ import {
 } from './FloatingAIHubMenu';
 import { useFloatingAIButtonPosition } from './useFloatingAIButtonPosition';
 import { useFloatingAIButtonPanGesture } from './useFloatingAIButtonPanGesture';
+import {
+  FLOATING_AI_BUTTON_LONG_PRESS_MS,
+  PRESS_SCALE_FACTOR,
+  useFloatingAIButtonAffordances,
+} from './useFloatingAIButtonAffordances';
 
 interface FloatingAIButtonProps {
   readonly currentRouteName?: string;
@@ -36,6 +41,7 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
   const { isEnabled } = useAIStore();
   const { colors } = useTheme();
   const [reduceMotionEnabled, setReduceMotionEnabled] = useState(true);
+  const [reduceMotionResolved, setReduceMotionResolved] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [horizontalDirection, setHorizontalDirection] = useState<MenuDirection>(-1);
   const [verticalDirection, setVerticalDirection] = useState<MenuDirection>(-1);
@@ -51,15 +57,38 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
     savePosition,
   } = position;
   const menuProgress = useSharedValue(0);
+  // Creation order is load-bearing: the pan position shared values (indices
+  // 0-5) and menuProgress (6) must precede the affordance values (entrance 7,
+  // press 8, hold 9, hint 10) because component tests assert them by index.
+  const affordances = useFloatingAIButtonAffordances({
+    reduceMotionEnabled,
+    reduceMotionResolved,
+    menuOpen,
+  });
+
+  const triggerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        scale:
+          affordances.entranceProgress.value
+          * (1 - PRESS_SCALE_FACTOR * affordances.pressProgress.value),
+      },
+    ],
+  }));
 
   useEffect(() => {
     let isMounted = true;
     AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
-      if (isMounted) setReduceMotionEnabled(enabled);
+      if (!isMounted) return;
+      setReduceMotionEnabled(enabled);
+      setReduceMotionResolved(true);
     });
     const subscription = AccessibilityInfo.addEventListener(
       'reduceMotionChanged',
-      setReduceMotionEnabled,
+      (enabled) => {
+        setReduceMotionEnabled(enabled);
+        setReduceMotionResolved(true);
+      },
     );
 
     return () => {
@@ -92,6 +121,7 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
   }, [closeMenu, menuOpen, navigation]);
 
   const handleLongPress = useCallback(() => {
+    affordances.handleHoldComplete();
     markPositionInteractionStarted();
     HapticService.selection();
     if (menuOpen) {
@@ -113,8 +143,10 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
     }
     setHorizontalDirection(placement.horizontalDirection);
     setVerticalDirection(placement.verticalDirection);
+    affordances.markHubDiscovered();
     setMenuOpen(true);
   }, [
+    affordances,
     closeMenu,
     geometry,
     markPositionInteractionStarted,
@@ -155,6 +187,7 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
     closeMenu,
     setHorizontalDirection,
     setVerticalDirection,
+    cancelAffordances: affordances.cancelAffordances,
   });
 
   const animatedStyle = useAnimatedStyle(() => {
@@ -187,6 +220,8 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
           horizontalDirection={horizontalDirection}
           verticalDirection={verticalDirection}
           progress={menuProgress}
+          holdProgress={affordances.holdProgress}
+          hintProgress={affordances.hintProgress}
           primaryColor={colors.primary}
           iconColor={colors.surface}
           labelColor={colors.text}
@@ -197,28 +232,40 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
         />
 
         <GestureDetector gesture={panGesture}>
-          <Pressable
-            testID="floating-ai.button.navigate-chat"
-            accessibilityRole="button"
-            accessibilityLabel={menuOpen ? 'Close AI hub' : 'Start a new AI chat'}
-            accessibilityState={{ expanded: menuOpen }}
-            onPress={handleTap}
-            onLongPress={handleLongPress}
-            delayLongPress={450}
-            style={styles.button}
-          >
-            {reduceMotionEnabled ? (
-              <Surface
-                elevation="raised"
-                radius="pill"
-                style={[styles.button, { backgroundColor: colors.primary }]}
-              >
-                <Ionicons name="sparkles" size={24} color="#FFFFFF" />
-              </Surface>
-            ) : (
-              <Ionicons name="sparkles" size={24} color={colors.surface} />
-            )}
-          </Pressable>
+          <Animated.View style={triggerAnimatedStyle}>
+            <Pressable
+              testID="floating-ai.button.navigate-chat"
+              accessibilityRole="button"
+              accessibilityLabel={menuOpen ? 'Close AI hub' : 'Start a new AI chat'}
+              accessibilityHint={
+                menuOpen
+                  ? 'Tap to close the AI hub.'
+                  : 'Tap to start a new AI chat. Press and hold to open the AI hub with more options.'
+              }
+              accessibilityState={{ expanded: menuOpen }}
+              onPress={handleTap}
+              onLongPress={handleLongPress}
+              onPressIn={affordances.handlePressIn}
+              onPressOut={affordances.handlePressOut}
+              delayLongPress={FLOATING_AI_BUTTON_LONG_PRESS_MS}
+              style={({ pressed }) => [
+                styles.button,
+                reduceMotionEnabled && pressed ? { opacity: 0.8 } : null,
+              ]}
+            >
+              {reduceMotionEnabled ? (
+                <Surface
+                  elevation="raised"
+                  radius="pill"
+                  style={[styles.button, { backgroundColor: colors.primary }]}
+                >
+                  <Ionicons name="sparkles" size={24} color="#FFFFFF" />
+                </Surface>
+              ) : (
+                <Ionicons name="sparkles" size={24} color={colors.surface} />
+              )}
+            </Pressable>
+          </Animated.View>
         </GestureDetector>
       </Animated.View>
     </>
