@@ -18,7 +18,7 @@ import { useRepos } from '../contexts/RepoContext';
 import { RootStackParamList } from '../navigation/types';
 import { Canvas } from '../models/Canvas';
 import SearchBar from '../components/SearchBar';
-import { ScreenHeader, IconButton, useScreenHeaderHeight } from '../components/ui';
+import { ScreenHeader, IconButton, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { EntityFilterModal } from '../components/EntityFilterModal';
 import { ActiveFilterStrip } from '../components/ActiveFilterStrip';
@@ -42,6 +42,7 @@ export default function CanvasListScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
   const headerHeight = useScreenHeaderHeight();
+  const tabBarHeight = useTabBarHeight();
   const { canvases, filteredCanvases, searchQuery, setSearchQuery, deleteCanvas, refreshCanvases } = useCanvases();
   const { repositories } = useRepos();
   const filter = useEntityFilter<Canvas>(canvases);
@@ -191,7 +192,7 @@ export default function CanvasListScreen() {
         renderItem={renderCanvas}
         numColumns={columnCount}
         key={`canvases-${columnCount}`}
-        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: tabBarHeight + 24 }}
         columnWrapperStyle={columnCount > 1 ? { gap: 8 } : undefined}
         ListEmptyComponent={
           <View className="items-center justify-center pt-15 px-6">
