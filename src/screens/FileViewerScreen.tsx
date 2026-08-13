@@ -17,6 +17,7 @@ import { GitHubService } from '../services/GitHubService';
 import { NeorgContentParser } from '../services/NeorgContentParser';
 import { OrgContentParser } from '../services/OrgContentParser';
 import StructuredRenderer from '../components/StructuredRenderer';
+import CanvasPreview from '../components/CanvasPreview';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { JsonRenderer } from '../components/JsonRenderer';
 import { HapticService } from '../utils/haptics';
@@ -166,6 +167,7 @@ export default function FileViewerScreen() {
               blocks={parsedNeorg}
               format={mode === 'org' ? 'org' : 'neorg'}
               currentNotePath={path}
+              CanvasPreview={CanvasPreview}
               onOpenNote={(targetPath: string, _fragment?: string) => {
                 const targetTitle = targetPath.split('/').pop() ?? targetPath;
                 navigation.navigate('FileViewer', {

@@ -13,6 +13,7 @@ import { BlurView } from 'expo-blur';
 import { useTheme } from '../../contexts/ThemeContext';
 import { NoteFormat } from '../../models/Note';
 import StructuredRenderer from '../StructuredRenderer';
+import CanvasPreview from '../CanvasPreview';
 import PdfViewer from '../PdfViewer';
 import { MarkdownBody } from './MarkdownBody';
 
@@ -129,6 +130,7 @@ export function NotePreviewPane({
               currentNotePath={currentNotePath}
               headingPositions={headingPositions}
               scrollRef={previewScrollRef}
+              CanvasPreview={CanvasPreview}
             />
           ) : (
             <Text style={[styles.structuredFallback, { color: colors.text }]}>{previewContent}</Text>

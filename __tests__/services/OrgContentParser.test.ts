@@ -352,3 +352,37 @@ Some paragraph text.
     });
   });
 });
+
+describe('OrgContentParser - Image Block Detection', () => {
+  test('parses [[file:path.png]][caption] as image block', () => {
+    const result = OrgContentParser.parseContent('[[file:photos/cat.png]][A cute cat]');
+    expect(result.success).toBe(true);
+    const img = result.blocks!.find(b => b.type === 'image');
+    expect(img).toBeTruthy();
+    expect(img!.image!.path).toBe('photos/cat.png');
+    expect(img!.image!.caption).toBe('A cute cat');
+  });
+
+  test('parses [[file:path.svg]] without caption as image block', () => {
+    const result = OrgContentParser.parseContent('[[file:logo.svg]]');
+    expect(result.success).toBe(true);
+    const img = result.blocks!.find(b => b.type === 'image');
+    expect(img).toBeTruthy();
+    expect(img!.image!.path).toBe('logo.svg');
+    expect(img!.image!.caption).toBeUndefined();
+  });
+
+  test('does NOT treat non-image file link as image', () => {
+    const result = OrgContentParser.parseContent('[[file:notes.org]]');
+    expect(result.success).toBe(true);
+    const img = result.blocks!.find(b => b.type === 'image');
+    expect(img).toBeUndefined();
+  });
+
+  test('does NOT treat mixed text with image link as image block', () => {
+    const result = OrgContentParser.parseContent('text [[file:img.png]] more text');
+    expect(result.success).toBe(true);
+    const img = result.blocks!.find(b => b.type === 'image');
+    expect(img).toBeUndefined();
+  });
+});

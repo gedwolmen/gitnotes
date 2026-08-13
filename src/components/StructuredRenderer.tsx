@@ -1,11 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Alert, Linking, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { NeorgContentBlock, NeorgHeading, NeorgListItem, NeorgChecklistItem, NeorgDefinitionItem } from '../models/NeorgContent';
 import { useTheme } from '../contexts/ThemeContext';
 import { useRenderStyle } from '../stores/renderStyleStore';
 import type { RenderFormat } from '../types/RenderStyle';
 import { classifyHref } from '../utils/linkClassifier';
+import { isCanvasLink, canvasIdFromLink } from '../models/Canvas';
+import { ErrorBoundary } from './ui/ErrorBoundary';
 import CodeBlock from './CodeBlock';
 import KatexView from './KatexView';
 import { OrgInlineParser } from '../services/OrgInlineParser';
@@ -17,6 +20,7 @@ interface StructuredRendererProps {
   currentNotePath?: string;
   headingPositions?: { current: Map<string, number> };
   scrollRef?: React.RefObject<ScrollView | null>;
+  CanvasPreview?: React.ComponentType<{ canvasId: string }>;
 }
 
 type InlineSegment =
@@ -291,7 +295,7 @@ function DetailsBlock({ summary, content, colors }: { summary?: string; content:
   );
 }
 
-export default function StructuredRenderer({ blocks, format = 'neorg', onOpenNote, currentNotePath, headingPositions, scrollRef }: StructuredRendererProps) {
+export default function StructuredRenderer({ blocks, format = 'neorg', onOpenNote, currentNotePath, headingPositions, scrollRef, CanvasPreview }: StructuredRendererProps) {
   const { colors, isDark } = useTheme();
   const overrides = useRenderStyle(format);
 
@@ -334,6 +338,12 @@ export default function StructuredRenderer({ blocks, format = 'neorg', onOpenNot
   };
 
   const handleLinkPress = (target: string) => {
+    if (isCanvasLink(target) && CanvasPreview) {
+      const id = canvasIdFromLink(target);
+      Alert.alert('Canvas', `Canvas: ${id}`);
+      return;
+    }
+
     const classified = classifyHref(target, currentNotePath);
     if (!classified) {
       Alert.alert("Can't open link", target);
@@ -426,7 +436,15 @@ export default function StructuredRenderer({ blocks, format = 'neorg', onOpenNot
               return <Text key={k} selectable style={styles.superscript}>{renderInline(seg.content)}</Text>;
             case 'subscript':
               return <Text key={k} selectable style={styles.subscript}>{renderInline(seg.content)}</Text>;
-            case 'link':
+            case 'link': {
+              if (isCanvasLink(seg.target) && CanvasPreview) {
+                const id = canvasIdFromLink(seg.target);
+                return (
+                  <ErrorBoundary key={k} fallback={<Text selectable style={{ color: colors.textSecondary }}>Canvas preview unavailable</Text>}>
+                    <CanvasPreview key={`canvas-${id}`} canvasId={id} />
+                  </ErrorBoundary>
+                );
+              }
               return (
                 <Text
                   key={k}
@@ -437,6 +455,7 @@ export default function StructuredRenderer({ blocks, format = 'neorg', onOpenNot
                   {seg.label}
                 </Text>
               );
+            }
             case 'tag':
               return (
                 <Text key={k} selectable style={[styles.tagBadge, { backgroundColor: colors.primary + '20', color: colors.primary }]}> 
@@ -698,12 +717,13 @@ export default function StructuredRenderer({ blocks, format = 'neorg', onOpenNot
         ) : null;
       case 'image':
         return block.image ? (
-          <View key={`img-${index}`} style={{ padding: 8, borderRadius: 4, marginVertical: 4, backgroundColor: colors.surfaceSecondary, alignItems: 'center' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Ionicons name="camera" size={14} color={colors.text} style={{ marginRight: 6 }} />
-              <Text selectable style={{ fontSize: 14, color: colors.text }}>{block.image.path}</Text>
-            </View>
-            {block.image.caption ? <Text selectable style={{ fontSize: 12, color: colors.textSecondary, marginTop: 4 }}>{block.image.caption}</Text> : null}
+          <View key={`img-${index}`} style={{ marginVertical: 8 }}>
+            <Image
+              source={{ uri: block.image.path }}
+              contentFit="contain"
+              style={{ width: '100%', height: 240, borderRadius: 6, backgroundColor: colors.surfaceSecondary ?? '#f0f0f0' }}
+            />
+            {block.image.caption ? <Text selectable style={{ fontSize: 12, color: colors.textSecondary, marginTop: 4, textAlign: 'center' }}>{block.image.caption}</Text> : null}
           </View>
         ) : null;
       case 'math':

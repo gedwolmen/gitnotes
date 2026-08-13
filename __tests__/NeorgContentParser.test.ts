@@ -592,3 +592,51 @@ A footnote`;
     });
   });
 });
+describe('NeorgContentParser - Image Block Detection', () => {
+  test('parses {path}[caption] as image block', () => {
+    const result = NeorgContentParser.parseContent('{img.png}[cap]');
+    expect(result.success).toBe(true);
+    const img = result.blocks!.find(b => b.type === 'image');
+    expect(img).toBeTruthy();
+    expect(img!.image!.path).toBe('img.png');
+    expect(img!.image!.caption).toBe('cap');
+  });
+
+  test('parses {path} without caption as image block', () => {
+    const result = NeorgContentParser.parseContent('{photo.jpg}');
+    expect(result.success).toBe(true);
+    const img = result.blocks!.find(b => b.type === 'image');
+    expect(img).toBeTruthy();
+    expect(img!.image!.path).toBe('photo.jpg');
+    expect(img!.image!.caption).toBeUndefined();
+  });
+
+  test('does NOT treat {canvas:id}[title] as image', () => {
+    const result = NeorgContentParser.parseContent('{canvas:abc-123}[title]');
+    expect(result.success).toBe(true);
+    const img = result.blocks!.find(b => b.type === 'image');
+    expect(img).toBeUndefined();
+  });
+
+  test('does NOT treat non-image extension as image', () => {
+    const result = NeorgContentParser.parseContent('{note.md}[link]');
+    expect(result.success).toBe(true);
+    const img = result.blocks!.find(b => b.type === 'image');
+    expect(img).toBeUndefined();
+  });
+
+  test('does NOT treat mixed text with image ref as image block', () => {
+    const result = NeorgContentParser.parseContent('text {img.png} more text');
+    expect(result.success).toBe(true);
+    const img = result.blocks!.find(b => b.type === 'image');
+    expect(img).toBeUndefined();
+  });
+
+  test('parses webp extension as image', () => {
+    const result = NeorgContentParser.parseContent('{photos/cat.webp}');
+    expect(result.success).toBe(true);
+    const img = result.blocks!.find(b => b.type === 'image');
+    expect(img).toBeTruthy();
+    expect(img!.image!.path).toBe('photos/cat.webp');
+  });
+});
