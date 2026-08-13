@@ -16,6 +16,8 @@ import { ScreenHeader, Button, Input, EmptyState, Modal } from '../components/ui
 import { useScreenHeaderHeight } from '../components/ui';
 import VoiceInputModal from '../components/VoiceInputModal';
 import { indexDump, removeDump } from '../services/ai/thoughtDumpIndexing';
+import { SwipeableListItem } from '../components/list/SwipeableListItem';
+import { BulkActionBar } from '../components/list/BulkActionBar';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -36,9 +38,23 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ThoughtDump | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [repoPath, setRepoPath] = useState('');
   const [branch, setBranch] = useState<string | undefined>();
   const [showVoiceModal, setShowVoiceModal] = useState(false);
+
+  const selectionMode = selectedIds.size > 0;
+
+  const toggleSelected = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 
   const loadDumps = useCallback(async () => {
     setIsLoading(true);
@@ -118,6 +134,47 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
     }
   };
 
+  const handleBulkDelete = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    Alert.alert(
+      t('thoughtDump.confirmDelete'),
+      `Delete ${selectedIds.size} ${selectedIds.size === 1 ? 'thought dump' : 'thought dumps'}?`,
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.delete'),
+          style: 'destructive',
+          onPress: async () => {
+            const toDelete = dumps.filter((d) => selectedIds.has(d.id));
+            let anyFailed = false;
+            for (const dump of toDelete) {
+              try {
+                const ok = await ThoughtDumpService.delete(dump.id, {
+                  repoPath,
+                  branch,
+                  filePath: dump.filePath,
+                });
+                if (ok) {
+                  setDumps((prev) => prev.filter((d) => d.id !== dump.id));
+                  removeDump(dump.filePath);
+                  onDumpChange?.(dump);
+                } else {
+                  anyFailed = true;
+                }
+              } catch {
+                anyFailed = true;
+              }
+            }
+            clearSelection();
+            if (anyFailed) {
+              Alert.alert(t('common.error'), t('thoughtDump.error'));
+            }
+          },
+        },
+      ],
+    );
+  }, [selectedIds, dumps, repoPath, branch, clearSelection, onDumpChange, removeDump, t]);
+
   const formatRelativeDate = (isoDate: string): string => {
     const now = Date.now();
     const then = new Date(isoDate).getTime();
@@ -134,24 +191,31 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
 
   const renderItem = useCallback(
     ({ item }: { item: ThoughtDump }) => (
-      <View style={[styles.dumpItem, { padding: spacing[3], marginBottom: spacing[2], backgroundColor: colors.surface }]}>
-        <Text style={[styles.dumpText, { color: colors.text }]} numberOfLines={6}>
-          {item.text}
-        </Text>
-        <View style={[styles.dumpFooter, { marginTop: spacing[2] }]}>
-          <Text style={[styles.dumpDate, { color: colors.textSecondary }]}>
-            {formatRelativeDate(item.createdAt)}
+      <SwipeableListItem
+        itemId={item.id}
+        selected={selectedIds.has(item.id)}
+        selectionMode={selectionMode}
+        onToggleSelect={() => toggleSelected(item.id)}
+      >
+        <View style={[styles.dumpItem, { padding: spacing[3], marginBottom: spacing[2], backgroundColor: colors.surface }]}>
+          <Text style={[styles.dumpText, { color: colors.text }]} numberOfLines={6}>
+            {item.text}
           </Text>
-          <Button
-            testID={`thought-dump-delete-${item.id}`}
-            label={t('thoughtDump.delete')}
-            variant="ghost"
-            onPress={() => setDeleteTarget(item)}
-          />
+          <View style={[styles.dumpFooter, { marginTop: spacing[2] }]}>
+            <Text style={[styles.dumpDate, { color: colors.textSecondary }]}>
+              {formatRelativeDate(item.createdAt)}
+            </Text>
+            <Button
+              testID={`thought-dump-delete-${item.id}`}
+              label={t('thoughtDump.delete')}
+              variant="ghost"
+              onPress={() => setDeleteTarget(item)}
+            />
+          </View>
         </View>
-      </View>
+      </SwipeableListItem>
     ),
-    [colors, spacing, t],
+    [colors, spacing, t, selectedIds, selectionMode, toggleSelected],
   );
 
   const renderEmpty = () => {
@@ -210,8 +274,16 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
           data={dumps}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ padding: spacing[3], paddingBottom: spacing[6] }}
+          contentContainerStyle={{ padding: spacing[3], paddingBottom: spacing[6] + (selectionMode ? 72 : 0) }}
           ListEmptyComponent={renderEmpty}
+        />
+
+        <BulkActionBar
+          count={selectedIds.size}
+          onCancel={clearSelection}
+          onDelete={handleBulkDelete}
+          bottomOffset={spacing[4]}
+          itemNoun="thought dump"
         />
       </View>
 
