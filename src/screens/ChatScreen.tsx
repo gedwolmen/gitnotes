@@ -4,6 +4,7 @@ import { useNavigation, useRoute, type RouteProp } from '@react-navigation/nativ
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { ChatMessageBubble } from '../components/ai/ChatMessageBubble';
+import { ChatHintChips } from '../components/ai/ChatHintChips';
 import { ChatInputBar } from '../components/ai/ChatInputBar';
 import { ChatLoadingStrip } from '../components/ai/ChatLoadingStrip';
 import ContextPickerModal from '../components/ai/ContextPickerModal';
@@ -60,6 +61,13 @@ export default function ChatScreen() {
 
   const [voiceModalVisible, setVoiceModalVisible] = useState(false);
   const [chatText, setChatText] = useState('');
+
+  const handleHintPress = useCallback(
+    (text: string) => {
+      setChatText(text);
+    },
+    [],
+  );
 
   const handleVoiceDone = useCallback((text: string) => {
     setVoiceModalVisible(false);
@@ -139,6 +147,7 @@ export default function ChatScreen() {
                 <Text className="text-md text-center text-text-secondary">
                   {t('chat.emptyStateBody')}
                 </Text>
+                <ChatHintChips onPressHint={handleHintPress} />
               </View>
             }
           />
