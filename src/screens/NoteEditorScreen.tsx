@@ -16,7 +16,7 @@ import { useRepos } from '../contexts/RepoContext';
 import { useResponsive } from '../hooks/useResponsive';
 import { getMarkdownStyles } from '../utils/preview';
 import { useRenderStyle } from '../stores/renderStyleStore';
-import { GitHubActivityIndicator } from '../components/GitHubActivityIndicator';
+import { SavingOverlay } from '../components/ui/SavingOverlay';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { CanvasPickerModal } from '../components/editor/CanvasPickerModal';
 import { EditorHeader } from '../components/editor/EditorHeader';
@@ -184,7 +184,7 @@ function NoteEditorScreenInner() {
 
   return (
     <SafeAreaView edges={['top', 'bottom']} className="flex-1" style={{ backgroundColor: colors.surface }}> 
-      {document.isSaving ? <GitHubActivityIndicator /> : null}
+      {document.isSaving ? <SavingOverlay visible label={t('editor.saving')} /> : null}
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
         <EditorHeader noteId={noteId} isSaving={document.isSaving} onCancel={document.handleCancelEdit} onSave={document.handleSave} />
 

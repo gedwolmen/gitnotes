@@ -5,7 +5,6 @@ import {
   TextInput,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   Alert,
   Pressable,
 } from 'react-native';
@@ -18,6 +17,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useRenderStyleStore } from '../stores/renderStyleStore';
 import StructuredRenderer from '../components/StructuredRenderer';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
+import { SavingOverlay } from '../components/ui/SavingOverlay';
 import HexColorPickerModal from '../components/HexColorPickerModal';
 import { NeorgContentParser } from '../services/NeorgContentParser';
 import { OrgContentParser } from '../services/OrgContentParser';
@@ -181,11 +181,12 @@ export default function RenderStyleEditorScreen() {
         </TouchableOpacity>
         <Text className="text-[17px] font-semibold" style={{ color: colors.text }}>{formatLabel(format)}</Text>
         <TouchableOpacity onPress={handleSave} disabled={isSaving || !dirty}>
-          {isSaving ? (
-            <ActivityIndicator color={colors.primary} />
-          ) : (
-            <Text className="text-[15px] font-semibold" style={{ color: dirty ? colors.primary : colors.textSecondary }}>Save</Text>
-          )}
+          <Text
+            className="text-[15px] font-semibold"
+            style={{ color: dirty ? colors.primary : colors.textSecondary, opacity: isSaving ? 0.5 : 1 }}
+          >
+            Save
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -408,6 +409,8 @@ export default function RenderStyleEditorScreen() {
           Save pushes settings/render.json to {binding ? `${binding.owner}/${binding.name}` : 'the bound repo'}. Other devices pick it up on next launch.
         </Text>
       </ScrollView>
+
+      {isSaving ? <SavingOverlay visible label="Saving…" /> : null}
     </SafeAreaView>
   );
 }
