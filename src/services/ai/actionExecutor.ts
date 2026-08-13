@@ -3,6 +3,7 @@ import { TodoCreateInput, TodoPriority, TodoUpdateInput } from '../../models/Tod
 import { useNoteStore } from '../../stores/noteStore';
 import { useTodoStore } from '../../stores/todoStore';
 import { useAIStore } from '../../stores/aiStore';
+import { GitHubService } from '../GitHubService';
 import { NoteSyncQueueService } from '../NoteSyncQueueService';
 
 export interface ProposedChange {
@@ -25,9 +26,27 @@ type ActionMode = 'auto' | 'confirm';
 const NOTE_FORMATS: NoteFormat[] = ['markdown', 'neorg', 'org', 'pdf'];
 const TODO_PRIORITIES: TodoPriority[] = ['low', 'medium', 'high'];
 
+const GITHUB_TOOL_NAMES = new Set<string>([
+  'list_repos',
+  'list_issues',
+  'create_issue',
+  'list_pull_requests',
+  'create_pull_request',
+  'get_pull_request_diff',
+  'review_pull_request',
+]);
+
 function getStringArg(args: Record<string, unknown>, key: string): string {
   const value = args[key];
   if (typeof value !== 'string') {
+    throw new Error(`Missing or invalid '${key}'`);
+  }
+  return value;
+}
+
+function getNumberArg(args: Record<string, unknown>, key: string): number {
+  const value = args[key];
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
     throw new Error(`Missing or invalid '${key}'`);
   }
   return value;
@@ -140,6 +159,16 @@ export async function executeToolCall(
   mode: ActionMode,
 ): Promise<ActionExecutorResult> {
   try {
+    // GitHub tools gate — checked here as defence-in-depth
+    // (the chat controller also gates registration)
+    if (GITHUB_TOOL_NAMES.has(toolName) && !useAIStore.getState().githubToolsEnabled) {
+      return {
+        success: false,
+        requiresConfirmation: false,
+        error: 'GitHub tools are disabled. Enable them in Settings → AI → GitHub Tools.',
+      };
+    }
+
     switch (toolName) {
       case 'create_note': {
         const aiState = useAIStore.getState();
@@ -384,6 +413,142 @@ export async function executeToolCall(
         });
 
         return buildSuccessResult(todos);
+      }
+
+      case 'list_repos': {
+        const repos = await GitHubService.getRepositories();
+        return buildSuccessResult(
+          repos.map((r) => ({
+            id: r.id,
+            name: r.full_name,
+            private: r.private,
+            description: r.description,
+            url: r.html_url,
+          })),
+        );
+      }
+
+      case 'list_issues': {
+        const owner = getStringArg(args, 'owner');
+        const repo = getStringArg(args, 'repo');
+        const issues = await GitHubService.getIssues(owner, repo);
+        return buildSuccessResult(
+          issues.map((i) => ({
+            number: i.number,
+            title: i.title,
+            state: i.state,
+            html_url: i.html_url,
+            created_at: i.created_at,
+          })),
+        );
+      }
+
+      case 'create_issue': {
+        const owner = getStringArg(args, 'owner');
+        const repo = getStringArg(args, 'repo');
+        const title = getStringArg(args, 'title');
+        const body = getOptionalStringArg(args, 'body');
+        const labels = getOptionalStringArrayArg(args, 'labels');
+        const assignees = getOptionalStringArrayArg(args, 'assignees');
+
+        if (mode === 'confirm') {
+          return buildConfirmationResult({
+            type: 'create_issue',
+            description: `Create issue "${title}" in ${owner}/${repo}`,
+            details: toDetails({ owner, repo, title, body, labels, assignees }),
+          });
+        }
+
+        const created = await GitHubService.createIssue({ owner, repo, title, body, labels, assignees });
+        if (!created) {
+          return {
+            success: false,
+            requiresConfirmation: false,
+            error: 'Failed to create issue. Check token permissions for Issues: Read and write.',
+          };
+        }
+        return buildSuccessResult({ number: created.number, title: created.title, html_url: created.html_url });
+      }
+
+      case 'list_pull_requests': {
+        const owner = getStringArg(args, 'owner');
+        const repo = getStringArg(args, 'repo');
+        const prs = await GitHubService.getPullRequests(owner, repo);
+        return buildSuccessResult(
+          prs.map((p) => ({
+            number: p.number,
+            title: p.title,
+            state: p.state,
+            html_url: p.html_url,
+            draft: p.draft,
+          })),
+        );
+      }
+
+      case 'create_pull_request': {
+        const owner = getStringArg(args, 'owner');
+        const repo = getStringArg(args, 'repo');
+        const title = getStringArg(args, 'title');
+        const body = getOptionalStringArg(args, 'body');
+        const head = getStringArg(args, 'head');
+        const base = getStringArg(args, 'base');
+
+        if (mode === 'confirm') {
+          return buildConfirmationResult({
+            type: 'create_pull_request',
+            description: `Create PR "${title}" (${head} → ${base}) in ${owner}/${repo}`,
+            details: toDetails({ owner, repo, title, body, head, base }),
+          });
+        }
+
+        const pr = await GitHubService.createPullRequest({ owner, repo, title, body: body ?? '', head, base });
+        if (!pr) {
+          return { success: false, requiresConfirmation: false, error: 'Failed to create pull request.' };
+        }
+        return buildSuccessResult({ number: pr.number, title: pr.title, html_url: pr.html_url, draft: pr.draft });
+      }
+
+      case 'get_pull_request_diff': {
+        const owner = getStringArg(args, 'owner');
+        const repo = getStringArg(args, 'repo');
+        const pull_number = getNumberArg(args, 'pull_number');
+        const diff = await GitHubService.getPullRequestDiff(owner, repo, pull_number);
+        if (!diff) {
+          return { success: false, requiresConfirmation: false, error: 'Could not fetch PR diff.' };
+        }
+        return buildSuccessResult({
+          files: diff.files.map((f) => ({
+            filename: f.filename,
+            status: f.status,
+            additions: f.additions,
+            deletions: f.deletions,
+          })),
+        });
+      }
+
+      case 'review_pull_request': {
+        const owner = getStringArg(args, 'owner');
+        const repo = getStringArg(args, 'repo');
+        const pull_number = getNumberArg(args, 'pull_number');
+        const body = getStringArg(args, 'body');
+        const event = getStringArg(args, 'event') as 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT';
+        if (!['APPROVE', 'REQUEST_CHANGES', 'COMMENT'].includes(event)) {
+          throw new Error("Invalid 'event' — must be APPROVE, REQUEST_CHANGES, or COMMENT");
+        }
+
+        if (mode === 'confirm') {
+          return buildConfirmationResult({
+            type: 'review_pull_request',
+            description: `Post ${event} review on PR #${pull_number} in ${owner}/${repo}`,
+            details: toDetails({ owner, repo, pull_number, body, event }),
+          });
+        }
+
+        const review = await GitHubService.reviewPullRequest({ owner, repo, pull_number, body, event });
+        if (!review) {
+          return { success: false, requiresConfirmation: false, error: 'Failed to post review.' };
+        }
+        return buildSuccessResult({ id: review.id, state: review.state, html_url: review.html_url });
       }
 
       default:
