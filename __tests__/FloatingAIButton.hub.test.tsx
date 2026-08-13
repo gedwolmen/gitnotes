@@ -353,4 +353,14 @@ describe('FloatingAIButton liquid hub', () => {
       })).toBe(true);
     });
   });
+
+  it('marks the hub discovered after a long press', async () => {
+    const { getByTestId } = await renderInitializedFloatingAIButton();
+
+    fireEvent(getByTestId('floating-ai.button.navigate-chat'), 'longPress');
+
+    await waitFor(() => {
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith('ai-hub-discovered', 'true');
+    });
+  });
 });
