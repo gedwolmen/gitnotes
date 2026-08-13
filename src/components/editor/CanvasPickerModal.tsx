@@ -67,7 +67,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -75,7 +74,7 @@ const styles = StyleSheet.create({
   },
   closeBtn: { paddingHorizontal: 8, paddingVertical: 4 },
   closeText: { fontSize: 16 },
-  title: { fontSize: 17, fontWeight: '600' },
+  title: { flex: 1, fontSize: 17, fontWeight: '600', textAlign: 'center' },
   item: {
     flexDirection: 'row',
     alignItems: 'center',

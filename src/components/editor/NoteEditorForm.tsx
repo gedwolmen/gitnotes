@@ -74,6 +74,7 @@ export function NoteEditorForm({
           repo={repo}
           branch={branch}
           commit={commit}
+          entityType="note"
           onRepoChange={onRepoChange}
           onBranchChange={onBranchChange}
           onCommitChange={onCommitChange}

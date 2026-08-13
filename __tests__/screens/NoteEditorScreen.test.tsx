@@ -252,7 +252,6 @@ jest.mock('../../src/components/editor/useNoteEditorPreview', () => ({
 }));
 
 jest.mock('../../src/components/VoiceInputModal', () => () => null);
-jest.mock('../../src/components/CanvasModal', () => () => null);
 jest.mock('../../src/components/FolderSelectionDialog', () => () => null);
 jest.mock('../../src/components/GitHubActivityIndicator', () => () => null);
 

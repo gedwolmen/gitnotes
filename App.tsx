@@ -44,6 +44,7 @@ import { startScheduledLearningBackgroundTask } from './src/services/ScheduledLe
 import { loadForegroundSyncConfig } from './src/hooks/useForegroundSyncSettings';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { reconcileThoughtDumps } from './src/services/ai/thoughtDumpIndexing';
+import { LastSelectionPreferenceService } from './src/services/LastSelectionPreferenceService';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -97,6 +98,7 @@ export default function App() {
     }
     void startScheduledLearningBackgroundTask();
     void reconcileThoughtDumps().catch(() => {});
+    void LastSelectionPreferenceService.migrateFromLegacy();
   }, []);
 
   useEffect(() => {

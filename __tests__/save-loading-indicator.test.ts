@@ -184,7 +184,6 @@ jest.mock('../src/components/StructuredRenderer', () => () => null);
 jest.mock('../src/components/PdfViewer', () => () => null);
 jest.mock('../src/components/TagInput', () => () => null);
 jest.mock('../src/components/VoiceInputModal', () => () => null);
-jest.mock('../src/components/CanvasModal', () => ({ __esModule: true, default: () => null }));
 jest.mock('../src/components/CanvasPreview', () => () => null);
 jest.mock('../src/components/FolderSelectionDialog', () => () => null);
 jest.mock('../src/components/ContextMenu', () => () => null);

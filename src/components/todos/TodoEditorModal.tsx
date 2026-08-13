@@ -302,6 +302,7 @@ export function TodoEditorModal({
               repo={todoRepo}
               branch={todoBranch}
               commit={undefined}
+              entityType="todo"
               onRepoChange={onRepoChange}
               onBranchChange={onBranchChange}
               onCommitChange={() => {}}
