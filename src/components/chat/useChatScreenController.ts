@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import type { AIContextItem, AIModelConfig, AIProviderConfig } from '../../models/AIProvider';
 import type { ChatMessage } from '../../models/Chat';
 import * as AIService from '../../services/AIService';
+import { AuthService } from '../../services/AuthService';
 import * as ChatStorageService from '../../services/ChatStorageService';
 import { executeToolCall } from '../../services/ai/actionExecutor';
-import { chatTools } from '../../services/ai/tools';
+import { chatTools, githubTools } from '../../services/ai/tools';
 import { buildSystemPrompt } from '../../services/ai/systemPrompt';
 import { checkContextBudget, getModelContextLimit } from '../../services/ai/modelLimits';
 import { buildContextString } from '../../services/ContextService';
@@ -38,16 +39,18 @@ type ToolListItem = {
   completed?: boolean;
 };
 
-const KNOWN_TOOL_NAMES = new Set(Object.keys(chatTools));
+function buildChatToolsMap(enabled: boolean = useAIStore.getState().githubToolsEnabled) {
+  return enabled ? { ...chatTools, ...githubTools } : chatTools;
+}
 
-function sanitizeToolName(raw: string | undefined): string | null {
+function sanitizeToolName(raw: string | undefined, knownToolNames: ReadonlySet<string>): string | null {
   const trimmed = raw?.trim();
   if (!trimmed) return null;
-  if (KNOWN_TOOL_NAMES.has(trimmed)) return trimmed;
+  if (knownToolNames.has(trimmed)) return trimmed;
   const colonIdx = trimmed.indexOf(':');
   if (colonIdx > 0) {
     const prefix = trimmed.slice(0, colonIdx).trim();
-    if (KNOWN_TOOL_NAMES.has(prefix)) return prefix;
+    if (knownToolNames.has(prefix)) return prefix;
   }
   return null;
 }
@@ -197,6 +200,11 @@ function mergeAssistantWithToolFallback(
 export function useChatScreenController(threadId: string) {
   const noteCount = useNoteStore((state) => state.notes.length);
   const todoCount = useTodoStore((state) => state.todos.length);
+  const githubToolsEnabled = useAIStore((state) => state.githubToolsEnabled);
+  const knownToolNames = useMemo(
+    () => new Set(Object.keys(buildChatToolsMap(githubToolsEnabled))),
+    [githubToolsEnabled],
+  );
   const activeThread = useChatStore((state) => state.activeThread);
   const isLoading = useChatStore((state) => state.isLoading);
   const storeError = useChatStore((state) => state.error);
@@ -327,6 +335,9 @@ export function useChatScreenController(threadId: string) {
 
     try {
       const aiState = useAIStore.getState();
+      const githubAccountLogin = githubToolsEnabled
+        ? (await AuthService.checkAuthState()).user?.login
+        : undefined;
       const { model, provider } = getSelectedModelConfig();
       const runtimeThread = useChatStore.getState().activeThread;
       if (!runtimeThread) throw new Error('Chat thread is not available.');
@@ -334,15 +345,15 @@ export function useChatScreenController(threadId: string) {
       const aggregatedContexts = dedupeContexts([...runtimeThread.messages.flatMap((message) => message.attachedContexts ?? []), ...contexts]);
       const contextString = aggregatedContexts.length ? await buildContextString(aggregatedContexts) : undefined;
       const history = runtimeThread.messages.filter((message) => message.id !== assistantMessageId).map(formatHistoryMessage);
-      const basePrompt = buildSystemPrompt({ attachedContexts: contextString, noteCount, todoCount, actionMode: aiState.actionMode });
+      const basePrompt = buildSystemPrompt({ attachedContexts: contextString, noteCount, todoCount, actionMode: aiState.actionMode, githubToolsEnabled, githubAccountLogin });
       const memoryBlock = await buildMemoryBlockForQuery(trimmedText, model, basePrompt.length);
       const prompt = memoryBlock
-        ? buildSystemPrompt({ attachedContexts: contextString, noteCount, todoCount, actionMode: aiState.actionMode, memoryBlock })
+        ? buildSystemPrompt({ attachedContexts: contextString, noteCount, todoCount, actionMode: aiState.actionMode, memoryBlock, githubToolsEnabled, githubAccountLogin })
         : basePrompt;
       const modelInstance = await AIService.initializeModel(model, provider as AIProviderConfig | undefined);
       const requestMessages: Parameters<typeof AIService.streamChatResponse>[1] = [{ role: 'system', content: prompt }, ...history];
 
-      for await (const chunk of AIService.streamChatResponse(modelInstance, requestMessages, chatTools, abortController.signal)) {
+      for await (const chunk of AIService.streamChatResponse(modelInstance, requestMessages, buildChatToolsMap(), abortController.signal)) {
         if (abortController.signal.aborted) break;
         const toolEvent = parseToolEvent(chunk);
         if (!toolEvent) {
@@ -359,7 +370,7 @@ export function useChatScreenController(threadId: string) {
           // model finishes streaming the args and the tool actually runs.
           toolArgsBufferRef.current[toolCallId] = existingArgs;
           if (!toolMessageIdsRef.current[toolCallId]) {
-            const streamingToolName = sanitizeToolName(toolEvent.toolName);
+            const streamingToolName = sanitizeToolName(toolEvent.toolName, knownToolNames);
             if (!streamingToolName) continue;
             const streamingMessageId = generateId();
             toolMessageIdsRef.current[toolCallId] = streamingMessageId;
@@ -389,7 +400,7 @@ export function useChatScreenController(threadId: string) {
           const streamedResultText = formatToolResult(toolEvent.result);
           const existingToolMessageId = toolMessageIdsRef.current[toolCallId];
           if (existingToolMessageId) {
-            const eventToolName = sanitizeToolName(toolEvent.toolName);
+            const eventToolName = sanitizeToolName(toolEvent.toolName, knownToolNames);
             updateMessage(existingToolMessageId, {
               ...(eventToolName ? { toolCallName: eventToolName } : null),
               toolCallResult: streamedResultText,
@@ -402,7 +413,7 @@ export function useChatScreenController(threadId: string) {
           continue;
         }
 
-        const resolvedToolName = sanitizeToolName(toolEvent.toolName);
+        const resolvedToolName = sanitizeToolName(toolEvent.toolName, knownToolNames);
         if (!resolvedToolName) continue;
 
         const args = parseToolArgs(toolEvent.input, toolArgsBufferRef.current[toolCallId]);
@@ -494,7 +505,7 @@ export function useChatScreenController(threadId: string) {
       setStreaming(false);
       setStreamStartedAt(0);
     }
-  }, [addMessage, clearError, getSelectedModelConfig, noteCount, persistPrimedThread, removeMessage, runToolCall, saveActiveThread, setStreaming, t, todoCount, updateMessage]);
+  }, [addMessage, clearError, getSelectedModelConfig, githubToolsEnabled, knownToolNames, noteCount, persistPrimedThread, removeMessage, runToolCall, saveActiveThread, setStreaming, t, todoCount, updateMessage]);
 
   const stopStreaming = useCallback(() => abortRef.current?.abort(), []);
 
