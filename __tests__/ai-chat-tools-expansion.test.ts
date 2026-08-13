@@ -34,6 +34,9 @@ jest.mock('../src/stores/aiStore', () => {
     chatRepoOwner: null as string | null,
     chatRepoName: null as string | null,
     chatRepoBranch: 'main',
+    selectedModel: undefined as Record<string, unknown> | undefined,
+    providers: [] as Array<Record<string, unknown>>,
+    getSelectedModel: () => state.selectedModel,
   };
   return {
     useAIStore: { getState: () => state, __state: state },
@@ -47,7 +50,18 @@ jest.mock('../src/services/NoteSyncQueueService', () => ({
   },
 }));
 
+jest.mock('ai', () => ({
+  ...jest.requireActual('ai'),
+  generateText: jest.fn(async () => ({ text: 'A1 is partial but on the right track.' })),
+}));
+
+jest.mock('../src/services/AIService', () => ({
+  initializeModel: jest.fn(async () => ({})),
+}));
+
+import { generateText } from 'ai';
 import { executeToolCall } from '../src/services/ai/actionExecutor';
+import { initializeModel } from '../src/services/AIService';
 import {
   chatTools,
   createQuestionerNoteParameters,
@@ -55,6 +69,7 @@ import {
   findNotesParameters,
   findTodosParameters,
   generateDailyBriefParameters,
+  gradeQuestionerNoteParameters,
   linkNotesParameters,
   summarizeNotesParameters,
 } from '../src/services/ai/tools';
@@ -79,6 +94,9 @@ const aiState = (useAIStore as unknown as StoreMock<{
   chatRepoOwner: string | null;
   chatRepoName: string | null;
   chatRepoBranch: string;
+  selectedModel: Record<string, unknown> | undefined;
+  providers: Array<Record<string, unknown>>;
+  getSelectedModel: () => Record<string, unknown> | undefined;
 }>).__state;
 
 function makeNote(overrides: Record<string, unknown>): Record<string, unknown> {
@@ -94,12 +112,15 @@ function makeNote(overrides: Record<string, unknown>): Record<string, unknown> {
 }
 
 beforeEach(() => {
+  jest.clearAllMocks();
   noteState.notes = [];
   todoState.todos = [];
   aiState.githubToolsEnabled = true;
   aiState.chatRepoOwner = null;
   aiState.chatRepoName = null;
   aiState.chatRepoBranch = 'main';
+  aiState.selectedModel = undefined;
+  aiState.providers = [];
   noteState.createNote.mockClear();
   noteState.updateNote.mockClear();
   (NoteSyncQueueService.enqueueNoteUpsert as jest.Mock).mockClear();
@@ -120,6 +141,12 @@ describe('chat-tools expansion — schema validation', () => {
       schema: createQuestionerNoteParameters,
       valid: { topic: 'Type theory', content: 'Q1? Q2?', sourceNotes: ['n1'], tags: ['study'] },
       invalid: { topic: 'Type theory' },
+    },
+    {
+      label: 'gradeQuestionerNoteParameters',
+      schema: gradeQuestionerNoteParameters,
+      valid: { noteId: 'note-1' },
+      invalid: {},
     },
     {
       label: 'findNotesParameters',
@@ -167,7 +194,7 @@ describe('chat-tools expansion — schema validation', () => {
     expect(() => schema.parse(invalid)).toThrow();
   });
 
-  test('chatTools exposes all 7 new tools alongside the original 10', () => {
+  test('chatTools exposes all 8 new tools alongside the original 10', () => {
     expect(Object.keys(chatTools).sort()).toEqual(
       [
         'create_note',
@@ -181,6 +208,7 @@ describe('chat-tools expansion — schema validation', () => {
         'search_todos',
         'get_todos',
         'create_questioner_note',
+        'grade_questioner_answers',
         'find_notes',
         'find_todos',
         'summarize_notes',
@@ -324,19 +352,129 @@ describe('chat-tools expansion — write tools respect confirm mode', () => {
       expect(noteState.updateNote).not.toHaveBeenCalled();
     },
   );
+});
 
-  test.each(['auto', 'confirm'] as const)(
-    'grade_questioner_answers (%s mode) returns a clean error — feature removed in #836',
-    async (mode) => {
-      noteState.notes = [makeNote({ id: 'q1', title: 'Quiz', tags: ['questioner'] })];
+describe('chat-tools expansion — grade_questioner_answers', () => {
+  test('confirm mode proposes grading without touching the store or the model', async () => {
+    noteState.notes = [makeNote({ id: 'q1', title: 'Quiz', tags: ['questioner'] })];
 
-      const result = await executeToolCall('grade_questioner_answers', { noteId: 'q1' }, mode);
+    const result = await executeToolCall('grade_questioner_answers', { noteId: 'q1' }, 'confirm');
+
+    expect(result.success).toBe(true);
+    expect(result.requiresConfirmation).toBe(true);
+    expect(result.proposedChanges?.type).toBe('grade_questioner_answers');
+    expect(noteState.updateNote).not.toHaveBeenCalled();
+    expect(initializeModel).not.toHaveBeenCalled();
+  });
+
+  test('returns a clean error when the note does not exist, in both modes', async () => {
+    for (const mode of ['auto', 'confirm'] as const) {
+      const result = await executeToolCall('grade_questioner_answers', { noteId: 'does-not-exist' }, mode);
 
       expect(result.success).toBe(false);
-      expect(result.requiresConfirmation).toBe(false);
-      expect(result.error).toMatch(/replaced by the Reminder system in PR #836/);
-    },
-  );
+      expect(result.error).toContain('Note not found');
+    }
+  });
+
+  test("refuses notes without the 'questioner' tag before touching the model", async () => {
+    noteState.notes = [makeNote({ id: 'q1', title: 'Quiz', tags: [] })];
+
+    const result = await executeToolCall('grade_questioner_answers', { noteId: 'q1' }, 'auto');
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('questioner');
+    expect(initializeModel).not.toHaveBeenCalled();
+    expect(generateText).not.toHaveBeenCalled();
+  });
+
+  test('auto mode appends a fresh grading block from the selected model', async () => {
+    noteState.notes = [
+      makeNote({
+        id: 'q1',
+        title: 'Quiz',
+        tags: ['questioner'],
+        content: 'Q1. What is X?\n\nA1. something',
+      }),
+    ];
+    aiState.selectedModel = { id: 'claude-opus', providerId: 'anthropic' };
+    aiState.providers = [{ id: 'anthropic' }];
+    (generateText as jest.Mock).mockResolvedValue({ text: 'A1 is incomplete — also mention Y.' });
+
+    const result = await executeToolCall('grade_questioner_answers', { noteId: 'q1' }, 'auto');
+
+    expect(result.success).toBe(true);
+    expect(noteState.updateNote).toHaveBeenCalledTimes(1);
+    const update = noteState.updateNote.mock.calls[0][0] as { content: string };
+    expect(update.content).toContain('Q1. What is X?');
+    expect(update.content).toContain('A1. something');
+    expect(
+      update.content.endsWith('\n\n---\n\n## Grading & Corrections\n\nA1 is incomplete — also mention Y.\n'),
+    ).toBe(true);
+    const data = result.data as { graded: boolean; gradingAppended: number };
+    expect(data.graded).toBe(true);
+    expect(data.gradingAppended).toBeGreaterThan(0);
+  });
+
+  test('strips the previous grading section before calling the model', async () => {
+    noteState.notes = [
+      makeNote({
+        id: 'q1',
+        title: 'Quiz',
+        tags: ['questioner'],
+        content: 'Q1. What is X?\n\nA1. something\n\n---\n\n## Grading & Corrections\n\nOLD grading here',
+      }),
+    ];
+    aiState.selectedModel = { id: 'claude-opus', providerId: 'anthropic' };
+    aiState.providers = [{ id: 'anthropic' }];
+    (generateText as jest.Mock).mockResolvedValue({ text: 'Fresh grading.' });
+
+    const result = await executeToolCall('grade_questioner_answers', { noteId: 'q1' }, 'auto');
+
+    expect(result.success).toBe(true);
+    const modelCall = (generateText as jest.Mock).mock.calls[0][0] as { prompt: string };
+    expect(modelCall.prompt).not.toContain('OLD grading here');
+    const update = noteState.updateNote.mock.calls[0][0] as { content: string };
+    expect(update.content.split('## Grading & Corrections').length - 1).toBe(1);
+  });
+
+  test('returns a clean error when no AI model is selected', async () => {
+    noteState.notes = [
+      makeNote({ id: 'q1', title: 'Quiz', tags: ['questioner'], content: 'Q1. What is X?\n\nA1. something' }),
+    ];
+    aiState.selectedModel = undefined;
+
+    const result = await executeToolCall('grade_questioner_answers', { noteId: 'q1' }, 'auto');
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('Select an AI model');
+    expect(initializeModel).not.toHaveBeenCalled();
+  });
+
+  test('enqueues a sync upsert carrying the note filePath when a chat repo is set', async () => {
+    noteState.notes = [
+      makeNote({
+        id: 'q1',
+        title: 'Quiz',
+        tags: ['questioner'],
+        content: 'Q1. What is X?\n\nA1. something',
+        filePath: 'notes/q1.md',
+      }),
+    ];
+    aiState.selectedModel = { id: 'claude-opus', providerId: 'anthropic' };
+    aiState.providers = [{ id: 'anthropic' }];
+    aiState.chatRepoOwner = 'owner';
+    aiState.chatRepoName = 'repo';
+    (generateText as jest.Mock).mockResolvedValue({ text: 'Grading for the repo note.' });
+
+    const result = await executeToolCall('grade_questioner_answers', { noteId: 'q1' }, 'auto');
+
+    expect(result.success).toBe(true);
+    expect(NoteSyncQueueService.enqueueNoteUpsert).toHaveBeenCalledTimes(1);
+    const upsertParams = (NoteSyncQueueService.enqueueNoteUpsert as jest.Mock).mock.calls[0][0] as {
+      filePath?: string;
+    };
+    expect(upsertParams.filePath).toBe('notes/q1.md');
+  });
 });
 
 describe('chat-tools expansion — create_questioner_note forces the questioner tag', () => {

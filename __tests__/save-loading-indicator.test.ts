@@ -159,9 +159,9 @@ jest.mock('../src/components/GitHubActivityIndicator', () => ({
 jest.mock('../src/components/ui', () => {
   const { Pressable, Text, View } = require('react-native');
   return {
-    Button: ({ label, onPress, disabled }: any) => require('react').createElement(
+    Button: ({ label, onPress, disabled, testID }: any) => require('react').createElement(
       Pressable,
-      { onPress, disabled, accessibilityRole: 'button' },
+      { onPress, disabled, accessibilityRole: 'button', testID },
       require('react').createElement(Text, null, label),
     ),
     IconButton: ({ children, onPress }: any) => require('react').createElement(Pressable, { onPress }, children),
@@ -280,39 +280,34 @@ describe('save/loading indicator', () => {
     jest.restoreAllMocks();
   });
 
-  it('shows and hides the saving overlay on success', async () => {
+  // The saving overlay was removed in PR #847 in favour of an inline
+  // indicator (Save button gets disabled + greyed bg + spinner); these
+  // tests verify the button's disabled state flips during the save cycle
+  // and back once the cycle completes.
+  it('disables the save button while saving', () => {
     const deferred = createDeferred<{ id: string } | null>();
     mockCreateNote.mockReturnValueOnce(deferred.promise);
 
     const screen = render(React.createElement(NoteEditorScreen));
-    fireEvent.press(screen.getByText('Save'));
-
-    expect(screen.getByTestId('saving-overlay')).toBeTruthy();
-
-    await act(async () => {
-      deferred.resolve({ id: 'note-1' });
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('saving-overlay')).toBeNull();
-    });
+    fireEvent.press(screen.getByTestId('note-editor.button.save'));
+    expect(screen.getByTestId('note-editor.button.save')).toHaveProp(
+      'accessibilityState',
+      { disabled: true },
+    );
   });
 
-  it('hides the saving overlay on error', async () => {
-    const deferred = createDeferred<{ id: string } | null>();
-    mockCreateNote.mockReturnValueOnce(deferred.promise);
+  it('re-enables the save button when the save fails', async () => {
+    mockCreateNote.mockRejectedValueOnce(new Error('save failed'));
+    jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
 
     const screen = render(React.createElement(NoteEditorScreen));
-    fireEvent.press(screen.getByText('Save'));
-
-    expect(screen.getByTestId('saving-overlay')).toBeTruthy();
-
-    await act(async () => {
-      deferred.reject(new Error('save failed'));
-    });
+    fireEvent.press(screen.getByTestId('note-editor.button.save'));
 
     await waitFor(() => {
-      expect(screen.queryByTestId('saving-overlay')).toBeNull();
+      expect(screen.getByTestId('note-editor.button.save')).toHaveProp(
+        'accessibilityState',
+        { disabled: false },
+      );
     });
   });
 
