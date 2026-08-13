@@ -17,6 +17,7 @@ import { classifyGitHubSyncError, isRetryableFailure, syncStatusForError } from 
 import { githubActivity } from '../../stores/githubActivityStore';
 import { canvasToLink } from '../../models/Canvas';
 import { getExtensionForFormat, extractCanvasJsonRefs, slugifyLocal } from './editorShared';
+import { useHardWrap, applyHardWrap } from '../../hooks/useHardWrap';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'NoteEditor'>;
 
@@ -96,6 +97,7 @@ export function useNoteEditorDocument({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [repoFolders, setRepoFolders] = useState<Folder[]>([]);
   const [notFound, setNotFound] = useState(false);
+  const { hardWrapEnabled } = useHardWrap();
 
   useEffect(() => {
     if (noteId) return;
@@ -262,6 +264,8 @@ export function useNoteEditorDocument({
       return;
     }
 
+    const finalContent = applyHardWrap(content.trim(), hardWrapEnabled && noteFormat === 'markdown');
+
     setIsSaving(true);
     try {
       let savedNoteId = noteId;
@@ -270,7 +274,7 @@ export function useNoteEditorDocument({
         const updated = await updateNote({
           id: noteId,
           title: title.trim(),
-          content: content.trim(),
+          content: finalContent,
           tags,
           repo,
           branch,
@@ -291,7 +295,7 @@ export function useNoteEditorDocument({
       } else {
         const newNote = await createNote({
           title: title.trim(),
-          content: content.trim(),
+          content: finalContent,
           tags,
           repo,
           branch,
@@ -319,7 +323,7 @@ export function useNoteEditorDocument({
             branch,
             filePath: existingFilePath ?? (folderPath ? `${folderPath}/${slugifyLocal(title.trim())}${getExtensionForFormat(noteFormat)}` : undefined),
             title: title.trim(),
-            content: content.trim(),
+            content: finalContent,
             format: noteFormat,
             accountId,
             tags,
@@ -333,7 +337,7 @@ export function useNoteEditorDocument({
             const updated = await updateNote({
               id: savedNoteId,
               filePath: syncResult.filePath,
-              ...(syncResult.finalContent != null && syncResult.finalContent !== content.trim()
+              ...(syncResult.finalContent != null && syncResult.finalContent !== finalContent
                 ? { content: syncResult.finalContent }
                 : {}),
             });
@@ -377,7 +381,7 @@ export function useNoteEditorDocument({
             branch,
             filePath: existingFilePath ?? (folderPath ? `${folderPath}/${slugifyLocal(title.trim())}${getExtensionForFormat(noteFormat)}` : undefined),
             title: title.trim(),
-            content: content.trim(),
+            content: finalContent,
             format: noteFormat,
             accountId,
             tags,
@@ -420,7 +424,7 @@ export function useNoteEditorDocument({
     } finally {
       setIsSaving(false);
     }
-  }, [title, content, repo, noteId, updateNote, tags, branch, commit, folderPath, noteFormat, attachments, accountId, createNote, navigation]);
+  }, [title, content, repo, noteId, updateNote, tags, branch, commit, folderPath, noteFormat, attachments, accountId, createNote, navigation, hardWrapEnabled]);
 
   const handleCancelEdit = useCallback(() => {
     if (hasChanges && (title.trim() || content.trim())) {
