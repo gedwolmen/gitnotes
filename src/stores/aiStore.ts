@@ -22,6 +22,7 @@ interface AIState {
   error: string | null;
   dailyQuoteEnabled: boolean;
   aiPersonalizationEnabled: boolean;
+  githubToolsEnabled: boolean;
 }
 
 interface AIActions {
@@ -40,6 +41,7 @@ interface AIActions {
   loadSettings: () => Promise<void>;
   toggleDailyQuote: () => Promise<void>;
   toggleAiPersonalization: () => Promise<void>;
+  toggleGithubTools: () => Promise<void>;
 }
 
 const createDefaultProviders = (): AIProviderConfig[] => [
@@ -95,6 +97,7 @@ const createDefaultSettings = (): AISettings => ({
   providers: createDefaultProviders(),
   dailyQuoteEnabled: true,
   aiPersonalizationEnabled: true,
+  githubToolsEnabled: false,
 });
 
 const getProviderApiKeyStorageKey = (providerId: string) => `${AI_PROVIDER_KEY_PREFIX}${providerId}`;
@@ -338,6 +341,11 @@ export const useAIStore = create<AIState & AIActions>()((set, get) => ({
     await get().persistSettings();
   },
 
+  toggleGithubTools: async () => {
+    set((state) => ({ githubToolsEnabled: !state.githubToolsEnabled, error: null }));
+    await get().persistSettings();
+  },
+
   getAvailableModels: () =>
     get()
       .providers.filter((provider) => provider.isEnabled)
@@ -374,6 +382,7 @@ export const useAIStore = create<AIState & AIActions>()((set, get) => ({
         providers,
         dailyQuoteEnabled,
         aiPersonalizationEnabled,
+        githubToolsEnabled,
       } = get();
 
       await Promise.all(
@@ -400,6 +409,7 @@ export const useAIStore = create<AIState & AIActions>()((set, get) => ({
         providers: providers.map(stripProviderApiKey),
         dailyQuoteEnabled,
         aiPersonalizationEnabled,
+        githubToolsEnabled,
       };
 
       await AsyncStorage.setItem(AI_SETTINGS_STORAGE_KEY, JSON.stringify(settingsToPersist));
