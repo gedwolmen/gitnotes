@@ -4,7 +4,6 @@ import { create } from 'zustand';
 import { AIActionMode, AIModelConfig, AIProviderConfig, AISettings } from '../models/AIProvider';
 import { setChatRepoAccount } from '../services/ChatStorageService';
 import { resolveProviderAvailability } from '../services/ai/providerAvailability';
-import { ANTHROPIC_DEFAULT_MODELS, ANTHROPIC_DEFAULT_PROVIDER_ID } from '../services/ai/anthropicDefaults';
 import { discoverModelsIfNeeded } from '../services/ai/modelDiscoveryService';
 
 const AI_SETTINGS_STORAGE_KEY = 'ai-settings';
@@ -82,20 +81,6 @@ const createDefaultProviders = (): AIProviderConfig[] => [
         isDownloaded: false,
       },
     ],
-  },
-  {
-    id: ANTHROPIC_DEFAULT_PROVIDER_ID,
-    type: 'anthropic',
-    name: 'Anthropic',
-    isEnabled: false,
-    addedAt: 0,
-    models: ANTHROPIC_DEFAULT_MODELS.map((m) => ({
-      id: m.id,
-      name: m.name,
-      providerId: ANTHROPIC_DEFAULT_PROVIDER_ID,
-      providerType: 'anthropic',
-      requiresDownload: false,
-    })),
   },
 ];
 

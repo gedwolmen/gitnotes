@@ -20,7 +20,7 @@ import { Group, GroupRow } from '../ui';
 import { AIProviderConfig, AIModelConfig } from '../../models/AIProvider';
 import { useAIStore } from '../../stores/aiStore';
 import { checkOpenRouterKey, isOpenRouterBaseURL } from '../../services/ai/openrouterPreflight';
-import { isAnthropicBaseURL, isAnthropicProviderType } from '../../services/ai/anthropicDefaults';
+import { isAnthropicBaseURL } from '../../services/ai/anthropicDefaults';
 import { getFactory } from '../../services/ai/providerFactory';
 
 interface ProviderConfigModalProps {
@@ -61,6 +61,8 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
   const [apiKeyVisible, setApiKeyVisible] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testedModels, setTestedModels] = useState<AIModelConfig[]>([]);
+  const [apiType, setApiType] = useState<'openai-compatible' | 'anthropic'>('openai-compatible');
+  const [userSetApiType, setUserSetApiType] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -69,15 +71,26 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
         setBaseURL(provider.baseURL || '');
         setApiKey(provider.apiKey || '');
         setTestedModels(provider.models || []);
+        setApiType(provider.type === 'anthropic' ? 'anthropic' : 'openai-compatible');
+        setUserSetApiType(true);
       } else {
         setName('');
         setBaseURL('');
         setApiKey('');
         setTestedModels([]);
+        setApiType('openai-compatible');
+        setUserSetApiType(false);
       }
       setApiKeyVisible(false);
     }
   }, [visible, provider]);
+
+  const handleBaseURLChange = (url: string) => {
+    setBaseURL(url);
+    if (!userSetApiType) {
+      setApiType(isAnthropicBaseURL(url) ? 'anthropic' : 'openai-compatible');
+    }
+  };
 
   const handleTestConnection = async () => {
     if (!baseURL.trim()) {
@@ -90,7 +103,7 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
       const normalizedBaseURL = normalizeMiniMaxBaseURL(baseURL);
       const headers: Record<string, string> = {};
       if (apiKey.trim()) {
-        if (isAnthropicBaseURL(normalizedBaseURL)) {
+        if (apiType === 'anthropic') {
           headers['x-api-key'] = apiKey.trim();
           headers['anthropic-version'] = '2023-06-01';
         } else {
@@ -98,7 +111,7 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
         }
       }
 
-      if (isAnthropicBaseURL(normalizedBaseURL)) {
+      if (apiType === 'anthropic') {
         const providerId = provider?.id || `custom-${Date.now()}`;
         const result = await getFactory('anthropic').testConnection(normalizedBaseURL, apiKey.trim(), providerId);
         setTestedModels(result.models);
@@ -183,7 +196,7 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
       return;
     }
 
-    if (!isBuiltIn && !baseURL.trim() && provider?.type !== 'anthropic') {
+    if (!isBuiltIn && !baseURL.trim() && apiType !== 'anthropic') {
       Alert.alert('Validation Error', 'Base URL is required.');
       return;
     }
@@ -224,7 +237,7 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
 
     const baseProvider: AIProviderConfig = {
       id: providerId,
-      type: isBuiltIn ? provider!.type : (isAnthropicBaseURL(normalizedBaseURL ?? '') ? 'anthropic' : 'openai-compatible'),
+      type: isBuiltIn ? provider!.type : apiType,
       name: name.trim(),
       isEnabled: provider?.isEnabled ?? true,
       addedAt: provider?.addedAt || Date.now(),
@@ -304,11 +317,46 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
                       placeholder="Base URL (e.g., http://localhost:11434/v1)"
                       placeholderTextColor={colors.textSecondary}
                       value={baseURL}
-                      onChangeText={setBaseURL}
+                      onChangeText={handleBaseURLChange}
                       autoCapitalize="none"
                       autoCorrect={false}
                       keyboardType="url"
                     />
+                  </GroupRow>
+                  <GroupRow>
+                    <Text style={[styles.apiTypeLabel, { color: colors.textSecondary }]}>API Format</Text>
+                    <View style={styles.apiTypeToggle}>
+                      <TouchableOpacity
+                        testID="provider-config.button.api-type-openai"
+                        style={[
+                          styles.apiTypeButton,
+                          {
+                            backgroundColor: apiType === 'openai-compatible' ? colors.primary : colors.surface,
+                            borderColor: apiType === 'openai-compatible' ? colors.primary : colors.border,
+                          },
+                        ]}
+                        onPress={() => { setApiType('openai-compatible'); setUserSetApiType(true); }}
+                      >
+                        <Text style={[styles.apiTypeButtonText, { color: apiType === 'openai-compatible' ? '#FFF' : colors.text }]}>
+                          OpenAI-compatible
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        testID="provider-config.button.api-type-anthropic"
+                        style={[
+                          styles.apiTypeButton,
+                          {
+                            backgroundColor: apiType === 'anthropic' ? colors.primary : colors.surface,
+                            borderColor: apiType === 'anthropic' ? colors.primary : colors.border,
+                          },
+                        ]}
+                        onPress={() => { setApiType('anthropic'); setUserSetApiType(true); }}
+                      >
+                        <Text style={[styles.apiTypeButtonText, { color: apiType === 'anthropic' ? '#FFF' : colors.text }]}>
+                          Anthropic
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                   </GroupRow>
                   <GroupRow>
                     <View style={styles.apiKeyContainer}>
@@ -460,5 +508,25 @@ const styles = StyleSheet.create({
   actionBtnText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  apiTypeToggle: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  apiTypeButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  apiTypeButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  apiTypeLabel: {
+    fontSize: 12,
+    marginBottom: 6,
   },
 });
