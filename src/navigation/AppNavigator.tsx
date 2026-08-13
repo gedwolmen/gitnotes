@@ -24,7 +24,7 @@ import ConflictResolverScreen from '../screens/ConflictResolverScreen';
 import NeumorphicGallery from '../screens/__dev__/NeumorphicGallery';
 import { FloatingAIButton } from '../components/ai/FloatingAIButton';
 import { ChatRepoPickerModal } from '../components/ai/ChatRepoPickerModal';
-import { AddScheduledLearningScreen } from '../components/settings/AddScheduledLearningScreen';
+import { AddReminderScreen } from '../components/settings/AddReminderScreen';
 import ThoughtDumpScreen from '../screens/ThoughtDumpScreen';
 import { RootStackParamList } from './types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -201,8 +201,8 @@ export default function AppNavigator() {
               options={{ headerShown: false }}
             />
             <Stack.Screen
-              name="AddScheduledLearning"
-              component={AddScheduledLearningScreen}
+              name="AddReminder"
+              component={AddReminderScreen}
               options={{ headerShown: false }}
             />
             <Stack.Screen

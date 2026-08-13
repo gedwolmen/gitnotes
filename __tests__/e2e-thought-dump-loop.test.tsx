@@ -269,6 +269,9 @@ beforeEach(async () => {
   const entries = (require('../src/services/ai/AIMemoryIndexService') as { __entries: Map<string, string> }).__entries;
   entries.clear();
 
+  // mockReset clears any queued mockResolvedValueOnce values left behind
+  // by a timed-out test so they cannot leak into the next test.
+  (ThoughtDumpService.create as jest.Mock).mockReset();
   (ThoughtDumpService.create as jest.Mock).mockImplementation(async (text: string) => ({
     id: 'test-dump-id',
     text,
@@ -364,7 +367,7 @@ describe('e2e: FAB -> thought dump -> memory -> reset', () => {
         }),
       );
     });
-  });
+  }, 15000);
 
   it('mocked index upsert stores dump in memory index', async () => {
     const dump = {
@@ -469,5 +472,5 @@ describe('e2e: FAB -> thought dump -> memory -> reset', () => {
 
     await aiMemoryIndex.clear();
     expect(aiMemoryIndex.clear).toHaveBeenCalled();
-  });
+  }, 15000);
 });

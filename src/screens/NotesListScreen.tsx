@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Alert, View, Text, ActivityIndicator, RefreshControl, FlatList, TouchableOpacity } from 'react-native';
+import { Alert, View, Text, ActivityIndicator, RefreshControl, FlatList, TouchableOpacity, InteractionManager } from 'react-native';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -38,6 +38,7 @@ import { SwipeableListItem } from '../components/list/SwipeableListItem';
 import { BulkActionBar } from '../components/list/BulkActionBar';
 import { useResponsive } from '../hooks/useResponsive';
 import { useGitHubActivityStore } from '../stores/githubActivityStore';
+import { useReminderStore } from '../stores/reminderStore';
 import { useTranslation } from 'react-i18next';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -141,6 +142,29 @@ export default function NotesListScreen() {
     handleToggleTag,
     handleToggleColor,
   } = useNotesListFilters({ notes, filteredNotes, searchQuery, persistenceKey: '@gitnotes:filters:notes-list' });
+
+  // Consume pending reminder filter pushed by App.tsx on notification tap.
+  const consumePendingFilter = useReminderStore((s) => s.consumePendingFilter);
+  useEffect(() => {
+    if (!isFocused) return;
+    InteractionManager.runAfterInteractions(() => {
+      const pending = consumePendingFilter();
+      if (!pending) return;
+      handleClearFilters();
+      if (pending.kind === 'repo' && pending.repoPath) {
+        const repo = repositories.find((r) => r.path === pending.repoPath) ?? null;
+        if (repo) handleSelectRepo(repo);
+      } else if (pending.kind === 'folder') {
+        if (pending.repoPath) {
+          const repo = repositories.find((r) => r.path === pending.repoPath) ?? null;
+          if (repo) handleSelectRepo(repo);
+        }
+        if (pending.folderPath) handleSelectFolder(pending.folderPath);
+      } else if (pending.kind === 'tag' && pending.tag) {
+        handleToggleTag(pending.tag);
+      }
+    });
+  }, [isFocused, consumePendingFilter, handleClearFilters, handleSelectRepo, handleSelectFolder, handleToggleTag, repositories]);
 
   const activeFilterChips: FilterChip[] = useMemo(() => {
     const chips: FilterChip[] = [];
