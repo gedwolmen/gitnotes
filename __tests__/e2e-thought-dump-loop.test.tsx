@@ -54,18 +54,21 @@ jest.mock('react-native-reanimated', () => {
 jest.mock('react-native-gesture-handler', () => {
   const React = require('react');
   const RN = require('react-native');
+  const mockPanGesture = (): Record<string, () => unknown> => ({
+    activeOffsetX: () => mockPanGesture(),
+    activeOffsetY: () => mockPanGesture(),
+    failOffsetX: () => mockPanGesture(),
+    failOffsetY: () => mockPanGesture(),
+    onBegin: () => mockPanGesture(),
+    onStart: () => mockPanGesture(),
+    onUpdate: () => mockPanGesture(),
+    onEnd: () => mockPanGesture(),
+    onFinalize: () => mockPanGesture(),
+  });
   return {
     GestureDetector: ({ children }: any) => children,
     Gesture: {
-      Pan: () => ({
-        onBegin: () => ({
-          onStart: () => ({
-            onUpdate: () => ({
-              onEnd: () => ({ onFinalize: () => ({}) }),
-            }),
-          }),
-        }),
-      }),
+      Pan: () => mockPanGesture(),
     },
     PanGestureHandler: React.forwardRef((props: any, ref: any) =>
       React.createElement(RN.View, { ...props, ref }),

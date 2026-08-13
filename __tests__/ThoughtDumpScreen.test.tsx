@@ -21,6 +21,11 @@ jest.mock('../src/services/StorageService', () => ({
   },
 }));
 
+jest.mock('../src/services/ai/thoughtDumpIndexing', () => ({
+  indexDump: jest.fn(),
+  removeDump: jest.fn(),
+}));
+
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
@@ -54,6 +59,39 @@ jest.mock('../src/components/VoiceInputModal', () => {
         </View>
       ) : null,
   };
+});
+
+jest.mock('../src/components/list/SwipeableListItem', () => {
+  const React = require('react');
+  const { TouchableOpacity, View } = require('react-native');
+  const SwipeableListItem = ({ itemId, selected, selectionMode, onToggleSelect, children }: any) => (
+    <View testID={`swipeable-${itemId}`} accessibilityState={{ selected }}>
+      <TouchableOpacity
+        testID={`swipeable-list-item.button.toggle-${itemId}`}
+        onPress={onToggleSelect}
+      >
+        {children}
+      </TouchableOpacity>
+    </View>
+  );
+  return { __esModule: true, default: SwipeableListItem, SwipeableListItem };
+});
+
+jest.mock('../src/components/list/BulkActionBar', () => {
+  const React = require('react');
+  const { TouchableOpacity, View, Text } = require('react-native');
+  const BulkActionBar = ({ count, onCancel, onDelete, itemNoun }: any) =>
+    count === 0 ? null : (
+      <View testID="bulk-action-bar.container">
+        <TouchableOpacity testID="bulk-action-bar.button.cancel" onPress={onCancel}>
+          <Text>cancel</Text>
+        </TouchableOpacity>
+        <TouchableOpacity testID="bulk-action-bar.button.delete" onPress={onDelete}>
+          <Text>{`delete ${count} ${itemNoun}s`}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  return { __esModule: true, default: BulkActionBar, BulkActionBar };
 });
 
 jest.mock('../src/contexts/ThemeContext', () => ({
@@ -314,6 +352,142 @@ describe('ThoughtDumpScreen', () => {
 
     await waitFor(() => {
       expect(getByTestId('voice-input-modal.button.close-unavailable')).toBeTruthy();
+    });
+  });
+
+  describe('swipe-to-select multi-delete', () => {
+    it('renders SwipeableListItem per dump and BulkActionBar hidden by default', async () => {
+      const dumps = [
+        makeDump({ id: 'dump-1', text: 'A' }),
+        makeDump({ id: 'dump-2', text: 'B' }),
+      ];
+      mockList.mockResolvedValue(dumps);
+
+      const { getByTestId, queryByTestId } = render(<ThoughtDumpScreen />);
+
+      await waitFor(() => {
+        expect(getByTestId('swipeable-dump-1')).toBeTruthy();
+        expect(getByTestId('swipeable-dump-2')).toBeTruthy();
+        expect(queryByTestId('bulk-action-bar.container')).toBeNull();
+      });
+    });
+
+    it('tapping the toggle button selects the row and shows the BulkActionBar', async () => {
+      const dumps = [makeDump({ id: 'dump-1', text: 'A' })];
+      mockList.mockResolvedValue(dumps);
+
+      const { getByTestId } = render(<ThoughtDumpScreen />);
+
+      await waitFor(() => expect(getByTestId('swipeable-dump-1')).toBeTruthy());
+
+      fireEvent.press(getByTestId('swipeable-list-item.button.toggle-dump-1'));
+
+      await waitFor(() => {
+        expect(getByTestId('bulk-action-bar.container')).toBeTruthy();
+      });
+    });
+
+    it('bulk delete confirms then deletes each selected dump and cleans index', async () => {
+      const dumps = [
+        makeDump({ id: 'dump-1', text: 'A', filePath: 'thoughts/one.md' }),
+        makeDump({ id: 'dump-2', text: 'B', filePath: 'thoughts/two.md' }),
+      ];
+      mockList.mockResolvedValue(dumps);
+      mockDelete.mockResolvedValue(true);
+
+      const indexMock = require('../src/services/ai/thoughtDumpIndexing');
+      const removeDumpSpy = jest.spyOn(indexMock, 'removeDump').mockImplementation(() => undefined);
+
+      jest.spyOn(Alert, 'alert').mockImplementationOnce((title, message, buttons) => {
+        if (Array.isArray(buttons) && buttons[1]) {
+          (buttons[1].onPress as () => void)();
+        }
+      });
+
+      const { getByTestId, queryByText, queryByTestId } = render(<ThoughtDumpScreen />);
+
+      await waitFor(() => expect(getByTestId('swipeable-dump-1')).toBeTruthy());
+
+      fireEvent.press(getByTestId('swipeable-list-item.button.toggle-dump-1'));
+      fireEvent.press(getByTestId('swipeable-list-item.button.toggle-dump-2'));
+
+      await waitFor(() => expect(getByTestId('bulk-action-bar.container')).toBeTruthy());
+
+      fireEvent.press(getByTestId('bulk-action-bar.button.delete'));
+
+      await waitFor(() => {
+        expect(mockDelete).toHaveBeenCalledTimes(2);
+        expect(mockDelete).toHaveBeenCalledWith('dump-1', {
+          repoPath: 'owner/repo',
+          branch: 'main',
+          filePath: 'thoughts/one.md',
+        });
+        expect(mockDelete).toHaveBeenCalledWith('dump-2', {
+          repoPath: 'owner/repo',
+          branch: 'main',
+          filePath: 'thoughts/two.md',
+        });
+        expect(removeDumpSpy).toHaveBeenCalledWith('thoughts/one.md');
+        expect(removeDumpSpy).toHaveBeenCalledWith('thoughts/two.md');
+      });
+
+      await waitFor(() => {
+        expect(queryByText('A')).toBeNull();
+        expect(queryByText('B')).toBeNull();
+      });
+
+      await waitFor(() => {
+        expect(queryByTestId('bulk-action-bar.container')).toBeNull();
+      });
+    });
+
+    it('cancel on BulkActionBar clears selection and hides the bar', async () => {
+      const dumps = [makeDump({ id: 'dump-1', text: 'A' })];
+      mockList.mockResolvedValue(dumps);
+      const { getByTestId, queryByTestId } = render(<ThoughtDumpScreen />);
+
+      await waitFor(() => expect(getByTestId('swipeable-dump-1')).toBeTruthy());
+
+      fireEvent.press(getByTestId('swipeable-list-item.button.toggle-dump-1'));
+      await waitFor(() => expect(getByTestId('bulk-action-bar.container')).toBeTruthy());
+
+      fireEvent.press(getByTestId('bulk-action-bar.button.cancel'));
+      await waitFor(() => expect(queryByTestId('bulk-action-bar.container')).toBeNull());
+    });
+
+    it('does not call ThoughtDumpService.delete when cancel is pressed in confirmation dialog', async () => {
+      const dumps = [
+        makeDump({ id: 'dump-1', text: 'A', filePath: 'thoughts/one.md' }),
+        makeDump({ id: 'dump-2', text: 'B', filePath: 'thoughts/two.md' }),
+      ];
+      mockList.mockResolvedValue(dumps);
+
+      const alertSpy = jest.spyOn(Alert, 'alert').mockImplementationOnce(() => undefined);
+
+      const { getByTestId } = render(<ThoughtDumpScreen />);
+
+      await waitFor(() => expect(getByTestId('swipeable-dump-1')).toBeTruthy());
+
+      fireEvent.press(getByTestId('swipeable-list-item.button.toggle-dump-1'));
+      fireEvent.press(getByTestId('swipeable-list-item.button.toggle-dump-2'));
+      fireEvent.press(getByTestId('bulk-action-bar.button.delete'));
+
+      expect(mockDelete).not.toHaveBeenCalled();
+      alertSpy.mockRestore();
+    });
+
+    it('existing single-delete test still works (regression)', async () => {
+      // This is a sentinel — the pre-existing single-delete tests above must not regress.
+      // We verify the per-item button still exists alongside swipe.
+      const dumps = [makeDump({ id: 'dump-1', text: 'First dump' })];
+      mockList.mockResolvedValue(dumps);
+
+      const { getByTestId } = render(<ThoughtDumpScreen />);
+
+      await waitFor(() => {
+        expect(getByTestId('thought-dump-delete-dump-1')).toBeTruthy();
+        expect(getByTestId('swipeable-dump-1')).toBeTruthy();
+      });
     });
   });
 });
