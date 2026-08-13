@@ -116,6 +116,7 @@ const styles = StyleSheet.create({
   },
   tagsScrollView: {
     flexGrow: 0,
+    minHeight: 36,
   },
   tagChip: {
     marginRight: 8,
