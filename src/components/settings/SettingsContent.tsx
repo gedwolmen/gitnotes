@@ -124,6 +124,8 @@ onRemoveAccount: (id: string, login: string) => void;
   onToggleDailyQuote: () => void;
   aiPersonalizationEnabled: boolean;
   onToggleAiPersonalization: () => void;
+  githubToolsEnabled: boolean;
+  onToggleGithubTools: () => void;
   isBiometricLockEnabled: boolean;
   isBiometricAvailable: boolean;
   biometricKind: BiometricKind;
@@ -202,6 +204,8 @@ export function SettingsContent(props: SettingsContentProps) {
     onToggleDailyQuote,
     aiPersonalizationEnabled,
     onToggleAiPersonalization,
+    githubToolsEnabled,
+    onToggleGithubTools,
     isBiometricLockEnabled,
     isBiometricAvailable,
     biometricKind,
@@ -819,6 +823,29 @@ onSetSyncIntervalSeconds,
             </Text>
             <Text style={[styles.settingValue, { color: colors.textSecondary, fontSize: 12, marginTop: 2 }]}>
               {t('settings.aiPersonalizationDescription', { defaultValue: "When off, AI won't read your notes or journals for data safety" })}
+            </Text>
+          </View>
+        </GroupRow>
+        <GroupRow
+          testID="settings.row.github-tools"
+          trailing={
+            <View className="flex-row items-center gap-2">
+              <Toggle
+                testID="settings.toggle.github-tools"
+                value={isAIEnabled ? githubToolsEnabled : false}
+                onValueChange={onToggleGithubTools}
+                disabled={!isAIEnabled}
+              />
+              <HintIcon hintKey="hints.settings.githubTools" testID="hint.github-tools" />
+            </View>
+          }
+        >
+          <View>
+            <Text style={[styles.settingLabel, { color: colors.text }]}>
+              {t('settings.githubTools.title', { defaultValue: 'GitHub Tools' })}
+            </Text>
+            <Text style={[styles.settingValue, { color: colors.textSecondary, fontSize: 12, marginTop: 2 }]}>
+              {t('settings.githubTools.description', { defaultValue: "Let AI manage issues, PRs, and repos via your active GitHub account." })}
             </Text>
           </View>
         </GroupRow>

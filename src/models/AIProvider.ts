@@ -42,6 +42,8 @@ export interface AISettings {
   providers: AIProviderConfig[];
   dailyQuoteEnabled: boolean;
   aiPersonalizationEnabled: boolean;
+  /** Expose seven GitHub tools to the AI agent. Defaults to false (opt-in). */
+  githubToolsEnabled: boolean;
 }
 
 export interface AIContextItem {

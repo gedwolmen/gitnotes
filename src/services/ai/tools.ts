@@ -127,3 +127,101 @@ export const chatTools = {
   search_todos,
   get_todos,
 };
+
+export const listReposParameters = z.object({});
+
+export const list_repos = tool({
+  description: 'List the repositories accessible with the linked account.',
+  inputSchema: listReposParameters,
+  execute: async (params) => params,
+});
+
+export const listIssuesParameters = z.object({
+  owner: z.string(),
+  repo: z.string(),
+  state: z.enum(['open', 'closed', 'all']).optional(),
+});
+
+export const list_issues = tool({
+  description: 'List issues in a repository with an optional state filter.',
+  inputSchema: listIssuesParameters,
+  execute: async (params) => params,
+});
+
+export const createIssueParameters = z.object({
+  owner: z.string(),
+  repo: z.string(),
+  title: z.string(),
+  body: z.string().optional(),
+  labels: z.array(z.string()).optional(),
+  assignees: z.array(z.string()).optional(),
+});
+
+export const create_issue = tool({
+  description: 'Create a new issue in a repository.',
+  inputSchema: createIssueParameters,
+  execute: async (params) => params,
+});
+
+export const listPullRequestsParameters = z.object({
+  owner: z.string(),
+  repo: z.string(),
+  state: z.enum(['open', 'closed', 'all']).optional(),
+});
+
+export const list_pull_requests = tool({
+  description: 'List pull requests in a repository with an optional state filter.',
+  inputSchema: listPullRequestsParameters,
+  execute: async (params) => params,
+});
+
+export const createPullRequestParameters = z.object({
+  owner: z.string(),
+  repo: z.string(),
+  title: z.string(),
+  body: z.string().optional(),
+  head: z.string(),
+  base: z.string(),
+});
+
+export const create_pull_request = tool({
+  description: 'Create a new pull request from a head branch into a base branch.',
+  inputSchema: createPullRequestParameters,
+  execute: async (params) => params,
+});
+
+export const getPullRequestDiffParameters = z.object({
+  owner: z.string(),
+  repo: z.string(),
+  pull_number: z.number(),
+});
+
+export const get_pull_request_diff = tool({
+  description: 'Fetch the diff of a pull request by number.',
+  inputSchema: getPullRequestDiffParameters,
+  execute: async (params) => params,
+});
+
+export const reviewPullRequestParameters = z.object({
+  owner: z.string(),
+  repo: z.string(),
+  pull_number: z.number(),
+  body: z.string(),
+  event: z.enum(['APPROVE', 'REQUEST_CHANGES', 'COMMENT']),
+});
+
+export const review_pull_request = tool({
+  description: 'Submit a review on a pull request.',
+  inputSchema: reviewPullRequestParameters,
+  execute: async (params) => params,
+});
+
+export const githubTools = {
+  list_repos,
+  list_issues,
+  create_issue,
+  list_pull_requests,
+  create_pull_request,
+  get_pull_request_diff,
+  review_pull_request,
+};

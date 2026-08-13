@@ -167,6 +167,42 @@ export interface GitHubContent {
   sha?: string;
 }
 
+export interface GitHubCreateIssueInput {
+  owner: string;
+  repo: string;
+  title: string;
+  body?: string;
+  labels?: string[];
+  assignees?: string[];
+}
+
+export interface GitHubPullRequestDiff {
+  files: Array<{
+    filename: string;
+    status: string;
+    additions: number;
+    deletions: number;
+    patch?: string;
+  }>;
+}
+
+export interface GitHubReviewInput {
+  owner: string;
+  repo: string;
+  pull_number: number;
+  body: string;
+  event: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT';
+}
+
+export interface GitHubReview {
+  id: number;
+  user: { login: string };
+  body: string;
+  state: string;
+  submitted_at: string;
+  html_url?: string;
+}
+
 export interface GitHubFileCommit {
   content: { sha: string } | null;
   commit: { sha: string };
@@ -401,6 +437,67 @@ class GitHubServiceClass {
       return data as GitHubPullRequest;
     } catch (error) {
       console.warn('[GitHubService] Failed to create pull request:', error);
+      return null;
+    }
+  }
+
+  async createIssue(input: GitHubCreateIssueInput): Promise<GitHubIssue | null> {
+    try {
+      const data = await this.request(
+        `https://api.github.com/repos/${input.owner}/${input.repo}/issues`,
+        'POST',
+        {
+          title: input.title,
+          body: input.body,
+          labels: input.labels,
+          assignees: input.assignees,
+        }
+      );
+      return data as GitHubIssue;
+    } catch (error) {
+      console.warn('[GitHubService] Failed to create issue:', error);
+      return null;
+    }
+  }
+
+  async getPullRequestDiff(
+    owner: string,
+    repo: string,
+    pull_number: number,
+  ): Promise<GitHubPullRequestDiff | null> {
+    try {
+      const data = await this.request<
+        Array<{ filename: string; status: string; additions: number; deletions: number; patch?: string }>
+      >(`https://api.github.com/repos/${owner}/${repo}/pulls/${pull_number}/files`);
+      if (!Array.isArray(data)) return null;
+      return {
+        files: data.map((f) => ({
+          filename: f.filename,
+          status: f.status,
+          additions: f.additions,
+          deletions: f.deletions,
+          patch: f.patch,
+        })),
+      };
+    } catch (error) {
+      console.warn('[GitHubService] Failed to get pull request diff:', error);
+      return null;
+    }
+  }
+
+  async reviewPullRequest(input: GitHubReviewInput): Promise<GitHubReview | null> {
+    try {
+      const data = await this.request(
+        `https://api.github.com/repos/${input.owner}/${input.repo}/pulls/${input.pull_number}/reviews`,
+        'POST',
+        {
+          body: input.body,
+          event: input.event,
+        }
+      );
+      return data as GitHubReview;
+    } catch (error) {
+      console.warn('[GitHubService] Failed to review pull request:', error);
       return null;
     }
   }

@@ -205,7 +205,13 @@
     "chat": "chat",
     "chats": "chats",
     "stopGeneration": "Stop generation",
-    "cancelResponse": "Cancel AI response"
+    "cancelResponse": "Cancel AI response",
+    "hints": {
+      "summarizeIssues": "Summarize my open issues",
+      "showRepos": "Show my repos",
+      "createIssue": "Create an issue",
+      "listPRs": "List open PRs"
+    }
   },
   "explore": {
     "title": "Explore",
@@ -227,6 +233,10 @@
       "title": "Personalize AI with my notes"
     },
     "aiPersonalizationDescription": "When off, AI won't read your notes or journals for data safety",
+    "githubTools": {
+      "title": "GitHub Tools",
+      "description": "Let AI manage issues, PRs, and repos via your active GitHub account."
+    },
     "security": "Security",
     "appearance": "Appearance",
     "updatedUI": "Updated UI",
@@ -479,6 +489,12 @@
     "aiDescription": "Chat over your notes, todos, and canvases. AI can read context and apply edits when you allow it.",
     "aiHelper": "You can turn this on or off anytime in Settings → AI.",
     "aiEnable": "Enable AI",
+    "githubTools": {
+      "title": "GitHub Agent Tools",
+      "body": "Your AI can now list repos, create issues, open pull requests, review changes, and post PR reviews using your connected GitHub account. All write operations respect your Action Mode setting.",
+      "enable": "Enable GitHub Tools",
+      "bodyReminder": "You can turn this on or off anytime in Settings → AI → GitHub Tools."
+    },
     "skipForNow": "Skip for Now"
   },
   "renderStyle": {
@@ -723,7 +739,8 @@
       "providers": "AI providers allow you to connect different AI services. Apple Intelligence uses on-device processing for privacy.",
       "scheduledLearning": "Schedule daily reviews of notes with specific tags. The app sends reminders to help you learn and remember your notes.",
       "dailyQuote": "Shows a daily philosopher quote on your Home screen, personalized based on your recent journal reflections.",
-      "aiPersonalization": "When enabled, AI reads your notes and journals to provide personalized responses. Turn off for data privacy — AI will only use the current chat context."
+      "aiPersonalization": "When enabled, AI reads your notes and journals to provide personalized responses. Turn off for data privacy — AI will only use the current chat context.",
+      "githubTools": "When enabled, your AI agent can list your repos, create issues, open pull requests, review diff changes, and post reviews using your connected GitHub account. Uses the same token you already set up."
     },
     "title": "Hint"
   },

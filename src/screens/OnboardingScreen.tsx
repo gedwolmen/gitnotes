@@ -11,6 +11,7 @@ import {
   Clipboard,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../contexts/ThemeContext';
 import { OnboardingService } from '../services/OnboardingService';
 import { AuthService } from '../services/AuthService';
@@ -59,9 +60,11 @@ const INFO_STEPS = [
 
 const TOKEN_STEP = INFO_STEPS.length;
 const AI_STEP = TOKEN_STEP + 1;
-const TOTAL_STEPS = INFO_STEPS.length + 2;
+const GITHUB_TOOLS_STEP = AI_STEP + 1;
+const TOTAL_STEPS = INFO_STEPS.length + 3;
 
 export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScreenProps) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const [currentStep, setCurrentStep] = useState(0);
   const [token, setToken] = useState('');
@@ -92,16 +95,30 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
       } else {
         setCurrentStep(AI_STEP);
       }
+    } else if (currentStep === AI_STEP) {
+      setCurrentStep(GITHUB_TOOLS_STEP);
+    } else if (currentStep === GITHUB_TOOLS_STEP) {
+      await finish();
     }
-  }, [currentStep, token]);
+  }, [currentStep, token, finish]);
 
   const handleEnableAI = useCallback(async () => {
     await useAIStore.getState().setEnabled(true);
-    await finish();
-  }, [finish]);
+    setCurrentStep(GITHUB_TOOLS_STEP);
+  }, []);
 
   const handleSkipAI = useCallback(async () => {
     await useAIStore.getState().setEnabled(false);
+    await finish();
+  }, [finish]);
+
+  const handleEnableGithubTools = useCallback(async () => {
+    await useAIStore.getState().toggleGithubTools();
+    await finish();
+  }, [finish]);
+
+  const handleSkipGithubTools = useCallback(async () => {
+    // Skipping leaves githubToolsEnabled at its default (false), so no toggle call
     await finish();
   }, [finish]);
 
@@ -112,6 +129,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
 
   const isTokenStep = currentStep === TOKEN_STEP;
   const isAIStep = currentStep === AI_STEP;
+  const isGithubToolsStep = currentStep === GITHUB_TOOLS_STEP;
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['top', 'bottom']}>
@@ -192,6 +210,21 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
               You can turn this on or off anytime in Settings → AI.
             </Text>
           </View>
+        ) : isGithubToolsStep ? (
+          <View className="flex-1 px-10 items-center">
+            <Surface elevation="raised" radius="pill" className="w-[140px] h-[140px] items-center justify-center mb-6">
+              <Ionicons name="git-branch-outline" size={72} color={colors.accent} />
+            </Surface>
+            <Text className="text-[28px] font-bold text-center" style={{ color: colors.text }}>
+              {t('onboarding.githubTools.title', { defaultValue: 'GitHub Agent Tools' })}
+            </Text>
+            <Text className="text-base text-center leading-6" style={{ color: colors.textSecondary }}>
+              {t('onboarding.githubTools.body', { defaultValue: 'Your AI can now list repos, create issues, open pull requests, review changes, and post PR reviews using your connected GitHub account. All write operations respect your Action Mode setting.' })}
+            </Text>
+            <Text className="text-[13px] text-center leading-[18px] mt-2 opacity-80" style={{ color: colors.textSecondary }}>
+              {t('onboarding.githubTools.bodyReminder', { defaultValue: 'You can turn this on or off anytime in Settings → AI → GitHub Tools.' })}
+            </Text>
+          </View>
         ) : (
           <View className="flex-1 px-10 items-center">
             <Surface elevation="raised" radius="pill" className="w-[140px] h-[140px] items-center justify-center mb-6">
@@ -224,7 +257,26 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
             ))}
           </View>
 
-          {isAIStep ? (
+          {isGithubToolsStep ? (
+            <View className="w-full">
+              <Button
+                variant="primary"
+                fullWidth
+                testID="onboarding.button.enable-github-tools"
+                onPress={handleEnableGithubTools}
+                label={t('onboarding.githubTools.enable', { defaultValue: 'Enable GitHub Tools' })}
+                trailingIcon={<Ionicons name="git-branch-outline" size={20} color={colors.accent} />}
+              />
+              <Button
+                variant="ghost"
+                fullWidth
+                testID="onboarding.button.skip-github-tools"
+                onPress={handleSkipGithubTools}
+                label="Skip for Now"
+                style={{ marginTop: 8 }}
+              />
+            </View>
+          ) : isAIStep ? (
             <View className="w-full">
               <Button
                 variant="primary"
