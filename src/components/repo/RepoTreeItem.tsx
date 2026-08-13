@@ -12,6 +12,15 @@ import { RepoTreeMoveDialog } from './RepoTreeMoveDialog';
 import { RepoTreeRenameDialog } from './RepoTreeRenameDialog';
 import { treeStyles } from './repoTreeStyles';
 
+/**
+ * Single user-facing failure report for tree mutations. Isolated here so
+ * the registry fail-state wiring (git-operation-locking Todo 8) can replace
+ * this alert in one place.
+ */
+function announceMutationFailure(title: string, message: string): void {
+  Alert.alert(title, message);
+}
+
 export function RepoTreeItem({ node, owner, repo, branch, level, onFilePress, onRefresh, onChildDeleted }: TreeItemProps) {
   const { colors } = useTheme();
   const [expanded, setExpanded] = useState(false);
@@ -70,8 +79,13 @@ export function RepoTreeItem({ node, owner, repo, branch, level, onFilePress, on
           Alert.alert('Error', 'Could not read file content.');
           return;
         }
-        const sha = await GitHubService.getFileShaOrNull(owner, repo, oldPath, branch);
-        const moved = await GitHubService.moveFile(owner, repo, oldPath, newPath, content, `Rename: ${oldPath} → ${newPath}`, sha || '', branch || 'main');
+        const shaResult = await GitHubService.getFileSha(owner, repo, oldPath, branch);
+        if (shaResult.kind === 'error') {
+          announceMutationFailure('Rename Failed', shaResult.message);
+          return;
+        }
+        const sha = shaResult.kind === 'found' ? shaResult.sha : '';
+        const moved = await GitHubService.moveFile(owner, repo, oldPath, newPath, content, `Rename: ${oldPath} → ${newPath}`, sha, branch || 'main');
         if (!moved) {
           Alert.alert('Error', 'Failed to rename file.');
           return;
@@ -80,7 +94,7 @@ export function RepoTreeItem({ node, owner, repo, branch, level, onFilePress, on
       HapticService.success();
       onRefresh?.();
     } catch (error) {
-      Alert.alert('Rename Failed', error instanceof Error ? error.message : 'Unknown error');
+      announceMutationFailure('Rename Failed', error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setIsOperating(false);
     }
@@ -101,8 +115,13 @@ export function RepoTreeItem({ node, owner, repo, branch, level, onFilePress, on
           Alert.alert('Error', 'Could not read file content.');
           return;
         }
-        const sha = await GitHubService.getFileShaOrNull(owner, repo, oldPath, branch);
-        const moved = await GitHubService.moveFile(owner, repo, oldPath, newPath, content, `Move: ${oldPath} → ${newPath}`, sha || '', branch || 'main');
+        const shaResult = await GitHubService.getFileSha(owner, repo, oldPath, branch);
+        if (shaResult.kind === 'error') {
+          announceMutationFailure('Move Failed', shaResult.message);
+          return;
+        }
+        const sha = shaResult.kind === 'found' ? shaResult.sha : '';
+        const moved = await GitHubService.moveFile(owner, repo, oldPath, newPath, content, `Move: ${oldPath} → ${newPath}`, sha, branch || 'main');
         if (!moved) {
           Alert.alert('Error', 'Failed to move file.');
           return;
@@ -111,7 +130,7 @@ export function RepoTreeItem({ node, owner, repo, branch, level, onFilePress, on
       HapticService.success();
       onRefresh?.();
     } catch (error) {
-      Alert.alert('Move Failed', error instanceof Error ? error.message : 'Unknown error');
+      announceMutationFailure('Move Failed', error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setIsOperating(false);
     }
@@ -127,18 +146,27 @@ export function RepoTreeItem({ node, owner, repo, branch, level, onFilePress, on
           setIsOperating(true);
           try {
             if (isDir) {
-              await deleteDirectory(owner, repo, branch, node.path);
+              const result = await deleteDirectory(owner, repo, branch, node.path);
+              if (result.failed.length > 0) {
+                announceMutationFailure('Delete Failed', `Deleted ${result.deleted.length}, failed ${result.failed.length}`);
+                onRefresh?.();
+                return;
+              }
             } else {
-              const sha = await GitHubService.getFileShaOrNull(owner, repo, node.path, branch);
-              if (sha) {
-                await GitHubService.deleteFile(owner, repo, node.path, `Delete: ${node.path}`, sha, branch || 'main');
+              const shaResult = await GitHubService.getFileSha(owner, repo, node.path, branch);
+              if (shaResult.kind === 'error') {
+                announceMutationFailure('Delete Failed', shaResult.message);
+                return;
+              }
+              if (shaResult.kind === 'found') {
+                await GitHubService.deleteFile(owner, repo, node.path, `Delete: ${node.path}`, shaResult.sha, branch || 'main');
               }
             }
             HapticService.success();
             onChildDeleted?.(node.path);
             onRefresh?.();
           } catch (error) {
-            Alert.alert('Delete Failed', error instanceof Error ? error.message : 'Unknown error');
+            announceMutationFailure('Delete Failed', error instanceof Error ? error.message : 'Unknown error');
           } finally {
             setIsOperating(false);
           }
