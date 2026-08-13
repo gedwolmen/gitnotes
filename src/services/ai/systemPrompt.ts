@@ -4,6 +4,8 @@ type SystemPromptContext = {
   todoCount: number;
   actionMode: 'auto' | 'confirm';
   memoryBlock?: string;
+  githubToolsEnabled?: boolean;
+  githubAccountLogin?: string;
 };
 
 const BASE_PROMPT =
@@ -27,6 +29,23 @@ export function buildSystemPrompt(context: SystemPromptContext): string {
   if (context.memoryBlock) {
     sections.push(
       `=== User memory (thought dumps) ===\n${context.memoryBlock}\n=== End memory ===`
+    );
+  }
+
+  if (context.githubToolsEnabled) {
+    const loginLine = context.githubAccountLogin
+      ? ` for the account @${context.githubAccountLogin}`
+      : '';
+    sections.push(
+      `=== GitHub Tools${loginLine} ===
+You have access to GitHub tools:
+- list_repos: list repositories the user has access to
+- list_issues / create_issue: view and create issues in any repository
+- list_pull_requests / create_pull_request: view and open pull requests
+- get_pull_request_diff: fetch the file-level diff for review
+- review_pull_request: post an APPROVE, REQUEST_CHANGES, or COMMENT review on a PR
+Use these tools when the user asks about their repos, issues, PRs, or reviews. Always confirm before write operations if the user has actionMode=confirm.
+=== End GitHub Tools ===`
     );
   }
 
