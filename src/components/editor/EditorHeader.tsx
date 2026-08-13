@@ -23,7 +23,7 @@ export function EditorHeader({ noteId, isSaving, onCancel, onSave }: EditorHeade
       <View testID="editor-header.button.save" style={styles.headerRight}>
         <Button
           variant="ghost"
-          label={isSaving ? 'Saving…' : 'Save'}
+          label="Save"
           testID="note-editor.button.save"
           onPress={onSave}
           disabled={isSaving}

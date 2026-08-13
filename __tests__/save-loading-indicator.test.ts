@@ -280,39 +280,39 @@ describe('save/loading indicator', () => {
     jest.restoreAllMocks();
   });
 
-  it('shows and hides the save spinner on success', async () => {
+  it('shows and hides the saving overlay on success', async () => {
     const deferred = createDeferred<{ id: string } | null>();
     mockCreateNote.mockReturnValueOnce(deferred.promise);
 
     const screen = render(React.createElement(NoteEditorScreen));
     fireEvent.press(screen.getByText('Save'));
 
-    expect(screen.getByTestId('github-activity-indicator')).toBeTruthy();
+    expect(screen.getByTestId('saving-overlay')).toBeTruthy();
 
     await act(async () => {
       deferred.resolve({ id: 'note-1' });
     });
 
     await waitFor(() => {
-      expect(screen.queryByTestId('github-activity-indicator')).toBeNull();
+      expect(screen.queryByTestId('saving-overlay')).toBeNull();
     });
   });
 
-  it('hides the save spinner on error', async () => {
+  it('hides the saving overlay on error', async () => {
     const deferred = createDeferred<{ id: string } | null>();
     mockCreateNote.mockReturnValueOnce(deferred.promise);
 
     const screen = render(React.createElement(NoteEditorScreen));
     fireEvent.press(screen.getByText('Save'));
 
-    expect(screen.getByTestId('github-activity-indicator')).toBeTruthy();
+    expect(screen.getByTestId('saving-overlay')).toBeTruthy();
 
     await act(async () => {
       deferred.reject(new Error('save failed'));
     });
 
     await waitFor(() => {
-      expect(screen.queryByTestId('github-activity-indicator')).toBeNull();
+      expect(screen.queryByTestId('saving-overlay')).toBeNull();
     });
   });
 
