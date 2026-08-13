@@ -5,6 +5,7 @@ import { AuthService } from './AuthService';
 import { SyncEngineService } from './SyncEngineService';
 import { LocalGitWriter } from './git/LocalGitWriter';
 import { GitFsService } from './git/GitFsService';
+import { resolveBranch } from './git/resolveBranch';
 import { githubActivity } from '../stores/githubActivityStore';
 
 async function resolveToken(accountId?: string): Promise<string | undefined> {
@@ -53,7 +54,7 @@ export async function syncTodoToGitHub(params: {
     return { success: false, error: `Invalid repo path: ${repoPath}` };
   }
 
-  const targetBranch = branch || 'main';
+  const targetBranch = await resolveBranch(repoPath, branch);
   const opts = tokenOverride ? { tokenOverride } : undefined;
 
   let targetPath = filePath;
@@ -163,7 +164,7 @@ export async function deleteTodoFromGitHub(params: {
     return { success: false, error: `Invalid repo path: ${repoPath}` };
   }
 
-  const targetBranch = branch || 'main';
+  const targetBranch = await resolveBranch(repoPath, branch);
   const opts = tokenOverride ? { tokenOverride } : undefined;
 
   const mode = await SyncEngineService.getMode(repoPath);

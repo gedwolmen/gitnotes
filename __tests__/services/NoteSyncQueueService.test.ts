@@ -20,39 +20,61 @@ jest.mock('@react-native-async-storage/async-storage', () => {
   };
 });
 
-jest.mock('../src/services/NoteGitHubSyncService', () => ({
+jest.mock('../../src/services/NoteGitHubSyncService', () => ({
   syncNoteToGitHub: jest.fn(),
   deleteNoteFromGitHub: jest.fn(),
 }));
 
-jest.mock('../src/services/StorageService', () => ({
+jest.mock('../../src/services/StorageService', () => ({
   StorageService: { updateNote: jest.fn(async () => undefined) },
 }));
 
-jest.mock('../src/services/SyncEngineService', () => ({
+jest.mock('../../src/services/SyncEngineService', () => ({
   SyncEngineService: { getMode: jest.fn(async () => 'api') },
 }));
 
-jest.mock('../src/services/AuthService', () => ({
+jest.mock('../../src/services/AuthService', () => ({
   AuthService: { getToken: jest.fn(async () => 'tok') },
 }));
 
-jest.mock('../src/services/git/LocalGitWriter', () => ({
+jest.mock('../../src/services/git/LocalGitWriter', () => ({
   LocalGitWriter: { push: jest.fn(async () => ({ success: true })) },
 }));
 
+jest.mock('../../src/services/git/resolveBranch', () => ({
+  resolveBranch: jest.fn(),
+}));
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { NoteSyncQueueService } from '../src/services/NoteSyncQueueService';
-import { syncNoteToGitHub, deleteNoteFromGitHub } from '../src/services/NoteGitHubSyncService';
-import { SyncEngineService } from '../src/services/SyncEngineService';
-import { LocalGitWriter } from '../src/services/git/LocalGitWriter';
+import { NoteSyncQueueService, DroppedMutationEvent } from '../../src/services/NoteSyncQueueService';
+import { syncNoteToGitHub, deleteNoteFromGitHub } from '../../src/services/NoteGitHubSyncService';
+import { SyncEngineService } from '../../src/services/SyncEngineService';
+import { LocalGitWriter } from '../../src/services/git/LocalGitWriter';
+import { resolveBranch } from '../../src/services/git/resolveBranch';
+import {
+  DELETE_FAILURES_STORAGE_KEY,
+  readDeleteFailures,
+} from '../../src/services/git/deleteFailures';
 
 const QUEUE_KEY = '@gitnotes:sync_queue_v1';
+const TOMBSTONE_KEY = '@gitnotes:delete_tombstones_v1';
+const TOMBSTONE_TTL_MS = 24 * 60 * 60 * 1_000;
+
+const resolveBranchMock = resolveBranch as jest.MockedFunction<typeof resolveBranch>;
+
+// Mirrors the real resolver's contract for these tests: an explicit branch
+// short-circuits (no network/fs), otherwise fall back to 'main'. Individual
+// tests override the fallback to simulate a non-main host default branch.
+function defaultResolveBranch(repoPath: string, hint?: string | null): Promise<string> {
+  void repoPath;
+  return Promise.resolve(hint ?? 'main');
+}
 
 describe('NoteSyncQueueService', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     (AsyncStorage as unknown as { __reset: () => void }).__reset();
+    resolveBranchMock.mockImplementation(defaultResolveBranch);
   });
 
   describe('enqueueNoteUpsert', () => {
@@ -587,6 +609,256 @@ describe('NoteSyncQueueService', () => {
       expect(good).toHaveBeenCalled();
       u1();
       u2();
+    });
+  });
+
+  describe('onDroppedMutation', () => {
+    test('unsubscribe stops drop events', async () => {
+      (deleteNoteFromGitHub as jest.Mock).mockResolvedValue({
+        success: false, error: 'Bad credentials', status: 401,
+      });
+      const events: DroppedMutationEvent[] = [];
+      const unsub = NoteSyncQueueService.onDroppedMutation((e) => events.push(e));
+      unsub();
+
+      await NoteSyncQueueService.enqueueNoteDelete({
+        repo: 'r', branch: 'main', filePath: 'a.md',
+      });
+      await NoteSyncQueueService.drain();
+      expect(events).toHaveLength(0);
+    });
+
+    test('listener errors do not break the drain', async () => {
+      (deleteNoteFromGitHub as jest.Mock).mockResolvedValue({
+        success: false, error: 'Bad credentials', status: 401,
+      });
+      const unsub = NoteSyncQueueService.onDroppedMutation(() => {
+        throw new Error('boom');
+      });
+
+      await NoteSyncQueueService.enqueueNoteDelete({
+        repo: 'r', branch: 'main', filePath: 'a.md',
+      });
+      const result = await NoteSyncQueueService.drain();
+      expect(result.remaining).toBe(0);
+      unsub();
+    });
+  });
+
+  describe('resolved-branch tombstones', () => {
+    test('enqueueNoteDelete with undefined branch persists the resolved branch (acceptance 1)', async () => {
+      resolveBranchMock.mockImplementation(async (_repo, hint) => hint ?? 'master');
+
+      await NoteSyncQueueService.enqueueNoteDelete({
+        repo: 'owner/repo', filePath: 'notes/a.md', title: 'A',
+      });
+
+      const items = await NoteSyncQueueService.getAll();
+      expect(items).toHaveLength(1);
+      expect(items[0].params.branch).toBe('master');
+      expect(await NoteSyncQueueService.isTombstoned('owner/repo', 'master', 'notes/a.md')).toBe(true);
+
+      // The raw undefined->'main' fallback key is gone (the original bug).
+      const rawTombstones = await AsyncStorage.getItem(TOMBSTONE_KEY);
+      expect(rawTombstones).not.toContain('owner/repo::main::notes/a.md');
+    });
+
+    test('enqueueNoteUpsert with undefined branch persists the resolved branch', async () => {
+      resolveBranchMock.mockImplementation(async (_repo, hint) => hint ?? 'master');
+
+      await NoteSyncQueueService.enqueueNoteUpsert({
+        repo: 'owner/repo', filePath: 'notes/a.md', title: 'A', content: 'x', format: 'markdown',
+      });
+
+      const items = await NoteSyncQueueService.getAll();
+      expect(items).toHaveLength(1);
+      expect(items[0].params.branch).toBe('master');
+    });
+  });
+
+  describe('durable-drop surfacing + failure pinning', () => {
+    test('durable 401 delete drops with an event and pins the tombstone past TTL (acceptance 2)', async () => {
+      resolveBranchMock.mockImplementation(async (_repo, hint) => hint ?? 'master');
+      (deleteNoteFromGitHub as jest.Mock).mockResolvedValue({
+        success: false, error: 'Bad credentials', status: 401,
+      });
+
+      const events: DroppedMutationEvent[] = [];
+      const unsub = NoteSyncQueueService.onDroppedMutation((e) => events.push(e));
+
+      await NoteSyncQueueService.enqueueNoteDelete({
+        repo: 'owner/repo', filePath: 'notes/a.md', title: 'A',
+      });
+      const result = await NoteSyncQueueService.drain();
+
+      // Drop is a side channel: drain() contract stays {succeeded, failed, remaining}
+      expect(result.succeeded).toBe(0);
+      expect(result.failed).toBe(0);
+      expect(result.remaining).toBe(0);
+
+      expect(events).toHaveLength(1);
+      expect(events[0].reason).toBe('durable');
+      expect(events[0].error).toBe('Bad credentials');
+      expect(events[0].status).toBe(401);
+      expect(events[0].mutation.type).toBe('note.delete');
+      expect(events[0].mutation.params.branch).toBe('master');
+
+      const failures = await readDeleteFailures();
+      expect(Object.keys(failures)).toEqual(['owner/repo::master::notes/a.md']);
+      expect(failures['owner/repo::master::notes/a.md']).toMatchObject({
+        error: 'Bad credentials',
+        kind: 'authentication',
+      });
+      expect(await NoteSyncQueueService.isTombstoned('owner/repo', 'master', 'notes/a.md')).toBe(true);
+
+      // Advance past the 24h TTL — the failure entry keeps it tombstoned.
+      const base = Date.now();
+      const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => base + TOMBSTONE_TTL_MS + 60_000);
+      try {
+        expect(await NoteSyncQueueService.isTombstoned('owner/repo', 'master', 'notes/a.md')).toBe(true);
+      } finally {
+        nowSpy.mockRestore();
+      }
+      unsub();
+    });
+
+    test('durable upsert drop records no delete failure', async () => {
+      (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: false, error: '401 Unauthorized' });
+
+      await NoteSyncQueueService.enqueueNoteUpsert({
+        repo: 'r', branch: 'main', filePath: 'a', title: 'A', content: '', format: 'markdown',
+      });
+      const result = await NoteSyncQueueService.drain();
+
+      expect(result.failed).toBe(0);
+      expect(result.remaining).toBe(0);
+      expect(await readDeleteFailures()).toEqual({});
+    });
+
+    test('exhausted delete (8 transient failures) drops with an event and pins (acceptance 3)', async () => {
+      (deleteNoteFromGitHub as jest.Mock).mockResolvedValue({
+        success: false, error: 'network down',
+      });
+
+      const events: DroppedMutationEvent[] = [];
+      const unsub = NoteSyncQueueService.onDroppedMutation((e) => events.push(e));
+
+      await NoteSyncQueueService.enqueueNoteDelete({
+        repo: 'r', branch: 'main', filePath: 'a.md', title: 'A',
+      });
+
+      let virtualNow = Date.now();
+      const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => virtualNow);
+      let lastResult = { succeeded: 0, failed: 0, remaining: 1 };
+      try {
+        for (let i = 0; i < 8; i++) {
+          lastResult = await NoteSyncQueueService.drain();
+          virtualNow += 60_000;
+        }
+      } finally {
+        nowSpy.mockRestore();
+      }
+
+      expect(lastResult.failed).toBe(1);
+      expect(lastResult.remaining).toBe(0);
+      expect(events).toHaveLength(1);
+      expect(events[0].reason).toBe('exhausted');
+      expect(events[0].error).toBe('network down');
+      expect(events[0].mutation.type).toBe('note.delete');
+
+      const failures = await readDeleteFailures();
+      expect(failures['r::main::a.md']).toMatchObject({
+        error: 'network down',
+        kind: 'exhausted',
+      });
+
+      // Pinned past the TTL like the durable case.
+      const futureSpy = jest
+        .spyOn(Date, 'now')
+        .mockImplementation(() => virtualNow + TOMBSTONE_TTL_MS + 60_000);
+      try {
+        expect(await NoteSyncQueueService.isTombstoned('r', 'main', 'a.md')).toBe(true);
+      } finally {
+        futureSpy.mockRestore();
+      }
+      unsub();
+    });
+
+    test('retry re-enqueue clears the pinned failure entry (acceptance 4)', async () => {
+      (deleteNoteFromGitHub as jest.Mock).mockResolvedValue({
+        success: false, error: 'Bad credentials', status: 401,
+      });
+
+      await NoteSyncQueueService.enqueueNoteDelete({
+        repo: 'r', branch: 'main', filePath: 'a.md', title: 'A',
+      });
+      await NoteSyncQueueService.drain();
+      expect(Object.keys(await readDeleteFailures())).toEqual(['r::main::a.md']);
+      expect(await NoteSyncQueueService.isTombstoned('r', 'main', 'a.md')).toBe(true);
+
+      await NoteSyncQueueService.enqueueNoteDelete({
+        repo: 'r', branch: 'main', filePath: 'a.md', title: 'A',
+      });
+      expect(await readDeleteFailures()).toEqual({});
+
+      // Fresh tombstone covers the retry window...
+      expect(await NoteSyncQueueService.isTombstoned('r', 'main', 'a.md')).toBe(true);
+      // ...but without the pin it expires normally past the TTL.
+      const futureSpy = jest
+        .spyOn(Date, 'now')
+        .mockImplementation(() => Date.now() + TOMBSTONE_TTL_MS + 60_000);
+      try {
+        expect(await NoteSyncQueueService.isTombstoned('r', 'main', 'a.md')).toBe(false);
+      } finally {
+        futureSpy.mockRestore();
+      }
+    });
+
+    test('failure map survives corrupted JSON', async () => {
+      await AsyncStorage.setItem(DELETE_FAILURES_STORAGE_KEY, '{not json');
+      expect(await readDeleteFailures()).toEqual({});
+      expect(await NoteSyncQueueService.isTombstoned('r', 'main', 'a.md')).toBe(false);
+    });
+  });
+
+  describe('clone-mode resolved-branch push', () => {
+    beforeEach(() => {
+      (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
+      (LocalGitWriter.push as jest.Mock).mockResolvedValue({ success: true });
+    });
+
+    afterEach(() => {
+      (SyncEngineService.getMode as jest.Mock).mockResolvedValue('api');
+    });
+
+    test('group with undefined branch commits and pushes on the resolved branch (acceptance 5)', async () => {
+      resolveBranchMock.mockImplementation(async (_repo, hint) => hint ?? 'master');
+      (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: true });
+      (deleteNoteFromGitHub as jest.Mock).mockResolvedValue({ success: true });
+
+      await NoteSyncQueueService.enqueueNoteUpsert({
+        repo: 'me/repo', filePath: 'a.md', title: 'A', content: 'x', format: 'markdown',
+      });
+      await NoteSyncQueueService.enqueueNoteDelete({
+        repo: 'me/repo', filePath: 'b.md', title: 'B',
+      });
+
+      const result = await NoteSyncQueueService.drain();
+      expect(result.succeeded).toBe(2);
+      expect(result.failed).toBe(0);
+      expect(result.remaining).toBe(0);
+
+      // Each mutation ran against the resolved branch (commit target).
+      expect((syncNoteToGitHub as jest.Mock).mock.calls[0][0].branch).toBe('master');
+      expect((deleteNoteFromGitHub as jest.Mock).mock.calls[0][0].branch).toBe('master');
+
+      // The single coalesced push targets the same resolved branch.
+      expect(LocalGitWriter.push).toHaveBeenCalledTimes(1);
+      expect(LocalGitWriter.push).toHaveBeenCalledWith({
+        repoPath: 'me/repo',
+        branch: 'master',
+        token: 'tok',
+      });
     });
   });
 });
