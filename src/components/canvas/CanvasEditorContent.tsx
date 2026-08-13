@@ -56,6 +56,10 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as ImagePicker from 'expo-image-picker';
 import type { RootStackParamList } from '../../navigation/types';
+import { DraftLayerRenderer } from './DraftLayerRenderer';
+import { AcceptDiscardBar } from './AcceptDiscardBar';
+import { useLongPressForVision } from '../../hooks/useLongPressForVision';
+import type { DraftCommand } from '../../stores/draftStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'CanvasEditor'>;
 type RouteType = RouteProp<RootStackParamList, 'CanvasEditor'>;
@@ -328,6 +332,55 @@ function AnimatedCanvasElement({ element, children }: { element: CanvasElement; 
   );
 }
 
+function convertDraftToElement(cmd: DraftCommand): CanvasElement | null {
+  const p = cmd.payload ?? {};
+  const x = typeof p.x === 'number' ? p.x : 0;
+  const y = typeof p.y === 'number' ? p.y : 0;
+  const w = typeof p.width === 'number' ? p.width : 100;
+  const h = typeof p.height === 'number' ? p.height : 30;
+  const content = typeof p.content === 'string' ? p.content : (cmd.label ?? '');
+  const color = typeof p.color === 'string' ? p.color : '#000000';
+  const fontSize = typeof p.fontSize === 'number' ? p.fontSize : 20;
+
+  if (cmd.kind === 'text' || cmd.kind === 'annotation' || cmd.kind === 'highlight') {
+    return {
+      type: 'text',
+      id: uid(),
+      x,
+      y,
+      text: content,
+      fontSize,
+      color,
+    } satisfies CanvasText;
+  }
+  if (cmd.kind === 'shape') {
+    return {
+      type: 'shape',
+      id: uid(),
+      shape: 'rect',
+      color,
+      fillColor: undefined,
+      width: 2,
+      x1: x,
+      y1: y,
+      x2: x + w,
+      y2: y + h,
+    } satisfies CanvasShape;
+  }
+  if (cmd.kind === 'replace' && content) {
+    return {
+      type: 'text',
+      id: uid(),
+      x,
+      y,
+      text: content,
+      fontSize,
+      color,
+    } satisfies CanvasText;
+  }
+  return null;
+}
+
 export default function CanvasEditorContent() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteType>();
@@ -441,6 +494,22 @@ export default function CanvasEditorContent() {
   const gestureModeRef = useRef<'RESIZE' | 'MOVE' | 'LASSO' | null>(null);
   const lassoPointsRef = useRef<Point[]>([]);
   const [lassoRenderTick, setLassoRenderTick] = useState(0);
+
+  const {
+    gesture: visionLongPressGesture,
+    isTranscribing,
+    error: visionError,
+  } = useLongPressForVision({
+    selectedElementIds: selectedIds,
+    allElements: elements as unknown as Array<{ id: string; [key: string]: unknown }>,
+    canvasId: canvasId ?? 'new',
+  });
+
+  useEffect(() => {
+    if (visionError) {
+      Alert.alert('Vision error', visionError);
+    }
+  }, [visionError]);
 
   const textFont = useMemo(
     () =>
@@ -1166,14 +1235,13 @@ export default function CanvasEditorContent() {
   // - Two-finger: always wins via Race, provides zoom+pan
   const composedGesture = useMemo(
     () => {
+      const withVision = Gesture.Race(twoFingerCombo, visionLongPressGesture);
       if (tool === 'select') {
-        // In select mode, use select pan OR two-finger combo
-        return Gesture.Race(twoFingerCombo, selectPanGesture);
+        return Gesture.Race(withVision, selectPanGesture);
       }
-      // In draw mode, use draw pan OR two-finger combo
-      return Gesture.Race(twoFingerCombo, drawPanGesture);
+      return Gesture.Race(withVision, drawPanGesture);
     },
-    [tool, twoFingerCombo, drawPanGesture, selectPanGesture],
+    [tool, twoFingerCombo, drawPanGesture, selectPanGesture, visionLongPressGesture],
   );
 
   const saveCanvas = useCallback(async () => {
@@ -1630,6 +1698,48 @@ export default function CanvasEditorContent() {
         </View>
       </GestureDetector>
 
+      {selectedIds.length > 0 && (
+        <DraftLayerRenderer
+          atlasWidth={canvasSize?.width ?? cw}
+          atlasHeight={canvasSize?.height ?? 600}
+          atlasOffsetX={0}
+          atlasOffsetY={0}
+          applyCommand={(cmd) => {
+            saveHistory();
+            const newEl = convertDraftToElement(cmd);
+            if (newEl) setElements((prev) => [...prev, newEl]);
+          }}
+          pushUndo={() => saveHistory()}
+          applyCommands={(cmds) => {
+            saveHistory();
+            const newEls = cmds.map(convertDraftToElement).filter((e): e is CanvasElement => e !== null);
+            setElements((prev) => [...prev, ...newEls]);
+          }}
+        />
+      )}
+
+      <AcceptDiscardBar
+        applyCommand={(cmd) => {
+          saveHistory();
+          const newEl = convertDraftToElement(cmd);
+          if (newEl) setElements((prev) => [...prev, newEl]);
+        }}
+        applyCommands={(cmds) => {
+          saveHistory();
+          const newEls = cmds.map(convertDraftToElement).filter((e): e is CanvasElement => e !== null);
+          setElements((prev) => [...prev, ...newEls]);
+        }}
+        pushUndo={() => saveHistory()}
+      />
+
+      {isTranscribing && (
+        <View style={styles.transcribingOverlay}>
+          <View style={styles.transcribingCard}>
+            <Text style={[styles.transcribingText, { color: colors.text }]}>AI is analyzing selection...</Text>
+          </View>
+        </View>
+      )}
+
       <Modal visible={textModalVisible} transparent animationType="fade" onRequestClose={() => setTextModalVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
@@ -1835,4 +1945,25 @@ const makeStyles = (colors: StyleColors) => StyleSheet.create({
   modalInput: { height: 40, borderWidth: 1, borderColor: colors.border, borderRadius: 6, paddingHorizontal: 8, fontSize: 15, color: colors.text },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 12, gap: 16 },
   modalBtn: { paddingVertical: 6, paddingHorizontal: 12 },
+  transcribingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    zIndex: 1000,
+  },
+  transcribingCard: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+  },
+  transcribingText: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
 });
