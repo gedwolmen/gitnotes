@@ -33,9 +33,9 @@ export function clearAuthToken(): void {
 
 function labelForMethod(method?: string): string {
   const m = (method ?? 'get').toLowerCase();
-  if (m === 'delete') return 'Deleting on GitHub…';
-  if (m === 'put' || m === 'post' || m === 'patch') return 'Saving to GitHub…';
-  return 'Syncing with GitHub…';
+  if (m === 'delete') return 'Deleting on GitHub';
+  if (m === 'put' || m === 'post' || m === 'patch') return 'Saving to GitHub';
+  return 'Syncing with GitHub';
 }
 
 type TrackedConfig = InternalAxiosRequestConfig & {

@@ -38,7 +38,8 @@ import { SwipeableListItem } from '../components/list/SwipeableListItem';
 import { BulkActionBar } from '../components/list/BulkActionBar';
 import { useResponsive } from '../hooks/useResponsive';
 import { useGitHubActivityStore } from '../stores/githubActivityStore';
-import { gitOperationRegistry } from '../stores/gitOperationStore';
+import { gitOperationRegistry, useGitOperationStore } from '../stores/gitOperationStore';
+import { GitSyncGate } from '../services/git/GitSyncGate';
 import { useEntityLock } from '../hooks/useGitOpLock';
 import { useTranslation } from 'react-i18next';
 import { LastSelectionPreferenceService } from '../services/LastSelectionPreferenceService';
@@ -127,6 +128,16 @@ export default function TodoListScreen() {
   const selectionMode = selectedIds.size > 0;
   const isFocused = useIsFocused();
   const { inflight } = useGitHubActivityStore();
+
+  // GitSyncGate publishes registry ops for the held cycle (kind 'pull')
+  // and push markers (kind 'push'); the registry is the reactive busy source.
+  const gateBusy = useGitOperationStore((s) =>
+    Object.values(s.ops).some(
+      (op) =>
+        (op.status === 'queued' || op.status === 'running') &&
+        (op.kind === 'pull' || op.kind === 'push'),
+    ),
+  );
 
   // Reset refresh state when screen loses focus (tab switch, stack push, etc.)
   useEffect(() => {
@@ -537,6 +548,7 @@ export default function TodoListScreen() {
   const handlePullToRefresh = useCallback(async () => {
     if (isRefreshingRef.current) return;
     if (useGitHubActivityStore.getState().inflight > 0) return;
+    if (GitSyncGate.isCycleHeld()) return;
     isRefreshingRef.current = true;
     setIsRefreshing(true);
     HapticService.light();
@@ -651,8 +663,10 @@ export default function TodoListScreen() {
         refreshControl={
           gitOperationActive ? undefined : (
             <RefreshControl
+              testID="todo-list.swipe.pull-refresh"
               refreshing={isRefreshing}
               onRefresh={handlePullToRefresh}
+              enabled={!gateBusy}
               tintColor={colors.primary}
               colors={[colors.primary]}
             />

@@ -298,7 +298,8 @@
     "saveMerged": "Save merged",
     "deleteFailed": "Error al eliminar",
     "retry": "Reintentar",
-    "deleteInProgress": "Esta nota se está eliminando. Guardar está desactivado hasta que se complete la eliminación."
+    "deleteInProgress": "Esta nota se está eliminando. Guardar está desactivado hasta que se complete la eliminación.",
+    "offlineBanner": "Estás sin conexión — los cambios no se sincronizarán"
   },
   "onboarding": {
     "steps": {

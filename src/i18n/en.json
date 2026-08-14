@@ -473,7 +473,8 @@
     "saveMerged": "Save merged",
     "deleteFailed": "Delete Failed",
     "retry": "Retry",
-    "deleteInProgress": "This note is being deleted. Saving is disabled until the delete completes."
+    "deleteInProgress": "This note is being deleted. Saving is disabled until the delete completes.",
+    "offlineBanner": "You're offline — changes won't sync"
   },
   "onboarding": {
     "steps": {

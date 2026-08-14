@@ -14,7 +14,8 @@ import { Note } from '../models/Note';
 import { GitHubService } from '../services/GitHubService';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import type { NoteDeleteParams } from '../services/NoteSyncQueueService';
-import { gitOperationRegistry } from '../stores/gitOperationStore';
+import { gitOperationRegistry, useGitOperationStore } from '../stores/gitOperationStore';
+import { GitSyncGate } from '../services/git/GitSyncGate';
 import { deriveDefaultNotePath, useNoteStore } from '../stores/noteStore';
 import { useEntityLock } from '../hooks/useGitOpLock';
 import { syncNow } from '../services/git/manualSync';
@@ -190,6 +191,16 @@ export default function NotesListScreen() {
 
   const isFocused = useIsFocused();
   const { inflight } = useGitHubActivityStore();
+
+  // GitSyncGate publishes registry ops for the held cycle (kind 'pull')
+  // and push markers (kind 'push'); the registry is the reactive busy source.
+  const gateBusy = useGitOperationStore((s) =>
+    Object.values(s.ops).some(
+      (op) =>
+        (op.status === 'queued' || op.status === 'running') &&
+        (op.kind === 'pull' || op.kind === 'push'),
+    ),
+  );
 
   // Reset refresh state when screen loses focus (tab switch, stack push, etc.)
   useEffect(() => {
@@ -443,6 +454,7 @@ export default function NotesListScreen() {
   const handlePullToRefresh = useCallback(async () => {
     if (isPullRefreshingRef.current) return;
     if (useGitHubActivityStore.getState().inflight > 0) return;
+    if (GitSyncGate.isCycleHeld()) return;
     isPullRefreshingRef.current = true;
     setIsPullRefreshing(true);
     HapticService.light();
@@ -470,6 +482,10 @@ export default function NotesListScreen() {
 
   const handleManualSync = useCallback(async () => {
     if (isManualSyncing) return;
+    if (gateBusy) {
+      HapticService.warning();
+      return;
+    }
     HapticService.light();
     setIsManualSyncing(true);
     try {
@@ -485,7 +501,7 @@ export default function NotesListScreen() {
     } finally {
       setIsManualSyncing(false);
     }
-  }, [isManualSyncing]);
+  }, [isManualSyncing, gateBusy]);
 
   const handleViewModeChange = useCallback(
     (mode: ViewMode) => {
@@ -642,6 +658,7 @@ export default function NotesListScreen() {
               testID="notes-list.swipe.pull-refresh"
               refreshing={isPullRefreshing}
               onRefresh={handlePullToRefresh}
+              enabled={!gateBusy}
               tintColor={colors.primary}
               colors={[colors.primary]}
             />
@@ -744,11 +761,10 @@ export default function NotesListScreen() {
                 size="sm"
                 testID="notes-list.icon-button.sync"
                 active={pendingSync > 0}
-                disabled={isManualSyncing}
                 onPress={handleManualSync}
                 accessibilityLabel={t('common.sync')}
               >
-                {isManualSyncing ? (
+                {isManualSyncing || gateBusy ? (
                   <ActivityIndicator size="small" color={colors.primary} />
                 ) : (
                   <Ionicons

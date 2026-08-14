@@ -298,7 +298,8 @@
     "saveMerged": "Save merged",
     "deleteFailed": "Löschen fehlgeschlagen",
     "retry": "Erneut versuchen",
-    "deleteInProgress": "Diese Notiz wird gelöscht. Speichern ist deaktiviert, bis der Löschvorgang abgeschlossen ist."
+    "deleteInProgress": "Diese Notiz wird gelöscht. Speichern ist deaktiviert, bis der Löschvorgang abgeschlossen ist.",
+    "offlineBanner": "Du bist offline — Änderungen werden nicht synchronisiert"
   },
   "onboarding": {
     "steps": {
