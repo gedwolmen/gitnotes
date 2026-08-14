@@ -208,6 +208,14 @@ export interface GitHubFileCommit {
   commit: { sha: string };
 }
 
+/** Entry of a Git tree listing / explicit `POST /git/trees` payload. */
+export interface GitHubTreeEntry {
+  path: string;
+  mode: string;
+  type: string;
+  sha: string;
+}
+
 export interface GitHubPathCommitDates {
   updatedAt?: number;
   createdAt?: number;
@@ -978,9 +986,130 @@ class GitHubServiceClass {
     return true;
   }
 
+  /**
+   * Git Data API primitives backing `src/services/git/BatchGitOperations`
+   * (single-commit bulk deletes). Strict contract: HTTP errors are rethrown
+   * so the batch driver can apply its own retry/fallback policy — unlike
+   * the Contents-API helpers above, which swallow failures into null/[] .
+   */
+  async getBranchHead(
+    owner: string,
+    repo: string,
+    branch: string,
+    opts?: TokenOpts,
+  ): Promise<{ sha: string }> {
+    const encodedBranch = branch.split('/').map(encodeURIComponent).join('/');
+    const data = await this.request<{ object?: { sha?: string } }>(
+      `https://api.github.com/repos/${owner}/${repo}/git/ref/heads/${encodedBranch}`,
+      'GET',
+      undefined,
+      opts,
+    );
+    if (!data?.object?.sha) {
+      throw new Error(`Branch head not found for ${branch}`);
+    }
+    return { sha: data.object.sha };
+  }
+
+  async getCommit(
+    owner: string,
+    repo: string,
+    sha: string,
+    opts?: TokenOpts,
+  ): Promise<{ treeSha: string }> {
+    const data = await this.request<{ tree?: { sha?: string } }>(
+      `https://api.github.com/repos/${owner}/${repo}/git/commits/${encodeURIComponent(sha)}`,
+      'GET',
+      undefined,
+      opts,
+    );
+    if (!data?.tree?.sha) {
+      throw new Error(`Commit tree not found for ${sha}`);
+    }
+    return { treeSha: data.tree.sha };
+  }
+
+  async getTreeRaw(
+    owner: string,
+    repo: string,
+    treeSha: string,
+    recursive: boolean = true,
+    opts?: TokenOpts,
+  ): Promise<GitHubTreeEntry[]> {
+    const url = `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(treeSha)}` +
+      (recursive ? '?recursive=1' : '');
+    const data = await this.request(url, 'GET', undefined, opts);
+    // Same strictness as `getTreeRecursiveOrThrow`: a 200 with a malformed
+    // body is not evidence of an empty tree.
+    if (!Array.isArray(data?.tree)) {
+      throw new Error('GitHub tree response missing tree array');
+    }
+    return data.tree.map((item: any) => ({
+      path: item.path,
+      mode: item.mode,
+      type: item.type,
+      sha: item.sha,
+    }));
+  }
+
+  async createTree(
+    owner: string,
+    repo: string,
+    tree: GitHubTreeEntry[],
+    opts?: TokenOpts,
+  ): Promise<{ sha: string }> {
+    // Explicit tree (no base_tree): omitting a path from base_tree does NOT
+    // delete it, so batch deletes always send the FULL tree minus deletions.
+    const data = await this.request<{ sha?: string }>(
+      `https://api.github.com/repos/${owner}/${repo}/git/trees`,
+      'POST',
+      { tree },
+      opts,
+    );
+    if (!data?.sha) {
+      throw new Error('GitHub create tree returned no sha');
+    }
+    return { sha: data.sha };
+  }
+
+  async createCommit(
+    owner: string,
+    repo: string,
+    input: { message: string; tree: string; parents: string[] },
+    opts?: TokenOpts,
+  ): Promise<{ sha: string }> {
+    const data = await this.request<{ sha?: string }>(
+      `https://api.github.com/repos/${owner}/${repo}/git/commits`,
+      'POST',
+      input,
+      opts,
+    );
+    if (!data?.sha) {
+      throw new Error('GitHub create commit returned no sha');
+    }
+    return { sha: data.sha };
+  }
+
+  async updateRef(
+    owner: string,
+    repo: string,
+    ref: string,
+    sha: string,
+    force: boolean = false,
+    opts?: TokenOpts,
+  ): Promise<void> {
+    const encodedRef = ref.split('/').map(encodeURIComponent).join('/');
+    await this.request(
+      `https://api.github.com/repos/${owner}/${repo}/git/refs/${encodedRef}`,
+      'PATCH',
+      { sha, force },
+      opts,
+    );
+  }
+
   private async request<T = any>(
     url: string,
-    method: 'GET' | 'PUT' | 'POST' | 'DELETE' = 'GET',
+    method: 'GET' | 'PUT' | 'POST' | 'DELETE' | 'PATCH' = 'GET',
     data?: any,
     opts?: TokenOpts,
   ): Promise<T> {

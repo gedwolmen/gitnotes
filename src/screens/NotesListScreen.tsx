@@ -13,6 +13,10 @@ import { RootStackParamList } from '../navigation/types';
 import { Note } from '../models/Note';
 import { GitHubService } from '../services/GitHubService';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
+import type { NoteDeleteParams } from '../services/NoteSyncQueueService';
+import { StorageService } from '../services/StorageService';
+import { gitOperationRegistry } from '../stores/gitOperationStore';
+import { deriveDefaultNotePath } from '../stores/noteStore';
 import { pullAllFromRepos } from '../services/RepoPullService';
 import ColorPicker from '../components/ColorPicker';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
@@ -239,15 +243,49 @@ export default function NotesListScreen() {
             if (isDeletingRef.current) return;
             isDeletingRef.current = true;
             setIsDeleting(true);
-            const failedIds = new Set<string>();
             try {
-              for (const id of ids) {
-                try {
-                  const ok = await deleteNote(id);
-                  if (!ok) failedIds.add(id);
-                } catch { failedIds.add(id); }
+              const selectedNotes = notes.filter((note) => selectedIds.has(note.id));
+              const deleteTargets: { note: Note; filePath: string }[] = [];
+              for (const note of selectedNotes) {
+                if (!note.repo) continue;
+                const filePath = note.filePath ?? deriveDefaultNotePath(note);
+                if (filePath) deleteTargets.push({ note, filePath });
               }
-              if (failedIds.size > 0) {
+              if (deleteTargets.length > 0) {
+                const params: NoteDeleteParams[] = deleteTargets.map(({ note, filePath }) => ({
+                  repo: note.repo!,
+                  branch: note.branch,
+                  filePath,
+                  title: note.title,
+                  accountId: note.accountId,
+                }));
+                await NoteSyncQueueService.enqueueNoteDeletes(params);
+                for (const { note, filePath } of deleteTargets) {
+                  gitOperationRegistry.begin({
+                    kind: 'delete',
+                    repo: note.repo!,
+                    branch: note.branch,
+                    path: filePath,
+                    entityIds: [note.id],
+                    status: 'running',
+                    attempts: 0,
+                  });
+                }
+              }
+              let localFailure = false;
+              for (const note of selectedNotes) {
+                try {
+                  const removed = await StorageService.deleteNote(note.id);
+                  if (!removed) localFailure = true;
+                } catch {
+                  localFailure = true;
+                }
+              }
+              await refreshNotes();
+              if (deleteTargets.length > 0) {
+                void NoteSyncQueueService.drain();
+              }
+              if (localFailure) {
                 HapticService.warning();
               } else {
                 HapticService.success();
@@ -261,7 +299,7 @@ export default function NotesListScreen() {
         },
       ],
     );
-  }, [selectedIds, deleteNote, clearSelection, t]);
+  }, [selectedIds, notes, clearSelection, refreshNotes, t]);
 
   useEffect(() => {
     if (authState.token) GitHubService.setToken(authState.token);

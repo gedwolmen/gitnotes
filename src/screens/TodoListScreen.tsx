@@ -14,6 +14,12 @@ import { SortMode } from '../types/SortTypes';
 import { HapticService } from '../utils/haptics';
 import { syncTodoToGitHub } from '../services/TodoGitHubSyncService';
 import { pullAllFromRepos } from '../services/RepoPullService';
+import { batchDeleteFiles } from '../services/git/BatchGitOperations';
+import { resolveBranch } from '../services/git/resolveBranch';
+import { formatSyncError } from '../services/git/formatSyncError';
+import { SyncEngineService } from '../services/SyncEngineService';
+import { StorageService } from '../services/StorageService';
+import { parseRepoPath } from '../utils/gitPathParser';
 import { IconButton, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
@@ -158,6 +164,82 @@ export default function TodoListScreen() {
     persistenceKey: '@gitnotes:filters:todo-list',
   });
 
+  const runApiBatchDeletes = useCallback(async (batchable: Todo[], failedIds: Set<string>) => {
+    const branchByHintKey = new Map<string, string>();
+    const groups = new Map<string, { repo: string; branch: string; todos: Todo[] }>();
+    for (const todo of batchable) {
+      const hintKey = `${todo.repo}\n${todo.branch ?? ''}`;
+      if (!branchByHintKey.has(hintKey)) {
+        branchByHintKey.set(hintKey, await resolveBranch(todo.repo!, todo.branch));
+      }
+      const branch = branchByHintKey.get(hintKey)!;
+      const groupKey = `${todo.repo}\n${branch}`;
+      const group = groups.get(groupKey) ?? { repo: todo.repo!, branch, todos: [] };
+      group.todos.push(todo);
+      groups.set(groupKey, group);
+    }
+
+    for (const group of groups.values()) {
+      const repoInfo = parseRepoPath(group.repo);
+      if (!repoInfo || group.todos.length < 2) {
+        for (const todo of group.todos) {
+          try {
+            const ok = await deleteTodo(todo.id);
+            if (!ok) failedIds.add(todo.id);
+          } catch {
+            failedIds.add(todo.id);
+          }
+        }
+        continue;
+      }
+
+      let result;
+      try {
+        result = await batchDeleteFiles({
+          owner: repoInfo.owner,
+          repo: repoInfo.repo,
+          branch: group.branch,
+          paths: group.todos.map((todo) => todo.filePath!),
+          message: `Delete ${group.todos.length} todos`,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        result = {
+          success: false,
+          deleted: [] as string[],
+          failed: group.todos.map((todo) => ({ path: todo.filePath!, error: message })),
+        };
+      }
+
+      // Remote-first (#489): local rows disappear ONLY for paths the batch
+      // actually deleted; failures keep their rows plus the store error state.
+      const deletedPaths = new Set(result.deleted);
+      const removedIds: string[] = [];
+      for (const todo of group.todos) {
+        if (!deletedPaths.has(todo.filePath!)) {
+          failedIds.add(todo.id);
+          continue;
+        }
+        try {
+          if (await StorageService.deleteTodo(todo.id)) removedIds.push(todo.id);
+          else failedIds.add(todo.id);
+        } catch {
+          failedIds.add(todo.id);
+        }
+      }
+      if (removedIds.length > 0) {
+        const removedSet = new Set(removedIds);
+        useTodoStore.setState((state) => ({
+          todos: state.todos.filter((todo) => !removedSet.has(todo.id)),
+        }));
+      }
+      if (result.failed.length > 0) {
+        console.warn('[TodoList] bulk delete failed for paths:', result.failed);
+        useTodoStore.setState({ error: formatSyncError(result.failed[0].error, 'delete') });
+      }
+    }
+  }, [deleteTodo]);
+
   const handleBulkDelete = useCallback(() => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
@@ -176,12 +258,27 @@ export default function TodoListScreen() {
             isDeletingRef.current = true;
             const failedIds = new Set<string>();
             try {
-              for (const id of ids) {
-                try {
-                  const ok = await deleteTodo(id);
-                  if (!ok) failedIds.add(id);
-                } catch { failedIds.add(id); }
+              const selectedTodos = todos.filter((todo) => selectedIds.has(todo.id));
+              const batchable: Todo[] = [];
+              const perItem: Todo[] = [];
+              for (const todo of selectedTodos) {
+                if (!todo.repo || !todo.filePath) {
+                  perItem.push(todo);
+                  continue;
+                }
+                const mode = await SyncEngineService.getMode(todo.repo);
+                if (mode === 'api') batchable.push(todo);
+                else perItem.push(todo);
               }
+              for (const todo of perItem) {
+                try {
+                  const ok = await deleteTodo(todo.id);
+                  if (!ok) failedIds.add(todo.id);
+                } catch {
+                  failedIds.add(todo.id);
+                }
+              }
+              await runApiBatchDeletes(batchable, failedIds);
               if (failedIds.size > 0) {
                 HapticService.warning();
               } else {
@@ -195,7 +292,7 @@ export default function TodoListScreen() {
         },
       ],
     );
-  }, [selectedIds, deleteTodo, clearSelection, t]);
+  }, [selectedIds, todos, deleteTodo, clearSelection, runApiBatchDeletes, t]);
 
   const resetForm = useCallback(() => {
     setTodoText('');

@@ -25,7 +25,7 @@ interface NoteActions {
   clearError: () => void;
 }
 
-function deriveDefaultNotePath(note: Note): string | null {
+export function deriveDefaultNotePath(note: Note): string | null {
   const title = (note.title ?? '').trim();
   if (!title) return null;
   const slug = slugifyLocal(title);
