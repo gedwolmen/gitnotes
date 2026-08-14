@@ -13,7 +13,7 @@ import { slugifyTodoText, Todo, TodoPriority } from '../models/Todo';
 import { SortMode } from '../types/SortTypes';
 import { HapticService } from '../utils/haptics';
 import { syncTodoToGitHub } from '../services/TodoGitHubSyncService';
-import { pullAllFromRepos } from '../services/RepoPullService';
+import { syncNow } from '../services/git/manualSync';
 import { batchDeleteFiles } from '../services/git/BatchGitOperations';
 import { resolveBranch } from '../services/git/resolveBranch';
 import { formatSyncError } from '../services/git/formatSyncError';
@@ -49,7 +49,7 @@ export default function TodoListScreen() {
   const headerHeight = useScreenHeaderHeight();
   const tabBarHeight = useTabBarHeight();
   const navigation = useNavigation();
-  const { todos, createTodo, updateTodo, toggleTodo, refreshTodos } = useTodos();
+  const { todos, createTodo, updateTodo, toggleTodo } = useTodos();
   const deleteTodo = useTodoStore((state) => state.deleteTodo);
   const { activeAccountId } = useAuth();
   const { repositories } = useRepos();
@@ -489,16 +489,15 @@ export default function TodoListScreen() {
     }, 30000);
 
     try {
-      await pullAllFromRepos();
-    } catch (err) {
-      console.warn('[TodoList] Pull failed:', err);
+      // Do NOT acquire the gate cycle here: syncNow acquires it internally,
+      // and a held cycle would deadlock its own acquisition.
+      await syncNow();
     } finally {
       clearTimeout(safetyTimeout);
-      await refreshTodos();
       isRefreshingRef.current = false;
       setIsRefreshing(false);
     }
-  }, [refreshTodos]);
+  }, []);
 
   const renderTodoItem = useCallback(
     ({ item }: { item: Todo }) => (

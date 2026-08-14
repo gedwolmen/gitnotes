@@ -145,6 +145,11 @@ jest.mock('../../src/services/RepoPullService', () => ({
   pullAllFromRepos: jest.fn(async () => undefined),
 }));
 
+jest.mock('../../src/services/git/manualSync', () => ({
+  syncNow: jest.fn(async () => ({ ok: true })),
+  isSyncNowRunning: jest.fn(() => false),
+}));
+
 jest.mock('../../src/stores/githubActivityStore', () => ({
   githubActivity: { begin: jest.fn(), end: jest.fn() },
   useGitHubActivityStore: () => ({ inflight: 0 }),

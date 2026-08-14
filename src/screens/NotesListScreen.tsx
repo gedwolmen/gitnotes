@@ -17,7 +17,7 @@ import type { NoteDeleteParams } from '../services/NoteSyncQueueService';
 import { StorageService } from '../services/StorageService';
 import { gitOperationRegistry } from '../stores/gitOperationStore';
 import { deriveDefaultNotePath } from '../stores/noteStore';
-import { pullAllFromRepos } from '../services/RepoPullService';
+import { syncNow } from '../services/git/manualSync';
 import ColorPicker from '../components/ColorPicker';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
 import { ConflictBanner } from '../components/ui/ConflictBanner';
@@ -349,52 +349,40 @@ export default function NotesListScreen() {
       setIsPullRefreshing(false);
     }, 30000);
 
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-    const timeout = new Promise<never>((_, reject) => {
-      timeoutId = setTimeout(() => reject(new Error('Sync timed out')), 60000);
-    });
     try {
-      await Promise.race([
-        (async () => {
-          await NoteSyncQueueService.drain();
-          await pullAllFromRepos();
-        })(),
-        timeout,
-      ]);
-      await refreshNotes();
-      HapticService.success();
-    } catch (pullError) {
-      HapticService.warning();
-      console.warn('[Sync] pull-refresh failed:', pullError);
+      // Do NOT acquire the gate cycle here: syncNow acquires it internally,
+      // and a held cycle would deadlock its own acquisition.
+      const result = await syncNow();
+      if (result.ok) {
+        HapticService.success();
+      } else {
+        HapticService.warning();
+      }
     } finally {
-      if (timeoutId !== null) clearTimeout(timeoutId);
       clearTimeout(safetyTimeout);
       isPullRefreshingRef.current = false;
       setIsPullRefreshing(false);
     }
-  }, [refreshNotes]);
+  }, []);
 
   const handleManualSync = useCallback(async () => {
     if (isManualSyncing) return;
     HapticService.light();
     setIsManualSyncing(true);
     try {
-      // Bidirectional: drain pending upserts AND pull remote changes (#621).
-      // Mirrors handlePullToRefresh so the cloud icon and the swipe gesture
-      // perform the same work — the icon previously only pushed, which left
-      // remote ADD/UPDATE/DELETE invisible to users who tapped it expecting
-      // a sync.
-      await NoteSyncQueueService.drain();
-      await pullAllFromRepos();
-      await refreshNotes();
-      HapticService.success();
-    } catch (error) {
-      HapticService.warning();
-      console.warn('[Sync] manual sync failed:', error);
+      // Bidirectional manual sync (#621). Do NOT acquire the gate cycle
+      // here: syncNow acquires it internally, and a held cycle would
+      // deadlock its own acquisition.
+      const result = await syncNow();
+      if (result.ok) {
+        HapticService.success();
+      } else {
+        HapticService.warning();
+      }
     } finally {
       setIsManualSyncing(false);
     }
-  }, [isManualSyncing, refreshNotes]);
+  }, [isManualSyncing]);
 
   const handleViewModeChange = useCallback(
     (mode: ViewMode) => {

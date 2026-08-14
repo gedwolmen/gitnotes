@@ -104,6 +104,11 @@ jest.mock('../../src/services/RepoPullService', () => ({
   pullAllFromRepos: jest.fn(async () => undefined),
 }));
 
+jest.mock('../../src/services/git/manualSync', () => ({
+  syncNow: jest.fn(async () => ({ ok: true })),
+  isSyncNowRunning: jest.fn(() => false),
+}));
+
 jest.mock('../../src/services/ShareService', () => ({
   ShareService: { shareText: jest.fn() },
 }));
