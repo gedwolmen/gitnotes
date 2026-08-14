@@ -17,6 +17,7 @@ import {
   isRepoBusy,
   hasActivePull,
   pendingRunningCount,
+  GIT_OP_ALL_REPOS,
 } from '../../src/stores/gitOperationStore';
 import type { GitOpKind } from '../../src/stores/gitOperationStore';
 
@@ -236,6 +237,19 @@ describe('gitOperationStore', () => {
       expect(hasActivePull(opsState(), 'other/repo')).toBe(true);
       expect(hasActivePull(opsState(), REPO)).toBe(false);
       expect(pendingRunningCount(opsState())).toBe(2);
+    });
+
+    it('a wildcard-repo pull op counts as busy/pulling for every repo (sync cycle op)', () => {
+      const id = beginOp({ kind: 'pull', repo: GIT_OP_ALL_REPOS, status: 'running' });
+
+      expect(isRepoBusy(opsState(), REPO)).toBe(true);
+      expect(isRepoBusy(opsState(), 'third/repo')).toBe(true);
+      expect(hasActivePull(opsState(), REPO)).toBe(true);
+      expect(hasActivePull(opsState(), 'third/repo')).toBe(true);
+
+      useGitOperationStore.getState().succeed(id);
+      expect(isRepoBusy(opsState(), REPO)).toBe(false);
+      expect(hasActivePull(opsState(), REPO)).toBe(false);
     });
   });
 

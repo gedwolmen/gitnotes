@@ -565,6 +565,10 @@ describe('NoteSyncQueueService', () => {
       expect(secondDrain.succeeded).toBe(0);
       expect(secondDrain.remaining).toBe(1);
 
+      // The sync gate adds one acquisition hop inside drain(); give the
+      // in-flight drain enough turns to reach its awaiting syncNoteToGitHub
+      // call (assigning resolveSync) before we resolve it.
+      for (let i = 0; i < 10; i += 1) await Promise.resolve();
       resolveSync({ success: true });
       const first = await firstDrain;
       expect(first.succeeded).toBe(1);

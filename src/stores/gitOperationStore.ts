@@ -58,6 +58,12 @@ interface GitOperationActions {
 const GIT_OP_KINDS: readonly GitOpKind[] = ['upsert', 'delete', 'rename', 'move', 'pull', 'push'];
 const DELETE_FAILURES_KEY = '@gitnotes:delete_failures_v1';
 
+/**
+ * Repo sentinel for app-wide ops. The sync gate publishes its cycle op as a
+ * pull against every repo; selectors below treat it as matching all repos.
+ */
+export const GIT_OP_ALL_REPOS = '*';
+
 /** Ids of ops derived from durable sources on the last replaceFromDurable pass. */
 let durableOpIds = new Set<string>();
 let queueSubscription: (() => void) | null = null;
@@ -275,10 +281,19 @@ export const isEntityLocked = (ops: Record<string, GitOp>, entityId: string): bo
   Object.values(ops).some((op) => isActiveStatus(op.status) && op.entityIds.includes(entityId));
 
 export const isRepoBusy = (ops: Record<string, GitOp>, repo: string): boolean =>
-  Object.values(ops).some((op) => isActiveStatus(op.status) && op.repo === repo);
+  Object.values(ops).some(
+    (op) =>
+      isActiveStatus(op.status) &&
+      (op.repo === repo || (op.repo === GIT_OP_ALL_REPOS && op.kind === 'pull')),
+  );
 
 export const hasActivePull = (ops: Record<string, GitOp>, repo: string): boolean =>
-  Object.values(ops).some((op) => isActiveStatus(op.status) && op.kind === 'pull' && op.repo === repo);
+  Object.values(ops).some(
+    (op) =>
+      isActiveStatus(op.status) &&
+      op.kind === 'pull' &&
+      (op.repo === repo || op.repo === GIT_OP_ALL_REPOS),
+  );
 
 export const pendingRunningCount = (ops: Record<string, GitOp>): number =>
   Object.values(ops).filter((op) => isActiveStatus(op.status)).length;

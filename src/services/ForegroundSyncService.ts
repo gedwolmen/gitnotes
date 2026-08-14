@@ -5,6 +5,7 @@ import { StorageService } from './StorageService';
 import { NoteSyncQueueService } from './NoteSyncQueueService';
 import { pullAllFromRepos } from './RepoPullService';
 import { reconcileThoughtDumps } from './ai/thoughtDumpIndexing';
+import { GitSyncGate } from './git/GitSyncGate';
 
 /**
  * Foreground auto-pull driver: pulls every tracked repo when the app becomes
@@ -113,12 +114,21 @@ async function runPull(reason: string): Promise<void> {
   let success = false;
   const PULL_TIMEOUT_MS = 600_000;
   backgroundWork = (async () => {
+    // ONE cycle acquisition spans the whole drain+pull pair; drain() sees
+    // the held cycle and runs inside it (no self-deadlock). The release
+    // lives with the work itself, not the timeout race below, so a timed-
+    // out pull keeps owning the cycle until it actually settles.
+    const releaseCycle = await GitSyncGate.acquireCycle();
     try {
-      await NoteSyncQueueService.drain();
-    } catch (error) {
-      console.warn(`[ForegroundSync] drain (${reason}) failed:`, error);
+      try {
+        await NoteSyncQueueService.drain();
+      } catch (error) {
+        console.warn(`[ForegroundSync] drain (${reason}) failed:`, error);
+      }
+      await pullAllFromRepos();
+    } finally {
+      releaseCycle();
     }
-    await pullAllFromRepos();
   })().finally(() => {
     pendingBackgroundWork = false;
     backgroundWork = null;
@@ -278,6 +288,7 @@ export async function __runPullForTest(reason = 'test'): Promise<void> {
 
 export function __resetForegroundSyncForTest(): void {
   stopForegroundWatcher();
+  GitSyncGate.__resetForTest();
   inFlight = false;
   pendingBackgroundWork = false;
   backgroundWork = null;

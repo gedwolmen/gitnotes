@@ -8,6 +8,7 @@ import {
   subscribeForegroundSync,
   acquireExternalSync,
 } from '../services/ForegroundSyncService';
+import { GitSyncGate } from '../services/git/GitSyncGate';
 import { useNotes } from '../contexts/NoteContext';
 import { useCanvases } from '../contexts/CanvasContext';
 import { useTodos } from '../contexts/TodoContext';
@@ -72,8 +73,13 @@ export function StartupSyncGate({ children }: { children: React.ReactNode }) {
       try {
         await GitHubService.initialize();
         if (!GitHubService.isAuthenticated()) return;
-        await NoteSyncQueueService.drain();
-        await pullAllFromRepos();
+        const releaseCycle = await GitSyncGate.acquireCycle();
+        try {
+          await NoteSyncQueueService.drain();
+          await pullAllFromRepos();
+        } finally {
+          releaseCycle();
+        }
       } catch (error) {
         console.warn('[SyncDrain] Failed:', error);
       } finally {

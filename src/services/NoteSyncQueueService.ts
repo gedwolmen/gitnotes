@@ -11,6 +11,7 @@ import { LocalGitWriter } from './git/LocalGitWriter';
 import { classifyGitHubSyncError, isRetryableFailure, syncStatusForError } from './git/syncFailure';
 import { resolveBranch } from './git/resolveBranch';
 import { clearDeleteFailure, readDeleteFailures, recordDeleteFailure } from './git/deleteFailures';
+import { GitSyncGate } from './git/GitSyncGate';
 import { NoteColor, NoteFormat } from '../models/Note';
 
 const QUEUE_KEY = '@gitnotes:sync_queue_v1';
@@ -265,6 +266,12 @@ class NoteSyncQueueServiceClass {
     }
     this.isDraining = true;
 
+    // Serialize against app-wide drain+pull cycles (foreground/startup/
+    // background/manual sync). When this drain runs INSIDE a held cycle
+    // the cycle owner already owns the mutex — acquiring again here would
+    // self-deadlock, so the short-circuit is mandatory.
+    const releaseCycle = GitSyncGate.isCycleHeld() ? null : await GitSyncGate.acquireCycle();
+
     try {
       const initial = await this.getAll();
       const now = Date.now();
@@ -324,6 +331,7 @@ class NoteSyncQueueServiceClass {
       return { succeeded, failed, remaining: next.length };
     } finally {
       this.isDraining = false;
+      if (releaseCycle) releaseCycle();
     }
   }
 
@@ -340,6 +348,29 @@ class NoteSyncQueueServiceClass {
     const sep = key.indexOf('\n');
     const repoPath = key.slice(0, sep);
     const branch = key.slice(sep + 1);
+
+    // Push marker spans the whole group flight (per-mutation HTTP calls and
+    // the clone-mode coalesced push). A pull reading origin mid-push is the
+    // resurrection window, so pull steps must wait for this marker to clear.
+    GitSyncGate.markPushActive(repoPath, branch);
+    try {
+      return await this.processDrainGroup(repoPath, branch, items, now);
+    } finally {
+      GitSyncGate.clearPushActive(repoPath, branch);
+    }
+  }
+
+  private async processDrainGroup(
+    repoPath: string,
+    branch: string,
+    items: QueuedMutation[],
+    now: number,
+  ): Promise<{
+    succeeded: number;
+    failed: number;
+    droppedIds: Set<string>;
+    updatedById: Map<string, QueuedMutation>;
+  }> {
     const isClone = (await SyncEngineService.getMode(repoPath)) === 'clone';
 
     const droppedIds = new Set<string>();
