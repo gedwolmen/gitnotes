@@ -295,7 +295,10 @@
     "tabRemote": "Remote",
     "keepMine": "Keep mine",
     "keepTheirs": "Keep theirs",
-    "saveMerged": "Save merged"
+    "saveMerged": "Save merged",
+    "deleteFailed": "Error al eliminar",
+    "retry": "Reintentar",
+    "deleteInProgress": "Esta nota se está eliminando. Guardar está desactivado hasta que se complete la eliminación."
   },
   "onboarding": {
     "steps": {

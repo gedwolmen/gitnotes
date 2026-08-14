@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { View, Alert, Platform, RefreshControl } from 'react-native';
+import { View, Alert, Platform, RefreshControl, ActivityIndicator } from 'react-native';
 import { FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
@@ -38,10 +38,47 @@ import { SwipeableListItem } from '../components/list/SwipeableListItem';
 import { BulkActionBar } from '../components/list/BulkActionBar';
 import { useResponsive } from '../hooks/useResponsive';
 import { useGitHubActivityStore } from '../stores/githubActivityStore';
+import { gitOperationRegistry } from '../stores/gitOperationStore';
+import { useEntityLock } from '../hooks/useGitOpLock';
 import { useTranslation } from 'react-i18next';
 import { LastSelectionPreferenceService } from '../services/LastSelectionPreferenceService';
 
 const FILTER_COMPLETED_PERSISTENCE_KEY = '@gitnotes:filters:todo-completed';
+
+interface LockedTodoRowProps {
+  item: Todo;
+  selected: boolean;
+  selectionMode: boolean;
+  onToggleSelect: () => void;
+  onPress: (todo: Todo) => void;
+  onToggle: (id: string) => void;
+}
+
+function LockedTodoRow({ item, selected, selectionMode, onToggleSelect, onPress, onToggle }: LockedTodoRowProps) {
+  const { colors } = useTheme();
+  const lock = useEntityLock(item.id, { repo: item.repo, branch: item.branch, path: item.filePath });
+  return (
+    <SwipeableListItem
+      itemId={item.id}
+      selected={selected}
+      selectionMode={selectionMode}
+      onToggleSelect={onToggleSelect}
+      disabled={lock.locked}
+    >
+      <View style={{ opacity: lock.locked ? 0.45 : 1 }}>
+        <TodoCard todo={item} onPress={onPress} onToggle={onToggle} />
+        {lock.locked ? (
+          <ActivityIndicator
+            size="small"
+            testID="todo-row.lock-spinner"
+            color={colors.primary}
+            style={{ position: 'absolute', right: 12, top: 12, zIndex: 5 }}
+          />
+        ) : null}
+      </View>
+    </SwipeableListItem>
+  );
+}
 
 export default function TodoListScreen() {
   const { t } = useTranslation();
@@ -193,6 +230,19 @@ export default function TodoListScreen() {
         continue;
       }
 
+      const opByTodoId = new Map<string, string>();
+      for (const todo of group.todos) {
+        opByTodoId.set(todo.id, gitOperationRegistry.begin({
+          kind: 'delete',
+          repo: todo.repo!,
+          branch: todo.branch,
+          path: todo.filePath!,
+          entityIds: [todo.id],
+          status: 'running',
+          attempts: 0,
+        }));
+      }
+
       let result;
       try {
         result = await batchDeleteFiles({
@@ -216,15 +266,23 @@ export default function TodoListScreen() {
       const deletedPaths = new Set(result.deleted);
       const removedIds: string[] = [];
       for (const todo of group.todos) {
+        const opId = opByTodoId.get(todo.id);
         if (!deletedPaths.has(todo.filePath!)) {
           failedIds.add(todo.id);
+          if (opId) gitOperationRegistry.fail(opId, result.failed[0]?.error ?? 'Delete failed');
           continue;
         }
         try {
-          if (await StorageService.deleteTodo(todo.id)) removedIds.push(todo.id);
-          else failedIds.add(todo.id);
+          if (await StorageService.deleteTodo(todo.id)) {
+            removedIds.push(todo.id);
+            if (opId) gitOperationRegistry.succeed(opId);
+          } else {
+            failedIds.add(todo.id);
+            if (opId) gitOperationRegistry.fail(opId, 'Failed to delete todo locally');
+          }
         } catch {
           failedIds.add(todo.id);
+          if (opId) gitOperationRegistry.fail(opId, 'Failed to delete todo locally');
         }
       }
       if (removedIds.length > 0) {
@@ -501,14 +559,14 @@ export default function TodoListScreen() {
 
   const renderTodoItem = useCallback(
     ({ item }: { item: Todo }) => (
-      <SwipeableListItem
-        itemId={item.id}
+      <LockedTodoRow
+        item={item}
         selected={selectedIds.has(item.id)}
         selectionMode={selectionMode}
         onToggleSelect={() => toggleSelected(item.id)}
-      >
-        <TodoCard todo={item} onPress={openEditModal} onToggle={handleToggleTodo} />
-      </SwipeableListItem>
+        onPress={openEditModal}
+        onToggle={handleToggleTodo}
+      />
     ),
     [
       handleToggleTodo,

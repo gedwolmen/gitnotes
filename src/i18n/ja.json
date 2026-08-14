@@ -295,7 +295,10 @@
     "tabRemote": "Remote",
     "keepMine": "Keep mine",
     "keepTheirs": "Keep theirs",
-    "saveMerged": "Save merged"
+    "saveMerged": "Save merged",
+    "deleteFailed": "削除に失敗しました",
+    "retry": "再試行",
+    "deleteInProgress": "このノートは削除中です。削除が完了するまで保存は無効です。"
   },
   "onboarding": {
     "steps": {

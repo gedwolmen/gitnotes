@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Alert, View, Text, ActivityIndicator, RefreshControl, FlatList, TouchableOpacity, InteractionManager } from 'react-native';
+import { Alert, View, Text, ActivityIndicator, RefreshControl, FlatList, TouchableOpacity, InteractionManager, StyleSheet } from 'react-native';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,9 +14,9 @@ import { Note } from '../models/Note';
 import { GitHubService } from '../services/GitHubService';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import type { NoteDeleteParams } from '../services/NoteSyncQueueService';
-import { StorageService } from '../services/StorageService';
 import { gitOperationRegistry } from '../stores/gitOperationStore';
-import { deriveDefaultNotePath } from '../stores/noteStore';
+import { deriveDefaultNotePath, useNoteStore } from '../stores/noteStore';
+import { useEntityLock } from '../hooks/useGitOpLock';
 import { syncNow } from '../services/git/manualSync';
 import ColorPicker from '../components/ColorPicker';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
@@ -47,6 +47,106 @@ import { useTranslation } from 'react-i18next';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
+interface LockedNoteRowProps {
+  item: Note;
+  index: number;
+  viewMode: ViewMode;
+  selectionMode: boolean;
+  selected: boolean;
+  highlighted: boolean;
+  isOffline: boolean;
+  isCached: boolean;
+  onToggleSelect: () => void;
+  onTagPress: (tag: string) => void;
+  prevDateKey: string | undefined;
+  onPress: (note: Note) => void;
+  onLongPress: (note: Note) => void;
+}
+
+function LockedNoteRow({
+  item,
+  index,
+  viewMode,
+  selectionMode,
+  selected,
+  highlighted,
+  isOffline,
+  isCached,
+  onToggleSelect,
+  onTagPress,
+  prevDateKey,
+  onPress,
+  onLongPress,
+}: LockedNoteRowProps) {
+  const { t } = useTranslation();
+  const { colors } = useTheme();
+  const lock = useEntityLock(item.id, {
+    repo: item.repo,
+    branch: item.branch,
+    path: item.filePath ?? deriveDefaultNotePath(item) ?? undefined,
+  });
+
+  const handlePress = useCallback(() => {
+    if (lock.locked) return;
+    if (lock.failed) {
+      Alert.alert(t('sync.deleteFailed'), lock.error ?? t('errors.failedDeleteNoteBody'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('sync.retry'), onPress: lock.retry },
+      ]);
+      return;
+    }
+    onPress(item);
+  }, [lock, onPress, item, t]);
+
+  const handleLongPress = useCallback(() => {
+    if (lock.locked || lock.failed) return;
+    onLongPress(item);
+  }, [lock, onLongPress, item]);
+
+  return (
+    <SwipeableListItem
+      itemId={item.id}
+      selected={selected}
+      selectionMode={selectionMode}
+      onToggleSelect={onToggleSelect}
+      disabled={lock.locked || lock.failed}
+    >
+      <View style={{ opacity: lock.locked ? 0.45 : 1 }}>
+        <NotesListCard
+          note={item}
+          viewMode={viewMode}
+          onPress={handlePress}
+          onLongPress={handleLongPress}
+          highlighted={highlighted}
+          isOffline={isOffline}
+          isCached={isCached}
+          onTagPress={onTagPress}
+          prevDateKey={prevDateKey}
+          index={index}
+        />
+        {lock.locked ? (
+          <View pointerEvents="none" style={styles.rowLockTrailing}>
+            <ActivityIndicator size="small" testID="note-row.lock-spinner" color={colors.primary} />
+          </View>
+        ) : lock.failed ? (
+          <View pointerEvents="none" style={styles.rowLockTrailing} testID="note-row.lock-error">
+            <Ionicons name="alert-circle" size={18} color={colors.error} />
+          </View>
+        ) : null}
+      </View>
+    </SwipeableListItem>
+  );
+}
+
+const styles = StyleSheet.create({
+  rowLockTrailing: {
+    position: 'absolute',
+    right: 12,
+    top: 12,
+    zIndex: 5,
+  },
+});
+
 export default function NotesListScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<NavigationProp>();
@@ -65,7 +165,6 @@ export default function NotesListScreen() {
     searchQuery,
     setSearchQuery,
     deleteNote,
-    refreshNotes,
     togglePin,
     error,
     clearError,
@@ -246,20 +345,18 @@ export default function NotesListScreen() {
             try {
               const selectedNotes = notes.filter((note) => selectedIds.has(note.id));
               const deleteTargets: { note: Note; filePath: string }[] = [];
+              const localOnlyIds: string[] = [];
               for (const note of selectedNotes) {
-                if (!note.repo) continue;
+                if (!note.repo) {
+                  localOnlyIds.push(note.id);
+                  continue;
+                }
                 const filePath = note.filePath ?? deriveDefaultNotePath(note);
                 if (filePath) deleteTargets.push({ note, filePath });
+                else localOnlyIds.push(note.id);
               }
               if (deleteTargets.length > 0) {
-                const params: NoteDeleteParams[] = deleteTargets.map(({ note, filePath }) => ({
-                  repo: note.repo!,
-                  branch: note.branch,
-                  filePath,
-                  title: note.title,
-                  accountId: note.accountId,
-                }));
-                await NoteSyncQueueService.enqueueNoteDeletes(params);
+                // All rows lock simultaneously; each is removed only on its queue success event.
                 for (const { note, filePath } of deleteTargets) {
                   gitOperationRegistry.begin({
                     kind: 'delete',
@@ -271,19 +368,25 @@ export default function NotesListScreen() {
                     attempts: 0,
                   });
                 }
+                const params: NoteDeleteParams[] = deleteTargets.map(({ note, filePath }) => ({
+                  repo: note.repo!,
+                  branch: note.branch,
+                  filePath,
+                  title: note.title,
+                  accountId: note.accountId,
+                  localNoteId: note.id,
+                }));
+                await NoteSyncQueueService.enqueueNoteDeletes(params);
+                void NoteSyncQueueService.drain();
               }
               let localFailure = false;
-              for (const note of selectedNotes) {
+              for (const id of localOnlyIds) {
                 try {
-                  const removed = await StorageService.deleteNote(note.id);
+                  const removed = await useNoteStore.getState().deleteNote(id);
                   if (!removed) localFailure = true;
                 } catch {
                   localFailure = true;
                 }
-              }
-              await refreshNotes();
-              if (deleteTargets.length > 0) {
-                void NoteSyncQueueService.drain();
               }
               if (localFailure) {
                 HapticService.warning();
@@ -299,7 +402,7 @@ export default function NotesListScreen() {
         },
       ],
     );
-  }, [selectedIds, notes, clearSelection, refreshNotes, t]);
+  }, [selectedIds, notes, clearSelection, t]);
 
   useEffect(() => {
     if (authState.token) GitHubService.setToken(authState.token);
@@ -429,25 +532,21 @@ export default function NotesListScreen() {
       const prevDateKey =
         viewMode === 'journal' && prev?.updatedAt ? formatJournalDate(new Date(prev.updatedAt)) : undefined;
       return (
-        <SwipeableListItem
-          itemId={item.id}
+        <LockedNoteRow
+          item={item}
+          index={index}
+          viewMode={viewMode}
           selected={selectedIds.has(item.id)}
           selectionMode={selectionMode}
           onToggleSelect={() => toggleSelected(item.id)}
-        >
-          <NotesListCard
-            note={item}
-            viewMode={viewMode}
-            onPress={handleNotePress}
-            onLongPress={handleNoteLongPress}
-            highlighted={hasActiveSearch && index === currentSearchMatchIndex}
-            isOffline={isConnected === false}
-            isCached={!!item.content?.trim()}
-            onTagPress={handleTagPress}
-            prevDateKey={prevDateKey}
-            index={index}
-          />
-        </SwipeableListItem>
+          onPress={handleNotePress}
+          onLongPress={handleNoteLongPress}
+          highlighted={hasActiveSearch && index === currentSearchMatchIndex}
+          isOffline={isConnected === false}
+          isCached={!!item.content?.trim()}
+          onTagPress={handleTagPress}
+          prevDateKey={prevDateKey}
+        />
       );
     },
     [

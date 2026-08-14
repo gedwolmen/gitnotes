@@ -295,7 +295,10 @@
     "tabRemote": "Remote",
     "keepMine": "Keep mine",
     "keepTheirs": "Keep theirs",
-    "saveMerged": "Save merged"
+    "saveMerged": "Save merged",
+    "deleteFailed": "삭제 실패",
+    "retry": "다시 시도",
+    "deleteInProgress": "이 노트를 삭제하는 중입니다. 삭제가 완료될 때까지 저장이 비활성화됩니다."
   },
   "onboarding": {
     "steps": {

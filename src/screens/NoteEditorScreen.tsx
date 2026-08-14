@@ -68,11 +68,14 @@ function NoteEditorScreenInner() {
     activeAccountId,
     repositories,
     folders,
+    notes,
     getNoteById,
     createNote,
     updateNote,
     navigation,
   });
+
+  const editingNote = noteId ? notes.find((n) => n.id === noteId) : undefined;
 
   const markdownOverrides = useRenderStyle('markdown');
   const markdownStyles = React.useMemo(
@@ -161,7 +164,13 @@ function NoteEditorScreenInner() {
   return (
     <SafeAreaView edges={['top', 'bottom']} className="flex-1" style={{ backgroundColor: colors.surface }}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
-        <EditorHeader noteId={noteId} isSaving={document.isSaving} onCancel={document.handleCancelEdit} onSave={document.handleSave} />
+        <EditorHeader
+          noteId={noteId}
+          isSaving={document.isSaving}
+          onCancel={document.handleCancelEdit}
+          onSave={document.handleSave}
+          lockCtx={editingNote ? { repo: editingNote.repo, branch: editingNote.branch, path: editingNote.filePath } : undefined}
+        />
 
         <EditorToolbar
           canUndo={document.canUndo}

@@ -9,6 +9,7 @@ export interface ContextMenuItem {
   label: string;
   onPress: () => void;
   destructive?: boolean;
+  disabled?: boolean;
   subtitle?: string;
   testID?: string;
 }
@@ -76,7 +77,7 @@ export default function ContextMenu({
                 key={i}
                 testID={item.testID ?? `context-menu.item.press-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
               style={styles.item}
-              onPress={() => {
+              onPress={item.disabled ? undefined : () => {
                 onClose();
                 if (Platform.OS === 'ios') {
                   // Defer until parent modal finishes dismissing — otherwise UIKit
@@ -86,18 +87,19 @@ export default function ContextMenu({
                   item.onPress();
                 }
               }}
+              disabled={item.disabled}
               activeOpacity={0.7}
             >
               <Ionicons
                 name={item.icon}
                 size={20}
-                color={item.destructive ? colors.error : colors.primary}
+                color={item.disabled ? colors.textSecondary : item.destructive ? colors.error : colors.primary}
               />
               <View style={styles.itemTextContainer}>
                 <Text
                   style={[
                     styles.itemText,
-                    { color: item.destructive ? colors.error : colors.text },
+                    { color: item.disabled ? colors.textSecondary : item.destructive ? colors.error : colors.text },
                   ]}
                 >
                   {item.label}

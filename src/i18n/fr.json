@@ -295,7 +295,10 @@
     "tabRemote": "Remote",
     "keepMine": "Keep mine",
     "keepTheirs": "Keep theirs",
-    "saveMerged": "Save merged"
+    "saveMerged": "Save merged",
+    "deleteFailed": "Échec de la suppression",
+    "retry": "Réessayer",
+    "deleteInProgress": "Cette note est en cours de suppression. L'enregistrement est désactivé jusqu'à la fin de la suppression."
   },
   "onboarding": {
     "steps": {

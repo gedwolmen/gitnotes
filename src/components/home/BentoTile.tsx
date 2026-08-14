@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import type { TextLayoutEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -15,6 +15,7 @@ interface Props {
   onLongPress?: () => void;
   widthOverride?: number;
   hidePinGlyph?: boolean;
+  locked?: boolean;
   // Stable slot label for testIDs — render-order index from the parent list.
   // Maestro can't pin against the dynamic note id (changes every install).
   testIDSlot: string;
@@ -132,12 +133,13 @@ const TILE_WIDTH_HINT: Record<BentoSize, number> = { large: 320, medium: 160, sm
 const SNIPPET_LINES: Record<BentoSize, number> = { large: 3, medium: 2, small: 1, pinned: 2 };
 const COLOR_STRIPE_WIDTH = 4;
 
-export function BentoTile({ item, size, onPress, onLongPress, widthOverride, hidePinGlyph, testIDSlot }: Props) {
+export function BentoTile({ item, size, onPress, onLongPress, widthOverride, hidePinGlyph, locked, testIDSlot }: Props) {
   const { colors } = useTheme();
   const isLarge = size === 'large';
   const isMedium = size === 'medium';
   const isPinned = size === 'pinned';
   const isCanvas = item.kind === 'canvas';
+  const isLocked = locked === true;
   const [titleLines, setTitleLines] = useState(1);
   const handleTitleLayout = useCallback(
     (e: TextLayoutEvent) => {
@@ -166,8 +168,8 @@ export function BentoTile({ item, size, onPress, onLongPress, widthOverride, hid
     return (
       <Pressable
         testID={`bento-tile.button.press-${testIDSlot}`}
-        onPress={onPress}
-        onLongPress={onLongPress}
+        onPress={isLocked ? undefined : onPress}
+        onLongPress={isLocked ? undefined : onLongPress}
         style={({ pressed }) => [
           styles.tile,
           {
@@ -175,14 +177,15 @@ export function BentoTile({ item, size, onPress, onLongPress, widthOverride, hid
             borderColor: colors.border,
             height: tileHeight,
             borderRadius: tileRadius,
-            opacity: pressed ? 0.92 : 1,
+            opacity: isLocked ? 0.45 : pressed ? 0.92 : 1,
             transform: [{ scale: pressed ? 0.985 : 1 }],
           },
           widthStyle,
         ]}
-accessibilityRole="button"
+        accessibilityRole="button"
         accessibilityLabel={`canvas ${titleFor(item)}`}
       >
+        {isLocked ? <ActivityIndicator size="small" color={colors.primary} style={styles.lockSpinner} /> : null}
         <View style={[styles.thumbWrap, { height: thumbHeight, backgroundColor: '#FFFFFF' }]}>
           <CanvasThumbnail scene={scene} width={widthOverride ?? TILE_WIDTH_HINT[size]} height={thumbHeight} />
           <View style={[styles.canvasBadge, { backgroundColor: colors.background }]}>
@@ -219,8 +222,8 @@ accessibilityRole="button"
     return (
       <Pressable
         testID={`bento-tile.button.press-${testIDSlot}`}
-        onPress={onPress}
-        onLongPress={onLongPress}
+        onPress={isLocked ? undefined : onPress}
+        onLongPress={isLocked ? undefined : onLongPress}
         style={({ pressed }) => [
           styles.tile,
           {
@@ -229,7 +232,7 @@ accessibilityRole="button"
             height: tileHeight,
             padding: tilePad,
             borderRadius: tileRadius,
-            opacity: pressed ? 0.92 : 1,
+            opacity: isLocked ? 0.45 : pressed ? 0.92 : 1,
             transform: [{ scale: pressed ? 0.985 : 1 }],
           },
           noteColorHex ? { borderLeftColor: noteColorHex, borderLeftWidth: COLOR_STRIPE_WIDTH } : null,
@@ -238,6 +241,7 @@ accessibilityRole="button"
         accessibilityRole="button"
         accessibilityLabel={`document ${titleFor(item)}`}
       >
+        {isLocked ? <ActivityIndicator size="small" color={colors.primary} style={styles.lockSpinner} /> : null}
         <View style={[styles.badge, { backgroundColor: accent + '1F' }]}>
           <Ionicons name={iconFor(item.kind)} size={ICON_SIZE[size]} color={accent} />
         </View>
@@ -281,8 +285,8 @@ accessibilityRole="button"
   return (
     <Pressable
       testID={`bento-tile.button.press-${testIDSlot}`}
-      onPress={onPress}
-      onLongPress={onLongPress}
+      onPress={isLocked ? undefined : onPress}
+      onLongPress={isLocked ? undefined : onLongPress}
       style={({ pressed }) => [
         styles.tile,
         {
@@ -291,7 +295,7 @@ accessibilityRole="button"
           height: tileHeight,
           padding: tilePad,
           borderRadius: tileRadius,
-          opacity: pressed ? 0.92 : 1,
+          opacity: isLocked ? 0.45 : pressed ? 0.92 : 1,
           transform: [{ scale: pressed ? 0.985 : 1 }],
         },
         noteColorHex ? { borderLeftColor: noteColorHex, borderLeftWidth: COLOR_STRIPE_WIDTH } : null,
@@ -300,6 +304,7 @@ accessibilityRole="button"
       accessibilityRole="button"
       accessibilityLabel={`${item.kind} ${titleFor(item)}`}
     >
+      {isLocked ? <ActivityIndicator size="small" color={colors.primary} style={styles.lockSpinner} /> : null}
       <View style={[styles.badge, { backgroundColor: accent + '1F' }]}>
         <Ionicons name={iconFor(item.kind)} size={ICON_SIZE[size]} color={accent} />
       </View>
@@ -363,6 +368,12 @@ const styles = StyleSheet.create({
   tile: {
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
+  },
+  lockSpinner: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 3,
   },
   badge: {
     width: 38,

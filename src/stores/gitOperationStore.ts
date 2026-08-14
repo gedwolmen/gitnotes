@@ -103,7 +103,8 @@ function opFromQueuedMutation(mutation: QueuedMutation): GitOp | null {
     return { ...base, kind: 'upsert', entityIds: mutation.localNoteId ? [mutation.localNoteId] : [] };
   }
   if (mutation.type === 'note.delete') {
-    return { ...base, kind: 'delete' };
+    const localNoteId = mutation.params.localNoteId;
+    return { ...base, kind: 'delete', entityIds: localNoteId ? [localNoteId] : [] };
   }
   return null;
 }

@@ -295,7 +295,10 @@
     "tabRemote": "Remote",
     "keepMine": "Keep mine",
     "keepTheirs": "Keep theirs",
-    "saveMerged": "Save merged"
+    "saveMerged": "Save merged",
+    "deleteFailed": "Löschen fehlgeschlagen",
+    "retry": "Erneut versuchen",
+    "deleteInProgress": "Diese Notiz wird gelöscht. Speichern ist deaktiviert, bis der Löschvorgang abgeschlossen ist."
   },
   "onboarding": {
     "steps": {

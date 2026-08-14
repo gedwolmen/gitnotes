@@ -3,6 +3,9 @@ import { create } from 'zustand';
 import { Note, NoteCreateInput, NoteUpdateInput, sortNotesWithPinnedFirst, filterNotesBySearch } from '../models/Note';
 import { StorageService } from '../services/StorageService';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
+import type { MutationSucceededEvent, DroppedMutationEvent } from '../services/NoteSyncQueueService';
+import { gitOperationRegistry, useGitOperationStore } from './gitOperationStore';
+import type { GitOp } from './gitOperationStore';
 import { slugifyLocal, getExtensionForFormat } from '../components/editor/editorShared';
 
 interface NoteState {
@@ -102,33 +105,39 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
       set({ error: null });
 
       const note = get().notes.find((n) => n.id === id);
-      if (note?.repo) {
-        // Recover from the case where the note synced but the response
-        // never landed (so `filePath` is unset locally) by deriving the
-        // canonical path from title + folder + format. The same shape is
-        // produced by `useNoteEditorDocument` when first uploading; if no
-        // such file exists upstream, deleteNoteFromGitHub treats sha-null
-        // as success and the row drops cleanly.
+      if (!note) return false;
+
+      if (note.repo) {
         const filePath = note.filePath ?? deriveDefaultNotePath(note);
         if (filePath) {
-          // Optimistic delete (#565 phase A): enqueue the remote delete
-          // and let the next drain ship it. The UI removes the row
-          // immediately below — no spinner on the GitHub round-trip.
-          // Auth/network failures stay queued and retry on foreground/
-          // online triggers.
+          // The note stays in storage and renders locked until the queue
+          // reports success (row removed) or a drop (Retry shown).
+          armDeleteCompletionHandlers();
           await NoteSyncQueueService.enqueueNoteDelete({
             repo: note.repo,
             branch: note.branch,
             filePath,
             title: note.title,
             accountId: note.accountId,
+            localNoteId: id,
           });
-          // Fire-and-forget drain so the typical online case still pushes
-          // immediately. Reentrancy guard inside drain handles overlap.
+          gitOperationRegistry.begin({
+            kind: 'delete',
+            repo: note.repo,
+            branch: note.branch,
+            path: filePath,
+            entityIds: [id],
+            status: 'running',
+            attempts: 0,
+          });
           void NoteSyncQueueService.drain();
+          return true;
         }
+        // Repo-backed note with no derivable path: nothing to enqueue, so
+        // fall through to the instant local delete below.
       }
 
+      // Local-only notes delete instantly.
       const success = await StorageService.deleteNote(id);
       if (success) {
         set((state) => ({ notes: state.notes.filter((n) => n.id !== id) }));
@@ -205,3 +214,114 @@ export const useFilteredNotes = () => {
     [notes, searchQuery],
   );
 };
+
+// ── Delete-completion handlers ────────────────────────────────────────
+// The registry never removes a note's local row itself — queued deletes
+// complete asynchronously, so noteStore listens ONCE for the queue's
+// success/drop side channels and finishes the job there.
+
+let deleteHandlersArmed = false;
+
+function normalizeBranchForMatch(branch: string | undefined): string {
+  return branch || 'main';
+}
+
+function findNoteForDelete(mutation: {
+  repo?: string;
+  branch?: string;
+  filePath?: string;
+  localNoteId?: string;
+}): Note | undefined {
+  const { repo, branch, filePath, localNoteId } = mutation;
+  if (!repo || !filePath) return undefined;
+  const notes = useNoteStore.getState().notes;
+  if (localNoteId) return notes.find((n) => n.id === localNoteId);
+  return notes.find(
+    (n) =>
+      n.repo === repo &&
+      normalizeBranchForMatch(n.branch) === normalizeBranchForMatch(branch) &&
+      (n.filePath === filePath || deriveDefaultNotePath(n) === filePath),
+  );
+}
+
+function deleteOpMatches(
+  op: GitOp,
+  repo: string,
+  branch: string | undefined,
+  filePath: string,
+  localNoteId: string | undefined,
+): boolean {
+  if (op.kind !== 'delete') return false;
+  const pathMatch =
+    op.repo === repo && normalizeBranchForMatch(op.branch) === normalizeBranchForMatch(branch) && op.path === filePath;
+  const entityMatch = !!localNoteId && op.entityIds.includes(localNoteId);
+  return pathMatch || entityMatch;
+}
+
+function succeedDeleteOps(
+  repo: string,
+  branch: string | undefined,
+  filePath: string,
+  localNoteId: string | undefined,
+): void {
+  const { ops } = useGitOperationStore.getState();
+  for (const [id, op] of Object.entries(ops)) {
+    if (deleteOpMatches(op, repo, branch, filePath, localNoteId)) {
+      useGitOperationStore.getState().succeed(id);
+    }
+  }
+}
+
+function failDeleteOps(
+  repo: string,
+  branch: string | undefined,
+  filePath: string,
+  localNoteId: string | undefined,
+  error: string,
+): void {
+  const { ops } = useGitOperationStore.getState();
+  for (const [id, op] of Object.entries(ops)) {
+    if (deleteOpMatches(op, repo, branch, filePath, localNoteId)) {
+      useGitOperationStore.getState().fail(id, error);
+    }
+  }
+}
+
+function onDeleteMutationSucceeded(event: MutationSucceededEvent): void {
+  const mutation = event.mutation;
+  if (mutation.type !== 'note.delete') return;
+  const note = findNoteForDelete(mutation.params);
+  if (note) {
+    void StorageService.deleteNote(note.id).catch(() => undefined);
+    useNoteStore.setState((state) => ({ notes: state.notes.filter((n) => n.id !== note.id) }));
+  }
+  succeedDeleteOps(mutation.params.repo, mutation.params.branch, mutation.params.filePath, mutation.params.localNoteId);
+}
+
+function onDeleteMutationDropped(event: DroppedMutationEvent): void {
+  const mutation = event.mutation;
+  if (mutation.type !== 'note.delete') return;
+  failDeleteOps(
+    mutation.params.repo,
+    mutation.params.branch,
+    mutation.params.filePath,
+    mutation.params.localNoteId,
+    event.error ?? 'Delete failed',
+  );
+}
+
+/**
+ * Registers the success/drop handlers exactly once. Guarded so test suites
+ * that mock NoteSyncQueueService without the side-channel methods can still
+ * import this store without crashing.
+ */
+function armDeleteCompletionHandlers(): void {
+  if (deleteHandlersArmed) return;
+  if (typeof NoteSyncQueueService.onMutationSucceeded !== 'function') return;
+  if (typeof NoteSyncQueueService.onDroppedMutation !== 'function') return;
+  NoteSyncQueueService.onMutationSucceeded(onDeleteMutationSucceeded);
+  NoteSyncQueueService.onDroppedMutation(onDeleteMutationDropped);
+  deleteHandlersArmed = true;
+}
+
+armDeleteCompletionHandlers();

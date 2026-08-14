@@ -52,6 +52,8 @@ export interface NoteDeleteParams {
   filePath: string;
   title?: string;
   accountId?: string;
+  /** Local note id carried for success events + entity locks; the sync itself ignores it. */
+  localNoteId?: string;
 }
 
 interface MutationCommon {
@@ -92,10 +94,21 @@ export interface DroppedMutationEvent {
   status?: number;
 }
 
+/**
+ * Side-channel notification for mutations that reached the remote
+ * successfully. `noteStore` listens for `note.delete` events to complete
+ * the local delete (storage + state + registry) — the row stays
+ * visible-but-locked until this fires.
+ */
+export interface MutationSucceededEvent {
+  mutation: QueuedMutation;
+}
+
 class NoteSyncQueueServiceClass {
   private isDraining = false;
   private listeners = new Set<() => void>();
   private droppedListeners = new Set<(event: DroppedMutationEvent) => void>();
+  private succeededListeners = new Set<(event: MutationSucceededEvent) => void>();
 
   subscribe(fn: () => void): () => void {
     this.listeners.add(fn);
@@ -111,6 +124,13 @@ class NoteSyncQueueServiceClass {
     };
   }
 
+  onMutationSucceeded(fn: (event: MutationSucceededEvent) => void): () => void {
+    this.succeededListeners.add(fn);
+    return () => {
+      this.succeededListeners.delete(fn);
+    };
+  }
+
   private notify(): void {
     this.listeners.forEach((fn) => {
       try {
@@ -123,6 +143,16 @@ class NoteSyncQueueServiceClass {
 
   private emitDroppedMutation(event: DroppedMutationEvent): void {
     this.droppedListeners.forEach((fn) => {
+      try {
+        fn(event);
+      } catch {
+        // ignore listener errors - user callbacks should not break the queue
+      }
+    });
+  }
+
+  private emitMutationSucceeded(event: MutationSucceededEvent): void {
+    this.succeededListeners.forEach((fn) => {
       try {
         fn(event);
       } catch {
@@ -541,6 +571,7 @@ class NoteSyncQueueServiceClass {
                   await this.removeTombstone(item.params.repo, item.params.branch, item.params.filePath);
                   succeeded += 1;
                   droppedIds.add(item.id);
+                  this.emitMutationSucceeded({ mutation: item });
                   handledByBatch.add(item.id);
                 }
               }
@@ -618,6 +649,7 @@ class NoteSyncQueueServiceClass {
         }
         succeeded++;
         droppedIds.add(item.id);
+        this.emitMutationSucceeded({ mutation: item });
       }
     }
 
@@ -637,6 +669,7 @@ class NoteSyncQueueServiceClass {
           }
           succeeded++;
           droppedIds.add(item.id);
+          this.emitMutationSucceeded({ mutation: item });
         }
       } else {
         console.warn('[NoteSyncQueue] coalesced push failed:', flushResult.error);
