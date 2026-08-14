@@ -17,7 +17,10 @@ import { useRepos } from '../contexts/RepoContext';
 import { GitRepository } from '../services/GitService';
 import { HapticService } from '../utils/haptics';
 import { parseRepoPath } from '../utils/gitPathParser';
+import { GitSyncGate } from '../services/git/GitSyncGate';
+import { useGitOperationStore, hasActivePull } from '../stores/gitOperationStore';
 import RepoFileTree, { TreeNode } from '../components/RepoFileTree';
+import { treeStyles } from '../components/repo/repoTreeStyles';
 import { RootStackParamList } from '../navigation/types';
 import { EmptyState, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
@@ -56,6 +59,8 @@ export default function ExploreScreen() {
   const refreshingRef = useRef(false);
   const isFocused = useIsFocused();
 
+  const ops = useGitOperationStore((s) => s.ops);
+
   // Reset refresh state when screen loses focus (tab switch, stack push, etc.)
   useEffect(() => {
     if (!isFocused) {
@@ -78,6 +83,13 @@ export default function ExploreScreen() {
     if (!selectedRepo) return null;
     return parseRepoPath(selectedRepo.path);
   }, [selectedRepo]);
+
+  // Explore performs NO git pull — it only refreshes the repo list. When the
+  // gate reports the selected repo busy (push marker or cycle hold affecting
+  // it), the tree area shows its busy state and pull-to-refresh is disabled.
+  const repoPath = repoInfo ? `${repoInfo.owner}/${repoInfo.repo}` : null;
+  const gateBusy = GitSyncGate.isCycleHeld() || GitSyncGate.isPushActive();
+  const repoBusy = repoPath ? GitSyncGate.isPushActive(repoPath) || hasActivePull(ops, repoPath) : false;
 
   useEffect(() => {
     if (repos.length === 0) {
@@ -186,7 +198,7 @@ export default function ExploreScreen() {
             renderItem={renderRepoItem}
             contentContainerStyle={{ paddingBottom: tabBarHeight + 16 }}
             refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} enabled={!gateBusy} />
             }
           />
         )}
@@ -268,36 +280,42 @@ export default function ExploreScreen() {
           style={{ backgroundColor: colors.background }}
           contentContainerStyle={{ paddingBottom: 32, backgroundColor: colors.background }}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} enabled={!repoBusy} />
           }
         >
-          <RepoFileTree
-            owner={repoInfo.owner}
-            repo={repoInfo.repo}
-            branch={selectedRepo?.branch}
-            onFilePress={(node: TreeNode) => {
-              const kind = classifyFile(node.name);
-              const params = {
-                owner: repoInfo.owner,
-                repo: repoInfo.repo,
-                branch: selectedRepo?.branch,
-                path: node.path,
-                title: node.name,
-                size: node.size,
-              };
-              if (kind === 'pdf') {
-                navigation.navigate('PdfViewer', params);
-              } else if (kind === 'image') {
-                navigation.navigate('ImageViewer', params);
-              } else if (kind === 'video') {
-                navigation.navigate('VideoViewer', params);
-              } else if (kind === 'json') {
-                navigation.navigate('FileViewer', params);
-              } else {
-                navigation.navigate('FileViewer', params);
-              }
-            }}
-          />
+          {repoBusy ? (
+            <View style={[treeStyles.center]}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+          ) : (
+            <RepoFileTree
+              owner={repoInfo.owner}
+              repo={repoInfo.repo}
+              branch={selectedRepo?.branch}
+              onFilePress={(node: TreeNode) => {
+                const kind = classifyFile(node.name);
+                const params = {
+                  owner: repoInfo.owner,
+                  repo: repoInfo.repo,
+                  branch: selectedRepo?.branch,
+                  path: node.path,
+                  title: node.name,
+                  size: node.size,
+                };
+                if (kind === 'pdf') {
+                  navigation.navigate('PdfViewer', params);
+                } else if (kind === 'image') {
+                  navigation.navigate('ImageViewer', params);
+                } else if (kind === 'video') {
+                  navigation.navigate('VideoViewer', params);
+                } else if (kind === 'json') {
+                  navigation.navigate('FileViewer', params);
+                } else {
+                  navigation.navigate('FileViewer', params);
+                }
+              }}
+            />
+          )}
         </ScrollView>
       </SafeAreaView>
     );

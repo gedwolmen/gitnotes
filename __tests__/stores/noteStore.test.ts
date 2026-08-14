@@ -124,6 +124,44 @@ describe('useNoteStore', () => {
     });
   });
 
+  describe('dropByFilePaths', () => {
+    it('purges local notes whose repo+filePath match, without touching the queue', async () => {
+      const note = makeNote('1', { repo: 'owner/repo', branch: 'main', filePath: 'notes/foo.md' });
+      useNoteStore.setState({ notes: [note, makeNote('2', { repo: 'other/repo', filePath: 'notes/foo.md' })] });
+      (StorageService.deleteNote as jest.Mock).mockResolvedValue(true);
+
+      const dropped = await useNoteStore.getState().dropByFilePaths('owner/repo', ['notes/foo.md']);
+
+      expect(dropped).toBe(1);
+      expect(StorageService.deleteNote).toHaveBeenCalledWith('1');
+      expect(NoteSyncQueueService.enqueueNoteDelete).not.toHaveBeenCalled();
+      expect(NoteSyncQueueService.drain).not.toHaveBeenCalled();
+      expect(useNoteStore.getState().notes.map((n) => n.id)).toEqual(['2']);
+    });
+
+    it('matches notes by derived default path when filePath is unset', async () => {
+      const note = makeNote('1', { repo: 'owner/repo', branch: 'main', title: 'Foo Bar', format: 'markdown' });
+      useNoteStore.setState({ notes: [note] });
+      (StorageService.deleteNote as jest.Mock).mockResolvedValue(true);
+
+      const dropped = await useNoteStore.getState().dropByFilePaths('owner/repo', ['notes/foo-bar.md']);
+
+      expect(dropped).toBe(1);
+      expect(StorageService.deleteNote).toHaveBeenCalledWith('1');
+      expect(useNoteStore.getState().notes).toHaveLength(0);
+    });
+
+    it('is a no-op when no note matches the repo or paths', async () => {
+      useNoteStore.setState({ notes: [makeNote('1', { repo: 'owner/repo', filePath: 'notes/other.md' })] });
+
+      const dropped = await useNoteStore.getState().dropByFilePaths('owner/repo', ['notes/foo.md']);
+
+      expect(dropped).toBe(0);
+      expect(StorageService.deleteNote).not.toHaveBeenCalled();
+      expect(useNoteStore.getState().notes).toHaveLength(1);
+    });
+  });
+
   describe('togglePin', () => {
     it('toggles isPinned flag', async () => {
       const note = makeNote('1', { isPinned: false });

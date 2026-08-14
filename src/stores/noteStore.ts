@@ -7,6 +7,11 @@ import type { MutationSucceededEvent, DroppedMutationEvent } from '../services/N
 import { gitOperationRegistry, useGitOperationStore } from './gitOperationStore';
 import type { GitOp } from './gitOperationStore';
 import { slugifyLocal, getExtensionForFormat } from '../components/editor/editorShared';
+import { parseRepoPath } from '../utils/gitPathParser';
+
+function pathsEqual(a: { owner: string; repo: string } | null, b: { owner: string; repo: string }): boolean {
+  return !!a && a.owner === b.owner && a.repo === b.repo;
+}
 
 interface NoteState {
   notes: Note[];
@@ -21,6 +26,7 @@ interface NoteActions {
   createNote: (input: NoteCreateInput) => Promise<Note | null>;
   updateNote: (input: NoteUpdateInput) => Promise<Note | null>;
   deleteNote: (id: string) => Promise<boolean>;
+  dropByFilePaths: (repo: string, paths: string[]) => Promise<number>;
   clearAllNotes: () => Promise<boolean>;
   getNoteById: (id: string) => Note | undefined;
   togglePin: (id: string) => Promise<boolean>;
@@ -147,6 +153,32 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
       set({ error: 'Failed to delete note' });
       console.error('Error deleting note:', err);
       return false;
+    }
+  },
+
+  dropByFilePaths: async (repo, paths) => {
+    try {
+      set({ error: null });
+      const pathSet = new Set(paths);
+      const repoPaths = parseRepoPath(repo);
+      const matches = get().notes.filter((note) => {
+        if (!note.repo) return false;
+        const sameRepo =
+          note.repo === repo ||
+          (!!repoPaths && pathsEqual(parseRepoPath(note.repo), repoPaths));
+        if (!sameRepo) return false;
+        const filePath = note.filePath ?? deriveDefaultNotePath(note);
+        return !!filePath && pathSet.has(filePath);
+      });
+      if (matches.length === 0) return 0;
+      await Promise.all(matches.map((note) => StorageService.deleteNote(note.id)));
+      const ids = new Set(matches.map((n) => n.id));
+      set((state) => ({ notes: state.notes.filter((n) => !ids.has(n.id)) }));
+      return matches.length;
+    } catch (err) {
+      set({ error: 'Failed to drop notes' });
+      console.error('Error dropping notes:', err);
+      return 0;
     }
   },
 
