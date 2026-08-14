@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -141,7 +141,10 @@ export function NoteViewer({
             style={[styles.gradeButton, { backgroundColor: colors.primary, opacity: isGrading ? 0.7 : 1 }]}
           >
             {isGrading ? (
-              <Text style={[styles.gradeButtonText, { color: '#fff' }]}>Grading...</Text>
+              <>
+                <ActivityIndicator size="small" color="#fff" />
+                <Text style={[styles.gradeButtonText, { color: '#fff' }]}>Grade My Answers</Text>
+              </>
             ) : (
               <>
                 <Ionicons name="checkmark-done" size={16} color="#fff" />

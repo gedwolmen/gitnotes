@@ -146,7 +146,6 @@ export function NotePreviewPane({
           <BlurView intensity={30} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
           <View style={[styles.loadingPill, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <ActivityIndicator size="small" color={colors.primary} />
-            <Text style={[styles.loadingLabel, { color: colors.textSecondary }]}>Loading note…</Text>
           </View>
         </View>
       ) : null}
@@ -202,9 +201,5 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 20,
     borderWidth: StyleSheet.hairlineWidth,
-  },
-  loadingLabel: {
-    fontSize: 13,
-    fontWeight: '500',
   },
 });

@@ -372,7 +372,7 @@ export function useNoteEditorDocument({
               attempts: 0,
             })
           : null;
-        githubActivity.begin('Pushing note…');
+        githubActivity.begin('Pushing note');
         try {
           const existingForColor = getNoteByIdRef.current(savedNoteId);
           const syncParams = {

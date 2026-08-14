@@ -219,7 +219,7 @@ export default function VoiceInputModal({ visible, onDone, onClose }: VoiceInput
               : error
                 ? error
                 : isListening
-                  ? 'Listening…'
+                  ? 'Listening'
                   : transcript
                     ? 'Paused — tap to continue'
                     : 'Tap to speak'}
@@ -231,7 +231,7 @@ export default function VoiceInputModal({ visible, onDone, onClose }: VoiceInput
               <Text style={styles.interimText}>{interim}</Text>
             </Text>
             {!transcript && !interim && (
-              <Text style={styles.placeholder}>Your speech will appear here…</Text>
+              <Text style={styles.placeholder}>Your speech will appear here</Text>
             )}
           </ScrollView>
         </View>

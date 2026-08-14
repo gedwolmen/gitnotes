@@ -394,9 +394,12 @@ export function ConnectHostModal({
                 opacity: isTesting || !token.trim() ? 0.6 : 1,
               }}
             >
-              <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>
-                {isTesting ? '…' : t('connectHost.test')}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
+                <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>
+                  {t('connectHost.test')}
+                </Text>
+                {isTesting ? <ActivityIndicator size="small" color={colors.text} /> : null}
+              </View>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleSave}

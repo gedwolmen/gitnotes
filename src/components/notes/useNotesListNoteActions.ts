@@ -113,7 +113,7 @@ export function useNotesListNoteActions({
 
   const handleDeleteNote = useCallback(
     async (note: Note) => {
-      githubActivity.begin('Deleting note…');
+      githubActivity.begin('Deleting note');
       setIsDeleting(true);
       try {
         if (!(await deleteNote(note.id))) {

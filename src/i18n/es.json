@@ -192,7 +192,7 @@
   "home": {
     "title": "Inicio",
     "dailyQuote": {
-      "loading": "Buscando tu cita…"
+      "loading": "Buscando tu cita"
     }
   },
   "hints": {

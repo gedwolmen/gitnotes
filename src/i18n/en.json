@@ -52,7 +52,7 @@
   "home": {
     "title": "Home",
     "dailyQuote": {
-      "loading": "Finding your quote…"
+      "loading": "Finding your quote"
     },
     "appTitle": "GitNotēs",
     "subtitle": "Your development notes, organized.",

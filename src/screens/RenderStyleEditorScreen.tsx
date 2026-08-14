@@ -410,7 +410,7 @@ export default function RenderStyleEditorScreen() {
         </Text>
       </ScrollView>
 
-      {isSaving ? <SavingOverlay visible label="Saving…" /> : null}
+      {isSaving ? <SavingOverlay visible /> : null}
     </SafeAreaView>
   );
 }
