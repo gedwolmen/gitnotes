@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 
 import { RootStackParamList } from '../../navigation/types';
 import { Folder } from '../../models/Folder';
@@ -15,6 +16,8 @@ import { syncNoteToGitHub } from '../../services/NoteGitHubSyncService';
 import { NoteSyncQueueService } from '../../services/NoteSyncQueueService';
 import { classifyGitHubSyncError, isRetryableFailure, syncStatusForError } from '../../services/git/syncFailure';
 import { githubActivity } from '../../stores/githubActivityStore';
+import { useGitOperationStore, gitOperationRegistry } from '../../stores/gitOperationStore';
+import type { GitOp } from '../../stores/gitOperationStore';
 import { canvasToLink } from '../../models/Canvas';
 import { getExtensionForFormat, extractCanvasJsonRefs, slugifyLocal } from './editorShared';
 import { useHardWrap, applyHardWrap } from '../../hooks/useHardWrap';
@@ -45,6 +48,30 @@ function showDurableSyncFailureAlert(kind: ReturnType<typeof classifyGitHubSyncE
   }
 }
 
+function normalizeBranch(branch: string | undefined): string {
+  return branch || 'main';
+}
+
+function hasActiveDeleteLock(
+  ops: Record<string, GitOp>,
+  entityId: string | undefined,
+  repo: string | undefined,
+  branch: string | undefined,
+  path: string | undefined,
+): boolean {
+  return Object.values(ops).some(
+    (op) =>
+      op.kind === 'delete' &&
+      (op.status === 'queued' || op.status === 'running') &&
+      ((!!entityId && op.entityIds.includes(entityId)) ||
+        (!!repo &&
+          !!path &&
+          op.repo === repo &&
+          normalizeBranch(op.branch) === normalizeBranch(branch) &&
+          op.path === path)),
+  );
+}
+
 interface NoteEditorDocumentParams {
   noteId?: string;
   initialFormat?: NoteFormat;
@@ -57,6 +84,7 @@ interface NoteEditorDocumentParams {
   activeAccountId?: string | null;
   repositories: { path: string }[];
   folders: Folder[];
+  notes: Note[];
   getNoteById: (id: string) => Note | undefined;
   createNote: (...args: any[]) => Promise<any>;
   updateNote: (...args: any[]) => Promise<any>;
@@ -75,11 +103,13 @@ export function useNoteEditorDocument({
   activeAccountId,
   repositories,
   folders,
+  notes,
   getNoteById,
   createNote,
   updateNote,
   navigation,
 }: NoteEditorDocumentParams) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState(initialTitle ?? '');
   const { state: content, setState: setContent, undo, redo, canUndo, canRedo } = useUndo(initialContent ?? '');
   const [repo, setRepo] = useState<string | undefined>(initialRepo);
@@ -127,6 +157,11 @@ export function useNoteEditorDocument({
   useEffect(() => {
     getNoteByIdRef.current = getNoteById;
   }, [getNoteById]);
+
+  // Guards the notFound effect below against re-copying editor state on
+  // unrelated store churn: hydrate once per noteId, then only react to the
+  // note actually disappearing.
+  const hydratedNoteIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!noteId && !repo && repositories.length > 0) {
@@ -192,6 +227,8 @@ export function useNoteEditorDocument({
       return;
     }
     setNotFound(false);
+    if (hydratedNoteIdRef.current === noteId) return;
+    hydratedNoteIdRef.current = noteId;
 
     setTitle(existingNote.title);
     setContent(existingNote.content);
@@ -205,7 +242,7 @@ export function useNoteEditorDocument({
     setNoteFormat(existingNote.format ?? 'markdown');
     setTags(existingNote.tags || []);
     setAttachments(existingNote.attachments || []);
-  }, [noteId, setContent, activeAccountId]);
+  }, [noteId, setContent, activeAccountId, notes]);
 
   const handleTitleChange = useCallback((text: string) => {
     setTitle(text);
@@ -264,6 +301,13 @@ export function useNoteEditorDocument({
       return;
     }
 
+    const syncBlockPath =
+      existingFilePath ?? (folderPath ? `${folderPath}/${slugifyLocal(title.trim())}${getExtensionForFormat(noteFormat)}` : undefined);
+    if (hasActiveDeleteLock(useGitOperationStore.getState().ops, noteId, repo, branch, syncBlockPath)) {
+      Alert.alert(t('common.error'), t('sync.deleteInProgress'));
+      return;
+    }
+
     const finalContent = applyHardWrap(content.trim(), hardWrapEnabled && noteFormat === 'markdown');
 
     setIsSaving(true);
@@ -315,13 +359,26 @@ export function useNoteEditorDocument({
       }
 
       if (repo && savedNoteId) {
-        githubActivity.begin('Pushing note…');
+        const syncPath =
+          existingFilePath ?? (folderPath ? `${folderPath}/${slugifyLocal(title.trim())}${getExtensionForFormat(noteFormat)}` : undefined);
+        const upsertOpId = syncPath
+          ? gitOperationRegistry.begin({
+              kind: 'upsert',
+              repo,
+              branch,
+              path: syncPath,
+              entityIds: [savedNoteId],
+              status: 'running',
+              attempts: 0,
+            })
+          : null;
+        githubActivity.begin('Pushing note');
         try {
           const existingForColor = getNoteByIdRef.current(savedNoteId);
           const syncParams = {
             repo,
             branch,
-            filePath: existingFilePath ?? (folderPath ? `${folderPath}/${slugifyLocal(title.trim())}${getExtensionForFormat(noteFormat)}` : undefined),
+            filePath: syncPath,
             title: title.trim(),
             content: finalContent,
             format: noteFormat,
@@ -379,7 +436,7 @@ export function useNoteEditorDocument({
           const syncParams = {
             repo,
             branch,
-            filePath: existingFilePath ?? (folderPath ? `${folderPath}/${slugifyLocal(title.trim())}${getExtensionForFormat(noteFormat)}` : undefined),
+            filePath: syncPath,
             title: title.trim(),
             content: finalContent,
             format: noteFormat,
@@ -411,6 +468,7 @@ export function useNoteEditorDocument({
             }
           }
         } finally {
+          if (upsertOpId) gitOperationRegistry.succeed(upsertOpId);
           githubActivity.end();
         }
       }
@@ -424,7 +482,7 @@ export function useNoteEditorDocument({
     } finally {
       setIsSaving(false);
     }
-  }, [title, content, repo, noteId, updateNote, tags, branch, commit, folderPath, noteFormat, attachments, accountId, createNote, navigation, hardWrapEnabled]);
+  }, [title, content, repo, noteId, updateNote, tags, branch, commit, folderPath, noteFormat, attachments, accountId, createNote, navigation, hardWrapEnabled, t]);
 
   const handleCancelEdit = useCallback(() => {
     if (hasChanges && (title.trim() || content.trim())) {

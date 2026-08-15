@@ -64,6 +64,8 @@ export function GitHubActivityIndicator() {
   const progress = useGitHubActivityStore((s) => s.progress);
   const [pendingCount, setPendingCount] = useState(0);
 
+  const safeLabel = (label ?? 'Syncing with GitHub').replace(/…+$/, '');
+
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(-12)).current;
 
@@ -118,7 +120,7 @@ export function GitHubActivityIndicator() {
             style={{ color: colors.text, fontSize: type.sm, fontWeight: '600' }}
             numberOfLines={1}
           >
-            {label ?? 'Syncing with GitHub…'}
+            {safeLabel}
             {pendingCount > 0 ? ` (${pendingCount} pending)` : ''}
           </Text>
           {progress && <ProgressBar progress={progress} color={colors.accent} />}

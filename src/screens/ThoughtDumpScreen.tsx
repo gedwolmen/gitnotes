@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { View, StyleSheet, FlatList, Alert, Text, Pressable } from 'react-native';
+import { View, StyleSheet, FlatList, Alert, Text, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -12,6 +12,8 @@ import { RootStackParamList } from '../navigation/types';
 import { ThoughtDumpService } from '../services/ThoughtDumpService';
 import { StorageService } from '../services/StorageService';
 import { ThoughtDump } from '../models/ThoughtDump';
+import { gitOperationRegistry } from '../stores/gitOperationStore';
+import { useEntityLock } from '../hooks/useGitOpLock';
 import { ScreenHeader, Button, Input, EmptyState, Modal } from '../components/ui';
 import { useScreenHeaderHeight } from '../components/ui';
 import VoiceInputModal from '../components/VoiceInputModal';
@@ -23,6 +25,72 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 interface Props {
   onDumpChange?: (dump: ThoughtDump) => void;
+}
+
+interface LockedDumpRowProps {
+  item: ThoughtDump;
+  repoPath: string;
+  branch: string | undefined;
+  onRequestDelete: (dump: ThoughtDump) => void;
+  formatRelativeDate: (isoDate: string) => string;
+  selected: boolean;
+  selectionMode: boolean;
+  onToggleSelect: () => void;
+}
+
+function LockedDumpRow({
+  item,
+  repoPath,
+  branch,
+  onRequestDelete,
+  formatRelativeDate,
+  selected,
+  selectionMode,
+  onToggleSelect,
+}: LockedDumpRowProps) {
+  const { t } = useTranslation();
+  const { colors, spacing } = useTokens();
+  const lock = useEntityLock(item.id, { repo: repoPath || undefined, branch, path: item.filePath });
+  return (
+    <SwipeableListItem
+      itemId={item.id}
+      selected={selected}
+      selectionMode={selectionMode}
+      onToggleSelect={onToggleSelect}
+      disabled={lock.locked}
+    >
+      <View
+        style={[
+          styles.dumpItem,
+          {
+            padding: spacing[3],
+            marginBottom: spacing[2],
+            backgroundColor: colors.surface,
+            opacity: lock.locked ? 0.45 : 1,
+          },
+        ]}
+      >
+        <Text style={[styles.dumpText, { color: colors.text }]} numberOfLines={6}>
+          {item.text}
+        </Text>
+        <View style={[styles.dumpFooter, { marginTop: spacing[2] }]}>
+          <Text style={[styles.dumpDate, { color: colors.textSecondary }]}>
+            {formatRelativeDate(item.createdAt)}
+          </Text>
+          {lock.locked ? (
+            <ActivityIndicator size="small" testID={`thought-dump-lock-${item.id}`} color={colors.primary} />
+          ) : (
+            <Button
+              testID={`thought-dump-delete-${item.id}`}
+              label={t('thoughtDump.delete')}
+              variant="ghost"
+              onPress={() => onRequestDelete(item)}
+            />
+          )}
+        </View>
+      </View>
+    </SwipeableListItem>
+  );
 }
 
 export default function ThoughtDumpScreen({ onDumpChange }: Props) {
@@ -116,6 +184,15 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
     if (!target) return;
     setDeleteTarget(null);
 
+    const opId = gitOperationRegistry.begin({
+      kind: 'delete',
+      repo: repoPath,
+      branch,
+      path: target.filePath,
+      entityIds: [target.id],
+      status: 'running',
+      attempts: 0,
+    });
     try {
       const success = await ThoughtDumpService.delete(target.id, {
         repoPath,
@@ -123,13 +200,16 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
         filePath: target.filePath,
       });
       if (success) {
+        gitOperationRegistry.succeed(opId);
         setDumps((prev) => prev.filter((d) => d.id !== target.id));
         removeDump(target.filePath);
         onDumpChange?.(target);
       } else {
+        gitOperationRegistry.fail(opId, 'Delete failed');
         Alert.alert(t('common.error'), t('thoughtDump.error'));
       }
     } catch {
+      gitOperationRegistry.fail(opId, 'Delete failed');
       Alert.alert(t('common.error'), t('thoughtDump.error'));
     }
   };
@@ -191,31 +271,18 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
 
   const renderItem = useCallback(
     ({ item }: { item: ThoughtDump }) => (
-      <SwipeableListItem
-        itemId={item.id}
+      <LockedDumpRow
+        item={item}
+        repoPath={repoPath}
+        branch={branch}
+        onRequestDelete={(dump) => setDeleteTarget(dump)}
+        formatRelativeDate={formatRelativeDate}
         selected={selectedIds.has(item.id)}
         selectionMode={selectionMode}
         onToggleSelect={() => toggleSelected(item.id)}
-      >
-        <View style={[styles.dumpItem, { padding: spacing[3], marginBottom: spacing[2], backgroundColor: colors.surface }]}>
-          <Text style={[styles.dumpText, { color: colors.text }]} numberOfLines={6}>
-            {item.text}
-          </Text>
-          <View style={[styles.dumpFooter, { marginTop: spacing[2] }]}>
-            <Text style={[styles.dumpDate, { color: colors.textSecondary }]}>
-              {formatRelativeDate(item.createdAt)}
-            </Text>
-            <Button
-              testID={`thought-dump-delete-${item.id}`}
-              label={t('thoughtDump.delete')}
-              variant="ghost"
-              onPress={() => setDeleteTarget(item)}
-            />
-          </View>
-        </View>
-      </SwipeableListItem>
+      />
     ),
-    [colors, spacing, t, selectedIds, selectionMode, toggleSelected],
+    [repoPath, branch, formatRelativeDate, selectedIds, selectionMode, toggleSelected],
   );
 
   const renderEmpty = () => {

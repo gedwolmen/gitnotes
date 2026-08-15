@@ -4,6 +4,7 @@ import { StorageService } from '../services/StorageService';
 import { GitHubService } from '../services/GitHubService';
 import { deleteCanvasFromGitHub } from '../services/CanvasGitHubSyncService';
 import { formatSyncError } from '../services/git/formatSyncError';
+import { gitOperationRegistry } from './gitOperationStore';
 
 interface CanvasState {
   canvases: Canvas[];
@@ -73,33 +74,54 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()((set, get) =
       set({ error: null });
       const canvas = get().canvases.find((c) => c.id === id);
 
-      // Repo-backed canvases must purge the remote file first; otherwise the
-      // next pull re-imports the row. The sync helper treats a missing remote
-      // (sha null / 404) as success.
+      let opId: string | null = null;
       if (canvas?.repo && canvas.filePath) {
-        if (!GitHubService.isAuthenticated()) {
-          set({ error: 'Sign in to GitHub to delete synced canvases' });
-          return false;
-        }
-        const remote = await deleteCanvasFromGitHub({
+        opId = gitOperationRegistry.begin({
+          kind: 'delete',
           repo: canvas.repo,
           branch: canvas.branch,
-          filePath: canvas.filePath,
-          title: canvas.title,
-          accountId: canvas.accountId,
+          path: canvas.filePath,
+          entityIds: [id],
+          status: 'running',
+          attempts: 0,
         });
-        if (!remote.success) {
-          if (remote.error) console.warn('[CanvasStore] delete sync failed:', remote.error);
-          set({ error: formatSyncError(remote.error, 'delete') });
-          return false;
-        }
       }
 
-      const success = await StorageService.deleteCanvas(id);
-      if (success) {
-        set((state) => ({ canvases: state.canvases.filter((c) => c.id !== id) }));
+      try {
+        // Repo-backed canvases must purge the remote file first; otherwise the
+        // next pull re-imports the row. The sync helper treats a missing remote
+        // (sha null / 404) as success.
+        if (canvas?.repo && canvas.filePath) {
+          if (!GitHubService.isAuthenticated()) {
+            set({ error: 'Sign in to GitHub to delete synced canvases' });
+            if (opId) gitOperationRegistry.fail(opId, 'Sign in to GitHub to delete synced canvases');
+            return false;
+          }
+          const remote = await deleteCanvasFromGitHub({
+            repo: canvas.repo,
+            branch: canvas.branch,
+            filePath: canvas.filePath,
+            title: canvas.title,
+            accountId: canvas.accountId,
+          });
+          if (!remote.success) {
+            if (remote.error) console.warn('[CanvasStore] delete sync failed:', remote.error);
+            set({ error: formatSyncError(remote.error, 'delete') });
+            if (opId) gitOperationRegistry.fail(opId, remote.error ?? 'Delete failed');
+            return false;
+          }
+        }
+
+        const success = await StorageService.deleteCanvas(id);
+        if (success) {
+          if (opId) gitOperationRegistry.succeed(opId);
+          set((state) => ({ canvases: state.canvases.filter((c) => c.id !== id) }));
+        }
+        return success;
+      } catch (err) {
+        if (opId) gitOperationRegistry.fail(opId, err instanceof Error ? err.message : 'Delete failed');
+        throw err;
       }
-      return success;
     } catch (err) {
       set({ error: 'Failed to delete canvas' });
       console.error('Error deleting canvas:', err);

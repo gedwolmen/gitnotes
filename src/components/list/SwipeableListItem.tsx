@@ -17,6 +17,7 @@ interface SwipeableListItemProps {
   selectionMode: boolean;
   onToggleSelect: () => void;
   children: React.ReactNode;
+  disabled?: boolean;
 }
 
 const SWIPE_THRESHOLD = 36;
@@ -28,6 +29,7 @@ export function SwipeableListItem({
   selectionMode,
   onToggleSelect,
   children,
+  disabled = false,
 }: SwipeableListItemProps) {
   const { colors } = useTheme();
   const translateX = useSharedValue(0);
@@ -58,7 +60,8 @@ export function SwipeableListItem({
     <TouchableOpacity
       testID={`swipeable-list-item.button.toggle-${itemId}`}
       activeOpacity={0.7}
-      onPress={() => {
+      disabled={disabled}
+      onPress={disabled ? undefined : () => {
         HapticService.selection();
         onToggleSelect();
       }}
@@ -69,24 +72,30 @@ export function SwipeableListItem({
     children
   );
 
+  const row = (
+    <Animated.View
+      testID={`swipeable-${itemId}`}
+      className="rounded-sm"
+      style={[
+        selected && {
+          shadowColor: colors.error,
+          shadowOpacity: 0.55,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 0 },
+          elevation: 8,
+        },
+        animatedStyle,
+      ]}
+    >
+      {cardContent}
+    </Animated.View>
+  );
+
+  if (disabled) return row;
+
   return (
     <GestureDetector gesture={pan}>
-      <Animated.View
-        testID={`swipeable-${itemId}`}
-        className="rounded-sm"
-        style={[
-          selected && {
-            shadowColor: colors.error,
-            shadowOpacity: 0.55,
-            shadowRadius: 10,
-            shadowOffset: { width: 0, height: 0 },
-            elevation: 8,
-          },
-          animatedStyle,
-        ]}
-      >
-        {cardContent}
-      </Animated.View>
+      {row}
     </GestureDetector>
   );
 }

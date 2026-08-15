@@ -84,7 +84,7 @@ jest.mock('../src/contexts/NoteContext', () => {
 });
 
 jest.mock('../src/stores/noteStore', () => {
-  return { useNoteStore: mockUseNoteStore };
+  return { useNoteStore: mockUseNoteStore, deriveDefaultNotePath: jest.fn(() => null) };
 });
 
 jest.mock('../src/services/GitHubService', () => ({

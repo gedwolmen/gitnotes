@@ -574,7 +574,7 @@ export function AddReminderScreen() {
           testID="add-reminder-submit"
         >
           {submitState === 'saving'
-            ? 'Saving…'
+            ? 'Saving'
             : submitState === 'added'
               ? 'Reminder Added'
               : 'Add Reminder'}

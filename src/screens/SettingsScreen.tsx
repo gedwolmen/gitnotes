@@ -302,7 +302,7 @@ export default function SettingsScreen() {
     if (cloneProgress?.error) {
       setCloneProgress(null);
     } else {
-      setCloneProgress((prev) => (prev ? { ...prev, phase: 'Cancelling…' } : prev));
+      setCloneProgress((prev) => (prev ? { ...prev, phase: 'Cancelling' } : prev));
     }
   }, [cloneProgress]);
 

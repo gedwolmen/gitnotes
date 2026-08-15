@@ -38,6 +38,7 @@ import { ReminderService } from './src/services/ReminderService';
 import { StartupSyncGate } from './src/components/StartupSyncGate';
 import { GitHubActivityIndicator } from './src/components/GitHubActivityIndicator';
 import { bootstrapStorage } from './src/services/StorageBootstrap';
+import { hydrate as hydrateGitOperationRegistry } from './src/stores/gitOperationStore';
 import { useRenderStyleStore } from './src/stores/renderStyleStore';
 import { startForegroundWatcher } from './src/services/ForegroundSyncService';
 import { loadForegroundSyncConfig } from './src/hooks/useForegroundSyncSettings';
@@ -60,6 +61,9 @@ export default function App() {
 
   const checkOnboarding = useCallback(async () => {
     await bootstrapStorage();
+    // Restore durable git-operation locks (queued mutations + failed deletes)
+    // before StartupSyncGate drains/pulls and the UI reads lock state.
+    void hydrateGitOperationRegistry();
     void useRenderStyleStore.getState().hydrate();
     const completed = await OnboardingService.isOnboardingCompleted();
     setShowOnboarding(!completed);

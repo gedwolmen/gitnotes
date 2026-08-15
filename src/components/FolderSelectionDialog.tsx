@@ -8,6 +8,7 @@ import {
   Alert,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -280,11 +281,15 @@ export default function FolderSelectionDialog({
               maxLength={50}
             />
             <TouchableOpacity
-              style={[styles.createButton, { backgroundColor: colors.primary }]}
+              style={[
+                styles.createButton,
+                { backgroundColor: colors.primary, opacity: isSubmitting ? 0.7 : 1 },
+              ]}
               onPress={handleCreateFolder}
               disabled={!newFolderName.trim() || isSubmitting}
             >
-              <Text style={styles.createButtonText}>{isSubmitting ? 'Creating…' : 'Create'}</Text>
+              {isSubmitting ? <ActivityIndicator size="small" color="#fff" /> : null}
+              <Text style={styles.createButtonText}>Create</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -403,6 +408,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   createButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,

@@ -55,9 +55,6 @@ export default function RepoFileTree({ owner, repo, branch, onFilePress }: RepoF
     return (
       <View style={[treeStyles.center]}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={[treeStyles.loadingText, { color: colors.textSecondary }]}>
-          Loading file tree…
-        </Text>
       </View>
     );
   }

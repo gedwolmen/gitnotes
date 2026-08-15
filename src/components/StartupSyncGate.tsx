@@ -1,13 +1,12 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { AppState } from 'react-native';
-import { pullAllFromRepos } from '../services/RepoPullService';
 import { GitHubService } from '../services/GitHubService';
-import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import {
   isForegroundSyncInFlight,
   subscribeForegroundSync,
   acquireExternalSync,
 } from '../services/ForegroundSyncService';
+import { syncNow } from '../services/git/manualSync';
 import { useNotes } from '../contexts/NoteContext';
 import { useCanvases } from '../contexts/CanvasContext';
 import { useTodos } from '../contexts/TodoContext';
@@ -44,8 +43,10 @@ export function StartupSyncGate({ children }: { children: React.ReactNode }) {
 
     (async () => {
       try {
+        // initialize() must stay before the pull; do NOT hold a gate cycle
+        // here — syncNow acquires it internally and would deadlock otherwise.
         await GitHubService.initialize();
-        await pullAllFromRepos();
+        await syncNow();
       } catch (error) {
         console.warn('[StartupSync] Pull failed:', error);
       } finally {
@@ -72,8 +73,9 @@ export function StartupSyncGate({ children }: { children: React.ReactNode }) {
       try {
         await GitHubService.initialize();
         if (!GitHubService.isAuthenticated()) return;
-        await NoteSyncQueueService.drain();
-        await pullAllFromRepos();
+        // Do NOT wrap this in a gate cycle: syncNow acquires the cycle
+        // itself, and holding one here would deadlock its acquisition.
+        await syncNow();
       } catch (error) {
         console.warn('[SyncDrain] Failed:', error);
       } finally {

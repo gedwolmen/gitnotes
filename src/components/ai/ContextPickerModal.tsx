@@ -177,7 +177,6 @@ export default function ContextPickerModal({
     treeLoading ? (
       <View style={styles.placeholderContainer}>
         <ActivityIndicator color={colors.accent} />
-        <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>Loading files…</Text>
       </View>
     ) : treeError ? (
       renderEmptyState('alert-circle-outline', 'Files unavailable', treeError)
@@ -229,7 +228,6 @@ export default function ContextPickerModal({
     treeLoading ? (
       <View style={styles.placeholderContainer}>
         <ActivityIndicator color={colors.accent} />
-        <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>Loading folders…</Text>
       </View>
     ) : treeError ? (
       renderEmptyState('alert-circle-outline', 'Folders unavailable', treeError)

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { View, Alert, Platform, RefreshControl } from 'react-native';
+import { View, Alert, Platform, RefreshControl, ActivityIndicator } from 'react-native';
 import { FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
@@ -13,7 +13,13 @@ import { slugifyTodoText, Todo, TodoPriority } from '../models/Todo';
 import { SortMode } from '../types/SortTypes';
 import { HapticService } from '../utils/haptics';
 import { syncTodoToGitHub } from '../services/TodoGitHubSyncService';
-import { pullAllFromRepos } from '../services/RepoPullService';
+import { syncNow } from '../services/git/manualSync';
+import { batchDeleteFiles } from '../services/git/BatchGitOperations';
+import { resolveBranch } from '../services/git/resolveBranch';
+import { formatSyncError } from '../services/git/formatSyncError';
+import { SyncEngineService } from '../services/SyncEngineService';
+import { StorageService } from '../services/StorageService';
+import { parseRepoPath } from '../utils/gitPathParser';
 import { IconButton, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
@@ -32,10 +38,48 @@ import { SwipeableListItem } from '../components/list/SwipeableListItem';
 import { BulkActionBar } from '../components/list/BulkActionBar';
 import { useResponsive } from '../hooks/useResponsive';
 import { useGitHubActivityStore } from '../stores/githubActivityStore';
+import { gitOperationRegistry, useGitOperationStore } from '../stores/gitOperationStore';
+import { GitSyncGate } from '../services/git/GitSyncGate';
+import { useEntityLock } from '../hooks/useGitOpLock';
 import { useTranslation } from 'react-i18next';
 import { LastSelectionPreferenceService } from '../services/LastSelectionPreferenceService';
 
 const FILTER_COMPLETED_PERSISTENCE_KEY = '@gitnotes:filters:todo-completed';
+
+interface LockedTodoRowProps {
+  item: Todo;
+  selected: boolean;
+  selectionMode: boolean;
+  onToggleSelect: () => void;
+  onPress: (todo: Todo) => void;
+  onToggle: (id: string) => void;
+}
+
+function LockedTodoRow({ item, selected, selectionMode, onToggleSelect, onPress, onToggle }: LockedTodoRowProps) {
+  const { colors } = useTheme();
+  const lock = useEntityLock(item.id, { repo: item.repo, branch: item.branch, path: item.filePath });
+  return (
+    <SwipeableListItem
+      itemId={item.id}
+      selected={selected}
+      selectionMode={selectionMode}
+      onToggleSelect={onToggleSelect}
+      disabled={lock.locked}
+    >
+      <View style={{ opacity: lock.locked ? 0.45 : 1 }}>
+        <TodoCard todo={item} onPress={onPress} onToggle={onToggle} />
+        {lock.locked ? (
+          <ActivityIndicator
+            size="small"
+            testID="todo-row.lock-spinner"
+            color={colors.primary}
+            style={{ position: 'absolute', right: 12, top: 12, zIndex: 5 }}
+          />
+        ) : null}
+      </View>
+    </SwipeableListItem>
+  );
+}
 
 export default function TodoListScreen() {
   const { t } = useTranslation();
@@ -43,7 +87,7 @@ export default function TodoListScreen() {
   const headerHeight = useScreenHeaderHeight();
   const tabBarHeight = useTabBarHeight();
   const navigation = useNavigation();
-  const { todos, createTodo, updateTodo, toggleTodo, refreshTodos } = useTodos();
+  const { todos, createTodo, updateTodo, toggleTodo } = useTodos();
   const deleteTodo = useTodoStore((state) => state.deleteTodo);
   const { activeAccountId } = useAuth();
   const { repositories } = useRepos();
@@ -84,6 +128,16 @@ export default function TodoListScreen() {
   const selectionMode = selectedIds.size > 0;
   const isFocused = useIsFocused();
   const { inflight } = useGitHubActivityStore();
+
+  // GitSyncGate publishes registry ops for the held cycle (kind 'pull')
+  // and push markers (kind 'push'); the registry is the reactive busy source.
+  const gateBusy = useGitOperationStore((s) =>
+    Object.values(s.ops).some(
+      (op) =>
+        (op.status === 'queued' || op.status === 'running') &&
+        (op.kind === 'pull' || op.kind === 'push'),
+    ),
+  );
 
   // Reset refresh state when screen loses focus (tab switch, stack push, etc.)
   useEffect(() => {
@@ -158,6 +212,103 @@ export default function TodoListScreen() {
     persistenceKey: '@gitnotes:filters:todo-list',
   });
 
+  const runApiBatchDeletes = useCallback(async (batchable: Todo[], failedIds: Set<string>) => {
+    const branchByHintKey = new Map<string, string>();
+    const groups = new Map<string, { repo: string; branch: string; todos: Todo[] }>();
+    for (const todo of batchable) {
+      const hintKey = `${todo.repo}\n${todo.branch ?? ''}`;
+      if (!branchByHintKey.has(hintKey)) {
+        branchByHintKey.set(hintKey, await resolveBranch(todo.repo!, todo.branch));
+      }
+      const branch = branchByHintKey.get(hintKey)!;
+      const groupKey = `${todo.repo}\n${branch}`;
+      const group = groups.get(groupKey) ?? { repo: todo.repo!, branch, todos: [] };
+      group.todos.push(todo);
+      groups.set(groupKey, group);
+    }
+
+    for (const group of groups.values()) {
+      const repoInfo = parseRepoPath(group.repo);
+      if (!repoInfo || group.todos.length < 2) {
+        for (const todo of group.todos) {
+          try {
+            const ok = await deleteTodo(todo.id);
+            if (!ok) failedIds.add(todo.id);
+          } catch {
+            failedIds.add(todo.id);
+          }
+        }
+        continue;
+      }
+
+      const opByTodoId = new Map<string, string>();
+      for (const todo of group.todos) {
+        opByTodoId.set(todo.id, gitOperationRegistry.begin({
+          kind: 'delete',
+          repo: todo.repo!,
+          branch: todo.branch,
+          path: todo.filePath!,
+          entityIds: [todo.id],
+          status: 'running',
+          attempts: 0,
+        }));
+      }
+
+      let result;
+      try {
+        result = await batchDeleteFiles({
+          owner: repoInfo.owner,
+          repo: repoInfo.repo,
+          branch: group.branch,
+          paths: group.todos.map((todo) => todo.filePath!),
+          message: `Delete ${group.todos.length} todos`,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        result = {
+          success: false,
+          deleted: [] as string[],
+          failed: group.todos.map((todo) => ({ path: todo.filePath!, error: message })),
+        };
+      }
+
+      // Remote-first (#489): local rows disappear ONLY for paths the batch
+      // actually deleted; failures keep their rows plus the store error state.
+      const deletedPaths = new Set(result.deleted);
+      const removedIds: string[] = [];
+      for (const todo of group.todos) {
+        const opId = opByTodoId.get(todo.id);
+        if (!deletedPaths.has(todo.filePath!)) {
+          failedIds.add(todo.id);
+          if (opId) gitOperationRegistry.fail(opId, result.failed[0]?.error ?? 'Delete failed');
+          continue;
+        }
+        try {
+          if (await StorageService.deleteTodo(todo.id)) {
+            removedIds.push(todo.id);
+            if (opId) gitOperationRegistry.succeed(opId);
+          } else {
+            failedIds.add(todo.id);
+            if (opId) gitOperationRegistry.fail(opId, 'Failed to delete todo locally');
+          }
+        } catch {
+          failedIds.add(todo.id);
+          if (opId) gitOperationRegistry.fail(opId, 'Failed to delete todo locally');
+        }
+      }
+      if (removedIds.length > 0) {
+        const removedSet = new Set(removedIds);
+        useTodoStore.setState((state) => ({
+          todos: state.todos.filter((todo) => !removedSet.has(todo.id)),
+        }));
+      }
+      if (result.failed.length > 0) {
+        console.warn('[TodoList] bulk delete failed for paths:', result.failed);
+        useTodoStore.setState({ error: formatSyncError(result.failed[0].error, 'delete') });
+      }
+    }
+  }, [deleteTodo]);
+
   const handleBulkDelete = useCallback(() => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
@@ -176,12 +327,27 @@ export default function TodoListScreen() {
             isDeletingRef.current = true;
             const failedIds = new Set<string>();
             try {
-              for (const id of ids) {
-                try {
-                  const ok = await deleteTodo(id);
-                  if (!ok) failedIds.add(id);
-                } catch { failedIds.add(id); }
+              const selectedTodos = todos.filter((todo) => selectedIds.has(todo.id));
+              const batchable: Todo[] = [];
+              const perItem: Todo[] = [];
+              for (const todo of selectedTodos) {
+                if (!todo.repo || !todo.filePath) {
+                  perItem.push(todo);
+                  continue;
+                }
+                const mode = await SyncEngineService.getMode(todo.repo);
+                if (mode === 'api') batchable.push(todo);
+                else perItem.push(todo);
               }
+              for (const todo of perItem) {
+                try {
+                  const ok = await deleteTodo(todo.id);
+                  if (!ok) failedIds.add(todo.id);
+                } catch {
+                  failedIds.add(todo.id);
+                }
+              }
+              await runApiBatchDeletes(batchable, failedIds);
               if (failedIds.size > 0) {
                 HapticService.warning();
               } else {
@@ -195,7 +361,7 @@ export default function TodoListScreen() {
         },
       ],
     );
-  }, [selectedIds, deleteTodo, clearSelection, t]);
+  }, [selectedIds, todos, deleteTodo, clearSelection, runApiBatchDeletes, t]);
 
   const resetForm = useCallback(() => {
     setTodoText('');
@@ -382,6 +548,7 @@ export default function TodoListScreen() {
   const handlePullToRefresh = useCallback(async () => {
     if (isRefreshingRef.current) return;
     if (useGitHubActivityStore.getState().inflight > 0) return;
+    if (GitSyncGate.isCycleHeld()) return;
     isRefreshingRef.current = true;
     setIsRefreshing(true);
     HapticService.light();
@@ -392,27 +559,26 @@ export default function TodoListScreen() {
     }, 30000);
 
     try {
-      await pullAllFromRepos();
-    } catch (err) {
-      console.warn('[TodoList] Pull failed:', err);
+      // Do NOT acquire the gate cycle here: syncNow acquires it internally,
+      // and a held cycle would deadlock its own acquisition.
+      await syncNow();
     } finally {
       clearTimeout(safetyTimeout);
-      await refreshTodos();
       isRefreshingRef.current = false;
       setIsRefreshing(false);
     }
-  }, [refreshTodos]);
+  }, []);
 
   const renderTodoItem = useCallback(
     ({ item }: { item: Todo }) => (
-      <SwipeableListItem
-        itemId={item.id}
+      <LockedTodoRow
+        item={item}
         selected={selectedIds.has(item.id)}
         selectionMode={selectionMode}
         onToggleSelect={() => toggleSelected(item.id)}
-      >
-        <TodoCard todo={item} onPress={openEditModal} onToggle={handleToggleTodo} />
-      </SwipeableListItem>
+        onPress={openEditModal}
+        onToggle={handleToggleTodo}
+      />
     ),
     [
       handleToggleTodo,
@@ -497,8 +663,10 @@ export default function TodoListScreen() {
         refreshControl={
           gitOperationActive ? undefined : (
             <RefreshControl
+              testID="todo-list.swipe.pull-refresh"
               refreshing={isRefreshing}
               onRefresh={handlePullToRefresh}
+              enabled={!gateBusy}
               tintColor={colors.primary}
               colors={[colors.primary]}
             />

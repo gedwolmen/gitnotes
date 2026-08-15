@@ -192,7 +192,7 @@
   "home": {
     "title": "Accueil",
     "dailyQuote": {
-      "loading": "Recherche de votre citation…"
+      "loading": "Recherche de votre citation"
     }
   },
   "hints": {
@@ -295,7 +295,11 @@
     "tabRemote": "Remote",
     "keepMine": "Keep mine",
     "keepTheirs": "Keep theirs",
-    "saveMerged": "Save merged"
+    "saveMerged": "Save merged",
+    "deleteFailed": "Échec de la suppression",
+    "retry": "Réessayer",
+    "deleteInProgress": "Cette note est en cours de suppression. L'enregistrement est désactivé jusqu'à la fin de la suppression.",
+    "offlineBanner": "Vous êtes hors ligne — les modifications ne seront pas synchronisées"
   },
   "onboarding": {
     "steps": {

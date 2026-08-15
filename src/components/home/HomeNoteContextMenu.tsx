@@ -37,6 +37,7 @@ interface HomeNoteContextMenuProps {
   onPickColor?: (item: RecentItem) => void;
   onDuplicate?: (item: RecentItem) => Promise<void>;
   onDelete?: (item: RecentItem) => Promise<void>;
+  deleteDisabled?: boolean;
 }
 
 export function HomeNoteContextMenu({
@@ -49,6 +50,7 @@ export function HomeNoteContextMenu({
   onPickColor,
   onDuplicate,
   onDelete,
+  deleteDisabled = false,
 }: HomeNoteContextMenuProps) {
   const [exportPickerItem, setExportPickerItem] = React.useState<RecentItem | null>(null);
 
@@ -150,6 +152,7 @@ export function HomeNoteContextMenu({
             icon: 'trash-outline' as IconName,
             label: 'Delete',
             destructive: true,
+            disabled: deleteDisabled,
             testID: 'home-note-context-menu.item.delete',
             onPress: handleDelete,
           },

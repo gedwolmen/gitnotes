@@ -46,7 +46,7 @@ export function DailyQuoteCard({
       <View style={styles.container}>
         <ActivityIndicator color={colors.textSecondary} size="small" />
         <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-          {t('home.dailyQuote.loading', { defaultValue: 'Finding your quote…' })}
+          {t('home.dailyQuote.loading', { defaultValue: 'Finding your quote' })}
         </Text>
       </View>
     );

@@ -92,11 +92,21 @@ jest.mock('../../src/services/NoteSyncQueueService', () => ({
     pendingCount: jest.fn(async () => 0),
     subscribe: jest.fn(() => jest.fn()),
     drain: jest.fn(async () => ({ succeeded: 0 })),
+    enqueueNoteDeletes: jest.fn(async () => undefined),
   },
+}));
+
+jest.mock('../../src/services/StorageService', () => ({
+  StorageService: { deleteNote: jest.fn(async () => true) },
 }));
 
 jest.mock('../../src/services/RepoPullService', () => ({
   pullAllFromRepos: jest.fn(async () => undefined),
+}));
+
+jest.mock('../../src/services/git/manualSync', () => ({
+  syncNow: jest.fn(async () => ({ ok: true })),
+  isSyncNowRunning: jest.fn(() => false),
 }));
 
 jest.mock('../../src/services/ShareService', () => ({

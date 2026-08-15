@@ -52,7 +52,7 @@
   "home": {
     "title": "Home",
     "dailyQuote": {
-      "loading": "Finding your quote…"
+      "loading": "Finding your quote"
     },
     "appTitle": "GitNotēs",
     "subtitle": "Your development notes, organized.",
@@ -470,7 +470,11 @@
     "tabRemote": "Remote",
     "keepMine": "Keep mine",
     "keepTheirs": "Keep theirs",
-    "saveMerged": "Save merged"
+    "saveMerged": "Save merged",
+    "deleteFailed": "Delete Failed",
+    "retry": "Retry",
+    "deleteInProgress": "This note is being deleted. Saving is disabled until the delete completes.",
+    "offlineBanner": "You're offline — changes won't sync"
   },
   "onboarding": {
     "steps": {

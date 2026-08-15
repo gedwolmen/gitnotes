@@ -6,7 +6,7 @@ import { AuthService } from './AuthService';
 import { SyncEngineService } from './SyncEngineService';
 import { LocalGitWriter } from './git/LocalGitWriter';
 import { GitFsService } from './git/GitFsService';
-import { resolveBranch } from './git/branchResolver';
+import { resolveBranch } from './git/resolveBranch';
 import { githubActivity } from '../stores/githubActivityStore';
 import { getGitHostService } from './git/gitHostFactory';
 import { FEATURE_USE_MULTI_HOST_WRITE } from './featureFlags';

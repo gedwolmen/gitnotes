@@ -48,7 +48,7 @@ export const useGitHubActivityStore = create<GitHubActivityState & GitHubActivit
     const timer = get().hideTimer;
     if (timer !== null) clearTimeout(timer);
     const newInflight = get().inflight + 1;
-    const newLabel = label ?? get().label ?? 'Syncing with GitHub…';
+    const newLabel = label ?? get().label ?? 'Syncing with GitHub';
     if (!get().visible) {
       const existing = get().visibilityChangeTimer;
       if (existing !== null) clearTimeout(existing);

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -7,6 +8,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 export function OfflineBanner() {
   const { isConnected } = useNetworkStatus();
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   if (isConnected) return null;
 
@@ -16,7 +18,7 @@ export function OfflineBanner() {
       style={{ backgroundColor: `${colors.error}20`, borderColor: `${colors.error}33` }}
     >
       <Text className="text-sm font-semibold" style={{ color: colors.error }}>
-        You're offline — changes won't sync
+        {t('sync.offlineBanner')}
       </Text>
     </View>
   );

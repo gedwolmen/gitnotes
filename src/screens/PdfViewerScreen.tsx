@@ -263,7 +263,6 @@ export default function PdfViewerScreen() {
       ) : !localUri ? (
         <View className="flex-1 items-center justify-center p-6">
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text className="mt-3 text-sm" style={{ color: colors.textSecondary }}>Loading PDF…</Text>
         </View>
       ) : (
         // Wrapper acts as the blend stacking context for the invert overlay.

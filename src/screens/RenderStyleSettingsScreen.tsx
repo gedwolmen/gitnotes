@@ -197,7 +197,6 @@ function RepoPickerSheet(props: RepoPickerProps) {
           {discovering ? (
             <View className="flex-row items-center gap-3 px-4 py-3">
               <ActivityIndicator color={colors.primary} />
-              <Text className="text-xs mt-0.5" style={{ color: colors.textSecondary }}>Scanning for existing settings/render.json…</Text>
             </View>
           ) : null}
 

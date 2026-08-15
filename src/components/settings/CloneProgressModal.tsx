@@ -58,7 +58,7 @@ export function CloneProgressModal({ progress, onCancel, onRetry }: CloneProgres
       ) : (
         <>
           <Text style={{ color: colors.textSecondary, fontSize: type.sm, marginBottom: spacing[4] }}>
-            {progress?.phase ?? 'Preparing…'} · {pctLabel}
+            {progress?.phase ?? 'Preparing'} · {pctLabel}
           </Text>
 
           <View

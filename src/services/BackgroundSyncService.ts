@@ -4,6 +4,7 @@ import { GitHubService } from './GitHubService';
 import { StorageService } from './StorageService';
 import { NoteSyncQueueService } from './NoteSyncQueueService';
 import { pullAllFromRepos } from './RepoPullService';
+import { GitSyncGate } from './git/GitSyncGate';
 
 const TASK_NAME = 'background-sync';
 
@@ -23,8 +24,15 @@ TaskManager.defineTask(TASK_NAME, async () => {
       return BackgroundTask.BackgroundTaskResult.Success;
     }
 
-    await NoteSyncQueueService.drain();
-    await pullAllFromRepos();
+    // ONE cycle spans the drain+pull pair; drain() sees the held cycle and
+    // skips its own acquisition (no self-deadlock).
+    const releaseCycle = await GitSyncGate.acquireCycle();
+    try {
+      await NoteSyncQueueService.drain();
+      await pullAllFromRepos();
+    } finally {
+      releaseCycle();
+    }
 
     return BackgroundTask.BackgroundTaskResult.Success;
   } catch (error) {

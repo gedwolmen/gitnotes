@@ -9,6 +9,12 @@ import { SyncEngineService } from './SyncEngineService';
 import { AuthService } from './AuthService';
 import { LocalGitWriter } from './git/LocalGitWriter';
 import { classifyGitHubSyncError, isRetryableFailure, syncStatusForError } from './git/syncFailure';
+import { resolveBranch } from './git/resolveBranch';
+import { clearDeleteFailure, readDeleteFailures, recordDeleteFailure, DELETE_FAILURES_STORAGE_KEY } from './git/deleteFailures';
+import { GitSyncGate } from './git/GitSyncGate';
+import { batchDeleteFiles } from './git/BatchGitOperations';
+import type { BatchDeleteFilesResult } from './git/BatchGitOperations';
+import { parseRepoPath } from '../utils/gitPathParser';
 import { NoteColor, NoteFormat } from '../models/Note';
 
 const QUEUE_KEY = '@gitnotes:sync_queue_v1';
@@ -46,6 +52,8 @@ export interface NoteDeleteParams {
   filePath: string;
   title?: string;
   accountId?: string;
+  /** Local note id carried for success events + entity locks; the sync itself ignores it. */
+  localNoteId?: string;
 }
 
 interface MutationCommon {
@@ -72,9 +80,35 @@ export type QueuedMutation =
       params: NoteDeleteParams;
     });
 
+/**
+ * Side-channel notification for mutations the queue gave up on. Emitted
+ * instead of changing `drain()`'s `{succeeded, failed, remaining}`
+ * contract: drops do not count as `failed` in the durable case, and the
+ * return shape stays exactly as callers (and tests) codify it.
+ */
+export interface DroppedMutationEvent {
+  mutation: QueuedMutation;
+  /** 'durable' = non-retryable error; 'exhausted' = retry budget used up. */
+  reason: 'durable' | 'exhausted';
+  error?: string;
+  status?: number;
+}
+
+/**
+ * Side-channel notification for mutations that reached the remote
+ * successfully. `noteStore` listens for `note.delete` events to complete
+ * the local delete (storage + state + registry) — the row stays
+ * visible-but-locked until this fires.
+ */
+export interface MutationSucceededEvent {
+  mutation: QueuedMutation;
+}
+
 class NoteSyncQueueServiceClass {
   private isDraining = false;
   private listeners = new Set<() => void>();
+  private droppedListeners = new Set<(event: DroppedMutationEvent) => void>();
+  private succeededListeners = new Set<(event: MutationSucceededEvent) => void>();
 
   subscribe(fn: () => void): () => void {
     this.listeners.add(fn);
@@ -83,10 +117,44 @@ class NoteSyncQueueServiceClass {
     };
   }
 
+  onDroppedMutation(fn: (event: DroppedMutationEvent) => void): () => void {
+    this.droppedListeners.add(fn);
+    return () => {
+      this.droppedListeners.delete(fn);
+    };
+  }
+
+  onMutationSucceeded(fn: (event: MutationSucceededEvent) => void): () => void {
+    this.succeededListeners.add(fn);
+    return () => {
+      this.succeededListeners.delete(fn);
+    };
+  }
+
   private notify(): void {
     this.listeners.forEach((fn) => {
       try {
         fn();
+      } catch {
+        // ignore listener errors - user callbacks should not break the queue
+      }
+    });
+  }
+
+  private emitDroppedMutation(event: DroppedMutationEvent): void {
+    this.droppedListeners.forEach((fn) => {
+      try {
+        fn(event);
+      } catch {
+        // ignore listener errors - user callbacks should not break the queue
+      }
+    });
+  }
+
+  private emitMutationSucceeded(event: MutationSucceededEvent): void {
+    this.succeededListeners.forEach((fn) => {
+      try {
+        fn(event);
       } catch {
         // ignore listener errors - user callbacks should not break the queue
       }
@@ -128,11 +196,18 @@ class NoteSyncQueueServiceClass {
   }
 
   async isTombstoned(repo: string, branch: string | undefined, filePath: string): Promise<boolean> {
+    const key = this.tombstoneKey(repo, branch || 'main', filePath);
+    try {
+      // A dropped-delete failure entry pins the tombstone indefinitely:
+      // the remote file still exists, so expiry would let the next pull
+      // resurrect the note the user deleted.
+      const failures = await readDeleteFailures();
+      if (failures[key] != null) return true;
+    } catch { /* fall through to the TTL check */ }
     try {
       const raw = await AsyncStorage.getItem(TOMBSTONE_KEY);
       if (!raw) return false;
       const map: Record<string, number> = JSON.parse(raw);
-      const key = this.tombstoneKey(repo, branch || 'main', filePath);
       const ts = map[key];
       if (ts == null) return false;
       if (Date.now() - ts > TOMBSTONE_TTL_MS) {
@@ -145,6 +220,7 @@ class NoteSyncQueueServiceClass {
   }
 
   async removeTombstone(repo: string, branch: string | undefined, filePath: string): Promise<void> {
+    await clearDeleteFailure(repo, branch, filePath);
     try {
       const raw = await AsyncStorage.getItem(TOMBSTONE_KEY);
       if (!raw) return;
@@ -154,56 +230,150 @@ class NoteSyncQueueServiceClass {
     } catch { /* best-effort */ }
   }
 
-  async enqueueNoteUpsert(params: NoteUpsertParams, localNoteId?: string): Promise<void> {
-    const items = await this.getAll();
-    const sameRepoBranchPath = (m: QueuedMutation) =>
-      m.params.repo === params.repo &&
-      (m.params.branch || 'main') === (params.branch || 'main') &&
-      m.params.filePath === params.filePath;
-    // Drop prior upserts with the same (repo, branch, filePath, title) —
-    // latest wins. Also drop any pending delete for the same path: the
-    // user re-created the note, so the delete is wasted (#565 phase B.2).
-    const filtered = items.filter((m) => {
-      if (m.type === 'note.upsert') {
-        return !(
-          sameRepoBranchPath(m) && m.params.title === params.title
-        );
+  private newMutationId(): string {
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  private branchCacheKey(repo: string, hint: string | undefined): string {
+    return `${repo}\n${hint ?? ''}`;
+  }
+
+  private async resolveBranchesOnce(
+    keys: { repo: string; hint?: string }[],
+  ): Promise<Map<string, string>> {
+    const unique = new Map<string, { repo: string; hint?: string }>();
+    for (const key of keys) {
+      unique.set(this.branchCacheKey(key.repo, key.hint), key);
+    }
+    const resolved = new Map<string, string>();
+    await Promise.all(
+      Array.from(unique.entries()).map(async ([cacheKey, { repo, hint }]) => {
+        resolved.set(cacheKey, await resolveBranch(repo, hint));
+      }),
+    );
+    return resolved;
+  }
+
+  /**
+   * Batch variant of `enqueueNoteDelete`: branches are resolved once per
+   * unique (repo, hint) pair, the queue is rewritten ONCE, and tombstones
+   * plus pinned-failure clears happen in ONE read/modify/write pass per
+   * storage key. Same-path dedup rules apply across the existing queue AND
+   * within the batch (last item for a path wins).
+   */
+  async enqueueNoteDeletes(items: NoteDeleteParams[]): Promise<void> {
+    if (items.length === 0) return;
+    const branches = await this.resolveBranchesOnce(
+      items.map((params) => ({ repo: params.repo, hint: params.branch })),
+    );
+    const resolvedItems = items.map((params) => ({
+      ...params,
+      branch: branches.get(this.branchCacheKey(params.repo, params.branch))!,
+    }));
+
+    let queue = await this.getAll();
+    const batchMutations: QueuedMutation[] = [];
+    for (const params of resolvedItems) {
+      const sameRepoBranchPath = (m: QueuedMutation) =>
+        m.params.repo === params.repo &&
+        (m.params.branch || 'main') === params.branch &&
+        m.params.filePath === params.filePath;
+      queue = queue.filter((m) => !sameRepoBranchPath(m));
+      for (let i = batchMutations.length - 1; i >= 0; i -= 1) {
+        if (sameRepoBranchPath(batchMutations[i])) batchMutations.splice(i, 1);
       }
-      // note.delete: only drop if filePath matches and is set on both
-      // sides — undefined filePath on either side means we can't be
-      // sure they refer to the same blob.
-      return !(params.filePath && sameRepoBranchPath(m));
+      batchMutations.push({
+        id: this.newMutationId(),
+        type: 'note.delete',
+        createdAt: Date.now(),
+        attempts: 0,
+        params,
+      });
+    }
+    await this.saveAll([...queue, ...batchMutations]);
+
+    let tombstoneMap: Record<string, number> = {};
+    let failureMap: Record<string, unknown> = {};
+    try {
+      const rawTombstones = await AsyncStorage.getItem(TOMBSTONE_KEY);
+      if (rawTombstones) tombstoneMap = JSON.parse(rawTombstones);
+    } catch { /* best-effort */ }
+    try {
+      const rawFailures = await AsyncStorage.getItem(DELETE_FAILURES_STORAGE_KEY);
+      if (rawFailures) failureMap = JSON.parse(rawFailures);
+    } catch { /* best-effort */ }
+    const now = Date.now();
+    let failuresChanged = false;
+    for (const params of resolvedItems) {
+      const key = this.tombstoneKey(params.repo, params.branch, params.filePath);
+      tombstoneMap[key] = now;
+      if (key in failureMap) {
+        delete failureMap[key];
+        failuresChanged = true;
+      }
+    }
+    try {
+      await AsyncStorage.setItem(TOMBSTONE_KEY, JSON.stringify(tombstoneMap));
+      if (failuresChanged) {
+        await AsyncStorage.setItem(DELETE_FAILURES_STORAGE_KEY, JSON.stringify(failureMap));
+      }
+    } catch { /* best-effort */ }
+  }
+
+  /**
+   * Batch variant of `enqueueNoteUpsert`: ONE queue write for the whole
+   * batch. Dedup mirrors the single-item rules — a new upsert drops
+   * same-path prior upserts with the same title (latest wins) and any
+   * pending same-path delete (the note was re-created, delete wasted).
+   */
+  async enqueueNoteUpserts(
+    items: NoteUpsertParams[],
+    localNoteIds?: (string | undefined)[],
+  ): Promise<void> {
+    if (items.length === 0) return;
+    const branches = await this.resolveBranchesOnce(
+      items.map((params) => ({ repo: params.repo, hint: params.branch })),
+    );
+
+    let queue = await this.getAll();
+    const batchMutations: QueuedMutation[] = [];
+    items.forEach((rawParams, index) => {
+      const branch = branches.get(this.branchCacheKey(rawParams.repo, rawParams.branch))!;
+      const resolvedParams: NoteUpsertParams = { ...rawParams, branch };
+      const sameRepoBranchPath = (m: QueuedMutation) =>
+        m.params.repo === resolvedParams.repo &&
+        (m.params.branch || 'main') === branch &&
+        m.params.filePath === resolvedParams.filePath;
+      // note.delete entries are only dropped when filePath is set on both
+      // sides — undefined on either side means the blob match is unproven.
+      const keepExisting = (m: QueuedMutation): boolean => {
+        if (m.type === 'note.upsert') {
+          return !(sameRepoBranchPath(m) && m.params.title === resolvedParams.title);
+        }
+        return !(resolvedParams.filePath && sameRepoBranchPath(m));
+      };
+      queue = queue.filter(keepExisting);
+      for (let i = batchMutations.length - 1; i >= 0; i -= 1) {
+        if (!keepExisting(batchMutations[i])) batchMutations.splice(i, 1);
+      }
+      batchMutations.push({
+        id: this.newMutationId(),
+        type: 'note.upsert',
+        createdAt: Date.now(),
+        attempts: 0,
+        localNoteId: localNoteIds?.[index],
+        params: resolvedParams,
+      });
     });
-    filtered.push({
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      type: 'note.upsert',
-      createdAt: Date.now(),
-      attempts: 0,
-      localNoteId,
-      params,
-    });
-    await this.saveAll(filtered);
+    await this.saveAll([...queue, ...batchMutations]);
+  }
+
+  async enqueueNoteUpsert(params: NoteUpsertParams, localNoteId?: string): Promise<void> {
+    await this.enqueueNoteUpserts([params], localNoteId === undefined ? undefined : [localNoteId]);
   }
 
   async enqueueNoteDelete(params: NoteDeleteParams): Promise<void> {
-    const items = await this.getAll();
-    const sameRepoBranchPath = (m: QueuedMutation) =>
-      m.params.repo === params.repo &&
-      (m.params.branch || 'main') === (params.branch || 'main') &&
-      m.params.filePath === params.filePath;
-    // Drop prior upserts for this file — they're wasted writes since the
-    // file is being deleted (#565 phase B.2). Drop prior deletes for the
-    // same file too — only one delete is needed.
-    const filtered = items.filter((m) => !sameRepoBranchPath(m));
-    filtered.push({
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      type: 'note.delete',
-      createdAt: Date.now(),
-      attempts: 0,
-      params,
-    });
-    await this.saveAll(filtered);
-    await this.addTombstone(params.repo, params.branch, params.filePath);
+    await this.enqueueNoteDeletes([params]);
   }
 
   async drain(): Promise<{ succeeded: number; failed: number; remaining: number }> {
@@ -212,6 +382,12 @@ class NoteSyncQueueServiceClass {
       return { succeeded: 0, failed: 0, remaining: items.length };
     }
     this.isDraining = true;
+
+    // Serialize against app-wide drain+pull cycles (foreground/startup/
+    // background/manual sync). When this drain runs INSIDE a held cycle
+    // the cycle owner already owns the mutex — acquiring again here would
+    // self-deadlock, so the short-circuit is mandatory.
+    const releaseCycle = GitSyncGate.isCycleHeld() ? null : await GitSyncGate.acquireCycle();
 
     try {
       const initial = await this.getAll();
@@ -272,6 +448,7 @@ class NoteSyncQueueServiceClass {
       return { succeeded, failed, remaining: next.length };
     } finally {
       this.isDraining = false;
+      if (releaseCycle) releaseCycle();
     }
   }
 
@@ -288,6 +465,29 @@ class NoteSyncQueueServiceClass {
     const sep = key.indexOf('\n');
     const repoPath = key.slice(0, sep);
     const branch = key.slice(sep + 1);
+
+    // Push marker spans the whole group flight (per-mutation HTTP calls and
+    // the clone-mode coalesced push). A pull reading origin mid-push is the
+    // resurrection window, so pull steps must wait for this marker to clear.
+    GitSyncGate.markPushActive(repoPath, branch);
+    try {
+      return await this.processDrainGroup(repoPath, branch, items, now);
+    } finally {
+      GitSyncGate.clearPushActive(repoPath, branch);
+    }
+  }
+
+  private async processDrainGroup(
+    repoPath: string,
+    branch: string,
+    items: QueuedMutation[],
+    now: number,
+  ): Promise<{
+    succeeded: number;
+    failed: number;
+    droppedIds: Set<string>;
+    updatedById: Map<string, QueuedMutation>;
+  }> {
     const isClone = (await SyncEngineService.getMode(repoPath)) === 'clone';
 
     const droppedIds = new Set<string>();
@@ -295,12 +495,24 @@ class NoteSyncQueueServiceClass {
     let succeeded = 0;
     let failed = 0;
 
-    const recordFailure = (item: QueuedMutation, error: string | undefined): void => {
+    const recordFailure = async (
+      item: QueuedMutation,
+      error: string | undefined,
+      status?: number,
+    ): Promise<void> => {
       const attempts = item.attempts + 1;
       if (attempts >= MAX_ATTEMPTS) {
         console.warn('[NoteSyncQueue] dropped after max attempts:', error);
         failed++;
         droppedIds.add(item.id);
+        this.emitDroppedMutation({ mutation: item, reason: 'exhausted', error, status });
+        if (item.type === 'note.delete') {
+          await recordDeleteFailure(item.params.repo, item.params.branch, item.params.filePath, {
+            error: error ?? 'Unknown error',
+            kind: 'exhausted',
+            at: Date.now(),
+          });
+        }
       } else {
         updatedById.set(item.id, {
           ...item,
@@ -312,6 +524,75 @@ class NoteSyncQueueServiceClass {
       }
     };
 
+    // API-mode single-commit bulk: >=2 due deletes in one (repo, branch)
+    // group ship as ONE Git-Data commit instead of N Contents-API deletes.
+    // Subgroups keyed by accountId never share a batch (token ownership);
+    // a group that throws is left for the per-item loop below so its items
+    // get the full deleteNoteFromGitHub classification instead.
+    const handledByBatch = new Set<string>();
+    if (!isClone) {
+      const dueDeletes = items.filter(
+        (m): m is QueuedMutation & { type: 'note.delete' } => m.type === 'note.delete',
+      );
+      if (dueDeletes.length >= 2) {
+        const repoInfo = parseRepoPath(repoPath);
+        if (repoInfo) {
+          const subgroups = new Map<string, (QueuedMutation & { type: 'note.delete' })[]>();
+          for (const item of dueDeletes) {
+            const key = item.params.accountId ?? '';
+            const arr = subgroups.get(key) ?? [];
+            arr.push(item);
+            subgroups.set(key, arr);
+          }
+          for (const [accountId, group] of subgroups) {
+            if (group.length < 2) continue;
+            let tokenOverride: string | undefined;
+            if (accountId) {
+              tokenOverride = (await AuthService.getTokenById(accountId)) ?? undefined;
+            }
+            let batchResult: BatchDeleteFilesResult | null = null;
+            try {
+              batchResult = await batchDeleteFiles({
+                owner: repoInfo.owner,
+                repo: repoInfo.repo,
+                branch,
+                paths: group.map((item) => item.params.filePath),
+                message: `Delete ${group.length} notes`,
+                ...(tokenOverride ? { opts: { tokenOverride } } : {}),
+              });
+            } catch (batchError) {
+              console.warn('[NoteSyncQueue] batch delete threw; group reverts to per-item processing:', batchError);
+            }
+            if (batchResult) {
+              const byPath = new Map(group.map((item) => [item.params.filePath, item]));
+              const deletedPaths = new Set(batchResult.deleted);
+              for (const item of group) {
+                if (deletedPaths.has(item.params.filePath)) {
+                  await this.removeTombstone(item.params.repo, item.params.branch, item.params.filePath);
+                  succeeded += 1;
+                  droppedIds.add(item.id);
+                  this.emitMutationSucceeded({ mutation: item });
+                  handledByBatch.add(item.id);
+                }
+              }
+              for (const failure of batchResult.failed) {
+                const item = byPath.get(failure.path);
+                if (!item) continue;
+                handledByBatch.add(item.id);
+                await this.classifyBatchDeleteFailure(item, failure.error, droppedIds, recordFailure);
+              }
+              for (const item of group) {
+                if (!handledByBatch.has(item.id)) {
+                  handledByBatch.add(item.id);
+                  await recordFailure(item, 'Batch delete returned no outcome for path');
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
     // Items whose local write/delete+commit succeeded but whose push is
     // deferred to the group flush. Recorded so we can apply the post-
     // success StorageService.updateNote (upserts only) and drop them
@@ -319,6 +600,7 @@ class NoteSyncQueueServiceClass {
     const pendingFlush: { item: QueuedMutation; result: NoteGitHubSyncResult }[] = [];
 
     for (const item of items) {
+      if (handledByBatch.has(item.id)) continue;
       const result =
         item.type === 'note.upsert'
           ? await syncNoteToGitHub({
@@ -338,8 +620,21 @@ class NoteSyncQueueServiceClass {
         if (!isRetryableFailure(failure)) {
           console.warn('[NoteSyncQueue] dropped durable failure:', failure.kind);
           droppedIds.add(item.id);
+          this.emitDroppedMutation({
+            mutation: item,
+            reason: 'durable',
+            error: result.error,
+            status: result.status,
+          });
+          if (item.type === 'note.delete') {
+            await recordDeleteFailure(item.params.repo, item.params.branch, item.params.filePath, {
+              error: result.error ?? failure.message,
+              kind: failure.kind,
+              at: Date.now(),
+            });
+          }
         } else {
-          recordFailure(item, result.error);
+          await recordFailure(item, result.error, result.status);
         }
         continue;
       }
@@ -354,6 +649,7 @@ class NoteSyncQueueServiceClass {
         }
         succeeded++;
         droppedIds.add(item.id);
+        this.emitMutationSucceeded({ mutation: item });
       }
     }
 
@@ -373,14 +669,37 @@ class NoteSyncQueueServiceClass {
           }
           succeeded++;
           droppedIds.add(item.id);
+          this.emitMutationSucceeded({ mutation: item });
         }
       } else {
         console.warn('[NoteSyncQueue] coalesced push failed:', flushResult.error);
-        for (const { item } of pendingFlush) recordFailure(item, flushResult.error);
+        for (const { item } of pendingFlush) await recordFailure(item, flushResult.error);
       }
     }
 
     return { succeeded, failed, droppedIds, updatedById };
+  }
+
+  private async classifyBatchDeleteFailure(
+    item: QueuedMutation & { type: 'note.delete' },
+    error: string,
+    droppedIds: Set<string>,
+    recordFailure: (item: QueuedMutation, error: string | undefined, status?: number) => Promise<void>,
+  ): Promise<void> {
+    const status = syncStatusForError(error);
+    const failure = classifyGitHubSyncError(new Error(error), status);
+    if (isRetryableFailure(failure)) {
+      await recordFailure(item, error, status);
+      return;
+    }
+    console.warn('[NoteSyncQueue] dropped durable batch-delete failure:', failure.kind);
+    droppedIds.add(item.id);
+    this.emitDroppedMutation({ mutation: item, reason: 'durable', error, status });
+    await recordDeleteFailure(item.params.repo, item.params.branch, item.params.filePath, {
+      error: error || failure.message,
+      kind: failure.kind,
+      at: Date.now(),
+    });
   }
 
   private async applyPostSyncStorageUpdate(

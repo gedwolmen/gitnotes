@@ -39,10 +39,6 @@ export const treeStyles = StyleSheet.create({
     gap: 8,
     paddingTop: 60,
   },
-  loadingText: {
-    fontSize: 14,
-    marginTop: 4,
-  },
   emptyText: {
     fontSize: 16,
     fontWeight: '600',

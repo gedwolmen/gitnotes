@@ -20,39 +20,66 @@ jest.mock('@react-native-async-storage/async-storage', () => {
   };
 });
 
-jest.mock('../src/services/NoteGitHubSyncService', () => ({
+jest.mock('../../src/services/NoteGitHubSyncService', () => ({
   syncNoteToGitHub: jest.fn(),
   deleteNoteFromGitHub: jest.fn(),
 }));
 
-jest.mock('../src/services/StorageService', () => ({
+jest.mock('../../src/services/StorageService', () => ({
   StorageService: { updateNote: jest.fn(async () => undefined) },
 }));
 
-jest.mock('../src/services/SyncEngineService', () => ({
+jest.mock('../../src/services/SyncEngineService', () => ({
   SyncEngineService: { getMode: jest.fn(async () => 'api') },
 }));
 
-jest.mock('../src/services/AuthService', () => ({
+jest.mock('../../src/services/AuthService', () => ({
   AuthService: { getToken: jest.fn(async () => 'tok') },
 }));
 
-jest.mock('../src/services/git/LocalGitWriter', () => ({
+jest.mock('../../src/services/git/LocalGitWriter', () => ({
   LocalGitWriter: { push: jest.fn(async () => ({ success: true })) },
 }));
 
+jest.mock('../../src/services/git/BatchGitOperations', () => ({
+  batchDeleteFiles: jest.fn(),
+}));
+
+jest.mock('../../src/services/git/resolveBranch', () => ({
+  resolveBranch: jest.fn(),
+}));
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { NoteSyncQueueService } from '../src/services/NoteSyncQueueService';
-import { syncNoteToGitHub, deleteNoteFromGitHub } from '../src/services/NoteGitHubSyncService';
-import { SyncEngineService } from '../src/services/SyncEngineService';
-import { LocalGitWriter } from '../src/services/git/LocalGitWriter';
+import { NoteSyncQueueService, DroppedMutationEvent } from '../../src/services/NoteSyncQueueService';
+import { syncNoteToGitHub, deleteNoteFromGitHub } from '../../src/services/NoteGitHubSyncService';
+import { SyncEngineService } from '../../src/services/SyncEngineService';
+import { LocalGitWriter } from '../../src/services/git/LocalGitWriter';
+import { batchDeleteFiles } from '../../src/services/git/BatchGitOperations';
+import { resolveBranch } from '../../src/services/git/resolveBranch';
+import {
+  DELETE_FAILURES_STORAGE_KEY,
+  readDeleteFailures,
+} from '../../src/services/git/deleteFailures';
 
 const QUEUE_KEY = '@gitnotes:sync_queue_v1';
+const TOMBSTONE_KEY = '@gitnotes:delete_tombstones_v1';
+const TOMBSTONE_TTL_MS = 24 * 60 * 60 * 1_000;
+
+const resolveBranchMock = resolveBranch as jest.MockedFunction<typeof resolveBranch>;
+
+// Mirrors the real resolver's contract for these tests: an explicit branch
+// short-circuits (no network/fs), otherwise fall back to 'main'. Individual
+// tests override the fallback to simulate a non-main host default branch.
+function defaultResolveBranch(repoPath: string, hint?: string | null): Promise<string> {
+  void repoPath;
+  return Promise.resolve(hint ?? 'main');
+}
 
 describe('NoteSyncQueueService', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     (AsyncStorage as unknown as { __reset: () => void }).__reset();
+    resolveBranchMock.mockImplementation(defaultResolveBranch);
   });
 
   describe('enqueueNoteUpsert', () => {
@@ -543,6 +570,10 @@ describe('NoteSyncQueueService', () => {
       expect(secondDrain.succeeded).toBe(0);
       expect(secondDrain.remaining).toBe(1);
 
+      // The sync gate adds one acquisition hop inside drain(); give the
+      // in-flight drain enough turns to reach its awaiting syncNoteToGitHub
+      // call (assigning resolveSync) before we resolve it.
+      for (let i = 0; i < 10; i += 1) await Promise.resolve();
       resolveSync({ success: true });
       const first = await firstDrain;
       expect(first.succeeded).toBe(1);
@@ -587,6 +618,478 @@ describe('NoteSyncQueueService', () => {
       expect(good).toHaveBeenCalled();
       u1();
       u2();
+    });
+  });
+
+  describe('onDroppedMutation', () => {
+    test('unsubscribe stops drop events', async () => {
+      (deleteNoteFromGitHub as jest.Mock).mockResolvedValue({
+        success: false, error: 'Bad credentials', status: 401,
+      });
+      const events: DroppedMutationEvent[] = [];
+      const unsub = NoteSyncQueueService.onDroppedMutation((e) => events.push(e));
+      unsub();
+
+      await NoteSyncQueueService.enqueueNoteDelete({
+        repo: 'r', branch: 'main', filePath: 'a.md',
+      });
+      await NoteSyncQueueService.drain();
+      expect(events).toHaveLength(0);
+    });
+
+    test('listener errors do not break the drain', async () => {
+      (deleteNoteFromGitHub as jest.Mock).mockResolvedValue({
+        success: false, error: 'Bad credentials', status: 401,
+      });
+      const unsub = NoteSyncQueueService.onDroppedMutation(() => {
+        throw new Error('boom');
+      });
+
+      await NoteSyncQueueService.enqueueNoteDelete({
+        repo: 'r', branch: 'main', filePath: 'a.md',
+      });
+      const result = await NoteSyncQueueService.drain();
+      expect(result.remaining).toBe(0);
+      unsub();
+    });
+  });
+
+  describe('resolved-branch tombstones', () => {
+    test('enqueueNoteDelete with undefined branch persists the resolved branch (acceptance 1)', async () => {
+      resolveBranchMock.mockImplementation(async (_repo, hint) => hint ?? 'master');
+
+      await NoteSyncQueueService.enqueueNoteDelete({
+        repo: 'owner/repo', filePath: 'notes/a.md', title: 'A',
+      });
+
+      const items = await NoteSyncQueueService.getAll();
+      expect(items).toHaveLength(1);
+      expect(items[0].params.branch).toBe('master');
+      expect(await NoteSyncQueueService.isTombstoned('owner/repo', 'master', 'notes/a.md')).toBe(true);
+
+      // The raw undefined->'main' fallback key is gone (the original bug).
+      const rawTombstones = await AsyncStorage.getItem(TOMBSTONE_KEY);
+      expect(rawTombstones).not.toContain('owner/repo::main::notes/a.md');
+    });
+
+    test('enqueueNoteUpsert with undefined branch persists the resolved branch', async () => {
+      resolveBranchMock.mockImplementation(async (_repo, hint) => hint ?? 'master');
+
+      await NoteSyncQueueService.enqueueNoteUpsert({
+        repo: 'owner/repo', filePath: 'notes/a.md', title: 'A', content: 'x', format: 'markdown',
+      });
+
+      const items = await NoteSyncQueueService.getAll();
+      expect(items).toHaveLength(1);
+      expect(items[0].params.branch).toBe('master');
+    });
+  });
+
+  describe('durable-drop surfacing + failure pinning', () => {
+    test('durable 401 delete drops with an event and pins the tombstone past TTL (acceptance 2)', async () => {
+      resolveBranchMock.mockImplementation(async (_repo, hint) => hint ?? 'master');
+      (deleteNoteFromGitHub as jest.Mock).mockResolvedValue({
+        success: false, error: 'Bad credentials', status: 401,
+      });
+
+      const events: DroppedMutationEvent[] = [];
+      const unsub = NoteSyncQueueService.onDroppedMutation((e) => events.push(e));
+
+      await NoteSyncQueueService.enqueueNoteDelete({
+        repo: 'owner/repo', filePath: 'notes/a.md', title: 'A',
+      });
+      const result = await NoteSyncQueueService.drain();
+
+      // Drop is a side channel: drain() contract stays {succeeded, failed, remaining}
+      expect(result.succeeded).toBe(0);
+      expect(result.failed).toBe(0);
+      expect(result.remaining).toBe(0);
+
+      expect(events).toHaveLength(1);
+      expect(events[0].reason).toBe('durable');
+      expect(events[0].error).toBe('Bad credentials');
+      expect(events[0].status).toBe(401);
+      expect(events[0].mutation.type).toBe('note.delete');
+      expect(events[0].mutation.params.branch).toBe('master');
+
+      const failures = await readDeleteFailures();
+      expect(Object.keys(failures)).toEqual(['owner/repo::master::notes/a.md']);
+      expect(failures['owner/repo::master::notes/a.md']).toMatchObject({
+        error: 'Bad credentials',
+        kind: 'authentication',
+      });
+      expect(await NoteSyncQueueService.isTombstoned('owner/repo', 'master', 'notes/a.md')).toBe(true);
+
+      // Advance past the 24h TTL — the failure entry keeps it tombstoned.
+      const base = Date.now();
+      const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => base + TOMBSTONE_TTL_MS + 60_000);
+      try {
+        expect(await NoteSyncQueueService.isTombstoned('owner/repo', 'master', 'notes/a.md')).toBe(true);
+      } finally {
+        nowSpy.mockRestore();
+      }
+      unsub();
+    });
+
+    test('durable upsert drop records no delete failure', async () => {
+      (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: false, error: '401 Unauthorized' });
+
+      await NoteSyncQueueService.enqueueNoteUpsert({
+        repo: 'r', branch: 'main', filePath: 'a', title: 'A', content: '', format: 'markdown',
+      });
+      const result = await NoteSyncQueueService.drain();
+
+      expect(result.failed).toBe(0);
+      expect(result.remaining).toBe(0);
+      expect(await readDeleteFailures()).toEqual({});
+    });
+
+    test('exhausted delete (8 transient failures) drops with an event and pins (acceptance 3)', async () => {
+      (deleteNoteFromGitHub as jest.Mock).mockResolvedValue({
+        success: false, error: 'network down',
+      });
+
+      const events: DroppedMutationEvent[] = [];
+      const unsub = NoteSyncQueueService.onDroppedMutation((e) => events.push(e));
+
+      await NoteSyncQueueService.enqueueNoteDelete({
+        repo: 'r', branch: 'main', filePath: 'a.md', title: 'A',
+      });
+
+      let virtualNow = Date.now();
+      const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => virtualNow);
+      let lastResult = { succeeded: 0, failed: 0, remaining: 1 };
+      try {
+        for (let i = 0; i < 8; i++) {
+          lastResult = await NoteSyncQueueService.drain();
+          virtualNow += 60_000;
+        }
+      } finally {
+        nowSpy.mockRestore();
+      }
+
+      expect(lastResult.failed).toBe(1);
+      expect(lastResult.remaining).toBe(0);
+      expect(events).toHaveLength(1);
+      expect(events[0].reason).toBe('exhausted');
+      expect(events[0].error).toBe('network down');
+      expect(events[0].mutation.type).toBe('note.delete');
+
+      const failures = await readDeleteFailures();
+      expect(failures['r::main::a.md']).toMatchObject({
+        error: 'network down',
+        kind: 'exhausted',
+      });
+
+      // Pinned past the TTL like the durable case.
+      const futureSpy = jest
+        .spyOn(Date, 'now')
+        .mockImplementation(() => virtualNow + TOMBSTONE_TTL_MS + 60_000);
+      try {
+        expect(await NoteSyncQueueService.isTombstoned('r', 'main', 'a.md')).toBe(true);
+      } finally {
+        futureSpy.mockRestore();
+      }
+      unsub();
+    });
+
+    test('retry re-enqueue clears the pinned failure entry (acceptance 4)', async () => {
+      (deleteNoteFromGitHub as jest.Mock).mockResolvedValue({
+        success: false, error: 'Bad credentials', status: 401,
+      });
+
+      await NoteSyncQueueService.enqueueNoteDelete({
+        repo: 'r', branch: 'main', filePath: 'a.md', title: 'A',
+      });
+      await NoteSyncQueueService.drain();
+      expect(Object.keys(await readDeleteFailures())).toEqual(['r::main::a.md']);
+      expect(await NoteSyncQueueService.isTombstoned('r', 'main', 'a.md')).toBe(true);
+
+      await NoteSyncQueueService.enqueueNoteDelete({
+        repo: 'r', branch: 'main', filePath: 'a.md', title: 'A',
+      });
+      expect(await readDeleteFailures()).toEqual({});
+
+      // Fresh tombstone covers the retry window...
+      expect(await NoteSyncQueueService.isTombstoned('r', 'main', 'a.md')).toBe(true);
+      // ...but without the pin it expires normally past the TTL.
+      const futureSpy = jest
+        .spyOn(Date, 'now')
+        .mockImplementation(() => Date.now() + TOMBSTONE_TTL_MS + 60_000);
+      try {
+        expect(await NoteSyncQueueService.isTombstoned('r', 'main', 'a.md')).toBe(false);
+      } finally {
+        futureSpy.mockRestore();
+      }
+    });
+
+    test('failure map survives corrupted JSON', async () => {
+      await AsyncStorage.setItem(DELETE_FAILURES_STORAGE_KEY, '{not json');
+      expect(await readDeleteFailures()).toEqual({});
+      expect(await NoteSyncQueueService.isTombstoned('r', 'main', 'a.md')).toBe(false);
+    });
+  });
+
+  describe('clone-mode resolved-branch push', () => {
+    beforeEach(() => {
+      (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
+      (LocalGitWriter.push as jest.Mock).mockResolvedValue({ success: true });
+    });
+
+    afterEach(() => {
+      (SyncEngineService.getMode as jest.Mock).mockResolvedValue('api');
+    });
+
+    test('group with undefined branch commits and pushes on the resolved branch (acceptance 5)', async () => {
+      resolveBranchMock.mockImplementation(async (_repo, hint) => hint ?? 'master');
+      (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: true });
+      (deleteNoteFromGitHub as jest.Mock).mockResolvedValue({ success: true });
+
+      await NoteSyncQueueService.enqueueNoteUpsert({
+        repo: 'me/repo', filePath: 'a.md', title: 'A', content: 'x', format: 'markdown',
+      });
+      await NoteSyncQueueService.enqueueNoteDelete({
+        repo: 'me/repo', filePath: 'b.md', title: 'B',
+      });
+
+      const result = await NoteSyncQueueService.drain();
+      expect(result.succeeded).toBe(2);
+      expect(result.failed).toBe(0);
+      expect(result.remaining).toBe(0);
+
+      // Each mutation ran against the resolved branch (commit target).
+      expect((syncNoteToGitHub as jest.Mock).mock.calls[0][0].branch).toBe('master');
+      expect((deleteNoteFromGitHub as jest.Mock).mock.calls[0][0].branch).toBe('master');
+
+      // The single coalesced push targets the same resolved branch.
+      expect(LocalGitWriter.push).toHaveBeenCalledTimes(1);
+      expect(LocalGitWriter.push).toHaveBeenCalledWith({
+        repoPath: 'me/repo',
+        branch: 'master',
+        token: 'tok',
+      });
+    });
+  });
+
+  describe('enqueueNoteDeletes (batch)', () => {
+    test('3 deletes -> ONE queue write + ONE tombstone pass with 3 tombstones (acceptance)', async () => {
+      await NoteSyncQueueService.enqueueNoteDeletes([
+        { repo: 'owner/repo', branch: 'main', filePath: 'a.md', title: 'A' },
+        { repo: 'owner/repo', branch: 'main', filePath: 'b.md', title: 'B' },
+        { repo: 'owner/repo', filePath: 'c.md', title: 'C' },
+      ]);
+
+      const queueWrites = (AsyncStorage.setItem as jest.Mock).mock.calls.filter(
+        ([key]: [string]) => key === QUEUE_KEY,
+      );
+      expect(queueWrites).toHaveLength(1);
+      const tombstoneWrites = (AsyncStorage.setItem as jest.Mock).mock.calls.filter(
+        ([key]: [string]) => key === TOMBSTONE_KEY,
+      );
+      expect(tombstoneWrites).toHaveLength(1);
+
+      const items = await NoteSyncQueueService.getAll();
+      expect(items).toHaveLength(3);
+      // Branch resolved once per unique (repo, hint) and persisted (c.md hinted undefined).
+      expect(items.map((m) => m.params.branch)).toEqual(['main', 'main', 'main']);
+
+      const rawTombstones = await AsyncStorage.getItem(TOMBSTONE_KEY);
+      expect(Object.keys(JSON.parse(rawTombstones!)).sort()).toEqual([
+        'owner/repo::main::a.md',
+        'owner/repo::main::b.md',
+        'owner/repo::main::c.md',
+      ]);
+    });
+
+    test('dedup holds across batch + existing queue; pinned failures clear', async () => {
+      resolveBranchMock.mockImplementation(async (_repo, hint) => hint ?? 'master');
+      await AsyncStorage.setItem(
+        DELETE_FAILURES_STORAGE_KEY,
+        JSON.stringify({ 'owner/repo::master::a.md': { error: 'old', kind: 'server', at: 1 } }),
+      );
+      // Pre-existing pending upsert for b.md must be dropped by the batch delete.
+      await NoteSyncQueueService.enqueueNoteUpsert({
+        repo: 'owner/repo', filePath: 'b.md', title: 'B', content: 'x', format: 'markdown',
+      });
+
+      await NoteSyncQueueService.enqueueNoteDeletes([
+        { repo: 'owner/repo', filePath: 'a.md' },
+        { repo: 'owner/repo', filePath: 'b.md' },
+        { repo: 'owner/repo', filePath: 'b.md' },
+        { repo: 'owner/repo', filePath: 'a.md' },
+      ]);
+
+      const items = await NoteSyncQueueService.getAll();
+      expect(items).toHaveLength(2);
+      expect(items.map((m) => m.params.filePath).sort()).toEqual(['a.md', 'b.md']);
+      for (const m of items) {
+        expect(m.type).toBe('note.delete');
+        expect(m.params.branch).toBe('master');
+      }
+
+      // Pinned failure cleared for retried delete; tombstones pinned on resolved branch.
+      expect(await readDeleteFailures()).toEqual({});
+      expect(await NoteSyncQueueService.isTombstoned('owner/repo', 'master', 'a.md')).toBe(true);
+      expect(await NoteSyncQueueService.isTombstoned('owner/repo', 'master', 'b.md')).toBe(true);
+    });
+
+    test('resolveBranch runs once per unique (repo, hint), not per item', async () => {
+      await NoteSyncQueueService.enqueueNoteDeletes([
+        { repo: 'r1', filePath: 'a.md' },
+        { repo: 'r1', filePath: 'b.md' },
+        { repo: 'r1', branch: 'dev', filePath: 'c.md' },
+        { repo: 'r2', filePath: 'd.md' },
+      ]);
+      expect(resolveBranchMock).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  describe('enqueueNoteUpserts (batch)', () => {
+    test('3 upserts -> ONE queue write; same-path+title dedup within the batch', async () => {
+      await NoteSyncQueueService.enqueueNoteUpserts(
+        [
+          { repo: 'owner/repo', branch: 'main', filePath: 'a.md', title: 'A', content: 'first' },
+          { repo: 'owner/repo', branch: 'main', filePath: 'a.md', title: 'A', content: 'second' },
+          { repo: 'owner/repo', branch: 'main', filePath: 'b.md', title: 'B', content: 'x' },
+        ],
+        ['note-1', 'note-1', 'note-2'],
+      );
+
+      const queueWrites = (AsyncStorage.setItem as jest.Mock).mock.calls.filter(
+        ([key]: [string]) => key === QUEUE_KEY,
+      );
+      expect(queueWrites).toHaveLength(1);
+
+      const items = await NoteSyncQueueService.getAll();
+      expect(items).toHaveLength(2);
+      const a = items.find((m) => m.params.filePath === 'a.md');
+      expect(a?.type).toBe('note.upsert');
+      if (a?.type === 'note.upsert') {
+        expect(a.params.content).toBe('second');
+        expect(a.localNoteId).toBe('note-1');
+      }
+    });
+
+    test('batch upsert drops pending deletes for matching paths', async () => {
+      await NoteSyncQueueService.enqueueNoteDelete({
+        repo: 'r', branch: 'main', filePath: 'a.md', title: 'A',
+      });
+      await NoteSyncQueueService.enqueueNoteUpserts([
+        { repo: 'r', branch: 'main', filePath: 'a.md', title: 'A', content: 'rebuilt' },
+      ]);
+
+      const items = await NoteSyncQueueService.getAll();
+      expect(items).toHaveLength(1);
+      expect(items[0].type).toBe('note.upsert');
+    });
+  });
+
+  describe('api-mode batch delete drain', () => {
+    test('3 due deletes -> ONE batchDeleteFiles with all 3 paths; mixed outcomes mapped (acceptance)', async () => {
+      (batchDeleteFiles as jest.Mock).mockResolvedValue({
+        success: false,
+        deleted: ['a.md', 'b.md'],
+        failed: [{ path: 'c.md', error: '401 Unauthorized' }],
+      });
+      const events: DroppedMutationEvent[] = [];
+      const unsub = NoteSyncQueueService.onDroppedMutation((e) => events.push(e));
+
+      await NoteSyncQueueService.enqueueNoteDeletes([
+        { repo: 'owner/repo', branch: 'main', filePath: 'a.md', title: 'A' },
+        { repo: 'owner/repo', branch: 'main', filePath: 'b.md', title: 'B' },
+        { repo: 'owner/repo', branch: 'main', filePath: 'c.md', title: 'C' },
+      ]);
+      const result = await NoteSyncQueueService.drain();
+
+      expect(batchDeleteFiles).toHaveBeenCalledTimes(1);
+      expect((batchDeleteFiles as jest.Mock).mock.calls[0][0]).toMatchObject({
+        owner: 'owner',
+        repo: 'repo',
+        branch: 'main',
+        paths: ['a.md', 'b.md', 'c.md'],
+        message: 'Delete 3 notes',
+      });
+      // Per-item API path never ran for the batched group.
+      expect(deleteNoteFromGitHub).not.toHaveBeenCalled();
+
+      // Durable drop is a side channel: succeeded counts only real deletes.
+      expect(result).toEqual({ succeeded: 2, failed: 0, remaining: 0 });
+      expect(events).toHaveLength(1);
+      expect(events[0].reason).toBe('durable');
+      expect(events[0].status).toBe(401);
+      expect(events[0].mutation.params.filePath).toBe('c.md');
+
+      const failures = await readDeleteFailures();
+      expect(Object.keys(failures)).toEqual(['owner/repo::main::c.md']);
+      // Tombstones cleared for the deleted paths, pinned for the dropped one.
+      expect(await NoteSyncQueueService.isTombstoned('owner/repo', 'main', 'a.md')).toBe(false);
+      expect(await NoteSyncQueueService.isTombstoned('owner/repo', 'main', 'b.md')).toBe(false);
+      expect(await NoteSyncQueueService.isTombstoned('owner/repo', 'main', 'c.md')).toBe(true);
+      unsub();
+    });
+
+    test('retryable per-path failure keeps the mutation queued with backoff', async () => {
+      (batchDeleteFiles as jest.Mock).mockResolvedValue({
+        success: false,
+        deleted: ['a.md'],
+        failed: [{ path: 'b.md', error: 'network down' }],
+      });
+      const events: DroppedMutationEvent[] = [];
+      const unsub = NoteSyncQueueService.onDroppedMutation((e) => events.push(e));
+
+      await NoteSyncQueueService.enqueueNoteDeletes([
+        { repo: 'owner/repo', branch: 'main', filePath: 'a.md' },
+        { repo: 'owner/repo', branch: 'main', filePath: 'b.md' },
+      ]);
+      const result = await NoteSyncQueueService.drain();
+
+      expect(result).toEqual({ succeeded: 1, failed: 1, remaining: 1 });
+      expect(events).toHaveLength(0);
+      const items = await NoteSyncQueueService.getAll();
+      expect(items).toHaveLength(1);
+      expect(items[0].params.filePath).toBe('b.md');
+      expect(items[0].attempts).toBe(1);
+      expect(items[0].lastError).toBe('network down');
+      expect(items[0].nextRetryAt).toBeDefined();
+      unsub();
+    });
+
+    test('groups under 2 deletes and cross-repo deletes never batch together', async () => {
+      (batchDeleteFiles as jest.Mock).mockResolvedValue({
+        success: true,
+        deleted: ['a.md', 'b.md'],
+        failed: [],
+      });
+      (deleteNoteFromGitHub as jest.Mock).mockResolvedValue({ success: true });
+
+      await NoteSyncQueueService.enqueueNoteDeletes([
+        { repo: 'owner/repo', branch: 'main', filePath: 'a.md' },
+        { repo: 'owner/repo', branch: 'main', filePath: 'b.md' },
+        { repo: 'other/repo', branch: 'main', filePath: 'solo.md' },
+      ]);
+      const result = await NoteSyncQueueService.drain();
+
+      expect(batchDeleteFiles).toHaveBeenCalledTimes(1);
+      expect((batchDeleteFiles as jest.Mock).mock.calls[0][0].paths).toEqual(['a.md', 'b.md']);
+      // Single-delete group kept the per-item path (no trees API for singles).
+      expect(deleteNoteFromGitHub).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({ succeeded: 3, failed: 0, remaining: 0 });
+    });
+
+    test('batch that throws reverts the group to per-item deleteNoteFromGitHub', async () => {
+      (batchDeleteFiles as jest.Mock).mockRejectedValue(new Error('boom'));
+      (deleteNoteFromGitHub as jest.Mock).mockResolvedValue({ success: true });
+
+      await NoteSyncQueueService.enqueueNoteDeletes([
+        { repo: 'owner/repo', branch: 'main', filePath: 'a.md' },
+        { repo: 'owner/repo', branch: 'main', filePath: 'b.md' },
+        { repo: 'owner/repo', branch: 'main', filePath: 'c.md' },
+      ]);
+      const result = await NoteSyncQueueService.drain();
+
+      expect(batchDeleteFiles).toHaveBeenCalledTimes(1);
+      expect(deleteNoteFromGitHub).toHaveBeenCalledTimes(3);
+      expect(result).toEqual({ succeeded: 3, failed: 0, remaining: 0 });
     });
   });
 });

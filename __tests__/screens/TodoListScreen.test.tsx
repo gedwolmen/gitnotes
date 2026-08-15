@@ -125,8 +125,29 @@ jest.mock('../../src/services/TodoGitHubSyncService', () => ({
   syncTodoToGitHub: jest.fn(async () => ({ success: true })),
 }));
 
+jest.mock('../../src/services/git/BatchGitOperations', () => ({
+  batchDeleteFiles: jest.fn(async () => ({ success: true, deleted: [], failed: [] })),
+}));
+
+jest.mock('../../src/services/SyncEngineService', () => ({
+  SyncEngineService: { getMode: jest.fn(async () => 'api') },
+}));
+
+jest.mock('../../src/services/StorageService', () => ({
+  StorageService: { deleteTodo: jest.fn(async () => true) },
+}));
+
+jest.mock('../../src/services/git/resolveBranch', () => ({
+  resolveBranch: jest.fn(async (_repo: string, hint?: string) => hint ?? 'main'),
+}));
+
 jest.mock('../../src/services/RepoPullService', () => ({
   pullAllFromRepos: jest.fn(async () => undefined),
+}));
+
+jest.mock('../../src/services/git/manualSync', () => ({
+  syncNow: jest.fn(async () => ({ ok: true })),
+  isSyncNowRunning: jest.fn(() => false),
 }));
 
 jest.mock('../../src/stores/githubActivityStore', () => ({
