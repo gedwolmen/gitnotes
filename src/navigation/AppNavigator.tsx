@@ -24,6 +24,7 @@ import StageScreen from '../screens/StageScreen';
 import ConflictResolverScreen from '../screens/ConflictResolverScreen';
 import NeumorphicGallery from '../screens/__dev__/NeumorphicGallery';
 import { FloatingAIButton } from '../components/ai/FloatingAIButton';
+import { FloatingStageButton } from '../components/git/FloatingStageButton';
 import { ChatRepoPickerModal } from '../components/ai/ChatRepoPickerModal';
 import { AddReminderScreen } from '../components/settings/AddReminderScreen';
 import ThoughtDumpScreen from '../screens/ThoughtDumpScreen';
@@ -31,6 +32,7 @@ import { RootStackParamList } from './types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAIStore } from '../stores/aiStore';
 import { useAIHubStore } from '../stores/aiHubStore';
+import { FEATURE_STAGE_PUSH } from '../services/featureFlags';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -225,6 +227,7 @@ export default function AppNavigator() {
             )}
           </Stack.Navigator>
           <FloatingAIButton currentRouteName={currentRouteName} />
+          {FEATURE_STAGE_PUSH && <FloatingStageButton currentRouteName={currentRouteName} />}
         </View>
       </NavigationContainer>
         <ChatRepoPickerModal
