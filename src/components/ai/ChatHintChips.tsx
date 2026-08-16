@@ -105,7 +105,7 @@ export function ChatHintChips({ onPressHint }: ChatHintChipsProps) {
         testID="chat-hints-scroller"
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: spacing[2], paddingRight: spacing[2] }}
+        contentContainerStyle={{ gap: spacing[2], paddingHorizontal: spacing[2] }}
       >
         {HINTS.map((hint) => (
           <TouchableOpacity

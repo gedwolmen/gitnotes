@@ -285,6 +285,17 @@ async function safeChat(messages: Message[], provider: AIProviderConfig) {
 }
 ```
 
+## Chat Empty State UI
+
+The empty (new chat) screen in `ChatScreen.tsx` shows a start-conversation title, a body description, and a horizontally scrolling hint chip row (`ChatHintChips`).
+
+Layout rules:
+
+- **Title & description** (`ChatScreen.tsx`, `ListEmptyComponent`) use `marginHorizontal: spacing[4]` so text never touches the screen edges.
+- **Hint chip row** (`ChatHintChips.tsx`) uses `paddingHorizontal: spacing[2]` on the `ScrollView` `contentContainerStyle`. On load the first chip is inset from the left edge; the row remains scrollable so the user can swipe chips to the screen edges.
+
+Tests: `__tests__/ChatHintChips.test.tsx` asserts the scroller carries symmetric side padding while the outer container stays padding-free.
+
 ## Testing
 
 ```typescript

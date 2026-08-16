@@ -106,7 +106,7 @@ describe('ChatHintChips', () => {
     expect(getByTestId('chat-hints-scroller')).toHaveProp('horizontal', true);
   });
 
-  test('outer container has no horizontal padding so chips sit flush to screen edges', () => {
+  test('outer container has no horizontal padding (side inset lives on the scroller content)', () => {
     const { UNSAFE_root } = render(<ChatHintChips onPressHint={jest.fn()} />);
 
     const scroller = UNSAFE_root.findByProps({ testID: 'chat-hints-scroller' });
@@ -118,13 +118,13 @@ describe('ChatHintChips', () => {
     expect(style.paddingRight).toBeUndefined();
   });
 
-  test('in empty-chat context the first chip starts at x=0 (no leading padding)', () => {
+  test('in empty-chat context the scroll content has symmetric side padding so the first chip is inset on load', () => {
     const { UNSAFE_root } = render(<ChatHintChips onPressHint={jest.fn()} />);
 
     const scroller = UNSAFE_root.findByProps({ testID: 'chat-hints-scroller' });
-    expect(scroller.props.contentContainerStyle.paddingHorizontal).toBeUndefined();
+    expect(scroller.props.contentContainerStyle.paddingHorizontal).toBe(8);
     expect(scroller.props.contentContainerStyle.paddingLeft).toBeUndefined();
-    expect(scroller.props.contentContainerStyle.paddingRight).toBe(8);
+    expect(scroller.props.contentContainerStyle.paddingRight).toBeUndefined();
 
     const outerContainer = scroller.parent;
     expect(outerContainer?.props.style.paddingHorizontal).toBeUndefined();
