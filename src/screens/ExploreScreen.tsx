@@ -12,6 +12,7 @@ import {
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { useTheme } from '../contexts/ThemeContext';
 import { useRepos } from '../contexts/RepoContext';
 import { GitRepository } from '../services/GitService';
@@ -47,7 +48,7 @@ type ExploreView = 'repoList' | 'repoDetail' | 'fileTree';
 export default function ExploreScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<NavigationProp>();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const headerHeight = useScreenHeaderHeight();
   const tabBarHeight = useTabBarHeight();
   const { repositories: repos, refreshRepos } = useRepos();
@@ -58,6 +59,9 @@ export default function ExploreScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const refreshingRef = useRef(false);
   const isFocused = useIsFocused();
+
+  const [bannerRegionHeight, setBannerRegionHeight] = useState(headerHeight);
+  const [toolsHeight, setToolsHeight] = useState(0);
 
   const ops = useGitOperationStore((s) => s.ops);
 
@@ -169,16 +173,13 @@ export default function ExploreScreen() {
   if (view === 'repoList') {
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['bottom']}>
-        <View style={{ paddingTop: headerHeight }}>
+        <View
+          testID="explore.banner-region"
+          pointerEvents="box-none"
+          style={{ position: 'absolute', left: 0, right: 0, top: 0, paddingTop: headerHeight }}
+          onLayout={(event) => setBannerRegionHeight(event.nativeEvent.layout.height)}
+        >
           <OfflineBanner />
-        </View>
-        <View className="px-4 pt-2 pb-3">
-          <SearchBar
-            testID="explore.search-bar.repo-search"
-            value={repoSearch}
-            onChangeText={setRepoSearch}
-            placeholder={t('explore.searchRepos')}
-          />
         </View>
         {loadingRepos ? (
           <View className="flex-1 items-center justify-center gap-3">
@@ -196,12 +197,30 @@ export default function ExploreScreen() {
             data={filteredRepos}
             keyExtractor={(item) => item.id.toString()}
             renderItem={renderRepoItem}
-            contentContainerStyle={{ paddingBottom: tabBarHeight + 16 }}
+            contentContainerStyle={{ paddingTop: bannerRegionHeight + toolsHeight + 8, paddingBottom: tabBarHeight + 16 }}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} enabled={!gateBusy} />
             }
           />
         )}
+        <BlurView
+          testID="explore.header-blur"
+          pointerEvents="box-none"
+          intensity={60}
+          tint={isDark ? 'dark' : 'light'}
+          className="absolute left-0 right-0 z-10"
+          style={{ top: bannerRegionHeight }}
+          onLayout={(event) => setToolsHeight(event.nativeEvent.layout.height)}
+        >
+          <View className="px-4 pt-2 pb-3">
+            <SearchBar
+              testID="explore.search-bar.repo-search"
+              value={repoSearch}
+              onChangeText={setRepoSearch}
+              placeholder={t('explore.searchRepos')}
+            />
+          </View>
+        </BlurView>
         <ScreenHeader title={t('explore.title')} />
       </SafeAreaView>
     );
@@ -261,24 +280,19 @@ export default function ExploreScreen() {
   if (view === 'fileTree' && repoInfo) {
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['top', 'bottom']}>
-        <View className="flex-row items-center px-3 py-2.5 gap-2" style={{ borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border + '40' }}>
-          <TouchableOpacity testID="explore.button.back" className="w-9 h-9 items-center justify-center" onPress={handleBack}>
-            <Ionicons name="arrow-back" size={22} color={colors.primary} />
-          </TouchableOpacity>
-          <View className="flex-1 flex-row items-center px-2.5 py-2 rounded-sm gap-1.5" style={{ backgroundColor: colors.surface }}>
-            <Ionicons name="git-branch" size={16} color={colors.primary} />
-            <Text className="flex-1 text-sm font-medium" style={{ color: colors.text }} numberOfLines={1}>
-              {repoInfo.owner}/{repoInfo.repo}
-            </Text>
-          </View>
-          <View className="w-9" />
+        <View
+          testID="explore.file-tree.banner-region"
+          pointerEvents="box-none"
+          style={{ position: 'absolute', left: 0, right: 0, top: 0, paddingTop: headerHeight }}
+          onLayout={(event) => setBannerRegionHeight(event.nativeEvent.layout.height)}
+        >
+          <OfflineBanner />
         </View>
-        <OfflineBanner />
 
         <ScrollView
           className="flex-1"
           style={{ backgroundColor: colors.background }}
-          contentContainerStyle={{ paddingBottom: 32, backgroundColor: colors.background }}
+          contentContainerStyle={{ paddingTop: bannerRegionHeight, paddingBottom: 32, backgroundColor: colors.background }}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} enabled={!repoBusy} />
           }
@@ -317,6 +331,8 @@ export default function ExploreScreen() {
             />
           )}
         </ScrollView>
+
+        <ScreenHeader title={`${repoInfo.owner}/${repoInfo.repo}`} onBack={handleBack} />
       </SafeAreaView>
     );
   }

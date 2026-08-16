@@ -676,6 +676,14 @@ onSetSyncIntervalSeconds,
             </GroupRow>
           </>
         ) : null}
+        <GroupRow
+          testID="settings.button.manage-templates"
+          onPress={onManageTemplates}
+          leading={<Ionicons name="document-text-outline" size={20} color={colors.text} />}
+          trailing={<Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
+        >
+          <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.manageTemplates')}</Text>
+        </GroupRow>
       </Group>
 
       <Group title={t('settings.noteRendering')}>
@@ -761,17 +769,6 @@ onSetSyncIntervalSeconds,
       </Group>
 
       <ImportSection />
-
-      <Group title={t('settings.about')}>
-        <GroupRow
-          trailing={<Text style={[styles.settingValue, { color: colors.textSecondary }]}>{Constants.expoConfig?.version ?? '—'}</Text>}
-        >
-          <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.version')}</Text>
-        </GroupRow>
-        <GroupRow testID="settings.button.manage-templates" onPress={onManageTemplates}>
-          <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.manageTemplates')}</Text>
-        </GroupRow>
-      </Group>
 
       <Group title={t('settings.artificialIntelligence')}>
         <GroupRow trailing={<View className="flex-row items-center gap-2">
@@ -919,6 +916,14 @@ onSetSyncIntervalSeconds,
           <ReminderSection colors={colors} />
         </>
       ) : null}
+
+      <Group title={t('settings.about')}>
+        <GroupRow
+          trailing={<Text style={[styles.settingValue, { color: colors.textSecondary }]}>{Constants.expoConfig?.version ?? '—'}</Text>}
+        >
+          <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.version')}</Text>
+        </GroupRow>
+      </Group>
 
       <View style={styles.creditsWrap}>
         <Text style={[styles.creditsText, { color: colors.textSecondary }]} numberOfLines={1}>
