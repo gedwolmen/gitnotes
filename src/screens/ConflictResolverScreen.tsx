@@ -1,11 +1,13 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useConflictStore } from '../stores/conflictStore';
+import { useAIStore } from '../stores/aiStore';
 import { ConflictResolverService } from '../services/conflict/ConflictResolverService';
+import { proposeMerge } from '../services/conflict/AiConflictResolver';
 import { GitFsService } from '../services/git/GitFsService';
 import { LocalGitWriter } from '../services/git/LocalGitWriter';
 import { FEATURE_STAGE_PUSH } from '../services/featureFlags';
@@ -37,6 +39,12 @@ export default function ConflictResolverScreen() {
 
   const [activeTab, setActiveTab] = useState<Tab>('merged');
   const [isResolving, setIsResolving] = useState(false);
+  const [isProposing, setIsProposing] = useState(false);
+  const [aiNote, setAiNote] = useState<string | undefined>(undefined);
+  const [aiConfidence, setAiConfidence] = useState<'high' | 'low' | undefined>(undefined);
+
+  const hasAiModel = useAIStore((s) => s.getSelectedModel() !== undefined);
+  const isFileResolved = file?.autoResolved === true;
 
   const displayContent = useMemo(() => {
     if (!file) return '';
@@ -79,6 +87,31 @@ export default function ConflictResolverScreen() {
     updateConflict(repoPath, branch, () => updated);
     checkAndFinish(updated);
   }, [conflict, filePath, file, repoPath, branch, updateConflict]);
+
+  const handleAiFix = useCallback(async () => {
+    if (!file || !conflict) return;
+    const aiState = useAIStore.getState();
+    const modelConfig = aiState.getSelectedModel();
+    const providerConfig = aiState.providers.find((p) => p.id === modelConfig?.providerId);
+
+    setIsProposing(true);
+    setAiNote(undefined);
+    setAiConfidence(undefined);
+    try {
+      const proposal = await proposeMerge(file, modelConfig, providerConfig);
+      setAiNote(proposal.note);
+      setAiConfidence(proposal.confidence);
+      if (proposal.mergedContent !== null) {
+        const updated = ConflictResolverService.applyResolution(conflict, filePath, {
+          content: proposal.mergedContent,
+        });
+        updateConflict(repoPath, branch, () => updated);
+        setActiveTab('merged');
+      }
+    } finally {
+      setIsProposing(false);
+    }
+  }, [conflict, file, filePath, repoPath, branch, updateConflict]);
 
   const checkAndFinish = useCallback(
     (updated: typeof conflict) => {
@@ -214,6 +247,41 @@ export default function ConflictResolverScreen() {
         <Text className="font-mono text-sm leading-[22px]" style={{ color: colors.text }}>{displayContent}</Text>
       </ScrollView>
 
+      {hasAiModel && !isBinary && !isDeleteVsModify && (
+        <View
+          className="flex-row items-center gap-2 px-4 py-2 border-t"
+          style={{ borderTopWidth: 0.5, borderTopColor: colors.border }}
+        >
+          <TouchableOpacity
+            testID="conflict-resolver.ai-fix"
+            onPress={handleAiFix}
+            disabled={isFileResolved || isResolving || isProposing}
+            className="flex-row items-center gap-1.5 px-3 py-2 rounded-lg"
+            style={{
+              backgroundColor: `${colors.primary ?? colors.text}15`,
+              opacity: isFileResolved || isResolving || isProposing ? 0.5 : 1,
+            }}
+          >
+            {isProposing ? (
+              <ActivityIndicator size="small" color={colors.primary ?? colors.text} />
+            ) : null}
+            <Text className="text-[12px] font-bold" style={{ color: colors.primary ?? colors.text }}>
+              {isProposing ? 'AI fixing…' : 'AI-fix'}
+            </Text>
+          </TouchableOpacity>
+          {aiNote || aiConfidence ? (
+            <Text
+              testID="conflict-resolver.ai-note"
+              className="text-xs flex-1"
+              style={{ color: colors.textSecondary }}
+              numberOfLines={2}
+            >
+              {aiNote ?? `AI suggestion · ${aiConfidence} confidence`}
+            </Text>
+          ) : null}
+        </View>
+      )}
+
       <View
         className="flex-row gap-2 px-4 py-3 border-t"
         style={{ borderTopWidth: 0.5, borderTopColor: colors.border }}
@@ -224,7 +292,7 @@ export default function ConflictResolverScreen() {
               className="flex-1 py-3 rounded-[10px] items-center"
               style={{ backgroundColor: `${colors.error ?? '#ef4444'}15` }}
               onPress={handleKeepLocal}
-              disabled={isResolving}
+              disabled={isResolving || isProposing}
             >
               <Text className="text-sm font-bold" style={{ color: colors.error ?? '#ef4444' }}>
                 Keep mine
@@ -234,7 +302,7 @@ export default function ConflictResolverScreen() {
               className="flex-1 py-3 rounded-[10px] items-center"
               style={{ backgroundColor: `${colors.primary ?? colors.text}15` }}
               onPress={handleKeepRemote}
-              disabled={isResolving}
+              disabled={isResolving || isProposing}
             >
               <Text className="text-sm font-bold" style={{ color: colors.primary ?? colors.text }}>
                 Keep theirs
@@ -247,7 +315,7 @@ export default function ConflictResolverScreen() {
               className="flex-1 py-3 rounded-[10px] items-center"
               style={{ backgroundColor: `${colors.error ?? '#ef4444'}15` }}
               onPress={handleKeepLocal}
-              disabled={isResolving}
+              disabled={isResolving || isProposing}
             >
               <Text className="text-sm font-bold" style={{ color: colors.error ?? '#ef4444' }}>
                 Keep mine
@@ -257,7 +325,7 @@ export default function ConflictResolverScreen() {
               className="flex-1 py-3 rounded-[10px] items-center"
               style={{ backgroundColor: `${colors.primary ?? colors.text}15` }}
               onPress={handleKeepRemote}
-              disabled={isResolving}
+              disabled={isResolving || isProposing}
             >
               <Text className="text-sm font-bold" style={{ color: colors.primary ?? colors.text }}>
                 Keep theirs
@@ -267,7 +335,7 @@ export default function ConflictResolverScreen() {
               className="flex-1 py-3 rounded-[10px] items-center"
               style={{ backgroundColor: colors.primary ?? colors.text }}
               onPress={handleSaveMerged}
-              disabled={isResolving}
+              disabled={isResolving || isProposing}
             >
               <Text className="text-sm font-bold" style={{ color: '#ffffff' }}>
                 Save merged

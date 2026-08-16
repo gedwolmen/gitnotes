@@ -1,6 +1,6 @@
 import React from 'react';
 import { Alert } from 'react-native';
-import { render, fireEvent } from '@testing-library/react-native';
+import { act, render, fireEvent } from '@testing-library/react-native';
 
 import SyncStatusScreen from '../../src/screens/SyncStatusScreen';
 import type { ConflictSet, FileConflict } from '../../src/services/conflict/types';
@@ -9,17 +9,30 @@ const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
 
 const mockConflictState: { conflicts: ConflictSet[] } = { conflicts: [] };
+const mockUpdateConflict = jest.fn();
+const mockProposeMerge = jest.fn();
 
 let mockSelectedModel: { id: string } | undefined;
 
 jest.mock('../../src/stores/conflictStore', () => ({
-  useConflictStore: (selector: (state: typeof mockConflictState) => unknown) =>
-    selector(mockConflictState),
+  useConflictStore: Object.assign(
+    (selector: (state: typeof mockConflictState) => unknown) => selector(mockConflictState),
+    { getState: () => ({ updateConflict: mockUpdateConflict }) },
+  ),
 }));
 
 jest.mock('../../src/stores/aiStore', () => ({
-  useAIStore: (selector: (state: { getSelectedModel: () => { id: string } | undefined }) => unknown) =>
-    selector({ getSelectedModel: () => mockSelectedModel }),
+  useAIStore: Object.assign(
+    (selector: (state: { getSelectedModel: () => { id: string } | undefined }) => unknown) =>
+      selector({ getSelectedModel: () => mockSelectedModel }),
+    {
+      getState: () => ({ getSelectedModel: () => mockSelectedModel, providers: [] }),
+    },
+  ),
+}));
+
+jest.mock('../../src/services/conflict/AiConflictResolver', () => ({
+  proposeMerge: (...args: unknown[]) => mockProposeMerge(...args),
 }));
 
 jest.mock('@react-navigation/native', () => ({
@@ -94,6 +107,8 @@ describe('SyncStatusScreen', () => {
     mockSelectedModel = undefined;
     mockNavigate.mockClear();
     mockGoBack.mockClear();
+    mockUpdateConflict.mockClear();
+    mockProposeMerge.mockReset();
   });
 
   it('renders one section per conflict set with repo name and branch', () => {
@@ -156,14 +171,54 @@ describe('SyncStatusScreen', () => {
     expect(queryByTestId('sync-conflicts.ai-fix')).toBeTruthy();
   });
 
-  it('shows an Alert when AI-fix is pressed without a handler', () => {
+  it('runs the default AI-fix batch and shows a summary alert', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
     mockSelectedModel = { id: 'test-model' };
 
     const { getByTestId } = render(<SyncStatusScreen />);
-    fireEvent.press(getByTestId('sync-conflicts.ai-fix'));
+    await act(async () => {
+      fireEvent.press(getByTestId('sync-conflicts.ai-fix'));
+    });
 
-    expect(alertSpy).toHaveBeenCalledWith('AI conflict fixing is not available yet');
+    expect(alertSpy).toHaveBeenCalledWith('AI conflict fixing', 'AI fixed 0 of 0 conflicts');
+    alertSpy.mockRestore();
+  });
+
+  it('batch AI-fix resolves high-confidence files and reports AI fixed N of M', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    mockSelectedModel = { id: 'test-model' };
+
+    mockConflictState.conflicts = [
+      makeConflictSet('owner/repo-a', 'main', [
+        makeFile('notes/a.md'),
+        makeFile('notes/b.md'),
+        makeFile('assets/logo.png', { format: 'binary' }),
+      ]),
+    ];
+
+    mockProposeMerge
+      .mockResolvedValueOnce({ mergedContent: 'merged-a', confidence: 'high' })
+      .mockResolvedValueOnce({ mergedContent: null, confidence: 'low', note: 'no usable merge' });
+
+    const { getByTestId } = render(<SyncStatusScreen />);
+    await act(async () => {
+      fireEvent.press(getByTestId('sync-conflicts.ai-fix'));
+    });
+
+    expect(mockProposeMerge).toHaveBeenCalledTimes(2);
+    expect(alertSpy).toHaveBeenCalledWith('AI conflict fixing', 'AI fixed 1 of 2 conflicts');
+
+    expect(mockUpdateConflict).toHaveBeenCalledTimes(1);
+    const [repoPath, branch, updater] = mockUpdateConflict.mock.calls[0] as [
+      string,
+      string,
+      (c: ConflictSet) => ConflictSet,
+    ];
+    expect(repoPath).toBe('owner/repo-a');
+    expect(branch).toBe('main');
+    const updatedSet = updater(mockConflictState.conflicts[0]);
+    expect(updatedSet.files.find((f) => f.path === 'notes/a.md')?.mergedContent).toBe('merged-a');
+
     alertSpy.mockRestore();
   });
 

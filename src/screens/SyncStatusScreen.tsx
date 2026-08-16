@@ -6,6 +6,8 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useConflictStore } from '../stores/conflictStore';
 import { useAIStore } from '../stores/aiStore';
+import { ConflictResolverService } from '../services/conflict/ConflictResolverService';
+import { proposeMerge } from '../services/conflict/AiConflictResolver';
 import type { FileConflict } from '../services/conflict/types';
 import type { RootStackParamList } from '../navigation/types';
 import { ScreenHeader } from '../components/ui';
@@ -103,13 +105,34 @@ export default function SyncStatusScreen({ onAiFixRemaining }: SyncStatusScreenP
     navigation.navigate('Conflicts', { mode: 'manage' });
   }, [navigation]);
 
-  const handleAiFixRemaining = useCallback(() => {
+  const handleAiFixRemaining = useCallback(async () => {
     if (onAiFixRemaining) {
       onAiFixRemaining();
       return;
     }
-    Alert.alert('AI conflict fixing is not available yet');
-  }, [onAiFixRemaining]);
+
+    const aiState = useAIStore.getState();
+    const modelConfig = aiState.getSelectedModel();
+    const providerConfig = aiState.providers.find((p) => p.id === modelConfig?.providerId);
+
+    let fixed = 0;
+    let attempted = 0;
+    for (const group of groups) {
+      for (const file of group.files) {
+        if (file.format === 'binary') continue;
+        if (file.baseContent === null || file.localContent === null || file.remoteContent === null) continue;
+        attempted += 1;
+        const proposal = await proposeMerge(file, modelConfig, providerConfig);
+        if (proposal.mergedContent !== null && proposal.confidence === 'high') {
+          useConflictStore.getState().updateConflict(group.repoPath, group.branch, (cs) =>
+            ConflictResolverService.applyResolution(cs, file.path, { content: proposal.mergedContent }),
+          );
+          fixed += 1;
+        }
+      }
+    }
+    Alert.alert('AI conflict fixing', `AI fixed ${fixed} of ${attempted} conflicts`);
+  }, [onAiFixRemaining, groups]);
 
   const renderHeader = useCallback(
     ({ group }: { group: ConflictGroup }) => {
