@@ -20,6 +20,7 @@ import RenderStyleSettingsScreen from '../screens/RenderStyleSettingsScreen';
 import RenderStyleEditorScreen from '../screens/RenderStyleEditorScreen';
 import TemplateManagerScreen from '../screens/TemplateManagerScreen';
 import SyncStatusScreen from '../screens/SyncStatusScreen';
+import StageScreen from '../screens/StageScreen';
 import ConflictResolverScreen from '../screens/ConflictResolverScreen';
 import NeumorphicGallery from '../screens/__dev__/NeumorphicGallery';
 import { FloatingAIButton } from '../components/ai/FloatingAIButton';
@@ -193,6 +194,11 @@ export default function AppNavigator() {
             <Stack.Screen
               name="SyncStatus"
               component={SyncStatusScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="Stage"
+              component={StageScreen}
               options={{ headerShown: false }}
             />
             <Stack.Screen

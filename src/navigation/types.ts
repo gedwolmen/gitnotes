@@ -16,6 +16,7 @@ type ProductionStackParamList = {
   RenderStyleEditor: { format: 'markdown' | 'org' | 'neorg' };
   TemplateManager: undefined;
   SyncStatus: undefined;
+  Stage: undefined;
   ConflictResolver: { repoPath: string; branch: string; filePath: string };
   AddReminder: undefined;
   ThoughtDump: { openVoiceOnMount?: boolean } | undefined;
