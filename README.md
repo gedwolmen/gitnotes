@@ -49,6 +49,8 @@ Expo SDK 56 · React Native 0.85 · TypeScript 5.7 · isomorphic-git · React Na
 
 Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and commit guidelines.
 
+For a full project knowledge base see docs/wiki/
+
 For bugs or feature requests, [open an issue](https://github.com/gedwolmen/gitnotes/issues/new/choose).
 
 ## License
