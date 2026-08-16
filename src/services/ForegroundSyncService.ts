@@ -2,7 +2,6 @@ import { AppState, type AppStateStatus, type NativeEventSubscription } from 'rea
 import NetInfo, { type NetInfoSubscription } from '@react-native-community/netinfo';
 import { GitHubService } from './GitHubService';
 import { StorageService } from './StorageService';
-import { NoteSyncQueueService } from './NoteSyncQueueService';
 import { pullAllFromRepos } from './RepoPullService';
 import { reconcileThoughtDumps } from './ai/thoughtDumpIndexing';
 import { GitSyncGate } from './git/GitSyncGate';
@@ -114,17 +113,11 @@ async function runPull(reason: string): Promise<void> {
   let success = false;
   const PULL_TIMEOUT_MS = 600_000;
   backgroundWork = (async () => {
-    // ONE cycle acquisition spans the whole drain+pull pair; drain() sees
-    // the held cycle and runs inside it (no self-deadlock). The release
-    // lives with the work itself, not the timeout race below, so a timed-
-    // out pull keeps owning the cycle until it actually settles.
+    // ONE cycle acquisition spans the pull; the release lives with the work
+    // itself, not the timeout race below, so a timed-out pull keeps owning
+    // the cycle until it actually settles.
     const releaseCycle = await GitSyncGate.acquireCycle();
     try {
-      try {
-        await NoteSyncQueueService.drain();
-      } catch (error) {
-        console.warn(`[ForegroundSync] drain (${reason}) failed:`, error);
-      }
       await pullAllFromRepos();
     } finally {
       releaseCycle();
