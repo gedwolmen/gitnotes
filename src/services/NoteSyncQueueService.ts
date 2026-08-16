@@ -508,7 +508,7 @@ class NoteSyncQueueServiceClass {
         this.emitDroppedMutation({ mutation: item, reason: 'exhausted', error, status });
         if (item.type === 'note.delete') {
           await recordDeleteFailure(item.params.repo, item.params.branch, item.params.filePath, {
-            error: error ?? 'Unknown error',
+            error: error || 'Unknown error',
             kind: 'exhausted',
             at: Date.now(),
           });
@@ -628,7 +628,7 @@ class NoteSyncQueueServiceClass {
           });
           if (item.type === 'note.delete') {
             await recordDeleteFailure(item.params.repo, item.params.branch, item.params.filePath, {
-              error: result.error ?? failure.message,
+              error: result.error || failure.message,
               kind: failure.kind,
               at: Date.now(),
             });

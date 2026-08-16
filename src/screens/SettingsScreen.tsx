@@ -538,7 +538,22 @@ export default function SettingsScreen() {
     HapticService.warning();
     Alert.alert(t('settings.removeRepoTitle'), t('settings.removeRepoBody', { name: repo.name }), [
       { text: t('common.cancel'), style: 'cancel' },
-      { text: t('common.remove'), style: 'destructive', onPress: async () => { await removeRepo(repo.path); HapticService.success(); } },
+      {
+        text: t('common.remove'),
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await removeRepo(repo.path);
+            HapticService.success();
+          } catch (err) {
+            HapticService.error();
+            Alert.alert(
+              t('errors.somethingWrong'),
+              err instanceof Error ? err.message : t('errors.somethingWrong'),
+            );
+          }
+        },
+      },
     ]);
   }, [removeRepo, t]);
 
@@ -573,7 +588,22 @@ export default function SettingsScreen() {
     HapticService.warning();
     Alert.alert(t('settings.removeAccountTitle', { login }), t('settings.removeAccountBody'), [
       { text: t('common.cancel'), style: 'cancel' },
-      { text: t('common.remove'), style: 'destructive', onPress: async () => { await removeAccount(id); HapticService.success(); } },
+      {
+        text: t('common.remove'),
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await removeAccount(id);
+            HapticService.success();
+          } catch (err) {
+            HapticService.error();
+            Alert.alert(
+              t('errors.somethingWrong'),
+              err instanceof Error ? err.message : t('errors.somethingWrong'),
+            );
+          }
+        },
+      },
     ]);
   }, [removeAccount, t]);
 
@@ -581,7 +611,22 @@ export default function SettingsScreen() {
     HapticService.warning();
     Alert.alert(t('settings.removeTokenTitle'), t('settings.removeTokenBody'), [
       { text: t('common.cancel'), style: 'cancel' },
-      { text: t('common.remove'), style: 'destructive', onPress: async () => { await clearToken(); HapticService.success(); } },
+      {
+        text: t('common.remove'),
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await clearToken();
+            HapticService.success();
+          } catch (err) {
+            HapticService.error();
+            Alert.alert(
+              t('errors.somethingWrong'),
+              err instanceof Error ? err.message : t('errors.somethingWrong'),
+            );
+          }
+        },
+      },
     ]);
   }, [clearToken, t]);
 

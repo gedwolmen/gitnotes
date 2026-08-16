@@ -165,7 +165,7 @@ async function readDeleteFailures(): Promise<FailedDeleteEntry[]> {
         repo: parts.repo,
         branch: parts.branch,
         path: parts.path,
-        error: typeof record.error === 'string' ? record.error : 'Delete failed',
+        error: typeof record.error === 'string' && record.error.trim() ? record.error : 'Delete failed',
         kind: typeof record.kind === 'string' ? record.kind : 'delete',
         at: typeof record.at === 'number' ? record.at : 0,
       });
