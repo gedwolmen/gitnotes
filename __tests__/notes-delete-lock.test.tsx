@@ -485,7 +485,7 @@ describe('notes delete lock', () => {
     expect(screen.getByTestId('note-row.lock-spinner')).toBeTruthy();
   });
 
-  it('places the lock spinner inside the card bounds (right/top 16, relative wrapper)', async () => {
+  it('places the lock spinner inside the card bounds (right/top 24, relative wrapper)', async () => {
     const note = createNote({ id: 'n-pos', title: 'Position', repo: 'owner/repo', branch: 'main', filePath: 'notes/position.md' });
     useNoteStore.setState({ notes: [note], isLoading: false, error: null });
 
@@ -499,10 +499,10 @@ describe('notes delete lock', () => {
     expect(lockView).toBeTruthy();
     const lockStyle = (lockView?.props as { style?: Record<string, unknown> }).style;
     expect(lockStyle?.position).toBe('absolute');
-    // The card is inset by marginHorizontal:16, so an in-bounds spinner must be
-    // at least 16px from the wrapper's right/top edges.
-    expect(lockStyle?.right).toBeGreaterThanOrEqual(16);
-    expect(lockStyle?.top).toBeGreaterThanOrEqual(16);
+    // The card is inset by marginHorizontal:16 and rounded by borderRadius:12, so
+    // an in-bounds spinner must sit at least 24px from the wrapper's right/top edges.
+    expect(lockStyle?.right).toBeGreaterThanOrEqual(24);
+    expect(lockStyle?.top).toBeGreaterThanOrEqual(24);
 
     const wrapper = lockView?.parent?.parent;
     expect(wrapper).toBeTruthy();
