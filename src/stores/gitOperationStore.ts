@@ -275,7 +275,8 @@ export const isPathLocked = (
       isActiveStatus(op.status) &&
       op.repo === repo &&
       normalizeBranch(op.branch) === normalizeBranch(branch) &&
-      (op.path === undefined || op.path === path),
+      op.path !== undefined &&
+      op.path === path,
   );
 
 export const isEntityLocked = (ops: Record<string, GitOp>, entityId: string): boolean =>

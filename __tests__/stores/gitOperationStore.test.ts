@@ -204,9 +204,14 @@ describe('gitOperationStore', () => {
       expect(isPathLocked(opsState(), REPO, BRANCH, 'notes/other.md')).toBe(false);
     });
 
-    it('ops without a path lock every path on their repo+branch (pull/push)', () => {
+    it('repo-wide ops without a path do not lock any specific path (pull/push)', () => {
       beginOp({ kind: 'pull', branch: BRANCH, status: 'running' });
-      expect(isPathLocked(opsState(), REPO, BRANCH, 'any/file.md')).toBe(true);
+      expect(isPathLocked(opsState(), REPO, BRANCH, 'any/file.md')).toBe(false);
+    });
+
+    it('isPathLocked false for an active op with undefined path on the same repo+branch', () => {
+      beginOp({ kind: 'push', branch: BRANCH, status: 'running' });
+      expect(isPathLocked(opsState(), REPO, BRANCH, PATH)).toBe(false);
     });
 
     it('failed ops do not lock paths or entities', () => {
