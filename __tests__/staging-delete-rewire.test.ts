@@ -107,18 +107,22 @@ jest.mock('../src/stores/todoStore', () => {
   return { useTodoStore: { getState: () => state } };
 });
 
-jest.mock('../src/stores/aiStore', () => ({
-  useAIStore: {
-    getState: () => ({
-      chatRepoOwner: 'owner',
-      chatRepoName: 'repo',
-      chatRepoBranch: 'main',
-      getSelectedModel: jest.fn(() => ({ id: 'm1', providerId: 'p1' })),
-      providers: [{ id: 'p1' }],
-      githubToolsEnabled: true,
-    }),
-  },
-}));
+jest.mock('../src/stores/aiStore', () => {
+  const aiState = {
+    chatRepoOwner: 'owner',
+    chatRepoName: 'repo',
+    chatRepoBranch: 'main',
+    getSelectedModel: jest.fn(() => ({ id: 'm1', providerId: 'p1' })),
+    providers: [{ id: 'p1' }],
+    githubToolsEnabled: true,
+  };
+  return {
+    useAIStore: Object.assign(
+      (selector: (state: typeof aiState) => unknown) => selector(aiState),
+      { getState: () => aiState },
+    ),
+  };
+});
 
 jest.mock('../src/components/ui', () => {
   const ReactMock = require('react');
