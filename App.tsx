@@ -47,6 +47,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { reconcileThoughtDumps } from './src/services/ai/thoughtDumpIndexing';
 import { LastSelectionPreferenceService } from './src/services/LastSelectionPreferenceService';
 import * as PushNotificationService from './src/services/PushNotificationService';
+import * as StagePushScheduler from './src/services/StagePushScheduler';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -115,6 +116,7 @@ export default function App() {
     }
     PushNotificationService.attachToScheduler();
     PushNotificationService.subscribeToPushProgress();
+    StagePushScheduler.startScheduler();
     void reconcileThoughtDumps().catch(() => {});
     void LastSelectionPreferenceService.migrateFromLegacy();
   }, []);
