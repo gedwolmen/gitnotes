@@ -296,12 +296,36 @@ async function processQueue() {
 
 While a git operation is in flight for a file, the row cards in the Notes and Todo lists gray out and show a small spinner in the card's top-right corner (`note-row.lock-spinner` / `todo-row.lock-spinner`). The state comes from `useEntityLock` (`src/hooks/useGitOpLock.ts`), which mirrors ops from the `gitOperationStore` registry.
 
+Locks are per-item. Only ops that carry a concrete `path` or matching `entityIds` gray out a row. Repo-wide ops do not match any row: push markers published with `path: undefined` and the all-repos pull-cycle op (`repo: GIT_OP_ALL_REPOS`) leave every row interactive, so a repo-wide push or pull never dims the whole list. `opMatchesContext` (`src/hooks/useGitOpLock.ts`) and `isPathLocked` (`src/stores/gitOperationStore.ts`) both require `op.path !== undefined && op.path === ctx.path`; an `entityIds` match on a queued delete/upsert still locks its row. Repo-level guards (`gateBusy`, `isRepoBusy`, `hasActivePull`, RefreshControl) are separate and unchanged.
+
 Layout rule:
 
 - The spinner overlay is positioned `absolute` with `right: 24, top: 24` relative to the row wrapper (`LockedNoteRow` / `LockedTodoRow`). The 24px offsets keep the spinner inside the card's bounds, clear of the 12px rounded card corner.
-- Do not lower the offsets below 24 — the note card is inset by `marginHorizontal: 16` and both cards use `borderRadius: 12`, so smaller offsets make the spinner overhang the card edge.
+- Do not lower the offsets below 24. The note card is inset by `marginHorizontal: 16` and both cards use `borderRadius: 12`, so smaller offsets make the spinner overhang the card edge.
 
 Tests: `__tests__/notes-delete-lock.test.tsx` asserts the spinner wrapper sits at least 24px from the row wrapper's right/top edges.
+
+## Push model
+
+Refresh, startup, and manual sync entry points are pull-only. They pull remote state and refresh the stores, but they never push staged changes:
+
+- `ForegroundSyncService.runPull` (`src/services/ForegroundSyncService.ts`) pulls every tracked repo on app focus, online transitions, and the foreground interval. No queue drain.
+- `manualSync.runSyncCycle` (`src/services/git/manualSync.ts`) backs pull-to-refresh, the cloud-icon sync button, and startup sync via `syncNow`. Pull and store refresh only.
+- `useGitOpLock.retry` (`src/hooks/useGitOpLock.ts`) clears the failure entry and re-enqueues the delete; it does not drain the sync queue.
+
+Pushes flow only through three paths: the stage scheduler (`StagePushScheduler`, a 3-minute idle window that resets on staged changes), the explicit Push / Push-all buttons on the Stage screen, or the OS background task. The sync queue drains only when one of those push paths runs. Saving or deleting a note by itself never starts a push.
+
+## Push progress & failure notifications
+
+Immediate local notifications (push progress, push failure, background-pull) use a `TIME_INTERVAL` trigger with `seconds: 1` instead of a near-future date, which avoids expo-notifications rejecting past dates. Date-trigger scheduling (`scheduleDateTrigger` in `src/services/NotificationService.ts`) re-checks the trigger against `Date.now()` after the permission round-trip, so a date that lapses while the permission prompt is open is skipped rather than rejected. Native scheduling failures never throw: they log with `console.warn`, return `null`, and callers fire-and-forget.
+
+## Background pull notification
+
+The OS background sync task (`BackgroundSyncService`) schedules a local notification only when a pull changed something. After `pullAllFromRepos()`, the task sums the `PullResult` counts (`notes + canvases + todos + templates`) and, when the sum is greater than zero, calls `NotificationService.schedulePushProgress('Synced with origin', ...)` with `{ kind: 'background-pull' }`. A background pull that changed nothing stays silent.
+
+## `globalPushing` reset
+
+The stage store's `globalPushing` flag resets to `false` once the push queue drains. `StagePushScheduler.drainPushQueue` calls `setGlobalPushing(false)` after the FIFO loop ends and `dequeueNext()` returns `null`, so the Stage screen "Push all" button and the floating stage button stop spinning as soon as a push completes. While any key is still in flight (`isPushing[key]` true), the flag stays `true`.
 
 ## Testing
 
