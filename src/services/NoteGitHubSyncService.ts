@@ -10,7 +10,7 @@ import { resolveBranch } from './git/resolveBranch';
 import { githubActivity } from '../stores/githubActivityStore';
 import { getGitHostService } from './git/gitHostFactory';
 import { FEATURE_USE_MULTI_HOST_WRITE } from './featureFlags';
-import { extractHttpErrorDetails, syncStatusForError } from './git/syncFailure';
+import { classifyGitHubSyncError, extractHttpErrorDetails, syncStatusForError } from './git/syncFailure';
 import type { GitHostProvider } from './git/GitHost';
 
 async function resolveAuthor(provider: GitHostProvider = 'github'): Promise<{ name: string; email: string }> {
@@ -42,6 +42,14 @@ function failedSyncResult(error: unknown): NoteGitHubSyncResult {
   return status === undefined
     ? { success: false, error: message }
     : { success: false, error: message, status };
+}
+
+function failedSyncOrConflict(error: unknown, status?: number): NoteGitHubSyncResult {
+  const classified = classifyGitHubSyncError(error, status);
+  if (classified.kind === 'conflict') {
+    return { success: false, error: 'conflict-detected', status: 409 };
+  }
+  return failedSyncResult(error);
 }
 
 export function canPersistNoteTags(format?: string): boolean {
@@ -404,7 +412,7 @@ export async function deleteNoteFromGitHub(params: {
       if (details.status === 404 || /404/.test(details.message ?? '')) {
         return { success: true, filePath };
       }
-      return failedSyncResult(error);
+      return failedSyncOrConflict(error);
     }
   }
 
@@ -447,7 +455,7 @@ export async function deleteNoteFromGitHub(params: {
     if (details.status === 404 || /404/.test(details.message ?? '')) {
       return { success: true, filePath };
     }
-    return failedSyncResult(error);
+    return failedSyncOrConflict(error);
   }
 }
 
@@ -577,7 +585,10 @@ export async function syncNoteToGitHub(params: {
           repoInfo.owner, repoInfo.repo, targetPath, targetBranch,
         );
         if (currentSha && currentSha !== knownSha) {
-          return { success: false, error: `Conflict: ${targetPath} was modified on GitHub since you last loaded it. Pull to get the latest version.` };
+          return failedSyncOrConflict(
+            `Conflict: ${targetPath} was modified on GitHub since you last loaded it. Pull to get the latest version.`,
+            409,
+          );
         }
       }
       await host.updateFile(
@@ -585,7 +596,7 @@ export async function syncNoteToGitHub(params: {
       );
       return { success: true, filePath: targetPath, finalContent };
     } catch (error) {
-      return failedSyncResult(error);
+      return failedSyncOrConflict(error);
     }
   }
 
@@ -595,7 +606,10 @@ export async function syncNoteToGitHub(params: {
         repoInfo.owner, repoInfo.repo, targetPath, targetBranch, opts,
       );
       if (currentSha && currentSha !== knownSha) {
-        return { success: false, error: `Conflict: ${targetPath} was modified on GitHub since you last loaded it. Pull to get the latest version.` };
+        return failedSyncOrConflict(
+          `Conflict: ${targetPath} was modified on GitHub since you last loaded it. Pull to get the latest version.`,
+          409,
+        );
       }
     }
 
@@ -614,6 +628,6 @@ export async function syncNoteToGitHub(params: {
     }
     return { success: false, error: 'GitHub API returned no result' };
   } catch (error) {
-    return failedSyncResult(error);
+    return failedSyncOrConflict(error);
   }
 }

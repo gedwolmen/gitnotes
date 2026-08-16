@@ -3,6 +3,7 @@ import { GitHubContent, GitHubService } from '../../services/GitHubService';
 import { AuthService } from '../../services/AuthService';
 import { SyncEngineService } from '../../services/SyncEngineService';
 import { LocalGitWriter } from '../../services/git/LocalGitWriter';
+import { FEATURE_STAGE_PUSH } from '../../services/featureFlags';
 import { batchDeleteFiles } from '../../services/git/BatchGitOperations';
 import { getGitHostService } from '../../services/git/gitHostFactory';
 
@@ -169,7 +170,7 @@ async function deleteDirectoryClone(
     }
   }
 
-  if (deleted.length > 0) {
+  if (deleted.length > 0 && !FEATURE_STAGE_PUSH) {
     const flushResult = await LocalGitWriter.push({ repoPath, branch: targetBranch, token });
     if (!flushResult.success) {
       const pushError = flushResult.error ?? 'Push failed';

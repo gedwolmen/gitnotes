@@ -7,6 +7,7 @@ import { useAIStore } from '../../stores/aiStore';
 import { initializeModel } from '../AIService';
 import { GITHUB_ITEM_STATES, GitHubItemState, GitHubService } from '../GitHubService';
 import { NoteSyncQueueService } from '../NoteSyncQueueService';
+import { FEATURE_STAGE_PUSH } from '../featureFlags';
 
 export interface ProposedChange {
   type: string;
@@ -204,7 +205,9 @@ async function enqueueNoteSync(
       },
       noteId,
     );
-    void NoteSyncQueueService.drain();
+    if (!FEATURE_STAGE_PUSH) {
+      void NoteSyncQueueService.drain();
+    }
   } catch (error) {
     console.warn('[actionExecutor] enqueueNoteUpsert failed:', error);
   }
@@ -398,7 +401,9 @@ export async function executeToolCall(
               },
               gradedNote.id,
             );
-            void NoteSyncQueueService.drain();
+            if (!FEATURE_STAGE_PUSH) {
+              void NoteSyncQueueService.drain();
+            }
           } catch (error) {
             console.warn('[actionExecutor] grade_questioner_answers sync enqueue failed:', error);
           }
@@ -704,7 +709,7 @@ export async function executeToolCall(
           linked += 1;
         }
 
-        if (repoPath) {
+        if (repoPath && !FEATURE_STAGE_PUSH) {
           try {
             void NoteSyncQueueService.drain();
           } catch {

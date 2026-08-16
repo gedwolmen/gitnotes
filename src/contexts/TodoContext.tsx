@@ -5,6 +5,23 @@ import { NotificationService } from '../services/NotificationService';
 import { useTodoStore } from '../stores/todoStore';
 import { syncTodoToGitHub } from '../services/TodoGitHubSyncService';
 import { formatSyncError } from '../services/git/formatSyncError';
+import { FEATURE_STAGE_PUSH } from '../services/featureFlags';
+import { StagingService } from '../services/git/StagingService';
+
+/** Mirrors TodoGitHubSyncService.serializeTodo so staged todos keep the on-disk shape. */
+function serializeTodoForStage(todo: Partial<Todo>): string {
+  const data = {
+    text: todo.text ?? '',
+    completed: todo.completed ?? false,
+    priority: todo.priority,
+    notes: todo.notes,
+    tags: todo.tags ?? [],
+    dueDate: todo.dueDate,
+    createdAt: todo.createdAt,
+    updatedAt: todo.updatedAt,
+  };
+  return JSON.stringify(data, null, 2);
+}
 
 interface TodoContextValue {
   todos: Todo[];
@@ -114,15 +131,28 @@ export function useTodos(): TodoContextValue {
     }
 
     if (todo.repo) {
-      const syncResult = await syncTodoToGitHub({
-        repo: todo.repo,
-        branch: todo.branch,
-        filePath: todo.filePath,
-        text: finalTodo.text,
-        todo: finalTodo,
-      });
-      if (!syncResult.success) {
-        console.warn('[TodoContext] GitHub sync failed:', formatSyncError(syncResult.error, 'upsert'));
+      if (FEATURE_STAGE_PUSH) {
+        const stageResult = await StagingService.stageUpsert({
+          repo: todo.repo,
+          branch: todo.branch,
+          filePath: todo.filePath,
+          title: finalTodo.text,
+          content: serializeTodoForStage(finalTodo),
+        });
+        if (!stageResult.success) {
+          console.warn('[TodoContext] GitHub stage failed:', stageResult.error);
+        }
+      } else {
+        const syncResult = await syncTodoToGitHub({
+          repo: todo.repo,
+          branch: todo.branch,
+          filePath: todo.filePath,
+          text: finalTodo.text,
+          todo: finalTodo,
+        });
+        if (!syncResult.success) {
+          console.warn('[TodoContext] GitHub sync failed:', formatSyncError(syncResult.error, 'upsert'));
+        }
       }
     }
 

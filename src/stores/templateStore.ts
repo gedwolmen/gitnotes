@@ -6,8 +6,11 @@ import {
   syncTemplateToGitHub,
   deleteTemplateFromGitHub,
 } from '../services/TemplateGitHubSyncService';
+import { serializeTemplate, templateSlug } from '../services/TemplateMarkdownService';
 import { generateId } from '../utils/ids';
 import { formatSyncError } from '../services/git/formatSyncError';
+import { FEATURE_STAGE_PUSH } from '../services/featureFlags';
+import { StagingService } from '../services/git/StagingService';
 
 interface TemplateState {
   customTemplates: NoteTemplate[];
@@ -47,15 +50,28 @@ export const useTemplateStore = create<TemplateState>()((set, get) => ({
     let synced = template;
     const pref = await TemplateRepoPreferenceService.get();
     if (pref) {
-      const result = await syncTemplateToGitHub({
-        repoPath: pref.repoPath,
-        branch: pref.branch,
-        template,
-      });
-      if (result.success && result.filePath) {
-        synced = { ...template, filePath: result.filePath };
-      } else if (!result.success) {
-        console.warn(`[templateStore] Failed to sync template "${template.name}" to GitHub: ${formatSyncError(result.error, 'upsert')}`);
+      if (FEATURE_STAGE_PUSH) {
+        const staged = await StagingService.stageUpsert({
+          repo: pref.repoPath,
+          branch: pref.branch,
+          filePath: template.filePath ?? `templates/${templateSlug(template.name)}.md`,
+          title: template.name,
+          content: serializeTemplate({ ...template, filePath: undefined }),
+        });
+        if (!staged.success) {
+          console.warn(`[templateStore] Failed to stage template "${template.name}" to GitHub: ${formatSyncError(staged.error, 'upsert')}`);
+        }
+      } else {
+        const result = await syncTemplateToGitHub({
+          repoPath: pref.repoPath,
+          branch: pref.branch,
+          template,
+        });
+        if (result.success && result.filePath) {
+          synced = { ...template, filePath: result.filePath };
+        } else if (!result.success) {
+          console.warn(`[templateStore] Failed to sync template "${template.name}" to GitHub: ${formatSyncError(result.error, 'upsert')}`);
+        }
       }
     }
 
@@ -73,15 +89,28 @@ export const useTemplateStore = create<TemplateState>()((set, get) => ({
 
     const pref = await TemplateRepoPreferenceService.get();
     if (pref) {
-      const result = await syncTemplateToGitHub({
-        repoPath: pref.repoPath,
-        branch: pref.branch,
-        template: merged,
-      });
-      if (result.success && result.filePath) {
-        merged.filePath = result.filePath;
-      } else if (!result.success) {
-        console.warn(`[templateStore] Failed to sync template "${merged.name}" to GitHub: ${formatSyncError(result.error, 'upsert')}`);
+      if (FEATURE_STAGE_PUSH) {
+        const staged = await StagingService.stageUpsert({
+          repo: pref.repoPath,
+          branch: pref.branch,
+          filePath: merged.filePath ?? `templates/${templateSlug(merged.name)}.md`,
+          title: merged.name,
+          content: serializeTemplate({ ...merged, filePath: undefined }),
+        });
+        if (!staged.success) {
+          console.warn(`[templateStore] Failed to stage template "${merged.name}" to GitHub: ${formatSyncError(staged.error, 'upsert')}`);
+        }
+      } else {
+        const result = await syncTemplateToGitHub({
+          repoPath: pref.repoPath,
+          branch: pref.branch,
+          template: merged,
+        });
+        if (result.success && result.filePath) {
+          merged.filePath = result.filePath;
+        } else if (!result.success) {
+          console.warn(`[templateStore] Failed to sync template "${merged.name}" to GitHub: ${formatSyncError(result.error, 'upsert')}`);
+        }
       }
     }
 
@@ -96,14 +125,26 @@ export const useTemplateStore = create<TemplateState>()((set, get) => ({
 
     const pref = await TemplateRepoPreferenceService.get();
     if (pref && template.filePath) {
-      const delResult = await deleteTemplateFromGitHub({
-        repoPath: pref.repoPath,
-        branch: pref.branch,
-        filePath: template.filePath,
-        name: template.name,
-      });
-      if (!delResult.success) {
-        console.warn(`[templateStore] Failed to delete template "${template.name}" from GitHub: ${formatSyncError(delResult.error, 'delete')}`);
+      if (FEATURE_STAGE_PUSH) {
+        const staged = await StagingService.stageDelete({
+          repo: pref.repoPath,
+          branch: pref.branch,
+          filePath: template.filePath,
+          title: template.name,
+        });
+        if (!staged.success) {
+          console.warn(`[templateStore] Failed to stage template "${template.name}" deletion: ${formatSyncError(staged.error, 'delete')}`);
+        }
+      } else {
+        const delResult = await deleteTemplateFromGitHub({
+          repoPath: pref.repoPath,
+          branch: pref.branch,
+          filePath: template.filePath,
+          name: template.name,
+        });
+        if (!delResult.success) {
+          console.warn(`[templateStore] Failed to delete template "${template.name}" from GitHub: ${formatSyncError(delResult.error, 'delete')}`);
+        }
       }
     }
 

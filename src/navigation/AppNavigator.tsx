@@ -20,9 +20,11 @@ import RenderStyleSettingsScreen from '../screens/RenderStyleSettingsScreen';
 import RenderStyleEditorScreen from '../screens/RenderStyleEditorScreen';
 import TemplateManagerScreen from '../screens/TemplateManagerScreen';
 import SyncStatusScreen from '../screens/SyncStatusScreen';
+import StageScreen from '../screens/StageScreen';
 import ConflictResolverScreen from '../screens/ConflictResolverScreen';
 import NeumorphicGallery from '../screens/__dev__/NeumorphicGallery';
 import { FloatingAIButton } from '../components/ai/FloatingAIButton';
+import { FloatingStageButton } from '../components/git/FloatingStageButton';
 import { ChatRepoPickerModal } from '../components/ai/ChatRepoPickerModal';
 import { AddReminderScreen } from '../components/settings/AddReminderScreen';
 import ThoughtDumpScreen from '../screens/ThoughtDumpScreen';
@@ -30,6 +32,7 @@ import { RootStackParamList } from './types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAIStore } from '../stores/aiStore';
 import { useAIHubStore } from '../stores/aiHubStore';
+import { FEATURE_STAGE_PUSH } from '../services/featureFlags';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -56,6 +59,8 @@ const linking: LinkingOptions<RootStackParamList> = {
       ChatThreadList: 'chat',
       ChatScreen: 'chat/:threadId',
       ThoughtDump: 'thought-dump',
+      Stage: 'stage',
+      Conflicts: 'conflicts',
       NeumorphicGallery: '__dev__/neumorphic',
     },
   },
@@ -196,6 +201,19 @@ export default function AppNavigator() {
               options={{ headerShown: false }}
             />
             <Stack.Screen
+              name="Stage"
+              component={StageScreen}
+              options={{ headerShown: false }}
+            />
+            {/* TODO(todo 11): point Conflicts at the upgraded SyncStatusScreen
+                (conflicts management page). It aliases SyncStatusScreen today so
+                the gitnotes://conflicts push-failure deep link resolves. */}
+            <Stack.Screen
+              name="Conflicts"
+              component={SyncStatusScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
               name="ConflictResolver"
               component={ConflictResolverScreen}
               options={{ headerShown: false }}
@@ -219,6 +237,7 @@ export default function AppNavigator() {
             )}
           </Stack.Navigator>
           <FloatingAIButton currentRouteName={currentRouteName} />
+          {FEATURE_STAGE_PUSH && <FloatingStageButton currentRouteName={currentRouteName} />}
         </View>
       </NavigationContainer>
         <ChatRepoPickerModal

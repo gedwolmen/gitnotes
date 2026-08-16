@@ -39,12 +39,15 @@ import { StartupSyncGate } from './src/components/StartupSyncGate';
 import { GitHubActivityIndicator } from './src/components/GitHubActivityIndicator';
 import { bootstrapStorage } from './src/services/StorageBootstrap';
 import { hydrate as hydrateGitOperationRegistry } from './src/stores/gitOperationStore';
+import { useConflictStore } from './src/stores/conflictStore';
 import { useRenderStyleStore } from './src/stores/renderStyleStore';
 import { startForegroundWatcher } from './src/services/ForegroundSyncService';
 import { loadForegroundSyncConfig } from './src/hooks/useForegroundSyncSettings';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { reconcileThoughtDumps } from './src/services/ai/thoughtDumpIndexing';
 import { LastSelectionPreferenceService } from './src/services/LastSelectionPreferenceService';
+import * as PushNotificationService from './src/services/PushNotificationService';
+import { FEATURE_STAGE_PUSH } from './src/services/featureFlags';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -64,6 +67,7 @@ export default function App() {
     // Restore durable git-operation locks (queued mutations + failed deletes)
     // before StartupSyncGate drains/pulls and the UI reads lock state.
     void hydrateGitOperationRegistry();
+    void useConflictStore.getState().loadConflicts();
     void useRenderStyleStore.getState().hydrate();
     const completed = await OnboardingService.isOnboardingCompleted();
     setShowOnboarding(!completed);
@@ -72,6 +76,12 @@ export default function App() {
     // Set up notification response listener for reminders
     Notifications.addNotificationResponseReceivedListener(async (response) => {
       const data = response.notification.request.content.data;
+      if (data?.kind === 'push-failure') {
+        await Linking.openURL(
+          PushNotificationService.resolvePushFailureRoute(data.conflict === true),
+        );
+        return;
+      }
       if (data?.reminderId) {
         const store = useReminderStore.getState();
         const reminder = store.getItem(String(data.reminderId));
@@ -103,6 +113,10 @@ export default function App() {
       startForegroundWatcher(cfg);
     } catch (error) {
       console.warn('[App] foreground sync watcher start failed:', error);
+    }
+    if (FEATURE_STAGE_PUSH) {
+      PushNotificationService.attachToScheduler();
+      PushNotificationService.subscribeToPushProgress();
     }
     void reconcileThoughtDumps().catch(() => {});
     void LastSelectionPreferenceService.migrateFromLegacy();
