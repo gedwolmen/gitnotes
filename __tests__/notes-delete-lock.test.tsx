@@ -564,7 +564,7 @@ describe('notes delete lock', () => {
     await waitFor(() => {
       expect(NoteSyncQueueService.enqueueNoteDelete).toHaveBeenCalled();
       expect(clearDeleteFailure).toHaveBeenCalledWith('owner/repo', 'main', 'notes/third.md');
-      expect(NoteSyncQueueService.drain).toHaveBeenCalled();
+      expect(NoteSyncQueueService.drain).not.toHaveBeenCalled();
     });
     // The queue notify → hydrate path (real app) re-derives the queued op,
     // which takes the row straight back to locked.

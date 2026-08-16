@@ -1,7 +1,3 @@
-jest.mock('../../src/services/NoteSyncQueueService', () => ({
-  NoteSyncQueueService: { drain: jest.fn() },
-}));
-
 jest.mock('../../src/services/RepoPullService', () => ({
   pullAllFromRepos: jest.fn(),
   pullFromSingleRepo: jest.fn(),
@@ -24,13 +20,11 @@ jest.mock('../../src/stores/todoStore', () => ({
 }));
 
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
-import { NoteSyncQueueService } from '../../src/services/NoteSyncQueueService';
 import { pullAllFromRepos, pullFromSingleRepo } from '../../src/services/RepoPullService';
 import type { PullResult } from '../../src/services/RepoPullService';
 import { GitSyncGate } from '../../src/services/git/GitSyncGate';
 import { isSyncNowRunning, syncNow } from '../../src/services/git/manualSync';
 
-const drainMock = jest.mocked(NoteSyncQueueService.drain);
 const pullAllMock = jest.mocked(pullAllFromRepos);
 const pullSingleMock = jest.mocked(pullFromSingleRepo);
 
@@ -46,7 +40,6 @@ describe('manualSync.syncNow', () => {
     jest.useFakeTimers();
     jest.clearAllMocks();
     GitSyncGate.__resetForTest();
-    drainMock.mockResolvedValue({ succeeded: 0, failed: 0, remaining: 0 });
     pullAllMock.mockResolvedValue(pullResult);
     pullSingleMock.mockResolvedValue(pullResult);
     mockRefreshNotes.mockResolvedValue(undefined);
@@ -59,12 +52,8 @@ describe('manualSync.syncNow', () => {
     jest.useRealTimers();
   });
 
-  test('runs drain → pull → store refresh inside one held gate cycle (case 1)', async () => {
+  test('runs pull → store refresh inside one held gate cycle (case 1)', async () => {
     const events: string[] = [];
-    drainMock.mockImplementation(async () => {
-      events.push(`drain:held=${GitSyncGate.isCycleHeld()}`);
-      return { succeeded: 1, failed: 0, remaining: 0 };
-    });
     pullAllMock.mockImplementation(async () => {
       events.push(`pull:held=${GitSyncGate.isCycleHeld()}`);
       return pullResult;
@@ -86,7 +75,6 @@ describe('manualSync.syncNow', () => {
 
     expect(result).toEqual({ ok: true });
     expect(events).toEqual([
-      'drain:held=true',
       'pull:held=true',
       'refreshNotes:held=true',
       'refreshCanvases:held=true',
@@ -110,12 +98,10 @@ describe('manualSync.syncNow', () => {
     const first = syncNow();
     await flushMicrotasks();
     expect(isSyncNowRunning()).toBe(true);
-    expect(drainMock).toHaveBeenCalledTimes(1);
     expect(pullAllMock).toHaveBeenCalledTimes(1);
 
     const second = await syncNow();
     expect(second).toEqual({ ok: false, error: 'already-running' });
-    expect(drainMock).toHaveBeenCalledTimes(1);
     expect(pullAllMock).toHaveBeenCalledTimes(1);
     expect(mockRefreshNotes).not.toHaveBeenCalled();
     expect(mockRefreshCanvases).not.toHaveBeenCalled();

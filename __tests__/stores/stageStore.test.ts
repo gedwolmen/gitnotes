@@ -102,6 +102,17 @@ describe('stageStore', () => {
     expect(state.pushQueue).toEqual(['a/repo::main', 'b/repo::main']);
   });
 
+  it('setGlobalPushing toggles the globalPushing flag (reset after drain)', () => {
+    useStageStore.getState().pushAll();
+    expect(useStageStore.getState().globalPushing).toBe(true);
+
+    useStageStore.getState().setGlobalPushing(false);
+    expect(useStageStore.getState().globalPushing).toBe(false);
+
+    useStageStore.getState().setGlobalPushing(true);
+    expect(useStageStore.getState().globalPushing).toBe(true);
+  });
+
   it('requestPush(key) during globalPushing still enqueues behind', () => {
     useStageStore.setState({ globalPushing: true, pushQueue: ['x/repo::main'] });
 

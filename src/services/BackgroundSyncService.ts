@@ -6,6 +6,7 @@ import { NoteSyncQueueService } from './NoteSyncQueueService';
 import { pullAllFromRepos } from './RepoPullService';
 import { GitSyncGate } from './git/GitSyncGate';
 import { StagingService } from './git/StagingService';
+import { NotificationService } from './NotificationService';
 
 const TASK_NAME = 'background-sync';
 
@@ -34,8 +35,21 @@ TaskManager.defineTask(TASK_NAME, async () => {
     const releaseCycle = await GitSyncGate.acquireCycle();
     try {
       await NoteSyncQueueService.drain();
-      await pullAllFromRepos();
+      const result = await pullAllFromRepos();
       await flushStagedSetsForBackgroundTask();
+
+      const pulled = result.notes + result.canvases + result.todos + result.templates;
+      if (pulled > 0) {
+        try {
+          await NotificationService.schedulePushProgress(
+            'Synced with origin',
+            `Pulled ${pulled} changed item(s)`,
+            { kind: 'background-pull' },
+          );
+        } catch (error) {
+          console.warn('[BackgroundSync] push-progress notification failed:', error);
+        }
+      }
     } finally {
       releaseCycle();
     }

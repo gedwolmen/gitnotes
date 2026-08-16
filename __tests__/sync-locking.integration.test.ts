@@ -634,8 +634,9 @@ describe('sync-locking integration scenarios S1–S8', () => {
     );
     pressAlertButton('Retry');
 
-    // The retry drain holds on the transport, so the row is observable LOCKED
-    // again (failure entry cleared, fresh tombstone, one queued delete).
+    // Retry stages the delete (re-enqueues, clears the failure entry) WITHOUT
+    // draining, so the row is observable LOCKED again (fresh tombstone, one
+    // queued delete).
     await waitFor(() => {
       expect(screen.getByTestId('note-row.lock-spinner')).toBeTruthy();
     });
@@ -643,7 +644,9 @@ describe('sync-locking integration scenarios S1–S8', () => {
     expect(await NoteSyncQueueService.pendingCount()).toBe(1);
     expect(await NoteSyncQueueService.isTombstoned('owner/repo', 'main', 'notes/third.md')).toBe(true);
 
-    // Retry drain succeeds -> succeeded event -> storage delete + row removed.
+    // The stage path enqueues but never drains — the push engine owns the
+    // flush. Trigger it here the way the scheduler would, then report success.
+    void NoteSyncQueueService.drain();
     await act(async () => {
       await flushMicrotasks();
     });

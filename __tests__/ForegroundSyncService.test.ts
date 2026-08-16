@@ -19,12 +19,6 @@ jest.mock('../src/services/StorageService', () => ({
   },
 }));
 
-jest.mock('../src/services/NoteSyncQueueService', () => ({
-  NoteSyncQueueService: {
-    drain: jest.fn(),
-  },
-}));
-
 jest.mock('../src/services/RepoPullService', () => ({
   pullAllFromRepos: jest.fn(),
 }));
@@ -45,7 +39,6 @@ import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globa
 import NetInfo, { NetInfoStateType, type NetInfoState } from '@react-native-community/netinfo';
 import type { AppStateStatus } from 'react-native';
 import { GitHubService } from '../src/services/GitHubService';
-import { NoteSyncQueueService } from '../src/services/NoteSyncQueueService';
 import {
   __resetForegroundSyncForTest,
   __runPullForTest,
@@ -60,7 +53,6 @@ import type { GitRepository } from '../src/services/GitService';
 const authMock = jest.mocked(GitHubService.isAuthenticated);
 const reposMock = jest.mocked(StorageService.getSavedRepositories);
 const netInfoFetchMock = jest.mocked(NetInfo.fetch);
-const drainMock = jest.mocked(NoteSyncQueueService.drain);
 const pullMock = jest.mocked(pullAllFromRepos);
 
 const repository: GitRepository = { id: 'repo-id', name: 'repo', path: 'owner/repo' };
@@ -99,7 +91,6 @@ describe('ForegroundSyncService', () => {
     authMock.mockReturnValue(true);
     reposMock.mockResolvedValue([repository]);
     netInfoFetchMock.mockResolvedValue(reachableState);
-    drainMock.mockResolvedValue({ succeeded: 0, failed: 0, remaining: 0 });
     pullMock.mockResolvedValue(pullResult);
   });
 
@@ -108,12 +99,8 @@ describe('ForegroundSyncService', () => {
     jest.useRealTimers();
   });
 
-  test('drains queued mutations before pulling remote state', async () => {
+  test('pulls remote state without draining queued mutations', async () => {
     const order: string[] = [];
-    drainMock.mockImplementation(async () => {
-      order.push('drain');
-      return { succeeded: 1, failed: 0, remaining: 0 };
-    });
     pullMock.mockImplementation(async () => {
       order.push('pull');
       return pullResult;
@@ -121,15 +108,14 @@ describe('ForegroundSyncService', () => {
 
     await __runPullForTest();
 
-    expect(order).toEqual(['drain', 'pull']);
+    expect(order).toEqual(['pull']);
   });
 
-  test('does not drain or pull while offline', async () => {
+  test('does not pull while offline', async () => {
     netInfoFetchMock.mockResolvedValue(offlineState);
 
     await __runPullForTest();
 
-    expect(drainMock).not.toHaveBeenCalled();
     expect(pullMock).not.toHaveBeenCalled();
   });
 
@@ -150,7 +136,6 @@ describe('ForegroundSyncService', () => {
     const secondPull = __runPullForTest('second');
 
     await secondPull;
-    expect(drainMock).toHaveBeenCalledTimes(1);
     expect(pullMock).toHaveBeenCalledTimes(1);
 
     resolvePull?.();
@@ -162,18 +147,16 @@ describe('ForegroundSyncService', () => {
     jest.setSystemTime(11000);
     await __runPullForTest('second');
 
-    expect(drainMock).toHaveBeenCalledTimes(1);
     expect(pullMock).toHaveBeenCalledTimes(1);
   });
 
-  test('recovers when draining fails without entering pull backoff', async () => {
-    drainMock.mockRejectedValueOnce(new Error('drain failed'));
+  test('recovers after a pull failure once backoff elapses', async () => {
+    pullMock.mockRejectedValueOnce(new Error('pull failed'));
 
     await __runPullForTest('first');
     jest.setSystemTime(40000);
     await __runPullForTest('second');
 
-    expect(drainMock).toHaveBeenCalledTimes(2);
     expect(pullMock).toHaveBeenCalledTimes(2);
   });
 

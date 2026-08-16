@@ -20,6 +20,49 @@ export class NotificationService {
     return status === 'granted';
   }
 
+  private static async scheduleImmediate(
+    content: Notifications.NotificationContentInput,
+  ): Promise<string | null> {
+    const hasPermission = await this.requestPermissions();
+    if (!hasPermission) return null;
+
+    try {
+      return await Notifications.scheduleNotificationAsync({
+        content,
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: 1,
+        },
+      });
+    } catch (error) {
+      console.warn('[NotificationService] failed to schedule notification:', error);
+      return null;
+    }
+  }
+
+  private static async scheduleDateTrigger(
+    content: Notifications.NotificationContentInput,
+    trigger: Date,
+  ): Promise<string | null> {
+    const hasPermission = await this.requestPermissions();
+    if (!hasPermission) return null;
+
+    if (trigger.getTime() <= Date.now()) return null;
+
+    try {
+      return await Notifications.scheduleNotificationAsync({
+        content,
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: trigger,
+        },
+      });
+    } catch (error) {
+      console.warn('[NotificationService] failed to schedule notification:', error);
+      return null;
+    }
+  }
+
   static async scheduleReminder(todo: Todo): Promise<string | undefined> {
     if (!todo.dueDate || todo.completed) return undefined;
 
@@ -28,23 +71,17 @@ export class NotificationService {
 
     if (triggerTime.getTime() <= Date.now()) return undefined;
 
-    const hasPermission = await this.requestPermissions();
-    if (!hasPermission) return undefined;
-
-    const notificationId = await Notifications.scheduleNotificationAsync({
-      content: {
+    const notificationId = await this.scheduleDateTrigger(
+      {
         title: 'Todo Reminder',
         body: todo.text,
         data: { todoId: todo.id },
         sound: true,
       },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DATE,
-        date: triggerTime,
-      },
-    });
+      triggerTime,
+    );
 
-    return notificationId;
+    return notificationId ?? undefined;
   }
 
   static async cancelReminder(notificationId: string): Promise<void> {
@@ -74,18 +111,7 @@ export class NotificationService {
 
     if (trigger.getTime() <= Date.now()) return null;
 
-    const hasPermission = await this.requestPermissions();
-    if (!hasPermission) return null;
-
-    const notificationId = await Notifications.scheduleNotificationAsync({
-      content: { title, body, data, sound: true },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DATE,
-        date: trigger,
-      },
-    });
-
-    return notificationId;
+    return this.scheduleDateTrigger({ title, body, data, sound: true }, trigger);
   }
 
   /**
@@ -97,12 +123,7 @@ export class NotificationService {
     body: string,
     data: Record<string, unknown>,
   ): Promise<string | null> {
-    return this.scheduleLearningNotification({
-      title,
-      body,
-      data,
-      trigger: new Date(Date.now() + 100),
-    });
+    return this.scheduleImmediate({ title, body, data, sound: true });
   }
 
   static async schedulePushFailure(
@@ -110,11 +131,6 @@ export class NotificationService {
     body: string,
     data: { kind: 'push-failure'; repoPath?: string; branch?: string; conflict: boolean },
   ): Promise<string | null> {
-    return this.scheduleLearningNotification({
-      title,
-      body,
-      data,
-      trigger: new Date(Date.now() + 100),
-    });
+    return this.scheduleImmediate({ title, body, data, sound: true });
   }
 }

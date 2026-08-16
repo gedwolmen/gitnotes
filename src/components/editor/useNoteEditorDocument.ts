@@ -360,7 +360,7 @@ export function useNoteEditorDocument({
 
       if (repo && savedNoteId) {
         const syncPath =
-          existingFilePath ?? (folderPath ? `${folderPath}/${slugifyLocal(title.trim())}${getExtensionForFormat(noteFormat)}` : undefined);
+          existingFilePath ?? (folderPath ? `${folderPath}/${slugifyLocal(title.trim())}${getExtensionForFormat(noteFormat)}` : `${slugifyLocal(title.trim())}${getExtensionForFormat(noteFormat)}`);
         const upsertOpId = syncPath
           ? gitOperationRegistry.begin({
               kind: 'upsert',
@@ -389,7 +389,7 @@ export function useNoteEditorDocument({
           };
 
           const stageResult = await StagingService.stageUpsert(syncParams);
-          if (stageResult.success && syncPath) {
+          if (stageResult.success) {
             const updated = await updateNote({
               id: savedNoteId,
               filePath: syncPath,
@@ -402,20 +402,12 @@ export function useNoteEditorDocument({
               );
             }
           } else {
-            try {
-              await NoteSyncQueueService.enqueueNoteUpsert(syncParams, savedNoteId);
-              Alert.alert(
-                'Note Saved Locally',
-                'Your note was saved but could not be pushed to GitHub yet. It will sync automatically when connection is restored.',
-                [{ text: 'OK' }],
-              );
-            } catch {
-              Alert.alert(
-                'Save Failed',
-                'Your note was saved locally but could not be queued for sync. Please try again.',
-                [{ text: 'OK' }],
-              );
-            }
+            console.warn('[useNoteEditorDocument] stage failed:', stageResult.error);
+            Alert.alert(
+              'Save Failed',
+              'Your note was saved locally but could not be staged for sync. Please try again.',
+              [{ text: 'OK' }],
+            );
           }
         } catch (error) {
           console.warn('[useNoteEditorDocument] note sync threw:', error);

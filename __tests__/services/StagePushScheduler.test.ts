@@ -195,6 +195,27 @@ describe('StagePushScheduler', () => {
     expect(useStageStore.getState().pushQueue).toHaveLength(0);
   });
 
+  test('drainPushQueue resets globalPushing once the queue empties', async () => {
+    useStageStore.setState({
+      staged: [],
+      isPushing: {},
+      globalPushing: true,
+      pushQueue: ['a/repo::main'],
+      pendingCount: 0,
+    });
+
+    const setGlobalPushingSpy = jest.spyOn(useStageStore.getState(), 'setGlobalPushing');
+
+    await drainPushQueue();
+    await flushAsync();
+
+    expect(setGlobalPushingSpy).toHaveBeenCalledWith(false);
+    expect(useStageStore.getState().globalPushing).toBe(false);
+    expect(useStageStore.getState().pushQueue).toHaveLength(0);
+
+    setGlobalPushingSpy.mockRestore();
+  });
+
   test('failed push invokes the registered push-failure callback with {key, error}', async () => {
     useStageStore.setState({
       staged: [item(REPO_A, 'main', 'notes/a.md')],

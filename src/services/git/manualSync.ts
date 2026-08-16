@@ -1,4 +1,3 @@
-import { NoteSyncQueueService } from '../NoteSyncQueueService';
 import { pullAllFromRepos, pullFromSingleRepo } from '../RepoPullService';
 import { useCanvasStore } from '../../stores/canvasStore';
 import { useNoteStore } from '../../stores/noteStore';
@@ -8,14 +7,13 @@ import { GitSyncGate } from './GitSyncGate';
 /**
  * Single manual-sync entry point ("sync now") for user-facing pulls:
  * pull-to-refresh swipes and the cloud-icon sync button. Acquires the
- * app-wide gate cycle, drains queued mutations, waits for in-flight push
- * markers to settle, pulls remote state, and refreshes all three stores
- * before releasing the cycle.
+ * app-wide gate cycle, waits for in-flight push markers to settle, pulls
+ * remote state, and refreshes all three stores before releasing the cycle.
  *
  * Reentrancy: exactly one syncNow runs at a time. Overlapping manual
  * calls return `{ok:false, error:'already-running'}` immediately instead
  * of queueing — the gesture already ran once, and stacking another pull
- * behind a long drain only adds latency. (Auto paths — ForegroundSync
+ * behind a long one only adds latency. (Auto paths — ForegroundSync
  * runPull / BackgroundSyncService — keep their own gate-wrapped internals
  * and never route through here.)
  *
@@ -77,17 +75,9 @@ async function refreshAllStores(): Promise<void> {
 }
 
 async function runSyncCycle(repos?: string[]): Promise<void> {
-  // ONE cycle acquisition spans drain + pull + refresh. drain() sees the
-  // held cycle via isCycleHeld() and runs inside it (no self-deadlock).
+  // ONE cycle acquisition spans the push-settle wait + pull + refresh.
   const releaseCycle = await GitSyncGate.acquireCycle();
   try {
-    try {
-      await NoteSyncQueueService.drain();
-    } catch (error) {
-      // A drain failure must not block the remote pull (same recovery
-      // semantics as ForegroundSyncService.runPull).
-      console.warn('[Sync] drain failed:', error);
-    }
     await waitForPushesToSettle(repos);
     if (repos?.length === 1) {
       await pullFromSingleRepo(repos[0]);
