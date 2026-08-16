@@ -146,8 +146,10 @@ export default function ChatScreen() {
                 className="flex-1 justify-center items-center"
                 style={{ paddingVertical: spacing[6], paddingHorizontal: 0 }}
               >
-                <Text className="text-xl font-bold mb-2 text-text">{t('chat.startConversation')}</Text>
-                <Text className="text-md text-center text-text-secondary">
+                <Text className="text-xl font-bold mb-2 text-text" style={{ marginHorizontal: spacing[4] }}>
+                  {t('chat.startConversation')}
+                </Text>
+                <Text className="text-md text-center text-text-secondary" style={{ marginHorizontal: spacing[4] }}>
                   {t('chat.emptyStateBody')}
                 </Text>
                 <ChatHintChips onPressHint={handleHintPress} />
