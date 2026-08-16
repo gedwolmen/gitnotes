@@ -23,14 +23,19 @@ function normalizeBranch(branch: string | undefined): string {
   return branch || 'main';
 }
 
-function opMatchesContext(op: GitOp, entityId: string | undefined, ctx?: UseEntityLockOptions): boolean {
+export function opMatchesContext(
+  op: GitOp,
+  entityId: string | undefined,
+  ctx?: UseEntityLockOptions,
+): boolean {
   const entityMatch = !!entityId && op.entityIds.includes(entityId);
   const pathMatch =
     !!ctx?.repo &&
     !!ctx.path &&
     op.repo === ctx.repo &&
     normalizeBranch(op.branch) === normalizeBranch(ctx.branch) &&
-    (op.path === undefined || op.path === ctx.path);
+    op.path !== undefined &&
+    op.path === ctx.path;
   return entityMatch || pathMatch;
 }
 
@@ -41,8 +46,9 @@ function opMatchesContext(op: GitOp, entityId: string | undefined, ctx?: UseEnti
  * entityIds as a secondary index (cover for calls that only know the id).
  *
  * `retry()` clears the durable failure entry, drops every registry op on
- * this path (volatile row-locks included), re-enqueues the delete and
- * drains once so the failed row goes straight back to locked.
+ * this path (volatile row-locks included) and re-enqueues the delete. The
+ * queue notifies and re-derives the queued op, which takes the row straight
+ * back to locked.
  */
 export function useEntityLock(
   entityId?: string,
@@ -91,7 +97,6 @@ export function useEntityLock(
         accountId: note?.accountId,
         localNoteId: note?.id ?? entityId,
       });
-      void NoteSyncQueueService.drain();
     })();
   }, [failedOp, entityId]);
 
