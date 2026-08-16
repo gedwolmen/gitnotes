@@ -15,6 +15,8 @@ import { useUndo } from '../../utils/useUndo';
 import { syncNoteToGitHub } from '../../services/NoteGitHubSyncService';
 import { NoteSyncQueueService } from '../../services/NoteSyncQueueService';
 import { classifyGitHubSyncError, isRetryableFailure, syncStatusForError } from '../../services/git/syncFailure';
+import { FEATURE_STAGE_PUSH } from '../../services/featureFlags';
+import { StagingService } from '../../services/git/StagingService';
 import { githubActivity } from '../../stores/githubActivityStore';
 import { useGitOperationStore, gitOperationRegistry } from '../../stores/gitOperationStore';
 import type { GitOp } from '../../stores/gitOperationStore';
@@ -388,30 +390,21 @@ export function useNoteEditorDocument({
             knownSha: commit,
           };
 
-          const syncResult = await syncNoteToGitHub(syncParams);
-
-          if (syncResult.success && syncResult.filePath) {
-            const updated = await updateNote({
-              id: savedNoteId,
-              filePath: syncResult.filePath,
-              ...(syncResult.finalContent != null && syncResult.finalContent !== finalContent
-                ? { content: syncResult.finalContent }
-                : {}),
-            });
-            if (!updated) {
-              Alert.alert(
-                'Partial Save',
-                'Your note was pushed to GitHub but local metadata could not be updated.',
-                [{ text: 'OK' }],
-              );
-            }
-          } else {
-            const error = syncResult.error!;
-            const failure = classifyGitHubSyncError(
-              new Error(error),
-              syncResult.status ?? syncStatusForError(error),
-            );
-            if (isRetryableFailure(failure)) {
+          if (FEATURE_STAGE_PUSH) {
+            const stageResult = await StagingService.stageUpsert(syncParams);
+            if (stageResult.success && syncPath) {
+              const updated = await updateNote({
+                id: savedNoteId,
+                filePath: syncPath,
+              });
+              if (!updated) {
+                Alert.alert(
+                  'Partial Save',
+                  'Your note was staged but local metadata could not be updated.',
+                  [{ text: 'OK' }],
+                );
+              }
+            } else {
               try {
                 await NoteSyncQueueService.enqueueNoteUpsert(syncParams, savedNoteId);
                 Alert.alert(
@@ -426,8 +419,49 @@ export function useNoteEditorDocument({
                   [{ text: 'OK' }],
                 );
               }
+            }
+          } else {
+            const syncResult = await syncNoteToGitHub(syncParams);
+
+            if (syncResult.success && syncResult.filePath) {
+              const updated = await updateNote({
+                id: savedNoteId,
+                filePath: syncResult.filePath,
+                ...(syncResult.finalContent != null && syncResult.finalContent !== finalContent
+                  ? { content: syncResult.finalContent }
+                  : {}),
+              });
+              if (!updated) {
+                Alert.alert(
+                  'Partial Save',
+                  'Your note was pushed to GitHub but local metadata could not be updated.',
+                  [{ text: 'OK' }],
+                );
+              }
             } else {
-              showDurableSyncFailureAlert(failure.kind);
+              const error = syncResult.error!;
+              const failure = classifyGitHubSyncError(
+                new Error(error),
+                syncResult.status ?? syncStatusForError(error),
+              );
+              if (isRetryableFailure(failure)) {
+                try {
+                  await NoteSyncQueueService.enqueueNoteUpsert(syncParams, savedNoteId);
+                  Alert.alert(
+                    'Note Saved Locally',
+                    'Your note was saved but could not be pushed to GitHub yet. It will sync automatically when connection is restored.',
+                    [{ text: 'OK' }],
+                  );
+                } catch {
+                  Alert.alert(
+                    'Save Failed',
+                    'Your note was saved locally but could not be queued for sync. Please try again.',
+                    [{ text: 'OK' }],
+                  );
+                }
+              } else {
+                showDurableSyncFailureAlert(failure.kind);
+              }
             }
           }
         } catch (error) {
