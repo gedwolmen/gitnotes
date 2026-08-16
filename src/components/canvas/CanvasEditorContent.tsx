@@ -47,8 +47,6 @@ import {
   slugifyCanvasTitle,
 } from '../../models/Canvas';
 import GitContextPicker from '../GitContextPicker';
-import { syncCanvasToGitHub } from '../../services/CanvasGitHubSyncService';
-import { FEATURE_STAGE_PUSH } from '../../services/featureFlags';
 import { StagingService } from '../../services/git/StagingService';
 import { useAuth } from '../../contexts/AuthContext';
 import { renderSceneToPng } from '../../utils/canvasPngExport';
@@ -1271,30 +1269,15 @@ export default function CanvasEditorContent() {
     }
 
     if (repo) {
-      if (FEATURE_STAGE_PUSH) {
-        const stageResult = await StagingService.stageUpsert({
-          repo,
-          branch,
-          filePath: canvasFilePath,
-          title: title.trim(),
-          content: JSON.stringify(scene, null, 2),
-        });
-        if (!stageResult.success) {
-          console.warn('[CanvasEditorContent] stage canvas failed:', stageResult.error);
-        }
-      } else {
-        const syncResult = await syncCanvasToGitHub({
-          repo,
-          branch,
-          filePath: canvasFilePath,
-          title: title.trim(),
-          scene,
-          accountId,
-        });
-
-        if (!syncResult.success) {
-          Alert.alert('Sync Failed', syncResult.error || 'Canvas changes were saved locally but could not sync to GitHub.');
-        }
+      const stageResult = await StagingService.stageUpsert({
+        repo,
+        branch,
+        filePath: canvasFilePath,
+        title: title.trim(),
+        content: JSON.stringify(scene, null, 2),
+      });
+      if (!stageResult.success) {
+        console.warn('[CanvasEditorContent] stage canvas failed:', stageResult.error);
       }
     }
 

@@ -32,7 +32,6 @@ import { RootStackParamList } from './types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAIStore } from '../stores/aiStore';
 import { useAIHubStore } from '../stores/aiHubStore';
-import { FEATURE_STAGE_PUSH } from '../services/featureFlags';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -237,7 +236,7 @@ export default function AppNavigator() {
             )}
           </Stack.Navigator>
           <FloatingAIButton currentRouteName={currentRouteName} />
-          {FEATURE_STAGE_PUSH && <FloatingStageButton currentRouteName={currentRouteName} />}
+          <FloatingStageButton currentRouteName={currentRouteName} />
         </View>
       </NavigationContainer>
         <ChatRepoPickerModal

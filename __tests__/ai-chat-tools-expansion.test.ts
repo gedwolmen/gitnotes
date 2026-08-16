@@ -522,7 +522,7 @@ describe('chat-tools expansion — chatRepoSync behavior', () => {
     expect(createInput.repo).toBe('me/notes-repo');
     expect(createInput.branch).toBe('dev');
     expect(NoteSyncQueueService.enqueueNoteUpsert).toHaveBeenCalledTimes(1);
-    expect(NoteSyncQueueService.drain).toHaveBeenCalled();
+    expect(NoteSyncQueueService.drain).not.toHaveBeenCalled();
   });
 
   test('write tools skip the sync queue when no chat repo is selected', async () => {
@@ -555,7 +555,7 @@ describe('chat-tools expansion — chatRepoSync behavior', () => {
     expect(firstUpdate.content).toContain('## Sequence');
     expect(firstUpdate.content).toContain('[[Second]]');
     expect(NoteSyncQueueService.enqueueNoteUpsert).toHaveBeenCalledTimes(2);
-    expect(NoteSyncQueueService.drain).toHaveBeenCalled();
+    expect(NoteSyncQueueService.drain).not.toHaveBeenCalled();
     expect((result.data as { linked: number }).linked).toBe(2);
   });
 });

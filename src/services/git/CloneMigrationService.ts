@@ -1,8 +1,6 @@
 import { StorageService } from '../StorageService';
 import { GitHubService } from '../GitHubService';
-import { AuthService } from '../AuthService';
 import { LocalGitWriter } from './LocalGitWriter';
-import { FEATURE_STAGE_PUSH } from '../featureFlags';
 import { TemplateRepoPreferenceService } from '../TemplateRepoPreferenceService';
 import { useTemplateStore } from '../../stores/templateStore';
 import { serializeTemplate, templateSlug } from '../TemplateMarkdownService';
@@ -48,11 +46,11 @@ function serializeTodo(todo: Partial<Todo>): string {
 
 /**
  * One-shot import that copies every locally-tracked file with `repo ===
- * repoPath` into the cloned working tree, stages + commits each one without
- * pushing, then pushes the whole batch in a single round-trip. The point is
- * to lift offline edits (notes the user wrote in API mode that never reached
- * the remote) into the new clone before the first pull-fast-forward — without
- * this step the next pull would fast-forward over them.
+ * repoPath` into the cloned working tree, staging + committing each one
+ * without pushing. The point is to lift offline edits (notes the user wrote
+ * in API mode that never reached the remote) into the new clone before the
+ * first pull-fast-forward — without this step the next pull would fast-forward
+ * over them. Pushes are owned by the stage/push engine.
  *
  * Safe to re-run: writeAndCommit is idempotent at the working-tree level
  * (overwrites + git-add will produce a no-op commit if content matches HEAD).
@@ -72,7 +70,6 @@ export class CloneMigrationService {
     };
 
     const author = authorFromUser();
-    const token = (await AuthService.getToken()) ?? undefined;
 
     const allNotes = await StorageService.getAllNotes();
     const localNotes = allNotes.filter((n: Note) => n.repo === repoPath && n.filePath);
@@ -168,19 +165,6 @@ export class CloneMigrationService {
             filePath: targetPath,
             error: result.error ?? 'unknown',
           });
-      }
-    }
-
-    const total = report.notes + report.todos + report.canvases + report.templates;
-    if (total > 0 && !FEATURE_STAGE_PUSH) {
-      const pushResult = await LocalGitWriter.push({ repoPath, branch, token });
-      if (!pushResult.success) {
-        report.success = false;
-        report.failures.push({
-          kind: 'push',
-          filePath: '',
-          error: pushResult.error ?? 'unknown',
-        });
       }
     }
 

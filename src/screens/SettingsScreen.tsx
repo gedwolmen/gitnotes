@@ -18,9 +18,7 @@ import { GitHubService, type GitHubRepository } from '../services/GitHubService'
 import { RepoFileSyncService } from '../services/RepoFileSyncService';
 import { pullFromSingleRepo } from '../services/RepoPullService';
 import { TemplateRepoPreferenceService, type TemplateRepoPreference } from '../services/TemplateRepoPreferenceService';
-import { syncTemplateToGitHub } from '../services/TemplateGitHubSyncService';
 import { serializeTemplate, templateSlug } from '../services/TemplateMarkdownService';
-import { FEATURE_STAGE_PUSH } from '../services/featureFlags';
 import { StagingService } from '../services/git/StagingService';
 import { SyncEngineService, type SyncEngineMode } from '../services/SyncEngineService';
 import { GitFsService } from '../services/git/GitFsService';
@@ -414,29 +412,19 @@ export default function SettingsScreen() {
     let failed = 0;
     try {
       for (const template of unsynced) {
-        if (FEATURE_STAGE_PUSH) {
-          const filePath = `templates/${templateSlug(template.name)}.md`;
-          const staged = await StagingService.stageUpsert({
-            repo: templatesRepoPref.repoPath,
-            branch: templatesRepoPref.branch,
-            filePath,
-            title: template.name,
-            content: serializeTemplate({ ...template, filePath: undefined }),
-          });
-          if (staged.success) {
-            await useTemplateStore.getState().updateTemplate(template.id, { filePath });
-            synced++;
-          } else {
-            failed++;
-          }
+        const filePath = `templates/${templateSlug(template.name)}.md`;
+        const staged = await StagingService.stageUpsert({
+          repo: templatesRepoPref.repoPath,
+          branch: templatesRepoPref.branch,
+          filePath,
+          title: template.name,
+          content: serializeTemplate({ ...template, filePath: undefined }),
+        });
+        if (staged.success) {
+          await useTemplateStore.getState().updateTemplate(template.id, { filePath });
+          synced++;
         } else {
-          const result = await syncTemplateToGitHub({ repoPath: templatesRepoPref.repoPath, branch: templatesRepoPref.branch, template });
-          if (result.success && result.filePath) {
-            await useTemplateStore.getState().updateTemplate(template.id, { filePath: result.filePath });
-            synced++;
-          } else {
-            failed++;
-          }
+          failed++;
         }
       }
     } finally {

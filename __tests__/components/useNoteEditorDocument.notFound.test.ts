@@ -16,6 +16,10 @@ jest.mock('../../src/services/NoteGitHubSyncService', () => ({
   syncNoteToGitHub: jest.fn(),
 }));
 
+jest.mock('../../src/services/git/StagingService', () => ({
+  StagingService: { stageUpsert: jest.fn() },
+}));
+
 jest.mock('../../src/services/NoteSyncQueueService', () => ({
   NoteSyncQueueService: { enqueue: jest.fn(), enqueueNoteUpsert: jest.fn() },
 }));
@@ -25,8 +29,8 @@ jest.mock('../../src/utils/haptics', () => ({
 }));
 
 import { useNoteEditorDocument } from '../../src/components/editor/useNoteEditorDocument';
-import { syncNoteToGitHub } from '../../src/services/NoteGitHubSyncService';
 import { NoteSyncQueueService } from '../../src/services/NoteSyncQueueService';
+import { StagingService } from '../../src/services/git/StagingService';
 
 const baseParams = {
   initialFormat: 'markdown' as const,
@@ -92,7 +96,7 @@ describe('useNoteEditorDocument notFound (issue #669)', () => {
 
   test('shows actionable auth failure and does not enqueue the locally saved note', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
-    (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: false, error: 'GitHub not authenticated' });
+    (StagingService.stageUpsert as jest.Mock).mockRejectedValue(new Error('GitHub not authenticated'));
     const createNote = jest.fn(async () => ({ id: 'new-note-1' }));
 
     const { result } = renderHook(() =>
@@ -118,13 +122,11 @@ describe('useNoteEditorDocument notFound (issue #669)', () => {
     alertSpy.mockRestore();
   });
 
-  test('shows the repository permission alert for a generic 403 sync failure', async () => {
+  test('shows the repository permission alert for a generic 403 stage failure', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
-    (syncNoteToGitHub as jest.Mock).mockResolvedValue({
-      success: false,
-      error: 'Permission denied',
-      status: 403,
-    });
+    (StagingService.stageUpsert as jest.Mock).mockRejectedValue(
+      Object.assign(new Error('Permission denied'), { status: 403 }),
+    );
     const createNote = jest.fn(async () => ({ id: 'new-note-1' }));
 
     const { result } = renderHook(() =>
