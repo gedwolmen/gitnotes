@@ -9,8 +9,6 @@
     "chat": "Chat"
   },
   "common": {
-    "beta": "BETA",
-    "new": "NEW",
     "untitled": "Untitled",
     "cannotBeUndone": "This cannot be undone.",
     "later": "Later",

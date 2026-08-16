@@ -106,6 +106,33 @@ describe('ChatHintChips', () => {
     expect(getByTestId('chat-hints-scroller')).toHaveProp('horizontal', true);
   });
 
+  test('outer container has no horizontal padding so chips sit flush to screen edges', () => {
+    const { UNSAFE_root } = render(<ChatHintChips onPressHint={jest.fn()} />);
+
+    const scroller = UNSAFE_root.findByProps({ testID: 'chat-hints-scroller' });
+    const outerContainer = scroller.parent;
+    expect(outerContainer).toBeTruthy();
+    const style = outerContainer?.props.style;
+    expect(style.paddingHorizontal).toBeUndefined();
+    expect(style.paddingLeft).toBeUndefined();
+    expect(style.paddingRight).toBeUndefined();
+  });
+
+  test('in empty-chat context the first chip starts at x=0 (no leading padding)', () => {
+    const { UNSAFE_root } = render(<ChatHintChips onPressHint={jest.fn()} />);
+
+    const scroller = UNSAFE_root.findByProps({ testID: 'chat-hints-scroller' });
+    expect(scroller.props.contentContainerStyle.paddingHorizontal).toBeUndefined();
+    expect(scroller.props.contentContainerStyle.paddingLeft).toBeUndefined();
+    expect(scroller.props.contentContainerStyle.paddingRight).toBe(8);
+
+    const outerContainer = scroller.parent;
+    expect(outerContainer?.props.style.paddingHorizontal).toBeUndefined();
+
+    const firstChip = UNSAFE_root.findByProps({ testID: 'chat.hint.summarize-issues' });
+    expect(firstChip.props.style.marginLeft).toBeUndefined();
+  });
+
   test.each(HINT_CASES.map(({ label, prompt }) => ({ label, prompt })))(
     'tapping "$label" fires onPressHint once with the prompt "$prompt"',
     ({ label, prompt }) => {

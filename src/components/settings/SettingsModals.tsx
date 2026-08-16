@@ -2,6 +2,7 @@ import React from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Linking, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SearchBar from '../SearchBar';
 import { Modal, Input, Button } from '../ui';
 import type { GitRepository } from '../../services/GitService';
@@ -54,6 +55,7 @@ type SettingsModalsProps = {
 
 export function SettingsModals(props: SettingsModalsProps) {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const {
     colors,
     authState,
@@ -104,7 +106,7 @@ export function SettingsModals(props: SettingsModalsProps) {
             <Ionicons name="close" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, paddingBottom: 16 + insets.bottom }}>
           <View className="flex-row items-center px-4 py-4 gap-2 border-b" style={{ borderColor: colors.border }}>
             <Input
               testID="settings-modals.input.manual-repo"
@@ -179,7 +181,7 @@ export function SettingsModals(props: SettingsModalsProps) {
             <Ionicons name="close" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, paddingBottom: 16 + insets.bottom }}>
           {repositories.length === 0 ? (
             <Text className="p-6 text-center text-sm" style={{ color: colors.textSecondary }}>
               {t('settings.addRepoFirstForTemplates')}

@@ -332,7 +332,6 @@ export default function CanvasListScreen() {
       </Modal>
       <ScreenHeader
         title={t('canvases.title')}
-        badge={t('common.beta')}
         actions={
           <>
             <IconButton

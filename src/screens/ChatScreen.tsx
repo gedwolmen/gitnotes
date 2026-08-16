@@ -124,7 +124,7 @@ export default function ChatScreen() {
             }}
             contentContainerStyle={{
               paddingTop: headerHeight,
-              paddingHorizontal: spacing[4],
+              paddingHorizontal: messages.length === 0 ? 0 : spacing[4],
               paddingBottom: spacing[4],
               flexGrow: messages.length === 0 ? 1 : undefined,
             }}
@@ -142,7 +142,10 @@ export default function ChatScreen() {
               );
             }}
             ListEmptyComponent={
-              <View className="flex-1 justify-center items-center" style={{ padding: spacing[6] }}>
+              <View
+                className="flex-1 justify-center items-center"
+                style={{ paddingVertical: spacing[6], paddingHorizontal: 0 }}
+              >
                 <Text className="text-xl font-bold mb-2 text-text">{t('chat.startConversation')}</Text>
                 <Text className="text-md text-center text-text-secondary">
                   {t('chat.emptyStateBody')}

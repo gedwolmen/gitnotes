@@ -112,7 +112,7 @@ function LockedNoteRow({
       onToggleSelect={onToggleSelect}
       disabled={lock.locked || lock.failed}
     >
-      <View style={{ opacity: lock.locked ? 0.45 : 1 }}>
+      <View style={{ opacity: lock.locked ? 0.45 : 1, position: 'relative' }}>
         <NotesListCard
           note={item}
           viewMode={viewMode}
@@ -142,8 +142,8 @@ function LockedNoteRow({
 const styles = StyleSheet.create({
   rowLockTrailing: {
     position: 'absolute',
-    right: 12,
-    top: 12,
+    right: 16,
+    top: 16,
     zIndex: 5,
   },
 });

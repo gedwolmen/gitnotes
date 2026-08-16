@@ -53,7 +53,7 @@ export function ReminderSection({ colors }: ReminderSectionProps) {
   );
 
   return (
-    <Group title="Reminders" badge="BETA">
+    <Group title="Reminders">
       {items.length === 0 ? (
         <GroupRow
           leading={

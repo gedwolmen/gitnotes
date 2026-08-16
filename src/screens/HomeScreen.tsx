@@ -374,9 +374,6 @@ export default function HomeScreen() {
             <View className="gap-0.5">
               <View className="flex-row items-center gap-1.5">
                 <Text className="text-base font-bold" style={{ color: colors.text, letterSpacing: -0.2 }}>{t('canvases.title')}</Text>
-                <View className="bg-blue-500 px-1.5 py-0.5 rounded">
-                  <Text className="text-white font-extrabold" style={{ fontSize: 9, letterSpacing: 0.5 }}>{t('common.beta')}</Text>
-                </View>
               </View>
               <Text className="text-xs font-medium" style={{ color: colors.textSecondary }}>{t('home.bento.canvasesSub')}</Text>
             </View>
@@ -399,9 +396,6 @@ export default function HomeScreen() {
           <View style={{ gap: 6 }}>
             <View className="flex-row items-center gap-1.5">
               <Text className="text-base font-bold" style={{ color: '#FFFFFF', letterSpacing: -0.2 }}>{t('thoughtDump.title')}</Text>
-              <View className="bg-emerald-500 px-1.5 py-0.5 rounded">
-                <Text className="text-white font-extrabold" style={{ fontSize: 9, letterSpacing: 0.5 }}>{t('common.new')}</Text>
-              </View>
             </View>
             <Text className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.85)' }} numberOfLines={3}>
               {t('home.bento.thoughtDumpSub')}

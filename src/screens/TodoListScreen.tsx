@@ -66,14 +66,14 @@ function LockedTodoRow({ item, selected, selectionMode, onToggleSelect, onPress,
       onToggleSelect={onToggleSelect}
       disabled={lock.locked}
     >
-      <View style={{ opacity: lock.locked ? 0.45 : 1 }}>
+      <View style={{ opacity: lock.locked ? 0.45 : 1, position: 'relative' }}>
         <TodoCard todo={item} onPress={onPress} onToggle={onToggle} />
         {lock.locked ? (
           <ActivityIndicator
             size="small"
             testID="todo-row.lock-spinner"
             color={colors.primary}
-            style={{ position: 'absolute', right: 12, top: 12, zIndex: 5 }}
+            style={{ position: 'absolute', right: 16, top: 16, zIndex: 5 }}
           />
         ) : null}
       </View>
