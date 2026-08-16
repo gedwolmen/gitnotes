@@ -87,4 +87,34 @@ export class NotificationService {
 
     return notificationId;
   }
+
+  /**
+   * Immediate-ish push-progress local notification. Throttling (push starts
+   * can happen back-to-back) is the caller's job.
+   */
+  static async schedulePushProgress(
+    title: string,
+    body: string,
+    data: Record<string, unknown>,
+  ): Promise<string | null> {
+    return this.scheduleLearningNotification({
+      title,
+      body,
+      data,
+      trigger: new Date(Date.now() + 100),
+    });
+  }
+
+  static async schedulePushFailure(
+    title: string,
+    body: string,
+    data: { kind: 'push-failure'; repoPath?: string; branch?: string; conflict: boolean },
+  ): Promise<string | null> {
+    return this.scheduleLearningNotification({
+      title,
+      body,
+      data,
+      trigger: new Date(Date.now() + 100),
+    });
+  }
 }

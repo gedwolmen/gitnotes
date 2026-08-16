@@ -59,6 +59,8 @@ const linking: LinkingOptions<RootStackParamList> = {
       ChatThreadList: 'chat',
       ChatScreen: 'chat/:threadId',
       ThoughtDump: 'thought-dump',
+      Stage: 'stage',
+      Conflicts: 'conflicts',
       NeumorphicGallery: '__dev__/neumorphic',
     },
   },
@@ -201,6 +203,14 @@ export default function AppNavigator() {
             <Stack.Screen
               name="Stage"
               component={StageScreen}
+              options={{ headerShown: false }}
+            />
+            {/* TODO(todo 11): point Conflicts at the upgraded SyncStatusScreen
+                (conflicts management page). It aliases SyncStatusScreen today so
+                the gitnotes://conflicts push-failure deep link resolves. */}
+            <Stack.Screen
+              name="Conflicts"
+              component={SyncStatusScreen}
               options={{ headerShown: false }}
             />
             <Stack.Screen
