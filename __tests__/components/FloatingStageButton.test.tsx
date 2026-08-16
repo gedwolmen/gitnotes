@@ -134,6 +134,28 @@ jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate }),
 }));
 
+const mockHandlePressIn = jest.fn();
+const mockHandlePressOut = jest.fn();
+const mockHandleHoldComplete = jest.fn();
+
+jest.mock('../../src/components/ai/useFloatingAIButtonAffordances', () => ({
+  FLOATING_AI_BUTTON_LONG_PRESS_MS: 450,
+  PRESS_SCALE_FACTOR: 0.08,
+  useFloatingAIButtonAffordances: () => ({
+    entranceProgress: { value: 1 },
+    pressProgress: { value: 0 },
+    holdProgress: { value: 0 },
+    hintProgress: { value: 0 },
+    hubDiscovered: false,
+    discoveryChecked: true,
+    handlePressIn: mockHandlePressIn,
+    handlePressOut: mockHandlePressOut,
+    handleHoldComplete: mockHandleHoldComplete,
+    cancelAffordances: jest.fn(),
+    markHubDiscovered: jest.fn(),
+  }),
+}));
+
 import { FloatingAIButton } from '../../src/components/ai/FloatingAIButton';
 
 describe('FloatingStageButton', () => {
@@ -146,6 +168,9 @@ describe('FloatingStageButton', () => {
     mockNavigate.mockClear();
     mockPushAll.mockClear();
     mockRequestPush.mockClear();
+    mockHandlePressIn.mockClear();
+    mockHandlePressOut.mockClear();
+    mockHandleHoldComplete.mockClear();
     jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
   });
 
@@ -171,6 +196,7 @@ describe('FloatingStageButton', () => {
 
     fireEvent(getByTestId('floating-stage.button.navigate-stage'), 'longPress');
 
+    expect(mockHandleHoldComplete).toHaveBeenCalledTimes(1);
     expect(mockPushAll).toHaveBeenCalledTimes(1);
     jest.useRealTimers();
   });

@@ -4,7 +4,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSharedValue, type SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTabBarHeight } from '../ui/TabBar';
+import { publishButtonRect, resolveNonOverlapping } from '../floatingButtonLayout';
 import {
+  FLOATING_AI_BUTTON_SIZE,
   resolveFloatingAIButtonPlacement,
   type FloatingButtonGeometry,
   type FloatingButtonPosition,
@@ -82,6 +84,7 @@ export function useFloatingAIButtonPosition(): FloatingAIButtonPositionState {
     translateY.value = position.y;
     savedTranslateX.value = position.x;
     savedTranslateY.value = position.y;
+    publishButtonRect('ai', { x: position.x, y: position.y, size: FLOATING_AI_BUTTON_SIZE });
   }, [savedTranslateX, savedTranslateY, translateX, translateY]);
 
   const savePosition = useCallback((position: FloatingButtonPosition) => {
@@ -137,6 +140,14 @@ export function useFloatingAIButtonPosition(): FloatingAIButtonPositionState {
   }, [applyPosition, dragActive, savePosition]);
 
   useEffect(() => {
+    publishButtonRect('ai', {
+      x: initialPosition.x,
+      y: initialPosition.y,
+      size: FLOATING_AI_BUTTON_SIZE,
+    });
+  }, [initialPosition.x, initialPosition.y]);
+
+  useEffect(() => {
     latestGeometry.value = geometry;
   }, [geometry, latestGeometry]);
 
@@ -151,15 +162,21 @@ export function useFloatingAIButtonPosition(): FloatingAIButtonPositionState {
       currentPosition,
       geometry,
     ).position;
+    const resolvedPosition = resolveNonOverlapping(
+      'ai',
+      normalizedPosition,
+      FLOATING_AI_BUTTON_SIZE,
+      geometry,
+    );
     if (
-      normalizedPosition.x === currentPosition.x
-      && normalizedPosition.y === currentPosition.y
+      resolvedPosition.x === currentPosition.x
+      && resolvedPosition.y === currentPosition.y
     ) {
       return;
     }
 
-    applyPosition(normalizedPosition);
-    savePosition(normalizedPosition);
+    applyPosition(resolvedPosition);
+    savePosition(resolvedPosition);
   }, [
     applyPosition,
     dragActive,

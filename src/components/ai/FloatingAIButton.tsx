@@ -27,6 +27,7 @@ import {
 } from './FloatingAIHubMenu';
 import { useFloatingAIButtonPosition } from './useFloatingAIButtonPosition';
 import { useFloatingAIButtonPanGesture } from './useFloatingAIButtonPanGesture';
+import { useFloatingButtonCollision } from '../floatingButtonLayout';
 import {
   FLOATING_AI_BUTTON_LONG_PRESS_MS,
   PRESS_SCALE_FACTOR,
@@ -47,6 +48,13 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
   const [verticalDirection, setVerticalDirection] = useState<MenuDirection>(-1);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const position = useFloatingAIButtonPosition();
+  useFloatingButtonCollision('ai', {
+    translateX: position.translateX,
+    translateY: position.translateY,
+    dragActive: position.dragActive,
+    size: FLOATING_AI_BUTTON_SIZE,
+    geometry: position.geometry,
+  });
   const {
     geometry,
     translateX,
