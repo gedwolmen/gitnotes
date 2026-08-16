@@ -119,6 +119,12 @@ export async function drainPushQueue(): Promise<void> {
         useStageStore.getState().shiftQueue();
       }
     }
+
+    if (useStageStore.getState().dequeueNext() === null) {
+      if (useStageStore.getState().globalPushing) {
+        useStageStore.getState().setGlobalPushing(false);
+      }
+    }
   } finally {
     draining = false;
   }

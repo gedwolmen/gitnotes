@@ -29,6 +29,7 @@ interface StageActions {
   keyFor: (repoPath: string, branch: string) => string;
   requestPush: (repoPath?: string, branch?: string) => string | null;
   setPushing: (key: string, bool: boolean) => void;
+  setGlobalPushing: (bool: boolean) => void;
   pushAll: () => void;
   dequeueNext: () => string | null;
   shiftQueue: () => void;
@@ -117,6 +118,8 @@ export const useStageStore = create<StageState & StageActions>()((set, get) => (
 
   setPushing: (key, bool) =>
     set((state) => ({ isPushing: { ...state.isPushing, [key]: bool } })),
+
+  setGlobalPushing: (bool) => set({ globalPushing: bool }),
 
   pushAll: () => {
     set({ globalPushing: true });
