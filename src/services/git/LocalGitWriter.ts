@@ -5,6 +5,8 @@ import { makeGitFs as buildGitFs } from './gitFs';
 import { gitHttp } from './gitHttp';
 import { formatSyncError } from './formatSyncError';
 import { GitFsService } from './GitFsService';
+import { ConflictResolverService } from '../conflict/ConflictResolverService';
+import { useConflictStore } from '../../stores/conflictStore';
 
 const CLONES_SUBDIR = 'GitNotes/';
 
@@ -96,6 +98,30 @@ async function handleCorruptionAndRetry<T>(
     await GitFsService.removeRepo({ repoPath });
     await GitFsService.clone({ repoPath, branch, token: token ?? undefined });
     return operation();
+  }
+}
+
+/**
+ * A diverged push-rejection means local commits and remote commits split
+ * from a common merge base. Walk both trees + the merge base into a
+ * ConflictSet, auto-resolve what can be merged safely, and persist it for
+ * the conflicts UI — instead of force-resetting the local branch
+ * (last-write-wins). Mirrors RepoPullService's pull-side detection.
+ */
+async function surfaceConflictsOnDiverged(repoPath: string, branch: string): Promise<void> {
+  const localRef = `refs/heads/${branch}`;
+  const remoteRef = `refs/remotes/origin/${branch}`;
+  const mergeBase = await GitFsService.findMergeBase({ repoPath, ref1: localRef, ref2: remoteRef });
+  if (mergeBase) {
+    const conflictSet = await ConflictResolverService.detectConflicts({
+      repoPath,
+      branch,
+      localRef,
+      remoteRef,
+      mergeBaseRef: mergeBase,
+    });
+    const resolved = await ConflictResolverService.autoResolve(conflictSet);
+    await useConflictStore.getState().addConflict(resolved);
   }
 }
 
@@ -292,37 +318,8 @@ static async writeAndCommit(opts: WriteOpts): Promise<LocalGitWriterResult> {
                 });
                 return { success: true, filePath: opts.filePath };
               } else if (ffResult.reason === 'diverged') {
-                const remoteRef = `refs/remotes/origin/${opts.branch}`;
-                const remoteOid = await git.resolveRef({ fs, dir, ref: remoteRef });
-                await git.writeRef({
-                  fs,
-                  dir,
-                  ref: `refs/heads/${opts.branch}`,
-                  value: remoteOid,
-                  force: true,
-                });
-                await git.checkout({ fs, dir, ref: opts.branch, force: true });
-                await ensureParentDirs(fsRoot, absVirtual);
-                await FileSystem.writeAsStringAsync(absUri, opts.content);
-                await git.add({ fs, dir, filepath: opts.filePath });
-                const replayStatus = await git.status({ fs, dir, filepath: opts.filePath });
-                if (replayStatus !== 'unmodified') {
-                  await git.commit({
-                    fs,
-                    dir,
-                    message: opts.message,
-                    author: { name: opts.author.name, email: opts.author.email },
-                  });
-                }
-                await git.push({
-                  fs,
-                  dir,
-                  http: gitHttp,
-                  ref: opts.branch,
-                  remoteRef: opts.branch,
-                  onAuth: tokenAuth(opts.token),
-                });
-                return { success: true, filePath: opts.filePath };
+                await surfaceConflictsOnDiverged(opts.repoPath, opts.branch);
+                return { success: false, error: 'conflict-detected' };
               }
             }
             await git.push({
@@ -448,6 +445,9 @@ static async deleteAndCommit(opts: DeleteOpts): Promise<LocalGitWriterResult> {
                   onAuth: tokenAuth(opts.token),
                 });
                 return { success: true, filePath: opts.filePath };
+              } else if (ffResult.reason === 'diverged') {
+                await surfaceConflictsOnDiverged(opts.repoPath, opts.branch);
+                return { success: false, error: 'conflict-detected' };
               } else {
                 throw new Error(`Push failed: ${ffResult.error ?? ffResult.reason}`);
               }
@@ -528,6 +528,10 @@ static async push(opts: { repoPath: string; branch: string; token?: string }): P
           await GitFsService.removeRepo({ repoPath: opts.repoPath });
           await GitFsService.clone({ repoPath: opts.repoPath, branch: opts.branch, token: opts.token });
           return { success: false, error: 'Clone corruption detected, push failed. Please retry.' };
+        }
+        if (ffResult.reason === 'diverged') {
+          await surfaceConflictsOnDiverged(opts.repoPath, opts.branch);
+          return { success: false, error: 'conflict-detected' };
         }
         return { success: false, error: `Push failed: ${ffResult.error ?? ffResult.reason}` };
       }
