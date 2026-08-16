@@ -134,6 +134,9 @@ export function startScheduler(): void {
   if (schedulerRunning) return;
   schedulerRunning = true;
   useStageStore.getState().registerQueueSubscription();
+  // Seed pendingCount at boot so the staged-changes UI reflects the current
+  // state immediately, not only after later queue-churn notifications.
+  void useStageStore.getState().loadStaged();
   unsubscribeStaged = useStageStore.subscribe(onStagedChanged);
   resetIdleTimer();
 }

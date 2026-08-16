@@ -61,6 +61,9 @@ const flushAsync = async (rounds = 20): Promise<void> => {
 };
 
 describe('StagePushScheduler', () => {
+  let loadStagedSpy: jest.SpiedFunction<() => Promise<void>>;
+  let registerQueueSubscriptionSpy: jest.SpiedFunction<() => void>;
+
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
@@ -73,6 +76,14 @@ describe('StagePushScheduler', () => {
       pushQueue: [],
       pendingCount: 0,
     });
+    // No-op the store actions startScheduler() triggers so the real async
+    // loadStaged cannot clobber fixture state mid-test.
+    loadStagedSpy = jest
+      .spyOn(useStageStore.getState(), 'loadStaged')
+      .mockResolvedValue(undefined);
+    registerQueueSubscriptionSpy = jest
+      .spyOn(useStageStore.getState(), 'registerQueueSubscription')
+      .mockImplementation(() => undefined);
     (StorageService.getSavedRepositories as jest.Mock).mockImplementation(async () => [
       { path: REPO_A },
       { path: REPO_B },
@@ -206,5 +217,13 @@ describe('StagePushScheduler', () => {
     expect(failures).toEqual([{ key: 'a/repo::main', error: 'boom' }]);
     expect(useStageStore.getState().isPushing['a/repo::main']).toBe(false);
     expect(useStageStore.getState().pushQueue).toHaveLength(0);
+  });
+
+  test('startScheduler() loads staged state once and registers the queue subscription', async () => {
+    startScheduler();
+    await flushAsync();
+
+    expect(loadStagedSpy).toHaveBeenCalledTimes(1);
+    expect(registerQueueSubscriptionSpy).toHaveBeenCalledTimes(1);
   });
 });
