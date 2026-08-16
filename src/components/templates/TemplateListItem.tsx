@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '../../contexts/ThemeContext';
+import { useTranslation } from 'react-i18next';
 import { NoteTemplate } from '../../services/TemplateService';
 
 interface TemplateListItemProps {
@@ -15,6 +16,7 @@ interface TemplateListItemProps {
 
 export function TemplateListItem({ template, pinned, onTogglePin, onEdit, onDelete }: TemplateListItemProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <View
@@ -30,7 +32,7 @@ export function TemplateListItem({ template, pinned, onTogglePin, onEdit, onDele
           {template.name}
         </Text>
         <Text className="text-xs mt-0.5" style={{ color: colors.textSecondary }} numberOfLines={1}>
-          {template.isCustom ? 'Custom' : 'Built-in'}
+          {template.isCustom ? t('templates.custom') : t('templates.builtIn')}
           {template.description ? ` · ${template.description}` : ''}
         </Text>
       </View>
@@ -39,7 +41,7 @@ export function TemplateListItem({ template, pinned, onTogglePin, onEdit, onDele
           testID={`template-list-item.icon-button.pin-${template.id}`}
           onPress={() => onTogglePin(template)}
           className="p-2"
-          accessibilityLabel={pinned ? 'Unpin template' : 'Pin template'}
+          accessibilityLabel={pinned ? t('templates.unpinA11y') : t('templates.pinA11y')}
         >
           <Ionicons
             name={pinned ? 'star' : 'star-outline'}
@@ -53,7 +55,7 @@ export function TemplateListItem({ template, pinned, onTogglePin, onEdit, onDele
               testID={`template-list-item.icon-button.edit-${template.id}`}
               onPress={() => onEdit(template)}
               className="p-2"
-              accessibilityLabel="Edit template"
+              accessibilityLabel={t('templates.editA11y')}
             >
               <Ionicons name="create-outline" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
@@ -61,7 +63,7 @@ export function TemplateListItem({ template, pinned, onTogglePin, onEdit, onDele
               testID={`template-list-item.icon-button.delete-${template.id}`}
               onPress={() => onDelete(template)}
               className="p-2"
-              accessibilityLabel="Delete template"
+              accessibilityLabel={t('templates.deleteA11y')}
             >
               <Ionicons name="trash-outline" size={20} color={colors.error} />
             </TouchableOpacity>

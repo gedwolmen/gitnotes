@@ -3,6 +3,7 @@ import { View, TextInput, ScrollView, TouchableOpacity, Text, Platform } from 'r
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTokens, useTheme } from '../../contexts/ThemeContext';
 import { AIContextItem } from '../../models/AIProvider';
 import { Surface } from '../ui/Surface';
@@ -42,6 +43,7 @@ export function ChatInputBar({
   const { colors, spacing, type } = useTokens();
   const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   const handleSend = () => {
     if (text.trim() && !isStreaming) {
@@ -140,7 +142,7 @@ export function ChatInputBar({
             onPress={onVoicePress}
             disabled={disabled || isStreaming}
             style={{ marginRight: spacing[1] }}
-            accessibilityLabel="Voice input"
+            accessibilityLabel={t('editor.voiceInput')}
           >
             <Ionicons name="mic" size={24} color={colors.textSecondary} />
           </IconButton>
@@ -162,7 +164,7 @@ export function ChatInputBar({
             paddingBottom: spacing[2],
             fontSize: 16,
           }}
-          placeholder="Type a message..."
+          placeholder={t('chat.typeMessage')}
           placeholderTextColor={colors.textSecondary}
           autoCapitalize="sentences"
           multiline
@@ -176,7 +178,7 @@ export function ChatInputBar({
             variant="ghost"
             onPress={onStop}
             style={{ marginLeft: spacing[1] }}
-            accessibilityLabel="Stop generation"
+            accessibilityLabel={t('chat.stopGeneration')}
           >
             <Ionicons name="stop-circle" size={26} color={colors.primary} />
           </IconButton>

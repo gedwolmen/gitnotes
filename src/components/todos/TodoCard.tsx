@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { isPast } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '../../contexts/ThemeContext';
 import { PRIORITY_COLORS, PRIORITY_LABELS, Todo } from '../../models/Todo';
@@ -15,13 +16,14 @@ interface TodoCardProps {
 
 function TodoCardImpl({ todo, onPress, onToggle }: TodoCardProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const isOverdue = todo.dueDate ? isPast(new Date(todo.dueDate)) && !todo.completed : false;
 
   return (
     <View testID="todo-card.button.press">
       <TouchableOpacity
         testID="todo-card-root.button.edit"
-        accessibilityLabel={`Todo: ${todo.text}`}
+        accessibilityLabel={t('todos.todoA11yLabel', { text: todo.text })}
         style={[
           styles.todoItem,
           { backgroundColor: colors.surface, borderColor: isOverdue ? colors.error : colors.border },
@@ -64,7 +66,7 @@ function TodoCardImpl({ todo, onPress, onToggle }: TodoCardProps) {
 
             {isOverdue ? (
               <View style={[styles.expiredBadge, { backgroundColor: colors.error }]}>
-                <Text style={styles.expiredText}>EXPIRED</Text>
+                <Text style={styles.expiredText}>{t('todos.expired')}</Text>
               </View>
             ) : null}
 

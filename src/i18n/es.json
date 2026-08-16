@@ -30,7 +30,8 @@
     "skip": "Omitir",
     "copy": "Copiar",
     "paste": "Pegar",
-    "select": "Seleccionar"
+    "select": "Seleccionar",
+    "apply": "Apply"
   },
   "notes": {
     "title": "Notas",
@@ -75,7 +76,11 @@
     "setDeadline": "Establecer fecha límite",
     "deadline": "Fecha límite",
     "repositoryRequired": "Repositorio requerido",
-    "selectRepository": "Selecciona un repositorio antes de guardar."
+    "selectRepository": "Selecciona un repositorio antes de guardar.",
+    "deleteFailedLocally": "Failed to delete todo locally",
+    "remindMe": "Remind me",
+    "expired": "EXPIRED",
+    "todoA11yLabel": "Todo: {{text}}"
   },
   "canvases": {
     "title": "Lienzos",
@@ -153,7 +158,23 @@
     "resetAIMemory": "Restablecer memoria de IA",
     "resetAIMemoryConfirm": "Restablecer memoria de IA",
     "resetAIMemoryMessage": "Los archivos de thought-dump y los chats se conservan. Solo se borra la memoria de la IA.",
-    "resetAIMemorySuccess": "Memoria de IA borrada"
+    "resetAIMemorySuccess": "Memoria de IA borrada",
+    "biometricLockLabel": "{{kind}} Lock",
+    "lfsPending": "{{count}} LFS file(s) not downloaded",
+    "lfsBytesPending": "{{size}} pending",
+    "lfsFailedBody": "Downloaded {{count}} file(s); {{failed}} failed.\n\n{{details}}",
+    "writeAccessNotVerifiedTitle": "Write access not verified",
+    "writeAccessNotVerifiedBody": "Write access not verified. This repository may be read-only. Add anyway?",
+    "addAnyway": "Add anyway",
+    "repositoryAccessTitle": "Repository Access",
+    "syncFailedBody": "Failed to sync repository files.",
+    "clonePhasePreparing": "Preparing",
+    "clonePhaseRetrying": "Retrying with smaller clone...",
+    "clonePhaseFailed": "Clone failed",
+    "clonePhaseCancelling": "Cancelling",
+    "cloneFailedRetryError": "Clone failed: {{error}}\n\nRetrying with minimal settings...",
+    "repoPathPlaceholder": "owner/repo",
+    "tokenPlaceholder": "github_pat_xxxxxxxxxxxxxxxxxxxx"
   },
   "ai": {
     "availability": {
@@ -168,6 +189,35 @@
     "askAI": "Preguntar a IA",
     "typeMessage": "Escribe un mensaje...",
     "thinking": "Pensando...",
+    "messageCount": "{{count}} messages",
+    "loadingConversation": "Loading conversation",
+    "noFoundNoun": "No {{noun}} found.",
+    "foundCount": "Found {{count}} {{noun}}:",
+    "andMore": "- and {{count}} more",
+    "nounNotes": "notes",
+    "nounTodos": "todos",
+    "doneParenthetical": " (done)",
+    "done": "Done.",
+    "selectModelFirst": "Select an AI model before sending a message.",
+    "toolError": "Tool error: {{message}}",
+    "toolExecutionFailed": "Tool execution failed.",
+    "threadNotLoaded": "Chat thread is not loaded.",
+    "threadNotAvailable": "Chat thread is not available.",
+    "stopped": "Stopped.",
+    "noResponseReceived": "No response received. Tap Retry to try again.",
+    "emptyResponse": "The model returned an empty response.",
+    "failedToSend": "Failed to send message.",
+    "editMessageTitle": "Edit message",
+    "editMessageBody": "Re-send with new text. Replies after will be discarded.",
+    "send": "Send",
+    "regenerateTitle": "Regenerate response",
+    "regenerateBody": "Discard this reply and ask the model again?",
+    "regenerate": "Regenerate",
+    "storageRepoNotConfigured": "Chat storage repo is not configured yet.",
+    "failedToApplyTool": "Failed to apply tool action.",
+    "cancelled": "Cancelled.",
+    "cancelledAction": "Cancelled: {{description}}",
+    "generatingWith": "Generating with {{model}}, {{seconds}} seconds elapsed",
     "hints": {
       "summarizeIssues": "Resume mis issues abiertos",
       "showRepos": "Muestra mis repositorios",
@@ -393,7 +443,11 @@
     "editA11y": "Edit template",
     "deleteA11y": "Delete template",
     "emptyTitle": "No templates yet",
-    "emptySubtitle": "Create your first custom template to get started."
+    "emptySubtitle": "Create your first custom template to get started.",
+    "subtitleNoRepo": "{{total}} total · {{custom}} custom",
+    "saveChanges": "Save changes",
+    "custom": "Custom",
+    "builtIn": "Built-in"
   },
   "import": {
     "keep": {

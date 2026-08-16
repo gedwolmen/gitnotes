@@ -214,8 +214,8 @@ export default function ChatScreen() {
         }}
       />
       <ScreenHeader
-        title={thread?.title ?? 'GitNotes AI'}
-        subtitle={thread ? `${messages.length} messages` : 'Loading conversation'}
+        title={thread?.title ?? t('chat.title')}
+        subtitle={thread ? t('chat.messageCount', { count: messages.length }) : t('chat.loadingConversation')}
         onBack={() => navigation.goBack()}
       />
     </SafeAreaView>

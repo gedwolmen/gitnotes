@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Modal } from '../ui';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useTranslation } from 'react-i18next';
 import { NoteTemplateIcon } from '../../services/TemplateService';
 import { TEMPLATE_MAX_TAGS, TEMPLATE_MAX_TAG_LENGTH } from '../../utils/templateTags';
 import { ICON_OPTIONS } from './templateManagerShared';
@@ -52,14 +53,15 @@ export function TemplateEditorModal({
   onRemoveTag,
 }: TemplateEditorModalProps) {
   const { colors } = useTheme();
-  const previewName = draftName.trim() || (editingId ? 'Untitled template' : 'New template');
-  const previewDescription = draftDescription.trim() || 'No description yet';
+  const { t } = useTranslation();
+  const previewName = draftName.trim() || (editingId ? t('templates.untitled') : t('templates.newTemplate'));
+  const previewDescription = draftDescription.trim() || t('templates.noDescription');
   const tagLimitReached = draftTags.length >= TEMPLATE_MAX_TAGS;
 
   return (
     <Modal visible={visible} onRequestClose={onClose} contentStyle={{ width: '100%', maxWidth: 480, flex: 1 }}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1 pt-3 px-5 pb-3">
-        <Text className="text-[22px] font-bold mb-[18px]" style={{ color: colors.text }}>{editingId ? 'Edit template' : 'New template'}</Text>
+        <Text className="text-[22px] font-bold mb-[18px]" style={{ color: colors.text }}>{editingId ? t('templates.editTemplate') : t('templates.newTemplate')}</Text>
 
         <ScrollView
           className="flex-1"
@@ -86,12 +88,12 @@ export function TemplateEditorModal({
             </View>
           </View>
 
-          <Text className="text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: colors.textSecondary, letterSpacing: 0.4 }}>Name</Text>
+          <Text className="text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: colors.textSecondary, letterSpacing: 0.4 }}>{t('templates.name')}</Text>
           <TextInput
             testID="template-editor.input.name"
             value={draftName}
             onChangeText={onNameChange}
-            placeholder="My template"
+            placeholder={t('templates.namePlaceholder')}
             placeholderTextColor={colors.textSecondary}
             autoCapitalize="sentences"
             className="border rounded-[10px] px-3 py-2.5 text-[15px]"
@@ -99,7 +101,7 @@ export function TemplateEditorModal({
             maxLength={60}
           />
 
-          <Text className="text-xs font-semibold uppercase tracking-wide mb-1.5 mt-3.5" style={{ color: colors.textSecondary, letterSpacing: 0.4 }}>Icon</Text>
+          <Text className="text-xs font-semibold uppercase tracking-wide mb-1.5 mt-3.5" style={{ color: colors.textSecondary, letterSpacing: 0.4 }}>{t('templates.icon')}</Text>
           <View className="flex-row flex-wrap gap-2" testID="template-editor.view.icon-grid">
             {ICON_OPTIONS.map((icon) => {
               const selected = icon === draftIcon;
@@ -107,7 +109,7 @@ export function TemplateEditorModal({
                 <TouchableOpacity
                   key={icon}
                   testID={`template-editor.button.select-icon-${icon}`}
-                  accessibilityLabel={`Select ${icon} icon`}
+                  accessibilityLabel={t('templates.selectIcon', { icon })}
                   accessibilityState={{ selected }}
                   onPress={() => onIconChange(icon)}
                   className="w-10 h-10 rounded-[10px] border items-center justify-center"
@@ -122,12 +124,12 @@ export function TemplateEditorModal({
             })}
           </View>
 
-          <Text className="text-xs font-semibold uppercase tracking-wide mb-1.5 mt-3.5" style={{ color: colors.textSecondary, letterSpacing: 0.4 }}>Description</Text>
+          <Text className="text-xs font-semibold uppercase tracking-wide mb-1.5 mt-3.5" style={{ color: colors.textSecondary, letterSpacing: 0.4 }}>{t('templates.description')}</Text>
           <TextInput
             testID="template-editor.input.description"
             value={draftDescription}
             onChangeText={onDescriptionChange}
-            placeholder="e.g. Weekly retrospective"
+            placeholder={t('templates.descriptionPlaceholder')}
             placeholderTextColor={colors.textSecondary}
             autoCapitalize="sentences"
             className="border rounded-[10px] px-3 py-2.5 text-[15px]"
@@ -135,12 +137,12 @@ export function TemplateEditorModal({
             maxLength={120}
           />
 
-          <Text className="text-xs font-semibold uppercase tracking-wide mb-1.5 mt-3.5" style={{ color: colors.textSecondary, letterSpacing: 0.4 }}>Default note title (optional)</Text>
+          <Text className="text-xs font-semibold uppercase tracking-wide mb-1.5 mt-3.5" style={{ color: colors.textSecondary, letterSpacing: 0.4 }}>{t('templates.defaultTitle')}</Text>
           <TextInput
             testID="template-editor.input.title"
             value={draftTitle}
             onChangeText={onTitleChange}
-            placeholder="e.g. Standup - "
+            placeholder={t('templates.titlePlaceholder')}
             placeholderTextColor={colors.textSecondary}
             autoCapitalize="sentences"
             className="border rounded-[10px] px-3 py-2.5 text-[15px]"
@@ -148,14 +150,14 @@ export function TemplateEditorModal({
             maxLength={80}
           />
 
-          <Text className="text-xs font-semibold uppercase tracking-wide mb-1.5 mt-3.5" style={{ color: colors.textSecondary, letterSpacing: 0.4 }}>Tags</Text>
+          <Text className="text-xs font-semibold uppercase tracking-wide mb-1.5 mt-3.5" style={{ color: colors.textSecondary, letterSpacing: 0.4 }}>{t('templates.tags')}</Text>
           {draftTags.length > 0 ? (
             <View className="flex-row flex-wrap gap-1.5 mb-2" testID="template-tag-chips">
               {draftTags.map((tag) => (
                 <TouchableOpacity
                   key={tag}
                   testID={`template-tag-chip-${tag}`}
-                  accessibilityLabel={`Remove tag ${tag}`}
+                  accessibilityLabel={t('templates.removeTag', { tag })}
                   onPress={() => onRemoveTag(tag)}
                   className="flex-row items-center gap-1 px-2.5 py-1 rounded-[14px] border"
                   style={{ backgroundColor: colors.primary + '20', borderColor: colors.primary + '40' }}
@@ -173,7 +175,7 @@ export function TemplateEditorModal({
             onChangeText={onTagInputChange}
             onSubmitEditing={onTagSubmit}
             onBlur={onTagSubmit}
-            placeholder={tagLimitReached ? `Max ${TEMPLATE_MAX_TAGS} tags` : 'Add tags (comma or space to separate)'}
+            placeholder={tagLimitReached ? t('templates.maxTags', { count: TEMPLATE_MAX_TAGS }) : t('templates.tagInputPlaceholder')}
             placeholderTextColor={colors.textSecondary}
             autoCapitalize="none"
             autoCorrect={false}
@@ -184,12 +186,12 @@ export function TemplateEditorModal({
             returnKeyType="done"
           />
 
-          <Text className="text-xs font-semibold uppercase tracking-wide mb-1.5 mt-3.5" style={{ color: colors.textSecondary, letterSpacing: 0.4 }}>Initial content</Text>
+          <Text className="text-xs font-semibold uppercase tracking-wide mb-1.5 mt-3.5" style={{ color: colors.textSecondary, letterSpacing: 0.4 }}>{t('templates.initialContent')}</Text>
           <TextInput
             testID="template-editor.input.content"
             value={draftContent}
             onChangeText={onContentChange}
-            placeholder={'## Heading\n\nWrite something...'}
+            placeholder={t('templates.contentPlaceholder')}
             placeholderTextColor={colors.textSecondary}
             autoCapitalize="sentences"
             multiline
@@ -201,10 +203,10 @@ export function TemplateEditorModal({
 
         <View className="flex-row justify-end gap-2.5 mt-3">
           <TouchableOpacity testID="template-editor.button.close" onPress={onClose} className="px-4 py-2.5 rounded-[10px] border" style={{ borderColor: colors.border }}>
-            <Text className="text-[15px] font-semibold" style={{ color: colors.textSecondary }}>Cancel</Text>
+            <Text className="text-[15px] font-semibold" style={{ color: colors.textSecondary }}>{t('common.cancel')}</Text>
           </TouchableOpacity>
           <TouchableOpacity testID="template-editor.button.save" onPress={onSave} className="px-4 py-2.5 rounded-[10px]" style={{ backgroundColor: colors.primary }}>
-            <Text className="text-[15px] font-semibold" style={{ color: '#fff' }}>{editingId ? 'Save changes' : 'Create'}</Text>
+            <Text className="text-[15px] font-semibold" style={{ color: '#fff' }}>{editingId ? t('templates.saveChanges') : t('common.create')}</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

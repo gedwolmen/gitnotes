@@ -280,7 +280,7 @@ export default function TodoListScreen() {
         const opId = opByTodoId.get(todo.id);
         if (!deletedPaths.has(todo.filePath!)) {
           failedIds.add(todo.id);
-          if (opId) gitOperationRegistry.fail(opId, result.failed[0]?.error ?? 'Delete failed');
+          if (opId) gitOperationRegistry.fail(opId, result.failed[0]?.error ?? t('sync.deleteFailed'));
           continue;
         }
         try {
@@ -289,11 +289,11 @@ export default function TodoListScreen() {
             if (opId) gitOperationRegistry.succeed(opId);
           } else {
             failedIds.add(todo.id);
-            if (opId) gitOperationRegistry.fail(opId, 'Failed to delete todo locally');
+            if (opId) gitOperationRegistry.fail(opId, t('todos.deleteFailedLocally'));
           }
         } catch {
           failedIds.add(todo.id);
-          if (opId) gitOperationRegistry.fail(opId, 'Failed to delete todo locally');
+          if (opId) gitOperationRegistry.fail(opId, t('todos.deleteFailedLocally'));
         }
       }
       if (removedIds.length > 0) {
@@ -307,7 +307,7 @@ export default function TodoListScreen() {
         useTodoStore.setState({ error: formatSyncError(result.failed[0].error, 'delete') });
       }
     }
-  }, [deleteTodo]);
+  }, [deleteTodo, t]);
 
   const handleBulkDelete = useCallback(() => {
     const ids = Array.from(selectedIds);
@@ -436,7 +436,7 @@ export default function TodoListScreen() {
     if (!editingTodo || !todoText.trim()) return;
 
     if (!todoRepo) {
-      Alert.alert('Repository Required', 'Please select a repository before saving.');
+      Alert.alert(t('todos.repositoryRequired'), t('todos.selectRepository'));
       return;
     }
 
@@ -492,6 +492,7 @@ export default function TodoListScreen() {
     todoRepo,
     todoText,
     updateTodo,
+    t,
   ]);
 
   const handleToggleTodo = useCallback(async (id: string) => {
