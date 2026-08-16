@@ -3,7 +3,6 @@ import { GitHubContent, GitHubService } from '../../services/GitHubService';
 import { AuthService } from '../../services/AuthService';
 import { SyncEngineService } from '../../services/SyncEngineService';
 import { LocalGitWriter } from '../../services/git/LocalGitWriter';
-import { FEATURE_STAGE_PUSH } from '../../services/featureFlags';
 import { batchDeleteFiles } from '../../services/git/BatchGitOperations';
 import { getGitHostService } from '../../services/git/gitHostFactory';
 
@@ -135,10 +134,8 @@ async function resolveCloneAuthor(): Promise<{ name: string; email: string }> {
 
 /**
  * Clone-mode folder delete: one local `deleteAndCommit(push:false)` per
- * leaf file, then ONE trailing `LocalGitWriter.push` flushes the whole
- * folder (mirrors `NoteSyncQueueService.processDrainGroup`'s coalesced
- * push). A failed flush strands every locally-committed delete, so they
- * all surface as failures.
+ * leaf file. Pushes are owned by the stage/push engine, so nothing is
+ * flushed here.
  */
 async function deleteDirectoryClone(
   owner: string,
@@ -170,22 +167,14 @@ async function deleteDirectoryClone(
     }
   }
 
-  if (deleted.length > 0 && !FEATURE_STAGE_PUSH) {
-    const flushResult = await LocalGitWriter.push({ repoPath, branch: targetBranch, token });
-    if (!flushResult.success) {
-      const pushError = flushResult.error ?? 'Push failed';
-      for (const path of deleted) failed.push({ path, error: pushError });
-      return { deleted: [], failed };
-    }
-  }
   return { deleted, failed };
 }
 
 /**
  * Mode-aware folder delete. API mode batches every collected path into ONE
  * `batchDeleteFiles` commit (>= 2 paths; a single-path folder falls back to
- * per-file deletes). Clone mode commits locally with push deferred and
- * flushes with one trailing push.
+ * per-file deletes). Clone mode commits locally with push deferred to the
+ * stage/push engine.
  */
 export async function deleteDirectoryModeAware(
   owner: string,

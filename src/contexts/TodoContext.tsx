@@ -3,9 +3,6 @@ import { Todo, TodoCreateInput, TodoUpdateInput, reorderTodos } from '../models/
 import { StorageService } from '../services/StorageService';
 import { NotificationService } from '../services/NotificationService';
 import { useTodoStore } from '../stores/todoStore';
-import { syncTodoToGitHub } from '../services/TodoGitHubSyncService';
-import { formatSyncError } from '../services/git/formatSyncError';
-import { FEATURE_STAGE_PUSH } from '../services/featureFlags';
 import { StagingService } from '../services/git/StagingService';
 
 /** Mirrors TodoGitHubSyncService.serializeTodo so staged todos keep the on-disk shape. */
@@ -131,28 +128,15 @@ export function useTodos(): TodoContextValue {
     }
 
     if (todo.repo) {
-      if (FEATURE_STAGE_PUSH) {
-        const stageResult = await StagingService.stageUpsert({
-          repo: todo.repo,
-          branch: todo.branch,
-          filePath: todo.filePath,
-          title: finalTodo.text,
-          content: serializeTodoForStage(finalTodo),
-        });
-        if (!stageResult.success) {
-          console.warn('[TodoContext] GitHub stage failed:', stageResult.error);
-        }
-      } else {
-        const syncResult = await syncTodoToGitHub({
-          repo: todo.repo,
-          branch: todo.branch,
-          filePath: todo.filePath,
-          text: finalTodo.text,
-          todo: finalTodo,
-        });
-        if (!syncResult.success) {
-          console.warn('[TodoContext] GitHub sync failed:', formatSyncError(syncResult.error, 'upsert'));
-        }
+      const stageResult = await StagingService.stageUpsert({
+        repo: todo.repo,
+        branch: todo.branch,
+        filePath: todo.filePath,
+        title: finalTodo.text,
+        content: serializeTodoForStage(finalTodo),
+      });
+      if (!stageResult.success) {
+        console.warn('[TodoContext] GitHub stage failed:', stageResult.error);
       }
     }
 

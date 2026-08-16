@@ -51,6 +51,10 @@ jest.mock('../../src/services/git/gitHostFactory', () => ({
   })),
 }));
 
+jest.mock('../../src/services/git/StagingService', () => ({
+  StagingService: { stageUpsert: jest.fn(), stageDelete: jest.fn() },
+}));
+
 jest.mock('../../src/services/featureFlags', () => ({
   FEATURE_USE_MULTI_HOST_WRITE: false,
 }));
@@ -58,17 +62,19 @@ jest.mock('../../src/services/featureFlags', () => ({
 import { ThoughtDumpService } from '../../src/services/ThoughtDumpService';
 import { GitHubService } from '../../src/services/GitHubService';
 import { SyncEngineService } from '../../src/services/SyncEngineService';
-import { LocalGitWriter } from '../../src/services/git/LocalGitWriter';
+import { StagingService } from '../../src/services/git/StagingService';
 import { parseThoughtDump, serializeThoughtDump, createThoughtDump } from '../../src/models/ThoughtDump';
 
 beforeEach(() => {
   jest.clearAllMocks();
   (GitHubService.isAuthenticated as jest.Mock).mockReturnValue(true);
   (SyncEngineService.getMode as jest.Mock).mockResolvedValue('api');
+  (StagingService.stageUpsert as jest.Mock).mockResolvedValue({ success: true });
+  (StagingService.stageDelete as jest.Mock).mockResolvedValue({ success: true });
 });
 
 describe('ThoughtDumpService.create', () => {
-  it('creates a thought dump via API mode', async () => {
+  it('stages the upsert for the new dump', async () => {
     const dump = await ThoughtDumpService.create('my random thought', {
       repoPath: 'org/repo',
       branch: 'main',
@@ -80,30 +86,25 @@ describe('ThoughtDumpService.create', () => {
     expect(dump!.id).toBeTruthy();
     expect(dump!.createdAt).toBeTruthy();
 
-    expect(GitHubService.updateFile).toHaveBeenCalledTimes(1);
-    const call = (GitHubService.updateFile as jest.Mock).mock.calls[0];
-    expect(call[2]).toBe(dump!.filePath);
-    expect(call[3]).toContain('<!-- thought-dump');
-    expect(call[3]).toContain('my random thought');
+    expect(StagingService.stageUpsert).toHaveBeenCalledTimes(1);
+    expect(StagingService.stageUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        repo: 'org/repo',
+        branch: 'main',
+        filePath: dump!.filePath,
+        title: 'Thought dump',
+      }),
+    );
+    const arg = (StagingService.stageUpsert as jest.Mock).mock.calls[0][0] as { content: string };
+    expect(arg.content).toContain('<!-- thought-dump');
+    expect(arg.content).toContain('my random thought');
+    expect(GitHubService.updateFile).not.toHaveBeenCalled();
   });
 
   it('returns null when not authenticated', async () => {
     (GitHubService.isAuthenticated as jest.Mock).mockReturnValue(false);
     const dump = await ThoughtDumpService.create('test', { repoPath: 'org/repo' });
     expect(dump).toBeNull();
-  });
-
-  it('uses clone mode when configured', async () => {
-    (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
-
-    const dump = await ThoughtDumpService.create('clone thought', {
-      repoPath: 'org/repo',
-      branch: 'main',
-    });
-
-    expect(dump).not.toBeNull();
-    expect(LocalGitWriter.writeAndCommit).toHaveBeenCalledTimes(1);
-    expect(GitHubService.updateFile).not.toHaveBeenCalled();
   });
 });
 
@@ -155,7 +156,7 @@ describe('ThoughtDumpService.list', () => {
 });
 
 describe('ThoughtDumpService.delete', () => {
-  it('deletes a thought dump via API mode', async () => {
+  it('stages the delete', async () => {
     const result = await ThoughtDumpService.delete('some-id', {
       repoPath: 'org/repo',
       branch: 'main',
@@ -163,23 +164,15 @@ describe('ThoughtDumpService.delete', () => {
     });
 
     expect(result).toBe(true);
-    expect(GitHubService.getFileSha).toHaveBeenCalledWith(
-      'org', 'repo', 'thoughts/20240101-120000-some-id.md', 'main',
+    expect(StagingService.stageDelete).toHaveBeenCalledTimes(1);
+    expect(StagingService.stageDelete).toHaveBeenCalledWith(
+      expect.objectContaining({
+        repo: 'org/repo',
+        branch: 'main',
+        filePath: 'thoughts/20240101-120000-some-id.md',
+        title: 'Thought dump',
+      }),
     );
-    expect(GitHubService.deleteFile).toHaveBeenCalledTimes(1);
-  });
-
-  it('uses clone mode for delete when configured', async () => {
-    (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
-
-    const result = await ThoughtDumpService.delete('some-id', {
-      repoPath: 'org/repo',
-      branch: 'main',
-      filePath: 'thoughts/20240101-120000-some-id.md',
-    });
-
-    expect(result).toBe(true);
-    expect(LocalGitWriter.deleteAndCommit).toHaveBeenCalledTimes(1);
     expect(GitHubService.deleteFile).not.toHaveBeenCalled();
   });
 

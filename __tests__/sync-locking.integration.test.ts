@@ -17,6 +17,7 @@
 jest.mock('../src/services/GitHubService', () => ({
   GitHubService: {
     isAuthenticated: jest.fn(() => true),
+    getUser: jest.fn(() => ({ login: 'me', name: 'Me', email: 'me@example.com' })),
     getTreeRecursive: jest.fn(),
     getTreeRecursiveOrThrow: jest.fn(),
     getFileContent: jest.fn(),
@@ -66,7 +67,10 @@ jest.mock('../src/services/StorageService', () => ({
 }));
 
 jest.mock('../src/services/SyncEngineService', () => ({
-  SyncEngineService: { getMode: jest.fn(async () => 'api') },
+  SyncEngineService: {
+    getMode: jest.fn(async () => 'api'),
+    listOverrides: jest.fn(async () => ({})),
+  },
 }));
 
 jest.mock('../src/services/AuthService', () => ({
@@ -344,6 +348,7 @@ import { LocalGitWriter } from '../src/services/git/LocalGitWriter';
 import { batchDeleteFiles } from '../src/services/git/BatchGitOperations';
 import { SyncEngineService } from '../src/services/SyncEngineService';
 import { GitFsService } from '../src/services/git/GitFsService';
+import { StagingService } from '../src/services/git/StagingService';
 import { GitSyncGate } from '../src/services/git/GitSyncGate';
 import { syncNow } from '../src/services/git/manualSync';
 import { pullFromSingleRepo, pullAllFromRepos } from '../src/services/RepoPullService';
@@ -552,6 +557,10 @@ describe('sync-locking integration scenarios S1–S8', () => {
     expect(screen.getByText('Second')).toBeTruthy();
     expect(screen.getByTestId('swipeable-select-n2').props.accessibilityState.disabled).toBe(true);
 
+    // The stage path enqueues but never drains — the push engine owns the
+    // flush. Trigger it here the way the scheduler would.
+    void NoteSyncQueueService.drain();
+
     // Let the drain reach its transport, then report success.
     await act(async () => {
       await flushMicrotasks();
@@ -584,6 +593,12 @@ describe('sync-locking integration scenarios S1–S8', () => {
     const screen = renderNotesList();
     fireEvent(screen.getByTestId('notes-card-n3'), 'longPress');
     fireEvent.press(screen.getByTestId('notes-context-menu.delete'));
+
+    // The stage path enqueues but never drains — simulate the push engine.
+    await waitFor(() => {
+      expect(screen.getByTestId('note-row.lock-spinner')).toBeTruthy();
+    });
+    void NoteSyncQueueService.drain();
 
     // Durable drop -> failed row (error affordance, row still present).
     await waitFor(() => {
@@ -711,6 +726,9 @@ describe('sync-locking integration scenarios S1–S8', () => {
     fireEvent.press(screen.getByTestId('bulk-action-bar.delete'));
     await pressAlertButtonAsync('Delete');
 
+    // The stage path enqueues but never drains — simulate the push engine.
+    void NoteSyncQueueService.drain();
+
     // The whole batch is enqueued in ONE queue write...
     const queueWrites = (AsyncStorage.setItem as jest.Mock).mock.calls.filter(
       ([key]: [string]) => key === QUEUE_KEY,
@@ -781,6 +799,9 @@ describe('sync-locking integration scenarios S1–S8', () => {
     }
     fireEvent.press(screen.getByTestId('bulk-action-bar.delete'));
     await pressAlertButtonAsync('Delete');
+
+    // The stage path enqueues but never drains — simulate the push engine.
+    void NoteSyncQueueService.drain();
 
     const queueWrites = (AsyncStorage.setItem as jest.Mock).mock.calls.filter(
       ([key]: [string]) => key === QUEUE_KEY,
@@ -872,13 +893,20 @@ describe('sync-locking integration scenarios S1–S8', () => {
     expect(Object.values(ops).some((op) => op.status !== 'failed' && op.kind === 'delete' && op.path === 'notes/sixth.md')).toBe(true);
   });
 
-  it('S7 — clone divergence lifecycle: push {success:false,error:"Push failed: diverged"} is retryable, exhausts at MAX_ATTEMPTS, drops with reason "exhausted", pins the tombstone, fails the registry op, and the conflict store keeps the local-deleted-remote-modified entry unresolved', async () => {
+  it('S7 — clone divergence lifecycle: the delete commits locally (push:false) and the row is removed immediately; a diverged engine push surfaces without resurrecting the row, and the conflict store keeps the local-deleted-remote-modified entry unresolved', async () => {
     (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
-    (deleteNoteFromGitHub as jest.Mock).mockResolvedValue({ success: true });
+    (SyncEngineService.listOverrides as jest.Mock).mockResolvedValue({ 'owner/repo': 'clone' });
+    (LocalGitWriter.deleteAndCommit as jest.Mock).mockResolvedValue({ success: true });
     (LocalGitWriter.push as jest.Mock).mockResolvedValue({
       success: false,
       error: 'Push failed: diverged',
     });
+    (StorageService.getSavedRepositories as jest.Mock).mockResolvedValue([
+      { path: 'owner/repo', branch: 'main' },
+    ]);
+    (GitFsService.getCommitOid as jest.Mock).mockImplementation(async ({ ref }: { ref: string }) =>
+      ref.includes('remotes/origin') ? 'remote-oid' : 'local-oid',
+    );
 
     // The divergence read (RepoPullService:108) already persisted this entry;
     // autoResolve leaves local-deleted-remote-modified unresolved by design.
@@ -908,66 +936,32 @@ describe('sync-locking integration scenarios S1–S8', () => {
     const note = createNote({ id: 'n7', title: 'Diverged', repo: 'owner/repo', branch: 'main', filePath: 'notes/diverged.md' });
     useNoteStore.setState({ notes: [note], isLoading: false, error: null });
 
-    const dropped: Array<{ reason?: string; error?: string; mutation: { type: string } }> = [];
-    const unsub = NoteSyncQueueService.onDroppedMutation((e) => dropped.push(e as never));
-
     await useNoteStore.getState().deleteNote('n7');
     await flushMicrotasks();
 
-    // First attempt: delete commit ok (push:false), coalesced push diverges.
-    expect(LocalGitWriter.push).toHaveBeenCalledTimes(1);
-    const queued = await NoteSyncQueueService.getAll();
-    expect(queued).toHaveLength(1);
-    expect(queued[0].attempts).toBe(1);
-    expect(queued[0].lastError).toBe('Push failed: diverged');
-    // Row still visible and locked (no silent loss).
-    expect(useNoteStore.getState().notes.some((n) => n.id === 'n7')).toBe(true);
-
-    // Exhaust the retry budget.
-    let virtualNow = Date.now();
-    const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => virtualNow);
-    let lastResult = { succeeded: 0, failed: 0, remaining: 1 };
-    try {
-      for (let i = 0; i < 8; i += 1) {
-        lastResult = await NoteSyncQueueService.drain();
-        virtualNow += 60_000;
-      }
-    } finally {
-      nowSpy.mockRestore();
-    }
-
-    expect(lastResult.failed).toBe(1);
-    expect(lastResult.remaining).toBe(0);
-    expect(LocalGitWriter.push).toHaveBeenCalledTimes(8);
-
-    // Dropped event, NOT silent.
-    expect(dropped).toHaveLength(1);
-    expect(dropped[0].reason).toBe('exhausted');
-    expect(dropped[0].error).toBe('Push failed: diverged');
-    expect(dropped[0].mutation.type).toBe('note.delete');
-
-    // Failure entry persisted + tombstone pinned past the TTL.
-    const failures = await readDeleteFailures();
-    expect(failures['owner/repo::main::notes/diverged.md']).toMatchObject({
-      error: 'Push failed: diverged',
-      kind: 'exhausted',
-    });
-    const futureSpy = jest
-      .spyOn(Date, 'now')
-      .mockImplementation(() => virtualNow + TOMBSTONE_TTL_MS + 60_000);
-    try {
-      expect(await NoteSyncQueueService.isTombstoned('owner/repo', 'main', 'notes/diverged.md')).toBe(true);
-    } finally {
-      futureSpy.mockRestore();
-    }
-
-    // Registry: the delete op for the path is FAILED with the diverged error.
-    const ops = useGitOperationStore.getState().ops;
-    const failedOp = Object.values(ops).find(
-      (op) => op.kind === 'delete' && op.path === 'notes/diverged.md' && op.status === 'failed',
+    // Clone-mode stageDelete commits the delete locally; the row is removed
+    // immediately and no queue mutation is created.
+    expect(LocalGitWriter.deleteAndCommit).toHaveBeenCalledTimes(1);
+    expect(LocalGitWriter.deleteAndCommit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        repoPath: 'owner/repo',
+        branch: 'main',
+        filePath: 'notes/diverged.md',
+        push: false,
+      }),
     );
-    expect(failedOp).toBeDefined();
-    expect(failedOp?.error).toContain('diverged');
+    expect(useNoteStore.getState().notes.some((n) => n.id === 'n7')).toBe(false);
+    expect(Object.values(useGitOperationStore.getState().ops).some(
+      (op) => op.kind === 'delete' && op.path === 'notes/diverged.md' && op.status === 'failed',
+    )).toBe(false);
+    expect(await NoteSyncQueueService.getAll()).toHaveLength(0);
+
+    // The engine's coalesced push is where divergence surfaces: the flush
+    // fails, but the local row stays deleted (no resurrection).
+    const pushResult = await StagingService.pushStaged('owner/repo', 'main');
+    expect(pushResult.success).toBe(false);
+    expect(pushResult.error).toContain('diverged');
+    expect(useNoteStore.getState().notes.some((n) => n.id === 'n7')).toBe(false);
 
     // Linkage with the conflict store: the local-deleted-remote-modified
     // entry is still there and NOT auto-resolved.
@@ -977,8 +971,6 @@ describe('sync-locking integration scenarios S1–S8', () => {
     expect(file?.kind).toBe('local-deleted-remote-modified');
     expect(file?.autoResolved).toBe(false);
     expect(useConflictStore.getState().totalUnresolvedFiles()).toBeGreaterThanOrEqual(1);
-
-    unsub();
   });
 
   it('S8 — restart: seeded AsyncStorage queue + failure map hydrate into the registry; rows render locked (queued) and failed BEFORE any drain runs', async () => {

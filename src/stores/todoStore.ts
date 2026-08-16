@@ -2,9 +2,7 @@ import { create } from 'zustand';
 import { Todo, TodoCreateInput, TodoUpdateInput, reorderTodos } from '../models/Todo';
 import { StorageService } from '../services/StorageService';
 import { GitHubService } from '../services/GitHubService';
-import { deleteTodoFromGitHub } from '../services/TodoGitHubSyncService';
 import { formatSyncError } from '../services/git/formatSyncError';
-import { FEATURE_STAGE_PUSH } from '../services/featureFlags';
 import { StagingService } from '../services/git/StagingService';
 import { gitOperationRegistry } from './gitOperationStore';
 
@@ -100,32 +98,17 @@ export const useTodoStore = create<TodoState & TodoActions>()((set, get) => ({
             if (opId) gitOperationRegistry.fail(opId, 'Cannot delete repo-backed todo while signed out of GitHub');
             return false;
           }
-          if (FEATURE_STAGE_PUSH) {
-            const staged = await StagingService.stageDelete({
-              repo: todoToDelete!.repo!,
-              branch: todoToDelete!.branch,
-              filePath: todoToDelete!.filePath!,
-              title: todoToDelete!.text,
-            });
-            if (!staged.success) {
-              if (staged.error) console.warn('[TodoStore] delete stage failed:', staged.error);
-              set({ error: formatSyncError(staged.error, 'delete') });
-              if (opId) gitOperationRegistry.fail(opId, staged.error ?? 'Delete failed');
-              return false;
-            }
-          } else {
-            const remote = await deleteTodoFromGitHub({
-              repo: todoToDelete!.repo!,
-              branch: todoToDelete!.branch,
-              filePath: todoToDelete!.filePath!,
-              text: todoToDelete!.text,
-            });
-            if (!remote.success) {
-              if (remote.error) console.warn('[TodoStore] delete sync failed:', remote.error);
-              set({ error: formatSyncError(remote.error, 'delete') });
-              if (opId) gitOperationRegistry.fail(opId, remote.error ?? 'Delete failed');
-              return false;
-            }
+          const staged = await StagingService.stageDelete({
+            repo: todoToDelete!.repo!,
+            branch: todoToDelete!.branch,
+            filePath: todoToDelete!.filePath!,
+            title: todoToDelete!.text,
+          });
+          if (!staged.success) {
+            if (staged.error) console.warn('[TodoStore] delete stage failed:', staged.error);
+            set({ error: formatSyncError(staged.error, 'delete') });
+            if (opId) gitOperationRegistry.fail(opId, staged.error ?? 'Delete failed');
+            return false;
           }
         }
 

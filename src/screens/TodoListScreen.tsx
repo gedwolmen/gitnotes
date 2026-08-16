@@ -13,8 +13,6 @@ import { useTheme } from '../contexts/ThemeContext';
 import { slugifyTodoText, Todo, TodoPriority } from '../models/Todo';
 import { SortMode } from '../types/SortTypes';
 import { HapticService } from '../utils/haptics';
-import { syncTodoToGitHub } from '../services/TodoGitHubSyncService';
-import { FEATURE_STAGE_PUSH } from '../services/featureFlags';
 import { StagingService } from '../services/git/StagingService';
 import { syncNow } from '../services/git/manualSync';
 import { batchDeleteFiles } from '../services/git/BatchGitOperations';
@@ -424,29 +422,15 @@ export default function TodoListScreen() {
     });
 
     if (todoRepo && newTodo) {
-      if (FEATURE_STAGE_PUSH) {
-        const stageResult = await StagingService.stageUpsert({
-          repo: todoRepo,
-          branch: todoBranch,
-          filePath: todoFilePath,
-          title: todoText.trim(),
-          content: serializeTodoForStage(newTodo),
-        });
-        if (!stageResult.success) {
-          console.warn('[TodoList] GitHub stage failed:', stageResult.error);
-        }
-      } else {
-        const syncResult = await syncTodoToGitHub({
-          repo: todoRepo,
-          branch: todoBranch,
-          filePath: todoFilePath,
-          text: todoText.trim(),
-          todo: newTodo,
-          accountId: newTodo.accountId,
-        });
-        if (!syncResult.success) {
-          console.warn('[TodoList] GitHub sync failed:', syncResult.error);
-        }
+      const stageResult = await StagingService.stageUpsert({
+        repo: todoRepo,
+        branch: todoBranch,
+        filePath: todoFilePath,
+        title: todoText.trim(),
+        content: serializeTodoForStage(newTodo),
+      });
+      if (!stageResult.success) {
+        console.warn('[TodoList] GitHub stage failed:', stageResult.error);
       }
     }
 
@@ -491,47 +475,24 @@ export default function TodoListScreen() {
       accountId: editAccountId,
     });
 
-    if (FEATURE_STAGE_PUSH) {
-      const stageResult = await StagingService.stageUpsert({
-        repo: todoRepo,
-        branch: todoBranch,
-        filePath: todoFilePath,
-        title: todoText.trim(),
-        content: serializeTodoForStage({
-          text: todoText.trim(),
-          completed: editingTodo.completed,
-          priority: todoPriority,
-          notes: todoNotes.trim() || undefined,
-          tags: editingTodo.tags,
-          dueDate: todoDueDate,
-          createdAt: editingTodo.createdAt,
-          updatedAt: Date.now(),
-        }),
-      });
-      if (!stageResult.success) {
-        console.warn('[TodoList] GitHub stage failed:', stageResult.error);
-      }
-    } else {
-      const syncResult = await syncTodoToGitHub({
-        repo: todoRepo,
-        branch: todoBranch,
-        filePath: todoFilePath,
+    const stageResult = await StagingService.stageUpsert({
+      repo: todoRepo,
+      branch: todoBranch,
+      filePath: todoFilePath,
+      title: todoText.trim(),
+      content: serializeTodoForStage({
         text: todoText.trim(),
-        todo: {
-          text: todoText.trim(),
-          completed: editingTodo.completed,
-          priority: todoPriority,
-          notes: todoNotes.trim() || undefined,
-          tags: editingTodo.tags,
-          dueDate: todoDueDate,
-          createdAt: editingTodo.createdAt,
-          updatedAt: Date.now(),
-        },
-        accountId: editAccountId,
-      });
-      if (!syncResult.success) {
-        console.warn('[TodoList] GitHub sync failed:', syncResult.error);
-      }
+        completed: editingTodo.completed,
+        priority: todoPriority,
+        notes: todoNotes.trim() || undefined,
+        tags: editingTodo.tags,
+        dueDate: todoDueDate,
+        createdAt: editingTodo.createdAt,
+        updatedAt: Date.now(),
+      }),
+    });
+    if (!stageResult.success) {
+      console.warn('[TodoList] GitHub stage failed:', stageResult.error);
     }
 
     resetForm();

@@ -6,7 +6,6 @@ import { NoteSyncQueueService } from './NoteSyncQueueService';
 import { pullAllFromRepos } from './RepoPullService';
 import { GitSyncGate } from './git/GitSyncGate';
 import { StagingService } from './git/StagingService';
-import { FEATURE_STAGE_PUSH } from './featureFlags';
 
 const TASK_NAME = 'background-sync';
 
@@ -36,9 +35,7 @@ TaskManager.defineTask(TASK_NAME, async () => {
     try {
       await NoteSyncQueueService.drain();
       await pullAllFromRepos();
-      if (FEATURE_STAGE_PUSH) {
-        await flushStagedSetsForBackgroundTask();
-      }
+      await flushStagedSetsForBackgroundTask();
     } finally {
       releaseCycle();
     }

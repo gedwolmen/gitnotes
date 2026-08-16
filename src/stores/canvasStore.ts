@@ -2,9 +2,7 @@ import { create } from 'zustand';
 import { Canvas, CanvasCreateInput, CanvasUpdateInput, sortCanvasesByUpdated } from '../models/Canvas';
 import { StorageService } from '../services/StorageService';
 import { GitHubService } from '../services/GitHubService';
-import { deleteCanvasFromGitHub } from '../services/CanvasGitHubSyncService';
 import { formatSyncError } from '../services/git/formatSyncError';
-import { FEATURE_STAGE_PUSH } from '../services/featureFlags';
 import { StagingService } from '../services/git/StagingService';
 import { gitOperationRegistry } from './gitOperationStore';
 
@@ -99,33 +97,17 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()((set, get) =
             if (opId) gitOperationRegistry.fail(opId, 'Sign in to GitHub to delete synced canvases');
             return false;
           }
-          if (FEATURE_STAGE_PUSH) {
-            const staged = await StagingService.stageDelete({
-              repo: canvas.repo,
-              branch: canvas.branch,
-              filePath: canvas.filePath,
-              title: canvas.title,
-            });
-            if (!staged.success) {
-              if (staged.error) console.warn('[CanvasStore] delete stage failed:', staged.error);
-              set({ error: formatSyncError(staged.error, 'delete') });
-              if (opId) gitOperationRegistry.fail(opId, staged.error ?? 'Delete failed');
-              return false;
-            }
-          } else {
-            const remote = await deleteCanvasFromGitHub({
-              repo: canvas.repo,
-              branch: canvas.branch,
-              filePath: canvas.filePath,
-              title: canvas.title,
-              accountId: canvas.accountId,
-            });
-            if (!remote.success) {
-              if (remote.error) console.warn('[CanvasStore] delete sync failed:', remote.error);
-              set({ error: formatSyncError(remote.error, 'delete') });
-              if (opId) gitOperationRegistry.fail(opId, remote.error ?? 'Delete failed');
-              return false;
-            }
+          const staged = await StagingService.stageDelete({
+            repo: canvas.repo,
+            branch: canvas.branch,
+            filePath: canvas.filePath,
+            title: canvas.title,
+          });
+          if (!staged.success) {
+            if (staged.error) console.warn('[CanvasStore] delete stage failed:', staged.error);
+            set({ error: formatSyncError(staged.error, 'delete') });
+            if (opId) gitOperationRegistry.fail(opId, staged.error ?? 'Delete failed');
+            return false;
           }
         }
 

@@ -16,6 +16,14 @@ jest.mock('../../src/services/NoteSyncQueueService', () => ({
   },
 }));
 
+jest.mock('../../src/services/SyncEngineService', () => ({
+  SyncEngineService: { getMode: jest.fn(async () => 'api') },
+}));
+
+jest.mock('../../src/services/git/StagingService', () => ({
+  StagingService: { stageDelete: jest.fn(), stageUpsert: jest.fn() },
+}));
+
 jest.mock('../../src/components/editor/editorShared', () => ({
   slugifyLocal: jest.fn((s: string) => s.toLowerCase().replace(/\s+/g, '-')),
   getExtensionForFormat: jest.fn(() => '.md'),
@@ -24,6 +32,7 @@ jest.mock('../../src/components/editor/editorShared', () => ({
 import { useNoteStore } from '../../src/stores/noteStore';
 import { StorageService } from '../../src/services/StorageService';
 import { NoteSyncQueueService } from '../../src/services/NoteSyncQueueService';
+import { StagingService } from '../../src/services/git/StagingService';
 import type { Note } from '../../src/models/Note';
 
 const makeNote = (id: string, overrides: Partial<Note> = {}): Note => ({
@@ -103,18 +112,22 @@ describe('useNoteStore', () => {
   });
 
   describe('deleteNote', () => {
-    it('enqueues remote delete for repo-backed notes', async () => {
+    it('stages the delete for repo-backed notes (api mode keeps the row locked)', async () => {
       const note = makeNote('1', { repo: 'me/repo', branch: 'main', filePath: 'notes/test.md' });
       useNoteStore.setState({ notes: [note] });
+      (StagingService.stageDelete as jest.Mock).mockResolvedValue({ success: true });
       (StorageService.deleteNote as jest.Mock).mockResolvedValue(true);
 
       await useNoteStore.getState().deleteNote('1');
 
-      expect(NoteSyncQueueService.enqueueNoteDelete).toHaveBeenCalled();
-      expect(NoteSyncQueueService.drain).toHaveBeenCalled();
+      expect(StagingService.stageDelete).toHaveBeenCalled();
+      expect(NoteSyncQueueService.enqueueNoteDelete).not.toHaveBeenCalled();
+      expect(NoteSyncQueueService.drain).not.toHaveBeenCalled();
+      // Api mode keeps the row until the queue reports the delete succeeded.
+      expect(useNoteStore.getState().notes).toHaveLength(1);
     });
 
-    it('removes note from list after successful delete', async () => {
+    it('removes note from list after successful local delete', async () => {
       useNoteStore.setState({ notes: [makeNote('1')] });
       (StorageService.deleteNote as jest.Mock).mockResolvedValue(true);
 

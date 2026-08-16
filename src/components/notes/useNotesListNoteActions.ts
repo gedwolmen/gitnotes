@@ -7,8 +7,6 @@ import { parseRepoPath } from '../../utils/gitPathParser';
 import { HapticService } from '../../utils/haptics';
 import { ShareFormat, ShareService } from '../../services/ShareService';
 import { NoteSyncQueueService } from '../../services/NoteSyncQueueService';
-import { syncNoteToGitHub } from '../../services/NoteGitHubSyncService';
-import { FEATURE_STAGE_PUSH } from '../../services/featureFlags';
 import { StagingService } from '../../services/git/StagingService';
 import { githubActivity } from '../../stores/githubActivityStore';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -93,28 +91,14 @@ export function useNotesListNoteActions({
             tags: updated.tags,
             color,
           };
-          if (FEATURE_STAGE_PUSH) {
-            try {
-              const staged = await StagingService.stageUpsert(syncParams);
-              if (!staged.success) {
-                console.warn('[useNotesListNoteActions] stage after color update failed:', staged.error);
-              }
-            } catch (error) {
-              console.warn('[useNotesListNoteActions] stage after color update failed:', error);
-              await NoteSyncQueueService.enqueueNoteUpsert(syncParams, updated.id);
+          try {
+            const staged = await StagingService.stageUpsert(syncParams);
+            if (!staged.success) {
+              console.warn('[useNotesListNoteActions] stage after color update failed:', staged.error);
             }
-          } else {
-            try {
-              const result = await syncNoteToGitHub(syncParams);
-              if (!result.success) {
-                await NoteSyncQueueService.enqueueNoteUpsert(syncParams, updated.id);
-              } else if (result.finalContent && result.finalContent !== updated.content) {
-                await updateNote({ id: updated.id, content: result.finalContent });
-              }
-            } catch (error) {
-              console.warn('[useNotesListNoteActions] sync after color update failed:', error);
-              await NoteSyncQueueService.enqueueNoteUpsert(syncParams, updated.id);
-            }
+          } catch (error) {
+            console.warn('[useNotesListNoteActions] stage after color update failed:', error);
+            await NoteSyncQueueService.enqueueNoteUpsert(syncParams, updated.id);
           }
         }
       } catch {

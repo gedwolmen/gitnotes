@@ -97,7 +97,7 @@ export function buildThreadSummary(thread: ChatThread): ChatThreadSummary {
   return {
     id: thread.id,
     title: deriveThreadTitle(thread),
-    updatedAt: thread.updatedAt,
+    updatedAt: Number.isFinite(thread.updatedAt) ? thread.updatedAt : Date.now(),
     messageCount: thread.messages.length,
     ...(preview ? { preview } : {}),
   };

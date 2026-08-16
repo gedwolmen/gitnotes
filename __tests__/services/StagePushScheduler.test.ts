@@ -1,14 +1,6 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 import type { StagedItem } from '../../src/services/git/StagingService';
 
-const mockFlagState: { FEATURE_STAGE_PUSH: boolean } = { FEATURE_STAGE_PUSH: true };
-jest.mock('../../src/services/featureFlags', () => ({
-  get FEATURE_STAGE_PUSH(): boolean {
-    return mockFlagState.FEATURE_STAGE_PUSH;
-  },
-  FEATURE_USE_MULTI_HOST_WRITE: false,
-}));
-
 jest.mock('../../src/services/git/StagingService', () => ({
   StagingService: {
     listStaged: jest.fn(async () => []),
@@ -72,7 +64,6 @@ describe('StagePushScheduler', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
-    mockFlagState.FEATURE_STAGE_PUSH = true;
     stopScheduler();
     setOnPushFailure(null);
     useStageStore.setState({
@@ -158,22 +149,6 @@ describe('StagePushScheduler', () => {
     const state = useStageStore.getState();
     expect(state.pushQueue).toHaveLength(0);
     expect(Object.values(state.isPushing).every((p) => !p)).toBe(true);
-  });
-
-  test('FEATURE_STAGE_PUSH off makes startScheduler a no-op', async () => {
-    mockFlagState.FEATURE_STAGE_PUSH = false;
-    useStageStore.setState({
-      staged: [item(REPO_A, 'main', 'notes/a.md')],
-      pendingCount: 1,
-    });
-    const registerSpy = jest.spyOn(useStageStore.getState(), 'registerQueueSubscription');
-
-    startScheduler();
-
-    expect(registerSpy).not.toHaveBeenCalled();
-    jest.advanceTimersByTime(10 * 60 * 1000);
-    await flushAsync();
-    expect(StagingService.pushStaged).not.toHaveBeenCalled();
   });
 
   test('background flush honors the ≤10-files-per-repo cap', async () => {

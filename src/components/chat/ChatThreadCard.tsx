@@ -18,7 +18,11 @@ function ChatThreadCardImpl({ thread, onPress, onLongPress }: ChatThreadCardProp
   const { colors, type } = useTokens();
   const typography = type ?? TYPE;
 
-  const timeAgo = formatDistanceToNow(thread.updatedAt, { addSuffix: true });
+  // formatDistanceToNow throws RangeError on a missing/NaN timestamp; never let a
+  // persisted thread summary with an invalid updatedAt crash the whole chat render.
+  const timeAgo = Number.isFinite(thread.updatedAt)
+    ? formatDistanceToNow(thread.updatedAt, { addSuffix: true })
+    : '';
 
   return (
     <TouchableOpacity activeOpacity={0.7} onPress={onPress} onLongPress={onLongPress}>

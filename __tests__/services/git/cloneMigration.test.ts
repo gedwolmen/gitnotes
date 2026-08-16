@@ -95,15 +95,15 @@ describe('CloneMigrationService.migrateRepo', () => {
     expect(report.success).toBe(true);
 
     expect(getLgwMocks().writeAndCommit).toHaveBeenCalledTimes(3);
-    // All writeAndCommit calls must be staged-only (push:false) so the final
-    // push flushes everything in one round-trip.
+    // All writeAndCommit calls must be staged-only (push:false) — the
+    // stage/push engine owns the flush.
     for (const call of getLgwMocks().writeAndCommit.mock.calls) {
       expect(call[0].push).toBe(false);
     }
-    expect(getLgwMocks().push).toHaveBeenCalledTimes(1);
+    expect(getLgwMocks().push).not.toHaveBeenCalled();
   });
 
-  test('reports failures and still pushes the successful commits', async () => {
+  test('reports failures without pushing (the engine owns the flush)', async () => {
     getLgwMocks().writeAndCommit.mockResolvedValueOnce({
       success: false,
       error: 'disk full',
@@ -116,8 +116,7 @@ describe('CloneMigrationService.migrateRepo', () => {
     expect(report.failures).toEqual([
       { kind: 'note', filePath: 'notes/local.md', error: 'disk full' },
     ]);
-    // Two successes → push still runs.
-    expect(getLgwMocks().push).toHaveBeenCalledTimes(1);
+    expect(getLgwMocks().push).not.toHaveBeenCalled();
   });
 
   test('skips push when nothing migrated', async () => {

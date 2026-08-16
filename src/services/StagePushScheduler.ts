@@ -1,7 +1,6 @@
 import { StagingService } from './git/StagingService';
 import { GitSyncGate } from './git/GitSyncGate';
 import { useStageStore } from '../stores/stageStore';
-import { FEATURE_STAGE_PUSH } from './featureFlags';
 
 /**
  * Foreground idle-timeout auto-push for staged changes.
@@ -130,9 +129,9 @@ export function onStagedChanged(): void {
   resetIdleTimer();
 }
 
-/** Start the scheduler. No-op behind `FEATURE_STAGE_PUSH`. */
+/** Start the scheduler. */
 export function startScheduler(): void {
-  if (!FEATURE_STAGE_PUSH || schedulerRunning) return;
+  if (schedulerRunning) return;
   schedulerRunning = true;
   useStageStore.getState().registerQueueSubscription();
   unsubscribeStaged = useStageStore.subscribe(onStagedChanged);

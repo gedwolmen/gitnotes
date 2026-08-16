@@ -20,6 +20,10 @@ jest.mock('../src/services/SyncEngineService', () => ({
   },
 }));
 
+jest.mock('../src/services/git/StagingService', () => ({
+  StagingService: { stageDelete: jest.fn(), stageUpsert: jest.fn() },
+}));
+
 jest.mock('../src/services/AuthService', () => ({
   AuthService: {
     getTokenById: jest.fn(async () => null),
@@ -30,6 +34,7 @@ jest.mock('../src/services/AuthService', () => ({
 import { useTodoStore } from '../src/stores/todoStore';
 import { StorageService } from '../src/services/StorageService';
 import { GitHubService } from '../src/services/GitHubService';
+import { StagingService } from '../src/services/git/StagingService';
 
 describe('todo delete GitHub sync', () => {
   let storageTodos: Array<{
@@ -58,10 +63,11 @@ describe('todo delete GitHub sync', () => {
       content: { sha: 'deleted-sha' },
       commit: { sha: 'commit-sha' },
     });
+    (StagingService.stageDelete as jest.Mock).mockResolvedValue({ success: true });
     useTodoStore.setState({ todos: [], isLoading: false, error: null });
   });
 
-  test('deletes the remote todo file and keeps it gone after refresh', async () => {
+  test('stages the delete, removes the local row, and keeps it gone after refresh', async () => {
     const syncedTodo = {
       id: 'todo-1',
       text: 'Ship it',
@@ -78,23 +84,16 @@ describe('todo delete GitHub sync', () => {
 
     await useTodoStore.getState().deleteTodo('todo-1');
 
+    expect(StagingService.stageDelete).toHaveBeenCalledWith(
+      expect.objectContaining({
+        repo: 'owner/repo',
+        branch: 'main',
+        filePath: 'todos/ship-it.json',
+        title: 'Ship it',
+      }),
+    );
+    expect(GitHubService.deleteFile).not.toHaveBeenCalled();
     expect(StorageService.deleteTodo).toHaveBeenCalledWith('todo-1');
-    expect(GitHubService.getFileSha).toHaveBeenCalledWith(
-      'owner',
-      'repo',
-      'todos/ship-it.json',
-      'main',
-      undefined,
-    );
-    expect(GitHubService.deleteFile).toHaveBeenCalledWith(
-      'owner',
-      'repo',
-      'todos/ship-it.json',
-      'Delete todo: Ship it',
-      'todo-sha-123',
-      'main',
-      undefined,
-    );
     expect(useTodoStore.getState().todos).toEqual([]);
 
     await useTodoStore.getState().refreshTodos();
@@ -102,7 +101,7 @@ describe('todo delete GitHub sync', () => {
     expect(useTodoStore.getState().todos).toEqual([]);
   });
 
-  test('keeps the todo locally when GitHub delete fails so pull does not re-import it', async () => {
+  test('keeps the todo locally when the delete stage fails so pull does not re-import it', async () => {
     const syncedTodo = {
       id: 'todo-2',
       text: 'Keep on failure',
@@ -117,12 +116,15 @@ describe('todo delete GitHub sync', () => {
     storageTodos = [syncedTodo];
     useTodoStore.setState({ todos: [syncedTodo], isLoading: false, error: null });
 
-    (GitHubService.deleteFile as jest.Mock).mockResolvedValueOnce(null);
+    (StagingService.stageDelete as jest.Mock).mockResolvedValueOnce({
+      success: false,
+      error: 'staging boom',
+    });
 
     const ok = await useTodoStore.getState().deleteTodo('todo-2');
 
     expect(ok).toBe(false);
-    // Local storage MUST NOT be mutated when remote delete fails — otherwise
+    // Local storage MUST NOT be mutated when staging fails — otherwise
     // the next pull-to-refresh would re-create the todo (issue #489).
     expect(StorageService.deleteTodo).not.toHaveBeenCalled();
     expect(useTodoStore.getState().todos).toEqual([syncedTodo]);
@@ -155,12 +157,7 @@ describe('todo delete GitHub sync', () => {
     expect(useTodoStore.getState().error).toBeTruthy();
   });
 
-  test('treats a missing remote (sha null) as success so local row can still be removed', async () => {
-    // Reproduces the "Cannot delete todo: failed to look up remote file" bug —
-    // a stale local row whose remote was already deleted should not be stuck
-    // forever. Pull won't re-import a file that doesn't exist anymore.
-    (GitHubService.getFileSha as jest.Mock).mockResolvedValueOnce({ kind: 'not-found' });
-
+  test('a successful stage clears a stale local row (missing remote handled by the stage engine)', async () => {
     const stale = {
       id: 'todo-stale',
       text: 'Already gone remotely',
@@ -177,6 +174,7 @@ describe('todo delete GitHub sync', () => {
     const ok = await useTodoStore.getState().deleteTodo('todo-stale');
 
     expect(ok).toBe(true);
+    expect(StagingService.stageDelete).toHaveBeenCalledTimes(1);
     expect(GitHubService.deleteFile).not.toHaveBeenCalled();
     expect(StorageService.deleteTodo).toHaveBeenCalledWith('todo-stale');
     expect(useTodoStore.getState().todos).toEqual([]);

@@ -30,9 +30,7 @@ import { buildPinnedFeed, buildRecentFeed, RecentItem } from '../utils/recentIte
 import { HomeNoteContextMenu } from '../components/home/HomeNoteContextMenu';
 import ColorPicker from '../components/ColorPicker';
 import { ShareFormat } from '../services/ShareService';
-import { syncNoteToGitHub } from '../services/NoteGitHubSyncService';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
-import { FEATURE_STAGE_PUSH } from '../services/featureFlags';
 import { StagingService } from '../services/git/StagingService';
 import { useGitOperationStore } from '../stores/gitOperationStore';
 import { useTranslation } from 'react-i18next';
@@ -246,28 +244,14 @@ export default function HomeScreen() {
             tags: updated.tags,
             color,
           };
-          if (FEATURE_STAGE_PUSH) {
-            try {
-              const staged = await StagingService.stageUpsert(syncParams);
-              if (!staged.success) {
-                console.warn('[HomeScreen] stage after color update failed:', staged.error);
-              }
-            } catch (error) {
-              console.warn('[HomeScreen] stage after color update failed:', error);
-              await NoteSyncQueueService.enqueueNoteUpsert(syncParams, updated.id);
+          try {
+            const staged = await StagingService.stageUpsert(syncParams);
+            if (!staged.success) {
+              console.warn('[HomeScreen] stage after color update failed:', staged.error);
             }
-          } else {
-            try {
-              const result = await syncNoteToGitHub(syncParams);
-              if (!result.success) {
-                await NoteSyncQueueService.enqueueNoteUpsert(syncParams, updated.id);
-              } else if (result.finalContent && result.finalContent !== updated.content) {
-                await updateNote({ id: updated.id, content: result.finalContent });
-              }
-            } catch (error) {
-              console.warn('[HomeScreen] sync after color update failed:', error);
-              await NoteSyncQueueService.enqueueNoteUpsert(syncParams, updated.id);
-            }
+          } catch (error) {
+            console.warn('[HomeScreen] stage after color update failed:', error);
+            await NoteSyncQueueService.enqueueNoteUpsert(syncParams, updated.id);
           }
         }
       } catch {

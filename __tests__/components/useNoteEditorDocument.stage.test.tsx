@@ -27,7 +27,6 @@ jest.mock('../../src/services/git/StagingService', () => ({
 }));
 
 jest.mock('../../src/services/featureFlags', () => ({
-  FEATURE_STAGE_PUSH: false,
   FEATURE_USE_MULTI_HOST_WRITE: false,
 }));
 
@@ -39,10 +38,6 @@ import { useNoteEditorDocument } from '../../src/components/editor/useNoteEditor
 import { syncNoteToGitHub } from '../../src/services/NoteGitHubSyncService';
 import { NoteSyncQueueService } from '../../src/services/NoteSyncQueueService';
 import { StagingService } from '../../src/services/git/StagingService';
-
-const featureFlagsMock = jest.requireMock('../../src/services/featureFlags') as {
-  FEATURE_STAGE_PUSH: boolean;
-};
 
 const navigation = {
   navigate: jest.fn(),
@@ -70,15 +65,13 @@ function editorParams(overrides: Record<string, unknown>) {
 describe('useNoteEditorDocument stage-push rework', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    featureFlagsMock.FEATURE_STAGE_PUSH = false;
   });
 
   afterEach(() => {
     jest.restoreAllMocks();
   });
 
-  it('with FEATURE_STAGE_PUSH ON: stages the upsert and never calls syncNoteToGitHub', async () => {
-    featureFlagsMock.FEATURE_STAGE_PUSH = true;
+  it('stages the upsert and never calls syncNoteToGitHub', async () => {
     jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
     (StagingService.stageUpsert as jest.Mock).mockResolvedValue({ success: true });
     const createNote = jest.fn(async () => ({ id: 'new-note-1' }));
@@ -121,53 +114,7 @@ describe('useNoteEditorDocument stage-push rework', () => {
     );
   });
 
-  it('with FEATURE_STAGE_PUSH OFF: old path is unchanged (syncNoteToGitHub called, stageUpsert not)', async () => {
-    featureFlagsMock.FEATURE_STAGE_PUSH = false;
-    jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
-    (syncNoteToGitHub as jest.Mock).mockResolvedValue({
-      success: true,
-      filePath: 'notes/my-note.md',
-      finalContent: null,
-    });
-    const createNote = jest.fn(async () => ({ id: 'new-note-1' }));
-    const updateNote = jest.fn(async () => true);
-
-    const { result } = renderHook(() =>
-      useNoteEditorDocument(
-        editorParams({
-          initialRepo: 'owner/repo',
-          initialBranch: 'main',
-          initialTitle: 'My Note',
-          initialContent: 'body',
-          initialFolderPath: '/notes',
-          createNote,
-          updateNote,
-          getNoteById: () => undefined,
-        }),
-      ),
-    );
-
-    await act(async () => {
-      await result.current.handleSave();
-    });
-
-    expect(syncNoteToGitHub).toHaveBeenCalledTimes(1);
-    expect(syncNoteToGitHub).toHaveBeenCalledWith(
-      expect.objectContaining({
-        repo: 'owner/repo',
-        branch: 'main',
-        filePath: '/notes/my-note.md',
-        title: 'My Note',
-      }),
-    );
-    expect(StagingService.stageUpsert).not.toHaveBeenCalled();
-    expect(updateNote).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'new-note-1', filePath: 'notes/my-note.md' }),
-    );
-  });
-
-  it('with FEATURE_STAGE_PUSH ON and a failing stage: falls back to the sync queue with the "Note Saved Locally" alert', async () => {
-    featureFlagsMock.FEATURE_STAGE_PUSH = true;
+  it('a failing stage falls back to the sync queue with the "Note Saved Locally" alert', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
     (StagingService.stageUpsert as jest.Mock).mockResolvedValue({ success: false, error: 'staging boom' });
     const createNote = jest.fn(async () => ({ id: 'new-note-1' }));

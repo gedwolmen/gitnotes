@@ -15,7 +15,6 @@ import { renderWithTheme } from './helpers/renderWithTheme';
 import ConflictResolverScreen from '../src/screens/ConflictResolverScreen';
 
 jest.mock('../src/services/featureFlags', () => ({
-  FEATURE_STAGE_PUSH: false,
   FEATURE_USE_MULTI_HOST_WRITE: false,
 }));
 
@@ -153,11 +152,6 @@ jest.mock('@react-navigation/native', () => {
 
 jest.mock('@react-navigation/native-stack', () => ({}));
 
-const featureFlagsMock = jest.requireMock('../src/services/featureFlags') as {
-  FEATURE_STAGE_PUSH: boolean;
-  FEATURE_USE_MULTI_HOST_WRITE: boolean;
-};
-
 interface ConflictApi {
   getConflict: jest.Mock;
   updateConflict: jest.Mock;
@@ -216,13 +210,11 @@ async function pressCommitAndPushButton(): Promise<void> {
 describe('noteStore.deleteNote staging rewire', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    featureFlagsMock.FEATURE_STAGE_PUSH = false;
     useNoteStore.setState({ notes: [], isLoading: false, error: null, searchQuery: '' });
     useGitOperationStore.setState({ ops: {} });
   });
 
-  it('with FEATURE_STAGE_PUSH ON (api mode): stages the delete, keeps the row locked, never drains directly', async () => {
-    featureFlagsMock.FEATURE_STAGE_PUSH = true;
+  it('api mode: stages the delete, keeps the row locked, never drains directly', async () => {
     (SyncEngineService.getMode as jest.Mock).mockResolvedValue('api');
     (StagingService.stageDelete as jest.Mock).mockResolvedValue({ success: true });
     useNoteStore.setState({
@@ -262,8 +254,7 @@ describe('noteStore.deleteNote staging rewire', () => {
     expect(ops[0].status).toBe('running');
   });
 
-  it('with FEATURE_STAGE_PUSH ON (clone mode): completes the local delete immediately (no queue mutation exists)', async () => {
-    featureFlagsMock.FEATURE_STAGE_PUSH = true;
+  it('clone mode: completes the local delete immediately (no queue mutation exists)', async () => {
     (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
     (StagingService.stageDelete as jest.Mock).mockResolvedValue({ success: true });
     useNoteStore.setState({
@@ -300,28 +291,7 @@ describe('noteStore.deleteNote staging rewire', () => {
     expect(NoteSyncQueueService.drain).not.toHaveBeenCalled();
   });
 
-  it('with FEATURE_STAGE_PUSH OFF: old path is unchanged (enqueue + drain)', async () => {
-    useNoteStore.setState({
-      notes: [
-        makeNote({
-          id: 'n2',
-          repo: 'owner/repo',
-          branch: 'main',
-          filePath: 'notes/two.md',
-        }),
-      ],
-    });
-
-    const ok = await useNoteStore.getState().deleteNote('n2');
-
-    expect(ok).toBe(true);
-    expect(StagingService.stageDelete).not.toHaveBeenCalled();
-    expect(NoteSyncQueueService.enqueueNoteDelete).toHaveBeenCalledTimes(1);
-    expect(NoteSyncQueueService.drain).toHaveBeenCalledTimes(1);
-  });
-
-  it('with FEATURE_STAGE_PUSH ON and a failing stage: surfaces the error and does not enqueue/drain', async () => {
-    featureFlagsMock.FEATURE_STAGE_PUSH = true;
+  it('a failing stage surfaces the error and does not enqueue/drain', async () => {
     (StagingService.stageDelete as jest.Mock).mockResolvedValue({ success: false, error: 'staging boom' });
     useNoteStore.setState({
       notes: [
@@ -346,12 +316,10 @@ describe('noteStore.deleteNote staging rewire', () => {
 describe('AI tool saves staging rewire', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    featureFlagsMock.FEATURE_STAGE_PUSH = false;
     useNoteStore.setState({ notes: [], isLoading: false, error: null, searchQuery: '' });
   });
 
-  it('create_note with FEATURE_STAGE_PUSH ON: enqueues without calling drain directly', async () => {
-    featureFlagsMock.FEATURE_STAGE_PUSH = true;
+  it('create_note enqueues without calling drain directly', async () => {
     useNoteStore.setState({
       createNote: jest.fn(async (input: unknown) => ({ id: 'new-note', ...(input as object) })),
     });
@@ -367,20 +335,7 @@ describe('AI tool saves staging rewire', () => {
     expect(NoteSyncQueueService.drain).not.toHaveBeenCalled();
   });
 
-  it('create_note with FEATURE_STAGE_PUSH OFF: enqueues then drains (old path)', async () => {
-    useNoteStore.setState({
-      createNote: jest.fn(async (input: unknown) => ({ id: 'new-note', ...(input as object) })),
-    });
-
-    const result = await executeToolCall('create_note', { title: 'T', content: 'C' }, 'auto');
-
-    expect(result.success).toBe(true);
-    expect(NoteSyncQueueService.enqueueNoteUpsert).toHaveBeenCalledTimes(1);
-    expect(NoteSyncQueueService.drain).toHaveBeenCalledTimes(1);
-  });
-
-  it('link_notes with FEATURE_STAGE_PUSH ON: enqueues each link without draining', async () => {
-    featureFlagsMock.FEATURE_STAGE_PUSH = true;
+  it('link_notes enqueues each link without draining', async () => {
     useNoteStore.setState({
       notes: [
         makeNote({ id: 'a', title: 'A', repo: 'owner/repo', branch: 'main', filePath: 'notes/a.md' }),
@@ -400,8 +355,7 @@ describe('AI tool saves staging rewire', () => {
     expect(NoteSyncQueueService.drain).not.toHaveBeenCalled();
   });
 
-  it('grade_questioner_answers with FEATURE_STAGE_PUSH ON: enqueues without draining', async () => {
-    featureFlagsMock.FEATURE_STAGE_PUSH = true;
+  it('grade_questioner_answers enqueues without draining', async () => {
     useNoteStore.setState({
       notes: [
         makeNote({
@@ -432,7 +386,6 @@ describe('AI tool saves staging rewire', () => {
 describe('ConflictResolverScreen commitAndPush staging rewire', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    featureFlagsMock.FEATURE_STAGE_PUSH = false;
     conflictApi.getConflict.mockReturnValue(conflictFixture);
     (GitFsService.mergeCommit as jest.Mock).mockResolvedValue({ sha: 'merged-sha' });
   });
@@ -441,8 +394,7 @@ describe('ConflictResolverScreen commitAndPush staging rewire', () => {
     jest.restoreAllMocks();
   });
 
-  it('with FEATURE_STAGE_PUSH ON: mergeCommit is called with push:false and no immediate push happens', async () => {
-    featureFlagsMock.FEATURE_STAGE_PUSH = true;
+  it('mergeCommit is called with push:false and no immediate push happens', async () => {
     jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
 
     const screen = renderWithTheme(React.createElement(ConflictResolverScreen));
@@ -459,20 +411,6 @@ describe('ConflictResolverScreen commitAndPush staging rewire', () => {
         push: false,
       }),
     );
-    expect(conflictApi.removeConflict).toHaveBeenCalledWith('owner/repo', 'main');
-    expect(navMock).toHaveBeenCalled();
-  });
-
-  it('with FEATURE_STAGE_PUSH OFF: mergeCommit keeps the old push behavior (no push key)', async () => {
-    jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
-
-    const screen = renderWithTheme(React.createElement(ConflictResolverScreen));
-    fireEvent.press(screen.getByText('Save merged'));
-    await pressCommitAndPushButton();
-
-    expect(GitFsService.mergeCommit).toHaveBeenCalledTimes(1);
-    const mergeOpts = (GitFsService.mergeCommit as jest.Mock).mock.calls[0][0] as Record<string, unknown>;
-    expect(mergeOpts).not.toHaveProperty('push');
     expect(conflictApi.removeConflict).toHaveBeenCalledWith('owner/repo', 'main');
     expect(navMock).toHaveBeenCalled();
   });
