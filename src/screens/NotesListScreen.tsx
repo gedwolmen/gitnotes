@@ -143,8 +143,8 @@ function LockedNoteRow({
 const styles = StyleSheet.create({
   rowLockTrailing: {
     position: 'absolute',
-    right: 16,
-    top: 16,
+    right: 24,
+    top: 24,
     zIndex: 5,
   },
 });

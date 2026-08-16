@@ -89,7 +89,7 @@ function LockedTodoRow({ item, selected, selectionMode, onToggleSelect, onPress,
             size="small"
             testID="todo-row.lock-spinner"
             color={colors.primary}
-            style={{ position: 'absolute', right: 16, top: 16, zIndex: 5 }}
+            style={{ position: 'absolute', right: 24, top: 24, zIndex: 5 }}
           />
         ) : null}
       </View>
