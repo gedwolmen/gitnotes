@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../contexts/ThemeContext';
 import { useRepos } from '../contexts/RepoContext';
-import { GitRepository } from '../services/GitService';
+import { GitService, GitRepository, GitBranch } from '../services/GitService';
 import { HapticService } from '../utils/haptics';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { GitSyncGate } from '../services/git/GitSyncGate';
@@ -23,7 +23,7 @@ import { useGitOperationStore, hasActivePull } from '../stores/gitOperationStore
 import RepoFileTree, { TreeNode } from '../components/RepoFileTree';
 import { treeStyles } from '../components/repo/repoTreeStyles';
 import { RootStackParamList } from '../navigation/types';
-import { EmptyState, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
+import { EmptyState, Modal, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
 import SearchBar from '../components/SearchBar';
@@ -54,11 +54,17 @@ export default function ExploreScreen() {
   const { repositories: repos, refreshRepos } = useRepos();
   const [view, setView] = useState<ExploreView>('repoList');
   const [selectedRepo, setSelectedRepo] = useState<GitRepository | null>(null);
+  const [selectedBranch, setSelectedBranch] = useState<string | undefined>(undefined);
   const [repoSearch, setRepoSearch] = useState('');
   const [loadingRepos, setLoadingRepos] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const refreshingRef = useRef(false);
   const isFocused = useIsFocused();
+
+  const [branchPickerVisible, setBranchPickerVisible] = useState(false);
+  const [branches, setBranches] = useState<GitBranch[]>([]);
+  const [branchLoading, setBranchLoading] = useState(false);
+  const [branchLoadFailed, setBranchLoadFailed] = useState(false);
 
   const [bannerRegionHeight, setBannerRegionHeight] = useState(headerHeight);
   const [toolsHeight, setToolsHeight] = useState(0);
@@ -105,6 +111,7 @@ export default function ExploreScreen() {
   const handleSelectRepo = useCallback((repo: GitRepository) => {
     HapticService.light();
     setSelectedRepo(repo);
+    setSelectedBranch(repo.branch);
     setView('repoDetail');
   }, []);
 
@@ -145,6 +152,33 @@ export default function ExploreScreen() {
       setRefreshing(false);
     }
   }, [view, refreshRepos]);
+
+  const openBranchPicker = useCallback(async () => {
+    if (!selectedRepo) return;
+    HapticService.light();
+    setBranchPickerVisible(true);
+    setBranchLoading(true);
+    setBranchLoadFailed(false);
+    setBranches([]);
+    try {
+      setBranches(await GitService.getBranches(selectedRepo.path, selectedRepo.provider));
+    } catch (error) {
+      console.warn('[Explore] Failed to load branches:', error);
+      setBranchLoadFailed(true);
+    } finally {
+      setBranchLoading(false);
+    }
+  }, [selectedRepo]);
+
+  const handleSelectBranch = useCallback((name: string) => {
+    HapticService.selection();
+    setSelectedBranch(name);
+    setBranchPickerVisible(false);
+  }, []);
+
+  const closeBranchPicker = useCallback(() => {
+    setBranchPickerVisible(false);
+  }, []);
 
   const renderRepoItem = useCallback(
     ({ item }: { item: GitRepository }) => (
@@ -278,6 +312,9 @@ export default function ExploreScreen() {
   }
 
   if (view === 'fileTree' && repoInfo) {
+    const branch = selectedBranch ?? selectedRepo?.branch;
+    const branchLabel = branch ?? t('settings.branchDefault');
+
     return (
       <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['top', 'bottom']}>
         <View
@@ -305,13 +342,13 @@ export default function ExploreScreen() {
             <RepoFileTree
               owner={repoInfo.owner}
               repo={repoInfo.repo}
-              branch={selectedRepo?.branch}
+              branch={branch}
               onFilePress={(node: TreeNode) => {
                 const kind = classifyFile(node.name);
                 const params = {
                   owner: repoInfo.owner,
                   repo: repoInfo.repo,
-                  branch: selectedRepo?.branch,
+                  branch,
                   path: node.path,
                   title: node.name,
                   size: node.size,
@@ -332,7 +369,88 @@ export default function ExploreScreen() {
           )}
         </ScrollView>
 
-        <ScreenHeader title={`${repoInfo.owner}/${repoInfo.repo}`} onBack={handleBack} />
+        <ScreenHeader
+          title={`${repoInfo.owner}/${repoInfo.repo}`}
+          onBack={handleBack}
+          actions={
+            <TouchableOpacity
+              testID="explore.button.branch-picker"
+              className="flex-row items-center gap-1.5 rounded-full px-3 py-1.5"
+              style={{ backgroundColor: colors.primary + '15' }}
+              onPress={openBranchPicker}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="git-branch-outline" size={14} color={colors.primary} />
+              <Text className="text-xs font-semibold" style={{ color: colors.primary }} numberOfLines={1}>
+                {branchLabel}
+              </Text>
+            </TouchableOpacity>
+          }
+        />
+
+        <Modal
+          visible={branchPickerVisible}
+          onRequestClose={closeBranchPicker}
+          bottomSheet
+          contentStyle={{ maxHeight: 420 }}
+        >
+          <View className="max-h-[420px]">
+            <View
+              className="flex-row items-center justify-between px-4 py-3"
+              style={{ borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border + '40' }}
+            >
+              <Text className="text-base font-semibold" style={{ color: colors.text }}>
+                {t('notesFilter.branch')}
+              </Text>
+              <TouchableOpacity
+                testID="explore.button.close-branch-picker"
+                onPress={closeBranchPicker}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close" size={22} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {branchLoading ? (
+              <ActivityIndicator size="large" color={colors.primary} style={{ paddingVertical: 32 }} />
+            ) : branchLoadFailed || branches.length === 0 ? (
+              <View className="px-4 py-6 gap-1.5">
+                {branchLoadFailed && (
+                  <Text className="text-sm" style={{ color: colors.textSecondary }}>
+                    {t('errors.somethingWrong')}
+                  </Text>
+                )}
+                <Text className="text-sm font-medium" style={{ color: colors.text }}>{branchLabel}</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={branches}
+                keyExtractor={(item) => item.name}
+                renderItem={({ item }) => {
+                  const isCurrent = item.name === branchLabel;
+                  return (
+                    <TouchableOpacity
+                      testID={`explore.branch.option.${item.name}`}
+                      className="flex-row items-center gap-3 px-4 py-3.5"
+                      style={{ borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border + '30' }}
+                      onPress={() => handleSelectBranch(item.name)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons
+                        name={isCurrent ? 'checkmark-circle' : 'git-branch-outline'}
+                        size={18}
+                        color={isCurrent ? '#34C759' : colors.textSecondary}
+                      />
+                      <Text className="flex-1 text-sm" style={{ color: colors.text }} numberOfLines={1}>
+                        {item.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                }}
+              />
+            )}
+          </View>
+        </Modal>
       </SafeAreaView>
     );
   }

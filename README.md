@@ -37,7 +37,7 @@
 - Notes, todos, journals, and Excalidraw-style canvases — all backed by Git
 - Folders, tags, colors, pins, wiki-links, backlinks, custom templates
 - Multiple GitHub accounts; per-repo API or full-clone sync modes
-- Importers for Google Keep and Apple Notes
+- Deprecated importers (Google Keep, Apple Notes) are documented in the wiki: docs/wiki/importers.md
 - Optional AI chat layer (Anthropic, OpenAI-compatible providers, Apple Intelligence, on-device Llama)
 - Biometric lock, multilingual UI (EN, ES, FR, DE, JA, KO), light / dark / system themes
 

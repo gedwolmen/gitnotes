@@ -660,24 +660,6 @@
     "custom": "Custom",
     "builtIn": "Built-in"
   },
-  "import": {
-    "keep": {
-      "noNotesTitle": "Keine Notizen gefunden",
-      "noNotesBody": "Keine Google Keep-Notizen in der ausgewählten Datei gefunden.",
-      "completeTitle": "Import abgeschlossen",
-      "completeBody": "{{count}} Notiz(en) aus Google Keep importiert.",
-      "failedTitle": "Import fehlgeschlagen"
-    },
-    "apple": {
-      "noNotesTitle": "Keine Notizen gefunden",
-      "noNotesBody": "Keine Apple-Notizen in den ausgewählten Dateien gefunden.",
-      "completeTitle": "Import abgeschlossen",
-      "completeBody": "{{count}} Notiz(en) aus Apple-Notizen importiert.",
-      "failedTitle": "Import fehlgeschlagen"
-    },
-    "partialFinishedTitle": "Import beendet",
-    "partialFinishedBody": "{{count}} Notiz(en) importiert; {{failed}} fehlgeschlagen."
-  },
   "editor": {
     "titlePlaceholder": "Notiztitel",
     "folder": "Ordner",

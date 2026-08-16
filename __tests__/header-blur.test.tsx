@@ -256,6 +256,8 @@ jest.mock('../src/components/ui', () => {
         <RNText>{title}</RNText>
       </RNView>
     ),
+    Modal: ({ visible, children }: { visible: boolean; children: React.ReactNode }) =>
+      visible ? <RNView testID="branch-picker-modal">{children}</RNView> : null,
     IconButton: ({ children, onPress, testID }: any) => (
       <RNPressable onPress={onPress} testID={testID}>
         {children}

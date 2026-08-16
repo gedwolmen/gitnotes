@@ -15,7 +15,6 @@ import {
   setLanguage,
   type LanguageCode,
 } from '../../i18n';
-import { ImportSection } from './ImportSection';
 import { ReminderSection } from './ReminderSection';
 import { settingsStyles as styles } from './settingsStyles';
 import type { GitRepository } from '../../services/GitService';
@@ -767,8 +766,6 @@ onSetSyncIntervalSeconds,
           <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.resetOnboarding')}</Text>
         </GroupRow>
       </Group>
-
-      <ImportSection />
 
       <Group title={t('settings.artificialIntelligence')}>
         <GroupRow trailing={<View className="flex-row items-center gap-2">

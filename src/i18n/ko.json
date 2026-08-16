@@ -660,24 +660,6 @@
     "custom": "Custom",
     "builtIn": "Built-in"
   },
-  "import": {
-    "keep": {
-      "noNotesTitle": "No Notes Found",
-      "noNotesBody": "Could not find any Google Keep notes in the selected file.",
-      "completeTitle": "Import Complete",
-      "completeBody": "Imported {{count}} note(s) from Google Keep.",
-      "failedTitle": "Import Failed"
-    },
-    "apple": {
-      "noNotesTitle": "No Notes Found",
-      "noNotesBody": "Could not find any Apple Notes in the selected files.",
-      "completeTitle": "Import Complete",
-      "completeBody": "Imported {{count}} note(s) from Apple Notes.",
-      "failedTitle": "Import Failed"
-    },
-    "partialFinishedTitle": "Import Finished",
-    "partialFinishedBody": "Imported {{count}} note(s); {{failed}} failed."
-  },
   "editor": {
     "titlePlaceholder": "Note Title",
     "folder": "Folder",
