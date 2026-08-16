@@ -3,7 +3,10 @@ import { create } from 'zustand';
 import { Note, NoteCreateInput, NoteUpdateInput, sortNotesWithPinnedFirst, filterNotesBySearch } from '../models/Note';
 import { StorageService } from '../services/StorageService';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
-import type { MutationSucceededEvent, DroppedMutationEvent } from '../services/NoteSyncQueueService';
+import type { MutationSucceededEvent, DroppedMutationEvent, NoteDeleteParams } from '../services/NoteSyncQueueService';
+import { SyncEngineService } from '../services/SyncEngineService';
+import { FEATURE_STAGE_PUSH } from '../services/featureFlags';
+import { StagingService } from '../services/git/StagingService';
 import { gitOperationRegistry, useGitOperationStore } from './gitOperationStore';
 import type { GitOp } from './gitOperationStore';
 import { slugifyLocal, getExtensionForFormat } from '../components/editor/editorShared';
@@ -114,29 +117,58 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
       if (!note) return false;
 
       if (note.repo) {
+        const repoPath = note.repo;
         const filePath = note.filePath ?? deriveDefaultNotePath(note);
         if (filePath) {
           // The note stays in storage and renders locked until the queue
           // reports success (row removed) or a drop (Retry shown).
           armDeleteCompletionHandlers();
-          await NoteSyncQueueService.enqueueNoteDelete({
-            repo: note.repo,
+          const deleteParams: NoteDeleteParams = {
+            repo: repoPath,
             branch: note.branch,
             filePath,
             title: note.title,
             accountId: note.accountId,
             localNoteId: id,
-          });
-          gitOperationRegistry.begin({
-            kind: 'delete',
-            repo: note.repo,
-            branch: note.branch,
-            path: filePath,
-            entityIds: [id],
-            status: 'running',
-            attempts: 0,
-          });
-          void NoteSyncQueueService.drain();
+          };
+          const beginDeleteOp = () =>
+            gitOperationRegistry.begin({
+              kind: 'delete',
+              repo: repoPath,
+              branch: note.branch,
+              path: filePath,
+              entityIds: [id],
+              status: 'running',
+              attempts: 0,
+            });
+          if (FEATURE_STAGE_PUSH) {
+            const mode = await SyncEngineService.getMode(repoPath);
+            const stageResult = await StagingService.stageDelete(deleteParams);
+            if (!stageResult.success) {
+              set({ error: stageResult.error ?? 'Failed to delete note' });
+              return false;
+            }
+            if (mode === 'clone') {
+              // Clone-mode stageDelete commits the delete locally with no
+              // queue mutation, so the side-channel completion handlers
+              // never fire — finish the local delete right here.
+              const opId = beginDeleteOp();
+              const success = await StorageService.deleteNote(id);
+              if (success) {
+                set((state) => ({ notes: state.notes.filter((n) => n.id !== id) }));
+                gitOperationRegistry.succeed(opId);
+              } else {
+                gitOperationRegistry.fail(opId, 'Failed to delete note locally');
+              }
+              return success;
+            }
+          } else {
+            await NoteSyncQueueService.enqueueNoteDelete(deleteParams);
+          }
+          beginDeleteOp();
+          if (!FEATURE_STAGE_PUSH) {
+            void NoteSyncQueueService.drain();
+          }
           return true;
         }
         // Repo-backed note with no derivable path: nothing to enqueue, so

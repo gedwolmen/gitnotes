@@ -407,6 +407,8 @@ export class GitFsService {
     message: string;
     author: { name: string; email: string };
     token?: string;
+    /** Commit locally only (push deferred to the stage engine) when false. Defaults to true. */
+    push?: boolean;
   }): Promise<{ sha: string } | { error: string }> {
     const info = parseRepoPath(opts.repoPath);
     if (!info) return { error: `Invalid repo path: ${opts.repoPath}` };
@@ -426,14 +428,16 @@ export class GitFsService {
         ref: opts.branch,
       });
 
-      await git.push({
-        fs,
-        dir,
-        http: gitHttp,
-        ref: opts.branch,
-        remoteRef: opts.branch,
-        onAuth: ensureToken(opts.token),
-      });
+      if (opts.push !== false) {
+        await git.push({
+          fs,
+          dir,
+          http: gitHttp,
+          ref: opts.branch,
+          remoteRef: opts.branch,
+          onAuth: ensureToken(opts.token),
+        });
+      }
 
       return { sha };
     } catch (e) {

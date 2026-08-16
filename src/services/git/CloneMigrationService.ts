@@ -2,6 +2,7 @@ import { StorageService } from '../StorageService';
 import { GitHubService } from '../GitHubService';
 import { AuthService } from '../AuthService';
 import { LocalGitWriter } from './LocalGitWriter';
+import { FEATURE_STAGE_PUSH } from '../featureFlags';
 import { TemplateRepoPreferenceService } from '../TemplateRepoPreferenceService';
 import { useTemplateStore } from '../../stores/templateStore';
 import { serializeTemplate, templateSlug } from '../TemplateMarkdownService';
@@ -170,9 +171,8 @@ export class CloneMigrationService {
       }
     }
 
-    // Flush the batch in one push.
     const total = report.notes + report.todos + report.canvases + report.templates;
-    if (total > 0) {
+    if (total > 0 && !FEATURE_STAGE_PUSH) {
       const pushResult = await LocalGitWriter.push({ repoPath, branch, token });
       if (!pushResult.success) {
         report.success = false;

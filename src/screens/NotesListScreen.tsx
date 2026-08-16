@@ -14,6 +14,7 @@ import { Note } from '../models/Note';
 import { GitHubService } from '../services/GitHubService';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import type { NoteDeleteParams } from '../services/NoteSyncQueueService';
+import { FEATURE_STAGE_PUSH } from '../services/featureFlags';
 import { gitOperationRegistry, useGitOperationStore } from '../stores/gitOperationStore';
 import { GitSyncGate } from '../services/git/GitSyncGate';
 import { deriveDefaultNotePath, useNoteStore } from '../stores/noteStore';
@@ -388,7 +389,9 @@ export default function NotesListScreen() {
                   localNoteId: note.id,
                 }));
                 await NoteSyncQueueService.enqueueNoteDeletes(params);
-                void NoteSyncQueueService.drain();
+                if (!FEATURE_STAGE_PUSH) {
+                  void NoteSyncQueueService.drain();
+                }
               }
               let localFailure = false;
               for (const id of localOnlyIds) {

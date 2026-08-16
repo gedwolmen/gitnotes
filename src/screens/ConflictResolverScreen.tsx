@@ -8,6 +8,7 @@ import { useConflictStore } from '../stores/conflictStore';
 import { ConflictResolverService } from '../services/conflict/ConflictResolverService';
 import { GitFsService } from '../services/git/GitFsService';
 import { LocalGitWriter } from '../services/git/LocalGitWriter';
+import { FEATURE_STAGE_PUSH } from '../services/featureFlags';
 import { AuthService } from '../services/AuthService';
 import type { FileConflict } from '../services/conflict/types';
 import type { RootStackParamList } from '../navigation/types';
@@ -141,6 +142,7 @@ export default function ConflictResolverScreen() {
           message: `Merge remote changes into ${branch}`,
           author: { name: authorName, email: authorEmail },
           token,
+          ...(FEATURE_STAGE_PUSH ? { push: false } : {}),
         });
 
         if ('error' in result) {
