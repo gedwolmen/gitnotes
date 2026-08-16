@@ -1,5 +1,6 @@
 import React from 'react';
 import { Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Button, Surface } from '../ui';
 import type { PendingConfirmation } from './chatScreenShared';
 
@@ -13,6 +14,7 @@ type Props = {
 };
 
 export function ChatConfirmationCard({ pendingConfirmation, colors, spacing, type, onApply, onCancel }: Props) {
+  const { t } = useTranslation();
   if (!pendingConfirmation) return null;
 
   return (
@@ -28,8 +30,8 @@ export function ChatConfirmationCard({ pendingConfirmation, colors, spacing, typ
         {JSON.stringify(pendingConfirmation.details, null, 2)}
       </Text>
       <View className="flex-row gap-2">
-        <Button testID="chat-confirmation.button.apply" variant="primary" onPress={onApply} style={{ flex: 1 }}>Apply</Button>
-        <Button testID="chat-confirmation.button.cancel" variant="secondary" onPress={onCancel} style={{ flex: 1 }}>Cancel</Button>
+        <Button testID="chat-confirmation.button.apply" variant="primary" onPress={onApply} style={{ flex: 1 }}>{t('common.apply')}</Button>
+        <Button testID="chat-confirmation.button.cancel" variant="secondary" onPress={onCancel} style={{ flex: 1 }}>{t('common.cancel')}</Button>
       </View>
     </Surface>
   );

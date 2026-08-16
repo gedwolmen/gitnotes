@@ -1,13 +1,15 @@
 import React from 'react';
 
 import { EmptyState } from '../ui';
+import { useTranslation } from 'react-i18next';
 
 export function TemplatesEmptyState() {
+  const { t } = useTranslation();
   return (
     <EmptyState
       icon="document-text-outline"
-      title="No templates yet"
-      subtitle="Create your first custom template to get started."
+      title={t('templates.emptyTitle')}
+      subtitle={t('templates.emptySubtitle')}
     />
   );
 }

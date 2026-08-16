@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTokens } from '../../contexts/ThemeContext';
 
 export interface ChatLoadingStripProps {
@@ -13,6 +14,7 @@ export interface ChatLoadingStripProps {
 
 export function ChatLoadingStrip({ visible, model, provider, startedAt, onCancel }: ChatLoadingStripProps) {
   const { colors, spacing, type, radii } = useTokens();
+  const { t } = useTranslation();
   const [elapsedMs, setElapsedMs] = useState(() => Math.max(0, Date.now() - startedAt));
 
   useEffect(() => {
@@ -31,7 +33,7 @@ export function ChatLoadingStrip({ visible, model, provider, startedAt, onCancel
       testID="chat.status.strip"
       accessible
       accessibilityLiveRegion="polite"
-      accessibilityLabel={`Generating with ${pillLabel}, ${(elapsedMs / 1000).toFixed(1)} seconds elapsed`}
+      accessibilityLabel={t('chat.generatingWith', { model: pillLabel, seconds: (elapsedMs / 1000).toFixed(1) })}
       className="flex-row items-center bg-elevated border-t border-border px-3 py-2 gap-2"
     >
       <View
@@ -65,13 +67,13 @@ export function ChatLoadingStrip({ visible, model, provider, startedAt, onCancel
       <Pressable
         testID="chat.status.cancel"
         accessibilityRole="button"
-        accessibilityLabel="Cancel AI response"
+        accessibilityLabel={t('chat.cancelResponse')}
         onPress={onCancel}
         hitSlop={8}
         className="flex-row items-center gap-1"
       >
         <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
-        <Text className="text-xs text-text-secondary">Cancel</Text>
+        <Text className="text-xs text-text-secondary">{t('common.cancel')}</Text>
       </Pressable>
     </View>
   );

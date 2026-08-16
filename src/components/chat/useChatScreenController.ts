@@ -16,6 +16,7 @@ import type { MemorySearchResult } from '../../services/ai/AIMemoryIndexService'
 import { ProviderUnavailableError } from '../../services/ai/providerAvailability';
 import { describeAvailability } from '../../services/ai/providerAvailabilityCopy';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useAIStore } from '../../stores/aiStore';
 import { useChatStore } from '../../stores/chatStore';
 import { useNoteStore } from '../../stores/noteStore';
@@ -65,25 +66,26 @@ function parseToolListItems(raw: string): ToolListItem[] | null {
   }
 }
 
-function formatBulletList(items: string[], noun: string): string {
-  if (items.length === 0) return `No ${noun} found.`;
+function formatBulletList(items: string[], noun: string, t: TFunction): string {
+  if (items.length === 0) return t('chat.noFoundNoun', { noun });
   const visibleItems = items.slice(0, 8);
   const extraCount = items.length - visibleItems.length;
   return [
-    `Found ${items.length} ${noun}:`,
+    t('chat.foundCount', { count: items.length, noun }),
     ...visibleItems.map((item) => `- ${item}`),
-    ...(extraCount > 0 ? [`- and ${extraCount} more`] : []),
+    ...(extraCount > 0 ? [t('chat.andMore', { count: extraCount })] : []),
   ].join('\n');
 }
 
-function buildFallbackToolResponse(toolName: string, rawResult: string): string | null {
+function buildFallbackToolResponse(toolName: string, rawResult: string, t: TFunction): string | null {
   if (!rawResult.trim()) return null;
   if (toolName === 'search_notes') {
     const items = parseToolListItems(rawResult);
     if (!items) return null;
     return formatBulletList(
       items.map((item) => item.title?.trim()).filter((item): item is string => !!item),
-      'notes',
+      t('chat.nounNotes'),
+      t,
     );
   }
   if (toolName === 'search_todos' || toolName === 'get_todos') {
@@ -94,10 +96,11 @@ function buildFallbackToolResponse(toolName: string, rawResult: string): string 
         .map((item) => {
           const label = item.text?.trim();
           if (!label) return null;
-          return item.completed ? `${label} (done)` : label;
+          return item.completed ? `${label}${t('chat.doneParenthetical')}` : label;
         })
         .filter((item): item is string => !!item),
-      'todos',
+      t('chat.nounTodos'),
+      t,
     );
   }
   return null;
@@ -175,6 +178,7 @@ function mergeAssistantWithToolFallback(
   assistantText: string,
   fallbackToolText: string,
   handledToolCount: number,
+  t: TFunction,
 ): string {
   const assistant = assistantText.trim();
   const fallback = fallbackToolText.trim();
@@ -182,7 +186,7 @@ function mergeAssistantWithToolFallback(
 
   if (!fallback) {
     if (assistantIsMeaningful) return assistant;
-    return handledToolCount > 0 ? '' : assistant || 'Done.';
+    return handledToolCount > 0 ? '' : assistant || t('chat.done');
   }
 
   if (handledToolCount <= 0) {
@@ -255,10 +259,10 @@ export function useChatScreenController(threadId: string) {
   const getSelectedModelConfig = useCallback(() => {
     const aiState = useAIStore.getState();
     const model = aiState.getSelectedModel();
-    if (!model) throw new Error('Select an AI model before sending a message.');
+    if (!model) throw new Error(t('chat.selectModelFirst'));
     const provider = aiState.providers.find((item) => item.id === model.providerId);
     return { model, provider };
-  }, []);
+  }, [t]);
 
   const runToolCall = useCallback(async (
     toolName: string,
@@ -278,26 +282,26 @@ export function useChatScreenController(threadId: string) {
       }
 
       if (!result.requiresConfirmation && !result.success) {
-        addMessage({ id: generateId(), role: 'system', content: `Tool error: ${resultText}`, timestamp: Date.now() });
+        addMessage({ id: generateId(), role: 'system', content: t('chat.toolError', { message: resultText }), timestamp: Date.now() });
       }
 
       return result;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Tool execution failed.';
+      const message = error instanceof Error ? error.message : t('chat.toolExecutionFailed');
       if (options?.messageId) updateMessage(options.messageId, { toolCallResult: message });
-      addMessage({ id: generateId(), role: 'system', content: `Tool error: ${message}`, timestamp: Date.now() });
+      addMessage({ id: generateId(), role: 'system', content: t('chat.toolError', { message }), timestamp: Date.now() });
       return {
         success: false,
         error: message,
         requiresConfirmation: false,
       };
     }
-  }, [addMessage, updateMessage]);
+  }, [addMessage, updateMessage, t]);
 
   const streamAssistantResponse = useCallback(async (text: string, contexts: AIContextItem[]) => {
     const currentThread = useChatStore.getState().activeThread;
     if (!currentThread) {
-      setLocalError('Chat thread is not loaded.');
+      setLocalError(t('chat.threadNotLoaded'));
       return;
     }
 
@@ -340,7 +344,7 @@ export function useChatScreenController(threadId: string) {
         : undefined;
       const { model, provider } = getSelectedModelConfig();
       const runtimeThread = useChatStore.getState().activeThread;
-      if (!runtimeThread) throw new Error('Chat thread is not available.');
+      if (!runtimeThread) throw new Error(t('chat.threadNotAvailable'));
 
       const aggregatedContexts = dedupeContexts([...runtimeThread.messages.flatMap((message) => message.attachedContexts ?? []), ...contexts]);
       const contextString = aggregatedContexts.length ? await buildContextString(aggregatedContexts) : undefined;
@@ -406,7 +410,7 @@ export function useChatScreenController(threadId: string) {
               toolCallResult: streamedResultText,
             });
             const fallbackToolResponse = eventToolName
-              ? buildFallbackToolResponse(eventToolName, streamedResultText)
+              ? buildFallbackToolResponse(eventToolName, streamedResultText, t)
               : null;
             if (fallbackToolResponse) fallbackToolResponses.push(fallbackToolResponse);
           }
@@ -430,7 +434,7 @@ export function useChatScreenController(threadId: string) {
         handledToolCount += 1;
         const result = await runToolCall(resolvedToolName, args, { messageId: toolMessageId });
         const resultText = formatExecutorResult(result);
-        const fallbackToolResponse = buildFallbackToolResponse(resolvedToolName, resultText);
+        const fallbackToolResponse = buildFallbackToolResponse(resolvedToolName, resultText, t);
         if (fallbackToolResponse) fallbackToolResponses.push(fallbackToolResponse);
         delete toolArgsBufferRef.current[toolCallId];
         delete toolMessageIdsRef.current[toolCallId];
@@ -443,7 +447,7 @@ export function useChatScreenController(threadId: string) {
       if (pendingFlush) clearTimeout(pendingFlush);
 
       if (abortController.signal.aborted) {
-        updateMessage(assistantMessageId, { content: assistantText || 'Stopped.' });
+        updateMessage(assistantMessageId, { content: assistantText || t('chat.stopped') });
       } else if (!assistantText.trim() && !pausedForConfirmation) {
         const fallbackToolText = fallbackToolResponses.join('\n\n').trim();
         // Stream finished with no text. If the model invoked tools the
@@ -461,12 +465,12 @@ export function useChatScreenController(threadId: string) {
             removeMessage(assistantMessageId);
           }
         } else {
-          updateMessage(assistantMessageId, { content: 'No response received. Tap Retry to try again.' });
-          setLocalError('The model returned an empty response.');
+          updateMessage(assistantMessageId, { content: t('chat.noResponseReceived') });
+          setLocalError(t('chat.emptyResponse'));
         }
       } else {
         const fallbackToolText = fallbackToolResponses.join('\n\n').trim();
-        const nextContent = mergeAssistantWithToolFallback(assistantText, fallbackToolText, handledToolCount);
+        const nextContent = mergeAssistantWithToolFallback(assistantText, fallbackToolText, handledToolCount, t);
         if (!nextContent && handledToolCount > 0) removeMessage(assistantMessageId);
         else updateMessage(assistantMessageId, { content: nextContent });
       }
@@ -481,17 +485,17 @@ export function useChatScreenController(threadId: string) {
       setStreaming(false);
       setStreamStartedAt(0);
       const aborted = (error as Error)?.name === 'AbortError' || abortController.signal.aborted;
-      if (aborted) updateMessage(assistantMessageId, { content: assistantText || 'Stopped.' });
+      if (aborted) updateMessage(assistantMessageId, { content: assistantText || t('chat.stopped') });
       else {
         const message =
           error instanceof ProviderUnavailableError
             ? describeAvailability(t, error.reason)
             : error instanceof Error
               ? error.message
-              : 'Failed to send message.';
+              : t('chat.failedToSend');
         const fallbackToolText = fallbackToolResponses.join('\n\n').trim();
         if (hasMeaningfulAssistantText(assistantText) || handledToolCount > 0 || fallbackToolText) {
-          const nextContent = mergeAssistantWithToolFallback(assistantText, fallbackToolText, handledToolCount);
+          const nextContent = mergeAssistantWithToolFallback(assistantText, fallbackToolText, handledToolCount, t);
           if (!nextContent && handledToolCount > 0) removeMessage(assistantMessageId);
           else updateMessage(assistantMessageId, { content: nextContent });
           console.warn('[ChatScreen] stream finished with visible output but failed while persisting or post-processing:', message);
@@ -512,9 +516,9 @@ export function useChatScreenController(threadId: string) {
   const handleMessageLongPress = useCallback((message: ChatMessage) => {
     if (isStreaming) return;
     if (message.role === 'user') {
-      Alert.prompt?.('Edit message', 'Re-send with new text. Replies after will be discarded.', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Send', onPress: (newText?: string) => {
+      Alert.prompt?.(t('chat.editMessageTitle'), t('chat.editMessageBody'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('chat.send'), onPress: (newText?: string) => {
           const text = (newText ?? '').trim();
           if (!text) return;
           truncateAfter(message.id, { inclusive: true });
@@ -532,15 +536,15 @@ export function useChatScreenController(threadId: string) {
       while (priorUserIdx >= 0 && currentMessages[priorUserIdx].role !== 'user') priorUserIdx -= 1;
       if (priorUserIdx < 0) return;
       const priorUser = currentMessages[priorUserIdx];
-      Alert.alert('Regenerate response', 'Discard this reply and ask the model again?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Regenerate', onPress: () => {
+      Alert.alert(t('chat.regenerateTitle'), t('chat.regenerateBody'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('chat.regenerate'), onPress: () => {
           truncateAfter(priorUser.id);
           void streamAssistantResponse(priorUser.content, priorUser.attachedContexts ?? []);
         } },
       ]);
     }
-  }, [isStreaming, streamAssistantResponse, truncateAfter]);
+  }, [isStreaming, streamAssistantResponse, truncateAfter, t]);
 
   useEffect(() => {
     if (storageAdapter) return;
@@ -556,11 +560,11 @@ export function useChatScreenController(threadId: string) {
     if (thread || !storageAdapter) return;
     const { chatRepoOwner, chatRepoName, chatRepoBranch } = useAIStore.getState();
     if (!chatRepoOwner || !chatRepoName) {
-      setLocalError('Chat storage repo is not configured yet.');
+      setLocalError(t('chat.storageRepoNotConfigured'));
       return;
     }
     void loadThread({ owner: chatRepoOwner, repo: chatRepoName, branch: chatRepoBranch, threadId });
-  }, [loadThread, storageAdapter, thread, threadId]);
+  }, [loadThread, storageAdapter, thread, threadId, t]);
 
   const handleRetry = useCallback(() => {
     if (retryPayload && !isStreaming) void streamAssistantResponse(retryPayload.text, retryPayload.contexts);
@@ -629,17 +633,17 @@ export function useChatScreenController(threadId: string) {
       await runToolCall(pendingConfirmation.toolName, pendingConfirmation.args, { allowConfirmation: false, messageId: pendingConfirmation.messageId });
       await saveActiveThread();
     } catch (error) {
-      setLocalError(error instanceof Error ? error.message : 'Failed to apply tool action.');
+      setLocalError(error instanceof Error ? error.message : t('chat.failedToApplyTool'));
     }
-  }, [pendingConfirmation, runToolCall, saveActiveThread]);
+  }, [pendingConfirmation, runToolCall, saveActiveThread, t]);
 
   const handleConfirmCancel = useCallback(async () => {
     if (!pendingConfirmation) return;
-    updateMessage(pendingConfirmation.messageId, { toolCallResult: 'Cancelled.' });
-    addMessage({ id: generateId(), role: 'system', content: `Cancelled: ${pendingConfirmation.description}`, timestamp: Date.now() });
+    updateMessage(pendingConfirmation.messageId, { toolCallResult: t('chat.cancelled') });
+    addMessage({ id: generateId(), role: 'system', content: t('chat.cancelledAction', { description: pendingConfirmation.description }), timestamp: Date.now() });
     setPendingConfirmation(null);
     await saveActiveThread();
-  }, [addMessage, pendingConfirmation, saveActiveThread, updateMessage]);
+  }, [addMessage, pendingConfirmation, saveActiveThread, updateMessage, t]);
 
   const contextBudget = useCallback(() => {
     const model = useAIStore.getState().getSelectedModel();

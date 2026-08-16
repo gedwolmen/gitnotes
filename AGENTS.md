@@ -32,6 +32,10 @@ yarn eslint . --ext .ts,.tsx  # Linting
 - Branch per feature, rebase before merging.
 - `lint-staged` runs on pre-commit (ESLint + Prettier).
 
+## Wiki documentation
+
+- Every fix or feature MUST be documented in the wiki (docs/wiki/). Each page must be added to the docs/wiki/index.md table. Wiki documentation is part of the definition of done.
+
 ## Data Safety
 
 - **Never push secrets, API keys, or auth tokens.**

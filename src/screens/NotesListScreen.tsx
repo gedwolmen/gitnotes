@@ -3,6 +3,7 @@ import { Alert, View, Text, ActivityIndicator, RefreshControl, FlatList, Touchab
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 
 import { useNotes } from '../contexts/NoteContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -113,7 +114,7 @@ function LockedNoteRow({
       onToggleSelect={onToggleSelect}
       disabled={lock.locked || lock.failed}
     >
-      <View style={{ opacity: lock.locked ? 0.45 : 1 }}>
+      <View style={{ opacity: lock.locked ? 0.45 : 1, position: 'relative' }}>
         <NotesListCard
           note={item}
           viewMode={viewMode}
@@ -143,8 +144,8 @@ function LockedNoteRow({
 const styles = StyleSheet.create({
   rowLockTrailing: {
     position: 'absolute',
-    right: 12,
-    top: 12,
+    right: 16,
+    top: 16,
     zIndex: 5,
   },
 });
@@ -152,7 +153,7 @@ const styles = StyleSheet.create({
 export default function NotesListScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<NavigationProp>();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { authState } = useAuth();
   const headerHeight = useScreenHeaderHeight();
   const tabBarHeight = useTabBarHeight();
@@ -177,6 +178,9 @@ export default function NotesListScreen() {
   const listRef = useRef<FlatList<Note>>(null);
   const isPullRefreshingRef = useRef(false);
   const [gitOperationActive, setGitOperationActive] = useState(false);
+
+  const [bannerRegionHeight, setBannerRegionHeight] = useState(headerHeight);
+  const [toolsHeight, setToolsHeight] = useState(0);
 
   const [showViewModePicker, setShowViewModePicker] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -597,25 +601,24 @@ export default function NotesListScreen() {
   return (
     <SafeAreaView edges={[]} className="flex-1" style={{ backgroundColor: colors.background }}>
       {isDeleting ? <GitHubActivityIndicator /> : null}
-      <View style={{ flex: 1, paddingTop: headerHeight }}>
-      <View>
+      <View
+        testID="notes-list.banner-region"
+        pointerEvents="box-none"
+        style={{ position: 'absolute', left: 0, right: 0, top: 0, paddingTop: headerHeight }}
+        onLayout={(event) => setBannerRegionHeight(event.nativeEvent.layout.height)}
+      >
         <OfflineBanner />
         <ConflictBanner />
-      </View>
 
-      <NotesListHeader
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        repositories={repositories}
-        selectedRepo={filters.selectedRepo}
-        hasActiveSearch={hasActiveSearch}
-        searchMatchCount={searchMatchCount}
-        currentSearchMatchIndex={currentSearchMatchIndex}
-        sortMode={sortMode}
-        onSortChange={setSortMode}
-        onSelectRepo={handleSelectRepo}
-        onSearchNavigate={handleSearchNavigate}
-      />
+        {error ? (
+          <View className="mx-3 mb-1 p-2.5 rounded-sm border-l-4" style={{ backgroundColor: colors.error + '20', borderLeftColor: colors.error }}>
+            <Text className="text-xs flex-1" style={{ color: colors.error }} numberOfLines={2}>{error}</Text>
+            <TouchableOpacity onPress={clearError} className="ml-3 px-3 py-1.5 rounded-md border" style={{ borderColor: colors.error }}>
+              <Text className="text-xs font-semibold" style={{ color: colors.error }}>{t('common.dismiss')}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+      </View>
 
       <NotesViewModePicker
         visible={showViewModePicker}
@@ -623,21 +626,6 @@ export default function NotesListScreen() {
         onClose={() => setShowViewModePicker(false)}
         onChange={handleViewModeChange}
       />
-
-      <FilterBar
-        filters={activeFilterChips}
-        onRemoveFilter={handleRemoveFilterChip}
-        onClearAll={handleClearFilters}
-      />
-
-      {error ? (
-        <View className="mx-3 mb-1 p-2.5 rounded-sm border-l-4" style={{ backgroundColor: colors.error + '20', borderLeftColor: colors.error }}>
-          <Text className="text-xs flex-1" style={{ color: colors.error }} numberOfLines={2}>{error}</Text>
-          <TouchableOpacity onPress={clearError} className="ml-3 px-3 py-1.5 rounded-md border" style={{ borderColor: colors.error }}>
-            <Text className="text-xs font-semibold" style={{ color: colors.error }}>{t('common.dismiss')}</Text>
-          </TouchableOpacity>
-        </View>
-      ) : null}
 
       <FlatList
         ref={listRef}
@@ -650,7 +638,7 @@ export default function NotesListScreen() {
         removeClippedSubviews={false}
         contentContainerStyle={{
           padding: 12,
-          paddingTop: 4,
+          paddingTop: bannerRegionHeight + toolsHeight + 4,
           paddingBottom: tabBarHeight + 16,
           flexGrow: 1,
         }}
@@ -669,7 +657,36 @@ export default function NotesListScreen() {
         }
         ListEmptyComponent={<NotesEmptyState isFiltered={!!searchQuery || activeFilterCount > 0} />}
       />
-      </View>
+
+      <BlurView
+        testID="notes-list.header-blur"
+        pointerEvents="box-none"
+        intensity={60}
+        tint={isDark ? 'dark' : 'light'}
+        className="absolute left-0 right-0 z-10"
+        style={{ top: bannerRegionHeight }}
+        onLayout={(event) => setToolsHeight(event.nativeEvent.layout.height)}
+      >
+        <NotesListHeader
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          repositories={repositories}
+          selectedRepo={filters.selectedRepo}
+          hasActiveSearch={hasActiveSearch}
+          searchMatchCount={searchMatchCount}
+          currentSearchMatchIndex={currentSearchMatchIndex}
+          sortMode={sortMode}
+          onSortChange={setSortMode}
+          onSelectRepo={handleSelectRepo}
+          onSearchNavigate={handleSearchNavigate}
+        />
+
+        <FilterBar
+          filters={activeFilterChips}
+          onRemoveFilter={handleRemoveFilterChip}
+          onClearAll={handleClearFilters}
+        />
+      </BlurView>
 
       <NotesFilterModal
         visible={showFilterModal}

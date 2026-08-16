@@ -16,6 +16,7 @@
 | [Theme & Styling](./theme-styling.md) | NativeWind v5, theme tokens, dark mode |
 | [AI Providers](./ai-providers.md) | Provider types, Anthropic defaults, adding providers |
 | [Filter Persistence](./filter-persistence.md) | Filter state architecture and AsyncStorage |
+| [Importers](./importers.md) | Removed Google Keep and Apple Notes importers, for later re-integration |
 
 ## Quick Start
 

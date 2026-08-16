@@ -72,9 +72,12 @@ http.interceptors.response.use(
     endIfTracked(error.config as TrackedConfig | undefined);
     const status = error.response?.status;
     // Prevent credential leaks in error messages
+    // `||` (not `??`): a status-less error whose message is empty (e.g. a
+    // dropped connection or an interceptor that lost the body) must surface
+    // as a real "Network error", never an empty string that reaches the UI.
     const safeMessage = status
       ? `GitHub API error: ${status}`
-      : error.message?.replace(/Bearer\s+\S+/gi, 'Bearer ***') ?? 'Network error';
+      : error.message?.replace(/Bearer\s+\S+/gi, 'Bearer ***') || 'Network error';
 
     const normalized = new Error(safeMessage) as Error & { status?: number };
     normalized.status = status;

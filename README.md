@@ -37,7 +37,7 @@
 - Notes, todos, journals, and Excalidraw-style canvases — all backed by Git
 - Folders, tags, colors, pins, wiki-links, backlinks, custom templates
 - Multiple GitHub accounts; per-repo API or full-clone sync modes
-- Importers for Google Keep and Apple Notes
+- Deprecated importers (Google Keep, Apple Notes) are documented in the wiki: docs/wiki/importers.md
 - Optional AI chat layer (Anthropic, OpenAI-compatible providers, Apple Intelligence, on-device Llama)
 - Biometric lock, multilingual UI (EN, ES, FR, DE, JA, KO), light / dark / system themes
 
@@ -48,6 +48,8 @@ Expo SDK 56 · React Native 0.85 · TypeScript 5.7 · isomorphic-git · React Na
 ## Contributing
 
 Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and commit guidelines.
+
+For a full project knowledge base see docs/wiki/
 
 For bugs or feature requests, [open an issue](https://github.com/gedwolmen/gitnotes/issues/new/choose).
 

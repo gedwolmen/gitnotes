@@ -153,7 +153,7 @@ export default function TemplateManagerScreen() {
   const handleSave = useCallback(async () => {
     const name = draftName.trim();
     if (!name) {
-      Alert.alert('Name required', 'Please give your template a name.');
+      Alert.alert(t('templates.nameRequiredTitle'), t('templates.nameRequiredBody'));
       return;
     }
     const description = draftDescription.trim();
@@ -186,7 +186,7 @@ export default function TemplateManagerScreen() {
     } catch (error) {
       console.error('[TemplateManagerScreen] save failed', error);
       HapticService.error();
-      Alert.alert('Save failed', 'Could not save the template. Please try again.');
+      Alert.alert(t('templates.saveFailedTitle'), t('templates.saveFailedBody'));
     }
   }, [
     draftName,
@@ -199,18 +199,19 @@ export default function TemplateManagerScreen() {
     editingId,
     createTemplate,
     updateTemplate,
+    t,
   ]);
 
   const handleDelete = useCallback(
     (template: NoteTemplate) => {
       if (!template.isCustom) return;
       Alert.alert(
-        'Delete template?',
-        `"${template.name}" will be permanently removed.`,
+        t('templates.deleteConfirmTitle'),
+        t('templates.deleteConfirmBody', { name: template.name }),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: 'Delete',
+            text: t('common.delete'),
             style: 'destructive',
             onPress: async () => {
               await deleteTemplate(template.id);
@@ -220,7 +221,7 @@ export default function TemplateManagerScreen() {
         ],
       );
     },
-    [deleteTemplate],
+    [deleteTemplate, t],
   );
 
   const handleTogglePin = useCallback(
@@ -259,7 +260,7 @@ export default function TemplateManagerScreen() {
           activeOpacity={0.8}
         >
           <Ionicons name="add" size={18} color="#fff" />
-          <Text className="text-white text-[15px] font-semibold">New template</Text>
+          <Text className="text-white text-[15px] font-semibold">{t('templates.newTemplate')}</Text>
         </TouchableOpacity>
 
         {allTemplates.length === 0
@@ -302,7 +303,7 @@ export default function TemplateManagerScreen() {
         subtitle={
           templatesRepoPref
             ? t('templates.subtitle', { total: allTemplates.length, custom: customCount, repo: templatesRepoPref.repoPath })
-            : `${allTemplates.length} total · ${customCount} custom`
+            : t('templates.subtitleNoRepo', { total: allTemplates.length, custom: customCount })
         }
         onBack={handleBack}
         actions={

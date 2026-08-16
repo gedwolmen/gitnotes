@@ -74,10 +74,6 @@ jest.mock('../src/components/ui/HintIcon', () => ({
   HintIcon: () => null,
 }));
 
-jest.mock('../src/components/settings/ImportSection', () => ({
-  ImportSection: () => null,
-}));
-
 jest.mock('../src/components/settings/ReminderSection', () => ({
   ReminderSection: () => null,
 }));

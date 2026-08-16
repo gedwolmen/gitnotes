@@ -37,7 +37,7 @@ export interface NoteGitHubSyncResult {
 
 function failedSyncResult(error: unknown): NoteGitHubSyncResult {
   const details = extractHttpErrorDetails(error);
-  const message = details.message ?? 'Unknown error';
+  const message = details.message || 'Unknown error';
   const status = details.status ?? syncStatusForError(message);
   return status === undefined
     ? { success: false, error: message }

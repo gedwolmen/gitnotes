@@ -43,15 +43,21 @@ import { SettingsModals } from '../components/settings/SettingsModals';
 import { CloneProgressModal, type CloneProgress } from '../components/settings/CloneProgressModal';
 import type { GitRepository } from '../services/GitService';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { RepoAccessPreflightError } from '../services/git/repoAccessPreflight';
 
-function confirmUnverifiedWrite(onConfirm: () => void): void {
+// Mirrors GitFsService's MAX_CLONE_RETRIES so a failing repo can't loop the outer flow.
+const MAX_OUTER_CLONE_RETRIES = 1;
+// The onProgress abort throw may never land (stuck transfer), so cancel force-closes after this.
+const CLONE_CANCEL_GRACE_MS = 800;
+
+function confirmUnverifiedWrite(t: TFunction, onConfirm: () => void): void {
   Alert.alert(
-    'Write access not verified',
-    'Write access not verified. This repository may be read-only. Add anyway?',
+    t('settings.writeAccessNotVerifiedTitle'),
+    t('settings.writeAccessNotVerifiedBody'),
     [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Add anyway', onPress: onConfirm },
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('settings.addAnyway'), onPress: onConfirm },
     ],
   );
 }
@@ -123,6 +129,7 @@ export default function SettingsScreen() {
   const [cloningRepo, setCloningRepo] = useState<string | null>(null);
   const [cloneProgress, setCloneProgress] = useState<CloneProgress | null>(null);
   const cloneAbortedRef = useRef(false);
+  const cloneOuterRetriesRef = useRef(0);
   const [isSyncingExistingTemplates, setIsSyncingExistingTemplates] = useState(false);
   const [lfsPending, setLfsPending] = useState<Record<string, { count: number; bytes: number }>>({});
   const [lfsDownloadingRepo, setLfsDownloadingRepo] = useState<string | null>(null);
@@ -209,12 +216,15 @@ export default function SettingsScreen() {
 
   const handleEnableCloneMode = useCallback(async (repo: GitRepository, isRetry = false) => {
     if (!GitHubService.isAuthenticated()) {
-      Alert.alert('GitHub required', 'Connect a GitHub account before enabling clone mode.');
+      Alert.alert(t('settings.githubRequiredTitle'), t('settings.githubRequiredBody'));
       return;
+    }
+    if (!isRetry) {
+      cloneOuterRetriesRef.current = 0;
     }
     setCloningRepo(repo.path);
     cloneAbortedRef.current = false;
-    setCloneProgress({ repoName: repo.name, phase: 'Preparing', loaded: 0, total: null });
+    setCloneProgress({ repoName: repo.name, phase: t('settings.clonePhasePreparing'), loaded: 0, total: null });
     try {
       const token = (await AuthService.getToken()) ?? undefined;
       const branch = repo.branch || 'main';
@@ -237,27 +247,28 @@ export default function SettingsScreen() {
       }
       await SyncEngineService.setMode(repo.path, 'clone');
       setSyncModes((prev) => ({ ...prev, [repo.path]: 'clone' }));
+      setCloneProgress(null);
       void refreshLfsPending([repo.path]);
       HapticService.success();
-      Alert.alert('Clone mode enabled', `${repo.name} now syncs through a local working tree.\n\nPush any offline edits up to this clone now?`, [
-        { text: 'Skip', style: 'cancel' },
+      Alert.alert(t('settings.cloneEnabledTitle'), t('settings.cloneEnabledBody', { name: repo.name }), [
+        { text: t('common.skip'), style: 'cancel' },
         {
-          text: 'Push edits',
+          text: t('settings.pushEdits'),
           onPress: async () => {
             try {
               const report = await CloneMigrationService.migrateRepo(repo.path, branch);
               const total = report.notes + report.todos + report.canvases + report.templates;
               if (report.failures.length > 0) {
                 HapticService.error();
-                Alert.alert('Migration finished with issues', `Pushed ${total} item(s); ${report.failures.length} failed (see console).`);
+                Alert.alert(t('settings.migrationIssuesTitle'), t('settings.migrationIssuesBody', { total, failures: report.failures.length }));
                 report.failures.forEach((failure) => console.warn('[CloneMigration]', failure.kind, failure.filePath, failure.error));
               } else {
                 HapticService.success();
-                Alert.alert('Pushed offline edits', `${total} item(s) committed and pushed to ${repo.name}.`);
+                Alert.alert(t('settings.pushedEditsTitle'), t('settings.pushedEditsBody', { total, name: repo.name }));
               }
             } catch (error) {
               HapticService.error();
-              Alert.alert('Migration failed', error instanceof Error ? error.message : String(error));
+              Alert.alert(t('settings.migrationFailedTitle'), error instanceof Error ? error.message : String(error));
             }
           },
         },
@@ -265,20 +276,25 @@ export default function SettingsScreen() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (cloneAbortedRef.current) return;
-      if (/Packfile trailer mismatch|packfile may be corrupted/i.test(errorMessage) && !isRetry) {
+      if (
+        /Packfile trailer mismatch|packfile may be corrupted/i.test(errorMessage) &&
+        cloneOuterRetriesRef.current < MAX_OUTER_CLONE_RETRIES
+      ) {
+        cloneOuterRetriesRef.current += 1;
         await GitFsService.removeRepo({ repoPath: repo.path }).catch(() => undefined);
         setCloneProgress({
           repoName: repo.name,
-          phase: 'Retrying with smaller clone...',
+          phase: t('settings.clonePhaseRetrying'),
           loaded: 0,
           total: null,
-          error: `Clone failed: ${errorMessage}\n\nRetrying with minimal settings...`,
+          error: t('settings.cloneFailedRetryError', { error: errorMessage }),
         });
         setTimeout(() => {
+          if (cloneAbortedRef.current) return;
           handleEnableCloneMode(repo, true).catch((retryError) => {
             setCloneProgress({
               repoName: repo.name,
-              phase: 'Clone failed',
+              phase: t('settings.clonePhaseFailed'),
               loaded: 0,
               total: null,
               error: retryError instanceof Error ? retryError.message : String(retryError),
@@ -291,23 +307,32 @@ export default function SettingsScreen() {
       HapticService.error();
       setCloneProgress({
         repoName: repo.name,
-        phase: 'Clone failed',
+        phase: t('settings.clonePhaseFailed'),
         loaded: 0,
         total: null,
         error: errorMessage,
       });
     } finally {
+      setCloningRepo(null);
+      if (cloneAbortedRef.current) {
+        setCloneProgress(null);
+      }
     }
-  }, [refreshLfsPending]);
+  }, [refreshLfsPending, t]);
 
   const handleCancelClone = useCallback(() => {
     cloneAbortedRef.current = true;
     if (cloneProgress?.error) {
       setCloneProgress(null);
-    } else {
-      setCloneProgress((prev) => (prev ? { ...prev, phase: 'Cancelling' } : prev));
+      return;
     }
-  }, [cloneProgress]);
+    setCloneProgress((prev) => (prev ? { ...prev, phase: t('settings.clonePhaseCancelling') } : prev));
+    setTimeout(() => {
+      setCloneProgress((prev) =>
+        prev && prev.phase === t('settings.clonePhaseCancelling') ? null : prev,
+      );
+    }, CLONE_CANCEL_GRACE_MS);
+  }, [cloneProgress, t]);
 
   const handleRetryClone = useCallback(() => {
     if (cloningRepo) {
@@ -322,7 +347,7 @@ export default function SettingsScreen() {
   const handleDownloadLfsObjects = useCallback(async (repo: GitRepository) => {
     const token = (await AuthService.getToken()) ?? undefined;
     if (!token) {
-      Alert.alert('GitHub required', 'Connect a GitHub account before downloading LFS objects.');
+      Alert.alert(t('settings.lfsGithubRequiredTitle'), t('settings.lfsGithubRequiredBody'));
       return;
     }
     setLfsDownloadingRepo(repo.path);
@@ -348,24 +373,24 @@ export default function SettingsScreen() {
       await refreshLfsPending([repo.path]);
       if (failures.length === 0) {
         HapticService.success();
-        Alert.alert('LFS downloads complete', `Downloaded ${succeeded} file(s) for ${repo.name}.`);
+        Alert.alert(t('settings.lfsDoneTitle'), t('settings.lfsDoneBody', { count: succeeded, name: repo.name }));
       } else {
         HapticService.error();
         Alert.alert(
-          'Some LFS downloads failed',
-          `Downloaded ${succeeded} file(s); ${failures.length} failed.\n\n${failures[0].error}`,
+          t('settings.lfsFailedTitle'),
+          t('settings.lfsFailedBody', { count: succeeded, failed: failures.length, details: failures[0].error }),
         );
       }
     } finally {
       setLfsDownloadingRepo(null);
     }
-  }, [refreshLfsPending]);
+  }, [refreshLfsPending, t]);
 
   const handleDisableCloneMode = useCallback((repo: GitRepository) => {
-    Alert.alert('Switch to API mode?', `This will remove the local clone of ${repo.name} and revert to the GitHub Contents API.`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('settings.switchToApiTitle'), t('settings.switchToApiBody', { name: repo.name }), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Switch',
+        text: t('settings.switch'),
         style: 'destructive',
         onPress: async () => {
           await GitFsService.removeRepo({ repoPath: repo.path });
@@ -375,13 +400,13 @@ export default function SettingsScreen() {
         },
       },
     ]);
-  }, []);
+  }, [t]);
 
   const handleSyncExistingTemplates = useCallback(async () => {
     if (!templatesRepoPref) return;
     const unsynced = useTemplateStore.getState().customTemplates.filter((template) => !template.filePath);
     if (unsynced.length === 0) {
-      Alert.alert('Nothing to sync', 'All custom templates are already in the templates repo.');
+      Alert.alert(t('settings.nothingToSyncTitle'), t('settings.nothingToSyncBody'));
       return;
     }
     setIsSyncingExistingTemplates(true);
@@ -419,12 +444,17 @@ export default function SettingsScreen() {
     }
     if (failed === 0) HapticService.success();
     else HapticService.error();
-    Alert.alert('Done', failed === 0 ? `Synced ${synced} template(s) to ${templatesRepoPref.repoPath}.` : `Synced ${synced} template(s); ${failed} failed.`);
-  }, [templatesRepoPref]);
+    Alert.alert(
+      t('settings.templatesSyncDoneTitle'),
+      failed === 0
+        ? t('settings.templatesSyncDoneBody', { count: synced, path: templatesRepoPref.repoPath })
+        : t('settings.templatesSyncDonePartial', { count: synced, failed }),
+    );
+  }, [templatesRepoPref, t]);
 
   const handleSyncRepo = useCallback(async (repo: GitRepository) => {
     if (!GitHubService.isAuthenticated()) {
-      Alert.alert('GitHub Required', 'Please connect your GitHub account in Settings to sync repository files.');
+      Alert.alert(t('settings.githubRequiredSyncTitle'), t('settings.githubRequiredSyncBody'));
       return;
     }
     setSyncingRepo(repo.path);
@@ -433,21 +463,21 @@ export default function SettingsScreen() {
       HapticService.success();
       if (result.created > 0) {
         await refreshNotes();
-        Alert.alert('Sync Complete', `Imported ${result.created} notes from ${repo.name}.`);
+        Alert.alert(t('settings.syncCompleteImportedTitle'), t('settings.syncCompleteImportedBody', { count: result.created, name: repo.name }));
       } else if (result.skipped > 0) {
-        Alert.alert('Sync Complete', `All ${result.total} files were already imported or skipped.`);
+        Alert.alert(t('settings.syncCompleteImportedTitle'), t('settings.syncCompleteSkippedBody', { count: result.total }));
       } else if (result.errors.length > 0) {
-        Alert.alert('Sync Issues', `Encountered ${result.errors.length} errors. ${result.errors.slice(0, 3).join('\n')}`);
+        Alert.alert(t('settings.syncIssuesTitle'), t('settings.syncIssuesBody', { count: result.errors.length, details: result.errors.slice(0, 3).join('\n') }));
       } else {
-        Alert.alert('No Files Found', 'No .md, .norg, .org, or .pdf files found in this repository.');
+        Alert.alert(t('settings.noFilesTitle'), t('settings.noFilesBody'));
       }
     } catch (error) {
       HapticService.error();
-      Alert.alert('Sync Failed', error instanceof Error ? error.message : 'Failed to sync repository files.');
+      Alert.alert(t('settings.syncFailedTitle'), error instanceof Error ? error.message : t('settings.syncFailedBody'));
     } finally {
       setSyncingRepo(null);
     }
-  }, [refreshNotes]);
+  }, [refreshNotes, t]);
 
   const autoSyncAfterAdd = useCallback(async (repoPath: string, repoName: string) => {
     if (!GitHubService.isAuthenticated()) return;
@@ -459,9 +489,9 @@ export default function SettingsScreen() {
       }
     } catch (error) {
       console.warn('[Settings] auto-sync after add failed:', error);
-      Alert.alert('Auto-sync Failed', `Couldn't pull existing files from ${repoName}. You can retry from the Sync button.`);
+      Alert.alert(t('settings.autoSyncFailedTitle'), t('settings.autoSyncFailedBody', { name: repoName }));
     }
-  }, [refreshCanvases, refreshNotes, refreshTodos]);
+  }, [refreshCanvases, refreshNotes, refreshTodos, t]);
 
   const openRepoPicker = useCallback(async () => {
     setRepoSearchQuery('');
@@ -497,22 +527,22 @@ export default function SettingsScreen() {
         autoSyncAfterAdd(repo.full_name, repo.name);
       } catch (error) {
         if (error instanceof RepoAccessPreflightError && error.canRetry && !allowUnverifiedWrite) {
-          confirmUnverifiedWrite(() => void attemptAdd(true));
+          confirmUnverifiedWrite(t, () => void attemptAdd(true));
           return;
         }
         console.warn('[SettingsScreen] handleSelectGithubRepo failed:', error);
         HapticService.error();
         if (error instanceof RepoAccessPreflightError) {
-          Alert.alert('Repository Access', error.message);
+          Alert.alert(t('settings.repositoryAccessTitle'), error.message);
           return;
         }
-        Alert.alert('Error', 'Failed to add repository.');
+        Alert.alert(t('common.error'), t('settings.addRepoFailedBody'));
       } finally {
         setIsAddingRepo(false);
       }
     };
     await attemptAdd(false);
-  }, [addRepo, autoSyncAfterAdd, repositories]);
+  }, [addRepo, autoSyncAfterAdd, repositories, t]);
 
   const handleAddManualRepo = useCallback(async () => {
     const value = manualRepoInput.trim();
@@ -531,34 +561,49 @@ export default function SettingsScreen() {
         autoSyncAfterAdd(value, value);
       } catch (error) {
         if (error instanceof RepoAccessPreflightError && error.canRetry && !allowUnverifiedWrite) {
-          confirmUnverifiedWrite(() => void attemptAdd(true));
+          confirmUnverifiedWrite(t, () => void attemptAdd(true));
           return;
         }
         console.warn('[SettingsScreen] handleAddManualRepo failed:', error);
         HapticService.error();
         if (error instanceof RepoAccessPreflightError) {
-          Alert.alert('Repository Access', error.message);
+          Alert.alert(t('settings.repositoryAccessTitle'), error.message);
           return;
         }
-        Alert.alert('Error', 'Failed to add repository.');
+        Alert.alert(t('common.error'), t('settings.addRepoFailedBody'));
       } finally {
         setIsAddingRepo(false);
       }
     };
     await attemptAdd(false);
-  }, [addRepo, autoSyncAfterAdd, manualRepoInput]);
+  }, [addRepo, autoSyncAfterAdd, manualRepoInput, t]);
 
   const handleRemoveRepo = useCallback((repo: GitRepository) => {
     HapticService.warning();
-    Alert.alert('Remove Repository', `Remove "${repo.name}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: async () => { await removeRepo(repo.path); HapticService.success(); } },
+    Alert.alert(t('settings.removeRepoTitle'), t('settings.removeRepoBody', { name: repo.name }), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.remove'),
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await removeRepo(repo.path);
+            HapticService.success();
+          } catch (err) {
+            HapticService.error();
+            Alert.alert(
+              t('errors.somethingWrong'),
+              err instanceof Error ? err.message : t('errors.somethingWrong'),
+            );
+          }
+        },
+      },
     ]);
-  }, [removeRepo]);
+  }, [removeRepo, t]);
 
   const handleSaveToken = useCallback(async () => {
     if (!tokenInput.trim()) {
-      setTokenError('Please enter a token');
+      setTokenError(t('settings.tokenRequired'));
       return;
     }
     setIsVerifying(true);
@@ -573,9 +618,9 @@ export default function SettingsScreen() {
       setTokenModalMode('connect');
     } else {
       HapticService.error();
-      setTokenError('Invalid token. Please check and try again.');
+      setTokenError(t('settings.tokenInvalid'));
     }
-  }, [addAccount, setToken, tokenInput, tokenModalMode]);
+  }, [addAccount, setToken, tokenInput, tokenModalMode, t]);
 
   const handleSwitchAccount = useCallback(async (id: string) => {
     if (id === activeAccountId) return;
@@ -585,19 +630,49 @@ export default function SettingsScreen() {
 
   const handleRemoveAccount = useCallback((id: string, login: string) => {
     HapticService.warning();
-    Alert.alert(`Remove @${login}?`, 'The token for this account will be deleted from this device. Notes/todos created under it stay locally.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: async () => { await removeAccount(id); HapticService.success(); } },
+    Alert.alert(t('settings.removeAccountTitle', { login }), t('settings.removeAccountBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.remove'),
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await removeAccount(id);
+            HapticService.success();
+          } catch (err) {
+            HapticService.error();
+            Alert.alert(
+              t('errors.somethingWrong'),
+              err instanceof Error ? err.message : t('errors.somethingWrong'),
+            );
+          }
+        },
+      },
     ]);
-  }, [removeAccount]);
+  }, [removeAccount, t]);
 
   const handleRemoveToken = useCallback(() => {
     HapticService.warning();
-    Alert.alert('Remove GitHub Token', 'This will disconnect your GitHub account. Continue?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: async () => { await clearToken(); HapticService.success(); } },
+    Alert.alert(t('settings.removeTokenTitle'), t('settings.removeTokenBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('common.remove'),
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await clearToken();
+            HapticService.success();
+          } catch (err) {
+            HapticService.error();
+            Alert.alert(
+              t('errors.somethingWrong'),
+              err instanceof Error ? err.message : t('errors.somethingWrong'),
+            );
+          }
+        },
+      },
     ]);
-  }, [clearToken]);
+  }, [clearToken, t]);
 
   // Native-only "Connected hosts" UI: a single Alert lists each connected
   // host as a button; tapping one shows the disconnect confirmation Alert.
@@ -647,31 +722,31 @@ export default function SettingsScreen() {
 
   const handleResetOnboarding = useCallback(() => {
     HapticService.warning();
-    Alert.alert('Reset Onboarding', 'This will show the onboarding screen on next app launch.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Reset', onPress: async () => { await OnboardingService.resetOnboarding(); HapticService.success(); Alert.alert('Success', 'Onboarding will show on next launch.'); } },
+    Alert.alert(t('settings.resetOnboardingTitle'), t('settings.resetOnboardingBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.reset'), onPress: async () => { await OnboardingService.resetOnboarding(); HapticService.success(); Alert.alert(t('common.success'), t('settings.resetOnboardingSuccess')); } },
     ]);
-  }, []);
+  }, [t]);
 
   const clearData = useCallback(() => {
     HapticService.warning();
-    Alert.alert('Clear All Data', 'Are you sure you want to clear all notes? This action cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Clear', style: 'destructive', onPress: async () => {
+    Alert.alert(t('settings.clearAllNotes'), t('settings.clearAllConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('settings.clear'), style: 'destructive', onPress: async () => {
         const success = await clearAllNotes();
         if (success) {
           HapticService.success();
-          Alert.alert('Success', 'All notes have been cleared.');
+          Alert.alert(t('common.success'), t('settings.clearAllSuccess'));
         } else {
           HapticService.error();
-          Alert.alert('Error', 'Failed to clear notes.');
+          Alert.alert(t('common.error'), t('settings.clearAllFailed'));
         }
       } },
     ]);
-  }, [clearAllNotes]);
+  }, [clearAllNotes, t]);
 
-  const selectedModelName = providers.flatMap((provider) => provider.models).find((model) => model.id === selectedModelId)?.name ?? 'Not set';
-  const chatStorageLabel = chatRepoName ? (chatRepoOwner ? `${chatRepoOwner}/${chatRepoName}` : chatRepoName) : 'Not set';
+  const selectedModelName = providers.flatMap((provider) => provider.models).find((model) => model.id === selectedModelId)?.name ?? t('settings.notSet');
+  const chatStorageLabel = chatRepoName ? (chatRepoOwner ? `${chatRepoOwner}/${chatRepoName}` : chatRepoName) : t('settings.notSet');
 
   return (
     <SafeAreaView edges={[]} className="flex-1" style={{ backgroundColor: colors.background }}>

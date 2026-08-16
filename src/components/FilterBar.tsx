@@ -31,7 +31,7 @@ export function FilterBar({ filters, onRemoveFilter, onClearAll }: FilterBarProp
 
   return (
     <View testID="filter-bar.filter.change" style={styles.wrap}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} testID="filter-bar.row" contentContainerStyle={styles.row}>
         {filters.map((f) => (
           <TouchableOpacity
             key={f.id}
@@ -57,8 +57,8 @@ export function FilterBar({ filters, onRemoveFilter, onClearAll }: FilterBarProp
 }
 
 const styles = StyleSheet.create({
-  wrap: { marginHorizontal: 12, marginTop: 4, marginBottom: 4 },
-  row: { gap: 6, paddingTop: 6, paddingBottom: 8, paddingRight: 8 },
+  wrap: { marginHorizontal: 0, marginTop: 4, marginBottom: 4 },
+  row: { gap: 6, paddingTop: 6, paddingBottom: 8, paddingRight: 12 },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',

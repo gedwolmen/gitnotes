@@ -5,6 +5,7 @@ import DateTimePicker from '@react-native/datetimepicker';
 import { format } from 'date-fns';
 
 import { useTheme } from '../../contexts/ThemeContext';
+import { useTranslation } from 'react-i18next';
 import { PRIORITY_COLORS, PRIORITY_LABELS, REMINDER_OPTIONS, Todo, TodoPriority } from '../../models/Todo';
 import GitContextPicker from '../GitContextPicker';
 import { findReminderLabel } from './todosShared';
@@ -71,6 +72,7 @@ export function TodoEditorModal({
   onSubmit,
 }: TodoEditorModalProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const modalScrollRef = useRef<ScrollView>(null);
 
   const handleReminderPickerToggle = () => {
@@ -92,7 +94,7 @@ export function TodoEditorModal({
         <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}> 
             <Text style={[styles.modalTitle, { color: colors.text }]}>
-              {editingTodo ? 'Edit Todo' : 'New Todo'}
+              {editingTodo ? t('todos.editTodo') : t('todos.newTodo')}
             </Text>
             <TouchableOpacity testID="todo-editor.button.close" onPress={onClose}>
               <Ionicons name="close" size={24} color={colors.textSecondary} />
@@ -100,32 +102,32 @@ export function TodoEditorModal({
           </View>
 
           <ScrollView ref={modalScrollRef} style={styles.modalBody} contentContainerStyle={{ flexGrow: 1 }}>
-            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Todo Text *</Text>
+            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>{t('todos.todoText')} *</Text>
             <TextInput
               testID="todo-editor.input.title"
               style={[styles.input, { color: colors.text, borderColor: colors.border }]}
               value={todoText}
               onChangeText={onChangeText}
-              placeholder="What needs to be done?"
+              placeholder={t('todos.whatNeedsToBeDone')}
               placeholderTextColor={colors.textSecondary}
               autoCapitalize="sentences"
               returnKeyType="done"
             />
 
-            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Notes</Text>
+            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>{t('todos.notes')}</Text>
             <TextInput
               testID="todo-editor.input.notes"
               style={[styles.input, styles.inputMultiline, { color: colors.text, borderColor: colors.border }]}
               value={todoNotes}
               onChangeText={onChangeNotes}
-              placeholder="Additional notes..."
+              placeholder={t('todos.additionalNotes')}
               placeholderTextColor={colors.textSecondary}
               autoCapitalize="sentences"
               multiline
               numberOfLines={3}
             />
 
-            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Priority</Text>
+            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>{t('todos.priority')}</Text>
             <View style={styles.priorityContainer}>
               {(['low', 'medium', 'high'] as TodoPriority[]).map((priority) => (
                 <TouchableOpacity
@@ -163,7 +165,7 @@ export function TodoEditorModal({
                 <View style={styles.deadlineCardHeader}>
                   <View style={styles.deadlineCardLabel}>
                     <Ionicons name="calendar" size={15} color={colors.primary} />
-                    <Text style={[styles.deadlineCardTitle, { color: colors.primary }]}>Deadline</Text>
+                    <Text style={[styles.deadlineCardTitle, { color: colors.primary }]}>{t('todos.deadline')}</Text>
                   </View>
                   <TouchableOpacity testID="todo-editor.button.remove-deadline" onPress={onRemoveDeadline} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                     <Ionicons name="close" size={18} color={colors.textSecondary} />
@@ -240,7 +242,7 @@ export function TodoEditorModal({
                 <View style={[styles.addDeadlineIcon, { backgroundColor: colors.primary + '15' }]}> 
                   <Ionicons name="calendar-outline" size={18} color={colors.primary} />
                 </View>
-                <Text style={[styles.addDeadlineText, { color: colors.primary }]}>Set deadline</Text>
+                <Text style={[styles.addDeadlineText, { color: colors.primary }]}>{t('todos.setDeadline')}</Text>
                 <Ionicons
                   name="chevron-forward"
                   size={16}
@@ -252,7 +254,7 @@ export function TodoEditorModal({
 
             {todoDueDate ? (
               <>
-                <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Remind me</Text>
+                <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>{t('todos.remindMe')}</Text>
                 <TouchableOpacity
                   style={[styles.reminderPickerButton, { borderColor: colors.border }]}
                   onPress={handleReminderPickerToggle}
@@ -315,10 +317,10 @@ export function TodoEditorModal({
               style={[styles.cancelButton, { borderColor: colors.border }]}
               onPress={onClose}
             >
-              <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>Cancel</Text>
+              <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity testID="todo-editor.button.submit" style={[styles.saveButton, { backgroundColor: colors.primary }]} onPress={onSubmit}>
-              <Text style={styles.saveButtonText}>{editingTodo ? 'Update' : 'Add'}</Text>
+              <Text style={styles.saveButtonText}>{editingTodo ? t('common.update') : t('common.add')}</Text>
             </TouchableOpacity>
           </View>
         </View>

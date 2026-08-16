@@ -65,6 +65,7 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
     reduceMotionResolved,
     menuOpen,
   });
+  const { cancelAffordances } = affordances;
 
   const triggerAnimatedStyle = useAnimatedStyle(() => ({
     transform: [
@@ -102,6 +103,10 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
       ? menuOpen ? 1 : 0
       : withSpring(menuOpen ? 1 : 0, MENU_SPRING);
   }, [menuOpen, menuProgress, reduceMotionEnabled]);
+
+  useEffect(() => {
+    cancelAffordances();
+  }, [cancelAffordances, currentRouteName]);
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
 

@@ -362,7 +362,6 @@ export default function ChatThreadListScreen() {
 
       <ScreenHeader
         title={t('chat.title')}
-        badge={t('common.beta')}
         onBack={() => navigation.goBack()}
       />
     </SafeAreaView>

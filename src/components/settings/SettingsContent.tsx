@@ -15,7 +15,6 @@ import {
   setLanguage,
   type LanguageCode,
 } from '../../i18n';
-import { ImportSection } from './ImportSection';
 import { ReminderSection } from './ReminderSection';
 import { settingsStyles as styles } from './settingsStyles';
 import type { GitRepository } from '../../services/GitService';
@@ -370,7 +369,7 @@ onSetSyncIntervalSeconds,
               size={20}
               color={colors.text}
             />
-            <Text style={[styles.settingLabel, { color: colors.text }]}>{biometricLabel} Lock</Text>
+            <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.biometricLockLabel', { kind: biometricLabel })}</Text>
           </View>
         </GroupRow>
         {isBiometricLockEnabled ? (
@@ -380,18 +379,18 @@ onSetSyncIntervalSeconds,
             trailing={
               <View className="flex-row items-center gap-1">
                 <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
-                  {TIMEOUT_OPTIONS.find((o) => o.value === lockTimeout)?.label ?? '5 minutes'}
+                  {TIMEOUT_OPTIONS.find((o) => o.value === lockTimeout)?.label ?? t('settings.lockTimeout5Min')}
                 </Text>
                 <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
               </View>
             }
           >
-            <Text style={[styles.settingLabel, { color: colors.text }]}>Lock Timeout</Text>
+            <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.lockTimeout')}</Text>
           </GroupRow>
         ) : null}
       </Group>
 
-      <Group title={accountSummaries.length >= 2 ? 'Accounts' : 'Accounts'}>
+      <Group title={t('accounts.title')}>
         {accountSummaries.length === 0 ? (
           // No accounts AND no legacy authState: show the unified host picker
           // entry. This is the new first-run path — any host works.
@@ -465,7 +464,7 @@ onSetSyncIntervalSeconds,
                                     letterSpacing: 0.6,
                                   }}
                                 >
-                                  ACTIVE
+                                  {t('accounts.active').toUpperCase()}
                                 </Text>
                               </View>
                             ) : null}
@@ -534,12 +533,12 @@ onSetSyncIntervalSeconds,
         )}
       </Group>
 
-      <Group title="Repositories">
+      <Group title={t('settings.repositories')}>
         {repositories.length === 0 ? (
           <GroupRow>
             <View className="items-center gap-1.5 py-2">
               <Ionicons name="code-slash-outline" size={32} color={colors.textSecondary} />
-              <Text style={[styles.emptyReposText, { color: colors.textSecondary }]}>No repositories added yet</Text>
+              <Text style={[styles.emptyReposText, { color: colors.textSecondary }]}>{t('settings.noRepositories')}</Text>
             </View>
           </GroupRow>
         ) : (
@@ -572,12 +571,12 @@ onSetSyncIntervalSeconds,
           onPress={onOpenRepoPicker}
           leading={<Ionicons name="add" size={20} color={colors.primary} />}
         >
-          <Text style={[styles.settingLabel, { color: colors.primary, fontWeight: '600' }]}>Add Repository</Text>
+          <Text style={[styles.settingLabel, { color: colors.primary, fontWeight: '600' }]}>{t('settings.addRepository')}</Text>
         </GroupRow>
       </Group>
 
       {repositories.length > 0 ? (
-        <Group title="Sync engine">
+        <Group title={t('settings.syncEngine')}>
           {repositories.map((repo) => {
             const mode = syncModes[repo.path] ?? 'api';
             const isClone = mode === 'clone';
@@ -595,13 +594,13 @@ onSetSyncIntervalSeconds,
                     ) : isClone ? (
                       <View testID="settings.button.disable-clone">
                         <TouchableOpacity testID={`sync-engine-disable-${repo.path}`} onPress={() => onDisableCloneMode(repo)} style={{ padding: 4 }}>
-                          <Text style={[styles.settingLabel, { color: colors.error }]}>Use API</Text>
+                          <Text style={[styles.settingLabel, { color: colors.error }]}>{t('settings.useApi')}</Text>
                         </TouchableOpacity>
                       </View>
                     ) : (
                       <View testID="settings.button.enable-clone">
                         <TouchableOpacity testID={`settings.toggle.sync-engine-enable-${repo.path.replace('/', '-')}`} onPress={() => onEnableCloneMode(repo)} style={{ padding: 4 }}>
-                          <Text style={[styles.settingLabel, { color: colors.primary }]}>Clone</Text>
+                          <Text style={[styles.settingLabel, { color: colors.primary }]}>{t('settings.clone')}</Text>
                         </TouchableOpacity>
                       </View>
                     )
@@ -609,7 +608,7 @@ onSetSyncIntervalSeconds,
                 >
                   <Text style={[styles.repoName, { color: colors.text }]} numberOfLines={1}>{repo.name}</Text>
                   <Text style={[styles.repoPath, { color: colors.textSecondary }]} numberOfLines={1}>
-                    {isClone ? 'Clone (local working tree)' : 'GitHub API (per-file)'}
+                    {isClone ? t('settings.cloneModeDescription') : t('settings.apiModeDescription')}
                   </Text>
                 </GroupRow>
                 {isClone && lfs && lfs.count > 0 ? (
@@ -627,17 +626,17 @@ onSetSyncIntervalSeconds,
                           style={{ padding: 4 }}
                           disabled={!!lfsDownloadingRepo}
                         >
-                          <Text style={[styles.settingLabel, { color: colors.primary }]}>Download</Text>
+                          <Text style={[styles.settingLabel, { color: colors.primary }]}>{t('settings.download')}</Text>
                         </TouchableOpacity>
                         </View>
                       )
                     }
                   >
                     <Text style={[styles.repoName, { color: colors.text }]} numberOfLines={1}>
-                      {lfs.count} LFS file{lfs.count === 1 ? '' : 's'} not downloaded
+                      {t('settings.lfsPending', { count: lfs.count })}
                     </Text>
                     <Text style={[styles.repoPath, { color: colors.textSecondary }]} numberOfLines={1}>
-                      {formatLfsBytes(lfs.bytes)} pending
+                      {t('settings.lfsBytesPending', { size: formatLfsBytes(lfs.bytes) })}
                     </Text>
                   </GroupRow>
                 ) : null}
@@ -647,16 +646,16 @@ onSetSyncIntervalSeconds,
         </Group>
       ) : null}
 
-      <Group title="Templates">
+      <Group title={t('settings.templates')}>
         <GroupRow
           testID="settings.button.templates-repo-picker"
           onPress={onOpenTemplatesRepoPicker}
           leading={<Ionicons name="document-text-outline" size={20} color={colors.text} />}
           trailing={<Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
         >
-          <Text style={[styles.settingLabel, { color: colors.text }]}>Templates repository</Text>
+          <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.templatesRepository')}</Text>
           <Text style={[styles.settingValue, { color: colors.textSecondary, fontSize: 12, marginTop: 2 }]} numberOfLines={1}>
-            {templatesRepoPref ? `${templatesRepoPref.repoPath}@${templatesRepoPref.branch}` : 'Not set'}
+            {templatesRepoPref ? `${templatesRepoPref.repoPath}@${templatesRepoPref.branch}` : t('settings.notSet')}
           </Text>
         </GroupRow>
 
@@ -669,27 +668,35 @@ onSetSyncIntervalSeconds,
               leading={<Ionicons name="cloud-upload-outline" size={20} color={colors.text} />}
               trailing={isSyncingExistingTemplates ? <ActivityIndicator size="small" color={colors.primary} /> : null}
             >
-              <Text style={[styles.settingLabel, { color: colors.text }]} numberOfLines={1}>Sync custom templates</Text>
+              <Text style={[styles.settingLabel, { color: colors.text }]} numberOfLines={1}>{t('settings.syncCustomTemplates')}</Text>
             </GroupRow>
             <GroupRow testID="settings.button.clear-templates-repo" onPress={onClearTemplatesRepo}>
-              <Text style={[styles.settingLabel, { color: colors.error }]}>Disconnect templates repo</Text>
+              <Text style={[styles.settingLabel, { color: colors.error }]}>{t('settings.disconnectTemplatesRepo')}</Text>
             </GroupRow>
           </>
         ) : null}
+        <GroupRow
+          testID="settings.button.manage-templates"
+          onPress={onManageTemplates}
+          leading={<Ionicons name="document-text-outline" size={20} color={colors.text} />}
+          trailing={<Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
+        >
+          <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.manageTemplates')}</Text>
+        </GroupRow>
       </Group>
 
-      <Group title="Note rendering">
+      <Group title={t('settings.noteRendering')}>
         <GroupRow
           testID="settings.button.render-style-settings"
           onPress={onOpenRenderStyleSettings}
           leading={<Ionicons name="color-palette-outline" size={20} color={colors.text} />}
           trailing={<Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
         >
-          <Text style={[styles.settingLabel, { color: colors.text }]}>Customize render styles</Text>
+          <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.customizeRenderStyles')}</Text>
         </GroupRow>
       </Group>
 
-      <Group title="Sync">
+      <Group title={t('common.sync')}>
         <GroupRow
           trailing={
             <View className="flex-row items-center gap-2">
@@ -705,9 +712,9 @@ onSetSyncIntervalSeconds,
           <View className="flex-row items-center gap-2">
             <Ionicons name="sync-outline" size={20} color={colors.text} />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.settingLabel, { color: colors.text }]}>Sync frequently</Text>
+              <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.syncFrequently')}</Text>
               <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>
-                Recommended for multi-device
+                {t('settings.syncFrequentlySub')}
               </Text>
             </View>
           </View>
@@ -729,7 +736,7 @@ onSetSyncIntervalSeconds,
               { color: syncFrequentlyEnabled ? colors.text : colors.textSecondary },
             ]}
           >
-            Sync interval
+            {t('settings.syncInterval')}
           </Text>
         </GroupRow>
         <GroupRow
@@ -746,30 +753,17 @@ onSetSyncIntervalSeconds,
         >
           <View className="flex-row items-center gap-2">
             <Ionicons name="cloud-download-outline" size={20} color={colors.text} />
-            <Text style={[styles.settingLabel, { color: colors.text }]}>Background Sync</Text>
+            <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.backgroundSync')}</Text>
           </View>
         </GroupRow>
       </Group>
 
-      <Group title="Data">
+      <Group title={t('settings.data')}>
         <GroupRow testID="settings.button.clear-data" onPress={onClearData} trailing={<HintIcon hintKey="hints.settings.clearData" testID="hint.clear-data" />}>
-          <Text style={[styles.settingLabel, { color: colors.error }]}>Clear All Notes</Text>
+          <Text style={[styles.settingLabel, { color: colors.error }]}>{t('settings.clearAllNotes')}</Text>
         </GroupRow>
         <GroupRow testID="settings.button.reset-onboarding" onPress={onResetOnboarding} trailing={<HintIcon hintKey="hints.settings.resetOnboarding" testID="hint.reset-onboarding" />}>
-          <Text style={[styles.settingLabel, { color: colors.text }]}>Reset Onboarding</Text>
-        </GroupRow>
-      </Group>
-
-      <ImportSection />
-
-      <Group title="About">
-        <GroupRow
-          trailing={<Text style={[styles.settingValue, { color: colors.textSecondary }]}>{Constants.expoConfig?.version ?? '—'}</Text>}
-        >
-          <Text style={[styles.settingLabel, { color: colors.text }]}>Version</Text>
-        </GroupRow>
-        <GroupRow testID="settings.button.manage-templates" onPress={onManageTemplates}>
-          <Text style={[styles.settingLabel, { color: colors.text }]}>Manage templates</Text>
+          <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.resetOnboarding')}</Text>
         </GroupRow>
       </Group>
 
@@ -778,7 +772,7 @@ onSetSyncIntervalSeconds,
           <Toggle testID="settings.toggle.ai" value={isAIEnabled} onValueChange={onToggleAI} />
           <HintIcon hintKey="hints.settings.enableAI" testID="hint.enable-ai" />
         </View>}>
-          <Text style={[styles.settingLabel, { color: colors.text }]}>Enable Artificial Intelligence</Text>
+          <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.enableAI')}</Text>
         </GroupRow>
         <GroupRow
           testID="settings.row.daily-quote"
@@ -855,19 +849,19 @@ onSetSyncIntervalSeconds,
         <>
           <Group>
             <GroupRow testID="settings.button.model-selector" onPress={onOpenModelSelector} trailing={<Text style={[styles.settingValue, { color: colors.textSecondary }]}>{selectedModelName}</Text>}>
-              <Text style={[styles.settingLabel, { color: colors.text }]}>Model</Text>
+              <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.model')}</Text>
             </GroupRow>
             <GroupRow testID="settings.button.toggle-action-mode" onPress={onToggleActionMode} trailing={<View className="flex-row items-center gap-1">
-              <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{actionMode === 'auto' ? 'Auto' : 'Confirm'}</Text>
+              <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{actionMode === 'auto' ? t('settings.auto') : t('settings.confirm')}</Text>
               <HintIcon hintKey={actionMode === 'auto' ? 'hints.settings.actionModeAuto' : 'hints.settings.actionModeConfirm'} testID="hint.action-mode" />
             </View>}>
-              <Text style={[styles.settingLabel, { color: colors.text }]}>Action Mode</Text>
+              <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.actionMode')}</Text>
             </GroupRow>
             <GroupRow testID="settings.button.chat-repo-picker" onPress={onOpenChatRepoPicker} trailing={<View className="flex-row items-center gap-1">
               <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{chatStorageLabel}</Text>
               <HintIcon hintKey="hints.settings.chatStorage" testID="hint.chat-storage" />
             </View>}>
-              <Text style={[styles.settingLabel, { color: colors.text }]}>Chat Storage</Text>
+              <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.chatStorage')}</Text>
             </GroupRow>
           </Group>
 
@@ -894,8 +888,8 @@ onSetSyncIntervalSeconds,
                       {isUnavailable
                         ? t('settings.unavailable')
                         : provider.isEnabled
-                          ? 'Enabled'
-                          : 'Disabled'}
+                          ? t('settings.enabled')
+                          : t('settings.disabled')}
                     </Text>
                   }
                   style={isUnavailable ? { opacity: 0.5 } : undefined}
@@ -912,13 +906,21 @@ onSetSyncIntervalSeconds,
               );
             })}
             <GroupRow testID="settings.button.add-provider" onPress={onAddProvider} trailing={<HintIcon hintKey="hints.settings.providers" testID="hint.providers" />}>
-              <Text style={[styles.settingLabel, { color: colors.primary }]}>Add Provider</Text>
+              <Text style={[styles.settingLabel, { color: colors.primary }]}>{t('settings.addProvider')}</Text>
             </GroupRow>
           </Group>
 
           <ReminderSection colors={colors} />
         </>
       ) : null}
+
+      <Group title={t('settings.about')}>
+        <GroupRow
+          trailing={<Text style={[styles.settingValue, { color: colors.textSecondary }]}>{Constants.expoConfig?.version ?? '—'}</Text>}
+        >
+          <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.version')}</Text>
+        </GroupRow>
+      </Group>
 
       <View style={styles.creditsWrap}>
         <Text style={[styles.creditsText, { color: colors.textSecondary }]} numberOfLines={1}>
@@ -939,7 +941,7 @@ onSetSyncIntervalSeconds,
       contentStyle={{ padding: 16, paddingBottom: 34 }}
     >
       <View className="flex-row justify-between items-center mb-3">
-        <Text style={{ color: colors.text, fontSize: 17, fontWeight: '600' }}>Lock Timeout</Text>
+        <Text style={{ color: colors.text, fontSize: 17, fontWeight: '600' }}>{t('settings.lockTimeout')}</Text>
         <TouchableOpacity onPress={() => setShowTimeoutPicker(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Ionicons name="close" size={22} color={colors.textSecondary} />
         </TouchableOpacity>
@@ -970,7 +972,7 @@ onSetSyncIntervalSeconds,
       contentStyle={{ padding: 16, paddingBottom: 34 }}
     >
       <View className="flex-row justify-between items-center mb-3">
-        <Text style={{ color: colors.text, fontSize: 17, fontWeight: '600' }}>Sync interval</Text>
+        <Text style={{ color: colors.text, fontSize: 17, fontWeight: '600' }}>{t('settings.syncInterval')}</Text>
         <TouchableOpacity onPress={() => setShowIntervalPicker(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Ionicons name="close" size={22} color={colors.textSecondary} />
         </TouchableOpacity>

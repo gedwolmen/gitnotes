@@ -1,6 +1,8 @@
 import React from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Linking, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SearchBar from '../SearchBar';
 import { Modal, Input, Button } from '../ui';
 import type { GitRepository } from '../../services/GitService';
@@ -52,6 +54,8 @@ type SettingsModalsProps = {
 };
 
 export function SettingsModals(props: SettingsModalsProps) {
+  const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const {
     colors,
     authState,
@@ -97,17 +101,17 @@ export function SettingsModals(props: SettingsModalsProps) {
     <>
       <Modal visible={showRepoPickerModal} onRequestClose={onCloseRepoPicker} bottomSheet contentStyle={{ padding: 0 }}>
         <View className="flex-row justify-between items-center px-4 pt-4 pb-3 border-b" style={{ borderColor: colors.border }}>
-          <Text style={{ color: colors.text, fontSize: 18, fontWeight: '600' }}>Add Repository</Text>
+          <Text style={{ color: colors.text, fontSize: 18, fontWeight: '600' }}>{t('settings.addRepository')}</Text>
           <TouchableOpacity onPress={onCloseRepoPicker}>
             <Ionicons name="close" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, paddingBottom: 16 + insets.bottom }}>
           <View className="flex-row items-center px-4 py-4 gap-2 border-b" style={{ borderColor: colors.border }}>
             <Input
               testID="settings-modals.input.manual-repo"
               containerStyle={{ flex: 1, borderWidth: 1, borderColor: colors.border }}
-              placeholder="owner/repo"
+              placeholder={t('settings.repoPathPlaceholder')}
               placeholderTextColor={colors.textSecondary}
               value={manualRepoInput}
               onChangeText={onSetManualRepoInput}
@@ -118,7 +122,7 @@ export function SettingsModals(props: SettingsModalsProps) {
             />
             <Button
               testID="settings-modals.button.add-manual-repo"
-              label="Add"
+              label={t('common.add')}
               onPress={onAddManualRepo}
               disabled={!manualRepoInput.trim() || isAddingRepo}
               variant="primary"
@@ -130,14 +134,14 @@ export function SettingsModals(props: SettingsModalsProps) {
           {authState.isAuthenticated ? (
             <>
               <View className="px-4 py-2">
-                <SearchBar value={repoSearchQuery} onChangeText={onSetRepoSearchQuery} placeholder="Search repositories..." />
+                <SearchBar value={repoSearchQuery} onChangeText={onSetRepoSearchQuery} placeholder={t('explore.searchRepos')} />
               </View>
-              <Text className="text-xs font-semibold uppercase tracking-wide px-4 py-2.5 border-b" style={{ color: colors.textSecondary, borderColor: colors.border }}>Your GitHub Repositories</Text>
+              <Text className="text-xs font-semibold uppercase tracking-wide px-4 py-2.5 border-b" style={{ color: colors.textSecondary, borderColor: colors.border }}>{t('settings.yourGithubRepositories')}</Text>
               {isLoadingGithubRepos ? (
                 <ActivityIndicator size="large" color={colors.primary} style={{ padding: 32 }} />
               ) : filteredRepos.length === 0 ? (
                 <Text className="p-6 text-center text-sm" style={{ color: colors.textSecondary }}>
-                  {repoSearchQuery ? 'No matching repositories' : 'No repositories found'}
+                  {repoSearchQuery ? t('settings.noMatchingRepositories') : t('settings.noRepositoriesFound')}
                 </Text>
               ) : (
                 filteredRepos.map((repo) => {
@@ -172,15 +176,15 @@ export function SettingsModals(props: SettingsModalsProps) {
 
       <Modal visible={showTemplatesRepoPicker} onRequestClose={onCloseTemplatesRepoPicker} bottomSheet contentStyle={{ padding: 0 }}>
         <View className="flex-row justify-between items-center px-4 pt-4 pb-3 border-b" style={{ borderColor: colors.border }}>
-          <Text style={{ color: colors.text, fontSize: 18, fontWeight: '600' }}>Templates repository</Text>
+          <Text style={{ color: colors.text, fontSize: 18, fontWeight: '600' }}>{t('settings.templatesRepository')}</Text>
           <TouchableOpacity testID="settings-modals.button.close-templates-repo" onPress={onCloseTemplatesRepoPicker}>
             <Ionicons name="close" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1, paddingBottom: 16 + insets.bottom }}>
           {repositories.length === 0 ? (
             <Text className="p-6 text-center text-sm" style={{ color: colors.textSecondary }}>
-              Add a repository first under Repositories to choose it as the templates repo.
+              {t('settings.addRepoFirstForTemplates')}
             </Text>
           ) : (
             repositories.map((repo) => {
@@ -197,7 +201,7 @@ export function SettingsModals(props: SettingsModalsProps) {
                   <View className="flex-1">
                     <Text style={{ color: colors.text, fontSize: 15, fontWeight: '500' }} numberOfLines={1}>{repo.path}</Text>
                     <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }} numberOfLines={1}>
-                      Branch: {repo.branch || 'main'}
+                      {t('settings.branch', { branch: repo.branch || t('settings.branchDefault') })}
                     </Text>
                   </View>
                   {selected ? <Ionicons name="checkmark-circle" size={18} color={colors.primary} /> : null}
@@ -211,7 +215,7 @@ export function SettingsModals(props: SettingsModalsProps) {
       <Modal visible={showTokenModal} onRequestClose={onCloseTokenModal} bottomSheet contentStyle={{ padding: 0 }}>
         <View className="flex-row justify-between items-center px-4 pt-4 pb-3 border-b" style={{ borderColor: colors.border }}>
           <Text style={{ color: colors.text, fontSize: 18, fontWeight: '600' }}>
-            {tokenModalMode === 'add' ? 'Add GitHub Account' : authState.isAuthenticated ? 'Change Token' : 'Connect GitHub'}
+            {tokenModalMode === 'add' ? t('settings.addGitHubAccount') : authState.isAuthenticated ? t('settings.changeToken') : t('settings.connectGithub')}
           </Text>
           <TouchableOpacity onPress={onCloseTokenModal}>
             <Ionicons name="close" size={24} color={colors.textSecondary} />
@@ -219,10 +223,10 @@ export function SettingsModals(props: SettingsModalsProps) {
         </View>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView className="px-4 py-4" keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 16 }}>
-            <Text className="text-sm mb-3 leading-5" style={{ color: colors.textSecondary }}>Fine-grained Personal Access Token with read/write access to your repositories.</Text>
+            <Text className="text-sm mb-3 leading-5" style={{ color: colors.textSecondary }}>{t('settings.tokenDescription')}</Text>
             <TouchableOpacity className="flex-row items-center gap-1 mb-4" onPress={() => Linking.openURL('https://github.com/settings/personal-access-tokens/new?description=GitNotes')}>
               <Ionicons name="open-outline" size={14} color={colors.primary} />
-              <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '500' }}>Open GitHub token settings</Text>
+              <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '500' }}>{t('settings.openGithubTokenSettings')}</Text>
             </TouchableOpacity>
             <View
               className="flex-row items-center rounded-lg px-3 mb-2 h-[50px]"
@@ -231,7 +235,7 @@ export function SettingsModals(props: SettingsModalsProps) {
               <Input
                 testID="settings-modals.input.token"
                 containerStyle={{ flex: 1, borderWidth: 0 }}
-                placeholder="github_pat_xxxxxxxxxxxxxxxxxxxx"
+                placeholder={t('settings.tokenPlaceholder')}
                 placeholderTextColor={colors.textSecondary}
                 value={tokenInput}
                 onChangeText={onSetTokenInput}
@@ -245,7 +249,7 @@ export function SettingsModals(props: SettingsModalsProps) {
                 onPress={onToggleTokenVisible}
                 className="px-1.5 py-1.5 ml-1"
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityLabel={tokenVisible ? 'Hide token' : 'Show token'}
+                accessibilityLabel={tokenVisible ? t('settings.hideToken') : t('settings.showToken')}
               >
                 <Ionicons name={tokenVisible ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textSecondary} />
               </TouchableOpacity>
@@ -256,10 +260,10 @@ export function SettingsModals(props: SettingsModalsProps) {
                 className="flex-row items-center justify-center py-2.5 px-3 rounded-lg border flex-1 gap-1.5"
                 style={{ borderColor: colors.border }}
                 onPress={onPasteToken}
-                accessibilityLabel="Paste token from clipboard"
+                accessibilityLabel={t('settings.pasteToken')}
               >
                 <Ionicons name="clipboard-outline" size={16} color={colors.primary} />
-                <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>Paste</Text>
+                <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>{t('common.paste')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 testID="settings-modals.button.copy-token"
@@ -267,16 +271,16 @@ export function SettingsModals(props: SettingsModalsProps) {
                 style={[{ borderColor: colors.border }, { opacity: tokenInput.trim() ? 1 : 0.4 }]}
                 onPress={onCopyToken}
                 disabled={!tokenInput.trim()}
-                accessibilityLabel="Copy token to clipboard"
+                accessibilityLabel={t('settings.copyToken')}
               >
                 <Ionicons name="copy-outline" size={16} color={colors.primary} />
-                <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>Copy</Text>
+                <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>{t('common.copy')}</Text>
               </TouchableOpacity>
             </View>
             {tokenError ? <Text style={{ color: '#FF3B30', fontSize: 13, marginBottom: 10 }}>{tokenError}</Text> : null}
             <Button
               testID="settings-modals.button.save-token"
-              label={tokenModalMode === 'add' ? 'Add Account' : 'Save Token'}
+              label={tokenModalMode === 'add' ? t('settings.addAccount') : t('settings.saveToken')}
               onPress={onSaveToken}
               disabled={isVerifying}
               variant="primary"

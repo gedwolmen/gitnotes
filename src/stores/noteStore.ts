@@ -370,7 +370,7 @@ function onDeleteMutationDropped(event: DroppedMutationEvent): void {
     mutation.params.branch,
     mutation.params.filePath,
     mutation.params.localNoteId,
-    event.error ?? 'Delete failed',
+    event.error || 'Delete failed',
   );
 }
 

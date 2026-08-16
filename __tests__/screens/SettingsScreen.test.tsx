@@ -6,6 +6,8 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 
 import SettingsScreen from '../../src/screens/SettingsScreen';
 import { RepoAccessPreflightError } from '../../src/services/git/repoAccessPreflight';
+import { GitHubService } from '../../src/services/GitHubService';
+import { GitFsService } from '../../src/services/git/GitFsService';
 
 const mockNavigate = jest.fn();
 
@@ -388,6 +390,16 @@ jest.mock('../../src/components/SearchBar', () => {
   );
 });
 
+const cloneRepo = { id: 'github:1', name: 'notes', path: 'octo/notes', branch: 'main' };
+
+async function flushMicrotasks(): Promise<void> {
+  await act(async () => {
+    for (let i = 0; i < 20; i++) {
+      await Promise.resolve();
+    }
+  });
+}
+
 describe('SettingsScreen', () => {
   const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
 
@@ -399,6 +411,12 @@ describe('SettingsScreen', () => {
     mockSetStyle.mockClear();
     mockAddRepository.mockReset();
     alertSpy.mockClear();
+    stableRepositories.length = 0;
+    jest.useRealTimers();
+    (GitHubService.isAuthenticated as jest.Mock).mockReset().mockReturnValue(false);
+    (GitFsService.clone as jest.Mock).mockReset().mockResolvedValue(undefined);
+    (GitFsService.isCloned as jest.Mock).mockReset().mockResolvedValue(false);
+    (GitFsService.removeRepo as jest.Mock).mockReset().mockResolvedValue(undefined);
   });
 
   it('renders without crashing', () => {
@@ -488,5 +506,109 @@ describe('SettingsScreen', () => {
     const confirmationButtons = alertSpy.mock.calls[alertSpy.mock.calls.length - 1]?.[2];
     confirmationButtons?.find((button: AlertButton) => button.text === 'Cancel')?.onPress?.();
     expect(mockAddRepository).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears the clone modal after a successful clone', async () => {
+    (GitHubService.isAuthenticated as jest.Mock).mockReturnValue(true);
+    let resolveClone: (() => void) | undefined;
+    (GitFsService.clone as jest.Mock).mockImplementation(
+      () => new Promise<void>((resolve) => { resolveClone = resolve; }),
+    );
+    stableRepositories.push(cloneRepo);
+
+    const { getByTestId, queryByTestId } = render(<SettingsScreen />);
+    fireEvent.press(getByTestId('settings.toggle.sync-engine-enable-octo-notes'));
+
+    // Clone is in flight → the progress modal is up (previously it never closed).
+    expect(getByTestId('modal')).toBeTruthy();
+
+    // Let the isCloned→clone chain land so resolveClone is captured.
+    await flushMicrotasks();
+    expect(resolveClone).toBeDefined();
+
+    await act(async () => {
+      resolveClone?.();
+      for (let i = 0; i < 20; i++) {
+        await Promise.resolve();
+      }
+    });
+
+    // Success clears cloneProgress → modal closes and the success alert shows.
+    await waitFor(() => expect(queryByTestId('modal')).toBeNull());
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Clone mode enabled',
+      expect.stringContaining('now syncs through a local working tree'),
+      expect.any(Array),
+    );
+  });
+
+  it('force-closes the clone modal after the grace period when cancel never reaches the git op', () => {
+    jest.useFakeTimers();
+    (GitHubService.isAuthenticated as jest.Mock).mockReturnValue(true);
+    (GitFsService.clone as jest.Mock).mockImplementation(() => new Promise<void>(() => {}));
+    stableRepositories.push(cloneRepo);
+
+    const { getByTestId, getByText, queryByTestId } = render(<SettingsScreen />);
+    fireEvent.press(getByTestId('settings.toggle.sync-engine-enable-octo-notes'));
+    expect(getByTestId('modal')).toBeTruthy();
+
+    fireEvent.press(getByTestId('button-Cancel'));
+    expect(getByTestId('modal')).toBeTruthy();
+    expect(getByText(/Cancelling/)).toBeTruthy();
+
+    act(() => {
+      jest.advanceTimersByTime(799);
+    });
+    expect(getByTestId('modal')).toBeTruthy();
+
+    act(() => {
+      jest.advanceTimersByTime(1);
+    });
+    expect(queryByTestId('modal')).toBeNull();
+  });
+
+  it('renders the Clone failed modal with the error on failure', async () => {
+    (GitHubService.isAuthenticated as jest.Mock).mockReturnValue(true);
+    (GitFsService.clone as jest.Mock).mockRejectedValue(new Error('Bad credentials'));
+    stableRepositories.push(cloneRepo);
+
+    const { getByTestId, getByText } = render(<SettingsScreen />);
+    fireEvent.press(getByTestId('settings.toggle.sync-engine-enable-octo-notes'));
+
+    await waitFor(() => expect(getByTestId('modal')).toBeTruthy());
+    expect(getByText('Clone Failed')).toBeTruthy();
+    expect(getByText(/Bad credentials/)).toBeTruthy();
+    expect(GitFsService.clone).toHaveBeenCalledTimes(1);
+  });
+
+  it('caps the automatic outer retry at one for a persistently corrupt packfile', async () => {
+    jest.useFakeTimers();
+    (GitHubService.isAuthenticated as jest.Mock).mockReturnValue(true);
+    const cloneMock = GitFsService.clone as jest.Mock;
+    cloneMock.mockRejectedValue(new Error('Packfile trailer mismatch'));
+    stableRepositories.push(cloneRepo);
+
+    const { getByTestId, getByText } = render(<SettingsScreen />);
+    fireEvent.press(getByTestId('settings.toggle.sync-engine-enable-octo-notes'));
+
+    await flushMicrotasks();
+    expect(cloneMock).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      jest.advanceTimersByTime(1500);
+    });
+    await flushMicrotasks();
+    expect(cloneMock).toHaveBeenCalledTimes(2);
+
+    act(() => {
+      jest.advanceTimersByTime(5000);
+    });
+    await flushMicrotasks();
+    expect(cloneMock).toHaveBeenCalledTimes(2);
+
+    // Cap reached → no endless loop; the failure modal still renders Clone Failed + error.
+    expect(getByTestId('modal')).toBeTruthy();
+    expect(getByText('Clone Failed')).toBeTruthy();
+    expect(getByText(/Packfile trailer mismatch/)).toBeTruthy();
   });
 });
