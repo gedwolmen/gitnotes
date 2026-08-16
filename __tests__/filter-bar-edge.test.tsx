@@ -37,7 +37,7 @@ describe('FilterBar edge-to-edge layout', () => {
     expect(wrapStyle.marginBottom).toBe(4);
   });
 
-  it('starts the chip row at x=0 with only a small trailing padding', () => {
+  it('insets the chip row with symmetric side padding so the first chip is not flush on load', () => {
     const { getByTestId } = renderFilterBar();
 
     const scroll = getByTestId('filter-bar.row');
@@ -45,8 +45,7 @@ describe('FilterBar edge-to-edge layout', () => {
 
     expect(rowStyle.marginLeft ?? 0).toBe(0);
     expect(rowStyle.marginRight ?? 0).toBe(0);
-    expect(rowStyle.paddingLeft ?? 0).toBe(0);
-    expect(rowStyle.paddingRight).toBe(12);
+    expect(rowStyle.paddingHorizontal).toBe(12);
     expect(rowStyle.gap).toBe(6);
   });
 });
