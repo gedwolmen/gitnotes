@@ -43,6 +43,11 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { RepoAccessPreflightError } from '../services/git/repoAccessPreflight';
 
+// Mirrors GitFsService's MAX_CLONE_RETRIES so a failing repo can't loop the outer flow.
+const MAX_OUTER_CLONE_RETRIES = 1;
+// The onProgress abort throw may never land (stuck transfer), so cancel force-closes after this.
+const CLONE_CANCEL_GRACE_MS = 800;
+
 function confirmUnverifiedWrite(t: TFunction, onConfirm: () => void): void {
   Alert.alert(
     t('settings.writeAccessNotVerifiedTitle'),
@@ -121,6 +126,7 @@ export default function SettingsScreen() {
   const [cloningRepo, setCloningRepo] = useState<string | null>(null);
   const [cloneProgress, setCloneProgress] = useState<CloneProgress | null>(null);
   const cloneAbortedRef = useRef(false);
+  const cloneOuterRetriesRef = useRef(0);
   const [isSyncingExistingTemplates, setIsSyncingExistingTemplates] = useState(false);
   const [lfsPending, setLfsPending] = useState<Record<string, { count: number; bytes: number }>>({});
   const [lfsDownloadingRepo, setLfsDownloadingRepo] = useState<string | null>(null);
@@ -210,6 +216,9 @@ export default function SettingsScreen() {
       Alert.alert(t('settings.githubRequiredTitle'), t('settings.githubRequiredBody'));
       return;
     }
+    if (!isRetry) {
+      cloneOuterRetriesRef.current = 0;
+    }
     setCloningRepo(repo.path);
     cloneAbortedRef.current = false;
     setCloneProgress({ repoName: repo.name, phase: t('settings.clonePhasePreparing'), loaded: 0, total: null });
@@ -235,6 +244,7 @@ export default function SettingsScreen() {
       }
       await SyncEngineService.setMode(repo.path, 'clone');
       setSyncModes((prev) => ({ ...prev, [repo.path]: 'clone' }));
+      setCloneProgress(null);
       void refreshLfsPending([repo.path]);
       HapticService.success();
       Alert.alert(t('settings.cloneEnabledTitle'), t('settings.cloneEnabledBody', { name: repo.name }), [
@@ -263,7 +273,11 @@ export default function SettingsScreen() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (cloneAbortedRef.current) return;
-      if (/Packfile trailer mismatch|packfile may be corrupted/i.test(errorMessage) && !isRetry) {
+      if (
+        /Packfile trailer mismatch|packfile may be corrupted/i.test(errorMessage) &&
+        cloneOuterRetriesRef.current < MAX_OUTER_CLONE_RETRIES
+      ) {
+        cloneOuterRetriesRef.current += 1;
         await GitFsService.removeRepo({ repoPath: repo.path }).catch(() => undefined);
         setCloneProgress({
           repoName: repo.name,
@@ -273,6 +287,7 @@ export default function SettingsScreen() {
           error: t('settings.cloneFailedRetryError', { error: errorMessage }),
         });
         setTimeout(() => {
+          if (cloneAbortedRef.current) return;
           handleEnableCloneMode(repo, true).catch((retryError) => {
             setCloneProgress({
               repoName: repo.name,
@@ -295,6 +310,10 @@ export default function SettingsScreen() {
         error: errorMessage,
       });
     } finally {
+      setCloningRepo(null);
+      if (cloneAbortedRef.current) {
+        setCloneProgress(null);
+      }
     }
   }, [refreshLfsPending, t]);
 
@@ -302,9 +321,14 @@ export default function SettingsScreen() {
     cloneAbortedRef.current = true;
     if (cloneProgress?.error) {
       setCloneProgress(null);
-    } else {
-      setCloneProgress((prev) => (prev ? { ...prev, phase: t('settings.clonePhaseCancelling') } : prev));
+      return;
     }
+    setCloneProgress((prev) => (prev ? { ...prev, phase: t('settings.clonePhaseCancelling') } : prev));
+    setTimeout(() => {
+      setCloneProgress((prev) =>
+        prev && prev.phase === t('settings.clonePhaseCancelling') ? null : prev,
+      );
+    }, CLONE_CANCEL_GRACE_MS);
   }, [cloneProgress, t]);
 
   const handleRetryClone = useCallback(() => {
