@@ -67,7 +67,11 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
     setToolCallExpanded(false);
   }, [message.id]);
 
-  const timestamp = formatDistanceToNow(message.timestamp, { addSuffix: true });
+  // formatDistanceToNow throws RangeError on a missing/NaN timestamp; never let a
+  // persisted message with an invalid timestamp crash the whole chat render.
+  const timestamp = Number.isFinite(message.timestamp)
+    ? formatDistanceToNow(message.timestamp, { addSuffix: true })
+    : '';
 
   const isUser = message.role === 'user';
   const textColor = isUser ? '#ffffff' : colors.text;

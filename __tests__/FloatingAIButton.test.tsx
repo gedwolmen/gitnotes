@@ -598,6 +598,24 @@ describe('FloatingAIButton', () => {
     expect(mockSharedValues[9]?.value).toBe(0);
   });
 
+  it('resets the hold ring when the route changes to a chat screen and back', async () => {
+    const { getByTestId, rerender } = render(<FloatingAIButton currentRouteName="Home" />);
+    await waitForEntranceSpring();
+    const trigger = getByTestId('floating-ai.button.navigate-chat');
+
+    fireEvent(trigger, 'pressIn');
+
+    // Shared value creation order: positions 0-5, menuProgress 6, entrance 7,
+    // press 8, hold 9, hint 10.
+    expect(mockSharedValues[9]?.value).toBe(1);
+
+    rerender(<FloatingAIButton currentRouteName="ChatScreen" />);
+    expect(mockSharedValues[9]?.value).toBe(0);
+
+    rerender(<FloatingAIButton currentRouteName="Home" />);
+    expect(mockSharedValues[9]?.value).toBe(0);
+  });
+
   it('skips the hold ring timing when Reduce Motion is enabled', async () => {
     jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
 

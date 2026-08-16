@@ -90,11 +90,22 @@ export function parseToolArgs(value: unknown, fallback = ''): Record<string, unk
   }
 }
 
+// A tool bubble can carry `toolCallArgs` that fail to serialise (circular
+// refs, BigInt, throwing getters) — never let that abort the request-history
+// build for an otherwise healthy thread.
+function stringifyToolCallArgs(args: Record<string, unknown> | undefined): string {
+  try {
+    return JSON.stringify(args ?? {});
+  } catch {
+    return '[unserializable]';
+  }
+}
+
 export function formatHistoryMessage(message: ChatMessage): ChatRequestMessage {
   const content =
     message.content
     || (message.toolCallName
-      ? `${message.toolCallName}: ${JSON.stringify(message.toolCallArgs ?? {})}${message.toolCallResult ? `\nResult: ${message.toolCallResult}` : ''}`
+      ? `${message.toolCallName}: ${stringifyToolCallArgs(message.toolCallArgs)}${message.toolCallResult ? `\nResult: ${message.toolCallResult}` : ''}`
       : '');
 
   return { role: message.role, content };
