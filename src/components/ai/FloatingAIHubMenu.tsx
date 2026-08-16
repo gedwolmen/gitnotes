@@ -5,7 +5,6 @@ import {
   Canvas,
   Circle,
   ColorMatrix,
-  DashPathEffect,
   Group,
   Paint,
 } from '@shopify/react-native-skia';
@@ -15,6 +14,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { RADII } from '../../theme/tokens';
+import { HoldProgressRing } from '../ui/HoldProgressRing';
 import {
   FLOATING_AI_BUTTON_SIZE,
   FLOATING_AI_HUB_ITEMS,
@@ -29,9 +29,6 @@ const LIQUID_CANVAS_INSET = (
   LIQUID_CANVAS_SIZE - FLOATING_AI_BUTTON_SIZE
 ) / 2;
 const LIQUID_CENTER = LIQUID_CANVAS_SIZE / 2;
-export const HOLD_RING_RADIUS = FLOATING_AI_BUTTON_SIZE / 2 + 6;
-const HOLD_RING_STROKE_WIDTH = 3.5;
-export const HOLD_RING_CIRCUMFERENCE = 2 * Math.PI * HOLD_RING_RADIUS;
 const GOOEY_ALPHA_MATRIX = [
   1, 0, 0, 0, 0,
   0, 1, 0, 0, 0,
@@ -45,6 +42,8 @@ export const MENU_SPRING = {
   stiffness: 210,
   overshootClamping: true,
 } as const;
+
+export { HOLD_RING_CIRCUMFERENCE, HOLD_RING_RADIUS } from '../ui/HoldProgressRing';
 
 interface HubItemContent {
   readonly label: string;
@@ -168,7 +167,7 @@ interface FloatingAIHubMenuProps {
   readonly horizontalDirection: MenuDirection;
   readonly verticalDirection: MenuDirection;
   readonly progress: SharedValue<number>;
-  readonly holdProgress?: SharedValue<number>;
+  readonly holdProgress: SharedValue<number>;
   readonly hintProgress?: SharedValue<number>;
   readonly primaryColor: string;
   readonly iconColor: string;
@@ -195,15 +194,6 @@ export function FloatingAIHubMenu({
 }: FloatingAIHubMenuProps) {
   const canvasProgress = useDerivedValue(
     () => Math.max(progress.value, hintProgress?.value ?? 0),
-  );
-  const ringIntervals = useDerivedValue(
-    () => [
-      (holdProgress?.value ?? 0) * HOLD_RING_CIRCUMFERENCE,
-      HOLD_RING_CIRCUMFERENCE,
-    ],
-  );
-  const ringOpacity = useDerivedValue(
-    () => Math.min(1, (holdProgress?.value ?? 0) * 3),
   );
 
   return (
@@ -238,23 +228,15 @@ export function FloatingAIHubMenu({
               />
             ))}
           </Group>
-
-          <Circle
-            cx={LIQUID_CENTER}
-            cy={LIQUID_CENTER}
-            r={HOLD_RING_RADIUS}
-            color={primaryColor}
-            style="stroke"
-            strokeWidth={HOLD_RING_STROKE_WIDTH}
-            strokeCap="round"
-            opacity={ringOpacity}
-            origin={{ x: LIQUID_CENTER, y: LIQUID_CENTER }}
-            transform={[{ rotate: -Math.PI / 2 }]}
-          >
-            <DashPathEffect intervals={ringIntervals} />
-          </Circle>
         </Canvas>
       )}
+
+      <HoldProgressRing
+        progress={holdProgress}
+        size={FLOATING_AI_BUTTON_SIZE}
+        color={primaryColor}
+        reduceMotionEnabled={reduceMotionEnabled}
+      />
 
       {menuOpen && FLOATING_AI_HUB_ITEMS.map((item) => (
         <HubMenuItem

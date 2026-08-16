@@ -4,11 +4,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSharedValue, type SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTabBarHeight } from '../ui/TabBar';
+import { publishButtonRect, resolveNonOverlapping } from '../floatingButtonLayout';
 import type {
   FloatingButtonGeometry,
   FloatingButtonPosition,
 } from '../ai/floatingAIButtonGeometry';
-import { resolveStageButtonPlacement } from './stageButtonGeometry';
+import { resolveStageButtonPlacement, STAGE_BUTTON_SIZE } from './stageButtonGeometry';
 
 const EDGE_INSET = 16;
 const MINIMUM_TOP_BOUND = 60;
@@ -82,6 +83,7 @@ export function useStageButtonPosition(): StageButtonPositionState {
     translateY.value = position.y;
     savedTranslateX.value = position.x;
     savedTranslateY.value = position.y;
+    publishButtonRect('stage', { x: position.x, y: position.y, size: STAGE_BUTTON_SIZE });
   }, [savedTranslateX, savedTranslateY, translateX, translateY]);
 
   const savePosition = useCallback((position: FloatingButtonPosition) => {
@@ -137,6 +139,14 @@ export function useStageButtonPosition(): StageButtonPositionState {
   }, [applyPosition, dragActive, savePosition]);
 
   useEffect(() => {
+    publishButtonRect('stage', {
+      x: initialPosition.x,
+      y: initialPosition.y,
+      size: STAGE_BUTTON_SIZE,
+    });
+  }, [initialPosition.x, initialPosition.y]);
+
+  useEffect(() => {
     latestGeometry.value = geometry;
   }, [geometry, latestGeometry]);
 
@@ -151,15 +161,21 @@ export function useStageButtonPosition(): StageButtonPositionState {
       currentPosition,
       geometry,
     ).position;
+    const resolvedPosition = resolveNonOverlapping(
+      'stage',
+      normalizedPosition,
+      STAGE_BUTTON_SIZE,
+      geometry,
+    );
     if (
-      normalizedPosition.x === currentPosition.x
-      && normalizedPosition.y === currentPosition.y
+      resolvedPosition.x === currentPosition.x
+      && resolvedPosition.y === currentPosition.y
     ) {
       return;
     }
 
-    applyPosition(normalizedPosition);
-    savePosition(normalizedPosition);
+    applyPosition(resolvedPosition);
+    savePosition(resolvedPosition);
   }, [
     applyPosition,
     dragActive,

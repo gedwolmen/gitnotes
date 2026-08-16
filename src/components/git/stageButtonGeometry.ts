@@ -3,9 +3,10 @@ import {
   type FloatingButtonGeometry,
   type FloatingButtonPosition,
 } from '../ai/floatingAIButtonGeometry';
+import { FLOATING_AI_BUTTON_LONG_PRESS_MS } from '../ai/useFloatingAIButtonAffordances';
 
 export const STAGE_BUTTON_SIZE = 52;
-export const STAGE_BUTTON_LONG_PRESS_MS = 500;
+export const STAGE_BUTTON_LONG_PRESS_MS = FLOATING_AI_BUTTON_LONG_PRESS_MS;
 export const STAGE_BUTTON_VERTICAL_GAP = 12;
 
 /**

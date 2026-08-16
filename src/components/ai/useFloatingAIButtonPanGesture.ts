@@ -1,10 +1,19 @@
+import { useEffect } from 'react';
 import { Gesture } from 'react-native-gesture-handler';
-import { runOnJS, withSpring } from 'react-native-reanimated';
+import { runOnJS, useSharedValue, withSpring } from 'react-native-reanimated';
 import type { FloatingAIButtonPositionState } from './useFloatingAIButtonPosition';
 import {
+  FLOATING_AI_BUTTON_SIZE,
   resolveFloatingAIButtonPlacement,
   type MenuDirection,
 } from './floatingAIButtonGeometry';
+import {
+  getButtonRect,
+  publishButtonRect,
+  resolveNonOverlappingWithRect,
+  subscribeButtonRects,
+  type FloatingButtonRect,
+} from '../floatingButtonLayout';
 
 const POSITION_SPRING = {
   mass: 1,
@@ -34,6 +43,14 @@ export function useFloatingAIButtonPanGesture(
     markPositionInteractionStarted,
     savePosition,
   } = position;
+  const otherRect = useSharedValue<FloatingButtonRect | null>(null);
+
+  useEffect(() => {
+    otherRect.value = getButtonRect('stage');
+    return subscribeButtonRects(() => {
+      otherRect.value = getButtonRect('stage');
+    });
+  }, [otherRect]);
 
   return Gesture.Pan()
     .onBegin(() => {
@@ -56,15 +73,26 @@ export function useFloatingAIButtonPanGesture(
         latestGeometry.value,
       );
       const normalizedPosition = placement.position;
+      const collisionFreePosition = resolveNonOverlappingWithRect(
+        normalizedPosition,
+        FLOATING_AI_BUTTON_SIZE,
+        latestGeometry.value,
+        otherRect.value,
+      );
 
-      translateX.value = withSpring(normalizedPosition.x, POSITION_SPRING);
-      translateY.value = withSpring(normalizedPosition.y, POSITION_SPRING);
-      savedTranslateX.value = normalizedPosition.x;
-      savedTranslateY.value = normalizedPosition.y;
+      translateX.value = withSpring(collisionFreePosition.x, POSITION_SPRING);
+      translateY.value = withSpring(collisionFreePosition.y, POSITION_SPRING);
+      savedTranslateX.value = collisionFreePosition.x;
+      savedTranslateY.value = collisionFreePosition.y;
 
       runOnJS(actions.setHorizontalDirection)(placement.horizontalDirection);
       runOnJS(actions.setVerticalDirection)(placement.verticalDirection);
-      runOnJS(savePosition)(normalizedPosition);
+      runOnJS(savePosition)(collisionFreePosition);
+      runOnJS(publishButtonRect)('ai', {
+        x: collisionFreePosition.x,
+        y: collisionFreePosition.y,
+        size: FLOATING_AI_BUTTON_SIZE,
+      });
     })
     .onFinalize((_event, successful) => {
       dragActive.value = false;
@@ -78,16 +106,27 @@ export function useFloatingAIButtonPanGesture(
         savedPosition,
         latestGeometry.value,
       ).position;
-      translateX.value = withSpring(normalizedPosition.x, POSITION_SPRING);
-      translateY.value = withSpring(normalizedPosition.y, POSITION_SPRING);
-      savedTranslateX.value = normalizedPosition.x;
-      savedTranslateY.value = normalizedPosition.y;
+      const collisionFreePosition = resolveNonOverlappingWithRect(
+        normalizedPosition,
+        FLOATING_AI_BUTTON_SIZE,
+        latestGeometry.value,
+        otherRect.value,
+      );
+      translateX.value = withSpring(collisionFreePosition.x, POSITION_SPRING);
+      translateY.value = withSpring(collisionFreePosition.y, POSITION_SPRING);
+      savedTranslateX.value = collisionFreePosition.x;
+      savedTranslateY.value = collisionFreePosition.y;
 
       if (
-        normalizedPosition.x !== savedPosition.x
-        || normalizedPosition.y !== savedPosition.y
+        collisionFreePosition.x !== savedPosition.x
+        || collisionFreePosition.y !== savedPosition.y
       ) {
-        runOnJS(savePosition)(normalizedPosition);
+        runOnJS(savePosition)(collisionFreePosition);
       }
+      runOnJS(publishButtonRect)('ai', {
+        x: collisionFreePosition.x,
+        y: collisionFreePosition.y,
+        size: FLOATING_AI_BUTTON_SIZE,
+      });
     });
 }
