@@ -13,6 +13,8 @@ import { slugifyTodoText, Todo, TodoPriority } from '../models/Todo';
 import { SortMode } from '../types/SortTypes';
 import { HapticService } from '../utils/haptics';
 import { syncTodoToGitHub } from '../services/TodoGitHubSyncService';
+import { FEATURE_STAGE_PUSH } from '../services/featureFlags';
+import { StagingService } from '../services/git/StagingService';
 import { syncNow } from '../services/git/manualSync';
 import { batchDeleteFiles } from '../services/git/BatchGitOperations';
 import { resolveBranch } from '../services/git/resolveBranch';
@@ -45,6 +47,21 @@ import { useTranslation } from 'react-i18next';
 import { LastSelectionPreferenceService } from '../services/LastSelectionPreferenceService';
 
 const FILTER_COMPLETED_PERSISTENCE_KEY = '@gitnotes:filters:todo-completed';
+
+/** Mirrors TodoGitHubSyncService.serializeTodo so staged todos keep the on-disk shape. */
+function serializeTodoForStage(todo: Partial<Todo>): string {
+  const data = {
+    text: todo.text ?? '',
+    completed: todo.completed ?? false,
+    priority: todo.priority,
+    notes: todo.notes,
+    tags: todo.tags ?? [],
+    dueDate: todo.dueDate,
+    createdAt: todo.createdAt,
+    updatedAt: todo.updatedAt,
+  };
+  return JSON.stringify(data, null, 2);
+}
 
 interface LockedTodoRowProps {
   item: Todo;
@@ -403,16 +420,29 @@ export default function TodoListScreen() {
     });
 
     if (todoRepo && newTodo) {
-      const syncResult = await syncTodoToGitHub({
-        repo: todoRepo,
-        branch: todoBranch,
-        filePath: todoFilePath,
-        text: todoText.trim(),
-        todo: newTodo,
-        accountId: newTodo.accountId,
-      });
-      if (!syncResult.success) {
-        console.warn('[TodoList] GitHub sync failed:', syncResult.error);
+      if (FEATURE_STAGE_PUSH) {
+        const stageResult = await StagingService.stageUpsert({
+          repo: todoRepo,
+          branch: todoBranch,
+          filePath: todoFilePath,
+          title: todoText.trim(),
+          content: serializeTodoForStage(newTodo),
+        });
+        if (!stageResult.success) {
+          console.warn('[TodoList] GitHub stage failed:', stageResult.error);
+        }
+      } else {
+        const syncResult = await syncTodoToGitHub({
+          repo: todoRepo,
+          branch: todoBranch,
+          filePath: todoFilePath,
+          text: todoText.trim(),
+          todo: newTodo,
+          accountId: newTodo.accountId,
+        });
+        if (!syncResult.success) {
+          console.warn('[TodoList] GitHub sync failed:', syncResult.error);
+        }
       }
     }
 
@@ -457,25 +487,47 @@ export default function TodoListScreen() {
       accountId: editAccountId,
     });
 
-    const syncResult = await syncTodoToGitHub({
-      repo: todoRepo,
-      branch: todoBranch,
-      filePath: todoFilePath,
-      text: todoText.trim(),
-      todo: {
+    if (FEATURE_STAGE_PUSH) {
+      const stageResult = await StagingService.stageUpsert({
+        repo: todoRepo,
+        branch: todoBranch,
+        filePath: todoFilePath,
+        title: todoText.trim(),
+        content: serializeTodoForStage({
+          text: todoText.trim(),
+          completed: editingTodo.completed,
+          priority: todoPriority,
+          notes: todoNotes.trim() || undefined,
+          tags: editingTodo.tags,
+          dueDate: todoDueDate,
+          createdAt: editingTodo.createdAt,
+          updatedAt: Date.now(),
+        }),
+      });
+      if (!stageResult.success) {
+        console.warn('[TodoList] GitHub stage failed:', stageResult.error);
+      }
+    } else {
+      const syncResult = await syncTodoToGitHub({
+        repo: todoRepo,
+        branch: todoBranch,
+        filePath: todoFilePath,
         text: todoText.trim(),
-        completed: editingTodo.completed,
-        priority: todoPriority,
-        notes: todoNotes.trim() || undefined,
-        tags: editingTodo.tags,
-        dueDate: todoDueDate,
-        createdAt: editingTodo.createdAt,
-        updatedAt: Date.now(),
-      },
-      accountId: editAccountId,
-    });
-    if (!syncResult.success) {
-      console.warn('[TodoList] GitHub sync failed:', syncResult.error);
+        todo: {
+          text: todoText.trim(),
+          completed: editingTodo.completed,
+          priority: todoPriority,
+          notes: todoNotes.trim() || undefined,
+          tags: editingTodo.tags,
+          dueDate: todoDueDate,
+          createdAt: editingTodo.createdAt,
+          updatedAt: Date.now(),
+        },
+        accountId: editAccountId,
+      });
+      if (!syncResult.success) {
+        console.warn('[TodoList] GitHub sync failed:', syncResult.error);
+      }
     }
 
     resetForm();

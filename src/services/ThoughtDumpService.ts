@@ -7,7 +7,8 @@ import { LocalGitWriter } from './git/LocalGitWriter';
 import { AuthService } from './AuthService';
 import { resolveBranch } from './git/branchResolver';
 import { getGitHostService } from './git/gitHostFactory';
-import { FEATURE_USE_MULTI_HOST_WRITE } from './featureFlags';
+import { FEATURE_USE_MULTI_HOST_WRITE, FEATURE_STAGE_PUSH } from './featureFlags';
+import { StagingService } from './git/StagingService';
 import type { GitHostProvider } from './git/GitHost';
 
 const THOUGHTS_DIR = 'thoughts/';
@@ -98,6 +99,16 @@ export class ThoughtDumpService {
     const mode = await SyncEngineService.getMode(repoPath);
 
     const writeResult = await enqueueRepoWrite(repoInfo.owner, repoInfo.repo, branch, async () => {
+      if (FEATURE_STAGE_PUSH) {
+        return StagingService.stageUpsert({
+          repo: repoPath,
+          branch,
+          filePath: dump.filePath,
+          title: 'Thought dump',
+          content,
+        });
+      }
+
       if (mode === 'clone') {
         const author = await resolveAuthor();
         const token = await resolveToken();
@@ -226,6 +237,15 @@ export class ThoughtDumpService {
     const mode = await SyncEngineService.getMode(repoPath);
 
     const result = await enqueueRepoWrite(repoInfo.owner, repoInfo.repo, branch, async () => {
+      if (FEATURE_STAGE_PUSH) {
+        return StagingService.stageDelete({
+          repo: repoPath,
+          branch,
+          filePath: options.filePath,
+          title: 'Thought dump',
+        });
+      }
+
       if (mode === 'clone') {
         const author = await resolveAuthor();
         const token = await resolveToken();
