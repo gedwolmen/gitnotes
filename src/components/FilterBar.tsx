@@ -58,7 +58,7 @@ export function FilterBar({ filters, onRemoveFilter, onClearAll }: FilterBarProp
 
 const styles = StyleSheet.create({
   wrap: { marginHorizontal: 0, marginTop: 4, marginBottom: 4 },
-  row: { gap: 6, paddingTop: 6, paddingBottom: 8, paddingRight: 12 },
+  row: { gap: 6, paddingTop: 6, paddingBottom: 8, paddingHorizontal: 12 },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
