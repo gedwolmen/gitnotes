@@ -1,6 +1,10 @@
 import * as Notifications from 'expo-notifications';
 import { Todo } from '../models/Todo';
 
+// iOS asserts (ERR_NOTIFICATIONS_FAILED_TO_SCHEDULE) on non-positive
+// intervals, so clamp trigger dates at least this far into the future.
+const MIN_FUTURE_OFFSET_MS = 1000;
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -31,20 +35,29 @@ export class NotificationService {
     const hasPermission = await this.requestPermissions();
     if (!hasPermission) return undefined;
 
-    const notificationId = await Notifications.scheduleNotificationAsync({
-      content: {
-        title: 'Todo Reminder',
-        body: todo.text,
-        data: { todoId: todo.id },
-        sound: true,
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DATE,
-        date: triggerTime,
-      },
-    });
+    const safeTrigger = new Date(
+      Math.max(triggerTime.getTime(), Date.now() + MIN_FUTURE_OFFSET_MS),
+    );
 
-    return notificationId;
+    try {
+      const notificationId = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Todo Reminder',
+          body: todo.text,
+          data: { todoId: todo.id },
+          sound: true,
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: safeTrigger,
+        },
+      });
+
+      return notificationId;
+    } catch (error) {
+      console.warn('[NotificationService] schedule reminder failed:', error);
+      return undefined;
+    }
   }
 
   static async cancelReminder(notificationId: string): Promise<void> {
@@ -77,15 +90,24 @@ export class NotificationService {
     const hasPermission = await this.requestPermissions();
     if (!hasPermission) return null;
 
-    const notificationId = await Notifications.scheduleNotificationAsync({
-      content: { title, body, data, sound: true },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DATE,
-        date: trigger,
-      },
-    });
+    const safeTrigger = new Date(
+      Math.max(trigger.getTime(), Date.now() + MIN_FUTURE_OFFSET_MS),
+    );
 
-    return notificationId;
+    try {
+      const notificationId = await Notifications.scheduleNotificationAsync({
+        content: { title, body, data, sound: true },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: safeTrigger,
+        },
+      });
+
+      return notificationId;
+    } catch (error) {
+      console.warn('[NotificationService] schedule notification failed:', error);
+      return null;
+    }
   }
 
   /**
@@ -101,7 +123,7 @@ export class NotificationService {
       title,
       body,
       data,
-      trigger: new Date(Date.now() + 100),
+      trigger: new Date(Date.now() + MIN_FUTURE_OFFSET_MS),
     });
   }
 
@@ -114,7 +136,7 @@ export class NotificationService {
       title,
       body,
       data,
-      trigger: new Date(Date.now() + 100),
+      trigger: new Date(Date.now() + MIN_FUTURE_OFFSET_MS),
     });
   }
 }
