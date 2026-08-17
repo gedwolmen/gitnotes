@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { parseRepoPath } from '../../utils/gitPathParser';
 import { GitFsService } from './GitFsService';
+import AuthService from '../AuthService';
 
 const GITHUB_API_BASE = 'https://api.github.com';
 const GITLAB_API_BASE = 'https://gitlab.com/api/v4';
@@ -60,9 +61,14 @@ export async function fetchGitHubDefaultBranch(repoPath: string): Promise<string
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
+    const token = await AuthService.getToken();
+    const headers: Record<string, string> = { Accept: 'application/vnd.github.v3+json' };
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
     const response = await fetch(
       `${GITHUB_API_BASE}/repos/${info.owner}/${info.repo}`,
-      { headers: { Accept: 'application/vnd.github.v3+json' }, signal: controller.signal },
+      { headers, signal: controller.signal },
     );
     if (!response.ok) {
       clearTimeout(timeoutId);
