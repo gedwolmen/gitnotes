@@ -53,6 +53,7 @@ jest.mock('../src/services/AuthService', () => ({
       token: null,
     })),
     validateAllAccounts: jest.fn(async () => ({ removed: [] })),
+    connectHost: jest.fn(async () => null),
   },
 }));
 
@@ -92,6 +93,7 @@ let capturedMethods: {
   removeAccount: (id: string) => Promise<void>;
   disconnectHost: (id: string) => Promise<void>;
   clearToken: () => Promise<void>;
+  addAccount: (token: string) => Promise<unknown>;
   accountSummaries: Array<{ account: { id: string }; hosts: Array<{ id: string }> }>;
   activeAccountId: string | null;
 } | null = null;
@@ -102,6 +104,7 @@ function TestProbe() {
     removeAccount: ctx.removeAccount,
     disconnectHost: ctx.disconnectHost,
     clearToken: ctx.clearToken,
+    addAccount: ctx.addAccount,
     accountSummaries: ctx.accountSummaries,
     activeAccountId: ctx.activeAccountId,
   };
@@ -118,6 +121,7 @@ describe('AccountsContext — chat repo clearing on removal', () => {
     aiStoreState.chatRepoName = null;
     aiStoreState.chatRepoBranch = 'main';
     mockSetChatRepo.mockClear();
+    (GitHubService.setToken as jest.Mock).mockClear();
   });
 
   function renderProvider() {
@@ -409,6 +413,58 @@ describe('AccountsContext — chat repo clearing on removal', () => {
       });
 
       expect(mockSetChatRepo).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── addAccount ─────────────────────────────────────────────────────
+
+  describe('addAccount', () => {
+    it('syncs the GitHubService singleton token so repo listing works immediately', async () => {
+      (AuthService.listAccountSummaries as jest.Mock).mockResolvedValue([]);
+      (AuthService.getActiveSummary as jest.Mock).mockResolvedValue(null);
+      (AuthService.getToken as jest.Mock).mockResolvedValue(null);
+      (AuthService.connectHost as jest.Mock).mockResolvedValue({
+        ok: true,
+        host: {
+          id: 'h1',
+          hostUserId: 42,
+          hostLogin: 'alice',
+          name: 'Alice',
+          email: 'alice@example.com',
+        },
+        account: { id: 'acc-1' },
+      });
+
+      const { getByTestId } = renderProvider();
+      await waitFor(() => expect(getByTestId('probe')).toBeTruthy());
+
+      const added = await capturedMethods!.addAccount('ghp_secret');
+
+      expect(added).toEqual({ id: 'acc-1' });
+      expect(GitHubService.setToken).toHaveBeenCalledWith(
+        'ghp_secret',
+        expect.objectContaining({
+          id: 42,
+          login: 'alice',
+          name: 'Alice',
+          email: 'alice@example.com',
+        }),
+      );
+    });
+
+    it('does not touch GitHubService when connectHost fails', async () => {
+      (AuthService.listAccountSummaries as jest.Mock).mockResolvedValue([]);
+      (AuthService.getActiveSummary as jest.Mock).mockResolvedValue(null);
+      (AuthService.getToken as jest.Mock).mockResolvedValue(null);
+      (AuthService.connectHost as jest.Mock).mockResolvedValue(null);
+
+      const { getByTestId } = renderProvider();
+      await waitFor(() => expect(getByTestId('probe')).toBeTruthy());
+
+      const added = await capturedMethods!.addAccount('bad-token');
+
+      expect(added).toBeNull();
+      expect(GitHubService.setToken).not.toHaveBeenCalled();
     });
   });
 });

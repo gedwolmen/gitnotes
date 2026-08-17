@@ -59,7 +59,7 @@ export function Button(props: ButtonProps) {
     transform: [{ scale: scale.value }],
   }));
 
-  const textColor = colors.text;
+  const textColor = variant === 'primary' ? '#fff' : colors.text;
   const isGhost = variant === 'ghost';
 
   const labelNode = label !== undefined && (
@@ -139,6 +139,10 @@ export function Button(props: ButtonProps) {
             {
               minHeight: 44,
             },
+            // variant="primary" carries a filled primary background; the
+            // raised Surface alone renders a white card, which made primary
+            // labels overridden to white invisible (white-on-white).
+            variant === 'primary' && { backgroundColor: colors.primary },
             style,
           ]}
         >

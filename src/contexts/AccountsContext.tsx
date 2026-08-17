@@ -285,6 +285,18 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
     async (token: string): Promise<StoredAccount | null> => {
       const result = await AuthService.connectHost({ provider: 'github', token });
       await refreshAccounts();
+      if (result) {
+        // Keep the legacy GitHubService singleton in sync so repo listing /
+        // preflight checks (which gate on GitHubService.isAuthenticated) work
+        // immediately after adding an account, not just after an app restart.
+        await GitHubService.setToken(token, {
+          id: result.host.hostUserId,
+          login: result.host.hostLogin,
+          name: result.host.name ?? result.host.hostLogin,
+          email: result.host.email ?? '',
+          avatar_url: result.host.avatarUrl ?? '',
+        } as unknown as GhSetTokenUser).catch(() => undefined);
+      }
       return result?.account ?? null;
     },
     [refreshAccounts],
