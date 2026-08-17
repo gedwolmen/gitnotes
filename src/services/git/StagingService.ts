@@ -133,7 +133,19 @@ export class StagingService {
       });
       const hasLocal = localOid !== null;
       const hasRemote = remoteOid !== null;
-      if (!hasLocal || (hasRemote && localOid === remoteOid)) continue;
+      const mergeBase = hasRemote
+        ? await GitFsService.findMergeBase({
+            repoPath: repo,
+            ref1: `refs/heads/${repoBranch}`,
+            ref2: `refs/remotes/origin/${repoBranch}`,
+          })
+        : null;
+      if (
+        !hasLocal ||
+        (hasRemote && (localOid === remoteOid || (mergeBase !== null && localOid === mergeBase)))
+      ) {
+        continue;
+      }
 
       items.push({
         repoPath: repo,

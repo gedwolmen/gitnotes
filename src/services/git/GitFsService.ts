@@ -8,6 +8,17 @@ import { LfsService } from './lfs';
 const CLONES_SUBDIR = 'GitNotes/';
 
 /**
+ * Minimum history depth we fetch so merge-base detection stays reachable.
+ * `findMergeBase` needs ~2-3 commits of shared ancestry to compute a common
+ * ancestor; a depth-1 shallow fetch cannot compute merge bases, which silently
+ * disables divergence-conflict recording (the conflict-store branch surfaced by
+ * `surfaceConflictsOnDiverged` in LocalGitWriter and RepoPullService's divergence
+ * detection). Fetching ≥3 commits is a small constant cost (a few objects) and
+ * makes the merge-base-based divergence detection in pull/push actually reachable.
+ */
+const MIN_DIVERGENCE_HISTORY_DEPTH = 3;
+
+/**
  * Tree entry shape that mirrors `GitHubService.getTreeRecursiveOrThrow` so
  * later phases can swap one for the other behind the SyncEngine flag without
  * the callers caring which transport produced the listing.
@@ -181,7 +192,7 @@ export class GitFsService {
         dir,
         ref: opts.branch,
         singleBranch: true,
-        depth: opts.depth ?? 1,
+        depth: Math.max(opts.depth ?? MIN_DIVERGENCE_HISTORY_DEPTH, MIN_DIVERGENCE_HISTORY_DEPTH),
         tags: false,
         onAuth: ensureToken(opts.token),
       });
@@ -221,7 +232,7 @@ export class GitFsService {
         dir,
         ref: opts.branch,
         singleBranch: true,
-        depth: opts.depth ?? 1,
+        depth: Math.max(opts.depth ?? MIN_DIVERGENCE_HISTORY_DEPTH, MIN_DIVERGENCE_HISTORY_DEPTH),
         tags: false,
         onAuth: ensureToken(opts.token),
       });

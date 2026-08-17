@@ -25,6 +25,7 @@ jest.mock('../../src/services/SyncEngineService', () => ({
 jest.mock('../../src/services/git/GitFsService', () => ({
   GitFsService: {
     getCommitOid: jest.fn(async () => null),
+    findMergeBase: jest.fn(async () => null),
   },
 }));
 
@@ -94,6 +95,7 @@ const getMode = SyncEngineService.getMode as jest.Mock;
 const listOverrides = SyncEngineService.listOverrides as jest.Mock;
 
 const getCommitOid = GitFsService.getCommitOid as jest.Mock;
+const findMergeBase = GitFsService.findMergeBase as jest.Mock;
 const getSavedRepositories = StorageService.getSavedRepositories as jest.Mock;
 const getToken = AuthService.getToken as jest.Mock;
 
@@ -342,12 +344,30 @@ describe('StagingService', () => {
       });
     });
 
+    test('strictly-behind local branch (local === merge base) emits no phantom unpushed row (#879)', async () => {
+      listOverrides.mockResolvedValue({ 'owner/repo': 'clone' });
+      getSavedRepositories.mockResolvedValue([
+        { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
+      ]);
+      // Local is the ancestor of origin: localOid === merge base, remote descendants.
+      getCommitOid.mockImplementation(
+        async ({ ref }: { ref: string }) =>
+          ref.startsWith('refs/heads') ? 'ancestor-oid' : 'descendant-oid',
+      );
+      findMergeBase.mockResolvedValue('ancestor-oid');
+
+      const staged = await StagingService.listStaged();
+
+      expect(staged).toHaveLength(0);
+    });
+
     test('fresh clone with no commits on either side is not staged', async () => {
       listOverrides.mockResolvedValue({ 'owner/repo': 'clone' });
       getSavedRepositories.mockResolvedValue([
         { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
       ]);
-      getCommitOid.mockResolvedValue(null);
+getCommitOid.mockResolvedValue(null);
+    findMergeBase.mockResolvedValue(null);
 
       const staged = await StagingService.listStaged();
 
