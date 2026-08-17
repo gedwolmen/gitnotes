@@ -16,6 +16,7 @@ import {
   checkGitHubRepoAccess,
   RepoAccessPreflightError,
 } from '../services/git/repoAccessPreflight';
+import { reposAffectedByRemovedHosts, type RemovedHostRef } from '../services/git/repoRemovalCascade';
 
 interface RepoState {
   repositories: GitRepository[];
@@ -35,6 +36,10 @@ interface RepoActions {
     options?: AddRepositoryOptions,
   ) => Promise<GitRepository>;
   removeRepository: (path: string, provider?: GitHostProvider) => Promise<void>;
+  removeRepositoriesForHosts: (
+    removedHosts: RemovedHostRef[],
+    providerAccountCount: ReadonlyMap<GitHostProvider, number>,
+  ) => Promise<number>;
   refreshRepos: () => Promise<void>;
 }
 
@@ -57,8 +62,8 @@ export const useRepoStore = create<RepoState & RepoActions>()((set, get) => ({
     const name = typeof nameOrOptions === 'string' ? nameOrOptions : undefined;
     const resolvedOptions = typeof nameOrOptions === 'object' ? nameOrOptions : options;
     const resolvedProvider = provider ?? 'github';
+    const activeHost = await getActiveGitHost();
     if (resolvedProvider === 'github') {
-      const activeHost = await getActiveGitHost();
       if (activeHost?.provider === 'github') {
         const access = await checkGitHubRepoAccess(path, activeHost.token);
         switch (access.kind) {
@@ -81,7 +86,7 @@ export const useRepoStore = create<RepoState & RepoActions>()((set, get) => ({
         }
       }
     }
-    const repo = await GitService.addRepository(path, name, resolvedProvider);
+    const repo = await GitService.addRepository(path, name, resolvedProvider, activeHost?.hostId);
     const updated = await StorageService.getSavedRepositories();
     set({ repositories: updated });
     return repo;
@@ -124,6 +129,14 @@ export const useRepoStore = create<RepoState & RepoActions>()((set, get) => ({
       useCanvasStore.getState().refreshCanvases(),
       useTodoStore.getState().refreshTodos(),
     ]);
+  },
+
+  removeRepositoriesForHosts: async (removedHosts, providerAccountCount) => {
+    const targets = reposAffectedByRemovedHosts(get().repositories, removedHosts, providerAccountCount);
+    for (const repo of targets) {
+      await get().removeRepository(repo.path, repo.provider);
+    }
+    return targets.length;
   },
 
   refreshRepos: async () => {

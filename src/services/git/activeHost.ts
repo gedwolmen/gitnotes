@@ -19,6 +19,8 @@ export interface ActiveGitHost {
   baseUrl: string;
   token: string;
   host: GitHostFullService;
+  /** Host connection id this active host was resolved from. */
+  hostId: string;
 }
 
 /** Scratch cache so two callers in the same tick don't re-instantiate services. */
@@ -66,6 +68,7 @@ export async function getActiveGitHost(): Promise<ActiveGitHost | null> {
     baseUrl,
     token,
     host,
+    hostId: hostSummary.id,
   };
   cache = { key, value };
   return value;

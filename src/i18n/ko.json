@@ -318,6 +318,7 @@
     "removeAccountBody": "이 계정의 토큰이 이 기기에서 삭제됩니다. 이 계정으로 만든 노트/할 일은 로컬에 유지됩니다.",
     "removeTokenTitle": "GitHub 토큰 제거",
     "removeTokenBody": "GitHub 계정 연결이 해제됩니다. 계속하시겠습니까?",
+    "cascadeRemoveWarning": "동기화된 {{count}}개의 리포지토리도 이 기기에서 제거됩니다.",
     "resetOnboardingTitle": "온보딩 재설정",
     "resetOnboardingBody": "다음 앱 실행 시 온보딩 화면이 표시됩니다.",
     "resetOnboardingSuccess": "온보딩은 다음 실행 시 표시됩니다.",
