@@ -606,7 +606,11 @@ class GitHubServiceClass {
       let url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
       if (ref) url += `?ref=${encodeURIComponent(ref)}`;
       const data = await this.request(url, 'GET', undefined, opts);
-      if (data.type === 'file' && data.content) {
+      // Gate on the type + content *field presence*, not truthiness: an empty
+      // file legitimately has `content === ''` and must not read as "missing"
+      // (#883 — `.gitkeep` and other empty files were false-negatived by the
+      // old `data.content` truthiness check).
+      if (data.type === 'file' && typeof data.content === 'string') {
         const base64 = data.content.replace(/\n/g, '');
         return decodeBase64(base64);
       }
@@ -729,6 +733,12 @@ class GitHubServiceClass {
     return result.kind === 'found' ? result.sha : null;
   }
 
+  /**
+   * Create a remote file. HTTP errors are rethrown (rather than collapsed to
+   * null) so a 401/403/409 propagates to the queue classifier with its status
+   * intact — swallowing it here made bad-credential failures surface as an
+   * unknown retryable and loop forever (#884).
+   */
   async createFile(
     owner: string,
     repo: string,
@@ -738,19 +748,14 @@ class GitHubServiceClass {
     branch: string = 'main',
     opts?: TokenOpts,
   ): Promise<GitHubFileCommit | null> {
-    try {
-      const encodedPath = path.split('/').map(encodeURIComponent).join('/');
-      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
-      const base64Content = await bytesToBase64Async(content);
-      return await this.request(url, 'PUT', {
-        message,
-        content: base64Content,
-        branch,
-      }, opts);
-    } catch (error) {
-      console.warn('[GitHubService] Failed to create file:', error);
-      return null;
-    }
+    const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
+    const base64Content = await bytesToBase64Async(content);
+    return await this.request(url, 'PUT', {
+      message,
+      content: base64Content,
+      branch,
+    }, opts);
   }
 
   async uploadBinaryFile(
@@ -885,7 +890,12 @@ class GitHubServiceClass {
     opts?: TokenOpts,
   ): Promise<GitHubFileCommit | null> {
     const keepPath = folderPath ? `${folderPath}/.gitkeep` : '.gitkeep';
-    return this.createFile(owner, repo, keepPath, '', `Create folder ${folderPath || '/'}`, branch, opts);
+    try {
+      return await this.createFile(owner, repo, keepPath, '', `Create folder ${folderPath || '/'}`, branch, opts);
+    } catch (error) {
+      console.warn('[GitHubService] Failed to create folder:', error);
+      return null;
+    }
   }
 
   async updateFile(
@@ -935,13 +945,14 @@ class GitHubServiceClass {
         const status = details.status;
         if (status === 409 && attempt < 2) {
           this.shaCache.delete(cacheKey);
+          let upstreamContent: string | null = null;
           try {
-            const upstreamContent = await this.getFileContent(owner, repo, path, branch);
-            if (upstreamContent !== null && upstreamContent !== content) {
-              console.warn(`[GitHubService] Aborting update: upstream content diverged for ${path}`);
-              return null;
-            }
+            upstreamContent = await this.getFileContent(owner, repo, path, branch);
           } catch {
+            // getFileContent swallows its own failures; treat as unresolved.
+          }
+          if (upstreamContent !== null && upstreamContent !== content) {
+            throw Object.assign(new Error('upstream-content-changed, pull to resolve'), { status: 409 });
           }
           continue;
         }
@@ -973,7 +984,13 @@ class GitHubServiceClass {
     branch: string = 'main',
     opts?: TokenOpts,
   ): Promise<boolean> {
-    const createResult = await this.createFile(owner, repo, newPath, content, message, branch, opts);
+    let createResult: GitHubFileCommit | null = null;
+    try {
+      createResult = await this.createFile(owner, repo, newPath, content, message, branch, opts);
+    } catch (error) {
+      console.warn('[GitHubService] moveFile create failed for', newPath, error);
+      return false;
+    }
     if (!createResult) return false;
     try {
       await this.deleteFile(owner, repo, oldPath, message, oldSha, branch, opts);
@@ -1052,18 +1069,37 @@ class GitHubServiceClass {
     }));
   }
 
+  async createBlob(
+    owner: string,
+    repo: string,
+    content: string,
+    opts?: TokenOpts,
+  ): Promise<{ sha: string }> {
+    const data = await this.request<{ sha?: string }>(
+      `https://api.github.com/repos/${owner}/${repo}/git/blobs`,
+      'POST',
+      { content: await bytesToBase64Async(content), encoding: 'base64' },
+      opts,
+    );
+    if (!data?.sha) {
+      throw new Error('GitHub create blob returned no sha');
+    }
+    return { sha: data.sha };
+  }
+
   async createTree(
     owner: string,
     repo: string,
     tree: GitHubTreeEntry[],
-    opts?: TokenOpts,
+    opts?: TokenOpts & { baseTree?: string },
   ): Promise<{ sha: string }> {
     // Explicit tree (no base_tree): omitting a path from base_tree does NOT
     // delete it, so batch deletes always send the FULL tree minus deletions.
+    const baseTree = opts?.baseTree;
     const data = await this.request<{ sha?: string }>(
       `https://api.github.com/repos/${owner}/${repo}/git/trees`,
       'POST',
-      { tree },
+      { tree, ...(baseTree ? { base_tree: baseTree } : {}) },
       opts,
     );
     if (!data?.sha) {
