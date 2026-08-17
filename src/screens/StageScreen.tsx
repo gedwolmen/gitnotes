@@ -199,7 +199,7 @@ export default function StageScreen() {
         keyExtractor={(item) => item.key}
         renderItem={renderGroup}
         ListEmptyComponent={renderEmpty}
-        contentContainerClassName="pb-8"
+        contentContainerClassName="pt-4 pb-8"
         contentContainerStyle={groups.length === 0 ? { flexGrow: 1 } : undefined}
         refreshControl={
           <RefreshControl
