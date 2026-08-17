@@ -92,4 +92,48 @@ describe('empty-error guard', () => {
 
     expect(() => rejected?.({ message: '', config: {} })).toThrow('Network error');
   });
+
+  test('http interceptor appends the sanitized GitHub reason to a status error', () => {
+    const [handler] = http.interceptors.response.handlers ?? [];
+    const rejected = handler?.rejected as ((error: unknown) => unknown) | undefined;
+    expect(rejected).toBeDefined();
+
+    const error = {
+      message: 'Request failed with status code 403',
+      config: {},
+      response: { status: 403, data: { message: 'Resource not accessible by integration' } },
+    };
+
+    expect(() => rejected?.(error)).toThrow('GitHub API error: 403 (Resource not accessible by integration)');
+  });
+
+  test('http interceptor scrubs bearer tokens from the appended reason', () => {
+    const [handler] = http.interceptors.response.handlers ?? [];
+    const rejected = handler?.rejected as ((error: unknown) => unknown) | undefined;
+    expect(rejected).toBeDefined();
+
+    const error = {
+      message: 'Request failed with status code 403',
+      config: {},
+      response: { status: 403, data: { message: 'Rate limited for Bearer super-secret-token' } },
+    };
+
+    let thrown: unknown;
+    try {
+      rejected?.(error);
+    } catch (caught) {
+      thrown = caught;
+    }
+    expect(String(thrown)).not.toContain('super-secret-token');
+    expect(String(thrown)).toContain('Bearer ***');
+  });
+
+  test('http interceptor keeps a plain status error when no reason is available', () => {
+    const [handler] = http.interceptors.response.handlers ?? [];
+    const rejected = handler?.rejected as ((error: unknown) => unknown) | undefined;
+    expect(rejected).toBeDefined();
+
+    expect(() => rejected?.({ message: 'Request failed with status code 422', config: {}, response: { status: 422, data: undefined } }))
+      .toThrow('GitHub API error: 422');
+  });
 });

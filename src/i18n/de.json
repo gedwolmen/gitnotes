@@ -264,7 +264,7 @@
     "branch": "Branch: {{branch}}",
     "branchDefault": "main",
     "addGitHubAccount": "GitHub-Konto hinzufügen",
-    "tokenDescription": "Feingranulares persönliches Zugriffstoken mit Lese- und Schreibzugriff auf den Inhalt deiner Repositorys.",
+    "tokenDescription": "Dein Token benötigt Zugriff auf das Repository: ein feingranulares Token mit „Contents: Read and write“ für jedes Repository (wähle deine Repositorys) oder ein klassisches Token mit dem Bereich „repo“.",
     "openGithubTokenSettings": "GitHub-Token-Einstellungen öffnen",
     "hideToken": "Token ausblenden",
     "showToken": "Token anzeigen",
@@ -524,7 +524,7 @@
     "hide": "Hide",
     "connectHost": "Connect host",
     "help": {
-      "github": "Feingranulare Tokens benötigen „Contents: Read and write“ für jedes Repository. Klassische Tokens benötigen den Bereich „repo“."
+      "github": "Dein Token benötigt Zugriff auf das Repository: ein feingranulares Token mit „Contents: Read and write“ für jedes Repository (wähle deine Repositorys) oder ein klassisches Token mit dem Bereich „repo“."
     },
     "success": {
       "testTitle": "Success",

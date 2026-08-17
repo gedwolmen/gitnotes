@@ -264,7 +264,7 @@
     "branch": "Branche : {{branch}}",
     "branchDefault": "main",
     "addGitHubAccount": "Ajouter un compte GitHub",
-    "tokenDescription": "Jeton d'accès personnel à granularité fine avec accès en lecture et écriture au contenu de vos dépôts.",
+    "tokenDescription": "Votre jeton doit avoir accès au dépôt : un jeton à granularité fine avec « Contents: Read and write » sur chaque dépôt (sélectionnez vos dépôts) ou un jeton classique avec la portée repo.",
     "openGithubTokenSettings": "Ouvrir les réglages du jeton GitHub",
     "hideToken": "Masquer le jeton",
     "showToken": "Afficher le jeton",
@@ -524,7 +524,7 @@
     "hide": "Hide",
     "connectHost": "Connect host",
     "help": {
-      "github": "Les jetons à granularité fine nécessitent l’autorisation « Contents: Read and write » pour chaque dépôt. Les jetons classiques nécessitent la portée repo."
+      "github": "Votre jeton doit avoir accès au dépôt : un jeton à granularité fine avec « Contents: Read and write » sur chaque dépôt (sélectionnez vos dépôts) ou un jeton classique avec la portée repo."
     },
     "success": {
       "testTitle": "Success",

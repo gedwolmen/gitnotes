@@ -264,7 +264,7 @@
     "branch": "ブランチ: {{branch}}",
     "branchDefault": "main",
     "addGitHubAccount": "GitHubアカウントを追加",
-    "tokenDescription": "リポジトリのコンテンツへの読み取り・書き込みアクセス権を持つファイングレインド・パーソナルアクセストークン。",
+    "tokenDescription": "トークンにはリポジトリへのアクセス権が必要です: 各リポジトリの「Contents: Read and write」を持つファイングレインド・トークン(リポジトリを選択)または repo スコープのクラシックトークン。",
     "openGithubTokenSettings": "GitHubトークン設定を開く",
     "hideToken": "トークンを隠す",
     "showToken": "トークンを表示",
@@ -524,7 +524,7 @@
     "hide": "Hide",
     "connectHost": "Connect host",
     "help": {
-      "github": "きめ細かいトークンには、各リポジトリの「Contents: Read and write」権限が必要です。クラシックトークンには repo スコープが必要です。"
+      "github": "トークンにはリポジトリへのアクセス権が必要です: 各リポジトリの「Contents: Read and write」を持つファイングレインド・トークン(リポジトリを選択)または repo スコープのクラシックトークン。"
     },
     "success": {
       "testTitle": "Success",
