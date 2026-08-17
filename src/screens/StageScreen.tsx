@@ -3,7 +3,7 @@ import { FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-na
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../contexts/ThemeContext';
-import { ScreenHeader } from '../components/ui';
+import { ScreenHeader, useScreenHeaderHeight } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { groupStaged, useStageStore, type StageGroup } from '../stores/stageStore';
 import { useGitHubActivityStore } from '../stores/githubActivityStore';
@@ -74,6 +74,8 @@ export default function StageScreen() {
   const pushAll = useStageStore((s) => s.pushAll);
   const { progress, visible, label } = useGitHubActivityStore();
   const [refreshing, setRefreshing] = useState(false);
+  const headerHeight = useScreenHeaderHeight();
+  const [headerBlurHeight, setHeaderBlurHeight] = useState(headerHeight);
 
   const groups = groupStaged(staged);
 
@@ -153,10 +155,24 @@ export default function StageScreen() {
   const pushAllDisabled = staged.length === 0 || globalPushing;
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
+    <SafeAreaView edges={[]} className="flex-1" style={{ backgroundColor: colors.background }}>
       <ScreenHeader
         title="Staged Changes"
         onBack={() => navigation.goBack()}
+        onLayout={(event) => setHeaderBlurHeight(event.nativeEvent.layout.height)}
+        footer={
+          visible ? (
+            <View
+              className="px-4 py-2 border-b"
+              style={{ backgroundColor: `${colors.primary}14`, borderBottomColor: colors.border }}
+            >
+              <Text className="text-xs font-medium" style={{ color: colors.textSecondary }} numberOfLines={1}>
+                {label ?? 'Syncing with GitHub'}
+                {progress?.total != null ? ` — ${progress.loaded}/${progress.total}` : ''}
+              </Text>
+            </View>
+          ) : null
+        }
         actions={
           <TouchableOpacity
             testID="stage.push-all"
@@ -174,25 +190,16 @@ export default function StageScreen() {
         }
       />
 
-      {visible ? (
-        <View
-          className="px-4 py-2 border-b"
-          style={{ backgroundColor: `${colors.primary}14`, borderBottomColor: colors.border }}
-        >
-          <Text className="text-xs font-medium" style={{ color: colors.textSecondary }} numberOfLines={1}>
-            {label ?? 'Syncing with GitHub'}
-            {progress?.total != null ? ` — ${progress.loaded}/${progress.total}` : ''}
-          </Text>
-        </View>
-      ) : null}
-
       <FlatList
         data={groups}
         keyExtractor={(item) => item.key}
         renderItem={renderGroup}
         ListEmptyComponent={renderEmpty}
-        contentContainerClassName="pt-4 pb-8"
-        contentContainerStyle={groups.length === 0 ? { flexGrow: 1 } : undefined}
+        contentContainerStyle={{
+          paddingTop: headerBlurHeight + 8,
+          paddingBottom: 32,
+          ...(groups.length === 0 ? { flexGrow: 1 } : null),
+        }}
         refreshControl={
           <RefreshControl
             testID="stage.pull-refresh"

@@ -84,6 +84,7 @@ jest.mock('../../src/components/ui', () => {
         React.createElement(Text, null, title),
         actions,
       ),
+    useScreenHeaderHeight: () => 60,
   };
 });
 
