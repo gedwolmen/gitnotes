@@ -34,7 +34,7 @@ jest.mock('../../src/services/SyncEngineService', () => ({
 }));
 
 jest.mock('../../src/services/AuthService', () => ({
-  AuthService: { getToken: jest.fn(async () => 'tok') },
+  AuthService: { getToken: jest.fn(async () => 'tok'), getTokenById: jest.fn(async () => 'tok') },
 }));
 
 jest.mock('../../src/services/git/LocalGitWriter', () => ({
@@ -43,6 +43,7 @@ jest.mock('../../src/services/git/LocalGitWriter', () => ({
 
 jest.mock('../../src/services/git/BatchGitOperations', () => ({
   batchDeleteFiles: jest.fn(),
+  batchUpsertFiles: jest.fn(),
 }));
 
 jest.mock('../../src/services/git/resolveBranch', () => ({
@@ -54,7 +55,7 @@ import { NoteSyncQueueService, DroppedMutationEvent } from '../../src/services/N
 import { syncNoteToGitHub, deleteNoteFromGitHub } from '../../src/services/NoteGitHubSyncService';
 import { SyncEngineService } from '../../src/services/SyncEngineService';
 import { LocalGitWriter } from '../../src/services/git/LocalGitWriter';
-import { batchDeleteFiles } from '../../src/services/git/BatchGitOperations';
+import { batchDeleteFiles, batchUpsertFiles } from '../../src/services/git/BatchGitOperations';
 import { resolveBranch } from '../../src/services/git/resolveBranch';
 import {
   DELETE_FAILURES_STORAGE_KEY,
@@ -116,6 +117,24 @@ describe('NoteSyncQueueService', () => {
       const m = items[0];
       expect(m.type).toBe('note.upsert');
       if (m.type === 'note.upsert') expect(m.params.content).toBe('third');
+    });
+
+    test('dedupes a rename: same path with a different title drops the prior upsert (#880)', async () => {
+      await NoteSyncQueueService.enqueueNoteUpsert({
+        repo: 'r', branch: 'main', filePath: 'a.md', title: 'A', content: 'x', format: 'markdown',
+      });
+      await NoteSyncQueueService.enqueueNoteUpsert({
+        repo: 'r', branch: 'main', filePath: 'a.md', title: 'B', content: 'y', format: 'markdown',
+      });
+
+      const items = await NoteSyncQueueService.getAll();
+      expect(items).toHaveLength(1);
+      const m = items[0];
+      expect(m.type).toBe('note.upsert');
+      if (m.type === 'note.upsert') {
+        expect(m.params.title).toBe('B');
+        expect(m.params.content).toBe('y');
+      }
     });
 
     test('treats missing branch as "main" for dedupe', async () => {
@@ -1090,6 +1109,128 @@ describe('NoteSyncQueueService', () => {
       expect(batchDeleteFiles).toHaveBeenCalledTimes(1);
       expect(deleteNoteFromGitHub).toHaveBeenCalledTimes(3);
       expect(result).toEqual({ succeeded: 3, failed: 0, remaining: 0 });
+    });
+  });
+
+  describe('api-mode batch upsert drain', () => {
+    test('2 clean upserts -> ONE batchUpsertFiles; both removed from queue', async () => {
+      (batchUpsertFiles as jest.Mock).mockResolvedValue({
+        success: true,
+        upserted: ['a.md', 'b.md'],
+        failed: [],
+      });
+
+      await NoteSyncQueueService.enqueueNoteUpserts([
+        { repo: 'owner/repo', branch: 'main', filePath: 'a.md', title: 'A', content: 'aaa', format: 'markdown' },
+        { repo: 'owner/repo', branch: 'main', filePath: 'b.md', title: 'B', content: 'bbb', format: 'markdown' },
+      ]);
+      const result = await NoteSyncQueueService.drain();
+
+      expect(batchUpsertFiles).toHaveBeenCalledTimes(1);
+      expect((batchUpsertFiles as jest.Mock).mock.calls[0][0]).toMatchObject({
+        owner: 'owner',
+        repo: 'repo',
+        branch: 'main',
+        files: [
+          { path: 'a.md', content: 'aaa' },
+          { path: 'b.md', content: 'bbb' },
+        ],
+        message: 'Update 2 notes',
+      });
+      // The batched group never hit the per-item API path.
+      expect(syncNoteToGitHub).not.toHaveBeenCalled();
+      expect(result).toEqual({ succeeded: 2, failed: 0, remaining: 0 });
+      expect(await NoteSyncQueueService.pendingCount()).toBe(0);
+    });
+
+    test('knownSha upsert is excluded from the batch and runs per-item', async () => {
+      (batchUpsertFiles as jest.Mock).mockResolvedValue({
+        success: true,
+        upserted: ['a.md', 'b.md'],
+        failed: [],
+      });
+      (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: true });
+
+      await NoteSyncQueueService.enqueueNoteUpserts([
+        { repo: 'owner/repo', branch: 'main', filePath: 'a.md', title: 'A', content: 'aaa', format: 'markdown' },
+        { repo: 'owner/repo', branch: 'main', filePath: 'b.md', title: 'B', content: 'bbb', format: 'markdown' },
+        { repo: 'owner/repo', branch: 'main', filePath: 'c.md', title: 'C', content: 'ccc', format: 'markdown', knownSha: 'sha-c' },
+      ]);
+      const result = await NoteSyncQueueService.drain();
+
+      expect(batchUpsertFiles).toHaveBeenCalledTimes(1);
+      expect((batchUpsertFiles as jest.Mock).mock.calls[0][0].files).toEqual([
+        { path: 'a.md', content: 'aaa' },
+        { path: 'b.md', content: 'bbb' },
+      ]);
+      // The knownSha item stayed on the per-item path.
+      expect(syncNoteToGitHub).toHaveBeenCalledTimes(1);
+      expect((syncNoteToGitHub as jest.Mock).mock.calls[0][0].filePath).toBe('c.md');
+      expect(result).toEqual({ succeeded: 3, failed: 0, remaining: 0 });
+    });
+
+    test('upsert whose content references a local image URI is NOT batched', async () => {
+      (batchUpsertFiles as jest.Mock).mockResolvedValue({
+        success: true,
+        upserted: ['a.md', 'b.md'],
+        failed: [],
+      });
+      (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: true });
+
+      await NoteSyncQueueService.enqueueNoteUpserts([
+        { repo: 'owner/repo', branch: 'main', filePath: 'a.md', title: 'A', content: 'aaa', format: 'markdown' },
+        { repo: 'owner/repo', branch: 'main', filePath: 'b.md', title: 'B', content: 'bbb', format: 'markdown' },
+        { repo: 'owner/repo', branch: 'main', filePath: 'c.md', title: 'C', content: '![img](file:///tmp/img.png)', format: 'markdown' },
+      ]);
+      const result = await NoteSyncQueueService.drain();
+
+      expect(batchUpsertFiles).toHaveBeenCalledTimes(1);
+      expect((batchUpsertFiles as jest.Mock).mock.calls[0][0].files).toEqual([
+        { path: 'a.md', content: 'aaa' },
+        { path: 'b.md', content: 'bbb' },
+      ]);
+      expect(syncNoteToGitHub).toHaveBeenCalledTimes(1);
+      expect((syncNoteToGitHub as jest.Mock).mock.calls[0][0].filePath).toBe('c.md');
+      expect(result).toEqual({ succeeded: 3, failed: 0, remaining: 0 });
+    });
+
+    test('batch that throws reverts the group to per-item syncNoteToGitHub', async () => {
+      (batchUpsertFiles as jest.Mock).mockRejectedValue(new Error('boom'));
+      (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: true });
+
+      await NoteSyncQueueService.enqueueNoteUpserts([
+        { repo: 'owner/repo', branch: 'main', filePath: 'a.md', title: 'A', content: 'aaa', format: 'markdown' },
+        { repo: 'owner/repo', branch: 'main', filePath: 'b.md', title: 'B', content: 'bbb', format: 'markdown' },
+      ]);
+      const result = await NoteSyncQueueService.drain();
+
+      expect(batchUpsertFiles).toHaveBeenCalledTimes(1);
+      expect(syncNoteToGitHub).toHaveBeenCalledTimes(2);
+      expect(result).toEqual({ succeeded: 2, failed: 0, remaining: 0 });
+    });
+
+    test('durable per-path failure drops the mutation via the side channel', async () => {
+      (batchUpsertFiles as jest.Mock).mockResolvedValue({
+        success: false,
+        upserted: ['a.md'],
+        failed: [{ path: 'b.md', error: '401 Unauthorized' }],
+      });
+      const events: DroppedMutationEvent[] = [];
+      const unsub = NoteSyncQueueService.onDroppedMutation((e) => events.push(e));
+
+      await NoteSyncQueueService.enqueueNoteUpserts([
+        { repo: 'owner/repo', branch: 'main', filePath: 'a.md', title: 'A', content: 'aaa', format: 'markdown' },
+        { repo: 'owner/repo', branch: 'main', filePath: 'b.md', title: 'B', content: 'bbb', format: 'markdown' },
+      ]);
+      const result = await NoteSyncQueueService.drain();
+
+      expect(result).toEqual({ succeeded: 1, failed: 0, remaining: 0 });
+      expect(events).toHaveLength(1);
+      expect(events[0].reason).toBe('durable');
+      expect(events[0].status).toBe(401);
+      expect(events[0].mutation.params.filePath).toBe('b.md');
+      expect(syncNoteToGitHub).not.toHaveBeenCalled();
+      unsub();
     });
   });
 });

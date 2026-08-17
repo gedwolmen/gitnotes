@@ -12,8 +12,8 @@ import { classifyGitHubSyncError, isRetryableFailure, syncStatusForError } from 
 import { resolveBranch } from './git/resolveBranch';
 import { clearDeleteFailure, clearDeleteFailuresForRepo, readDeleteFailures, recordDeleteFailure, DELETE_FAILURES_STORAGE_KEY } from './git/deleteFailures';
 import { GitSyncGate } from './git/GitSyncGate';
-import { batchDeleteFiles } from './git/BatchGitOperations';
-import type { BatchDeleteFilesResult } from './git/BatchGitOperations';
+import { batchDeleteFiles, batchUpsertFiles } from './git/BatchGitOperations';
+import type { BatchDeleteFilesResult, BatchUpsertFilesResult } from './git/BatchGitOperations';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { NoteColor, NoteFormat } from '../models/Note';
 
@@ -37,6 +37,7 @@ function backoffMsForAttempts(attempts: number): number {
 export interface NoteUpsertParams {
   repo: string;
   branch?: string;
+  accountId?: string;
   filePath?: string;
   title: string;
   content: string;
@@ -79,6 +80,34 @@ export type QueuedMutation =
       type: 'note.delete';
       params: NoteDeleteParams;
     });
+
+const LOCAL_IMAGE_URI_RE = /(file:\/\/|asset:\/\/|ph:\/\/|content:\/\/)/i;
+
+type BatchEligibleUpsert = QueuedMutation & {
+  type: 'note.upsert';
+  params: NoteUpsertParams & { filePath: string };
+};
+
+/**
+ * An upsert is batchable only when the per-item path would NOT have done
+ * something the batch can't replicate:
+ *  (a) `knownSha` is unset — the per-item path guards remote conflicts via
+ *      knownSha; batching skips that check, so those items stay per-item.
+ *  (b) the content references no local image URI — `syncNoteToGitHub`
+ *      rewrites file://, asset://, ph:// and content:// URIs to remote URLs
+ *      during upload; the batch writes content verbatim, so such items must
+ *      stay per-item (their images would 404 remotely).
+ * A missing filePath also disqualifies: the title-derived path is resolved
+ * on the per-item path, and without a concrete path the batch can't address
+ * the file.
+ */
+function isBatchEligibleUpsert(m: QueuedMutation): m is BatchEligibleUpsert {
+  if (m.type !== 'note.upsert') return false;
+  if (!m.params.filePath) return false;
+  if (m.params.knownSha) return false;
+  if (LOCAL_IMAGE_URI_RE.test(m.params.content)) return false;
+  return true;
+}
 
 /**
  * Side-channel notification for mutations the queue gave up on. Emitted
@@ -349,8 +378,9 @@ class NoteSyncQueueServiceClass {
   /**
    * Batch variant of `enqueueNoteUpsert`: ONE queue write for the whole
    * batch. Dedup mirrors the single-item rules — a new upsert drops
-   * same-path prior upserts with the same title (latest wins) and any
-   * pending same-path delete (the note was re-created, delete wasted).
+   * same-path prior upserts regardless of title (latest wins; a rename
+   * reuses the path under a new title and must not leave two writes) and
+   * any pending same-path delete (the note was re-created, delete wasted).
    */
   async enqueueNoteUpserts(
     items: NoteUpsertParams[],
@@ -370,14 +400,14 @@ class NoteSyncQueueServiceClass {
         m.params.repo === resolvedParams.repo &&
         (m.params.branch || 'main') === branch &&
         m.params.filePath === resolvedParams.filePath;
-      // note.delete entries are only dropped when filePath is set on both
-      // sides — undefined on either side means the blob match is unproven.
-      const keepExisting = (m: QueuedMutation): boolean => {
-        if (m.type === 'note.upsert') {
-          return !(sameRepoBranchPath(m) && m.params.title === resolvedParams.title);
-        }
-        return !(resolvedParams.filePath && sameRepoBranchPath(m));
-      };
+      // Drop any prior entry sharing the resolved (repo, branch, filePath):
+      // upserts regardless of title (a rename reuses the path under a new
+      // title, and the old title-only match left BOTH queued — two writes
+      // for one rename); deletes only when filePath is set on both sides
+      // (undefined on either side means the blob match is unproven). The
+      // filePath guard also keeps two un-pathed new notes from collapsing.
+      const keepExisting = (m: QueuedMutation): boolean =>
+        !(resolvedParams.filePath && sameRepoBranchPath(m));
       queue = queue.filter(keepExisting);
       for (let i = batchMutations.length - 1; i >= 0; i -= 1) {
         if (!keepExisting(batchMutations[i])) batchMutations.splice(i, 1);
@@ -619,6 +649,82 @@ class NoteSyncQueueServiceClass {
       }
     }
 
+    // API-mode single-commit bulk upserts: >=2 eligible upserts in one
+    // (repo, branch) group ship as ONE Git-Data commit (createBlob xN in
+    // parallel -> createTree with base_tree -> createCommit -> updateRef)
+    // instead of N serial GET(sha)+PUT(contents) round-trips. Only eligible
+    // items batch (see isBatchEligibleUpsert); ineligible upserts and any
+    // deletes flow through the per-item loop. A batch that throws reverts
+    // its group to per-item syncNoteToGitHub so items keep their full
+    // classification.
+    if (!isClone) {
+      const dueUpserts = items.filter(isBatchEligibleUpsert);
+      if (dueUpserts.length >= 2) {
+        const repoInfo = parseRepoPath(repoPath);
+        if (repoInfo) {
+          const subgroups = new Map<string, BatchEligibleUpsert[]>();
+          for (const item of dueUpserts) {
+            const key = item.params.accountId ?? '';
+            const arr = subgroups.get(key) ?? [];
+            arr.push(item);
+            subgroups.set(key, arr);
+          }
+          for (const [accountId, group] of subgroups) {
+            if (group.length < 2) continue;
+            let tokenOverride: string | undefined;
+            if (accountId) {
+              tokenOverride = (await AuthService.getTokenById(accountId)) ?? undefined;
+            }
+            let batchResult: BatchUpsertFilesResult | null = null;
+            try {
+              batchResult = await batchUpsertFiles({
+                owner: repoInfo.owner,
+                repo: repoInfo.repo,
+                branch,
+                files: group.map((item) => ({
+                  path: item.params.filePath,
+                  content: item.params.content,
+                })),
+                message: `Update ${group.length} notes`,
+                ...(tokenOverride ? { opts: { tokenOverride } } : {}),
+              });
+            } catch (batchError) {
+              console.warn('[NoteSyncQueue] batch upsert threw; group reverts to per-item processing:', batchError);
+            }
+            if (batchResult) {
+              const byPath = new Map(group.map((item) => [item.params.filePath, item]));
+              const upsertedPaths = new Set(batchResult.upserted);
+              for (const item of group) {
+                if (upsertedPaths.has(item.params.filePath)) {
+                  await this.applyPostSyncStorageUpdate(item, {
+                    success: true,
+                    filePath: item.params.filePath,
+                    finalContent: item.params.content,
+                  });
+                  succeeded += 1;
+                  droppedIds.add(item.id);
+                  this.emitMutationSucceeded({ mutation: item });
+                  handledByBatch.add(item.id);
+                }
+              }
+              for (const failure of batchResult.failed) {
+                const item = byPath.get(failure.path);
+                if (!item) continue;
+                handledByBatch.add(item.id);
+                await this.handleBatchUpsertFailure(item, failure.error, droppedIds, recordFailure);
+              }
+              for (const item of group) {
+                if (!handledByBatch.has(item.id)) {
+                  handledByBatch.add(item.id);
+                  await recordFailure(item, 'Batch upsert returned no outcome for path');
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
     // Items whose local write/delete+commit succeeded but whose push is
     // deferred to the group flush. Recorded so we can apply the post-
     // success StorageService.updateNote (upserts only) and drop them
@@ -726,6 +832,23 @@ class NoteSyncQueueServiceClass {
       kind: failure.kind,
       at: Date.now(),
     });
+  }
+
+  private async handleBatchUpsertFailure(
+    item: QueuedMutation & { type: 'note.upsert' },
+    error: string,
+    droppedIds: Set<string>,
+    recordFailure: (item: QueuedMutation, error: string | undefined, status?: number) => Promise<void>,
+  ): Promise<void> {
+    const status = syncStatusForError(error);
+    const failure = classifyGitHubSyncError(new Error(error), status);
+    if (isRetryableFailure(failure)) {
+      await recordFailure(item, error, status);
+      return;
+    }
+    console.warn('[NoteSyncQueue] dropped durable batch-upsert failure:', failure.kind);
+    droppedIds.add(item.id);
+    this.emitDroppedMutation({ mutation: item, reason: 'durable', error, status });
   }
 
   private async applyPostSyncStorageUpdate(
