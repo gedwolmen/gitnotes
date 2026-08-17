@@ -63,6 +63,16 @@ function endIfTracked(config: TrackedConfig | undefined) {
   }
 }
 
+function extractGitHubReason(error: AxiosError): string | undefined {
+  // GitHub error bodies are { message, documentation_url } JSON, or a raw string.
+  const data = error.response?.data;
+  const message = typeof data === 'string' ? data : (data as { message?: unknown } | undefined)?.message;
+  if (typeof message !== 'string') return undefined;
+  const cleaned = message.replace(/Bearer\s+\S+/gi, 'Bearer ***').replace(/\s+/g, ' ').trim();
+  if (!cleaned) return undefined;
+  return cleaned.length > 100 ? `${cleaned.slice(0, 97)}...` : cleaned;
+}
+
 http.interceptors.response.use(
   (response) => {
     endIfTracked(response.config as TrackedConfig);
@@ -75,9 +85,12 @@ http.interceptors.response.use(
     // `||` (not `??`): a status-less error whose message is empty (e.g. a
     // dropped connection or an interceptor that lost the body) must surface
     // as a real "Network error", never an empty string that reaches the UI.
-    const safeMessage = status
-      ? `GitHub API error: ${status}`
-      : error.message?.replace(/Bearer\s+\S+/gi, 'Bearer ***') || 'Network error';
+    const reason = status ? extractGitHubReason(error) : undefined;
+    const safeMessage = reason
+      ? `GitHub API error: ${status} (${reason})`
+      : status
+        ? `GitHub API error: ${status}`
+        : error.message?.replace(/Bearer\s+\S+/gi, 'Bearer ***') || 'Network error';
 
     const normalized = new Error(safeMessage) as Error & { status?: number };
     normalized.status = status;

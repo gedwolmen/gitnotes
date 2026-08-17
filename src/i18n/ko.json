@@ -264,7 +264,7 @@
     "branch": "브랜치: {{branch}}",
     "branchDefault": "main",
     "addGitHubAccount": "GitHub 계정 추가",
-    "tokenDescription": "저장소 콘텐츠에 대한 읽기 및 쓰기 권한이 있는 세밀한 개인 액세스 토큰.",
+    "tokenDescription": "토큰에는 저장소에 대한 액세스 권한이 필요합니다: 각 저장소에 'Contents: Read and write' 권한이 있는 세분화된 토큰(저장소 선택) 또는 repo 스코프의 클래식 토큰.",
     "openGithubTokenSettings": "GitHub 토큰 설정 열기",
     "hideToken": "토큰 숨기기",
     "showToken": "토큰 표시",
@@ -524,7 +524,7 @@
     "hide": "Hide",
     "connectHost": "Connect host",
     "help": {
-      "github": "세분화된 토큰은 각 저장소에 'Contents: Read and write' 권한이 필요합니다. 클래식 토큰은 repo 스코프가 필요합니다."
+      "github": "토큰에는 저장소에 대한 액세스 권한이 필요합니다: 각 저장소에 'Contents: Read and write' 권한이 있는 세분화된 토큰(저장소 선택) 또는 repo 스코프의 클래식 토큰."
     },
     "success": {
       "testTitle": "Success",

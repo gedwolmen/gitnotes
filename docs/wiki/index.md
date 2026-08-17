@@ -21,6 +21,7 @@
 | [Settings — Add Repo Fixes](./settings-add-repo-fixes.md) | invisible primary-button fix + repo list not loading after adding a token |
 | [Stage → Push UX](./stage-push-ux.md) | staged-upsert locks, spinner-free push buttons, GitHubActivity push progress |
 | [Token Removal Repo Cascade](./repo-removal-cascade.md) | removing a token also removes its synced repos, with a confirmation warning |
+| [Token Scope Error Messaging](./token-scope-error-messaging.md) | 403s surface needed token scopes in the sync message and token-add UI |
 
 ## Quick Start
 

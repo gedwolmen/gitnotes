@@ -32,8 +32,16 @@ const MATCHERS: Matcher[] = [
     message: 'Sign in to GitHub again.',
   },
   {
-    needles: ['rate limit', '403'],
+    // Must precede the generic 403 matcher: GitHub signals API rate limits
+    // with a 403 status plus a rate-limit body (now surfaced by http.ts).
+    needles: ['rate limit', 'rate-limit', 'ratelimit', 'too many requests', '429'],
     message: 'GitHub rate limit hit — try again in a few minutes.',
+  },
+  {
+    // A non-rate-limit 403 means the token lacks access. Name the scopes so
+    // the user knows exactly what to grant.
+    needles: ['403', 'not accessible', 'resource not accessible', 'permission denied', 'must have push access', 'integration'],
+    message: "Your token can't access this repo — use a fine-grained token with Contents: Read and write (and the repo selected) or a classic token with the repo scope.",
   },
   {
     needles: ['409'],

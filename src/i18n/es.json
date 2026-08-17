@@ -264,7 +264,7 @@
     "branch": "Rama: {{branch}}",
     "branchDefault": "main",
     "addGitHubAccount": "Añadir cuenta de GitHub",
-    "tokenDescription": "Token de acceso personal de grano fino con acceso de lectura y escritura al contenido de tus repositorios.",
+    "tokenDescription": "Tu token necesita acceso al repositorio: un token de grano fino con «Contents: Read and write» en cada repositorio (selecciona tus repositorios) o un token clásico con el ámbito repo.",
     "openGithubTokenSettings": "Abrir ajustes del token de GitHub",
     "hideToken": "Ocultar token",
     "showToken": "Mostrar token",
@@ -524,7 +524,7 @@
     "hide": "Hide",
     "connectHost": "Connect host",
     "help": {
-      "github": "Los tokens de grano fino necesitan «Contents: Read and write» para cada repositorio. Los tokens clásicos necesitan el ámbito repo."
+      "github": "Tu token necesita acceso al repositorio: un token de grano fino con «Contents: Read and write» en cada repositorio (selecciona tus repositorios) o un token clásico con el ámbito repo."
     },
     "success": {
       "testTitle": "Success",
