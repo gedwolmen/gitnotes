@@ -125,6 +125,9 @@ export interface Canvas {
   createdAt: number;
   updatedAt: number;
   accountId?: string;
+  /** Stable serialization of `scene` as observed on the last pull, used to
+   * detect unsaved local edits during reconcile. */
+  lastPulledScene?: string;
 }
 
 export interface CanvasCreateInput {
@@ -136,6 +139,7 @@ export interface CanvasCreateInput {
   filePath?: string;
   tags?: string[];
   accountId?: string;
+  lastPulledScene?: string;
 }
 
 export interface CanvasUpdateInput {
@@ -148,6 +152,7 @@ export interface CanvasUpdateInput {
   filePath?: string;
   tags?: string[];
   accountId?: string;
+  lastPulledScene?: string;
 }
 
 function generateId(): string {
@@ -180,6 +185,7 @@ export function createCanvas(input: CanvasCreateInput): Canvas {
     createdAt: now,
     updatedAt: now,
     accountId: input.accountId,
+    lastPulledScene: input.lastPulledScene,
   };
 }
 
@@ -194,6 +200,7 @@ export function updateCanvas(existing: Canvas, input: Partial<CanvasCreateInput>
     filePath: input.filePath ?? existing.filePath,
     tags: input.tags ?? existing.tags,
     accountId: input.accountId ?? existing.accountId,
+    lastPulledScene: input.lastPulledScene ?? existing.lastPulledScene,
     updatedAt: Date.now(),
   };
 }

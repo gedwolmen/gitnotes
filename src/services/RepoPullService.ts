@@ -176,44 +176,35 @@ const isMissingObject = /Could not find|not foundobject|NotFoundError|Packfile t
 async function fetchDirectoryFiles(
   owner: string,
   repo: string,
+  repoPath: string,
   dirPath: string,
   branch: string,
   provider?: GitHostProvider,
 ): Promise<{ path: string; content: string }[]> {
-  if (FEATURE_USE_MULTI_HOST_WRITE) {
-    const host = getGitHostService(provider);
-    const contents = await host.listContents(owner, repo, dirPath, branch);
-    const files = contents.filter((item) => item.type === 'file' && item.downloadUrl);
+  // Route through the mode-aware reader so clone mode reads todos/canvases
+  // from the local clone (no Contents-API calls) and the recursive tree
+  // pulls nested files under `dirPath/` (#885). The `dirPath + '/'` prefix
+  // guards against sibling-dir false matches (e.g. `todos/` vs `todos-archive/`).
+  const reader = await getRepoReader(repoPath, owner, repo, branch, provider);
+  const tree = await reader.listTree();
+  const files = tree.filter(
+    (item) => item.type === 'blob' && item.path.startsWith(dirPath + '/'),
+  );
 
-    const results: { path: string; content: string }[] = [];
-    for (const file of files) {
+  const fetched = await fetchInBatches(
+    files,
+    async (file) => {
       try {
-        const content = await host.getFileText(owner, repo, file.path, branch);
-        if (content) {
-          results.push({ path: file.path, content });
-        }
+        const content = await reader.readFile(file.path);
+        return content === null ? null : { path: file.path, content };
       } catch (error) {
         console.warn(`[RepoPullService] Failed to fetch ${file.path}:`, error);
+        return null;
       }
-    }
-    return results;
-  }
-
-  const contents = await GitHubService.getRepoContents(owner, repo, dirPath, branch);
-  const files = contents.filter((item) => item.type === 'file' && item.download_url);
-
-  const results: { path: string; content: string }[] = [];
-  for (const file of files) {
-    try {
-      const content = await GitHubService.getFileContent(owner, repo, file.path, branch);
-      if (content) {
-        results.push({ path: file.path, content });
-      }
-    } catch (error) {
-      console.warn(`[RepoPullService] Failed to fetch ${file.path}:`, error);
-    }
-  }
-  return results;
+    },
+    FILE_FETCH_CONCURRENCY,
+  );
+  return fetched.filter((f): f is { path: string; content: string } => f !== null);
 }
 
 const NOTE_EXTS = ['md', 'markdown', 'norg', 'org', 'txt'] as const;
@@ -488,7 +479,7 @@ async function pullCanvasesFromRepo(
   let directoryExists = false;
 
   try {
-    files = await fetchDirectoryFiles(owner, repo, 'canvases', branch, provider);
+    files = await fetchDirectoryFiles(owner, repo, repoPath, 'canvases', branch, provider);
     directoryExists = true;
   } catch {
     // Directory doesn't exist remotely (404) — treat as all canvases deleted.
@@ -517,12 +508,15 @@ async function pullCanvasesFromRepo(
             .replace(/\.json$/, '')
             .replace(/-/g, ' ');
 
+          const pulledScene = JSON.stringify(scene);
           const idx = allCanvases.findIndex((c) => c.filePath === file.path);
           if (idx !== -1) {
             const existing = allCanvases[idx];
-            if (JSON.stringify(existing.scene) !== JSON.stringify(scene)) {
-              allCanvases[idx] = updateCanvas(existing, { scene });
+            if (JSON.stringify(existing.scene) !== pulledScene) {
+              allCanvases[idx] = updateCanvas(existing, { scene, lastPulledScene: pulledScene });
               pulled++;
+            } else if (existing.lastPulledScene !== pulledScene) {
+              allCanvases[idx] = { ...existing, lastPulledScene: pulledScene };
             }
           } else {
             allCanvases.push(
@@ -532,6 +526,7 @@ async function pullCanvasesFromRepo(
                 repo: repoPath,
                 branch,
                 filePath: file.path,
+                lastPulledScene: pulledScene,
               }),
             );
             pulled++;
@@ -539,30 +534,33 @@ async function pullCanvasesFromRepo(
         }
 
         // Reconcile: drop local canvases whose backing file was deleted remotely.
-        // Safety mirrors the notes reconcile — scoped to (repoPath, branch),
-        // only touches canvases with a filePath (local-only drafts kept).
-        //
-        // TEMPORARILY DISABLED for release safety: local canvases without remote
-        // backing may be unsaved edits that would be incorrectly deleted.
-        // A proper dirty/tombstone tracking system is needed to safely reconcile.
-        // const before = allCanvases.length;
-        // const survivors = allCanvases.filter((c) => {
-        //   if (c.repo !== repoPath) return true;
-        //   if (c.branch !== branch) return true;
-        //   if (!c.filePath) return true;
-        //   return remotePaths.has(c.filePath);
-        // });
-        // allCanvases.length = 0;
-        // allCanvases.push(...survivors);
-        // void before;
-      } else {
-        // Directory gone — remove all canvases from this repo+branch that
-        // originated from a remote file. Local-only canvases stay.
+        // Safety mirrors the notes reconcile — scoped to (repoPath, branch), only
+        // touches canvases with a filePath (local-only drafts kept). A canvas whose
+        // backing file is missing is dropped only when its scene still matches
+        // `lastPulledScene`; a mismatch (or a missing marker) means the user edited
+        // locally since the last pull, so it is kept.
         const survivors = allCanvases.filter((c) => {
           if (c.repo !== repoPath) return true;
           if (c.branch !== branch) return true;
           if (!c.filePath) return true;
-          return false;
+          if (remotePaths.has(c.filePath)) return true;
+          const dirty =
+            c.lastPulledScene === undefined || c.lastPulledScene !== JSON.stringify(c.scene);
+          return dirty;
+        });
+        allCanvases.length = 0;
+        allCanvases.push(...survivors);
+      } else {
+        // Directory gone — remove all canvases from this repo+branch that
+        // originated from a remote file and were not locally modified since the
+        // last pull. Local-only drafts and dirty (unsaved-edit) canvases stay.
+        const survivors = allCanvases.filter((c) => {
+          if (c.repo !== repoPath) return true;
+          if (c.branch !== branch) return true;
+          if (!c.filePath) return true;
+          const dirty =
+            c.lastPulledScene === undefined || c.lastPulledScene !== JSON.stringify(c.scene);
+          return dirty;
         });
         allCanvases.length = 0;
         allCanvases.push(...survivors);
@@ -586,7 +584,7 @@ async function pullTodosFromRepo(
   let directoryExists = false;
 
   try {
-    files = await fetchDirectoryFiles(owner, repo, 'todos', branch, provider);
+    files = await fetchDirectoryFiles(owner, repo, repoPath, 'todos', branch, provider);
     directoryExists = true;
   } catch {
     directoryExists = false;

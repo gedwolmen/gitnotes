@@ -21,6 +21,10 @@ jest.mock('../src/services/StorageService', () => ({
     getSavedRepositories: jest.fn(async () => [
       { id: '1', name: 'gitnotes', path: 'me/gitnotes', branch: 'main' },
     ]),
+    getAllTodos: jest.fn(async () => []),
+    saveAllTodos: jest.fn(async () => undefined),
+    getAllCanvases: jest.fn(async () => []),
+    mutateCanvases: jest.fn(async () => undefined),
   },
 }));
 
@@ -90,7 +94,7 @@ describe('pullNotesFromRepo via clone mode', () => {
     });
     expect(GitFsService.fetch).not.toHaveBeenCalled();
 
-    (GitFsService.isCloned as jest.Mock).mockResolvedValueOnce(true);
+    (GitFsService.isCloned as jest.Mock).mockResolvedValue(true);
     (GitFsService.clone as jest.Mock).mockClear();
     (GitFsService.pullWithFastForward as jest.Mock).mockClear();
     await pullFromSingleRepo('me/gitnotes');
@@ -140,11 +144,11 @@ describe('pullNotesFromRepo via clone mode', () => {
   });
 
   test('api mode keeps using GitHubService (no clone-mode side effects)', async () => {
-    (SyncEngineService.getMode as jest.Mock).mockResolvedValueOnce('api');
-    (GitHubService.getTreeRecursiveOrThrow as jest.Mock).mockResolvedValueOnce([
+    (SyncEngineService.getMode as jest.Mock).mockResolvedValue('api');
+    (GitHubService.getTreeRecursiveOrThrow as jest.Mock).mockResolvedValue([
       { path: 'notes/foo.md', type: 'blob', sha: 'aa' },
     ]);
-    (GitHubService.getFileContent as jest.Mock).mockResolvedValueOnce('hello');
+    (GitHubService.getFileContent as jest.Mock).mockResolvedValue('hello');
 
     await pullFromSingleRepo('me/gitnotes');
     expect(GitFsService.clone).not.toHaveBeenCalled();
