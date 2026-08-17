@@ -1,6 +1,7 @@
 import { StagingService } from './git/StagingService';
 import { GitSyncGate } from './git/GitSyncGate';
 import { useStageStore } from '../stores/stageStore';
+import { githubActivity } from '../stores/githubActivityStore';
 
 /**
  * Foreground idle-timeout auto-push for staged changes.
@@ -106,6 +107,7 @@ export async function drainPushQueue(): Promise<void> {
 
       useStageStore.getState().setPushing(key, true);
       const releaseCycle = await GitSyncGate.acquireCycle();
+      githubActivity.begin('Pushing changes');
       try {
         const result = await StagingService.pushStaged(repoPath, branch);
         if (!result.success) {
@@ -114,6 +116,7 @@ export async function drainPushQueue(): Promise<void> {
       } catch (error) {
         notifyPushFailure(key, error instanceof Error ? error.message : String(error));
       } finally {
+        githubActivity.end();
         releaseCycle();
         useStageStore.getState().setPushing(key, false);
         useStageStore.getState().shiftQueue();

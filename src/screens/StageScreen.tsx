@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../contexts/ThemeContext';
@@ -125,13 +125,9 @@ export default function StageScreen() {
               className="px-3 py-1.5 rounded-md"
               style={{ backgroundColor: pushing ? colors.border : colors.primary }}
             >
-              {pushing ? (
-                <ActivityIndicator size="small" color={colors.text} />
-              ) : (
-                <Text className="text-xs font-bold" style={{ color: '#ffffff' }}>
-                  Push
-                </Text>
-              )}
+              <Text className="text-xs font-bold" style={{ color: '#ffffff' }}>
+                Push
+              </Text>
             </TouchableOpacity>
           </View>
           {item.items.map((row) => (
@@ -171,13 +167,9 @@ export default function StageScreen() {
             className="px-3 py-1.5 rounded-md"
             style={{ backgroundColor: pushAllDisabled ? colors.border : colors.primary }}
           >
-            {globalPushing ? (
-              <ActivityIndicator size="small" color={colors.text} />
-            ) : (
-              <Text className="text-xs font-bold" style={{ color: '#ffffff' }}>
-                Push all
-              </Text>
-            )}
+            <Text className="text-xs font-bold" style={{ color: '#ffffff' }}>
+              Push all
+            </Text>
           </TouchableOpacity>
         }
       />
@@ -199,7 +191,7 @@ export default function StageScreen() {
         keyExtractor={(item) => item.key}
         renderItem={renderGroup}
         ListEmptyComponent={renderEmpty}
-        contentContainerClassName="pb-8"
+        contentContainerClassName="pt-4 pb-8"
         contentContainerStyle={groups.length === 0 ? { flexGrow: 1 } : undefined}
         refreshControl={
           <RefreshControl

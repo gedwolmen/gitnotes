@@ -46,7 +46,7 @@ const upsertMutation = (
 
 const deleteMutation = (
   id: string,
-  opts: { branch?: string; filePath?: string } = {},
+  opts: { branch?: string; filePath?: string; localNoteId?: string } = {},
 ): QueuedMutation => ({
   id,
   type: 'note.delete',
@@ -57,6 +57,7 @@ const deleteMutation = (
     branch: opts.branch ?? BRANCH,
     filePath: opts.filePath ?? PATH,
     title: 'Hello',
+    localNoteId: opts.localNoteId,
   },
 });
 
@@ -113,7 +114,7 @@ describe('gitOperationStore', () => {
       churn!();
       await flushAsync();
       expect(opsState()['live-1']).toBeDefined();
-      expect(opsState()['live-1'].status).toBe('queued');
+      expect(opsState()['live-1'].status).toBe('staged');
 
       await hydrate();
       await hydrate();
@@ -280,7 +281,7 @@ describe('gitOperationStore', () => {
         branch: BRANCH,
         path: PATH,
         entityIds: ['note-42'],
-        status: 'queued',
+        status: 'staged',
       });
 
       const deleteOp = ops['m-delete'];
@@ -375,21 +376,45 @@ describe('gitOperationStore', () => {
 
       expect(opsState()[pushOpId]).toMatchObject({ kind: 'push', status: 'running' });
       expect(opsState()['m-1']).toBeDefined();
+      expect(opsState()['m-1'].status).toBe('staged');
+    });
+  });
+
+  describe('lock semantics', () => {
+    it('staged upserts do not lock paths or entities (editable while push is pending)', async () => {
+      (NoteSyncQueueService.getAll as jest.Mock).mockImplementation(async () => [
+        upsertMutation('m-1', { localNoteId: 'note-1' }),
+      ]);
+      await hydrate();
+
+      expect(opsState()['m-1'].status).toBe('staged');
+      expect(isPathLocked(opsState(), REPO, BRANCH, PATH)).toBe(false);
+      expect(isEntityLocked(opsState(), 'note-1')).toBe(false);
+    });
+
+    it('queued deletes keep locking paths and entities', async () => {
+      (NoteSyncQueueService.getAll as jest.Mock).mockImplementation(async () => [
+        deleteMutation('m-1', { localNoteId: 'note-del' }),
+      ]);
+      await hydrate();
+
       expect(opsState()['m-1'].status).toBe('queued');
+      expect(isPathLocked(opsState(), REPO, BRANCH, PATH)).toBe(true);
+      expect(isEntityLocked(opsState(), 'note-del')).toBe(true);
     });
   });
 
   describe('lock durability across store refresh', () => {
     it('path lock survives a simulated refresh that re-creates the note under a new id', async () => {
       (NoteSyncQueueService.getAll as jest.Mock).mockImplementation(async () => [
-        upsertMutation('m-1', { localNoteId: 'note-v1' }),
+        deleteMutation('m-1', { localNoteId: 'note-v1' }),
       ]);
       await hydrate();
       expect(isPathLocked(opsState(), REPO, BRANCH, PATH)).toBe(true);
       expect(isEntityLocked(opsState(), 'note-v1')).toBe(true);
 
       (NoteSyncQueueService.getAll as jest.Mock).mockImplementation(async () => [
-        upsertMutation('m-1', { localNoteId: 'note-v2' }),
+        deleteMutation('m-1', { localNoteId: 'note-v2' }),
       ]);
       await hydrate();
 

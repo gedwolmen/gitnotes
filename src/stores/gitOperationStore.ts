@@ -9,11 +9,17 @@ import type { QueuedMutation } from '../services/NoteSyncQueueService';
  * truth: queued and failed ops are re-derived from the durable sync queue
  * and the delete-failure map via hydrate(), so locks survive app restarts
  * and the StartupSyncGate refresh cascade that re-reads AsyncStorage.
+ *
+ * Status semantics: `queued`/`running` ops lock their paths/entities.
+ * `staged` ops — queue-backed upserts that have been staged but not yet
+ * pushed — stay in the registry (so the stage screen stays in sync) but
+ * never lock: cards are editable while the push is in flight. Deletes stay
+ * `queued` so their rows remain locked until the push removes them.
  */
 
 export type GitOpKind = 'upsert' | 'delete' | 'rename' | 'move' | 'pull' | 'push';
 
-export type GitOpStatus = 'queued' | 'running' | 'failed';
+export type GitOpStatus = 'queued' | 'running' | 'failed' | 'staged';
 
 export interface GitOp {
   id: string;
@@ -100,7 +106,7 @@ function opFromQueuedMutation(mutation: QueuedMutation): GitOp | null {
     createdAt: typeof mutation.createdAt === 'number' ? mutation.createdAt : 0,
   };
   if (mutation.type === 'note.upsert') {
-    return { ...base, kind: 'upsert', entityIds: mutation.localNoteId ? [mutation.localNoteId] : [] };
+    return { ...base, kind: 'upsert', status: 'staged', entityIds: mutation.localNoteId ? [mutation.localNoteId] : [] };
   }
   if (mutation.type === 'note.delete') {
     const localNoteId = mutation.params.localNoteId;

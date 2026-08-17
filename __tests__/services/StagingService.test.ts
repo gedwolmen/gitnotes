@@ -71,6 +71,14 @@ jest.mock('../../src/services/GitHubService', () => ({
   },
 }));
 
+jest.mock('../../src/stores/githubActivityStore', () => ({
+  githubActivity: {
+    begin: jest.fn(),
+    end: jest.fn(),
+    setProgress: jest.fn(),
+  },
+}));
+
 import { StagingService } from '../../src/services/git/StagingService';
 import type { StagedItem } from '../../src/services/git/StagingService';
 import { NoteSyncQueueService } from '../../src/services/NoteSyncQueueService';
@@ -81,6 +89,7 @@ import { StorageService } from '../../src/services/StorageService';
 import { AuthService } from '../../src/services/AuthService';
 import { syncNoteToGitHub, deleteNoteFromGitHub } from '../../src/services/NoteGitHubSyncService';
 import { GitHubService } from '../../src/services/GitHubService';
+import { githubActivity } from '../../src/stores/githubActivityStore';
 
 const enqueueUpsert = NoteSyncQueueService.enqueueNoteUpsert as jest.Mock;
 const enqueueDelete = NoteSyncQueueService.enqueueNoteDelete as jest.Mock;
@@ -432,12 +441,42 @@ getCommitOid.mockResolvedValue(null);
 
       expect(result).toEqual({ success: true });
       expect(writerPush).toHaveBeenCalledTimes(1);
-      expect(writerPush).toHaveBeenCalledWith({
-        repoPath: 'owner/repo',
-        branch: 'main',
-        token: 'test-token',
-      });
+      expect(writerPush).toHaveBeenCalledWith(
+        expect.objectContaining({
+          repoPath: 'owner/repo',
+          branch: 'main',
+          token: 'test-token',
+        }),
+      );
       expect(queueDrain).not.toHaveBeenCalled();
+    });
+
+    test('clone push forwards onProgress to githubActivity.setProgress', async () => {
+      listOverrides.mockResolvedValue({ 'owner/repo': 'clone' });
+      getSavedRepositories.mockResolvedValue([
+        { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
+      ]);
+      getCommitOid.mockImplementation(
+        async ({ ref }: { ref: string }) =>
+          ref.startsWith('refs/heads') ? 'local-oid' : 'remote-oid',
+      );
+
+      let capturedOnProgress: ((p: { phase: string; loaded: number; total: number }) => void) | undefined;
+      writerPush.mockImplementation(async (opts: { onProgress?: (p: { phase: string; loaded: number; total: number }) => void }) => {
+        capturedOnProgress = opts.onProgress;
+        return { success: true };
+      });
+
+      const result = await StagingService.pushStaged('owner/repo', 'main');
+
+      expect(result).toEqual({ success: true });
+      expect(capturedOnProgress).toBeDefined();
+      capturedOnProgress?.({ phase: 'Writing objects', loaded: 2, total: 5 });
+      expect(githubActivity.setProgress).toHaveBeenCalledWith({
+        phase: 'Pushing changes',
+        loaded: 2,
+        total: 5,
+      });
     });
 
     test('clone push failure surfaces an error', async () => {

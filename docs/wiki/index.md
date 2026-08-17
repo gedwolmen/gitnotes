@@ -19,6 +19,7 @@
 | [Importers](./importers.md) | Removed Google Keep and Apple Notes importers, for later re-integration |
 | [Git Core Hardening](./git-core-hardening.md) | git-core test-campaign fixes: binary decode integrity, case collisions, auth/preflight, API batch writes, pull/reconcile fixes (#876–#892) |
 | [Settings — Add Repo Fixes](./settings-add-repo-fixes.md) | invisible primary-button fix + repo list not loading after adding a token |
+| [Stage → Push UX](./stage-push-ux.md) | staged-upsert locks, spinner-free push buttons, GitHubActivity push progress |
 
 ## Quick Start
 

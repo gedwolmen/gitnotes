@@ -177,10 +177,26 @@ describe('StageScreen', () => {
     mockStageState.staged = [item('owner/repo-a', 'main', 'notes/a.md')];
     mockStageState.isPushing = { 'owner/repo-a::main': true };
 
-    const { getByTestId } = render(<StageScreen />);
+    const { getByTestId, getByText, UNSAFE_queryByType } = render(<StageScreen />);
 
     const button = getByTestId('stage.push.owner/repo-a::main');
     expect(button.props.accessibilityState.disabled).toBe(true);
+    expect(getByText('Push')).toBeTruthy();
+    const ActivityIndicator = require('react-native').ActivityIndicator;
+    expect(UNSAFE_queryByType(ActivityIndicator)).toBeNull();
+  });
+
+  it('disables the header Push all button (label kept, no spinner) while globalPushing', () => {
+    mockStageState.staged = [item('owner/repo-a', 'main', 'notes/a.md')];
+    mockStageState.globalPushing = true;
+
+    const { getByTestId, getByText, UNSAFE_queryByType } = render(<StageScreen />);
+
+    const button = getByTestId('stage.push-all');
+    expect(button.props.accessibilityState.disabled).toBe(true);
+    expect(getByText('Push all')).toBeTruthy();
+    const ActivityIndicator = require('react-native').ActivityIndicator;
+    expect(UNSAFE_queryByType(ActivityIndicator)).toBeNull();
   });
 
   it('navigates to the Stage route from a stub trigger', () => {
