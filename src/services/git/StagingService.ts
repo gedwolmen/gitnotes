@@ -7,6 +7,7 @@ import { LocalGitWriter } from './LocalGitWriter';
 import { GitFsService } from './GitFsService';
 import { getGitHostService } from './gitHostFactory';
 import type { GitHostUser } from './GitHost';
+import { githubActivity } from '../../stores/githubActivityStore';
 
 /**
  * One staged change as surfaced to the Stage page. Queue-backed items
@@ -196,6 +197,12 @@ export class StagingService {
             repoPath: repo,
             branch: repoBranch,
             token: token ?? undefined,
+            onProgress: (p) =>
+              githubActivity.setProgress({
+                phase: 'Pushing changes',
+                loaded: p.loaded,
+                total: p.total,
+              }),
           });
           if (!result.success) failures.push(result.error ?? `${repo}@${repoBranch}`);
         }

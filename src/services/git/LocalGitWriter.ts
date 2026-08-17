@@ -479,7 +479,12 @@ static async deleteAndCommit(opts: DeleteOpts): Promise<LocalGitWriterResult> {
    * B.1). On non-fast-forward rejection we pull once and retry the push,
    * mirroring the pattern in `writeAndCommit` / `deleteAndCommit`.
    */
-static async push(opts: { repoPath: string; branch: string; token?: string }): Promise<
+static async push(opts: {
+    repoPath: string;
+    branch: string;
+    token?: string;
+    onProgress?: (progress: { phase: string; loaded: number; total: number }) => void;
+  }): Promise<
     LocalGitWriterResult
   > {
     const info = parseRepoPath(opts.repoPath);
@@ -496,6 +501,7 @@ static async push(opts: { repoPath: string; branch: string; token?: string }): P
         ref: opts.branch,
         remoteRef: opts.branch,
         onAuth: tokenAuth(opts.token),
+        onProgress: opts.onProgress,
       });
       return { success: true };
     } catch (pushError) {
@@ -543,6 +549,7 @@ static async push(opts: { repoPath: string; branch: string; token?: string }): P
           ref: opts.branch,
           remoteRef: opts.branch,
           onAuth: tokenAuth(opts.token),
+          onProgress: opts.onProgress,
         });
         return { success: true };
       } catch (retryError) {

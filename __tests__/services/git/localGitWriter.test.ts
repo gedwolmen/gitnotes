@@ -165,6 +165,21 @@ describe('LocalGitWriter', () => {
     expect(getGitMocks().push).toHaveBeenCalledTimes(1);
   });
 
+  test('push forwards onProgress to git.push', async () => {
+    const onProgress = jest.fn();
+    const result = await LocalGitWriter.push({
+      repoPath: 'me/repo',
+      branch: 'main',
+      token: 'tok',
+      onProgress,
+    });
+    expect(result.success).toBe(true);
+    expect(getGitMocks().push).toHaveBeenCalledTimes(1);
+    expect(getGitMocks().push).toHaveBeenCalledWith(
+      expect.objectContaining({ onProgress }),
+    );
+  });
+
   test('rejects an invalid repoPath without touching the FS or git', async () => {
     const result = await LocalGitWriter.writeAndCommit({
       repoPath: 'not-a-repo',

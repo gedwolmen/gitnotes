@@ -29,9 +29,18 @@ jest.mock('../../src/services/StorageService', () => ({
   },
 }));
 
+jest.mock('../../src/stores/githubActivityStore', () => ({
+  githubActivity: {
+    begin: jest.fn(),
+    end: jest.fn(),
+    setProgress: jest.fn(),
+  },
+}));
+
 import { StagingService } from '../../src/services/git/StagingService';
 import { StorageService } from '../../src/services/StorageService';
 import { useStageStore } from '../../src/stores/stageStore';
+import { githubActivity } from '../../src/stores/githubActivityStore';
 import {
   STAGE_PUSH_IDLE_MS,
   drainPushQueue,
@@ -238,6 +247,43 @@ describe('StagePushScheduler', () => {
     expect(failures).toEqual([{ key: 'a/repo::main', error: 'boom' }]);
     expect(useStageStore.getState().isPushing['a/repo::main']).toBe(false);
     expect(useStageStore.getState().pushQueue).toHaveLength(0);
+  });
+
+  test('drainPushQueue wraps each pushStaged in a githubActivity.begin/end cycle', async () => {
+    useStageStore.setState({
+      staged: [],
+      isPushing: {},
+      globalPushing: false,
+      pushQueue: ['a/repo::main'],
+      pendingCount: 0,
+    });
+
+    await drainPushQueue();
+    await flushAsync();
+
+    expect(githubActivity.begin).toHaveBeenCalledWith('Pushing changes');
+    expect(githubActivity.end).toHaveBeenCalledTimes(1);
+    expect(StagingService.pushStaged).toHaveBeenCalledTimes(1);
+  });
+
+  test('failed push still ends the githubActivity cycle (end called in finally)', async () => {
+    useStageStore.setState({
+      staged: [],
+      isPushing: {},
+      globalPushing: false,
+      pushQueue: ['a/repo::main'],
+      pendingCount: 0,
+    });
+    (StagingService.pushStaged as jest.Mock).mockImplementation(async () => ({
+      success: false,
+      error: 'boom',
+    }));
+
+    await drainPushQueue();
+    await flushAsync();
+
+    expect(githubActivity.begin).toHaveBeenCalledWith('Pushing changes');
+    expect(githubActivity.end).toHaveBeenCalledTimes(1);
   });
 
   test('startScheduler() loads staged state once and registers the queue subscription', async () => {
