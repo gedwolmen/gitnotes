@@ -769,6 +769,27 @@ export async function executeToolCall(
         if (!result) {
           return { success: false, requiresConfirmation: false, error: 'Note not found.' };
         }
+
+        if (repoPath) {
+          try {
+            await NoteSyncQueueService.enqueueNoteUpsert(
+              {
+                repo: repoPath,
+                branch,
+                filePath: result.filePath,
+                title: result.title,
+                content: result.content,
+                format: result.format ?? 'markdown',
+                tags: result.tags,
+                color: null,
+              },
+              result.id,
+            );
+          } catch (error) {
+            console.warn('[actionExecutor] edit_note sync enqueue failed:', error);
+          }
+        }
+
         return buildSuccessResult({ noteId: result.id, title: result.title });
       }
 
