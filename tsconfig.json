@@ -6,19 +6,42 @@
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "types": ["jest", "node"],
+    "types": [
+      "jest",
+      "node"
+    ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@components/*": ["./src/components/*"],
-      "@screens/*": ["./src/screens/*"],
-      "@navigation/*": ["./src/navigation/*"],
-      "@contexts/*": ["./src/contexts/*"],
-      "@services/*": ["./src/services/*"],
-      "@models/*": ["./src/models/*"],
-      "@utils/*": ["./src/utils/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@components/*": [
+        "./src/components/*"
+      ],
+      "@screens/*": [
+        "./src/screens/*"
+      ],
+      "@navigation/*": [
+        "./src/navigation/*"
+      ],
+      "@contexts/*": [
+        "./src/contexts/*"
+      ],
+      "@services/*": [
+        "./src/services/*"
+      ],
+      "@models/*": [
+        "./src/models/*"
+      ],
+      "@utils/*": [
+        "./src/utils/*"
+      ]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx"],
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "nativewind-env.d.ts"
+  ],
   "exclude": [
     "node_modules",
     "babel.config.js",

@@ -116,15 +116,25 @@ describe('GitFsService', () => {
     expect(getGitMocks().clone).not.toHaveBeenCalled();
   });
 
-  test('fetch forwards branch + depth + token-derived auth', async () => {
-    await GitFsService.fetch({ repoPath: 'me/repo', branch: 'feature/x', token: 'tok', depth: 2 });
+  test('fetch forwards branch + token-derived auth and floors depth to >=3', async () => {
+    await GitFsService.fetch({ repoPath: 'me/repo', branch: 'feature/x', token: 'tok' });
     expect(getGitMocks().fetch).toHaveBeenCalledTimes(1);
     const args = getGitMocks().fetch.mock.calls[0][0];
     expect(args.dir).toBe('/me/repo');
     expect(args.ref).toBe('feature/x');
-    expect(args.depth).toBe(2);
+    expect(args.depth).toBeGreaterThanOrEqual(3);
     expect(args.tags).toBe(false);
     expect(args.onAuth()).toEqual({ username: 'x-access-token', password: 'tok' });
+  });
+
+  test('fetch honors an explicit larger depth', async () => {
+    await GitFsService.fetch({ repoPath: 'me/repo', branch: 'main', depth: 50 });
+    expect(getGitMocks().fetch.mock.calls[0][0].depth).toBe(50);
+  });
+
+  test('fetch floors an explicit shallow depth up to the minimum', async () => {
+    await GitFsService.fetch({ repoPath: 'me/repo', branch: 'main', depth: 1 });
+    expect(getGitMocks().fetch.mock.calls[0][0].depth).toBe(3);
   });
 
   test('listTree maps walk entries into the tree-entry shape (matches GitHubService)', async () => {
@@ -221,6 +231,23 @@ describe('GitFsService', () => {
     expect(result.ok).toBe(true);
     expect(getGitMocks().fetch).toHaveBeenCalled();
     expect(getGitMocks().fastForward).toHaveBeenCalled();
+  });
+
+  test('pullWithFastForward fetches with depth >=3 when no explicit depth given', async () => {
+    await GitFsService.pullWithFastForward({
+      repoPath: 'me/repo',
+      branch: 'main',
+    });
+    expect(getGitMocks().fetch.mock.calls[0][0].depth).toBeGreaterThanOrEqual(3);
+  });
+
+  test('pullWithFastForward passes through an explicit larger depth', async () => {
+    await GitFsService.pullWithFastForward({
+      repoPath: 'me/repo',
+      branch: 'main',
+      depth: 50,
+    });
+    expect(getGitMocks().fetch.mock.calls[0][0].depth).toBe(50);
   });
 
   test('pullWithFastForward returns diverged when fast-forward fails', async () => {

@@ -21,6 +21,26 @@ export interface BatchDeleteFilesResult {
   failed: BatchDeleteFailedPath[];
 }
 
+export interface BatchUpsertFilesInput {
+  owner: string;
+  repo: string;
+  branch: string;
+  files: { path: string; content: string }[];
+  message: string;
+  opts?: TokenOpts;
+}
+
+export interface BatchUpsertFailedPath {
+  path: string;
+  error: string;
+}
+
+export interface BatchUpsertFilesResult {
+  success: boolean;
+  upserted: string[];
+  failed: BatchUpsertFailedPath[];
+}
+
 /** Initial cycle + up to 2 full retries when updateRef reports the branch moved. */
 const MAX_CYCLE_ATTEMPTS = 3;
 
@@ -175,6 +195,124 @@ export async function batchDeleteFiles(
     input.repo,
     input.branch,
     uniquePaths,
+    input.message,
+    input.opts,
+  );
+}
+
+async function runUpsertCycle(input: BatchUpsertFilesInput): Promise<CycleOutcome> {
+  const { owner, repo, branch, files, message, opts } = input;
+  try {
+    const head = await GitHubService.getBranchHead(owner, repo, branch, opts);
+    const commit = await GitHubService.getCommit(owner, repo, head.sha, opts);
+    // Small markdown blobs — parallel is safe and turns N uploads into one
+    // round-trip (issue #888).
+    const blobShas = await Promise.all(
+      files.map((file) => GitHubService.createBlob(owner, repo, file.content, opts)),
+    );
+    const entryList: GitHubTreeEntry[] = files.map((file, index) => ({
+      path: file.path,
+      mode: '100644',
+      type: 'blob',
+      sha: blobShas[index].sha,
+    }));
+    // With base_tree, GitHub derives the parent/structure automatically and
+    // merely overwrites these paths — omitted siblings are left untouched and
+    // there is no duplicate-coverage problem (unlike the delete flow).
+    const newTree = await GitHubService.createTree(owner, repo, entryList, {
+      baseTree: commit.treeSha,
+      ...opts,
+    });
+    const newCommit = await GitHubService.createCommit(owner, repo, {
+      message,
+      tree: newTree.sha,
+      parents: [head.sha],
+    }, opts);
+    try {
+      await GitHubService.updateRef(owner, repo, `heads/${branch}`, newCommit.sha, false, opts);
+    } catch (error) {
+      return { ok: false, fromUpdateRef: true, error };
+    }
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, fromUpdateRef: false, error };
+  }
+}
+
+async function upsertFilesSequentially(
+  owner: string,
+  repo: string,
+  branch: string,
+  files: { path: string; content: string }[],
+  message: string,
+  opts?: TokenOpts,
+): Promise<BatchUpsertFilesResult> {
+  const upserted: string[] = [];
+  const failed: BatchUpsertFailedPath[] = [];
+  for (const file of files) {
+    try {
+      const result = await GitHubService.updateFile(
+        owner,
+        repo,
+        file.path,
+        file.content,
+        message,
+        branch,
+        opts,
+      );
+      if (result) {
+        upserted.push(file.path);
+        continue;
+      }
+      failed.push({ path: file.path, error: 'GitHub API returned no result' });
+    } catch (error) {
+      const details = extractHttpErrorDetails(error);
+      const errorMessage = details.message ?? (error instanceof Error ? error.message : String(error));
+      failed.push({ path: file.path, error: errorMessage });
+    }
+  }
+  return { success: failed.length === 0, upserted, failed };
+}
+
+/**
+ * Upserts two or more remote files with ONE commit via the Git Data API:
+ * head → commit → blobs (parallel) → createTree(base_tree) →
+ * createCommit(parent=head) → updateRef.
+ *
+ * A 409/422 from updateRef means the branch moved mid-flight; the whole
+ * cycle is retried with a fresh head (up to 2 retries). Any terminal
+ * Git-Data failure degrades to sequential `updateFile` calls and merges the
+ * per-path outcomes — bulk must never be worse than per-file.
+ * Throws for fewer than 2 files (single files use the Contents API).
+ */
+export async function batchUpsertFiles(
+  input: BatchUpsertFilesInput,
+): Promise<BatchUpsertFilesResult> {
+  const { files } = input;
+  if (files.length < 2) {
+    throw new Error('batchUpsertFiles requires at least 2 files');
+  }
+
+  let terminalError: unknown = null;
+  for (let attempt = 0; attempt < MAX_CYCLE_ATTEMPTS; attempt += 1) {
+    const outcome = await runUpsertCycle(input);
+    if (outcome.ok) {
+      return { success: true, upserted: files.map((f) => f.path), failed: [] };
+    }
+    terminalError = outcome.error;
+    const retriable = outcome.fromUpdateRef && isBranchMovedError(outcome.error);
+    if (!retriable || attempt === MAX_CYCLE_ATTEMPTS - 1) break;
+  }
+
+  console.warn(
+    '[BatchGitOperations] batch upsert cycle failed, falling back to per-file upserts:',
+    terminalError,
+  );
+  return upsertFilesSequentially(
+    input.owner,
+    input.repo,
+    input.branch,
+    input.files,
     input.message,
     input.opts,
   );

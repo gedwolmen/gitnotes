@@ -547,8 +547,14 @@ export async function syncNoteToGitHub(params: {
       }
     }
   } catch (error) {
-    console.warn('[NoteGitHubSync] fileExists check failed:', error);
-    fileExists = null;
+    const code = (error as Error & { code?: string }).code;
+    const message = error instanceof Error ? error.message : String(error);
+    if (code === 'NotFoundError' || /NotFoundError|Could not find|not foundobject/i.test(message)) {
+      fileExists = false;
+    } else {
+      console.warn('[NoteGitHubSync] fileExists check failed:', error);
+      fileExists = null;
+    }
   }
   const useUpdateVerb = fileExists ?? !!(knownSha || filePath);
   const message = useUpdateVerb ? `Update note: ${title}` : `Create note: ${title}`;
@@ -620,7 +626,7 @@ export async function syncNoteToGitHub(params: {
       finalContent,
       message,
       targetBranch,
-      { ...opts, expectExists: !!filePath },
+      { ...opts, expectExists: useUpdateVerb },
     );
 
     if (result) {

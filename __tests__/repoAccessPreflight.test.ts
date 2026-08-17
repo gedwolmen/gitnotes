@@ -32,14 +32,16 @@ describe('checkGitHubRepoAccess', () => {
     });
   });
 
-  it('returns write_unverified for read-only accepted permissions', async () => {
-    fetchSpy.mockResolvedValue(new Response('{}', {
-      status: 200,
-      headers: { 'x-accepted-github-permissions': 'contents:read' },
-    }));
+  it('probes when accepted permissions are read-only and reports no_access on a forbidden probe', async () => {
+    fetchSpy
+      .mockResolvedValueOnce(new Response('{}', {
+        status: 200,
+        headers: { 'x-accepted-github-permissions': 'contents:read' },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ message: 'Forbidden' }), { status: 403 }));
 
     await expect(checkGitHubRepoAccess('octo/notes', token)).resolves.toMatchObject({
-      kind: 'write_unverified',
+      kind: 'no_access',
     });
   });
 
@@ -52,19 +54,72 @@ describe('checkGitHubRepoAccess', () => {
     });
   });
 
-  it('returns write_unverified when permissions.push is false', async () => {
-    fetchSpy.mockResolvedValue(new Response(JSON.stringify({ permissions: { push: false } }), { status: 200 }));
+  it('probes when permissions.push is false', async () => {
+    fetchSpy
+      .mockResolvedValueOnce(new Response(JSON.stringify({ permissions: { push: false } }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ message: 'Forbidden' }), { status: 403 }));
 
     await expect(checkGitHubRepoAccess('octo/notes', token)).resolves.toMatchObject({
-      kind: 'write_unverified',
+      kind: 'no_access',
     });
   });
 
-  it('returns write_unverified when GitHub provides no permissions information', async () => {
-    fetchSpy.mockResolvedValue(new Response(JSON.stringify({ private: true }), { status: 200 }));
+  it('probes when GitHub provides no permissions information and reports ok on a successful write probe', async () => {
+    fetchSpy
+      .mockResolvedValueOnce(new Response(JSON.stringify({ private: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ content: { sha: 'abc123' } }), { status: 201 }))
+      .mockResolvedValueOnce(new Response('{}', { status: 200 }));
 
-    await expect(checkGitHubRepoAccess('octo/notes', token)).resolves.toMatchObject({
-      kind: 'write_unverified',
+    await expect(checkGitHubRepoAccess('octo/notes', token)).resolves.toEqual({
+      kind: 'ok',
+      writeVerified: true,
+    });
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('/contents/.gitnotes-preflight-'),
+      expect.objectContaining({ method: 'PUT' }),
+    );
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      3,
+      expect.stringContaining('/contents/.gitnotes-preflight-'),
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+  });
+
+  it('reports no_access when the write probe is forbidden', async () => {
+    fetchSpy
+      .mockResolvedValueOnce(new Response(JSON.stringify({ private: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ message: 'Forbidden' }), { status: 403 }));
+
+    await expect(checkGitHubRepoAccess('octo/notes', token)).resolves.toMatchObject({ kind: 'no_access' });
+  });
+
+  it('reports transient when the write probe is rate-limited', async () => {
+    fetchSpy
+      .mockResolvedValueOnce(new Response(JSON.stringify({ private: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response('{}', { status: 429 }));
+
+    await expect(checkGitHubRepoAccess('octo/notes', token)).resolves.toMatchObject({ kind: 'transient' });
+  });
+
+  it('reports transient when the write probe hits a network failure', async () => {
+    fetchSpy
+      .mockResolvedValueOnce(new Response(JSON.stringify({ private: true }), { status: 200 }))
+      .mockRejectedValueOnce(new TypeError('Network request failed'));
+
+    await expect(checkGitHubRepoAccess('octo/notes', token)).resolves.toMatchObject({ kind: 'transient' });
+  });
+
+  it('still reports ok when probe cleanup fails', async () => {
+    fetchSpy
+      .mockResolvedValueOnce(new Response(JSON.stringify({ private: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ content: { sha: 'abc123' } }), { status: 201 }))
+      .mockResolvedValueOnce(new Response('{}', { status: 500 }))
+      .mockResolvedValueOnce(new Response('{}', { status: 500 }));
+
+    await expect(checkGitHubRepoAccess('octo/notes', token)).resolves.toEqual({
+      kind: 'ok',
+      writeVerified: true,
     });
   });
 

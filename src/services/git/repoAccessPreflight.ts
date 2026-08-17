@@ -118,11 +118,85 @@ export async function preflightGitHubRepoAccess(repoPath: string, token: string)
       if (writeVerified) {
         return { kind: 'ok', writeVerified: true };
       }
-      return failure('write_unverified', 'Write access not verified. Do you want to add anyway?');
+      return probeWriteAccess(url, token);
     }
     return classifyResponse(errorDetails);
   } catch {
     return failure('transient', 'GitHub repository access could not be verified right now.');
+  }
+}
+
+/**
+ * Fine-grained PATs only advertise `metadata:read` on `GET /repos` regardless
+ * of their real write capability, so the header/`permissions.push` fast path
+ * produces a false negative. Prove (or disprove) write access by creating a
+ * throwaway file, then best-effort delete it.
+ */
+async function probeWriteAccess(url: string, token: string): Promise<RepoAccessResult> {
+  const fileName = `.gitnotes-preflight-${Date.now()}-${Math.random().toString(36).slice(2)}.tmp`;
+  const probeUrl = `${url}/contents/${fileName}`;
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    Accept: 'application/vnd.github.v3+json',
+  };
+
+  let putResponse: Response;
+  try {
+    putResponse = await fetch(probeUrl, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({ message: 'GitNotes write preflight', content: 'cHJlZmxpZ2h0' }),
+    });
+  } catch {
+    return failure('transient', 'GitHub repository access could not be verified right now.');
+  }
+
+  if (putResponse.ok) {
+    let sha: string | undefined;
+    try {
+      const body = (await putResponse.json()) as { content?: { sha?: string }; sha?: string };
+      sha = body.content?.sha ?? body.sha;
+    } catch {
+      // Cleanup is best-effort; missing sha only means we skip the delete.
+    }
+    await cleanupProbeFile(probeUrl, token, sha);
+    return { kind: 'ok', writeVerified: true };
+  }
+
+  let responseBody: unknown;
+  try {
+    responseBody = await putResponse.json();
+  } catch {
+    responseBody = undefined;
+  }
+  const errorDetails = extractHttpErrorDetails({
+    response: {
+      data: responseBody,
+      status: putResponse.status,
+      headers: captureResponseHeaders(putResponse.headers),
+    },
+  });
+  return classifyResponse(errorDetails);
+}
+
+async function cleanupProbeFile(probeUrl: string, token: string, sha: string | undefined): Promise<void> {
+  if (!sha) return;
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    Accept: 'application/vnd.github.v3+json',
+  };
+  const body = JSON.stringify({ message: 'GitNotes preflight cleanup', sha });
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const response = await fetch(probeUrl, {
+        method: 'DELETE',
+        headers,
+        body,
+      });
+      if (response.ok) return;
+    } catch {
+      // Ignore; cleanup is best-effort and must not affect the write verdict.
+    }
   }
 }
 

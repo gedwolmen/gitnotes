@@ -8,11 +8,17 @@ jest.mock('../../src/services/GitHubService', () => ({
     updateRef: jest.fn(),
     getFileSha: jest.fn(),
     deleteFile: jest.fn(),
+    createBlob: jest.fn(),
+    updateFile: jest.fn(),
   },
 }));
 
 import { GitHubService } from '../../src/services/GitHubService';
-import { batchDeleteFiles, buildTreeMinusPaths } from '../../src/services/git/BatchGitOperations';
+import {
+  batchDeleteFiles,
+  buildTreeMinusPaths,
+  batchUpsertFiles,
+} from '../../src/services/git/BatchGitOperations';
 
 const TREE_ENTRIES = [
   { path: 'notes', mode: '040000', type: 'tree', sha: 'tree-notes' },
@@ -248,6 +254,119 @@ describe('batchDeleteFiles', () => {
     expect(result.deleted).toEqual(['notes/a.md']);
     expect(result.failed).toEqual([{ path: 'notes/b.md', error: 'lookup blew up' }]);
     expect(GitHubService.deleteFile).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('batchUpsertFiles', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    happyPathMocks();
+    (GitHubService.createBlob as jest.Mock).mockImplementation(
+      async (_o: string, _r: string, content: string) => ({ sha: `blob-${content}` }),
+    );
+    (GitHubService.updateFile as jest.Mock).mockResolvedValue({
+      content: { sha: 'fallback-sha' },
+      commit: { sha: 'fallback-commit' },
+    });
+  });
+
+  test('2 files -> parallel createBlob + ONE createTree(base_tree) + ONE commit + ONE updateRef', async () => {
+    const result = await batchUpsertFiles({
+      owner: 'owner',
+      repo: 'repo',
+      branch: 'main',
+      files: [
+        { path: 'notes/a.md', content: 'AAA' },
+        { path: 'notes/b.md', content: 'BBB' },
+      ],
+      message: 'Update 2 notes',
+    });
+
+    expect(result).toEqual({ success: true, upserted: ['notes/a.md', 'notes/b.md'], failed: [] });
+    expect(GitHubService.getBranchHead).toHaveBeenCalledTimes(1);
+    expect(GitHubService.getCommit).toHaveBeenCalledTimes(1);
+    // No recursive tree read: base_tree derives parents/structure.
+    expect(GitHubService.getTreeRaw).not.toHaveBeenCalled();
+    expect(GitHubService.createBlob).toHaveBeenCalledTimes(2);
+    expect(GitHubService.createTree).toHaveBeenCalledTimes(1);
+    expect(GitHubService.createCommit).toHaveBeenCalledTimes(1);
+    expect(GitHubService.updateRef).toHaveBeenCalledTimes(1);
+    expect(GitHubService.updateFile).not.toHaveBeenCalled();
+
+    // Tree entries map each blob sha to its path in input order; base_tree set.
+    const [treeOwner, treeRepo, treeEntries, treeOpts] = (GitHubService.createTree as jest.Mock).mock.calls[0];
+    expect(treeOwner).toBe('owner');
+    expect(treeRepo).toBe('repo');
+    expect(treeEntries).toEqual([
+      { path: 'notes/a.md', mode: '100644', type: 'blob', sha: 'blob-AAA' },
+      { path: 'notes/b.md', mode: '100644', type: 'blob', sha: 'blob-BBB' },
+    ]);
+    expect(treeOpts).toEqual({ baseTree: 'tree-root' });
+
+    expect(GitHubService.createCommit).toHaveBeenCalledWith(
+      'owner',
+      'repo',
+      { message: 'Update 2 notes', tree: 'new-tree-1', parents: ['head-1'] },
+      undefined,
+    );
+    expect(GitHubService.updateRef).toHaveBeenCalledWith(
+      'owner',
+      'repo',
+      'heads/main',
+      'new-commit-1',
+      false,
+      undefined,
+    );
+  });
+
+  test('updateRef 409 on every attempt -> falls back to sequential updateFile', async () => {
+    (GitHubService.updateRef as jest.Mock).mockRejectedValue(
+      Object.assign(new Error('Cannot force-update ref'), { status: 409 }),
+    );
+    (GitHubService.updateFile as jest.Mock).mockImplementation(async (_o: string, _r: string, path: string) => {
+      if (path === 'notes/b.md') {
+        throw Object.assign(new Error('Server exploded'), { status: 500 });
+      }
+      return { content: { sha: 'fallback-sha' }, commit: { sha: 'fallback-commit' } };
+    });
+
+    const result = await batchUpsertFiles({
+      owner: 'owner',
+      repo: 'repo',
+      branch: 'main',
+      files: [
+        { path: 'notes/a.md', content: 'AAA' },
+        { path: 'notes/b.md', content: 'BBB' },
+      ],
+      message: 'Update 2 notes',
+    });
+
+    // Initial cycle + 2 branch-moved retries, then sequential fallback.
+    expect(GitHubService.getBranchHead).toHaveBeenCalledTimes(3);
+    expect(GitHubService.updateRef).toHaveBeenCalledTimes(3);
+    expect(GitHubService.createBlob).toHaveBeenCalledTimes(6);
+    expect(GitHubService.updateFile).toHaveBeenCalledTimes(2);
+    expect(result).toEqual({
+      success: false,
+      upserted: ['notes/a.md'],
+      failed: [{ path: 'notes/b.md', error: 'Server exploded' }],
+    });
+  });
+
+  test('1 file -> throws (case 4)', async () => {
+    await expect(
+      batchUpsertFiles({
+        owner: 'owner',
+        repo: 'repo',
+        branch: 'main',
+        files: [{ path: 'notes/a.md', content: 'AAA' }],
+        message: 'Update 1 note',
+      }),
+    ).rejects.toThrow(/at least 2 files/);
+
+    expect(GitHubService.getBranchHead).not.toHaveBeenCalled();
+    expect(GitHubService.createBlob).not.toHaveBeenCalled();
+    expect(GitHubService.updateFile).not.toHaveBeenCalled();
   });
 });
 
