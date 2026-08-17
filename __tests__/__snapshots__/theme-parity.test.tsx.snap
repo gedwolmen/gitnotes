@@ -67,6 +67,9 @@ exports[`NativeWind theme parity matches the pre-migration key-kit snapshots in 
               {
                 "minHeight": 44,
               },
+              {
+                "backgroundColor": "#8B9BE8",
+              },
               undefined,
             ],
           ]
@@ -108,7 +111,7 @@ exports[`NativeWind theme parity matches the pre-migration key-kit snapshots in 
               style={
                 [
                   {
-                    "color": "#F2F2F7",
+                    "color": "#fff",
                     "fontSize": 16,
                     "fontWeight": "600",
                   },
@@ -317,6 +320,9 @@ exports[`NativeWind theme parity matches the pre-migration key-kit snapshots in 
               {
                 "minHeight": 44,
               },
+              {
+                "backgroundColor": "#7B8CDE",
+              },
               undefined,
             ],
           ]
@@ -358,7 +364,7 @@ exports[`NativeWind theme parity matches the pre-migration key-kit snapshots in 
               style={
                 [
                   {
-                    "color": "#1C1C1E",
+                    "color": "#fff",
                     "fontSize": 16,
                     "fontWeight": "600",
                   },

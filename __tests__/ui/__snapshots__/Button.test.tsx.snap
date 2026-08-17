@@ -66,6 +66,9 @@ exports[`Button snapshots primary in light + dark: primary-dark 1`] = `
             {
               "minHeight": 44,
             },
+            {
+              "backgroundColor": "#8B9BE8",
+            },
             undefined,
           ],
         ]
@@ -107,7 +110,7 @@ exports[`Button snapshots primary in light + dark: primary-dark 1`] = `
             style={
               [
                 {
-                  "color": "#F2F2F7",
+                  "color": "#fff",
                   "fontSize": 16,
                   "fontWeight": "600",
                 },
@@ -190,6 +193,9 @@ exports[`Button snapshots primary in light + dark: primary-light 1`] = `
             {
               "minHeight": 44,
             },
+            {
+              "backgroundColor": "#7B8CDE",
+            },
             undefined,
           ],
         ]
@@ -231,7 +237,7 @@ exports[`Button snapshots primary in light + dark: primary-light 1`] = `
             style={
               [
                 {
-                  "color": "#1C1C1E",
+                  "color": "#fff",
                   "fontSize": 16,
                   "fontWeight": "600",
                 },
