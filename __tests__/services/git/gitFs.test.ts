@@ -126,6 +126,24 @@ function getStore(): Map<string, Entry> {
   return (globalThis as any).__gitFsTestStore;
 }
 
+function fnv1a(bytes: Uint8Array): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < bytes.length; i++) {
+    hash ^= bytes[i];
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
+}
+
+async function captureError(p: Promise<unknown>): Promise<unknown> {
+  try {
+    await p;
+    return undefined;
+  } catch (e) {
+    return e;
+  }
+}
+
 beforeEach(() => {
   const s = getStore();
   s.clear();
@@ -257,5 +275,42 @@ describe('gitFs adapter', () => {
       encoding: 'utf8',
     });
     expect(back).toBe('idx');
+  });
+
+  test('large binary (>49KB) round-trips without truncation or corruption', async () => {
+    const fs = makeGitFs('file:///doc/git/');
+    const size = 200000;
+    const bytes = new Uint8Array(size);
+    for (let i = 0; i < size; i++) bytes[i] = (i * 31 + 7) & 0xff;
+
+    await fs.promises.writeFile('/big.bin', bytes);
+    const data = await fs.promises.readFile('/big.bin');
+
+    expect(data).toBeInstanceOf(Uint8Array);
+    const decoded = data as Uint8Array;
+    expect(decoded.length).toBe(size);
+    expect(fnv1a(decoded)).toBe(fnv1a(bytes));
+  });
+
+  test('case-collision guard: second casing throws EEXIST instead of clobbering', async () => {
+    const fs = makeGitFs('file:///doc/git/');
+    await fs.promises.writeFile('/notes/Foo.md', 'first');
+
+    const writeErr = await captureError(
+      fs.promises.writeFile('/notes/foo.md', 'second'),
+    );
+    expect(writeErr).toBeInstanceOf(FsError);
+    expect((writeErr as FsError).code).toBe('EEXIST');
+    expect((writeErr as FsError).message).toMatch(/case-collision/);
+
+    const readErr = await captureError(
+      fs.promises.readFile('/notes/foo.md', { encoding: 'utf8' }),
+    );
+    expect(readErr).toBeInstanceOf(FsError);
+    expect((readErr as FsError).code).toBe('EEXIST');
+
+    expect(await fs.promises.readFile('/notes/Foo.md', { encoding: 'utf8' })).toBe(
+      'first',
+    );
   });
 });

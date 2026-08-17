@@ -15,7 +15,7 @@ class FsError extends Error {
 async function base64ToBytesAsync(b64: string): Promise<Uint8Array> {
   // Decode base64 in 4-char aligned chunks without calling atob on the full string.
   // atob materializes the entire decoded string synchronously, blocking the JS thread.
-  const CHUNK_CHARS = 65535; // Must be multiple of 4 for base64 boundary alignment
+  const CHUNK_CHARS = 65532; // Multiple of 4 so every chunk boundary is 4-char aligned
   const cleaned = b64.replace(/[^A-Za-z0-9+/=]/g, '');
   const totalChars = cleaned.length;
 
@@ -27,7 +27,6 @@ async function base64ToBytesAsync(b64: string): Promise<Uint8Array> {
   }
 
   // Chunked decoding with yields
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   const resultParts: Uint8Array[] = [];
 
   for (let i = 0; i < totalChars; i += CHUNK_CHARS) {
@@ -44,8 +43,6 @@ async function base64ToBytesAsync(b64: string): Promise<Uint8Array> {
     if (alignedEnd < totalChars) {
       await new Promise<void>((r) => setTimeout(r, 0));
     }
-    // Move past any padding bytes at chunk boundary
-    i = alignedEnd - 1;
   }
 
   // Concatenate all parts
@@ -153,6 +150,28 @@ export function makeGitFs(root: string): PromiseFsClient {
   // single Set.has() check.
   const existingDirs = new Set<string>([root]);
 
+  // Case-insensitive filesystems (APFS/NTFS) collapse case-variant paths onto
+  // one file, so a second write would silently clobber the first. Remember the
+  // first-seen spelling per lowercased URI and throw EEXIST on any variant.
+  const caseMap = new Map<string, string>(); // lowercased URI -> canonical URI
+  function guardCase(filepath: string, uri: string): void {
+    if (uri === root) return; // the adapter root itself is case-exempt
+    const key = uri.toLowerCase();
+    const canonical = caseMap.get(key);
+    if (canonical === undefined) {
+      caseMap.set(key, uri);
+      return;
+    }
+    if (canonical !== uri) {
+      const incoming = filepath.replace(/^\/+/, '');
+      const existing = canonical.slice(root.length);
+      throw new FsError(
+        'EEXIST',
+        `case-collision: "${incoming}" collides with "${existing}" on this filesystem`,
+      );
+    }
+  }
+
   // Yield to the event loop every N writes. Cloning 10k+ objects still
   // accumulates JS-thread work even after the ancestor + base64 fixes;
   // without periodic yields, taps queued in the bridge would still see
@@ -176,6 +195,7 @@ export function makeGitFs(root: string): PromiseFsClient {
   const promises = {
     async readFile(filepath: string, opts?: ReadOpts | string): Promise<string | Uint8Array> {
       const uri = joinUri(root, filepath);
+      guardCase(filepath, uri);
       const info = await FileSystem.getInfoAsync(uri);
       if (!info.exists) {
         throw new FsError('ENOENT', `ENOENT: no such file '${filepath}'`);
@@ -199,6 +219,7 @@ export function makeGitFs(root: string): PromiseFsClient {
       opts?: ReadOpts | string,
     ): Promise<void> {
       const uri = joinUri(root, filepath);
+      guardCase(filepath, uri);
       await ensureParentDirs(uri, root, FileSystem, existingDirs);
       if (typeof data === 'string') {
         const encoding = typeof opts === 'string' ? opts : opts?.encoding;
@@ -240,6 +261,7 @@ export function makeGitFs(root: string): PromiseFsClient {
 
     async readdir(filepath: string): Promise<string[]> {
       const uri = joinUri(root, filepath);
+      guardCase(filepath, uri);
       const info = await FileSystem.getInfoAsync(uri);
       if (!info.exists) {
         throw new FsError('ENOENT', `ENOENT: no such directory '${filepath}'`);
@@ -294,6 +316,7 @@ export function makeGitFs(root: string): PromiseFsClient {
       isSymbolicLink: () => boolean;
     }> {
       const uri = joinUri(root, filepath);
+      guardCase(filepath, uri);
       const info = await FileSystem.getInfoAsync(uri);
       if (!info.exists) {
         throw new FsError('ENOENT', `ENOENT: no such path '${filepath}'`);
