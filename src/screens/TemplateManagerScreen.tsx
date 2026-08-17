@@ -25,6 +25,7 @@ import { TemplateEditorModal } from '../components/templates/TemplateEditorModal
 import { TemplateListItem } from '../components/templates/TemplateListItem';
 import { TemplatesEmptyState } from '../components/templates/TemplatesEmptyState';
 import { DEFAULT_ICON } from '../components/templates/templateManagerShared';
+import { RADII } from '../theme/tokens';
 import { useTranslation } from 'react-i18next';
 
 export default function TemplateManagerScreen() {
@@ -243,7 +244,7 @@ export default function TemplateManagerScreen() {
     <SafeAreaView edges={['bottom']} className="flex-1" style={{ backgroundColor: colors.background }}>
       <ScrollView
         className="flex-1"
-        contentContainerClassName="p-4 pb-10 gap-2.5 flex-grow"
+        contentContainerStyle={{ padding: 16, paddingBottom: 40, gap: 10, flexGrow: 1 }}
         style={{ paddingTop: headerHeight }}
         keyboardShouldPersistTaps="handled"
         refreshControl={
@@ -255,8 +256,8 @@ export default function TemplateManagerScreen() {
         <TouchableOpacity
           testID="template-manager.button.create"
           onPress={handleOpenCreate}
-          className="flex-row items-center justify-center py-3 rounded-sm gap-1.5 mb-2"
-          style={{ backgroundColor: colors.primary }}
+          className="flex-row items-center justify-center py-3 gap-1.5"
+          style={{ backgroundColor: colors.primary, borderRadius: RADII.sm }}
           activeOpacity={0.8}
         >
           <Ionicons name="add" size={18} color="#fff" />

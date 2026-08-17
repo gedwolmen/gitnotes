@@ -13,4 +13,8 @@ export class LastUsedRepoService {
   static async set(repoPath: string): Promise<void> {
     await AsyncStorage.setItem(KEY, repoPath);
   }
+
+  static async clear(): Promise<void> {
+    await AsyncStorage.removeItem(KEY);
+  }
 }

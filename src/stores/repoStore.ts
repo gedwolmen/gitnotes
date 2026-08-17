@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import { GitRepository, GitService } from '../services/GitService';
 import { StorageService } from '../services/StorageService';
+import { TemplateRepoPreferenceService } from '../services/TemplateRepoPreferenceService';
+import { LastUsedRepoService } from '../services/LastUsedRepoService';
+import { SyncEngineService } from '../services/SyncEngineService';
+import { GitFsService } from '../services/git/GitFsService';
+import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
+import { useAIStore } from './aiStore';
 import { useNoteStore } from './noteStore';
 import { useCanvasStore } from './canvasStore';
 import { useTodoStore } from './todoStore';
@@ -83,11 +89,31 @@ export const useRepoStore = create<RepoState & RepoActions>()((set, get) => ({
 
   removeRepository: async (path, provider = 'github') => {
     await StorageService.removeRepository(path, provider);
-    // Drop all locally-cached records that originated from the removed repo
-    // before refreshing the dependent stores. Without this, notes/canvases/
-    // todos from the now-disconnected repo keep showing up in their lists
-    // even though the repo is gone from settings.
     await StorageService.purgeRepoData(path);
+
+    const template = await TemplateRepoPreferenceService.get();
+    if (template?.repoPath === path) {
+      await TemplateRepoPreferenceService.clear();
+    }
+
+    const lastUsed = await LastUsedRepoService.get();
+    if (lastUsed === path) {
+      await LastUsedRepoService.clear();
+    }
+
+    await SyncEngineService.clear(path);
+
+    if ((await SyncEngineService.getMode(path)) === 'clone') {
+      GitFsService.removeRepo({ repoPath: path }).catch(() => undefined);
+    }
+
+    const { chatRepoOwner, chatRepoName } = useAIStore.getState();
+    if (chatRepoOwner && chatRepoName && `${chatRepoOwner}/${chatRepoName}` === path) {
+      await useAIStore.getState().setChatRepo(null, null, 'main', null);
+    }
+
+    await NoteSyncQueueService.purgeForRepo(path);
+
     set((state) => ({
       repositories: state.repositories.filter(
         (r) => !(r.path === path && (r.provider ?? 'github') === provider),

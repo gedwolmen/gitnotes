@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { Platform, Text, View, StyleProp, ViewStyle } from 'react-native';
+import { Platform, Text, View, StyleProp, ViewStyle, LayoutChangeEvent } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,10 +22,13 @@ export interface ScreenHeaderProps {
   onBack?: () => void;
   actions?: ReactNode;
   style?: StyleProp<ViewStyle>;
+  footer?: ReactNode;
+  testID?: string;
+  onLayout?: (e: LayoutChangeEvent) => void;
 }
 
 export function ScreenHeader(props: ScreenHeaderProps) {
-  const { title, subtitle, badge, onBack, actions, style } = props;
+  const { title, subtitle, badge, onBack, actions, style, footer, testID, onLayout } = props;
   const { isDark } = useTheme();
   const { colors, spacing, type } = useTokens();
   const insets = useSafeAreaInsets();
@@ -87,6 +90,8 @@ export function ScreenHeader(props: ScreenHeaderProps) {
     return (
       <View
         pointerEvents="box-none"
+        testID={testID}
+        onLayout={onLayout}
         className="absolute top-0 left-0 right-0 z-10"
         style={{
           paddingTop: insets.top,
@@ -94,6 +99,7 @@ export function ScreenHeader(props: ScreenHeaderProps) {
         }}
       >
         {headerContent}
+        {footer}
       </View>
     );
   }
@@ -101,12 +107,15 @@ export function ScreenHeader(props: ScreenHeaderProps) {
   return (
     <BlurView
       pointerEvents="box-none"
+      testID={testID}
+      onLayout={onLayout}
       intensity={60}
       tint={isDark ? 'dark' : 'light'}
       className="absolute top-0 left-0 right-0 z-10"
       style={{ paddingTop: insets.top }}
     >
       {headerContent}
+      {footer}
     </BlurView>
   );
 }

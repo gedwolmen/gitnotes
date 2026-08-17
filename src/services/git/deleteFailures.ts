@@ -70,3 +70,20 @@ export async function clearDeleteFailure(
     await AsyncStorage.setItem(DELETE_FAILURES_STORAGE_KEY, JSON.stringify(map));
   } catch { /* best-effort persistence */ }
 }
+
+/** Remove every delete-failure entry whose key starts with `${repoPath}::`. */
+export async function clearDeleteFailuresForRepo(repoPath: string): Promise<void> {
+  try {
+    const map = await readDeleteFailures();
+    const prefix = `${repoPath}::`;
+    let changed = false;
+    for (const key of Object.keys(map)) {
+      if (key.startsWith(prefix)) {
+        delete map[key];
+        changed = true;
+      }
+    }
+    if (!changed) return;
+    await AsyncStorage.setItem(DELETE_FAILURES_STORAGE_KEY, JSON.stringify(map));
+  } catch { /* best-effort persistence */ }
+}

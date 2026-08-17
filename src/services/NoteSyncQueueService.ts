@@ -10,7 +10,7 @@ import { AuthService } from './AuthService';
 import { LocalGitWriter } from './git/LocalGitWriter';
 import { classifyGitHubSyncError, isRetryableFailure, syncStatusForError } from './git/syncFailure';
 import { resolveBranch } from './git/resolveBranch';
-import { clearDeleteFailure, readDeleteFailures, recordDeleteFailure, DELETE_FAILURES_STORAGE_KEY } from './git/deleteFailures';
+import { clearDeleteFailure, clearDeleteFailuresForRepo, readDeleteFailures, recordDeleteFailure, DELETE_FAILURES_STORAGE_KEY } from './git/deleteFailures';
 import { GitSyncGate } from './git/GitSyncGate';
 import { batchDeleteFiles } from './git/BatchGitOperations';
 import type { BatchDeleteFilesResult } from './git/BatchGitOperations';
@@ -228,6 +228,32 @@ class NoteSyncQueueServiceClass {
       delete map[this.tombstoneKey(repo, branch || 'main', filePath)];
       await AsyncStorage.setItem(TOMBSTONE_KEY, JSON.stringify(map));
     } catch { /* best-effort */ }
+  }
+
+  async purgeForRepo(repoPath: string): Promise<void> {
+    const queue = await this.getAll();
+    const remaining = queue.filter((m) => m.params.repo !== repoPath);
+    if (remaining.length < queue.length) {
+      await this.saveAll(remaining);
+    }
+    try {
+      const raw = await AsyncStorage.getItem(TOMBSTONE_KEY);
+      if (raw) {
+        const map: Record<string, number> = JSON.parse(raw);
+        const prefix = `${repoPath}::`;
+        let changed = false;
+        for (const key of Object.keys(map)) {
+          if (key.startsWith(prefix)) {
+            delete map[key];
+            changed = true;
+          }
+        }
+        if (changed) {
+          await AsyncStorage.setItem(TOMBSTONE_KEY, JSON.stringify(map));
+        }
+      }
+    } catch { /* best-effort */ }
+    await clearDeleteFailuresForRepo(repoPath);
   }
 
   private newMutationId(): string {

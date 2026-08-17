@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import { NoteTemplate } from '../../services/TemplateService';
+import { RADII } from '../../theme/tokens';
 
 interface TemplateListItemProps {
   template: NoteTemplate;
@@ -21,8 +22,8 @@ export function TemplateListItem({ template, pinned, onTogglePin, onEdit, onDele
   return (
     <View
       testID={`template-list-item.button.press-${template.id}`}
-      className="flex-row items-center p-3 rounded-sm border gap-3"
-      style={{ backgroundColor: colors.surface, borderColor: colors.border }}
+      className="flex-row items-center p-3 border gap-3"
+      style={{ backgroundColor: colors.surface, borderColor: colors.border, borderRadius: RADII.sm }}
     >
       <View className="w-9 h-9 rounded-[10px] items-center justify-center" style={{ backgroundColor: colors.primary + '20' }}>
         <Ionicons name={template.icon} size={20} color={colors.primary} />
