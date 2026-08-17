@@ -1,8 +1,14 @@
 import { GitService } from '../../src/services/GitService';
 import { StorageService } from '../../src/services/StorageService';
+import { TemplateRepoPreferenceService } from '../../src/services/TemplateRepoPreferenceService';
+import { LastUsedRepoService } from '../../src/services/LastUsedRepoService';
+import { SyncEngineService } from '../../src/services/SyncEngineService';
+import { GitFsService } from '../../src/services/git/GitFsService';
+import { NoteSyncQueueService } from '../../src/services/NoteSyncQueueService';
 import { getActiveGitHost } from '../../src/services/git/activeHost';
 import { gitHubHostService } from '../../src/services/git/gitHostFactory';
 import { checkGitHubRepoAccess } from '../../src/services/git/repoAccessPreflight';
+import { useAIStore } from '../../src/stores/aiStore';
 import { useRepoStore } from '../../src/stores/repoStore';
 import { beforeEach, describe, expect, it } from '@jest/globals';
 
@@ -11,7 +17,55 @@ jest.mock('../../src/services/GitService', () => ({
 }));
 
 jest.mock('../../src/services/StorageService', () => ({
-  StorageService: { getSavedRepositories: jest.fn() },
+  StorageService: {
+    getSavedRepositories: jest.fn(),
+    removeRepository: jest.fn(),
+    purgeRepoData: jest.fn(),
+  },
+}));
+
+jest.mock('../../src/services/TemplateRepoPreferenceService', () => ({
+  TemplateRepoPreferenceService: {
+    get: jest.fn(),
+    clear: jest.fn(),
+  },
+}));
+
+jest.mock('../../src/services/LastUsedRepoService', () => ({
+  LastUsedRepoService: {
+    get: jest.fn(),
+    set: jest.fn(),
+    clear: jest.fn(),
+  },
+}));
+
+jest.mock('../../src/services/SyncEngineService', () => ({
+  SyncEngineService: {
+    getMode: jest.fn(),
+    clear: jest.fn(),
+  },
+}));
+
+jest.mock('../../src/services/git/GitFsService', () => ({
+  GitFsService: {
+    removeRepo: jest.fn(),
+  },
+}));
+
+jest.mock('../../src/services/NoteSyncQueueService', () => ({
+  NoteSyncQueueService: {
+    purgeForRepo: jest.fn(),
+  },
+}));
+
+jest.mock('../../src/stores/aiStore', () => ({
+  useAIStore: {
+    getState: jest.fn(() => ({
+      chatRepoOwner: null,
+      chatRepoName: null,
+      setChatRepo: jest.fn(),
+    })),
+  },
 }));
 
 jest.mock('../../src/services/git/activeHost', () => ({
@@ -65,5 +119,71 @@ describe('repoStore addRepository preflight', () => {
       { allowUnverifiedWrite: true },
     )).resolves.toEqual(repository);
     expect(GitService.addRepository).toHaveBeenCalledWith('octo/notes', undefined, 'github');
+  });
+});
+
+describe('repoStore removeRepository', () => {
+  const repoPath = 'octo/notes';
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.mocked(StorageService.getSavedRepositories).mockResolvedValue([]);
+  });
+
+  it('disconnects all per-repo pointers that match the removed path', async () => {
+    jest.mocked(StorageService.removeRepository).mockResolvedValue(undefined);
+    jest.mocked(StorageService.purgeRepoData).mockResolvedValue(undefined);
+    jest.mocked(TemplateRepoPreferenceService.get).mockResolvedValue({ repoPath, branch: 'main' });
+    jest.mocked(TemplateRepoPreferenceService.clear).mockResolvedValue(undefined);
+    jest.mocked(LastUsedRepoService.get).mockResolvedValue(repoPath);
+    jest.mocked(LastUsedRepoService.clear).mockResolvedValue(undefined);
+    jest.mocked(SyncEngineService.clear).mockResolvedValue(undefined);
+    jest.mocked(SyncEngineService.getMode).mockResolvedValue('api');
+    jest.mocked(NoteSyncQueueService.purgeForRepo).mockResolvedValue(undefined);
+    jest.mocked(useAIStore.getState).mockReturnValue({
+      chatRepoOwner: 'octo',
+      chatRepoName: 'notes',
+      chatRepoBranch: 'main',
+      chatRepoAccountId: null,
+      setChatRepo: jest.fn(),
+    } as ReturnType<typeof useAIStore.getState>);
+
+    await useRepoStore.getState().removeRepository(repoPath);
+
+    expect(TemplateRepoPreferenceService.clear).toHaveBeenCalled();
+    expect(LastUsedRepoService.clear).toHaveBeenCalled();
+    expect(SyncEngineService.clear).toHaveBeenCalledWith(repoPath);
+    expect(NoteSyncQueueService.purgeForRepo).toHaveBeenCalledWith(repoPath);
+  });
+
+  it('does not clear template/last-used when they point at a different repo', async () => {
+    jest.mocked(StorageService.removeRepository).mockResolvedValue(undefined);
+    jest.mocked(StorageService.purgeRepoData).mockResolvedValue(undefined);
+    jest.mocked(TemplateRepoPreferenceService.get).mockResolvedValue({ repoPath: 'other/repo', branch: 'main' });
+    jest.mocked(LastUsedRepoService.get).mockResolvedValue('other/repo');
+    jest.mocked(SyncEngineService.clear).mockResolvedValue(undefined);
+    jest.mocked(SyncEngineService.getMode).mockResolvedValue('api');
+    jest.mocked(NoteSyncQueueService.purgeForRepo).mockResolvedValue(undefined);
+
+    await useRepoStore.getState().removeRepository(repoPath);
+
+    expect(TemplateRepoPreferenceService.clear).not.toHaveBeenCalled();
+    expect(LastUsedRepoService.clear).not.toHaveBeenCalled();
+    expect(NoteSyncQueueService.purgeForRepo).toHaveBeenCalledWith(repoPath);
+  });
+
+  it('removes clone from disk when sync mode is clone', async () => {
+    jest.mocked(StorageService.removeRepository).mockResolvedValue(undefined);
+    jest.mocked(StorageService.purgeRepoData).mockResolvedValue(undefined);
+    jest.mocked(TemplateRepoPreferenceService.get).mockResolvedValue(null);
+    jest.mocked(LastUsedRepoService.get).mockResolvedValue(null);
+    jest.mocked(SyncEngineService.clear).mockResolvedValue(undefined);
+    jest.mocked(SyncEngineService.getMode).mockResolvedValue('clone');
+    jest.mocked(GitFsService.removeRepo).mockResolvedValue(undefined);
+    jest.mocked(NoteSyncQueueService.purgeForRepo).mockResolvedValue(undefined);
+
+    await useRepoStore.getState().removeRepository(repoPath);
+
+    expect(GitFsService.removeRepo).toHaveBeenCalledWith({ repoPath });
   });
 });
