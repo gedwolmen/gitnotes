@@ -11,6 +11,7 @@ import type { GitHostProvider } from '../services/git/GitHost';
 import { GitHubService } from '../services/GitHubService';
 import { AccountStorage, StoredAccount } from '../services/AccountStorage';
 import { clearActiveGitHostCache } from '../services/git/activeHost';
+import { useAIStore } from '../stores/aiStore';
 
 interface ConnectHostResult {
   ok: boolean;
@@ -150,6 +151,18 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
     })();
   }, [refreshAccounts]);
 
+  const clearChatRepoIfOrphaned = useCallback(
+    (removedAccountId: string, wasActive: boolean) => {
+      const { chatRepoAccountId } = useAIStore.getState();
+      const isBound = chatRepoAccountId === removedAccountId;
+      const wasActiveBound = chatRepoAccountId === null && wasActive;
+      if (isBound || wasActiveBound) {
+        useAIStore.getState().setChatRepo(null, null, 'main', null);
+      }
+    },
+    [],
+  );
+
   const connectHost = useCallback(
     async (input: ConnectHostInput): Promise<ConnectHostResult> => {
       const result = await AuthService.connectHost(input);
@@ -162,10 +175,16 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
 
   const disconnectHost = useCallback(
     async (hostId: string) => {
+      const summary = accountSummaries.find((s) => s.hosts.some((h) => h.id === hostId));
+      const owningAccountId = summary?.account.id ?? null;
+      const wasActive = owningAccountId !== null && activeAccountId === owningAccountId;
       await AuthService.disconnectHost(hostId);
       await refreshAccounts();
+      if (owningAccountId) {
+        clearChatRepoIfOrphaned(owningAccountId, wasActive);
+      }
     },
-    [refreshAccounts],
+    [accountSummaries, activeAccountId, refreshAccounts, clearChatRepoIfOrphaned],
   );
 
   const switchToHost = useCallback(
@@ -208,6 +227,7 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
       const wasActive = activeAccountId === accountId;
       await AuthService.removeAccount(accountId);
       await refreshAccounts();
+      clearChatRepoIfOrphaned(accountId, wasActive);
       if (wasActive) {
         const state = await AuthService.checkAuthState();
         if (state.isAuthenticated && state.token) {
@@ -221,7 +241,7 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [activeAccountId, refreshAccounts],
+    [activeAccountId, refreshAccounts, clearChatRepoIfOrphaned],
   );
 
   const setToken = useCallback(
@@ -256,6 +276,7 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
     await GitHubService.clearToken();
     setAuthState(EMPTY_AUTH);
     await refreshAccounts();
+    useAIStore.getState().setChatRepo(null, null, 'main', null);
     // Guard against unused imports.
     void AccountStorage;
   }, [activeHostId, refreshAccounts]);
