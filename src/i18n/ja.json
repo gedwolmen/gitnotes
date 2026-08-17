@@ -318,6 +318,7 @@
     "removeAccountBody": "このアカウントのトークンはこのデバイスから削除されます。このアカウントで作成したノート/ToDoはローカルに残ります。",
     "removeTokenTitle": "GitHubトークンを削除",
     "removeTokenBody": "GitHubアカウントの接続が解除されます。続行しますか？",
+    "cascadeRemoveWarning": "同期された {{count}} 個のリポジトリもこの端末から削除されます。",
     "resetOnboardingTitle": "オンボーディングをリセット",
     "resetOnboardingBody": "次回アプリ起動時にオンボーディング画面が表示されます。",
     "resetOnboardingSuccess": "オンボーディングは次回起動時に表示されます。",

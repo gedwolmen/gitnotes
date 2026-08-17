@@ -14,6 +14,8 @@ export interface GitRepository {
   commit?: string;
   /** Which host this repository lives on. Defaults to 'github' for legacy entries. */
   provider?: GitHostProvider;
+  /** Host connection (token) this repo was added under. */
+  hostId?: string;
 }
 
 export interface GitBranch {
@@ -73,6 +75,7 @@ export class GitService {
     path: string,
     name?: string,
     provider: GitHostProvider = 'github',
+    hostId?: string,
   ): Promise<GitRepository> {
     try {
       const repoName = name || path.split('/').pop() || path;
@@ -95,6 +98,7 @@ export class GitService {
         path: path,
         branch,
         provider,
+        hostId,
       };
 
       await StorageService.addRepository(repo);

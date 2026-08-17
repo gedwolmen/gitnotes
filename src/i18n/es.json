@@ -318,6 +318,7 @@
     "removeAccountBody": "El token de esta cuenta se eliminará de este dispositivo. Las notas/tareas creadas con ella permanecen en local.",
     "removeTokenTitle": "Eliminar token de GitHub",
     "removeTokenBody": "Esto desconectará tu cuenta de GitHub. ¿Continuar?",
+    "cascadeRemoveWarning": "Esto también eliminará {{count}} repositorio(s) sincronizado(s) de este dispositivo.",
     "resetOnboardingTitle": "Restablecer introducción",
     "resetOnboardingBody": "La pantalla de introducción se mostrará en el próximo inicio de la aplicación.",
     "resetOnboardingSuccess": "La introducción se mostrará en el próximo inicio.",

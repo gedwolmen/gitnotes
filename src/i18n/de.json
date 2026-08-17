@@ -318,6 +318,7 @@
     "removeAccountBody": "Das Token für dieses Konto wird von diesem Gerät gelöscht. Mit dem Konto erstellte Notizen/Aufgaben bleiben lokal erhalten.",
     "removeTokenTitle": "GitHub-Token entfernen",
     "removeTokenBody": "Dadurch wird dein GitHub-Konto getrennt. Fortfahren?",
+    "cascadeRemoveWarning": "Dadurch wird/werden auch {{count}} synchronisierte(s) Repo(s) von diesem Gerät entfernt.",
     "resetOnboardingTitle": "Onboarding zurücksetzen",
     "resetOnboardingBody": "Der Onboarding-Bildschirm wird beim nächsten Start der App angezeigt.",
     "resetOnboardingSuccess": "Das Onboarding wird beim nächsten Start angezeigt.",

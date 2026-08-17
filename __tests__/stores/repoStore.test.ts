@@ -8,6 +8,8 @@ import { NoteSyncQueueService } from '../../src/services/NoteSyncQueueService';
 import { getActiveGitHost } from '../../src/services/git/activeHost';
 import { gitHubHostService } from '../../src/services/git/gitHostFactory';
 import { checkGitHubRepoAccess } from '../../src/services/git/repoAccessPreflight';
+import type { GitHostProvider } from '../../src/services/git/GitHost';
+import type { RemovedHostRef } from '../../src/services/git/repoRemovalCascade';
 import { useAIStore } from '../../src/stores/aiStore';
 import { useRepoStore } from '../../src/stores/repoStore';
 import { beforeEach, describe, expect, it } from '@jest/globals';
@@ -95,6 +97,7 @@ describe('repoStore addRepository preflight', () => {
       baseUrl: 'https://api.github.com',
       token: 'secret-token',
       host: gitHubHostService,
+      hostId: 'host-1',
     });
     jest.mocked(checkGitHubRepoAccess).mockResolvedValue({
       kind: 'write_unverified',
@@ -118,7 +121,7 @@ describe('repoStore addRepository preflight', () => {
       'octo/notes',
       { allowUnverifiedWrite: true },
     )).resolves.toEqual(repository);
-    expect(GitService.addRepository).toHaveBeenCalledWith('octo/notes', undefined, 'github');
+    expect(GitService.addRepository).toHaveBeenCalledWith('octo/notes', undefined, 'github', 'host-1');
   });
 });
 
@@ -185,5 +188,64 @@ describe('repoStore removeRepository', () => {
     await useRepoStore.getState().removeRepository(repoPath);
 
     expect(GitFsService.removeRepo).toHaveBeenCalledWith({ repoPath });
+  });
+});
+
+describe('repoStore removeRepositoriesForHosts', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('removes only repos stamped with a removed host id and returns the count', async () => {
+    const stamped = {
+      id: 'github:1',
+      name: 'notes',
+      path: 'octo/notes',
+      branch: 'main',
+      provider: 'github' as const,
+      hostId: 'host-1',
+    };
+    const other = {
+      id: 'github:2',
+      name: 'other',
+      path: 'octo/other',
+      branch: 'main',
+      provider: 'github' as const,
+      hostId: 'host-2',
+    };
+    useRepoStore.setState({ repositories: [stamped, other] });
+
+    const removeSpy = jest
+      .spyOn(useRepoStore.getState(), 'removeRepository')
+      .mockResolvedValue(undefined);
+
+    const removedHosts: RemovedHostRef[] = [{ id: 'host-1', provider: 'github' }];
+    const counts = new Map<GitHostProvider, number>([['github', 1]]);
+
+    const removed = await useRepoStore.getState().removeRepositoriesForHosts(removedHosts, counts);
+
+    expect(removed).toBe(1);
+    expect(removeSpy).toHaveBeenCalledTimes(1);
+    expect(removeSpy).toHaveBeenCalledWith('octo/notes', 'github');
+  });
+
+  it('removes nothing when no repo matches the removed host', async () => {
+    useRepoStore.setState({
+      repositories: [
+        { id: 'github:2', name: 'other', path: 'octo/other', provider: 'github' as const, hostId: 'host-2' },
+      ],
+    });
+
+    const removeSpy = jest
+      .spyOn(useRepoStore.getState(), 'removeRepository')
+      .mockResolvedValue(undefined);
+
+    const removedHosts: RemovedHostRef[] = [{ id: 'host-1', provider: 'github' }];
+    const counts = new Map<GitHostProvider, number>([['github', 1]]);
+
+    const removed = await useRepoStore.getState().removeRepositoriesForHosts(removedHosts, counts);
+
+    expect(removed).toBe(0);
+    expect(removeSpy).not.toHaveBeenCalled();
   });
 });

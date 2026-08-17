@@ -77,19 +77,24 @@ jest.mock('../../src/contexts/ThemeContext', () => ({
   }),
 }));
 
+const mockAccountSummaries: any[] = [];
+const mockDisconnectHost = jest.fn(async () => undefined);
+const mockRemoveAccount = jest.fn(async () => undefined);
+const mockClearToken = jest.fn(async () => undefined);
+
 jest.mock('../../src/contexts/AuthContext', () => {
   const fn = () => ({
     authState: { isAuthenticated: false, token: null },
     accounts: [],
     activeAccountId: null,
-    accountSummaries: [],
+    accountSummaries: mockAccountSummaries,
     setToken: jest.fn(async () => true),
-    clearToken: jest.fn(async () => undefined),
+    clearToken: mockClearToken,
     addAccount: jest.fn(async () => null),
-    removeAccount: jest.fn(async () => undefined),
+    removeAccount: mockRemoveAccount,
     switchAccount: jest.fn(async () => undefined),
     switchToHost: jest.fn(async () => true),
-    disconnectHost: jest.fn(async () => undefined),
+    disconnectHost: mockDisconnectHost,
     connectHost: jest.fn(async () => ({ ok: true })),
   });
   return {
@@ -249,6 +254,15 @@ jest.mock('../../src/stores/aiStore', () => ({
   useAIStore: (selector: any) => {
     if (selector) return selector(mockAIStore);
     return mockAIStore;
+  },
+}));
+
+const mockRemoveRepositoriesForHosts = jest.fn(async () => 0);
+jest.mock('../../src/stores/repoStore', () => ({
+  useRepoStore: {
+    getState: () => ({
+      removeRepositoriesForHosts: mockRemoveRepositoriesForHosts,
+    }),
   },
 }));
 
@@ -413,6 +427,11 @@ describe('SettingsScreen', () => {
     mockAddRepository.mockReset();
     alertSpy.mockClear();
     stableRepositories.length = 0;
+    mockAccountSummaries.length = 0;
+    mockDisconnectHost.mockReset();
+    mockRemoveAccount.mockReset();
+    mockClearToken.mockReset();
+    mockRemoveRepositoriesForHosts.mockReset();
     jest.useRealTimers();
     (GitHubService.isAuthenticated as jest.Mock).mockReset().mockReturnValue(false);
     (GitFsService.clone as jest.Mock).mockReset().mockResolvedValue(undefined);
@@ -611,5 +630,42 @@ describe('SettingsScreen', () => {
     expect(getByTestId('modal')).toBeTruthy();
     expect(getByText('Clone Failed')).toBeTruthy();
     expect(getByText(/Packfile trailer mismatch/)).toBeTruthy();
+  });
+
+  it('warns about cascaded repos and removes them when a host is disconnected', async () => {
+    mockAccountSummaries.push({
+      account: { id: 'acc-1', login: 'octocat', name: 'Octo Cat', avatarUrl: '' },
+      hosts: [
+        { id: 'host-1', provider: 'github', hostLogin: 'octocat', instanceBaseUrl: null },
+      ],
+      activeHostId: 'host-1',
+    });
+    stableRepositories.push({
+      id: 'github:1',
+      name: 'notes',
+      path: 'octo/notes',
+      provider: 'github',
+      hostId: 'host-1',
+    });
+
+    const { getByTestId } = render(<SettingsScreen />);
+    fireEvent.press(getByTestId('settings.button.disconnect-host.host-1'));
+
+    await waitFor(() => expect(alertSpy).toHaveBeenCalled());
+    const lastCall = alertSpy.mock.calls[alertSpy.mock.calls.length - 1];
+    const body = lastCall?.[1] as string;
+    expect(body).toContain('This will also remove 1 synced repo(s) from this device.');
+
+    const buttons = lastCall?.[2] as AlertButton[] | undefined;
+    const disconnectButton = buttons?.find((b) => b.text === 'Disconnect');
+    await act(async () => {
+      await disconnectButton?.onPress?.();
+    });
+
+    expect(mockDisconnectHost).toHaveBeenCalledWith('host-1');
+    expect(mockRemoveRepositoriesForHosts).toHaveBeenCalledTimes(1);
+    const [removedHosts, counts] = mockRemoveRepositoriesForHosts.mock.calls[0];
+    expect(removedHosts).toEqual([{ id: 'host-1', provider: 'github' }]);
+    expect(counts.get('github')).toBe(1);
   });
 });

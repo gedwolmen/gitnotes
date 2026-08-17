@@ -318,6 +318,7 @@
     "removeAccountBody": "Le jeton de ce compte sera supprimé de cet appareil. Les notes/tâches créées avec ce compte restent en local.",
     "removeTokenTitle": "Supprimer le jeton GitHub",
     "removeTokenBody": "Cela déconnectera votre compte GitHub. Continuer ?",
+    "cascadeRemoveWarning": "Cela supprimera également {{count}} dépôt(s) synchronisé(s) de cet appareil.",
     "resetOnboardingTitle": "Réinitialiser l'intégration",
     "resetOnboardingBody": "L'écran d'intégration s'affichera au prochain lancement de l'application.",
     "resetOnboardingSuccess": "L'intégration s'affichera au prochain lancement.",

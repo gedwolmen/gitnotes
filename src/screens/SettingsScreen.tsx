@@ -40,6 +40,8 @@ import { SettingsContent } from '../components/settings/SettingsContent';
 import { SettingsModals } from '../components/settings/SettingsModals';
 import { CloneProgressModal, type CloneProgress } from '../components/settings/CloneProgressModal';
 import type { GitRepository } from '../services/GitService';
+import { reposAffectedByRemovedHosts, buildProviderAccountCount, type RemovedHostRef } from '../services/git/repoRemovalCascade';
+import { useRepoStore } from '../stores/repoStore';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { RepoAccessPreflightError } from '../services/git/repoAccessPreflight';
@@ -618,7 +620,16 @@ export default function SettingsScreen() {
 
   const handleRemoveAccount = useCallback((id: string, login: string) => {
     HapticService.warning();
-    Alert.alert(t('settings.removeAccountTitle', { login }), t('settings.removeAccountBody'), [
+    const summary = accountSummaries.find((s) => s.account.id === id);
+    const removedHosts: RemovedHostRef[] = summary
+      ? summary.hosts.map((h) => ({ id: h.id, provider: h.provider }))
+      : [];
+    const providerAccountCount = buildProviderAccountCount(accountSummaries);
+    const affectedCount = reposAffectedByRemovedHosts(repositories, removedHosts, providerAccountCount).length;
+    const body = affectedCount > 0
+      ? `${t('settings.removeAccountBody')}\n\n${t('settings.cascadeRemoveWarning', { count: affectedCount })}`
+      : t('settings.removeAccountBody');
+    Alert.alert(t('settings.removeAccountTitle', { login }), body, [
       { text: t('common.cancel'), style: 'cancel' },
       {
         text: t('common.remove'),
@@ -626,6 +637,7 @@ export default function SettingsScreen() {
         onPress: async () => {
           try {
             await removeAccount(id);
+            await useRepoStore.getState().removeRepositoriesForHosts(removedHosts, providerAccountCount);
             HapticService.success();
           } catch (err) {
             HapticService.error();
@@ -637,11 +649,21 @@ export default function SettingsScreen() {
         },
       },
     ]);
-  }, [removeAccount, t]);
+  }, [accountSummaries, repositories, removeAccount, t]);
 
   const handleRemoveToken = useCallback(() => {
     HapticService.warning();
-    Alert.alert(t('settings.removeTokenTitle'), t('settings.removeTokenBody'), [
+    const summary = accountSummaries[0];
+    const host = summary
+      ? summary.hosts.find((h) => h.id === summary.activeHostId) ?? summary.hosts[0]
+      : undefined;
+    const removedHosts: RemovedHostRef[] = host ? [{ id: host.id, provider: host.provider }] : [];
+    const providerAccountCount = buildProviderAccountCount(accountSummaries);
+    const affectedCount = reposAffectedByRemovedHosts(repositories, removedHosts, providerAccountCount).length;
+    const body = affectedCount > 0
+      ? `${t('settings.removeTokenBody')}\n\n${t('settings.cascadeRemoveWarning', { count: affectedCount })}`
+      : t('settings.removeTokenBody');
+    Alert.alert(t('settings.removeTokenTitle'), body, [
       { text: t('common.cancel'), style: 'cancel' },
       {
         text: t('common.remove'),
@@ -649,6 +671,7 @@ export default function SettingsScreen() {
         onPress: async () => {
           try {
             await clearToken();
+            await useRepoStore.getState().removeRepositoriesForHosts(removedHosts, providerAccountCount);
             HapticService.success();
           } catch (err) {
             HapticService.error();
@@ -660,7 +683,7 @@ export default function SettingsScreen() {
         },
       },
     ]);
-  }, [clearToken, t]);
+  }, [accountSummaries, repositories, clearToken, t]);
 
   // Native-only "Connected hosts" UI: a single Alert lists each connected
   // host as a button; tapping one shows the disconnect confirmation Alert.
@@ -672,20 +695,29 @@ export default function SettingsScreen() {
     // Find the host across accounts so the label in the confirmation Alert
     // matches what the user just tapped on.
     let label = hostId;
+    let hostProvider: GitHostProvider = 'github';
     for (const summary of accountSummaries) {
       const host = summary.hosts.find((h) => h.id === hostId);
       if (host) {
         label = host.instanceBaseUrl
           ? `${GIT_HOST_LABELS[host.provider]} · ${host.instanceBaseUrl} (${host.hostLogin})`
           : `${GIT_HOST_LABELS[host.provider]} · ${host.hostLogin}`;
+        hostProvider = host.provider;
         break;
       }
     }
 
+    const removedHosts: RemovedHostRef[] = [{ id: hostId, provider: hostProvider }];
+    const providerAccountCount = buildProviderAccountCount(accountSummaries);
+    const affectedCount = reposAffectedByRemovedHosts(repositories, removedHosts, providerAccountCount).length;
+    const body = affectedCount > 0
+      ? `${t('accounts.disconnectBody', { label })}\n\n${t('settings.cascadeRemoveWarning', { count: affectedCount })}`
+      : t('accounts.disconnectBody', { label });
+
     HapticService.warning();
     Alert.alert(
       t('accounts.disconnectTitle'),
-      t('accounts.disconnectBody', { label }),
+      body,
       [
         { text: t('common.cancel'), style: 'cancel' as const },
         {
@@ -694,6 +726,7 @@ export default function SettingsScreen() {
           onPress: async () => {
             try {
               await disconnectHost(hostId);
+              await useRepoStore.getState().removeRepositoriesForHosts(removedHosts, providerAccountCount);
               HapticService.success();
             } catch (err) {
               HapticService.error();
@@ -706,7 +739,7 @@ export default function SettingsScreen() {
         },
       ],
     );
-  }, [accountSummaries, disconnectHost, t]);
+  }, [accountSummaries, repositories, disconnectHost, t]);
 
   const handleResetOnboarding = useCallback(() => {
     HapticService.warning();

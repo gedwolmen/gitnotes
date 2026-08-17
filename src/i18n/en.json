@@ -407,6 +407,7 @@
     "removeAccountBody": "The token for this account will be deleted from this device. Notes/todos created under it stay locally.",
     "removeTokenTitle": "Remove GitHub Token",
     "removeTokenBody": "This will disconnect your GitHub account. Continue?",
+    "cascadeRemoveWarning": "This will also remove {{count}} synced repo(s) from this device.",
     "resetOnboardingTitle": "Reset Onboarding",
     "resetOnboardingBody": "This will show the onboarding screen on next app launch.",
     "resetOnboardingSuccess": "Onboarding will show on next launch.",
