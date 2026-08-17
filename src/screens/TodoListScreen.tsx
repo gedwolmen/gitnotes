@@ -1,8 +1,7 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { View, Alert, Platform, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Alert, Platform, RefreshControl, ActivityIndicator, LayoutChangeEvent } from 'react-native';
 import { FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -113,8 +112,10 @@ export default function TodoListScreen() {
   const isRefreshingRef = useRef(false);
   const [gitOperationActive, setGitOperationActive] = useState(false);
 
-  const [bannerRegionHeight, setBannerRegionHeight] = useState(headerHeight);
-  const [toolsHeight, setToolsHeight] = useState(0);
+  // Unified height of the single blurred header region (title + banners + tools).
+  // Initial estimate is the bare header height so the list is never under the header
+  // before onLayout fires with the real measured value.
+  const [headerBlurHeight, setHeaderBlurHeight] = useState(headerHeight);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [todoText, setTodoText] = useState('');
@@ -642,16 +643,6 @@ export default function TodoListScreen() {
 
   return (
     <SafeAreaView edges={[]} className="flex-1" style={{ backgroundColor: colors.background }}>
-      <View
-        testID="todos-list.banner-region"
-        pointerEvents="box-none"
-        style={{ position: 'absolute', left: 0, right: 0, top: 0, paddingTop: headerHeight }}
-        onLayout={(event) => setBannerRegionHeight(event.nativeEvent.layout.height)}
-      >
-        <OfflineBanner />
-        <ConflictBanner />
-      </View>
-
       <EntityFilterModal
         visible={showFilterModal}
         onClose={() => setShowFilterModal(false)}
@@ -669,7 +660,7 @@ export default function TodoListScreen() {
         removeClippedSubviews={false}
         contentContainerStyle={{
           padding: 16,
-          paddingTop: bannerRegionHeight + toolsHeight + 8,
+          paddingTop: headerBlurHeight + 8,
           paddingBottom: tabBarHeight + 16,
           flexGrow: 1,
         }}
@@ -689,27 +680,6 @@ export default function TodoListScreen() {
           )
         }
       />
-
-      <BlurView
-        testID="todos-list.header-blur"
-        pointerEvents="box-none"
-        intensity={60}
-        tint={isDark ? 'dark' : 'light'}
-        className="absolute left-0 right-0 z-10"
-        style={{ top: bannerRegionHeight }}
-        onLayout={(event) => setToolsHeight(event.nativeEvent.layout.height)}
-      >
-        <TodosListHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} sortMode={sortMode} onSortChange={setSortMode} />
-
-        <FilterBar
-          filters={activeFilterChips}
-          onRemoveFilter={handleRemoveTodoFilterChip}
-          onClearAll={() => {
-            filter.clearAll();
-            setFilterCompleted(false);
-          }}
-        />
-      </BlurView>
 
       <TodoEditorModal
         visible={showAddModal || editingTodo !== null}
@@ -764,6 +734,25 @@ export default function TodoListScreen() {
 
       <ScreenHeader
         title={t('todos.title')}
+        testID="todos-list.header-blur"
+        onLayout={(event: LayoutChangeEvent) => setHeaderBlurHeight(event.nativeEvent.layout.height)}
+        footer={
+          <>
+            <OfflineBanner />
+            <ConflictBanner />
+
+            <TodosListHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} sortMode={sortMode} onSortChange={setSortMode} />
+
+            <FilterBar
+              filters={activeFilterChips}
+              onRemoveFilter={handleRemoveTodoFilterChip}
+              onClearAll={() => {
+                filter.clearAll();
+                setFilterCompleted(false);
+              }}
+            />
+          </>
+        }
         actions={
           <>
             <IconButton

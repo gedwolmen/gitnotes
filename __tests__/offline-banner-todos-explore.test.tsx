@@ -74,9 +74,14 @@ jest.mock('../src/components/SearchBar', () => {
 jest.mock('../src/components/SortPicker', () => () => null);
 
 jest.mock('../src/components/ui', () => {
-  const { Text, TouchableOpacity } = require('react-native');
+  const { Text, TouchableOpacity, View } = require('react-native');
   return {
-    ScreenHeader: ({ title }: { title: string }) => <Text>{title}</Text>,
+    ScreenHeader: ({ title, footer }: { title: string; footer?: React.ReactNode }) => (
+      <View>
+        <Text>{title}</Text>
+        {footer}
+      </View>
+    ),
     IconButton: ({ children, onPress }: any) => (
       <TouchableOpacity onPress={onPress}>{children}</TouchableOpacity>
     ),

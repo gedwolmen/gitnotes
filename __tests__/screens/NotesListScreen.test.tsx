@@ -155,10 +155,22 @@ jest.mock('../../src/components/SearchBar', () => {
   }) => <TextInput testID="search-bar" value={value} onChangeText={onChangeText} />;
 });
 
+jest.mock('../../src/components/ui/OfflineBanner', () => ({
+  OfflineBanner: () => null,
+}));
+jest.mock('../../src/components/ui/ConflictBanner', () => ({
+  ConflictBanner: () => null,
+}));
+
 jest.mock('../../src/components/ui', () => ({
-  ScreenHeader: ({ title }: { title: string }) => {
-    const { Text } = require('react-native');
-    return <Text testID="screen-header">{title}</Text>;
+  ScreenHeader: ({ title, footer }: { title: string; footer?: React.ReactNode }) => {
+    const { Text, View } = require('react-native');
+    return (
+      <View>
+        <Text testID="screen-header">{title}</Text>
+        {footer}
+      </View>
+    );
   },
   useScreenHeaderHeight: () => 60,
   SCREEN_HEADER_BASE_HEIGHT: 60,

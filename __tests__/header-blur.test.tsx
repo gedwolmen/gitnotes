@@ -33,8 +33,16 @@ const mockColorProxy = new Proxy(
   },
 );
 
+const mockTokens = {
+  colors: mockColorProxy,
+  radii: { sm: 12, md: 18, lg: 24, pill: 999 },
+  spacing: { 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32 },
+  type: { xs: 12, sm: 14, md: 16, lg: 18, xl: 22, '2xl': 28 },
+};
+
 jest.mock('../src/contexts/ThemeContext', () => ({
   useTheme: () => ({ colors: mockColorProxy, isDark: false }),
+  useTokens: () => mockTokens,
 }));
 
 jest.mock('@react-navigation/native', () => ({
@@ -243,22 +251,26 @@ jest.mock('../src/services/LastSelectionPreferenceService', () => ({
   LastSelectionPreferenceService: { get: jest.fn(async () => ({ repo: undefined, branch: undefined })) },
 }));
 
+// Mock expo-blur so BlurView renders as a plain View that forwards testID,
+// onLayout, and children. This lets the single-blur assertion be real.
+jest.mock('expo-blur', () => {
+  const { View } = require('react-native');
+  return {
+    BlurView: (p: { testID?: string; onLayout?: (e: unknown) => void; children?: React.ReactNode }) =>
+      <View testID={p.testID} onLayout={p.onLayout as never}>{p.children}</View>,
+  };
+});
+
+// Use the REAL ScreenHeader (via jest.requireActual) so the single-blur
+// assertion exercises the actual component. Other UI helpers stay mocked.
 jest.mock('../src/components/ui', () => {
   const { Pressable: RNPressable, Text: RNText, View: RNView } = require('react-native');
+  const { ScreenHeader } = jest.requireActual('../src/components/ui/ScreenHeader');
   return {
-    ScreenHeader: ({ title, onBack }: { title: string; onBack?: () => void }) => (
-      <RNView testID="screen-header">
-        {onBack ? (
-          <RNPressable testID="explore.button.back" onPress={onBack}>
-            <RNText>back</RNText>
-          </RNPressable>
-        ) : null}
-        <RNText>{title}</RNText>
-      </RNView>
-    ),
+    ScreenHeader,
     Modal: ({ visible, children }: { visible: boolean; children: React.ReactNode }) =>
       visible ? <RNView testID="branch-picker-modal">{children}</RNView> : null,
-    IconButton: ({ children, onPress, testID }: any) => (
+    IconButton: ({ children, onPress, testID }: { children: React.ReactNode; onPress?: () => void; testID?: string }) => (
       <RNPressable onPress={onPress} testID={testID}>
         {children}
       </RNPressable>
@@ -319,7 +331,7 @@ jest.mock('../src/components/todos/TodoEditorModal', () => ({ TodoEditorModal: (
 
 jest.mock('../src/components/list/SwipeableListItem', () => {
   const { View: RNView } = require('react-native');
-  return { SwipeableListItem: ({ children }: any) => <RNView>{children}</RNView> };
+  return { SwipeableListItem: ({ children }: { children?: React.ReactNode }) => <RNView>{children}</RNView> };
 });
 
 jest.mock('../src/components/list/BulkActionBar', () => ({ BulkActionBar: () => null }));
@@ -333,38 +345,51 @@ import NotesListScreen from '../src/screens/NotesListScreen';
 import TodoListScreen from '../src/screens/TodoListScreen';
 import ExploreScreen from '../src/screens/ExploreScreen';
 
-function hasAncestorWithTestID(element: { parent: any }, testID: string): boolean {
-  let node = element.parent;
+function hasAncestorWithTestID(element: { parent: unknown }, testID: string): boolean {
+  let node: unknown = element.parent;
   while (node) {
-    if (node.props?.testID === testID) return true;
-    node = node.parent;
+    if (typeof node === 'object' && node !== null && 'props' in node) {
+      const props = (node as { props?: { testID?: string } }).props;
+      if (props?.testID === testID) return true;
+    }
+    node = (node as { parent?: unknown })?.parent;
   }
   return false;
 }
 
 describe('blurred title + tools header treatment', () => {
-  it('renders the NotesList search bar inside the blurred tools header and pads the list below it', () => {
+  it('renders the NotesList title AND search bar inside a SINGLE blurred header and pads the list below it', () => {
     const screen = render(<NotesListScreen />);
+
+    // The title text and the search bar must both be inside the same blur region.
+    const title = screen.getByText('Notes');
+    expect(hasAncestorWithTestID(title, 'notes-list.header-blur')).toBe(true);
 
     const searchBar = screen.getByTestId('notes-list.search-bar.search');
     expect(hasAncestorWithTestID(searchBar, 'notes-list.header-blur')).toBe(true);
 
+    // Initial padding uses the bare header height estimate (60) so the list is
+    // never under the header before onLayout fires.
     const list = screen.UNSAFE_getByType(FlatList);
     const initialPaddingTop = (list.props.contentContainerStyle as { paddingTop: number }).paddingTop;
     expect(initialPaddingTop).toBe(60 + 4);
 
+    // After the unified header measures itself, the padding tracks that single height.
     fireEvent(screen.getByTestId('notes-list.header-blur'), 'layout', {
       nativeEvent: { layout: { height: 130 } },
     });
 
     const paddedList = screen.UNSAFE_getByType(FlatList);
     expect((paddedList.props.contentContainerStyle as { paddingTop: number }).paddingTop).toBe(
-      60 + 130 + 4,
+      130 + 4,
     );
   });
 
-  it('renders the TodoList search bar inside the blurred tools header', () => {
+  it('renders the TodoList title AND search bar inside a SINGLE blurred header', () => {
     const screen = render(<TodoListScreen />);
+
+    const title = screen.getByText('Todos');
+    expect(hasAncestorWithTestID(title, 'todos-list.header-blur')).toBe(true);
 
     const searchBar = screen.getByTestId('todos-list-header.search-bar.search');
     expect(hasAncestorWithTestID(searchBar, 'todos-list.header-blur')).toBe(true);
@@ -385,9 +410,9 @@ describe('blurred title + tools header treatment', () => {
 
     expect(screen.getByText('owner/repo')).toBeTruthy();
 
-    const back = screen.getByTestId('explore.button.back');
-    expect(hasAncestorWithTestID(back, 'screen-header')).toBe(true);
-
+    // The real ScreenHeader renders the back button as an IconButton with
+    // accessibilityLabel="Back" (no hardcoded testID).
+    const back = screen.getByLabelText('Back');
     fireEvent.press(back);
     expect(screen.getByTestId('explore.button.open-file-tree')).toBeTruthy();
   });

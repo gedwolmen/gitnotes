@@ -156,11 +156,12 @@ jest.mock('../../src/stores/githubActivityStore', () => ({
 }));
 
 jest.mock('../../src/components/ui', () => ({
-  ScreenHeader: ({ title, actions }: { title: string; actions?: React.ReactNode }) => {
+  ScreenHeader: ({ title, footer, actions }: { title: string; footer?: React.ReactNode; actions?: React.ReactNode }) => {
     const { Text, View } = require('react-native');
     return (
       <View>
         <Text testID="screen-header">{title}</Text>
+        {footer}
         {actions}
       </View>
     );
