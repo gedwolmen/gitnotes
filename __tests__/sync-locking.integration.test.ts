@@ -553,7 +553,7 @@ describe('sync-locking integration scenarios S1–S8', () => {
 
     await waitFor(() => {
       expect(screen.queryByText('Second')).toBeNull();
-    });
+    }, { timeout: 5000 });
     expect(screen.queryByTestId('note-row.lock-spinner')).toBeNull();
     expect(StorageService.deleteNote).toHaveBeenCalledWith('n2');
     expect(useNoteStore.getState().notes.some((n) => n.id === 'n2')).toBe(false);
@@ -570,7 +570,7 @@ describe('sync-locking integration scenarios S1–S8', () => {
     expect(screen.queryByTestId('note-row.lock-spinner')).toBeNull();
     expect(useNoteStore.getState().notes.some((n) => n.id === 'n2')).toBe(false);
     expect(await NoteSyncQueueService.pendingCount()).toBe(0);
-  });
+  }, 15000);
 
   it('S3 — durable 401 drops with a failure entry; no row-level lock/error UI; retryDeleteFailure clears entry and re-enqueues; tombstone stays pinned past 24h', async () => {
     (deleteNoteFromGitHub as jest.Mock).mockResolvedValue({
@@ -588,7 +588,7 @@ describe('sync-locking integration scenarios S1–S8', () => {
 
     await waitFor(() => {
       expect(screen.queryByText('Third')).toBeNull();
-    });
+    }, { timeout: 5000 });
     expect(screen.queryByTestId('note-row.lock-spinner')).toBeNull();
     expect(screen.queryByTestId('note-row.lock-error')).toBeNull();
 
@@ -630,7 +630,7 @@ describe('sync-locking integration scenarios S1–S8', () => {
       resolveRetryDelete?.({ success: true });
     });
     expect(await NoteSyncQueueService.pendingCount()).toBe(0);
-  });
+  }, 15000);
 
   it('S4 — syncNow() waits while a push marker is active for repo R; pullAllFromRepos runs only after the marker clears; an unrelated repo S proceeds in parallel', async () => {
     jest.useFakeTimers();

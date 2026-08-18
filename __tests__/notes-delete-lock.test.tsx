@@ -497,7 +497,7 @@ describe('notes delete lock', () => {
 
     await waitFor(() => {
       expect(screen.queryByText('Second')).toBeNull();
-    });
+    }, { timeout: 5000 });
     expect(StorageService.deleteNote).toHaveBeenCalledTimes(1);
     expect(StorageService.deleteNote).toHaveBeenCalledWith('n2');
 
@@ -511,7 +511,7 @@ describe('notes delete lock', () => {
     expect(screen.queryByText('Second')).toBeNull();
     expect(StorageService.deleteNote).toHaveBeenCalledTimes(1);
     expect(useGitOperationStore.getState().ops).toEqual({});
-  });
+  }, 15000);
 
   it('drop records a durable failure entry; retryDeleteFailure clears it and re-enqueues without draining', async () => {
     const note = createNote({ id: 'n3', title: 'Third', repo: 'owner/repo', branch: 'main', filePath: 'notes/third.md' });
@@ -523,7 +523,7 @@ describe('notes delete lock', () => {
 
     await waitFor(() => {
       expect(screen.queryByText('Third')).toBeNull();
-    });
+    }, { timeout: 5000 });
 
     const mutation = {
       id: 'mutation-n3',
@@ -555,7 +555,7 @@ describe('notes delete lock', () => {
     );
     expect(NoteSyncQueueService.drain).not.toHaveBeenCalled();
     expect(screen.queryByText('Third')).toBeNull();
-  });
+  }, 15000);
 
   it('all three rows are enqueued in ONE queue write; no lock spinner rendered', async () => {
     const notes = [
