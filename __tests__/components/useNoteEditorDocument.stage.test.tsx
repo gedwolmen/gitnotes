@@ -162,7 +162,7 @@ describe('useNoteEditorDocument stage-push rework', () => {
     alertSpy.mockRestore();
   });
 
-  it('a stage returning success:false shows the failure alert and does not enqueue', async () => {
+  it('a stage returning success:false enqueues the locally saved note (issue #899)', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     (StagingService.stageUpsert as jest.Mock).mockResolvedValue({
@@ -192,17 +192,17 @@ describe('useNoteEditorDocument stage-push rework', () => {
 
     expect(StagingService.stageUpsert).toHaveBeenCalledTimes(1);
     expect(syncNoteToGitHub).not.toHaveBeenCalled();
-    // Staging owns the enqueue; a non-throw failure means nothing was staged, so
-    // surfacing it as "Save Failed" must not trigger a second enqueue.
-    expect(NoteSyncQueueService.enqueueNoteUpsert).not.toHaveBeenCalled();
-    expect(alertSpy).toHaveBeenCalledWith(
+    // The note was saved locally; a returned failure must never orphan it —
+    // fall back to the durable sync queue so it still reaches GitHub.
+    expect(NoteSyncQueueService.enqueueNoteUpsert).toHaveBeenCalledTimes(1);
+    expect(alertSpy).toHaveBeenCalledWith(SAVED_LOCALLY_TITLE, SAVED_LOCALLY_BODY, [
+      { text: 'OK' },
+    ]);
+    expect(alertSpy).not.toHaveBeenCalledWith(
       'Save Failed',
       'Your note was saved locally but could not be staged for sync. Please try again.',
       [{ text: 'OK' }],
     );
-    expect(alertSpy).not.toHaveBeenCalledWith(SAVED_LOCALLY_TITLE, SAVED_LOCALLY_BODY, [
-      { text: 'OK' },
-    ]);
     expect(warnSpy).toHaveBeenCalled();
     alertSpy.mockRestore();
     warnSpy.mockRestore();
