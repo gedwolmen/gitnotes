@@ -109,7 +109,9 @@ export async function drainPushQueue(): Promise<void> {
       const releaseCycle = await GitSyncGate.acquireCycle();
       githubActivity.begin('Pushing changes');
       try {
-        const result = await StagingService.pushStaged(repoPath, branch);
+        const result = await StagingService.pushStaged(repoPath, branch, (fraction) => {
+          useStageStore.getState().setPushProgress(fraction);
+        });
         if (!result.success) {
           notifyPushFailure(key, result.error ?? 'Staged push failed');
         }
@@ -124,6 +126,7 @@ export async function drainPushQueue(): Promise<void> {
     }
 
     if (useStageStore.getState().dequeueNext() === null) {
+      useStageStore.getState().setPushProgress(null);
       if (useStageStore.getState().globalPushing) {
         useStageStore.getState().setGlobalPushing(false);
       }

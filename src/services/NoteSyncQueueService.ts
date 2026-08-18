@@ -432,7 +432,9 @@ class NoteSyncQueueServiceClass {
     await this.enqueueNoteDeletes([params]);
   }
 
-  async drain(): Promise<{ succeeded: number; failed: number; remaining: number }> {
+  async drain(
+    onProgress?: (fraction: number | null) => void,
+  ): Promise<{ succeeded: number; failed: number; remaining: number }> {
     if (this.isDraining) {
       const items = await this.getAll();
       return { succeeded: 0, failed: 0, remaining: items.length };
@@ -472,8 +474,18 @@ class NoteSyncQueueServiceClass {
       // independent of each other. Within a single group the processing
       // stays serial so write ordering against the same repo is
       // preserved (issue #565 phase B.3).
+      const totalDue = due.length;
+      let completed = 0;
       const perGroupOutcomes = await Promise.all(
-        Array.from(groups.entries()).map(([key, items]) => this.drainGroup(key, items, now)),
+        Array.from(groups.entries()).map(([key, items]) =>
+          this.drainGroup(key, items, now).then((outcome) => {
+            completed += items.length;
+            if (onProgress) {
+              onProgress(totalDue > 0 ? completed / totalDue : null);
+            }
+            return outcome;
+          }),
+        ),
       );
 
       const updatedById = new Map<string, QueuedMutation>();
@@ -501,6 +513,7 @@ class NoteSyncQueueServiceClass {
       }
 
       await this.saveAll(next);
+      if (onProgress) onProgress(totalDue > 0 ? 1 : null);
       return { succeeded, failed, remaining: next.length };
     } finally {
       this.isDraining = false;

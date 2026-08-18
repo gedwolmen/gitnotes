@@ -44,6 +44,7 @@ describe('stageStore', () => {
       globalPushing: false,
       pushQueue: [],
       pendingCount: 0,
+      pushProgress: null,
     });
     (StorageService.getSavedRepositories as jest.Mock).mockImplementation(async () => [
       { path: REPO_A },
@@ -158,6 +159,16 @@ describe('stageStore', () => {
     expect(useStageStore.getState().staged).toHaveLength(1);
   });
 
+  it('setPushProgress sets and resets pushProgress', () => {
+    expect(useStageStore.getState().pushProgress).toBeNull();
+    useStageStore.getState().setPushProgress(0.5);
+    expect(useStageStore.getState().pushProgress).toBe(0.5);
+    useStageStore.getState().setPushProgress(1);
+    expect(useStageStore.getState().pushProgress).toBe(1);
+    useStageStore.getState().setPushProgress(null);
+    expect(useStageStore.getState().pushProgress).toBeNull();
+  });
+
   it('filters staged items whose repo was removed from saved repositories', async () => {
     (StorageService.getSavedRepositories as jest.Mock).mockImplementation(async () => [
       { path: REPO_A },
@@ -175,5 +186,18 @@ describe('stageStore', () => {
     expect(state.pendingCount).toBe(1);
     expect(warnSpy).toHaveBeenCalled();
     warnSpy.mockRestore();
+  });
+
+  it('setPushProgress updates pushProgress state', () => {
+    expect(useStageStore.getState().pushProgress).toBeNull();
+
+    useStageStore.getState().setPushProgress(0.5);
+    expect(useStageStore.getState().pushProgress).toBe(0.5);
+
+    useStageStore.getState().setPushProgress(1);
+    expect(useStageStore.getState().pushProgress).toBe(1);
+
+    useStageStore.getState().setPushProgress(null);
+    expect(useStageStore.getState().pushProgress).toBeNull();
   });
 });

@@ -84,6 +84,7 @@ describe('StagePushScheduler', () => {
       globalPushing: false,
       pushQueue: [],
       pendingCount: 0,
+      pushProgress: null,
     });
     // No-op the store actions startScheduler() triggers so the real async
     // loadStaged cannot clobber fixture state mid-test.
@@ -119,7 +120,7 @@ describe('StagePushScheduler', () => {
     jest.advanceTimersByTime(1);
     await flushAsync();
     expect(StagingService.pushStaged).toHaveBeenCalledTimes(1);
-    expect(StagingService.pushStaged).toHaveBeenCalledWith(REPO_A, 'main');
+    expect(StagingService.pushStaged).toHaveBeenCalledWith(REPO_A, 'main', expect.any(Function));
   });
 
   test('timer resets on a new staged item (onStagedChanged restarts the window)', async () => {
@@ -164,8 +165,8 @@ describe('StagePushScheduler', () => {
 
     expect(pushOrder).toEqual([REPO_A, REPO_B]);
     expect(activePushes).toBe(0);
-    expect(StagingService.pushStaged).toHaveBeenNthCalledWith(1, REPO_A, 'main');
-    expect(StagingService.pushStaged).toHaveBeenNthCalledWith(2, REPO_B, 'main');
+    expect(StagingService.pushStaged).toHaveBeenNthCalledWith(1, REPO_A, 'main', expect.any(Function));
+    expect(StagingService.pushStaged).toHaveBeenNthCalledWith(2, REPO_B, 'main', expect.any(Function));
     const state = useStageStore.getState();
     expect(state.pushQueue).toHaveLength(0);
     expect(Object.values(state.isPushing).every((p) => !p)).toBe(true);
@@ -181,7 +182,7 @@ describe('StagePushScheduler', () => {
 
     await flushStagedSetsForBackgroundTask();
 
-    expect(StagingService.pushStaged).not.toHaveBeenCalledWith(REPO_A, 'main');
+    expect(StagingService.pushStaged).not.toHaveBeenCalledWith(REPO_A, 'main', expect.any(Function));
     expect(StagingService.pushStaged).toHaveBeenCalledTimes(1);
     expect(StagingService.pushStaged).toHaveBeenCalledWith(REPO_B, 'main');
   });
@@ -199,8 +200,8 @@ describe('StagePushScheduler', () => {
     await flushAsync();
 
     expect(StagingService.pushStaged).toHaveBeenCalledTimes(2);
-    expect(StagingService.pushStaged).toHaveBeenNthCalledWith(1, REPO_A, 'main');
-    expect(StagingService.pushStaged).toHaveBeenNthCalledWith(2, REPO_B, 'main');
+    expect(StagingService.pushStaged).toHaveBeenNthCalledWith(1, REPO_A, 'main', expect.any(Function));
+    expect(StagingService.pushStaged).toHaveBeenNthCalledWith(2, REPO_B, 'main', expect.any(Function));
     expect(useStageStore.getState().pushQueue).toHaveLength(0);
   });
 
@@ -297,7 +298,7 @@ describe('StagePushScheduler', () => {
 
     await flushAsync();
     expect(StagingService.pushStaged).toHaveBeenCalledTimes(1);
-    expect(StagingService.pushStaged).toHaveBeenCalledWith(REPO_A, 'main');
+    expect(StagingService.pushStaged).toHaveBeenCalledWith(REPO_A, 'main', expect.any(Function));
   });
 
   test('explicit drain after requestPush(key) starts network immediately', async () => {
@@ -311,7 +312,7 @@ describe('StagePushScheduler', () => {
 
     await flushAsync();
     expect(StagingService.pushStaged).toHaveBeenCalledTimes(1);
-    expect(StagingService.pushStaged).toHaveBeenCalledWith(REPO_A, 'main');
+    expect(StagingService.pushStaged).toHaveBeenCalledWith(REPO_A, 'main', expect.any(Function));
   });
 
   test('idle auto-push still works after idle timer elapses', async () => {
@@ -329,7 +330,7 @@ describe('StagePushScheduler', () => {
     jest.advanceTimersByTime(1);
     await flushAsync();
     expect(StagingService.pushStaged).toHaveBeenCalledTimes(1);
-    expect(StagingService.pushStaged).toHaveBeenCalledWith(REPO_A, 'main');
+    expect(StagingService.pushStaged).toHaveBeenCalledWith(REPO_A, 'main', expect.any(Function));
   });
 
   test('startScheduler() loads staged state once and registers the queue subscription', async () => {
@@ -353,7 +354,7 @@ describe('StagePushScheduler', () => {
     await flushAsync();
 
     expect(StagingService.pushStaged).toHaveBeenCalledTimes(1);
-    expect(StagingService.pushStaged).toHaveBeenCalledWith(REPO_A, 'main');
+    expect(StagingService.pushStaged).toHaveBeenCalledWith(REPO_A, 'main', expect.any(Function));
   });
 
   test('explicit requestPush + drainPushQueue drains single-group immediately', async () => {
@@ -369,7 +370,7 @@ describe('StagePushScheduler', () => {
     await flushAsync();
 
     expect(StagingService.pushStaged).toHaveBeenCalledTimes(1);
-    expect(StagingService.pushStaged).toHaveBeenCalledWith(REPO_A, 'main');
+    expect(StagingService.pushStaged).toHaveBeenCalledWith(REPO_A, 'main', expect.any(Function));
   });
 
   test('idle auto-push still works after explicit push (regression guard)', async () => {
@@ -388,5 +389,59 @@ describe('StagePushScheduler', () => {
     jest.advanceTimersByTime(STAGE_PUSH_IDLE_MS);
     await flushAsync();
     expect(StagingService.pushStaged).toHaveBeenCalledTimes(2);
+  });
+
+  test('drainPushQueue resets pushProgress to null when the queue empties', async () => {
+    useStageStore.setState({
+      staged: [],
+      isPushing: {},
+      globalPushing: false,
+      pushQueue: ['a/repo::main'],
+      pendingCount: 0,
+      pushProgress: 0.5,
+    });
+
+    (StagingService.pushStaged as jest.Mock).mockImplementation(
+      async (_repoPath: string, _branch: string, onProgress?: (f: number | null) => void) => {
+        if (onProgress) onProgress(0.75);
+        return { success: true };
+      },
+    );
+
+    const setPushProgressSpy = jest.spyOn(useStageStore.getState(), 'setPushProgress');
+
+    await drainPushQueue();
+    await flushAsync();
+
+    expect(setPushProgressSpy).toHaveBeenCalledWith(null);
+    expect(useStageStore.getState().pushProgress).toBeNull();
+
+    setPushProgressSpy.mockRestore();
+  });
+
+  test('drainPushQueue forwards pushProgress from pushStaged to stageStore', async () => {
+    useStageStore.setState({
+      staged: [],
+      isPushing: {},
+      globalPushing: false,
+      pushQueue: ['a/repo::main'],
+      pendingCount: 0,
+    });
+
+    (StagingService.pushStaged as jest.Mock).mockImplementation(
+      async (_repoPath: string, _branch: string, onProgress?: (f: number | null) => void) => {
+        if (onProgress) {
+          onProgress(0.3);
+          onProgress(0.6);
+          onProgress(1);
+        }
+        return { success: true };
+      },
+    );
+
+    await drainPushQueue();
+    await flushAsync();
+
+    expect(useStageStore.getState().pushProgress).toBeNull();
   });
 });

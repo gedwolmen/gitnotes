@@ -597,6 +597,86 @@ describe('NoteSyncQueueService', () => {
       const first = await firstDrain;
       expect(first.succeeded).toBe(1);
     });
+
+    describe('onProgress', () => {
+      test('receives advancing fractions 0→1 across parallel groups', async () => {
+        (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: true });
+
+        for (const f of ['a', 'b', 'c']) {
+          await NoteSyncQueueService.enqueueNoteUpsert({
+            repo: 'repo-a', branch: 'main', filePath: f, title: f, content: '', format: 'markdown',
+          });
+        }
+        for (const f of ['d', 'e']) {
+          await NoteSyncQueueService.enqueueNoteUpsert({
+            repo: 'repo-b', branch: 'main', filePath: f, title: f, content: '', format: 'markdown',
+          });
+        }
+
+        const fractions: Array<number | null> = [];
+        const result = await NoteSyncQueueService.drain((f) => fractions.push(f));
+
+        expect(result.succeeded).toBe(5);
+        expect(result.remaining).toBe(0);
+
+        expect(fractions.length).toBeGreaterThanOrEqual(2);
+        expect(fractions[fractions.length - 1]).toBe(1);
+        for (const f of fractions) {
+          expect(f).not.toBeNull();
+          expect((f as number)).toBeLessThanOrEqual(1);
+          expect((f as number)).toBeGreaterThan(0);
+        }
+      });
+
+      test('fraction never exceeds 1 and reaches 1 on completion', async () => {
+        (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: true });
+
+        for (let i = 0; i < 4; i++) {
+          await NoteSyncQueueService.enqueueNoteUpsert({
+            repo: 'r', branch: 'main', filePath: `${i}.md`, title: `${i}`, content: '', format: 'markdown',
+          });
+        }
+
+        const fractions: Array<number | null> = [];
+        await NoteSyncQueueService.drain((f) => fractions.push(f));
+
+        expect(fractions.length).toBeGreaterThanOrEqual(1);
+        expect(fractions[fractions.length - 1]).toBe(1);
+        for (const f of fractions) {
+          expect(f).not.toBeNull();
+          expect((f as number)).toBeLessThanOrEqual(1);
+        }
+      });
+
+      test('empty queue calls onProgress(null)', async () => {
+        const fractions: Array<number | null> = [];
+        await NoteSyncQueueService.drain((f) => fractions.push(f));
+
+        expect(fractions).toContain(null);
+        expect(fractions[fractions.length - 1]).toBeNull();
+      });
+
+      test('calls onProgress(null) when all items have backoff', async () => {
+        (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: false, error: 'transient' });
+
+        await NoteSyncQueueService.enqueueNoteUpsert({
+          repo: 'r', branch: 'main', filePath: 'a', title: 'A', content: '', format: 'markdown',
+        });
+
+        await NoteSyncQueueService.drain();
+        const items = await NoteSyncQueueService.getAll();
+        const retryAt = items[0].nextRetryAt!;
+
+        const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => retryAt - 1);
+        try {
+          const fractions: Array<number | null> = [];
+          await NoteSyncQueueService.drain((f) => fractions.push(f));
+          expect(fractions).toContain(null);
+        } finally {
+          nowSpy.mockRestore();
+        }
+      });
+    });
   });
 
   describe('subscribe', () => {
