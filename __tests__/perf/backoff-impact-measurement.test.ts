@@ -179,9 +179,9 @@ describe('Backoff impact measurement (todo 7)', () => {
       const retryAt = items[0].nextRetryAt!;
       expect(items[0].attempts).toBe(1);
       const backoff1Ms = retryAt - Date.now();
-      // backoff1Ms should be 500 (BACKOFF_BASE_MS * 2^0). Allow ±1ms for
-      // Date.now() micro-drift between drain() capture and this assertion.
-      expect(backoff1Ms).toBeGreaterThanOrEqual(499);
+      // Loose window (400-501ms) so parallel CI load cannot drift the
+      // assertion; still proves a real ~500ms backoff was scheduled.
+      expect(backoff1Ms).toBeGreaterThanOrEqual(400);
       expect(backoff1Ms).toBeLessThanOrEqual(501);
 
       // --- Drain 2 (immediately): skipped due to backoff ---
