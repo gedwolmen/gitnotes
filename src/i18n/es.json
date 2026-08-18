@@ -594,7 +594,12 @@
       "enable": "Activar herramientas de GitHub",
       "bodyReminder": "Puedes activar o desactivar esto en cualquier momento en Configuración → IA → Herramientas de GitHub."
     },
-    "skipForNow": "Skip for Now"
+    "skipForNow": "Skip for Now",
+    "pro": {
+      "title": "GitNotēs Pro",
+      "body": "El chat de IA, el volcado de pensamientos y voz, las citas personalizadas, los lienzos, las plantillas y más forman parte de GitNotēs Pro. Comienza con una prueba gratuita de 30 días cuando quieras.",
+      "reminder": "Puedes actualizar en cualquier momento en Ajustes → GitNotēs Pro."
+    }
   },
   "renderStyle": {
     "disconnectTitle": "Disconnect render styles repo?",

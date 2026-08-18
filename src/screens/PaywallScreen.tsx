@@ -108,7 +108,7 @@ export default function PaywallScreen() {
         }
       />
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, paddingTop: headerHeight + 8 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, paddingTop: Math.max(56, headerHeight - 24) }}
         testID="paywall.scroll"
       >
         <Text className="text-3xl font-bold text-center" style={{ color: colors.text }}>

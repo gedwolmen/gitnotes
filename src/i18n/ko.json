@@ -594,7 +594,12 @@
       "enable": "GitHub 도구 활성화",
       "bodyReminder": "설정 → AI → GitHub 도구에서 언제든지 켜거나 끌 수 있습니다."
     },
-    "skipForNow": "Skip for Now"
+    "skipForNow": "Skip for Now",
+    "pro": {
+      "title": "GitNotēs Pro",
+      "body": "AI 채팅, 생각·음성 덤프, 맞춤 명언, 캔버스, 템플릿 등은 GitNotēs Pro의 일부입니다. 언제든 30일 무료 체험을 시작할 수 있습니다.",
+      "reminder": "설정 → GitNotēs Pro에서 언제든 업그레이드할 수 있습니다."
+    }
   },
   "renderStyle": {
     "disconnectTitle": "Disconnect render styles repo?",

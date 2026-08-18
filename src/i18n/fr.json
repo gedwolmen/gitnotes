@@ -594,7 +594,12 @@
       "enable": "Activer les outils GitHub",
       "bodyReminder": "Vous pouvez activer ou désactiver ceci à tout moment dans Paramètres → IA → Outils GitHub."
     },
-    "skipForNow": "Skip for Now"
+    "skipForNow": "Skip for Now",
+    "pro": {
+      "title": "GitNotēs Pro",
+      "body": "Le chat IA, la décharge de pensées et vocale, les citations personnalisées, les toiles, les modèles et plus font partie de GitNotēs Pro. Commencez par un essai gratuit de 30 jours à tout moment.",
+      "reminder": "Vous pouvez passer à Pro à tout moment dans Réglages → GitNotēs Pro."
+    }
   },
   "renderStyle": {
     "disconnectTitle": "Disconnect render styles repo?",

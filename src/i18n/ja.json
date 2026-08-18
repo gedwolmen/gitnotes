@@ -594,7 +594,12 @@
       "enable": "GitHubツールを有効にする",
       "bodyReminder": "設定 → AI → GitHubツールから、いつでもオン・オフを切り替えられます。"
     },
-    "skipForNow": "Skip for Now"
+    "skipForNow": "Skip for Now",
+    "pro": {
+      "title": "GitNotēs Pro",
+      "body": "AIチャット、思考・音声ダンプ、パーソナライズされた名言、キャンバス、テンプレートなどはGitNotēs Proの一部です。いつでも30日間の無料トライアルを開始できます。",
+      "reminder": "設定 → GitNotēs Proからいつでもアップグレードできます。"
+    }
   },
   "renderStyle": {
     "disconnectTitle": "Disconnect render styles repo?",

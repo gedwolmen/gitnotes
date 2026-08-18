@@ -594,7 +594,12 @@
       "enable": "GitHub-Tools aktivieren",
       "bodyReminder": "Du kannst dies jederzeit unter Einstellungen → KI → GitHub-Tools ein- oder ausschalten."
     },
-    "skipForNow": "Skip for Now"
+    "skipForNow": "Skip for Now",
+    "pro": {
+      "title": "GitNotēs Pro",
+      "body": "KI-Chat, Gedanken- und Sprach-Dump, personalisierte Zitate, Canvas, Vorlagen und mehr sind Teil von GitNotēs Pro. Starte jederzeit mit einer 30-tägigen kostenlosen Testversion.",
+      "reminder": "Du kannst jederzeit in Einstellungen → GitNotēs Pro upgraden."
+    }
   },
   "renderStyle": {
     "disconnectTitle": "Render-Stil-Repository trennen?",

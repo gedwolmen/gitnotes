@@ -556,7 +556,12 @@
       "enable": "Enable GitHub Tools",
       "bodyReminder": "You can turn this on or off anytime in Settings → AI → GitHub Tools."
     },
-    "skipForNow": "Skip for Now"
+    "skipForNow": "Skip for Now",
+    "pro": {
+      "title": "GitNotēs Pro",
+      "body": "AI chat, thought & voice dump, personalized quotes, canvases, templates, and more are part of GitNotēs Pro. Start with a free 30-day trial anytime.",
+      "reminder": "You can upgrade anytime in Settings → GitNotēs Pro."
+    }
   },
   "renderStyle": {
     "disconnectTitle": "Disconnect render styles repo?",
