@@ -370,10 +370,15 @@ async function pullNotesFromRepo(
 
     // Build a set of remote file paths we successfully observed. The set is
     // the basis for reconciling local notes against the remote tree below.
-    // We populate it from `noteBlobs` (the full list of relevant remote
-    // entries) — not `fetched` — so a transient per-file fetch failure does
-    // not cause us to drop a still-existing local note.
-    const remoteFilePaths = new Set<string>(noteBlobs.map((b) => b.path));
+    // We populate it from ALL tree blob paths — NOT just the notes/*-filtered
+    // `noteBlobs` — because a note's backing file can live at the repo root or
+    // in any custom folder (the editor writes filePath wherever the user
+    // chooses). Restricting the set to notes/* made root-level notes look
+    // "deleted on the remote" after a successful push, so the reconcile
+    // dropped them from the local index — data loss after push + restart.
+    const remoteFilePaths = new Set<string>(
+      tree.filter((item) => item.type === 'blob').map((b) => b.path),
+    );
 
     // Protect locally-staged-but-unpushed notes from the remote reconcile.
     // With stage-then-push, `updateNote({ filePath })` runs at SAVE time, so

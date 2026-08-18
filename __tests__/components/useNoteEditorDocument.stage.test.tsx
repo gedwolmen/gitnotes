@@ -123,7 +123,7 @@ describe('useNoteEditorDocument stage-push rework', () => {
     );
   });
 
-  it('stages a new root-level note with a real path and no fallback toast', async () => {
+  it('stages a new note under notes/ by default so the pull can re-import it after restart', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
     (StagingService.stageUpsert as jest.Mock).mockResolvedValue({ success: true });
     const createNote = jest.fn(async () => ({ id: 'new-root-note' }));
@@ -148,12 +148,14 @@ describe('useNoteEditorDocument stage-push rework', () => {
     });
 
     expect(StagingService.stageUpsert).toHaveBeenCalledTimes(1);
+    // A brand-new note defaults into notes/ (matching deriveDefaultNotePath),
+    // NOT the repo root — a root-level file is invisible to the pull's
+    // notes/* import filter and appears "gone" after push + restart.
     expect(StagingService.stageUpsert).toHaveBeenCalledWith(
-      expect.objectContaining({ filePath: 'my-note.md', repo: 'owner/repo', branch: 'main' }),
+      expect.objectContaining({ filePath: 'notes/my-note.md', repo: 'owner/repo', branch: 'main' }),
     );
-    // A root note now gets a real syncPath, so metadata is persisted and nothing re-enqueues.
     expect(updateNote).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'new-root-note', filePath: 'my-note.md' }),
+      expect.objectContaining({ id: 'new-root-note', filePath: 'notes/my-note.md' }),
     );
     expect(NoteSyncQueueService.enqueueNoteUpsert).not.toHaveBeenCalled();
     expect(alertSpy).not.toHaveBeenCalledWith(SAVED_LOCALLY_TITLE, SAVED_LOCALLY_BODY, [

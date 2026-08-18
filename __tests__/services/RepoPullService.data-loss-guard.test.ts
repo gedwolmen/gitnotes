@@ -127,4 +127,34 @@ describe('RepoPullService reconcile data-loss guard', () => {
     const saved = (StorageService.saveAllNotes as jest.Mock).mock.calls[0][0] as unknown[];
     expect(saved.map((n) => (n as { id: string }).id)).not.toContain('local-1');
   });
+
+  it('keeps a pushed root-level note (repo root, not notes/ prefix) that exists on the remote (issue: notes gone after push+restart)', async () => {
+    // The note was pushed successfully and lives at the REPO ROOT
+    // (folder = None in the editor). It is in the remote tree, but NOT under
+    // notes/ — this is the exact state right after a successful push + restart.
+    (GitHubService.getTreeRecursiveOrThrow as jest.Mock).mockResolvedValue([
+      { type: 'blob', path: 'qa-data-loss-test.md', sha: 'a' },
+    ]);
+    (GitHubService.getFileContent as jest.Mock)
+      .mockResolvedValueOnce('# QA Data Loss Test');
+
+    (StorageService.getAllNotes as jest.Mock).mockResolvedValue([
+      {
+        id: 'local-1',
+        title: 'QA Data Loss Test',
+        content: '# QA Data Loss Test',
+        repo: 'org/repo',
+        branch: 'main',
+        filePath: 'qa-data-loss-test.md',
+        format: 'markdown',
+      },
+    ]);
+    // Push already succeeded → queue is empty → no pending-path protection.
+    (NoteSyncQueueService.getAll as jest.Mock).mockResolvedValue([]);
+
+    await pullFromSingleRepo('org/repo');
+
+    const saved = (StorageService.saveAllNotes as jest.Mock).mock.calls[0][0] as unknown[];
+    expect(saved.map((n) => (n as { id: string }).id)).toContain('local-1');
+  });
 });
