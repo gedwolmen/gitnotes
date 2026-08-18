@@ -18,7 +18,11 @@ jest.mock('react-native-purchases', () => {
     },
     PURCHASES_ERROR_CODE: { PURCHASE_CANCELLED_ERROR: '1' },
   };
-  return { __esModule: true, default: Purchases };
+  return {
+    __esModule: true,
+    default: Purchases,
+    STOREKIT_VERSION: { STOREKIT_1: 'STOREKIT_1', STOREKIT_2: 'STOREKIT_2' },
+  };
 });
 
 import { Platform } from 'react-native';
@@ -71,15 +75,18 @@ afterEach(() => {
 });
 
 describe('configureRevenueCat', () => {
-  it('configures with the iOS key on iOS', async () => {
+  it('configures with the iOS key on iOS using StoreKit 1', async () => {
     process.env[IOS_KEY] = 'appl_live_key';
     jest.replaceProperty(Platform, 'OS', 'ios');
     const result = await configureRevenueCat();
     expect(result).toEqual({ configured: true });
-    expect(PurchasesMock.configure).toHaveBeenCalledWith({ apiKey: 'appl_live_key' });
+    expect(PurchasesMock.configure).toHaveBeenCalledWith({
+      apiKey: 'appl_live_key',
+      storeKitVersion: 'STOREKIT_1',
+    });
   });
 
-  it('configures with the Android key on Android', async () => {
+  it('configures with the Android key on Android without a storeKit version', async () => {
     process.env[ANDROID_KEY] = 'goog_live_key';
     jest.replaceProperty(Platform, 'OS', 'android');
     const result = await configureRevenueCat();

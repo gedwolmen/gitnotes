@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import Purchases from 'react-native-purchases';
+import Purchases, { STOREKIT_VERSION } from 'react-native-purchases';
 import type { CustomerInfo, PurchasesOfferings, PurchasesPackage } from 'react-native-purchases';
 
 const IOS_API_KEY_ENV = 'EXPO_PUBLIC_REVENUECAT_API_KEY_IOS';
@@ -31,7 +31,10 @@ export async function configureRevenueCat(): Promise<ConfigureResult> {
     return { configured: false };
   }
   Purchases.setLogLevel(Purchases.LOG_LEVEL.WARN);
-  await Purchases.configure({ apiKey });
+  await Purchases.configure({
+    apiKey,
+    ...(Platform.OS === 'ios' ? { storeKitVersion: STOREKIT_VERSION.STOREKIT_1 } : {}),
+  });
   return { configured: true };
 }
 

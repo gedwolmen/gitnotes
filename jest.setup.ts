@@ -409,6 +409,7 @@ jest.mock('react-native-purchases', () => {
   return {
     __esModule: true,
     default: Purchases,
+    STOREKIT_VERSION: { STOREKIT_1: 'STOREKIT_1', STOREKIT_2: 'STOREKIT_2' },
     __resetPurchasesMocks: () => {
       for (const fn of Object.values(Purchases)) {
         if (typeof fn === 'function' && 'mockClear' in fn) (fn as jest.Mock).mockClear();
