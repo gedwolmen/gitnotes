@@ -151,4 +151,72 @@ describe('useNoteEditorDocument notFound (issue #669)', () => {
     expect(NoteSyncQueueService.enqueueNoteUpsert).not.toHaveBeenCalled();
     alertSpy.mockRestore();
   });
+
+  test('enqueues the locally saved note when stageUpsert returns success:false (never orphans it)', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    (StagingService.stageUpsert as jest.Mock).mockResolvedValue({
+      success: false,
+      error: 'Clone write failed',
+    });
+    const createNote = jest.fn(async () => ({ id: 'new-note-1' }));
+
+    const { result } = renderHook(() =>
+      useNoteEditorDocument({
+        ...baseParams,
+        initialRepo: 'owner/repo',
+        initialTitle: 'A note',
+        createNote,
+        getNoteById: () => undefined,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.handleSave();
+    });
+
+    expect(NoteSyncQueueService.enqueueNoteUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        repo: 'owner/repo',
+        title: 'A note',
+      }),
+      'new-note-1',
+    );
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Note Saved Locally',
+      expect.stringContaining('will sync automatically'),
+      [{ text: 'OK' }],
+    );
+    alertSpy.mockRestore();
+  });
+
+  test('shows Save Failed when stageUpsert returns success:false and even queuing fails', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    (StagingService.stageUpsert as jest.Mock).mockResolvedValue({
+      success: false,
+      error: 'Clone write failed',
+    });
+    (NoteSyncQueueService.enqueueNoteUpsert as jest.Mock).mockRejectedValue(new Error('queue full'));
+    const createNote = jest.fn(async () => ({ id: 'new-note-1' }));
+
+    const { result } = renderHook(() =>
+      useNoteEditorDocument({
+        ...baseParams,
+        initialRepo: 'owner/repo',
+        initialTitle: 'A note',
+        createNote,
+        getNoteById: () => undefined,
+      }),
+    );
+
+    await act(async () => {
+      await result.current.handleSave();
+    });
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Save Failed',
+      'Your note was saved locally but could not be queued for sync. Please try again.',
+      [{ text: 'OK' }],
+    );
+    alertSpy.mockRestore();
+  });
 });
