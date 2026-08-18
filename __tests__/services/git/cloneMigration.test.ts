@@ -64,12 +64,19 @@ jest.mock('../../../src/services/NoteGitHubSyncService', () => ({
   applyNoteColorToContent: (content: string) => content,
 }));
 
+jest.mock('../../../src/services/NoteSyncQueueService', () => ({
+  NoteSyncQueueService: { purgeForRepo: jest.fn(async () => undefined) },
+}));
+
 jest.mock('../../../src/services/TemplateMarkdownService', () => ({
   serializeTemplate: () => '---\n---\n',
   templateSlug: (s: string) => s,
 }));
 
 import { CloneMigrationService } from '../../../src/services/git/CloneMigrationService';
+import { NoteSyncQueueService } from '../../../src/services/NoteSyncQueueService';
+
+const purgeForRepo = NoteSyncQueueService.purgeForRepo as jest.Mock;
 
 function getLgwMocks() {
   return (globalThis as any).__lgwForMigrationTest as {
@@ -101,6 +108,9 @@ describe('CloneMigrationService.migrateRepo', () => {
       expect(call[0].push).toBe(false);
     }
     expect(getLgwMocks().push).not.toHaveBeenCalled();
+    // Leftover API-mode queue items for the migrated repo are purged so
+    // the Stage cannot show a mixed API/clone state (issue #902).
+    expect(purgeForRepo).toHaveBeenCalledWith('me/repo');
   });
 
   test('reports failures without pushing (the engine owns the flush)', async () => {

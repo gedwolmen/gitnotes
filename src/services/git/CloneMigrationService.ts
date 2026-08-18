@@ -1,6 +1,7 @@
 import { StorageService } from '../StorageService';
 import { GitHubService } from '../GitHubService';
 import { LocalGitWriter } from './LocalGitWriter';
+import { NoteSyncQueueService } from '../NoteSyncQueueService';
 import { TemplateRepoPreferenceService } from '../TemplateRepoPreferenceService';
 import { useTemplateStore } from '../../stores/templateStore';
 import { serializeTemplate, templateSlug } from '../TemplateMarkdownService';
@@ -167,6 +168,10 @@ export class CloneMigrationService {
           });
       }
     }
+
+    // Migration supersedes this repo's API-mode queue: drop leftovers so
+    // the Stage cannot show a mixed API/clone state (issue #902).
+    await NoteSyncQueueService.purgeForRepo(repoPath);
 
     if (report.failures.length > 0) report.success = report.failures.length === 0;
     return report;
