@@ -209,6 +209,38 @@ async function fetchDirectoryFiles(
 
 const NOTE_EXTS = ['md', 'markdown', 'norg', 'org', 'txt'] as const;
 
+/**
+ * Paths that exist locally (staged but not yet pushed) and must be immune to
+ * the remote reconcile. API mode: pending sync-queue mutations. Clone mode:
+ * the local branch tree, which includes unpushed local commits — otherwise a
+ * pull that races an in-flight push would see the remote without the note and
+ * drop the local copy (data loss after restart).
+ */
+async function collectPendingPaths(
+  repoPath: string,
+  branch: string,
+  mode: 'api' | 'clone',
+  prefix: string,
+): Promise<string[]> {
+  if (mode === 'clone') {
+    try {
+      const tree = await GitFsService.listTree({ repoPath, ref: branch });
+      return tree.filter((e) => e.type === 'blob' && e.path.startsWith(prefix)).map((e) => e.path);
+    } catch {
+      return [];
+    }
+  }
+  try {
+    const queue = await NoteSyncQueueService.getAll();
+    return queue
+      .filter((m) => m.params.repo === repoPath && (m.params.branch ?? 'main') === branch)
+      .map((m) => m.params.filePath ?? '')
+      .filter((p) => p.startsWith(prefix));
+  } catch {
+    return [];
+  }
+}
+
 function noteFormatFromExt(ext: string): 'markdown' | 'neorg' | 'org' {
   if (ext === 'norg') return 'neorg';
   if (ext === 'org') return 'org';
@@ -338,10 +370,25 @@ async function pullNotesFromRepo(
 
     // Build a set of remote file paths we successfully observed. The set is
     // the basis for reconciling local notes against the remote tree below.
-    // We populate it from `noteBlobs` (the full list of relevant remote
-    // entries) — not `fetched` — so a transient per-file fetch failure does
-    // not cause us to drop a still-existing local note.
-    const remoteFilePaths = new Set<string>(noteBlobs.map((b) => b.path));
+    // We populate it from ALL tree blob paths — NOT just the notes/*-filtered
+    // `noteBlobs` — because a note's backing file can live at the repo root or
+    // in any custom folder (the editor writes filePath wherever the user
+    // chooses). Restricting the set to notes/* made root-level notes look
+    // "deleted on the remote" after a successful push, so the reconcile
+    // dropped them from the local index — data loss after push + restart.
+    const remoteFilePaths = new Set<string>(
+      tree.filter((item) => item.type === 'blob').map((b) => b.path),
+    );
+
+    // Protect locally-staged-but-unpushed notes from the remote reconcile.
+    // With stage-then-push, `updateNote({ filePath })` runs at SAVE time, so
+    // a note can carry a filePath before its push has reached GitHub (queue
+    // pending in API mode, unpushed local commit in clone mode). Dropping it
+    // here would DELETE a note the user just wrote — data loss after a
+    // restart mid-push. Only drop a note when we are sure the remote no
+    // longer has it AND nothing local is waiting to push it.
+    const protectedPaths = await collectPendingPaths(repoPath, branch, reader.mode, 'notes/');
+    for (const p of protectedPaths) remoteFilePaths.add(p);
 
     let allNotes = await StorageService.getAllNotes();
     let pulled = 0;
@@ -648,12 +695,21 @@ async function pullTodosFromRepo(
     }
 
     // Reconcile: drop local todos whose backing file was deleted remotely.
-    // Same safety scoping as notes and canvases reconcile.
+    // Same safety scoping as notes and canvases reconcile — but never drop
+    // a todo that is staged-but-unpushed (pending queue / unpushed local
+    // commit), otherwise a restart mid-push loses it (data loss, mirrors the
+    // notes protection).
+    const todoPending = new Set<string>();
+    const todoMode = await SyncEngineService.getMode(repoPath);
+    for (const p of await collectPendingPaths(repoPath, branch, todoMode, 'todos/')) {
+      todoPending.add(p);
+    }
     const before = allTodos.length;
     const reconciled = allTodos.filter((t) => {
       if (t.repo !== repoPath) return true;
       if (t.branch !== branch) return true;
       if (!t.filePath) return true;
+      if (todoPending.has(t.filePath)) return true;
       if (!directoryExists) return false;
       return remotePaths.has(t.filePath);
     });

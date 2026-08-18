@@ -359,8 +359,15 @@ export function useNoteEditorDocument({
       }
 
       if (repo && savedNoteId) {
+        // Default a brand-new note into `notes/` (matching
+        // deriveDefaultNotePath) so the pull reconcile can re-import it after
+        // a push + restart. Writing to the repo root (the old fallback) left
+        // the file on GitHub but invisible to the notes/ import filter — the
+        // note appeared "gone" after restart (data-loss report).
+        const defaultSlug = `${slugifyLocal(title.trim())}${getExtensionForFormat(noteFormat)}`;
         const syncPath =
-          existingFilePath ?? (folderPath ? `${folderPath}/${slugifyLocal(title.trim())}${getExtensionForFormat(noteFormat)}` : `${slugifyLocal(title.trim())}${getExtensionForFormat(noteFormat)}`);
+          existingFilePath ??
+          (folderPath ? `${folderPath}/${defaultSlug}` : `notes/${defaultSlug}`);
         const upsertOpId = syncPath
           ? gitOperationRegistry.begin({
               kind: 'upsert',

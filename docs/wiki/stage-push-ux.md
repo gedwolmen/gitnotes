@@ -107,9 +107,10 @@ value, range 0..1):
 
 - When `pushProgress` is a number, `ringProgress` follows it directly, giving
   the user real progress feedback.
-- When `pushProgress` is `null` (API-mode drain where total item count is
-  unknown), the ring clamps at 0.9. This avoids an infinite indeterminate
-  animation while still signaling activity.
+- When `pushProgress` is `null` (total unknown, e.g. clone push before
+  transport progress lands), the ring holds a small `0.15` arc — it reads
+  "working", not "almost done". (Previously clamped at 0.9, which made a push
+  look ~90% complete from the start.)
 - When no push is in flight, the ring resets to 0.
 
 The progress fraction comes from `StagePushScheduler.drainPushQueue`, which
@@ -142,6 +143,29 @@ the scheduled notification and dismisses any presented one, then re-schedules
 under the same `PUSH_NOTIFICATION_ID` with a `TIME_INTERVAL` trigger of
 `seconds: 1`. This works around expo-notifications having no in-place update
 API.
+
+All push progress notifications are **suppressed while the app is in the
+foreground** (`AppState.currentState === 'active'`) — the in-app ring and the
+githubActivity banner already communicate progress, so a banner would be
+redundant noise. Notifications fire only when the push runs while the app is
+backgrounded.
+
+### 9. Data safety: note paths and the pull reconcile
+
+A note's backing file path is its identity across devices. Two rules keep a
+pushed note from appearing "gone" after a restart:
+
+- **New notes default into `notes/`.** The editor writes a brand-new note
+  (no folder) to `notes/<slug>.<ext>` — matching `deriveDefaultNotePath` in
+  `noteStore` — so the pull's `notes/*` import filter can re-import it after a
+  push + restart. Writing to the repo root would leave the file on GitHub but
+  invisible to the app.
+- **The reconcile never drops a file that exists on the remote.** The pull
+  builds its "still exists" set from **all** tree blobs (not just `notes/*`),
+  so a note at the repo root or in a custom folder is not mistaken for a
+  remote deletion. Staged-but-unpushed paths are also protected (pending sync
+  queue mutations in API mode; the local branch tree in clone mode), so a
+  restart mid-push cannot drop local work.
 
 ### 8. Resume on foreground
 
@@ -188,7 +212,8 @@ remain in the sync queue.
   rewritten for the vanish contract — deletes remove rows immediately, failures
   surface via the Stage screen, and no row ever renders a lock spinner.
 - `__tests__/components/FloatingStageButton.test.tsx`: progress ring follows
-  `storePushProgress`, clamps at 0.9 when null, resets when idle.
+  `storePushProgress`, holds a small 0.15 arc when total is unknown, resets
+  when idle.
 - `__tests__/services/StagePushScheduler.test.ts`: `drainPushQueue` forwards
   progress fraction to `stageStore.setPushProgress`; resets `pushProgress` to
   null when the queue empties.

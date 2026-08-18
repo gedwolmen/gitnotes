@@ -66,7 +66,9 @@ export function FloatingStageButton({ currentRouteName }: FloatingStageButtonPro
     } else if (storePushProgress !== null) {
       ringProgress.value = storePushProgress;
     } else {
-      ringProgress.value = 0.9;
+      // Total unknown (e.g. clone push before transport progress lands):
+      // show a small arc so the ring reads "working", not "almost done".
+      ringProgress.value = 0.15;
     }
   }, [anyPushing, storePushProgress, ringProgress]);
 
