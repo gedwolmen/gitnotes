@@ -141,6 +141,22 @@ describe('getPackages', () => {
     const result = await getPackages();
     expect(result?.lifetime?.identifier).toBe('lifetime');
   });
+
+  it('matches RevenueCat default package identifiers ($rc_monthly, $rc_annual, $rc_lifetime)', async () => {
+    PurchasesMock.getOfferings.mockResolvedValue({
+      current: {
+        availablePackages: [
+          pkg('$rc_monthly'),
+          pkg('$rc_annual'),
+          pkg('$rc_lifetime'),
+        ],
+      },
+    });
+    const result = await getPackages();
+    expect(result?.monthly.identifier).toBe('$rc_monthly');
+    expect(result?.yearly?.identifier).toBe('$rc_annual');
+    expect(result?.lifetime?.identifier).toBe('$rc_lifetime');
+  });
 });
 
 describe('purchasePackage', () => {

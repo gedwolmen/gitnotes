@@ -35,14 +35,20 @@ export async function configureRevenueCat(): Promise<ConfigureResult> {
   return { configured: true };
 }
 
+const matchIdentifier =
+  (accepted: readonly string[]) => (pkg: PurchasesPackage): boolean =>
+    accepted.includes(pkg.identifier);
+
 export async function getPackages(): Promise<Packages | null> {
   const offerings = await Purchases.getOfferings();
   const current = offerings.current;
   if (!current) return null;
-  const monthly = current.availablePackages.find((pkg) => pkg.identifier === 'monthly');
+  const monthly = current.availablePackages.find(matchIdentifier(['monthly', '$rc_monthly']));
   if (!monthly) return null;
-  const yearly = current.availablePackages.find((pkg) => pkg.identifier === 'yearly');
-  const lifetime = current.availablePackages.find((pkg) => pkg.identifier === 'lifetime');
+  const yearly = current.availablePackages.find(matchIdentifier(['yearly', '$rc_annual']));
+  const lifetime = current.availablePackages.find(
+    matchIdentifier(['lifetime', '$rc_lifetime', '$rc_one_time']),
+  );
   return { monthly, yearly, lifetime, offerings };
 }
 
