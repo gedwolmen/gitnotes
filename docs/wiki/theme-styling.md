@@ -420,3 +420,13 @@ getting cut off at the bottom. The tag input row also carries 16px of
 horizontal padding so it aligns with the other NoteEditor form rows (title,
 folder, format). See `src/components/ui/Input.tsx` and
 `src/components/TagInput.tsx`.
+
+### Hairline border gotcha
+
+`borderWidth: StyleSheet.hairlineWidth` sets the width on **all four sides**.
+If only `borderTopColor` is set, the other three sides fall back to React
+Native's default black border — e.g. the Explore repo-detail branch row
+rendered with a black box outline around the branch name. Prefer the
+`border-t` NativeWind class (top border only) plus an explicit
+`borderTopColor`, and only use `borderWidth` when `borderColor` is also set.
+See `src/screens/ExploreScreen.tsx`.
