@@ -64,6 +64,7 @@ exports[`Button snapshots primary in light + dark: primary-dark 1`] = `
           },
           [
             {
+              "alignSelf": "stretch",
               "minHeight": 44,
             },
             {
@@ -101,7 +102,7 @@ exports[`Button snapshots primary in light + dark: primary-dark 1`] = `
         }
       />
       <View
-        className="py-3 px-5 items-center justify-center"
+        className="py-3 px-5 items-center justify-center self-stretch"
       >
         <View
           className="flex-row items-center justify-center gap-2"
@@ -191,6 +192,7 @@ exports[`Button snapshots primary in light + dark: primary-light 1`] = `
           },
           [
             {
+              "alignSelf": "stretch",
               "minHeight": 44,
             },
             {
@@ -228,7 +230,7 @@ exports[`Button snapshots primary in light + dark: primary-light 1`] = `
         }
       />
       <View
-        className="py-3 px-5 items-center justify-center"
+        className="py-3 px-5 items-center justify-center self-stretch"
       >
         <View
           className="flex-row items-center justify-center gap-2"
