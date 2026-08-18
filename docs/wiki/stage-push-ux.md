@@ -74,6 +74,29 @@ The pill's existing `ProgressBar` renders a determinate percentage when
 `total > 0` and an indeterminate bar otherwise — clone pushes now show real
 object-transfer progress.
 
+### 5. Immediate drain on explicit push
+
+Previously, pressing Push on the Stage screen or long-pressing the floating
+button only enqueued work into `StagePushScheduler`. The actual drain started
+only when the 3-minute idle timer (`STAGE_PUSH_IDLE_MS`) fired — meaning an
+explicit push could sit idle for up to 3 minutes before anything happened.
+
+Now, both call sites trigger `drainPushQueue()` immediately after enqueuing:
+
+- `FloatingStageButton.handleLongPress`: calls `drainPushQueue()` after
+  `pushAll()`.
+- `StageScreen.handlePushAll`: calls `drainPushQueue()` after `pushAll()`.
+- `StageScreen.handlePushGroup`: calls `drainPushQueue()` after
+  `requestPush()`.
+
+`drainPushQueue` has a re-entrancy guard (`draining` flag), so redundant calls
+are safe and fire-and-forget (`void`). The idle-timer auto-push path
+(`flushStaged`) is unchanged.
+
+The circular-import constraint (`stageStore` must not import
+`StagePushScheduler`) is preserved: drain is triggered from UI call sites, not
+from the store.
+
 ## Tests
 
 - `__tests__/stores/gitOperationStore.test.ts`: staged upserts do **not** lock
@@ -85,7 +108,8 @@ object-transfer progress.
   hides no spinner, keeps the icon.
 - `__tests__/services/StagePushScheduler.test.ts`: each push is wrapped in
   `githubActivity.begin('Pushing changes')` / `end()`; `end()` still runs on
-  failure.
+  failure. New tests verify immediate drain after explicit `pushAll` and
+  `requestPush` calls, plus an idle auto-push regression guard.
 - `__tests__/services/git/localGitWriter.test.ts`: `push` forwards
   `onProgress` to `git.push`.
 - `__tests__/services/StagingService.test.ts`: clone-mode push forwards
