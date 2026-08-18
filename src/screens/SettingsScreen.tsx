@@ -45,6 +45,7 @@ import { useRepoStore } from '../stores/repoStore';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { RepoAccessPreflightError } from '../services/git/repoAccessPreflight';
+import { useProGate } from '../hooks/useProGate';
 
 // Mirrors GitFsService's MAX_CLONE_RETRIES so a failing repo can't loop the outer flow.
 const MAX_OUTER_CLONE_RETRIES = 1;
@@ -65,6 +66,7 @@ function confirmUnverifiedWrite(t: TFunction, onConfirm: () => void): void {
 export default function SettingsScreen() {
   const { t } = useTranslation();
   const { theme, colors, setTheme, style: uiStyle, setStyle } = useTheme();
+  const { isPro, openPaywall } = useProGate();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const headerHeight = useScreenHeaderHeight();
   const tabBarHeight = useTabBarHeight();
@@ -811,7 +813,13 @@ export default function SettingsScreen() {
         setTheme={setTheme}
         setStyle={setStyle}
         onOpenConnectToken={() => { setTokenModalMode('connect'); setTokenInput(''); setTokenError(null); setTokenVisible(false); setShowTokenModal(true); }}
-        onOpenAddAccount={() => { setTokenModalMode('add'); setTokenInput(''); setTokenError(null); setTokenVisible(false); setShowTokenModal(true); }}
+        onOpenAddAccount={() => {
+          if (accounts.length >= 1 && !isPro) {
+            openPaywall();
+            return;
+          }
+          setTokenModalMode('add'); setTokenInput(''); setTokenError(null); setTokenVisible(false); setShowTokenModal(true);
+        }}
         onSwitchAccount={handleSwitchAccount}
         onRemoveAccount={handleRemoveAccount}
         onRemoveToken={handleRemoveToken}

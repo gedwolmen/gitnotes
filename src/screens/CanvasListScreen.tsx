@@ -25,6 +25,7 @@ import { ActiveFilterStrip } from '../components/ActiveFilterStrip';
 import { useEntityFilter } from '../hooks/useEntityFilter';
 import { useResponsive } from '../hooks/useResponsive';
 import { useTranslation } from 'react-i18next';
+import { useProGate } from '../hooks/useProGate';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -106,6 +107,7 @@ export default function CanvasListScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
+  const { isPro, openPaywall } = useProGate();
   const headerHeight = useScreenHeaderHeight();
   const tabBarHeight = useTabBarHeight();
   const { canvases, filteredCanvases, searchQuery, setSearchQuery, deleteCanvas, refreshCanvases } = useCanvases();
@@ -126,11 +128,15 @@ export default function CanvasListScreen() {
   );
 
   const handleCreate = useCallback(() => {
+    if (!isPro) {
+      openPaywall();
+      return;
+    }
     setCanvasTitle('');
     setCustomW('800');
     setCustomH('600');
     setShowSizePicker(true);
-  }, []);
+  }, [isPro, openPaywall]);
 
   const handlePickSize = useCallback(
     (w: number, h: number) => {
@@ -152,9 +158,13 @@ export default function CanvasListScreen() {
 
   const handleOpen = useCallback(
     (id: string) => {
+      if (!isPro) {
+        openPaywall();
+        return;
+      }
       navigation.navigate('CanvasEditor', { canvasId: id });
     },
-    [navigation],
+    [navigation, isPro, openPaywall],
   );
 
   const handleDelete = useCallback(
