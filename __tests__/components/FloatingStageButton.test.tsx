@@ -28,10 +28,12 @@ interface MockStageState {
   globalPushing: boolean;
   pushQueue: string[];
   pendingCount: number;
+  pushProgress: number | null;
   loadStaged: () => Promise<void>;
   keyFor: (repoPath: string, branch: string) => string;
   requestPush: (repoPath?: string, branch?: string) => string | null;
   setPushing: (key: string, bool: boolean) => void;
+  setPushProgress: (fraction: number | null) => void;
   pushAll: () => void;
   dequeueNext: () => string | null;
   shiftQueue: () => void;
@@ -44,10 +46,12 @@ const mockStageState: MockStageState = {
   globalPushing: false,
   pushQueue: [],
   pendingCount: 2,
+  pushProgress: null,
   loadStaged: mockLoadStaged,
   keyFor: (repoPath, branch) => `${repoPath}::${branch}`,
   requestPush: mockRequestPush,
   setPushing: mockSetPushing,
+  setPushProgress: jest.fn(),
   pushAll: mockPushAll,
   dequeueNext: () => null,
   shiftQueue: mockShiftQueue,
@@ -167,6 +171,7 @@ describe('FloatingStageButton', () => {
     mockStageState.pendingCount = 2;
     mockStageState.globalPushing = false;
     mockStageState.isPushing = {};
+    mockStageState.pushProgress = null;
     mockAIEnabled = true;
     mockWindowDimensions = { width: 320, height: 480, scale: 2, fontScale: 1 };
     mockNavigate.mockClear();
@@ -263,5 +268,20 @@ describe('FloatingStageButton', () => {
 
     expect(getByTestId('floating-ai.button.navigate-chat')).toBeTruthy();
     expect(getByTestId('floating-stage.button.navigate-stage')).toBeTruthy();
+  });
+
+  it('uses store pushProgress for the ring instead of an indeterminate animation', async () => {
+    mockStageState.globalPushing = true;
+    mockStageState.pushProgress = 0.6;
+
+    const { getByTestId } = await renderStageButton();
+
+    const pressable = getByTestId('floating-stage.button.navigate-stage');
+    expect(pressable.props.accessibilityState.busy).toBe(true);
+
+    mockStageState.pushProgress = null;
+    const { getByTestId: getByTestId2 } = await renderStageButton();
+
+    expect(getByTestId2('floating-stage.button.navigate-stage')).toBeTruthy();
   });
 });

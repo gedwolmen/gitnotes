@@ -3,11 +3,8 @@ import { AccessibilityInfo, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  Easing,
   useAnimatedStyle,
   useSharedValue,
-  withRepeat,
-  withTiming,
 } from 'react-native-reanimated';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -60,15 +57,18 @@ export function FloatingStageButton({ currentRouteName }: FloatingStageButtonPro
     [globalPushing, isPushing],
   );
 
-  const pushProgress = useSharedValue(0);
+  const storePushProgress = useStageStore((s) => s.pushProgress);
+  const ringProgress = useSharedValue(0);
 
   useEffect(() => {
-    if (anyPushing) {
-      pushProgress.value = withRepeat(withTiming(1, { duration: 1500, easing: Easing.linear }), -1);
+    if (!anyPushing) {
+      ringProgress.value = 0;
+    } else if (storePushProgress !== null) {
+      ringProgress.value = storePushProgress;
     } else {
-      pushProgress.value = 0;
+      ringProgress.value = 0.9;
     }
-  }, [anyPushing, pushProgress]);
+  }, [anyPushing, storePushProgress, ringProgress]);
 
   useEffect(() => {
     let isMounted = true;
@@ -132,7 +132,7 @@ export function FloatingStageButton({ currentRouteName }: FloatingStageButtonPro
   return (
     <Animated.View style={[styles.container, animatedStyle]} pointerEvents="box-none">
       <HoldProgressRing
-        progress={anyPushing ? pushProgress : affordances.holdProgress}
+        progress={anyPushing ? ringProgress : affordances.holdProgress}
         size={STAGE_BUTTON_SIZE}
         color={colors.primary}
         reduceMotionEnabled={reduceMotionEnabled}
