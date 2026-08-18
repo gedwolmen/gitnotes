@@ -149,4 +149,17 @@ describe('Settings Pro section', () => {
     fireEvent.press(getByTestId('settings.row.ai-locked'));
     expect(onOpenPaywall).toHaveBeenCalledTimes(1);
   });
+
+  it('hides the secondary AI rows (model selector, action mode, providers) for a free user', () => {
+    const { queryByTestId } = renderContent({ isPro: false, isAIEnabled: true });
+    expect(queryByTestId('settings.button.model-selector')).toBeNull();
+    expect(queryByTestId('settings.button.toggle-action-mode')).toBeNull();
+    expect(queryByTestId('settings.button.add-provider')).toBeNull();
+  });
+
+  it('shows the secondary AI rows for a pro user', () => {
+    const { getByTestId } = renderContent({ isPro: true, isAIEnabled: true });
+    expect(getByTestId('settings.button.model-selector')).toBeTruthy();
+    expect(getByTestId('settings.button.add-provider')).toBeTruthy();
+  });
 });

@@ -881,7 +881,7 @@ onSetSyncIntervalSeconds,
       </Group>
       )}
 
-      {isAIEnabled ? (
+      {isPro && isAIEnabled ? (
         <>
           <Group>
             <GroupRow testID="settings.button.model-selector" onPress={onOpenModelSelector} trailing={<Text style={[styles.settingValue, { color: colors.textSecondary }]}>{selectedModelName}</Text>}>
