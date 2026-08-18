@@ -112,6 +112,9 @@ onRemoveAccount: (id: string, login: string) => void;
   onOpenRenderStyleSettings: () => void;
   onClearData: () => void;
   onResetOnboarding: () => void;
+  isPro: boolean;
+  proStatusLabel: string;
+  onOpenPaywall: () => void;
   onManageTemplates: () => void;
   onToggleAI: () => void;
   onOpenModelSelector: () => void;
@@ -192,6 +195,9 @@ export function SettingsContent(props: SettingsContentProps) {
     onOpenRenderStyleSettings,
     onClearData,
     onResetOnboarding,
+    isPro,
+    proStatusLabel,
+    onOpenPaywall,
     onManageTemplates,
     onToggleAI,
     onOpenModelSelector,
@@ -288,6 +294,20 @@ onSetSyncIntervalSeconds,
         gap: 20,
       }}
     >
+      <Group title={t('pro.settingsRow')}>
+        <GroupRow
+          testID="settings.row.pro"
+          onPress={() => { if (!isPro) onOpenPaywall(); }}
+          trailing={
+            <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
+              {proStatusLabel}
+            </Text>
+          }
+        >
+          <Text style={[styles.settingLabel, { color: colors.text }]}>{t('pro.settingsRow')}</Text>
+        </GroupRow>
+      </Group>
+
       <Group
         title={t('settings.appearance')}
       >
@@ -767,6 +787,7 @@ onSetSyncIntervalSeconds,
         </GroupRow>
       </Group>
 
+      {isPro ? (
       <Group title={t('settings.artificialIntelligence')}>
         <GroupRow trailing={<View className="flex-row items-center gap-2">
           <Toggle testID="settings.toggle.ai" value={isAIEnabled} onValueChange={onToggleAI} />
@@ -844,6 +865,21 @@ onSetSyncIntervalSeconds,
           </View>
         </GroupRow>
       </Group>
+      ) : (
+      <Group title={t('settings.artificialIntelligence')}>
+        <GroupRow
+          testID="settings.row.ai-locked"
+          onPress={onOpenPaywall}
+          trailing={
+            <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
+          }
+        >
+          <Text style={[styles.settingLabel, { color: colors.text }]}>
+            {t('pro.gateTitle')}
+          </Text>
+        </GroupRow>
+      </Group>
+      )}
 
       {isAIEnabled ? (
         <>

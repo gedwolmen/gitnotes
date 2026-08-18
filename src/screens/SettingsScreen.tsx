@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -46,6 +46,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { RepoAccessPreflightError } from '../services/git/repoAccessPreflight';
 import { useProGate } from '../hooks/useProGate';
+import { useProStore } from '../stores/proStore';
 
 // Mirrors GitFsService's MAX_CLONE_RETRIES so a failing repo can't loop the outer flow.
 const MAX_OUTER_CLONE_RETRIES = 1;
@@ -67,6 +68,16 @@ export default function SettingsScreen() {
   const { t } = useTranslation();
   const { theme, colors, setTheme, style: uiStyle, setStyle } = useTheme();
   const { isPro, openPaywall } = useProGate();
+  const trialActive = useProStore((s) => s.trialActive);
+  const trialEndsAt = useProStore((s) => s.trialEndsAt);
+  const proStatusLabel = useMemo(() => {
+    if (isPro && trialActive && trialEndsAt) {
+      const days = Math.max(1, Math.ceil((trialEndsAt - Date.now()) / 86_400_000));
+      return t('pro.statusTrial', { days: String(days) });
+    }
+    if (isPro) return t('pro.statusActive');
+    return t('pro.statusUpgrade');
+  }, [isPro, trialActive, trialEndsAt, t]);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const headerHeight = useScreenHeaderHeight();
   const tabBarHeight = useTabBarHeight();
@@ -842,6 +853,9 @@ export default function SettingsScreen() {
         onOpenRenderStyleSettings={() => navigation.navigate('RenderStyleSettings')}
         onClearData={clearData}
         onResetOnboarding={handleResetOnboarding}
+        isPro={isPro}
+        proStatusLabel={proStatusLabel}
+        onOpenPaywall={openPaywall}
         onManageTemplates={() => navigation.navigate('TemplateManager' as never)}
         onToggleAI={() => { void toggleAI(); }}
         dailyQuoteEnabled={dailyQuoteEnabled}
