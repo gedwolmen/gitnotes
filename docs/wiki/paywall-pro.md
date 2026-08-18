@@ -81,6 +81,8 @@ These are RevenueCat **public SDK keys** (non-secret, embedded in the app). Copy
 
 ## Manual store setup checklist (user-performed)
 
+> **Status:** iOS in progress. **Android deferred** — tracked in [issue #914](https://github.com/gedwolmen/gitnotes/issues/914) (needs the `goog_…` SDK key + Play Console products + Android sandbox QA). The code is cross-platform-ready; the paywall auto-hides packages the dashboard does not provide.
+
 This cannot be automated — a human must complete it before real-device (sandbox) QA:
 
 1. **RevenueCat dashboard**: create the project, add the iOS app (`com.xaventra.gitnotes`) and Android app (`org.gitnotes.app`), and copy the SDK keys into `.env`.
