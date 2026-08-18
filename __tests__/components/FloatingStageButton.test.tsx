@@ -220,12 +220,24 @@ describe('FloatingStageButton', () => {
     },
   );
 
-  it('shows a progress indicator and hides the icon while pushing', async () => {
+  it('grays out while pushing: no spinner, tap still navigates, hold-to-push blocked', async () => {
     mockStageState.globalPushing = true;
 
-    const { getByTestId } = await renderStageButton();
+    const { getByTestId, queryByTestId } = await renderStageButton();
 
-    expect(getByTestId('floating-stage.button.progress')).toBeTruthy();
+    // No progress spinner while pushing
+    expect(queryByTestId('floating-stage.button.progress')).toBeNull();
+    const pressable = getByTestId('floating-stage.button.navigate-stage');
+    expect(pressable.props.accessibilityState.busy).toBe(true);
+    // Tap still navigates to the Stage screen during a push
+    fireEvent.press(pressable);
+    expect(mockNavigate).toHaveBeenCalledWith('Stage');
+    // Hold-to-push is blocked while a push is underway
+    mockPushAll.mockClear();
+    fireEvent(getByTestId('floating-stage.button.navigate-stage'), 'longPress');
+    expect(mockPushAll).not.toHaveBeenCalled();
+    // Cloud icon is still rendered, just dimmed
+    expect(pressable).toBeTruthy();
   });
 
   it('coexists with the AI floating button in the same tree', async () => {

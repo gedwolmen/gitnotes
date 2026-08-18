@@ -214,7 +214,7 @@ describe('noteStore.deleteNote staging rewire', () => {
     useGitOperationStore.setState({ ops: {} });
   });
 
-  it('api mode: stages the delete, keeps the row locked, never drains directly', async () => {
+  it('api mode: stages the delete, removes the note locally, succeeds the op, never drains directly', async () => {
     (SyncEngineService.getMode as jest.Mock).mockResolvedValue('api');
     (StagingService.stageDelete as jest.Mock).mockResolvedValue({ success: true });
     useNoteStore.setState({
@@ -244,14 +244,9 @@ describe('noteStore.deleteNote staging rewire', () => {
     );
     expect(NoteSyncQueueService.enqueueNoteDelete).not.toHaveBeenCalled();
     expect(NoteSyncQueueService.drain).not.toHaveBeenCalled();
-    // Api mode keeps the row visible-but-locked until the queue reports
-    // success (the completion handlers remove it on mutation.succeeded).
-    expect(useNoteStore.getState().notes).toHaveLength(1);
-    expect(StorageService.deleteNote).not.toHaveBeenCalled();
-    const ops = Object.values(useGitOperationStore.getState().ops);
-    expect(ops).toHaveLength(1);
-    expect(ops[0].kind).toBe('delete');
-    expect(ops[0].status).toBe('running');
+    expect(StorageService.deleteNote).toHaveBeenCalledWith('n1');
+    expect(useNoteStore.getState().notes).toHaveLength(0);
+    expect(useGitOperationStore.getState().ops).toEqual({});
   });
 
   it('clone mode: completes the local delete immediately (no queue mutation exists)', async () => {

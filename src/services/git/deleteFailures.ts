@@ -32,6 +32,20 @@ export function deleteFailureKey(
   return `${repo}::${branch || 'main'}::${filePath}`;
 }
 
+/** Inverse of `deleteFailureKey` — parse a map key back into its parts. */
+export function parseDeleteFailureKey(
+  key: string,
+): { repo: string; branch: string; path: string } | null {
+  const firstSep = key.indexOf('::');
+  const secondSep = firstSep >= 0 ? key.indexOf('::', firstSep + 2) : -1;
+  if (firstSep <= 0 || secondSep === -1) return null;
+  const repo = key.slice(0, firstSep);
+  const branch = key.slice(firstSep + 2, secondSep);
+  const path = key.slice(secondSep + 2);
+  if (!repo || !path) return null;
+  return { repo, branch, path };
+}
+
 export async function readDeleteFailures(): Promise<DeleteFailureMap> {
   try {
     const raw = await AsyncStorage.getItem(DELETE_FAILURES_STORAGE_KEY);

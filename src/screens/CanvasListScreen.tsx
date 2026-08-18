@@ -7,7 +7,6 @@ import {
   Alert,
   Modal,
   TextInput,
-  ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -18,7 +17,6 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useRepos } from '../contexts/RepoContext';
 import { RootStackParamList } from '../navigation/types';
 import { Canvas } from '../models/Canvas';
-import { useEntityLock } from '../hooks/useGitOpLock';
 import SearchBar from '../components/SearchBar';
 import { ScreenHeader, IconButton, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
@@ -48,8 +46,6 @@ interface CanvasRowProps {
 function CanvasRow({ item, onOpen, onDelete }: CanvasRowProps) {
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const lock = useEntityLock(item.id, { repo: item.repo, branch: item.branch, path: item.filePath });
-  const locked = lock.locked;
   const elementCount = item.scene?.elements?.length ?? 0;
   const date = new Date(item.updatedAt);
   const dateStr = date.toLocaleDateString(undefined, {
@@ -60,55 +56,49 @@ function CanvasRow({ item, onOpen, onDelete }: CanvasRowProps) {
   });
 
   return (
-    <View style={{ opacity: locked ? 0.45 : 1 }}>
-      <TouchableOpacity
-        testID="canvas-list.button.open"
-        className="flex-row items-center p-3.5 rounded-md border mb-2.5"
-        style={{ backgroundColor: colors.surface, borderColor: colors.border }}
-        onPress={locked ? undefined : () => onOpen(item.id)}
-        activeOpacity={0.7}
-      >
-        <View className="flex-1">
-          <View className="flex-row items-center gap-2 mb-1">
-            <Ionicons name="easel-outline" size={18} color={colors.primary} />
-            <Text className="text-base font-semibold flex-1" style={{ color: colors.text }} numberOfLines={1}>
-              {item.title || t('canvases.untitled')}
+    <TouchableOpacity
+      testID="canvas-list.button.open"
+      className="flex-row items-center p-3.5 rounded-md border mb-2.5"
+      style={{ backgroundColor: colors.surface, borderColor: colors.border }}
+      onPress={() => onOpen(item.id)}
+      activeOpacity={0.7}
+    >
+      <View className="flex-1">
+        <View className="flex-row items-center gap-2 mb-1">
+          <Ionicons name="easel-outline" size={18} color={colors.primary} />
+          <Text className="text-base font-semibold flex-1" style={{ color: colors.text }} numberOfLines={1}>
+            {item.title || t('canvases.untitled')}
+          </Text>
+        </View>
+        <Text className="text-xs mb-1" style={{ color: colors.textSecondary }}>
+          {elementCount} element{elementCount !== 1 ? 's' : ''} · {dateStr}
+        </Text>
+        {item.repo && (
+          <View className="flex-row items-center gap-1 mt-1">
+            <Ionicons name="git-branch-outline" size={12} color={colors.primary} />
+            <Text className="text-xs font-medium" style={{ color: colors.primary }} numberOfLines={1}>
+              {item.repo.split('/').pop()}{item.branch ? ` · ${item.branch}` : ''}
             </Text>
           </View>
-          <Text className="text-xs mb-1" style={{ color: colors.textSecondary }}>
-            {elementCount} element{elementCount !== 1 ? 's' : ''} · {dateStr}
-          </Text>
-          {item.repo && (
-            <View className="flex-row items-center gap-1 mt-1">
-              <Ionicons name="git-branch-outline" size={12} color={colors.primary} />
-              <Text className="text-xs font-medium" style={{ color: colors.primary }} numberOfLines={1}>
-                {item.repo.split('/').pop()}{item.branch ? ` · ${item.branch}` : ''}
-              </Text>
-            </View>
-          )}
-          {item.tags.length > 0 && (
-            <View className="flex-row gap-1.5 flex-wrap">
-              {item.tags.slice(0, 3).map((tag) => (
-                <View key={tag} className="px-2 py-0.5 rounded-sm" style={{ backgroundColor: colors.primary + '18' }}>
-                  <Text className="text-xs font-medium" style={{ color: colors.primary }}>{tag}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-        {locked ? (
-          <ActivityIndicator size="small" testID="canvas-row.lock-spinner" color={colors.primary} />
-        ) : (
-          <TouchableOpacity
-            testID="canvas-list.button.delete"
-            className="p-3"
-            onPress={() => onDelete(item)}
-          >
-            <Ionicons name="trash-outline" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
         )}
+        {item.tags.length > 0 && (
+          <View className="flex-row gap-1.5 flex-wrap">
+            {item.tags.slice(0, 3).map((tag) => (
+              <View key={tag} className="px-2 py-0.5 rounded-sm" style={{ backgroundColor: colors.primary + '18' }}>
+                <Text className="text-xs font-medium" style={{ color: colors.primary }}>{tag}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+      <TouchableOpacity
+        testID="canvas-list.button.delete"
+        className="p-3"
+        onPress={() => onDelete(item)}
+      >
+        <Ionicons name="trash-outline" size={20} color={colors.textSecondary} />
       </TouchableOpacity>
-    </View>
+    </TouchableOpacity>
   );
 }
 

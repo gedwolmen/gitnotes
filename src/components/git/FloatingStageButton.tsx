@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AccessibilityInfo, ActivityIndicator, Pressable, StyleSheet } from 'react-native';
+import { AccessibilityInfo, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { GestureDetector } from 'react-native-gesture-handler';
-import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useStageStore } from '../../stores/stageStore';
@@ -52,6 +58,16 @@ export function FloatingStageButton({ currentRouteName }: FloatingStageButtonPro
     () => globalPushing || Object.values(isPushing).some(Boolean),
     [globalPushing, isPushing],
   );
+
+  const pushProgress = useSharedValue(0);
+
+  useEffect(() => {
+    if (anyPushing) {
+      pushProgress.value = withRepeat(withTiming(1, { duration: 1500, easing: Easing.linear }), -1);
+    } else {
+      pushProgress.value = 0;
+    }
+  }, [anyPushing, pushProgress]);
 
   useEffect(() => {
     let isMounted = true;
@@ -114,7 +130,7 @@ export function FloatingStageButton({ currentRouteName }: FloatingStageButtonPro
   return (
     <Animated.View style={[styles.container, animatedStyle]} pointerEvents="box-none">
       <HoldProgressRing
-        progress={affordances.holdProgress}
+        progress={anyPushing ? pushProgress : affordances.holdProgress}
         size={STAGE_BUTTON_SIZE}
         color={colors.primary}
         reduceMotionEnabled={reduceMotionEnabled}
@@ -126,7 +142,7 @@ export function FloatingStageButton({ currentRouteName }: FloatingStageButtonPro
             accessibilityRole="button"
             accessibilityLabel="View staged changes"
             accessibilityHint="Tap to view staged changes. Press and hold to push all staged changes."
-            accessibilityState={{ disabled: anyPushing }}
+            accessibilityState={{ busy: anyPushing }}
             onPress={handleTap}
             onLongPress={handleLongPress}
             onPressIn={affordances.handlePressIn}
@@ -134,19 +150,11 @@ export function FloatingStageButton({ currentRouteName }: FloatingStageButtonPro
             delayLongPress={FLOATING_AI_BUTTON_LONG_PRESS_MS}
             style={({ pressed }) => [
               styles.button,
-              { backgroundColor: colors.primary },
+              { backgroundColor: anyPushing ? colors.border : colors.primary },
               pressed ? styles.pressed : null,
             ]}
           >
-            {anyPushing ? (
-              <ActivityIndicator
-                testID="floating-stage.button.progress"
-                size="small"
-                color="#FFFFFF"
-              />
-            ) : (
-              <Ionicons name="cloud-upload" size={24} color="#FFFFFF" />
-            )}
+            <Ionicons name="cloud-upload" size={24} color={anyPushing ? colors.textSecondary : '#FFFFFF'} />
           </Pressable>
         </Animated.View>
       </GestureDetector>

@@ -9,7 +9,8 @@ import { useNoteStore } from '../src/stores/noteStore';
 import { useGitOperationStore, gitOperationRegistry, hydrate } from '../src/stores/gitOperationStore';
 import { NoteSyncQueueService } from '../src/services/NoteSyncQueueService';
 import { StorageService } from '../src/services/StorageService';
-import { clearDeleteFailure } from '../src/services/git/deleteFailures';
+import { clearDeleteFailure, recordDeleteFailure } from '../src/services/git/deleteFailures';
+import { retryDeleteFailure } from '../src/services/git/retryDeleteFailure';
 import { renderWithTheme } from './helpers/renderWithTheme';
 
 type SucceededHandler = (event: { mutation: { id: string; type: string; params: Record<string, any> } }) => void;
@@ -458,7 +459,7 @@ describe('notes delete lock', () => {
     jest.restoreAllMocks();
   });
 
-  it('keeps the row visible-but-locked with a spinner after a delete press; press handlers no-op and swipe is disabled', async () => {
+  it('removes the row immediately on delete press; the row is gone and no lock UI is rendered', async () => {
     const note = createNote({ id: 'n1', title: 'First', repo: 'owner/repo', branch: 'main', filePath: 'notes/first.md' });
     useNoteStore.setState({ notes: [note], isLoading: false, error: null });
 
@@ -469,54 +470,36 @@ describe('notes delete lock', () => {
     fireEvent.press(screen.getByTestId('notes-context-menu.delete'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('note-row.lock-spinner')).toBeTruthy();
+      expect(screen.queryByText('First')).toBeNull();
     });
-
-    // The note is still in the list and still rendered.
-    expect(screen.getByText('First')).toBeTruthy();
-    // Swipe (selection toggle) is disabled while locked.
-    expect(screen.getByTestId('swipeable-select-n1').props.accessibilityState.disabled).toBe(true);
-    // Card press no-ops: navigation is not invoked.
-    fireEvent.press(screen.getByTestId('notes-card-n1'));
-    expect(mockNavigate).not.toHaveBeenCalledWith('NoteEditor', { noteId: 'n1' });
-    // Swipe press (selection toggle) no-ops: bulk action bar never appears.
-    fireEvent.press(screen.getByTestId('swipeable-select-n1'));
-    expect(screen.queryByTestId('bulk-action-bar.delete')).toBeNull();
-    expect(screen.getByTestId('note-row.lock-spinner')).toBeTruthy();
+    expect(screen.queryByTestId('note-row.lock-spinner')).toBeNull();
+    expect(screen.queryByTestId('note-row.lock-error')).toBeNull();
+    expect(useNoteStore.getState().notes).toHaveLength(0);
+    expect(StorageService.deleteNote).toHaveBeenCalledWith('n1');
+    expect(NoteSyncQueueService.enqueueNoteDelete).toHaveBeenCalledWith(
+      expect.objectContaining({
+        repo: 'owner/repo',
+        branch: 'main',
+        filePath: 'notes/first.md',
+        localNoteId: 'n1',
+      }),
+    );
+    expect(NoteSyncQueueService.drain).not.toHaveBeenCalled();
   });
 
-  it('places the lock spinner inside the card bounds (right/top 24, relative wrapper)', async () => {
-    const note = createNote({ id: 'n-pos', title: 'Position', repo: 'owner/repo', branch: 'main', filePath: 'notes/position.md' });
-    useNoteStore.setState({ notes: [note], isLoading: false, error: null });
-
-    const screen = renderWithTheme(<NotesListScreen />);
-    fireEvent(screen.getByTestId('notes-card-n-pos'), 'longPress');
-    fireEvent.press(screen.getByTestId('notes-context-menu.delete'));
-    await waitFor(() => expect(screen.getByTestId('note-row.lock-spinner')).toBeTruthy());
-
-    const spinner = screen.getByTestId('note-row.lock-spinner');
-    const lockView = spinner.parent?.parent;
-    expect(lockView).toBeTruthy();
-    const lockStyle = (lockView?.props as { style?: Record<string, unknown> }).style;
-    expect(lockStyle?.position).toBe('absolute');
-    // The card is inset by marginHorizontal:16 and rounded by borderRadius:12, so
-    // an in-bounds spinner must sit at least 24px from the wrapper's right/top edges.
-    expect(lockStyle?.right).toBeGreaterThanOrEqual(24);
-    expect(lockStyle?.top).toBeGreaterThanOrEqual(24);
-
-    const wrapper = lockView?.parent?.parent;
-    expect(wrapper).toBeTruthy();
-    expect((wrapper?.props as { style?: Record<string, unknown> }).style?.position).toBe('relative');
-  });
-
-  it('removes the row and purges local storage when the queue success event fires', async () => {
+  it('queue success event is a no-op: row already removed at delete time, no crash or leftover ops', async () => {
     const note = createNote({ id: 'n2', title: 'Second', repo: 'owner/repo', branch: 'main', filePath: 'notes/second.md' });
     useNoteStore.setState({ notes: [note], isLoading: false, error: null });
 
     const screen = renderWithTheme(<NotesListScreen />);
     fireEvent(screen.getByTestId('notes-card-n2'), 'longPress');
     fireEvent.press(screen.getByTestId('notes-context-menu.delete'));
-    await waitFor(() => expect(screen.getByTestId('note-row.lock-spinner')).toBeTruthy());
+
+    await waitFor(() => {
+      expect(screen.queryByText('Second')).toBeNull();
+    });
+    expect(StorageService.deleteNote).toHaveBeenCalledTimes(1);
+    expect(StorageService.deleteNote).toHaveBeenCalledWith('n2');
 
     const mutation = {
       id: 'mutation-n2',
@@ -525,23 +508,22 @@ describe('notes delete lock', () => {
     };
     emitSucceeded(mutation);
 
-    await waitFor(() => {
-      expect(StorageService.deleteNote).toHaveBeenCalledWith('n2');
-    });
-    await waitFor(() => {
-      expect(screen.queryByText('Second')).toBeNull();
-    });
-    expect(screen.queryByTestId('note-row.lock-spinner')).toBeNull();
+    expect(screen.queryByText('Second')).toBeNull();
+    expect(StorageService.deleteNote).toHaveBeenCalledTimes(1);
+    expect(useGitOperationStore.getState().ops).toEqual({});
   });
 
-  it('renders a failure icon after a drop and Retry re-enqueues the delete (failure entry cleared)', async () => {
+  it('drop records a durable failure entry; retryDeleteFailure clears it and re-enqueues without draining', async () => {
     const note = createNote({ id: 'n3', title: 'Third', repo: 'owner/repo', branch: 'main', filePath: 'notes/third.md' });
     useNoteStore.setState({ notes: [note], isLoading: false, error: null });
 
     const screen = renderWithTheme(<NotesListScreen />);
     fireEvent(screen.getByTestId('notes-card-n3'), 'longPress');
     fireEvent.press(screen.getByTestId('notes-context-menu.delete'));
-    await waitFor(() => expect(screen.getByTestId('note-row.lock-spinner')).toBeTruthy());
+
+    await waitFor(() => {
+      expect(screen.queryByText('Third')).toBeNull();
+    });
 
     const mutation = {
       id: 'mutation-n3',
@@ -551,33 +533,31 @@ describe('notes delete lock', () => {
     emitDropped(mutation, '401 unauthorized');
 
     await waitFor(() => {
-      expect(screen.getByTestId('note-row.lock-error')).toBeTruthy();
+      expect(recordDeleteFailure).toHaveBeenCalledWith(
+        'owner/repo',
+        'main',
+        'notes/third.md',
+        expect.objectContaining({ error: '401 unauthorized', kind: 'durable' }),
+      );
     });
-    // The row is still present, at normal opacity.
-    expect(screen.getByText('Third')).toBeTruthy();
+    expect(screen.queryByText('Third')).toBeNull();
+    expect(screen.queryByTestId('note-row.lock-error')).toBeNull();
 
-    // Tapping the row surfaces the failure with a Retry action.
-    fireEvent.press(screen.getByTestId('notes-card-n3'));
-    expect(Alert.alert).toHaveBeenCalled();
-    pressLatestRetryAlert();
+    await retryDeleteFailure('owner/repo', 'main', 'notes/third.md');
 
-    await waitFor(() => {
-      expect(NoteSyncQueueService.enqueueNoteDelete).toHaveBeenCalled();
-      expect(clearDeleteFailure).toHaveBeenCalledWith('owner/repo', 'main', 'notes/third.md');
-      expect(NoteSyncQueueService.drain).not.toHaveBeenCalled();
-    });
-    // The queue notify → hydrate path (real app) re-derives the queued op,
-    // which takes the row straight back to locked.
-    (NoteSyncQueueService.getAll as jest.Mock).mockImplementation(async () => [mutation]);
-    await act(async () => {
-      await hydrate();
-    });
-    await waitFor(() => {
-      expect(screen.getByTestId('note-row.lock-spinner')).toBeTruthy();
-    });
+    expect(clearDeleteFailure).toHaveBeenCalledWith('owner/repo', 'main', 'notes/third.md');
+    expect(NoteSyncQueueService.enqueueNoteDelete).toHaveBeenCalledWith(
+      expect.objectContaining({
+        repo: 'owner/repo',
+        branch: 'main',
+        filePath: 'notes/third.md',
+      }),
+    );
+    expect(NoteSyncQueueService.drain).not.toHaveBeenCalled();
+    expect(screen.queryByText('Third')).toBeNull();
   });
 
-  it('locks all three rows simultaneously on a bulk delete', async () => {
+  it('all three rows are enqueued in ONE queue write; no lock spinner rendered', async () => {
     const notes = [
       createNote({ id: 'b1', title: 'Bulk one', repo: 'owner/repo', branch: 'main', filePath: 'notes/b1.md' }),
       createNote({ id: 'b2', title: 'Bulk two', repo: 'owner/repo', branch: 'main', filePath: 'notes/b2.md' }),
@@ -592,20 +572,16 @@ describe('notes delete lock', () => {
     fireEvent.press(screen.getByTestId('bulk-action-bar.delete'));
     await pressLatestDeleteAlertConfirm();
 
-    await waitFor(() => {
-      expect(screen.getAllByTestId('note-row.lock-spinner')).toHaveLength(3);
-    });
+    expect(screen.queryByTestId('note-row.lock-spinner')).toBeNull();
     expect(NoteSyncQueueService.enqueueNoteDeletes).toHaveBeenCalledTimes(1);
     const params = (NoteSyncQueueService.enqueueNoteDeletes as jest.Mock).mock.calls[0][0];
     expect(params.map((p: any) => p.filePath).sort()).toEqual(['notes/b1.md', 'notes/b2.md', 'notes/b3.md']);
     expect(params.map((p: any) => p.localNoteId).sort()).toEqual(['b1', 'b2', 'b3']);
-    // All three rows remain rendered.
-    expect(screen.getByText('Bulk one')).toBeTruthy();
-    expect(screen.getByText('Bulk two')).toBeTruthy();
-    expect(screen.getByText('Bulk three')).toBeTruthy();
+    const ops = Object.values(useGitOperationStore.getState().ops);
+    expect(ops.filter((op) => op.kind === 'delete')).toHaveLength(3);
   });
 
-  it('renders the row locked after a restart hydrate from a seeded queue, before any drain', async () => {
+  it('restart hydrate from a seeded queue: no lock spinner or lock-error rendered', async () => {
     const note = createNote({ id: 'restart-note', title: 'Restart note', repo: 'owner/repo', branch: 'main', filePath: 'notes/restart.md' });
     useNoteStore.setState({ notes: [note], isLoading: false, error: null });
     useGitOperationStore.setState({ ops: {} });
@@ -626,13 +602,14 @@ describe('notes delete lock', () => {
 
     const screen = renderWithTheme(<NotesListScreen />);
     expect(screen.getByText('Restart note')).toBeTruthy();
-    expect(screen.getByTestId('note-row.lock-spinner')).toBeTruthy();
+    expect(screen.queryByTestId('note-row.lock-spinner')).toBeNull();
+    expect(screen.queryByTestId('note-row.lock-error')).toBeNull();
     expect(NoteSyncQueueService.drain).not.toHaveBeenCalled();
   });
 
-  it('blocks editor save on a path with a queued delete: sync spy not called and Alert shown', async () => {
-    // Synced note → the header lock is visible: the save button is disabled
-    // while the delete runs.
+  it('editor save with queued delete: save button not disabled but pressing save triggers Alert and blocks sync', async () => {
+    const { syncNoteToGitHub } = require('../src/services/NoteGitHubSyncService');
+
     mockRouteNoteId = 'editor-synced';
     const syncedNote = createNote({
       id: 'editor-synced',
@@ -656,10 +633,18 @@ describe('notes delete lock', () => {
     await waitFor(() => expect(screen.getByTestId('note-viewer.edit')).toBeTruthy());
     fireEvent.press(screen.getByTestId('note-viewer.edit'));
     await waitFor(() => expect(screen.getByTestId('note-editor.button.save')).toBeTruthy());
-    expect(screen.getByTestId('note-editor.button.save').props.accessibilityState.disabled).toBe(true);
 
-    // Unsynced note (no filePath): the header cannot lock by path, but
-    // handleSave still blocks the save via the derived path.
+    expect(screen.getByTestId('note-editor.button.save').props.accessibilityState.disabled).not.toBe(true);
+
+    fireEvent.press(screen.getByTestId('note-editor.button.save'));
+
+    expect(Alert.alert).toHaveBeenCalled();
+    expect(Alert.alert).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.stringContaining('deleted'),
+    );
+    expect(syncNoteToGitHub).not.toHaveBeenCalled();
+
     mockRouteNoteId = 'editor-note';
     useNoteStore.setState({ notes: [], isLoading: false, error: null });
     useGitOperationStore.setState({ ops: {} });
@@ -688,7 +673,6 @@ describe('notes delete lock', () => {
 
     fireEvent.press(screen2.getByTestId('note-editor.button.save'));
 
-    const { syncNoteToGitHub } = require('../src/services/NoteGitHubSyncService');
     expect(syncNoteToGitHub).not.toHaveBeenCalled();
     expect(Alert.alert).toHaveBeenCalled();
     expect(Alert.alert).toHaveBeenCalledWith(expect.any(String), expect.stringContaining('deleted'));

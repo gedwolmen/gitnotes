@@ -9,8 +9,18 @@ import { groupStaged, useStageStore, type StageGroup } from '../stores/stageStor
 import { useGitHubActivityStore } from '../stores/githubActivityStore';
 import type { StagedItem } from '../services/git/StagingService';
 import type { RootStackParamList } from '../navigation/types';
+import { readDeleteFailures, parseDeleteFailureKey } from '../services/git/deleteFailures';
+import { retryDeleteFailure } from '../services/git/retryDeleteFailure';
 
 const UPSERT_COLOR = '#22c55e';
+
+interface DeleteFailureRow {
+  readonly key: string;
+  readonly repo: string;
+  readonly branch: string;
+  readonly path: string;
+  readonly error: string;
+}
 
 function formatChip(filePath: string): string {
   const dot = filePath.lastIndexOf('.');
@@ -76,6 +86,34 @@ export default function StageScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const headerHeight = useScreenHeaderHeight();
   const [headerBlurHeight, setHeaderBlurHeight] = useState(headerHeight);
+  const [deleteFailures, setDeleteFailures] = useState<readonly DeleteFailureRow[]>([]);
+  const [retryingKey, setRetryingKey] = useState<string | null>(null);
+
+  const loadDeleteFailures = useCallback(async () => {
+    const map = await readDeleteFailures();
+    const rows: DeleteFailureRow[] = Object.entries(map)
+      .map(([mapKey, entry]) => {
+        const parts = parseDeleteFailureKey(mapKey);
+        if (!parts || !parts.repo || !parts.path) return null;
+        return { key: mapKey, repo: parts.repo, branch: parts.branch, path: parts.path, error: entry.error };
+      })
+      .filter((row): row is DeleteFailureRow => row !== null);
+    setDeleteFailures(rows);
+  }, []);
+
+  useEffect(() => {
+    void loadDeleteFailures();
+  }, [loadDeleteFailures]);
+
+  const handleRetryDelete = useCallback(async (row: DeleteFailureRow) => {
+    setRetryingKey(row.key);
+    try {
+      await retryDeleteFailure(row.repo, row.branch, row.path);
+    } finally {
+      setRetryingKey(null);
+    }
+    void loadDeleteFailures();
+  }, [loadDeleteFailures]);
 
   const groups = groupStaged(staged);
 
@@ -98,11 +136,11 @@ export default function StageScreen() {
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await loadStaged();
+      await Promise.all([loadStaged(), loadDeleteFailures()]);
     } finally {
       setRefreshing(false);
     }
-  }, [loadStaged]);
+  }, [loadStaged, loadDeleteFailures]);
 
   const renderGroup = useCallback(
     ({ item }: { item: StageGroup }) => {
@@ -152,6 +190,49 @@ export default function StageScreen() {
     [colors],
   );
 
+  const renderFailedDeletes = useCallback(() => {
+    if (deleteFailures.length === 0) return null;
+    return (
+      <View className="px-4 pb-2">
+        <Text className="text-sm font-bold pt-4 pb-2" style={{ color: colors.text }}>
+          Failed to delete
+        </Text>
+        {deleteFailures.map((row) => (
+          <View
+            key={row.key}
+            className="flex-row items-center justify-between py-2 border-b"
+            style={{ borderBottomWidth: 0.5, borderBottomColor: colors.border }}
+          >
+            <View className="flex-1 mr-3">
+              <Text className="text-[15px] font-medium" style={{ color: colors.text }} numberOfLines={1}>
+                {row.path}
+              </Text>
+              <Text className="text-xs mt-0.5" style={{ color: colors.textSecondary }} numberOfLines={1}>
+                {row.repo} · {row.branch}
+              </Text>
+              <Text className="text-xs mt-0.5" style={{ color: colors.error }} numberOfLines={1}>
+                {row.error}
+              </Text>
+            </View>
+            <TouchableOpacity
+              testID={`stage.retry-delete.${row.key}`}
+              onPress={() => handleRetryDelete(row)}
+              disabled={retryingKey === row.key}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: retryingKey === row.key }}
+              className="px-3 py-1.5 rounded-md"
+              style={{ backgroundColor: retryingKey === row.key ? colors.border : colors.primary }}
+            >
+              <Text className="text-xs font-bold" style={{ color: '#ffffff' }}>
+                Retry
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ))}
+      </View>
+    );
+  }, [colors, deleteFailures, handleRetryDelete, retryingKey]);
+
   const pushAllDisabled = staged.length === 0 || globalPushing;
 
   return (
@@ -195,6 +276,7 @@ export default function StageScreen() {
         keyExtractor={(item) => item.key}
         renderItem={renderGroup}
         ListEmptyComponent={renderEmpty}
+        ListHeaderComponent={renderFailedDeletes}
         contentContainerStyle={{
           paddingTop: headerBlurHeight + 8,
           paddingBottom: 32,

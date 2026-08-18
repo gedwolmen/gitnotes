@@ -1,46 +1,66 @@
-# Stage → Push UX: Card Locks, Push Buttons, and Push Progress
+# Stage → Push UX: No Row Locks, Push Buttons, and Push Progress
 
-Stage-then-push rework that separates the *stage* phase from the *push* phase
-in the user-visible locking and progress model.
+Stage-then-push model where the *push button* (not the card rows) is the single
+coordination point for pending work.
 
 ## Problem
 
 - Note/todo/canvas cards stayed **locked (grayed + spinner) until the push
   completed** — in API mode that could mean minutes (idle auto-push at 3 min).
-  The card was only supposed to be locked while its edit was being staged.
-- The Stage screen push buttons showed an `ActivityIndicator` while pushing,
-  replacing the label.
-- Clone-mode pushes (which go through isomorphic-git directly, bypassing
-  `http.ts`) never surfaced in the GitHubActivity pill.
+  Deleting a note left its row grayed out until a push happened to drain, and
+  new edits made mid-push couldn't be pushed until the in-flight push finished.
+- The floating push button showed an `ActivityIndicator` while pushing,
+  replacing the icon.
+- Delete failures were only surfaced as an inline locked row with a Retry
+  alert — the row that the user had just deleted.
 
 ## Changes
 
-### 1. Upsert ops are `staged`, not `queued` — cards unlock after stage
+### 1. No row locks — rows are always interactive
 
-`src/stores/gitOperationStore.ts`:
-- Added a `'staged'` status to `GitOpStatus`.
-- `opFromQueuedMutation` now maps `note.upsert` queue mutations to
-  `status: 'staged'` instead of `'queued'`. These ops stay in the registry
-  (stage screen stays consistent) but are **not** "active" — `isActiveStatus`
-  still covers only `queued`/`running` — so `useEntityLock`, `isPathLocked`,
-  and `isEntityLocked` no longer lock the card after staging.
-- `note.delete` mutations keep `status: 'queued'`: the local row stays
-  visible-but-locked until the push removes it (pinned by the delete-lock
-  integration tests).
+All per-row lock UI has been removed. Notes, todos, canvases, and thought-dump
+rows never gray out, never disable, and never show a lock spinner or failure
+icon. The `useEntityLock` hook (`src/hooks/useGitOpLock.ts`) was deleted along
+with its consumers (`LockedNoteRow`, `LockedTodoRow`, `LockedDumpRow`,
+`BentoTile`'s lock overlay, `EditorHeader`'s save lock). Deleting a note in
+either API or clone mode now removes the row immediately:
 
-Net effect: editing a note stages it, the card unlocks immediately, and new
-edits queue for the next push cycle. The editor already had a stage-scoped
-volatile op (`useNoteEditorDocument`), which is unchanged.
+- `noteStore.deleteNote` stages the delete, then removes the note from storage
+  and state and succeeds the git op synchronously. The queue holds the pending
+  delete mutation, which the next push drains.
+- The queue's success/drop side-channel handlers (`onDeleteMutationSucceeded` /
+  `onDeleteMutationDropped`) stay armed but are idempotent no-ops: by the time
+  the queue reports, the note and op are already gone.
+- `EditorHeader`'s Save button is disabled only by `isSaving`. The
+  `hasActiveDeleteLock` guard in `useNoteEditorDocument` still blocks a save of
+  a note whose delete is pending (Alert, no sync call).
 
-### 2. Push buttons: disabled, no spinner
+### 2. Deletes are staged, not pinned
 
-`src/screens/StageScreen.tsx`: the group-Push and Push-all buttons no longer
-swap their label for an `ActivityIndicator` while pushing. They render the
-label (`Push` / `Push all`) always and rely on `disabled` + grayed background
-during a push. `accessibilityState.disabled` and the `stage.push.*` testIDs
-are unchanged.
+A drop by the push (durable error / exhausted retries) is recorded in the
+durable `@gitnotes:delete_failures_v1` map (`src/services/git/deleteFailures.ts`)
+by the queue's drain path and by the drop handler. Failures surface on the
+Stage screen's **Failed to delete** section, not on a row:
 
-### 3. Push progress in the GitHubActivity pill
+- `StageScreen` reads `readDeleteFailures()` and renders path/repo/error with a
+  Retry button per entry.
+- Retry calls `retryDeleteFailure` (`src/services/git/retryDeleteFailure.ts`),
+  which clears the durable entry, succeeds any leftover registry ops on the
+  path, re-enqueues the delete, and does **not** drain — the user pushes when
+  ready.
+
+### 3. Push buttons: grayed, no spinner
+
+- `src/screens/StageScreen.tsx`: group-Push and Push-all buttons keep their
+  label and render no `ActivityIndicator`; they rely on `disabled` + grayed
+  background during a push.
+- `src/components/git/FloatingStageButton.tsx`: the floating button no longer
+  swaps its cloud icon for a spinner. While any push is in flight it keeps the
+  icon, grays its background (`colors.border`), dims the icon, and disables
+  tap/long-press. New edits made mid-push stage normally and are drained by the
+  next push once the current one finishes.
+
+### 4. Push progress in the GitHubActivity pill
 
 - `LocalGitWriter.push` accepts an optional `onProgress` callback and forwards
   it to the isomorphic-git `git.push` calls (initial + retry paths).
@@ -57,10 +77,12 @@ object-transfer progress.
 ## Tests
 
 - `__tests__/stores/gitOperationStore.test.ts`: staged upserts do **not** lock
-  paths/entities; queued deletes still lock; the lock-durability-across-refresh
-  test now exercises delete mutations (upserts no longer lock by design).
+  paths/entities; queued deletes still register as durable ops but rows no
+  longer consume locks.
 - `__tests__/screens/StageScreen.test.tsx`: pushing buttons keep their label
   and render no `ActivityIndicator`.
+- `__tests__/components/FloatingStageButton.test.tsx`: pushing grays the button,
+  hides no spinner, keeps the icon.
 - `__tests__/services/StagePushScheduler.test.ts`: each push is wrapped in
   `githubActivity.begin('Pushing changes')` / `end()`; `end()` still runs on
   failure.
@@ -68,5 +90,6 @@ object-transfer progress.
   `onProgress` to `git.push`.
 - `__tests__/services/StagingService.test.ts`: clone-mode push forwards
   `onProgress` to `githubActivity.setProgress`.
-- `__tests__/sync-locking.integration.test.ts` + `notes-delete-lock.test.tsx`:
-  unchanged — deletes keep locking until the push completes.
+- `__tests__/notes-delete-lock.test.tsx` + `__tests__/sync-locking.integration.test.ts`:
+  rewritten for the vanish contract — deletes remove rows immediately, failures
+  surface via the Stage screen, and no row ever renders a lock spinner.

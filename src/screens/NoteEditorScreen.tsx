@@ -75,8 +75,6 @@ function NoteEditorScreenInner() {
     navigation,
   });
 
-  const editingNote = noteId ? notes.find((n) => n.id === noteId) : undefined;
-
   const markdownOverrides = useRenderStyle('markdown');
   const markdownStyles = React.useMemo(
     () => getMarkdownStyles(colors, isDark, markdownOverrides),
@@ -169,7 +167,6 @@ function NoteEditorScreenInner() {
           isSaving={document.isSaving}
           onCancel={document.handleCancelEdit}
           onSave={document.handleSave}
-          lockCtx={editingNote ? { repo: editingNote.repo, branch: editingNote.branch, path: editingNote.filePath } : undefined}
         />
 
         <EditorToolbar

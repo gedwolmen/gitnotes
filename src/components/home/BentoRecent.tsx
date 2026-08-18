@@ -9,10 +9,9 @@ interface Props {
   items: RecentItem[];
   onOpen: (item: RecentItem) => void;
   onLongPress?: (item: RecentItem) => void;
-  lockedIds?: Set<string>;
 }
 
-export function BentoRecent({ items, onOpen, onLongPress, lockedIds }: Props) {
+export function BentoRecent({ items, onOpen, onLongPress }: Props) {
   const { colors } = useTheme();
   const { columnCount } = useResponsive('bento');
 
@@ -38,7 +37,6 @@ export function BentoRecent({ items, onOpen, onLongPress, lockedIds }: Props) {
                     size="medium"
                     onPress={() => onOpen(item)}
                     onLongPress={onLongPress ? () => onLongPress(item) : undefined}
-                    locked={lockedIds?.has(item.data.id)}
                     testIDSlot={`recent-${flatIdx}`}
                   />
                 </View>

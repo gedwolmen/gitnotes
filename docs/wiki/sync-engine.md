@@ -292,18 +292,25 @@ async function processQueue() {
 }
 ```
 
-## Per-Row Lock UI
+## Row Locks (removed)
 
-While a git operation is in flight for a file, the row cards in the Notes and Todo lists gray out and show a small spinner in the card's top-right corner (`note-row.lock-spinner` / `todo-row.lock-spinner`). The state comes from `useEntityLock` (`src/hooks/useGitOpLock.ts`), which mirrors ops from the `gitOperationStore` registry.
+Rows are never grayed out or disabled. The per-row lock UI — `useEntityLock`
+(`src/hooks/useGitOpLock.ts`), the `LockedNoteRow`/`LockedTodoRow`/`LockedDumpRow`
+wrappers, and the `note-row.lock-spinner` / `todo-row.lock-spinner` /
+`note-row.lock-error` overlays — has been deleted. The push button is the single
+coordination point for pending work.
 
-Locks are per-item. Only ops that carry a concrete `path` or matching `entityIds` gray out a row. Repo-wide ops do not match any row: push markers published with `path: undefined` and the all-repos pull-cycle op (`repo: GIT_OP_ALL_REPOS`) leave every row interactive, so a repo-wide push or pull never dims the whole list. `opMatchesContext` (`src/hooks/useGitOpLock.ts`) and `isPathLocked` (`src/stores/gitOperationStore.ts`) both require `op.path !== undefined && op.path === ctx.path`; an `entityIds` match on a queued delete/upsert still locks its row. Repo-level guards (`gateBusy`, `isRepoBusy`, `hasActivePull`, RefreshControl) are separate and unchanged.
+Delete behavior: deleting a note removes the row immediately in both API and
+clone modes (`noteStore.deleteNote` stages, then removes from storage + state
+and succeeds the git op). The pending delete stays in the sync queue and is
+drained by the next push. If the push drops it, the failure is recorded in the
+durable `@gitnotes:delete_failures_v1` map and surfaced on the Stage screen's
+"Failed to delete" section with a Retry button (`retryDeleteFailure` in
+`src/services/git/retryDeleteFailure.ts`).
 
-Layout rule:
-
-- The spinner overlay is positioned `absolute` with `right: 24, top: 24` relative to the row wrapper (`LockedNoteRow` / `LockedTodoRow`). The 24px offsets keep the spinner inside the card's bounds, clear of the 12px rounded card corner.
-- Do not lower the offsets below 24. The note card is inset by `marginHorizontal: 16` and both cards use `borderRadius: 12`, so smaller offsets make the spinner overhang the card edge.
-
-Tests: `__tests__/notes-delete-lock.test.tsx` asserts the spinner wrapper sits at least 24px from the row wrapper's right/top edges.
+Repo-level guards remain unchanged: `gateBusy`, `isRepoBusy`, `hasActivePull`,
+and `RefreshControl` still gate repo-wide operations, and repo-tree items keep
+their path locks via `isPathLocked` (`src/stores/gitOperationStore.ts`).
 
 ## Push model
 
@@ -311,7 +318,7 @@ Refresh, startup, and manual sync entry points are pull-only. They pull remote s
 
 - `ForegroundSyncService.runPull` (`src/services/ForegroundSyncService.ts`) pulls every tracked repo on app focus, online transitions, and the foreground interval. No queue drain.
 - `manualSync.runSyncCycle` (`src/services/git/manualSync.ts`) backs pull-to-refresh, the cloud-icon sync button, and startup sync via `syncNow`. Pull and store refresh only.
-- `useGitOpLock.retry` (`src/hooks/useGitOpLock.ts`) clears the failure entry and re-enqueues the delete; it does not drain the sync queue.
+- `retryDeleteFailure` (`src/services/git/retryDeleteFailure.ts`) clears the durable delete-failure entry and re-enqueues the delete; it does not drain the sync queue. It is triggered from the Stage screen's "Failed to delete" section.
 
 Pushes flow only through three paths: the stage scheduler (`StagePushScheduler`, a 3-minute idle window that resets on staged changes), the explicit Push / Push-all buttons on the Stage screen, or the OS background task. The sync queue drains only when one of those push paths runs. Saving or deleting a note by itself never starts a push.
 
