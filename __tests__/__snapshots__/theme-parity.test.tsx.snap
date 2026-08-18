@@ -65,6 +65,7 @@ exports[`NativeWind theme parity matches the pre-migration key-kit snapshots in 
             },
             [
               {
+                "alignSelf": "stretch",
                 "minHeight": 44,
               },
               {
@@ -102,7 +103,7 @@ exports[`NativeWind theme parity matches the pre-migration key-kit snapshots in 
           }
         />
         <View
-          className="py-3 px-5 items-center justify-center"
+          className="py-3 px-5 items-center justify-center self-stretch"
         >
           <View
             className="flex-row items-center justify-center gap-2"
@@ -318,6 +319,7 @@ exports[`NativeWind theme parity matches the pre-migration key-kit snapshots in 
             },
             [
               {
+                "alignSelf": "stretch",
                 "minHeight": 44,
               },
               {
@@ -355,7 +357,7 @@ exports[`NativeWind theme parity matches the pre-migration key-kit snapshots in 
           }
         />
         <View
-          className="py-3 px-5 items-center justify-center"
+          className="py-3 px-5 items-center justify-center self-stretch"
         >
           <View
             className="flex-row items-center justify-center gap-2"
