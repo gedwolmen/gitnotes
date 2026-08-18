@@ -266,6 +266,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
                 onPress={handleEnableGithubTools}
                 label={t('onboarding.githubTools.enable', { defaultValue: 'Enable GitHub Tools' })}
                 trailingIcon={<Ionicons name="git-branch-outline" size={20} color={colors.accent} />}
+                iconAlign="edge"
               />
               <Button
                 variant="ghost"
@@ -285,6 +286,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
                 onPress={handleEnableAI}
                 label="Enable AI"
                 trailingIcon={<Ionicons name="sparkles" size={20} color={colors.accent} />}
+                iconAlign="edge"
               />
               <Button
                 variant="ghost"
@@ -310,6 +312,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
                   <Ionicons name="arrow-forward" size={20} color={colors.accent} />
                 )
               }
+              iconAlign="edge"
             />
           )}
         </View>

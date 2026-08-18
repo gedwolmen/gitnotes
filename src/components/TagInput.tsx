@@ -110,6 +110,7 @@ const styles = StyleSheet.create({
   container: {
     borderTopWidth: 1,
     paddingTop: 8,
+    paddingHorizontal: 16,
   },
   tagsContainer: {
     marginBottom: 8,

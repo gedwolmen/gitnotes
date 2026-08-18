@@ -288,6 +288,7 @@ export function SettingsModals(props: SettingsModalsProps) {
               style={{ marginTop: 8, minHeight: 48 }}
               textStyle={{ color: '#fff', fontWeight: '600' }}
               trailingIcon={isVerifying ? <ActivityIndicator color="#fff" /> : undefined}
+              iconAlign="edge"
             />
           </ScrollView>
         </KeyboardAvoidingView>
