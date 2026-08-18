@@ -46,7 +46,8 @@
     "next": "次へ",
     "continue": "続行",
     "viewMode": "表示モード",
-    "searchPlaceholder": "検索..."
+    "searchPlaceholder": "検索...",
+    "upgrade": "アップグレード"
   },
   "notes": {
     "title": "ノート",
@@ -828,5 +829,44 @@
     "tagPickerTitle": "Pick a Tag",
     "noNotesYet": "No notes yet",
     "noTagsYet": "No tags yet"
+  },
+  "paywall": {
+    "title": "GitNotēs Pro",
+    "subtitle": "AIスイートと高度な機能をアンロック",
+    "features": {
+      "aiChat": "ノートとAIチャット",
+      "aiActions": "エディターでのAIアクション",
+      "thoughtDump": "思考ダンプ",
+      "voiceDump": "音声ダンプ",
+      "personalizedQuotes": "パーソナライズされた日替わりの名言",
+      "githubTools": "AI向けGitHubツール",
+      "canvases": "キャンバス",
+      "templates": "カスタムテンプレート",
+      "renderStyles": "レンダースタイル",
+      "multiAccount": "複数のGitHubアカウント"
+    },
+    "monthly": {
+      "trialCta": "30日間無料トライアル、その後{{price}}/月",
+      "price": "{{price}}/月"
+    },
+    "lifetime": {
+      "cta": "{{price}}の一括払い"
+    },
+    "restore": "購入を復元",
+    "restored": "購入を復元しました",
+    "purchaseError": "購入に失敗しました",
+    "loading": "読み込み中…",
+    "later": "後で",
+    "retry": "再試行",
+    "termsNote": "サブスクリプションは解約するまで自動更新されます。購入を復元してこのデバイスに移行してください。新規加入者には30日間の無料トライアルがあります。"
+  },
+  "pro": {
+    "statusActive": "Proが有効です",
+    "statusTrial": "トライアル残り{{days}}日",
+    "statusUpgrade": "アップグレード",
+    "settingsRow": "GitNotēs Pro",
+    "gateTitle": "Pro機能です",
+    "gateBody": "アップグレードするとAI機能などを利用できます。",
+    "badge": "PRO"
   }
 }

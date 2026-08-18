@@ -46,7 +46,8 @@
     "next": "Suivant",
     "continue": "Continuer",
     "viewMode": "Mode d'affichage",
-    "searchPlaceholder": "Rechercher..."
+    "searchPlaceholder": "Rechercher...",
+    "upgrade": "Passer à Pro"
   },
   "notes": {
     "title": "Notes",
@@ -828,5 +829,44 @@
     "tagPickerTitle": "Pick a Tag",
     "noNotesYet": "No notes yet",
     "noTagsYet": "No tags yet"
+  },
+  "paywall": {
+    "title": "GitNotēs Pro",
+    "subtitle": "Débloquez la suite IA et les fonctionnalités avancées",
+    "features": {
+      "aiChat": "Chat IA avec vos notes",
+      "aiActions": "Actions IA dans l'éditeur",
+      "thoughtDump": "Décharge de pensées",
+      "voiceDump": "Décharge vocale",
+      "personalizedQuotes": "Citations quotidiennes personnalisées",
+      "githubTools": "Outils GitHub pour l'IA",
+      "canvases": "Toiles",
+      "templates": "Modèles personnalisés",
+      "renderStyles": "Styles de rendu",
+      "multiAccount": "Plusieurs comptes GitHub"
+    },
+    "monthly": {
+      "trialCta": "Essayez 30 jours gratuitement, puis {{price}}/mois",
+      "price": "{{price}}/mois"
+    },
+    "lifetime": {
+      "cta": "{{price}} en paiement unique"
+    },
+    "restore": "Restaurer les achats",
+    "restored": "Achats restaurés",
+    "purchaseError": "Échec de l'achat",
+    "loading": "Chargement…",
+    "later": "Plus tard",
+    "retry": "Réessayer",
+    "termsNote": "Les abonnements se renouvellent automatiquement jusqu'à annulation. Restaurez vos achats pour les transférer sur cet appareil. Cette app propose un essai gratuit de 30 jours aux nouveaux abonnés."
+  },
+  "pro": {
+    "statusActive": "Pro est actif",
+    "statusTrial": "{{days}} jours restants d'essai",
+    "statusUpgrade": "Passer à Pro",
+    "settingsRow": "GitNotēs Pro",
+    "gateTitle": "Fonctionnalité Pro",
+    "gateBody": "Passez à Pro pour débloquer l'IA et plus encore.",
+    "badge": "PRO"
   }
 }

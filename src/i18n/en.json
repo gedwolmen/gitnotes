@@ -46,7 +46,8 @@
     "next": "Next",
     "continue": "Continue",
     "viewMode": "View mode",
-    "searchPlaceholder": "Search..."
+    "searchPlaceholder": "Search...",
+    "upgrade": "Upgrade"
   },
   "home": {
     "title": "Home",
@@ -828,5 +829,44 @@
     "voiceInput": "Voice input",
     "voiceUnavailable": "Voice input not available",
     "voiceDump": "Voice dump"
+  },
+  "paywall": {
+    "title": "GitNotēs Pro",
+    "subtitle": "Unlock the AI suite and advanced features",
+    "features": {
+      "aiChat": "AI chat with your notes",
+      "aiActions": "AI actions in the editor",
+      "thoughtDump": "Thought dump",
+      "voiceDump": "Voice dump",
+      "personalizedQuotes": "Personalized daily quotes",
+      "githubTools": "GitHub tools for AI",
+      "canvases": "Canvases",
+      "templates": "Custom templates",
+      "renderStyles": "Render styles",
+      "multiAccount": "Multiple GitHub accounts"
+    },
+    "monthly": {
+      "trialCta": "Try 30 days free, then {{price}}/month",
+      "price": "{{price}}/month"
+    },
+    "lifetime": {
+      "cta": "{{price}} one-time"
+    },
+    "restore": "Restore purchases",
+    "restored": "Purchases restored",
+    "purchaseError": "Purchase failed",
+    "loading": "Loading…",
+    "later": "Maybe later",
+    "retry": "Retry",
+    "termsNote": "Subscriptions renew automatically until cancelled. Restore purchases to transfer them to this device. This app offers a 30-day free trial for new subscribers."
+  },
+  "pro": {
+    "statusActive": "Pro is active",
+    "statusTrial": "{{days}} days left in trial",
+    "statusUpgrade": "Upgrade",
+    "settingsRow": "GitNotēs Pro",
+    "gateTitle": "This is a Pro feature",
+    "gateBody": "Upgrade to unlock AI features and more.",
+    "badge": "PRO"
   }
 }

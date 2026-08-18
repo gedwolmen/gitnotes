@@ -46,7 +46,8 @@
     "next": "Siguiente",
     "continue": "Continuar",
     "viewMode": "Modo de vista",
-    "searchPlaceholder": "Buscar..."
+    "searchPlaceholder": "Buscar...",
+    "upgrade": "Mejorar"
   },
   "notes": {
     "title": "Notas",
@@ -828,5 +829,44 @@
     "tagPickerTitle": "Pick a Tag",
     "noNotesYet": "No notes yet",
     "noTagsYet": "No tags yet"
+  },
+  "paywall": {
+    "title": "GitNotēs Pro",
+    "subtitle": "Desbloquea la suite de IA y las funciones avanzadas",
+    "features": {
+      "aiChat": "Chat de IA con tus notas",
+      "aiActions": "Acciones de IA en el editor",
+      "thoughtDump": "Volcado de pensamientos",
+      "voiceDump": "Volcado de voz",
+      "personalizedQuotes": "Citas diarias personalizadas",
+      "githubTools": "Herramientas de GitHub para IA",
+      "canvases": "Lienzos",
+      "templates": "Plantillas personalizadas",
+      "renderStyles": "Estilos de renderizado",
+      "multiAccount": "Múltiples cuentas de GitHub"
+    },
+    "monthly": {
+      "trialCta": "Prueba 30 días gratis, luego {{price}}/mes",
+      "price": "{{price}}/mes"
+    },
+    "lifetime": {
+      "cta": "{{price}} de pago único"
+    },
+    "restore": "Restaurar compras",
+    "restored": "Compras restauradas",
+    "purchaseError": "Error en la compra",
+    "loading": "Cargando…",
+    "later": "Quizás más tarde",
+    "retry": "Reintentar",
+    "termsNote": "Las suscripciones se renuevan automáticamente hasta que se cancelen. Restaura las compras para transferirlas a este dispositivo. Esta app ofrece una prueba gratuita de 30 días para nuevos suscriptores."
+  },
+  "pro": {
+    "statusActive": "Pro está activo",
+    "statusTrial": "{{days}} días restantes de prueba",
+    "statusUpgrade": "Mejorar",
+    "settingsRow": "GitNotēs Pro",
+    "gateTitle": "Esta es una función Pro",
+    "gateBody": "Mejora para desbloquear funciones de IA y más.",
+    "badge": "PRO"
   }
 }
