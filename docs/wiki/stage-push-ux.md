@@ -1,7 +1,9 @@
 # Stage → Push UX: No Row Locks, Push Buttons, and Push Progress
 
 Stage-then-push model where the *push button* (not the card rows) is the single
-coordination point for pending work.
+coordination point for pending work. Pushes drain immediately on explicit
+trigger, show determinate progress, emit body-text notifications, and resume
+automatically after foreground re-entry.
 
 ## Problem
 
@@ -97,6 +99,74 @@ The circular-import constraint (`stageStore` must not import
 `StagePushScheduler`) is preserved: drain is triggered from UI call sites, not
 from the store.
 
+### 6. Determinate progress ring
+
+`FloatingStageButton` renders a `HoldProgressRing` that shows a determinate arc
+during a push. The ring reads `stageStore.pushProgress` (a `number | null`
+value, range 0..1):
+
+- When `pushProgress` is a number, `ringProgress` follows it directly, giving
+  the user real progress feedback.
+- When `pushProgress` is `null` (API-mode drain where total item count is
+  unknown), the ring clamps at 0.9. This avoids an infinite indeterminate
+  animation while still signaling activity.
+- When no push is in flight, the ring resets to 0.
+
+The progress fraction comes from `StagePushScheduler.drainPushQueue`, which
+passes `(fraction) => useStageStore.getState().setPushProgress(fraction)` to
+`StagingService.pushStaged`. API-mode drain computes `completed / totalDue`
+across parallel (repo, branch) groups; clone-mode push forwards
+`loaded / total` from the isomorphic-git transport callback.
+
+### 7. Body-text push notifications
+
+`PushNotificationService.subscribeToPushProgress()` watches the stage store
+and emits three notification phases under the constant identifier
+`PUSH_NOTIFICATION_ID` (`'gitnotes-push-progress'`):
+
+1. **Start.** When `isPushing` transitions false to true, a notification fires
+   with body `"Pushing 0/N files…"` (or `"Pushing staged changes to GitHub"`
+   when `pendingCount` is 0). `pushTotal` is captured from `pendingCount` at
+   this moment.
+2. **Progress.** While pushing, each `pushProgress` change that differs from
+   the previous value updates the body to `"Pushing N/M files…"` where
+   N = `Math.round(pushProgress * pushTotal)` and M is the total count. Updates
+   are throttled to one per second via
+   `Date.now() - lastProgressSentAt < PROGRESS_THROTTLE_MS` (1000 ms).
+3. **Completion.** When `isPushing` transitions true to false, a final
+   notification shows `"Push complete"` / `"All staged changes pushed to
+   GitHub"`.
+
+All three phases use `NotificationService.dismissAndReschedule`, which cancels
+the scheduled notification and dismisses any presented one, then re-schedules
+under the same `PUSH_NOTIFICATION_ID` with a `TIME_INTERVAL` trigger of
+`seconds: 1`. This works around expo-notifications having no in-place update
+API.
+
+### 8. Resume on foreground
+
+A push interrupted by the app being backgrounded (kill, OS reclaim, user
+switching apps) resumes automatically when the app returns to the foreground.
+
+`StagePushScheduler.drainPushQueue` sets an AsyncStorage marker
+(`gitnotes-push-session`) when the FIFO loop starts, and clears it when the
+queue fully drains. `ForegroundSyncService.handleAppStateChange` checks for
+this marker on `AppState → active`:
+
+```
+hasPushSession().then((active) => {
+  if (active && useStageStore.getState().staged.length > 0) {
+    void drainPushQueue();
+  }
+});
+```
+
+If the marker exists and there are staged items remaining, `drainPushQueue` is
+called immediately. The re-entrancy guard (`draining` flag) prevents overlap
+with a concurrent drain. The push session marker is idempotent: clone push
+re-pushes the same refs safely, and API-mode drain re-runs whatever mutations
+remain in the sync queue.
+
 ## Tests
 
 - `__tests__/stores/gitOperationStore.test.ts`: staged upserts do **not** lock
@@ -117,3 +187,14 @@ from the store.
 - `__tests__/notes-delete-lock.test.tsx` + `__tests__/sync-locking.integration.test.ts`:
   rewritten for the vanish contract — deletes remove rows immediately, failures
   surface via the Stage screen, and no row ever renders a lock spinner.
+- `__tests__/components/FloatingStageButton.test.tsx`: progress ring follows
+  `storePushProgress`, clamps at 0.9 when null, resets when idle.
+- `__tests__/services/StagePushScheduler.test.ts`: `drainPushQueue` forwards
+  progress fraction to `stageStore.setPushProgress`; resets `pushProgress` to
+  null when the queue empties.
+- `__tests__/services/PushNotificationService.test.ts`: start notification
+  captures `pushTotal` from `pendingCount`; progress notification computes
+  `Math.round(progress * total)` body text; completion notification fires on
+  `isPushing` false transition; throttled at 1/sec.
+- `__tests__/services/ForegroundSyncService.test.ts`: `hasPushSession` returning
+  true with staged items triggers `drainPushQueue` on `AppState → active`.

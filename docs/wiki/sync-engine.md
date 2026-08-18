@@ -322,6 +322,36 @@ Refresh, startup, and manual sync entry points are pull-only. They pull remote s
 
 Pushes flow only through three paths: the stage scheduler (`StagePushScheduler`, a 3-minute idle window that resets on staged changes), the explicit Push / Push-all buttons on the Stage screen, or the OS background task. The sync queue drains only when one of those push paths runs. Saving or deleting a note by itself never starts a push.
 
+### Immediate drain on explicit push
+
+When a user taps Push / Push-all on the Stage screen or long-presses the floating stage button, the call site enqueues keys via `stageStore.pushAll()` or `stageStore.requestPush()` and then immediately calls `void drainPushQueue()`. Previously, explicit push only enqueued work; the actual drain waited for the 3-minute idle timer. Now the drain starts right away, and the idle-timer path (`flushStaged`) continues to serve the auto-push use case.
+
+The circular-import constraint is preserved: `stageStore` must not import `StagePushScheduler`. The drain trigger lives at UI call sites, not in the store.
+
+### Parallel group drain and progress aggregation
+
+`drainPushQueue` processes the FIFO queue one key at a time, each inside a `GitSyncGate` cycle. For each key it calls `StagingService.pushStaged(repoPath, branch, onProgress)`, which delegates to `NoteSyncQueueService.drain(onProgress)` for API mode or `LocalGitWriter.push` for clone mode.
+
+`drain()` groups pending mutations by `(repo, branch)` and processes groups in parallel via `Promise.all`. A shared `completed` counter incremented in per-group `.then()` callbacks fires `onProgress(completed / totalDue)` after each group resolves, giving coarse per-group granularity. When `totalDue === 0` (all items skipped by backoff), `onProgress(null)` is called. After the loop, `onProgress(1)` signals completion.
+
+The progress fraction (`number | null`, range 0..1) flows from `drainPushQueue` into `stageStore.setPushProgress`. A `null` value means "unknown total" and the floating button's progress ring clamps at 0.9 to avoid an infinite indeterminate animation. See [Stage Push UX](./stage-push-ux.md) for the full ring and notification behavior.
+
+### Resume on foreground
+
+`drainPushQueue` sets an AsyncStorage marker (`gitnotes-push-session`) when the FIFO loop starts and clears it when the queue drains. If the app is backgrounded mid-push (OS reclaim, user switching apps, kill), the marker persists.
+
+`ForegroundSyncService.handleAppStateChange` checks `hasPushSession()` on `AppState → active`. When the marker exists and `stageStore.staged.length > 0`, it calls `drainPushQueue()` immediately. The re-entrancy guard (`draining` flag) prevents overlap. Clone push re-pushes the same refs safely (idempotent), and API-mode drain re-runs whatever mutations remain in the sync queue.
+
+### Backoff constants
+
+`NoteSyncQueueService` uses exponential backoff for transient failures:
+
+- `BACKOFF_BASE_MS = 500` (initial retry delay)
+- `BACKOFF_CAP_MS = 30_000` (maximum retry delay)
+- `MAX_ATTEMPTS = 8` (mutations are dropped after 8 failures)
+
+The formula: `Math.min(500 * 2^(attempts-1), 30000)`. This turns a transient network blip from 8 immediate retries into roughly 1 minute of wall-clock retries, giving the foreground/auto-pull path time to resolve the underlying issue.
+
 ## Push progress & failure notifications
 
 Immediate local notifications (push progress, push failure, background-pull) use a `TIME_INTERVAL` trigger with `seconds: 1` instead of a near-future date, which avoids expo-notifications rejecting past dates. Date-trigger scheduling (`scheduleDateTrigger` in `src/services/NotificationService.ts`) re-checks the trigger against `Date.now()` after the permission round-trip, so a date that lapses while the permission prompt is open is skipped rather than rejected. Native scheduling failures never throw: they log with `console.warn`, return `null`, and callers fire-and-forget.
