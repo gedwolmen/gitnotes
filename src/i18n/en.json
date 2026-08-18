@@ -858,7 +858,11 @@
     "loading": "Loading…",
     "later": "Maybe later",
     "retry": "Retry",
-    "termsNote": "Subscriptions renew automatically until cancelled. Restore purchases to transfer them to this device. This app offers a 30-day free trial for new subscribers."
+    "termsNote": "Subscriptions renew automatically until cancelled. Restore purchases to transfer them to this device. This app offers a 30-day free trial for new subscribers.",
+    "yearly": {
+      "title": "Yearly",
+      "cta": "{{price}}/year"
+    }
   },
   "pro": {
     "statusActive": "Pro is active",

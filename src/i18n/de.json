@@ -858,7 +858,11 @@
     "loading": "Wird geladen…",
     "later": "Vielleicht später",
     "retry": "Erneut versuchen",
-    "termsNote": "Abonnements verlängern sich automatisch bis zur Kündigung. Stelle Käufe wieder her, um sie auf dieses Gerät zu übertragen. Diese App bietet neuen Abonnenten eine 30-tägige kostenlose Testphase."
+    "termsNote": "Abonnements verlängern sich automatisch bis zur Kündigung. Stelle Käufe wieder her, um sie auf dieses Gerät zu übertragen. Diese App bietet neuen Abonnenten eine 30-tägige kostenlose Testphase.",
+    "yearly": {
+      "title": "Jährlich",
+      "cta": "{{price}}/Jahr"
+    }
   },
   "pro": {
     "statusActive": "Pro ist aktiv",

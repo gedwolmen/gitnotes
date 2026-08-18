@@ -8,6 +8,7 @@
 |------|-------|--------------|
 | Free trial | 30 days | Store intro offer (App Store Connect introductory offer / Play Console free-trial base plan) |
 | Monthly | $2.99/month (after trial) | Auto-renewable subscription |
+| Yearly | $19.99/year (when configured) | Auto-renewable subscription |
 | Lifetime | $40 one-time | Non-consumable in-app purchase |
 
 Existing users (installed before the paywall release) are grandfathered as Pro forever and never see the paywall.
@@ -24,7 +25,7 @@ PaywallScreen ──► ProStore (zustand) ──► RevenueCatService ──►
 
 ### Files
 
-- `src/services/RevenueCatService.ts` — the only module that imports `react-native-purchases`. Configures per platform (`EXPO_PUBLIC_REVENUECAT_API_KEY_IOS` / `_ANDROID`; placeholder keys skip configuration), fetches offerings (packages `monthly` + `lifetime` from the current offering), purchases, restores, reads customer info, subscribes to updates, and computes iOS-only trial eligibility (`checkTrialOrIntroductoryPriceEligibility`; Android returns true — the Play sheet is the source of truth).
+- `src/services/RevenueCatService.ts` — the only module that imports `react-native-purchases`. Configures per platform (`EXPO_PUBLIC_REVENUECAT_API_KEY_IOS` / `_ANDROID`; placeholder keys skip configuration), fetches offerings (packages `monthly` + `yearly` (optional) + `lifetime` from the current offering), purchases, restores, reads customer info, subscribes to updates, and computes iOS-only trial eligibility (`checkTrialOrIntroductoryPriceEligibility`; Android returns true — the Play sheet is the source of truth).
 - `src/stores/proStore.ts` — zustand store: `status` (`loading | pro | free`), `entitlementActive`, `isGrandfathered`, `trialActive`/`trialEndsAt`, packages, purchase/restore actions, and the interstitial state machine. `selectIsPro(state) = entitlementActive || isGrandfathered`. Initialized at app boot in `App.tsx` (non-blocking, after `bootstrapStorage()`).
 - `src/services/GrandfatherService.ts` — one-shot migration of existing users.
 
@@ -64,10 +65,10 @@ A one-time paywall presentation ~3 days after a trial expires: `@gitnotes:trial_
 ## RevenueCat configuration
 
 - Entitlement: `pro` (both products grant it)
-- Offering: `default` with packages `monthly` + `lifetime`
+- Offering: `default` with packages `monthly` + `yearly` (optional) + `lifetime`
 - Product identifiers (must match the stores exactly):
-  - iOS: `com.xaventra.gitnotes.monthly`, `com.xaventra.gitnotes.lifetime`
-  - Android: `gitnotes_monthly`, `gitnotes_lifetime`
+  - iOS: `com.xaventra.gitnotes.monthly`, `com.xaventra.gitnotes.yearly`, `com.xaventra.gitnotes.lifetime`
+  - Android: `gitnotes_monthly`, `gitnotes_yearly`, `gitnotes_lifetime`
 
 ## Environment variables
 
@@ -83,9 +84,9 @@ These are RevenueCat **public SDK keys** (non-secret, embedded in the app). Copy
 This cannot be automated — a human must complete it before real-device (sandbox) QA:
 
 1. **RevenueCat dashboard**: create the project, add the iOS app (`com.xaventra.gitnotes`) and Android app (`org.gitnotes.app`), and copy the SDK keys into `.env`.
-2. **App Store Connect**: create the auto-renewable subscription `com.xaventra.gitnotes.monthly` at $2.99 with a **30-day free trial** introductory offer, and the non-consumable `com.xaventra.gitnotes.lifetime` at $40.
-3. **Google Play Console**: create the subscription `gitnotes_monthly` at $2.99 with a **free-trial base plan** (30 days), and the one-time product `gitnotes_lifetime` at $40.
-4. **RevenueCat dashboard**: create the `pro` entitlement, link BOTH products to it, create the `default` offering with `monthly` + `lifetime` packages, and mark it current.
+2. **App Store Connect**: create the auto-renewable subscriptions `com.xaventra.gitnotes.monthly` at $2.99 (with a **30-day free trial** introductory offer) and `com.xaventra.gitnotes.yearly` at $19.99, plus the non-consumable `com.xaventra.gitnotes.lifetime` at $40.
+3. **Google Play Console**: create the subscriptions `gitnotes_monthly` at $2.99 (**free-trial base plan**, 30 days) and `gitnotes_yearly` at $19.99, plus the one-time product `gitnotes_lifetime` at $40.
+4. **RevenueCat dashboard**: create the `pro` entitlement, link ALL products to it, create the `default` offering with `monthly` + `yearly` + `lifetime` packages (yearly is optional — the paywall hides it when absent), and mark it current.
 5. Verify the build number: the paywall release must be **build ≥ 9** (iOS `buildNumber` in `app.json`) so `originalApplicationVersion < 9` correctly identifies pre-paywall users.
 6. App Store review may require real terms/privacy URLs in the paywall's `paywall.termsNote` text — decide before submission.
 

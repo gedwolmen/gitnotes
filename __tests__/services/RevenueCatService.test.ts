@@ -45,10 +45,11 @@ const PurchasesMock = Purchases as unknown as {
 };
 
 const pkg = (identifier: string) => ({ identifier } as PurchasesPackage);
-const offerings = (monthly?: boolean, lifetime?: boolean) => ({
+const offerings = (monthly?: boolean, lifetime?: boolean, yearly?: boolean) => ({
   current: {
     availablePackages: [
       ...(monthly ? [pkg('monthly')] : []),
+      ...(yearly ? [pkg('yearly')] : []),
       ...(lifetime ? [pkg('lifetime')] : []),
     ],
   },
@@ -119,6 +120,19 @@ describe('getPackages', () => {
   it('returns null when a package is missing', async () => {
     PurchasesMock.getOfferings.mockResolvedValue(offerings(true, false));
     expect(await getPackages()).toBeNull();
+  });
+
+  it('includes the yearly package when the offering has one', async () => {
+    PurchasesMock.getOfferings.mockResolvedValue(offerings(true, true, true));
+    const result = await getPackages();
+    expect(result?.yearly?.identifier).toBe('yearly');
+  });
+
+  it('omits the yearly package when the offering has none', async () => {
+    PurchasesMock.getOfferings.mockResolvedValue(offerings(true, true, false));
+    const result = await getPackages();
+    expect(result?.yearly).toBeUndefined();
+    expect(result?.monthly.identifier).toBe('monthly');
   });
 });
 

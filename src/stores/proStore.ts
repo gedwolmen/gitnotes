@@ -27,6 +27,7 @@ interface ProState {
   entitlementExpiresAt: number | null;
   offeringsReady: boolean;
   monthlyPackage: PurchasesPackage | null;
+  yearlyPackage: PurchasesPackage | null;
   lifetimePackage: PurchasesPackage | null;
   isPurchasing: boolean;
   isRestoring: boolean;
@@ -39,6 +40,7 @@ interface ProActions {
   initialize: () => Promise<void>;
   refresh: () => Promise<void>;
   purchaseMonthly: () => Promise<void>;
+  purchaseYearly: () => Promise<void>;
   purchaseLifetime: () => Promise<void>;
   restore: () => Promise<void>;
   loadOfferingsIfNeeded: () => Promise<void>;
@@ -111,6 +113,7 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
   entitlementExpiresAt: null,
   offeringsReady: false,
   monthlyPackage: null,
+  yearlyPackage: null,
   lifetimePackage: null,
   isPurchasing: false,
   isRestoring: false,
@@ -175,6 +178,19 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
     }
   },
 
+  purchaseYearly: async () => {
+    const pkg = get().yearlyPackage;
+    if (!pkg) return;
+    set({ isPurchasing: true, error: null });
+    const result = await purchasePackageWith(pkg);
+    set({ isPurchasing: false });
+    if (result.kind === 'purchased') {
+      await get().refresh();
+    } else if (result.kind === 'error') {
+      set({ error: result.message });
+    }
+  },
+
   purchaseLifetime: async () => {
     const pkg = get().lifetimePackage;
     if (!pkg) return;
@@ -205,6 +221,7 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
       const packages = await getPackages();
       set({
         monthlyPackage: packages?.monthly ?? null,
+        yearlyPackage: packages?.yearly ?? null,
         lifetimePackage: packages?.lifetime ?? null,
         offeringsReady: true,
         error: null,

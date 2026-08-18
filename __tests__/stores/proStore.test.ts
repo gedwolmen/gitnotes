@@ -26,6 +26,7 @@ jest.mock('../../src/services/RevenueCatService', () => ({
   getCustomerInfo: jest.fn(async () => ({ entitlements: { active: {} } })),
   getPackages: jest.fn(async () => ({
     monthly: { identifier: 'monthly', product: { identifier: 'monthly-product', priceString: '$2.99' } },
+    yearly: { identifier: 'yearly', product: { identifier: 'yearly-product', priceString: '$19.99' } },
     lifetime: { identifier: 'lifetime', product: { identifier: 'lifetime-product', priceString: '$40.00' } },
     offerings: { current: null },
   })),
@@ -84,6 +85,7 @@ function resetStoreState(): void {
     entitlementExpiresAt: null,
     offeringsReady: false,
     monthlyPackage: null,
+    yearlyPackage: null,
     lifetimePackage: null,
     isPurchasing: false,
     isRestoring: false,
@@ -101,6 +103,7 @@ beforeEach(() => {
   customerInfoMock.mockResolvedValue(freeCustomer);
   packagesMock.mockResolvedValue({
     monthly: { identifier: 'monthly', product: { identifier: 'm', priceString: '$2.99' } },
+    yearly: { identifier: 'yearly', product: { identifier: 'y', priceString: '$19.99' } },
     lifetime: { identifier: 'lifetime', product: { identifier: 'l', priceString: '$40.00' } },
     offerings: { current: null },
   });
@@ -238,6 +241,18 @@ describe('purchases', () => {
     expect(purchaseMock).toHaveBeenCalledWith(
       expect.objectContaining({ identifier: 'lifetime' }),
     );
+  });
+
+  it('purchaseYearly purchases the yearly package and refreshes to pro', async () => {
+    await useProStore.getState().loadOfferingsIfNeeded();
+    expect(useProStore.getState().yearlyPackage?.identifier).toBe('yearly');
+    purchaseMock.mockResolvedValue({ kind: 'purchased', customerInfo: proCustomer() });
+    customerInfoMock.mockResolvedValue(proCustomer());
+    await useProStore.getState().purchaseYearly();
+    expect(purchaseMock).toHaveBeenCalledWith(
+      expect.objectContaining({ identifier: 'yearly' }),
+    );
+    expect(useProStore.getState().status).toBe('pro');
   });
 
   it('clears errors on cancel and keeps status unchanged', async () => {

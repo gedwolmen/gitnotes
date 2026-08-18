@@ -29,6 +29,7 @@ export default function PaywallScreen() {
   const headerHeight = useScreenHeaderHeight();
 
   const monthlyPackage = useProStore((s) => s.monthlyPackage);
+  const yearlyPackage = useProStore((s) => s.yearlyPackage);
   const lifetimePackage = useProStore((s) => s.lifetimePackage);
   const offeringsReady = useProStore((s) => s.offeringsReady);
   const isPurchasing = useProStore((s) => s.isPurchasing);
@@ -36,6 +37,7 @@ export default function PaywallScreen() {
   const error = useProStore((s) => s.error);
   const loadOfferingsIfNeeded = useProStore((s) => s.loadOfferingsIfNeeded);
   const purchaseMonthly = useProStore((s) => s.purchaseMonthly);
+  const purchaseYearly = useProStore((s) => s.purchaseYearly);
   const purchaseLifetime = useProStore((s) => s.purchaseLifetime);
   const restore = useProStore((s) => s.restore);
 
@@ -56,6 +58,7 @@ export default function PaywallScreen() {
   }, [monthlyProductId, trialChecked]);
 
   const monthlyPrice = monthlyPackage?.product.priceString;
+  const yearlyPrice = yearlyPackage?.product.priceString;
   const lifetimePrice = lifetimePackage?.product.priceString;
   const busy = isPurchasing || isRestoring;
 
@@ -64,6 +67,12 @@ export default function PaywallScreen() {
       if (useProStore.getState().status === 'pro') navigation.goBack();
     });
   }, [purchaseMonthly, navigation]);
+
+  const handleYearly = useCallback(() => {
+    void purchaseYearly().then(() => {
+      if (useProStore.getState().status === 'pro') navigation.goBack();
+    });
+  }, [purchaseYearly, navigation]);
 
   const handleLifetime = useCallback(() => {
     void purchaseLifetime().then(() => {
@@ -157,6 +166,23 @@ export default function PaywallScreen() {
                 style={{ marginTop: 14 }}
               />
             </Surface>
+
+            {yearlyPackage ? (
+            <Surface elevation="raised" radius="md" className="mt-4 p-5">
+              <Text className="text-lg font-bold" style={{ color: colors.text }}>
+                {t('paywall.yearly.title')}
+              </Text>
+              <Button
+                testID="paywall.yearly.cta"
+                variant="secondary"
+                fullWidth
+                disabled={busy || !yearlyPrice}
+                label={yearlyPrice ? t('paywall.yearly.cta', { price: yearlyPrice }) : t('paywall.loading')}
+                onPress={handleYearly}
+                style={{ marginTop: 14 }}
+              />
+            </Surface>
+            ) : null}
 
             <Surface elevation="raised" radius="md" className="mt-4 p-5">
               <Text className="text-lg font-bold" style={{ color: colors.text }}>

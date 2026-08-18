@@ -858,7 +858,11 @@
     "loading": "Cargando…",
     "later": "Quizás más tarde",
     "retry": "Reintentar",
-    "termsNote": "Las suscripciones se renuevan automáticamente hasta que se cancelen. Restaura las compras para transferirlas a este dispositivo. Esta app ofrece una prueba gratuita de 30 días para nuevos suscriptores."
+    "termsNote": "Las suscripciones se renuevan automáticamente hasta que se cancelen. Restaura las compras para transferirlas a este dispositivo. Esta app ofrece una prueba gratuita de 30 días para nuevos suscriptores.",
+    "yearly": {
+      "title": "Anual",
+      "cta": "{{price}}/año"
+    }
   },
   "pro": {
     "statusActive": "Pro está activo",

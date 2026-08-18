@@ -50,6 +50,7 @@ import { __setProState } from '../../src/stores/proStore';
 const trialEligibleMock = isTrialEligible as jest.Mock;
 
 const monthlyPkg = { identifier: 'monthly', product: { identifier: 'monthly-product', priceString: '$2.99' } };
+const yearlyPkg = { identifier: 'yearly', product: { identifier: 'yearly-product', priceString: '$19.99' } };
 const lifetimePkg = { identifier: 'lifetime', product: { identifier: 'lifetime-product', priceString: '$40.00' } };
 
 function setReadyState(overrides: Record<string, unknown> = {}): void {
@@ -65,9 +66,11 @@ function setReadyState(overrides: Record<string, unknown> = {}): void {
     interstitialEligible: false,
     offeringsReady: true,
     monthlyPackage: monthlyPkg,
+    yearlyPackage: null,
     lifetimePackage: lifetimePkg,
     configured: true,
     purchaseMonthly: jest.fn(async () => undefined),
+    purchaseYearly: jest.fn(async () => undefined),
     purchaseLifetime: jest.fn(async () => undefined),
     restore: jest.fn(async () => undefined),
     loadOfferingsIfNeeded: jest.fn(async () => undefined),
@@ -116,6 +119,26 @@ describe('PaywallScreen', () => {
   it('shows the lifetime CTA with the price', () => {
     const { getByText } = render(<PaywallScreen />);
     expect(getByText('$40.00 one-time')).toBeTruthy();
+  });
+
+  it('hides the yearly option when no yearly package is offered', () => {
+    const { queryByTestId } = render(<PaywallScreen />);
+    expect(queryByTestId('paywall.yearly.cta')).toBeNull();
+  });
+
+  it('shows and purchases the yearly option when a yearly package exists', async () => {
+    const purchaseYearly = jest.fn(async () => {
+      __setProState({ status: 'pro', entitlementActive: true });
+    });
+    setReadyState({ yearlyPackage: yearlyPkg, purchaseYearly });
+    const { getByTestId, getByText } = render(<PaywallScreen />);
+    expect(getByTestId('paywall.yearly.cta')).toBeTruthy();
+    expect(getByText('$19.99/year')).toBeTruthy();
+    await act(async () => {
+      fireEvent.press(getByTestId('paywall.yearly.cta'));
+    });
+    expect(purchaseYearly).toHaveBeenCalledTimes(1);
+    expect(mockGoBack).toHaveBeenCalledTimes(1);
   });
 
   it('purchases the monthly package and goes back when the purchase succeeds', async () => {
