@@ -100,7 +100,13 @@ export function Button(props: ButtonProps) {
   // to one side, so the text sits left of the button's true center. Pin the
   // trailing icon to the right edge (absolute) and reserve the same space on
   // the left so the label stays dead-center (onboarding "Next" bug).
+  //
+  // iconAlign="edge" keeps that behavior for wide/fullWidth buttons where the
+  // pinned icon has room. iconAlign="inline" (default) renders the icon next
+  // to the label in the flex row instead — needed for narrow buttons (e.g. the
+  // header "Save" button) where the absolutely-pinned icon overlaps the text.
   const hasTrailingIcon = trailingIcon != null;
+  const useEdgeIcon = hasTrailingIcon && iconAlign === 'edge';
   const centeredContent = (
     <View className="flex-row items-center justify-center">
       <View style={{ width: hasTrailingIcon ? 20 : 0 }} />
@@ -135,7 +141,7 @@ export function Button(props: ButtonProps) {
           fullWidth && 'self-stretch'
         )}
       >
-        {hasTrailingIcon ? (
+        {useEdgeIcon ? (
           <>
             {centeredContent}
             {edgeIcon}
@@ -173,7 +179,7 @@ export function Button(props: ButtonProps) {
           ]}
         >
           <View className="py-3 px-5 items-center justify-center self-stretch">
-            {hasTrailingIcon ? (
+            {useEdgeIcon ? (
               <>
                 {centeredContent}
                 {edgeIcon}
