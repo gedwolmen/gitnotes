@@ -69,6 +69,10 @@ jest.mock('../../src/services/StorageService', () => ({
   StorageService: { getSavedRepositories: jest.fn(async () => []) },
 }));
 
+jest.mock('../../src/services/StagePushScheduler', () => ({
+  drainPushQueue: jest.fn(async () => undefined),
+}));
+
 jest.mock('../../src/stores/stageStore', () => {
   const actual = jest.requireActual('../../src/stores/stageStore');
   const mockUseStageStore = (selector: (state: MockStageState) => unknown) =>
@@ -171,6 +175,8 @@ describe('FloatingStageButton', () => {
     mockHandlePressIn.mockClear();
     mockHandlePressOut.mockClear();
     mockHandleHoldComplete.mockClear();
+    const schedulerMock = jest.requireMock('../../src/services/StagePushScheduler') as { drainPushQueue: jest.Mock };
+    schedulerMock.drainPushQueue.mockClear();
     jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
   });
 
@@ -190,7 +196,7 @@ describe('FloatingStageButton', () => {
     expect(mockNavigate).toHaveBeenCalledWith('Stage');
   });
 
-  it('pushes all staged changes on long press', async () => {
+  it('pushes all staged changes on long press and drains immediately', async () => {
     jest.useFakeTimers();
     const { getByTestId } = await renderStageButton();
 
@@ -198,6 +204,8 @@ describe('FloatingStageButton', () => {
 
     expect(mockHandleHoldComplete).toHaveBeenCalledTimes(1);
     expect(mockPushAll).toHaveBeenCalledTimes(1);
+    const schedulerMock = jest.requireMock('../../src/services/StagePushScheduler') as { drainPushQueue: jest.Mock };
+    expect(schedulerMock.drainPushQueue).toHaveBeenCalledTimes(1);
     jest.useRealTimers();
   });
 

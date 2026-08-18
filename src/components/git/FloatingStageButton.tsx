@@ -12,6 +12,7 @@ import Animated, {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useStageStore } from '../../stores/stageStore';
+import { drainPushQueue } from '../../services/StagePushScheduler';
 import { useTheme } from '../../contexts/ThemeContext';
 import { HapticService } from '../../utils/haptics';
 import type { RootStackParamList } from '../../navigation/types';
@@ -108,6 +109,7 @@ export function FloatingStageButton({ currentRouteName }: FloatingStageButtonPro
     affordances.handleHoldComplete();
     HapticService.selection();
     useStageStore.getState().pushAll();
+    void drainPushQueue();
   }, [affordances, anyPushing]);
 
   const panGesture = useStageButtonPanGesture(position);

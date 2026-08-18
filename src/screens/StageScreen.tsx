@@ -6,6 +6,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { ScreenHeader, useScreenHeaderHeight } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { groupStaged, useStageStore, type StageGroup } from '../stores/stageStore';
+import { drainPushQueue } from '../services/StagePushScheduler';
 import { useGitHubActivityStore } from '../stores/githubActivityStore';
 import type { StagedItem } from '../services/git/StagingService';
 import type { RootStackParamList } from '../navigation/types';
@@ -125,12 +126,14 @@ export default function StageScreen() {
   const handlePushGroup = useCallback(
     (group: StageGroup) => {
       requestPush(group.repoPath, group.branch);
+      void drainPushQueue();
     },
     [requestPush],
   );
 
   const handlePushAll = useCallback(() => {
     pushAll();
+    void drainPushQueue();
   }, [pushAll]);
 
   const handleRefresh = useCallback(async () => {
