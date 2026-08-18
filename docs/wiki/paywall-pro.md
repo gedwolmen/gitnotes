@@ -79,6 +79,8 @@ EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID=goog_...
 
 These are RevenueCat **public SDK keys** (non-secret, embedded in the app). Copy `.env.example` to `.env` and fill them in. Placeholder values are treated as "not configured" — RevenueCat is skipped safely.
 
+**Native setup:** `react-native-purchases@10.7.1` ships **no Expo config plugin** (`app.plugin.js` absent) — do NOT add it to `app.json` plugins (breaks `expo prebuild`). The native module links automatically via Expo autolinking (podspec + gradle). For **production**, the App ID must have the **In-App Purchase capability** (enable it in the Apple Developer portal / App Store Connect and ensure the EAS provisioning profile includes it); StoreKit sandbox on the simulator needs no capability.
+
 ## Manual store setup checklist (user-performed)
 
 > **Status:** iOS in progress. **Android deferred** — tracked in [issue #914](https://github.com/gedwolmen/gitnotes/issues/914) (needs the `goog_…` SDK key + Play Console products + Android sandbox QA). The code is cross-platform-ready; the paywall auto-hides packages the dashboard does not provide.
