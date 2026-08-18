@@ -97,25 +97,25 @@ describe('PaywallScreen', () => {
     expect(getByTestId('paywall.monthly.cta')).toBeTruthy();
     expect(getByTestId('paywall.lifetime.cta')).toBeTruthy();
     expect(getByTestId('paywall.restore')).toBeTruthy();
-    expect(getByText('paywall.features.aiChat')).toBeTruthy();
-    expect(getByText('paywall.features.multiAccount')).toBeTruthy();
+    expect(getByText('AI chat with your notes')).toBeTruthy();
+    expect(getByText('Multiple GitHub accounts')).toBeTruthy();
   });
 
   it('uses the trial CTA label for the monthly option when the user is trial-eligible', async () => {
     trialEligibleMock.mockResolvedValue(true);
     const { findAllByText } = render(<PaywallScreen />);
-    const matches = await findAllByText('paywall.monthly.trialCta');
+    const matches = await findAllByText('Try 30 days free, then $2.99/month');
     expect(matches.length).toBeGreaterThanOrEqual(1);
   });
 
   it('uses the plain price label when the user is not trial-eligible', () => {
     const { getByText } = render(<PaywallScreen />);
-    expect(getByText('paywall.monthly.price')).toBeTruthy();
+    expect(getByText('$2.99/month')).toBeTruthy();
   });
 
   it('shows the lifetime CTA with the price', () => {
     const { getByText } = render(<PaywallScreen />);
-    expect(getByText('paywall.lifetime.cta')).toBeTruthy();
+    expect(getByText('$40.00 one-time')).toBeTruthy();
   });
 
   it('purchases the monthly package and goes back when the purchase succeeds', async () => {
