@@ -448,7 +448,9 @@ getCommitOid.mockResolvedValue(null);
           token: 'test-token',
         }),
       );
-      expect(queueDrain).not.toHaveBeenCalled();
+      // drain() is now unconditional so stale API-mode queue items in a
+      // clone-mode repo (issue #900) never get stranded.
+      expect(queueDrain).toHaveBeenCalledTimes(1);
     });
 
     test('clone push forwards onProgress to githubActivity.setProgress', async () => {
@@ -493,6 +495,34 @@ getCommitOid.mockResolvedValue(null);
       const result = await StagingService.pushStaged('owner/repo', 'main');
 
       expect(result).toEqual({ success: false, error: 'push rejected' });
+      expect(writerPush).toHaveBeenCalledTimes(1);
+    });
+
+    test('clone-mode repo with leftover API-mode queue items still drains (issue #900)', async () => {
+      queueGetAll.mockResolvedValue([
+        queueItem('note.delete', {
+          repo: 'owner/repo',
+          branch: 'main',
+          filePath: 'notes/stale.md',
+          title: 'stale',
+        }),
+      ]);
+      listOverrides.mockResolvedValue({ 'owner/repo': 'clone' });
+      getSavedRepositories.mockResolvedValue([
+        { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
+      ]);
+      getCommitOid.mockImplementation(
+        async ({ ref }: { ref: string }) =>
+          ref.startsWith('refs/heads') ? 'local-oid' : 'remote-oid',
+      );
+
+      const result = await StagingService.pushStaged('owner/repo', 'main');
+
+      expect(result).toEqual({ success: true });
+      // The stale API-mode delete would previously be stranded: listStaged
+      // tags queue items with the repo's current mode (clone), so the old
+      // hasApi gate skipped drain entirely and the item sat at attempts 0.
+      expect(queueDrain).toHaveBeenCalledTimes(1);
       expect(writerPush).toHaveBeenCalledTimes(1);
     });
 

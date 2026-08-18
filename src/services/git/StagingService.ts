@@ -173,21 +173,19 @@ export class StagingService {
       if (staged.length === 0) return { success: true };
 
       const cloneKeys = new Map<string, { repoPath: string; branch: string }>();
-      let hasApi = false;
       for (const item of staged) {
         if (item.mode === 'clone') {
           cloneKeys.set(`${item.repoPath}\n${item.branch}`, {
             repoPath: item.repoPath,
             branch: item.branch,
           });
-        } else {
-          hasApi = true;
         }
       }
 
-      if (hasApi) {
-        await NoteSyncQueueService.drain();
-      }
+      // Always drain: listStaged tags leftover API-mode mutations with the
+      // repo's current mode, so a hasApi gate would strand queue items in
+      // clone-mode repos forever. drain() handles clone groups internally.
+      await NoteSyncQueueService.drain();
 
       if (cloneKeys.size > 0) {
         const token = await AuthService.getToken();
