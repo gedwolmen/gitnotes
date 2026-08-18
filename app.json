@@ -82,7 +82,8 @@
           "microphonePermission": "GitNotēs needs access to your microphone for voice-to-text note input.",
           "speechRecognitionPermission": "GitNotēs uses on-device speech recognition to convert your voice into note text. Audio stays on your device."
         }
-      ]
+      ],
+      "react-native-purchases"
     ],
     "owner": "vidwa",
     "runtimeVersion": {

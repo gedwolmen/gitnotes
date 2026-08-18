@@ -375,3 +375,68 @@ jest.mock('expo-notifications', () => ({
   cancelAllScheduledNotificationsAsync: jest.fn(),
   getPresentedNotificationsAsync: jest.fn(async () => []),
 }));
+
+// ---- Paywall mocks (RevenueCat + ProStore) ----
+// react-native-purchases is a native module; the global mock keeps every test
+// file loadable in jest. Tests that need per-test control re-mock the module
+// (standard pattern, same as the AsyncStorage mock above).
+jest.mock('react-native-purchases', () => {
+  const Purchases = {
+    setLogLevel: jest.fn(),
+    configure: jest.fn(async () => undefined),
+    getOfferings: jest.fn(async () => ({ current: null })),
+    purchasePackage: jest.fn(async () => ({
+      customerInfo: { entitlements: { active: { pro: { isActive: true, periodType: 'NORMAL' } } } },
+    })),
+    restorePurchases: jest.fn(async () => ({ entitlements: { active: {} } })),
+    getCustomerInfo: jest.fn(async () => ({
+      entitlements: { active: {} },
+      originalApplicationVersion: null,
+      originalPurchaseDate: null,
+    })),
+    addCustomerInfoUpdateListener: jest.fn(() => () => {}),
+    removeCustomerInfoUpdateListener: jest.fn(),
+    checkTrialOrIntroductoryPriceEligibility: jest.fn(async () => ({})),
+    LOG_LEVEL: { WARN: 'WARN', DEBUG: 'DEBUG', VERBOSE: 'VERBOSE' },
+    INTRO_ELIGIBILITY_STATUS: { ELIGIBLE: 'ELIGIBLE', NOT_ELIGIBLE: 'NOT_ELIGIBLE', UNKNOWN: 'UNKNOWN' },
+    PURCHASES_ERROR_CODE: { PURCHASE_CANCELLED_ERROR: 'PURCHASE_CANCELLED_ERROR' },
+  };
+  return {
+    __esModule: true,
+    default: Purchases,
+    __resetPurchasesMocks: () => {
+      for (const fn of Object.values(Purchases)) {
+        if (typeof fn === 'function' && 'mockClear' in fn) (fn as jest.Mock).mockClear();
+      }
+    },
+  };
+});
+
+// ProStore defaults to PRO in jest so the ~160 pre-existing test files keep
+// passing once gating reads useProStore. Gating tests flip state via
+// __setProState. proStore.test.ts uses jest.requireActual to test the real store.
+const mockProStoreState: Record<string, unknown> = {
+  status: 'pro',
+  entitlementActive: true,
+  isGrandfathered: false,
+  trialActive: false,
+  trialEndsAt: null,
+  isPurchasing: false,
+  isRestoring: false,
+  error: null,
+  interstitialEligible: false,
+  monthlyPackage: null,
+  lifetimePackage: null,
+  configured: true,
+};
+jest.mock('./src/stores/proStore', () => ({
+  useProStore: {
+    getState: () => mockProStoreState,
+    setState: (partial: Record<string, unknown>) => Object.assign(mockProStoreState, partial),
+    subscribe: () => () => {},
+    getInitialState: () => mockProStoreState,
+  },
+  selectIsPro: (state: { entitlementActive?: boolean; isGrandfathered?: boolean }) =>
+    Boolean(state?.entitlementActive || state?.isGrandfathered),
+  __setProState: (partial: Record<string, unknown>) => Object.assign(mockProStoreState, partial),
+}));

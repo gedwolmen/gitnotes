@@ -2303,6 +2303,23 @@
   dependencies:
     nanoid "^3.3.11"
 
+"@revenuecat/purchases-js-hybrid-mappings@18.30.0":
+  version "18.30.0"
+  resolved "https://registry.yarnpkg.com/@revenuecat/purchases-js-hybrid-mappings/-/purchases-js-hybrid-mappings-18.30.0.tgz#19904016d98583ca1d50bd7bdf084663371b8459"
+  integrity sha512-i6cJlHajXL7vImLWuV7VY0X3wl+qmuPJm1sCqnLq9bryVhM2mdV6mJW9pfbiA/SHzAjvlml/DnU+ei7jYcWhIA==
+  dependencies:
+    "@revenuecat/purchases-js" "1.52.0"
+
+"@revenuecat/purchases-js@1.52.0":
+  version "1.52.0"
+  resolved "https://registry.yarnpkg.com/@revenuecat/purchases-js/-/purchases-js-1.52.0.tgz#ab06bb95800d054572c02dd936c59aa250fb9402"
+  integrity sha512-DCxib99kv7+Dt+HlDnV9cOBgQz6BEUdsP1bi3hObhzGHGtBoVab9qMkEMLamVT33nipOtWZRlHcfNfk3iCbsdQ==
+
+"@revenuecat/purchases-typescript-internal@18.30.0":
+  version "18.30.0"
+  resolved "https://registry.yarnpkg.com/@revenuecat/purchases-typescript-internal/-/purchases-typescript-internal-18.30.0.tgz#54513e25075ec7b76f6c6f02b356b9ec0cd21028"
+  integrity sha512-yqvd7vZ6Cp4A6FGqRIQHwF5OMAAPW/0D4XKx/NGED499F4jV/o+Q6AsVtGI4obAsj+aPTeW+QplTiOeF8wlzsw==
+
 "@rn-primitives/portal@^1.5.2":
   version "1.5.2"
   resolved "https://registry.yarnpkg.com/@rn-primitives/portal/-/portal-1.5.2.tgz#397ed8fb720afcb7e7a46780ad2abeb9a65dea7b"
@@ -6666,6 +6683,14 @@ react-native-marked@^8.0.1:
     marked "18.0.6"
     react-native-reanimated-table "0.0.2"
     svg-parser "2.0.4"
+
+react-native-purchases@^10.7.1:
+  version "10.7.1"
+  resolved "https://registry.yarnpkg.com/react-native-purchases/-/react-native-purchases-10.7.1.tgz#027798aa2804939e6aebcf38f144c587e2ee98cc"
+  integrity sha512-CbeejDQE6aeWYbAqfEB3XxZ7taYJCDSSIX7jEnwYt5dKuSizROHYLjYvmZQfdCbgJP35p5kEvHRtEldOmRil8w==
+  dependencies:
+    "@revenuecat/purchases-js-hybrid-mappings" "18.30.0"
+    "@revenuecat/purchases-typescript-internal" "18.30.0"
 
 react-native-reanimated-table@0.0.2:
   version "0.0.2"
