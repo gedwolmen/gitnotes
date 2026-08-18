@@ -102,6 +102,8 @@ describe('PaywallScreen', () => {
     expect(getByTestId('paywall.restore')).toBeTruthy();
     expect(getByText('AI chat with your notes')).toBeTruthy();
     expect(getByText('Multiple GitHub accounts')).toBeTruthy();
+    expect(getByText('Monthly')).toBeTruthy();
+    expect(getByText('Lifetime')).toBeTruthy();
   });
 
   it('uses the trial CTA label for the monthly option when the user is trial-eligible', async () => {

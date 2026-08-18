@@ -511,7 +511,9 @@
     "removeActiveConnection": "Disconnect active host",
     "settings": {
       "accountsGroup": "계정"
-    }
+    },
+    "disconnectFailedTitle": "연결 해제 실패",
+    "disconnectFailedBody": "계정 연결을 해제하지 못했습니다. 다시 시도해 주세요."
   },
   "connectHost": {
     "title": "Connect a git host",
@@ -847,10 +849,12 @@
     },
     "monthly": {
       "trialCta": "30일 무료 체험 후 {{price}}/월",
-      "price": "{{price}}/월"
+      "price": "{{price}}/월",
+      "title": "월간"
     },
     "lifetime": {
-      "cta": "{{price}} 일회 결제"
+      "cta": "{{price}} 일회 결제",
+      "title": "평생"
     },
     "restore": "구매 복원",
     "restored": "구매가 복원되었습니다",

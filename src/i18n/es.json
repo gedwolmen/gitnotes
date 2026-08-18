@@ -511,7 +511,9 @@
     "removeActiveConnection": "Disconnect active host",
     "settings": {
       "accountsGroup": "Cuentas"
-    }
+    },
+    "disconnectFailedTitle": "Error al desconectar",
+    "disconnectFailedBody": "No se pudo desconectar la cuenta. Inténtalo de nuevo."
   },
   "connectHost": {
     "title": "Connect a git host",
@@ -847,10 +849,12 @@
     },
     "monthly": {
       "trialCta": "Prueba 30 días gratis, luego {{price}}/mes",
-      "price": "{{price}}/mes"
+      "price": "{{price}}/mes",
+      "title": "Mensual"
     },
     "lifetime": {
-      "cta": "{{price}} de pago único"
+      "cta": "{{price}} de pago único",
+      "title": "De por vida"
     },
     "restore": "Restaurar compras",
     "restored": "Compras restauradas",

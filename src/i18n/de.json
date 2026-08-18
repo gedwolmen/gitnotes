@@ -511,7 +511,9 @@
     "removeActiveConnection": "Disconnect active host",
     "settings": {
       "accountsGroup": "Konten"
-    }
+    },
+    "disconnectFailedTitle": "Trennung fehlgeschlagen",
+    "disconnectFailedBody": "Das Konto konnte nicht getrennt werden. Bitte erneut versuchen."
   },
   "connectHost": {
     "title": "Connect a git host",
@@ -847,10 +849,12 @@
     },
     "monthly": {
       "trialCta": "30 Tage kostenlos testen, dann {{price}}/Monat",
-      "price": "{{price}}/Monat"
+      "price": "{{price}}/Monat",
+      "title": "Monatlich"
     },
     "lifetime": {
-      "cta": "{{price}} einmalig"
+      "cta": "{{price}} einmalig",
+      "title": "Lebenslang"
     },
     "restore": "Käufe wiederherstellen",
     "restored": "Käufe wiederhergestellt",

@@ -511,7 +511,9 @@
     "removeActiveConnection": "Disconnect active host",
     "settings": {
       "accountsGroup": "アカウント"
-    }
+    },
+    "disconnectFailedTitle": "切断に失敗しました",
+    "disconnectFailedBody": "アカウントを切断できませんでした。もう一度お試しください。"
   },
   "connectHost": {
     "title": "Connect a git host",
@@ -847,10 +849,12 @@
     },
     "monthly": {
       "trialCta": "30日間無料トライアル、その後{{price}}/月",
-      "price": "{{price}}/月"
+      "price": "{{price}}/月",
+      "title": "月額"
     },
     "lifetime": {
-      "cta": "{{price}}の一括払い"
+      "cta": "{{price}}の一括払い",
+      "title": "無期限"
     },
     "restore": "購入を復元",
     "restored": "購入を復元しました",
