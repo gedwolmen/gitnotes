@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StagingService } from './git/StagingService';
 import { GitSyncGate } from './git/GitSyncGate';
 import { useStageStore } from '../stores/stageStore';
@@ -18,6 +19,32 @@ import { githubActivity } from '../stores/githubActivityStore';
  */
 
 export const STAGE_PUSH_IDLE_MS = 3 * 60 * 1000;
+
+const PUSH_SESSION_KEY = 'gitnotes-push-session';
+
+export async function hasPushSession(): Promise<boolean> {
+  try {
+    return (await AsyncStorage.getItem(PUSH_SESSION_KEY)) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+async function setPushSession(): Promise<void> {
+  try {
+    await AsyncStorage.setItem(PUSH_SESSION_KEY, 'true');
+  } catch (error) {
+    console.warn('[StagePushScheduler] failed to set push session marker:', error);
+  }
+}
+
+async function clearPushSession(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(PUSH_SESSION_KEY);
+  } catch (error) {
+    console.warn('[StagePushScheduler] failed to clear push session marker:', error);
+  }
+}
 
 export interface PushFailure {
   key: string;
@@ -93,6 +120,7 @@ export function flushStaged(): void {
 export async function drainPushQueue(): Promise<void> {
   if (draining) return;
   draining = true;
+  await setPushSession();
   try {
     while (true) {
       const key = useStageStore.getState().dequeueNext();
@@ -130,6 +158,7 @@ export async function drainPushQueue(): Promise<void> {
       if (useStageStore.getState().globalPushing) {
         useStageStore.getState().setGlobalPushing(false);
       }
+      await clearPushSession();
     }
   } finally {
     draining = false;
