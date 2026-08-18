@@ -467,9 +467,9 @@ describe('SettingsScreen', () => {
     expect(getByText('Connect host')).toBeTruthy();
   });
 
-  it('shows Updated UI toggle', () => {
+  it('shows Fancy UI toggle', () => {
     const { getByText } = render(<SettingsScreen />);
-    expect(getByText('Updated UI')).toBeTruthy();
+    expect(getByText('Fancy UI')).toBeTruthy();
   });
 
   it('shows Repositories section', () => {
