@@ -28,10 +28,12 @@ interface MockStageState {
   globalPushing: boolean;
   pushQueue: string[];
   pendingCount: number;
+  pushProgress: number | null;
   loadStaged: () => Promise<void>;
   keyFor: (repoPath: string, branch: string) => string;
   requestPush: (repoPath?: string, branch?: string) => string | null;
   setPushing: (key: string, bool: boolean) => void;
+  setPushProgress: (fraction: number | null) => void;
   pushAll: () => void;
   dequeueNext: () => string | null;
   shiftQueue: () => void;
@@ -44,10 +46,12 @@ const mockStageState: MockStageState = {
   globalPushing: false,
   pushQueue: [],
   pendingCount: 2,
+  pushProgress: null,
   loadStaged: mockLoadStaged,
   keyFor: (repoPath, branch) => `${repoPath}::${branch}`,
   requestPush: mockRequestPush,
   setPushing: mockSetPushing,
+  setPushProgress: jest.fn(),
   pushAll: mockPushAll,
   dequeueNext: () => null,
   shiftQueue: mockShiftQueue,
@@ -67,6 +71,10 @@ jest.mock('../../src/services/NoteSyncQueueService', () => ({
 
 jest.mock('../../src/services/StorageService', () => ({
   StorageService: { getSavedRepositories: jest.fn(async () => []) },
+}));
+
+jest.mock('../../src/services/StagePushScheduler', () => ({
+  drainPushQueue: jest.fn(async () => undefined),
 }));
 
 jest.mock('../../src/stores/stageStore', () => {
@@ -163,6 +171,7 @@ describe('FloatingStageButton', () => {
     mockStageState.pendingCount = 2;
     mockStageState.globalPushing = false;
     mockStageState.isPushing = {};
+    mockStageState.pushProgress = null;
     mockAIEnabled = true;
     mockWindowDimensions = { width: 320, height: 480, scale: 2, fontScale: 1 };
     mockNavigate.mockClear();
@@ -171,6 +180,8 @@ describe('FloatingStageButton', () => {
     mockHandlePressIn.mockClear();
     mockHandlePressOut.mockClear();
     mockHandleHoldComplete.mockClear();
+    const schedulerMock = jest.requireMock('../../src/services/StagePushScheduler') as { drainPushQueue: jest.Mock };
+    schedulerMock.drainPushQueue.mockClear();
     jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
   });
 
@@ -190,7 +201,7 @@ describe('FloatingStageButton', () => {
     expect(mockNavigate).toHaveBeenCalledWith('Stage');
   });
 
-  it('pushes all staged changes on long press', async () => {
+  it('pushes all staged changes on long press and drains immediately', async () => {
     jest.useFakeTimers();
     const { getByTestId } = await renderStageButton();
 
@@ -198,6 +209,8 @@ describe('FloatingStageButton', () => {
 
     expect(mockHandleHoldComplete).toHaveBeenCalledTimes(1);
     expect(mockPushAll).toHaveBeenCalledTimes(1);
+    const schedulerMock = jest.requireMock('../../src/services/StagePushScheduler') as { drainPushQueue: jest.Mock };
+    expect(schedulerMock.drainPushQueue).toHaveBeenCalledTimes(1);
     jest.useRealTimers();
   });
 
@@ -220,12 +233,24 @@ describe('FloatingStageButton', () => {
     },
   );
 
-  it('shows a progress indicator and hides the icon while pushing', async () => {
+  it('grays out while pushing: no spinner, tap still navigates, hold-to-push blocked', async () => {
     mockStageState.globalPushing = true;
 
-    const { getByTestId } = await renderStageButton();
+    const { getByTestId, queryByTestId } = await renderStageButton();
 
-    expect(getByTestId('floating-stage.button.progress')).toBeTruthy();
+    // No progress spinner while pushing
+    expect(queryByTestId('floating-stage.button.progress')).toBeNull();
+    const pressable = getByTestId('floating-stage.button.navigate-stage');
+    expect(pressable.props.accessibilityState.busy).toBe(true);
+    // Tap still navigates to the Stage screen during a push
+    fireEvent.press(pressable);
+    expect(mockNavigate).toHaveBeenCalledWith('Stage');
+    // Hold-to-push is blocked while a push is underway
+    mockPushAll.mockClear();
+    fireEvent(getByTestId('floating-stage.button.navigate-stage'), 'longPress');
+    expect(mockPushAll).not.toHaveBeenCalled();
+    // Cloud icon is still rendered, just dimmed
+    expect(pressable).toBeTruthy();
   });
 
   it('coexists with the AI floating button in the same tree', async () => {
@@ -243,5 +268,20 @@ describe('FloatingStageButton', () => {
 
     expect(getByTestId('floating-ai.button.navigate-chat')).toBeTruthy();
     expect(getByTestId('floating-stage.button.navigate-stage')).toBeTruthy();
+  });
+
+  it('uses store pushProgress for the ring instead of an indeterminate animation', async () => {
+    mockStageState.globalPushing = true;
+    mockStageState.pushProgress = 0.6;
+
+    const { getByTestId } = await renderStageButton();
+
+    const pressable = getByTestId('floating-stage.button.navigate-stage');
+    expect(pressable.props.accessibilityState.busy).toBe(true);
+
+    mockStageState.pushProgress = null;
+    const { getByTestId: getByTestId2 } = await renderStageButton();
+
+    expect(getByTestId2('floating-stage.button.navigate-stage')).toBeTruthy();
   });
 });

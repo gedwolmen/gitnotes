@@ -10,7 +10,7 @@
 | [Services](./services.md) | Service layer design and responsibilities |
 | [Development Guide](./development-guide.md) | Local setup, build, test, lint workflow |
 | [Testing Guide](./testing-guide.md) | Test patterns, mocking, CI configuration |
-| [Sync Engine](./sync-engine.md) | Git sync architecture, error handling |
+| [Sync Engine](./sync-engine.md) | Git sync architecture, push model, error handling |
 | [AI Integration](./ai-integration.md) | Vercel AI SDK, providers, token budgeting |
 | [i18n](./i18n.md) | Localization setup, adding languages, testing |
 | [Theme & Styling](./theme-styling.md) | NativeWind v5, theme tokens, dark mode |
@@ -19,7 +19,7 @@
 | [Importers](./importers.md) | Removed Google Keep and Apple Notes importers, for later re-integration |
 | [Git Core Hardening](./git-core-hardening.md) | git-core test-campaign fixes: binary decode integrity, case collisions, auth/preflight, API batch writes, pull/reconcile fixes (#876–#892) |
 | [Settings — Add Repo Fixes](./settings-add-repo-fixes.md) | invisible primary-button fix + repo list not loading after adding a token |
-| [Stage → Push UX](./stage-push-ux.md) | staged-upsert locks, spinner-free push buttons, GitHubActivity push progress |
+| [Stage → Push UX](./stage-push-ux.md) | no row locks, vanish-immediate deletes, spinner-free grayed push buttons, determinate progress ring, body-text notifications, resume-on-foreground |
 | [Token Removal Repo Cascade](./repo-removal-cascade.md) | removing a token also removes its synced repos, with a confirmation warning |
 | [Token Scope Error Messaging](./token-scope-error-messaging.md) | 403s surface needed token scopes in the sync message and token-add UI |
 

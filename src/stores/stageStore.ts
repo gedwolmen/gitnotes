@@ -22,6 +22,7 @@ interface StageState {
   globalPushing: boolean;
   pushQueue: string[];
   pendingCount: number;
+  pushProgress: number | null;
 }
 
 interface StageActions {
@@ -30,6 +31,7 @@ interface StageActions {
   requestPush: (repoPath?: string, branch?: string) => string | null;
   setPushing: (key: string, bool: boolean) => void;
   setGlobalPushing: (bool: boolean) => void;
+  setPushProgress: (fraction: number | null) => void;
   pushAll: () => void;
   dequeueNext: () => string | null;
   shiftQueue: () => void;
@@ -75,6 +77,7 @@ export const useStageStore = create<StageState & StageActions>()((set, get) => (
   globalPushing: false,
   pushQueue: [],
   pendingCount: 0,
+  pushProgress: null,
 
   loadStaged: async () => {
     try {
@@ -120,6 +123,8 @@ export const useStageStore = create<StageState & StageActions>()((set, get) => (
     set((state) => ({ isPushing: { ...state.isPushing, [key]: bool } })),
 
   setGlobalPushing: (bool) => set({ globalPushing: bool }),
+
+  setPushProgress: (fraction) => set({ pushProgress: fraction }),
 
   pushAll: () => {
     set({ globalPushing: true });

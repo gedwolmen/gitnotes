@@ -117,6 +117,7 @@ jest.mock('react-native-reanimated', () => {
     withRepeat: (anim: unknown) => anim,
     cancelAnimation: () => {},
     runOnJS: (fn: (...args: unknown[]) => unknown) => fn,
+    Easing: { linear: (v: unknown) => v, in: (v: unknown) => v, out: (v: unknown) => v, inOut: (v: unknown) => v },
   };
 });
 

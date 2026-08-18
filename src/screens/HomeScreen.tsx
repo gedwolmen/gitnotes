@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Pressable, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -32,7 +32,6 @@ import ColorPicker from '../components/ColorPicker';
 import { ShareFormat } from '../services/ShareService';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import { StagingService } from '../services/git/StagingService';
-import { useGitOperationStore } from '../stores/gitOperationStore';
 import { useTranslation } from 'react-i18next';
 import { DailyQuoteCard } from '../components/home/DailyQuoteCard';
 import { useDailyQuote } from '../hooks/useDailyQuote';
@@ -67,17 +66,6 @@ export default function HomeScreen() {
   const [contextMenuItem, setContextMenuItem] = useState<RecentItem | null>(null);
   const [colorPickerItem, setColorPickerItem] = useState<RecentItem | null>(null);
   const { quote, isLoading: quoteLoading, refresh: quoteRefresh } = useDailyQuote();
-  const gitOps = useGitOperationStore((s) => s.ops);
-  const lockedIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const op of Object.values(gitOps)) {
-      if (op.status === 'queued' || op.status === 'running') {
-        for (const entityId of op.entityIds) ids.add(entityId);
-      }
-    }
-    return ids;
-  }, [gitOps]);
-  const contextMenuLocked = contextMenuItem ? lockedIds.has(contextMenuItem.data.id) : false;
 
   useEffect(() => {
     (async () => {
@@ -402,8 +390,8 @@ export default function HomeScreen() {
         </Pressable>
       </View>
 
-      <QuickAccessShelf items={pinnedItems} onOpen={handleOpenRecentItem} onLongPress={handleLongPressRecentItem} lockedIds={lockedIds} />
-      <BentoRecent items={recentItems} onOpen={handleOpenRecentItem} onLongPress={handleLongPressRecentItem} lockedIds={lockedIds} />
+      <QuickAccessShelf items={pinnedItems} onOpen={handleOpenRecentItem} onLongPress={handleLongPressRecentItem} />
+      <BentoRecent items={recentItems} onOpen={handleOpenRecentItem} onLongPress={handleLongPressRecentItem} />
 
       <Modal visible={showFormatPicker} onRequestClose={handleFormatPickerClose} fullWidth>
         <Text className="text-lg font-bold text-center mb-4" style={{ color: colors.text }}>{t('home.format.pickerTitle')}</Text>
@@ -456,7 +444,6 @@ export default function HomeScreen() {
         onShare={handleShare}
         onPickColor={handlePickColor}
         onDelete={handleDelete}
-        deleteDisabled={contextMenuLocked}
       />
 
       <ColorPicker

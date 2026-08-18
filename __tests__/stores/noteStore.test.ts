@@ -30,6 +30,7 @@ jest.mock('../../src/components/editor/editorShared', () => ({
 }));
 
 import { useNoteStore } from '../../src/stores/noteStore';
+import { useGitOperationStore } from '../../src/stores/gitOperationStore';
 import { StorageService } from '../../src/services/StorageService';
 import { NoteSyncQueueService } from '../../src/services/NoteSyncQueueService';
 import { StagingService } from '../../src/services/git/StagingService';
@@ -50,6 +51,7 @@ describe('useNoteStore', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useNoteStore.setState({ notes: [], isLoading: false, error: null, searchQuery: '' });
+    useGitOperationStore.setState({ ops: {} });
   });
 
   describe('loadNotes', () => {
@@ -112,7 +114,7 @@ describe('useNoteStore', () => {
   });
 
   describe('deleteNote', () => {
-    it('stages the delete for repo-backed notes (api mode keeps the row locked)', async () => {
+    it('stages the delete for repo-backed notes (api mode removes row immediately and succeeds the op)', async () => {
       const note = makeNote('1', { repo: 'me/repo', branch: 'main', filePath: 'notes/test.md' });
       useNoteStore.setState({ notes: [note] });
       (StagingService.stageDelete as jest.Mock).mockResolvedValue({ success: true });
@@ -121,10 +123,10 @@ describe('useNoteStore', () => {
       await useNoteStore.getState().deleteNote('1');
 
       expect(StagingService.stageDelete).toHaveBeenCalled();
-      expect(NoteSyncQueueService.enqueueNoteDelete).not.toHaveBeenCalled();
       expect(NoteSyncQueueService.drain).not.toHaveBeenCalled();
-      // Api mode keeps the row until the queue reports the delete succeeded.
-      expect(useNoteStore.getState().notes).toHaveLength(1);
+      expect(StorageService.deleteNote).toHaveBeenCalledWith('1');
+      expect(useNoteStore.getState().notes).toHaveLength(0);
+      expect(useGitOperationStore.getState().ops).toEqual({});
     });
 
     it('removes note from list after successful local delete', async () => {

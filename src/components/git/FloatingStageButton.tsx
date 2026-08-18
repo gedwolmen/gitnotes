@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AccessibilityInfo, ActivityIndicator, Pressable, StyleSheet } from 'react-native';
+import { AccessibilityInfo, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { GestureDetector } from 'react-native-gesture-handler';
-import Animated, { useAnimatedStyle } from 'react-native-reanimated';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useStageStore } from '../../stores/stageStore';
+import { drainPushQueue } from '../../services/StagePushScheduler';
 import { useTheme } from '../../contexts/ThemeContext';
 import { HapticService } from '../../utils/haptics';
 import type { RootStackParamList } from '../../navigation/types';
@@ -53,6 +57,19 @@ export function FloatingStageButton({ currentRouteName }: FloatingStageButtonPro
     [globalPushing, isPushing],
   );
 
+  const storePushProgress = useStageStore((s) => s.pushProgress);
+  const ringProgress = useSharedValue(0);
+
+  useEffect(() => {
+    if (!anyPushing) {
+      ringProgress.value = 0;
+    } else if (storePushProgress !== null) {
+      ringProgress.value = storePushProgress;
+    } else {
+      ringProgress.value = 0.9;
+    }
+  }, [anyPushing, storePushProgress, ringProgress]);
+
   useEffect(() => {
     let isMounted = true;
     AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
@@ -92,6 +109,7 @@ export function FloatingStageButton({ currentRouteName }: FloatingStageButtonPro
     affordances.handleHoldComplete();
     HapticService.selection();
     useStageStore.getState().pushAll();
+    void drainPushQueue();
   }, [affordances, anyPushing]);
 
   const panGesture = useStageButtonPanGesture(position);
@@ -114,7 +132,7 @@ export function FloatingStageButton({ currentRouteName }: FloatingStageButtonPro
   return (
     <Animated.View style={[styles.container, animatedStyle]} pointerEvents="box-none">
       <HoldProgressRing
-        progress={affordances.holdProgress}
+        progress={anyPushing ? ringProgress : affordances.holdProgress}
         size={STAGE_BUTTON_SIZE}
         color={colors.primary}
         reduceMotionEnabled={reduceMotionEnabled}
@@ -126,7 +144,7 @@ export function FloatingStageButton({ currentRouteName }: FloatingStageButtonPro
             accessibilityRole="button"
             accessibilityLabel="View staged changes"
             accessibilityHint="Tap to view staged changes. Press and hold to push all staged changes."
-            accessibilityState={{ disabled: anyPushing }}
+            accessibilityState={{ busy: anyPushing }}
             onPress={handleTap}
             onLongPress={handleLongPress}
             onPressIn={affordances.handlePressIn}
@@ -134,19 +152,11 @@ export function FloatingStageButton({ currentRouteName }: FloatingStageButtonPro
             delayLongPress={FLOATING_AI_BUTTON_LONG_PRESS_MS}
             style={({ pressed }) => [
               styles.button,
-              { backgroundColor: colors.primary },
+              { backgroundColor: anyPushing ? colors.border : colors.primary },
               pressed ? styles.pressed : null,
             ]}
           >
-            {anyPushing ? (
-              <ActivityIndicator
-                testID="floating-stage.button.progress"
-                size="small"
-                color="#FFFFFF"
-              />
-            ) : (
-              <Ionicons name="cloud-upload" size={24} color="#FFFFFF" />
-            )}
+            <Ionicons name="cloud-upload" size={24} color={anyPushing ? colors.textSecondary : '#FFFFFF'} />
           </Pressable>
         </Animated.View>
       </GestureDetector>

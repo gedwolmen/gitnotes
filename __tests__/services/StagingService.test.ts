@@ -503,5 +503,81 @@ getCommitOid.mockResolvedValue(null);
       expect(queueDrain).not.toHaveBeenCalled();
       expect(writerPush).not.toHaveBeenCalled();
     });
+
+    test('api mode forwards onProgress to NoteSyncQueueService.drain', async () => {
+      queueGetAll.mockResolvedValue([
+        queueItem('note.upsert', {
+          repo: 'owner/repo',
+          branch: 'main',
+          filePath: 'notes/a.md',
+          title: 'A',
+        }),
+      ]);
+      getMode.mockResolvedValue('api');
+
+      const onProgress = jest.fn();
+      const result = await StagingService.pushStaged(undefined, undefined, onProgress);
+
+      expect(result).toEqual({ success: true });
+      expect(queueDrain).toHaveBeenCalledTimes(1);
+      expect(queueDrain).toHaveBeenCalledWith(onProgress);
+    });
+
+    test('clone mode forwards onProgress fraction and githubActivity.setProgress', async () => {
+      listOverrides.mockResolvedValue({ 'owner/repo': 'clone' });
+      getSavedRepositories.mockResolvedValue([
+        { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
+      ]);
+      getCommitOid.mockImplementation(
+        async ({ ref }: { ref: string }) =>
+          ref.startsWith('refs/heads') ? 'local-oid' : 'remote-oid',
+      );
+
+      let capturedOnProgress: ((p: { phase: string; loaded: number; total: number }) => void) | undefined;
+      writerPush.mockImplementation(async (opts: { onProgress?: (p: { phase: string; loaded: number; total: number }) => void }) => {
+        capturedOnProgress = opts.onProgress;
+        return { success: true };
+      });
+
+      const onProgress = jest.fn();
+      const result = await StagingService.pushStaged('owner/repo', 'main', onProgress);
+
+      expect(result).toEqual({ success: true });
+      expect(capturedOnProgress).toBeDefined();
+
+      capturedOnProgress?.({ phase: 'Writing objects', loaded: 2, total: 5 });
+      expect(onProgress).toHaveBeenCalledWith(0.4);
+      expect(githubActivity.setProgress).toHaveBeenCalledWith({
+        phase: 'Pushing changes',
+        loaded: 2,
+        total: 5,
+      });
+
+      capturedOnProgress?.({ phase: 'Writing objects', loaded: 5, total: 5 });
+      expect(onProgress).toHaveBeenCalledWith(1);
+    });
+
+    test('clone mode calls onProgress(null) when total is 0', async () => {
+      listOverrides.mockResolvedValue({ 'owner/repo': 'clone' });
+      getSavedRepositories.mockResolvedValue([
+        { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
+      ]);
+      getCommitOid.mockImplementation(
+        async ({ ref }: { ref: string }) =>
+          ref.startsWith('refs/heads') ? 'local-oid' : 'remote-oid',
+      );
+
+      let capturedOnProgress: ((p: { phase: string; loaded: number; total: number }) => void) | undefined;
+      writerPush.mockImplementation(async (opts: { onProgress?: (p: { phase: string; loaded: number; total: number }) => void }) => {
+        capturedOnProgress = opts.onProgress;
+        return { success: true };
+      });
+
+      const onProgress = jest.fn();
+      await StagingService.pushStaged('owner/repo', 'main', onProgress);
+
+      capturedOnProgress?.({ phase: 'Writing objects', loaded: 0, total: 0 });
+      expect(onProgress).toHaveBeenCalledWith(null);
+    });
   });
 });

@@ -9,13 +9,12 @@ interface Props {
   items: RecentItem[];
   onOpen: (item: RecentItem) => void;
   onLongPress?: (item: RecentItem) => void;
-  lockedIds?: Set<string>;
 }
 
 const CARD_WIDTH = 176;
 const EDGE_INSET = 20;
 
-export function QuickAccessShelf({ items, onOpen, onLongPress, lockedIds }: Props) {
+export function QuickAccessShelf({ items, onOpen, onLongPress }: Props) {
   const { colors } = useTheme();
   if (items.length === 0) return null;
 
@@ -39,7 +38,6 @@ export function QuickAccessShelf({ items, onOpen, onLongPress, lockedIds }: Prop
             hidePinGlyph
             onPress={() => onOpen(item)}
             onLongPress={onLongPress ? () => onLongPress(item) : undefined}
-            locked={lockedIds?.has(item.data.id)}
             testIDSlot={`pinned-${idx}`}
           />
         ))}

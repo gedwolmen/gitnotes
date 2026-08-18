@@ -355,6 +355,7 @@ import { pullFromSingleRepo, pullAllFromRepos } from '../src/services/RepoPullSe
 import { resolveBranch } from '../src/services/git/branchResolver';
 import { HapticService } from '../src/utils/haptics';
 import { readDeleteFailures, DELETE_FAILURES_STORAGE_KEY } from '../src/services/git/deleteFailures';
+import { retryDeleteFailure } from '../src/services/git/retryDeleteFailure';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const QUEUE_KEY = '@gitnotes:sync_queue_v1';
@@ -534,7 +535,7 @@ describe('sync-locking integration scenarios S1–S8', () => {
     expect(GitSyncGate.isPushActive('owner/repo')).toBe(false);
   });
 
-  it('S2 — note delete locks the row (visible + spinner), drain success fires the succeeded event, StorageService.deleteNote runs and the row is removed', async () => {
+  it('S2 — note delete removes the row immediately (StorageService.deleteNote at delete time); drain success fires the succeeded event which is a no-op', async () => {
     let resolveDelete: ((value: { success: boolean }) => void) | undefined;
     (deleteNoteFromGitHub as jest.Mock).mockImplementation(
       () => new Promise((res) => { resolveDelete = res; }),
@@ -550,18 +551,14 @@ describe('sync-locking integration scenarios S1–S8', () => {
     fireEvent(screen.getByTestId('notes-card-n2'), 'longPress');
     fireEvent.press(screen.getByTestId('notes-context-menu.delete'));
 
-    // User-visible: row stays, spinner shows, swipe disabled.
     await waitFor(() => {
-      expect(screen.getByTestId('note-row.lock-spinner')).toBeTruthy();
-    });
-    expect(screen.getByText('Second')).toBeTruthy();
-    expect(screen.getByTestId('swipeable-select-n2').props.accessibilityState.disabled).toBe(true);
+      expect(screen.queryByText('Second')).toBeNull();
+    }, { timeout: 5000 });
+    expect(screen.queryByTestId('note-row.lock-spinner')).toBeNull();
+    expect(StorageService.deleteNote).toHaveBeenCalledWith('n2');
+    expect(useNoteStore.getState().notes.some((n) => n.id === 'n2')).toBe(false);
 
-    // The stage path enqueues but never drains — the push engine owns the
-    // flush. Trigger it here the way the scheduler would.
     void NoteSyncQueueService.drain();
-
-    // Let the drain reach its transport, then report success.
     await act(async () => {
       await flushMicrotasks();
     });
@@ -569,18 +566,13 @@ describe('sync-locking integration scenarios S1–S8', () => {
       resolveDelete?.({ success: true });
     });
 
-    await waitFor(() => {
-      expect(StorageService.deleteNote).toHaveBeenCalledWith('n2');
-    });
-    await waitFor(() => {
-      expect(screen.queryByText('Second')).toBeNull();
-    });
+    expect(screen.queryByText('Second')).toBeNull();
     expect(screen.queryByTestId('note-row.lock-spinner')).toBeNull();
     expect(useNoteStore.getState().notes.some((n) => n.id === 'n2')).toBe(false);
     expect(await NoteSyncQueueService.pendingCount()).toBe(0);
-  });
+  }, 15000);
 
-  it('S3 — durable 401 drops with an event, the row turns failed with Retry; tombstone stays pinned past 24h while failed; Retry re-enqueues (failure cleared) and success removes the row', async () => {
+  it('S3 — durable 401 drops with a failure entry; no row-level lock/error UI; retryDeleteFailure clears entry and re-enqueues; tombstone stays pinned past 24h', async () => {
     (deleteNoteFromGitHub as jest.Mock).mockResolvedValue({
       success: false,
       error: 'Bad credentials',
@@ -594,23 +586,18 @@ describe('sync-locking integration scenarios S1–S8', () => {
     fireEvent(screen.getByTestId('notes-card-n3'), 'longPress');
     fireEvent.press(screen.getByTestId('notes-context-menu.delete'));
 
-    // The stage path enqueues but never drains — simulate the push engine.
     await waitFor(() => {
-      expect(screen.getByTestId('note-row.lock-spinner')).toBeTruthy();
-    });
+      expect(screen.queryByText('Third')).toBeNull();
+    }, { timeout: 5000 });
+    expect(screen.queryByTestId('note-row.lock-spinner')).toBeNull();
+    expect(screen.queryByTestId('note-row.lock-error')).toBeNull();
+
     void NoteSyncQueueService.drain();
 
-    // Durable drop -> failed row (error affordance, row still present).
-    await waitFor(() => {
-      expect(screen.getByTestId('note-row.lock-error')).toBeTruthy();
+    await waitFor(async () => {
+      expect(await NoteSyncQueueService.pendingCount()).toBe(0);
     });
-    expect(screen.getByText('Third')).toBeTruthy();
-    expect(screen.queryByTestId('note-row.lock-spinner')).toBeNull();
 
-    // Queue drop side channel emitted once with reason 'durable'.
-    expect(await NoteSyncQueueService.pendingCount()).toBe(0);
-
-    // Failure entry persisted + tombstone PINNED past the 24h TTL while failed.
     const failures = await readDeleteFailures();
     expect(Object.keys(failures)).toEqual(['owner/repo::main::notes/third.md']);
     expect(failures['owner/repo::main::notes/third.md']).toMatchObject({
@@ -625,27 +612,16 @@ describe('sync-locking integration scenarios S1–S8', () => {
       nowSpy.mockRestore();
     }
 
-    // Retry from the failed row: re-enqueues, clears the failure entry.
-    fireEvent.press(screen.getByTestId('notes-card-n3'));
-    expect(alertSpy).toHaveBeenCalledWith('Delete Failed', expect.any(String), expect.any(Array));
     let resolveRetryDelete: ((value: { success: boolean }) => void) | undefined;
     (deleteNoteFromGitHub as jest.Mock).mockImplementation(
       () => new Promise((res) => { resolveRetryDelete = res; }),
     );
-    pressAlertButton('Retry');
+    await retryDeleteFailure('owner/repo', 'main', 'notes/third.md');
 
-    // Retry stages the delete (re-enqueues, clears the failure entry) WITHOUT
-    // draining, so the row is observable LOCKED again (fresh tombstone, one
-    // queued delete).
-    await waitFor(() => {
-      expect(screen.getByTestId('note-row.lock-spinner')).toBeTruthy();
-    });
     expect(await readDeleteFailures()).toEqual({});
     expect(await NoteSyncQueueService.pendingCount()).toBe(1);
     expect(await NoteSyncQueueService.isTombstoned('owner/repo', 'main', 'notes/third.md')).toBe(true);
 
-    // The stage path enqueues but never drains — the push engine owns the
-    // flush. Trigger it here the way the scheduler would, then report success.
     void NoteSyncQueueService.drain();
     await act(async () => {
       await flushMicrotasks();
@@ -653,14 +629,8 @@ describe('sync-locking integration scenarios S1–S8', () => {
     await act(async () => {
       resolveRetryDelete?.({ success: true });
     });
-    await waitFor(() => {
-      expect(StorageService.deleteNote).toHaveBeenCalledWith('n3');
-    });
-    await waitFor(() => {
-      expect(screen.queryByText('Third')).toBeNull();
-    });
     expect(await NoteSyncQueueService.pendingCount()).toBe(0);
-  });
+  }, 15000);
 
   it('S4 — syncNow() waits while a push marker is active for repo R; pullAllFromRepos runs only after the marker clears; an unrelated repo S proceeds in parallel', async () => {
     jest.useFakeTimers();
@@ -705,7 +675,7 @@ describe('sync-locking integration scenarios S1–S8', () => {
     }
   });
 
-  it('S5 (api mode) — bulk delete of 10 notes is ONE queue write, all 10 rows lock simultaneously, and the drain routes the group through ONE batchDeleteFiles call', async () => {
+  it('S5 (api mode) — bulk delete of 10 notes is ONE queue write; no lock spinner; drain routes the group through ONE batchDeleteFiles call', async () => {
     let resolveBatch: ((value: unknown) => void) | undefined;
     (batchDeleteFiles as jest.Mock).mockImplementation(
       () => new Promise((res) => { resolveBatch = res; }),
@@ -729,10 +699,8 @@ describe('sync-locking integration scenarios S1–S8', () => {
     fireEvent.press(screen.getByTestId('bulk-action-bar.delete'));
     await pressAlertButtonAsync('Delete');
 
-    // The stage path enqueues but never drains — simulate the push engine.
     void NoteSyncQueueService.drain();
 
-    // The whole batch is enqueued in ONE queue write...
     const queueWrites = (AsyncStorage.setItem as jest.Mock).mock.calls.filter(
       ([key]: [string]) => key === QUEUE_KEY,
     );
@@ -742,15 +710,8 @@ describe('sync-locking integration scenarios S1–S8', () => {
     expect(items).toHaveLength(10);
     expect(items.every((m) => m.type === 'note.delete')).toBe(true);
 
-    // ...and every row is visible AND locked at the same time.
-    await waitFor(() => {
-      expect(screen.getAllByTestId('note-row.lock-spinner')).toHaveLength(10);
-    });
-    for (let i = 0; i < 10; i += 1) {
-      expect(screen.getByText(`Bulk ${i}`)).toBeTruthy();
-    }
+    expect(screen.queryByTestId('note-row.lock-spinner')).toBeNull();
 
-    // The drain coalesces the 10 due deletes into ONE batch call.
     await act(async () => {
       await flushMicrotasks();
     });
@@ -766,19 +727,15 @@ describe('sync-locking integration scenarios S1–S8', () => {
     );
     expect(deleteNoteFromGitHub).not.toHaveBeenCalled();
 
-    // Remote success -> every row is removed via its succeeded event.
     const deleted = Array.from({ length: 10 }, (_, i) => `notes/b${i}.md`);
     await act(async () => {
       resolveBatch?.({ success: true, deleted, failed: [] });
-    });
-    await waitFor(() => {
-      expect(screen.queryAllByTestId('note-row.lock-spinner')).toHaveLength(0);
     });
     expect(await NoteSyncQueueService.pendingCount()).toBe(0);
     expect(useNoteStore.getState().notes).toHaveLength(0);
   });
 
-  it('S5 (clone mode) — bulk delete of 10 notes is ONE queue write, all rows lock, and the group flushes with exactly ONE LocalGitWriter.push', async () => {
+  it('S5 (clone mode) — bulk delete of 10 notes is ONE queue write; no lock spinner; the group flushes with exactly ONE LocalGitWriter.push', async () => {
     (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
     let resolvePush: ((value: { success: boolean }) => void) | undefined;
     (LocalGitWriter.push as jest.Mock).mockImplementation(
@@ -803,19 +760,15 @@ describe('sync-locking integration scenarios S1–S8', () => {
     fireEvent.press(screen.getByTestId('bulk-action-bar.delete'));
     await pressAlertButtonAsync('Delete');
 
-    // The stage path enqueues but never drains — simulate the push engine.
     void NoteSyncQueueService.drain();
 
     const queueWrites = (AsyncStorage.setItem as jest.Mock).mock.calls.filter(
       ([key]: [string]) => key === QUEUE_KEY,
     );
     expect(queueWrites).toHaveLength(1);
-    await waitFor(() => {
-      expect(screen.getAllByTestId('note-row.lock-spinner')).toHaveLength(10);
-    });
 
-    // Clone mode: no batchDeleteFiles; per-item deleteAndCommit (push:false)
-    // then ONE coalesced push for the whole group.
+    expect(screen.queryByTestId('note-row.lock-spinner')).toBeNull();
+
     await act(async () => {
       await flushMicrotasks();
     });
@@ -835,9 +788,6 @@ describe('sync-locking integration scenarios S1–S8', () => {
     await act(async () => {
       resolvePush?.({ success: true });
     });
-    await waitFor(() => {
-      expect(screen.queryAllByTestId('note-row.lock-spinner')).toHaveLength(0);
-    });
     expect(await NoteSyncQueueService.pendingCount()).toBe(0);
     expect(useNoteStore.getState().notes).toHaveLength(0);
   });
@@ -854,8 +804,6 @@ describe('sync-locking integration scenarios S1–S8', () => {
       filePath: 'notes/sixth.md',
     });
     useNoteStore.setState({ notes: [note], isLoading: false, error: null });
-    // Transient (retryable) transport failure keeps the delete queued without
-    // completing it, so the row stays visible-and-locked through the pull.
     (deleteNoteFromGitHub as jest.Mock).mockResolvedValue({ success: false, error: 'network down' });
 
     await useNoteStore.getState().deleteNote('n6');
@@ -869,11 +817,10 @@ describe('sync-locking integration scenarios S1–S8', () => {
     const rawTombstones = await AsyncStorage.getItem(TOMBSTONE_KEY);
     expect(rawTombstones).toContain('owner/repo::master::notes/sixth.md');
     expect(rawTombstones).not.toContain('owner/repo::main::notes/sixth.md');
-    // Row is locked (visible + spinner), not removed.
-    expect(useNoteStore.getState().notes.some((n) => n.id === 'n6')).toBe(true);
 
-    // Immediate pull: the remote tree STILL contains the file. The tombstone
-    // guard (keyed on the resolved branch) must skip it.
+    expect(useNoteStore.getState().notes.some((n) => n.id === 'n6')).toBe(false);
+    expect(StorageService.deleteNote).toHaveBeenCalledWith('n6');
+
     (GitHubService.getTreeRecursiveOrThrow as jest.Mock).mockResolvedValue([
       { path: 'notes/sixth.md', type: 'blob', sha: 'remote-sha' },
     ]);
@@ -884,16 +831,12 @@ describe('sync-locking integration scenarios S1–S8', () => {
     await pullFromSingleRepo('owner/repo');
     expect(GitHubService.getTreeRecursiveOrThrow).toHaveBeenCalledWith('owner', 'repo', 'master');
 
-    // No resurrection: the note keeps its original local content and id and
-    // stays locked (the pull did not re-fetch/update it).
     expect(StorageService.saveAllNotes).toHaveBeenCalled();
     const saved = (StorageService.saveAllNotes as jest.Mock).mock.calls[0][0] as Note[];
     expect(saved.some((n) => n.id === 'n6' && n.content === 'local-original')).toBe(true);
     await useNoteStore.getState().refreshNotes();
     const current = useNoteStore.getState().notes.find((n) => n.id === 'n6');
     expect(current?.content).toBe('local-original');
-    const ops = useGitOperationStore.getState().ops;
-    expect(Object.values(ops).some((op) => op.status !== 'failed' && op.kind === 'delete' && op.path === 'notes/sixth.md')).toBe(true);
   });
 
   it('S7 — clone divergence lifecycle: the delete commits locally (push:false) and the row is removed immediately; a diverged engine push surfaces without resurrecting the row, and the conflict store keeps the local-deleted-remote-modified entry unresolved', async () => {
@@ -976,7 +919,7 @@ describe('sync-locking integration scenarios S1–S8', () => {
     expect(useConflictStore.getState().totalUnresolvedFiles()).toBeGreaterThanOrEqual(1);
   });
 
-  it('S8 — restart: seeded AsyncStorage queue + failure map hydrate into the registry; rows render locked (queued) and failed BEFORE any drain runs', async () => {
+  it('S8 — restart: seeded AsyncStorage queue + failure map hydrate into the registry; rows render with no lock UI; failed entries are surfaced via the deleteFailures map', async () => {
     const now = Date.now();
     await AsyncStorage.setItem(
       QUEUE_KEY,
@@ -1002,7 +945,6 @@ describe('sync-locking integration scenarios S1–S8', () => {
     useNoteStore.setState({ notes: [queuedNote, failedNote], isLoading: false, error: null });
     useGitOperationStore.setState({ ops: {} });
 
-    // Boot hydrate re-derives ops from the seeded durable sources.
     await hydrate();
 
     const ops = useGitOperationStore.getState().ops;
@@ -1016,13 +958,19 @@ describe('sync-locking integration scenarios S1–S8', () => {
     expect(failedOp?.status).toBe('failed');
     expect(failedOp?.error).toBe('Bad credentials');
 
-    // Rows render locked/failed BEFORE any drain (kill-safety).
     const screen = renderNotesList();
     expect(screen.getByText('Restart queued')).toBeTruthy();
-    expect(screen.getByTestId('note-row.lock-spinner')).toBeTruthy();
+    expect(screen.queryByTestId('note-row.lock-spinner')).toBeNull();
     expect(screen.getByText('Restart failed')).toBeTruthy();
-    expect(screen.getByTestId('note-row.lock-error')).toBeTruthy();
+    expect(screen.queryByTestId('note-row.lock-error')).toBeNull();
     expect(deleteNoteFromGitHub).not.toHaveBeenCalled();
     expect(await NoteSyncQueueService.pendingCount()).toBe(1);
+
+    const failures = await readDeleteFailures();
+    expect(Object.keys(failures)).toEqual(['owner/repo::main::notes/restart-failed.md']);
+    expect(failures['owner/repo::main::notes/restart-failed.md']).toMatchObject({
+      error: 'Bad credentials',
+      kind: 'authentication',
+    });
   });
 });

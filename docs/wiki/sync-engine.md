@@ -292,18 +292,25 @@ async function processQueue() {
 }
 ```
 
-## Per-Row Lock UI
+## Row Locks (removed)
 
-While a git operation is in flight for a file, the row cards in the Notes and Todo lists gray out and show a small spinner in the card's top-right corner (`note-row.lock-spinner` / `todo-row.lock-spinner`). The state comes from `useEntityLock` (`src/hooks/useGitOpLock.ts`), which mirrors ops from the `gitOperationStore` registry.
+Rows are never grayed out or disabled. The per-row lock UI — `useEntityLock`
+(`src/hooks/useGitOpLock.ts`), the `LockedNoteRow`/`LockedTodoRow`/`LockedDumpRow`
+wrappers, and the `note-row.lock-spinner` / `todo-row.lock-spinner` /
+`note-row.lock-error` overlays — has been deleted. The push button is the single
+coordination point for pending work.
 
-Locks are per-item. Only ops that carry a concrete `path` or matching `entityIds` gray out a row. Repo-wide ops do not match any row: push markers published with `path: undefined` and the all-repos pull-cycle op (`repo: GIT_OP_ALL_REPOS`) leave every row interactive, so a repo-wide push or pull never dims the whole list. `opMatchesContext` (`src/hooks/useGitOpLock.ts`) and `isPathLocked` (`src/stores/gitOperationStore.ts`) both require `op.path !== undefined && op.path === ctx.path`; an `entityIds` match on a queued delete/upsert still locks its row. Repo-level guards (`gateBusy`, `isRepoBusy`, `hasActivePull`, RefreshControl) are separate and unchanged.
+Delete behavior: deleting a note removes the row immediately in both API and
+clone modes (`noteStore.deleteNote` stages, then removes from storage + state
+and succeeds the git op). The pending delete stays in the sync queue and is
+drained by the next push. If the push drops it, the failure is recorded in the
+durable `@gitnotes:delete_failures_v1` map and surfaced on the Stage screen's
+"Failed to delete" section with a Retry button (`retryDeleteFailure` in
+`src/services/git/retryDeleteFailure.ts`).
 
-Layout rule:
-
-- The spinner overlay is positioned `absolute` with `right: 24, top: 24` relative to the row wrapper (`LockedNoteRow` / `LockedTodoRow`). The 24px offsets keep the spinner inside the card's bounds, clear of the 12px rounded card corner.
-- Do not lower the offsets below 24. The note card is inset by `marginHorizontal: 16` and both cards use `borderRadius: 12`, so smaller offsets make the spinner overhang the card edge.
-
-Tests: `__tests__/notes-delete-lock.test.tsx` asserts the spinner wrapper sits at least 24px from the row wrapper's right/top edges.
+Repo-level guards remain unchanged: `gateBusy`, `isRepoBusy`, `hasActivePull`,
+and `RefreshControl` still gate repo-wide operations, and repo-tree items keep
+their path locks via `isPathLocked` (`src/stores/gitOperationStore.ts`).
 
 ## Push model
 
@@ -311,9 +318,39 @@ Refresh, startup, and manual sync entry points are pull-only. They pull remote s
 
 - `ForegroundSyncService.runPull` (`src/services/ForegroundSyncService.ts`) pulls every tracked repo on app focus, online transitions, and the foreground interval. No queue drain.
 - `manualSync.runSyncCycle` (`src/services/git/manualSync.ts`) backs pull-to-refresh, the cloud-icon sync button, and startup sync via `syncNow`. Pull and store refresh only.
-- `useGitOpLock.retry` (`src/hooks/useGitOpLock.ts`) clears the failure entry and re-enqueues the delete; it does not drain the sync queue.
+- `retryDeleteFailure` (`src/services/git/retryDeleteFailure.ts`) clears the durable delete-failure entry and re-enqueues the delete; it does not drain the sync queue. It is triggered from the Stage screen's "Failed to delete" section.
 
 Pushes flow only through three paths: the stage scheduler (`StagePushScheduler`, a 3-minute idle window that resets on staged changes), the explicit Push / Push-all buttons on the Stage screen, or the OS background task. The sync queue drains only when one of those push paths runs. Saving or deleting a note by itself never starts a push.
+
+### Immediate drain on explicit push
+
+When a user taps Push / Push-all on the Stage screen or long-presses the floating stage button, the call site enqueues keys via `stageStore.pushAll()` or `stageStore.requestPush()` and then immediately calls `void drainPushQueue()`. Previously, explicit push only enqueued work; the actual drain waited for the 3-minute idle timer. Now the drain starts right away, and the idle-timer path (`flushStaged`) continues to serve the auto-push use case.
+
+The circular-import constraint is preserved: `stageStore` must not import `StagePushScheduler`. The drain trigger lives at UI call sites, not in the store.
+
+### Parallel group drain and progress aggregation
+
+`drainPushQueue` processes the FIFO queue one key at a time, each inside a `GitSyncGate` cycle. For each key it calls `StagingService.pushStaged(repoPath, branch, onProgress)`, which delegates to `NoteSyncQueueService.drain(onProgress)` for API mode or `LocalGitWriter.push` for clone mode.
+
+`drain()` groups pending mutations by `(repo, branch)` and processes groups in parallel via `Promise.all`. A shared `completed` counter incremented in per-group `.then()` callbacks fires `onProgress(completed / totalDue)` after each group resolves, giving coarse per-group granularity. When `totalDue === 0` (all items skipped by backoff), `onProgress(null)` is called. After the loop, `onProgress(1)` signals completion.
+
+The progress fraction (`number | null`, range 0..1) flows from `drainPushQueue` into `stageStore.setPushProgress`. A `null` value means "unknown total" and the floating button's progress ring clamps at 0.9 to avoid an infinite indeterminate animation. See [Stage Push UX](./stage-push-ux.md) for the full ring and notification behavior.
+
+### Resume on foreground
+
+`drainPushQueue` sets an AsyncStorage marker (`gitnotes-push-session`) when the FIFO loop starts and clears it when the queue drains. If the app is backgrounded mid-push (OS reclaim, user switching apps, kill), the marker persists.
+
+`ForegroundSyncService.handleAppStateChange` checks `hasPushSession()` on `AppState → active`. When the marker exists and `stageStore.staged.length > 0`, it calls `drainPushQueue()` immediately. The re-entrancy guard (`draining` flag) prevents overlap. Clone push re-pushes the same refs safely (idempotent), and API-mode drain re-runs whatever mutations remain in the sync queue.
+
+### Backoff constants
+
+`NoteSyncQueueService` uses exponential backoff for transient failures:
+
+- `BACKOFF_BASE_MS = 500` (initial retry delay)
+- `BACKOFF_CAP_MS = 30_000` (maximum retry delay)
+- `MAX_ATTEMPTS = 8` (mutations are dropped after 8 failures)
+
+The formula: `Math.min(500 * 2^(attempts-1), 30000)`. This turns a transient network blip from 8 immediate retries into roughly 1 minute of wall-clock retries, giving the foreground/auto-pull path time to resolve the underlying issue.
 
 ## Push progress & failure notifications
 

@@ -6,6 +6,7 @@ import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import type { MutationSucceededEvent, DroppedMutationEvent, NoteDeleteParams } from '../services/NoteSyncQueueService';
 import { SyncEngineService } from '../services/SyncEngineService';
 import { StagingService } from '../services/git/StagingService';
+import { recordDeleteFailure } from '../services/git/deleteFailures';
 import { gitOperationRegistry, useGitOperationStore } from './gitOperationStore';
 import type { GitOp } from './gitOperationStore';
 import { slugifyLocal, getExtensionForFormat } from '../components/editor/editorShared';
@@ -119,8 +120,6 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
         const repoPath = note.repo;
         const filePath = note.filePath ?? deriveDefaultNotePath(note);
         if (filePath) {
-          // The note stays in storage and renders locked until the queue
-          // reports success (row removed) or a drop (Retry shown).
           armDeleteCompletionHandlers();
           const deleteParams: NoteDeleteParams = {
             repo: repoPath,
@@ -160,8 +159,18 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
             }
             return success;
           }
-          beginDeleteOp();
-          return true;
+          // API mode: stageDelete succeeded; the queue holds the mutation.
+          // Remove locally now — the row must vanish immediately; the
+          // push button (not the row) signals pending work.
+          const opId = beginDeleteOp();
+          const success = await StorageService.deleteNote(id);
+          if (success) {
+            set((state) => ({ notes: state.notes.filter((n) => n.id !== id) }));
+            gitOperationRegistry.succeed(opId);
+          } else {
+            gitOperationRegistry.fail(opId, 'Failed to delete note locally');
+          }
+          return success;
         }
         // Repo-backed note with no derivable path: nothing to enqueue, so
         // fall through to the instant local delete below.
@@ -363,6 +372,16 @@ function onDeleteMutationDropped(event: DroppedMutationEvent): void {
     mutation.params.filePath,
     mutation.params.localNoteId,
     event.error || 'Delete failed',
+  );
+  void recordDeleteFailure(
+    mutation.params.repo,
+    mutation.params.branch,
+    mutation.params.filePath,
+    {
+      error: event.error || 'Delete failed',
+      kind: event.reason,
+      at: Date.now(),
+    },
   );
 }
 

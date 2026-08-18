@@ -100,10 +100,6 @@ jest.mock('../src/stores/reminderStore', () => ({
     selector({ consumePendingFilter: () => undefined }),
 }));
 
-jest.mock('../src/hooks/useGitOpLock', () => ({
-  useEntityLock: () => ({ locked: false, failed: false, error: null, retry: jest.fn() }),
-}));
-
 jest.mock('../src/services/NoteSyncQueueService', () => ({
   NoteSyncQueueService: {
     enqueueNoteDelete: jest.fn(async () => undefined),

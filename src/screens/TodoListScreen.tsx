@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { View, Alert, Platform, RefreshControl, ActivityIndicator, LayoutChangeEvent } from 'react-native';
+import { View, Alert, Platform, RefreshControl, LayoutChangeEvent } from 'react-native';
 import { FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
@@ -40,7 +40,6 @@ import { useResponsive } from '../hooks/useResponsive';
 import { useGitHubActivityStore } from '../stores/githubActivityStore';
 import { gitOperationRegistry, useGitOperationStore } from '../stores/gitOperationStore';
 import { GitSyncGate } from '../services/git/GitSyncGate';
-import { useEntityLock } from '../hooks/useGitOpLock';
 import { useTranslation } from 'react-i18next';
 import { LastSelectionPreferenceService } from '../services/LastSelectionPreferenceService';
 
@@ -59,41 +58,6 @@ function serializeTodoForStage(todo: Partial<Todo>): string {
     updatedAt: todo.updatedAt,
   };
   return JSON.stringify(data, null, 2);
-}
-
-interface LockedTodoRowProps {
-  item: Todo;
-  selected: boolean;
-  selectionMode: boolean;
-  onToggleSelect: () => void;
-  onPress: (todo: Todo) => void;
-  onToggle: (id: string) => void;
-}
-
-function LockedTodoRow({ item, selected, selectionMode, onToggleSelect, onPress, onToggle }: LockedTodoRowProps) {
-  const { colors } = useTheme();
-  const lock = useEntityLock(item.id, { repo: item.repo, branch: item.branch, path: item.filePath });
-  return (
-    <SwipeableListItem
-      itemId={item.id}
-      selected={selected}
-      selectionMode={selectionMode}
-      onToggleSelect={onToggleSelect}
-      disabled={lock.locked}
-    >
-      <View style={{ opacity: lock.locked ? 0.45 : 1, position: 'relative' }}>
-        <TodoCard todo={item} onPress={onPress} onToggle={onToggle} />
-        {lock.locked ? (
-          <ActivityIndicator
-            size="small"
-            testID="todo-row.lock-spinner"
-            color={colors.primary}
-            style={{ position: 'absolute', right: 24, top: 24, zIndex: 5 }}
-          />
-        ) : null}
-      </View>
-    </SwipeableListItem>
-  );
 }
 
 export default function TodoListScreen() {
@@ -590,14 +554,14 @@ export default function TodoListScreen() {
 
   const renderTodoItem = useCallback(
     ({ item }: { item: Todo }) => (
-      <LockedTodoRow
-        item={item}
+      <SwipeableListItem
+        itemId={item.id}
         selected={selectedIds.has(item.id)}
         selectionMode={selectionMode}
         onToggleSelect={() => toggleSelected(item.id)}
-        onPress={openEditModal}
-        onToggle={handleToggleTodo}
-      />
+      >
+        <TodoCard todo={item} onPress={openEditModal} onToggle={handleToggleTodo} />
+      </SwipeableListItem>
     ),
     [
       handleToggleTodo,

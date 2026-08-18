@@ -167,7 +167,11 @@ export class StagingService {
    * drain the whole queue); clone-mode keys are pushed with
    * `LocalGitWriter.push`. The scheduler owns any post-push refresh.
    */
-  static async pushStaged(repoPath?: string, branch?: string): Promise<StagingResult> {
+  static async pushStaged(
+    repoPath?: string,
+    branch?: string,
+    onProgress?: (fraction: number | null) => void,
+  ): Promise<StagingResult> {
     try {
       const staged = await this.listStaged(repoPath, branch);
       if (staged.length === 0) return { success: true };
@@ -186,7 +190,7 @@ export class StagingService {
       }
 
       if (hasApi) {
-        await NoteSyncQueueService.drain();
+        await NoteSyncQueueService.drain(onProgress);
       }
 
       if (cloneKeys.size > 0) {
@@ -197,12 +201,15 @@ export class StagingService {
             repoPath: repo,
             branch: repoBranch,
             token: token ?? undefined,
-            onProgress: (p) =>
+            onProgress: (p) => {
+              const fraction = p.total > 0 ? p.loaded / p.total : null;
               githubActivity.setProgress({
                 phase: 'Pushing changes',
                 loaded: p.loaded,
                 total: p.total,
-              }),
+              });
+              if (onProgress) onProgress(fraction);
+            },
           });
           if (!result.success) failures.push(result.error ?? `${repo}@${repoBranch}`);
         }
