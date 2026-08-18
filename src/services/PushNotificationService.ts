@@ -1,8 +1,14 @@
+import { AppState } from 'react-native';
 import { setOnPushFailure } from './StagePushScheduler';
 import { useStageStore } from '../stores/stageStore';
 import { NotificationService } from './NotificationService';
 
 const PROGRESS_THROTTLE_MS = 1000;
+
+/** Foregrounded app shows progress in-UI (ring + activity banner) — no banner needed. */
+function appIsForegrounded(): boolean {
+  return AppState.currentState === 'active';
+}
 
 let lastProgressSentAt = 0;
 let unsubscribeProgress: (() => void) | null = null;
@@ -46,6 +52,7 @@ export function subscribeToPushProgress(): void {
   unsubscribeProgress = useStageStore.subscribe((state, prevState) => {
     const wasPushing = Object.values(prevState.isPushing).some(Boolean);
     const isPushing = Object.values(state.isPushing).some(Boolean);
+    if (appIsForegrounded()) return;
 
     if (isPushing && !wasPushing) {
       pushTotal = state.pendingCount;

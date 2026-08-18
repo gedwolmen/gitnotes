@@ -26,6 +26,15 @@ jest.mock('../../src/stores/stageStore', () => ({
   useStageStore: { subscribe: mockSubscribe },
 }));
 
+let mockAppState = 'background';
+jest.mock('react-native', () => ({
+  AppState: {
+    get currentState() {
+      return mockAppState;
+    },
+  },
+}));
+
 let pushService: typeof import('../../src/services/PushNotificationService');
 
 describe('PushNotificationService', () => {
@@ -33,6 +42,7 @@ describe('PushNotificationService', () => {
     jest.useFakeTimers();
     jest.setSystemTime(5000);
     jest.clearAllMocks();
+    mockAppState = 'background';
     jest.isolateModules(() => {
       pushService = require('../../src/services/PushNotificationService');
     });
@@ -137,6 +147,27 @@ describe('PushNotificationService', () => {
     expect(completionContent.title).toBe('Push complete');
     expect(completionContent.body).toBe('All staged changes pushed to GitHub');
     expect(completionContent.data).toEqual({ kind: 'push-complete' });
+  });
+
+  test('no notifications fire while the app is foregrounded (start/progress/completion)', () => {
+    mockAppState = 'active';
+    pushService.subscribeToPushProgress();
+    const listener = mockSubscribe.mock.calls[0][0] as ProgressListener;
+
+    listener(
+      { isPushing: { a: true }, pendingCount: 3, pushProgress: null },
+      { isPushing: {}, pendingCount: 3, pushProgress: null },
+    );
+    listener(
+      { isPushing: { a: true }, pendingCount: 3, pushProgress: 0.5 },
+      { isPushing: { a: true }, pendingCount: 3, pushProgress: 0.25 },
+    );
+    listener(
+      { isPushing: {}, pendingCount: 0, pushProgress: null },
+      { isPushing: { a: true }, pendingCount: 3, pushProgress: 1 },
+    );
+
+    expect(mockDismissAndReschedule).not.toHaveBeenCalled();
   });
 
   test('resolvePushFailureRoute maps plain failures to stage and conflicts to conflicts', () => {
