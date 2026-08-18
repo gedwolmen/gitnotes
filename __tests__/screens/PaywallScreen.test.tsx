@@ -128,6 +128,12 @@ describe('PaywallScreen', () => {
     expect(queryByTestId('paywall.yearly.cta')).toBeNull();
   });
 
+  it('hides the lifetime option when no lifetime package is offered', () => {
+    setReadyState({ lifetimePackage: null });
+    const { queryByTestId } = render(<PaywallScreen />);
+    expect(queryByTestId('paywall.lifetime.cta')).toBeNull();
+  });
+
   it('shows and purchases the yearly option when a yearly package exists', async () => {
     const purchaseYearly = jest.fn(async () => {
       __setProState({ status: 'pro', entitlementActive: true });

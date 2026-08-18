@@ -117,8 +117,8 @@ describe('getPackages', () => {
     expect(await getPackages()).toBeNull();
   });
 
-  it('returns null when a package is missing', async () => {
-    PurchasesMock.getOfferings.mockResolvedValue(offerings(true, false));
+  it('returns null when the monthly package is missing', async () => {
+    PurchasesMock.getOfferings.mockResolvedValue(offerings(false, true));
     expect(await getPackages()).toBeNull();
   });
 
@@ -128,11 +128,18 @@ describe('getPackages', () => {
     expect(result?.yearly?.identifier).toBe('yearly');
   });
 
-  it('omits the yearly package when the offering has none', async () => {
-    PurchasesMock.getOfferings.mockResolvedValue(offerings(true, true, false));
+  it('omits the yearly and lifetime packages when the offering lacks them', async () => {
+    PurchasesMock.getOfferings.mockResolvedValue(offerings(true, false, false));
     const result = await getPackages();
     expect(result?.yearly).toBeUndefined();
+    expect(result?.lifetime).toBeUndefined();
     expect(result?.monthly.identifier).toBe('monthly');
+  });
+
+  it('includes the lifetime package when the offering has one', async () => {
+    PurchasesMock.getOfferings.mockResolvedValue(offerings(true, true, true));
+    const result = await getPackages();
+    expect(result?.lifetime?.identifier).toBe('lifetime');
   });
 });
 

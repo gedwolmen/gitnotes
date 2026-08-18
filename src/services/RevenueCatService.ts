@@ -11,8 +11,8 @@ export interface ConfigureResult {
 
 export interface Packages {
   monthly: PurchasesPackage;
-  lifetime: PurchasesPackage;
   yearly?: PurchasesPackage;
+  lifetime?: PurchasesPackage;
   offerings: PurchasesOfferings;
 }
 
@@ -40,10 +40,10 @@ export async function getPackages(): Promise<Packages | null> {
   const current = offerings.current;
   if (!current) return null;
   const monthly = current.availablePackages.find((pkg) => pkg.identifier === 'monthly');
-  const lifetime = current.availablePackages.find((pkg) => pkg.identifier === 'lifetime');
-  if (!monthly || !lifetime) return null;
+  if (!monthly) return null;
   const yearly = current.availablePackages.find((pkg) => pkg.identifier === 'yearly');
-  return { monthly, lifetime, yearly, offerings };
+  const lifetime = current.availablePackages.find((pkg) => pkg.identifier === 'lifetime');
+  return { monthly, yearly, lifetime, offerings };
 }
 
 async function runPurchase(

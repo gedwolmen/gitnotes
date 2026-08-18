@@ -184,6 +184,7 @@ export default function PaywallScreen() {
             </Surface>
             ) : null}
 
+            {lifetimePackage ? (
             <Surface elevation="raised" radius="md" className="mt-4 p-5">
               <Text className="text-lg font-bold" style={{ color: colors.text }}>
                 {t('paywall.lifetime.title')}
@@ -198,6 +199,7 @@ export default function PaywallScreen() {
                 style={{ marginTop: 14 }}
               />
             </Surface>
+            ) : null}
 
             <TouchableOpacity
               testID="paywall.restore"
