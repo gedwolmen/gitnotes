@@ -433,6 +433,13 @@ const mockProStoreState: Record<string, unknown> = {
   monthlyPackage: null,
   lifetimePackage: null,
   configured: true,
+  initialize: jest.fn(async () => undefined),
+  refresh: jest.fn(async () => undefined),
+  purchaseMonthly: jest.fn(async () => undefined),
+  purchaseLifetime: jest.fn(async () => undefined),
+  restore: jest.fn(async () => undefined),
+  loadOfferingsIfNeeded: jest.fn(async () => undefined),
+  markInterstitialShown: jest.fn(async () => undefined),
 };
 jest.mock('./src/stores/proStore', () => ({
   useProStore: {
