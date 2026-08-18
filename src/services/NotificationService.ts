@@ -133,4 +133,34 @@ export class NotificationService {
   ): Promise<string | null> {
     return this.scheduleImmediate({ title, body, data, sound: true });
   }
+
+  /**
+   * Replaces an existing notification (scheduled or presented) with new
+   * content under the same identifier, so callers can update a live
+   * notification's body. Returns the reused identifier, or null when
+   * permission is denied or a native call fails.
+   */
+  static async dismissAndReschedule(
+    identifier: string,
+    content: Notifications.NotificationContentInput,
+  ): Promise<string | null> {
+    const hasPermission = await this.requestPermissions();
+    if (!hasPermission) return null;
+
+    try {
+      await Notifications.cancelScheduledNotificationAsync(identifier);
+      await Notifications.dismissNotificationAsync(identifier);
+      return await Notifications.scheduleNotificationAsync({
+        identifier,
+        content,
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: 1,
+        },
+      });
+    } catch (error) {
+      console.warn('[NotificationService] failed to reschedule notification:', error);
+      return null;
+    }
+  }
 }

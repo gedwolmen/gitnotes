@@ -5,6 +5,7 @@ const mockGetPermissionsAsync = jest.fn(async () => ({ status: 'granted' as cons
 const mockRequestPermissionsAsync = jest.fn(async () => ({ status: 'granted' as const }));
 const mockScheduleNotificationAsync = jest.fn(async () => 'notification-id');
 const mockCancelScheduledNotificationAsync = jest.fn();
+const mockDismissNotificationAsync = jest.fn();
 
 jest.mock('expo-notifications', () => ({
   setNotificationHandler: mockSetNotificationHandler,
@@ -12,6 +13,7 @@ jest.mock('expo-notifications', () => ({
   requestPermissionsAsync: mockRequestPermissionsAsync,
   scheduleNotificationAsync: mockScheduleNotificationAsync,
   cancelScheduledNotificationAsync: mockCancelScheduledNotificationAsync,
+  dismissNotificationAsync: mockDismissNotificationAsync,
   SchedulableTriggerInputTypes: {
     DATE: 'date',
     TIME_INTERVAL: 'timeInterval',
@@ -170,6 +172,66 @@ describe('NotificationService', () => {
 
     const id = await NotificationService.schedulePushProgress('Pushing', 'Pushing', {
       kind: 'push-progress',
+    });
+
+    expect(id).toBeNull();
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  test('dismissAndReschedule cancels the scheduled notification and dismisses presented ones for the identifier', async () => {
+    const id = await NotificationService.dismissAndReschedule('push-1', {
+      title: 'Pushing 2/5 files…',
+      body: 'Pushing',
+      data: { kind: 'push-progress' },
+    });
+
+    expect(id).toBe('notification-id');
+    expect(mockCancelScheduledNotificationAsync).toHaveBeenCalledWith('push-1');
+    expect(mockDismissNotificationAsync).toHaveBeenCalledWith('push-1');
+  });
+
+  test('dismissAndReschedule schedules the replacement with the SAME identifier', async () => {
+    await NotificationService.dismissAndReschedule('push-1', {
+      title: 'Pushing 2/5 files…',
+      body: 'Pushing',
+      data: { kind: 'push-progress' },
+    });
+
+    const call = mockScheduleNotificationAsync.mock.calls[0][0] as {
+      identifier?: string;
+      content: Record<string, unknown>;
+      trigger: { type: string; seconds?: number };
+    };
+    expect(call.identifier).toBe('push-1');
+    expect(call.trigger.type).toBe('timeInterval');
+    expect(call.trigger.seconds).toBe(1);
+  });
+
+  test('dismissAndReschedule returns null without scheduling when permission is denied', async () => {
+    mockGetPermissionsAsync.mockImplementation(async () => ({ status: 'denied' as const }));
+    mockRequestPermissionsAsync.mockImplementation(async () => ({ status: 'denied' as const }));
+
+    const id = await NotificationService.dismissAndReschedule('push-1', {
+      title: 'Pushing',
+      body: 'Pushing',
+      data: {},
+    });
+
+    expect(id).toBeNull();
+    expect(mockScheduleNotificationAsync).not.toHaveBeenCalled();
+    expect(mockCancelScheduledNotificationAsync).not.toHaveBeenCalled();
+    expect(mockDismissNotificationAsync).not.toHaveBeenCalled();
+  });
+
+  test('a dismissAndReschedule native rejection resolves to null with a console.warn', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    mockScheduleNotificationAsync.mockRejectedValueOnce(new Error('ERR_NOTIFICATIONS_FAILED_TO_SCHEDULE'));
+
+    const id = await NotificationService.dismissAndReschedule('push-1', {
+      title: 'Pushing',
+      body: 'Pushing',
+      data: {},
     });
 
     expect(id).toBeNull();
