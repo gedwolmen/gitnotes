@@ -86,12 +86,6 @@ export default function PaywallScreen() {
     });
   }, [restore, navigation]);
 
-  const monthlyCtaLabel = monthlyPrice
-    ? trialEligible
-      ? t('paywall.monthly.trialCta', { price: monthlyPrice })
-      : t('paywall.monthly.price', { price: monthlyPrice })
-    : t('paywall.loading');
-
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
       <ScreenHeader
@@ -133,35 +127,43 @@ export default function PaywallScreen() {
         ) : (
           <>
             {error ? (
-              <View className="mt-6 rounded-xl p-4" style={{ backgroundColor: colors.error + '22' }} testID="paywall.error">
-                <Text className="text-sm" style={{ color: colors.error }}>
-                  {t('paywall.purchaseError')}: {error}
-                </Text>
-                <Button
-                  testID="paywall.retry"
-                  variant="secondary"
-                  label={t('paywall.retry')}
-                  onPress={() => void loadOfferingsIfNeeded()}
-                  style={{ marginTop: 10 }}
-                />
+              <View className="mt-6 rounded-xl border p-4 flex-row items-start gap-3" style={{ backgroundColor: colors.error + '14', borderColor: colors.error + '44' }} testID="paywall.error">
+                <Ionicons name="alert-circle" size={22} color={colors.error} />
+                <View className="flex-1">
+                  <Text className="text-sm font-semibold" style={{ color: colors.error }}>
+                    {t('paywall.purchaseError')}
+                  </Text>
+                  <Text className="text-[13px] mt-1 leading-[18px]" style={{ color: colors.textSecondary }}>
+                    {error}
+                  </Text>
+                  <Button
+                    testID="paywall.retry"
+                    variant="secondary"
+                    label={t('paywall.retry')}
+                    onPress={() => void loadOfferingsIfNeeded()}
+                    style={{ marginTop: 12 }}
+                  />
+                </View>
               </View>
             ) : null}
 
             <Surface elevation="raised" radius="md" className="mt-6 p-5">
-              <Text className="text-lg font-bold" style={{ color: colors.text }}>
-                {t('paywall.monthly.title')}
-              </Text>
-              {monthlyPrice ? (
-                <Text className="text-sm mt-1" style={{ color: colors.textSecondary }}>
-                  {trialEligible ? t('paywall.monthly.trialCta', { price: monthlyPrice }) : monthlyPrice}
+              <View className="flex-row items-center justify-between">
+                <Text className="text-lg font-bold" style={{ color: colors.text }}>
+                  {t('paywall.monthly.title')}
                 </Text>
-              ) : null}
+                {monthlyPrice ? (
+                  <Text className="text-base font-semibold" style={{ color: colors.textSecondary }}>
+                    {trialEligible ? t('paywall.monthly.trialCta', { price: monthlyPrice }) : t('paywall.monthly.price', { price: monthlyPrice })}
+                  </Text>
+                ) : null}
+              </View>
               <Button
                 testID="paywall.monthly.cta"
                 variant="primary"
                 fullWidth
                 disabled={busy || !monthlyPrice}
-                label={monthlyCtaLabel}
+                label={trialEligible ? t('paywall.action.trial') : t('paywall.action.subscribe')}
                 onPress={handleMonthly}
                 style={{ marginTop: 14 }}
               />
@@ -169,15 +171,22 @@ export default function PaywallScreen() {
 
             {yearlyPackage ? (
             <Surface elevation="raised" radius="md" className="mt-4 p-5">
-              <Text className="text-lg font-bold" style={{ color: colors.text }}>
-                {t('paywall.yearly.title')}
-              </Text>
+              <View className="flex-row items-center justify-between">
+                <Text className="text-lg font-bold" style={{ color: colors.text }}>
+                  {t('paywall.yearly.title')}
+                </Text>
+                {yearlyPrice ? (
+                  <Text className="text-base font-semibold" style={{ color: colors.textSecondary }}>
+                    {t('paywall.yearly.cta', { price: yearlyPrice })}
+                  </Text>
+                ) : null}
+              </View>
               <Button
                 testID="paywall.yearly.cta"
                 variant="secondary"
                 fullWidth
                 disabled={busy || !yearlyPrice}
-                label={yearlyPrice ? t('paywall.yearly.cta', { price: yearlyPrice }) : t('paywall.loading')}
+                label={t('paywall.action.subscribe')}
                 onPress={handleYearly}
                 style={{ marginTop: 14 }}
               />
@@ -186,15 +195,22 @@ export default function PaywallScreen() {
 
             {lifetimePackage ? (
             <Surface elevation="raised" radius="md" className="mt-4 p-5">
-              <Text className="text-lg font-bold" style={{ color: colors.text }}>
-                {t('paywall.lifetime.title')}
-              </Text>
+              <View className="flex-row items-center justify-between">
+                <Text className="text-lg font-bold" style={{ color: colors.text }}>
+                  {t('paywall.lifetime.title')}
+                </Text>
+                {lifetimePrice ? (
+                  <Text className="text-base font-semibold" style={{ color: colors.textSecondary }}>
+                    {t('paywall.lifetime.cta', { price: lifetimePrice })}
+                  </Text>
+                ) : null}
+              </View>
               <Button
                 testID="paywall.lifetime.cta"
                 variant="secondary"
                 fullWidth
                 disabled={busy || !lifetimePrice}
-                label={lifetimePrice ? t('paywall.lifetime.cta', { price: lifetimePrice }) : t('paywall.loading')}
+                label={t('paywall.action.buy')}
                 onPress={handleLifetime}
                 style={{ marginTop: 14 }}
               />

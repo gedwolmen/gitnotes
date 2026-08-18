@@ -47,6 +47,7 @@ import type { TFunction } from 'i18next';
 import { RepoAccessPreflightError } from '../services/git/repoAccessPreflight';
 import { useProGate } from '../hooks/useProGate';
 import { useProStore } from '../stores/proStore';
+import { promptProUpgrade } from '../utils/proAlerts';
 
 // Mirrors GitFsService's MAX_CLONE_RETRIES so a failing repo can't loop the outer flow.
 const MAX_OUTER_CLONE_RETRIES = 1;
@@ -514,7 +515,7 @@ export default function SettingsScreen() {
 
   const handleSelectGithubRepo = useCallback(async (repo: GitHubRepository) => {
     if (repositories.length >= 1 && !isPro) {
-      openPaywall();
+      promptProUpgrade(t, openPaywall);
       return;
     }
     if (repositories.some((item) => item.path === repo.full_name)) {
@@ -555,7 +556,7 @@ export default function SettingsScreen() {
     const value = manualRepoInput.trim();
     if (!value) return;
     if (repositories.length >= 1 && !isPro) {
-      openPaywall();
+      promptProUpgrade(t, openPaywall);
       return;
     }
     const attemptAdd = async (allowUnverifiedWrite: boolean): Promise<void> => {
@@ -834,7 +835,7 @@ export default function SettingsScreen() {
         onOpenConnectToken={() => { setTokenModalMode('connect'); setTokenInput(''); setTokenError(null); setTokenVisible(false); setShowTokenModal(true); }}
         onOpenAddAccount={() => {
           if (accounts.length >= 1 && !isPro) {
-            openPaywall();
+            promptProUpgrade(t, openPaywall);
             return;
           }
           setTokenModalMode('add'); setTokenInput(''); setTokenError(null); setTokenVisible(false); setShowTokenModal(true);

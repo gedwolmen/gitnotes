@@ -162,4 +162,19 @@ describe('Settings Pro section', () => {
     expect(getByTestId('settings.button.model-selector')).toBeTruthy();
     expect(getByTestId('settings.button.add-provider')).toBeTruthy();
   });
+
+  it('locks the Fancy UI toggle for a free user and routes to the paywall', () => {
+    const onOpenPaywall = jest.fn();
+    const { getByTestId, queryByTestId } = renderContent({ isPro: false, onOpenPaywall });
+    expect(getByTestId('settings.row.updated-ui')).toBeTruthy();
+    expect(queryByTestId('settings.toggle.neu')).toBeNull();
+    fireEvent.press(getByTestId('settings.row.updated-ui'));
+    expect(onOpenPaywall).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the Fancy UI toggle for a pro user', () => {
+    const { getByTestId } = renderContent({ isPro: true });
+    expect(getByTestId('settings.toggle.neu')).toBeTruthy();
+    expect(getByTestId('settings.row.updated-ui')).toBeTruthy();
+  });
 });

@@ -172,7 +172,7 @@
     },
     "security": "セキュリティ",
     "appearance": "外観",
-    "updatedUI": "新しいUI",
+    "updatedUI": "ファンシーUI",
     "darkMode": "ダークモード",
     "useSystemTheme": "システムテーマを使用",
     "active": "有効",
@@ -597,7 +597,7 @@
     "skipForNow": "Skip for Now",
     "pro": {
       "title": "GitNotēs Pro",
-      "body": "AIチャット、思考・音声ダンプ、パーソナライズされた名言、キャンバス、テンプレートなどはGitNotēs Proの一部です。いつでも30日間の無料トライアルを開始できます。",
+      "body": "無料プランにはアカウント1つとリポジトリ1つが含まれます。GitNotēs Proでは、AIチャット、思考・音声ダンプ、パーソナライズされた名言、キャンバス、テンプレート、追加のリポジトリとアカウントを30日間の無料トライアル付きで利用できます。",
       "reminder": "設定 → GitNotēs Proからいつでもアップグレードできます。"
     }
   },
@@ -871,6 +871,11 @@
     "yearly": {
       "title": "年間",
       "cta": "{{price}}/年"
+    },
+    "action": {
+      "trial": "無料トライアルを開始",
+      "subscribe": "登録する",
+      "buy": "購入する"
     }
   },
   "pro": {
@@ -880,6 +885,8 @@
     "settingsRow": "GitNotēs Pro",
     "gateTitle": "Pro機能です",
     "gateBody": "アップグレードするとAI機能などを利用できます。",
-    "badge": "PRO"
+    "badge": "PRO",
+    "lockedTitle": "Pro機能",
+    "lockedBody": "この機能にはGitNotēs Proが必要です。アップグレードすると、無制限のアカウント、リポジトリ、AIなどを利用できます。"
   }
 }

@@ -172,7 +172,7 @@
     },
     "security": "Seguridad",
     "appearance": "Apariencia",
-    "updatedUI": "IU actualizada",
+    "updatedUI": "UI elegante",
     "darkMode": "Modo oscuro",
     "useSystemTheme": "Usar tema del sistema",
     "active": "Activo",
@@ -597,7 +597,7 @@
     "skipForNow": "Skip for Now",
     "pro": {
       "title": "GitNotēs Pro",
-      "body": "El chat de IA, el volcado de pensamientos y voz, las citas personalizadas, los lienzos, las plantillas y más forman parte de GitNotēs Pro. Comienza con una prueba gratuita de 30 días cuando quieras.",
+      "body": "El plan gratuito incluye 1 cuenta y 1 repositorio. GitNotēs Pro desbloquea chat de IA, volcado de pensamientos y voz, citas personalizadas, lienzos, plantillas, más repositorios y cuentas, con una prueba gratuita de 30 días.",
       "reminder": "Puedes actualizar en cualquier momento en Ajustes → GitNotēs Pro."
     }
   },
@@ -871,6 +871,11 @@
     "yearly": {
       "title": "Anual",
       "cta": "{{price}}/año"
+    },
+    "action": {
+      "trial": "Iniciar prueba gratis",
+      "subscribe": "Suscribirse",
+      "buy": "Comprar ahora"
     }
   },
   "pro": {
@@ -880,6 +885,8 @@
     "settingsRow": "GitNotēs Pro",
     "gateTitle": "Esta es una función Pro",
     "gateBody": "Mejora para desbloquear funciones de IA y más.",
-    "badge": "PRO"
+    "badge": "PRO",
+    "lockedTitle": "Función Pro",
+    "lockedBody": "Esta función requiere GitNotēs Pro. Mejora para desbloquear cuentas, repos, IA y más ilimitados."
   }
 }

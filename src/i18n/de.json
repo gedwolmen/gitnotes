@@ -172,7 +172,7 @@
     },
     "security": "Sicherheit",
     "appearance": "Erscheinungsbild",
-    "updatedUI": "Aktualisierte Oberfläche",
+    "updatedUI": "Fancy UI",
     "darkMode": "Dunkelmodus",
     "useSystemTheme": "Systemdesign verwenden",
     "active": "Aktiv",
@@ -597,7 +597,7 @@
     "skipForNow": "Skip for Now",
     "pro": {
       "title": "GitNotēs Pro",
-      "body": "KI-Chat, Gedanken- und Sprach-Dump, personalisierte Zitate, Canvas, Vorlagen und mehr sind Teil von GitNotēs Pro. Starte jederzeit mit einer 30-tägigen kostenlosen Testversion.",
+      "body": "Der kostenlose Plan umfasst 1 Konto und 1 Repository. GitNotēs Pro schaltet KI-Chat, Gedanken- und Sprach-Dump, personalisierte Zitate, Canvas, Vorlagen, weitere Repos und Konten frei — mit 30-tägiger kostenloser Testphase.",
       "reminder": "Du kannst jederzeit in Einstellungen → GitNotēs Pro upgraden."
     }
   },
@@ -871,6 +871,11 @@
     "yearly": {
       "title": "Jährlich",
       "cta": "{{price}}/Jahr"
+    },
+    "action": {
+      "trial": "Kostenlose Testversion",
+      "subscribe": "Abonnieren",
+      "buy": "Jetzt kaufen"
     }
   },
   "pro": {
@@ -880,6 +885,8 @@
     "settingsRow": "GitNotēs Pro",
     "gateTitle": "Dies ist eine Pro-Funktion",
     "gateBody": "Upgrade, um KI-Funktionen und mehr freizuschalten.",
-    "badge": "PRO"
+    "badge": "PRO",
+    "lockedTitle": "Pro-Funktion",
+    "lockedBody": "Diese Funktion erfordert GitNotēs Pro. Upgrade, um unbegrenzte Konten, Repos, KI und mehr freizuschalten."
   }
 }

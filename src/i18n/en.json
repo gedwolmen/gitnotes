@@ -277,7 +277,7 @@
     },
     "security": "Security",
     "appearance": "Appearance",
-    "updatedUI": "Updated UI",
+    "updatedUI": "Fancy UI",
     "darkMode": "Dark Mode",
     "useSystemTheme": "Use System Theme",
     "active": "Active",
@@ -559,7 +559,7 @@
     "skipForNow": "Skip for Now",
     "pro": {
       "title": "GitNotēs Pro",
-      "body": "AI chat, thought & voice dump, personalized quotes, canvases, templates, and more are part of GitNotēs Pro. Start with a free 30-day trial anytime.",
+      "body": "The free plan includes 1 account and 1 repo. GitNotēs Pro unlocks AI chat, thought & voice dump, personalized quotes, canvases, templates, more repos and accounts — with a 30-day free trial.",
       "reminder": "You can upgrade anytime in Settings → GitNotēs Pro."
     }
   },
@@ -871,6 +871,11 @@
     "yearly": {
       "title": "Yearly",
       "cta": "{{price}}/year"
+    },
+    "action": {
+      "trial": "Start Free Trial",
+      "subscribe": "Subscribe",
+      "buy": "Buy Once"
     }
   },
   "pro": {
@@ -880,6 +885,8 @@
     "settingsRow": "GitNotēs Pro",
     "gateTitle": "This is a Pro feature",
     "gateBody": "Upgrade to unlock AI features and more.",
-    "badge": "PRO"
+    "badge": "PRO",
+    "lockedTitle": "Pro Feature",
+    "lockedBody": "This feature requires GitNotēs Pro. Upgrade to unlock unlimited accounts, repos, AI, and more."
   }
 }

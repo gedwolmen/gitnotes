@@ -172,7 +172,7 @@
     },
     "security": "보안",
     "appearance": "모양",
-    "updatedUI": "업데이트된 UI",
+    "updatedUI": "팬시 UI",
     "darkMode": "다크 모드",
     "useSystemTheme": "시스템 테마 사용",
     "active": "활성",
@@ -597,7 +597,7 @@
     "skipForNow": "Skip for Now",
     "pro": {
       "title": "GitNotēs Pro",
-      "body": "AI 채팅, 생각·음성 덤프, 맞춤 명언, 캔버스, 템플릿 등은 GitNotēs Pro의 일부입니다. 언제든 30일 무료 체험을 시작할 수 있습니다.",
+      "body": "무료 플랜에는 계정 1개와 저장소 1개가 포함됩니다. GitNotēs Pro는 AI 채팅, 생각·음성 덤프, 맞춤 명언, 캔버스, 템플릿, 추가 저장소 및 계정을 30일 무료 체험과 함께 제공합니다.",
       "reminder": "설정 → GitNotēs Pro에서 언제든 업그레이드할 수 있습니다."
     }
   },
@@ -871,6 +871,11 @@
     "yearly": {
       "title": "연간",
       "cta": "{{price}}/년"
+    },
+    "action": {
+      "trial": "무료 체험 시작",
+      "subscribe": "구독하기",
+      "buy": "구매하기"
     }
   },
   "pro": {
@@ -880,6 +885,8 @@
     "settingsRow": "GitNotēs Pro",
     "gateTitle": "Pro 기능입니다",
     "gateBody": "업그레이드하면 AI 기능 등을 이용할 수 있습니다.",
-    "badge": "PRO"
+    "badge": "PRO",
+    "lockedTitle": "Pro 기능",
+    "lockedBody": "이 기능에는 GitNotēs Pro가 필요합니다. 업그레이드하면 무제한 계정, 저장소, AI 등을 이용할 수 있습니다."
   }
 }

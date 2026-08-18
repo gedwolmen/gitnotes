@@ -312,15 +312,21 @@ onSetSyncIntervalSeconds,
         title={t('settings.appearance')}
       >
         <GroupRow
+          testID="settings.row.updated-ui"
+          onPress={() => { if (!isPro) onOpenPaywall(); }}
           trailing={
-            <View className="flex-row items-center gap-2">
-              <Toggle
-                testID="settings.toggle.neu"
-                value={uiStyle === 'neumorphic'}
-                onValueChange={(value) => setStyle(value ? 'neumorphic' : 'flat')}
-              />
-              <HintIcon hintKey="hints.settings.updatedUI" testID="hint.updated-ui" />
-            </View>
+            isPro ? (
+              <View className="flex-row items-center gap-2">
+                <Toggle
+                  testID="settings.toggle.neu"
+                  value={uiStyle === 'neumorphic'}
+                  onValueChange={(value) => setStyle(value ? 'neumorphic' : 'flat')}
+                />
+                <HintIcon hintKey="hints.settings.updatedUI" testID="hint.updated-ui" />
+              </View>
+            ) : (
+              <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
+            )
           }
         >
           <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.updatedUI')}</Text>

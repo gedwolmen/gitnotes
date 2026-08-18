@@ -172,7 +172,7 @@
     },
     "security": "Sécurité",
     "appearance": "Apparence",
-    "updatedUI": "Interface mise à jour",
+    "updatedUI": "UI élégante",
     "darkMode": "Mode sombre",
     "useSystemTheme": "Utiliser le thème du système",
     "active": "Actif",
@@ -597,7 +597,7 @@
     "skipForNow": "Skip for Now",
     "pro": {
       "title": "GitNotēs Pro",
-      "body": "Le chat IA, la décharge de pensées et vocale, les citations personnalisées, les toiles, les modèles et plus font partie de GitNotēs Pro. Commencez par un essai gratuit de 30 jours à tout moment.",
+      "body": "Le plan gratuit inclut 1 compte et 1 dépôt. GitNotēs Pro débloque le chat IA, la décharge de pensées et vocale, les citations personnalisées, les toiles, les modèles, plus de dépôts et de comptes — avec un essai gratuit de 30 jours.",
       "reminder": "Vous pouvez passer à Pro à tout moment dans Réglages → GitNotēs Pro."
     }
   },
@@ -871,6 +871,11 @@
     "yearly": {
       "title": "Annuel",
       "cta": "{{price}}/an"
+    },
+    "action": {
+      "trial": "Essai gratuit",
+      "subscribe": "S'abonner",
+      "buy": "Acheter"
     }
   },
   "pro": {
@@ -880,6 +885,8 @@
     "settingsRow": "GitNotēs Pro",
     "gateTitle": "Fonctionnalité Pro",
     "gateBody": "Passez à Pro pour débloquer l'IA et plus encore.",
-    "badge": "PRO"
+    "badge": "PRO",
+    "lockedTitle": "Fonctionnalité Pro",
+    "lockedBody": "Cette fonctionnalité nécessite GitNotēs Pro. Passez à Pro pour débloquer comptes, dépôts, IA et plus, sans limite."
   }
 }
