@@ -441,14 +441,19 @@ const mockProStoreState: Record<string, unknown> = {
   loadOfferingsIfNeeded: jest.fn(async () => undefined),
   markInterstitialShown: jest.fn(async () => undefined),
 };
-jest.mock('./src/stores/proStore', () => ({
-  useProStore: {
+jest.mock('./src/stores/proStore', () => {
+  const useProStore = (selector: (state: Record<string, unknown>) => unknown) =>
+    selector(mockProStoreState);
+  Object.assign(useProStore, {
     getState: () => mockProStoreState,
     setState: (partial: Record<string, unknown>) => Object.assign(mockProStoreState, partial),
     subscribe: () => () => {},
     getInitialState: () => mockProStoreState,
-  },
-  selectIsPro: (state: { entitlementActive?: boolean; isGrandfathered?: boolean }) =>
-    Boolean(state?.entitlementActive || state?.isGrandfathered),
-  __setProState: (partial: Record<string, unknown>) => Object.assign(mockProStoreState, partial),
-}));
+  });
+  return {
+    useProStore,
+    selectIsPro: (state: { entitlementActive?: boolean; isGrandfathered?: boolean }) =>
+      Boolean(state?.entitlementActive || state?.isGrandfathered),
+    __setProState: (partial: Record<string, unknown>) => Object.assign(mockProStoreState, partial),
+  };
+});
