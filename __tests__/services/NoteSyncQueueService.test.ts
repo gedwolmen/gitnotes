@@ -556,6 +556,26 @@ describe('NoteSyncQueueService', () => {
         expect((deleteNoteFromGitHub as jest.Mock).mock.calls[0][0].push).toBe(false);
         (SyncEngineService.getMode as jest.Mock).mockResolvedValue('api');
       });
+
+      test('clears a leftover clone-mode delete from the queue after a successful flush (issue #901)', async () => {
+        (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
+        (LocalGitWriter.push as jest.Mock).mockResolvedValue({ success: true });
+        (deleteNoteFromGitHub as jest.Mock).mockResolvedValue({ success: true });
+
+        await NoteSyncQueueService.enqueueNoteDelete({
+          repo: 'r', branch: 'main', filePath: 'stale.md', title: 'stale',
+        });
+
+        const result = await NoteSyncQueueService.drain();
+
+        expect(result.succeeded).toBe(1);
+        expect(result.remaining).toBe(0);
+        expect(result.failed).toBe(0);
+        // The item must not linger at attempts 0 in the durable queue.
+        const items = await NoteSyncQueueService.getAll();
+        expect(items).toHaveLength(0);
+        (SyncEngineService.getMode as jest.Mock).mockResolvedValue('api');
+      });
     });
 
     describe('api-mode (no coalescing)', () => {
