@@ -387,3 +387,46 @@ yarn install
 # Check tailwind.config.js content paths
 # Should include: './src/**/*.{js,jsx,ts,tsx}'
 ```
+
+### Button label centering with trailing icons
+
+The shared `Button` component centers its label optically even when a
+`trailingIcon` is present. Two layout modes are controlled by the
+`iconAlign` prop:
+
+- **`iconAlign="edge"`** (for wide/`fullWidth` buttons): the icon is
+  absolutely pinned to the right edge (`absolute right-5`) and the label is
+  wrapped in a row with equal-width spacers on both sides, so the text stays
+  at the button's true center instead of shifting left to make room for the
+  icon. Used by the onboarding "Next"/"Connect" buttons and the settings
+  save-token button.
+- **`iconAlign="inline"`** (default): the trailing icon renders in the flex
+  row next to the label with a gap. Required for narrow buttons (e.g. the
+  editor header "Save" button) where the absolutely-pinned icon would overlap
+  the label text — this was the save-spinner-overlaps-text bug.
+
+`fullWidth` buttons stretch the entire `Pressable → Surface → content` chain
+(`alignSelf: 'stretch'`) so `justify-center` centers against the actual
+button width. See `src/components/ui/Button.tsx` and
+`__tests__/ui/Button.test.tsx`.
+
+### Single-line Input descender clipping
+
+The shared `Input`'s `TextInput` keeps a small vertical padding
+(`paddingVertical: 2`) instead of `0`. With zero padding, iOS renders the
+single-line text/placeholder box at exactly the font line height and clips
+glyph descenders — the "g" in the tag editor's "Add tags..." placeholder was
+getting cut off at the bottom. The tag input row also carries 16px of
+horizontal padding so it aligns with the other NoteEditor form rows (title,
+folder, format). See `src/components/ui/Input.tsx` and
+`src/components/TagInput.tsx`.
+
+### Hairline border gotcha
+
+`borderWidth: StyleSheet.hairlineWidth` sets the width on **all four sides**.
+If only `borderTopColor` is set, the other three sides fall back to React
+Native's default black border — e.g. the Explore repo-detail branch row
+rendered with a black box outline around the branch name. Prefer the
+`border-t` NativeWind class (top border only) plus an explicit
+`borderTopColor`, and only use `borderWidth` when `borderColor` is also set.
+See `src/screens/ExploreScreen.tsx`.

@@ -65,6 +65,7 @@ exports[`NativeWind theme parity matches the pre-migration key-kit snapshots in 
             },
             [
               {
+                "alignSelf": "stretch",
                 "minHeight": 44,
               },
               {
@@ -102,7 +103,7 @@ exports[`NativeWind theme parity matches the pre-migration key-kit snapshots in 
           }
         />
         <View
-          className="py-3 px-5 items-center justify-center"
+          className="py-3 px-5 items-center justify-center self-stretch"
         >
           <View
             className="flex-row items-center justify-center gap-2"
@@ -241,7 +242,7 @@ exports[`NativeWind theme parity matches the pre-migration key-kit snapshots in 
             "color": "#F2F2F7",
             "flex": 1,
             "fontSize": 16,
-            "paddingVertical": 0,
+            "paddingVertical": 2,
             "textAlignVertical": "center",
           },
           undefined,
@@ -318,6 +319,7 @@ exports[`NativeWind theme parity matches the pre-migration key-kit snapshots in 
             },
             [
               {
+                "alignSelf": "stretch",
                 "minHeight": 44,
               },
               {
@@ -355,7 +357,7 @@ exports[`NativeWind theme parity matches the pre-migration key-kit snapshots in 
           }
         />
         <View
-          className="py-3 px-5 items-center justify-center"
+          className="py-3 px-5 items-center justify-center self-stretch"
         >
           <View
             className="flex-row items-center justify-center gap-2"
@@ -494,7 +496,7 @@ exports[`NativeWind theme parity matches the pre-migration key-kit snapshots in 
             "color": "#1C1C1E",
             "flex": 1,
             "fontSize": 16,
-            "paddingVertical": 0,
+            "paddingVertical": 2,
             "textAlignVertical": "center",
           },
           undefined,

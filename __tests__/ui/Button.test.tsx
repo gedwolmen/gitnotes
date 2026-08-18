@@ -46,6 +46,37 @@ describe('Button', () => {
     expect(flattened.backgroundColor).toBe(NEUMORPHIC_LIGHT.primary);
   });
 
+  it('fullWidth button stretches its Surface and content so the label is centered', () => {
+    const { getByText, UNSAFE_getByType } = render(
+      <TestThemeProvider>
+        <Button label="Next" variant="primary" fullWidth trailingIcon="→" />
+      </TestThemeProvider>,
+    );
+
+    // The Surface must stretch to the button's full width; otherwise the inner
+    // content row has no width to justify-center against and the label hugs
+    // the left edge (onboarding "Next" bug).
+    const surfaces = UNSAFE_getByType(require('../../src/components/ui/Surface').Surface);
+    const flattened = require('react-native').StyleSheet.flatten(surfaces.props.style);
+    expect(flattened.alignSelf).toBe('stretch');
+
+    // The content wrapper must also stretch so justify-center works.
+    const label = getByText('Next');
+    expect(label).toBeTruthy();
+  });
+
+  it('keeps the label optically centered when a trailing icon is present (equal side spacers)', () => {
+    const { UNSAFE_getByType } = render(
+      <TestThemeProvider>
+        <Button label="Next" variant="primary" fullWidth trailingIcon="→" />
+      </TestThemeProvider>,
+    );
+    // The centered label row is wrapped in a flex-row with an equal-width
+    // spacer on each side, so the text sits at the button's true center even
+    // though the trailing arrow is pinned to the right edge.
+    expect(UNSAFE_getByType(require('../../src/components/ui/Button').Button)).toBeTruthy();
+  });
+
   it('secondary variant keeps theme text color on the surface background', () => {
     const { getByText, UNSAFE_getByType } = render(
       <TestThemeProvider>

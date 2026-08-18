@@ -66,7 +66,10 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(props, ref
             flex: 1,
             color: colors.text,
             fontSize: type.md,
-            paddingVertical: 0,
+            // Zero vertical padding leaves the single-line text/placeholder
+            // box at exactly the font line height on iOS, clipping glyph
+            // descenders (g/y/p — e.g. the "Add tags..." placeholder).
+            paddingVertical: 2,
             textAlignVertical: multiline ? 'top' : 'center',
           },
           inputStyle,

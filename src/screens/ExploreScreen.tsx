@@ -285,7 +285,7 @@ export default function ExploreScreen() {
           </View>
 
           {selectedRepo.branch && (
-            <View className="flex-row items-center gap-1.5 mt-3 pt-3 border-t" style={{ borderTopColor: 'rgba(150,150,150,0.2)', borderWidth: StyleSheet.hairlineWidth }}>
+            <View className="flex-row items-center gap-1.5 mt-3 pt-3 border-t" style={{ borderTopColor: 'rgba(150,150,150,0.2)' }}>
               <Ionicons name="git-branch-outline" size={14} color={colors.textSecondary} />
               <Text className="text-xs" style={{ color: colors.textSecondary }}>
                 {selectedRepo.branch}

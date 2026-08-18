@@ -96,6 +96,31 @@ export function Button(props: ButtonProps) {
     </View>
   );
 
+  // A trailing icon optically shifts the centered label: the icon adds width
+  // to one side, so the text sits left of the button's true center. Pin the
+  // trailing icon to the right edge (absolute) and reserve the same space on
+  // the left so the label stays dead-center (onboarding "Next" bug).
+  //
+  // iconAlign="edge" keeps that behavior for wide/fullWidth buttons where the
+  // pinned icon has room. iconAlign="inline" (default) renders the icon next
+  // to the label in the flex row instead — needed for narrow buttons (e.g. the
+  // header "Save" button) where the absolutely-pinned icon overlaps the text.
+  const hasTrailingIcon = trailingIcon != null;
+  const useEdgeIcon = hasTrailingIcon && iconAlign === 'edge';
+  const centeredContent = (
+    <View className="flex-row items-center justify-center">
+      <View style={{ width: hasTrailingIcon ? 20 : 0 }} />
+      {labelNode}
+      {childrenNode}
+      <View style={{ width: hasTrailingIcon ? 20 : 0 }} />
+    </View>
+  );
+  const edgeIcon = hasTrailingIcon ? (
+    <View className="absolute right-5">
+      {trailingIcon}
+    </View>
+  ) : null;
+
   if (isGhost) {
     return (
       <Pressable
@@ -116,7 +141,12 @@ export function Button(props: ButtonProps) {
           fullWidth && 'self-stretch'
         )}
       >
-        {content}
+        {useEdgeIcon ? (
+          <>
+            {centeredContent}
+            {edgeIcon}
+          </>
+        ) : content}
       </Pressable>
     );
   }
@@ -130,6 +160,7 @@ export function Button(props: ButtonProps) {
         onPressIn={disabled ? undefined : handlePressIn}
         onPressOut={disabled ? undefined : handlePressOut}
         disabled={disabled}
+        style={fullWidth ? { alignSelf: 'stretch' } : undefined}
       >
         <Surface
           elevation="raised"
@@ -138,6 +169,7 @@ export function Button(props: ButtonProps) {
           style={[
             {
               minHeight: 44,
+              alignSelf: 'stretch',
             },
             // variant="primary" carries a filled primary background; the
             // raised Surface alone renders a white card, which made primary
@@ -146,8 +178,13 @@ export function Button(props: ButtonProps) {
             style,
           ]}
         >
-          <View className="py-3 px-5 items-center justify-center">
-            {content}
+          <View className="py-3 px-5 items-center justify-center self-stretch">
+            {useEdgeIcon ? (
+              <>
+                {centeredContent}
+                {edgeIcon}
+              </>
+            ) : content}
           </View>
         </Surface>
       </Pressable>
