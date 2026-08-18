@@ -21,6 +21,7 @@ type ProductionStackParamList = {
   ConflictResolver: { repoPath: string; branch: string; filePath: string };
   AddReminder: undefined;
   ThoughtDump: { openVoiceOnMount?: boolean } | undefined;
+  Paywall: undefined;
 };
 
 type DevOnlyStackParamList = {

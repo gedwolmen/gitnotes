@@ -28,6 +28,7 @@ import { FloatingStageButton } from '../components/git/FloatingStageButton';
 import { ChatRepoPickerModal } from '../components/ai/ChatRepoPickerModal';
 import { AddReminderScreen } from '../components/settings/AddReminderScreen';
 import ThoughtDumpScreen from '../screens/ThoughtDumpScreen';
+import PaywallScreen from '../screens/PaywallScreen';
 import { RootStackParamList } from './types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAIStore } from '../stores/aiStore';
@@ -225,6 +226,11 @@ export default function AppNavigator() {
             <Stack.Screen
               name="ThoughtDump"
               component={ThoughtDumpScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="Paywall"
+              component={PaywallScreen}
               options={{ headerShown: false }}
             />
             {__DEV__ && (
