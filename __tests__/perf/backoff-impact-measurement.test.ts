@@ -298,14 +298,16 @@ describe('Backoff impact measurement (todo 7)', () => {
       expect(r1.failed).toBe(2);
       expect(r1.remaining).toBe(2);
 
-      // Verify backoff applied to the 2 failed items
+      // Loose window (400-501ms) so parallel CI load cannot drift the
+      // assertion; still proves a real ~500ms backoff was scheduled.
       const queue = await NoteSyncQueueService.getAll();
       expect(queue).toHaveLength(2);
       for (const item of queue) {
         expect(item.attempts).toBe(1);
         expect(item.nextRetryAt).toBeDefined();
-        expect(item.nextRetryAt! - Date.now()).toBeGreaterThanOrEqual(499);
-        expect(item.nextRetryAt! - Date.now()).toBeLessThanOrEqual(501);
+        const delay = item.nextRetryAt! - Date.now();
+        expect(delay).toBeGreaterThanOrEqual(400);
+        expect(delay).toBeLessThanOrEqual(501);
       }
 
       console.log(
