@@ -16,6 +16,18 @@
       "scheme": "gitnotes",
       "icon": "./assets/icon.png",
       "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "gitnotes"
+            ]
+          },
+          {
+            "CFBundleURLSchemes": [
+              "rc-0aadf77f9f"
+            ]
+          }
+        ],
         "NSPhotoLibraryUsageDescription": "GitNotēs needs access to your photo library to attach images to notes.",
         "NSMicrophoneUsageDescription": "GitNotēs needs access to your microphone for voice-to-text note input.",
         "ITSAppUsesNonExemptEncryption": false,
@@ -37,6 +49,20 @@
       },
       "package": "org.gitnotes.app",
       "scheme": "gitnotes",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "rc-0aadf77f9f"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ],
       "allowBackup": false,
       "permissions": [
         "android.permission.RECORD_AUDIO"
