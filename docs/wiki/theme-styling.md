@@ -387,3 +387,14 @@ yarn install
 # Check tailwind.config.js content paths
 # Should include: './src/**/*.{js,jsx,ts,tsx}'
 ```
+
+### Button label centering with trailing icons
+
+The shared `Button` component centers its label optically even when a
+`trailingIcon` is present. The icon is absolutely pinned to the right edge
+(`absolute right-5`) and the label is wrapped in a row with equal-width
+spacers on both sides, so the text stays at the button's true center instead
+of shifting left to make room for the icon. `fullWidth` buttons stretch the
+entire `Pressable → Surface → content` chain (`alignSelf: 'stretch'`) so
+`justify-center` centers against the actual button width. See
+`src/components/ui/Button.tsx` and `__tests__/ui/Button.test.tsx`.
