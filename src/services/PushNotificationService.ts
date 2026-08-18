@@ -36,22 +36,60 @@ export function attachToScheduler(): void {
   });
 }
 
-/** Notify once when a push starts (isPushing all-false → any-true), throttled to ≤1/sec. */
+const PUSH_NOTIFICATION_ID = 'gitnotes-push-progress';
+
+/** Notify on push start, throttled body-text progress, and completion. */
 export function subscribeToPushProgress(): void {
   if (unsubscribeProgress) return;
+  let pushTotal = 0;
+
   unsubscribeProgress = useStageStore.subscribe((state, prevState) => {
     const wasPushing = Object.values(prevState.isPushing).some(Boolean);
     const isPushing = Object.values(state.isPushing).some(Boolean);
-    if (!isPushing || wasPushing) return;
 
-    const now = Date.now();
-    if (now - lastProgressSentAt < PROGRESS_THROTTLE_MS) return;
-    lastProgressSentAt = now;
+    if (isPushing && !wasPushing) {
+      pushTotal = state.pendingCount;
+      lastProgressSentAt = Date.now();
+      const body = pushTotal > 0
+        ? `Pushing 0/${pushTotal} files…`
+        : 'Pushing staged changes to GitHub';
+      void NotificationService.dismissAndReschedule(PUSH_NOTIFICATION_ID, {
+        title: 'Pushing changes…',
+        body,
+        data: { kind: 'push-progress' },
+      });
+      return;
+    }
 
-    void NotificationService.schedulePushProgress(
-      'Pushing changes…',
-      'Pushing staged changes to GitHub',
-      { kind: 'push-progress' },
-    );
+    if (!isPushing && wasPushing) {
+      pushTotal = 0;
+      void NotificationService.dismissAndReschedule(PUSH_NOTIFICATION_ID, {
+        title: 'Push complete',
+        body: 'All staged changes pushed to GitHub',
+        data: { kind: 'push-complete' },
+      });
+      return;
+    }
+
+    if (
+      isPushing
+      && state.pushProgress !== null
+      && state.pushProgress !== prevState.pushProgress
+    ) {
+      const now = Date.now();
+      if (now - lastProgressSentAt < PROGRESS_THROTTLE_MS) return;
+      lastProgressSentAt = now;
+      const pushed = pushTotal > 0
+        ? Math.round(state.pushProgress * pushTotal)
+        : 0;
+      const body = pushTotal > 0
+        ? `Pushing ${pushed}/${pushTotal} files…`
+        : 'Pushing staged changes to GitHub';
+      void NotificationService.dismissAndReschedule(PUSH_NOTIFICATION_ID, {
+        title: 'Pushing changes…',
+        body,
+        data: { kind: 'push-progress' },
+      });
+    }
   });
 }

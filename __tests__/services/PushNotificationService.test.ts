@@ -1,16 +1,17 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-type PushState = { isPushing: Record<string, boolean> };
+type PushState = { isPushing: Record<string, boolean>; pushProgress?: number | null; pendingCount?: number };
 type PushFailure = { key: string; error: string };
 type ProgressListener = (state: PushState, prevState: PushState) => void;
 type FailureHandler = (failure: PushFailure) => void;
+type NotificationContent = { title: string; body: string; data: Record<string, unknown> };
 
-const mockSchedulePushProgress = jest.fn(async () => 'progress-id');
+const mockDismissAndReschedule = jest.fn(async () => 'reschedule-id');
 const mockSchedulePushFailure = jest.fn(async () => 'failure-id');
 
 jest.mock('../../src/services/NotificationService', () => ({
   NotificationService: {
-    schedulePushProgress: mockSchedulePushProgress,
+    dismissAndReschedule: mockDismissAndReschedule,
     schedulePushFailure: mockSchedulePushFailure,
   },
 }));
@@ -32,8 +33,6 @@ describe('PushNotificationService', () => {
     jest.useFakeTimers();
     jest.setSystemTime(5000);
     jest.clearAllMocks();
-    // Fresh module state per test so the module-level progress throttle
-    // (lastProgressSentAt) and subscription guard reset.
     jest.isolateModules(() => {
       pushService = require('../../src/services/PushNotificationService');
     });
@@ -76,31 +75,68 @@ describe('PushNotificationService', () => {
     );
   });
 
-  test('progress notification is scheduled when a push starts', () => {
+  test('start notification fires via dismissAndReschedule with body-text file count', () => {
     pushService.subscribeToPushProgress();
     const listener = mockSubscribe.mock.calls[0][0] as ProgressListener;
 
-    listener({ isPushing: { 'a/repo::main': true } }, { isPushing: {} });
-
-    expect(mockSchedulePushProgress).toHaveBeenCalledTimes(1);
-    expect(mockSchedulePushProgress).toHaveBeenCalledWith(
-      'Pushing changes…',
-      'Pushing staged changes to GitHub',
-      { kind: 'push-progress' },
+    listener(
+      { isPushing: { 'a/repo::main': true }, pendingCount: 5, pushProgress: null },
+      { isPushing: {}, pendingCount: 5, pushProgress: null },
     );
+
+    expect(mockDismissAndReschedule).toHaveBeenCalledTimes(1);
+    const [id, content] = mockDismissAndReschedule.mock.calls[0] as [string, NotificationContent];
+    expect(id).toBe('gitnotes-push-progress');
+    expect(content.title).toBe('Pushing changes…');
+    expect(content.body).toBe('Pushing 0/5 files…');
+    expect(content.data).toEqual({ kind: 'push-progress' });
   });
 
-  test('progress notifications are throttled to at most one per second', () => {
+  test('throttled body-text updates during push', () => {
     pushService.subscribeToPushProgress();
     const listener = mockSubscribe.mock.calls[0][0] as ProgressListener;
 
-    listener({ isPushing: { a: true } }, { isPushing: {} });
-    listener({ isPushing: { b: true } }, { isPushing: {} });
-    expect(mockSchedulePushProgress).toHaveBeenCalledTimes(1);
+    listener(
+      { isPushing: { a: true }, pendingCount: 10, pushProgress: 0 },
+      { isPushing: {}, pendingCount: 10, pushProgress: null },
+    );
+    expect(mockDismissAndReschedule).toHaveBeenCalledTimes(1);
+
+    listener(
+      { isPushing: { a: true }, pendingCount: 10, pushProgress: 0.3 },
+      { isPushing: { a: true }, pendingCount: 10, pushProgress: 0 },
+    );
+    expect(mockDismissAndReschedule).toHaveBeenCalledTimes(1);
 
     jest.advanceTimersByTime(1000);
-    listener({ isPushing: { c: true } }, { isPushing: {} });
-    expect(mockSchedulePushProgress).toHaveBeenCalledTimes(2);
+    listener(
+      { isPushing: { a: true }, pendingCount: 10, pushProgress: 0.6 },
+      { isPushing: { a: true }, pendingCount: 10, pushProgress: 0.3 },
+    );
+    expect(mockDismissAndReschedule).toHaveBeenCalledTimes(2);
+    const [, updatedContent] = mockDismissAndReschedule.mock.calls[1] as [string, NotificationContent];
+    expect(updatedContent.body).toBe('Pushing 6/10 files…');
+  });
+
+  test('completion notification fires when push ends', () => {
+    pushService.subscribeToPushProgress();
+    const listener = mockSubscribe.mock.calls[0][0] as ProgressListener;
+
+    listener(
+      { isPushing: { a: true }, pendingCount: 3, pushProgress: null },
+      { isPushing: {}, pendingCount: 3, pushProgress: null },
+    );
+    expect(mockDismissAndReschedule).toHaveBeenCalledTimes(1);
+
+    listener(
+      { isPushing: {}, pendingCount: 0, pushProgress: null },
+      { isPushing: { a: true }, pendingCount: 3, pushProgress: 1 },
+    );
+    expect(mockDismissAndReschedule).toHaveBeenCalledTimes(2);
+    const [, completionContent] = mockDismissAndReschedule.mock.calls[1] as [string, NotificationContent];
+    expect(completionContent.title).toBe('Push complete');
+    expect(completionContent.body).toBe('All staged changes pushed to GitHub');
+    expect(completionContent.data).toEqual({ kind: 'push-complete' });
   });
 
   test('resolvePushFailureRoute maps plain failures to stage and conflicts to conflicts', () => {
