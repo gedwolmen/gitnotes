@@ -43,6 +43,10 @@ jest.mock('../../src/services/StorageService', () => ({
   StorageService: { getSavedRepositories: jest.fn(async () => []) },
 }));
 
+jest.mock('../../src/services/StagePushScheduler', () => ({
+  drainPushQueue: jest.fn(async () => undefined),
+}));
+
 jest.mock('../../src/stores/stageStore', () => {
   const actual = jest.requireActual('../../src/stores/stageStore');
   return {
