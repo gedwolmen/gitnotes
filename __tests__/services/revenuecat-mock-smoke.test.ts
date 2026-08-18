@@ -10,8 +10,8 @@ describe('react-native-purchases jest mock', () => {
     expect(typeof Purchases.getCustomerInfo).toBe('function');
     expect(typeof Purchases.addCustomerInfoUpdateListener).toBe('function');
     expect(typeof Purchases.checkTrialOrIntroductoryPriceEligibility).toBe('function');
-    expect(Purchases.INTRO_ELIGIBILITY_STATUS.ELIGIBLE).toBe('ELIGIBLE');
-    expect(Purchases.PURCHASES_ERROR_CODE.PURCHASE_CANCELLED_ERROR).toBe('PURCHASE_CANCELLED_ERROR');
+    expect(Purchases.INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_ELIGIBLE).toBe(2);
+    expect(Purchases.PURCHASES_ERROR_CODE.PURCHASE_CANCELLED_ERROR).toBe('1');
   });
 
   it('getCustomerInfo resolves an empty active entitlement map by default', async () => {

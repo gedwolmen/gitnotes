@@ -398,8 +398,13 @@ jest.mock('react-native-purchases', () => {
     removeCustomerInfoUpdateListener: jest.fn(),
     checkTrialOrIntroductoryPriceEligibility: jest.fn(async () => ({})),
     LOG_LEVEL: { WARN: 'WARN', DEBUG: 'DEBUG', VERBOSE: 'VERBOSE' },
-    INTRO_ELIGIBILITY_STATUS: { ELIGIBLE: 'ELIGIBLE', NOT_ELIGIBLE: 'NOT_ELIGIBLE', UNKNOWN: 'UNKNOWN' },
-    PURCHASES_ERROR_CODE: { PURCHASE_CANCELLED_ERROR: 'PURCHASE_CANCELLED_ERROR' },
+    INTRO_ELIGIBILITY_STATUS: {
+      INTRO_ELIGIBILITY_STATUS_UNKNOWN: 0,
+      INTRO_ELIGIBILITY_STATUS_INELIGIBLE: 1,
+      INTRO_ELIGIBILITY_STATUS_ELIGIBLE: 2,
+      INTRO_ELIGIBILITY_STATUS_NO_INTRO_OFFER_EXISTS: 3,
+    },
+    PURCHASES_ERROR_CODE: { PURCHASE_CANCELLED_ERROR: '1' },
   };
   return {
     __esModule: true,
