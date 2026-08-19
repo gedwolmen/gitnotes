@@ -848,6 +848,14 @@ export default function SettingsScreen() {
           setConnectHostPreset(preset);
           setShowConnectHostModal(true);
         }}
+        onAddHostLocked={() => {
+          if (accounts.length >= 1 && !isPro) {
+            promptProUpgrade(t, openPaywall);
+          } else {
+            setConnectHostPreset(undefined);
+            setShowConnectHostModal(true);
+          }
+        }}
         onOpenRepoPicker={() => void openRepoPicker()}
         onSyncRepo={(repo) => void handleSyncRepo(repo)}
         onRemoveRepo={handleRemoveRepo}

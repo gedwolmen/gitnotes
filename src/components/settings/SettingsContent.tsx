@@ -9,6 +9,7 @@ import { Group, GroupRow, Modal, Toggle } from '../ui';
 import { HintIcon } from '../ui/HintIcon';
 import { aiMemoryIndex } from '../../services/ai/AIMemoryIndexService';
 import { HapticService } from '../../utils/haptics';
+import { promptProUpgrade } from '../../utils/proAlerts';
 import {
   SUPPORTED_LANGUAGES,
   getLanguagePreference,
@@ -97,6 +98,11 @@ onRemoveAccount: (id: string, login: string) => void;
   onDisconnectHost: (hostId: string) => void;
   /** Open Connect Host modal. Optional preset focuses the host picker. */
   onAddHost: (preset?: GitHostProvider) => void;
+  /**
+   * Gated add-host path for free users who already hold one account.
+   * The parent decides whether to open the paywall or the Connect Host modal.
+   */
+  onAddHostLocked: () => void;
   accountSummaries: AccountSummaryViewModel[];
   onOpenRepoPicker: () => void;
   onSyncRepo: (repo: GitRepository) => void;
@@ -181,6 +187,7 @@ export function SettingsContent(props: SettingsContentProps) {
     onRemoveToken,
     onDisconnectHost,
     onAddHost,
+    onAddHostLocked,
     onOpenRepoPicker,
     onSyncRepo,
     onRemoveRepo,
@@ -377,28 +384,34 @@ onSetSyncIntervalSeconds,
 
       <Group title={t('settings.security')}>
         <GroupRow
+          testID={isPro ? undefined : 'settings.row.biometric-lock-locked'}
+          onPress={isPro ? undefined : () => promptProUpgrade(t, onOpenPaywall)}
           trailing={
-            <View className="flex-row items-center gap-2">
-              <Toggle
-                testID="settings.toggle.biometric-lock"
-                value={isBiometricLockEnabled}
-                onValueChange={onToggleBiometricLock}
-                disabled={!isBiometricAvailable}
-              />
-              <HintIcon hintKey="hints.settings.biometricLock" testID="hint.biometric-lock" />
-            </View>
+            isPro ? (
+              <View className="flex-row items-center gap-2">
+                <Toggle
+                  testID="settings.toggle.biometric-lock"
+                  value={isBiometricLockEnabled}
+                  onValueChange={onToggleBiometricLock}
+                  disabled={!isBiometricAvailable}
+                />
+                <HintIcon hintKey="hints.settings.biometricLock" testID="hint.biometric-lock" />
+              </View>
+            ) : (
+              <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
+            )
           }
         >
           <View className="flex-row items-center gap-2">
             <Ionicons
-            name={biometricKind === 'face' ? 'scan-outline' : 'finger-print-outline'}
+              name={biometricKind === 'face' ? 'scan-outline' : 'finger-print-outline'}
               size={20}
               color={colors.text}
             />
             <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.biometricLockLabel', { kind: biometricLabel })}</Text>
           </View>
         </GroupRow>
-        {isBiometricLockEnabled ? (
+        {isPro && isBiometricLockEnabled ? (
           <GroupRow
             testID="settings.button.timeout-picker"
             onPress={() => setShowTimeoutPicker(true)}
@@ -538,10 +551,16 @@ onSetSyncIntervalSeconds,
             })}
 
             <GroupRow
-              testID="settings.button.connect-host"
-              onPress={() => onAddHost()}
+              testID={isPro ? 'settings.button.connect-host' : 'settings.row.connect-host-locked'}
+              onPress={isPro ? () => onAddHost() : onAddHostLocked}
               leading={<Ionicons name="add-circle-outline" size={20} color={colors.primary} />}
-              trailing={<Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
+              trailing={
+                isPro ? (
+                  <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+                ) : (
+                  <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
+                )
+              }
             >
               <Text style={[styles.settingLabel, { color: colors.primary }]}>
                 {t('connectHost.connectHost')}
@@ -593,9 +612,14 @@ onSetSyncIntervalSeconds,
           ))
         )}
         <GroupRow
-          testID="settings.button.repo-picker"
-          onPress={onOpenRepoPicker}
+          testID={!isPro && repositories.length >= 1 ? 'settings.row.add-repo-locked' : 'settings.button.repo-picker'}
+          onPress={!isPro && repositories.length >= 1 ? () => promptProUpgrade(t, onOpenPaywall) : onOpenRepoPicker}
           leading={<Ionicons name="add" size={20} color={colors.primary} />}
+          trailing={
+            !isPro && repositories.length >= 1 ? (
+              <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
+            ) : undefined
+          }
         >
           <Text style={[styles.settingLabel, { color: colors.primary, fontWeight: '600' }]}>{t('settings.addRepository')}</Text>
         </GroupRow>
@@ -793,26 +817,40 @@ onSetSyncIntervalSeconds,
         </GroupRow>
       </Group>
 
-      {isPro ? (
       <Group title={t('settings.artificialIntelligence')}>
-        <GroupRow trailing={<View className="flex-row items-center gap-2">
-          <Toggle testID="settings.toggle.ai" value={isAIEnabled} onValueChange={onToggleAI} />
-          <HintIcon hintKey="hints.settings.enableAI" testID="hint.enable-ai" />
-        </View>}>
+        <GroupRow
+          testID={isPro ? undefined : 'settings.row.ai-locked-enable'}
+          onPress={isPro ? undefined : () => promptProUpgrade(t, onOpenPaywall)}
+          trailing={
+            isPro ? (
+              <View className="flex-row items-center gap-2">
+                <Toggle testID="settings.toggle.ai" value={isAIEnabled} onValueChange={onToggleAI} />
+                <HintIcon hintKey="hints.settings.enableAI" testID="hint.enable-ai" />
+              </View>
+            ) : (
+              <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
+            )
+          }
+        >
           <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.enableAI')}</Text>
         </GroupRow>
         <GroupRow
-          testID="settings.row.daily-quote"
+          testID={isPro ? 'settings.row.daily-quote' : 'settings.row.ai-locked-daily-quote'}
+          onPress={isPro ? undefined : () => promptProUpgrade(t, onOpenPaywall)}
           trailing={
-            <View className="flex-row items-center gap-2">
-              <Toggle
-                testID="settings.toggle.daily-quote"
-                value={isAIEnabled ? dailyQuoteEnabled : false}
-                onValueChange={onToggleDailyQuote}
-                disabled={!isAIEnabled}
-              />
-              <HintIcon hintKey="hints.settings.dailyQuote" testID="hint.daily-quote" />
-            </View>
+            isPro ? (
+              <View className="flex-row items-center gap-2">
+                <Toggle
+                  testID="settings.toggle.daily-quote"
+                  value={isAIEnabled ? dailyQuoteEnabled : false}
+                  onValueChange={onToggleDailyQuote}
+                  disabled={!isAIEnabled}
+                />
+                <HintIcon hintKey="hints.settings.dailyQuote" testID="hint.daily-quote" />
+              </View>
+            ) : (
+              <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
+            )
           }
         >
           <View>
@@ -825,17 +863,22 @@ onSetSyncIntervalSeconds,
           </View>
         </GroupRow>
         <GroupRow
-          testID="settings.row.ai-personalization"
+          testID={isPro ? 'settings.row.ai-personalization' : 'settings.row.ai-locked-personalization'}
+          onPress={isPro ? undefined : () => promptProUpgrade(t, onOpenPaywall)}
           trailing={
-            <View className="flex-row items-center gap-2">
-              <Toggle
-                testID="settings.toggle.ai-personalization"
-                value={isAIEnabled ? aiPersonalizationEnabled : false}
-                onValueChange={onToggleAiPersonalization}
-                disabled={!isAIEnabled}
-              />
-              <HintIcon hintKey="hints.settings.aiPersonalization" testID="hint.ai-personalization" />
-            </View>
+            isPro ? (
+              <View className="flex-row items-center gap-2">
+                <Toggle
+                  testID="settings.toggle.ai-personalization"
+                  value={isAIEnabled ? aiPersonalizationEnabled : false}
+                  onValueChange={onToggleAiPersonalization}
+                  disabled={!isAIEnabled}
+                />
+                <HintIcon hintKey="hints.settings.aiPersonalization" testID="hint.ai-personalization" />
+              </View>
+            ) : (
+              <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
+            )
           }
         >
           <View>
@@ -848,17 +891,22 @@ onSetSyncIntervalSeconds,
           </View>
         </GroupRow>
         <GroupRow
-          testID="settings.row.github-tools"
+          testID={isPro ? 'settings.row.github-tools' : 'settings.row.ai-locked-github-tools'}
+          onPress={isPro ? undefined : () => promptProUpgrade(t, onOpenPaywall)}
           trailing={
-            <View className="flex-row items-center gap-2">
-              <Toggle
-                testID="settings.toggle.github-tools"
-                value={isAIEnabled ? githubToolsEnabled : false}
-                onValueChange={onToggleGithubTools}
-                disabled={!isAIEnabled}
-              />
-              <HintIcon hintKey="hints.settings.githubTools" testID="hint.github-tools" />
-            </View>
+            isPro ? (
+              <View className="flex-row items-center gap-2">
+                <Toggle
+                  testID="settings.toggle.github-tools"
+                  value={isAIEnabled ? githubToolsEnabled : false}
+                  onValueChange={onToggleGithubTools}
+                  disabled={!isAIEnabled}
+                />
+                <HintIcon hintKey="hints.settings.githubTools" testID="hint.github-tools" />
+              </View>
+            ) : (
+              <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
+            )
           }
         >
           <View>
@@ -871,61 +919,85 @@ onSetSyncIntervalSeconds,
           </View>
         </GroupRow>
       </Group>
-      ) : (
-      <Group title={t('settings.artificialIntelligence')}>
-        <GroupRow
-          testID="settings.row.ai-locked"
-          onPress={onOpenPaywall}
-          trailing={
-            <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
-          }
-        >
-          <Text style={[styles.settingLabel, { color: colors.text }]}>
-            {t('pro.gateTitle')}
-          </Text>
-        </GroupRow>
-      </Group>
-      )}
 
-      {isPro && isAIEnabled ? (
+      {!isPro || isAIEnabled ? (
         <>
-          <Group>
-            <GroupRow testID="settings.button.model-selector" onPress={onOpenModelSelector} trailing={<Text style={[styles.settingValue, { color: colors.textSecondary }]}>{selectedModelName}</Text>}>
-              <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.model')}</Text>
-            </GroupRow>
-            <GroupRow testID="settings.button.toggle-action-mode" onPress={onToggleActionMode} trailing={<View className="flex-row items-center gap-1">
-              <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{actionMode === 'auto' ? t('settings.auto') : t('settings.confirm')}</Text>
-              <HintIcon hintKey={actionMode === 'auto' ? 'hints.settings.actionModeAuto' : 'hints.settings.actionModeConfirm'} testID="hint.action-mode" />
-            </View>}>
-              <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.actionMode')}</Text>
-            </GroupRow>
-            <GroupRow testID="settings.button.chat-repo-picker" onPress={onOpenChatRepoPicker} trailing={<View className="flex-row items-center gap-1">
-              <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{chatStorageLabel}</Text>
-              <HintIcon hintKey="hints.settings.chatStorage" testID="hint.chat-storage" />
-            </View>}>
-              <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.chatStorage')}</Text>
-            </GroupRow>
-          </Group>
+        <Group>
+          <GroupRow
+            testID={isPro ? 'settings.button.model-selector' : 'settings.row.ai-locked-model'}
+            onPress={isPro ? onOpenModelSelector : () => promptProUpgrade(t, onOpenPaywall)}
+            trailing={
+              isPro ? (
+                <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{selectedModelName}</Text>
+              ) : (
+                <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
+              )
+            }
+          >
+            <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.model')}</Text>
+          </GroupRow>
+          <GroupRow
+            testID={isPro ? 'settings.button.toggle-action-mode' : 'settings.row.ai-locked-action-mode'}
+            onPress={isPro ? onToggleActionMode : () => promptProUpgrade(t, onOpenPaywall)}
+            trailing={
+              isPro ? (
+                <View className="flex-row items-center gap-1">
+                  <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{actionMode === 'auto' ? t('settings.auto') : t('settings.confirm')}</Text>
+                  <HintIcon hintKey={actionMode === 'auto' ? 'hints.settings.actionModeAuto' : 'hints.settings.actionModeConfirm'} testID="hint.action-mode" />
+                </View>
+              ) : (
+                <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
+              )
+            }
+          >
+            <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.actionMode')}</Text>
+          </GroupRow>
+          <GroupRow
+            testID={isPro ? 'settings.button.chat-repo-picker' : 'settings.row.ai-locked-chat-storage'}
+            onPress={isPro ? onOpenChatRepoPicker : () => promptProUpgrade(t, onOpenPaywall)}
+            trailing={
+              isPro ? (
+                <View className="flex-row items-center gap-1">
+                  <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{chatStorageLabel}</Text>
+                  <HintIcon hintKey="hints.settings.chatStorage" testID="hint.chat-storage" />
+                </View>
+              ) : (
+                <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
+              )
+            }
+          >
+            <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.chatStorage')}</Text>
+          </GroupRow>
+        </Group>
 
-          <Group>
-            <GroupRow testID="settings.button.reset-ai-memory" onPress={handleResetAIMemory}>
-              <Text style={[styles.settingLabel, { color: colors.error }]}>{t('settings.resetAIMemory')}</Text>
-            </GroupRow>
-          </Group>
+        <Group>
+          <GroupRow
+            testID={isPro ? 'settings.button.reset-ai-memory' : 'settings.row.ai-locked-reset-memory'}
+            onPress={isPro ? handleResetAIMemory : () => promptProUpgrade(t, onOpenPaywall)}
+            trailing={
+              isPro ? undefined : (
+                <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
+              )
+            }
+          >
+            <Text style={[styles.settingLabel, { color: colors.error }]}>{t('settings.resetAIMemory')}</Text>
+          </GroupRow>
+        </Group>
 
-          <Group title={t('settings.providers')}>
-            {visibleProviders.map((provider) => {
-              const availability = providerAvailability[provider.id];
-              const isUnavailable = availability?.kind === 'unavailable';
-              const reasonText = isUnavailable
-                ? describeAvailability(t, availability.reason)
-                : null;
-              return (
-                <GroupRow
-                  key={provider.id}
-                  testID={`settings.button.provider`}
-                  onPress={() => onProviderPress(provider)}
-                  trailing={
+        <Group title={t('settings.providers')}>
+          {visibleProviders.map((provider) => {
+            const availability = providerAvailability[provider.id];
+            const isUnavailable = availability?.kind === 'unavailable';
+            const reasonText = isUnavailable
+              ? describeAvailability(t, availability.reason)
+              : null;
+            return (
+              <GroupRow
+                key={provider.id}
+                testID={isPro ? 'settings.button.provider' : 'settings.row.ai-locked-provider'}
+                onPress={isPro ? () => onProviderPress(provider) : () => promptProUpgrade(t, onOpenPaywall)}
+                trailing={
+                  isPro ? (
                     <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
                       {isUnavailable
                         ? t('settings.unavailable')
@@ -933,26 +1005,39 @@ onSetSyncIntervalSeconds,
                           ? t('settings.enabled')
                           : t('settings.disabled')}
                     </Text>
-                  }
-                  style={isUnavailable ? { opacity: 0.5 } : undefined}
-                >
-                  <View>
-                    <Text style={[styles.settingLabel, { color: colors.text }]}>{provider.name}</Text>
-                    {reasonText ? (
-                      <Text style={[styles.settingValue, { color: colors.textSecondary, marginTop: 2 }]}>
-                        {reasonText}
-                      </Text>
-                    ) : null}
-                  </View>
-                </GroupRow>
-              );
-            })}
-            <GroupRow testID="settings.button.add-provider" onPress={onAddProvider} trailing={<HintIcon hintKey="hints.settings.providers" testID="hint.providers" />}>
-              <Text style={[styles.settingLabel, { color: colors.primary }]}>{t('settings.addProvider')}</Text>
-            </GroupRow>
-          </Group>
+                  ) : (
+                    <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
+                  )
+                }
+                style={isPro && isUnavailable ? { opacity: 0.5 } : undefined}
+              >
+                <View>
+                  <Text style={[styles.settingLabel, { color: colors.text }]}>{provider.name}</Text>
+                  {reasonText ? (
+                    <Text style={[styles.settingValue, { color: colors.textSecondary, marginTop: 2 }]}>
+                      {reasonText}
+                    </Text>
+                  ) : null}
+                </View>
+              </GroupRow>
+            );
+          })}
+          <GroupRow
+            testID={isPro ? 'settings.button.add-provider' : 'settings.row.ai-locked-add-provider'}
+            onPress={isPro ? onAddProvider : () => promptProUpgrade(t, onOpenPaywall)}
+            trailing={
+              isPro ? (
+                <HintIcon hintKey="hints.settings.providers" testID="hint.providers" />
+              ) : (
+                <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
+              )
+            }
+          >
+            <Text style={[styles.settingLabel, { color: colors.primary }]}>{t('settings.addProvider')}</Text>
+          </GroupRow>
+        </Group>
 
-          <ReminderSection colors={colors} />
+        {isPro && isAIEnabled ? <ReminderSection colors={colors} /> : null}
         </>
       ) : null}
 

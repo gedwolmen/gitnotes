@@ -52,11 +52,19 @@ Caveat: the Android fallback flag is device-local — a grandfathered user who u
 | Canvases | `CanvasListScreen` create + open handlers; `CanvasEditorScreen` guard |
 | Custom templates | `TemplateManagerScreen` guard; `TemplateSelector` create-template CTA |
 | Render styles | `RenderStyleSettingsScreen` + `RenderStyleEditorScreen` guards |
-| Multiple GitHub accounts | `SettingsScreen` add-account handler (gated when ≥ 1 account exists) |
-| Settings AI section | `SettingsContent` — locked row for free users |
+| Settings AI section | `SettingsContent` — free users see ALL AI rows (feature + deep-config: Enable AI, Daily Quote, AI Personalization, GitHub Tools, model selector, action mode, chat storage, providers, reset AI memory) LOCKED — lock icon instead of toggle, tap → paywall; pro+AI users get functional rows |
+| Biometric lock | `SettingsContent` Security row — lock icon for free, tap → paywall |
+| Second GitHub account | `SettingsContent` "Connect host" add-row — lock icon when free user has 1 account, tap → paywall (first account free) |
+| Second repository | `SettingsContent` "Add Repository" row — lock icon when free user has 1 repo, tap → paywall (first repo free) |
+| Graph view | `NotesViewModePicker` / `NotesListScreen` — lock icon on graph option for free, tap → paywall |
+| AI button (FloatingAIButton) | `AppNavigator` renders for all users; `aiHubStore` routes free taps to Paywall |
 | All gates | `useProGate()` hook + `ProRequired` component (src/components/paywall/ProRequired.tsx) |
 
-**Free for everyone:** notes, todos, journals, single-account git sync, tags/folders/search/backlinks, themes, biometric lock, reminders.
+**Free for everyone:** notes, todos, journals, single-account git sync, tags/folders/search/backlinks, themes, reminders, one GitHub account, one repository. **Pro only:** biometric lock and the AI suite.
+
+### Show-locked pattern
+
+Pro features are no longer HIDDEN from free users — they are SHOWN with a `lock-closed` icon in place of the control (toggle, row action, picker option) and tapping the row opens the paywall (`promptProUpgrade` / `useProGate().openPaywall()` / `aiHubStore` → `Paywall`). Rows render identically for both tiers except the trailing control and `onPress`, which branch per-row on `isPro` (see `SettingsContent.tsx` rows `settings.row.ai-locked-*`, `settings.row.biometric-lock-locked`, `settings.row.connect-host-locked`, `settings.row.add-repo-locked`, and the graph option in `NotesViewModePicker.tsx`).
 
 ### Interstitial
 
