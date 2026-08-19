@@ -160,7 +160,7 @@ export default function PaywallScreen() {
               </View>
               <Button
                 testID="paywall.monthly.cta"
-                variant="primary"
+                variant="secondary"
                 fullWidth
                 disabled={busy || !monthlyPrice}
                 label={trialEligible ? t('paywall.action.trial') : t('paywall.action.subscribe')}
