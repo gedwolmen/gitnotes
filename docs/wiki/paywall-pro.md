@@ -57,14 +57,14 @@ Caveat: the Android fallback flag is device-local — a grandfathered user who u
 | Second GitHub account | `SettingsContent` "Connect host" add-row — lock icon when free user has 1 account, tap → paywall (first account free) |
 | Second repository | `SettingsContent` "Add Repository" row — lock icon when free user has 1 repo, tap → paywall (first repo free) |
 | Graph view | `NotesViewModePicker` / `NotesListScreen` — lock icon on graph option for free, tap → paywall |
-| AI button (FloatingAIButton) | `AppNavigator` renders for all users; `aiHubStore` routes free taps to Paywall |
+| AI button (FloatingAIButton) | `FloatingAIButton` returns `null` when `useProGate().isPro` is false (hidden for free users); `aiHubStore` still routes any free tap to Paywall as a backstop |
 | All gates | `useProGate()` hook + `ProRequired` component (src/components/paywall/ProRequired.tsx) |
 
 **Free for everyone:** notes, todos, journals, single-account git sync, tags/folders/search/backlinks, themes, reminders, one GitHub account, one repository. **Pro only:** biometric lock and the AI suite.
 
 ### Show-locked pattern
 
-Pro features are no longer HIDDEN from free users — they are SHOWN with a `lock-closed` icon in place of the control (toggle, row action, picker option) and tapping the row opens the paywall (`promptProUpgrade` / `useProGate().openPaywall()` / `aiHubStore` → `Paywall`). Rows render identically for both tiers except the trailing control and `onPress`, which branch per-row on `isPro` (see `SettingsContent.tsx` rows `settings.row.ai-locked-*`, `settings.row.biometric-lock-locked`, `settings.row.connect-host-locked`, `settings.row.add-repo-locked`, and the graph option in `NotesViewModePicker.tsx`).
+Pro features are no longer HIDDEN from free users — they are SHOWN with a `lock-closed` icon in place of the control (toggle, row action, picker option) and tapping the row opens the paywall (`promptProUpgrade` / `useProGate().openPaywall()` / `aiHubStore` → `Paywall`). Rows render identically for both tiers except the trailing control and `onPress`, which branch per-row on `isPro` (see `SettingsContent.tsx` rows `settings.row.ai-locked-*`, `settings.row.biometric-lock-locked`, `settings.row.connect-host-locked`, `settings.row.add-repo-locked`, and the graph option in `NotesViewModePicker.tsx`). **Exception:** the floating AI button is a draggable overlay with no lockable row control, so it is hidden entirely for free users (`FloatingAIButton` guards on `useProGate().isPro`).
 
 ### Interstitial
 

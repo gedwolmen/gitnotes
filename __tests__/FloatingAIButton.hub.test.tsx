@@ -9,6 +9,7 @@ const mockCreateThread = jest.fn(() => ({ id: 'thread-from-fab' }));
 const mockRunOnJSCallbacks: Array<() => void> = [];
 const mockDashIntervals: unknown[] = [];
 const mockTimingCalls: Array<[unknown, unknown]> = [];
+let mockIsPro = true;
 let mockAIState = {
   isEnabled: true,
   chatRepoOwner: 'owner',
@@ -54,6 +55,15 @@ jest.mock('../src/stores/aiStore', () => ({
     jest.fn(() => ({ isEnabled: mockAIState.isEnabled })),
     { getState: () => mockAIState },
   ),
+}));
+
+jest.mock('../src/hooks/useProGate', () => ({
+  useProGate: () => ({
+    isPro: mockIsPro,
+    status: mockIsPro ? 'pro' : 'free',
+    loading: false,
+    openPaywall: jest.fn(),
+  }),
 }));
 
 jest.mock('../src/stores/chatStore', () => ({
@@ -210,6 +220,7 @@ describe('FloatingAIButton liquid hub', () => {
     mockPanCallbacks.finalize = undefined;
     await AsyncStorage.clear();
     useAIHubStore.setState({ pickerVisible: false });
+    mockIsPro = true;
     mockAIState = {
       isEnabled: true,
       chatRepoOwner: 'owner',
