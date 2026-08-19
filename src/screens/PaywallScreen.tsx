@@ -160,7 +160,7 @@ export default function PaywallScreen() {
               </View>
               <Button
                 testID="paywall.monthly.cta"
-                variant="secondary"
+                variant="primary"
                 fullWidth
                 disabled={busy || !monthlyPrice}
                 label={trialEligible ? t('paywall.action.trial') : t('paywall.action.subscribe')}
@@ -188,7 +188,7 @@ export default function PaywallScreen() {
                 disabled={busy || !yearlyPrice}
                 label={t('paywall.action.subscribe')}
                 onPress={handleYearly}
-                style={{ marginTop: 14 }}
+                style={{ marginTop: 14, borderWidth: 1, borderColor: colors.border }}
               />
             </Surface>
             ) : null}
@@ -212,7 +212,7 @@ export default function PaywallScreen() {
                 disabled={busy || !lifetimePrice}
                 label={t('paywall.action.buy')}
                 onPress={handleLifetime}
-                style={{ marginTop: 14 }}
+                style={{ marginTop: 14, borderWidth: 1, borderColor: colors.border }}
               />
             </Surface>
             ) : null}
