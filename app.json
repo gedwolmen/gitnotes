@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "GitNotēs",
+    "name": "GitNot\u0113s",
     "slug": "gitnotes",
     "version": "1.5.0",
     "orientation": "portrait",
@@ -12,12 +12,24 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.xaventra.gitnotes",
-      "buildNumber": "8",
+      "buildNumber": "9",
       "scheme": "gitnotes",
       "icon": "./assets/icon.png",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "GitNotēs needs access to your photo library to attach images to notes.",
-        "NSMicrophoneUsageDescription": "GitNotēs needs access to your microphone for voice-to-text note input.",
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "gitnotes"
+            ]
+          },
+          {
+            "CFBundleURLSchemes": [
+              "rc-0aadf77f9f"
+            ]
+          }
+        ],
+        "NSPhotoLibraryUsageDescription": "GitNot\u0113s needs access to your photo library to attach images to notes.",
+        "NSMicrophoneUsageDescription": "GitNot\u0113s needs access to your microphone for voice-to-text note input.",
         "ITSAppUsesNonExemptEncryption": false,
         "UIBackgroundModes": [
           "processing"
@@ -27,7 +39,7 @@
         ],
         "UIFileSharingEnabled": true,
         "LSSupportsOpeningDocumentsInPlace": true,
-        "NSDocumentsFolderUsageDescription": "GitNotēs stores your cloned repositories and note files here so you can browse and back them up from the Files app."
+        "NSDocumentsFolderUsageDescription": "GitNot\u0113s stores your cloned repositories and note files here so you can browse and back them up from the Files app."
       }
     },
     "android": {
@@ -37,6 +49,20 @@
       },
       "package": "org.gitnotes.app",
       "scheme": "gitnotes",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "rc-0aadf77f9f"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ],
       "allowBackup": false,
       "permissions": [
         "android.permission.RECORD_AUDIO"
@@ -79,8 +105,8 @@
       [
         "expo-speech-recognition",
         {
-          "microphonePermission": "GitNotēs needs access to your microphone for voice-to-text note input.",
-          "speechRecognitionPermission": "GitNotēs uses on-device speech recognition to convert your voice into note text. Audio stays on your device."
+          "microphonePermission": "GitNot\u0113s needs access to your microphone for voice-to-text note input.",
+          "speechRecognitionPermission": "GitNot\u0113s uses on-device speech recognition to convert your voice into note text. Audio stays on your device."
         }
       ]
     ],

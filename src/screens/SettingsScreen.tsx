@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -45,6 +45,9 @@ import { useRepoStore } from '../stores/repoStore';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { RepoAccessPreflightError } from '../services/git/repoAccessPreflight';
+import { useProGate } from '../hooks/useProGate';
+import { useProStore } from '../stores/proStore';
+import { promptProUpgrade } from '../utils/proAlerts';
 
 // Mirrors GitFsService's MAX_CLONE_RETRIES so a failing repo can't loop the outer flow.
 const MAX_OUTER_CLONE_RETRIES = 1;
@@ -65,6 +68,17 @@ function confirmUnverifiedWrite(t: TFunction, onConfirm: () => void): void {
 export default function SettingsScreen() {
   const { t } = useTranslation();
   const { theme, colors, setTheme, style: uiStyle, setStyle } = useTheme();
+  const { isPro, openPaywall } = useProGate();
+  const trialActive = useProStore((s) => s.trialActive);
+  const trialEndsAt = useProStore((s) => s.trialEndsAt);
+  const proStatusLabel = useMemo(() => {
+    if (isPro && trialActive && trialEndsAt) {
+      const days = Math.max(1, Math.ceil((trialEndsAt - Date.now()) / 86_400_000));
+      return t('pro.statusTrial', { days: String(days) });
+    }
+    if (isPro) return t('pro.statusActive');
+    return t('pro.statusUpgrade');
+  }, [isPro, trialActive, trialEndsAt, t]);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const headerHeight = useScreenHeaderHeight();
   const tabBarHeight = useTabBarHeight();
@@ -500,6 +514,10 @@ export default function SettingsScreen() {
   }, [authState.isAuthenticated]);
 
   const handleSelectGithubRepo = useCallback(async (repo: GitHubRepository) => {
+    if (repositories.length >= 1 && !isPro) {
+      promptProUpgrade(t, openPaywall);
+      return;
+    }
     if (repositories.some((item) => item.path === repo.full_name)) {
       setShowRepoPickerModal(false);
       return;
@@ -532,11 +550,15 @@ export default function SettingsScreen() {
       }
     };
     await attemptAdd(false);
-  }, [addRepo, autoSyncAfterAdd, repositories, t]);
+  }, [addRepo, autoSyncAfterAdd, repositories, t, isPro, openPaywall]);
 
   const handleAddManualRepo = useCallback(async () => {
     const value = manualRepoInput.trim();
     if (!value) return;
+    if (repositories.length >= 1 && !isPro) {
+      promptProUpgrade(t, openPaywall);
+      return;
+    }
     const attemptAdd = async (allowUnverifiedWrite: boolean): Promise<void> => {
       setIsAddingRepo(true);
       try {
@@ -566,7 +588,7 @@ export default function SettingsScreen() {
       }
     };
     await attemptAdd(false);
-  }, [addRepo, autoSyncAfterAdd, manualRepoInput, t]);
+  }, [addRepo, autoSyncAfterAdd, manualRepoInput, t, repositories, isPro, openPaywall]);
 
   const handleRemoveRepo = useCallback((repo: GitRepository) => {
     HapticService.warning();
@@ -811,7 +833,13 @@ export default function SettingsScreen() {
         setTheme={setTheme}
         setStyle={setStyle}
         onOpenConnectToken={() => { setTokenModalMode('connect'); setTokenInput(''); setTokenError(null); setTokenVisible(false); setShowTokenModal(true); }}
-        onOpenAddAccount={() => { setTokenModalMode('add'); setTokenInput(''); setTokenError(null); setTokenVisible(false); setShowTokenModal(true); }}
+        onOpenAddAccount={() => {
+          if (accounts.length >= 1 && !isPro) {
+            promptProUpgrade(t, openPaywall);
+            return;
+          }
+          setTokenModalMode('add'); setTokenInput(''); setTokenError(null); setTokenVisible(false); setShowTokenModal(true);
+        }}
         onSwitchAccount={handleSwitchAccount}
         onRemoveAccount={handleRemoveAccount}
         onRemoveToken={handleRemoveToken}
@@ -834,6 +862,9 @@ export default function SettingsScreen() {
         onOpenRenderStyleSettings={() => navigation.navigate('RenderStyleSettings')}
         onClearData={clearData}
         onResetOnboarding={handleResetOnboarding}
+        isPro={isPro}
+        proStatusLabel={proStatusLabel}
+        onOpenPaywall={openPaywall}
         onManageTemplates={() => navigation.navigate('TemplateManager' as never)}
         onToggleAI={() => { void toggleAI(); }}
         dailyQuoteEnabled={dailyQuoteEnabled}

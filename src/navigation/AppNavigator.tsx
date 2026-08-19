@@ -1,5 +1,5 @@
 import 'react-native-gesture-handler';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { NavigationContainer, DarkTheme, DefaultTheme, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -28,10 +28,12 @@ import { FloatingStageButton } from '../components/git/FloatingStageButton';
 import { ChatRepoPickerModal } from '../components/ai/ChatRepoPickerModal';
 import { AddReminderScreen } from '../components/settings/AddReminderScreen';
 import ThoughtDumpScreen from '../screens/ThoughtDumpScreen';
+import PaywallScreen from '../screens/PaywallScreen';
 import { RootStackParamList } from './types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAIStore } from '../stores/aiStore';
 import { useAIHubStore } from '../stores/aiHubStore';
+import { selectIsPro, useProStore } from '../stores/proStore';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -74,6 +76,17 @@ export default function AppNavigator() {
   const openChatRepoPicker = useAIHubStore((state) => state.openChatRepoPicker);
   const closeChatRepoPicker = useAIHubStore((state) => state.closeChatRepoPicker);
   const [currentRouteName, setCurrentRouteName] = useState<string | undefined>(undefined);
+  const interstitialEligible = useProStore((s) => s.interstitialEligible);
+  const markInterstitialShown = useProStore((s) => s.markInterstitialShown);
+  const isPro = useProStore(selectIsPro);
+
+  useEffect(() => {
+    if (!interstitialEligible) return;
+    markInterstitialShown();
+    if (navigationRef.isReady()) {
+      navigationRef.navigate('Paywall');
+    }
+  }, [interstitialEligible, markInterstitialShown]);
 
   const baseTheme = isDark ? DarkTheme : DefaultTheme;
   const navigationTheme = {
@@ -227,6 +240,11 @@ export default function AppNavigator() {
               component={ThoughtDumpScreen}
               options={{ headerShown: false }}
             />
+            <Stack.Screen
+              name="Paywall"
+              component={PaywallScreen}
+              options={{ headerShown: false }}
+            />
             {__DEV__ && (
               <Stack.Screen
                 name="NeumorphicGallery"
@@ -235,9 +253,8 @@ export default function AppNavigator() {
               />
             )}
           </Stack.Navigator>
-          <FloatingAIButton currentRouteName={currentRouteName} />
-          <FloatingStageButton currentRouteName={currentRouteName} />
-        </View>
+          {isPro ? <FloatingAIButton currentRouteName={currentRouteName} /> : null}
+          <FloatingStageButton currentRouteName={currentRouteName} />        </View>
       </NavigationContainer>
         <ChatRepoPickerModal
           visible={showChatRepoPicker}

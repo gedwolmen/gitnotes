@@ -46,7 +46,8 @@
     "next": "다음",
     "continue": "계속",
     "viewMode": "보기 모드",
-    "searchPlaceholder": "검색..."
+    "searchPlaceholder": "검색...",
+    "upgrade": "업그레이드"
   },
   "notes": {
     "title": "노트",
@@ -171,7 +172,7 @@
     },
     "security": "보안",
     "appearance": "모양",
-    "updatedUI": "업데이트된 UI",
+    "updatedUI": "팬시 UI",
     "darkMode": "다크 모드",
     "useSystemTheme": "시스템 테마 사용",
     "active": "활성",
@@ -510,7 +511,9 @@
     "removeActiveConnection": "Disconnect active host",
     "settings": {
       "accountsGroup": "계정"
-    }
+    },
+    "disconnectFailedTitle": "연결 해제 실패",
+    "disconnectFailedBody": "계정 연결을 해제하지 못했습니다. 다시 시도해 주세요."
   },
   "connectHost": {
     "title": "Connect a git host",
@@ -591,7 +594,12 @@
       "enable": "GitHub 도구 활성화",
       "bodyReminder": "설정 → AI → GitHub 도구에서 언제든지 켜거나 끌 수 있습니다."
     },
-    "skipForNow": "Skip for Now"
+    "skipForNow": "Skip for Now",
+    "pro": {
+      "title": "GitNotēs Pro",
+      "body": "무료 플랜에는 계정 1개와 저장소 1개가 포함됩니다. GitNotēs Pro는 AI 채팅, 생각·음성 덤프, 맞춤 명언, 캔버스, 템플릿, 추가 저장소 및 계정을 30일 무료 체험과 함께 제공합니다.",
+      "reminder": "설정 → GitNotēs Pro에서 언제든 업그레이드할 수 있습니다."
+    }
   },
   "renderStyle": {
     "disconnectTitle": "Disconnect render styles repo?",
@@ -828,5 +836,57 @@
     "tagPickerTitle": "Pick a Tag",
     "noNotesYet": "No notes yet",
     "noTagsYet": "No tags yet"
+  },
+  "paywall": {
+    "title": "GitNotēs Pro",
+    "subtitle": "AI 스위트와 고급 기능 잠금 해제",
+    "features": {
+      "aiChat": "노트와 AI 채팅",
+      "aiActions": "편집기의 AI 액션",
+      "thoughtDump": "생각 덤프",
+      "voiceDump": "음성 덤프",
+      "personalizedQuotes": "개인 맞춤 일일 명언",
+      "githubTools": "AI용 GitHub 도구",
+      "canvases": "캔버스",
+      "templates": "사용자 정의 템플릿",
+      "renderStyles": "렌더 스타일",
+      "multiAccount": "여러 GitHub 계정"
+    },
+    "monthly": {
+      "trialCta": "30일 무료 체험 후 {{price}}/월",
+      "price": "{{price}}/월",
+      "title": "월간"
+    },
+    "lifetime": {
+      "cta": "{{price}} 일회 결제",
+      "title": "평생"
+    },
+    "restore": "구매 복원",
+    "restored": "구매가 복원되었습니다",
+    "purchaseError": "구매에 실패했습니다",
+    "loading": "불러오는 중…",
+    "later": "나중에",
+    "retry": "다시 시도",
+    "termsNote": "구독은 취소할 때까지 자동 갱신됩니다. 구매를 복원하여 이 기기로 이전하세요. 신규 구독자에게는 30일 무료 체험이 제공됩니다.",
+    "yearly": {
+      "title": "연간",
+      "cta": "{{price}}/년"
+    },
+    "action": {
+      "trial": "무료 체험 시작",
+      "subscribe": "구독하기",
+      "buy": "구매하기"
+    }
+  },
+  "pro": {
+    "statusActive": "Pro가 활성화됨",
+    "statusTrial": "체험 {{days}}일 남음",
+    "statusUpgrade": "업그레이드",
+    "settingsRow": "GitNotēs Pro",
+    "gateTitle": "Pro 기능입니다",
+    "gateBody": "업그레이드하면 AI 기능 등을 이용할 수 있습니다.",
+    "badge": "PRO",
+    "lockedTitle": "Pro 기능",
+    "lockedBody": "이 기능에는 GitNotēs Pro가 필요합니다. 업그레이드하면 무제한 계정, 저장소, AI 등을 이용할 수 있습니다."
   }
 }

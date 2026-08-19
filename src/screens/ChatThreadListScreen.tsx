@@ -19,6 +19,8 @@ import { ChatThreadCard } from '../components/chat/ChatThreadCard';
 import { ChatThreadContextMenu } from '../components/chat/ChatThreadContextMenu';
 import { HapticService } from '../utils/haptics';
 import { useTranslation } from 'react-i18next';
+import { useProGate } from '../hooks/useProGate';
+import { ProRequired } from '../components/paywall/ProRequired';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -290,6 +292,8 @@ export default function ChatThreadListScreen() {
     [selectedIds, selectionMode, toggleSelected]
   );
 
+  const { isPro } = useProGate();
+
   const renderEmptyState = () => {
     if (isLoading) {
       return (
@@ -308,6 +312,10 @@ export default function ChatThreadListScreen() {
       />
     );
   };
+
+  if (!isPro) {
+    return <ProRequired />;
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={[]}>

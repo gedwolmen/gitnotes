@@ -5,6 +5,7 @@ import i18n from 'i18next';
 import { RootStackParamList } from '../navigation/types';
 import { useAIStore } from './aiStore';
 import { useChatStore } from './chatStore';
+import { selectIsPro, useProStore } from './proStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -30,6 +31,11 @@ export const useAIHubStore = create<AIHubState & AIHubActions>()((set, get) => (
   closeChatRepoPicker: () => set({ pickerVisible: false }),
 
   goNewChat: (navigation) => {
+    if (!selectIsPro(useProStore.getState())) {
+      navigation.navigate('Paywall');
+      return;
+    }
+
     const { chatRepoOwner, chatRepoName, chatRepoBranch, selectedModelId, getAvailableModels } =
       useAIStore.getState();
 
@@ -58,18 +64,34 @@ export const useAIHubStore = create<AIHubState & AIHubActions>()((set, get) => (
   },
 
   goChatHistory: (navigation) => {
+    if (!selectIsPro(useProStore.getState())) {
+      navigation.navigate('Paywall');
+      return;
+    }
     navigation.navigate('ChatThreadList');
   },
 
   goAISettings: (navigation) => {
+    if (!selectIsPro(useProStore.getState())) {
+      navigation.navigate('Paywall');
+      return;
+    }
     navigation.navigate('MainTabs', { screen: 'SettingsTab' });
   },
 
   goThoughtDump: (navigation) => {
+    if (!selectIsPro(useProStore.getState())) {
+      navigation.navigate('Paywall');
+      return;
+    }
     navigation.navigate('ThoughtDump');
   },
 
   goVoiceDump: (navigation) => {
+    if (!selectIsPro(useProStore.getState())) {
+      navigation.navigate('Paywall');
+      return;
+    }
     navigation.navigate('ThoughtDump', { openVoiceOnMount: true });
   },
 }));

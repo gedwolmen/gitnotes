@@ -46,6 +46,7 @@ import { loadForegroundSyncConfig } from './src/hooks/useForegroundSyncSettings'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { reconcileThoughtDumps } from './src/services/ai/thoughtDumpIndexing';
 import { LastSelectionPreferenceService } from './src/services/LastSelectionPreferenceService';
+import { useProStore } from './src/stores/proStore';
 import * as PushNotificationService from './src/services/PushNotificationService';
 import * as StagePushScheduler from './src/services/StagePushScheduler';
 
@@ -69,6 +70,7 @@ export default function App() {
     void hydrateGitOperationRegistry();
     void useConflictStore.getState().loadConflicts();
     void useRenderStyleStore.getState().hydrate();
+    void useProStore.getState().initialize();
     const completed = await OnboardingService.isOnboardingCompleted();
     setShowOnboarding(!completed);
     await NotificationService.requestPermissions();

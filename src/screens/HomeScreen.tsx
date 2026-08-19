@@ -35,6 +35,7 @@ import { StagingService } from '../services/git/StagingService';
 import { useTranslation } from 'react-i18next';
 import { DailyQuoteCard } from '../components/home/DailyQuoteCard';
 import { useDailyQuote } from '../hooks/useDailyQuote';
+import { useProGate } from '../hooks/useProGate';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type EditableNoteFormat = Exclude<NoteFormat, 'pdf' | 'json'>;
@@ -49,6 +50,7 @@ export default function HomeScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTheme();
+  const { isPro, openPaywall } = useProGate();
   const { notes, togglePin, updateNote, deleteNote } = useNotes();
   const { canvases } = useCanvases();
   const { repositories } = useRepos();
@@ -109,11 +111,15 @@ export default function HomeScreen() {
 
   const handleOpenTemplates = useCallback(() => {
     HapticService.medium();
+    if (!isPro) {
+      openPaywall();
+      return;
+    }
     if (!requireRepo(repositories.length > 0, { kind: 'template', onOpenSettings: openSettings })) {
       return;
     }
     setShowTemplateSelector(true);
-  }, [repositories.length, openSettings]);
+  }, [repositories.length, openSettings, isPro, openPaywall]);
 
   const handleOpenTodaysJournal = useCallback(() => {
     HapticService.medium();
@@ -370,6 +376,10 @@ export default function HomeScreen() {
           testID="home.button.open-thought-dump"
           onPress={() => {
             HapticService.medium();
+            if (!isPro) {
+              openPaywall();
+              return;
+            }
             navigation.navigate('ThoughtDump');
           }}
           style={({ pressed }) => [

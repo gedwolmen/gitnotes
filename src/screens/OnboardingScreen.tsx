@@ -102,16 +102,6 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
     }
   }, [currentStep, token, finish]);
 
-  const handleEnableAI = useCallback(async () => {
-    await useAIStore.getState().setEnabled(true);
-    setCurrentStep(GITHUB_TOOLS_STEP);
-  }, []);
-
-  const handleSkipAI = useCallback(async () => {
-    await useAIStore.getState().setEnabled(false);
-    await finish();
-  }, [finish]);
-
   const handleEnableGithubTools = useCallback(async () => {
     await useAIStore.getState().toggleGithubTools();
     await finish();
@@ -202,12 +192,14 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
             <Surface elevation="raised" radius="pill" className="w-[140px] h-[140px] items-center justify-center mb-6">
               <Ionicons name="sparkles-outline" size={72} color={colors.accent} />
             </Surface>
-            <Text className="text-[28px] font-bold text-center" style={{ color: colors.text }}>GitNotēs AI</Text>
+            <Text className="text-[28px] font-bold text-center" style={{ color: colors.text }}>
+              {t('onboarding.pro.title', { defaultValue: 'GitNotēs Pro' })}
+            </Text>
             <Text className="text-base text-center leading-6" style={{ color: colors.textSecondary }}>
-              Chat over your notes, todos, and canvases. AI can read context and apply edits when you allow it.
+              {t('onboarding.pro.body', { defaultValue: 'The free plan includes 1 account and 1 repo. GitNotēs Pro unlocks AI chat, thought & voice dump, personalized quotes, canvases, templates, more repos and accounts — with a 30-day free trial.' })}
             </Text>
             <Text className="text-[13px] text-center leading-[18px] mt-2 opacity-80" style={{ color: colors.textSecondary }}>
-              You can turn this on or off anytime in Settings → AI.
+              {t('onboarding.pro.reminder', { defaultValue: 'You can upgrade anytime in Settings → GitNotēs Pro.' })}
             </Text>
           </View>
         ) : isGithubToolsStep ? (
@@ -282,19 +274,11 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
               <Button
                 variant="primary"
                 fullWidth
-                testID="onboarding.button.enable-ai"
-                onPress={handleEnableAI}
-                label="Enable AI"
-                trailingIcon={<Ionicons name="sparkles" size={20} color={colors.accent} />}
+                testID="onboarding.button.pro-continue"
+                onPress={() => setCurrentStep(GITHUB_TOOLS_STEP)}
+                label={t('common.continue', { defaultValue: 'Continue' })}
+                trailingIcon={<Ionicons name="arrow-forward" size={20} color={colors.accent} />}
                 iconAlign="edge"
-              />
-              <Button
-                variant="ghost"
-                fullWidth
-                testID="onboarding.button.skip-ai"
-                onPress={handleSkipAI}
-                label="Skip for Now"
-                style={{ marginTop: 8 }}
               />
             </View>
           ) : (

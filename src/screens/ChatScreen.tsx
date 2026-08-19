@@ -19,6 +19,8 @@ import { ChatErrorCard } from '../components/chat/ChatErrorCard';
 import { useChatScreenController } from '../components/chat/useChatScreenController';
 import { useAIStore } from '../stores/aiStore';
 import { useTranslation } from 'react-i18next';
+import { useProGate } from '../hooks/useProGate';
+import { ProRequired } from '../components/paywall/ProRequired';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'ChatScreen'>;
 type ChatScreenRouteProp = RouteProp<RootStackParamList, 'ChatScreen'>;
@@ -102,6 +104,12 @@ export default function ChatScreen() {
   }, [messages.length, isStreaming, maybeScrollToBottom]);
 
   const errorMessage = localError || storeError;
+
+  const { isPro } = useProGate();
+
+  if (!isPro) {
+    return <ProRequired />;
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-bg" edges={['top', 'left', 'right']}>

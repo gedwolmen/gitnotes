@@ -375,3 +375,88 @@ jest.mock('expo-notifications', () => ({
   cancelAllScheduledNotificationsAsync: jest.fn(),
   getPresentedNotificationsAsync: jest.fn(async () => []),
 }));
+
+// ---- Paywall mocks (RevenueCat + ProStore) ----
+// react-native-purchases is a native module; the global mock keeps every test
+// file loadable in jest. Tests that need per-test control re-mock the module
+// (standard pattern, same as the AsyncStorage mock above).
+jest.mock('react-native-purchases', () => {
+  const Purchases = {
+    setLogLevel: jest.fn(),
+    configure: jest.fn(async () => undefined),
+    getOfferings: jest.fn(async () => ({ current: null })),
+    purchasePackage: jest.fn(async () => ({
+      customerInfo: { entitlements: { active: { pro: { isActive: true, periodType: 'NORMAL' } } } },
+    })),
+    restorePurchases: jest.fn(async () => ({ entitlements: { active: {} } })),
+    getCustomerInfo: jest.fn(async () => ({
+      entitlements: { active: {} },
+      originalApplicationVersion: null,
+      originalPurchaseDate: null,
+    })),
+    addCustomerInfoUpdateListener: jest.fn(() => () => {}),
+    removeCustomerInfoUpdateListener: jest.fn(),
+    checkTrialOrIntroductoryPriceEligibility: jest.fn(async () => ({})),
+    LOG_LEVEL: { WARN: 'WARN', DEBUG: 'DEBUG', VERBOSE: 'VERBOSE' },
+    INTRO_ELIGIBILITY_STATUS: {
+      INTRO_ELIGIBILITY_STATUS_UNKNOWN: 0,
+      INTRO_ELIGIBILITY_STATUS_INELIGIBLE: 1,
+      INTRO_ELIGIBILITY_STATUS_ELIGIBLE: 2,
+      INTRO_ELIGIBILITY_STATUS_NO_INTRO_OFFER_EXISTS: 3,
+    },
+    PURCHASES_ERROR_CODE: { PURCHASE_CANCELLED_ERROR: '1' },
+  };
+  return {
+    __esModule: true,
+    default: Purchases,
+    STOREKIT_VERSION: { STOREKIT_1: 'STOREKIT_1', STOREKIT_2: 'STOREKIT_2' },
+    __resetPurchasesMocks: () => {
+      for (const fn of Object.values(Purchases)) {
+        if (typeof fn === 'function' && 'mockClear' in fn) (fn as jest.Mock).mockClear();
+      }
+    },
+  };
+});
+
+// ProStore defaults to PRO in jest so the ~160 pre-existing test files keep
+// passing once gating reads useProStore. Gating tests flip state via
+// __setProState. proStore.test.ts uses jest.requireActual to test the real store.
+const mockProStoreState: Record<string, unknown> = {
+  status: 'pro',
+  entitlementActive: true,
+  isGrandfathered: false,
+  trialActive: false,
+  trialEndsAt: null,
+  isPurchasing: false,
+  isRestoring: false,
+  error: null,
+  interstitialEligible: false,
+  monthlyPackage: null,
+  yearlyPackage: null,
+  lifetimePackage: null,
+  configured: true,
+  initialize: jest.fn(async () => undefined),
+  refresh: jest.fn(async () => undefined),
+  purchaseMonthly: jest.fn(async () => undefined),
+  purchaseYearly: jest.fn(async () => undefined),
+  purchaseLifetime: jest.fn(async () => undefined),
+  restore: jest.fn(async () => undefined),
+  loadOfferingsIfNeeded: jest.fn(async () => undefined),
+  markInterstitialShown: jest.fn(async () => undefined),
+};
+jest.mock('./src/stores/proStore', () => {
+  const useProStore = (selector: (state: Record<string, unknown>) => unknown) =>
+    selector(mockProStoreState);
+  Object.assign(useProStore, {
+    getState: () => mockProStoreState,
+    setState: (partial: Record<string, unknown>) => Object.assign(mockProStoreState, partial),
+    subscribe: () => () => {},
+    getInitialState: () => mockProStoreState,
+  });
+  return {
+    useProStore,
+    selectIsPro: (state: { entitlementActive?: boolean; isGrandfathered?: boolean }) =>
+      Boolean(state?.entitlementActive || state?.isGrandfathered),
+    __setProState: (partial: Record<string, unknown>) => Object.assign(mockProStoreState, partial),
+  };
+});

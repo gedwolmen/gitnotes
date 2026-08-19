@@ -46,7 +46,8 @@
     "next": "Weiter",
     "continue": "Fortfahren",
     "viewMode": "Ansichtsmodus",
-    "searchPlaceholder": "Suchen..."
+    "searchPlaceholder": "Suchen...",
+    "upgrade": "Upgrade"
   },
   "notes": {
     "title": "Notizen",
@@ -171,7 +172,7 @@
     },
     "security": "Sicherheit",
     "appearance": "Erscheinungsbild",
-    "updatedUI": "Aktualisierte Oberfläche",
+    "updatedUI": "Fancy UI",
     "darkMode": "Dunkelmodus",
     "useSystemTheme": "Systemdesign verwenden",
     "active": "Aktiv",
@@ -510,7 +511,9 @@
     "removeActiveConnection": "Disconnect active host",
     "settings": {
       "accountsGroup": "Konten"
-    }
+    },
+    "disconnectFailedTitle": "Trennung fehlgeschlagen",
+    "disconnectFailedBody": "Das Konto konnte nicht getrennt werden. Bitte erneut versuchen."
   },
   "connectHost": {
     "title": "Connect a git host",
@@ -591,7 +594,12 @@
       "enable": "GitHub-Tools aktivieren",
       "bodyReminder": "Du kannst dies jederzeit unter Einstellungen → KI → GitHub-Tools ein- oder ausschalten."
     },
-    "skipForNow": "Skip for Now"
+    "skipForNow": "Skip for Now",
+    "pro": {
+      "title": "GitNotēs Pro",
+      "body": "Der kostenlose Plan umfasst 1 Konto und 1 Repository. GitNotēs Pro schaltet KI-Chat, Gedanken- und Sprach-Dump, personalisierte Zitate, Canvas, Vorlagen, weitere Repos und Konten frei — mit 30-tägiger kostenloser Testphase.",
+      "reminder": "Du kannst jederzeit in Einstellungen → GitNotēs Pro upgraden."
+    }
   },
   "renderStyle": {
     "disconnectTitle": "Render-Stil-Repository trennen?",
@@ -828,5 +836,57 @@
     "tagPickerTitle": "Pick a Tag",
     "noNotesYet": "No notes yet",
     "noTagsYet": "No tags yet"
+  },
+  "paywall": {
+    "title": "GitNotēs Pro",
+    "subtitle": "Schalte die KI-Suite und erweiterte Funktionen frei",
+    "features": {
+      "aiChat": "KI-Chat mit deinen Notizen",
+      "aiActions": "KI-Aktionen im Editor",
+      "thoughtDump": "Gedanken-Dump",
+      "voiceDump": "Sprach-Dump",
+      "personalizedQuotes": "Personalisierte Tageszitate",
+      "githubTools": "GitHub-Tools für KI",
+      "canvases": "Canvas",
+      "templates": "Benutzerdefinierte Vorlagen",
+      "renderStyles": "Renderstile",
+      "multiAccount": "Mehrere GitHub-Konten"
+    },
+    "monthly": {
+      "trialCta": "30 Tage kostenlos testen, dann {{price}}/Monat",
+      "price": "{{price}}/Monat",
+      "title": "Monatlich"
+    },
+    "lifetime": {
+      "cta": "{{price}} einmalig",
+      "title": "Lebenslang"
+    },
+    "restore": "Käufe wiederherstellen",
+    "restored": "Käufe wiederhergestellt",
+    "purchaseError": "Kauf fehlgeschlagen",
+    "loading": "Wird geladen…",
+    "later": "Vielleicht später",
+    "retry": "Erneut versuchen",
+    "termsNote": "Abonnements verlängern sich automatisch bis zur Kündigung. Stelle Käufe wieder her, um sie auf dieses Gerät zu übertragen. Diese App bietet neuen Abonnenten eine 30-tägige kostenlose Testphase.",
+    "yearly": {
+      "title": "Jährlich",
+      "cta": "{{price}}/Jahr"
+    },
+    "action": {
+      "trial": "Kostenlose Testversion",
+      "subscribe": "Abonnieren",
+      "buy": "Jetzt kaufen"
+    }
+  },
+  "pro": {
+    "statusActive": "Pro ist aktiv",
+    "statusTrial": "{{days}} Tage Testphase übrig",
+    "statusUpgrade": "Upgrade",
+    "settingsRow": "GitNotēs Pro",
+    "gateTitle": "Dies ist eine Pro-Funktion",
+    "gateBody": "Upgrade, um KI-Funktionen und mehr freizuschalten.",
+    "badge": "PRO",
+    "lockedTitle": "Pro-Funktion",
+    "lockedBody": "Diese Funktion erfordert GitNotēs Pro. Upgrade, um unbegrenzte Konten, Repos, KI und mehr freizuschalten."
   }
 }

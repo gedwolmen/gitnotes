@@ -13,6 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { NoteTemplate, TemplateService } from '../services/TemplateService';
 import { useTheme } from '../contexts/ThemeContext';
+import { useProGate } from '../hooks/useProGate';
 import { Modal } from './ui';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -60,11 +61,17 @@ export default function TemplateSelector({ visible, onClose, onSelect }: Templat
   const [isLoading, setIsLoading] = useState(false);
   const { colors } = useTheme();
   const navigation = useNavigation<Nav>();
+  const { isPro, openPaywall } = useProGate();
 
   const handleCreateTemplate = useCallback(() => {
+    if (!isPro) {
+      onClose();
+      openPaywall();
+      return;
+    }
     onClose();
     navigation.navigate('TemplateManager');
-  }, [onClose, navigation]);
+  }, [onClose, navigation, isPro, openPaywall]);
 
   const loadTemplates = useCallback(async () => {
     setIsLoading(true);

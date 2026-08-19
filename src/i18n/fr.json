@@ -46,7 +46,8 @@
     "next": "Suivant",
     "continue": "Continuer",
     "viewMode": "Mode d'affichage",
-    "searchPlaceholder": "Rechercher..."
+    "searchPlaceholder": "Rechercher...",
+    "upgrade": "Passer à Pro"
   },
   "notes": {
     "title": "Notes",
@@ -171,7 +172,7 @@
     },
     "security": "Sécurité",
     "appearance": "Apparence",
-    "updatedUI": "Interface mise à jour",
+    "updatedUI": "UI élégante",
     "darkMode": "Mode sombre",
     "useSystemTheme": "Utiliser le thème du système",
     "active": "Actif",
@@ -510,7 +511,9 @@
     "removeActiveConnection": "Disconnect active host",
     "settings": {
       "accountsGroup": "Comptes"
-    }
+    },
+    "disconnectFailedTitle": "Échec de la déconnexion",
+    "disconnectFailedBody": "Impossible de déconnecter le compte. Réessayez."
   },
   "connectHost": {
     "title": "Connect a git host",
@@ -591,7 +594,12 @@
       "enable": "Activer les outils GitHub",
       "bodyReminder": "Vous pouvez activer ou désactiver ceci à tout moment dans Paramètres → IA → Outils GitHub."
     },
-    "skipForNow": "Skip for Now"
+    "skipForNow": "Skip for Now",
+    "pro": {
+      "title": "GitNotēs Pro",
+      "body": "Le plan gratuit inclut 1 compte et 1 dépôt. GitNotēs Pro débloque le chat IA, la décharge de pensées et vocale, les citations personnalisées, les toiles, les modèles, plus de dépôts et de comptes — avec un essai gratuit de 30 jours.",
+      "reminder": "Vous pouvez passer à Pro à tout moment dans Réglages → GitNotēs Pro."
+    }
   },
   "renderStyle": {
     "disconnectTitle": "Disconnect render styles repo?",
@@ -828,5 +836,57 @@
     "tagPickerTitle": "Pick a Tag",
     "noNotesYet": "No notes yet",
     "noTagsYet": "No tags yet"
+  },
+  "paywall": {
+    "title": "GitNotēs Pro",
+    "subtitle": "Débloquez la suite IA et les fonctionnalités avancées",
+    "features": {
+      "aiChat": "Chat IA avec vos notes",
+      "aiActions": "Actions IA dans l'éditeur",
+      "thoughtDump": "Décharge de pensées",
+      "voiceDump": "Décharge vocale",
+      "personalizedQuotes": "Citations quotidiennes personnalisées",
+      "githubTools": "Outils GitHub pour l'IA",
+      "canvases": "Toiles",
+      "templates": "Modèles personnalisés",
+      "renderStyles": "Styles de rendu",
+      "multiAccount": "Plusieurs comptes GitHub"
+    },
+    "monthly": {
+      "trialCta": "Essayez 30 jours gratuitement, puis {{price}}/mois",
+      "price": "{{price}}/mois",
+      "title": "Mensuel"
+    },
+    "lifetime": {
+      "cta": "{{price}} en paiement unique",
+      "title": "À vie"
+    },
+    "restore": "Restaurer les achats",
+    "restored": "Achats restaurés",
+    "purchaseError": "Échec de l'achat",
+    "loading": "Chargement…",
+    "later": "Plus tard",
+    "retry": "Réessayer",
+    "termsNote": "Les abonnements se renouvellent automatiquement jusqu'à annulation. Restaurez vos achats pour les transférer sur cet appareil. Cette app propose un essai gratuit de 30 jours aux nouveaux abonnés.",
+    "yearly": {
+      "title": "Annuel",
+      "cta": "{{price}}/an"
+    },
+    "action": {
+      "trial": "Essai gratuit",
+      "subscribe": "S'abonner",
+      "buy": "Acheter"
+    }
+  },
+  "pro": {
+    "statusActive": "Pro est actif",
+    "statusTrial": "{{days}} jours restants d'essai",
+    "statusUpgrade": "Passer à Pro",
+    "settingsRow": "GitNotēs Pro",
+    "gateTitle": "Fonctionnalité Pro",
+    "gateBody": "Passez à Pro pour débloquer l'IA et plus encore.",
+    "badge": "PRO",
+    "lockedTitle": "Fonctionnalité Pro",
+    "lockedBody": "Cette fonctionnalité nécessite GitNotēs Pro. Passez à Pro pour débloquer comptes, dépôts, IA et plus, sans limite."
   }
 }

@@ -27,6 +27,8 @@ import { TemplatesEmptyState } from '../components/templates/TemplatesEmptyState
 import { DEFAULT_ICON } from '../components/templates/templateManagerShared';
 import { RADII } from '../theme/tokens';
 import { useTranslation } from 'react-i18next';
+import { useProGate } from '../hooks/useProGate';
+import { ProRequired } from '../components/paywall/ProRequired';
 
 export default function TemplateManagerScreen() {
   const { t } = useTranslation();
@@ -239,6 +241,12 @@ export default function TemplateManagerScreen() {
   }, [navigation]);
 
   const customCount = customTemplates.length;
+
+  const { isPro } = useProGate();
+
+  if (!isPro) {
+    return <ProRequired />;
+  }
 
   return (
     <SafeAreaView edges={['bottom']} className="flex-1" style={{ backgroundColor: colors.background }}>
