@@ -73,6 +73,10 @@ jest.mock('../src/services/GitHubService', () => ({
   GitHubService: { setToken: jest.fn(), isAuthenticated: jest.fn(() => true), getFileSha: jest.fn(), deleteFile: jest.fn() },
 }));
 
+jest.mock('../src/services/SyncEngineService', () => ({
+  SyncEngineService: { getMode: jest.fn(async () => 'api' as const) },
+}));
+
 jest.mock('../src/services/RepoPullService', () => ({
   pullAllFromRepos: jest.fn(async () => undefined),
 }));

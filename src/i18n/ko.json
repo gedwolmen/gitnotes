@@ -292,6 +292,8 @@
     "switchToApiTitle": "API 모드로 전환하시겠습니까?",
     "switchToApiBody": "{{name}}의 로컬 클론이 제거되고 GitHub Contents API로 되돌아갑니다.",
     "switch": "전환",
+    "apiModeWarningTitle": "API 모드는 안정적이지 않습니다",
+    "apiModeWarningBody": "API 모드는 실험적이며 제대로 작동하지 않을 수 있습니다. 최고의 경험을 위해 클론 모드를 권장합니다.",
     "nothingToSyncTitle": "동기화할 항목 없음",
     "nothingToSyncBody": "모든 사용자 지정 템플릿이 이미 템플릿 저장소에 있습니다.",
     "templatesSyncDoneTitle": "완료",

@@ -292,6 +292,8 @@
     "switchToApiTitle": "APIモードに切り替えますか？",
     "switchToApiBody": "{{name}}のローカルクローンが削除され、GitHub Contents APIに戻ります。",
     "switch": "切り替え",
+    "apiModeWarningTitle": "APIモードは安定していません",
+    "apiModeWarningBody": "APIモードは実験的で、正常に動作しない場合があります。最適なエクスペリエンスのためにクローンモードをお勧めします。",
     "nothingToSyncTitle": "同期するものはありません",
     "nothingToSyncBody": "すべてのカスタムテンプレートはすでにテンプレートリポジトリにあります。",
     "templatesSyncDoneTitle": "完了",

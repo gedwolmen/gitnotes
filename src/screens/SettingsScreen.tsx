@@ -411,6 +411,11 @@ export default function SettingsScreen() {
           await SyncEngineService.setMode(repo.path, 'api');
           setSyncModes((prev) => ({ ...prev, [repo.path]: 'api' }));
           HapticService.success();
+          Alert.alert(
+            t('settings.apiModeWarningTitle'),
+            t('settings.apiModeWarningBody'),
+            [{ text: t('common.ok') }],
+          );
         },
       },
     ]);

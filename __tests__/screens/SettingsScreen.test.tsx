@@ -537,6 +537,7 @@ describe('SettingsScreen', () => {
     stableRepositories.push(cloneRepo);
 
     const { getByTestId, queryByTestId } = render(<SettingsScreen />);
+    await flushMicrotasks();
     fireEvent.press(getByTestId('settings.toggle.sync-engine-enable-octo-notes'));
 
     // Clone is in flight → the progress modal is up (previously it never closed).
@@ -562,13 +563,14 @@ describe('SettingsScreen', () => {
     );
   });
 
-  it('force-closes the clone modal after the grace period when cancel never reaches the git op', () => {
+  it('force-closes the clone modal after the grace period when cancel never reaches the git op', async () => {
     jest.useFakeTimers();
     (GitHubService.isAuthenticated as jest.Mock).mockReturnValue(true);
     (GitFsService.clone as jest.Mock).mockImplementation(() => new Promise<void>(() => {}));
     stableRepositories.push(cloneRepo);
 
     const { getByTestId, getByText, queryByTestId } = render(<SettingsScreen />);
+    await flushMicrotasks();
     fireEvent.press(getByTestId('settings.toggle.sync-engine-enable-octo-notes'));
     expect(getByTestId('modal')).toBeTruthy();
 
@@ -593,6 +595,7 @@ describe('SettingsScreen', () => {
     stableRepositories.push(cloneRepo);
 
     const { getByTestId, getByText } = render(<SettingsScreen />);
+    await flushMicrotasks();
     fireEvent.press(getByTestId('settings.toggle.sync-engine-enable-octo-notes'));
 
     await waitFor(() => expect(getByTestId('modal')).toBeTruthy());
@@ -609,6 +612,7 @@ describe('SettingsScreen', () => {
     stableRepositories.push(cloneRepo);
 
     const { getByTestId, getByText } = render(<SettingsScreen />);
+    await flushMicrotasks();
     fireEvent.press(getByTestId('settings.toggle.sync-engine-enable-octo-notes'));
 
     await flushMicrotasks();

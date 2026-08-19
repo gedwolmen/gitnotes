@@ -10,6 +10,10 @@ jest.mock('../src/services/GitHubService', () => ({
   },
 }));
 
+jest.mock('../src/services/SyncEngineService', () => ({
+  SyncEngineService: { getMode: jest.fn(async () => 'api' as const) },
+}));
+
 jest.mock('../src/services/StorageService', () => ({
   StorageService: {
     getSavedRepositories: jest.fn(),

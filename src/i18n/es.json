@@ -292,6 +292,8 @@
     "switchToApiTitle": "¿Cambiar al modo API?",
     "switchToApiBody": "Esto eliminará el clon local de {{name}} y volverá a la API de contenidos de GitHub.",
     "switch": "Cambiar",
+    "apiModeWarningTitle": "El modo API no es estable",
+    "apiModeWarningBody": "El modo API es experimental y puede no funcionar de manera confiable. Se recomienda el modo clon para una mejor experiencia.",
     "nothingToSyncTitle": "Nada que sincronizar",
     "nothingToSyncBody": "Todas las plantillas personalizadas ya están en el repositorio de plantillas.",
     "templatesSyncDoneTitle": "Listo",

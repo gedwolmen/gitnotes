@@ -381,6 +381,8 @@
     "switchToApiTitle": "Switch to API mode?",
     "switchToApiBody": "This will remove the local clone of {{name}} and revert to the GitHub Contents API.",
     "switch": "Switch",
+    "apiModeWarningTitle": "API mode is not stable",
+    "apiModeWarningBody": "API mode is experimental and may not work reliably. Clone mode is recommended for the best experience.",
     "nothingToSyncTitle": "Nothing to sync",
     "nothingToSyncBody": "All custom templates are already in the templates repo.",
     "templatesSyncDoneTitle": "Done",
