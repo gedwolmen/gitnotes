@@ -36,7 +36,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
   const { isDark } = useTheme();
   const { t } = useTranslation();
 
-  const parentState = navigation.getParent()?.getState();
+  const parentState = navigation?.getParent?.()?.getState();
   const parentRouteName = parentState?.routes?.[parentState.index]?.name;
   if (parentRouteName === 'Paywall') return null;
 
