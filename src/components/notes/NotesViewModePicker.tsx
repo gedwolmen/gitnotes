@@ -10,6 +10,8 @@ interface NotesViewModePickerProps {
   viewMode: ViewMode;
   onClose: () => void;
   onChange: (mode: ViewMode) => void;
+  isPro: boolean;
+  onLockedPress: () => void;
 }
 
 export function NotesViewModePicker({
@@ -17,6 +19,8 @@ export function NotesViewModePicker({
   viewMode,
   onClose,
   onChange,
+  isPro,
+  onLockedPress,
 }: NotesViewModePickerProps) {
   const { colors } = useTheme();
 
@@ -29,12 +33,13 @@ export function NotesViewModePicker({
           <View style={styles.options}>
             {(Object.keys(VIEW_MODE_LABELS) as ViewMode[]).map((mode) => {
               const isSelected = viewMode === mode;
+              const isLocked = mode === 'graph' && !isPro;
               return (
                 <TouchableOpacity
                   key={mode}
                   testID={`notes-view-mode.button.change-${mode}`}
                   style={[styles.option, isSelected && { backgroundColor: colors.primary + '15' }]}
-                  onPress={() => onChange(mode)}
+                  onPress={() => (isLocked ? onLockedPress() : onChange(mode))}
                   activeOpacity={0.7}
                 >
                   <Ionicons
@@ -47,7 +52,11 @@ export function NotesViewModePicker({
                   >
                     {VIEW_MODE_LABELS[mode]}
                   </Text>
-                  {isSelected ? <Ionicons name="checkmark" size={18} color={colors.primary} /> : null}
+                  {isLocked ? (
+                    <Ionicons name="lock-closed" size={16} color={colors.textSecondary} />
+                  ) : isSelected ? (
+                    <Ionicons name="checkmark" size={18} color={colors.primary} />
+                  ) : null}
                 </TouchableOpacity>
               );
             })}
