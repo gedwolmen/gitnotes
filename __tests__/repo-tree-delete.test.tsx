@@ -19,6 +19,10 @@ jest.mock('../src/services/GitHubService', () => ({
   },
 }));
 
+jest.mock('../src/services/SyncEngineService', () => ({
+  SyncEngineService: { getMode: jest.fn(async () => 'api' as const) },
+}));
+
 jest.mock('../src/utils/haptics', () => ({
   HapticService: {
     light: jest.fn(),

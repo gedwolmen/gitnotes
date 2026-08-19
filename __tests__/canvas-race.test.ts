@@ -107,6 +107,10 @@ jest.mock('../src/services/GitHubService', () => ({
   },
 }));
 
+jest.mock('../src/services/SyncEngineService', () => ({
+  SyncEngineService: { getMode: jest.fn(async () => 'api' as const) },
+}));
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createCanvas } from '../src/models/Canvas';
 import { pullFromSingleRepo } from '../src/services/RepoPullService';

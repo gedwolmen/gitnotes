@@ -30,7 +30,12 @@ jest.mock('../src/services/GitHubService', () => ({
     getTreeRecursiveOrThrow: jest.fn(),
     getFileContent: jest.fn(),
     getRepoContents: jest.fn(async () => []),
+    getUser: jest.fn(() => ({ name: 'test', login: 'testuser', email: 'test@example.com' })),
   },
+}));
+
+jest.mock('../src/services/SyncEngineService', () => ({
+  SyncEngineService: { getMode: jest.fn(async () => 'api' as const) },
 }));
 
 jest.mock('../src/services/StorageService', () => ({

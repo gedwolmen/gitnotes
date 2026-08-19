@@ -23,14 +23,12 @@ async function writeMap(map: ModeMap): Promise<void> {
 }
 
 /**
- * Per-repo sync-engine selection. Default is 'api' (existing Contents-API
- * path), and only repos the user explicitly opts into 'clone' mode store an
- * entry. Phase 1 ships this service with no callers wired — the eventual
- * caller in Phase 2 (RepoPullService.pullNotesFromRepo et al.) will branch on
- * the returned mode.
+ * Per-repo sync-engine selection. Default is 'clone' (full working-tree
+ * clone), and only repos the user explicitly opts back into the 'api'
+ * (Contents-API) path store an entry.
  */
 export class SyncEngineService {
-  static readonly DEFAULT_MODE: SyncEngineMode = 'api';
+  static readonly DEFAULT_MODE: SyncEngineMode = 'clone';
 
   static async getMode(repoPath: string): Promise<SyncEngineMode> {
     const map = await readMap();

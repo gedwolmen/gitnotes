@@ -4,7 +4,12 @@ jest.mock('../src/services/GitHubService', () => ({
     updateFile: jest.fn(async () => ({ content: { sha: 'abc' }, commit: { sha: 'xyz' } })),
     deleteFile: jest.fn(async () => ({ commit: { sha: 'del' } })),
     getFileSha: jest.fn(async () => ({ kind: 'found', sha: 'abc' })),
+    getUser: jest.fn(() => ({ name: 'test', login: 'testuser', email: 'test@example.com' })),
   },
+}));
+
+jest.mock('../src/services/SyncEngineService', () => ({
+  SyncEngineService: { getMode: jest.fn(async () => 'api' as const) },
 }));
 
 import { GitHubService } from '../src/services/GitHubService';

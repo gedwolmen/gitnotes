@@ -8,6 +8,10 @@ jest.mock('../../src/services/GitHubService', () => ({
   },
 }));
 
+jest.mock('../../src/services/SyncEngineService', () => ({
+  SyncEngineService: { getMode: jest.fn(async () => 'api' as const) },
+}));
+
 const mockLocalCanvases: any[] = [];
 
 jest.mock('../../src/services/StorageService', () => ({

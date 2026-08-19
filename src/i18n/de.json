@@ -292,6 +292,8 @@
     "switchToApiTitle": "Zum API-Modus wechseln?",
     "switchToApiBody": "Dadurch wird der lokale Klon von {{name}} entfernt und zur GitHub-Contents-API zurückgekehrt.",
     "switch": "Wechseln",
+    "apiModeWarningTitle": "API-Modus ist nicht stabil",
+    "apiModeWarningBody": "Der API-Modus ist experimentell und funktioniert möglicherweise nicht zuverlässig. Für das beste Erlebnis wird der Klon-Modus empfohlen.",
     "nothingToSyncTitle": "Nichts zu synchronisieren",
     "nothingToSyncBody": "Alle benutzerdefinierten Vorlagen sind bereits im Vorlagen-Repository.",
     "templatesSyncDoneTitle": "Fertig",

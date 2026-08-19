@@ -628,7 +628,7 @@ onSetSyncIntervalSeconds,
       {repositories.length > 0 ? (
         <Group title={t('settings.syncEngine')}>
           {repositories.map((repo) => {
-            const mode = syncModes[repo.path] ?? 'api';
+            const mode = syncModes[repo.path] ?? 'clone';
             const isClone = mode === 'clone';
             const isCloning = cloningRepo === repo.path;
             const lfs = lfsPending[repo.path];

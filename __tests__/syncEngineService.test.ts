@@ -24,35 +24,35 @@ describe('SyncEngineService', () => {
     AsyncStorage.setItem('@gitnotes:sync_engine_modes', '{}');
   });
 
-  test('default mode is api', async () => {
-    expect(await SyncEngineService.getMode('me/repo')).toBe('api');
-    expect(SyncEngineService.DEFAULT_MODE).toBe('api');
-  });
-
-  test('setMode persists clone overrides per repo', async () => {
-    await SyncEngineService.setMode('me/repo', 'clone');
+  test('default mode is clone', async () => {
     expect(await SyncEngineService.getMode('me/repo')).toBe('clone');
-    expect(await SyncEngineService.getMode('other/repo')).toBe('api');
+    expect(SyncEngineService.DEFAULT_MODE).toBe('clone');
   });
 
-  test('setting back to api removes the entry', async () => {
-    await SyncEngineService.setMode('me/repo', 'clone');
+  test('setMode persists api overrides per repo', async () => {
     await SyncEngineService.setMode('me/repo', 'api');
+    expect(await SyncEngineService.getMode('me/repo')).toBe('api');
+    expect(await SyncEngineService.getMode('other/repo')).toBe('clone');
+  });
+
+  test('setting back to clone removes the entry', async () => {
+    await SyncEngineService.setMode('me/repo', 'api');
+    await SyncEngineService.setMode('me/repo', 'clone');
     const overrides = await SyncEngineService.listOverrides();
     expect(overrides).toEqual({});
   });
 
-  test('clear is equivalent to setMode("api")', async () => {
-    await SyncEngineService.setMode('me/repo', 'clone');
+  test('clear is equivalent to setMode("clone")', async () => {
+    await SyncEngineService.setMode('me/repo', 'api');
     await SyncEngineService.clear('me/repo');
-    expect(await SyncEngineService.getMode('me/repo')).toBe('api');
+    expect(await SyncEngineService.getMode('me/repo')).toBe('clone');
   });
 
   test('listOverrides returns only non-default repos', async () => {
-    await SyncEngineService.setMode('a/x', 'clone');
-    await SyncEngineService.setMode('b/y', 'clone');
-    await SyncEngineService.setMode('c/z', 'api');
+    await SyncEngineService.setMode('a/x', 'api');
+    await SyncEngineService.setMode('b/y', 'api');
+    await SyncEngineService.setMode('c/z', 'clone');
     const overrides = await SyncEngineService.listOverrides();
-    expect(overrides).toEqual({ 'a/x': 'clone', 'b/y': 'clone' });
+    expect(overrides).toEqual({ 'a/x': 'api', 'b/y': 'api' });
   });
 });
