@@ -127,6 +127,7 @@ export function FloatingStageButton({ currentRouteName }: FloatingStageButtonPro
     pendingCount === 0
     || currentRouteName === 'ChatThreadList'
     || currentRouteName === 'ChatScreen'
+    || currentRouteName === 'Paywall'
   ) {
     return null;
   }
