@@ -3,6 +3,7 @@ import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { ScreenHeader, useScreenHeaderHeight, Button, Surface } from '../components/ui';
 import { useTheme } from '../contexts/ThemeContext';
@@ -27,6 +28,7 @@ export default function PaywallScreen() {
   const { colors } = useTheme();
   const navigation = useNavigation();
   const headerHeight = useScreenHeaderHeight();
+  const insets = useSafeAreaInsets();
 
   const monthlyPackage = useProStore((s) => s.monthlyPackage);
   const yearlyPackage = useProStore((s) => s.yearlyPackage);
@@ -87,7 +89,7 @@ export default function PaywallScreen() {
   }, [restore, navigation]);
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
+    <SafeAreaView edges={['top']} className="flex-1" style={{ backgroundColor: colors.background }}>
       <ScreenHeader
         title={t('paywall.title')}
         actions={
@@ -102,7 +104,7 @@ export default function PaywallScreen() {
         }
       />
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, paddingTop: Math.max(56, headerHeight - 24) }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 40, paddingTop: Math.max(56, headerHeight - 24) }}
         testID="paywall.scroll"
       >
         <Text className="text-3xl font-bold text-center" style={{ color: colors.text }}>

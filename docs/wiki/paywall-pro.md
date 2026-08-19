@@ -62,6 +62,13 @@ Caveat: the Android fallback flag is device-local — a grandfathered user who u
 
 A one-time paywall presentation ~3 days after a trial expires: `@gitnotes:trial_was_active` → `@gitnotes:trial_expired_at` → `@gitnotes:interstitial_offer_shown`. Presented by `AppNavigator` when `interstitialEligible`. Never shown to grandfathered or paying users.
 
+### Paywall UI: tab bar & bottom safe-area
+
+The paywall is a root-stack screen pushed above `MainTabs`, so the tab bar and the bottom home-indicator inset must be handled explicitly:
+
+- **Tab bar**: `TabNavigator` reads the root stack's focused route (`useNavigationState`) and renders `() => null` for the `tabBar` while `Paywall` is on top. This is the single guard that covers all three tab bar variants — the custom neumorphic `TabBar` (whose `parentRouteName === 'Paywall'` check only fires for that variant), the default React Navigation bar (flat style / tablets), and the `TabletRail`. Without it, the default bar renders under the paywall in flat theme, showing as a dark/light strip at the bottom.
+- **Bottom inset**: `PaywallScreen` uses `SafeAreaView edges={['top']}` (not the default all-edges) so the `ScrollView` viewport extends to the physical screen edge, and sets `paddingBottom: insets.bottom + 40` so content still clears the home indicator when scrolled to the end. The default all-edges behavior left a ~34pt dead strip at the bottom that content could never scroll into.
+
 ## RevenueCat configuration
 
 - Entitlement: `pro` (both products grant it)
