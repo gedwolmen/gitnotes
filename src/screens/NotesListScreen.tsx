@@ -515,7 +515,10 @@ export default function NotesListScreen() {
         onClose={() => setShowViewModePicker(false)}
         onChange={handleViewModeChange}
         isPro={isPro}
-        onLockedPress={() => openPaywall()}
+        onLockedPress={() => {
+          setShowViewModePicker(false);
+          openPaywall();
+        }}
       />
 
       <FlatList
