@@ -22,7 +22,7 @@
 | [Stage → Push UX](./stage-push-ux.md) | no row locks, vanish-immediate deletes, spinner-free grayed push buttons, determinate progress ring, body-text notifications, resume-on-foreground |
 | [Token Removal Repo Cascade](./repo-removal-cascade.md) | removing a token also removes its synced repos, with a confirmation warning |
 | [Token Scope Error Messaging](./token-scope-error-messaging.md) | 403s surface needed token scopes in the sync message and token-add UI |
-| [Pro Paywall & Monetization](./paywall-pro.md) | RevenueCat Pro paywall: 30-day trial / $2.99 mo / $40 lifetime, grandfathering, gating map, store setup checklist |
+| [Pro Paywall & Monetization](./paywall-pro.md) | RevenueCat Pro paywall: 30-day trial / $2.99 mo / $40 lifetime, grandfathering, show-locked feature UX, gating map, store setup checklist |
 
 ## Quick Start
 

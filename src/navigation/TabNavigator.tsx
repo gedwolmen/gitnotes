@@ -1,5 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useNavigationState } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   View,
@@ -142,14 +143,21 @@ export default function TabNavigator() {
   const { t } = useTranslation();
   const useNeumorphicBar = !isTablet && style === 'neumorphic';
 
+  // Paywall lives on the root stack (sibling of MainTabs), so the custom
+  // TabBar's parent-route check never fires for the default bar (flat/tablet).
+  const rootRouteName = useNavigationState((state) => state.routes[state.index]?.name);
+  const isPaywallVisible = rootRouteName === 'Paywall';
+
   return (
     <Tab.Navigator
       tabBar={
-        isTablet
-          ? (props) => <TabletRail {...props} />
-          : useNeumorphicBar
-            ? (props) => <TabBar {...props} />
-            : undefined
+        isPaywallVisible
+          ? () => null
+          : isTablet
+            ? (props) => <TabletRail {...props} />
+            : useNeumorphicBar
+              ? (props) => <TabBar {...props} />
+              : undefined
       }
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {

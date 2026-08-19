@@ -26,6 +26,7 @@ import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { requireRepo } from '../utils/requireRepo';
 import { HapticService } from '../utils/haptics';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { useProGate } from '../hooks/useProGate';
 import { GitHubActivityIndicator } from '../components/GitHubActivityIndicator';
 import { ViewMode, VIEW_MODE_ICONS } from '../utils/viewModes';
 import { formatJournalDate } from '../services/JournalService';
@@ -56,6 +57,7 @@ export default function NotesListScreen() {
   const tabBarHeight = useTabBarHeight();
   const { viewMode, setViewMode } = useViewMode();
   const { isConnected } = useNetworkStatus();
+  const { isPro, openPaywall } = useProGate();
   const { repositories } = useRepos();
   const { columnCount } = useResponsive('list');
   const {
@@ -409,6 +411,11 @@ export default function NotesListScreen() {
   const handleViewModeChange = useCallback(
     (mode: ViewMode) => {
       HapticService.selection();
+      if (mode === 'graph' && !isPro) {
+        openPaywall();
+        setShowViewModePicker(false);
+        return;
+      }
       if (mode === 'graph') {
         navigation.navigate('GraphView');
       } else {
@@ -416,7 +423,7 @@ export default function NotesListScreen() {
       }
       setShowViewModePicker(false);
     },
-    [navigation, setViewMode],
+    [navigation, setViewMode, isPro, openPaywall],
   );
 
   const scrollToSearchMatch = useCallback(
@@ -507,6 +514,8 @@ export default function NotesListScreen() {
         viewMode={viewMode}
         onClose={() => setShowViewModePicker(false)}
         onChange={handleViewModeChange}
+        isPro={isPro}
+        onLockedPress={() => openPaywall()}
       />
 
       <FlatList
