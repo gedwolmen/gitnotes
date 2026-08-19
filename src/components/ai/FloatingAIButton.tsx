@@ -11,6 +11,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAIStore } from '../../stores/aiStore';
 import { useAIHubStore } from '../../stores/aiHubStore';
+import { useProGate } from '../../hooks/useProGate';
 import { useTheme } from '../../contexts/ThemeContext';
 import { HapticService } from '../../utils/haptics';
 import { Surface } from '../ui/Surface';
@@ -40,6 +41,7 @@ interface FloatingAIButtonProps {
 
 export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
   const { isEnabled } = useAIStore();
+  const { isPro } = useProGate();
   const { colors } = useTheme();
   const [reduceMotionEnabled, setReduceMotionEnabled] = useState(true);
   const [reduceMotionResolved, setReduceMotionResolved] = useState(false);
@@ -212,7 +214,12 @@ export function FloatingAIButton({ currentRouteName }: FloatingAIButtonProps) {
     };
   });
 
-  if (!isEnabled || currentRouteName === 'ChatThreadList' || currentRouteName === 'ChatScreen') {
+  if (
+    !isEnabled
+    || !isPro
+    || currentRouteName === 'ChatThreadList'
+    || currentRouteName === 'ChatScreen'
+  ) {
     return null;
   }
 

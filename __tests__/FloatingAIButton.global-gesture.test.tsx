@@ -11,6 +11,15 @@ jest.mock('../src/stores/aiStore', () => ({
   useAIStore: () => ({ isEnabled: true }),
 }));
 
+jest.mock('../src/hooks/useProGate', () => ({
+  useProGate: () => ({
+    isPro: true,
+    status: 'pro',
+    loading: false,
+    openPaywall: jest.fn(),
+  }),
+}));
+
 jest.mock('../src/contexts/ThemeContext', () => {
   const { NEUMORPHIC_LIGHT, RADII } = require('../src/theme/tokens');
 

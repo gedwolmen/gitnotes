@@ -16,6 +16,7 @@ let mockPanUpdate: ((event: MockPanUpdateEvent) => void) | undefined;
 let mockPanEnd: ((successful: boolean) => void) | undefined;
 let mockPanFinalize: ((successful: boolean) => void) | undefined;
 let mockAIEnabled = true;
+let mockIsPro = true;
 let mockTabBarHeight = 0;
 let mockWindowDimensions = { width: 320, height: 480, scale: 2, fontScale: 1 };
 let mockSafeAreaInsets = { top: 24, right: 0, bottom: 20, left: 0 };
@@ -83,6 +84,15 @@ jest.mock('@react-navigation/native', () => ({
 
 jest.mock('../src/stores/aiStore', () => ({
   useAIStore: () => ({ isEnabled: mockAIEnabled }),
+}));
+
+jest.mock('../src/hooks/useProGate', () => ({
+  useProGate: () => ({
+    isPro: mockIsPro,
+    status: mockIsPro ? 'pro' : 'free',
+    loading: false,
+    openPaywall: jest.fn(),
+  }),
 }));
 
 jest.mock('../src/contexts/ThemeContext', () => {
@@ -205,6 +215,7 @@ describe('FloatingAIButton', () => {
     mockPanEnd = undefined;
     mockPanFinalize = undefined;
     mockAIEnabled = true;
+    mockIsPro = true;
     mockTabBarHeight = 0;
     mockWindowDimensions = { width: 320, height: 480, scale: 2, fontScale: 1 };
     mockSafeAreaInsets = { top: 24, right: 0, bottom: 20, left: 0 };
@@ -236,6 +247,25 @@ describe('FloatingAIButton', () => {
       });
     },
   );
+
+  it('stays hidden when the user is on the free plan', async () => {
+    mockIsPro = false;
+
+    const { queryByTestId } = render(<FloatingAIButton currentRouteName="Home" />);
+
+    await waitFor(() => {
+      expect(queryByTestId('floating-ai.button.navigate-chat')).toBeNull();
+      expect(queryByTestId('floating-ai.button.liquid')).toBeNull();
+    });
+  });
+
+  it('renders when the user is on a paid plan', async () => {
+    const { getByTestId } = render(<FloatingAIButton currentRouteName="Home" />);
+
+    await waitFor(() => {
+      expect(getByTestId('floating-ai.button.navigate-chat')).toBeTruthy();
+    });
+  });
 
   it('normalizes stale left and invalid vertical persisted coordinates', async () => {
     await AsyncStorage.setItem('ai-button-position', JSON.stringify({ x: -180, y: -90 }));
