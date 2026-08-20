@@ -843,16 +843,46 @@
     "title": "GitNotēs Pro",
     "subtitle": "Desbloquea la suite de IA y las funciones avanzadas",
     "features": {
-      "aiChat": "Chat de IA con tus notas",
-      "aiActions": "Acciones de IA en el editor",
-      "thoughtDump": "Volcado de pensamientos",
-      "voiceDump": "Volcado de voz",
-      "personalizedQuotes": "Citas diarias personalizadas",
-      "githubTools": "Herramientas de GitHub para IA",
-      "canvases": "Lienzos",
-      "templates": "Plantillas personalizadas",
-      "renderStyles": "Estilos de renderizado",
-      "multiAccount": "Múltiples cuentas de GitHub"
+      "aiChat": {
+        "title": "Chat de IA con tus notas",
+        "description": "Haz preguntas y obtén respuestas basadas en tus notas"
+      },
+      "aiActions": {
+        "title": "Acciones de IA en el editor",
+        "description": "Resume, reescribe y corrige texto desde el editor"
+      },
+      "thoughtDump": {
+        "title": "Volcado de pensamientos",
+        "description": "Vuelca tus ideas; la IA las archiva en notas"
+      },
+      "voiceDump": {
+        "title": "Volcado de voz",
+        "description": "Graba notas de voz, transcritas directo a tus notas"
+      },
+      "personalizedQuotes": {
+        "title": "Citas diarias personalizadas",
+        "description": "Citas diarias ajustadas a tus notas e intereses"
+      },
+      "githubTools": {
+        "title": "Herramientas de GitHub para IA",
+        "description": "Gestiona issues y repos desde el chat de IA"
+      },
+      "canvases": {
+        "title": "Lienzos",
+        "description": "Conecta notas en un lienzo visual infinito"
+      },
+      "templates": {
+        "title": "Plantillas personalizadas",
+        "description": "Crea y reutiliza tus propias plantillas de notas"
+      },
+      "renderStyles": {
+        "title": "Estilos de renderizado",
+        "description": "Personaliza cómo se muestran Markdown, NORG y Org"
+      },
+      "multiAccount": {
+        "title": "Múltiples cuentas de GitHub",
+        "description": "Sincroniza varias cuentas de GitHub a la vez"
+      }
     },
     "featureDescriptions": {
       "aiChat": "Pregunta lo que sea a tus notas y obtén respuestas al instante",
@@ -877,6 +907,8 @@
     },
     "restore": "Restaurar compras",
     "restored": "Compras restauradas",
+    "restoring": "Restaurando compra…",
+    "nothingToRestore": "No hay nada que restaurar en este dispositivo.",
     "purchaseError": "Error en la compra",
     "loading": "Cargando…",
     "later": "Quizás más tarde",
@@ -884,12 +916,17 @@
     "termsNote": "Las suscripciones se renuevan automáticamente hasta que se cancelen. Restaura las compras para transferirlas a este dispositivo. Esta app ofrece una prueba gratuita de 30 días para nuevos suscriptores.",
     "yearly": {
       "title": "Anual",
-      "cta": "{{price}}/año"
+      "cta": "{{price}}/año",
+      "trialCta": "Prueba 30 días gratis, luego {{price}}/año"
     },
     "action": {
       "trial": "Iniciar prueba gratis",
       "subscribe": "Suscribirse",
       "buy": "Comprar ahora"
+    },
+    "footer": {
+      "terms": "Términos de uso",
+      "privacy": "Política de privacidad"
     }
   },
   "pro": {

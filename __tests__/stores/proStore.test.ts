@@ -36,13 +36,23 @@ jest.mock('../../src/services/RevenueCatService', () => ({
   })),
   restorePurchases: jest.fn(async () => ({
     kind: 'purchased',
-    customerInfo: { entitlements: { active: { pro: { isActive: true, periodType: 'NORMAL' } } } },
+    customerInfo: { entitlements: { active: {} } },
   })),
   onCustomerInfoUpdate: jest.fn(() => () => {}),
 }));
 
 jest.mock('../../src/services/GrandfatherService', () => ({
   resolveGrandfatherStatus: jest.fn(async () => ({ isGrandfathered: false, reason: 'none' })),
+}));
+
+jest.mock('../../src/services/PaywallAnalytics', () => ({
+  trackPaywallOpen: jest.fn(),
+  trackPaywallClose: jest.fn(),
+  trackCtaTap: jest.fn(),
+  trackPurchaseAttempt: jest.fn(),
+  trackPurchaseOutcome: jest.fn(),
+  trackRestoreTap: jest.fn(),
+  trackRestoreOutcome: jest.fn(),
 }));
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -55,6 +65,12 @@ import {
   onCustomerInfoUpdate,
 } from '../../src/services/RevenueCatService';
 import { resolveGrandfatherStatus } from '../../src/services/GrandfatherService';
+import {
+  trackPurchaseAttempt,
+  trackPurchaseOutcome,
+  trackRestoreTap,
+  trackRestoreOutcome,
+} from '../../src/services/PaywallAnalytics';
 
 const { useProStore, selectIsPro } = jest.requireActual('../../src/stores/proStore');
 
@@ -67,6 +83,10 @@ const purchaseMock = purchasePackage as jest.Mock;
 const restoreMock = restorePurchases as jest.Mock;
 const grandfatherMock = resolveGrandfatherStatus as jest.Mock;
 const listenerMock = onCustomerInfoUpdate as jest.Mock;
+const attemptSpy = trackPurchaseAttempt as jest.Mock;
+const outcomeSpy = trackPurchaseOutcome as jest.Mock;
+const restoreTapSpy = trackRestoreTap as jest.Mock;
+const restoreOutcomeSpy = trackRestoreOutcome as jest.Mock;
 
 const proCustomer = (periodType = 'NORMAL') => ({
   entitlements: { active: { pro: { isActive: true, periodType, expiresDate: null } } },
@@ -87,6 +107,7 @@ function resetStoreState(): void {
     monthlyPackage: null,
     yearlyPackage: null,
     lifetimePackage: null,
+    currentOffering: null,
     isPurchasing: false,
     isRestoring: false,
     error: null,
@@ -108,7 +129,8 @@ beforeEach(() => {
     offerings: { current: null },
   });
   purchaseMock.mockResolvedValue({ kind: 'purchased', customerInfo: proCustomer() });
-  restoreMock.mockResolvedValue({ kind: 'purchased', customerInfo: proCustomer() });
+  // Default restore fixture: nothing to restore (empty active entitlements).
+  restoreMock.mockResolvedValue({ kind: 'purchased', customerInfo: freeCustomer });
   grandfatherMock.mockResolvedValue({ isGrandfathered: false, reason: 'none' });
   listenerMock.mockImplementation(() => () => {});
 });
@@ -263,6 +285,7 @@ describe('purchases', () => {
     await useProStore.getState().purchaseMonthly();
     expect(useProStore.getState().error).toBeNull();
     expect(useProStore.getState().status).toBe('free');
+    expect(outcomeSpy).toHaveBeenCalledWith('cancelled');
   });
 
   it('surfaces an error message when the purchase fails', async () => {
@@ -270,6 +293,7 @@ describe('purchases', () => {
     purchaseMock.mockResolvedValue({ kind: 'error', message: 'Store unavailable' });
     await useProStore.getState().purchaseMonthly();
     expect(useProStore.getState().error).toBe('Store unavailable');
+    expect(outcomeSpy).toHaveBeenCalledWith('error');
   });
 
   it('does nothing when packages are not loaded', async () => {
@@ -277,11 +301,66 @@ describe('purchases', () => {
     expect(purchaseMock).not.toHaveBeenCalled();
   });
 
-  it('restores purchases and refreshes to pro', async () => {
+  it('tracks purchase attempt before and outcome after the store call', async () => {
+    await useProStore.getState().loadOfferingsIfNeeded();
+    await useProStore.getState().purchaseMonthly();
+    expect(attemptSpy).toHaveBeenCalledWith('m');
+    expect(outcomeSpy).toHaveBeenCalledWith('purchased');
+    const attemptAt = attemptSpy.mock.invocationCallOrder[0];
+    const purchaseAt = purchaseMock.mock.invocationCallOrder[0];
+    const outcomeAt = outcomeSpy.mock.invocationCallOrder[0];
+    expect(attemptAt).toBeLessThan(purchaseAt);
+    expect(purchaseAt).toBeLessThan(outcomeAt);
+  });
+});
+
+describe('restore outcomes', () => {
+  it('returns nothing and keeps free status when no entitlement is active', async () => {
+    await useProStore.getState().initialize();
+    expect(useProStore.getState().status).toBe('free');
+    const outcome = await useProStore.getState().restore();
+    expect(outcome).toBe('nothing');
+    expect(useProStore.getState().status).toBe('free');
+    expect(useProStore.getState().isRestoring).toBe(false);
+  });
+
+  it('returns restored and flips status to pro when the pro entitlement is active', async () => {
+    await useProStore.getState().initialize();
     restoreMock.mockResolvedValue({ kind: 'purchased', customerInfo: proCustomer() });
     customerInfoMock.mockResolvedValue(proCustomer());
-    await useProStore.getState().restore();
+    const outcome = await useProStore.getState().restore();
+    expect(outcome).toBe('restored');
     expect(useProStore.getState().status).toBe('pro');
+    expect(restoreOutcomeSpy).toHaveBeenCalledWith('restored');
+  });
+
+  it('returns nothing when the restore sheet is cancelled', async () => {
+    await useProStore.getState().initialize();
+    restoreMock.mockResolvedValue({ kind: 'cancelled' });
+    const outcome = await useProStore.getState().restore();
+    expect(outcome).toBe('nothing');
+    expect(useProStore.getState().status).toBe('free');
+    expect(useProStore.getState().error).toBeNull();
+  });
+
+  it('returns error and surfaces the message when restore fails', async () => {
+    restoreMock.mockResolvedValue({ kind: 'error', message: 'Store unavailable' });
+    const outcome = await useProStore.getState().restore();
+    expect(outcome).toBe('error');
+    expect(useProStore.getState().error).toBe('Store unavailable');
+    expect(useProStore.getState().isRestoring).toBe(false);
+  });
+
+  it('tracks restore tap before and outcome after the service call', async () => {
+    const outcome = await useProStore.getState().restore();
+    expect(outcome).toBe('nothing');
+    expect(restoreTapSpy).toHaveBeenCalledTimes(1);
+    expect(restoreOutcomeSpy).toHaveBeenCalledWith('nothing');
+    const tapAt = restoreTapSpy.mock.invocationCallOrder[0];
+    const serviceAt = restoreMock.mock.invocationCallOrder[0];
+    const outcomeAt = restoreOutcomeSpy.mock.invocationCallOrder[0];
+    expect(tapAt).toBeLessThan(serviceAt);
+    expect(serviceAt).toBeLessThan(outcomeAt);
   });
 });
 
@@ -298,5 +377,16 @@ describe('offerings', () => {
     packagesMock.mockRejectedValue(new Error('no offerings'));
     await useProStore.getState().loadOfferingsIfNeeded();
     expect(useProStore.getState().error).toBe('no offerings');
+  });
+
+  it('stores the current offering once offerings load', async () => {
+    const offering = { identifier: 'default', serverDescription: 'Default' };
+    packagesMock.mockResolvedValue({
+      monthly: { identifier: 'monthly', product: { identifier: 'm', priceString: '$2.99' } },
+      offerings: { current: offering },
+    });
+    await useProStore.getState().loadOfferingsIfNeeded();
+    expect(useProStore.getState().currentOffering).toEqual(offering);
+    expect(useProStore.getState().offeringsReady).toBe(true);
   });
 });

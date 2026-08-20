@@ -397,6 +397,7 @@ jest.mock('react-native-purchases', () => {
     addCustomerInfoUpdateListener: jest.fn(() => () => {}),
     removeCustomerInfoUpdateListener: jest.fn(),
     checkTrialOrIntroductoryPriceEligibility: jest.fn(async () => ({})),
+    trackCustomPaywallImpression: jest.fn(async () => undefined),
     LOG_LEVEL: { WARN: 'WARN', DEBUG: 'DEBUG', VERBOSE: 'VERBOSE' },
     INTRO_ELIGIBILITY_STATUS: {
       INTRO_ELIGIBILITY_STATUS_UNKNOWN: 0,
@@ -434,6 +435,8 @@ const mockProStoreState: Record<string, unknown> = {
   monthlyPackage: null,
   yearlyPackage: null,
   lifetimePackage: null,
+  offeringsReady: true,
+  currentOffering: null,
   configured: true,
   initialize: jest.fn(async () => undefined),
   refresh: jest.fn(async () => undefined),

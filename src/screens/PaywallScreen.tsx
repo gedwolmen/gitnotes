@@ -1,15 +1,24 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Linking,
+  Pressable,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { ScreenHeader, useScreenHeaderHeight, Button, Surface } from '../components/ui';
-import ProFeatureBento from '../components/paywall/ProFeatureBento';
+import PaywallFeatureGrid from '../components/paywall/PaywallFeatureGrid';
 import { useTheme } from '../contexts/ThemeContext';
 import { useProStore } from '../stores/proStore';
-import { isTrialEligible } from '../services/RevenueCatService';
+import { getIntroEligibilities, trackPaywallImpression } from '../services/RevenueCatService';
+import * as PaywallAnalytics from '../services/PaywallAnalytics';
 
 export default function PaywallScreen() {
   const { t } = useTranslation();
@@ -22,6 +31,8 @@ export default function PaywallScreen() {
   const yearlyPackage = useProStore((s) => s.yearlyPackage);
   const lifetimePackage = useProStore((s) => s.lifetimePackage);
   const offeringsReady = useProStore((s) => s.offeringsReady);
+  const configured = useProStore((s) => s.configured);
+  const currentOffering = useProStore((s) => s.currentOffering);
   const isPurchasing = useProStore((s) => s.isPurchasing);
   const isRestoring = useProStore((s) => s.isRestoring);
   const error = useProStore((s) => s.error);
@@ -31,21 +42,55 @@ export default function PaywallScreen() {
   const purchaseLifetime = useProStore((s) => s.purchaseLifetime);
   const restore = useProStore((s) => s.restore);
 
-  const [trialEligible, setTrialEligible] = useState(false);
-  const [trialChecked, setTrialChecked] = useState(false);
+  const [introEligible, setIntroEligible] = useState<Record<string, boolean>>({});
+  const [restoreNotice, setRestoreNotice] = useState<'nothing' | null>(null);
+  const openedAtRef = useRef(Date.now());
 
   useEffect(() => {
     void loadOfferingsIfNeeded();
   }, [loadOfferingsIfNeeded]);
 
-  const monthlyProductId = monthlyPackage?.product.identifier;
+  // Paywall is a leaf screen (only goBack): every entry path funnels through
+  // root-stack navigate('Paywall'), and navigating to an already-focused leaf
+  // screen is a no-op — mount == presentation, so exactly one impression per
+  // view (#935).
   useEffect(() => {
-    if (!monthlyProductId || trialChecked) return;
-    setTrialChecked(true);
-    isTrialEligible(monthlyProductId)
-      .then(setTrialEligible)
-      .catch(() => setTrialEligible(false));
-  }, [monthlyProductId, trialChecked]);
+    const openedAt = openedAtRef.current;
+    PaywallAnalytics.trackPaywallOpen();
+    if (configured) {
+      void trackPaywallImpression(currentOffering ?? undefined);
+    }
+    return () => {
+      PaywallAnalytics.trackPaywallClose(
+        Date.now() - openedAt,
+        useProStore.getState().status === 'pro',
+      );
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const monthlyProductId = monthlyPackage?.product.identifier;
+  const yearlyProductId = yearlyPackage?.product.identifier;
+  useEffect(() => {
+    const ids = [monthlyProductId, yearlyProductId].filter(
+      (id): id is string => typeof id === 'string',
+    );
+    if (ids.length === 0) return;
+    let cancelled = false;
+    getIntroEligibilities(ids)
+      .then((result) => {
+        if (!cancelled) setIntroEligible(result);
+      })
+      .catch(() => {
+        if (!cancelled) setIntroEligible({});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [monthlyProductId, yearlyProductId]);
+
+  const monthlyTrialEligible = monthlyProductId ? introEligible[monthlyProductId] === true : false;
+  const yearlyTrialEligible = yearlyProductId ? introEligible[yearlyProductId] === true : false;
 
   const monthlyPrice = monthlyPackage?.product.priceString;
   const yearlyPrice = yearlyPackage?.product.priceString;
@@ -53,27 +98,42 @@ export default function PaywallScreen() {
   const busy = isPurchasing || isRestoring;
 
   const handleMonthly = useCallback(() => {
+    if (!monthlyPackage) return;
+    setRestoreNotice(null);
+    PaywallAnalytics.trackCtaTap(monthlyPackage.product.identifier);
     void purchaseMonthly().then(() => {
       if (useProStore.getState().status === 'pro') navigation.goBack();
     });
-  }, [purchaseMonthly, navigation]);
+  }, [monthlyPackage, purchaseMonthly, navigation]);
 
   const handleYearly = useCallback(() => {
+    if (!yearlyPackage) return;
+    setRestoreNotice(null);
+    PaywallAnalytics.trackCtaTap(yearlyPackage.product.identifier);
     void purchaseYearly().then(() => {
       if (useProStore.getState().status === 'pro') navigation.goBack();
     });
-  }, [purchaseYearly, navigation]);
+  }, [yearlyPackage, purchaseYearly, navigation]);
 
   const handleLifetime = useCallback(() => {
+    if (!lifetimePackage) return;
+    setRestoreNotice(null);
+    PaywallAnalytics.trackCtaTap(lifetimePackage.product.identifier);
     void purchaseLifetime().then(() => {
       if (useProStore.getState().status === 'pro') navigation.goBack();
     });
-  }, [purchaseLifetime, navigation]);
+  }, [lifetimePackage, purchaseLifetime, navigation]);
 
-  const handleRestore = useCallback(() => {
-    void restore().then(() => {
-      if (useProStore.getState().status === 'pro') navigation.goBack();
-    });
+  const handleRestore = useCallback(async () => {
+    setRestoreNotice(null);
+    PaywallAnalytics.trackRestoreTap();
+    const outcome = await restore();
+    if (outcome === 'restored') {
+      navigation.goBack();
+    } else if (outcome === 'nothing') {
+      setRestoreNotice('nothing');
+    }
+    // 'error' surfaces through the existing error banner path.
   }, [restore, navigation]);
 
   return (
@@ -99,7 +159,9 @@ export default function PaywallScreen() {
           {t('paywall.subtitle')}
         </Text>
 
-        <ProFeatureBento />
+        <View className="mt-6">
+          <PaywallFeatureGrid />
+        </View>
 
         {!offeringsReady ? (
           <View className="mt-8 items-center" testID="paywall.loading">
@@ -135,7 +197,9 @@ export default function PaywallScreen() {
                 </Text>
                 {monthlyPrice ? (
                   <Text className="text-base font-semibold" style={{ color: colors.textSecondary }}>
-                    {trialEligible ? t('paywall.monthly.trialCta', { price: monthlyPrice }) : t('paywall.monthly.price', { price: monthlyPrice })}
+                    {monthlyTrialEligible
+                      ? t('paywall.monthly.trialCta', { price: monthlyPrice })
+                      : t('paywall.monthly.price', { price: monthlyPrice })}
                   </Text>
                 ) : null}
               </View>
@@ -144,7 +208,7 @@ export default function PaywallScreen() {
                 variant="primary"
                 fullWidth
                 disabled={busy || !monthlyPrice}
-                label={trialEligible ? t('paywall.action.trial') : t('paywall.action.subscribe')}
+                label={monthlyTrialEligible ? t('paywall.action.trial') : t('paywall.action.subscribe')}
                 onPress={handleMonthly}
                 style={{ marginTop: 14 }}
               />
@@ -158,7 +222,9 @@ export default function PaywallScreen() {
                 </Text>
                 {yearlyPrice ? (
                   <Text className="text-base font-semibold" style={{ color: colors.textSecondary }}>
-                    {t('paywall.yearly.cta', { price: yearlyPrice })}
+                    {yearlyTrialEligible
+                      ? t('paywall.yearly.trialCta', { price: yearlyPrice })
+                      : t('paywall.yearly.cta', { price: yearlyPrice })}
                   </Text>
                 ) : null}
               </View>
@@ -202,16 +268,56 @@ export default function PaywallScreen() {
               testID="paywall.restore"
               className="items-center mt-6"
               disabled={busy}
-              onPress={handleRestore}
+              onPress={() => void handleRestore()}
             >
-              <Text className="text-sm font-medium" style={{ color: colors.accent }}>
-                {t('paywall.restore')}
-              </Text>
+              {isRestoring ? (
+                <View className="flex-row items-center gap-2" testID="paywall.restoring">
+                  <ActivityIndicator size="small" color={colors.accent} />
+                  <Text className="text-sm font-medium" style={{ color: colors.accent }}>
+                    {t('paywall.restoring')}
+                  </Text>
+                </View>
+              ) : (
+                <Text className="text-sm font-medium" style={{ color: colors.accent }}>
+                  {t('paywall.restore')}
+                </Text>
+              )}
             </TouchableOpacity>
+
+            {restoreNotice === 'nothing' ? (
+              <Surface elevation="raised" radius="md" className="mt-4 p-4" testID="paywall.restore-nothing">
+                <Text className="text-[13px] text-center leading-[18px]" style={{ color: colors.textSecondary }}>
+                  {t('paywall.nothingToRestore')}
+                </Text>
+              </Surface>
+            ) : null}
 
             <Text className="text-xs text-center mt-6 leading-[18px]" style={{ color: colors.textSecondary }}>
               {t('paywall.termsNote')}
             </Text>
+
+            <View className="flex-row justify-center gap-4 mt-3">
+              <Pressable
+                testID="paywall.terms-link"
+                role="link"
+                accessibilityRole="link"
+                onPress={() => void Linking.openURL('https://www.gitnotes.org/terms')}
+              >
+                <Text className="text-xs font-medium" style={{ color: colors.accent }}>
+                  {t('paywall.footer.terms')}
+                </Text>
+              </Pressable>
+              <Pressable
+                testID="paywall.privacy-link"
+                role="link"
+                accessibilityRole="link"
+                onPress={() => void Linking.openURL('https://www.gitnotes.org/privacy')}
+              >
+                <Text className="text-xs font-medium" style={{ color: colors.accent }}>
+                  {t('paywall.footer.privacy')}
+                </Text>
+              </Pressable>
+            </View>
           </>
         )}
       </ScrollView>
