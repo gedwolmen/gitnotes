@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Linking, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Linking, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -221,78 +221,76 @@ export function SettingsModals(props: SettingsModalsProps) {
             <Ionicons name="close" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <ScrollView className="px-4 py-4" keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 16 }}>
-            <Text className="text-sm mb-3 leading-5" style={{ color: colors.textSecondary }}>{t('settings.tokenDescription')}</Text>
-            <TouchableOpacity className="flex-row items-center gap-1 mb-4" onPress={() => Linking.openURL('https://github.com/settings/personal-access-tokens/new?description=GitNotes')}>
-              <Ionicons name="open-outline" size={14} color={colors.primary} />
-              <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '500' }}>{t('settings.openGithubTokenSettings')}</Text>
-            </TouchableOpacity>
-            <View
-              className="flex-row items-center rounded-lg px-3 mb-2 h-[50px]"
-              style={{ borderWidth: 1, borderColor: tokenError ? '#FF3B30' : colors.border, backgroundColor: colors.background }}
-            >
-              <Input
-                testID="settings-modals.input.token"
-                containerStyle={{ flex: 1, borderWidth: 0 }}
-                placeholder={t('settings.tokenPlaceholder')}
-                placeholderTextColor={colors.textSecondary}
-                value={tokenInput}
-                onChangeText={onSetTokenInput}
-                secureTextEntry={!tokenVisible}
-                autoCapitalize="none"
-                autoCorrect={false}
-                showSoftInputOnFocus={false}
-              />
-              <TouchableOpacity
-                testID="settings-modals.button.toggle-token-visible"
-                onPress={onToggleTokenVisible}
-                className="px-1.5 py-1.5 ml-1"
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityLabel={tokenVisible ? t('settings.hideToken') : t('settings.showToken')}
-              >
-                <Ionicons name={tokenVisible ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-            <View className="flex-row gap-2 mb-2">
-              <TouchableOpacity
-                testID="settings-modals.button.paste-token"
-                className="flex-row items-center justify-center py-2.5 px-3 rounded-lg border flex-1 gap-1.5"
-                style={{ borderColor: colors.border }}
-                onPress={onPasteToken}
-                accessibilityLabel={t('settings.pasteToken')}
-              >
-                <Ionicons name="clipboard-outline" size={16} color={colors.primary} />
-                <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>{t('common.paste')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                testID="settings-modals.button.copy-token"
-                className="flex-row items-center justify-center py-2.5 px-3 rounded-lg border flex-1 gap-1.5"
-                style={[{ borderColor: colors.border }, { opacity: tokenInput.trim() ? 1 : 0.4 }]}
-                onPress={onCopyToken}
-                disabled={!tokenInput.trim()}
-                accessibilityLabel={t('settings.copyToken')}
-              >
-                <Ionicons name="copy-outline" size={16} color={colors.primary} />
-                <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>{t('common.copy')}</Text>
-              </TouchableOpacity>
-            </View>
-            {tokenError ? <Text style={{ color: '#FF3B30', fontSize: 13, marginBottom: 10 }}>{tokenError}</Text> : null}
-            <Button
-              testID="settings-modals.button.save-token"
-              label={tokenModalMode === 'add' ? t('settings.addAccount') : t('settings.saveToken')}
-              onPress={onSaveToken}
-              disabled={isVerifying}
-              variant="primary"
-              fullWidth
-              style={{ marginTop: 8, minHeight: 48 }}
-              textStyle={{ color: '#fff', fontWeight: '600' }}
-              trailingIcon={isVerifying ? <ActivityIndicator color="#fff" /> : undefined}
-              iconAlign="edge"
+        <ScrollView className="px-4 py-4" keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 16 }}>
+          <Text className="text-sm mb-3 leading-5" style={{ color: colors.textSecondary }}>{t('settings.tokenDescription')}</Text>
+          <TouchableOpacity className="flex-row items-center gap-1 mb-4" onPress={() => Linking.openURL('https://github.com/settings/personal-access-tokens/new?description=GitNotes')}>
+            <Ionicons name="open-outline" size={14} color={colors.primary} />
+            <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '500' }}>{t('settings.openGithubTokenSettings')}</Text>
+          </TouchableOpacity>
+          <View
+            className="flex-row items-center rounded-lg px-3 mb-2 h-[50px]"
+            style={{ borderWidth: 1, borderColor: tokenError ? '#FF3B30' : colors.border, backgroundColor: colors.background }}
+          >
+            <Input
+              testID="settings-modals.input.token"
+              containerStyle={{ flex: 1, borderWidth: 0 }}
+              placeholder={t('settings.tokenPlaceholder')}
+              placeholderTextColor={colors.textSecondary}
+              value={tokenInput}
+              onChangeText={onSetTokenInput}
+              secureTextEntry={!tokenVisible}
+              autoCapitalize="none"
+              autoCorrect={false}
+              showSoftInputOnFocus={false}
             />
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </Modal>
+            <TouchableOpacity
+              testID="settings-modals.button.toggle-token-visible"
+              onPress={onToggleTokenVisible}
+              className="px-1.5 py-1.5 ml-1"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel={tokenVisible ? t('settings.hideToken') : t('settings.showToken')}
+            >
+              <Ionicons name={tokenVisible ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+          <View className="flex-row gap-2 mb-2">
+            <TouchableOpacity
+              testID="settings-modals.button.paste-token"
+              className="flex-row items-center justify-center py-2.5 px-3 rounded-lg border flex-1 gap-1.5"
+              style={{ borderColor: colors.border }}
+              onPress={onPasteToken}
+              accessibilityLabel={t('settings.pasteToken')}
+            >
+              <Ionicons name="clipboard-outline" size={16} color={colors.primary} />
+              <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>{t('common.paste')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              testID="settings-modals.button.copy-token"
+              className="flex-row items-center justify-center py-2.5 px-3 rounded-lg border flex-1 gap-1.5"
+              style={[{ borderColor: colors.border }, { opacity: tokenInput.trim() ? 1 : 0.4 }]}
+              onPress={onCopyToken}
+              disabled={!tokenInput.trim()}
+              accessibilityLabel={t('settings.copyToken')}
+            >
+              <Ionicons name="copy-outline" size={16} color={colors.primary} />
+              <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>{t('common.copy')}</Text>
+            </TouchableOpacity>
+          </View>
+          {tokenError ? <Text style={{ color: '#FF3B30', fontSize: 13, marginBottom: 10 }}>{tokenError}</Text> : null}
+          <Button
+            testID="settings-modals.button.save-token"
+            label={tokenModalMode === 'add' ? t('settings.addAccount') : t('settings.saveToken')}
+            onPress={onSaveToken}
+            disabled={isVerifying}
+            variant="primary"
+            fullWidth
+            style={{ marginTop: 8, minHeight: 48 }}
+            textStyle={{ color: '#fff', fontWeight: '600' }}
+            trailingIcon={isVerifying ? <ActivityIndicator color="#fff" /> : undefined}
+            iconAlign="edge"
+          />
+        </ScrollView>
+        </Modal>
     </>
   );
 }

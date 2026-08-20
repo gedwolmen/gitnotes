@@ -4,8 +4,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   ActivityIndicator,
   StyleSheet,
@@ -192,136 +190,94 @@ export function ConnectHostModal({
       bottomSheet
       contentStyle={{ padding: 16, paddingBottom: 34, backgroundColor: colors.background }}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 24 : 0}
-      >
-        <ScrollView keyboardShouldPersistTaps="handled">
+      <ScrollView keyboardShouldPersistTaps="handled">
+        <Text
+          style={{
+            fontSize: 18,
+            fontWeight: '600',
+            color: colors.text,
+            marginBottom: spacing[2],
+          }}
+        >
+          {t('connectHost.title')}
+        </Text>
+        {accountLoginHint ? (
           <Text
             style={{
-              fontSize: 18,
-              fontWeight: '600',
-              color: colors.text,
-              marginBottom: spacing[2],
+              color: colors.textSecondary,
+              fontSize: 13,
+              marginBottom: spacing[3],
             }}
           >
-            {t('connectHost.title')}
+            {t('connectHost.attachingTo', { login: accountLoginHint })}
           </Text>
-          {accountLoginHint ? (
+        ) : null}
+
+        <Text
+          style={{
+            color: colors.textSecondary,
+            fontSize: 13,
+            marginBottom: spacing[2],
+          }}
+        >
+          {t('connectHost.providerLabel')}
+        </Text>
+        <View style={[styles.row, { marginBottom: spacing[3] }]}>
+          {ALL_PROVIDERS.map((entry) => {
+            const isSelected = provider === entry.provider;
+            return (
+              <TouchableOpacity
+                key={entry.provider}
+                onPress={() => handleSelectProvider(entry.provider)}
+                testID={`connect-host-provider-${entry.provider}`}
+                style={{
+                  flex: 1,
+                  paddingVertical: spacing[3],
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: isSelected ? colors.primary : colors.border,
+                  backgroundColor: isSelected ? colors.primary + '12' : colors.surface,
+                }}
+              >
+                <Text
+                  style={{
+                    color: isSelected ? colors.primary : colors.text,
+                    fontSize: 13,
+                    fontWeight: '600',
+                  }}
+                >
+                  {GIT_HOST_LABELS[entry.provider]}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {supportsSelfHost ? (
+          <>
             <Text
               style={{
                 color: colors.textSecondary,
                 fontSize: 13,
-                marginBottom: spacing[3],
+                marginBottom: spacing[2],
               }}
             >
-              {t('connectHost.attachingTo', { login: accountLoginHint })}
+              {t('connectHost.instanceUrlLabel')}
             </Text>
-          ) : null}
-
-          <Text
-            style={{
-              color: colors.textSecondary,
-              fontSize: 13,
-              marginBottom: spacing[2],
-            }}
-          >
-            {t('connectHost.providerLabel')}
-          </Text>
-          <View style={[styles.row, { marginBottom: spacing[3] }]}>
-            {ALL_PROVIDERS.map((entry) => {
-              const isSelected = provider === entry.provider;
-              return (
-                <TouchableOpacity
-                  key={entry.provider}
-                  onPress={() => handleSelectProvider(entry.provider)}
-                  testID={`connect-host-provider-${entry.provider}`}
-                  style={{
-                    flex: 1,
-                    paddingVertical: spacing[3],
-                    borderRadius: 12,
-                    alignItems: 'center',
-                    borderWidth: 1,
-                    borderColor: isSelected ? colors.primary : colors.border,
-                    backgroundColor: isSelected ? colors.primary + '12' : colors.surface,
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: isSelected ? colors.primary : colors.text,
-                      fontSize: 13,
-                      fontWeight: '600',
-                    }}
-                  >
-                    {GIT_HOST_LABELS[entry.provider]}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          {supportsSelfHost ? (
-            <>
-              <Text
-                style={{
-                  color: colors.textSecondary,
-                  fontSize: 13,
-                  marginBottom: spacing[2],
-                }}
-              >
-                {t('connectHost.instanceUrlLabel')}
-              </Text>
-              <TextInput
-                value={instanceBaseUrl}
-                onChangeText={(v) => {
-                  setInstanceBaseUrl(v);
-                  setVerifiedLogin(null);
-                }}
-                placeholder={GIT_HOST_API_BASES[provider]}
-                placeholderTextColor={colors.textSecondary}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="url"
-                testID="connect-host-instance-url-input"
-                style={{
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  borderRadius: 12,
-                  paddingHorizontal: spacing[3],
-                  paddingVertical: spacing[3],
-                  color: colors.text,
-                  backgroundColor: colors.surface,
-                  fontSize: 14,
-                  marginBottom: spacing[3],
-                }}
-              />
-            </>
-          ) : null}
-
-          <Text
-            style={{
-              color: colors.textSecondary,
-              fontSize: 13,
-              marginBottom: spacing[2],
-            }}
-          >
-            {t('connectHost.tokenLabel')}
-          </Text>
-          <View style={[styles.tokenRow, { marginBottom: spacing[3] }]}>
             <TextInput
-              value={token}
+              value={instanceBaseUrl}
               onChangeText={(v) => {
-                setToken(v);
+                setInstanceBaseUrl(v);
                 setVerifiedLogin(null);
               }}
-              placeholder={t('connectHost.tokenPlaceholder')}
+              placeholder={GIT_HOST_API_BASES[provider]}
               placeholderTextColor={colors.textSecondary}
               autoCapitalize="none"
               autoCorrect={false}
-              secureTextEntry={!tokenVisible}
-              testID="connect-host-token-input"
+              keyboardType="url"
+              testID="connect-host-instance-url-input"
               style={{
-                flex: 1,
                 borderWidth: 1,
                 borderColor: colors.border,
                 borderRadius: 12,
@@ -330,112 +286,149 @@ export function ConnectHostModal({
                 color: colors.text,
                 backgroundColor: colors.surface,
                 fontSize: 14,
+                marginBottom: spacing[3],
               }}
             />
-            <TouchableOpacity
-              onPress={() => setTokenVisible((v) => !v)}
-              testID="connect-host-token-toggle"
-              style={{
-                paddingHorizontal: spacing[3],
-                paddingVertical: spacing[3],
-                marginLeft: spacing[2],
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: colors.border,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600' }}>
-                {tokenVisible ? t('connectHost.hide') : t('connectHost.show')}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          </>
+        ) : null}
 
-          {provider === 'github' ? (
-            <Text
-              style={{
-                color: colors.textSecondary,
-                fontSize: 12,
-                marginBottom: spacing[2],
-              }}
-            >
-              {t('connectHost.help.github')}
+        <Text
+          style={{
+            color: colors.textSecondary,
+            fontSize: 13,
+            marginBottom: spacing[2],
+          }}
+        >
+          {t('connectHost.tokenLabel')}
+        </Text>
+        <View style={[styles.tokenRow, { marginBottom: spacing[3] }]}>
+          <TextInput
+            value={token}
+            onChangeText={(v) => {
+              setToken(v);
+              setVerifiedLogin(null);
+            }}
+            placeholder={t('connectHost.tokenPlaceholder')}
+            placeholderTextColor={colors.textSecondary}
+            autoCapitalize="none"
+            autoCorrect={false}
+            secureTextEntry={!tokenVisible}
+            testID="connect-host-token-input"
+            style={{
+              flex: 1,
+              borderWidth: 1,
+              borderColor: colors.border,
+              borderRadius: 12,
+              paddingHorizontal: spacing[3],
+              paddingVertical: spacing[3],
+              color: colors.text,
+              backgroundColor: colors.surface,
+              fontSize: 14,
+            }}
+          />
+          <TouchableOpacity
+            onPress={() => setTokenVisible((v) => !v)}
+            testID="connect-host-token-toggle"
+            style={{
+              paddingHorizontal: spacing[3],
+              paddingVertical: spacing[3],
+              marginLeft: spacing[2],
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: colors.border,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600' }}>
+              {tokenVisible ? t('connectHost.hide') : t('connectHost.show')}
             </Text>
-          ) : null}
+          </TouchableOpacity>
+        </View>
 
-          <View style={[styles.row, { marginTop: spacing[2] }]}>
-            <TouchableOpacity
-              onPress={onClose}
-              style={{
-                flex: 1,
-                paddingVertical: spacing[3],
-                borderRadius: 12,
-                alignItems: 'center',
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-            >
+        {provider === 'github' ? (
+          <Text
+            style={{
+              color: colors.textSecondary,
+              fontSize: 12,
+              marginBottom: spacing[2],
+            }}
+          >
+            {t('connectHost.help.github')}
+          </Text>
+        ) : null}
+
+        <View style={[styles.row, { marginTop: spacing[2] }]}>
+          <TouchableOpacity
+            onPress={onClose}
+            style={{
+              flex: 1,
+              paddingVertical: spacing[3],
+              borderRadius: 12,
+              alignItems: 'center',
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}
+          >
+            <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>
+              {t('common.cancel')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleTest}
+            disabled={isTesting || !token.trim()}
+            testID="connect-host-test"
+            style={{
+              flex: 1,
+              paddingVertical: spacing[3],
+              borderRadius: 12,
+              alignItems: 'center',
+              borderWidth: 1,
+              borderColor: colors.border,
+              opacity: isTesting || !token.trim() ? 0.6 : 1,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
               <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>
-                {t('common.cancel')}
+                {t('connectHost.test')}
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleTest}
-              disabled={isTesting || !token.trim()}
-              testID="connect-host-test"
-              style={{
-                flex: 1,
-                paddingVertical: spacing[3],
-                borderRadius: 12,
-                alignItems: 'center',
-                borderWidth: 1,
-                borderColor: colors.border,
-                opacity: isTesting || !token.trim() ? 0.6 : 1,
-              }}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[2] }}>
-                <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>
-                  {t('connectHost.test')}
-                </Text>
-                {isTesting ? <ActivityIndicator size="small" color={colors.text} /> : null}
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleSave}
-              disabled={isTesting || !token.trim()}
-              testID="connect-host-save"
-              style={{
-                flex: 1,
-                paddingVertical: spacing[3],
-                borderRadius: 12,
-                alignItems: 'center',
-                backgroundColor:
-                  isTesting || !token.trim() ? colors.surface : colors.primary,
-                borderWidth: 1,
-                borderColor:
-                  isTesting || !token.trim() ? colors.border : colors.primary,
-                opacity: isTesting || !token.trim() ? 0.6 : 1,
-              }}
-            >
-              {isTesting ? (
-                <ActivityIndicator color={colors.text} />
-              ) : (
-                <Text
-                  style={{
-                    color:
-                      isTesting || !token.trim() ? colors.textSecondary : '#fff',
-                    fontSize: 14,
-                    fontWeight: '600',
-                  }}
-                >
-                  {t('connectHost.save')}
-                </Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+              {isTesting ? <ActivityIndicator size="small" color={colors.text} /> : null}
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleSave}
+            disabled={isTesting || !token.trim()}
+            testID="connect-host-save"
+            style={{
+              flex: 1,
+              paddingVertical: spacing[3],
+              borderRadius: 12,
+              alignItems: 'center',
+              backgroundColor:
+                isTesting || !token.trim() ? colors.surface : colors.primary,
+              borderWidth: 1,
+              borderColor:
+                isTesting || !token.trim() ? colors.border : colors.primary,
+              opacity: isTesting || !token.trim() ? 0.6 : 1,
+            }}
+          >
+            {isTesting ? (
+              <ActivityIndicator color={colors.text} />
+            ) : (
+              <Text
+                style={{
+                  color:
+                    isTesting || !token.trim() ? colors.textSecondary : '#fff',
+                  fontSize: 14,
+                  fontWeight: '600',
+                }}
+              >
+                {t('connectHost.save')}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </Modal>
   );
 }

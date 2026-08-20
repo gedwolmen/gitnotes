@@ -57,6 +57,7 @@ Caveat: the Android fallback flag is device-local — a grandfathered user who u
 | Second GitHub account | `SettingsContent` "Connect host" add-row — lock icon when free user has 1 account, tap → paywall (first account free) |
 | Second repository | `SettingsContent` "Add Repository" row — lock icon when free user has 1 repo, tap → paywall (first repo free) |
 | Graph view | `NotesViewModePicker` / `NotesListScreen` — lock icon on graph option for free, tap → paywall |
+| Fancy UI style | `SettingsContent` `settings.row.updated-ui` — lock icon instead of toggle for free, tap → paywall; fresh installs default to `flat` |
 | AI button (FloatingAIButton) | `FloatingAIButton` returns `null` when `useProGate().isPro` is false (hidden for free users); `aiHubStore` still routes any free tap to Paywall as a backstop |
 | All gates | `useProGate()` hook + `ProRequired` component (src/components/paywall/ProRequired.tsx) |
 

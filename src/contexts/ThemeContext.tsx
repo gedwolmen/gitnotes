@@ -48,7 +48,8 @@ function readBootTheme(): ThemeMode {
 function readBootStyle(): ThemeStyle {
   const v = getBootValue('@gitnotes:style');
   if (v === 'neumorphic' || v === 'flat') return v;
-  return 'neumorphic';
+  // Fancy UI (neumorphic) is pro-gated — default fresh installs to flat.
+  return 'flat';
 }
 
 export function ThemeProvider({ children }: ThemeProviderProps) {

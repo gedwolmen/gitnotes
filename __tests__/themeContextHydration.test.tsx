@@ -59,4 +59,16 @@ describe('ThemeProvider initial paint', () => {
 
     expect(getByTestId('probe').props.children).toMatch(/theme=system/);
   });
+
+  it('defaults to the flat style on a fresh install because Fancy UI is pro-gated', async () => {
+    await bootstrapStorage();
+
+    const { getByTestId } = render(
+      <ThemeProvider>
+        <ThemeProbe />
+      </ThemeProvider>,
+    );
+
+    expect(getByTestId('probe').props.children).toMatch(/style=flat/);
+  });
 });

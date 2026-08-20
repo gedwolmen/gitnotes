@@ -6,6 +6,13 @@
 
 GitNotēs uses **NativeWind v5** (Tailwind CSS for React Native) with custom theme tokens. Supports **light/dark/system** modes.
 
+## UI styles
+
+Two visual styles, persisted under `@gitnotes:style` (`ThemeContext.readBootStyle`):
+
+- **`flat`** (classic look) — default for fresh installs. Fancy UI (neumorphic) is a pro-gated feature, so free users get the flat style unless they upgrade.
+- **`neumorphic`** ("Fancy UI") — soft-UI shadows. Pro-only: the toggle in Settings is locked for free users and routes to the paywall (`settings.row.updated-ui`).
+
 ## Architecture
 
 ```
@@ -409,6 +416,20 @@ The shared `Button` component centers its label optically even when a
 (`alignSelf: 'stretch'`) so `justify-center` centers against the actual
 button width. See `src/components/ui/Button.tsx` and
 `__tests__/ui/Button.test.tsx`.
+
+### Bottom-sheet modals must lift above the keyboard
+
+`src/components/ui/Modal.tsx` (`bottomSheet` variant) wraps the sheet slot in a
+`KeyboardAvoidingView` (`behavior="padding"` on iOS) so the whole sheet rises
+above the soft keyboard. This is the single place that handles keyboard
+avoidance for bottom sheets — the sheet is anchored to the screen bottom, so a
+`KeyboardAvoidingView` placed *inside* a sheet can only compress its own
+scroll area and can never lift the sheet itself; the token/URL inputs in
+`ConnectHostModal` and the Settings token modal were hidden by the keyboard
+before the slot was made keyboard-aware. Do NOT re-add per-modal
+`KeyboardAvoidingView`s around sheet content — the sheet slot already handles
+it, and nesting them causes a transient double-pad. Callers should keep
+`keyboardShouldPersistTaps="handled"` on their `ScrollView`s.
 
 ### Single-line Input descender clipping
 
