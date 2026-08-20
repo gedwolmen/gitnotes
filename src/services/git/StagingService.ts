@@ -8,6 +8,11 @@ import { GitFsService } from './GitFsService';
 import { getGitHostService } from './gitHostFactory';
 import type { GitHostUser } from './GitHost';
 import { githubActivity } from '../../stores/githubActivityStore';
+import { GitSyncGate } from './GitSyncGate';
+import { pullFromSingleRepo } from '../RepoPullService';
+import { useNoteStore } from '../../stores/noteStore';
+import { useCanvasStore } from '../../stores/canvasStore';
+import { useTodoStore } from '../../stores/todoStore';
 
 /**
  * Stage-change emitter. Clone-mode staging commits are purely local — no
@@ -73,12 +78,92 @@ export interface StagingResult {
 
 const UNPUSHED_COMMITS_PLACEHOLDER = '(unpushed commits)';
 
+/**
+ * Bounded write-through wait for API-mode saves (issue #927). The editor
+ * gets a response within this window; if the chain takes longer the result
+ * carries `pendingSync: true` and the chain continues detached — its
+ * `finally` block releases the cycle so the mutex is never leaked.
+ */
+const SYNC_SAVE_WAIT_MS = 45_000;
+
 async function resolveStageAuthor(): Promise<{ name: string; email: string }> {
   const user: GitHostUser | null = await getGitHostService('github').getAuthenticatedUser();
   return {
     name: user?.name ?? user?.login ?? 'gitnotes',
     email: user?.email ?? `${user?.login ?? 'gitnotes'}@users.noreply.gitnotes`,
   };
+}
+
+async function refreshStoresAfterPull(): Promise<void> {
+  await Promise.all([
+    useNoteStore.getState().refreshNotes(),
+    useCanvasStore.getState().refreshCanvases(),
+    useTodoStore.getState().refreshTodos(),
+  ]);
+}
+
+/**
+ * Write-through push for API-mode saves (#927). After enqueuing the
+ * mutation, we acquire a 'save' cycle, drain the queue, check whether
+ * our mutation survived or was dropped, then pull and refresh stores.
+ * The whole chain is raced against SYNC_SAVE_WAIT_MS; a timeout
+ * returns `pendingSync: true` but lets the chain continue detached —
+ * its `finally` block releases the cycle so the mutex is never leaked.
+ */
+async function writeThroughPush(
+  repoPath: string,
+  mutationId: string,
+): Promise<StagingResult> {
+  let dropped = false;
+  const unsubDrop = NoteSyncQueueService.onDroppedMutation((event) => {
+    if (event.mutation.id === mutationId) dropped = true;
+  });
+
+  const chain = (async (): Promise<StagingResult> => {
+    const releaseCycle = await GitSyncGate.acquireCycle('save');
+    try {
+      githubActivity.begin('Syncing');
+      try {
+        await NoteSyncQueueService.drain(undefined, 'save');
+
+        const stillQueued = await NoteSyncQueueService.getAll().then(
+          (items) => items.some((m) => m.id === mutationId),
+        );
+        if (stillQueued) {
+          return { success: true, pendingSync: true };
+        }
+        if (dropped) {
+          return {
+            success: false,
+            error: 'conflict',
+            droppedConflict: true,
+          };
+        }
+
+        await pullFromSingleRepo(repoPath);
+        await refreshStoresAfterPull();
+        return { success: true };
+      } finally {
+        githubActivity.end();
+      }
+    } finally {
+      releaseCycle();
+    }
+  })();
+
+  try {
+    return await Promise.race([
+      chain,
+      new Promise<StagingResult>((resolve) =>
+        setTimeout(
+          () => resolve({ success: true, pendingSync: true }),
+          SYNC_SAVE_WAIT_MS,
+        ),
+      ),
+    ]);
+  } finally {
+    unsubDrop();
+  }
 }
 
 /**
@@ -106,8 +191,8 @@ export class StagingService {
         notifyStagedChanged();
         return { success: true };
       }
-      await NoteSyncQueueService.enqueueNoteUpsert(params);
-      return { success: true };
+      const { id } = await NoteSyncQueueService.enqueueNoteUpsert(params);
+      return writeThroughPush(params.repo, id);
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
@@ -130,8 +215,8 @@ export class StagingService {
         notifyStagedChanged();
         return { success: true };
       }
-      await NoteSyncQueueService.enqueueNoteDelete(params);
-      return { success: true };
+      const { id } = await NoteSyncQueueService.enqueueNoteDelete(params);
+      return writeThroughPush(params.repo, id);
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
