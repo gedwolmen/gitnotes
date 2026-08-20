@@ -26,9 +26,10 @@ const enKeys = flattenKeys(en as Bundle);
 
 const SOURCE_FILES = [
   'src/screens/PaywallScreen.tsx',
-  'src/components/paywall/ProRequired.tsx',
   'src/components/paywall/PaywallFeatureGrid.tsx',
+  'src/utils/proAlerts.ts',
   'src/hooks/useProGate.ts',
+  'src/hooks/useProScreenGuard.ts',
   'src/screens/SettingsScreen.tsx',
   'src/components/settings/SettingsContent.tsx',
   'src/stores/aiHubStore.ts',

@@ -35,10 +35,14 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 
-jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({ goBack: jest.fn() }),
-  useRoute: () => ({ params: {} }),
-}));
+jest.mock('@react-navigation/native', () => {
+  const React = require('react');
+  return {
+    useNavigation: () => ({ goBack: jest.fn(), canGoBack: () => true }),
+    useRoute: () => ({ params: {} }),
+    useFocusEffect: (cb: () => unknown) => React.useEffect(cb),
+  };
+});
 
 jest.mock('@expo/vector-icons', () => ({
   Ionicons: () => null,

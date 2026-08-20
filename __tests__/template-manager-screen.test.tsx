@@ -3,10 +3,14 @@ jest.mock('@react-native-community/netinfo', () => ({
   default: { addEventListener: jest.fn(() => jest.fn()), fetch: jest.fn(async () => ({ isConnected: true })) },
 }));
 
-jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({ navigate: jest.fn(), goBack: jest.fn(), canGoBack: () => true }),
-  useIsFocused: () => true,
-}));
+jest.mock('@react-navigation/native', () => {
+  const React = require('react');
+  return {
+    useNavigation: () => ({ navigate: jest.fn(), goBack: jest.fn(), canGoBack: () => true }),
+    useIsFocused: () => true,
+    useFocusEffect: (cb: () => unknown) => React.useEffect(cb),
+  };
+});
 
 jest.mock('@expo/vector-icons', () => {
   const React = require('react');

@@ -884,6 +884,18 @@
         "description": "Synchronisiere mehrere GitHub-Konten nebeneinander"
       }
     },
+    "featureDescriptions": {
+      "aiChat": "Fragen Sie Ihre Notizen und erhalten Sie sofortige Antworten",
+      "aiActions": "Zusammenfassen, umschreiben und Text direkt im Editor verbessern",
+      "thoughtDump": "Erfassen Sie schnelle Gedanken sofort wie sie kommen",
+      "voiceDump": "Sagen Sie Ihre Ideen frei und speichern Sie sie als Notizen",
+      "personalizedQuotes": "Tägliche Zitate, die KI auf Ihren Schreibstil absttimmt",
+      "githubTools": "Geben Sie der KI Kontext aus Ihren GitHub-Repositories",
+      "canvases": "Ordnen Sie Notizen visuell auf einer unendlichen Leinwand an",
+      "templates": "Beginnen Sie neue Notizen mit Ihren eigenen Vorlagen",
+      "renderStyles": "Wählen Sie genau aus, wie Ihre Notizen aussehen sollen",
+      "multiAccount": "Verbinden Sie mehrere GitHub-Konten nebeneinander"
+    },
     "monthly": {
       "trialCta": "30 Tage kostenlos testen, dann {{price}}/Monat",
       "price": "{{price}}/Monat",
@@ -922,8 +934,6 @@
     "statusTrial": "{{days}} Tage Testphase übrig",
     "statusUpgrade": "Upgrade",
     "settingsRow": "GitNotēs Pro",
-    "gateTitle": "Dies ist eine Pro-Funktion",
-    "gateBody": "Upgrade, um KI-Funktionen und mehr freizuschalten.",
     "badge": "PRO",
     "lockedTitle": "Pro-Funktion",
     "lockedBody": "Diese Funktion erfordert GitNotēs Pro. Upgrade, um unbegrenzte Konten, Repos, KI und mehr freizuschalten."
