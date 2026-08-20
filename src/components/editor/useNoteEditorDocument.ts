@@ -16,7 +16,7 @@ import { NoteSyncQueueService } from '../../services/NoteSyncQueueService';
 import { classifyGitHubSyncError, isRetryableFailure, syncStatusForError } from '../../services/git/syncFailure';
 import { StagingService } from '../../services/git/StagingService';
 import { githubActivity } from '../../stores/githubActivityStore';
-import { useGitOperationStore, gitOperationRegistry } from '../../stores/gitOperationStore';
+import { useGitOperationStore, gitOperationRegistry, GIT_OP_ALL_REPOS } from '../../stores/gitOperationStore';
 import type { GitOp } from '../../stores/gitOperationStore';
 import { canvasToLink } from '../../models/Canvas';
 import { getExtensionForFormat, extractCanvasJsonRefs, slugifyLocal } from './editorShared';
@@ -65,6 +65,25 @@ function durableDropAlertKind(error: string | undefined): DurableSyncFailureKind
 
 function normalizeBranch(branch: string | undefined): string {
   return branch || 'main';
+}
+
+/**
+ * Returns true when the given repo has an in-flight push or pull operation
+ * scoped to it. Cycle ops (repo === '*') are excluded — they are covered by
+ * the SyncBlockOverlay and must not also block the editor independently.
+ */
+function hasRepoScopedSyncOp(
+  ops: Record<string, GitOp>,
+  repo: string | undefined,
+): boolean {
+  if (!repo) return false;
+  return Object.values(ops).some(
+    (op) =>
+      (op.status === 'queued' || op.status === 'running') &&
+      op.repo === repo &&
+      op.repo !== GIT_OP_ALL_REPOS &&
+      (op.kind === 'push' || op.kind === 'pull'),
+  );
 }
 
 function hasActiveDeleteLock(
@@ -313,6 +332,11 @@ export function useNoteEditorDocument({
 
     if (!repo) {
       Alert.alert('Repository Required', 'Please select a repository before saving.');
+      return;
+    }
+
+    if (hasRepoScopedSyncOp(useGitOperationStore.getState().ops, repo)) {
+      Alert.alert(t('sync.repoBusy'));
       return;
     }
 
