@@ -1,5 +1,3 @@
-import React from 'react';
-
 const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
 const mockCanGoBack = jest.fn(() => true);
@@ -10,10 +8,13 @@ const mockNavigation = {
 };
 const mockT = jest.fn((key: string) => key);
 
-jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => mockNavigation,
-  useFocusEffect: (cb: () => void) => React.useEffect(cb),
-}));
+jest.mock('@react-navigation/native', () => {
+  const React = require('react');
+  return {
+    useNavigation: () => mockNavigation,
+    useFocusEffect: (cb: () => void) => React.useEffect(cb),
+  };
+});
 
 // Identity t (stable identity) so alert assertions use raw i18n keys and the
 // useFocusEffect deps stay stable across re-renders.
