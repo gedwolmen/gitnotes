@@ -37,6 +37,7 @@ import {
   getCustomerInfo,
   onCustomerInfoUpdate,
   isTrialEligible,
+  getIntroEligibilities,
   trackPaywallImpression,
 } from '../../src/services/RevenueCatService';
 
@@ -233,9 +234,56 @@ describe('isTrialEligible', () => {
     expect(await isTrialEligible('monthly')).toBe(false);
   });
 
-  it('returns true on Android without calling the iOS-only API', async () => {
+});
+
+describe('getIntroEligibilities', () => {
+  it('maps ELIGIBLE status to true on iOS', async () => {
+    jest.replaceProperty(Platform, 'OS', 'ios');
+    PurchasesMock.checkTrialOrIntroductoryPriceEligibility.mockResolvedValue({
+      monthly: { status: 2 },
+    });
+    await expect(getIntroEligibilities(['monthly'])).resolves.toEqual({ monthly: true });
+    expect(PurchasesMock.checkTrialOrIntroductoryPriceEligibility).toHaveBeenCalledWith(['monthly']);
+  });
+
+  it('maps INELIGIBLE and UNKNOWN statuses to false on iOS', async () => {
+    jest.replaceProperty(Platform, 'OS', 'ios');
+    PurchasesMock.checkTrialOrIntroductoryPriceEligibility.mockResolvedValue({
+      monthly: { status: 1 },
+      yearly: { status: 0 },
+    });
+    await expect(getIntroEligibilities(['monthly', 'yearly'])).resolves.toEqual({
+      monthly: false,
+      yearly: false,
+    });
+  });
+
+  it('defaults product ids missing from the SDK response to false on iOS', async () => {
+    jest.replaceProperty(Platform, 'OS', 'ios');
+    PurchasesMock.checkTrialOrIntroductoryPriceEligibility.mockResolvedValue({
+      monthly: { status: 2 },
+    });
+    await expect(getIntroEligibilities(['monthly', 'lifetime'])).resolves.toEqual({
+      monthly: true,
+      lifetime: false,
+    });
+  });
+
+  it('returns all-false when the SDK rejects on iOS', async () => {
+    jest.replaceProperty(Platform, 'OS', 'ios');
+    PurchasesMock.checkTrialOrIntroductoryPriceEligibility.mockRejectedValue(new Error('SDK unavailable'));
+    await expect(getIntroEligibilities(['monthly', 'yearly'])).resolves.toEqual({
+      monthly: false,
+      yearly: false,
+    });
+  });
+
+  it('returns all-false on Android without calling the iOS-only API', async () => {
     jest.replaceProperty(Platform, 'OS', 'android');
-    expect(await isTrialEligible('monthly')).toBe(true);
+    await expect(getIntroEligibilities(['monthly', 'yearly'])).resolves.toEqual({
+      monthly: false,
+      yearly: false,
+    });
     expect(PurchasesMock.checkTrialOrIntroductoryPriceEligibility).not.toHaveBeenCalled();
   });
 });

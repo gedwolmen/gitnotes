@@ -98,6 +98,7 @@ export function onCustomerInfoUpdate(cb: (info: CustomerInfo) => void): () => vo
   return () => Purchases.removeCustomerInfoUpdateListener(cb);
 }
 
+/** @deprecated removed in the screen rewire (T10) */
 export async function isTrialEligible(productId: string): Promise<boolean> {
   if (Platform.OS !== 'ios') return true;
   try {
@@ -105,6 +106,20 @@ export async function isTrialEligible(productId: string): Promise<boolean> {
     return eligibilities[productId]?.status === Purchases.INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_ELIGIBLE;
   } catch {
     return false;
+  }
+}
+
+export async function getIntroEligibilities(productIds: string[]): Promise<Record<string, boolean>> {
+  const eligibilities: Record<string, boolean> = Object.fromEntries(productIds.map((id) => [id, false]));
+  if (Platform.OS !== 'ios') return eligibilities;
+  try {
+    const result = await Purchases.checkTrialOrIntroductoryPriceEligibility(productIds);
+    for (const id of productIds) {
+      eligibilities[id] = result[id]?.status === Purchases.INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_ELIGIBLE;
+    }
+    return eligibilities;
+  } catch {
+    return eligibilities;
   }
 }
 
