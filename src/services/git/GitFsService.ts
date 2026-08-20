@@ -114,6 +114,17 @@ async function cleanCorruptedPackfiles(repoPath: string): Promise<void> {
   }
 }
 
+/**
+ * In-flight clone promises keyed by `${repoPath}::${branch}`. Imports at
+ * add-time run OUTSIDE the sync gate (#938), so a startup/foreground pull's
+ * lazy `getRepoReader` clone can race the add-time clone on the same repoPath
+ * — both see `isCloned === false`. Concurrent callers for one key await the
+ * same promise instead of cloning twice. Entries are dropped on settle; a
+ * REJECTED clone is never cached, so a retry re-runs the clone instead of
+ * awaiting the failure forever.
+ */
+const inflightClones = new Map<string, Promise<void>>();
+
 export class GitFsService {
   /**
    * Clone a repo into the per-app document directory. Defaults to depth=1
@@ -177,6 +188,33 @@ export class GitFsService {
     } catch {
       // best-effort; pointer detection failure shouldn't fail the clone.
     }
+  }
+
+  /**
+   * Deduplicated clone: concurrent callers for the same `${repoPath}::${branch}`
+   * share ONE underlying `clone` promise, and callers arriving after a
+   * successful clone short-circuit via `isCloned`. Use this instead of `clone`
+   * wherever parallel code paths (add-time import, lazy pull-reader clone) can
+   * race on the same repo (#938). The packfile-corruption retry inside `clone`
+   * is preserved — dedup wraps it, never replaces it.
+   */
+  static cloneExclusive(opts: CloneOpts): Promise<void> {
+    const key = `${opts.repoPath}::${opts.branch}`;
+    const inflight = inflightClones.get(key);
+    if (inflight) return inflight;
+    const promise = (async () => {
+      if (await GitFsService.isCloned({ repoPath: opts.repoPath })) return;
+      await GitFsService.clone(opts);
+    })().finally(() => {
+      inflightClones.delete(key);
+    });
+    inflightClones.set(key, promise);
+    return promise;
+  }
+
+  /** Test seam — drop all in-flight clone dedup entries. */
+  static __resetCloneDedupForTest(): void {
+    inflightClones.clear();
   }
 
   /** Fetch updates for the cloned repo. Caller must have run `clone` first. */
