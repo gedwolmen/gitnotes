@@ -854,6 +854,18 @@
       "renderStyles": "Renderstile",
       "multiAccount": "Mehrere GitHub-Konten"
     },
+    "featureDescriptions": {
+      "aiChat": "Fragen Sie Ihre Notizen und erhalten Sie sofortige Antworten",
+      "aiActions": "Zusammenfassen, umschreiben und Text direkt im Editor verbessern",
+      "thoughtDump": "Erfassen Sie schnelle Gedanken sofort wie sie kommen",
+      "voiceDump": "Sagen Sie Ihre Ideen frei und speichern Sie sie als Notizen",
+      "personalizedQuotes": "Tägliche Zitate, die KI auf Ihren Schreibstil absttimmt",
+      "githubTools": "Geben Sie der KI Kontext aus Ihren GitHub-Repositories",
+      "canvases": "Ordnen Sie Notizen visuell auf einer unendlichen Leinwand an",
+      "templates": "Beginnen Sie neue Notizen mit Ihren eigenen Vorlagen",
+      "renderStyles": "Wählen Sie genau aus, wie Ihre Notizen aussehen sollen",
+      "multiAccount": "Verbinden Sie mehrere GitHub-Konten nebeneinander"
+    },
     "monthly": {
       "trialCta": "30 Tage kostenlos testen, dann {{price}}/Monat",
       "price": "{{price}}/Monat",
