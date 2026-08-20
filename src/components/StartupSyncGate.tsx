@@ -46,7 +46,7 @@ export function StartupSyncGate({ children }: { children: React.ReactNode }) {
         // initialize() must stay before the pull; do NOT hold a gate cycle
         // here — syncNow acquires it internally and would deadlock otherwise.
         await GitHubService.initialize();
-        await syncNow();
+        await syncNow({ source: 'startup' });
       } catch (error) {
         console.warn('[StartupSync] Pull failed:', error);
       } finally {
@@ -75,7 +75,8 @@ export function StartupSyncGate({ children }: { children: React.ReactNode }) {
         if (!GitHubService.isAuthenticated()) return;
         // Do NOT wrap this in a gate cycle: syncNow acquires the cycle
         // itself, and holding one here would deadlock its acquisition.
-        await syncNow();
+        // 'startup' keeps these auto-pulls non-blocking for the sync UI.
+        await syncNow({ source: 'startup' });
       } catch (error) {
         console.warn('[SyncDrain] Failed:', error);
       } finally {

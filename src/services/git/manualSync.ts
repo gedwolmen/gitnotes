@@ -2,7 +2,7 @@ import { pullAllFromRepos, pullFromSingleRepo } from '../RepoPullService';
 import { useCanvasStore } from '../../stores/canvasStore';
 import { useNoteStore } from '../../stores/noteStore';
 import { useTodoStore } from '../../stores/todoStore';
-import { GitSyncGate } from './GitSyncGate';
+import { GitSyncGate, type CycleSource } from './GitSyncGate';
 
 /**
  * Single manual-sync entry point ("sync now") for user-facing pulls:
@@ -31,6 +31,8 @@ import { GitSyncGate } from './GitSyncGate';
 export interface SyncNowOptions {
   /** Pull exactly one repo path instead of every tracked repo. */
   repos?: string[];
+  /** Cycle origin tag for the blocking-UI gate; user gestures default to 'manual'. */
+  source?: CycleSource;
 }
 
 export interface SyncNowResult {
@@ -74,9 +76,9 @@ async function refreshAllStores(): Promise<void> {
   ]);
 }
 
-async function runSyncCycle(repos?: string[]): Promise<void> {
+async function runSyncCycle(repos: string[] | undefined, source: CycleSource): Promise<void> {
   // ONE cycle acquisition spans the push-settle wait + pull + refresh.
-  const releaseCycle = await GitSyncGate.acquireCycle();
+  const releaseCycle = await GitSyncGate.acquireCycle(source);
   try {
     await waitForPushesToSettle(repos);
     if (repos?.length === 1) {
@@ -108,7 +110,7 @@ export async function syncNow(options?: SyncNowOptions): Promise<SyncNowResult> 
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
   try {
     await Promise.race([
-      runSyncCycle(options?.repos),
+      runSyncCycle(options?.repos, options?.source ?? 'manual'),
       new Promise<never>((_, reject) => {
         timeoutId = setTimeout(() => reject(new Error('Sync timed out')), SYNC_TIMEOUT_MS);
       }),

@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StagingService } from './git/StagingService';
-import { GitSyncGate } from './git/GitSyncGate';
+import { GitSyncGate, type CycleSource } from './git/GitSyncGate';
 import { useStageStore } from '../stores/stageStore';
 import { githubActivity } from '../stores/githubActivityStore';
 
@@ -108,7 +108,7 @@ export function flushStaged(): void {
       store.requestPush(parts.repoPath, parts.branch);
     }
   }
-  void drainPushQueue();
+  void drainPushQueue('idle');
 }
 
 /**
@@ -117,7 +117,7 @@ export function flushStaged(): void {
  * for the same (repo, branch) can overlap; the `draining` guard additionally
  * stops a re-entrant call from starting a second loop over the same queue.
  */
-export async function drainPushQueue(): Promise<void> {
+export async function drainPushQueue(source: CycleSource): Promise<void> {
   if (draining) return;
   draining = true;
   await setPushSession();
@@ -134,7 +134,7 @@ export async function drainPushQueue(): Promise<void> {
       const { repoPath, branch } = parts;
 
       useStageStore.getState().setPushing(key, true);
-      const releaseCycle = await GitSyncGate.acquireCycle();
+      const releaseCycle = await GitSyncGate.acquireCycle(source);
       githubActivity.begin('Pushing changes');
       try {
         const result = await StagingService.pushStaged(repoPath, branch, (fraction) => {

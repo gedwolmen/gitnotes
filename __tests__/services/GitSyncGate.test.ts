@@ -66,14 +66,14 @@ describe('GitSyncGate', () => {
   test('two concurrent cycle acquires serialize — second body runs only after first release (case 1)', async () => {
     const events: string[] = [];
 
-    const releaseA = await GitSyncGate.acquireCycle();
+    const releaseA = await GitSyncGate.acquireCycle('manual');
     events.push('a-body');
 
-    const bPending = GitSyncGate.acquireCycle().then((release) => {
+    const bPending = GitSyncGate.acquireCycle('manual').then((release) => {
       events.push('b-body');
       return release;
     });
-    const cPending = GitSyncGate.acquireCycle().then((release) => {
+    const cPending = GitSyncGate.acquireCycle('manual').then((release) => {
       events.push('c-body');
       return release;
     });
@@ -99,7 +99,7 @@ describe('GitSyncGate', () => {
       repo: 'r', branch: 'main', filePath: 'a', title: 'A', content: '', format: 'markdown',
     });
 
-    const releaseCycle = await GitSyncGate.acquireCycle();
+    const releaseCycle = await GitSyncGate.acquireCycle('manual');
     const order: string[] = [];
     try {
       // Regression: with the cycle already held, drain() must skip its own
@@ -147,8 +147,8 @@ describe('GitSyncGate', () => {
 
   test('watchdog force-releases a leaked cycle after 10 minutes (case 4)', async () => {
     const events: string[] = [];
-    const leakedRelease = await GitSyncGate.acquireCycle();
-    const waiterPending = GitSyncGate.acquireCycle().then((release) => {
+    const leakedRelease = await GitSyncGate.acquireCycle('manual');
+    const waiterPending = GitSyncGate.acquireCycle('manual').then((release) => {
       events.push('waiter-acquired');
       return release;
     });
@@ -175,7 +175,7 @@ describe('GitSyncGate', () => {
     expect(activeOps()).toHaveLength(0);
 
     // The gate is usable again immediately after expiry.
-    const freshRelease = await GitSyncGate.acquireCycle();
+    const freshRelease = await GitSyncGate.acquireCycle('manual');
     freshRelease();
     expect(GitSyncGate.isCycleHeld()).toBe(false);
   });
@@ -226,7 +226,7 @@ describe('GitSyncGate', () => {
   });
 
   test('cycle hold publishes an app-wide pull op; release removes it', async () => {
-    const release = await GitSyncGate.acquireCycle();
+    const release = await GitSyncGate.acquireCycle('manual');
     const pullOps = opsByKind('pull');
     expect(pullOps).toHaveLength(1);
     expect(pullOps[0]).toMatchObject({

@@ -11,7 +11,7 @@ import { LocalGitWriter } from './git/LocalGitWriter';
 import { classifyGitHubSyncError, isRetryableFailure, syncStatusForError } from './git/syncFailure';
 import { resolveBranch } from './git/resolveBranch';
 import { clearDeleteFailure, clearDeleteFailuresForRepo, readDeleteFailures, recordDeleteFailure, DELETE_FAILURES_STORAGE_KEY } from './git/deleteFailures';
-import { GitSyncGate } from './git/GitSyncGate';
+import { GitSyncGate, type CycleSource } from './git/GitSyncGate';
 import { batchDeleteFiles, batchUpsertFiles } from './git/BatchGitOperations';
 import type { BatchDeleteFilesResult, BatchUpsertFilesResult } from './git/BatchGitOperations';
 import { parseRepoPath } from '../utils/gitPathParser';
@@ -450,6 +450,7 @@ class NoteSyncQueueServiceClass {
 
   async drain(
     onProgress?: (fraction: number | null) => void,
+    source: CycleSource = 'background',
   ): Promise<{ succeeded: number; failed: number; remaining: number }> {
     if (this.isDraining) {
       const items = await this.getAll();
@@ -461,7 +462,7 @@ class NoteSyncQueueServiceClass {
     // background/manual sync). When this drain runs INSIDE a held cycle
     // the cycle owner already owns the mutex — acquiring again here would
     // self-deadlock, so the short-circuit is mandatory.
-    const releaseCycle = GitSyncGate.isCycleHeld() ? null : await GitSyncGate.acquireCycle();
+    const releaseCycle = GitSyncGate.isCycleHeld() ? null : await GitSyncGate.acquireCycle(source);
 
     try {
       const initial = await this.getAll();

@@ -118,7 +118,7 @@ async function runPull(reason: string): Promise<void> {
     // ONE cycle acquisition spans the pull; the release lives with the work
     // itself, not the timeout race below, so a timed-out pull keeps owning
     // the cycle until it actually settles.
-    const releaseCycle = await GitSyncGate.acquireCycle();
+    const releaseCycle = await GitSyncGate.acquireCycle('startup');
     try {
       await pullAllFromRepos();
     } finally {
@@ -190,7 +190,7 @@ function handleAppStateChange(state: AppStateStatus): void {
       void runPull('appstate-active');
       hasPushSession().then((active) => {
         if (active && useStageStore.getState().staged.length > 0) {
-          void drainPushQueue();
+          void drainPushQueue('idle');
         }
       }).catch(() => undefined);
     }

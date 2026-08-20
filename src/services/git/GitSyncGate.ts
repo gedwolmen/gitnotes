@@ -25,6 +25,13 @@ import { gitOperationRegistry, GIT_OP_ALL_REPOS } from '../../stores/gitOperatio
  * swept on the next markPushActive.
  */
 
+/**
+ * Why a sync cycle started. Blocking sync UI (issue #926) shows the modal
+ * overlay only for 'save' (API write-through, #927) and 'manual' cycles;
+ * 'idle' | 'background' | 'startup' cycles keep the non-blocking pill.
+ */
+export type CycleSource = 'save' | 'manual' | 'idle' | 'background' | 'startup';
+
 const CYCLE_WATCHDOG_MS = 10 * 60 * 1_000;
 const MARKER_MAX_AGE_MS = 10 * 60 * 1_000;
 const WAIT_FOR_IDLE_POLL_MS = 250;
@@ -43,22 +50,27 @@ class GitSyncGateClass {
   private cycleToken = 0;
   private cycleRegistryOpId: string | null = null;
   private cycleWatchdog: ReturnType<typeof setTimeout> | null = null;
-  private cycleWaiters: Array<() => void> = [];
+  private cycleWaiters: Array<{ source: CycleSource; grant: () => void }> = [];
   private pushMarkers = new Map<string, PushMarker>();
 
   /**
    * Acquire the app-wide cycle mutex. Resolves immediately when free,
    * otherwise queues FIFO behind the current holder. The returned release
    * is idempotent and becomes a no-op once the watchdog force-expires the
-   * acquisition. Pair every call with a release in a finally.
+   * acquisition. Pair every call with a release in a finally. `source`
+   * tags the published registry op so UI can tell blocking (save/manual)
+   * cycles from non-blocking (idle/background/startup) ones.
    */
-  acquireCycle(): Promise<() => void> {
+  acquireCycle(source: CycleSource): Promise<() => void> {
     if (!this.cycleHeld) {
-      this.grantCycle();
+      this.grantCycle(source);
       return Promise.resolve(this.makeCycleReleaser(this.cycleToken));
     }
     return new Promise<() => void>((resolve) => {
-      this.cycleWaiters.push(() => resolve(this.makeCycleReleaser(this.cycleToken)));
+      this.cycleWaiters.push({
+        source,
+        grant: () => resolve(this.makeCycleReleaser(this.cycleToken)),
+      });
     });
   }
 
@@ -142,17 +154,18 @@ class GitSyncGateClass {
     return `${repo}@${branch || DEFAULT_MARKER_BRANCH}`;
   }
 
-  private grantCycle(): void {
+  private grantCycle(source: CycleSource): void {
     this.cycleHeld = true;
     this.cycleToken += 1;
-    this.publishCycleOp();
+    this.publishCycleOp(source);
     this.armCycleWatchdog();
   }
 
-  private publishCycleOp(): void {
+  private publishCycleOp(source: CycleSource): void {
     this.cycleRegistryOpId = gitOperationRegistry.begin({
       kind: 'pull',
       repo: GIT_OP_ALL_REPOS,
+      source,
       entityIds: [],
       attempts: 0,
       status: 'running',
@@ -180,11 +193,12 @@ class GitSyncGateClass {
     const next = this.cycleWaiters.shift();
     if (next) {
       // Still held — the next FIFO waiter becomes the holder with a fresh
-      // token, registry op, and watchdog window.
+      // token, registry op (tagged with the waiter's own source), and
+      // watchdog window.
       this.cycleToken += 1;
-      this.publishCycleOp();
+      this.publishCycleOp(next.source);
       this.armCycleWatchdog();
-      next();
+      next.grant();
       return;
     }
     this.cycleHeld = false;
