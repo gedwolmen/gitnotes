@@ -9,6 +9,7 @@ jest.mock('react-native-purchases', () => {
     addCustomerInfoUpdateListener: jest.fn(),
     removeCustomerInfoUpdateListener: jest.fn(),
     checkTrialOrIntroductoryPriceEligibility: jest.fn(async () => ({})),
+    trackCustomPaywallImpression: jest.fn(async () => undefined),
     LOG_LEVEL: { WARN: 'WARN', DEBUG: 'DEBUG', VERBOSE: 'VERBOSE' },
     INTRO_ELIGIBILITY_STATUS: {
       INTRO_ELIGIBILITY_STATUS_UNKNOWN: 0,
@@ -27,7 +28,7 @@ jest.mock('react-native-purchases', () => {
 
 import { Platform } from 'react-native';
 import Purchases from 'react-native-purchases';
-import type { PurchasesPackage } from 'react-native-purchases';
+import type { PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
 import {
   configureRevenueCat,
   getPackages,
@@ -36,6 +37,7 @@ import {
   getCustomerInfo,
   onCustomerInfoUpdate,
   isTrialEligible,
+  trackPaywallImpression,
 } from '../../src/services/RevenueCatService';
 
 const PurchasesMock = Purchases as unknown as {
@@ -46,6 +48,7 @@ const PurchasesMock = Purchases as unknown as {
   checkTrialOrIntroductoryPriceEligibility: jest.Mock;
   addCustomerInfoUpdateListener: jest.Mock;
   removeCustomerInfoUpdateListener: jest.Mock;
+  trackCustomPaywallImpression: jest.Mock;
 };
 
 const pkg = (identifier: string) => ({ identifier } as PurchasesPackage);
@@ -234,5 +237,35 @@ describe('isTrialEligible', () => {
     jest.replaceProperty(Platform, 'OS', 'android');
     expect(await isTrialEligible('monthly')).toBe(true);
     expect(PurchasesMock.checkTrialOrIntroductoryPriceEligibility).not.toHaveBeenCalled();
+  });
+});
+
+describe('trackPaywallImpression', () => {
+  const offering = { identifier: 'standard' } as unknown as PurchasesOffering;
+
+  it('calls the SDK with {offering} when offering given, undefined otherwise', async () => {
+    process.env[IOS_KEY] = 'appl_live_key';
+    jest.replaceProperty(Platform, 'OS', 'ios');
+    await configureRevenueCat();
+
+    await trackPaywallImpression(offering);
+    expect(PurchasesMock.trackCustomPaywallImpression).toHaveBeenCalledWith({ offering });
+
+    await trackPaywallImpression();
+    expect(PurchasesMock.trackCustomPaywallImpression).toHaveBeenCalledWith(undefined);
+  });
+
+  it('no-ops silently when configureRevenueCat never ran', async () => {
+    let freshService!: typeof import('../../src/services/RevenueCatService');
+    let freshPurchases!: { trackCustomPaywallImpression: jest.Mock };
+    jest.isolateModules(() => {
+      freshService = require('../../src/services/RevenueCatService');
+      freshPurchases = (
+        require('react-native-purchases') as { default: { trackCustomPaywallImpression: jest.Mock } }
+      ).default;
+    });
+
+    await expect(freshService.trackPaywallImpression(undefined)).resolves.toBeUndefined();
+    expect(freshPurchases.trackCustomPaywallImpression).not.toHaveBeenCalled();
   });
 });

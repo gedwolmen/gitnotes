@@ -1,6 +1,11 @@
 import { Platform } from 'react-native';
 import Purchases, { STOREKIT_VERSION } from 'react-native-purchases';
-import type { CustomerInfo, PurchasesOfferings, PurchasesPackage } from 'react-native-purchases';
+import type {
+  CustomerInfo,
+  PurchasesOffering,
+  PurchasesOfferings,
+  PurchasesPackage,
+} from 'react-native-purchases';
 
 const IOS_API_KEY_ENV = 'EXPO_PUBLIC_REVENUECAT_API_KEY_IOS';
 const ANDROID_API_KEY_ENV = 'EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID';
@@ -25,6 +30,8 @@ function isPlaceholderKey(apiKey: string | undefined): boolean {
   return !apiKey || apiKey.length === 0 || apiKey.includes('<PLACEHOLDER>');
 }
 
+let configured = false;
+
 export async function configureRevenueCat(): Promise<ConfigureResult> {
   const apiKey = Platform.OS === 'ios' ? process.env[IOS_API_KEY_ENV] : process.env[ANDROID_API_KEY_ENV];
   if (isPlaceholderKey(apiKey)) {
@@ -35,6 +42,7 @@ export async function configureRevenueCat(): Promise<ConfigureResult> {
     apiKey,
     ...(Platform.OS === 'ios' ? { storeKitVersion: STOREKIT_VERSION.STOREKIT_2 } : {}),
   });
+  configured = true;
   return { configured: true };
 }
 
@@ -97,5 +105,14 @@ export async function isTrialEligible(productId: string): Promise<boolean> {
     return eligibilities[productId]?.status === Purchases.INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_ELIGIBLE;
   } catch {
     return false;
+  }
+}
+
+export async function trackPaywallImpression(offering?: PurchasesOffering | null): Promise<void> {
+  if (!configured) return;
+  try {
+    await Purchases.trackCustomPaywallImpression(offering ? { offering } : undefined);
+  } catch {
+    // analytics must never throw into the paywall
   }
 }

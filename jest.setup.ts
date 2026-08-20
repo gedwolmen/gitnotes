@@ -397,6 +397,7 @@ jest.mock('react-native-purchases', () => {
     addCustomerInfoUpdateListener: jest.fn(() => () => {}),
     removeCustomerInfoUpdateListener: jest.fn(),
     checkTrialOrIntroductoryPriceEligibility: jest.fn(async () => ({})),
+    trackCustomPaywallImpression: jest.fn(async () => undefined),
     LOG_LEVEL: { WARN: 'WARN', DEBUG: 'DEBUG', VERBOSE: 'VERBOSE' },
     INTRO_ELIGIBILITY_STATUS: {
       INTRO_ELIGIBILITY_STATUS_UNKNOWN: 0,
