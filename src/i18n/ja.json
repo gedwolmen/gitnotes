@@ -843,16 +843,46 @@
     "title": "GitNotēs Pro",
     "subtitle": "AIスイートと高度な機能をアンロック",
     "features": {
-      "aiChat": "ノートとAIチャット",
-      "aiActions": "エディターでのAIアクション",
-      "thoughtDump": "思考ダンプ",
-      "voiceDump": "音声ダンプ",
-      "personalizedQuotes": "パーソナライズされた日替わりの名言",
-      "githubTools": "AI向けGitHubツール",
-      "canvases": "キャンバス",
-      "templates": "カスタムテンプレート",
-      "renderStyles": "レンダースタイル",
-      "multiAccount": "複数のGitHubアカウント"
+      "aiChat": {
+        "title": "ノートとAIチャット",
+        "description": "質問すると、ノートにもとづく回答が得られます"
+      },
+      "aiActions": {
+        "title": "エディターでのAIアクション",
+        "description": "エディター内でテキストの要約・書き換え・修正"
+      },
+      "thoughtDump": {
+        "title": "思考ダンプ",
+        "description": "思いつきを書き出すと、AIがノートに整理"
+      },
+      "voiceDump": {
+        "title": "音声ダンプ",
+        "description": "音声メモを録音すると、そのままノートに文字起こし"
+      },
+      "personalizedQuotes": {
+        "title": "パーソナライズされた日替わりの名言",
+        "description": "ノートや関心に合わせた日替わり名言"
+      },
+      "githubTools": {
+        "title": "AI向けGitHubツール",
+        "description": "AIチャットからIssueやリポジトリを管理"
+      },
+      "canvases": {
+        "title": "キャンバス",
+        "description": "無限のキャンバス上でノートをつなげます"
+      },
+      "templates": {
+        "title": "カスタムテンプレート",
+        "description": "自分だけのノートテンプレートを作成・再利用"
+      },
+      "renderStyles": {
+        "title": "レンダースタイル",
+        "description": "Markdown・NORG・Orgの表示テーマを設定"
+      },
+      "multiAccount": {
+        "title": "複数のGitHubアカウント",
+        "description": "複数のGitHubアカウントを並行して同期"
+      }
     },
     "monthly": {
       "trialCta": "30日間無料トライアル、その後{{price}}/月",
@@ -865,6 +895,8 @@
     },
     "restore": "購入を復元",
     "restored": "購入を復元しました",
+    "restoring": "購入を復元中…",
+    "nothingToRestore": "このデバイスには復元できる購入はありません。",
     "purchaseError": "購入に失敗しました",
     "loading": "読み込み中…",
     "later": "後で",
@@ -872,12 +904,17 @@
     "termsNote": "サブスクリプションは解約するまで自動更新されます。購入を復元してこのデバイスに移行してください。新規加入者には30日間の無料トライアルがあります。",
     "yearly": {
       "title": "年間",
-      "cta": "{{price}}/年"
+      "cta": "{{price}}/年",
+      "trialCta": "30日間無料トライアル、その後{{price}}/年"
     },
     "action": {
       "trial": "無料トライアルを開始",
       "subscribe": "登録する",
       "buy": "購入する"
+    },
+    "footer": {
+      "terms": "利用規約",
+      "privacy": "プライバシーポリシー"
     }
   },
   "pro": {

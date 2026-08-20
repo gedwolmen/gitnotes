@@ -843,16 +843,46 @@
     "title": "GitNotēs Pro",
     "subtitle": "Débloquez la suite IA et les fonctionnalités avancées",
     "features": {
-      "aiChat": "Chat IA avec vos notes",
-      "aiActions": "Actions IA dans l'éditeur",
-      "thoughtDump": "Décharge de pensées",
-      "voiceDump": "Décharge vocale",
-      "personalizedQuotes": "Citations quotidiennes personnalisées",
-      "githubTools": "Outils GitHub pour l'IA",
-      "canvases": "Toiles",
-      "templates": "Modèles personnalisés",
-      "renderStyles": "Styles de rendu",
-      "multiAccount": "Plusieurs comptes GitHub"
+      "aiChat": {
+        "title": "Chat IA avec vos notes",
+        "description": "Posez des questions, obtenez des réponses ancrées dans vos notes"
+      },
+      "aiActions": {
+        "title": "Actions IA dans l'éditeur",
+        "description": "Résumez, réécrivez et corrigez le texte dans l'éditeur"
+      },
+      "thoughtDump": {
+        "title": "Décharge de pensées",
+        "description": "Déversez vos idées, l'IA les classe dans vos notes"
+      },
+      "voiceDump": {
+        "title": "Décharge vocale",
+        "description": "Enregistrez des mémos vocaux, transcrits en notes"
+      },
+      "personalizedQuotes": {
+        "title": "Citations quotidiennes personnalisées",
+        "description": "Citations quotidiennes adaptées à vos notes et intérêts"
+      },
+      "githubTools": {
+        "title": "Outils GitHub pour l'IA",
+        "description": "Gérez issues et dépôts depuis le chat IA"
+      },
+      "canvases": {
+        "title": "Toiles",
+        "description": "Reliez vos notes sur une toile visuelle infinie"
+      },
+      "templates": {
+        "title": "Modèles personnalisés",
+        "description": "Créez et réutilisez vos propres modèles de notes"
+      },
+      "renderStyles": {
+        "title": "Styles de rendu",
+        "description": "Choisissez le rendu de Markdown, NORG et Org"
+      },
+      "multiAccount": {
+        "title": "Plusieurs comptes GitHub",
+        "description": "Synchronisez plusieurs comptes GitHub côte à côte"
+      }
     },
     "monthly": {
       "trialCta": "Essayez 30 jours gratuitement, puis {{price}}/mois",
@@ -865,6 +895,8 @@
     },
     "restore": "Restaurer les achats",
     "restored": "Achats restaurés",
+    "restoring": "Restauration de l'achat…",
+    "nothingToRestore": "Rien à restaurer sur cet appareil.",
     "purchaseError": "Échec de l'achat",
     "loading": "Chargement…",
     "later": "Plus tard",
@@ -872,12 +904,17 @@
     "termsNote": "Les abonnements se renouvellent automatiquement jusqu'à annulation. Restaurez vos achats pour les transférer sur cet appareil. Cette app propose un essai gratuit de 30 jours aux nouveaux abonnés.",
     "yearly": {
       "title": "Annuel",
-      "cta": "{{price}}/an"
+      "cta": "{{price}}/an",
+      "trialCta": "Essayez 30 jours gratuitement, puis {{price}}/an"
     },
     "action": {
       "trial": "Essai gratuit",
       "subscribe": "S'abonner",
       "buy": "Acheter"
+    },
+    "footer": {
+      "terms": "Conditions d'utilisation",
+      "privacy": "Politique de confidentialité"
     }
   },
   "pro": {

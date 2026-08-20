@@ -843,16 +843,46 @@
     "title": "GitNotēs Pro",
     "subtitle": "AI 스위트와 고급 기능 잠금 해제",
     "features": {
-      "aiChat": "노트와 AI 채팅",
-      "aiActions": "편집기의 AI 액션",
-      "thoughtDump": "생각 덤프",
-      "voiceDump": "음성 덤프",
-      "personalizedQuotes": "개인 맞춤 일일 명언",
-      "githubTools": "AI용 GitHub 도구",
-      "canvases": "캔버스",
-      "templates": "사용자 정의 템플릿",
-      "renderStyles": "렌더 스타일",
-      "multiAccount": "여러 GitHub 계정"
+      "aiChat": {
+        "title": "노트와 AI 채팅",
+        "description": "질문하고 노트 기반의 답변을 받으세요"
+      },
+      "aiActions": {
+        "title": "편집기의 AI 액션",
+        "description": "에디터에서 텍스트 요약, 재작성, 교정"
+      },
+      "thoughtDump": {
+        "title": "생각 덤프",
+        "description": "생각을 쏟아내면 AI가 노트로 정리해요"
+      },
+      "voiceDump": {
+        "title": "음성 덤프",
+        "description": "음성 메모를 녹음해 노트로 변환해요"
+      },
+      "personalizedQuotes": {
+        "title": "개인 맞춤 일일 명언",
+        "description": "노트와 관심사에 맞는 오늘의 명언"
+      },
+      "githubTools": {
+        "title": "AI용 GitHub 도구",
+        "description": "AI 채팅에서 이슈와 저장소를 관리하세요"
+      },
+      "canvases": {
+        "title": "캔버스",
+        "description": "무한 비주얼 캔버스에 노트를 연결하세요"
+      },
+      "templates": {
+        "title": "사용자 정의 템플릿",
+        "description": "나만의 노트 템플릿을 만들어 재사용하세요"
+      },
+      "renderStyles": {
+        "title": "렌더 스타일",
+        "description": "마크다운, NORG, Org 렌더링 스타일을 설정해요"
+      },
+      "multiAccount": {
+        "title": "여러 GitHub 계정",
+        "description": "여러 GitHub 계정을 나란히 동기화하세요"
+      }
     },
     "monthly": {
       "trialCta": "30일 무료 체험 후 {{price}}/월",
@@ -865,6 +895,8 @@
     },
     "restore": "구매 복원",
     "restored": "구매가 복원되었습니다",
+    "restoring": "구매 복원 중…",
+    "nothingToRestore": "이 기기에서 복원할 구매가 없습니다.",
     "purchaseError": "구매에 실패했습니다",
     "loading": "불러오는 중…",
     "later": "나중에",
@@ -872,12 +904,17 @@
     "termsNote": "구독은 취소할 때까지 자동 갱신됩니다. 구매를 복원하여 이 기기로 이전하세요. 신규 구독자에게는 30일 무료 체험이 제공됩니다.",
     "yearly": {
       "title": "연간",
-      "cta": "{{price}}/년"
+      "cta": "{{price}}/년",
+      "trialCta": "30일 무료 체험 후 {{price}}/년"
     },
     "action": {
       "trial": "무료 체험 시작",
       "subscribe": "구독하기",
       "buy": "구매하기"
+    },
+    "footer": {
+      "terms": "이용 약관",
+      "privacy": "개인정보 처리방침"
     }
   },
   "pro": {
