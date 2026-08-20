@@ -113,6 +113,7 @@ New i18n keys added to all 6 locales (en, es, fr, de, ja, ko):
 
 ## Related
 
+- [Quote Content Policy & Regression Gate](./quote-content-policy.md) - the CI test that enforces the dataset policy
 - [Issue #933](https://github.com/gedwolmen/gitnotes/issues/933) - Audit + expand quote dataset
 - [Issue #934](https://github.com/gedwolmen/gitnotes/issues/934) - Add personalization/source settings
 - [PR #949](https://github.com/gedwolmen/gitnotes/pull/949) - Implementation
