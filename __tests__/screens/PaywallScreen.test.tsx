@@ -106,6 +106,14 @@ describe('PaywallScreen', () => {
     expect(getByText('Lifetime')).toBeTruthy();
   });
 
+  it('renders the bento feature cards with description text', () => {
+    const { getByText, getByTestId } = render(<PaywallScreen />);
+    // One feature's description rendered (new content from ProFeatureBento)
+    expect(getByText('Arrange notes visually on an infinite canvas')).toBeTruthy();
+    // Per-card testID is stable
+    expect(getByTestId('paywall.feature.aiChat')).toBeTruthy();
+  });
+
   it('uses the trial CTA label for the monthly option when the user is trial-eligible', async () => {
     trialEligibleMock.mockResolvedValue(true);
     const { findAllByText } = render(<PaywallScreen />);

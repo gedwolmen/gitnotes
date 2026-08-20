@@ -862,6 +862,18 @@
       "renderStyles": "レンダースタイル",
       "multiAccount": "複数のGitHubアカウント"
     },
+    "featureDescriptions": {
+      "aiChat": "ノートに何でも質問して、瞬時に回答を得る",
+      "aiActions": "エディター内でテキストの要約、書き換え、改善を行う",
+      "thoughtDump": "思いついた瞬間に素早く思考を捕捉する",
+      "voiceDump": "アイデアを口にして、それをノートとして保存する",
+      "personalizedQuotes": "AIがあなたの書き方に合わせた日替わり名言",
+      "githubTools": "GitHubリポジトリのコンテキストをAIに提供させる",
+      "canvases": "無限のキャンバス上にビジュアールにノートを配置する",
+      "templates": "自分のテンプレートから新しいノートを作成する",
+      "renderStyles": "ノートの表示スタイルを細かく選択する",
+      "multiAccount": "複数のGitHubアカウントを並んで接続する"
+    },
     "monthly": {
       "trialCta": "30日間無料トライアル、その後{{price}}/月",
       "price": "{{price}}/月",
@@ -893,8 +905,6 @@
     "statusTrial": "トライアル残り{{days}}日",
     "statusUpgrade": "アップグレード",
     "settingsRow": "GitNotēs Pro",
-    "gateTitle": "Pro機能です",
-    "gateBody": "アップグレードするとAI機能などを利用できます。",
     "badge": "PRO",
     "lockedTitle": "Pro機能",
     "lockedBody": "この機能にはGitNotēs Proが必要です。アップグレードすると、無制限のアカウント、リポジトリ、AIなどを利用できます。"

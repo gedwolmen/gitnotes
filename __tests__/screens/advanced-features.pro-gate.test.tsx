@@ -1,10 +1,14 @@
 const mockNavigate = jest.fn();
-jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({ navigate: mockNavigate, goBack: jest.fn(), canGoBack: () => true }),
-  useIsFocused: () => true,
-  useFocusEffect: jest.fn((cb: () => void) => cb()),
-  useRoute: () => ({ params: { format: 'markdown' } }),
-}));
+const mockGoBack = jest.fn();
+jest.mock('@react-navigation/native', () => {
+  const React = require('react');
+  return {
+    useNavigation: () => ({ navigate: mockNavigate, goBack: mockGoBack, canGoBack: () => true }),
+    useIsFocused: () => true,
+    useFocusEffect: (cb: () => unknown) => React.useEffect(cb),
+    useRoute: () => ({ params: { format: 'markdown' } }),
+  };
+});
 
 jest.mock('../../src/contexts/ThemeContext', () => ({
   useTheme: () => ({
@@ -52,6 +56,10 @@ jest.mock('../../src/components/ui', () => {
     TabBar: Stub,
   };
 });
+
+jest.mock('react-native-marked', () => ({
+  useMarkdown: () => [],
+}));
 
 jest.mock('../../src/components/SearchBar', () => {
   const React = require('react');
@@ -130,11 +138,13 @@ jest.mock('../../src/components/templates/TemplateListItem', () => {
 });
 
 import React from 'react';
+import { Alert } from 'react-native';
 import { fireEvent, render } from '@testing-library/react-native';
 import CanvasListScreen from '../../src/screens/CanvasListScreen';
 import CanvasEditorScreen from '../../src/screens/CanvasEditorScreen';
 import TemplateSelector from '../../src/components/TemplateSelector';
 import RenderStyleSettingsScreen from '../../src/screens/RenderStyleSettingsScreen';
+import RenderStyleEditorScreen from '../../src/screens/RenderStyleEditorScreen';
 import TemplateManagerScreen from '../../src/screens/TemplateManagerScreen';
 import { __setProState } from '../../src/stores/proStore';
 
@@ -146,9 +156,16 @@ function setPro(): void {
   __setProState({ status: 'pro', entitlementActive: true, isGrandfathered: false });
 }
 
+let alertSpy: jest.SpyInstance;
+
 beforeEach(() => {
   jest.clearAllMocks();
   setPro();
+  alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+});
+
+afterEach(() => {
+  alertSpy.mockRestore();
 });
 
 describe('advanced feature pro gates', () => {
@@ -167,16 +184,16 @@ describe('advanced feature pro gates', () => {
     expect(mockNavigate).not.toHaveBeenCalledWith('Paywall');
   });
 
-  it('CanvasEditorScreen renders the Pro gate for a free user (deep-link safety)', () => {
+  it('CanvasEditorScreen fires the Pro upgrade alert for a free user (deep-link safety)', () => {
     setFree();
-    const { getByTestId, queryByText } = render(<CanvasEditorScreen />);
-    expect(getByTestId('pro-required')).toBeTruthy();
+    const { queryByText } = render(<CanvasEditorScreen />);
+    expect(alertSpy).toHaveBeenCalled();
     expect(queryByText('canvas-editor-content')).toBeNull();
   });
 
   it('CanvasEditorScreen renders normally for a pro user', () => {
-    const { queryByTestId, getByText } = render(<CanvasEditorScreen />);
-    expect(queryByTestId('pro-required')).toBeNull();
+    const { getByText } = render(<CanvasEditorScreen />);
+    expect(alertSpy).not.toHaveBeenCalled();
     expect(getByText('canvas-editor-content')).toBeTruthy();
   });
 
@@ -190,15 +207,42 @@ describe('advanced feature pro gates', () => {
     expect(cta).toBeTruthy();
   });
 
-  it('RenderStyleSettingsScreen renders the Pro gate for a free user', () => {
+  it('RenderStyleSettingsScreen fires the Pro upgrade alert for a free user', () => {
     setFree();
-    const { getByTestId } = render(<RenderStyleSettingsScreen />);
-    expect(getByTestId('pro-required')).toBeTruthy();
+    const { queryByText } = render(<RenderStyleSettingsScreen />);
+    expect(alertSpy).toHaveBeenCalled();
+    expect(queryByText('Note rendering')).toBeNull();
   });
 
-  it('TemplateManagerScreen renders the Pro gate for a free user', () => {
+  it('RenderStyleSettingsScreen renders normally for a pro user', () => {
+    const { getByText } = render(<RenderStyleSettingsScreen />);
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(getByText('Note rendering')).toBeTruthy();
+  });
+
+  it('RenderStyleEditorScreen fires the Pro upgrade alert for a free user', () => {
     setFree();
+    const { queryByText } = render(<RenderStyleEditorScreen />);
+    expect(alertSpy).toHaveBeenCalled();
+    expect(queryByText('Markdown (.md)')).toBeNull();
+  });
+
+  it('RenderStyleEditorScreen renders normally for a pro user', () => {
+    const { getByText } = render(<RenderStyleEditorScreen />);
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(getByText('Markdown (.md)')).toBeTruthy();
+  });
+
+  it('TemplateManagerScreen fires the Pro upgrade alert for a free user', () => {
+    setFree();
+    const { queryByTestId } = render(<TemplateManagerScreen />);
+    expect(alertSpy).toHaveBeenCalled();
+    expect(queryByTestId('template-manager.button.create')).toBeNull();
+  });
+
+  it('TemplateManagerScreen renders normally for a pro user', () => {
     const { getByTestId } = render(<TemplateManagerScreen />);
-    expect(getByTestId('pro-required')).toBeTruthy();
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(getByTestId('template-manager.button.create')).toBeTruthy();
   });
 });
