@@ -336,7 +336,7 @@ export function useNoteEditorDocument({
     }
 
     if (hasRepoScopedSyncOp(useGitOperationStore.getState().ops, repo)) {
-      Alert.alert(t('sync.repoBusy'));
+      Alert.alert(t('common.error'), t('sync.repoBusy'));
       return;
     }
 
