@@ -317,7 +317,8 @@
     "tags": [
       "action",
       "purpose"
-    ]
+    ],
+    "source": "Letters and Social Aims (attributed)"
   },
   {
     "id": "emerson-4",
@@ -346,7 +347,8 @@
     "tags": [
       "action",
       "purpose"
-    ]
+    ],
+    "source": "Attributed"
   },
   {
     "id": "russell-1",
@@ -355,7 +357,8 @@
     "tags": [
       "wisdom",
       "humility"
-    ]
+    ],
+    "source": "The Triumph of Stupidity (attributed)"
   },
   {
     "id": "epicurus-1",
@@ -434,7 +437,8 @@
     "tags": [
       "discipline",
       "creativity"
-    ]
+    ],
+    "source": "The Art of War (attributed)"
   },
   {
     "id": "frankl-1",
@@ -487,733 +491,706 @@
     "source": "Essays, III:13"
   },
   {
-    "id": "seneca-8",
-    "text": "As a tale, so is life: not how long it is, but how good it is, is what matters.",
-    "author": "Seneca",
-    "tags": [
-      "reflection",
-      "purpose"
-    ]
-  },
-  {
-    "id": "seneca-9",
-    "text": "No man was ever wise by chance.",
-    "author": "Seneca",
-    "tags": [
-      "wisdom",
-      "discipline"
-    ]
-  },
-  {
-    "id": "aurelius-9",
-    "text": "Accept the things to which fate binds you, and love the people with whom fate brings you together, but do so with all your heart.",
-    "author": "Marcus Aurelius",
-    "tags": [
-      "gratitude",
-      "purpose"
-    ]
-  },
-  {
     "id": "montaigne-2",
     "text": "The most manifest sign of wisdom is a continual cheerfulness.",
     "author": "Michel de Montaigne",
-    "source": "Essays, I: On the Education of Children",
     "tags": [
       "wisdom"
-    ]
+    ],
+    "source": "Essays, I: On the Education of Children"
   },
   {
     "id": "montaigne-3",
     "text": "We are all patchwork, and so shapeless and diverse in composition that each bit, each moment plays its own game.",
     "author": "Michel de Montaigne",
-    "source": "Essays, II: On the Inconstancy of Our Actions",
     "tags": [
       "reflection"
-    ]
+    ],
+    "source": "Essays, II: On the Inconstancy of Our Actions"
   },
   {
     "id": "montaigne-4",
     "text": "The most fruitful and natural exercise of the mind, in my opinion, is conversation; I find the use of it more sweet than of any other action of life.",
     "author": "Michel de Montaigne",
-    "source": "Essays, III: Of the Art of Conference",
     "tags": [
       "learning"
-    ]
+    ],
+    "source": "Essays, III: Of the Art of Conference"
   },
   {
     "id": "montaigne-5",
     "text": "I quote others only the better to quote myself.",
     "author": "Michel de Montaigne",
-    "source": "Essays, III: On Physiognomy",
     "tags": [
       "creativity"
-    ]
+    ],
+    "source": "Essays, III: On Physiognomy"
   },
   {
     "id": "montaigne-6",
     "text": "The utility of living consists not in the length of days, but in the use of time.",
     "author": "Michel de Montaigne",
-    "source": "Essays, I: That to Study Philosophy Is to Learn to Die",
     "tags": [
       "purpose"
-    ]
+    ],
+    "source": "Essays, I: That to Study Philosophy Is to Learn to Die"
   },
   {
     "id": "montaigne-7",
     "text": "To compose our character is our duty, not to compose books, and to win, not battles and provinces, but order and tranquility in our conduct.",
     "author": "Michel de Montaigne",
-    "source": "Essays, III: On Experience",
     "tags": [
       "discipline"
-    ]
+    ],
+    "source": "Essays, III: On Experience"
   },
   {
     "id": "montaigne-8",
     "text": "On the loftiest throne in the world, we are still sitting on our bottom.",
     "author": "Michel de Montaigne",
-    "source": "Essays, III: On Experience",
     "tags": [
       "humility"
-    ]
+    ],
+    "source": "Essays, III: On Experience"
   },
   {
     "id": "montaigne-9",
     "text": "I speak truth, not so much as I would, but as much as I dare; and I dare a little the more, as I grow older.",
     "author": "Michel de Montaigne",
-    "source": "Essays, III: On Repentance",
     "tags": [
       "courage"
-    ]
+    ],
+    "source": "Essays, III: On Repentance"
   },
   {
     "id": "montaigne-10",
     "text": "There is no desire more natural than that of knowledge.",
     "author": "Michel de Montaigne",
-    "source": "Essays, III: On Experience",
     "tags": [
       "learning"
-    ]
+    ],
+    "source": "Essays, III: On Experience"
   },
   {
     "id": "montaigne-11",
     "text": "A well-made rather than a well-filled head.",
     "author": "Michel de Montaigne",
-    "source": "Essays, I: On the Education of Children",
     "tags": [
       "learning"
-    ]
+    ],
+    "source": "Essays, I: On the Education of Children"
   },
   {
     "id": "montaigne-12",
     "text": "My trade and art is to live.",
     "author": "Michel de Montaigne",
-    "source": "Essays, II: Use Makes Perfect",
     "tags": [
       "purpose"
-    ]
+    ],
+    "source": "Essays, II: Use Makes Perfect"
   },
   {
     "id": "montaigne-13",
     "text": "Because it was he, because it was I.",
     "author": "Michel de Montaigne",
-    "source": "Essays, I: On Friendship",
     "tags": [
       "gratitude"
-    ]
+    ],
+    "source": "Essays, I: On Friendship"
   },
   {
     "id": "bacon-1",
     "text": "Reading maketh a full man; conference a ready man; and writing an exact man.",
     "author": "Francis Bacon",
-    "source": "Essays, Of Studies",
     "tags": [
       "learning"
-    ]
+    ],
+    "source": "Essays, Of Studies"
   },
   {
     "id": "bacon-2",
     "text": "Virtue is like a rich stone, best plain set.",
     "author": "Francis Bacon",
-    "source": "Essays, Of Beauty",
     "tags": [
       "simplicity"
-    ]
+    ],
+    "source": "Essays, Of Beauty"
   },
   {
     "id": "bacon-3",
     "text": "Prosperity doth best discover vice, but adversity doth best discover virtue.",
     "author": "Francis Bacon",
-    "source": "Essays, Of Adversity",
     "tags": [
       "resilience"
-    ]
+    ],
+    "source": "Essays, Of Adversity"
   },
   {
     "id": "bacon-4",
     "text": "Fortune is like the market; where many times if you can stay a little, the price will fall.",
     "author": "Francis Bacon",
-    "source": "Essays, Of Delays",
     "tags": [
       "patience"
-    ]
+    ],
+    "source": "Essays, Of Delays"
   },
   {
     "id": "bacon-5",
     "text": "It is a mere and miserable solitude to want true friends; without which the world is but a wilderness.",
     "author": "Francis Bacon",
-    "source": "Essays, Of Friendship",
     "tags": [
       "reflection"
-    ]
+    ],
+    "source": "Essays, Of Friendship"
   },
   {
     "id": "bacon-6",
     "text": "Travel, in the younger sort, is a part of education; in the elder, a part of experience.",
     "author": "Francis Bacon",
-    "source": "Essays, Of Travel",
     "tags": [
       "growth"
-    ]
+    ],
+    "source": "Essays, Of Travel"
   },
   {
     "id": "bacon-7",
     "text": "Nature is often hidden; sometimes overcome; seldom extinguished.",
     "author": "Francis Bacon",
-    "source": "Essays, Of Nature in Men",
     "tags": [
       "discipline"
-    ]
+    ],
+    "source": "Essays, Of Nature in Men"
   },
   {
     "id": "bacon-8",
     "text": "Boldness is ever blind; for it seeth not dangers and inconveniences.",
     "author": "Francis Bacon",
-    "source": "Essays, Of Boldness",
     "tags": [
       "courage"
-    ]
+    ],
+    "source": "Essays, Of Boldness"
   },
   {
     "id": "la-rochefoucauld-1",
     "text": "Our virtues are most frequently but vices disguised.",
     "author": "François de La Rochefoucauld",
-    "source": "Maxims, Epigraph",
     "tags": [
       "humility"
-    ]
+    ],
+    "source": "Maxims, Epigraph"
   },
   {
     "id": "la-rochefoucauld-2",
     "text": "Self-love is the greatest of flatterers.",
     "author": "François de La Rochefoucauld",
-    "source": "Maxims, 2",
     "tags": [
       "wisdom"
-    ]
+    ],
+    "source": "Maxims, 2"
   },
   {
     "id": "la-rochefoucauld-3",
     "text": "Neither the sun nor death can be looked at without winking.",
     "author": "François de La Rochefoucauld",
-    "source": "Maxims, 26",
     "tags": [
       "courage"
-    ]
+    ],
+    "source": "Maxims, 26"
   },
   {
     "id": "la-rochefoucauld-4",
     "text": "We are never so happy or so unhappy as we suppose.",
     "author": "François de La Rochefoucauld",
-    "source": "Maxims, 49",
     "tags": [
       "resilience"
-    ]
+    ],
+    "source": "Maxims, 49"
   },
   {
     "id": "la-rochefoucauld-5",
     "text": "The head is ever the dupe of the heart.",
     "author": "François de La Rochefoucauld",
-    "source": "Maxims, 102",
     "tags": [
       "reflection"
-    ]
+    ],
+    "source": "Maxims, 102"
   },
   {
     "id": "la-rochefoucauld-6",
     "text": "Nothing is given so profusely as advice.",
     "author": "François de La Rochefoucauld",
-    "source": "Maxims, 110",
     "tags": [
       "wisdom"
-    ]
+    ],
+    "source": "Maxims, 110"
   },
   {
     "id": "la-rochefoucauld-7",
     "text": "We become so accustomed to disguise ourselves to others that at last we are disguised to ourselves.",
     "author": "François de La Rochefoucauld",
-    "source": "Maxims, 119",
     "tags": [
       "reflection"
-    ]
+    ],
+    "source": "Maxims, 119"
   },
   {
     "id": "la-rochefoucauld-8",
     "text": "There is great ability in knowing how to conceal one's ability.",
     "author": "François de La Rochefoucauld",
-    "source": "Maxims, 245",
     "tags": [
       "wisdom"
-    ]
+    ],
+    "source": "Maxims, 245"
   },
   {
     "id": "la-rochefoucauld-9",
     "text": "We hardly find any persons of good sense, save those who agree with us.",
     "author": "François de La Rochefoucauld",
-    "source": "Maxims, 347",
     "tags": [
       "humility"
-    ]
+    ],
+    "source": "Maxims, 347"
   },
   {
     "id": "la-rochefoucauld-10",
     "text": "Few know how to be old.",
     "author": "François de La Rochefoucauld",
-    "source": "Maxims, 423",
     "tags": [
       "patience"
-    ]
+    ],
+    "source": "Maxims, 423"
   },
   {
     "id": "chamfort-1",
     "text": "The most wasted of all days is that on which you have not laughed.",
     "author": "Nicolas Chamfort",
-    "source": "Maximes et Pensées, Part I",
     "tags": [
       "mindfulness"
-    ]
+    ],
+    "source": "Maximes et Pensées, Part I"
   },
   {
     "id": "chamfort-2",
     "text": "Happiness is not an easy thing: it is very difficult to find it within ourselves, and impossible to find it elsewhere.",
     "author": "Nicolas Chamfort",
-    "source": "Maximes et Pensées",
     "tags": [
       "reflection"
-    ]
+    ],
+    "source": "Maximes et Pensées"
   },
   {
     "id": "chamfort-3",
     "text": "Society is composed of two great classes: those who have more dinners than appetites, and those who have more appetites than dinners.",
     "author": "Nicolas Chamfort",
-    "source": "Maximes et Pensées",
     "tags": [
       "gratitude"
-    ]
+    ],
+    "source": "Maximes et Pensées"
   },
   {
     "id": "chamfort-4",
     "text": "A clever man would be greatly embarrassed without the company of fools.",
     "author": "Nicolas Chamfort",
-    "source": "Maximes et Pensées",
     "tags": [
       "humility"
-    ]
+    ],
+    "source": "Maximes et Pensées"
   },
   {
     "id": "chamfort-5",
     "text": "The best philosophy, as applied to this world, is to combine sarcasm with cheerfulness.",
     "author": "Nicolas Chamfort",
-    "source": "Maximes et Pensées",
     "tags": [
       "wisdom"
-    ]
+    ],
+    "source": "Maximes et Pensées"
   },
   {
     "id": "chamfort-6",
     "text": "There is nothing so rare as true kindness; even those who believe they possess it usually have only complacency or weakness.",
     "author": "Nicolas Chamfort",
-    "source": "Maximes et Pensées, Part I",
     "tags": [
       "humility"
-    ]
+    ],
+    "source": "Maximes et Pensées, Part I"
   },
   {
     "id": "chamfort-7",
     "text": "We should not judge a man's merit by his qualities, but by the use he makes of them.",
     "author": "Nicolas Chamfort",
-    "source": "Maximes et Pensées",
     "tags": [
       "wisdom"
-    ]
+    ],
+    "source": "Maximes et Pensées"
   },
   {
     "id": "chamfort-8",
     "text": "There is one thing rarer, finer, and happier than talent: the ability to recognize talent in others.",
     "author": "Nicolas Chamfort",
-    "source": "Maximes et Pensées",
     "tags": [
       "gratitude"
-    ]
+    ],
+    "source": "Maximes et Pensées"
   },
   {
     "id": "vauvenargues-1",
     "text": "Great thoughts come from the heart.",
     "author": "Marquis de Vauvenargues",
-    "source": "Réflexions et Maximes",
     "tags": [
       "wisdom"
-    ]
+    ],
+    "source": "Réflexions et Maximes"
   },
   {
     "id": "vauvenargues-2",
     "text": "Reason leads us astray more often than nature.",
     "author": "Marquis de Vauvenargues",
-    "source": "Réflexions et Maximes",
     "tags": [
       "humility"
-    ]
+    ],
+    "source": "Réflexions et Maximes"
   },
   {
     "id": "vauvenargues-3",
     "text": "Patience is the art of hoping.",
     "author": "Marquis de Vauvenargues",
-    "source": "Réflexions et Maximes",
     "tags": [
       "patience"
-    ]
+    ],
+    "source": "Réflexions et Maximes"
   },
   {
     "id": "vauvenargues-4",
     "text": "One cannot be just if one is not humane.",
     "author": "Marquis de Vauvenargues",
-    "source": "Réflexions et Maximes",
     "tags": [
       "wisdom"
-    ]
+    ],
+    "source": "Réflexions et Maximes"
   },
   {
     "id": "vauvenargues-5",
     "text": "It is easier to know mankind in general than a particular man.",
     "author": "Marquis de Vauvenargues",
-    "source": "Réflexions et Maximes",
     "tags": [
       "reflection"
-    ]
+    ],
+    "source": "Réflexions et Maximes"
   },
   {
     "id": "emerson-6",
     "text": "Whoso would be a man must be a nonconformist.",
     "author": "Ralph Waldo Emerson",
-    "source": "Self-Reliance",
     "tags": [
       "courage"
-    ]
+    ],
+    "source": "Self-Reliance"
   },
   {
     "id": "emerson-7",
     "text": "Insist on yourself; never imitate.",
     "author": "Ralph Waldo Emerson",
-    "source": "Self-Reliance",
     "tags": [
       "creativity"
-    ]
+    ],
+    "source": "Self-Reliance"
   },
   {
     "id": "emerson-8",
     "text": "Nothing is at last sacred but the integrity of your own mind.",
     "author": "Ralph Waldo Emerson",
-    "source": "Self-Reliance",
     "tags": [
       "wisdom"
-    ]
+    ],
+    "source": "Self-Reliance"
   },
   {
     "id": "emerson-9",
     "text": "Society everywhere is in conspiracy against the manhood of every one of its members.",
     "author": "Ralph Waldo Emerson",
-    "source": "Self-Reliance",
     "tags": [
       "freedom"
-    ]
+    ],
+    "source": "Self-Reliance"
   },
   {
     "id": "emerson-10",
     "text": "Trust thyself: every heart vibrates to that iron string.",
     "author": "Ralph Waldo Emerson",
-    "source": "Self-Reliance",
     "tags": [
       "courage"
-    ]
+    ],
+    "source": "Self-Reliance"
   },
   {
     "id": "emerson-11",
     "text": "Nothing can bring you peace but yourself.",
     "author": "Ralph Waldo Emerson",
-    "source": "Self-Reliance",
     "tags": [
       "freedom"
-    ]
+    ],
+    "source": "Self-Reliance"
   },
   {
     "id": "emerson-12",
     "text": "For every thing you have missed, you have gained something else; and for every thing you gain, you lose something.",
     "author": "Ralph Waldo Emerson",
-    "source": "Compensation (Essays, First Series)",
     "tags": [
       "growth"
-    ]
+    ],
+    "source": "Compensation (Essays, First Series)"
   },
   {
     "id": "emerson-13",
     "text": "A friend may well be reckoned the masterpiece of nature.",
     "author": "Ralph Waldo Emerson",
-    "source": "Friendship (Essays, First Series)",
     "tags": [
       "gratitude"
-    ]
+    ],
+    "source": "Friendship (Essays, First Series)"
   },
   {
     "id": "emerson-14",
     "text": "The sun shines to-day also. There is more wool and flax in the fields. There are new lands, new men, new thoughts.",
     "author": "Ralph Waldo Emerson",
-    "source": "Nature, Introduction",
     "tags": [
       "growth"
-    ]
+    ],
+    "source": "Nature, Introduction"
   },
   {
     "id": "emerson-15",
     "text": "Earth laughs in flowers, to see her boastful boys, earth-proud, proud of the earth which is not theirs.",
     "author": "Ralph Waldo Emerson",
-    "source": "Poems, Hamatreya",
     "tags": [
       "humility"
-    ]
+    ],
+    "source": "Poems, Hamatreya"
   },
   {
     "id": "thoreau-5",
     "text": "I went to the woods because I wished to live deliberately, to front only the essential facts of life, and see if I could not learn what it had to teach, and not, when I came to die, discover that I had not lived.",
     "author": "Henry David Thoreau",
-    "source": "Walden, Where I Lived, and What I Lived For",
     "tags": [
       "purpose"
-    ]
+    ],
+    "source": "Walden, Where I Lived, and What I Lived For"
   },
   {
     "id": "thoreau-6",
     "text": "Morning is when I am awake and there is a dawn in me.",
     "author": "Henry David Thoreau",
-    "source": "Walden, Where I Lived, and What I Lived For",
     "tags": [
       "mindfulness"
-    ]
+    ],
+    "source": "Walden, Where I Lived, and What I Lived For"
   },
   {
     "id": "thoreau-7",
     "text": "We must learn to reawaken and keep ourselves awake, not by mechanical aids, but by an infinite expectation of the dawn, which does not forsake us in our soundest sleep.",
     "author": "Henry David Thoreau",
-    "source": "Walden, Conclusion",
     "tags": [
       "growth"
-    ]
+    ],
+    "source": "Walden, Conclusion"
   },
   {
     "id": "thoreau-8",
     "text": "If you have built castles in the air, your work need not be lost; that is where they should be. Now put the foundations under them.",
     "author": "Henry David Thoreau",
-    "source": "Walden, Conclusion",
     "tags": [
       "perseverance"
-    ]
+    ],
+    "source": "Walden, Conclusion"
   },
   {
     "id": "thoreau-9",
     "text": "Rather than love, than money, than fame, give me truth.",
     "author": "Henry David Thoreau",
-    "source": "Walden, Conclusion",
     "tags": [
       "wisdom"
-    ]
+    ],
+    "source": "Walden, Conclusion"
   },
   {
     "id": "thoreau-10",
     "text": "The cost of a thing is the amount of what I will call life which is required to be exchanged for it.",
     "author": "Henry David Thoreau",
-    "source": "Walden, Economy",
     "tags": [
       "simplicity"
-    ]
+    ],
+    "source": "Walden, Economy"
   },
   {
     "id": "thoreau-11",
     "text": "Time is but the stream I go a-fishing in.",
     "author": "Henry David Thoreau",
-    "source": "Walden, Conclusion",
     "tags": [
       "mindfulness"
-    ]
+    ],
+    "source": "Walden, Conclusion"
   },
   {
     "id": "thoreau-12",
     "text": "Could a greater miracle take place than for us to look through each other's eyes for an instant?",
     "author": "Henry David Thoreau",
-    "source": "Walden, Economy",
     "tags": [
       "reflection"
-    ]
+    ],
+    "source": "Walden, Economy"
   },
   {
     "id": "thoreau-13",
     "text": "I never found the companion that was so companionable as solitude.",
     "author": "Henry David Thoreau",
-    "source": "Walden, Solitude",
     "tags": [
       "simplicity"
-    ]
+    ],
+    "source": "Walden, Solitude"
   },
   {
     "id": "thoreau-14",
     "text": "In Wildness is the preservation of the world.",
     "author": "Henry David Thoreau",
-    "source": "Walking",
     "tags": [
       "freedom"
-    ]
+    ],
+    "source": "Walking"
   },
   {
     "id": "hazlitt-1",
     "text": "One of the pleasantest things in the world is going a journey: but I like to go by myself.",
     "author": "William Hazlitt",
-    "source": "Table-Talk, On Going a Journey",
     "tags": [
       "freedom"
-    ]
+    ],
+    "source": "Table-Talk, On Going a Journey"
   },
   {
     "id": "hazlitt-2",
     "text": "Thought depends on the habitual exercise of the speculative faculties; action, on the determination of the will.",
     "author": "William Hazlitt",
-    "source": "Table-Talk, On Thought and Action",
     "tags": [
       "action"
-    ]
+    ],
+    "source": "Table-Talk, On Thought and Action"
   },
   {
     "id": "hazlitt-3",
     "text": "It asks a troublesome effort to ensure the admiration of others: it is a still greater one to be satisfied with one's own thoughts.",
     "author": "William Hazlitt",
-    "source": "Table-Talk, On Living to One's-Self",
     "tags": [
       "humility"
-    ]
+    ],
+    "source": "Table-Talk, On Living to One's-Self"
   },
   {
     "id": "hazlitt-4",
     "text": "It is better to be able neither to read nor write than to be able to do nothing else.",
     "author": "William Hazlitt",
-    "source": "Table-Talk, On the Ignorance of the Learned",
     "tags": [
       "learning"
-    ]
+    ],
+    "source": "Table-Talk, On the Ignorance of the Learned"
   },
   {
     "id": "hazlitt-5",
     "text": "To write a genuine familiar or truly English style is to write as any one would speak in common conversation who had a thorough command and choice of words.",
     "author": "William Hazlitt",
-    "source": "Table-Talk, On Familiar Style",
     "tags": [
       "creativity"
-    ]
+    ],
+    "source": "Table-Talk, On Familiar Style"
   },
   {
     "id": "johnson-1",
     "text": "Hasty compositions, however they please at first by flowery luxuriance, can seldom endure the change of seasons, but perish at the first blast of criticism, or frost of neglect.",
     "author": "Samuel Johnson",
-    "source": "Rambler, No. 169",
     "tags": [
       "creativity"
-    ]
+    ],
+    "source": "Rambler, No. 169"
   },
   {
     "id": "johnson-2",
     "text": "Wonder is a pause of reason, a sudden cessation of the mental progress.",
     "author": "Samuel Johnson",
-    "source": "Rambler, No. 137",
     "tags": [
       "reflection"
-    ]
+    ],
+    "source": "Rambler, No. 137"
   },
   {
     "id": "johnson-3",
     "text": "The first task is to search books, the next to contemplate nature.",
     "author": "Samuel Johnson",
-    "source": "Rambler, No. 154",
     "tags": [
       "learning"
-    ]
+    ],
+    "source": "Rambler, No. 154"
   },
   {
     "id": "johnson-4",
     "text": "The disposition to defer every important design to a time of leisure, and a state of settled uniformity, proceeds generally from a false estimate of the human powers.",
     "author": "Samuel Johnson",
-    "source": "Rambler, No. 108",
     "tags": [
       "action"
-    ]
+    ],
+    "source": "Rambler, No. 108"
   },
   {
     "id": "johnson-5",
     "text": "Calamity will neither be repelled by fortitude, nor escaped by flight; neither awed by greatness, nor eluded by obscurity.",
     "author": "Samuel Johnson",
-    "source": "Rambler, No. 150",
     "tags": [
       "resilience"
-    ]
+    ],
+    "source": "Rambler, No. 150"
   },
   {
     "id": "woolf-1",
     "text": "A woman must have money and a room of her own if she is to write fiction.",
     "author": "Virginia Woolf",
-    "source": "A Room of One's Own, Ch. I",
     "tags": [
       "creativity"
-    ]
+    ],
+    "source": "A Room of One's Own, Ch. I"
   },
   {
     "id": "woolf-2",
     "text": "Fiction is like a spider's web, attached ever so lightly perhaps, but still attached to life at all four corners.",
     "author": "Virginia Woolf",
-    "source": "A Room of One's Own, Ch. II",
     "tags": [
       "creativity"
-    ]
+    ],
+    "source": "A Room of One's Own, Ch. II"
   },
   {
     "id": "woolf-3",
     "text": "One cannot think well, love well, sleep well, if one has not dined well.",
     "author": "Virginia Woolf",
-    "source": "A Room of One's Own, Ch. I",
     "tags": [
       "simplicity"
-    ]
+    ],
+    "source": "A Room of One's Own, Ch. I"
   },
   {
     "id": "woolf-4",
     "text": "Lock up your libraries if you like; but there is no gate, no lock, no bolt that you can set upon the freedom of my mind.",
     "author": "Virginia Woolf",
-    "source": "A Room of One's Own, Ch. IV",
     "tags": [
       "freedom"
-    ]
+    ],
+    "source": "A Room of One's Own, Ch. IV"
   },
   {
     "id": "woolf-5",
     "text": "Life for both sexes—and I looked at them, shouldering their way along the pavement—is arduous, difficult, a perpetual struggle. It calls for gigantic courage and strength.",
     "author": "Virginia Woolf",
-    "source": "A Room of One's Own, Ch. II",
     "tags": [
       "resilience"
-    ]
+    ],
+    "source": "A Room of One's Own, Ch. II"
   },
   {
     "id": "nietzsche-7",
@@ -1949,2785 +1926,2544 @@
     "id": "darwin-1",
     "text": "A pleasure to last a lifetime.",
     "author": "Charles Darwin",
-    "source": "Autobiography, opening lines (ed. Nora Barlow, 1958)",
     "tags": [
       "gratitude",
       "reflection"
-    ]
+    ],
+    "source": "Autobiography, opening lines (ed. Nora Barlow, 1958)"
   },
   {
     "id": "darwin-2",
     "text": "A false or inaccurate fact does essential injury, for it endures a long time; but a true fact, even if for some time unproven, may do great good.",
     "author": "Charles Darwin",
-    "source": "Autobiography (ed. Nora Barlow, 1958)",
     "tags": [
       "wisdom",
       "learning"
-    ]
+    ],
+    "source": "Autobiography (ed. Nora Barlow, 1958)"
   },
   {
     "id": "darwin-3",
     "text": "If I had been obliged to graduate from simply observing and collecting results, I could not have written down the Origin.",
     "author": "Charles Darwin",
-    "source": "Autobiography (ed. Nora Barlow, 1958)",
     "tags": [
       "creativity",
       "reflection"
-    ]
+    ],
+    "source": "Autobiography (ed. Nora Barlow, 1958)"
   },
   {
     "id": "darwin-4",
     "text": "The love of all things of nature is indeed a most important element in the character of a naturalist.",
     "author": "Charles Darwin",
-    "source": "Autobiography (ed. Nora Barlow, 1958)",
     "tags": [
       "gratitude",
       "mindfulness"
-    ]
+    ],
+    "source": "Autobiography (ed. Nora Barlow, 1958)"
   },
   {
     "id": "darwin-6",
     "text": "There is grandeur in this view of life, with its several powers, having been originally breathed into a few forms or into one; and that, whilst this planet has gone cycling on according to the fixed law of gravity, from so simple a beginning endless forms most beautiful and most wonderful have been, and are being, evolved.",
     "author": "Charles Darwin",
-    "source": "On the Origin of Species, 1st ed. 1859, concluding paragraph",
     "tags": [
       "growth",
       "wisdom"
-    ]
+    ],
+    "source": "On the Origin of Species, 1st ed. 1859, concluding paragraph"
   },
   {
     "id": "darwin-7",
     "text": "Natural selection is daily and hourly scrutinising, throughout the world, every variation, even the slightest; rejecting that that is bad, preserving and adding up all that is good; silently and insensibly working, whenever and wherever opportunity offers, at the improvement of each organic being.",
     "author": "Charles Darwin",
-    "source": "On the Origin of Species, 1st ed. 1859, Chapter IV",
     "tags": [
       "patience",
       "perseverance"
-    ]
+    ],
+    "source": "On the Origin of Species, 1st ed. 1859, Chapter IV"
   },
   {
     "id": "darwin-9",
     "text": "If it could be demonstrated that any complex organ existed, which could not possibly have been formed by numerous, successive, slight modifications, my theory would absolutely break down.",
     "author": "Charles Darwin",
-    "source": "On the Origin of Species, 1st ed. 1859, Chapter VI",
     "tags": [
       "humility",
       "wisdom"
-    ]
+    ],
+    "source": "On the Origin of Species, 1st ed. 1859, Chapter VI"
   },
   {
     "id": "darwin-10",
     "text": "Nature may be compared to a surface covered with ten thousand sharp wedges, packed close together and driven inwards by incessant blows.",
     "author": "Charles Darwin",
-    "source": "On the Origin of Species, 1st ed. 1859, Chapter IV",
     "tags": [
       "resilience",
       "growth"
-    ]
+    ],
+    "source": "On the Origin of Species, 1st ed. 1859, Chapter IV"
   },
   {
     "id": "darwin-13",
     "text": "I have steadily endeavoured to keep my mind free so as to give up any hypothesis, however much beloved (and I cannot resist forming one on every subject), as soon as the facts are shown to be opposed to it.",
     "author": "Charles Darwin",
-    "source": "Autobiography (ed. Nora Barlow, 1958)",
     "tags": [
       "humility",
       "discipline"
-    ]
+    ],
+    "source": "Autobiography (ed. Nora Barlow, 1958)"
   },
   {
     "id": "curie-1",
     "text": "One never notices what has been done; one can only see what remains to be done.",
     "author": "Marie Curie",
-    "source": "Letter to her brother Józef Skłodowski, 1894 (in Ève Curie, Madame Curie, 1937)",
     "tags": [
       "purpose",
       "perseverance"
-    ]
+    ],
+    "source": "Letter to her brother Józef Skłodowski, 1894 (in Ève Curie, Madame Curie, 1937)"
   },
   {
     "id": "curie-2",
     "text": "We must have perseverance and, above all, confidence in ourselves. We must believe that we are gifted for something and that this thing must be attained.",
     "author": "Marie Curie",
-    "source": "Letter to her daughters, 1910s; widely reproduced in Ève Curie, Madame Curie (1937)",
     "tags": [
       "perseverance",
       "resilience"
-    ]
+    ],
+    "source": "Letter to her daughters, 1910s; widely reproduced in Ève Curie, Madame Curie (1937)"
   },
   {
     "id": "curie-4",
     "text": "I am among those who think that science has great beauty.",
     "author": "Marie Curie",
-    "source": "Nobel Prize banquet address, Stockholm, December 1911 (as reported in contemporary accounts and Ève Curie, Madame Curie)",
     "tags": [
       "gratitude",
       "wisdom"
-    ]
+    ],
+    "source": "Nobel Prize banquet address, Stockholm, December 1911 (as reported in contemporary accounts and Ève Curie, Madame Curie)"
   },
   {
     "id": "curie-5",
     "text": "It is the very spirit of science that makes the work of the scientist beautiful and almost joyous.",
     "author": "Marie Curie",
-    "source": "Autobiographical notes appended to Pierre Curie (Paris, 1923)",
     "tags": [
       "learning",
       "gratitude"
-    ]
+    ],
+    "source": "Autobiographical notes appended to Pierre Curie (Paris, 1923)"
   },
   {
     "id": "curie-6",
     "text": "In science, we must be interested in things, not in persons.",
     "author": "Marie Curie",
-    "source": "Attributed to Curie's writings on scientific ethics (1920s); attestation moderate — see ledger",
     "tags": [
       "humility",
       "discipline"
-    ]
+    ],
+    "source": "Attributed to Curie's writings on scientific ethics (1920s); attestation moderate — see ledger"
   },
   {
     "id": "feynman-1",
     "text": "What I cannot create, I do not understand.",
     "author": "Richard Feynman",
-    "source": "Blackboard note written at his death, February 1988 (feynmanlectures.caltech.edu photographs; Caltech Archives)",
     "tags": [
       "learning",
       "wisdom"
-    ]
+    ],
+    "source": "Blackboard note written at his death, February 1988 (feynmanlectures.caltech.edu photographs; Caltech Archives)"
   },
   {
     "id": "feynman-2",
     "text": "Nature uses only the longest threads to weave her patterns, so that each small piece of her fabric reveals the organization of the entire tapestry.",
     "author": "Richard Feynman",
-    "source": "The Feynman Lectures on Physics, Vol. I (1963), Ch. 2",
     "tags": [
       "wisdom",
       "learning"
-    ]
+    ],
+    "source": "The Feynman Lectures on Physics, Vol. I (1963), Ch. 2"
   },
   {
     "id": "feynman-3",
     "text": "The first principle is that you must not fool yourself — and you are the easiest person to fool.",
     "author": "Richard Feynman",
-    "source": "Caltech commencement address, 1974 ('Cargo Cult Science'; reprinted in Surely You're Joking, Mr. Feynman!)",
     "tags": [
       "humility",
       "wisdom"
-    ]
+    ],
+    "source": "Caltech commencement address, 1974 ('Cargo Cult Science'; reprinted in Surely You're Joking, Mr. Feynman!)"
   },
   {
     "id": "feynman-7",
     "text": "I would rather have questions that can't be answered than an answer which I can't question.",
     "author": "Richard Feynman",
-    "source": "BBC Horizon interview 'The Pleasure of Finding Things Out', 1981",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "BBC Horizon interview 'The Pleasure of Finding Things Out', 1981"
   },
   {
     "id": "feynman-9",
     "text": "You can know the name of a bird in all the languages of the world, but when you're finished, you'll know absolutely nothing whatever about the bird.",
     "author": "Richard Feynman",
-    "source": "'The Pleasure of Finding Things Out' (1981 BBC interview); reprinted in The Pleasure of Finding Things Out (1999)",
     "tags": [
       "learning",
       "wisdom"
-    ]
+    ],
+    "source": "'The Pleasure of Finding Things Out' (1981 BBC interview); reprinted in The Pleasure of Finding Things Out (1999)"
   },
   {
     "id": "sagan-1",
     "text": "The cosmos is within us. We are made of star-stuff. We are a way for the universe to know itself.",
     "author": "Carl Sagan",
-    "source": "Cosmos (1980), final chapter / TV series epilogue",
     "tags": [
       "reflection",
       "purpose"
-    ]
+    ],
+    "source": "Cosmos (1980), final chapter / TV series epilogue"
   },
   {
     "id": "sagan-2",
     "text": "The sky calls to us. If we do not destroy ourselves, we will one day venture to the stars.",
     "author": "Carl Sagan",
-    "source": "Cosmos (1980), final chapter",
     "tags": [
       "courage",
       "purpose"
-    ]
+    ],
+    "source": "Cosmos (1980), final chapter"
   },
   {
     "id": "sagan-3",
     "text": "Our posturings, our imagined self-importance, the delusion that we have some privileged position in the Universe, are challenged by this point of pale light.",
     "author": "Carl Sagan",
-    "source": "Pale Blue Dot (1994), Ch. 3 'The Great Demotions'",
     "tags": [
       "humility",
       "reflection"
-    ]
+    ],
+    "source": "Pale Blue Dot (1994), Ch. 3 'The Great Demotions'"
   },
   {
     "id": "sagan-4",
     "text": "Somewhere, something incredible is waiting to be known.",
     "author": "Carl Sagan",
-    "source": "Attributed in Sharon Levy's biography of Sagan (1998); attestation moderate — see ledger",
     "tags": [
       "learning",
       "creativity"
-    ]
+    ],
+    "source": "Attributed in Sharon Levy's biography of Sagan (1998); attestation moderate — see ledger"
   },
   {
     "id": "hawking-2",
     "text": "However difficult life may seem, there is always something you can do and succeed at.",
     "author": "Stephen Hawking",
-    "source": "Statement accompanying the 2013 film 'Hawking' / widely reported speech, 2013",
     "tags": [
       "resilience",
       "perseverance"
-    ]
+    ],
+    "source": "Statement accompanying the 2013 film 'Hawking' / widely reported speech, 2013"
   },
   {
     "id": "hawking-3",
     "text": "Look up at the stars and not down at your feet. Try to make sense of what you see.",
     "author": "Stephen Hawking",
-    "source": "Interview on the nature of curiosity, Newsweek, 1988 (short form)",
     "tags": [
       "purpose",
       "courage"
-    ]
+    ],
+    "source": "Interview on the nature of curiosity, Newsweek, 1988 (short form)"
   },
   {
     "id": "pasteur-1",
     "text": "Chance favors the prepared mind.",
     "author": "Louis Pasteur",
-    "source": "Inaugural discourse upon appointment as Professor of Chemistry, Faculty of Sciences at Lille, 7 December 1854",
     "tags": [
       "perseverance",
       "discipline"
-    ]
+    ],
+    "source": "Inaugural discourse upon appointment as Professor of Chemistry, Faculty of Sciences at Lille, 7 December 1854"
   },
   {
     "id": "lovelace-1",
     "text": "Imagination is the discovering faculty, pre-eminently.",
     "author": "Ada Lovelace",
-    "source": "Letter to Charles Babbage, 10 June 1843 (in B.A. Toole, Ada, the Enchantress of Numbers, 1998)",
     "tags": [
       "creativity",
       "learning"
-    ]
+    ],
+    "source": "Letter to Charles Babbage, 10 June 1843 (in B.A. Toole, Ada, the Enchantress of Numbers, 1998)"
   },
   {
     "id": "lovelace-2",
     "text": "The Analytical Engine weaves algebraical patterns just as the Jacquard loom weaves flowers and leaves.",
     "author": "Ada Lovelace",
-    "source": "Note A to 'Sketch of the Analytical Engine' (Scientific Memoirs, Vol. III, 1843)",
     "tags": [
       "creativity",
       "wisdom"
-    ]
+    ],
+    "source": "Note A to 'Sketch of the Analytical Engine' (Scientific Memoirs, Vol. III, 1843)"
   },
   {
     "id": "lovelace-4",
     "text": "The more I study, the more insatiable do I feel my genius for it to be.",
     "author": "Ada Lovelace",
-    "source": "Letter to Charles Babbage, 18 July 1843 (in Toole, Ada, the Enchantress of Numbers, 1998)",
     "tags": [
       "learning",
       "growth"
-    ]
+    ],
+    "source": "Letter to Charles Babbage, 18 July 1843 (in Toole, Ada, the Enchantress of Numbers, 1998)"
   },
   {
     "id": "lovelace-5",
     "text": "I never am really satisfied that I understand anything; because, understand it well as I may, my comprehension can only be an infinitesimal fraction of all I want to understand.",
     "author": "Ada Lovelace",
-    "source": "Letter to Andrew Crosse's wife, c. 1850 (in Toole, Ada, the Enchantress of Numbers, 1998)",
     "tags": [
       "humility",
       "learning"
-    ]
+    ],
+    "source": "Letter to Andrew Crosse's wife, c. 1850 (in Toole, Ada, the Enchantress of Numbers, 1998)"
   },
   {
     "id": "schrodinger-1",
     "text": "Consciousness is a singular of which the plural is unknown.",
     "author": "Erwin Schrödinger",
-    "source": "What is Life? with Mind and Matter (1944), Epilogue 'Is There an Ego?'",
     "tags": [
       "reflection",
       "wisdom"
-    ]
+    ],
+    "source": "What is Life? with Mind and Matter (1944), Epilogue 'Is There an Ego?'"
   },
   {
     "id": "turing-1",
     "text": "I propose to consider the question, 'Can machines think?'",
     "author": "Alan Turing",
-    "source": "'Computing Machinery and Intelligence', Mind 59 (1950), opening line",
     "tags": [
       "learning",
       "reflection"
-    ]
+    ],
+    "source": "'Computing Machinery and Intelligence', Mind 59 (1950), opening line"
   },
   {
     "id": "turing-2",
     "text": "We can only see a short distance ahead, but we can see plenty there that needs to be done.",
     "author": "Alan Turing",
-    "source": "'Computing Machinery and Intelligence', Mind 59 (1950), closing paragraph",
     "tags": [
       "purpose",
       "action"
-    ]
+    ],
+    "source": "'Computing Machinery and Intelligence', Mind 59 (1950), closing paragraph"
   },
   {
     "id": "planck-1",
     "text": "A new scientific truth does not triumph by convincing its opponents and making them see the light, but rather because its opponents eventually die and a new generation grows up that is familiar with it.",
     "author": "Max Planck",
-    "source": "Scientific Autobiography and Other Papers (1936; trans. F. Gaynor, 1949)",
     "tags": [
       "patience",
       "resilience"
-    ]
+    ],
+    "source": "Scientific Autobiography and Other Papers (1936; trans. F. Gaynor, 1949)"
   },
   {
     "id": "heisenberg-1",
     "text": "What we observe is not nature itself, but nature exposed to our method of questioning.",
     "author": "Werner Heisenberg",
-    "source": "Physics and Philosophy (1958), Ch. 'The Copenhagen Interpretation of Quantum Theory'",
     "tags": [
       "reflection",
       "humility"
-    ]
+    ],
+    "source": "Physics and Philosophy (1958), Ch. 'The Copenhagen Interpretation of Quantum Theory'"
   },
   {
     "id": "franklin-1",
     "text": "Science and everyday life cannot and should not be separated.",
     "author": "Rosalind Franklin",
-    "source": "Letter to her father, 1951 (in Brenda Maddox, Rosalind Franklin: The Dark Lady of DNA, 2002)",
     "tags": [
       "purpose",
       "reflection"
-    ]
+    ],
+    "source": "Letter to her father, 1951 (in Brenda Maddox, Rosalind Franklin: The Dark Lady of DNA, 2002)"
   },
   {
     "id": "einstein-2",
     "text": "I have no special talents. I am only passionately curious.",
     "author": "Albert Einstein",
-    "source": "Letter to Carl Seelig, 11 March 1952 (Einstein Archives 34-588; also in Ideas and Opinions correspondence)",
     "tags": [
       "learning",
       "humility"
-    ]
+    ],
+    "source": "Letter to Carl Seelig, 11 March 1952 (Einstein Archives 34-588; also in Ideas and Opinions correspondence)"
   },
   {
     "id": "einstein-3",
     "text": "Curiosity has its own reason for existing. One cannot help but be in awe when he contemplates the mysteries of eternity, of life, of the marvellous structure of reality.",
     "author": "Albert Einstein",
-    "source": "'On the Value of Education', Harper's Magazine, May 1936 (in Ideas and Opinions)",
     "tags": [
       "gratitude",
       "reflection"
-    ]
+    ],
+    "source": "'On the Value of Education', Harper's Magazine, May 1936 (in Ideas and Opinions)"
   },
   {
     "id": "einstein-4",
     "text": "Life is like riding a bicycle. To keep your balance you must keep moving.",
     "author": "Albert Einstein",
-    "source": "Letter to his son Eduard, 5 February 1930 (Einstein Archives)",
     "tags": [
       "resilience",
       "perseverance"
-    ]
+    ],
+    "source": "Letter to his son Eduard, 5 February 1930 (Einstein Archives)"
   },
   {
     "id": "darwin-14",
     "text": "This preservation of favourable variations and the rejection of injurious variations, I call Natural Selection.",
     "author": "Charles Darwin",
-    "source": "On the Origin of Species (1859), ch. IV 'Natural Selection'",
     "tags": [
       "patience",
       "growth"
-    ]
+    ],
+    "source": "On the Origin of Species (1859), ch. IV 'Natural Selection'"
   },
   {
     "id": "darwin-15",
     "text": "A grain in the balance will determine which individual shall live and which shall die, — which variety or species shall increase in number, and which shall decrease, or finally become extinct.",
     "author": "Charles Darwin",
-    "source": "On the Origin of Species (1859), ch. XIV 'Recapitulation'",
     "tags": [
       "simplicity",
       "growth"
-    ]
+    ],
+    "source": "On the Origin of Species (1859), ch. XIV 'Recapitulation'"
   },
   {
     "id": "darwin-16",
     "text": "My mind seems to have become a kind of machine for grinding general laws out of large collections of facts, but why this should have caused the atrophy of that part of the brain alone, on which the higher tastes depend, I cannot conceive.",
     "author": "Charles Darwin",
-    "source": "Autobiography (in The Life and Letters of Charles Darwin, ed. Francis Darwin, 1887)",
     "tags": [
       "reflection",
       "learning"
-    ]
+    ],
+    "source": "Autobiography (in The Life and Letters of Charles Darwin, ed. Francis Darwin, 1887)"
   },
   {
     "id": "darwin-17",
     "text": "From my early youth I have had the strongest desire to understand or explain whatever I observed, — that is, to group all facts under some general laws.",
     "author": "Charles Darwin",
-    "source": "Autobiography (in The Life and Letters of Charles Darwin, ed. Francis Darwin, 1887)",
     "tags": [
       "purpose",
       "learning"
-    ]
+    ],
+    "source": "Autobiography (in The Life and Letters of Charles Darwin, ed. Francis Darwin, 1887)"
   },
   {
     "id": "darwin-18",
     "text": "Nothing is easier than to admit in words the truth of the universal struggle for life, or more difficult — at least I have found it so — than constantly to bear this conclusion in mind.",
     "author": "Charles Darwin",
-    "source": "On the Origin of Species (1859), ch. III 'Struggle for Existence'",
     "tags": [
       "discipline",
       "focus"
-    ]
+    ],
+    "source": "On the Origin of Species (1859), ch. III 'Struggle for Existence'"
   },
   {
     "id": "curie-7",
     "text": "All my life through, the new sights of Nature made me rejoice like a child.",
     "author": "Marie Curie",
-    "source": "Autobiographical notes appended to Pierre Curie (Paris, 1923), trans. C. & V. Kellogg, p. 162",
     "tags": [
       "gratitude",
       "mindfulness"
-    ]
+    ],
+    "source": "Autobiographical notes appended to Pierre Curie (Paris, 1923), trans. C. & V. Kellogg, p. 162"
   },
   {
     "id": "curie-8",
     "text": "You cannot hope to build a better world without improving the individuals. To that end each of us must work for his own improvement, and at the same time share a general responsibility for all humanity, our particular duty being to aid those to whom we think we can be most useful.",
     "author": "Marie Curie",
-    "source": "Autobiographical notes appended to Pierre Curie (Paris, 1923), trans. C. & V. Kellogg, p. 168",
     "tags": [
       "purpose",
       "action"
-    ]
+    ],
+    "source": "Autobiographical notes appended to Pierre Curie (Paris, 1923), trans. C. & V. Kellogg, p. 168"
   },
   {
     "id": "curie-9",
     "text": "A scientist in his laboratory is not only a technician: he is also a child placed before natural phenomena which impress him like a fairy tale.",
     "author": "Marie Curie",
-    "source": "Nobel Prize banquet address, Stockholm, December 1911 (as reported in Ève Curie, Madame Curie, 1937, trans. V. Sheean, p. 341)",
     "tags": [
       "learning",
       "gratitude"
-    ]
+    ],
+    "source": "Nobel Prize banquet address, Stockholm, December 1911 (as reported in Ève Curie, Madame Curie, 1937, trans. V. Sheean, p. 341)"
   },
   {
     "id": "feynman-10",
     "text": "Scientific knowledge is a body of statements of varying degrees of certainty — some most unsure, some nearly sure, but none absolutely certain.",
     "author": "Richard Feynman",
-    "source": "'The Value of Science' (1955), in What Do You Care What Other People Think? (1988)",
     "tags": [
       "humility",
       "wisdom"
-    ]
+    ],
+    "source": "'The Value of Science' (1955), in What Do You Care What Other People Think? (1988)"
   },
   {
     "id": "feynman-11",
     "text": "The imagination of nature is far, far greater than the imagination of man.",
     "author": "Richard Feynman",
-    "source": "'The Value of Science' (1955), in What Do You Care What Other People Think? (1988)",
     "tags": [
       "humility",
       "creativity"
-    ]
+    ],
+    "source": "'The Value of Science' (1955), in What Do You Care What Other People Think? (1988)"
   },
   {
     "id": "feynman-12",
     "text": "For a successful technology, reality must take precedence over public relations, for Nature cannot be fooled.",
     "author": "Richard Feynman",
-    "source": "Rogers Commission Report, Appendix F (1986); reprinted in What Do You Care What Other People Think? (1988)",
     "tags": [
       "courage",
       "wisdom"
-    ]
+    ],
+    "source": "Rogers Commission Report, Appendix F (1986); reprinted in What Do You Care What Other People Think? (1988)"
   },
   {
     "id": "feynman-13",
     "text": "Study hard what interests you the most in the most undisciplined, irreverent and original manner possible.",
     "author": "Richard Feynman",
-    "source": "Letter to J. M. Szabados (30 November 1965), in Perfectly Reasonable Deviations from the Beaten Track (2005)",
     "tags": [
       "learning",
       "creativity"
-    ]
+    ],
+    "source": "Letter to J. M. Szabados (30 November 1965), in Perfectly Reasonable Deviations from the Beaten Track (2005)"
   },
   {
     "id": "feynman-14",
     "text": "I don't know anything, but I do know that everything is interesting if you go into it deeply enough.",
     "author": "Richard Feynman",
-    "source": "Omni magazine interview 'The Smartest Man in the World' (1979), p. 203",
     "tags": [
       "learning",
       "growth"
-    ]
+    ],
+    "source": "Omni magazine interview 'The Smartest Man in the World' (1979), p. 203"
   },
   {
     "id": "feynman-15",
     "text": "Have no respect whatsoever for authority; forget who said it and instead look what he starts with, where he ends up, and ask yourself, 'Is it reasonable?'",
     "author": "Richard Feynman",
-    "source": "What Do You Care What Other People Think? (1988)",
     "tags": [
       "learning",
       "courage"
-    ]
+    ],
+    "source": "What Do You Care What Other People Think? (1988)"
   },
   {
     "id": "sagan-5",
     "text": "Imagination will often carry us to worlds that never were. But without it we go nowhere.",
     "author": "Carl Sagan",
-    "source": "Cosmos (1980), p. 4",
     "tags": [
       "creativity",
       "courage"
-    ]
+    ],
+    "source": "Cosmos (1980), p. 4"
   },
   {
     "id": "sagan-6",
     "text": "Books break the shackles of time. A book is proof that humans are capable of working magic.",
     "author": "Carl Sagan",
-    "source": "Cosmos: A Personal Voyage (1980), Ep. 11 'The Persistence of Memory'",
     "tags": [
       "learning",
       "wisdom"
-    ]
+    ],
+    "source": "Cosmos: A Personal Voyage (1980), Ep. 11 'The Persistence of Memory'"
   },
   {
     "id": "sagan-7",
     "text": "With insufficient data it is easy to go wrong.",
     "author": "Carl Sagan",
-    "source": "Cosmos (1980), p. 94",
     "tags": [
       "patience",
       "discipline"
-    ]
+    ],
+    "source": "Cosmos (1980), p. 94"
   },
   {
     "id": "sagan-8",
     "text": "Every one of us is, in the cosmic perspective, precious. If a human disagrees with you, let him live.",
     "author": "Carl Sagan",
-    "source": "Cosmos (1980), p. 339",
     "tags": [
       "purpose",
       "freedom"
-    ]
+    ],
+    "source": "Cosmos (1980), p. 339"
   },
   {
     "id": "sagan-9",
     "text": "For small creatures such as we the vastness is bearable only through love.",
     "author": "Carl Sagan",
-    "source": "Contact (1985), ch. 24 (p. 430)",
     "tags": [
       "gratitude",
       "reflection"
-    ]
+    ],
+    "source": "Contact (1985), ch. 24 (p. 430)"
   },
   {
     "id": "sagan-10",
     "text": "Human history can be viewed as a slowly dawning awareness that we are members of a larger group.",
     "author": "Carl Sagan",
-    "source": "Cosmos (1980), p. 339",
     "tags": [
       "growth",
       "purpose"
-    ]
+    ],
+    "source": "Cosmos (1980), p. 339"
   },
   {
     "id": "einstein-5",
     "text": "I am enough of an artist to draw freely upon my imagination. Imagination is more important than knowledge. Knowledge is limited. Imagination encircles the world.",
     "author": "Albert Einstein",
-    "source": "Interview by George Sylvester Viereck, 'What Life Means to Einstein', The Saturday Evening Post (26 October 1929), p. 17; The New Quotable Einstein (Calaprice)",
     "tags": [
       "creativity",
       "wisdom"
-    ]
+    ],
+    "source": "Interview by George Sylvester Viereck, 'What Life Means to Einstein', The Saturday Evening Post (26 October 1929), p. 17; The New Quotable Einstein (Calaprice)"
   },
   {
     "id": "einstein-6",
     "text": "It is a miracle that curiosity survives formal education.",
     "author": "Albert Einstein",
-    "source": "'On Education', Harper's Magazine (1936); reprinted in Ideas and Opinions",
     "tags": [
       "learning",
       "reflection"
-    ]
+    ],
+    "source": "'On Education', Harper's Magazine (1936); reprinted in Ideas and Opinions"
   },
   {
     "id": "hawking-4",
     "text": "I have noticed that even people who claim everything is predetermined and that we can do nothing to change it, look before they cross the road.",
     "author": "Stephen Hawking",
-    "source": "Black Holes and Baby Universes and Other Essays (1993), 'Is Everything Determined?', pp. 133–135",
     "tags": [
       "action",
       "wisdom"
-    ]
+    ],
+    "source": "Black Holes and Baby Universes and Other Essays (1993), 'Is Everything Determined?', pp. 133–135"
   },
   {
     "id": "hawking-5",
     "text": "My goal is simple. It is a complete understanding of the universe, why it is as it is and why it exists at all.",
     "author": "Stephen Hawking",
-    "source": "as quoted in John Boslough, Stephen Hawking's Universe (1985), ch. 7 (p. 77)",
     "tags": [
       "purpose",
       "focus"
-    ]
+    ],
+    "source": "as quoted in John Boslough, Stephen Hawking's Universe (1985), ch. 7 (p. 77)"
   },
   {
     "id": "bohr-1",
     "text": "An expert is a person who has found out by his own painful experience all the mistakes that one can make in a very narrow field.",
     "author": "Niels Bohr",
-    "source": "as recalled by Edward Teller, LIFE magazine (6 September 1954), p. 62",
     "tags": [
       "learning",
       "humility"
-    ]
+    ],
+    "source": "as recalled by Edward Teller, LIFE magazine (6 September 1954), p. 62"
   },
   {
     "id": "bohr-2",
     "text": "Two sorts of truth, profound truths recognized by the fact that the opposite is also a profound truth, in contrast to trivialities where opposites are obviously absurd.",
     "author": "Niels Bohr",
-    "source": "as recalled by his son Hans Bohr, 'My Father', in Niels Bohr: His Life and Work (1967), p. 328",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "as recalled by his son Hans Bohr, 'My Father', in Niels Bohr: His Life and Work (1967), p. 328"
   },
   {
     "id": "bohr-3",
     "text": "How wonderful that we have met with a paradox. Now we have some hope of making progress.",
     "author": "Niels Bohr",
-    "source": "as quoted in Ruth Moore, Niels Bohr: The Man, His Science, & the World They Changed (1966), p. 196",
     "tags": [
       "creativity",
       "growth"
-    ]
+    ],
+    "source": "as quoted in Ruth Moore, Niels Bohr: The Man, His Science, & the World They Changed (1966), p. 196"
   },
   {
     "id": "planck-2",
     "text": "Science cannot solve the ultimate mystery of nature. And that is because, in the last analysis, we ourselves are part of nature and therefore part of the mystery that we are trying to solve.",
     "author": "Max Planck",
-    "source": "Scientific Autobiography and Other Papers (trans. F. Gaynor, 1949), Epilogue, p. 217",
     "tags": [
       "humility",
       "wisdom"
-    ]
+    ],
+    "source": "Scientific Autobiography and Other Papers (trans. F. Gaynor, 1949), Epilogue, p. 217"
   },
   {
     "id": "planck-3",
     "text": "Experiments are the only means of knowledge at our disposal. The rest is poetry, imagination.",
     "author": "Max Planck",
-    "source": "attestation moderate — as quoted in Advances in Biochemical Psychopharmacology, Vol. 25 (1980), p. 3; see ledger",
     "tags": [
       "discipline",
       "learning"
-    ]
+    ],
+    "source": "attestation moderate — as quoted in Advances in Biochemical Psychopharmacology, Vol. 25 (1980), p. 3; see ledger"
   },
   {
     "id": "heisenberg-2",
     "text": "Light and matter are both single entities, and the apparent duality arises in the limitations of our language.",
     "author": "Werner Heisenberg",
-    "source": "The Physical Principles of the Quantum Theory (1930), trans. Eckhart & Hoyt, p. 10",
     "tags": [
       "reflection",
       "wisdom"
-    ]
+    ],
+    "source": "The Physical Principles of the Quantum Theory (1930), trans. Eckhart & Hoyt, p. 10"
   },
   {
     "id": "heisenberg-3",
     "text": "Every experiment destroys some of the knowledge of the system which was obtained by previous experiments.",
     "author": "Werner Heisenberg",
-    "source": "The Physical Principles of the Quantum Theory (1930), trans. Eckhart & Hoyt, p. 20",
     "tags": [
       "learning",
       "humility"
-    ]
+    ],
+    "source": "The Physical Principles of the Quantum Theory (1930), trans. Eckhart & Hoyt, p. 20"
   },
   {
     "id": "pasteur-2",
     "text": "Science knows no country, because knowledge belongs to humanity, and is the torch which illuminates the world.",
     "author": "Louis Pasteur",
-    "source": "as quoted in René Dubos, Louis Pasteur, Free Lance of Science (1960), ch. 3",
     "tags": [
       "freedom",
       "purpose"
-    ]
+    ],
+    "source": "as quoted in René Dubos, Louis Pasteur, Free Lance of Science (1960), ch. 3"
   },
   {
     "id": "pasteur-3",
     "text": "Do not let yourselves become tainted by a deprecating and barren scepticism.",
     "author": "Louis Pasteur",
-    "source": "Speech at the inauguration of the Pasteur Institute, Paris (14 November 1888), in Vallery-Radot, The Life of Pasteur (1911), vol. II, p. 228",
     "tags": [
       "courage",
       "perseverance"
-    ]
+    ],
+    "source": "Speech at the inauguration of the Pasteur Institute, Paris (14 November 1888), in Vallery-Radot, The Life of Pasteur (1911), vol. II, p. 228"
   },
   {
     "id": "lovelace-6",
     "text": "Supposing, for instance, that the fundamental relations of pitched sounds in the science of harmony and of musical composition were susceptible of such expression and adaptations, the engine might compose elaborate and scientific pieces of music of any degree of complexity or extent.",
     "author": "Ada Lovelace",
-    "source": "Note A, 'Sketch of the Analytical Engine Invented by Charles Babbage, Esq.' (Scientific Memoirs, vol. III, 1843)",
     "tags": [
       "creativity",
       "purpose"
-    ]
+    ],
+    "source": "Note A, 'Sketch of the Analytical Engine Invented by Charles Babbage, Esq.' (Scientific Memoirs, vol. III, 1843)"
   },
   {
     "id": "schrodinger-2",
     "text": "I can see no other escape from this dilemma (lest our true aim be lost for ever) than that some of us should venture to embark on a synthesis of facts and theories, albeit with second-hand and incomplete knowledge of some of them — and at the risk of making fools of ourselves.",
     "author": "Erwin Schrödinger",
-    "source": "What is Life? (1944), ch. 1",
     "tags": [
       "courage",
       "learning"
-    ]
+    ],
+    "source": "What is Life? (1944), ch. 1"
   },
   {
     "id": "schrodinger-3",
     "text": "The difference in structure is of the same kind as that between an ordinary wallpaper in which the same pattern is repeated again and again in regular periodicity and a masterpiece of embroidery, say a Raphael tapestry, which shows no dull repetition, but an elaborate, coherent, meaningful design traced by the great master.",
     "author": "Erwin Schrödinger",
-    "source": "What is Life? (1944), ch. 1",
     "tags": [
       "creativity",
       "wisdom"
-    ]
+    ],
+    "source": "What is Life? (1944), ch. 1"
   },
   {
     "id": "turing-3",
     "text": "The idea behind digital computers may be explained by saying that these machines are intended to carry out any operations which could be done by a human computer.",
     "author": "Alan Turing",
-    "source": "'Computing Machinery and Intelligence', Mind 59 (1950), p. 436",
     "tags": [
       "learning",
       "reflection"
-    ]
+    ],
+    "source": "'Computing Machinery and Intelligence', Mind 59 (1950), p. 436"
   },
   {
     "id": "turing-4",
     "text": "Machines take me by surprise with great frequency.",
     "author": "Alan Turing",
-    "source": "'Computing Machinery and Intelligence', Mind 59 (1950), p. 450",
     "tags": [
       "learning",
       "humility"
-    ]
+    ],
+    "source": "'Computing Machinery and Intelligence', Mind 59 (1950), p. 450"
   },
   {
     "id": "kafka-11",
     "text": "I cannot transform the world, but I can transform myself.",
     "author": "Franz Kafka",
-    "source": "Diaries, 1910",
     "tags": [
       "perseverance",
       "growth"
-    ]
+    ],
+    "source": "Diaries, 1910"
   },
   {
     "id": "kafka-12",
     "text": "The meaning of life is that it stops.",
     "author": "Franz Kafka",
-    "source": "Diaries, 1910",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Diaries, 1910"
   },
   {
     "id": "kafka-13",
     "text": "Every revolution evaporates and leaves behind only the slime of a new bureaucracy.",
     "author": "Franz Kafka",
-    "source": "Diaries, 1910-1923",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Diaries, 1910-1923"
   },
   {
     "id": "dostoevsky-3",
     "text": "Above all, don't lie to yourself.",
     "author": "Fyodor Dostoevsky",
-    "source": "The Brothers Karamazov, Part 1, Book 3",
     "tags": [
       "discipline",
       "wisdom"
-    ]
+    ],
+    "source": "The Brothers Karamazov, Part 1, Book 3"
   },
   {
     "id": "dostoevsky-4",
     "text": "The darker the night, the brighter the stars.",
     "author": "Fyodor Dostoevsky",
-    "source": "The Brothers Karamazov",
     "tags": [
       "perseverance",
       "gratitude"
-    ]
+    ],
+    "source": "The Brothers Karamazov"
   },
   {
     "id": "dostoevsky-5",
     "text": "Beauty is a battlefield.",
     "author": "Fyodor Dostoevsky",
-    "source": "The Idiot",
     "tags": [
       "courage",
       "reflection"
-    ]
+    ],
+    "source": "The Idiot"
   },
   {
     "id": "tolstoy-4",
     "text": "Spring is the time of plans and projects.",
     "author": "Leo Tolstoy",
-    "source": "Anna Karenina, Part 3, Chapter 11",
     "tags": [
       "action",
       "purpose"
-    ]
+    ],
+    "source": "Anna Karenina, Part 3, Chapter 11"
   },
   {
     "id": "woolf-6",
     "text": "You cannot find peace by avoiding life.",
     "author": "Virginia Woolf",
-    "source": "Mrs Dalloway",
     "tags": [
       "perseverance",
       "courage"
-    ]
+    ],
+    "source": "Mrs Dalloway"
   },
   {
     "id": "woolf-7",
     "text": "A self that has been broken into pieces cannot be made whole again.",
     "author": "Virginia Woolf",
-    "source": "To the Lighthouse",
     "tags": [
       "perseverance",
       "wisdom"
-    ]
+    ],
+    "source": "To the Lighthouse"
   },
   {
     "id": "joyce-1",
     "text": "Mistakes are the portals of discovery.",
     "author": "James Joyce",
-    "source": "Ulysses",
     "tags": [
       "wisdom",
       "growth"
-    ]
+    ],
+    "source": "Ulysses"
   },
   {
     "id": "joyce-2",
     "text": "A man's character is his fate.",
     "author": "James Joyce",
-    "source": "A Portrait of the Artist as a Young Man",
     "tags": [
       "purpose",
       "discipline"
-    ]
+    ],
+    "source": "A Portrait of the Artist as a Young Man"
   },
   {
     "id": "proust-1",
     "text": "The real voyage of discovery consists not in seeking new landscapes, but in having new eyes.",
     "author": "Marcel Proust",
-    "source": "In Search of Lost Time: The Prisoner",
     "tags": [
       "wisdom",
       "growth"
-    ]
+    ],
+    "source": "In Search of Lost Time: The Prisoner"
   },
   {
     "id": "proust-2",
     "text": "Let us be grateful to the people who make us happy; they are the charming gardeners who make our souls blossom.",
     "author": "Marcel Proust",
-    "source": "In Search of Lost Time: Sodom and Gomorrah",
     "tags": [
       "gratitude",
       "reflection"
-    ]
+    ],
+    "source": "In Search of Lost Time: Sodom and Gomorrah"
   },
   {
     "id": "borges-1",
     "text": "I have always imagined that Paradise will be a kind of library.",
     "author": "Jorge Luis Borges",
-    "source": "Poem of the Gifts",
     "tags": [
       "wisdom",
       "gratitude"
-    ]
+    ],
+    "source": "Poem of the Gifts"
   },
   {
     "id": "borges-2",
     "text": "Time is the substance from which I am made.",
     "author": "Jorge Luis Borges",
-    "source": "A New Refutation of Time",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "A New Refutation of Time"
   },
   {
     "id": "marquez-1",
     "text": "He was still too young to know that the heart's memory eliminates the bad and magnifies the good.",
     "author": "Gabriel García Márquez",
-    "source": "One Hundred Years of Solitude",
     "tags": [
       "reflection",
       "wisdom"
-    ]
+    ],
+    "source": "One Hundred Years of Solitude"
   },
   {
     "id": "marquez-2",
     "text": "The only regret will be the love given to those who did not deserve it.",
     "author": "Gabriel García Márquez",
-    "source": "Love in the Time of Cholera",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Love in the Time of Cholera"
   },
   {
     "id": "murakami-1",
     "text": "And once the storm is over, you won't remember how you made it through.",
     "author": "Haruki Murakami",
-    "source": "Kafka on the Shore",
     "tags": [
       "perseverance",
       "gratitude"
-    ]
+    ],
+    "source": "Kafka on the Shore"
   },
   {
     "id": "murakami-2",
     "text": "Don't let appearances deceive you. There's only one thing you can do in this world, and that's to love.",
     "author": "Haruki Murakami",
-    "source": "Norwegian Wood",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Norwegian Wood"
   },
   {
     "id": "kundera-1",
     "text": "Life is a matter of loading oneself with meaning. The moment you unburden yourself of it, life suddenly acquires an unbearable lightness.",
     "author": "Milan Kundera",
-    "source": "The Unbearable Lightness of Being",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "The Unbearable Lightness of Being"
   },
   {
     "id": "kundera-2",
     "text": "There is no permanence, only change. Only change is permanent.",
     "author": "Milan Kundera",
-    "source": "The Unbearable Lightness of Being",
     "tags": [
       "wisdom",
       "action"
-    ]
+    ],
+    "source": "The Unbearable Lightness of Being"
   },
   {
     "id": "calvino-1",
     "text": "The inferno of the living is not something that will be; if there is one, it is what is already here.",
     "author": "Italo Calvino",
-    "source": "If on a winter's night a traveler",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "If on a winter's night a traveler"
   },
   {
     "id": "calvino-2",
     "text": "You take delight not in a city's seven or seventy wonders, but in the answer it gives to a question of yours.",
     "author": "Italo Calvino",
-    "source": "Invisible Cities",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Invisible Cities"
   },
   {
     "id": "morrison-1",
     "text": "If there's a book that you want to read, but it hasn't been written yet, then you must write it.",
     "author": "Toni Morrison",
-    "source": "Interview, 1992",
     "tags": [
       "action",
       "creativity"
-    ]
+    ],
+    "source": "Interview, 1992"
   },
   {
     "id": "morrison-2",
     "text": "You are your best thing.",
     "author": "Toni Morrison",
-    "source": "Beloved",
     "tags": [
       "gratitude",
       "wisdom"
-    ]
+    ],
+    "source": "Beloved"
   },
   {
     "id": "mccarthy-1",
     "text": "The road is there. It will always be there. You can give it up but it's never gone.",
     "author": "Cormac McCarthy",
-    "source": "The Road",
     "tags": [
       "perseverance",
       "purpose"
-    ]
+    ],
+    "source": "The Road"
   },
   {
     "id": "mccarthy-2",
     "text": "My job is to take care of the boy.",
     "author": "Cormac McCarthy",
-    "source": "The Road",
     "tags": [
       "purpose",
       "discipline"
-    ]
+    ],
+    "source": "The Road"
   },
   {
     "id": "ishiguro-1",
     "text": "Memory, I realize, can be an unreliable thing.",
     "author": "Kazuo Ishiguro",
-    "source": "The Remains of the Day",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "The Remains of the Day"
   },
   {
     "id": "ishiguro-2",
     "text": "Perhaps you are not what you think you are, or perhaps you are exactly what you think you are.",
     "author": "Kazuo Ishiguro",
-    "source": "Never Let Me Go",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Never Let Me Go"
   },
   {
     "id": "smith-1",
     "text": "The world is a book and those who do not travel read only one page.",
     "author": "Zadie Smith",
-    "source": "NW",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "NW"
   },
   {
     "id": "smith-2",
     "text": "We must be willing to let go of the life we planned so as to have the life that is waiting for us.",
     "author": "Zadie Smith",
-    "source": "On Beauty",
     "tags": [
       "wisdom",
       "perseverance"
-    ]
+    ],
+    "source": "On Beauty"
   },
   {
     "id": "adichie-1",
     "text": "The impression that Africa is a place of catastrophes is, to say the least, incomplete.",
     "author": "Chimamanda Ngozi Adichie",
-    "source": "Americanah",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Americanah"
   },
   {
     "id": "adichie-2",
     "text": "We teach girls to shrink themselves, to make themselves smaller.",
     "author": "Chimamanda Ngozi Adichie",
-    "source": "We Should All Be Feminists",
     "tags": [
       "wisdom",
       "courage"
-    ]
+    ],
+    "source": "We Should All Be Feminists"
   },
   {
     "id": "pamuk-1",
     "text": "The secret of happiness is to see all the marvels of the world, and never to forget the drops of oil on the spoon.",
     "author": "Orhan Pamuk",
-    "source": "My Name Is Red",
     "tags": [
       "wisdom",
       "gratitude"
-    ]
+    ],
+    "source": "My Name Is Red"
   },
   {
     "id": "pamuk-2",
     "text": "It's a strange thing to realize that we're all alone in our thoughts.",
     "author": "Orhan Pamuk",
-    "source": "The Museum of Innocence",
     "tags": [
       "reflection",
       "wisdom"
-    ]
+    ],
+    "source": "The Museum of Innocence"
   },
   {
     "id": "sebald-1",
     "text": "I can never really understand anything unless it comes from a book.",
     "author": "W.G. Sebald",
-    "source": "Austerlitz",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Austerlitz"
   },
   {
     "id": "sebald-2",
     "text": "The past is not dead. It's not even past.",
     "author": "W.G. Sebald",
-    "source": "The Rings of Saturn",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "The Rings of Saturn"
   },
   {
     "id": "bolano-1",
     "text": "Literature is the best thing that has happened to me.",
     "author": "Roberto Bolaño",
-    "source": "The Savage Detectives",
     "tags": [
       "gratitude",
       "wisdom"
-    ]
+    ],
+    "source": "The Savage Detectives"
   },
   {
     "id": "bolano-2",
     "text": "Reading is a solitary activity, but it's also a way of being in the world.",
     "author": "Roberto Bolaño",
-    "source": "2666",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "2666"
   },
   {
     "id": "marias-1",
     "text": "No one ever tells you the truth about anything, and when they do, it's already too late.",
     "author": "Javier Marías",
-    "source": "A Heart So White",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "A Heart So White"
   },
   {
     "id": "marias-2",
     "text": "The future is a matter of indifference, but the past is always urgent.",
     "author": "Javier Marías",
-    "source": "Dark Back of Time",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Dark Back of Time"
   },
   {
     "id": "aira-1",
     "text": "I write without a plan, I just start and see where it goes.",
     "author": "César Aira",
-    "source": "The Literary Conferences",
     "tags": [
       "creativity",
       "reflection"
-    ]
+    ],
+    "source": "The Literary Conferences"
   },
   {
     "id": "aira-2",
     "text": "The only way to be free is to write.",
     "author": "César Aira",
-    "source": "How I Became a Nun",
     "tags": [
       "freedom",
       "creativity"
-    ]
+    ],
+    "source": "How I Became a Nun"
   },
   {
     "id": "aurelius-10",
     "text": "The happiness of your life depends upon the quality of your thoughts.",
     "author": "Marcus Aurelius",
-    "source": "Meditations, 5.16",
     "tags": [
       "mindfulness",
       "wisdom"
-    ]
+    ],
+    "source": "Meditations, 5.16"
   },
   {
     "id": "aurelius-11",
     "text": "Waste no more time arguing about what a good man should be. Be one.",
     "author": "Marcus Aurelius",
-    "source": "Meditations, 10.16",
     "tags": [
       "action",
       "discipline"
-    ]
+    ],
+    "source": "Meditations, 10.16"
   },
   {
     "id": "aurelius-12",
     "text": "You have power over your mind, not outside events. Realize this, and you will find strength.",
     "author": "Marcus Aurelius",
-    "source": "Meditations, 6.8",
     "tags": [
       "perseverance",
       "courage"
-    ]
-  },
-  {
-    "id": "aurelius-13",
-    "text": "The impediment to action advances action. What stands in the way becomes the way.",
-    "author": "Marcus Aurelius",
-    "source": "Meditations, 5.20",
-    "tags": [
-      "perseverance",
-      "wisdom"
-    ]
+    ],
+    "source": "Meditations, 6.8"
   },
   {
     "id": "aurelius-14",
     "text": "When you arise in the morning, think of what a precious privilege it is to be alive, to breathe, to think, to enjoy, to love.",
     "author": "Marcus Aurelius",
-    "source": "Meditations, 5.1",
     "tags": [
       "gratitude",
       "mindfulness"
-    ]
-  },
-  {
-    "id": "aurelius-15",
-    "text": "Confine yourself to the present.",
-    "author": "Marcus Aurelius",
-    "source": "Meditations, 7.29",
-    "tags": [
-      "mindfulness",
-      "focus"
-    ]
+    ],
+    "source": "Meditations, 5.1"
   },
   {
     "id": "aurelius-16",
     "text": "Accept the things to which fate binds you, and love the people with whom fate brings you together, but do so with all your heart.",
     "author": "Marcus Aurelius",
-    "source": "Meditations, 6.44",
     "tags": [
       "gratitude",
       "purpose"
-    ]
+    ],
+    "source": "Meditations, 6.44"
   },
   {
     "id": "aurelius-17",
     "text": "Everything we hear is an opinion, not a fact. Everything we see is a perspective, not the truth.",
     "author": "Marcus Aurelius",
-    "source": "Meditations, 8.47",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Meditations, 8.47"
   },
   {
     "id": "aurelius-18",
     "text": "The soul becomes dyed with the color of its thoughts.",
     "author": "Marcus Aurelius",
-    "source": "Meditations, 5.16",
     "tags": [
       "mindfulness",
       "wisdom"
-    ]
+    ],
+    "source": "Meditations, 5.16"
   },
   {
     "id": "aurelius-19",
     "text": "Live a good life. If there are gods and they are just, then they will not care how devout you have been, but will welcome you based on the virtues you have lived by.",
     "author": "Marcus Aurelius",
-    "source": "Meditations, 6.44",
     "tags": [
       "purpose",
       "wisdom"
-    ]
+    ],
+    "source": "Meditations, 6.44"
   },
   {
     "id": "aurelius-20",
     "text": "The object of life is not to be on the side of the majority, but to escape finding oneself in the ranks of the insane.",
     "author": "Marcus Aurelius",
-    "source": "Meditations, 4.49",
     "tags": [
       "wisdom",
       "courage"
-    ]
-  },
-  {
-    "id": "seneca-10",
-    "text": "We suffer more often in imagination than in reality.",
-    "author": "Seneca",
-    "source": "Letters to Lucilius, 5.9",
-    "tags": [
-      "mindfulness",
-      "perseverance"
-    ]
+    ],
+    "source": "Meditations, 4.49"
   },
   {
     "id": "seneca-11",
     "text": "It is not that we have a short time to live, but that we waste a lot of it.",
     "author": "Seneca",
-    "source": "On the Shortness of Life, 1.1",
     "tags": [
       "focus",
       "reflection"
-    ]
+    ],
+    "source": "On the Shortness of Life, 1.1"
   },
   {
     "id": "seneca-12",
     "text": "He who is brave is free.",
     "author": "Seneca",
-    "source": "Letters to Lucilius, 5.1",
     "tags": [
       "courage",
       "freedom"
-    ]
-  },
-  {
-    "id": "seneca-13",
-    "text": "Begin at once to live, and count each separate day as a separate life.",
-    "author": "Seneca",
-    "source": "Letters to Lucilius, 100.1",
-    "tags": [
-      "purpose",
-      "mindfulness"
-    ]
+    ],
+    "source": "Letters to Lucilius, 5.1"
   },
   {
     "id": "seneca-14",
     "text": "Difficulties strengthen the mind, as labor does the body.",
     "author": "Seneca",
-    "source": "De Providentia, 2.2",
     "tags": [
       "perseverance",
       "growth"
-    ]
+    ],
+    "source": "De Providentia, 2.2"
   },
   {
     "id": "seneca-15",
     "text": "As a tale, so is life: not how long it is, but how good it is, is what matters.",
     "author": "Seneca",
-    "source": "Letters to Lucilius, 77.20",
     "tags": [
       "purpose",
       "wisdom"
-    ]
+    ],
+    "source": "Letters to Lucilius, 77.20"
   },
   {
     "id": "seneca-16",
     "text": "No man was ever wise by chance.",
     "author": "Seneca",
-    "source": "Letters to Lucilius, 29.6",
     "tags": [
       "wisdom",
       "discipline"
-    ]
+    ],
+    "source": "Letters to Lucilius, 29.6"
   },
   {
     "id": "seneca-17",
     "text": "He who fears death will never do anything worthy of a man who is alive.",
     "author": "Seneca",
-    "source": "Letters to Lucilius, 100.14",
     "tags": [
       "courage",
       "purpose"
-    ]
+    ],
+    "source": "Letters to Lucilius, 100.14"
   },
   {
     "id": "seneca-18",
     "text": "Associate with people who are likely to improve you.",
     "author": "Seneca",
-    "source": "Letters to Lucilius, 12.6",
     "tags": [
       "growth",
       "wisdom"
-    ]
+    ],
+    "source": "Letters to Lucilius, 12.6"
   },
   {
     "id": "seneca-19",
     "text": "The greatest remedy for anger is delay.",
     "author": "Seneca",
-    "source": "De Ira, 2.35",
     "tags": [
       "patience",
       "wisdom"
-    ]
-  },
-  {
-    "id": "epictetus-5",
-    "text": "No man is free who is not master of himself.",
-    "author": "Epictetus",
-    "source": "Enchiridion 5",
-    "tags": [
-      "discipline",
-      "freedom"
-    ]
+    ],
+    "source": "De Ira, 2.35"
   },
   {
     "id": "epictetus-6",
     "text": "Wealth consists not in having great possessions, but in having few wants.",
     "author": "Epictetus",
-    "source": "Discourses, 3.24",
     "tags": [
       "simplicity",
       "wisdom"
-    ]
-  },
-  {
-    "id": "epictetus-7",
-    "text": "First say to yourself what you would be; and then do what you have to do.",
-    "author": "Epictetus",
-    "source": "Discourses, 3.21",
-    "tags": [
-      "purpose",
-      "discipline"
-    ]
+    ],
+    "source": "Discourses, 3.24"
   },
   {
     "id": "epictetus-8",
     "text": "Men are disturbed not by things, but by the views which they take of things.",
     "author": "Epictetus",
-    "source": "Enchiridion 5",
     "tags": [
       "mindfulness",
       "wisdom"
-    ]
+    ],
+    "source": "Enchiridion 5"
   },
   {
     "id": "epictetus-9",
     "text": "Practice yourself, for heaven's sake, in little things; and from thence proceed to greater.",
     "author": "Epictetus",
-    "source": "Discourses, 3.15",
     "tags": [
       "discipline",
       "perseverance"
-    ]
+    ],
+    "source": "Discourses, 3.15"
   },
   {
     "id": "epictetus-10",
     "text": "The world is a stage, and life is a performance. If you can play a small part well, you can also play a large one.",
     "author": "Epictetus",
-    "source": "Enchiridion 17",
     "tags": [
       "purpose",
       "wisdom"
-    ]
+    ],
+    "source": "Enchiridion 17"
   },
   {
     "id": "lao-tzu-7",
     "text": "When I let go of what I am, I become what I might be.",
     "author": "Lao Tzu",
-    "source": "Tao Te Ching (verse)",
     "tags": [
       "growth",
       "wisdom"
-    ]
+    ],
+    "source": "Tao Te Ching (verse)"
   },
   {
     "id": "lao-tzu-8",
     "text": "Nature does not hurry, yet everything is accomplished.",
     "author": "Lao Tzu",
-    "source": "Tao Te Ching, Ch. 73",
     "tags": [
       "patience",
       "wisdom"
-    ]
+    ],
+    "source": "Tao Te Ching, Ch. 73"
   },
   {
     "id": "lao-tzu-9",
     "text": "He who knows, does not speak. He who speaks, does not know.",
     "author": "Lao Tzu",
-    "source": "Tao Te Ching, Ch. 56",
     "tags": [
       "wisdom",
       "mindfulness"
-    ]
+    ],
+    "source": "Tao Te Ching, Ch. 56"
   },
   {
     "id": "lao-tzu-10",
     "text": "A leader is best when people barely know he exists. When his work is done, his aim fulfilled, they will say: we did it ourselves.",
     "author": "Lao Tzu",
-    "source": "Tao Te Ching, Ch. 17",
     "tags": [
       "wisdom",
       "humility"
-    ]
+    ],
+    "source": "Tao Te Ching, Ch. 17"
   },
   {
     "id": "confucius-8",
     "text": "Our greatest glory is not in never falling, but in rising every time we fall.",
     "author": "Confucius",
-    "source": "Analects (attributed)",
     "tags": [
       "perseverance",
       "courage"
-    ]
+    ],
+    "source": "Analects (attributed)"
   },
   {
     "id": "confucius-9",
     "text": "It does not matter how slowly you go as long as you do not stop.",
     "author": "Confucius",
-    "source": "Analects (attributed)",
     "tags": [
       "perseverance",
       "patience"
-    ]
+    ],
+    "source": "Analects (attributed)"
   },
   {
     "id": "confucius-10",
     "text": "The man who moves a mountain begins by carrying away small stones.",
     "author": "Confucius",
-    "source": "Analects (attributed)",
     "tags": [
       "perseverance",
       "action"
-    ]
+    ],
+    "source": "Analects (attributed)"
   },
   {
     "id": "confucius-11",
     "text": "Study the past, if you would divine the future.",
     "author": "Confucius",
-    "source": "Analects, 2.11",
     "tags": [
       "learning",
       "wisdom"
-    ]
+    ],
+    "source": "Analects, 2.11"
   },
   {
     "id": "confucius-12",
     "text": "Wherever you go, go with all your heart.",
     "author": "Confucius",
-    "source": "Analects (attributed)",
     "tags": [
       "purpose",
       "courage"
-    ]
+    ],
+    "source": "Analects (attributed)"
   },
   {
     "id": "confucius-13",
     "text": "The man who asks a question is a fool for a minute. The man who does not ask is a fool for life.",
     "author": "Confucius",
-    "source": "Analects (attributed)",
     "tags": [
       "learning",
       "wisdom"
-    ]
+    ],
+    "source": "Analects (attributed)"
   },
   {
     "id": "sun-tzu-3",
     "text": "The greatest victory is that which requires no battle.",
     "author": "Sun Tzu",
-    "source": "The Art of War, Ch. 3",
     "tags": [
       "wisdom",
       "strategy"
-    ]
+    ],
+    "source": "The Art of War, Ch. 3"
   },
   {
     "id": "sun-tzu-4",
     "text": "Opportunities multiply as they are seized.",
     "author": "Sun Tzu",
-    "source": "The Art of War, Ch. 4",
     "tags": [
       "action",
       "wisdom"
-    ]
-  },
-  {
-    "id": "plato-3",
-    "text": "The heaviest penalty for declining to rule is to be ruled by someone inferior to yourself.",
-    "author": "Plato",
-    "source": "Republic 1.347c",
-    "tags": [
-      "purpose",
-      "wisdom"
-    ]
+    ],
+    "source": "The Art of War, Ch. 4"
   },
   {
     "id": "socrates-4",
     "text": "To find yourself, think for yourself.",
     "author": "Socrates",
-    "source": "Attributed",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Attributed"
   },
   {
     "id": "socrates-5",
     "text": "He is richest who is content with the least, for content is the wealth of nature.",
     "author": "Socrates",
-    "source": "Attributed",
     "tags": [
       "gratitude",
       "simplicity"
-    ]
+    ],
+    "source": "Attributed"
   },
   {
     "id": "aristotle-4",
     "text": "Educating the mind without educating the heart is no education at all.",
     "author": "Aristotle",
-    "source": "Nicomachean Ethics (attributed)",
     "tags": [
       "wisdom",
       "purpose"
-    ]
+    ],
+    "source": "Nicomachean Ethics (attributed)"
   },
   {
     "id": "aristotle-5",
     "text": "The roots of education are bitter, but the fruit is sweet.",
     "author": "Aristotle",
-    "source": "Attributed",
     "tags": [
       "learning",
       "perseverance"
-    ]
+    ],
+    "source": "Attributed"
   },
   {
     "id": "pascal-1",
     "text": "The heart has its reasons, which reason knows not.",
     "author": "Blaise Pascal",
-    "source": "Pensées, 423",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Pensées, 423"
   },
   {
     "id": "pascal-2",
     "text": "Men never do evil so completely and cheerfully as when they do it from religious conviction.",
     "author": "Blaise Pascal",
-    "source": "Lettres Provinciales",
     "tags": [
       "courage",
       "wisdom"
-    ]
+    ],
+    "source": "Lettres Provinciales"
   },
   {
     "id": "pascal-3",
     "text": "Imagination disposes of everything; it creates beauty, justice, and happiness, which is its ultimate dominion.",
     "author": "Blaise Pascal",
-    "source": "Pensées",
     "tags": [
       "wisdom",
       "creativity"
-    ]
+    ],
+    "source": "Pensées"
   },
   {
     "id": "pascal-4",
     "text": "All men seek happiness. This is without exception. Whatever different means they employ, they all tend to this end.",
     "author": "Blaise Pascal",
-    "source": "Pensées",
     "tags": [
       "purpose",
       "wisdom"
-    ]
+    ],
+    "source": "Pensées"
   },
   {
     "id": "pascal-5",
     "text": "Kind words do not cost much. Yet they accomplish much.",
     "author": "Blaise Pascal",
-    "source": "Pensées (attributed)",
     "tags": [
       "gratitude",
       "wisdom"
-    ]
+    ],
+    "source": "Pensées (attributed)"
   },
   {
     "id": "buddha-9",
     "text": "Peace comes from within. Do not seek it without.",
     "author": "Buddha",
-    "source": "Dhammapada (attributed)",
     "tags": [
       "mindfulness",
       "simplicity"
-    ]
+    ],
+    "source": "Dhammapada (attributed)"
   },
   {
     "id": "buddha-10",
     "text": "There is no path to happiness: happiness is the path.",
     "author": "Buddha",
-    "source": "Dhammapada (attributed)",
     "tags": [
       "wisdom",
       "purpose"
-    ]
+    ],
+    "source": "Dhammapada (attributed)"
   },
   {
     "id": "buddha-11",
     "text": "Do not dwell in the past, do not dream of the future, concentrate the mind on the present moment.",
     "author": "Buddha",
-    "source": "Bhaddekaratta Sutta",
     "tags": [
       "mindfulness",
       "focus"
-    ]
-  },
-  {
-    "id": "kierkegaard-12",
-    "text": "Anxiety is the dizziness of freedom.",
-    "author": "Søren Kierkegaard",
-    "source": "The Concept of Anxiety",
-    "tags": [
-      "freedom",
-      "wisdom"
-    ]
+    ],
+    "source": "Bhaddekaratta Sutta"
   },
   {
     "id": "twain-3",
     "text": "The secret of getting ahead is getting started.",
     "author": "Mark Twain",
-    "source": "Attributed",
     "tags": [
       "action",
       "perseverance"
-    ]
+    ],
+    "source": "Attributed"
   },
   {
     "id": "twain-4",
     "text": "Don't go around saying the world owes you a living. The world owes you nothing. It was here first.",
     "author": "Mark Twain",
-    "source": "Attributed",
     "tags": [
       "gratitude",
       "wisdom"
-    ]
+    ],
+    "source": "Attributed"
   },
   {
     "id": "russell-3",
     "text": "The time you enjoy wasting is not wasted time.",
     "author": "Bertrand Russell",
-    "source": "Attributed",
     "tags": [
       "wisdom",
       "reflection"
-    ]
-  },
-  {
-    "id": "frankl-11",
-    "text": "When we are no longer able to change a situation, we are challenged to change ourselves.",
-    "author": "Viktor Frankl",
-    "source": "Man's Search for Meaning",
-    "tags": [
-      "growth",
-      "wisdom"
-    ]
+    ],
+    "source": "Attributed"
   },
   {
     "id": "frankl-12",
     "text": "He who has a why to live can bear almost any how.",
     "author": "Viktor Frankl",
-    "source": "Man's Search for Meaning (quoting Nietzsche)",
     "tags": [
       "purpose",
       "perseverance"
-    ]
-  },
-  {
-    "id": "descartes-2",
-    "text": "I think, therefore I am.",
-    "author": "René Descartes",
-    "source": "Discourse on the Method",
-    "tags": [
-      "wisdom",
-      "reflection"
-    ]
+    ],
+    "source": "Man's Search for Meaning (quoting Nietzsche)"
   },
   {
     "id": "kant-11",
     "text": "Act only according to that maxim whereby you can at the same time will that it should become a universal law.",
     "author": "Immanuel Kant",
-    "source": "Groundwork of the Metaphysics of Morals",
     "tags": [
       "discipline",
       "purpose"
-    ]
+    ],
+    "source": "Groundwork of the Metaphysics of Morals"
   },
   {
     "id": "kant-12",
     "text": "Out of the crooked timber of humanity, no straight thing was ever made.",
     "author": "Immanuel Kant",
-    "source": "Idea for a Universal History",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Idea for a Universal History"
   },
   {
     "id": "da-vinci-11",
     "text": "Learning never exhausts the mind.",
     "author": "Leonardo da Vinci",
-    "source": "Notebooks (attributed)",
     "tags": [
       "learning",
       "creativity"
-    ]
+    ],
+    "source": "Notebooks (attributed)"
   },
   {
     "id": "da-vinci-12",
     "text": "Simplicity is the ultimate sophistication.",
     "author": "Leonardo da Vinci",
-    "source": "Notebooks (attributed)",
     "tags": [
       "simplicity",
       "wisdom"
-    ]
+    ],
+    "source": "Notebooks (attributed)"
   },
   {
     "id": "cicero-1",
     "text": "A room without books is like a body without a soul.",
     "author": "Cicero",
-    "source": "Pro Archia Poeta",
     "tags": [
       "wisdom",
       "learning",
       "reflection"
-    ]
+    ],
+    "source": "Pro Archia Poeta"
   },
   {
     "id": "cicero-2",
     "text": "Gratitude is not only the greatest of virtues, but the parent of all others.",
     "author": "Cicero",
-    "source": "De Officiis",
     "tags": [
       "gratitude",
       "wisdom"
-    ]
+    ],
+    "source": "De Officiis"
   },
   {
     "id": "cicero-3",
     "text": "The more you have, the more you want.",
     "author": "Cicero",
-    "source": "De Finibus Bonorum et Malorum",
     "tags": [
       "wisdom",
       "reflection",
       "simplicity"
-    ]
+    ],
+    "source": "De Finibus Bonorum et Malorum"
   },
   {
     "id": "cicero-4",
     "text": "While there is life, there is hope.",
     "author": "Cicero",
-    "source": "Ad Familiares, 9.15",
     "tags": [
       "perseverance",
       "wisdom",
       "courage"
-    ]
+    ],
+    "source": "Ad Familiares, 9.15"
   },
   {
     "id": "cicero-5",
     "text": "The functions of the intellect are wisdom and counsel.",
     "author": "Cicero",
-    "source": "De Officiis",
     "tags": [
       "wisdom",
       "purpose"
-    ]
+    ],
+    "source": "De Officiis"
   },
   {
     "id": "cleanthes-1",
     "text": "Fate guides the willing, but drags the unwilling.",
     "author": "Cleanthes",
-    "source": "Hymn to Zeus",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Hymn to Zeus"
   },
   {
     "id": "buddha-sutra-1",
     "text": "Do not believe in anything simply because you have heard it.",
     "author": "Buddha",
-    "source": "Kalama Sutta",
     "tags": [
       "wisdom",
       "learning"
-    ]
+    ],
+    "source": "Kalama Sutta"
   },
   {
     "id": "buddha-sutra-2",
     "text": "The root of suffering is attachment.",
     "author": "Buddha",
-    "source": "Four Noble Truths, Dhammacakkappavattana Sutta",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Four Noble Truths, Dhammacakkappavattana Sutta"
   },
   {
     "id": "buddha-sutra-3",
     "text": "Better than a thousand hollow words is one word that brings peace.",
     "author": "Buddha",
-    "source": "Dhammapada, Verse 100",
     "tags": [
       "wisdom",
-      "reflection"
-    ]
+      "reflection",
+      "peace"
+    ],
+    "source": "Dhammapada, Verse 100"
   },
   {
     "id": "nietzsche-zara-1",
     "text": "One must still have chaos in oneself to be able to give birth to a dancing star.",
     "author": "Friedrich Nietzsche",
-    "source": "Thus Spoke Zarathustra, Prologue",
     "tags": [
       "creativity",
       "perseverance"
-    ]
-  },
-  {
-    "id": "camus-mos-1",
-    "text": "In the depth of winter, I finally learned that within me there lay an invincible summer.",
-    "author": "Albert Camus",
-    "source": "Return to Tipasa",
-    "tags": [
-      "perseverance",
-      "wisdom"
-    ]
-  },
-  {
-    "id": "thoreau-walden-1",
-    "text": "The mass of men lead lives of quiet desperation.",
-    "author": "Henry David Thoreau",
-    "source": "Walden, 'Where I Lived'",
-    "tags": [
-      "reflection",
-      "wisdom"
-    ]
+    ],
+    "source": "Thus Spoke Zarathustra, Prologue"
   },
   {
     "id": "thoreau-walden-2",
     "text": "Go confidently in the direction of your dreams. Live the life you have imagined.",
     "author": "Henry David Thoreau",
-    "source": "Walden, Conclusion",
     "tags": [
       "courage",
       "purpose"
-    ]
-  },
-  {
-    "id": "emerson-self-1",
-    "text": "Nothing is at last sacred but the integrity of your own mind.",
-    "author": "Ralph Waldo Emerson",
-    "source": "Self-Reliance",
-    "tags": [
-      "wisdom",
-      "courage"
-    ]
+    ],
+    "source": "Walden, Conclusion"
   },
   {
     "id": "emerson-self-2",
     "text": "A foolish consistency is the hobgoblin of little minds.",
     "author": "Ralph Waldo Emerson",
-    "source": "Self-Reliance",
     "tags": [
       "creativity",
       "courage"
-    ]
-  },
-  {
-    "id": "emerson-self-3",
-    "text": "To be great is to be misunderstood.",
-    "author": "Ralph Waldo Emerson",
-    "source": "Self-Reliance",
-    "tags": [
-      "courage",
-      "wisdom"
-    ]
+    ],
+    "source": "Self-Reliance"
   },
   {
     "id": "seneca-letter-1",
     "text": "It is not the man who has too little, but the man who craves more, that is poor.",
     "author": "Seneca",
-    "source": "Letter 2, Moral Epistles",
     "tags": [
       "simplicity",
       "wisdom"
-    ]
+    ],
+    "source": "Letter 2, Moral Epistles"
   },
   {
     "id": "seneca-letter-2",
     "text": "We are more often frightened than hurt, and we suffer more in imagination than in reality.",
     "author": "Seneca",
-    "source": "Letter 5, Moral Epistles",
     "tags": [
       "perseverance",
       "wisdom"
-    ]
+    ],
+    "source": "Letter 5, Moral Epistles"
   },
   {
     "id": "epictetus-ench-1",
     "text": "Men are disturbed not by things, but by the views which they take of them.",
     "author": "Epictetus",
-    "source": "Enchiridion, Chapter 5",
     "tags": [
       "mindfulness",
       "wisdom"
-    ]
-  },
-  {
-    "id": "epictetus-ench-2",
-    "text": "Wealth consists not in having great possessions, but in having few wants.",
-    "author": "Epictetus",
-    "source": "Enchiridion (attributed)",
-    "tags": [
-      "simplicity",
-      "wisdom"
-    ]
+    ],
+    "source": "Enchiridion, Chapter 5"
   },
   {
     "id": "lao-tzu-ttc-1",
     "text": "Know others are wise; know yourself is enlightenment.",
     "author": "Lao Tzu",
-    "source": "Tao Te Ching, Ch. 33",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Tao Te Ching, Ch. 33"
   },
   {
     "id": "lao-tzu-ttc-2",
     "text": "The journey of a thousand miles begins with a single step.",
     "author": "Lao Tzu",
-    "source": "Tao Te Ching, Ch. 64",
     "tags": [
       "perseverance",
       "action"
-    ]
+    ],
+    "source": "Tao Te Ching, Ch. 64"
   },
   {
     "id": "lao-tzu-ttc-3",
     "text": "To lead people, walk beside them.",
     "author": "Lao Tzu",
-    "source": "Tao Te Ching, Ch. 17 (attributed)",
     "tags": [
       "wisdom",
       "humility"
-    ]
+    ],
+    "source": "Tao Te Ching, Ch. 17 (attributed)"
   },
   {
     "id": "montaigne-essay-1",
     "text": "On the highest throne in the world sits only a man.",
     "author": "Michel de Montaigne",
-    "source": "Essays, Book I",
     "tags": [
       "wisdom",
       "humility"
-    ]
+    ],
+    "source": "Essays, Book I"
   },
   {
     "id": "montaigne-essay-2",
     "text": "He who teaches men to die, teaches them to live.",
     "author": "Michel de Montaigne",
-    "source": "Essays, Book I, Ch. 20",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Essays, Book I, Ch. 20"
   },
   {
     "id": "pascal-pensee-1",
     "text": "The eternal silence of these infinite spaces frightens me.",
     "author": "Blaise Pascal",
-    "source": "Pensées, 199",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Pensées, 199"
   },
   {
     "id": "voltaire-candide-1",
     "text": "We must cultivate our garden.",
     "author": "Voltaire",
-    "source": "Candide",
     "tags": [
       "purpose",
       "reflection"
-    ]
+    ],
+    "source": "Candide"
   },
   {
     "id": "voltaire-candide-2",
     "text": "Common sense is not so common.",
     "author": "Voltaire",
-    "source": "Attributed",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Attributed"
   },
   {
     "id": "kafka-diary-1",
     "text": "I am a cage, in search of a bird.",
     "author": "Franz Kafka",
-    "source": "Diaries, 1922",
     "tags": [
       "reflection",
       "wisdom"
-    ]
+    ],
+    "source": "Diaries, 1922"
   },
   {
     "id": "kafka-diary-2",
     "text": "A book must be the axe for the frozen sea within us.",
     "author": "Franz Kafka",
-    "source": "Letters to Oskar Pollak, 1904",
     "tags": [
       "creativity",
       "wisdom"
-    ]
+    ],
+    "source": "Letters to Oskar Pollak, 1904"
   },
   {
     "id": "dostoevsky-bk-1",
     "text": "The mystery of human existence lies not in just staying alive, but in finding something to live for.",
     "author": "Fyodor Dostoevsky",
-    "source": "The Brothers Karamazov",
     "tags": [
       "purpose",
       "wisdom"
-    ]
+    ],
+    "source": "The Brothers Karamazov"
   },
   {
     "id": "dostoevsky-bk-2",
     "text": "Above all, don't lie to yourself. The man who lies to himself and listens to his own lie comes to a point where he cannot distinguish the truth within him, or around him, and so loses all respect for himself and for others.",
     "author": "Fyodor Dostoevsky",
-    "source": "The Brothers Karamazov",
     "tags": [
       "wisdom",
       "discipline"
-    ]
+    ],
+    "source": "The Brothers Karamazov"
   },
   {
     "id": "tolstoy-ak-1",
     "text": "Everyone thinks of changing the world, but no one thinks of changing himself.",
     "author": "Leo Tolstoy",
-    "source": "Anna Karenina",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Anna Karenina"
   },
   {
     "id": "woolf-lighthouse-1",
     "text": "Life is not a series of gig lamps symmetrically arranged; life is a luminous halo.",
     "author": "Virginia Woolf",
-    "source": "Modern Fiction",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Modern Fiction"
   },
   {
     "id": "beckett-wfg-1",
     "text": "We have time to spare.",
     "author": "Samuel Beckett",
-    "source": "Waiting for Godot",
     "tags": [
       "reflection",
       "wisdom"
-    ]
+    ],
+    "source": "Waiting for Godot"
   },
   {
     "id": "beckett-wfg-2",
     "text": "Give birth to the future.",
     "author": "Samuel Beckett",
-    "source": "Worstward Ho",
     "tags": [
       "perseverance",
       "purpose"
-    ]
+    ],
+    "source": "Worstward Ho"
   },
   {
     "id": "ibsen-adh-1",
     "text": "The strongest man in the world is he who stands most alone.",
     "author": "Henrik Ibsen",
-    "source": "An Enemy of the People",
     "tags": [
       "courage",
       "wisdom"
-    ]
+    ],
+    "source": "An Enemy of the People"
   },
   {
     "id": "chekhov-letter-1",
     "text": "Don't tell me the moon is shining; show me the glint of light on broken glass.",
     "author": "Anton Chekhov",
-    "source": "Letter to Alexander Chekhov, 1886",
     "tags": [
       "creativity",
       "wisdom"
-    ]
+    ],
+    "source": "Letter to Alexander Chekhov, 1886"
   },
   {
     "id": "rilke-layp-1",
     "text": "Be patient toward all that is unsolved in your heart and try to love the questions themselves.",
     "author": "Rainer Maria Rilke",
-    "source": "Letters to a Young Poet, Letter 4",
     "tags": [
       "wisdom",
       "patience"
-    ]
+    ],
+    "source": "Letters to a Young Poet, Letter 4"
   },
   {
     "id": "rilke-layp-2",
     "text": "Perhaps all the dragons in our lives are princesses who are only waiting to see us act, just once, with beauty and courage.",
     "author": "Rainer Maria Rilke",
-    "source": "Letters to a Young Poet, Letter 7",
     "tags": [
       "courage",
       "perseverance"
-    ]
+    ],
+    "source": "Letters to a Young Poet, Letter 7"
   },
   {
     "id": "tagore-sb-1",
     "text": "The butterfly counts not months but moments, and has time enough.",
     "author": "Rabindranath Tagore",
-    "source": "Stray Birds, 81",
     "tags": [
       "mindfulness",
       "wisdom"
-    ]
+    ],
+    "source": "Stray Birds, 81"
   },
   {
     "id": "dickinson-poem-1",
     "text": "Hope is the thing with feathers that perches in the soul.",
     "author": "Emily Dickinson",
-    "source": "Poem 254",
     "tags": [
       "perseverance",
       "wisdom"
-    ]
+    ],
+    "source": "Poem 254"
   },
   {
     "id": "frost-road-1",
     "text": "The best way out is always through.",
     "author": "Robert Frost",
-    "source": "A Servant to Servants",
     "tags": [
       "perseverance",
       "courage"
-    ]
+    ],
+    "source": "A Servant to Servants"
   },
   {
     "id": "frost-road-2",
     "text": "In three words I can sum up everything I've learned about life: it goes on.",
     "author": "Robert Frost",
-    "source": "Attributed",
     "tags": [
       "wisdom",
       "perseverance"
-    ]
+    ],
+    "source": "Attributed"
   },
   {
     "id": "kipling-poem-1",
     "text": "If you can meet with Triumph and Disaster and treat those two impostors just the same.",
     "author": "Rudyard Kipling",
-    "source": "If—",
     "tags": [
       "wisdom",
       "perseverance"
-    ]
+    ],
+    "source": "If—"
   },
   {
     "id": "kipling-poem-2",
     "text": "The woman's cause is not to be won by entreaty, it is to be won by war.",
     "author": "Rudyard Kipling",
-    "source": "The Betrothed",
     "tags": [
       "courage",
       "wisdom"
-    ]
+    ],
+    "source": "The Betrothed"
   },
   {
     "id": "wilde-dg-1",
     "text": "I am not young enough to know everything.",
     "author": "Oscar Wilde",
-    "source": "De Profundis",
     "tags": [
       "wisdom",
       "humility"
-    ]
-  },
-  {
-    "id": "joyce-uly-1",
-    "text": "Mistakes are the portals of discovery.",
-    "author": "James Joyce",
-    "source": "Ulysses",
-    "tags": [
-      "wisdom",
-      "creativity"
-    ]
+    ],
+    "source": "De Profundis"
   },
   {
     "id": "sartre-bn-1",
     "text": "Man is condemned to be free.",
     "author": "Jean-Paul Sartre",
-    "source": "Being and Nothingness",
     "tags": [
       "freedom",
       "wisdom"
-    ]
+    ],
+    "source": "Being and Nothingness"
   },
   {
     "id": "sartre-bn-2",
     "text": "Life has no meaning a priori. You must invent your own meaning.",
     "author": "Jean-Paul Sartre",
-    "source": "Existentialism Is a Humanism",
     "tags": [
       "purpose",
       "wisdom"
-    ]
+    ],
+    "source": "Existentialism Is a Humanism"
   },
   {
     "id": "kierkegaard-eo-1",
     "text": "Purity of heart is to will one thing.",
     "author": "Søren Kierkegaard",
-    "source": "Purity of Heart Is to Will One Thing",
     "tags": [
       "purpose",
       "wisdom"
-    ]
-  },
-  {
-    "id": "schopenhauer-wr-1",
-    "text": "Talent hits a target no one else can hit; genius hits a target no one else can see.",
-    "author": "Arthur Schopenhauer",
-    "source": "The World as Will and Representation",
-    "tags": [
-      "creativity",
-      "wisdom"
-    ]
+    ],
+    "source": "Purity of Heart Is to Will One Thing"
   },
   {
     "id": "beauvoir-eoa-1",
     "text": "To be free is not to have the power to do whatever one likes, but to be able to do what one should.",
     "author": "Simone de Beauvoir",
-    "source": "The Ethics of Ambiguity",
     "tags": [
       "freedom",
       "wisdom"
-    ]
+    ],
+    "source": "The Ethics of Ambiguity"
   },
   {
     "id": "arendt-hc-1",
     "text": "The most radical revolutionary act is to change the concept of the world.",
     "author": "Hannah Arendt",
-    "source": "The Human Condition",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "The Human Condition"
   },
   {
     "id": "arendt-hc-2",
     "text": "Nobody ever killed or dominated for the sake of freedom.",
     "author": "Hannah Arendt",
-    "source": "Between Past and Future",
     "tags": [
       "freedom",
       "wisdom"
-    ]
+    ],
+    "source": "Between Past and Future"
   },
   {
     "id": "twain-letter-1",
     "text": "The best way to cheer yourself is to cheer somebody else up.",
     "author": "Mark Twain",
-    "source": "Letter to Mrs. Fairbanks, attributed",
     "tags": [
       "wisdom",
       "gratitude"
-    ]
+    ],
+    "source": "Letter to Mrs. Fairbanks, attributed"
   },
   {
     "id": "twain-letter-2",
     "text": "If you tell the truth, you don't have to remember anything.",
     "author": "Mark Twain",
-    "source": "Notebook (attributed)",
     "tags": [
       "wisdom",
       "discipline"
-    ]
+    ],
+    "source": "Notebook (attributed)"
   },
   {
     "id": "russell-speech-1",
     "text": "The world is full of people who are certain they are right.",
     "author": "Bertrand Russell",
-    "source": "Attributed",
     "tags": [
       "wisdom",
       "humility"
-    ]
+    ],
+    "source": "Attributed"
   },
   {
     "id": "frankl-msm-1",
     "text": "Everything can be taken from a man but one thing: the last of the human freedoms.",
     "author": "Viktor Frankl",
-    "source": "Man's Search for Meaning",
     "tags": [
       "freedom",
       "wisdom"
-    ]
+    ],
+    "source": "Man's Search for Meaning"
   },
   {
     "id": "frankl-msm-2",
     "text": "Those who have a 'why' to live can bear with almost any 'how'.",
     "author": "Viktor Frankl",
-    "source": "Man's Search for Meaning (quoting Nietzsche)",
     "tags": [
       "purpose",
       "perseverance"
-    ]
+    ],
+    "source": "Man's Search for Meaning (quoting Nietzsche)"
   },
   {
     "id": "cicero-6",
     "text": "To be grateful is to recognize a debt that can never be paid.",
     "author": "Cicero",
-    "source": "De Officiis (attributed)",
     "tags": [
       "gratitude",
       "wisdom"
-    ]
+    ],
+    "source": "De Officiis (attributed)"
   },
   {
     "id": "cicero-7",
     "text": "The life of the dead is placed in the memory of the living.",
     "author": "Cicero",
-    "source": "Philippicae",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Philippicae"
   },
   {
     "id": "musonius-1",
     "text": "How else can a man learn that injustice is unjust unless he is treated unjustly?",
     "author": "Musonius Rufus",
-    "source": "Discourses",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Discourses"
   },
   {
     "id": "plutarch-lives-1",
     "text": "What we obtain too cheap, we esteem too lightly.",
     "author": "Plutarch",
-    "source": "Life of Alexander (attributed)",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Life of Alexander (attributed)"
   },
   {
     "id": "plutarch-lives-2",
     "text": "To arrive at the most exquisite knowledge of things, nothing is wanting but to want.",
     "author": "Plutarch",
-    "source": "Moralia (attributed)",
     "tags": [
       "learning",
       "wisdom"
-    ]
+    ],
+    "source": "Moralia (attributed)"
   },
   {
     "id": "seneca-brev-1",
     "text": "Life is long if you know how to use it.",
     "author": "Seneca",
-    "source": "On the Shortness of Life",
     "tags": [
       "purpose",
       "wisdom"
-    ]
+    ],
+    "source": "On the Shortness of Life"
   },
   {
     "id": "seneca-brev-2",
     "text": "We are not given a short life, but we make it short.",
     "author": "Seneca",
-    "source": "On the Shortness of Life",
     "tags": [
       "purpose",
-      "reflexion"
-    ]
+      "reflection"
+    ],
+    "source": "On the Shortness of Life"
   },
   {
     "id": "epictetus-disc-1",
     "text": "First learn the meaning of what you say, and then speak.",
     "author": "Epictetus",
-    "source": "Discourses",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Discourses"
   },
   {
     "id": "aurelius-med-1",
     "text": "The present is the only thing of which a man can be deprived.",
     "author": "Marcus Aurelius",
-    "source": "Meditations, 2.14",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Meditations, 2.14"
   },
   {
     "id": "aurelius-med-2",
     "text": "Everything is opinion and opinion is in your power.",
     "author": "Marcus Aurelius",
-    "source": "Meditations, 12.22",
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Meditations, 12.22"
   },
   {
     "id": "aurelius-med-3",
     "text": "Do everything as if it were your last.",
     "author": "Marcus Aurelius",
-    "source": "Meditations, 2.2",
     "tags": [
       "purpose",
       "wisdom"
-    ]
-  },
-  {
-    "id": "buddha-dhamma-1",
-    "text": "Better than a thousand hollow words is one word that brings peace.",
-    "author": "Buddha",
-    "source": "Dhammapada, Verse 100",
-    "tags": [
-      "wisdom",
-      "peace"
-    ]
+    ],
+    "source": "Meditations, 2.2"
   },
   {
     "id": "buddha-dhamma-2",
     "text": "Just as a treasure is lost in a house but found again through diligent search, so too the Dhamma is found through diligence.",
     "author": "Buddha",
-    "source": "Dhammapada (attributed)",
     "tags": [
       "perseverance",
       "wisdom"
-    ]
+    ],
+    "source": "Dhammapada (attributed)"
   },
   {
     "id": "lao-tzu-ttc-4",
     "text": "He who knows does not speak; he who speaks does not know.",
     "author": "Lao Tzu",
-    "source": "Tao Te Ching, Ch. 56",
     "tags": [
       "wisdom",
-      "reflexion"
-    ]
+      "reflection"
+    ],
+    "source": "Tao Te Ching, Ch. 56"
   },
   {
     "id": "lao-tzu-ttc-5",
     "text": "A trip of a thousand miles begins with a single step.",
     "author": "Lao Tzu",
-    "source": "Tao Te Ching, Ch. 64",
     "tags": [
       "perseverance",
       "action"
-    ]
+    ],
+    "source": "Tao Te Ching, Ch. 64"
   },
   {
     "id": "confucius-an-1",
     "text": "By three methods we may learn wisdom: first, by reflection, which is noblest; second, by imitation, which is easiest; and third by experience, which is the bitterest.",
     "author": "Confucius",
-    "source": "Analects (attributed)",
     "tags": [
       "wisdom",
       "learning"
-    ]
+    ],
+    "source": "Analects (attributed)"
   },
   {
     "id": "montaigne-ess-1",
     "text": "To practice death is to practice freedom.",
     "author": "Michel de Montaigne",
-    "source": "Essays, Book I, Ch. 20",
     "tags": [
       "freedom",
       "wisdom"
-    ]
+    ],
+    "source": "Essays, Book I, Ch. 20"
   },
   {
     "id": "montaigne-ess-2",
     "text": "I study myself more than any other subject. That is my metaphysics, that is my physics.",
     "author": "Michel de Montaigne",
-    "source": "Essays, Book III: Of Repentance",
     "tags": [
       "reflection",
       "learning"
-    ]
+    ],
+    "source": "Essays, Book III: Of Repentance"
   },
   {
     "id": "descartes-dom-1",
     "text": "The greatest minds are capable of the greatest vices as well as of the greatest virtues.",
     "author": "René Descartes",
-    "source": "Discourse on the Method",
     "tags": [
       "wisdom",
       "reflection"
-    ]
-  },
-  {
-    "id": "kant-cpr-1",
-    "text": "Out of the crooked timber of humanity, no straight thing was ever made.",
-    "author": "Immanuel Kant",
-    "source": "Idea for a Universal History",
-    "tags": [
-      "wisdom",
-      "reflection"
-    ]
+    ],
+    "source": "Discourse on the Method"
   },
   {
     "id": "kant-gmm-1",
     "text": "Duty is the necessity of acting from respect for the law.",
     "author": "Immanuel Kant",
-    "source": "Groundwork of the Metaphysics of Morals",
     "tags": [
       "discipline",
       "wisdom"
-    ]
-  },
-  {
-    "id": "pascal-pensee-2",
-    "text": "Men never do evil so completely and cheerfully as when they do it from religious conviction.",
-    "author": "Blaise Pascal",
-    "source": "Lettres Provinciales",
-    "tags": [
-      "wisdom",
-      "courage"
-    ]
+    ],
+    "source": "Groundwork of the Metaphysics of Morals"
   },
   {
     "id": "spinoza-eth-1",
     "text": "All excellent things are as difficult as they are rare.",
     "author": "Baruch Spinoza",
-    "source": "Ethics (attributed)",
     "tags": [
       "perseverance",
       "wisdom"
-    ]
+    ],
+    "source": "Ethics (attributed)"
   },
   {
     "id": "wittgenstein-tract-1",
     "text": "The limits of my language mean the limits of my world.",
     "author": "Ludwig Wittgenstein",
-    "source": "Tractatus Logico-Philosophicus, 5.6",
     "tags": [
       "wisdom",
       "reflection"
-    ]
-  },
-  {
-    "id": "santayana-lr-1",
-    "text": "Those who cannot remember the past are condemned to repeat it.",
-    "author": "George Santayana",
-    "source": "The Life of Reason",
-    "tags": [
-      "wisdom",
-      "learning"
-    ]
-  },
-  {
-    "id": "thoreau-wald-1",
-    "text": "Not until we are lost do we begin to understand ourselves.",
-    "author": "Henry David Thoreau",
-    "source": "Walden, Where I Lived",
-    "tags": [
-      "reflection",
-      "wisdom"
-    ]
+    ],
+    "source": "Tractatus Logico-Philosophicus, 5.6"
   },
   {
     "id": "emerson-ess-1",
     "text": "Life is a progress and not a station.",
     "author": "Ralph Waldo Emerson",
-    "source": "The American Scholar",
     "tags": [
       "perseverance",
       "purpose"
-    ]
+    ],
+    "source": "The American Scholar"
   },
   {
     "id": "emerson-ess-2",
     "text": "Adopt the pace of nature: her secret is patience.",
     "author": "Ralph Waldo Emerson",
-    "sources": [
-      "Essays (attributed)"
-    ],
     "tags": [
       "patience",
       "wisdom"
-    ]
+    ],
+    "source": "Essays (attributed)"
   },
   {
     "id": "nietzsche-gm-1",
     "text": "He who fights with monsters might take care lest he thereby become a monster.",
     "author": "Friedrich Nietzsche",
-    "source": "Beyond Good and Evil, Aphorism 146",
     "tags": [
       "wisdom",
       "reflection"
-    ]
-  },
-  {
-    "id": "kafka-meta-1",
-    "text": "I cannot transform the world, but I can transform myself.",
-    "author": "Franz Kafka",
-    "source": "Diaries (attributed)",
-    "tags": [
-      "wisdom",
-      "perseverance"
-    ]
+    ],
+    "source": "Beyond Good and Evil, Aphorism 146"
   },
   {
     "id": "beckett-attr-1",
     "text": "Ever tried. Ever failed. No matter. Try again. Fail again. Fail better.",
     "author": "Samuel Beckett",
-    "source": "Worstward Ho",
     "tags": [
       "perseverance",
       "courage"
-    ]
+    ],
+    "source": "Worstward Ho"
   },
   {
     "id": "woolf-md-1",
     "text": "She felt somehow very like him—the young man who had killed himself.",
     "author": "Virginia Woolf",
-    "source": "Mrs Dalloway",
     "tags": [
       "reflection",
       "wisdom"
-    ]
+    ],
+    "source": "Mrs Dalloway"
   },
   {
     "id": "heraclitus-2",
     "text": "Much learning does not teach understanding.",
     "author": "Heraclitus",
-    "source": "Fragment B40",
     "tags": [
       "learning",
       "wisdom"
-    ]
-  },
-  {
-    "id": "socrates-3",
-    "text": "To find yourself, think for yourself.",
-    "author": "Socrates",
-    "source": "Socrates (attributed)",
-    "tags": [
-      "self",
-      "wisdom"
-    ]
+    ],
+    "source": "Fragment B40"
   },
   {
     "id": "aristotle-3",
     "text": "Happiness depends upon ourselves.",
     "author": "Aristotle",
-    "source": "Aristotle (attributed)",
     "tags": [
       "self",
       "wisdom"
-    ]
+    ],
+    "source": "Aristotle (attributed)"
   }
 ]
