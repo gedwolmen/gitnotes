@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generateText } from 'ai';
 import type { Note } from '../models/Note';
 import { useAIStore } from '../stores/aiStore';
+import { useProStore, selectIsPro } from '../stores/proStore';
 import { initializeModel } from './AIService';
 import quotesJson from '../data/philosopher_quotes.json';
 
@@ -42,6 +43,20 @@ const FALLBACK_DESCRIPTIONS: Record<FallbackReason, string> = {
     'AI personalization is off for data safety. Showing a random quote from the collection.',
 };
 
+const PRO_BLOCKED_REASONS: FallbackReason[] = ['disabled', 'no_model', 'personalization_off'];
+
+function resolveDescription(reason: FallbackReason): string {
+  try {
+    const isPro = selectIsPro(useProStore.getState());
+    if (!isPro && PRO_BLOCKED_REASONS.includes(reason)) {
+      return 'AI personalization requires GitNotēs Pro. Showing a quote from the collection.';
+    }
+  } catch {
+    // proStore may throw on bare useProStore.getState() in some test setups
+  }
+  return FALLBACK_DESCRIPTIONS[reason];
+}
+
 function makeFallbackQuote(reason: FallbackReason): DailyQuote {
   const random = quotes[Math.floor(Math.random() * quotes.length)];
   return {
@@ -49,7 +64,7 @@ function makeFallbackQuote(reason: FallbackReason): DailyQuote {
     text: random.text,
     author: random.author,
     tags: random.tags,
-    description: FALLBACK_DESCRIPTIONS[reason],
+    description: resolveDescription(reason),
     generatedAt: Date.now(),
   };
 }

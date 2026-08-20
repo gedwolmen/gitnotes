@@ -854,6 +854,18 @@
       "renderStyles": "렌더 스타일",
       "multiAccount": "여러 GitHub 계정"
     },
+    "featureDescriptions": {
+      "aiChat": "노트에 무엇이든 물어보면 즉시 답변을 받을 수 있습니다",
+      "aiActions": "에디터에서 텍스트 요약, 다시 쓰기, 개선을 할 수 있습니다",
+      "thoughtDump": "생각이 떠오르는 순간 빠르게 포착할 수 있습니다",
+      "voiceDump": "아이디어를 말로 남기고 노트로 저장할 수 있습니다",
+      "personalizedQuotes": "AI가 여러분의 글스타일에 맞춰 매일 인용문을 추천합니다",
+      "githubTools": "GitHub 저장소의 컨텍스트를 AI에 제공할 수 있습니다",
+      "canvases": "무한 캔버스 위에 노트를 시각적으로 배치할 수 있습니다",
+      "templates": "자신이 만든 템플릿으로 새 노트를 시작할 수 있습니다",
+      "renderStyles": "노트 표시 스타일을 정밀하게 선택할 수 있습니다",
+      "multiAccount": "여러 GitHub 계정을 동시에 연동할 수 있습니다"
+    },
     "monthly": {
       "trialCta": "30일 무료 체험 후 {{price}}/월",
       "price": "{{price}}/월",
@@ -885,8 +897,6 @@
     "statusTrial": "체험 {{days}}일 남음",
     "statusUpgrade": "업그레이드",
     "settingsRow": "GitNotēs Pro",
-    "gateTitle": "Pro 기능입니다",
-    "gateBody": "업그레이드하면 AI 기능 등을 이용할 수 있습니다.",
     "badge": "PRO",
     "lockedTitle": "Pro 기능",
     "lockedBody": "이 기능에는 GitNotēs Pro가 필요합니다. 업그레이드하면 무제한 계정, 저장소, AI 등을 이용할 수 있습니다."

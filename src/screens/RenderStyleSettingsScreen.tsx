@@ -12,8 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { useTheme } from '../contexts/ThemeContext';
-import { useProGate } from '../hooks/useProGate';
-import { ProRequired } from '../components/paywall/ProRequired';
+import { useProScreenGuard } from '../hooks/useProScreenGuard';
 import { useRepos } from '../contexts/RepoContext';
 import { useRenderStyleStore } from '../stores/renderStyleStore';
 import { RenderStyleService, DiscoveredBinding } from '../services/RenderStyleService';
@@ -71,11 +70,9 @@ export default function RenderStyleSettingsScreen() {
     [settings],
   );
 
-  const { isPro } = useProGate();
+  const blocked = useProScreenGuard();
 
-  if (!isPro) {
-    return <ProRequired />;
-  }
+  if (blocked) return null;
 
   return (
     <SafeAreaView edges={['top', 'bottom']} className="flex-1" style={{ backgroundColor: colors.background }}>

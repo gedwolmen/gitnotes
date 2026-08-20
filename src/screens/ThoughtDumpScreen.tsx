@@ -19,8 +19,7 @@ import VoiceInputModal from '../components/VoiceInputModal';
 import { indexDump, removeDump } from '../services/ai/thoughtDumpIndexing';
 import { SwipeableListItem } from '../components/list/SwipeableListItem';
 import { BulkActionBar } from '../components/list/BulkActionBar';
-import { useProGate } from '../hooks/useProGate';
-import { ProRequired } from '../components/paywall/ProRequired';
+import { useProScreenGuard } from '../hooks/useProScreenGuard';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -252,11 +251,9 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
     );
   };
 
-  const { isPro } = useProGate();
+  const blocked = useProScreenGuard();
 
-  if (!isPro) {
-    return <ProRequired />;
-  }
+  if (blocked) return null;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>

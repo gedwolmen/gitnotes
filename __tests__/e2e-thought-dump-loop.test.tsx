@@ -195,13 +195,18 @@ jest.mock('../src/stores/aiHubStore', () => {
   };
 });
 
-jest.mock('@react-navigation/native', () => ({
-  useNavigation: jest.fn(() => ({
-    navigate: jest.fn(),
-    goBack: jest.fn(),
-  })),
-  useRoute: jest.fn(() => ({ params: {} })),
-}));
+jest.mock('@react-navigation/native', () => {
+  const React = require('react');
+  return {
+    useNavigation: jest.fn(() => ({
+      navigate: jest.fn(),
+      goBack: jest.fn(),
+      canGoBack: () => true,
+    })),
+    useRoute: jest.fn(() => ({ params: {} })),
+    useFocusEffect: (cb: () => unknown) => React.useEffect(cb),
+  };
+});
 
 jest.mock('react-native-safe-area-context', () => {
   const React = require('react');
