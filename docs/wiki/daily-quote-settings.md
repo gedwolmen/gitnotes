@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Daily Quote feature displays philosophical quotes on the home screen. The dataset has been expanded from 113 to 418 verified quotes with full source citations, and two new settings have been added for greater control.
+The Daily Quote feature displays philosophical quotes on the home screen. The dataset has been expanded from 113 to 454 verified quotes with full source citations, and two new settings have been added for greater control.
 
 ## Settings
 
@@ -41,7 +41,7 @@ When disabled, only the author name is shown:
 
 ### Expansion
 
-The dataset was expanded from 113 to 418 quotes across five expansion batches:
+The dataset was expanded from 113 to 454 quotes across five expansion batches:
 
 - **expansion-A (80 quotes):** Classical/Stoic/Eastern
 - **expansion-B (76 quotes):** Essayists (Montaigne, Bacon, La Rochefoucauld, Vauvenargues, Emerson, Thoreau, Chesterton)
@@ -51,7 +51,7 @@ The dataset was expanded from 113 to 418 quotes across five expansion batches:
 
 ### Content Policy
 
-All 418 quotes comply with the AGENTS.md Quote Content Policy:
+All 454 quotes comply with the AGENTS.md Quote Content Policy:
 
 1. **Accurately attributed:** Every quote verified against the author's known works
 2. **Verifiable sources:** Each quote includes a `source` field naming the specific book, essay, letter, or work
@@ -63,7 +63,7 @@ All 418 quotes comply with the AGENTS.md Quote Content Policy:
 The dataset was rigorously audited:
 - **43 quotes removed:** Unverifiable attribution, misattribution, or without canonical sources
 - **7 quotes corrected:** Misattributed quotes corrected with proper attribution
-- **418 final quotes:** 100% source coverage, zero invalid entries
+- **454 final quotes:** 100% source coverage, zero invalid entries
 
 See issue #933 for the full audit report.
 
