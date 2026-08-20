@@ -519,6 +519,7 @@ export default function SettingsScreen() {
   }, [authState.isAuthenticated]);
 
   const handleSelectGithubRepo = useCallback(async (repo: GitHubRepository) => {
+    if (isAddingRepoPath !== null) return;
     if (repositories.length >= 1 && !isPro) {
       promptProUpgrade(t, openPaywall);
       return;
@@ -555,9 +556,10 @@ export default function SettingsScreen() {
       }
     };
     await attemptAdd(false);
-  }, [addRepo, autoSyncAfterAdd, repositories, t, isPro, openPaywall]);
+  }, [addRepo, autoSyncAfterAdd, repositories, t, isPro, openPaywall, isAddingRepoPath]);
 
   const handleAddManualRepo = useCallback(async () => {
+    if (isAddingRepoPath !== null) return;
     const value = manualRepoInput.trim();
     if (!value) return;
     if (repositories.length >= 1 && !isPro) {
@@ -593,7 +595,7 @@ export default function SettingsScreen() {
       }
     };
     await attemptAdd(false);
-  }, [addRepo, autoSyncAfterAdd, manualRepoInput, t, repositories, isPro, openPaywall]);
+  }, [addRepo, autoSyncAfterAdd, manualRepoInput, t, repositories, isPro, openPaywall, isAddingRepoPath]);
 
   const handleRemoveRepo = useCallback((repo: GitRepository) => {
     HapticService.warning();
