@@ -69,7 +69,7 @@ function makeProps(overrides: Partial<React.ComponentProps<typeof SettingsModals
     showTokenModal: false,
     repoSearchQuery: '',
     manualRepoInput: '',
-    isAddingRepo: false,
+    isAddingRepoPath: null,
     isLoadingGithubRepos: false,
     tokenInput: '',
     tokenVisible: false,
