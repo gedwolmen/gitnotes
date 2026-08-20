@@ -729,10 +729,16 @@ onSetSyncIntervalSeconds,
           </>
         ) : null}
         <GroupRow
-          testID="settings.button.manage-templates"
-          onPress={onManageTemplates}
+          testID={isPro ? 'settings.button.manage-templates' : 'settings.row.manage-templates-locked'}
+          onPress={isPro ? onManageTemplates : () => promptProUpgrade(t, onOpenPaywall)}
           leading={<Ionicons name="document-text-outline" size={20} color={colors.text} />}
-          trailing={<Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
+          trailing={
+            isPro ? (
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            ) : (
+              <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
+            )
+          }
         >
           <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.manageTemplates')}</Text>
         </GroupRow>
