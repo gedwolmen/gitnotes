@@ -344,7 +344,10 @@ onSetSyncIntervalSeconds,
               <Toggle
                 testID="settings.toggle.theme"
                 value={theme === 'dark'}
-                onValueChange={(value) => setTheme(value ? 'dark' : 'light')}
+                onValueChange={(value) => {
+                  HapticService.selection();
+                  setTheme(value ? 'dark' : 'light');
+                }}
               />
               <HintIcon hintKey="hints.settings.darkMode" testID="hint.dark-mode" />
             </View>
