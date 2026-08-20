@@ -163,7 +163,9 @@
     },
     "dailyQuoteDescription": "ホームに哲学者の名言を表示",
     "aiPersonalization": {
-      "title": "ノートでAIをパーソナライズ"
+      "title": "ノートでAIをパーソナライズ",
+      "label": "AIパーソナライズ",
+      "description": "ノートに基づいて名言をパーソナライズ"
     },
     "aiPersonalizationDescription": "オフにするとAIはノートや日記を読みません（データ保護）",
     "githubTools": {

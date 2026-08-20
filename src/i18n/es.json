@@ -163,7 +163,9 @@
     },
     "dailyQuoteDescription": "Mostrar cita filosófica personal en Inicio",
     "aiPersonalization": {
-      "title": "Personalizar IA con mis notas"
+      "title": "Personalizar IA con mis notas",
+      "label": "Personalización de IA",
+      "description": "Personaliza citas según tus notas"
     },
     "aiPersonalizationDescription": "Cuando está desactivado, la IA no lee tus notas ni diarios por seguridad",
     "githubTools": {

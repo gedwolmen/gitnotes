@@ -268,7 +268,9 @@
     },
     "dailyQuoteDescription": "Show a personal philosopher quote on Home",
     "aiPersonalization": {
-      "title": "Personalize AI with my notes"
+      "title": "Personalize AI with my notes",
+      "label": "AI Personalization",
+      "description": "Personalize quotes based on your notes"
     },
     "aiPersonalizationDescription": "When off, AI won't read your notes or journals for data safety",
     "githubTools": {

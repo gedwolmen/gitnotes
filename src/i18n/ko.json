@@ -163,7 +163,9 @@
     },
     "dailyQuoteDescription": "홈에 개인 철학자 명언 표시",
     "aiPersonalization": {
-      "title": "내 노트로 AI 맞춤화"
+      "title": "내 노트로 AI 맞춤화",
+      "label": "AI 맞춤화",
+      "description": "노트를 기반으로 명언 맞춤화"
     },
     "aiPersonalizationDescription": "끄면 AI가 데이터 보호를 위해 노트나 일지를 읽지 않습니다",
     "githubTools": {

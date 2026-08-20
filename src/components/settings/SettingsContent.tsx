@@ -936,7 +936,7 @@ onSetSyncIntervalSeconds,
           </View>
         </GroupRow>
         <GroupRow
-          testID={isPro ? 'settings.row.daily-quote-personalization' : 'settings.row.ai-locked-personalization'}
+          testID={isPro ? 'settings.row.daily-quote-personalization' : 'settings.row.ai-locked-daily-quote-personalization'}
           onPress={isPro ? undefined : () => promptProUpgrade(t, onOpenPaywall)}
           trailing={
             isPro ? (

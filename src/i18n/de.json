@@ -163,7 +163,9 @@
     },
     "dailyQuoteDescription": "Philosophisches Zitat auf Startseite",
     "aiPersonalization": {
-      "title": "KI mit meinen Notizen personalisieren"
+      "title": "KI mit meinen Notizen personalisieren",
+      "label": "KI-Personalisierung",
+      "description": "Zitate basierend auf deinen Notizen personalisieren"
     },
     "aiPersonalizationDescription": "Wenn aus, liest die KI keine Notizen oder Tagebücher zum Datenschutz",
     "githubTools": {

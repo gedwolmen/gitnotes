@@ -163,7 +163,9 @@
     },
     "dailyQuoteDescription": "Citation philosophique sur l'accueil",
     "aiPersonalization": {
-      "title": "Personnaliser l'IA avec mes notes"
+      "title": "Personnaliser l'IA avec mes notes",
+      "label": "Personnalisation de l'IA",
+      "description": "Personnalisez les citations en fonction de vos notes"
     },
     "aiPersonalizationDescription": "Si désactivé, l'IA ne lit pas vos notes ni journaux pour votre sécurité",
     "githubTools": {
