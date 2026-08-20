@@ -4,7 +4,7 @@
     "slug": "gitnotes",
     "version": "1.5.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/generated/icon.png",
     "userInterfaceStyle": "automatic",
     "assetBundlePatterns": [
       "**/*"
@@ -14,7 +14,7 @@
       "bundleIdentifier": "com.xaventra.gitnotes",
       "buildNumber": "9",
       "scheme": "gitnotes",
-      "icon": "./assets/icon.png",
+      "icon": "./assets/generated/icon.png",
       "infoPlist": {
         "CFBundleURLTypes": [
           {
@@ -44,8 +44,9 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/generated/adaptive-icon.png",
+        "backgroundColor": "#ffffff",
+        "monochromeImage": "./assets/generated/monochrome-icon.png"
       },
       "package": "org.gitnotes.app",
       "scheme": "gitnotes",
@@ -69,7 +70,7 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/generated/favicon.png"
     },
     "plugins": [
       "expo-font",
@@ -90,13 +91,13 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash.png",
-          "imageWidth": 800,
+          "image": "./assets/generated/splash-icon.png",
+          "imageWidth": 300,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
           "dark": {
-            "image": "./assets/splash-dark.png",
-            "imageWidth": 800,
+            "image": "./assets/generated/splash-icon.png",
+            "imageWidth": 300,
             "resizeMode": "contain",
             "backgroundColor": "#0E0E0E"
           }
