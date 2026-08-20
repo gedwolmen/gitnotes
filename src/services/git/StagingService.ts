@@ -115,28 +115,27 @@ export class StagingService {
       });
     }
 
-    const overrides = await SyncEngineService.listOverrides();
     const savedRepos = await StorageService.getSavedRepositories();
-    for (const repo of Object.keys(overrides)) {
-      if (overrides[repo] !== 'clone') continue;
-      const saved = savedRepos.find((r) => r.path === repo);
-      const repoBranch = saved?.branch ?? 'main';
-      if (repoPath && repo !== repoPath) continue;
+    for (const repo of savedRepos) {
+      const mode = await SyncEngineService.getMode(repo.path);
+      if (mode !== 'clone') continue;
+      const repoBranch = repo.branch ?? 'main';
+      if (repoPath && repo.path !== repoPath) continue;
       if (branch && repoBranch !== branch) continue;
 
       const localOid = await GitFsService.getCommitOid({
-        repoPath: repo,
+        repoPath: repo.path,
         ref: `refs/heads/${repoBranch}`,
       });
       const remoteOid = await GitFsService.getCommitOid({
-        repoPath: repo,
+        repoPath: repo.path,
         ref: `refs/remotes/origin/${repoBranch}`,
       });
       const hasLocal = localOid !== null;
       const hasRemote = remoteOid !== null;
       const mergeBase = hasRemote
         ? await GitFsService.findMergeBase({
-            repoPath: repo,
+            repoPath: repo.path,
             ref1: `refs/heads/${repoBranch}`,
             ref2: `refs/remotes/origin/${repoBranch}`,
           })
@@ -149,7 +148,7 @@ export class StagingService {
       }
 
       items.push({
-        repoPath: repo,
+        repoPath: repo.path,
         branch: repoBranch,
         filePath: UNPUSHED_COMMITS_PLACEHOLDER,
         kind: 'upsert',

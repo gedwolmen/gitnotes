@@ -59,6 +59,7 @@ import { GitFsService } from '../../src/services/git/GitFsService';
 import { StorageService } from '../../src/services/StorageService';
 
 const queueGetAll = NoteSyncQueueService.getAll as jest.Mock;
+const getMode = SyncEngineService.getMode as jest.Mock;
 const listOverrides = SyncEngineService.listOverrides as jest.Mock;
 const getSavedRepositories = StorageService.getSavedRepositories as jest.Mock;
 const getCommitOid = GitFsService.getCommitOid as jest.Mock;
@@ -75,7 +76,7 @@ describe('StagingService.listStaged — unpushed-commits merge-base gating (#879
   beforeEach(() => {
     jest.clearAllMocks();
     queueGetAll.mockResolvedValue([]);
-    listOverrides.mockResolvedValue({ [repo]: 'clone' });
+    getMode.mockResolvedValue('clone');
     getSavedRepositories.mockResolvedValue([
       { id: '1', name: 'repo', path: repo, branch: 'main' },
     ]);
@@ -126,5 +127,54 @@ describe('StagingService.listStaged — unpushed-commits merge-base gating (#879
       branch: 'main',
       localCommitOid: 'C',
     });
+  });
+});
+
+describe('StagingService.listStaged — default-clone repos without override (#925a)', () => {
+  const defaultCloneRepo = 'owner/default-clone';
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    queueGetAll.mockResolvedValue([]);
+    // No entry in @gitnotes:sync_engine_modes: the repo runs on the default
+    // sync mode, which SyncEngineService.DEFAULT_MODE resolves to 'clone'.
+    listOverrides.mockResolvedValue({});
+    getMode.mockResolvedValue('clone');
+    getSavedRepositories.mockResolvedValue([
+      { id: '1', name: 'default-clone', path: defaultCloneRepo, branch: 'main' },
+    ]);
+  });
+
+  test('default-clone repo without override surfaces unpushed commits', async () => {
+    getCommitOid.mockImplementation(async ({ ref }: { ref: string }) =>
+      ref.startsWith('refs/heads') ? 'C' : 'B',
+    );
+    findMergeBase.mockResolvedValue('A');
+
+    const staged = await StagingService.listStaged();
+
+    const rows = staged.filter((i) => i.filePath === UNPUSHED_COMMITS_PLACEHOLDER);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      repoPath: defaultCloneRepo,
+      branch: 'main',
+      kind: 'upsert',
+      mode: 'clone',
+      localCommitOid: 'C',
+    });
+  });
+
+  test('override repo removed from saved repos yields no row', async () => {
+    listOverrides.mockResolvedValue({ 'owner/removed': 'clone' });
+    getSavedRepositories.mockResolvedValue([]);
+    getCommitOid.mockImplementation(async ({ ref }: { ref: string }) =>
+      ref.startsWith('refs/heads') ? 'C' : 'B',
+    );
+    findMergeBase.mockResolvedValue('A');
+
+    const staged = await StagingService.listStaged();
+
+    const rows = staged.filter((i) => i.filePath === UNPUSHED_COMMITS_PLACEHOLDER);
+    expect(rows).toHaveLength(0);
   });
 });

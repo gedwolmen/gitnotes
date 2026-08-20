@@ -309,7 +309,7 @@ describe('StagingService', () => {
     });
 
     test('surfaces clone unpushed commits when local oid differs from remote', async () => {
-      listOverrides.mockResolvedValue({ 'owner/repo': 'clone' });
+      getMode.mockResolvedValue('clone');
       getSavedRepositories.mockResolvedValue([
         { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
       ]);
@@ -332,7 +332,7 @@ describe('StagingService', () => {
     });
 
     test('missing remote ref lists all local commits as staged', async () => {
-      listOverrides.mockResolvedValue({ 'owner/repo': 'clone' });
+      getMode.mockResolvedValue('clone');
       getSavedRepositories.mockResolvedValue([
         { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
       ]);
@@ -354,7 +354,7 @@ describe('StagingService', () => {
     });
 
     test('strictly-behind local branch (local === merge base) emits no phantom unpushed row (#879)', async () => {
-      listOverrides.mockResolvedValue({ 'owner/repo': 'clone' });
+      getMode.mockResolvedValue('clone');
       getSavedRepositories.mockResolvedValue([
         { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
       ]);
@@ -371,7 +371,7 @@ describe('StagingService', () => {
     });
 
     test('fresh clone with no commits on either side is not staged', async () => {
-      listOverrides.mockResolvedValue({ 'owner/repo': 'clone' });
+      getMode.mockResolvedValue('clone');
       getSavedRepositories.mockResolvedValue([
         { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
       ]);
@@ -428,7 +428,7 @@ getCommitOid.mockResolvedValue(null);
     });
 
     test('clone mode pushes once with the correct repoPath and branch', async () => {
-      listOverrides.mockResolvedValue({ 'owner/repo': 'clone' });
+      getMode.mockResolvedValue('clone');
       getSavedRepositories.mockResolvedValue([
         { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
       ]);
@@ -454,7 +454,7 @@ getCommitOid.mockResolvedValue(null);
     });
 
     test('clone push forwards onProgress to githubActivity.setProgress', async () => {
-      listOverrides.mockResolvedValue({ 'owner/repo': 'clone' });
+      getMode.mockResolvedValue('clone');
       getSavedRepositories.mockResolvedValue([
         { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
       ]);
@@ -482,7 +482,7 @@ getCommitOid.mockResolvedValue(null);
     });
 
     test('clone push failure surfaces an error', async () => {
-      listOverrides.mockResolvedValue({ 'owner/repo': 'clone' });
+      getMode.mockResolvedValue('clone');
       getSavedRepositories.mockResolvedValue([
         { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
       ]);
@@ -507,7 +507,7 @@ getCommitOid.mockResolvedValue(null);
           title: 'stale',
         }),
       ]);
-      listOverrides.mockResolvedValue({ 'owner/repo': 'clone' });
+      getMode.mockResolvedValue('clone');
       getSavedRepositories.mockResolvedValue([
         { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
       ]);
@@ -554,7 +554,7 @@ getCommitOid.mockResolvedValue(null);
     });
 
     test('clone mode forwards onProgress fraction and githubActivity.setProgress', async () => {
-      listOverrides.mockResolvedValue({ 'owner/repo': 'clone' });
+      getMode.mockResolvedValue('clone');
       getSavedRepositories.mockResolvedValue([
         { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
       ]);
@@ -588,7 +588,7 @@ getCommitOid.mockResolvedValue(null);
     });
 
     test('clone mode calls onProgress(null) when total is 0', async () => {
-      listOverrides.mockResolvedValue({ 'owner/repo': 'clone' });
+      getMode.mockResolvedValue('clone');
       getSavedRepositories.mockResolvedValue([
         { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
       ]);
