@@ -431,7 +431,15 @@
     "emptyTitleNoMatches": "일치하는 항목 없음",
     "emptySubtitleNoRepos": "설정에서 저장소를 추가하여 시작하세요",
     "emptySubtitleNoMatches": "다른 검색어로 시도해 보세요",
-    "browseFiles": "파일 찾아보기"
+    "browseFiles": "파일 찾아보기",
+    "pullRequests": "풀 리퀘스트",
+    "issues": "이슈",
+    "noPullRequests": "풀 리퀘스트가 없습니다",
+    "noIssues": "이슈가 없습니다",
+    "filterOpen": "열림",
+    "filterClosed": "닫힘",
+    "openInBrowser": "브라우저에서 열기",
+    "loadError": "로드할 수 없습니다 — 눌러서 다시 시도"
   },
   "home": {
     "title": "홈",

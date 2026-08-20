@@ -431,7 +431,15 @@
     "emptyTitleNoMatches": "Aucun résultat",
     "emptySubtitleNoRepos": "Ajoutez un dépôt dans les Réglages pour commencer",
     "emptySubtitleNoMatches": "Essayez une autre recherche",
-    "browseFiles": "Parcourir les fichiers"
+    "browseFiles": "Parcourir les fichiers",
+    "pullRequests": "Demandes de fusion",
+    "issues": "Tickets",
+    "noPullRequests": "Aucune demande de fusion",
+    "noIssues": "Aucun ticket",
+    "filterOpen": "Ouverts",
+    "filterClosed": "Fermés",
+    "openInBrowser": "Ouvrir dans le navigateur",
+    "loadError": "Impossible de charger — appuyez pour réessayer"
   },
   "home": {
     "title": "Accueil",
