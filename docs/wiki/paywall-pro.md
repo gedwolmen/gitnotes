@@ -25,7 +25,7 @@ PaywallScreen ──► ProStore (zustand) ──► RevenueCatService ──►
 
 ### Files
 
-- `src/services/RevenueCatService.ts` — the only module that imports `react-native-purchases`. Configures per platform (`EXPO_PUBLIC_REVENUECAT_API_KEY_IOS` / `_ANDROID`; placeholder keys skip configuration), fetches offerings (packages `monthly` + `yearly` (optional) + `lifetime` from the current offering), purchases, restores, reads customer info, subscribes to updates, and computes iOS-only trial eligibility (`checkTrialOrIntroductoryPriceEligibility`; Android returns true — the Play sheet is the source of truth).
+- `src/services/RevenueCatService.ts` — the only module that **imports `react-native-purchases` at runtime** (ProStore uses a type-only import to satisfy the TypeScript compiler; no dependency link at execution). Configures per platform (`EXPO_PUBLIC_REVENUECAT_API_KEY_IOS` / `_ANDROID`; placeholder keys skip configuration), fetches offerings (packages `monthly` + `yearly` (optional) + `lifetime` from the current offering), purchases, restores, reads customer info, subscribes to updates, derives entitlement / trial state from `customerInfo`, and resolves intro-eligibility via `getIntroEligibilities` (RC v10+ API returning `IntroEligibilityStatus` per iOS product; Android returns `UNKNOWN` — standard pricing is shown and the Play sheet is the source of truth).
 - `src/stores/proStore.ts` — zustand store: `status` (`loading | pro | free`), `entitlementActive`, `isGrandfathered`, `trialActive`/`trialEndsAt`, packages, purchase/restore actions, and the interstitial state machine. `selectIsPro(state) = entitlementActive || isGrandfathered`. Initialized at app boot in `App.tsx` (non-blocking, after `bootstrapStorage()`).
 - `src/services/GrandfatherService.ts` — one-shot migration of existing users.
 
@@ -78,6 +78,69 @@ The paywall is a root-stack screen pushed above `MainTabs`, so the tab bar and t
 - **Tab bar**: `TabNavigator` reads the root stack's focused route (`useNavigationState`) and renders `() => null` for the `tabBar` while `Paywall` is on top. This is the single guard that covers all three tab bar variants — the custom neumorphic `TabBar` (whose `parentRouteName === 'Paywall'` check only fires for that variant), the default React Navigation bar (flat style / tablets), and the `TabletRail`. Without it, the default bar renders under the paywall in flat theme, showing as a dark/light strip at the bottom.
 - **Bottom inset**: `PaywallScreen` uses `SafeAreaView edges={['top']}` (not the default all-edges) so the `ScrollView` viewport extends to the physical screen edge, and sets `paddingBottom: insets.bottom + 40` so content still clears the home indicator when scrolled to the end. The default all-edges behavior left a ~34pt dead strip at the bottom that content could never scroll into.
 
+## StoreKit compatibility
+
+- **StoreKit 2 active.** Migration from StoreKit 1 (`react-native-purchases` v1.x) completed with commit 54f07883 switching the SDK target to v10.x. App Store Connect ASC In-App Purchase key configured and linked in RevenueCat; sandbox transactions record correctly. StoreKit 2 handles all purchase / restore / entitlement APIs used by this paywall.
+
+## Impressions & analytics
+
+### Track custom paywall impression
+
+`trackCustomPaywallImpression` fires once per presentation of the leaf-level paywall screen (the one the user sees). If the same screen is remounted — e.g. due to navigation pop + push or state reset — a new impression fires. This semantics guarantees exactly-one-per-visible-session even if React unmounting/remounting cycle occurs within the same visual presentation.
+
+### Analytics event catalog
+
+All events emit via `console.warn` through `PaywallAnalytics`. Babel transform strips `console.log` / `console.info` calls in production builds; `console.warn` survives to ensure observability without polluting device logs with no-op traces. Decision to use `warn` over an alternative backend logging SDK: zero external dependency — pure console output.
+
+| Event | Parameters | When |
+|-------|-----------|------|
+| `paywall_open` | `{source}` | Paywall presented |
+| `paywall_close` | `{dwellMs, converted}` | User dismisses; `dwellMs` = elapsed time on screen; `converted` = true if purchase triggered in session |
+| `cta_tap` | `{packageId, type}` | CTA button tapped (`monthly` / `yearly` / `lifetime`); `type` = `"trial"` / `"purchase"` |
+| `purchase_attempt` | `{packageId, platform}` | Purchase initiated |
+| `purchase_outcome` | `{success, error?}` | Purchase complete or failed |
+| `restore_tap` | `{}` | Restore purchases tapped |
+| `restore_outcome` | `{status, previousEntitlements?, restoredPackages?}` | Derived from `customerInfo` comparison after restore completes |
+
+Each event carries deterministic payload shapes. Tests spy exclusively on `console.warn`; swapping to any other log level causes assertion failures.
+
+## Restore UX
+
+The restore flow has four observable states:
+
+1. **Restoring** — spinner shown, `Restoring` label ("Restoring purchases…")
+2. **Restored** — green confirmation banner listing purchased packages found in the restored `customerInfo` (compared against local state)
+3. **Nothing to restore** — neutral message ("No previous purchases detected") when the restored `customerInfo` contains no paid products beyond what the current session already holds
+4. **Error** — red error banner with retry CTA; message surfaces the underlying RC error reason if available
+
+Restore outcome is entirely derived from `customerInfo`: entitlement list, transaction history, and product identifiers. No manual state mutation.
+
+## Intro-eligibility policy
+
+**iOS:** Per-product intro eligibility resolved via `getIntroEligibilities([monthlyProductId, yearlyProductId])`. Each product returns `IntroEligibilityStatus` (eligible / ineligible / unknown). Intro offers apply independently per subscription tier — a user who cancels monthly and resubscribes may remain eligible for the monthly trial if Apple's terms allow, but yearly is always evaluated separately.
+
+**Android:** RC returns `UNKNOWN` for Android intro eligibility because Google Play Billing determines actual intro pricing from the Play sheet, not from client-side eligibility checks. Standard (non-discounted) pricing is shown; the Play billing sheet is authoritative for trial/offers. This decision follows RevenueCat guidance (#935 acceptance point 6).
+
+## Legal links
+
+Both Terms of Service and Privacy Policy URLs must appear in the paywall footer. Links point to:
+
+- Terms: `https://gitnotes.org/terms`
+- Privacy: `https://gitnotes.org/privacy`
+
+These serve as the referenced terms required by Apple App Store review guidelines for subscription purchases with free trials. See checklist item 8 below.
+
+## Bento layout (#921)
+
+The Pro upgrade page uses a bento-grid tile layout rather than full-width cards:
+
+- **Grid spec:** responsive two-column grid on screens ≥ 640pt width, single column below. Configurable via breakpoint constant `BENTO_BREAKPOINT_640PT`.
+- **Hero card:** the primary subscription card spans the full grid width on tablet breakpoints, centered visually with elevated shadow and accent-colored CTA.
+- **Tile structure:** each feature row renders as its own grid cell with rounded corners, padding gap 12pt, subtle background tint matching theme palette.
+- **i18n:** all tile labels live in translation keys under `paywall.bento.*` namespace (English, Spanish, French, German, Japanese, Korean). Grid column count itself is not translated — device width drives the layout.
+
+---
+
 ## RevenueCat configuration
 
 - Entitlement: `pro` (both products grant it)
@@ -104,16 +167,17 @@ These are RevenueCat **public SDK keys** (non-secret, embedded in the app). Copy
 This cannot be automated — a human must complete it before real-device (sandbox) QA:
 
 1. **RevenueCat dashboard**: create the project, add the iOS app (`com.xaventra.gitnotes`) and Android app (`org.gitnotes.app`), and copy the SDK keys into `.env`.
-2. **App Store Connect keys** (Users and Access → Integrations): generate an **In-App Purchase** key (`SubscriptionKey_XXXX.p8`) for the RevenueCat in-app purchase key config (required for StoreKit 2 — transactions fail to record without it), and an **App Store Connect API** key (`AuthKey_XXXX.p8`) for product import/price sync. Fill Key ID + Issuer ID (UUID at top of the Integrations page) into the RevenueCat app settings.
+2. **App Store Connect keys** (Users and Access → Integrations): generate an **In-App Purchase** key (`SubscriptionKey_XXXX.p8`) for the RevenueCat in-app purchase key config, and an **App Store Connect API** key (`AuthKey_XXXX.p8`) for product import/price sync. Fill Key ID + Issuer ID (UUID at top of the Integrations page) into the RevenueCat app settings.
 3. **RevenueCat custom URL scheme**: RevenueCat assigns a per-app scheme (e.g. `rc-0aadf77f9f`). It is registered in `app.json` — iOS via `infoPlist.CFBundleURLTypes` (alongside the existing `gitnotes` scheme) and Android via `intentFilters`. Regenerate native folders with `npx expo prebuild --clean` after changing. Registering the scheme alone only opens the app — presenting the preview paywall needs `react-native-purchases-ui` + URL handling.
 4. **App Store Connect**: create the auto-renewable subscriptions `com.xaventra.gitnotes.monthly` at $2.99 (with a **30-day free trial** introductory offer) and `com.xaventra.gitnotes.yearly` at $19.99, plus the non-consumable `com.xaventra.gitnotes.lifetime` at $40.
 5. **Google Play Console**: create the subscriptions `gitnotes_monthly` at $2.99 (**free-trial base plan**, 30 days) and `gitnotes_yearly` at $19.99, plus the one-time product `gitnotes_lifetime` at $40.
 6. **RevenueCat dashboard**: create the `pro` entitlement, link ALL products to it, create the `default` offering with `monthly` + `yearly` + `lifetime` packages (yearly is optional — the paywall hides it when absent), and mark it current.
 7. Verify the build number: the paywall release must be **build ≥ 9** (iOS `buildNumber` in `app.json`) so `originalApplicationVersion < 9` correctly identifies pre-paywall users.
-8. App Store review may require real terms/privacy URLs in the paywall's `paywall.termsNote` text — decide before submission.
+8. **Legal links (RESOLVED):** Terms of Service (`https://gitnotes.org/terms`) and Privacy Policy (`https://gitnotes.org/privacy`) are present in the paywall footer. App Store review requirement satisfied.
 
 ## Testing notes
 
 - `react-native-purchases` is globally mocked in `jest.setup.ts`; `proStore` is globally mocked **defaulting to PRO** so existing tests stay green — gating tests flip state via `__setProState` (import from `src/stores/proStore`). `proStore.test.ts` uses `jest.requireActual` to test the real store.
 - New i18n keys must be added to all six locales (`en/es/fr/de/ja/ko`) or `__tests__/i18n-key-parity.test.ts` fails.
 - Real purchases require a development build (`eas build --profile development`); Expo Go cannot purchase.
+- `PaywallAnalytics` module tests (7 cases) verify deterministic event emission via `console.warn` spy; swapping to any other log level breaks assertions. `PaywallFeatureGrid` component tests (Bento grid tile layout, responsive column breakpoints) cover the bento visual spec for #921.
