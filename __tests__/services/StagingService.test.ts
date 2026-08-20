@@ -1,7 +1,7 @@
 jest.mock('../../src/services/NoteSyncQueueService', () => ({
   NoteSyncQueueService: {
-    enqueueNoteUpsert: jest.fn(async () => undefined),
-    enqueueNoteDelete: jest.fn(async () => undefined),
+    enqueueNoteUpsert: jest.fn(async () => ({ id: 'mut_upsert' })),
+    enqueueNoteDelete: jest.fn(async () => ({ id: 'mut_delete' })),
     getAll: jest.fn(async () => []),
     drain: jest.fn(async () => ({ succeeded: 0, failed: 0, remaining: 0 })),
   },
@@ -143,8 +143,8 @@ function groupByRepoBranch(items: StagedItem[]): Map<string, StagedItem[]> {
 describe('StagingService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    enqueueUpsert.mockResolvedValue(undefined);
-    enqueueDelete.mockResolvedValue(undefined);
+    enqueueUpsert.mockResolvedValue({ id: 'mut_upsert' });
+    enqueueDelete.mockResolvedValue({ id: 'mut_delete' });
     queueGetAll.mockResolvedValue([]);
     queueDrain.mockResolvedValue({ succeeded: 0, failed: 0, remaining: 0 });
     writeAndCommit.mockResolvedValue({ success: true });
