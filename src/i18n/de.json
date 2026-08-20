@@ -431,7 +431,15 @@
     "emptyTitleNoMatches": "Keine Treffer",
     "emptySubtitleNoRepos": "Füge in den Einstellungen ein Repository hinzu, um loszulegen",
     "emptySubtitleNoMatches": "Versuche eine andere Suche",
-    "browseFiles": "Dateien durchsuchen"
+    "browseFiles": "Dateien durchsuchen",
+    "pullRequests": "Pull Requests",
+    "issues": "Issues",
+    "noPullRequests": "Keine Pull Requests",
+    "noIssues": "Keine Issues",
+    "filterOpen": "Offen",
+    "filterClosed": "Geschlossen",
+    "openInBrowser": "Im Browser öffnen",
+    "loadError": "Konnte nicht geladen werden — zum Wiederholen tippen"
   },
   "home": {
     "title": "Start",

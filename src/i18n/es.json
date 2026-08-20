@@ -431,7 +431,15 @@
     "emptyTitleNoMatches": "Sin coincidencias",
     "emptySubtitleNoRepos": "Añade un repositorio en Ajustes para empezar",
     "emptySubtitleNoMatches": "Prueba con otra búsqueda",
-    "browseFiles": "Explorar archivos"
+    "browseFiles": "Explorar archivos",
+    "pullRequests": "Solicitudes de cambios",
+    "issues": "Incidencias",
+    "noPullRequests": "No hay solicitudes de cambios",
+    "noIssues": "No hay incidencias",
+    "filterOpen": "Abiertas",
+    "filterClosed": "Cerradas",
+    "openInBrowser": "Abrir en navegador",
+    "loadError": "No se pudo cargar — toca para reintentar"
   },
   "home": {
     "title": "Inicio",

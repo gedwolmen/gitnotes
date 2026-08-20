@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   ScrollView,
   RefreshControl,
+  Linking,
 } from 'react-native';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -28,6 +29,8 @@ import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
 import SearchBar from '../components/SearchBar';
 import { useTranslation } from 'react-i18next';
+import { useGitHostPullRequests, useGitHostIssues } from '../hooks/useGitHostQueries';
+import type { GitHostItemState, GitHostPullRequest, GitHostIssue, GitHostProvider } from '../services/git/GitHost';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -43,7 +46,8 @@ function classifyFile(name: string): 'pdf' | 'json' | 'image' | 'video' | 'text'
   return 'text';
 }
 
-type ExploreView = 'repoList' | 'repoDetail' | 'fileTree';
+type ExploreView = 'repoList' | 'repoDetail' | 'fileTree' | 'prList' | 'issueList';
+type StateFilter = Extract<GitHostItemState, 'open' | 'closed'>;
 
 export default function ExploreScreen() {
   const { t } = useTranslation();
@@ -65,6 +69,9 @@ export default function ExploreScreen() {
   const [branches, setBranches] = useState<GitBranch[]>([]);
   const [branchLoading, setBranchLoading] = useState(false);
   const [branchLoadFailed, setBranchLoadFailed] = useState(false);
+
+  const [prFilter, setPrFilter] = useState<StateFilter>('open');
+  const [issueFilter, setIssueFilter] = useState<StateFilter>('open');
 
   const [bannerRegionHeight, setBannerRegionHeight] = useState(headerHeight);
   const [toolsHeight, setToolsHeight] = useState(0);
@@ -94,6 +101,13 @@ export default function ExploreScreen() {
     return parseRepoPath(selectedRepo.path);
   }, [selectedRepo]);
 
+  const repoProvider: GitHostProvider = (selectedRepo?.provider as GitHostProvider) ?? 'github';
+  const repoOwner = repoInfo?.owner ?? '';
+  const repoName = repoInfo?.repo ?? '';
+
+  const prQuery = useGitHostPullRequests(repoProvider, repoOwner, repoName, prFilter);
+  const issueQuery = useGitHostIssues(repoProvider, repoOwner, repoName, issueFilter);
+
   // Explore performs NO git pull — it only refreshes the repo list. When the
   // gate reports the selected repo busy (push marker or cycle hold affecting
   // it), the tree area shows its busy state and pull-to-refresh is disabled.
@@ -120,9 +134,19 @@ export default function ExploreScreen() {
     setView('fileTree');
   }, []);
 
+  const handleOpenPrList = useCallback(() => {
+    HapticService.medium();
+    setView('prList');
+  }, []);
+
+  const handleOpenIssueList = useCallback(() => {
+    HapticService.medium();
+    setView('issueList');
+  }, []);
+
   const handleBack = useCallback(() => {
     HapticService.light();
-    if (view === 'fileTree') {
+    if (view === 'fileTree' || view === 'prList' || view === 'issueList') {
       setView('repoDetail');
     } else if (view === 'repoDetail') {
       setSelectedRepo(null);
@@ -294,7 +318,7 @@ export default function ExploreScreen() {
           )}
         </View>
 
-        <View className="px-4 mt-6">
+        <View className="px-4 mt-6 gap-2">
           <TouchableOpacity
             testID="explore.button.open-file-tree"
             className="flex-row items-center justify-center py-3.5 rounded-md gap-2"
@@ -305,8 +329,45 @@ export default function ExploreScreen() {
             <Ionicons name="folder-open-outline" size={20} color="#fff" />
             <Text className="text-white text-base font-semibold">{t('explore.browseFiles')}</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            testID="explore.button.open-pr-list"
+            className="flex-row items-center justify-center py-3.5 rounded-md gap-2"
+            style={{ backgroundColor: colors.primary + 'CC' }}
+            onPress={handleOpenPrList}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="git-pull-request-outline" size={20} color="#fff" />
+            <Text className="text-white text-base font-semibold">{t('explore.pullRequests')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            testID="explore.button.open-issues-list"
+            className="flex-row items-center justify-center py-3.5 rounded-md gap-2"
+            style={{ backgroundColor: colors.primary + '99' }}
+            onPress={handleOpenIssueList}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="alert-circle-outline" size={20} color="#fff" />
+            <Text className="text-white text-base font-semibold">{t('explore.issues')}</Text>
+          </TouchableOpacity>
         </View>
-        <ScreenHeader title={selectedRepo.name} onBack={handleBack} />
+        <ScreenHeader
+          title={selectedRepo.name}
+          onBack={handleBack}
+          actions={
+            <TouchableOpacity
+              testID="explore.hub.branch-picker"
+              className="flex-row items-center gap-1.5 rounded-full px-3 py-1.5"
+              style={{ backgroundColor: colors.primary + '15' }}
+              onPress={openBranchPicker}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="git-branch-outline" size={14} color={colors.primary} />
+              <Text className="text-xs font-semibold" style={{ color: colors.primary }} numberOfLines={1}>
+                {selectedBranch ?? selectedRepo.branch ?? t('settings.branchDefault')}
+              </Text>
+            </TouchableOpacity>
+          }
+        />
       </SafeAreaView>
     );
   }
@@ -451,6 +512,153 @@ export default function ExploreScreen() {
             )}
           </View>
         </Modal>
+      </SafeAreaView>
+    );
+  }
+
+  if (view === 'prList' && selectedRepo && repoInfo) {
+    const prData = prQuery.data ?? [];
+    return (
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['top', 'bottom']}>
+        <View style={{ paddingTop: headerHeight }}>
+          <OfflineBanner />
+        </View>
+        <View className="flex-row px-4 py-3 gap-2" style={{ borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border + '30' }}>
+          {(['open', 'closed'] as StateFilter[]).map((s) => {
+            const active = prFilter === s;
+            return (
+              <TouchableOpacity
+                key={s}
+                testID={`explore.segmented.state-filter.${s}`}
+                onPress={() => setPrFilter(s)}
+                className="px-4 py-1.5 rounded-full"
+                style={{ backgroundColor: active ? colors.primary : colors.primary + '20' }}
+                activeOpacity={0.7}
+              >
+                <Text style={{ color: active ? '#fff' : colors.primary, fontSize: 13, fontWeight: '600' }}>
+                  {s === 'open' ? t('explore.filterOpen') : t('explore.filterClosed')}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        {prQuery.isLoading ? (
+          <View className="flex-1 items-center justify-center">
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : prQuery.isError ? (
+          <View className="flex-1 items-center justify-center px-6">
+            <Ionicons name="alert-circle-outline" size={40} color={colors.textSecondary} />
+            <Text className="text-sm mt-3" style={{ color: colors.textSecondary }}>{t('explore.loadError')}</Text>
+          </View>
+        ) : prData.length === 0 ? (
+          <EmptyState icon="git-pull-request-outline" title={t('explore.noPullRequests')} />
+        ) : (
+          <FlatList<GitHostPullRequest>
+            data={prData}
+            keyExtractor={(item) => `${item.id}`}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                testID="explore.pr.row"
+                className="flex-row items-start px-4 py-3 gap-3"
+                style={{ borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border + '30' }}
+                onPress={() => Linking.openURL(item.webUrl)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="git-pull-request-outline" size={18} color={item.state === 'open' ? '#34C759' : colors.textSecondary} />
+                <View className="flex-1 gap-0.5">
+                  <Text style={{ color: colors.text, fontSize: 14, fontWeight: '500' }} numberOfLines={2}>
+                    #{item.number} {item.title}
+                  </Text>
+                  <View className="flex-row items-center gap-2 mt-0.5">
+                    {item.author && (
+                      <Text style={{ color: colors.textSecondary, fontSize: 12 }} numberOfLines={1}>{item.author}</Text>
+                    )}
+                    {item.draft && (
+                      <View className="px-1.5 py-0.5 rounded" style={{ backgroundColor: colors.textSecondary + '30' }}>
+                        <Text style={{ color: colors.textSecondary, fontSize: 10, fontWeight: '600' }}>DRAFT</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+                <TouchableOpacity testID="explore.button.open-in-browser" onPress={() => Linking.openURL(item.webUrl)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="open-outline" size={18} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </TouchableOpacity>
+            )}
+          />
+        )}
+        <ScreenHeader title={t('explore.pullRequests')} onBack={handleBack} />
+      </SafeAreaView>
+    );
+  }
+
+  if (view === 'issueList' && selectedRepo && repoInfo) {
+    const issueData = issueQuery.data ?? [];
+    return (
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['top', 'bottom']}>
+        <View style={{ paddingTop: headerHeight }}>
+          <OfflineBanner />
+        </View>
+        <View className="flex-row px-4 py-3 gap-2" style={{ borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border + '30' }}>
+          {(['open', 'closed'] as StateFilter[]).map((s) => {
+            const active = issueFilter === s;
+            return (
+              <TouchableOpacity
+                key={s}
+                testID={`explore.segmented.state-filter.${s}`}
+                onPress={() => setIssueFilter(s)}
+                className="px-4 py-1.5 rounded-full"
+                style={{ backgroundColor: active ? colors.primary : colors.primary + '20' }}
+                activeOpacity={0.7}
+              >
+                <Text style={{ color: active ? '#fff' : colors.primary, fontSize: 13, fontWeight: '600' }}>
+                  {s === 'open' ? t('explore.filterOpen') : t('explore.filterClosed')}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        {issueQuery.isLoading ? (
+          <View className="flex-1 items-center justify-center">
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : issueQuery.isError ? (
+          <View className="flex-1 items-center justify-center px-6">
+            <Ionicons name="alert-circle-outline" size={40} color={colors.textSecondary} />
+            <Text className="text-sm mt-3" style={{ color: colors.textSecondary }}>{t('explore.loadError')}</Text>
+          </View>
+        ) : issueData.length === 0 ? (
+          <EmptyState icon="alert-circle-outline" title={t('explore.noIssues')} />
+        ) : (
+          <FlatList<GitHostIssue>
+            data={issueData}
+            keyExtractor={(item) => `${item.id}`}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                testID="explore.issue.row"
+                className="flex-row items-start px-4 py-3 gap-3"
+                style={{ borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border + '30' }}
+                onPress={() => Linking.openURL(item.webUrl)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="alert-circle-outline" size={18} color={item.state === 'open' ? '#34C759' : colors.textSecondary} />
+                <View className="flex-1 gap-0.5">
+                  <Text style={{ color: colors.text, fontSize: 14, fontWeight: '500' }} numberOfLines={2}>
+                    #{item.number} {item.title}
+                  </Text>
+                  {item.author && (
+                    <Text style={{ color: colors.textSecondary, fontSize: 12 }} numberOfLines={1}>{item.author}</Text>
+                  )}
+                </View>
+                <TouchableOpacity testID="explore.button.open-in-browser" onPress={() => Linking.openURL(item.webUrl)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="open-outline" size={18} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </TouchableOpacity>
+            )}
+          />
+        )}
+        <ScreenHeader title={t('explore.issues')} onBack={handleBack} />
       </SafeAreaView>
     );
   }

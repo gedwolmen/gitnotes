@@ -431,7 +431,15 @@
     "emptyTitleNoMatches": "一致するものはありません",
     "emptySubtitleNoRepos": "設定でリポジトリを追加して始めましょう",
     "emptySubtitleNoMatches": "別の検索語をお試しください",
-    "browseFiles": "ファイルを閲覧"
+    "browseFiles": "ファイルを閲覧",
+    "pullRequests": "プルリクエスト",
+    "issues": "イシュー",
+    "noPullRequests": "プルリクエストはありません",
+    "noIssues": "イシューはありません",
+    "filterOpen": "オープン",
+    "filterClosed": "クローズ",
+    "openInBrowser": "ブラウザで開く",
+    "loadError": "読み込めませんでした — タップして再試行"
   },
   "home": {
     "title": "ホーム",

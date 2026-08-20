@@ -259,7 +259,15 @@
     "emptyTitleNoMatches": "No matches",
     "emptySubtitleNoRepos": "Add a repo in Settings to get started",
     "emptySubtitleNoMatches": "Try a different search",
-    "browseFiles": "Browse Files"
+    "browseFiles": "Browse Files",
+    "pullRequests": "Pull Requests",
+    "issues": "Issues",
+    "noPullRequests": "No pull requests",
+    "noIssues": "No issues",
+    "filterOpen": "Open",
+    "filterClosed": "Closed",
+    "openInBrowser": "Open in browser",
+    "loadError": "Couldn't load — tap to retry"
   },
   "settings": {
     "title": "Settings",

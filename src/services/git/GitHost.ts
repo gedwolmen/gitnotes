@@ -72,6 +72,37 @@ export interface GitHostBranch {
   isDefault?: boolean;
 }
 
+/** Normalized item state across hosts. GitLab's `merged` maps to `closed`. */
+export type GitHostItemState = 'open' | 'closed';
+
+export interface GitHostIssue {
+  id: string | number;
+  /** Public display number (iid for GitLab, number for GitHub/Gitea). */
+  number: number;
+  title: string;
+  state: GitHostItemState;
+  webUrl: string;
+  /** Normalized label names (GitHub `{name,color}` labels flatten to name). */
+  labels: string[];
+  author?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface GitHostPullRequest {
+  id: string | number;
+  /** Public display number (iid for GitLab, number for GitHub/Gitea). */
+  number: number;
+  title: string;
+  state: GitHostItemState;
+  webUrl: string;
+  headBranch: string;
+  baseBranch: string;
+  author?: string;
+  draft?: boolean;
+  createdAt: string;
+}
+
 /**
  * Provider-agnostic surface used by GitService and the sync stack.
  *
@@ -113,6 +144,20 @@ export interface GitHostService {
     path: string,
     ref?: string,
   ): Promise<string | null>;
+
+  /** Lists pull requests (merge requests on GitLab). Returns [] on failure. */
+  listPullRequests(
+    owner: string,
+    repo: string,
+    state?: GitHostItemState,
+  ): Promise<GitHostPullRequest[]>;
+
+  /** Lists issues. Returns [] on failure. */
+  listIssues(
+    owner: string,
+    repo: string,
+    state?: GitHostItemState,
+  ): Promise<GitHostIssue[]>;
 }
 
 // ── Write operations ────────────────────────────────────────────────

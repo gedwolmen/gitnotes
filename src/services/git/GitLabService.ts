@@ -2,6 +2,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {
   GitHostBranch,
   GitHostContent,
+  GitHostIssue,
+  GitHostItemState,
+  GitHostPullRequest,
   GitHostService,
   GitHostShaResult,
   GitHostTreeEntry,
@@ -51,6 +54,29 @@ interface GitLabBranch {
   default?: boolean;
   protected?: boolean;
   merged_into?: string;
+}
+
+interface GitLabMR {
+  iid: number;
+  title: string;
+  state: 'opened' | 'closed' | 'merged' | 'locked' | string;
+  web_url: string;
+  source_branch: string;
+  target_branch: string;
+  draft?: boolean;
+  author?: { username?: string };
+  created_at: string;
+}
+
+interface GitLabIssue {
+  iid: number;
+  title: string;
+  state: 'opened' | 'closed' | string;
+  web_url: string;
+  labels?: string[];
+  author?: { username?: string };
+  created_at: string;
+  updated_at?: string;
 }
 
 /**
@@ -289,6 +315,53 @@ export class GitLabService implements GitHostService, GitHostWriteService {
     } catch {
       return null;
     }
+  }
+
+  async listPullRequests(
+    owner: string,
+    repo: string,
+    state: GitHostItemState = 'open',
+  ): Promise<GitHostPullRequest[]> {
+    const gitlabState = state === 'open' ? 'opened' : 'closed';
+    const data = await this.authedFetch<GitLabMR[]>(
+      `${this.baseUrl}/projects/${this.encodedProjectId(owner, repo)}/merge_requests?state=${gitlabState}&per_page=50`,
+    );
+    if (!data) return [];
+    return data.map((m) => ({
+      id: m.iid,
+      number: m.iid,
+      title: m.title,
+      state: m.state === 'opened' ? 'open' : 'closed',
+      webUrl: m.web_url,
+      headBranch: m.source_branch,
+      baseBranch: m.target_branch,
+      author: m.author?.username,
+      draft: m.draft ?? false,
+      createdAt: m.created_at,
+    }));
+  }
+
+  async listIssues(
+    owner: string,
+    repo: string,
+    state: GitHostItemState = 'open',
+  ): Promise<GitHostIssue[]> {
+    const gitlabState = state === 'open' ? 'opened' : 'closed';
+    const data = await this.authedFetch<GitLabIssue[]>(
+      `${this.baseUrl}/projects/${this.encodedProjectId(owner, repo)}/issues?state=${gitlabState}&per_page=50`,
+    );
+    if (!data) return [];
+    return data.map((i) => ({
+      id: i.iid,
+      number: i.iid,
+      title: i.title,
+      state: i.state === 'opened' ? 'open' : 'closed',
+      webUrl: i.web_url,
+      labels: i.labels ?? [],
+      author: i.author?.username,
+      createdAt: i.created_at,
+      updatedAt: i.updated_at,
+    }));
   }
 
   // ── Write operations (GitHostWriteService) ──────────────────────
