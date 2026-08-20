@@ -885,8 +885,6 @@
     "statusTrial": "{{days}} days left in trial",
     "statusUpgrade": "Upgrade",
     "settingsRow": "GitNotēs Pro",
-    "gateTitle": "This is a Pro feature",
-    "gateBody": "Upgrade to unlock AI features and more.",
     "badge": "PRO",
     "lockedTitle": "Pro Feature",
     "lockedBody": "This feature requires GitNotēs Pro. Upgrade to unlock unlimited accounts, repos, AI, and more."

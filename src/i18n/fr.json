@@ -885,8 +885,6 @@
     "statusTrial": "{{days}} jours restants d'essai",
     "statusUpgrade": "Passer à Pro",
     "settingsRow": "GitNotēs Pro",
-    "gateTitle": "Fonctionnalité Pro",
-    "gateBody": "Passez à Pro pour débloquer l'IA et plus encore.",
     "badge": "PRO",
     "lockedTitle": "Fonctionnalité Pro",
     "lockedBody": "Cette fonctionnalité nécessite GitNotēs Pro. Passez à Pro pour débloquer comptes, dépôts, IA et plus, sans limite."

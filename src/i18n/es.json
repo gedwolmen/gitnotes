@@ -885,8 +885,6 @@
     "statusTrial": "{{days}} días restantes de prueba",
     "statusUpgrade": "Mejorar",
     "settingsRow": "GitNotēs Pro",
-    "gateTitle": "Esta es una función Pro",
-    "gateBody": "Mejora para desbloquear funciones de IA y más.",
     "badge": "PRO",
     "lockedTitle": "Función Pro",
     "lockedBody": "Esta función requiere GitNotēs Pro. Mejora para desbloquear cuentas, repos, IA y más ilimitados."
