@@ -1,9 +1,10 @@
 jest.mock('../../src/services/NoteSyncQueueService', () => ({
   NoteSyncQueueService: {
-    enqueueNoteUpsert: jest.fn(async () => undefined),
-    enqueueNoteDelete: jest.fn(async () => undefined),
+    enqueueNoteUpsert: jest.fn(async () => ({ id: 'mut_upsert' })),
+    enqueueNoteDelete: jest.fn(async () => ({ id: 'mut_delete' })),
     getAll: jest.fn(async () => []),
     drain: jest.fn(async () => ({ succeeded: 0, failed: 0, remaining: 0 })),
+    onDroppedMutation: jest.fn(() => jest.fn()),
   },
 }));
 
@@ -59,6 +60,35 @@ jest.mock('../../src/stores/githubActivityStore', () => ({
   },
 }));
 
+jest.mock('../../src/services/git/GitSyncGate', () => ({
+  GitSyncGate: {
+    acquireCycle: jest.fn(async () => jest.fn()),
+    isCycleHeld: jest.fn(() => false),
+  },
+}));
+
+jest.mock('../../src/services/RepoPullService', () => ({
+  pullFromSingleRepo: jest.fn(async () => ({
+    repos: 1,
+    notes: 1,
+    canvases: 0,
+    todos: 0,
+    templates: 0,
+  })),
+}));
+
+jest.mock('../../src/stores/noteStore', () => ({
+  useNoteStore: { getState: jest.fn(() => ({ refreshNotes: jest.fn(async () => {}) })) },
+}));
+
+jest.mock('../../src/stores/canvasStore', () => ({
+  useCanvasStore: { getState: jest.fn(() => ({ refreshCanvases: jest.fn(async () => {}) })) },
+}));
+
+jest.mock('../../src/stores/todoStore', () => ({
+  useTodoStore: { getState: jest.fn(() => ({ refreshTodos: jest.fn(async () => {}) })) },
+}));
+
 import {
   StagingService,
   subscribeStagedChanged,
@@ -95,7 +125,7 @@ describe('StagingService staged-changed emitter (#925)', () => {
     jest.clearAllMocks();
     writeAndCommit.mockResolvedValue({ success: true });
     deleteAndCommit.mockResolvedValue({ success: true });
-    enqueueUpsert.mockResolvedValue(undefined);
+    enqueueUpsert.mockResolvedValue({ id: 'mut_upsert' });
     listener = jest.fn();
     unsubscribe = subscribeStagedChanged(listener);
   });

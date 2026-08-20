@@ -211,6 +211,7 @@ describe('FloatingStageButton', () => {
     expect(mockPushAll).toHaveBeenCalledTimes(1);
     const schedulerMock = jest.requireMock('../../src/services/StagePushScheduler') as { drainPushQueue: jest.Mock };
     expect(schedulerMock.drainPushQueue).toHaveBeenCalledTimes(1);
+    expect(schedulerMock.drainPushQueue).toHaveBeenCalledWith('manual');
     jest.useRealTimers();
   });
 

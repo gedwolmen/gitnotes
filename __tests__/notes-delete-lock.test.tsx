@@ -11,6 +11,7 @@ import { NoteSyncQueueService } from '../src/services/NoteSyncQueueService';
 import { StorageService } from '../src/services/StorageService';
 import { clearDeleteFailure, recordDeleteFailure } from '../src/services/git/deleteFailures';
 import { retryDeleteFailure } from '../src/services/git/retryDeleteFailure';
+import { GitSyncGate } from '../src/services/git/GitSyncGate';
 import { renderWithTheme } from './helpers/renderWithTheme';
 
 type SucceededHandler = (event: { mutation: { id: string; type: string; params: Record<string, any> } }) => void;
@@ -28,8 +29,8 @@ jest.mock('../src/services/NoteSyncQueueService', () => {
   const dropped = new Set<DroppedHandler>();
   return {
     NoteSyncQueueService: {
-      enqueueNoteDelete: jest.fn(async () => undefined),
-      enqueueNoteDeletes: jest.fn(async () => undefined),
+      enqueueNoteDelete: jest.fn(async () => ({ id: 'mock-delete-mutation' })),
+      enqueueNoteDeletes: jest.fn(async () => ({ ids: [] })),
       drain: jest.fn(async () => ({ succeeded: 0, failed: 0, remaining: 0 })),
       pendingCount: jest.fn(async () => 0),
       subscribe: jest.fn(() => jest.fn()),
@@ -66,6 +67,8 @@ jest.mock('../src/services/StorageService', () => ({
     deleteNote: jest.fn(async () => true),
     getAllNotes: jest.fn(async () => []),
     getSavedRepositories: jest.fn(async () => []),
+    getAllCanvases: jest.fn(async () => []),
+    getAllTodos: jest.fn(async () => []),
   },
 }));
 
@@ -79,6 +82,7 @@ jest.mock('../src/services/SyncEngineService', () => ({
 
 jest.mock('../src/services/RepoPullService', () => ({
   pullAllFromRepos: jest.fn(async () => undefined),
+  pullFromSingleRepo: jest.fn(async () => ({ repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0 })),
 }));
 
 jest.mock('../src/services/git/manualSync', () => ({
@@ -448,6 +452,7 @@ describe('notes delete lock', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockNavigate.mockClear();
+    GitSyncGate.__resetForTest();
     useNoteStore.setState({ notes: [], isLoading: false, error: null, searchQuery: '' });
     useGitOperationStore.setState({ ops: {} });
     (NoteSyncQueueService.getAll as jest.Mock).mockImplementation(async () => []);
@@ -488,7 +493,8 @@ describe('notes delete lock', () => {
         localNoteId: 'n1',
       }),
     );
-    expect(NoteSyncQueueService.drain).not.toHaveBeenCalled();
+    // API-mode write-through (#927): stageDelete drains immediately on save.
+    expect(NoteSyncQueueService.drain).toHaveBeenCalled();
   });
 
   it('queue success event is a no-op: row already removed at delete time, no crash or leftover ops', async () => {
@@ -557,7 +563,9 @@ describe('notes delete lock', () => {
         filePath: 'notes/third.md',
       }),
     );
-    expect(NoteSyncQueueService.drain).not.toHaveBeenCalled();
+    // retryDeleteFailure re-enqueues WITHOUT draining: the write-through
+    // delete already drained once, and the retry must not add another drain.
+    expect(NoteSyncQueueService.drain).toHaveBeenCalledTimes(1);
     expect(screen.queryByText('Third')).toBeNull();
   }, 15000);
 

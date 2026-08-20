@@ -1,20 +1,13 @@
 /**
  * Tests for #938 — deterministic, awaited repo content import at add-time.
  *
- * Two layers:
- *
- * 1. BASELINE characterization (written FIRST, passes on the UNCHANGED code):
- *    pins the bug — `SettingsScreen` fires `autoSyncAfterAdd` without awaiting
- *    it, so the add-repo flow completes while the import pull is still in
- *    flight (fire-and-forget). This test documents the broken behavior and is
- *    expected to be flipped/removed once the SettingsScreen adopts the awaited
- *    import (plan todo 12).
- *
- * 2. FAIL-FIRST proof tests for the new `importRepoAtAdd` service (plan todo
- *    11). They reference `src/services/RepoImportService` lazily so the
- *    baseline test above stays runnable before that module exists — they FAIL
- *    on the unchanged code and pass once the service + the
- *    `GitFsService.cloneExclusive` dedup land.
+ * Proof tests for the `importRepoAtAdd` service (plan todo 11): api-mode
+ * import awaits the pull and returns counts, clone-mode import clones-then-
+ * pulls (skipping the pull only when the clone succeeds or the repo is
+ * already cloned), EMPTY repos succeed quietly without pulling, failures are
+ * classified retryable/non-retryable, and concurrent imports for the same
+ * repoPath share one run. Also covers the `GitFsService.cloneExclusive`
+ * per-repo clone dedup (the #938 contention guard).
  */
 
 // ── Render-harness mocks for the SettingsScreen baseline section ─────────────
@@ -434,10 +427,6 @@ jest.mock('expo-file-system/legacy', () => ({
 
 jest.mock('../../src/services/git/gitHttp', () => ({ gitHttp: { request: jest.fn() } }));
 
-import React from 'react';
-import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
-import SettingsScreen from '../../src/screens/SettingsScreen';
-import { GitHubService } from '../../src/services/GitHubService';
 import { SyncEngineService } from '../../src/services/SyncEngineService';
 import { AuthService } from '../../src/services/AuthService';
 import { StorageService } from '../../src/services/StorageService';
@@ -463,13 +452,10 @@ type ImportFn = (
 ) => Promise<ImportRepoResult>;
 
 /**
- * Lazy loader for the new service. `require` (not a top-level import) keeps
- * the BASELINE characterization test above runnable — and passing — on the
- * unchanged code where `src/services/RepoImportService.ts` does not exist
- * yet. Every test below MUST FAIL until the service is implemented (#938).
+ * Lazy loader for the service under test, resolved via `require` so tests
+ * fail loudly if `importRepoAtAdd` is missing.
  */
 function loadImportRepoAtAdd(): ImportFn {
-   
   const mod = require('../../src/services/RepoImportService') as { importRepoAtAdd?: unknown };
   if (typeof mod.importRepoAtAdd !== 'function') {
     throw new Error('importRepoAtAdd is not implemented yet (#938)');
@@ -486,52 +472,6 @@ function makeDeferred<T>() {
   });
   return { promise, resolve, reject };
 }
-
-describe('BASELINE (#938 bug): add-repo import is fire-and-forget on unchanged code', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockRepositories.length = 0;
-    mockModalCapture.isAddingRepo = false;
-    mockModalCapture.sawAddingRepo = false;
-    mockModalCapture.showRepoPickerModal = false;
-    (GitHubService.isAuthenticated as jest.Mock).mockReturnValue(true);
-  });
-
-  it('SettingsScreen add-repo fires autoSyncAfterAdd without awaiting it: the add flow completes (isAddingRepo back to false) while the pull promise is still pending, and nothing about the import result is awaited (fire-and-forget, #938)', async () => {
-    mockAddRepository.mockResolvedValue({ id: 'github:1', name: 'repoName', path: 'owner/repo' });
-
-    // The import pull never settles on its own — it is parked so we can prove
-    // whether the add flow waits for it.
-    const deferred = makeDeferred<PullCounts>();
-    let pullSettled = false;
-    void deferred.promise.then(() => { pullSettled = true; });
-    (pullFromSingleRepo as jest.Mock).mockReturnValue(deferred.promise);
-
-    const { getByTestId } = render(<SettingsScreen />);
-    await act(async () => { await Promise.resolve(); });
-
-    fireEvent.changeText(getByTestId('test-manual-repo-input'), 'owner/repo');
-    fireEvent.press(getByTestId('test-add-manual-repo'));
-
-    // The add flow entered its busy state and fired the pull…
-    await waitFor(() => expect(mockModalCapture.sawAddingRepo).toBe(true));
-    await waitFor(() => expect(pullFromSingleRepo).toHaveBeenCalledWith('owner/repo'));
-
-    // …and then COMPLETED (busy flag dropped, picker not blocking) while the
-    // import promise is still pending: the pull was fired, not awaited.
-    await waitFor(() => expect(mockModalCapture.isAddingRepo).toBe(false));
-    expect(pullSettled).toBe(false);
-
-    // The detached chain keeps running on its own; only after the pull finally
-    // settles do the stores refresh — asynchronously to the add flow.
-    await act(async () => {
-      deferred.resolve({ repos: 1, notes: 1, canvases: 0, todos: 0, templates: 0 });
-      for (let i = 0; i < 20; i++) await Promise.resolve();
-    });
-    await waitFor(() => expect(mockRefreshNotes).toHaveBeenCalled());
-    expect(pullSettled).toBe(true);
-  });
-});
 
 const ZERO_IMPORT_COUNTS: PullCounts = { repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0 };
 const SAMPLE_COUNTS: PullCounts = { repos: 1, notes: 5, canvases: 2, todos: 3, templates: 4 };
