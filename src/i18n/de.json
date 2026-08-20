@@ -566,6 +566,7 @@
     "deleteFailed": "Löschen fehlgeschlagen",
     "retry": "Erneut versuchen",
     "deleteInProgress": "Diese Notiz wird gelöscht. Speichern ist deaktiviert, bis der Löschvorgang abgeschlossen ist.",
+    "repoBusy": "Das Repository wird synchronisiert. Bitte versuche es gleich erneut.",
     "offlineBanner": "Du bist offline — Änderungen werden nicht synchronisiert",
     "droppedTitle": "Änderung lokal gespeichert",
     "droppedBody": "Deine Änderung ist lokal gespeichert, konnte aber nicht synchronisiert werden. Tippe auf Stage, um sie zu übertragen.",
@@ -574,7 +575,12 @@
     "dropReasonConflict": "Synchronisationskonflikt: Die Notiz wurde auf GitHub geändert.",
     "dropReasonAuth": "GitHub-Anmeldung fehlgeschlagen. Verbinde dein Konto in den Einstellungen erneut.",
     "dropReasonNotFound": "Das Repository oder die Datei wurde auf GitHub nicht gefunden.",
-    "dropReasonRetries": "Die Synchronisation ist wiederholt fehlgeschlagen, automatische Wiederholungen wurden gestoppt."
+    "dropReasonRetries": "Die Synchronisation ist wiederholt fehlgeschlagen, automatische Wiederholungen wurden gestoppt.",
+    "overlay": {
+      "syncing": "Synchronisierung…",
+      "pushing": "Hochladen…",
+      "pulling": "Herunterladen…"
+    }
   },
   "onboarding": {
     "steps": {

@@ -566,6 +566,7 @@
     "deleteFailed": "Échec de la suppression",
     "retry": "Réessayer",
     "deleteInProgress": "Cette note est en cours de suppression. L'enregistrement est désactivé jusqu'à la fin de la suppression.",
+    "repoBusy": "Le dépôt est en cours de synchronisation. Veuillez réessayer dans un instant.",
     "offlineBanner": "Vous êtes hors ligne — les modifications ne seront pas synchronisées",
     "droppedTitle": "Modification enregistrée localement",
     "droppedBody": "Votre modification est enregistrée localement mais n'a pas pu être synchronisée. Touchez Stage pour la pousser.",
@@ -574,7 +575,12 @@
     "dropReasonConflict": "Conflit de synchronisation : la note a été modifiée sur GitHub.",
     "dropReasonAuth": "L'authentification GitHub a échoué. Reconnectez votre compte dans les réglages.",
     "dropReasonNotFound": "Le dépôt ou le fichier est introuvable sur GitHub.",
-    "dropReasonRetries": "La synchronisation échouait à répétition, les tentatives automatiques ont été arrêtées."
+    "dropReasonRetries": "La synchronisation échouait à répétition, les tentatives automatiques ont été arrêtées.",
+    "overlay": {
+      "syncing": "Synchronisation…",
+      "pushing": "Envoi…",
+      "pulling": "Réception…"
+    }
   },
   "onboarding": {
     "steps": {

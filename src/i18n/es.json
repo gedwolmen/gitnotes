@@ -566,6 +566,7 @@
     "deleteFailed": "Error al eliminar",
     "retry": "Reintentar",
     "deleteInProgress": "Esta nota se está eliminando. Guardar está desactivado hasta que se complete la eliminación.",
+    "repoBusy": "El repositorio se está sincronizando. Inténtalo de nuevo en un momento.",
     "offlineBanner": "Estás sin conexión — los cambios no se sincronizarán",
     "droppedTitle": "Cambio guardado localmente",
     "droppedBody": "Tu cambio está guardado localmente pero no se pudo sincronizar. Toca Stage para enviarlo.",
@@ -574,7 +575,12 @@
     "dropReasonConflict": "Conflicto de sincronización: la nota fue modificada en GitHub.",
     "dropReasonAuth": "Falló la autenticación de GitHub. Reconecta tu cuenta en Ajustes.",
     "dropReasonNotFound": "No se encontró el repositorio o el archivo en GitHub.",
-    "dropReasonRetries": "La sincronización seguía fallando, así que se detuvieron los reintentos automáticos."
+    "dropReasonRetries": "La sincronización seguía fallando, así que se detuvieron los reintentos automáticos.",
+    "overlay": {
+      "syncing": "Sincronizando…",
+      "pushing": "Enviando…",
+      "pulling": "Descargando…"
+    }
   },
   "onboarding": {
     "steps": {

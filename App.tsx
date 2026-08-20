@@ -38,6 +38,7 @@ import { ReminderService } from './src/services/ReminderService';
 import { StartupSyncGate } from './src/components/StartupSyncGate';
 import { GitHubActivityIndicator } from './src/components/GitHubActivityIndicator';
 import { SyncDropNotifier } from './src/components/git/SyncDropNotifier';
+import { SyncBlockOverlay } from './src/components/ui/SyncBlockOverlay';
 import { bootstrapStorage } from './src/services/StorageBootstrap';
 import { hydrate as hydrateGitOperationRegistry } from './src/stores/gitOperationStore';
 import { useConflictStore } from './src/stores/conflictStore';
@@ -181,6 +182,7 @@ export default function App() {
                               <AppNavigator />
                             </StartupSyncGate>
                             <GitHubActivityIndicator />
+                            <SyncBlockOverlay />
                             <SyncDropNotifier />
                             <BiometricLockScreen />
                           </BiometricLockProvider>
