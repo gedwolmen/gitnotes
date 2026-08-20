@@ -30,6 +30,7 @@ yarn eslint . --ext .ts,.tsx  # Linting
 - Atomic commits with descriptive messages (imperative mood).
 - No `node_modules/`, `.DS_Store`, `.env`, or build artifacts.
 - Branch per feature, rebase before merging.
+- Create git worktrees inside `.worktrees/` at the repository root (e.g. `.worktrees/<branch-name>`), never in random locations such as the home directory or paths outside the repo. `.worktrees/` is already gitignored.
 - `lint-staged` runs on pre-commit (ESLint + Prettier).
 
 ## Sync Architecture (Git Services) — source of truth
