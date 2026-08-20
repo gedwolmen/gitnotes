@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { ScrollView } from 'react-native';
+import { ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
 import { SettingsModals } from '../../../src/components/settings/SettingsModals';
 import type { GitRepository } from '../../../src/services/GitService';
 import type { GitHubRepository } from '../../../src/services/GitHubService';
@@ -30,9 +30,10 @@ jest.mock('../../../src/components/ui', () => {
   return {
     Modal: ({ visible, children }: any) => (visible ? <View testID="modal">{children}</View> : null),
     Input: (props: any) => <TextInput {...props} />,
-    Button: ({ label, onPress }: any) => (
-      <Pressable onPress={onPress}>
+    Button: ({ label, onPress, disabled, trailingIcon, testID }: any) => (
+      <Pressable testID={testID ?? `button-${label}`} onPress={onPress} disabled={disabled}>
         <Text>{label}</Text>
+        {trailingIcon}
       </Pressable>
     ),
   };
@@ -116,5 +117,94 @@ describe('SettingsModals repo pickers bottom padding', () => {
     const scrollView = UNSAFE_getByType(ScrollView);
     const paddingBottom = expectBottomPadding(scrollView.props.contentContainerStyle);
     expect(paddingBottom).toBe(16 + 34); // 16 padding + mocked bottom safe-area inset
+  });
+});
+
+describe('SettingsModals busy state', () => {
+  const extraRepos: GitHubRepository[] = [
+    { id: 1, name: 'notes', full_name: 'me/notes', owner: { login: 'me' }, html_url: 'https://github.com/me/notes', description: '', private: false },
+    { id: 2, name: 'other', full_name: 'other/repo', owner: { login: 'other' }, html_url: 'https://github.com/other/repo', description: '', private: false },
+  ];
+
+  it('renders ActivityIndicator in the row matching isAddingRepoPath', () => {
+    const { UNSAFE_getAllByType } = render(
+      <SettingsModals
+        {...makeProps({
+          showRepoPickerModal: true,
+          authState: { isAuthenticated: true },
+          githubRepos: extraRepos,
+          isAddingRepoPath: 'me/notes',
+        })}
+      />,
+    );
+    const touchables = UNSAFE_getAllByType(TouchableOpacity);
+    const repoRows = touchables.filter(
+      (t: any) => t.props.testID === 'settings-modals.button.select-github-repo',
+    );
+    expect(repoRows).toHaveLength(2);
+
+    const busyRow = repoRows[0];
+    const busyIndicator = busyRow.findAllByType(ActivityIndicator);
+    expect(busyIndicator.length).toBeGreaterThanOrEqual(1);
+
+    const otherRow = repoRows[1];
+    const otherIndicator = otherRow.findAllByType(ActivityIndicator);
+    expect(otherIndicator).toHaveLength(0);
+  });
+
+  it('disables all rows and adds dim opacity when isAddingRepoPath is set', () => {
+    const { UNSAFE_getAllByType } = render(
+      <SettingsModals
+        {...makeProps({
+          showRepoPickerModal: true,
+          authState: { isAuthenticated: true },
+          githubRepos: extraRepos,
+          isAddingRepoPath: 'me/notes',
+        })}
+      />,
+    );
+    const touchables = UNSAFE_getAllByType(TouchableOpacity);
+    const repoRows = touchables.filter(
+      (t: any) => t.props.testID === 'settings-modals.button.select-github-repo',
+    );
+    expect(repoRows).toHaveLength(2);
+
+    expect(repoRows[0].props.disabled).toBe(true);
+    expect(repoRows[1].props.disabled).toBe(true);
+
+    const otherRowStyle = repoRows[1].props.style as Array<Record<string, unknown>>;
+    const dimEntry = otherRowStyle.find((s) => s && typeof s === 'object' && 'opacity' in s);
+    expect(dimEntry).toBeDefined();
+    expect((dimEntry as Record<string, number>).opacity).toBe(0.5);
+  });
+
+  it('renders a busy indicator on the tapped row when isAddingRepoPath is non-null', () => {
+    const { rerender, UNSAFE_queryAllByType } = render(
+      <SettingsModals
+        {...makeProps({
+          showRepoPickerModal: true,
+          authState: { isAuthenticated: true },
+          githubRepos: extraRepos,
+          isAddingRepoPath: null,
+        })}
+      />,
+    );
+    let indicators = UNSAFE_queryAllByType(ActivityIndicator).filter(
+      (n: any) => n.props.size === 'small' || n.props.size === 'large',
+    );
+    expect(indicators).toHaveLength(0);
+
+    rerender(
+      <SettingsModals
+        {...makeProps({
+          showRepoPickerModal: true,
+          authState: { isAuthenticated: true },
+          githubRepos: extraRepos,
+          isAddingRepoPath: 'me/notes',
+        })}
+      />,
+    );
+    indicators = UNSAFE_queryAllByType(ActivityIndicator);
+    expect(indicators.length).toBeGreaterThanOrEqual(1);
   });
 });
