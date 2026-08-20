@@ -33,7 +33,7 @@ export async function configureRevenueCat(): Promise<ConfigureResult> {
   Purchases.setLogLevel(Purchases.LOG_LEVEL.WARN);
   await Purchases.configure({
     apiKey,
-    ...(Platform.OS === 'ios' ? { storeKitVersion: STOREKIT_VERSION.STOREKIT_1 } : {}),
+    ...(Platform.OS === 'ios' ? { storeKitVersion: STOREKIT_VERSION.STOREKIT_2 } : {}),
   });
   return { configured: true };
 }

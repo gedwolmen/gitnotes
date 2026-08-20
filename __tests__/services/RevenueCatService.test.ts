@@ -75,14 +75,14 @@ afterEach(() => {
 });
 
 describe('configureRevenueCat', () => {
-  it('configures with the iOS key on iOS using StoreKit 1', async () => {
+  it('configures with the iOS key on iOS using StoreKit 2', async () => {
     process.env[IOS_KEY] = 'appl_live_key';
     jest.replaceProperty(Platform, 'OS', 'ios');
     const result = await configureRevenueCat();
     expect(result).toEqual({ configured: true });
     expect(PurchasesMock.configure).toHaveBeenCalledWith({
       apiKey: 'appl_live_key',
-      storeKitVersion: 'STOREKIT_1',
+      storeKitVersion: 'STOREKIT_2',
     });
   });
 
