@@ -400,7 +400,7 @@ jest.mock('../../src/components/settings/SettingsModals', () => {
     SettingsModals: (props: any) => (
       <View testID="test-settings-modals">
         {props.showRepoPickerModal ? <View testID="test-repo-picker-modal" /> : null}
-        <Text testID="test-adding-state">{props.isAddingRepo ? 'adding' : 'idle'}</Text>
+        <Text testID="test-adding-state">{props.isAddingRepoPath !== null ? 'adding' : 'idle'}</Text>
         <TextInput testID="test-manual-repo-input" onChangeText={props.onSetManualRepoInput} />
         <Pressable testID="test-add-manual-repo" onPress={props.onAddManualRepo}>
           <Text>Add manual repository</Text>

@@ -163,7 +163,9 @@
     },
     "dailyQuoteDescription": "홈에 개인 철학자 명언 표시",
     "aiPersonalization": {
-      "title": "내 노트로 AI 맞춤화"
+      "title": "내 노트로 AI 맞춤화",
+      "label": "AI 맞춤화",
+      "description": "노트를 기반으로 명언 맞춤화"
     },
     "aiPersonalizationDescription": "끄면 AI가 데이터 보호를 위해 노트나 일지를 읽지 않습니다",
     "githubTools": {
@@ -327,7 +329,15 @@
     "resetOnboardingSuccess": "온보딩은 다음 실행 시 표시됩니다.",
     "clear": "지우기",
     "clearAllSuccess": "모든 노트가 지워졌습니다.",
-    "clearAllFailed": "노트를 지우지 못했습니다."
+    "clearAllFailed": "노트를 지우지 못했습니다.",
+    "dailyQuoteSource": {
+      "label": "출처 표시",
+      "description": "명언의 출처 책/작품 표시"
+    },
+    "dailyQuotePersonalization": {
+      "label": "AI 개인화",
+      "description": "노트를 기반으로 명언 개인화"
+    }
   },
   "ai": {
     "availability": {
@@ -431,7 +441,15 @@
     "emptyTitleNoMatches": "일치하는 항목 없음",
     "emptySubtitleNoRepos": "설정에서 저장소를 추가하여 시작하세요",
     "emptySubtitleNoMatches": "다른 검색어로 시도해 보세요",
-    "browseFiles": "파일 찾아보기"
+    "browseFiles": "파일 찾아보기",
+    "pullRequests": "풀 리퀘스트",
+    "issues": "이슈",
+    "noPullRequests": "풀 리퀘스트가 없습니다",
+    "noIssues": "이슈가 없습니다",
+    "filterOpen": "열림",
+    "filterClosed": "닫힘",
+    "openInBrowser": "브라우저에서 열기",
+    "loadError": "로드할 수 없습니다 — 눌러서 다시 시도"
   },
   "home": {
     "title": "홈",
@@ -482,7 +500,9 @@
       "reminders": "Set up reminders to review a note, folder, repo, or tag. The app sends a local notification at the scheduled time.",
       "dailyQuote": "홈 화면에 일일 철학자 명언을 표시합니다. 최근 일기 성찰을 기반으로 맞춤화됩니다.",
       "aiPersonalization": "활성화하면 AI가 노트와 일기를 읽어 맞춤화된 응답을 제공합니다. 데이터 프라이버시를 위해 끄면 AI는 현재 채팅 컨텍스트만 사용합니다.",
-      "githubTools": "활성화하면 AI 에이전트가 연결된 GitHub 계정으로 저장소 목록 보기, 이슈 생성, 풀 리퀘스트 열기, diff 변경 검토, 리뷰 게시를 할 수 있습니다. 이미 설정한 동일한 토큰을 사용합니다."
+      "githubTools": "활성화하면 AI 에이전트가 연결된 GitHub 계정으로 저장소 목록 보기, 이슈 생성, 풀 리퀘스트 열기, diff 변경 검토, 리뷰 게시를 할 수 있습니다. 이미 설정한 동일한 토큰을 사용합니다.",
+      "dailyQuotePersonalization": "활성화하면 AI가 일기 노트를 읽어 홈 화면에 표시되는 명언을 개인화합니다. 비활성화하면 매일 임의의 명언이 표시됩니다.",
+      "dailyQuoteShowSources": "명언의 출처가 된 원서나 작품을 저자 이름 옆에 표시합니다."
     },
     "title": "Hint"
   },
@@ -857,16 +877,58 @@
     "title": "GitNotēs Pro",
     "subtitle": "AI 스위트와 고급 기능 잠금 해제",
     "features": {
-      "aiChat": "노트와 AI 채팅",
-      "aiActions": "편집기의 AI 액션",
-      "thoughtDump": "생각 덤프",
-      "voiceDump": "음성 덤프",
-      "personalizedQuotes": "개인 맞춤 일일 명언",
-      "githubTools": "AI용 GitHub 도구",
-      "canvases": "캔버스",
-      "templates": "사용자 정의 템플릿",
-      "renderStyles": "렌더 스타일",
-      "multiAccount": "여러 GitHub 계정"
+      "aiChat": {
+        "title": "노트와 AI 채팅",
+        "description": "질문하고 노트 기반의 답변을 받으세요"
+      },
+      "aiActions": {
+        "title": "편집기의 AI 액션",
+        "description": "에디터에서 텍스트 요약, 재작성, 교정"
+      },
+      "thoughtDump": {
+        "title": "생각 덤프",
+        "description": "생각을 쏟아내면 AI가 노트로 정리해요"
+      },
+      "voiceDump": {
+        "title": "음성 덤프",
+        "description": "음성 메모를 녹음해 노트로 변환해요"
+      },
+      "personalizedQuotes": {
+        "title": "개인 맞춤 일일 명언",
+        "description": "노트와 관심사에 맞는 오늘의 명언"
+      },
+      "githubTools": {
+        "title": "AI용 GitHub 도구",
+        "description": "AI 채팅에서 이슈와 저장소를 관리하세요"
+      },
+      "canvases": {
+        "title": "캔버스",
+        "description": "무한 비주얼 캔버스에 노트를 연결하세요"
+      },
+      "templates": {
+        "title": "사용자 정의 템플릿",
+        "description": "나만의 노트 템플릿을 만들어 재사용하세요"
+      },
+      "renderStyles": {
+        "title": "렌더 스타일",
+        "description": "마크다운, NORG, Org 렌더링 스타일을 설정해요"
+      },
+      "multiAccount": {
+        "title": "여러 GitHub 계정",
+        "description": "여러 GitHub 계정을 나란히 동기화하세요"
+      }
+    },
+    "featureDescriptions": {
+      "aiChat": "노트에 무엇이든 물어보면 즉시 답변을 받을 수 있습니다",
+      "aiActions": "에디터에서 텍스트 요약, 다시 쓰기, 개선을 할 수 있습니다",
+      "thoughtDump": "생각이 떠오르는 순간 빠르게 포착할 수 있습니다",
+      "voiceDump": "아이디어를 말로 남기고 노트로 저장할 수 있습니다",
+      "personalizedQuotes": "AI가 여러분의 글스타일에 맞춰 매일 인용문을 추천합니다",
+      "githubTools": "GitHub 저장소의 컨텍스트를 AI에 제공할 수 있습니다",
+      "canvases": "무한 캔버스 위에 노트를 시각적으로 배치할 수 있습니다",
+      "templates": "자신이 만든 템플릿으로 새 노트를 시작할 수 있습니다",
+      "renderStyles": "노트 표시 스타일을 정밀하게 선택할 수 있습니다",
+      "multiAccount": "여러 GitHub 계정을 동시에 연동할 수 있습니다"
     },
     "monthly": {
       "trialCta": "30일 무료 체험 후 {{price}}/월",
@@ -879,6 +941,8 @@
     },
     "restore": "구매 복원",
     "restored": "구매가 복원되었습니다",
+    "restoring": "구매 복원 중…",
+    "nothingToRestore": "이 기기에서 복원할 구매가 없습니다.",
     "purchaseError": "구매에 실패했습니다",
     "loading": "불러오는 중…",
     "later": "나중에",
@@ -886,12 +950,17 @@
     "termsNote": "구독은 취소할 때까지 자동 갱신됩니다. 구매를 복원하여 이 기기로 이전하세요. 신규 구독자에게는 30일 무료 체험이 제공됩니다.",
     "yearly": {
       "title": "연간",
-      "cta": "{{price}}/년"
+      "cta": "{{price}}/년",
+      "trialCta": "30일 무료 체험 후 {{price}}/년"
     },
     "action": {
       "trial": "무료 체험 시작",
       "subscribe": "구독하기",
       "buy": "구매하기"
+    },
+    "footer": {
+      "terms": "이용 약관",
+      "privacy": "개인정보 처리방침"
     }
   },
   "pro": {
@@ -899,8 +968,6 @@
     "statusTrial": "체험 {{days}}일 남음",
     "statusUpgrade": "업그레이드",
     "settingsRow": "GitNotēs Pro",
-    "gateTitle": "Pro 기능입니다",
-    "gateBody": "업그레이드하면 AI 기능 등을 이용할 수 있습니다.",
     "badge": "PRO",
     "lockedTitle": "Pro 기능",
     "lockedBody": "이 기능에는 GitNotēs Pro가 필요합니다. 업그레이드하면 무제한 계정, 저장소, AI 등을 이용할 수 있습니다."

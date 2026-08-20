@@ -397,6 +397,7 @@ jest.mock('react-native-purchases', () => {
     addCustomerInfoUpdateListener: jest.fn(() => () => {}),
     removeCustomerInfoUpdateListener: jest.fn(),
     checkTrialOrIntroductoryPriceEligibility: jest.fn(async () => ({})),
+    trackCustomPaywallImpression: jest.fn(async () => undefined),
     LOG_LEVEL: { WARN: 'WARN', DEBUG: 'DEBUG', VERBOSE: 'VERBOSE' },
     INTRO_ELIGIBILITY_STATUS: {
       INTRO_ELIGIBILITY_STATUS_UNKNOWN: 0,
@@ -434,6 +435,8 @@ const mockProStoreState: Record<string, unknown> = {
   monthlyPackage: null,
   yearlyPackage: null,
   lifetimePackage: null,
+  offeringsReady: true,
+  currentOffering: null,
   configured: true,
   initialize: jest.fn(async () => undefined),
   refresh: jest.fn(async () => undefined),
@@ -460,3 +463,14 @@ jest.mock('./src/stores/proStore', () => {
     __setProState: (partial: Record<string, unknown>) => Object.assign(mockProStoreState, partial),
   };
 });
+
+// Global mock for the new multi-provider host hooks — existing tests render
+// ExploreScreen without wrapping in a QueryClientProvider, and these hooks
+// use @tanstack/react-query internally. Returning a synthetic "success" state
+// with empty data keeps the hub views out of the render path for tests that
+// don't explicitly exercise PR/issue views. The hook's OWN tests opt out
+// of this mock via jest.unmock at the top of the file.
+jest.mock('./src/hooks/useGitHostQueries', () => ({
+  useGitHostPullRequests: () => ({ data: [], isLoading: false, isError: false, isSuccess: true, refetch: jest.fn() }),
+  useGitHostIssues: () => ({ data: [], isLoading: false, isError: false, isSuccess: true, refetch: jest.fn() }),
+}));

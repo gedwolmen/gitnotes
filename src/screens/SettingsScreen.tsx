@@ -118,13 +118,17 @@ export default function SettingsScreen() {
   const toggleAiPersonalization = useAIStore((state) => state.toggleAiPersonalization);
   const githubToolsEnabled = useAIStore((state) => state.githubToolsEnabled);
   const toggleGithubTools = useAIStore((state) => state.toggleGithubTools);
+  const dailyQuotePersonalizationEnabled = useAIStore((state) => state.dailyQuotePersonalizationEnabled);
+  const toggleDailyQuotePersonalization = useAIStore((state) => state.toggleDailyQuotePersonalization);
+  const dailyQuoteSourceVisible = useAIStore((state) => state.dailyQuoteSourceVisible);
+  const toggleDailyQuoteSourceVisible = useAIStore((state) => state.toggleDailyQuoteSourceVisible);
   const setActionMode = useAIStore((state) => state.setActionMode);
 
   const [showRepoPickerModal, setShowRepoPickerModal] = useState(false);
   const [githubRepos, setGithubRepos] = useState<GitHubRepository[]>([]);
   const [isLoadingGithubRepos, setIsLoadingGithubRepos] = useState(false);
   const [manualRepoInput, setManualRepoInput] = useState('');
-  const [isAddingRepo, setIsAddingRepo] = useState(false);
+  const [isAddingRepoPath, setIsAddingRepoPath] = useState<string | null>(null);
   const [repoSearchQuery, setRepoSearchQuery] = useState('');
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [tokenInput, setTokenInput] = useState('');
@@ -143,7 +147,6 @@ export default function SettingsScreen() {
   const [showTemplatesRepoPicker, setShowTemplatesRepoPicker] = useState(false);
   const [syncModes, setSyncModes] = useState<Record<string, SyncEngineMode>>({});
   const [cloningRepo, setCloningRepo] = useState<string | null>(null);
-  const [addRepoPath, setAddRepoPath] = useState<string | null>(null);
   const [cloneProgress, setCloneProgress] = useState<CloneProgress | null>(null);
   const cloneAbortedRef = useRef(false);
   const cloneOuterRetriesRef = useRef(0);
@@ -506,11 +509,11 @@ export default function SettingsScreen() {
    */
   const importRepoAfterAdd = useCallback(async (repoPath: string, repoName: string): Promise<ImportAtAddOutcome> => {
     const retryImport = async (): Promise<void> => {
-      setIsAddingRepo(true);
+      setIsAddingRepoPath(repoPath);
       try {
         await importRepoAfterAdd(repoPath, repoName);
       } finally {
-        setIsAddingRepo(false);
+        setIsAddingRepoPath(null);
       }
     };
     cloneAbortedRef.current = false;
@@ -569,6 +572,7 @@ export default function SettingsScreen() {
   }, [authState.isAuthenticated]);
 
   const handleSelectGithubRepo = useCallback(async (repo: GitHubRepository) => {
+    if (isAddingRepoPath !== null) return;
     if (repositories.length >= 1 && !isPro) {
       promptProUpgrade(t, openPaywall);
       return;
@@ -578,9 +582,7 @@ export default function SettingsScreen() {
       return;
     }
     const attemptAdd = async (allowUnverifiedWrite: boolean): Promise<void> => {
-      if (isAddingRepo) return;
-      setIsAddingRepo(true);
-      setAddRepoPath(repo.full_name);
+      setIsAddingRepoPath(repo.full_name);
       try {
         if (allowUnverifiedWrite) {
           await addRepo(repo.full_name, repo.name, 'github', { allowUnverifiedWrite: true });
@@ -602,14 +604,14 @@ export default function SettingsScreen() {
         }
         Alert.alert(t('common.error'), t('settings.addRepoFailedBody'));
       } finally {
-        setIsAddingRepo(false);
-        setAddRepoPath(null);
+        setIsAddingRepoPath(null);
       }
     };
     await attemptAdd(false);
-  }, [addRepo, importRepoAfterAdd, repositories, t, isPro, openPaywall]);
+  }, [addRepo, importRepoAfterAdd, repositories, t, isPro, openPaywall, isAddingRepoPath]);
 
   const handleAddManualRepo = useCallback(async () => {
+    if (isAddingRepoPath !== null) return;
     const value = manualRepoInput.trim();
     if (!value) return;
     if (repositories.length >= 1 && !isPro) {
@@ -617,9 +619,7 @@ export default function SettingsScreen() {
       return;
     }
     const attemptAdd = async (allowUnverifiedWrite: boolean): Promise<void> => {
-      if (isAddingRepo) return;
-      setIsAddingRepo(true);
-      setAddRepoPath(value);
+      setIsAddingRepoPath(value);
       try {
         if (allowUnverifiedWrite) {
           await addRepo(value, { allowUnverifiedWrite: true });
@@ -642,12 +642,11 @@ export default function SettingsScreen() {
         }
         Alert.alert(t('common.error'), t('settings.addRepoFailedBody'));
       } finally {
-        setIsAddingRepo(false);
-        setAddRepoPath(null);
+        setIsAddingRepoPath(null);
       }
     };
     await attemptAdd(false);
-  }, [addRepo, importRepoAfterAdd, manualRepoInput, t, repositories, isPro, openPaywall]);
+  }, [addRepo, importRepoAfterAdd, manualRepoInput, t, repositories, isPro, openPaywall, isAddingRepoPath]);
 
   const handleRemoveRepo = useCallback((repo: GitRepository) => {
     HapticService.warning();
@@ -940,6 +939,10 @@ export default function SettingsScreen() {
         onToggleAiPersonalization={() => { void toggleAiPersonalization(); }}
         githubToolsEnabled={githubToolsEnabled}
         onToggleGithubTools={() => { void toggleGithubTools(); }}
+        dailyQuotePersonalizationEnabled={dailyQuotePersonalizationEnabled}
+        onToggleDailyQuotePersonalization={() => { void toggleDailyQuotePersonalization(); }}
+        dailyQuoteSourceVisible={dailyQuoteSourceVisible}
+        onToggleDailyQuoteSourceVisible={() => { void toggleDailyQuoteSourceVisible(); }}
         onOpenModelSelector={() => setShowModelSelector(true)}
         onToggleActionMode={() => { void setActionMode(actionMode === 'auto' ? 'confirm' : 'auto'); }}
         onOpenChatRepoPicker={() => { setShowTemplatesRepoPicker(false); setShowChatRepoPicker(true); }}
@@ -977,8 +980,7 @@ export default function SettingsScreen() {
         showTokenModal={showTokenModal}
         repoSearchQuery={repoSearchQuery}
         manualRepoInput={manualRepoInput}
-        isAddingRepo={isAddingRepo}
-        addRepoPath={addRepoPath}
+        isAddingRepoPath={isAddingRepoPath}
         isLoadingGithubRepos={isLoadingGithubRepos}
         tokenInput={tokenInput}
         tokenVisible={tokenVisible}

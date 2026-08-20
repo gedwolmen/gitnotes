@@ -17,12 +17,20 @@ export function useDailyQuote(): UseDailyQuoteReturn {
   const { notes } = useNotes();
   const aiIsLoading = useAIStore((s) => s.isLoading);
   const selectedModelId = useAIStore((s) => s.selectedModelId);
+  const dailyQuoteEnabled = useAIStore((s) => s.dailyQuoteEnabled);
+  const dailyQuotePersonalizationEnabled = useAIStore((s) => s.dailyQuotePersonalizationEnabled);
 
-  const notesRef = useRef(notes); // ref so callbacks don't depend on unstable notes array
+  const notesRef = useRef(notes);
   notesRef.current = notes;
 
   const loadQuote = useCallback(async () => {
     try {
+      if (!dailyQuoteEnabled) {
+        setQuote(null);
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       setError(null);
       const currentNotes = notesRef.current;
@@ -36,11 +44,15 @@ export function useDailyQuote(): UseDailyQuoteReturn {
     } finally {
       setIsLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- notes read via ref, aiIsLoading intentional dep
-  }, [aiIsLoading, selectedModelId]);
+  }, [aiIsLoading, selectedModelId, dailyQuoteEnabled, dailyQuotePersonalizationEnabled]);
 
   const refresh = useCallback(async () => {
     try {
+      if (!dailyQuoteEnabled) {
+        setQuote(null);
+        return;
+      }
+
       setIsLoading(true);
       setError(null);
       const currentNotes = notesRef.current;
@@ -54,8 +66,7 @@ export function useDailyQuote(): UseDailyQuoteReturn {
     } finally {
       setIsLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- notes read via ref
-  }, []);
+  }, [dailyQuoteEnabled, dailyQuotePersonalizationEnabled]);
 
   useEffect(() => {
     if (aiIsLoading) return; // Wait for AI store hydration

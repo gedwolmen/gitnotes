@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generateText } from 'ai';
 import type { Note } from '../models/Note';
 import { useAIStore } from '../stores/aiStore';
+import { useProStore, selectIsPro } from '../stores/proStore';
 import { initializeModel } from './AIService';
 import quotesJson from '../data/philosopher_quotes.json';
 
@@ -10,6 +11,7 @@ export interface DailyQuote {
   text: string;
   author: string;
   tags: string[];
+  source: string;
   description: string;
   generatedAt: number;
 }
@@ -19,6 +21,7 @@ interface QuoteRow {
   text: string;
   author: string;
   tags: string[];
+  source: string;
 }
 
 const CACHE_KEY = '@gitnotes:daily_quote';
@@ -26,7 +29,7 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 const quotes: QuoteRow[] = quotesJson as QuoteRow[];
 
-type FallbackReason = 'disabled' | 'no_model' | 'no_journals' | 'ai_failed' | 'error' | 'personalization_off';
+type FallbackReason = 'disabled' | 'no_model' | 'no_journals' | 'ai_failed' | 'error' | 'personalization_off' | 'quote_personalization_off';
 
 const FALLBACK_DESCRIPTIONS: Record<FallbackReason, string> = {
   disabled:
@@ -40,7 +43,23 @@ const FALLBACK_DESCRIPTIONS: Record<FallbackReason, string> = {
   error: 'Encountered an error. Showing a random quote from the collection.',
   personalization_off:
     'AI personalization is off for data safety. Showing a random quote from the collection.',
+  quote_personalization_off:
+    'A quote from our curated collection.',
 };
+
+const PRO_BLOCKED_REASONS: FallbackReason[] = ['disabled', 'no_model', 'personalization_off'];
+
+function resolveDescription(reason: FallbackReason): string {
+  try {
+    const isPro = selectIsPro(useProStore.getState());
+    if (!isPro && PRO_BLOCKED_REASONS.includes(reason)) {
+      return 'AI personalization requires GitNotēs Pro. Showing a quote from the collection.';
+    }
+  } catch {
+    // proStore may throw on bare useProStore.getState() in some test setups
+  }
+  return FALLBACK_DESCRIPTIONS[reason];
+}
 
 function makeFallbackQuote(reason: FallbackReason): DailyQuote {
   const random = quotes[Math.floor(Math.random() * quotes.length)];
@@ -49,7 +68,8 @@ function makeFallbackQuote(reason: FallbackReason): DailyQuote {
     text: random.text,
     author: random.author,
     tags: random.tags,
-    description: FALLBACK_DESCRIPTIONS[reason],
+    source: random.source,
+    description: resolveDescription(reason),
     generatedAt: Date.now(),
   };
 }
@@ -57,12 +77,22 @@ function makeFallbackQuote(reason: FallbackReason): DailyQuote {
 class DailyQuoteServiceClass {
   async getDailyQuote(journals: Note[], allNotes: Note[]): Promise<DailyQuote | null> {
     try {
+      const aiStore = useAIStore.getState();
+
+      if (!aiStore.dailyQuoteEnabled) {
+        return null;
+      }
+
+      if (!aiStore.dailyQuotePersonalizationEnabled) {
+        return makeFallbackQuote('quote_personalization_off');
+      }
+
       const cached = await this.readCache();
       if (cached) return cached;
 
-      const aiStore = useAIStore.getState();
-      if (!aiStore.dailyQuoteEnabled) return makeFallbackQuote('disabled');
-      if (!aiStore.aiPersonalizationEnabled) return makeFallbackQuote('personalization_off');
+      if (!aiStore.aiPersonalizationEnabled) {
+        return makeFallbackQuote('personalization_off');
+      }
 
       const selectedModel = aiStore.getSelectedModel();
       if (!selectedModel) return makeFallbackQuote('no_model');
@@ -156,6 +186,7 @@ class DailyQuoteServiceClass {
       text: quote.text,
       author: quote.author,
       tags: quote.tags,
+      source: quote.source,
       description: parsed.description.slice(0, 500),
       generatedAt: Date.now(),
     };

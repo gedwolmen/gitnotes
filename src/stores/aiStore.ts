@@ -23,6 +23,8 @@ interface AIState {
   dailyQuoteEnabled: boolean;
   aiPersonalizationEnabled: boolean;
   githubToolsEnabled: boolean;
+  dailyQuotePersonalizationEnabled: boolean;
+  dailyQuoteSourceVisible: boolean;
 }
 
 interface AIActions {
@@ -42,6 +44,8 @@ interface AIActions {
   toggleDailyQuote: () => Promise<void>;
   toggleAiPersonalization: () => Promise<void>;
   toggleGithubTools: () => Promise<void>;
+  toggleDailyQuotePersonalization: () => Promise<void>;
+  toggleDailyQuoteSourceVisible: () => Promise<void>;
 }
 
 const createDefaultProviders = (): AIProviderConfig[] => [
@@ -98,6 +102,8 @@ const createDefaultSettings = (): AISettings => ({
   dailyQuoteEnabled: true,
   aiPersonalizationEnabled: true,
   githubToolsEnabled: false,
+  dailyQuotePersonalizationEnabled: true,
+  dailyQuoteSourceVisible: true,
 });
 
 const getProviderApiKeyStorageKey = (providerId: string) => `${AI_PROVIDER_KEY_PREFIX}${providerId}`;
@@ -346,6 +352,16 @@ export const useAIStore = create<AIState & AIActions>()((set, get) => ({
     await get().persistSettings();
   },
 
+  toggleDailyQuotePersonalization: async () => {
+    set((state) => ({ dailyQuotePersonalizationEnabled: !state.dailyQuotePersonalizationEnabled, error: null }));
+    await get().persistSettings();
+  },
+
+  toggleDailyQuoteSourceVisible: async () => {
+    set((state) => ({ dailyQuoteSourceVisible: !state.dailyQuoteSourceVisible, error: null }));
+    await get().persistSettings();
+  },
+
   getAvailableModels: () =>
     get()
       .providers.filter((provider) => provider.isEnabled)
@@ -383,6 +399,8 @@ export const useAIStore = create<AIState & AIActions>()((set, get) => ({
         dailyQuoteEnabled,
         aiPersonalizationEnabled,
         githubToolsEnabled,
+        dailyQuotePersonalizationEnabled,
+        dailyQuoteSourceVisible,
       } = get();
 
       await Promise.all(
@@ -410,6 +428,8 @@ export const useAIStore = create<AIState & AIActions>()((set, get) => ({
         dailyQuoteEnabled,
         aiPersonalizationEnabled,
         githubToolsEnabled,
+        dailyQuotePersonalizationEnabled,
+        dailyQuoteSourceVisible,
       };
 
       await AsyncStorage.setItem(AI_SETTINGS_STORAGE_KEY, JSON.stringify(settingsToPersist));

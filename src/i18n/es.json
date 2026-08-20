@@ -163,7 +163,9 @@
     },
     "dailyQuoteDescription": "Mostrar cita filosófica personal en Inicio",
     "aiPersonalization": {
-      "title": "Personalizar IA con mis notas"
+      "title": "Personalizar IA con mis notas",
+      "label": "Personalización de IA",
+      "description": "Personaliza citas según tus notas"
     },
     "aiPersonalizationDescription": "Cuando está desactivado, la IA no lee tus notas ni diarios por seguridad",
     "githubTools": {
@@ -327,7 +329,15 @@
     "resetOnboardingSuccess": "La introducción se mostrará en el próximo inicio.",
     "clear": "Limpiar",
     "clearAllSuccess": "Todas las notas se han eliminado.",
-    "clearAllFailed": "No se pudieron eliminar las notas."
+    "clearAllFailed": "No se pudieron eliminar las notas.",
+    "dailyQuoteSource": {
+      "label": "Mostrar Fuentes",
+      "description": "Mostrar el libro/obra de donde proviene la cita"
+    },
+    "dailyQuotePersonalization": {
+      "label": "Personalización IA",
+      "description": "Personalizar citas según tus notas"
+    }
   },
   "ai": {
     "availability": {
@@ -431,7 +441,15 @@
     "emptyTitleNoMatches": "Sin coincidencias",
     "emptySubtitleNoRepos": "Añade un repositorio en Ajustes para empezar",
     "emptySubtitleNoMatches": "Prueba con otra búsqueda",
-    "browseFiles": "Explorar archivos"
+    "browseFiles": "Explorar archivos",
+    "pullRequests": "Solicitudes de cambios",
+    "issues": "Incidencias",
+    "noPullRequests": "No hay solicitudes de cambios",
+    "noIssues": "No hay incidencias",
+    "filterOpen": "Abiertas",
+    "filterClosed": "Cerradas",
+    "openInBrowser": "Abrir en navegador",
+    "loadError": "No se pudo cargar — toca para reintentar"
   },
   "home": {
     "title": "Inicio",
@@ -482,7 +500,9 @@
       "reminders": "Set up reminders to review a note, folder, repo, or tag. The app sends a local notification at the scheduled time.",
       "dailyQuote": "Muestra una cita filosófica diaria en tu pantalla de inicio, personalizada según tus reflexiones recientes de diario.",
       "aiPersonalization": "Cuando está activada, la IA lee tus notas y diarios para ofrecer respuestas personalizadas. Desactiva para mayor privacidad — la IA solo usará el contexto del chat actual.",
-      "githubTools": "Cuando está activado, tu agente de IA puede listar tus repositorios, crear issues, abrir pull requests, revisar cambios de diff y publicar reseñas usando tu cuenta de GitHub conectada. Usa el mismo token que ya configuraste."
+      "githubTools": "Cuando está activado, tu agente de IA puede listar tus repositorios, crear issues, abrir pull requests, revisar cambios de diff y publicar reseñas usando tu cuenta de GitHub conectada. Usa el mismo token que ya configuraste.",
+      "dailyQuotePersonalization": "Cuando está activado, la IA lee las notas de tu diario para personalizar las citas que se muestran en tu pantalla de inicio. Desactívalo para ver una cita aleatoria cada día.",
+      "dailyQuoteShowSources": "Muestra el libro original o la obra de donde fue tomada la cita, al lado del nombre del autor."
     },
     "title": "Hint"
   },
@@ -857,16 +877,58 @@
     "title": "GitNotēs Pro",
     "subtitle": "Desbloquea la suite de IA y las funciones avanzadas",
     "features": {
-      "aiChat": "Chat de IA con tus notas",
-      "aiActions": "Acciones de IA en el editor",
-      "thoughtDump": "Volcado de pensamientos",
-      "voiceDump": "Volcado de voz",
-      "personalizedQuotes": "Citas diarias personalizadas",
-      "githubTools": "Herramientas de GitHub para IA",
-      "canvases": "Lienzos",
-      "templates": "Plantillas personalizadas",
-      "renderStyles": "Estilos de renderizado",
-      "multiAccount": "Múltiples cuentas de GitHub"
+      "aiChat": {
+        "title": "Chat de IA con tus notas",
+        "description": "Haz preguntas y obtén respuestas basadas en tus notas"
+      },
+      "aiActions": {
+        "title": "Acciones de IA en el editor",
+        "description": "Resume, reescribe y corrige texto desde el editor"
+      },
+      "thoughtDump": {
+        "title": "Volcado de pensamientos",
+        "description": "Vuelca tus ideas; la IA las archiva en notas"
+      },
+      "voiceDump": {
+        "title": "Volcado de voz",
+        "description": "Graba notas de voz, transcritas directo a tus notas"
+      },
+      "personalizedQuotes": {
+        "title": "Citas diarias personalizadas",
+        "description": "Citas diarias ajustadas a tus notas e intereses"
+      },
+      "githubTools": {
+        "title": "Herramientas de GitHub para IA",
+        "description": "Gestiona issues y repos desde el chat de IA"
+      },
+      "canvases": {
+        "title": "Lienzos",
+        "description": "Conecta notas en un lienzo visual infinito"
+      },
+      "templates": {
+        "title": "Plantillas personalizadas",
+        "description": "Crea y reutiliza tus propias plantillas de notas"
+      },
+      "renderStyles": {
+        "title": "Estilos de renderizado",
+        "description": "Personaliza cómo se muestran Markdown, NORG y Org"
+      },
+      "multiAccount": {
+        "title": "Múltiples cuentas de GitHub",
+        "description": "Sincroniza varias cuentas de GitHub a la vez"
+      }
+    },
+    "featureDescriptions": {
+      "aiChat": "Pregunta lo que sea a tus notas y obtén respuestas al instante",
+      "aiActions": "Resume, reescribe y mejora texto directamente en el editor",
+      "thoughtDump": "Captura pensamientos rápidos justo cuando ocurren",
+      "voiceDump": "Expresa tus ideas y guárdalas como notas",
+      "personalizedQuotes": "Citas diarias personalizadas con IA según tu estilo de escritura",
+      "githubTools": "Proporciona contexto a la IA desde tus repositorios de GitHub",
+      "canvases": "Organiza notas visualmente en una canvas infinita",
+      "templates": "Empieza nuevas notas desde tus propias plantillas",
+      "renderStyles": "Elige exactamente cómo se ven tus notas",
+      "multiAccount": "Conecta varias cuentas de GitHub al mismo tiempo"
     },
     "monthly": {
       "trialCta": "Prueba 30 días gratis, luego {{price}}/mes",
@@ -879,6 +941,8 @@
     },
     "restore": "Restaurar compras",
     "restored": "Compras restauradas",
+    "restoring": "Restaurando compra…",
+    "nothingToRestore": "No hay nada que restaurar en este dispositivo.",
     "purchaseError": "Error en la compra",
     "loading": "Cargando…",
     "later": "Quizás más tarde",
@@ -886,12 +950,17 @@
     "termsNote": "Las suscripciones se renuevan automáticamente hasta que se cancelen. Restaura las compras para transferirlas a este dispositivo. Esta app ofrece una prueba gratuita de 30 días para nuevos suscriptores.",
     "yearly": {
       "title": "Anual",
-      "cta": "{{price}}/año"
+      "cta": "{{price}}/año",
+      "trialCta": "Prueba 30 días gratis, luego {{price}}/año"
     },
     "action": {
       "trial": "Iniciar prueba gratis",
       "subscribe": "Suscribirse",
       "buy": "Comprar ahora"
+    },
+    "footer": {
+      "terms": "Términos de uso",
+      "privacy": "Política de privacidad"
     }
   },
   "pro": {
@@ -899,8 +968,6 @@
     "statusTrial": "{{days}} días restantes de prueba",
     "statusUpgrade": "Mejorar",
     "settingsRow": "GitNotēs Pro",
-    "gateTitle": "Esta es una función Pro",
-    "gateBody": "Mejora para desbloquear funciones de IA y más.",
     "badge": "PRO",
     "lockedTitle": "Función Pro",
     "lockedBody": "Esta función requiere GitNotēs Pro. Mejora para desbloquear cuentas, repos, IA y más ilimitados."

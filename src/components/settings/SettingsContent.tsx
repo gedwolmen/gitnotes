@@ -134,6 +134,10 @@ onRemoveAccount: (id: string, login: string) => void;
   onToggleAiPersonalization: () => void;
   githubToolsEnabled: boolean;
   onToggleGithubTools: () => void;
+  dailyQuotePersonalizationEnabled: boolean;
+  onToggleDailyQuotePersonalization: () => void;
+  dailyQuoteSourceVisible: boolean;
+  onToggleDailyQuoteSourceVisible: () => void;
   isBiometricLockEnabled: boolean;
   isBiometricAvailable: boolean;
   biometricKind: BiometricKind;
@@ -218,6 +222,10 @@ export function SettingsContent(props: SettingsContentProps) {
     onToggleAiPersonalization,
     githubToolsEnabled,
     onToggleGithubTools,
+    dailyQuotePersonalizationEnabled,
+    onToggleDailyQuotePersonalization,
+    dailyQuoteSourceVisible,
+    onToggleDailyQuoteSourceVisible,
     isBiometricLockEnabled,
     isBiometricAvailable,
     biometricKind,
@@ -344,7 +352,10 @@ onSetSyncIntervalSeconds,
               <Toggle
                 testID="settings.toggle.theme"
                 value={theme === 'dark'}
-                onValueChange={(value) => setTheme(value ? 'dark' : 'light')}
+                onValueChange={(value) => {
+                  HapticService.selection();
+                  setTheme(value ? 'dark' : 'light');
+                }}
               />
               <HintIcon hintKey="hints.settings.darkMode" testID="hint.dark-mode" />
             </View>
@@ -726,10 +737,16 @@ onSetSyncIntervalSeconds,
           </>
         ) : null}
         <GroupRow
-          testID="settings.button.manage-templates"
-          onPress={onManageTemplates}
+          testID={isPro ? 'settings.button.manage-templates' : 'settings.row.manage-templates-locked'}
+          onPress={isPro ? onManageTemplates : () => promptProUpgrade(t, onOpenPaywall)}
           leading={<Ionicons name="document-text-outline" size={20} color={colors.text} />}
-          trailing={<Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />}
+          trailing={
+            isPro ? (
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            ) : (
+              <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
+            )
+          }
         >
           <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.manageTemplates')}</Text>
         </GroupRow>
@@ -915,6 +932,62 @@ onSetSyncIntervalSeconds,
             </Text>
             <Text style={[styles.settingValue, { color: colors.textSecondary, fontSize: 12, marginTop: 2 }]}>
               {t('settings.githubTools.description', { defaultValue: "Let AI manage issues, PRs, and repos via your active GitHub account." })}
+            </Text>
+          </View>
+        </GroupRow>
+        <GroupRow
+          testID={isPro ? 'settings.row.daily-quote-personalization' : 'settings.row.ai-locked-daily-quote-personalization'}
+          onPress={isPro ? undefined : () => promptProUpgrade(t, onOpenPaywall)}
+          trailing={
+            isPro ? (
+              <View className="flex-row items-center gap-2">
+                <Toggle
+                  testID="settings.toggle.daily-quote-personalization"
+                  value={isAIEnabled ? (dailyQuoteEnabled ? dailyQuotePersonalizationEnabled : false) : false}
+                  onValueChange={onToggleDailyQuotePersonalization}
+                  disabled={!isAIEnabled || !dailyQuoteEnabled}
+                />
+                <HintIcon hintKey="hints.settings.dailyQuotePersonalization" testID="hint.daily-quote-personalization" />
+              </View>
+            ) : (
+              <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
+            )
+          }
+        >
+          <View>
+            <Text style={[styles.settingLabel, { color: colors.text }]}>
+              {t('settings.aiPersonalization.label', { defaultValue: 'AI Personalization' })}
+            </Text>
+            <Text style={[styles.settingValue, { color: colors.textSecondary, fontSize: 12, marginTop: 2 }]}>
+              {t('settings.aiPersonalization.description', { defaultValue: 'Personalize quotes based on your notes' })}
+            </Text>
+          </View>
+        </GroupRow>
+        <GroupRow
+          testID={isPro ? 'settings.row.daily-quote-show-sources' : 'settings.row.ai-locked-show-sources'}
+          onPress={isPro ? undefined : () => promptProUpgrade(t, onOpenPaywall)}
+          trailing={
+            isPro ? (
+              <View className="flex-row items-center gap-2">
+                <Toggle
+                  testID="settings.toggle.daily-quote-show-sources"
+                  value={isAIEnabled ? (dailyQuoteEnabled ? dailyQuoteSourceVisible : false) : false}
+                  onValueChange={onToggleDailyQuoteSourceVisible}
+                  disabled={!isAIEnabled || !dailyQuoteEnabled}
+                />
+                <HintIcon hintKey="hints.settings.dailyQuoteShowSources" testID="hint.daily-quote-show-sources" />
+              </View>
+            ) : (
+              <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
+            )
+          }
+        >
+          <View>
+            <Text style={[styles.settingLabel, { color: colors.text }]}>
+              {t('settings.dailyQuoteSource.label', { defaultValue: 'Show Sources' })}
+            </Text>
+            <Text style={[styles.settingValue, { color: colors.textSecondary, fontSize: 12, marginTop: 2 }]}>
+              {t('settings.dailyQuoteSource.description', { defaultValue: 'Show the book/work the quote is from' })}
             </Text>
           </View>
         </GroupRow>

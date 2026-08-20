@@ -5,6 +5,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useChatStore } from '../stores/chatStore';
+import { useAIHubStore } from '../stores/aiHubStore';
 import { useAIStore } from '../stores/aiStore';
 import * as ChatStorageService from '../services/ChatStorageService';
 import { githubActivity } from '../stores/githubActivityStore';
@@ -19,8 +20,7 @@ import { ChatThreadCard } from '../components/chat/ChatThreadCard';
 import { ChatThreadContextMenu } from '../components/chat/ChatThreadContextMenu';
 import { HapticService } from '../utils/haptics';
 import { useTranslation } from 'react-i18next';
-import { useProGate } from '../hooks/useProGate';
-import { ProRequired } from '../components/paywall/ProRequired';
+import { useProScreenGuard } from '../hooks/useProScreenGuard';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -292,7 +292,7 @@ export default function ChatThreadListScreen() {
     [selectedIds, selectionMode, toggleSelected]
   );
 
-  const { isPro } = useProGate();
+  const blocked = useProScreenGuard(() => useAIHubStore.getState().closeChatRepoPicker());
 
   const renderEmptyState = () => {
     if (isLoading) {
@@ -313,9 +313,7 @@ export default function ChatThreadListScreen() {
     );
   };
 
-  if (!isPro) {
-    return <ProRequired />;
-  }
+  if (blocked) return null;
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={[]}>
