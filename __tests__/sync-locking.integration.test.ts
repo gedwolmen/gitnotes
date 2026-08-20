@@ -545,7 +545,10 @@ describe('sync-locking integration scenarios S1–S8', () => {
     expect(screen.getByText('Second')).toBeTruthy();
 
     fireEvent(screen.getByTestId('notes-card-n2'), 'longPress');
-    fireEvent.press(screen.getByTestId('notes-context-menu.delete'));
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('notes-context-menu.delete'));
+      await flushMicrotasks(40);
+    });
 
     await waitFor(() => {
       expect(screen.queryByText('Second')).toBeNull();
