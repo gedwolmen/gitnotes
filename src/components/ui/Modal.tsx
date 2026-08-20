@@ -1,5 +1,15 @@
 import React, { ReactNode } from 'react';
-import { Modal as RNModal, Pressable, StyleSheet, useWindowDimensions, View, ViewStyle, StyleProp } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Modal as RNModal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+  ViewStyle,
+  StyleProp,
+} from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Surface } from './Surface';
@@ -111,14 +121,37 @@ export function Modal(props: ModalProps) {
                 }
           }
         >
-          <Surface
-            elevation="floating"
-            radius="lg"
-            onStartShouldSetResponder={() => true}
-            style={[surfaceStyle, contentStyle]}
-          >
-            {children}
-          </Surface>
+          {bottomSheet ? (
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                justifyContent: 'flex-end',
+              }}
+            >
+              <Surface
+                elevation="floating"
+                radius="lg"
+                onStartShouldSetResponder={() => true}
+                style={[surfaceStyle, contentStyle]}
+              >
+                {children}
+              </Surface>
+            </KeyboardAvoidingView>
+          ) : (
+            <Surface
+              elevation="floating"
+              radius="lg"
+              onStartShouldSetResponder={() => true}
+              style={[surfaceStyle, contentStyle]}
+            >
+              {children}
+            </Surface>
+          )}
         </View>
       </Pressable>
     </RNModal>
