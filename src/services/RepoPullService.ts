@@ -53,7 +53,7 @@ async function handleCorruptionErrors<T>(fn: () => Promise<T>, repoPath: string,
         );
       }
       await GitFsService.removeRepo({ repoPath });
-      await GitFsService.clone({ repoPath, branch, token: token ?? undefined });
+      await GitFsService.cloneExclusive({ repoPath, branch, token: token ?? undefined });
       return fn();
     }
     throw error;
@@ -84,7 +84,7 @@ async function getRepoReader(
     const token = (await AuthService.getToken()) ?? undefined;
     const cloned = await GitFsService.isCloned({ repoPath });
     if (!cloned) {
-      await GitFsService.clone({ repoPath, branch, token });
+      await GitFsService.cloneExclusive({ repoPath, branch, token });
     } else {
       // Phase 5: fast-forward instead of bare fetch so local unpushed commits
       // can't be silently shadowed by stale reconcile. When the local branch
@@ -134,7 +134,7 @@ const isMissingObject = /Could not find|not foundobject|NotFoundError|Packfile t
                     );
                   }
                   await GitFsService.removeRepo({ repoPath });
-                  await GitFsService.clone({ repoPath, branch, token });
+                  await GitFsService.cloneExclusive({ repoPath, branch, token });
                   return {
                     mode,
                     listTree: () => GitFsService.listTree({ repoPath, ref: branch }),

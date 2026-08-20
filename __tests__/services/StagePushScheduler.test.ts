@@ -38,6 +38,7 @@ jest.mock('../../src/stores/githubActivityStore', () => ({
 }));
 
 import { StagingService } from '../../src/services/git/StagingService';
+import { GitSyncGate } from '../../src/services/git/GitSyncGate';
 import { StorageService } from '../../src/services/StorageService';
 import { useStageStore } from '../../src/stores/stageStore';
 import { githubActivity } from '../../src/stores/githubActivityStore';
@@ -196,7 +197,7 @@ describe('StagePushScheduler', () => {
       pendingCount: 0,
     });
 
-    await drainPushQueue();
+    await drainPushQueue('manual');
     await flushAsync();
 
     expect(StagingService.pushStaged).toHaveBeenCalledTimes(2);
@@ -216,7 +217,7 @@ describe('StagePushScheduler', () => {
 
     const setGlobalPushingSpy = jest.spyOn(useStageStore.getState(), 'setGlobalPushing');
 
-    await drainPushQueue();
+    await drainPushQueue('manual');
     await flushAsync();
 
     expect(setGlobalPushingSpy).toHaveBeenCalledWith(false);
@@ -259,7 +260,7 @@ describe('StagePushScheduler', () => {
       pendingCount: 0,
     });
 
-    await drainPushQueue();
+    await drainPushQueue('manual');
     await flushAsync();
 
     expect(githubActivity.begin).toHaveBeenCalledWith('Pushing changes');
@@ -280,7 +281,7 @@ describe('StagePushScheduler', () => {
       error: 'boom',
     }));
 
-    await drainPushQueue();
+    await drainPushQueue('manual');
     await flushAsync();
 
     expect(githubActivity.begin).toHaveBeenCalledWith('Pushing changes');
@@ -294,7 +295,7 @@ describe('StagePushScheduler', () => {
     });
 
     useStageStore.getState().pushAll();
-    void drainPushQueue();
+    void drainPushQueue('manual');
 
     await flushAsync();
     expect(StagingService.pushStaged).toHaveBeenCalledTimes(1);
@@ -308,7 +309,7 @@ describe('StagePushScheduler', () => {
     });
 
     useStageStore.getState().requestPush(REPO_A, 'main');
-    void drainPushQueue();
+    void drainPushQueue('manual');
 
     await flushAsync();
     expect(StagingService.pushStaged).toHaveBeenCalledTimes(1);
@@ -350,7 +351,7 @@ describe('StagePushScheduler', () => {
     startScheduler();
 
     useStageStore.getState().pushAll();
-    void drainPushQueue();
+    void drainPushQueue('manual');
     await flushAsync();
 
     expect(StagingService.pushStaged).toHaveBeenCalledTimes(1);
@@ -366,7 +367,7 @@ describe('StagePushScheduler', () => {
     startScheduler();
 
     useStageStore.getState().requestPush(REPO_A, 'main');
-    void drainPushQueue();
+    void drainPushQueue('manual');
     await flushAsync();
 
     expect(StagingService.pushStaged).toHaveBeenCalledTimes(1);
@@ -382,7 +383,7 @@ describe('StagePushScheduler', () => {
     startScheduler();
 
     useStageStore.getState().pushAll();
-    void drainPushQueue();
+    void drainPushQueue('manual');
     await flushAsync();
     expect(StagingService.pushStaged).toHaveBeenCalledTimes(1);
 
@@ -410,7 +411,7 @@ describe('StagePushScheduler', () => {
 
     const setPushProgressSpy = jest.spyOn(useStageStore.getState(), 'setPushProgress');
 
-    await drainPushQueue();
+    await drainPushQueue('manual');
     await flushAsync();
 
     expect(setPushProgressSpy).toHaveBeenCalledWith(null);
@@ -439,9 +440,38 @@ describe('StagePushScheduler', () => {
       },
     );
 
-    await drainPushQueue();
+    await drainPushQueue('manual');
     await flushAsync();
 
     expect(useStageStore.getState().pushProgress).toBeNull();
+  });
+
+  test('idle-timeout flush acquires the gate cycle tagged idle', async () => {
+    useStageStore.setState({
+      staged: [item(REPO_A, 'main', 'notes/a.md')],
+      pendingCount: 1,
+    });
+
+    startScheduler();
+    jest.advanceTimersByTime(STAGE_PUSH_IDLE_MS);
+    await flushAsync();
+
+    expect(StagingService.pushStaged).toHaveBeenCalledTimes(1);
+    expect(GitSyncGate.acquireCycle).toHaveBeenCalledWith('idle');
+  });
+
+  test('manual drainPushQueue acquires the gate cycle tagged with the given source', async () => {
+    useStageStore.setState({
+      staged: [],
+      isPushing: {},
+      globalPushing: false,
+      pushQueue: ['a/repo::main'],
+      pendingCount: 0,
+    });
+
+    await drainPushQueue('manual');
+    await flushAsync();
+
+    expect(GitSyncGate.acquireCycle).toHaveBeenCalledWith('manual');
   });
 });

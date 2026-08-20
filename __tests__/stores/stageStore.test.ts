@@ -2,6 +2,7 @@ jest.mock('../../src/services/git/StagingService', () => ({
   StagingService: {
     listStaged: jest.fn(async () => []),
   },
+  subscribeStagedChanged: jest.fn(() => () => {}),
 }));
 
 jest.mock('../../src/services/NoteSyncQueueService', () => ({
@@ -16,7 +17,7 @@ jest.mock('../../src/services/StorageService', () => ({
   },
 }));
 
-import { StagingService } from '../../src/services/git/StagingService';
+import { StagingService, subscribeStagedChanged } from '../../src/services/git/StagingService';
 import { NoteSyncQueueService } from '../../src/services/NoteSyncQueueService';
 import { StorageService } from '../../src/services/StorageService';
 import { useStageStore, groupStaged } from '../../src/stores/stageStore';
@@ -157,6 +158,63 @@ describe('stageStore', () => {
 
     expect(StagingService.listStaged).toHaveBeenCalled();
     expect(useStageStore.getState().staged).toHaveLength(1);
+  });
+
+  it('registerQueueSubscription subscribes the stagedChanged emitter — pendingCount increments after a clone-mode stage is added (#925)', async () => {
+    // The previous test leaves a registration behind; tear it down so this
+    // test installs the emitter subscription against its own mock.
+    useStageStore.getState().unregisterQueueSubscription();
+    let stagedChanged: (() => void) | undefined;
+    (subscribeStagedChanged as jest.Mock).mockImplementation((cb: () => void) => {
+      stagedChanged = cb;
+      return () => {};
+    });
+    (StagingService.listStaged as jest.Mock).mockImplementation(async () => [
+      {
+        repoPath: REPO_A,
+        branch: 'main',
+        filePath: '(unpushed commits)',
+        kind: 'upsert',
+        mode: 'clone',
+        localCommitOid: 'local-oid',
+      },
+    ]);
+
+    useStageStore.getState().registerQueueSubscription();
+    expect(subscribeStagedChanged).toHaveBeenCalledTimes(1);
+    expect(stagedChanged).toBeDefined();
+    expect(useStageStore.getState().pendingCount).toBe(0);
+
+    stagedChanged!();
+    await flushAsync();
+
+    expect(StagingService.listStaged).toHaveBeenCalled();
+    expect(useStageStore.getState().pendingCount).toBe(1);
+    expect(useStageStore.getState().staged[0]).toMatchObject({
+      repoPath: REPO_A,
+      filePath: '(unpushed commits)',
+      mode: 'clone',
+    });
+
+    useStageStore.getState().unregisterQueueSubscription();
+  });
+
+  it('unregisterQueueSubscription tears down both the queue and stagedChanged subscriptions', () => {
+    useStageStore.getState().unregisterQueueSubscription();
+    const queueUnsub = jest.fn();
+    const emitterUnsub = jest.fn();
+    (NoteSyncQueueService.subscribe as jest.Mock).mockReturnValue(queueUnsub);
+    (subscribeStagedChanged as jest.Mock).mockReturnValue(emitterUnsub);
+
+    useStageStore.getState().registerQueueSubscription();
+    useStageStore.getState().unregisterQueueSubscription();
+
+    expect(queueUnsub).toHaveBeenCalledTimes(1);
+    expect(emitterUnsub).toHaveBeenCalledTimes(1);
+
+    useStageStore.getState().registerQueueSubscription();
+    expect(NoteSyncQueueService.subscribe).toHaveBeenCalledTimes(2);
+    useStageStore.getState().unregisterQueueSubscription();
   });
 
   it('setPushProgress sets and resets pushProgress', () => {

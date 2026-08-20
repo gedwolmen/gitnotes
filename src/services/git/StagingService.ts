@@ -8,6 +8,38 @@ import { GitFsService } from './GitFsService';
 import { getGitHostService } from './gitHostFactory';
 import type { GitHostUser } from './GitHost';
 import { githubActivity } from '../../stores/githubActivityStore';
+import { GitSyncGate } from './GitSyncGate';
+import { pullFromSingleRepo } from '../RepoPullService';
+import { useNoteStore } from '../../stores/noteStore';
+import { useCanvasStore } from '../../stores/canvasStore';
+import { useTodoStore } from '../../stores/todoStore';
+
+/**
+ * Stage-change emitter. Clone-mode staging commits are purely local — no
+ * other subsystem observes them — so StagingService broadcasts successful
+ * clone staging here. stageStore subscribes to reload pending counts, which
+ * also arms the idle auto-push via the scheduler's store subscription.
+ * API-mode enqueue does NOT fire this: the sync-queue subscription already
+ * covers that path, and notifying both would double-load the stage store.
+ */
+const STAGED_CHANGED_LISTENERS = new Set<() => void>();
+
+export function subscribeStagedChanged(fn: () => void): () => void {
+  STAGED_CHANGED_LISTENERS.add(fn);
+  return () => {
+    STAGED_CHANGED_LISTENERS.delete(fn);
+  };
+}
+
+export function notifyStagedChanged(): void {
+  for (const fn of [...STAGED_CHANGED_LISTENERS]) {
+    try {
+      fn();
+    } catch {
+      // Listener failures must not break staging.
+    }
+  }
+}
 
 /**
  * One staged change as surfaced to the Stage page. Queue-backed items
@@ -27,9 +59,32 @@ export interface StagedItem {
 export interface StagingResult {
   success: boolean;
   error?: string;
+  /**
+   * API-mode write-through (#927): the change is safely saved locally, but
+   * the push did not complete within the bounded save wait (e.g. slow or
+   * missing network). The mutation stays in the durable queue and syncs
+   * later. Set by the write-through path; callers may show a
+   * "saved locally, will sync" notice.
+   */
+  pendingSync?: boolean;
+  /**
+   * API-mode write-through (#927): the queued mutation was durably dropped
+   * (non-retryable failure such as a 409 conflict or auth error). The
+   * change is preserved locally; callers should surface the failure to the
+   * user instead of re-enqueueing.
+   */
+  droppedConflict?: boolean;
 }
 
 const UNPUSHED_COMMITS_PLACEHOLDER = '(unpushed commits)';
+
+/**
+ * Bounded write-through wait for API-mode saves (issue #927). The editor
+ * gets a response within this window; if the chain takes longer the result
+ * carries `pendingSync: true` and the chain continues detached — its
+ * `finally` block releases the cycle so the mutex is never leaked.
+ */
+const SYNC_SAVE_WAIT_MS = 45_000;
 
 async function resolveStageAuthor(): Promise<{ name: string; email: string }> {
   const user: GitHostUser | null = await getGitHostService('github').getAuthenticatedUser();
@@ -37,6 +92,78 @@ async function resolveStageAuthor(): Promise<{ name: string; email: string }> {
     name: user?.name ?? user?.login ?? 'gitnotes',
     email: user?.email ?? `${user?.login ?? 'gitnotes'}@users.noreply.gitnotes`,
   };
+}
+
+async function refreshStoresAfterPull(): Promise<void> {
+  await Promise.all([
+    useNoteStore.getState().refreshNotes(),
+    useCanvasStore.getState().refreshCanvases(),
+    useTodoStore.getState().refreshTodos(),
+  ]);
+}
+
+/**
+ * Write-through push for API-mode saves (#927). After enqueuing the
+ * mutation, we acquire a 'save' cycle, drain the queue, check whether
+ * our mutation survived or was dropped, then pull and refresh stores.
+ * The whole chain is raced against SYNC_SAVE_WAIT_MS; a timeout
+ * returns `pendingSync: true` but lets the chain continue detached —
+ * its `finally` block releases the cycle so the mutex is never leaked.
+ */
+async function writeThroughPush(
+  repoPath: string,
+  mutationId: string,
+): Promise<StagingResult> {
+  let dropped = false;
+  const unsubDrop = NoteSyncQueueService.onDroppedMutation((event) => {
+    if (event.mutation.id === mutationId) dropped = true;
+  });
+
+  const chain = (async (): Promise<StagingResult> => {
+    const releaseCycle = await GitSyncGate.acquireCycle('save');
+    try {
+      githubActivity.begin('Syncing');
+      try {
+        await NoteSyncQueueService.drain(undefined, 'save');
+
+        const stillQueued = await NoteSyncQueueService.getAll().then(
+          (items) => items.some((m) => m.id === mutationId),
+        );
+        if (stillQueued) {
+          return { success: true, pendingSync: true };
+        }
+        if (dropped) {
+          return {
+            success: false,
+            error: 'conflict',
+            droppedConflict: true,
+          };
+        }
+
+        await pullFromSingleRepo(repoPath);
+        await refreshStoresAfterPull();
+        return { success: true };
+      } finally {
+        githubActivity.end();
+      }
+    } finally {
+      releaseCycle();
+    }
+  })();
+
+  try {
+    return await Promise.race([
+      chain,
+      new Promise<StagingResult>((resolve) =>
+        setTimeout(
+          () => resolve({ success: true, pendingSync: true }),
+          SYNC_SAVE_WAIT_MS,
+        ),
+      ),
+    ]);
+  } finally {
+    unsubDrop();
+  }
 }
 
 /**
@@ -60,10 +187,12 @@ export class StagingService {
           author,
           push: false,
         });
-        return result.success ? { success: true } : { success: false, error: result.error };
+        if (!result.success) return { success: false, error: result.error };
+        notifyStagedChanged();
+        return { success: true };
       }
-      await NoteSyncQueueService.enqueueNoteUpsert(params);
-      return { success: true };
+      const { id } = await NoteSyncQueueService.enqueueNoteUpsert(params);
+      return writeThroughPush(params.repo, id);
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
@@ -82,10 +211,12 @@ export class StagingService {
           author,
           push: false,
         });
-        return result.success ? { success: true } : { success: false, error: result.error };
+        if (!result.success) return { success: false, error: result.error };
+        notifyStagedChanged();
+        return { success: true };
       }
-      await NoteSyncQueueService.enqueueNoteDelete(params);
-      return { success: true };
+      const { id } = await NoteSyncQueueService.enqueueNoteDelete(params);
+      return writeThroughPush(params.repo, id);
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
@@ -115,28 +246,27 @@ export class StagingService {
       });
     }
 
-    const overrides = await SyncEngineService.listOverrides();
     const savedRepos = await StorageService.getSavedRepositories();
-    for (const repo of Object.keys(overrides)) {
-      if (overrides[repo] !== 'clone') continue;
-      const saved = savedRepos.find((r) => r.path === repo);
-      const repoBranch = saved?.branch ?? 'main';
-      if (repoPath && repo !== repoPath) continue;
+    for (const repo of savedRepos) {
+      const mode = await SyncEngineService.getMode(repo.path);
+      if (mode !== 'clone') continue;
+      const repoBranch = repo.branch ?? 'main';
+      if (repoPath && repo.path !== repoPath) continue;
       if (branch && repoBranch !== branch) continue;
 
       const localOid = await GitFsService.getCommitOid({
-        repoPath: repo,
+        repoPath: repo.path,
         ref: `refs/heads/${repoBranch}`,
       });
       const remoteOid = await GitFsService.getCommitOid({
-        repoPath: repo,
+        repoPath: repo.path,
         ref: `refs/remotes/origin/${repoBranch}`,
       });
       const hasLocal = localOid !== null;
       const hasRemote = remoteOid !== null;
       const mergeBase = hasRemote
         ? await GitFsService.findMergeBase({
-            repoPath: repo,
+            repoPath: repo.path,
             ref1: `refs/heads/${repoBranch}`,
             ref2: `refs/remotes/origin/${repoBranch}`,
           })
@@ -149,7 +279,7 @@ export class StagingService {
       }
 
       items.push({
-        repoPath: repo,
+        repoPath: repo.path,
         branch: repoBranch,
         filePath: UNPUSHED_COMMITS_PLACEHOLDER,
         kind: 'upsert',

@@ -11,7 +11,7 @@ import { LocalGitWriter } from './git/LocalGitWriter';
 import { classifyGitHubSyncError, isRetryableFailure, syncStatusForError } from './git/syncFailure';
 import { resolveBranch } from './git/resolveBranch';
 import { clearDeleteFailure, clearDeleteFailuresForRepo, readDeleteFailures, recordDeleteFailure, DELETE_FAILURES_STORAGE_KEY } from './git/deleteFailures';
-import { GitSyncGate } from './git/GitSyncGate';
+import { GitSyncGate, type CycleSource } from './git/GitSyncGate';
 import { batchDeleteFiles, batchUpsertFiles } from './git/BatchGitOperations';
 import type { BatchDeleteFilesResult, BatchUpsertFilesResult } from './git/BatchGitOperations';
 import { parseRepoPath } from '../utils/gitPathParser';
@@ -314,10 +314,12 @@ class NoteSyncQueueServiceClass {
    * unique (repo, hint) pair, the queue is rewritten ONCE, and tombstones
    * plus pinned-failure clears happen in ONE read/modify/write pass per
    * storage key. Same-path dedup rules apply across the existing queue AND
-   * within the batch (last item for a path wins).
+   * within the batch (last item for a path wins). Returns the created
+   * mutation ids in input order (issue #927 infra — write-through callers
+   * need the id to detect their own mutation's drop-vs-pushed outcome).
    */
-  async enqueueNoteDeletes(items: NoteDeleteParams[]): Promise<void> {
-    if (items.length === 0) return;
+  async enqueueNoteDeletes(items: NoteDeleteParams[]): Promise<{ ids: string[] }> {
+    if (items.length === 0) return { ids: [] };
     const branches = await this.resolveBranchesOnce(
       items.map((params) => ({ repo: params.repo, hint: params.branch })),
     );
@@ -328,6 +330,7 @@ class NoteSyncQueueServiceClass {
 
     let queue = await this.getAll();
     const batchMutations: QueuedMutation[] = [];
+    const ids: string[] = [];
     for (const params of resolvedItems) {
       const sameRepoBranchPath = (m: QueuedMutation) =>
         m.params.repo === params.repo &&
@@ -337,8 +340,10 @@ class NoteSyncQueueServiceClass {
       for (let i = batchMutations.length - 1; i >= 0; i -= 1) {
         if (sameRepoBranchPath(batchMutations[i])) batchMutations.splice(i, 1);
       }
+      const id = this.newMutationId();
+      ids.push(id);
       batchMutations.push({
-        id: this.newMutationId(),
+        id,
         type: 'note.delete',
         createdAt: Date.now(),
         attempts: 0,
@@ -373,6 +378,7 @@ class NoteSyncQueueServiceClass {
         await AsyncStorage.setItem(DELETE_FAILURES_STORAGE_KEY, JSON.stringify(failureMap));
       }
     } catch { /* best-effort */ }
+    return { ids };
   }
 
   /**
@@ -381,18 +387,20 @@ class NoteSyncQueueServiceClass {
    * same-path prior upserts regardless of title (latest wins; a rename
    * reuses the path under a new title and must not leave two writes) and
    * any pending same-path delete (the note was re-created, delete wasted).
+   * Returns the created mutation ids in input order.
    */
   async enqueueNoteUpserts(
     items: NoteUpsertParams[],
     localNoteIds?: (string | undefined)[],
-  ): Promise<void> {
-    if (items.length === 0) return;
+  ): Promise<{ ids: string[] }> {
+    if (items.length === 0) return { ids: [] };
     const branches = await this.resolveBranchesOnce(
       items.map((params) => ({ repo: params.repo, hint: params.branch })),
     );
 
     let queue = await this.getAll();
     const batchMutations: QueuedMutation[] = [];
+    const ids: string[] = [];
     items.forEach((rawParams, index) => {
       const branch = branches.get(this.branchCacheKey(rawParams.repo, rawParams.branch))!;
       const resolvedParams: NoteUpsertParams = { ...rawParams, branch };
@@ -412,8 +420,10 @@ class NoteSyncQueueServiceClass {
       for (let i = batchMutations.length - 1; i >= 0; i -= 1) {
         if (!keepExisting(batchMutations[i])) batchMutations.splice(i, 1);
       }
+      const id = this.newMutationId();
+      ids.push(id);
       batchMutations.push({
-        id: this.newMutationId(),
+        id,
         type: 'note.upsert',
         createdAt: Date.now(),
         attempts: 0,
@@ -422,18 +432,25 @@ class NoteSyncQueueServiceClass {
       });
     });
     await this.saveAll([...queue, ...batchMutations]);
+    return { ids };
   }
 
-  async enqueueNoteUpsert(params: NoteUpsertParams, localNoteId?: string): Promise<void> {
-    await this.enqueueNoteUpserts([params], localNoteId === undefined ? undefined : [localNoteId]);
+  async enqueueNoteUpsert(params: NoteUpsertParams, localNoteId?: string): Promise<{ id: string }> {
+    const { ids } = await this.enqueueNoteUpserts(
+      [params],
+      localNoteId === undefined ? undefined : [localNoteId],
+    );
+    return { id: ids[0] };
   }
 
-  async enqueueNoteDelete(params: NoteDeleteParams): Promise<void> {
-    await this.enqueueNoteDeletes([params]);
+  async enqueueNoteDelete(params: NoteDeleteParams): Promise<{ id: string }> {
+    const { ids } = await this.enqueueNoteDeletes([params]);
+    return { id: ids[0] };
   }
 
   async drain(
     onProgress?: (fraction: number | null) => void,
+    source: CycleSource = 'background',
   ): Promise<{ succeeded: number; failed: number; remaining: number }> {
     if (this.isDraining) {
       const items = await this.getAll();
@@ -445,7 +462,7 @@ class NoteSyncQueueServiceClass {
     // background/manual sync). When this drain runs INSIDE a held cycle
     // the cycle owner already owns the mutex — acquiring again here would
     // self-deadlock, so the short-circuit is mandatory.
-    const releaseCycle = GitSyncGate.isCycleHeld() ? null : await GitSyncGate.acquireCycle();
+    const releaseCycle = GitSyncGate.isCycleHeld() ? null : await GitSyncGate.acquireCycle(source);
 
     try {
       const initial = await this.getAll();

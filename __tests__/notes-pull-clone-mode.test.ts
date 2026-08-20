@@ -46,6 +46,7 @@ jest.mock('../src/services/git/GitFsService', () => ({
   GitFsService: {
     isCloned: jest.fn(async () => false),
     clone: jest.fn(async () => undefined),
+    cloneExclusive: jest.fn(async () => undefined),
     fetch: jest.fn(async () => undefined),
     pullWithFastForward: jest.fn(async () => ({ ok: true })),
     findMergeBase: jest.fn(async () => null),
@@ -87,7 +88,7 @@ describe('pullNotesFromRepo via clone mode', () => {
 
   test('first pull clones the repo, subsequent pulls fetch only', async () => {
     await pullFromSingleRepo('me/gitnotes');
-    expect(GitFsService.clone).toHaveBeenCalledWith({
+    expect(GitFsService.cloneExclusive).toHaveBeenCalledWith({
       repoPath: 'me/gitnotes',
       branch: 'main',
       token: 'tok-abc',
@@ -95,10 +96,10 @@ describe('pullNotesFromRepo via clone mode', () => {
     expect(GitFsService.fetch).not.toHaveBeenCalled();
 
     (GitFsService.isCloned as jest.Mock).mockResolvedValue(true);
-    (GitFsService.clone as jest.Mock).mockClear();
+    (GitFsService.cloneExclusive as jest.Mock).mockClear();
     (GitFsService.pullWithFastForward as jest.Mock).mockClear();
     await pullFromSingleRepo('me/gitnotes');
-    expect(GitFsService.clone).not.toHaveBeenCalled();
+    expect(GitFsService.cloneExclusive).not.toHaveBeenCalled();
     expect(GitFsService.pullWithFastForward).toHaveBeenCalledWith({
       repoPath: 'me/gitnotes',
       branch: 'main',
@@ -151,14 +152,14 @@ describe('pullNotesFromRepo via clone mode', () => {
     (GitHubService.getFileContent as jest.Mock).mockResolvedValue('hello');
 
     await pullFromSingleRepo('me/gitnotes');
-    expect(GitFsService.clone).not.toHaveBeenCalled();
+    expect(GitFsService.cloneExclusive).not.toHaveBeenCalled();
     expect(GitFsService.fetch).not.toHaveBeenCalled();
     expect(GitFsService.listTree).not.toHaveBeenCalled();
     expect(GitHubService.getTreeRecursiveOrThrow).toHaveBeenCalledWith('me', 'gitnotes', 'main');
   });
 
   test('clone failure returns 0 and skips reconcile (saveAllNotes not called)', async () => {
-    (GitFsService.clone as jest.Mock).mockRejectedValueOnce(new Error('network'));
+    (GitFsService.cloneExclusive as jest.Mock).mockRejectedValueOnce(new Error('network'));
     const result = await pullFromSingleRepo('me/gitnotes');
     expect(result.notes).toBe(0);
     expect(StorageService.saveAllNotes).not.toHaveBeenCalled();

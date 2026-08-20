@@ -32,7 +32,7 @@ TaskManager.defineTask(TASK_NAME, async () => {
 
     // ONE cycle spans the drain+pull pair; drain() sees the held cycle and
     // skips its own acquisition (no self-deadlock).
-    const releaseCycle = await GitSyncGate.acquireCycle();
+    const releaseCycle = await GitSyncGate.acquireCycle('background');
     try {
       await NoteSyncQueueService.drain();
       const result = await pullAllFromRepos();

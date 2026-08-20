@@ -535,21 +535,20 @@ describe('sync-locking integration scenarios S1–S8', () => {
     expect(GitSyncGate.isPushActive('owner/repo')).toBe(false);
   });
 
-  it('S2 — note delete removes the row immediately (StorageService.deleteNote at delete time); drain success fires the succeeded event which is a no-op', async () => {
-    let resolveDelete: ((value: { success: boolean }) => void) | undefined;
-    (deleteNoteFromGitHub as jest.Mock).mockImplementation(
-      () => new Promise((res) => { resolveDelete = res; }),
-    );
+  it('S2 — note delete writes through: stageDelete drains immediately and removes the row; the succeeded event is idempotent', async () => {
+    (deleteNoteFromGitHub as jest.Mock).mockResolvedValue({ success: true });
 
     const note = createNote({ id: 'n2', title: 'Second', repo: 'owner/repo', branch: 'main', filePath: 'notes/second.md' });
     useNoteStore.setState({ notes: [note], isLoading: false, error: null });
-    (StorageService.getAllNotes as jest.Mock).mockResolvedValue([note]);
 
     const screen = renderNotesList();
     expect(screen.getByText('Second')).toBeTruthy();
 
     fireEvent(screen.getByTestId('notes-card-n2'), 'longPress');
-    fireEvent.press(screen.getByTestId('notes-context-menu.delete'));
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('notes-context-menu.delete'));
+      await flushMicrotasks(40);
+    });
 
     await waitFor(() => {
       expect(screen.queryByText('Second')).toBeNull();
@@ -558,17 +557,9 @@ describe('sync-locking integration scenarios S1–S8', () => {
     expect(StorageService.deleteNote).toHaveBeenCalledWith('n2');
     expect(useNoteStore.getState().notes.some((n) => n.id === 'n2')).toBe(false);
 
-    void NoteSyncQueueService.drain();
-    await act(async () => {
-      await flushMicrotasks();
-    });
-    await act(async () => {
-      resolveDelete?.({ success: true });
-    });
-
-    expect(screen.queryByText('Second')).toBeNull();
-    expect(screen.queryByTestId('note-row.lock-spinner')).toBeNull();
-    expect(useNoteStore.getState().notes.some((n) => n.id === 'n2')).toBe(false);
+    // Write-through drained the queue during stageDelete; the succeeded
+    // event fired and the mutation is gone without a manual drain.
+    expect(deleteNoteFromGitHub).toHaveBeenCalledTimes(1);
     expect(await NoteSyncQueueService.pendingCount()).toBe(0);
   }, 15000);
 
@@ -586,20 +577,19 @@ describe('sync-locking integration scenarios S1–S8', () => {
     fireEvent(screen.getByTestId('notes-card-n3'), 'longPress');
     fireEvent.press(screen.getByTestId('notes-context-menu.delete'));
 
-    await waitFor(() => {
-      expect(screen.queryByText('Third')).toBeNull();
-    }, { timeout: 5000 });
+    // Write-through: the durable 401 drops the mutation, so the delete is
+    // preserved locally — the row stays (not removed) and no per-row lock UI
+    // renders; the failure is recorded for the Stage screen.
+    await waitFor(async () => {
+      const failures = await readDeleteFailures();
+      expect(Object.keys(failures)).toEqual(['owner/repo::main::notes/third.md']);
+    });
+    expect(screen.getByText('Third')).toBeTruthy();
     expect(screen.queryByTestId('note-row.lock-spinner')).toBeNull();
     expect(screen.queryByTestId('note-row.lock-error')).toBeNull();
-
-    void NoteSyncQueueService.drain();
-
-    await waitFor(async () => {
-      expect(await NoteSyncQueueService.pendingCount()).toBe(0);
-    });
+    expect(await NoteSyncQueueService.pendingCount()).toBe(0);
 
     const failures = await readDeleteFailures();
-    expect(Object.keys(failures)).toEqual(['owner/repo::main::notes/third.md']);
     expect(failures['owner/repo::main::notes/third.md']).toMatchObject({
       error: 'Bad credentials',
       kind: 'authentication',

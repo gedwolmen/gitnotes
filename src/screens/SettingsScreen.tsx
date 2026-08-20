@@ -16,7 +16,6 @@ import { useForegroundSyncSettings } from '../hooks/useForegroundSyncSettings';
 import type { RootStackParamList } from '../navigation/types';
 import { GitHubService, type GitHubRepository } from '../services/GitHubService';
 import { RepoFileSyncService } from '../services/RepoFileSyncService';
-import { pullFromSingleRepo } from '../services/RepoPullService';
 import { TemplateRepoPreferenceService, type TemplateRepoPreference } from '../services/TemplateRepoPreferenceService';
 import { serializeTemplate, templateSlug } from '../services/TemplateMarkdownService';
 import { StagingService } from '../services/git/StagingService';
@@ -42,6 +41,7 @@ import { CloneProgressModal, type CloneProgress } from '../components/settings/C
 import type { GitRepository } from '../services/GitService';
 import { reposAffectedByRemovedHosts, buildProviderAccountCount, type RemovedHostRef } from '../services/git/repoRemovalCascade';
 import { useRepoStore } from '../stores/repoStore';
+import { importRepoAtAdd } from '../services/RepoImportService';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { RepoAccessPreflightError } from '../services/git/repoAccessPreflight';
@@ -53,6 +53,8 @@ import { promptProUpgrade } from '../utils/proAlerts';
 const MAX_OUTER_CLONE_RETRIES = 1;
 // The onProgress abort throw may never land (stuck transfer), so cancel force-closes after this.
 const CLONE_CANCEL_GRACE_MS = 800;
+
+type ImportAtAddOutcome = 'imported' | 'cancelled' | 'failed';
 
 function confirmUnverifiedWrite(t: TFunction, onConfirm: () => void): void {
   Alert.alert(
@@ -492,18 +494,65 @@ export default function SettingsScreen() {
     }
   }, [refreshNotes, t]);
 
-  const autoSyncAfterAdd = useCallback(async (repoPath: string, repoName: string) => {
-    if (!GitHubService.isAuthenticated()) return;
-    try {
-      const result = await pullFromSingleRepo(repoPath);
-      if (result.notes + result.canvases + result.todos > 0) {
-        await Promise.all([refreshNotes(), refreshCanvases(), refreshTodos()]);
-        HapticService.success();
+  /**
+   * #938 — import repo contents right after the repo is added and AWAIT the
+   * outcome, so the picker stays busy until contents actually land. The
+   * picker closes from here on success/cancel only — never on failure.
+   *
+   * `importRepoAtAdd` acquires NO sync-gate cycle — it never waits on
+   * StartupSyncGate. The only real interaction is a concurrent startup-pull
+   * lazy clone on the same repoPath, already mitigated by the
+   * GitFsService.clone in-flight promise dedup + `isCloned` short-circuit.
+   * Cancel goes through `cloneAbortedRef` (same machinery as
+   * handleEnableCloneMode); the one packfile-corruption retry happens inside
+   * GitFsService.cloneExclusive.
+   */
+  const importRepoAfterAdd = useCallback(async (repoPath: string, repoName: string): Promise<ImportAtAddOutcome> => {
+    const retryImport = async (): Promise<void> => {
+      setIsAddingRepoPath(repoPath);
+      try {
+        await importRepoAfterAdd(repoPath, repoName);
+      } finally {
+        setIsAddingRepoPath(null);
       }
-    } catch (error) {
-      console.warn('[Settings] auto-sync after add failed:', error);
-      Alert.alert(t('settings.autoSyncFailedTitle'), t('settings.autoSyncFailedBody', { name: repoName }));
+    };
+    cloneAbortedRef.current = false;
+    setCloneProgress({ repoName, phase: t('settings.clonePhasePreparing'), loaded: 0, total: null });
+    const result = await importRepoAtAdd(repoPath, repoName, (phase, loaded, total) => {
+      if (cloneAbortedRef.current) {
+        throw new Error('CLONE_CANCELLED');
+      }
+      setCloneProgress({ repoName, phase, loaded, total });
+    });
+    setCloneProgress(null);
+    if (cloneAbortedRef.current) {
+      // Cancel: abort stops the import; the repo stays added and its
+      // contents come in on the next pull.
+      setShowRepoPickerModal(false);
+      Alert.alert(t('common.success'), t('settings.autoSyncFailedBody', { name: repoName }), [
+        { text: t('common.ok') },
+      ]);
+      return 'cancelled';
     }
+    if (!result.ok) {
+      HapticService.error();
+      Alert.alert(
+        t('settings.autoSyncFailedTitle'),
+        result.error,
+        result.retryable
+          ? [
+              { text: t('common.cancel'), style: 'cancel' },
+              { text: t('common.retry'), onPress: () => void retryImport() },
+            ]
+          : [{ text: t('common.ok') }],
+      );
+      return 'failed';
+    }
+    if (result.counts.notes + result.counts.canvases + result.counts.todos > 0) {
+      await Promise.all([refreshNotes(), refreshCanvases(), refreshTodos()]);
+    }
+    setShowRepoPickerModal(false);
+    return 'imported';
   }, [refreshCanvases, refreshNotes, refreshTodos, t]);
 
   const openRepoPicker = useCallback(async () => {
@@ -541,8 +590,7 @@ export default function SettingsScreen() {
           await addRepo(repo.full_name, repo.name);
         }
         HapticService.success();
-        setShowRepoPickerModal(false);
-        autoSyncAfterAdd(repo.full_name, repo.name);
+        await importRepoAfterAdd(repo.full_name, repo.name);
       } catch (error) {
         if (error instanceof RepoAccessPreflightError && error.canRetry && !allowUnverifiedWrite) {
           confirmUnverifiedWrite(t, () => void attemptAdd(true));
@@ -560,7 +608,7 @@ export default function SettingsScreen() {
       }
     };
     await attemptAdd(false);
-  }, [addRepo, autoSyncAfterAdd, repositories, t, isPro, openPaywall, isAddingRepoPath]);
+  }, [addRepo, importRepoAfterAdd, repositories, t, isPro, openPaywall, isAddingRepoPath]);
 
   const handleAddManualRepo = useCallback(async () => {
     if (isAddingRepoPath !== null) return;
@@ -580,8 +628,7 @@ export default function SettingsScreen() {
         }
         setManualRepoInput('');
         HapticService.success();
-        setShowRepoPickerModal(false);
-        autoSyncAfterAdd(value, value);
+        await importRepoAfterAdd(value, value);
       } catch (error) {
         if (error instanceof RepoAccessPreflightError && error.canRetry && !allowUnverifiedWrite) {
           confirmUnverifiedWrite(t, () => void attemptAdd(true));
@@ -599,7 +646,7 @@ export default function SettingsScreen() {
       }
     };
     await attemptAdd(false);
-  }, [addRepo, autoSyncAfterAdd, manualRepoInput, t, repositories, isPro, openPaywall, isAddingRepoPath]);
+  }, [addRepo, importRepoAfterAdd, manualRepoInput, t, repositories, isPro, openPaywall, isAddingRepoPath]);
 
   const handleRemoveRepo = useCallback((repo: GitRepository) => {
     HapticService.warning();

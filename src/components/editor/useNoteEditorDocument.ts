@@ -16,7 +16,7 @@ import { NoteSyncQueueService } from '../../services/NoteSyncQueueService';
 import { classifyGitHubSyncError, isRetryableFailure, syncStatusForError } from '../../services/git/syncFailure';
 import { StagingService } from '../../services/git/StagingService';
 import { githubActivity } from '../../stores/githubActivityStore';
-import { useGitOperationStore, gitOperationRegistry } from '../../stores/gitOperationStore';
+import { useGitOperationStore, gitOperationRegistry, GIT_OP_ALL_REPOS } from '../../stores/gitOperationStore';
 import type { GitOp } from '../../stores/gitOperationStore';
 import { canvasToLink } from '../../models/Canvas';
 import { getExtensionForFormat, extractCanvasJsonRefs, slugifyLocal } from './editorShared';
@@ -48,8 +48,42 @@ function showDurableSyncFailureAlert(kind: ReturnType<typeof classifyGitHubSyncE
   }
 }
 
+type DurableSyncFailureKind = ReturnType<typeof classifyGitHubSyncError>['kind'];
+
+const DURABLE_DROP_KINDS: readonly DurableSyncFailureKind[] = [
+  'authentication',
+  'permission',
+  'saml',
+  'conflict',
+  'not_found',
+];
+
+function durableDropAlertKind(error: string | undefined): DurableSyncFailureKind {
+  const match = DURABLE_DROP_KINDS.find((kind) => kind === error);
+  return match ?? 'conflict';
+}
+
 function normalizeBranch(branch: string | undefined): string {
   return branch || 'main';
+}
+
+/**
+ * Returns true when the given repo has an in-flight push or pull operation
+ * scoped to it. Cycle ops (repo === '*') are excluded — they are covered by
+ * the SyncBlockOverlay and must not also block the editor independently.
+ */
+function hasRepoScopedSyncOp(
+  ops: Record<string, GitOp>,
+  repo: string | undefined,
+): boolean {
+  if (!repo) return false;
+  return Object.values(ops).some(
+    (op) =>
+      (op.status === 'queued' || op.status === 'running') &&
+      op.repo === repo &&
+      op.repo !== GIT_OP_ALL_REPOS &&
+      (op.kind === 'push' || op.kind === 'pull'),
+  );
 }
 
 function hasActiveDeleteLock(
@@ -301,6 +335,11 @@ export function useNoteEditorDocument({
       return;
     }
 
+    if (hasRepoScopedSyncOp(useGitOperationStore.getState().ops, repo)) {
+      Alert.alert(t('common.error'), t('sync.repoBusy'));
+      return;
+    }
+
     const syncBlockPath =
       existingFilePath ?? (folderPath ? `${folderPath}/${slugifyLocal(title.trim())}${getExtensionForFormat(noteFormat)}` : undefined);
     if (hasActiveDeleteLock(useGitOperationStore.getState().ops, noteId, repo, branch, syncBlockPath)) {
@@ -408,6 +447,11 @@ export function useNoteEditorDocument({
                 [{ text: 'OK' }],
               );
             }
+            if (stageResult.pendingSync) {
+              Alert.alert(t('sync.pendingSyncTitle'), t('sync.pendingSyncBody'));
+            }
+          } else if (stageResult.droppedConflict) {
+            showDurableSyncFailureAlert(durableDropAlertKind(stageResult.error));
           } else {
             // Never orphan a locally-saved note: fall back to the durable queue (mirrors the retryable-failure path below).
             console.warn('[useNoteEditorDocument] stage failed:', stageResult.error);

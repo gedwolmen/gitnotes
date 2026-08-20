@@ -546,7 +546,21 @@
     "deleteFailed": "Delete Failed",
     "retry": "Retry",
     "deleteInProgress": "This note is being deleted. Saving is disabled until the delete completes.",
-    "offlineBanner": "You're offline — changes won't sync"
+    "repoBusy": "Repository is syncing. Please try again in a moment.",
+    "offlineBanner": "You're offline — changes won't sync",
+    "droppedTitle": "Change saved locally",
+    "droppedBody": "Your change is saved locally but couldn't sync. Tap Stage to push.",
+    "pendingSyncTitle": "Sync pending",
+    "pendingSyncBody": "Your change is saved locally and will sync when the network is available.",
+    "dropReasonConflict": "Sync conflict: the note was modified on GitHub.",
+    "dropReasonAuth": "GitHub authentication failed. Reconnect your account in Settings.",
+    "dropReasonNotFound": "The repository or file could not be found on GitHub.",
+    "dropReasonRetries": "Sync kept failing, so automatic retries stopped.",
+    "overlay": {
+      "syncing": "Syncing…",
+      "pushing": "Pushing…",
+      "pulling": "Pulling…"
+    }
   },
   "onboarding": {
     "steps": {

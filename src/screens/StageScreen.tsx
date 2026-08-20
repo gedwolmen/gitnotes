@@ -126,14 +126,14 @@ export default function StageScreen() {
   const handlePushGroup = useCallback(
     (group: StageGroup) => {
       requestPush(group.repoPath, group.branch);
-      void drainPushQueue();
+      void drainPushQueue('manual');
     },
     [requestPush],
   );
 
   const handlePushAll = useCallback(() => {
     pushAll();
-    void drainPushQueue();
+    void drainPushQueue('manual');
   }, [pushAll]);
 
   const handleRefresh = useCallback(async () => {

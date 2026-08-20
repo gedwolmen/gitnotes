@@ -28,8 +28,8 @@ jest.mock('../src/services/NoteSyncQueueService', () => {
   const dropped = new Set<DroppedHandler>();
   return {
     NoteSyncQueueService: {
-      enqueueNoteDelete: jest.fn(async () => undefined),
-      enqueueNoteDeletes: jest.fn(async () => undefined),
+      enqueueNoteDelete: jest.fn(async () => ({ id: 'mock-delete-mutation' })),
+      enqueueNoteDeletes: jest.fn(async () => ({ ids: [] })),
       drain: jest.fn(async () => ({ succeeded: 0, failed: 0, remaining: 0 })),
       pendingCount: jest.fn(async () => 0),
       subscribe: jest.fn(() => jest.fn()),
@@ -66,6 +66,8 @@ jest.mock('../src/services/StorageService', () => ({
     deleteNote: jest.fn(async () => true),
     getAllNotes: jest.fn(async () => []),
     getSavedRepositories: jest.fn(async () => []),
+    getAllCanvases: jest.fn(async () => []),
+    getAllTodos: jest.fn(async () => []),
   },
 }));
 
@@ -79,6 +81,19 @@ jest.mock('../src/services/SyncEngineService', () => ({
 
 jest.mock('../src/services/RepoPullService', () => ({
   pullAllFromRepos: jest.fn(async () => undefined),
+  pullFromSingleRepo: jest.fn(async () => ({ repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0 })),
+}));
+
+jest.mock('../src/services/git/GitSyncGate', () => ({
+  GitSyncGate: {
+    acquireCycle: jest.fn(async () => () => {}),
+    isCycleHeld: jest.fn(() => false),
+    isPushActive: jest.fn(() => false),
+    markPushActive: jest.fn(),
+    clearPushActive: jest.fn(),
+    waitForIdle: jest.fn(async () => true),
+    __resetForTest: jest.fn(),
+  },
 }));
 
 jest.mock('../src/services/git/manualSync', () => ({
@@ -471,11 +486,14 @@ describe('notes delete lock', () => {
     expect(screen.getByText('First')).toBeTruthy();
 
     fireEvent(screen.getByTestId('notes-card-n1'), 'longPress');
-    fireEvent.press(screen.getByTestId('notes-context-menu.delete'));
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('notes-context-menu.delete'));
+      for (let i = 0; i < 30; i += 1) await Promise.resolve();
+    });
 
     await waitFor(() => {
       expect(screen.queryByText('First')).toBeNull();
-    });
+    }, { timeout: 5000 });
     expect(screen.queryByTestId('note-row.lock-spinner')).toBeNull();
     expect(screen.queryByTestId('note-row.lock-error')).toBeNull();
     expect(useNoteStore.getState().notes).toHaveLength(0);
@@ -488,7 +506,8 @@ describe('notes delete lock', () => {
         localNoteId: 'n1',
       }),
     );
-    expect(NoteSyncQueueService.drain).not.toHaveBeenCalled();
+    // API-mode write-through (#927): stageDelete drains immediately on save.
+    expect(NoteSyncQueueService.drain).toHaveBeenCalled();
   });
 
   it('queue success event is a no-op: row already removed at delete time, no crash or leftover ops', async () => {
@@ -497,7 +516,10 @@ describe('notes delete lock', () => {
 
     const screen = renderWithTheme(<NotesListScreen />);
     fireEvent(screen.getByTestId('notes-card-n2'), 'longPress');
-    fireEvent.press(screen.getByTestId('notes-context-menu.delete'));
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('notes-context-menu.delete'));
+      for (let i = 0; i < 30; i += 1) await Promise.resolve();
+    });
 
     await waitFor(() => {
       expect(screen.queryByText('Second')).toBeNull();
@@ -523,7 +545,10 @@ describe('notes delete lock', () => {
 
     const screen = renderWithTheme(<NotesListScreen />);
     fireEvent(screen.getByTestId('notes-card-n3'), 'longPress');
-    fireEvent.press(screen.getByTestId('notes-context-menu.delete'));
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('notes-context-menu.delete'));
+      for (let i = 0; i < 30; i += 1) await Promise.resolve();
+    });
 
     await waitFor(() => {
       expect(screen.queryByText('Third')).toBeNull();
@@ -557,7 +582,9 @@ describe('notes delete lock', () => {
         filePath: 'notes/third.md',
       }),
     );
-    expect(NoteSyncQueueService.drain).not.toHaveBeenCalled();
+    // retryDeleteFailure re-enqueues WITHOUT draining: the write-through
+    // delete already drained once, and the retry must not add another drain.
+    expect(NoteSyncQueueService.drain).toHaveBeenCalledTimes(1);
     expect(screen.queryByText('Third')).toBeNull();
   }, 15000);
 

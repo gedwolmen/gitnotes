@@ -35,7 +35,7 @@ yarn eslint . --ext .ts,.tsx  # Linting
 
 ## Sync Architecture (Git Services) — source of truth
 
-Every repo has a sync mode (`SyncEngineService.getMode`, `src/services/SyncEngineService.ts`, default `'api'`, per-repo override map `@gitnotes:sync_engine_modes`). The two modes behave differently ON PURPOSE; do not "fix" one into the other:
+Every repo has a sync mode (`SyncEngineService.getMode`, `src/services/SyncEngineService.ts`, default `'clone'`, per-repo override map `@gitnotes:sync_engine_modes`). The two modes behave differently ON PURPOSE; do not "fix" one into the other:
 
 - **Clone mode — stage-then-push (write-behind):**
   - User changes are **staged locally** (local git commit with `push:false` via `StagingService` / `LocalGitWriter`). Nothing reaches GitHub at save time.

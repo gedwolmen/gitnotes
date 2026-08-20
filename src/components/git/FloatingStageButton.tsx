@@ -111,7 +111,7 @@ export function FloatingStageButton({ currentRouteName }: FloatingStageButtonPro
     affordances.handleHoldComplete();
     HapticService.selection();
     useStageStore.getState().pushAll();
-    void drainPushQueue();
+    void drainPushQueue('manual');
   }, [affordances, anyPushing]);
 
   const panGesture = useStageButtonPanGesture(position);

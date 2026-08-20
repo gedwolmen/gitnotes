@@ -1,10 +1,40 @@
 jest.mock('../../src/services/NoteSyncQueueService', () => ({
   NoteSyncQueueService: {
-    enqueueNoteUpsert: jest.fn(async () => undefined),
-    enqueueNoteDelete: jest.fn(async () => undefined),
+    enqueueNoteUpsert: jest.fn(async () => ({ id: 'mut_upsert' })),
+    enqueueNoteDelete: jest.fn(async () => ({ id: 'mut_delete' })),
     getAll: jest.fn(async () => []),
     drain: jest.fn(async () => ({ succeeded: 0, failed: 0, remaining: 0 })),
+    onDroppedMutation: jest.fn(() => jest.fn()),
   },
+}));
+
+jest.mock('../../src/services/git/GitSyncGate', () => ({
+  GitSyncGate: {
+    acquireCycle: jest.fn(async () => jest.fn()),
+    isCycleHeld: jest.fn(() => false),
+  },
+}));
+
+jest.mock('../../src/services/RepoPullService', () => ({
+  pullFromSingleRepo: jest.fn(async () => ({
+    repos: 1,
+    notes: 0,
+    canvases: 0,
+    todos: 0,
+    templates: 0,
+  })),
+}));
+
+jest.mock('../../src/stores/noteStore', () => ({
+  useNoteStore: { getState: jest.fn() },
+}));
+
+jest.mock('../../src/stores/canvasStore', () => ({
+  useCanvasStore: { getState: jest.fn() },
+}));
+
+jest.mock('../../src/stores/todoStore', () => ({
+  useTodoStore: { getState: jest.fn() },
 }));
 
 jest.mock('../../src/services/git/LocalGitWriter', () => ({
@@ -79,6 +109,7 @@ jest.mock('../../src/stores/githubActivityStore', () => ({
   },
 }));
 
+import { __resetImportDedupForTest } from '../../src/services/RepoImportService';
 import { StagingService } from '../../src/services/git/StagingService';
 import type { StagedItem } from '../../src/services/git/StagingService';
 import { NoteSyncQueueService } from '../../src/services/NoteSyncQueueService';
@@ -90,11 +121,17 @@ import { AuthService } from '../../src/services/AuthService';
 import { syncNoteToGitHub, deleteNoteFromGitHub } from '../../src/services/NoteGitHubSyncService';
 import { GitHubService } from '../../src/services/GitHubService';
 import { githubActivity } from '../../src/stores/githubActivityStore';
+import { GitSyncGate } from '../../src/services/git/GitSyncGate';
+import { pullFromSingleRepo } from '../../src/services/RepoPullService';
+import { useNoteStore } from '../../src/stores/noteStore';
+import { useCanvasStore } from '../../src/stores/canvasStore';
+import { useTodoStore } from '../../src/stores/todoStore';
 
 const enqueueUpsert = NoteSyncQueueService.enqueueNoteUpsert as jest.Mock;
 const enqueueDelete = NoteSyncQueueService.enqueueNoteDelete as jest.Mock;
 const queueGetAll = NoteSyncQueueService.getAll as jest.Mock;
 const queueDrain = NoteSyncQueueService.drain as jest.Mock;
+const onDroppedMutation = NoteSyncQueueService.onDroppedMutation as jest.Mock;
 
 const writeAndCommit = LocalGitWriter.writeAndCommit as jest.Mock;
 const deleteAndCommit = LocalGitWriter.deleteAndCommit as jest.Mock;
@@ -107,6 +144,11 @@ const getCommitOid = GitFsService.getCommitOid as jest.Mock;
 const findMergeBase = GitFsService.findMergeBase as jest.Mock;
 const getSavedRepositories = StorageService.getSavedRepositories as jest.Mock;
 const getToken = AuthService.getToken as jest.Mock;
+const acquireCycle = GitSyncGate.acquireCycle as jest.Mock;
+const mockPullFromSingleRepo = pullFromSingleRepo as jest.Mock;
+const mockRefreshNotes = jest.fn(async () => {});
+const mockRefreshCanvases = jest.fn(async () => {});
+const mockRefreshTodos = jest.fn(async () => {});
 
 interface LooseMutation {
   id: string;
@@ -143,8 +185,9 @@ function groupByRepoBranch(items: StagedItem[]): Map<string, StagedItem[]> {
 describe('StagingService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    enqueueUpsert.mockResolvedValue(undefined);
-    enqueueDelete.mockResolvedValue(undefined);
+    jest.useRealTimers();
+    enqueueUpsert.mockResolvedValue({ id: 'mut_upsert' });
+    enqueueDelete.mockResolvedValue({ id: 'mut_delete' });
     queueGetAll.mockResolvedValue([]);
     queueDrain.mockResolvedValue({ succeeded: 0, failed: 0, remaining: 0 });
     writeAndCommit.mockResolvedValue({ success: true });
@@ -155,11 +198,25 @@ describe('StagingService', () => {
     getCommitOid.mockResolvedValue(null);
     getSavedRepositories.mockResolvedValue([]);
     getToken.mockResolvedValue('test-token');
+    acquireCycle.mockResolvedValue(jest.fn());
+    mockPullFromSingleRepo.mockResolvedValue({ repos: 1, notes: 1, canvases: 0, todos: 0, templates: 0 });
+    onDroppedMutation.mockReturnValue(jest.fn());
+    mockRefreshNotes.mockClear();
+    mockRefreshCanvases.mockClear();
+    mockRefreshTodos.mockClear();
+    (useNoteStore.getState as jest.Mock).mockReturnValue({ refreshNotes: mockRefreshNotes });
+    (useCanvasStore.getState as jest.Mock).mockReturnValue({ refreshCanvases: mockRefreshCanvases });
+    (useTodoStore.getState as jest.Mock).mockReturnValue({ refreshTodos: mockRefreshTodos });
+  });
+
+  afterEach(() => {
+    __resetImportDedupForTest();
   });
 
   describe('stageUpsert', () => {
-    test('api mode enqueues with zero network calls', async () => {
+    test('api mode enqueues then writes through: drain, pull, success', async () => {
       getMode.mockResolvedValue('api');
+      queueGetAll.mockResolvedValue([]);
       const params = {
         repo: 'owner/repo',
         branch: 'main',
@@ -173,11 +230,91 @@ describe('StagingService', () => {
       expect(result).toEqual({ success: true });
       expect(enqueueUpsert).toHaveBeenCalledTimes(1);
       expect(enqueueUpsert).toHaveBeenCalledWith(params);
+      expect(acquireCycle).toHaveBeenCalledWith('save');
+      expect(queueDrain).toHaveBeenCalledWith(undefined, 'save');
+      expect(mockPullFromSingleRepo).toHaveBeenCalledWith('owner/repo');
+      expect(mockRefreshNotes).toHaveBeenCalled();
+      expect(mockRefreshCanvases).toHaveBeenCalled();
+      expect(mockRefreshTodos).toHaveBeenCalled();
+      expect(githubActivity.begin).toHaveBeenCalledWith('Syncing');
+      expect(githubActivity.end).toHaveBeenCalled();
       expect(syncNoteToGitHub).not.toHaveBeenCalled();
-      expect(deleteNoteFromGitHub).not.toHaveBeenCalled();
-      expect(GitHubService.updateFile).not.toHaveBeenCalled();
-      expect(GitHubService.deleteFile).not.toHaveBeenCalled();
       expect(writeAndCommit).not.toHaveBeenCalled();
+    });
+
+    test('api mode write-through returns pendingSync when mutation stays in queue', async () => {
+      getMode.mockResolvedValue('api');
+      const queuedMutation = {
+        id: 'mut_upsert',
+        type: 'note.upsert' as const,
+        createdAt: 0,
+        attempts: 0,
+        params: { repo: 'owner/repo', branch: 'main', filePath: 'notes/a.md', title: 'A', content: 'hello' },
+      };
+      queueGetAll.mockResolvedValue([queuedMutation]);
+
+      const result = await StagingService.stageUpsert({
+        repo: 'owner/repo',
+        title: 'A',
+        content: 'hello',
+      });
+
+      expect(result).toEqual({ success: true, pendingSync: true });
+      expect(queueDrain).toHaveBeenCalled();
+      expect(mockPullFromSingleRepo).not.toHaveBeenCalled();
+    });
+
+    test('api mode write-through returns droppedConflict when drop event fires', async () => {
+      getMode.mockResolvedValue('api');
+      queueGetAll.mockResolvedValue([]);
+
+      const dropListeners: Array<(event: { mutation: { id: string } }) => void> = [];
+      onDroppedMutation.mockImplementation((fn: (event: { mutation: { id: string } }) => void) => {
+        dropListeners.push(fn);
+        return jest.fn();
+      });
+
+      const drainPromise = new Promise<{ succeeded: number; failed: number; remaining: number }>((resolve) => {
+        queueDrain.mockImplementation(async () => {
+          for (const listener of dropListeners) {
+            listener({ mutation: { id: 'mut_upsert' } });
+          }
+          resolve({ succeeded: 0, failed: 1, remaining: 0 });
+          return { succeeded: 0, failed: 1, remaining: 0 };
+        });
+      });
+
+      const result = await StagingService.stageUpsert({
+        repo: 'owner/repo',
+        title: 'A',
+        content: 'hello',
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: 'conflict',
+        droppedConflict: true,
+      });
+      expect(mockPullFromSingleRepo).not.toHaveBeenCalled();
+    });
+
+    test('api mode write-through times out after 45s and returns pendingSync', async () => {
+      jest.useFakeTimers();
+      getMode.mockResolvedValue('api');
+      queueGetAll.mockResolvedValue([]);
+
+      acquireCycle.mockReturnValue(new Promise<() => void>(() => {}));
+
+      const resultPromise = StagingService.stageUpsert({
+        repo: 'owner/repo',
+        title: 'A',
+        content: 'hello',
+      });
+
+      await jest.advanceTimersByTimeAsync(45_000);
+      const result = await resultPromise;
+
+      expect(result).toEqual({ success: true, pendingSync: true });
     });
 
     test('api mode surfaces enqueue rejection without touching the remote', async () => {
@@ -193,6 +330,7 @@ describe('StagingService', () => {
       expect(result).toEqual({ success: false, error: 'queue write failed' });
       expect(syncNoteToGitHub).not.toHaveBeenCalled();
       expect(GitHubService.updateFile).not.toHaveBeenCalled();
+      expect(acquireCycle).not.toHaveBeenCalled();
     });
 
     test('clone mode writes with push:false and never pushes', async () => {
@@ -226,8 +364,9 @@ describe('StagingService', () => {
   });
 
   describe('stageDelete', () => {
-    test('api mode enqueues a delete', async () => {
+    test('api mode enqueues a delete then writes through: drain, pull, success', async () => {
       getMode.mockResolvedValue('api');
+      queueGetAll.mockResolvedValue([]);
       const params = {
         repo: 'owner/repo',
         branch: 'main',
@@ -240,6 +379,11 @@ describe('StagingService', () => {
       expect(result).toEqual({ success: true });
       expect(enqueueDelete).toHaveBeenCalledTimes(1);
       expect(enqueueDelete).toHaveBeenCalledWith(params);
+      expect(acquireCycle).toHaveBeenCalledWith('save');
+      expect(queueDrain).toHaveBeenCalledWith(undefined, 'save');
+      expect(mockPullFromSingleRepo).toHaveBeenCalledWith('owner/repo');
+      expect(githubActivity.begin).toHaveBeenCalledWith('Syncing');
+      expect(githubActivity.end).toHaveBeenCalled();
       expect(deleteAndCommit).not.toHaveBeenCalled();
       expect(deleteNoteFromGitHub).not.toHaveBeenCalled();
     });
@@ -309,7 +453,7 @@ describe('StagingService', () => {
     });
 
     test('surfaces clone unpushed commits when local oid differs from remote', async () => {
-      listOverrides.mockResolvedValue({ 'owner/repo': 'clone' });
+      getMode.mockResolvedValue('clone');
       getSavedRepositories.mockResolvedValue([
         { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
       ]);
@@ -332,7 +476,7 @@ describe('StagingService', () => {
     });
 
     test('missing remote ref lists all local commits as staged', async () => {
-      listOverrides.mockResolvedValue({ 'owner/repo': 'clone' });
+      getMode.mockResolvedValue('clone');
       getSavedRepositories.mockResolvedValue([
         { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
       ]);
@@ -354,7 +498,7 @@ describe('StagingService', () => {
     });
 
     test('strictly-behind local branch (local === merge base) emits no phantom unpushed row (#879)', async () => {
-      listOverrides.mockResolvedValue({ 'owner/repo': 'clone' });
+      getMode.mockResolvedValue('clone');
       getSavedRepositories.mockResolvedValue([
         { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
       ]);
@@ -371,7 +515,7 @@ describe('StagingService', () => {
     });
 
     test('fresh clone with no commits on either side is not staged', async () => {
-      listOverrides.mockResolvedValue({ 'owner/repo': 'clone' });
+      getMode.mockResolvedValue('clone');
       getSavedRepositories.mockResolvedValue([
         { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
       ]);
@@ -428,7 +572,7 @@ getCommitOid.mockResolvedValue(null);
     });
 
     test('clone mode pushes once with the correct repoPath and branch', async () => {
-      listOverrides.mockResolvedValue({ 'owner/repo': 'clone' });
+      getMode.mockResolvedValue('clone');
       getSavedRepositories.mockResolvedValue([
         { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
       ]);
@@ -454,7 +598,7 @@ getCommitOid.mockResolvedValue(null);
     });
 
     test('clone push forwards onProgress to githubActivity.setProgress', async () => {
-      listOverrides.mockResolvedValue({ 'owner/repo': 'clone' });
+      getMode.mockResolvedValue('clone');
       getSavedRepositories.mockResolvedValue([
         { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
       ]);
@@ -482,7 +626,7 @@ getCommitOid.mockResolvedValue(null);
     });
 
     test('clone push failure surfaces an error', async () => {
-      listOverrides.mockResolvedValue({ 'owner/repo': 'clone' });
+      getMode.mockResolvedValue('clone');
       getSavedRepositories.mockResolvedValue([
         { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
       ]);
@@ -507,7 +651,7 @@ getCommitOid.mockResolvedValue(null);
           title: 'stale',
         }),
       ]);
-      listOverrides.mockResolvedValue({ 'owner/repo': 'clone' });
+      getMode.mockResolvedValue('clone');
       getSavedRepositories.mockResolvedValue([
         { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
       ]);
@@ -554,7 +698,7 @@ getCommitOid.mockResolvedValue(null);
     });
 
     test('clone mode forwards onProgress fraction and githubActivity.setProgress', async () => {
-      listOverrides.mockResolvedValue({ 'owner/repo': 'clone' });
+      getMode.mockResolvedValue('clone');
       getSavedRepositories.mockResolvedValue([
         { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
       ]);
@@ -588,7 +732,7 @@ getCommitOid.mockResolvedValue(null);
     });
 
     test('clone mode calls onProgress(null) when total is 0', async () => {
-      listOverrides.mockResolvedValue({ 'owner/repo': 'clone' });
+      getMode.mockResolvedValue('clone');
       getSavedRepositories.mockResolvedValue([
         { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
       ]);

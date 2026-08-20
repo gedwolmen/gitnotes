@@ -1333,4 +1333,146 @@ describe('NoteSyncQueueService', () => {
       unsub();
     });
   });
+
+  describe('enqueue returns created mutation ids (#927 infra)', () => {
+    test('enqueueNoteUpsert returns the created mutation id', async () => {
+      const result = await NoteSyncQueueService.enqueueNoteUpsert(
+        {
+          repo: 'owner/repo',
+          branch: 'main',
+          filePath: 'notes/a.md',
+          title: 'A',
+          content: 'x',
+          format: 'markdown',
+        },
+        'local-note-1',
+      );
+
+      expect(result).toEqual({ id: expect.any(String) });
+      const items = await NoteSyncQueueService.getAll();
+      expect(items).toHaveLength(1);
+      expect(items[0].id).toBe(result.id);
+      expect(items[0].type).toBe('note.upsert');
+      if (items[0].type === 'note.upsert') {
+        expect(items[0].localNoteId).toBe('local-note-1');
+      }
+    });
+
+    test('enqueueNoteDelete returns the id', async () => {
+      const result = await NoteSyncQueueService.enqueueNoteDelete({
+        repo: 'owner/repo',
+        branch: 'main',
+        filePath: 'notes/a.md',
+        title: 'A',
+      });
+
+      expect(result).toEqual({ id: expect.any(String) });
+      const items = await NoteSyncQueueService.getAll();
+      expect(items).toHaveLength(1);
+      expect(items[0].id).toBe(result.id);
+      expect(items[0].type).toBe('note.delete');
+    });
+
+    test('enqueueNoteUpserts returns array of ids in insertion order', async () => {
+      const result = await NoteSyncQueueService.enqueueNoteUpserts([
+        { repo: 'r', branch: 'main', filePath: 'a.md', title: 'A', content: '1' },
+        { repo: 'r', branch: 'main', filePath: 'b.md', title: 'B', content: '2' },
+        { repo: 'r', branch: 'main', filePath: 'c.md', title: 'C', content: '3' },
+      ]);
+
+      expect(result).toEqual({ ids: expect.any(Array) });
+      expect(result.ids).toHaveLength(3);
+      for (const id of result.ids) expect(id).toEqual(expect.any(String));
+      expect(new Set(result.ids).size).toBe(3);
+
+      const items = await NoteSyncQueueService.getAll();
+      expect(items.map((m) => m.params.filePath)).toEqual(['a.md', 'b.md', 'c.md']);
+      expect(items.map((m) => m.id)).toEqual(result.ids);
+    });
+
+    test('enqueueNoteDeletes returns array of ids', async () => {
+      const result = await NoteSyncQueueService.enqueueNoteDeletes([
+        { repo: 'r', branch: 'main', filePath: 'a.md' },
+        { repo: 'r', branch: 'main', filePath: 'b.md' },
+      ]);
+
+      expect(result).toEqual({ ids: expect.any(Array) });
+      expect(result.ids).toHaveLength(2);
+      expect(new Set(result.ids).size).toBe(2);
+
+      const items = await NoteSyncQueueService.getAll();
+      expect(items.map((m) => m.params.filePath)).toEqual(['a.md', 'b.md']);
+      expect(items.map((m) => m.id)).toEqual(result.ids);
+    });
+
+    test('the returned id is the same id carried by the drop event (durable failure)', async () => {
+      (syncNoteToGitHub as jest.Mock).mockResolvedValue({
+        success: false,
+        error: '409 Conflict',
+        status: 409,
+      });
+
+      const { id } = await NoteSyncQueueService.enqueueNoteUpsert({
+        repo: 'r',
+        branch: 'main',
+        filePath: 'a.md',
+        title: 'A',
+        content: 'x',
+        format: 'markdown',
+      });
+
+      const events: DroppedMutationEvent[] = [];
+      const unsub = NoteSyncQueueService.onDroppedMutation((e) => events.push(e));
+      try {
+        await NoteSyncQueueService.drain();
+      } finally {
+        unsub();
+      }
+
+      expect(events).toHaveLength(1);
+      expect(events[0].mutation.id).toBe(id);
+    });
+  });
+
+  describe('onDroppedMutation event shape (#927 infra)', () => {
+    test('subscribers receive event with shape {mutation, reason, error?, status?} for durable failure', async () => {
+      (syncNoteToGitHub as jest.Mock).mockResolvedValue({
+        success: false,
+        error: '409 Conflict',
+        status: 409,
+      });
+
+      await NoteSyncQueueService.enqueueNoteUpsert({
+        repo: 'owner/repo',
+        branch: 'main',
+        filePath: 'notes/a.md',
+        title: 'A',
+        content: 'x',
+        format: 'markdown',
+      });
+      const queued = await NoteSyncQueueService.getAll();
+
+      const events: DroppedMutationEvent[] = [];
+      const unsub = NoteSyncQueueService.onDroppedMutation((e) => events.push(e));
+      try {
+        await NoteSyncQueueService.drain();
+      } finally {
+        unsub();
+      }
+
+      expect(events).toHaveLength(1);
+      const event = events[0];
+      // Exact key set: mutation + reason (+ optional error/status pair) —
+      // subscribers derive id/repo/type from event.mutation (nested, not
+      // flattened).
+      expect(Object.keys(event).sort()).toEqual(['error', 'mutation', 'reason', 'status']);
+      expect(event.reason).toBe('durable');
+      expect(event.error).toBe('409 Conflict');
+      expect(event.status).toBe(409);
+      expect(event.mutation).toEqual(queued[0]);
+      expect(event.mutation.id).toBe(queued[0].id);
+      expect(event.mutation.type).toBe('note.upsert');
+      expect(event.mutation.params.repo).toBe('owner/repo');
+    });
+  });
 });

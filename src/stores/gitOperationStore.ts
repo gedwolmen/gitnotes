@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import type { QueuedMutation } from '../services/NoteSyncQueueService';
+import type { CycleSource } from '../services/git/GitSyncGate';
 
 /**
  * Central registry of git operations (saves, deletes, pushes, pulls, ...).
@@ -32,6 +33,8 @@ export interface GitOp {
   error?: string;
   attempts: number;
   createdAt: number;
+  /** Cycle ops only: why the cycle started (blocking-UI gating, #926). */
+  source?: CycleSource;
 }
 
 export type GitOpBeginInput = Omit<GitOp, 'id' | 'createdAt'> & { status?: 'queued' | 'running' };
@@ -205,6 +208,7 @@ export const useGitOperationStore = create<GitOperationState & GitOperationActio
       error: input.error,
       attempts: input.attempts,
       createdAt: Date.now(),
+      source: input.source,
     };
     set((state) => ({ ops: { ...state.ops, [id]: op } }));
     return id;

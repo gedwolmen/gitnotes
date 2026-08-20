@@ -125,6 +125,8 @@ describe('StageScreen', () => {
     mockRegisterQueueSubscription.mockClear();
     mockRequestPush.mockClear();
     mockPushAll.mockClear();
+    const schedulerMock = jest.requireMock('../../src/services/StagePushScheduler') as { drainPushQueue: jest.Mock };
+    schedulerMock.drainPushQueue.mockClear();
   });
 
   it('renders staged items from two groups with both filePaths visible', () => {
@@ -166,6 +168,8 @@ describe('StageScreen', () => {
     fireEvent.press(getByTestId('stage.push.owner/repo-a::main'));
 
     expect(mockRequestPush).toHaveBeenCalledWith('owner/repo-a', 'main');
+    const schedulerMock = jest.requireMock('../../src/services/StagePushScheduler') as { drainPushQueue: jest.Mock };
+    expect(schedulerMock.drainPushQueue).toHaveBeenCalledWith('manual');
   });
 
   it('calls pushAll when the header Push all button is pressed', () => {
@@ -176,6 +180,8 @@ describe('StageScreen', () => {
     fireEvent.press(getByTestId('stage.push-all'));
 
     expect(mockPushAll).toHaveBeenCalledTimes(1);
+    const schedulerMock = jest.requireMock('../../src/services/StagePushScheduler') as { drainPushQueue: jest.Mock };
+    expect(schedulerMock.drainPushQueue).toHaveBeenCalledWith('manual');
   });
 
   it('disables the group Push button while that key is pushing', () => {
