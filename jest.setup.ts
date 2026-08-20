@@ -435,6 +435,8 @@ const mockProStoreState: Record<string, unknown> = {
   monthlyPackage: null,
   yearlyPackage: null,
   lifetimePackage: null,
+  offeringsReady: true,
+  currentOffering: null,
   configured: true,
   initialize: jest.fn(async () => undefined),
   refresh: jest.fn(async () => undefined),
