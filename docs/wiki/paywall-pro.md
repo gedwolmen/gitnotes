@@ -47,11 +47,11 @@ Caveat: the Android fallback flag is device-local — a grandfathered user who u
 | AI chat / new chat | `aiHubStore.goNewChat` (src/stores/aiHubStore.ts) |
 | Chat history | `aiHubStore.goChatHistory` |
 | AI settings (hub menu) | `aiHubStore.goAISettings` |
-| Thought dump / voice dump | `aiHubStore.goThoughtDump` / `goVoiceDump` + `ThoughtDumpScreen` guard |
-| Chat screens (deep links) | `ChatThreadListScreen` / `ChatScreen` defensive `ProRequired` guards |
-| Canvases | `CanvasListScreen` create + open handlers; `CanvasEditorScreen` guard |
-| Custom templates | `TemplateManagerScreen` guard; `TemplateSelector` create-template CTA |
-| Render styles | `RenderStyleSettingsScreen` + `RenderStyleEditorScreen` guards |
+| Thought dump / voice dump | `aiHubStore.goThoughtDump` / `goVoiceDump` + `ThoughtDumpScreen` alert-and-exit guard (`useProScreenGuard`) |
+| Chat screens (deep links) | `ChatThreadListScreen` / `ChatScreen` defensive alert-and-exit guards (`useProScreenGuard`); `ChatThreadListScreen` additionally closes the chat-repo picker via `useAIHubStore.getState().closeChatRepoPicker()` on guard leave |
+| Canvases | `CanvasListScreen` create + open handlers; `CanvasEditorScreen` alert-and-exit guard (`useProScreenGuard`) |
+| Custom templates | `TemplateManagerScreen` alert-and-exit guard (`useProScreenGuard`); `TemplateSelector` create-template CTA (tap-level, direct Paywall navigation) |
+| Render styles | `RenderStyleSettingsScreen` + `RenderStyleEditorScreen` alert-and-exit guards (`useProScreenGuard`) |
 | Settings AI section | `SettingsContent` — free users see ALL AI rows (feature + deep-config: Enable AI, Daily Quote, AI Personalization, GitHub Tools, model selector, action mode, chat storage, providers, reset AI memory) LOCKED — lock icon instead of toggle, tap → paywall; pro+AI users get functional rows |
 | Biometric lock | `SettingsContent` Security row — lock icon for free, tap → paywall |
 | Second GitHub account | `SettingsContent` "Connect host" add-row — lock icon when free user has 1 account, tap → paywall (first account free) |
@@ -59,13 +59,13 @@ Caveat: the Android fallback flag is device-local — a grandfathered user who u
 | Graph view | `NotesViewModePicker` / `NotesListScreen` — lock icon on graph option for free, tap → paywall |
 | Fancy UI style | `SettingsContent` `settings.row.updated-ui` — lock icon instead of toggle for free, tap → paywall; fresh installs default to `flat` |
 | AI button (FloatingAIButton) | `FloatingAIButton` returns `null` when `useProGate().isPro` is false (hidden for free users); `aiHubStore` still routes any free tap to Paywall as a backstop |
-| All gates | `useProGate()` hook + `ProRequired` component (src/components/paywall/ProRequired.tsx) |
+| All gates | `useProGate()` hook (src/hooks/useProGate.ts) for tap-level Paywall navigation; `useProScreenGuard()` hook (src/hooks/useProScreenGuard.ts) for screen-entry alert-and-exit guards firing the existing promptProUpgrade alert (src/utils/proAlerts.ts) |
 
 **Free for everyone:** notes, todos, journals, single-account git sync, tags/folders/search/backlinks, themes, reminders, one GitHub account, one repository. **Pro only:** biometric lock and the AI suite.
 
 ### Show-locked pattern
 
-Pro features are no longer HIDDEN from free users — they are SHOWN with a `lock-closed` icon in place of the control (toggle, row action, picker option) and tapping the row opens the paywall (`promptProUpgrade` / `useProGate().openPaywall()` / `aiHubStore` → `Paywall`). Rows render identically for both tiers except the trailing control and `onPress`, which branch per-row on `isPro` (see `SettingsContent.tsx` rows `settings.row.ai-locked-*`, `settings.row.biometric-lock-locked`, `settings.row.connect-host-locked`, `settings.row.add-repo-locked`, and the graph option in `NotesViewModePicker.tsx`). **Exception:** the floating AI button is a draggable overlay with no lockable row control, so it is hidden entirely for free users (`FloatingAIButton` guards on `useProGate().isPro`).
+Pro features are no longer HIDDEN from free users — they are SHOWN with a `lock-closed` icon in place of the control (toggle, row action, picker option) and tapping the row opens the paywall (`promptProUpgrade` / `useProGate().openPaywall()` / `aiHubStore` → `Paywall`). Rows render identically for both tiers except the trailing control and `onPress`, which branch per-row on `isPro` (see `SettingsContent.tsx` rows `settings.row.ai-locked-*`, `settings.row.biometric-lock-locked`, `settings.row.connect-host-locked`, `settings.row.add-repo-locked`, and the graph option in `NotesViewModePicker.tsx`). **Exception:** the floating AI button is a draggable overlay with no lockable row control, so it is hidden entirely for free users (`FloatingAIButton` guards on `useProGate().isPro`). Dedicated "This is a Pro feature" full-screen component removed in favor of the same alert pattern for screen-entry guards (issue #924); deep links into gated screens now alert-and-exit instead of showing a dedicated lock screen.
 
 ### Interstitial
 
