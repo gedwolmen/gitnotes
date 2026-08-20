@@ -143,6 +143,7 @@ export default function SettingsScreen() {
   const [showTemplatesRepoPicker, setShowTemplatesRepoPicker] = useState(false);
   const [syncModes, setSyncModes] = useState<Record<string, SyncEngineMode>>({});
   const [cloningRepo, setCloningRepo] = useState<string | null>(null);
+  const [addRepoPath, setAddRepoPath] = useState<string | null>(null);
   const [cloneProgress, setCloneProgress] = useState<CloneProgress | null>(null);
   const cloneAbortedRef = useRef(false);
   const cloneOuterRetriesRef = useRef(0);
@@ -577,7 +578,9 @@ export default function SettingsScreen() {
       return;
     }
     const attemptAdd = async (allowUnverifiedWrite: boolean): Promise<void> => {
+      if (isAddingRepo) return;
       setIsAddingRepo(true);
+      setAddRepoPath(repo.full_name);
       try {
         if (allowUnverifiedWrite) {
           await addRepo(repo.full_name, repo.name, 'github', { allowUnverifiedWrite: true });
@@ -600,6 +603,7 @@ export default function SettingsScreen() {
         Alert.alert(t('common.error'), t('settings.addRepoFailedBody'));
       } finally {
         setIsAddingRepo(false);
+        setAddRepoPath(null);
       }
     };
     await attemptAdd(false);
@@ -613,7 +617,9 @@ export default function SettingsScreen() {
       return;
     }
     const attemptAdd = async (allowUnverifiedWrite: boolean): Promise<void> => {
+      if (isAddingRepo) return;
       setIsAddingRepo(true);
+      setAddRepoPath(value);
       try {
         if (allowUnverifiedWrite) {
           await addRepo(value, { allowUnverifiedWrite: true });
@@ -637,6 +643,7 @@ export default function SettingsScreen() {
         Alert.alert(t('common.error'), t('settings.addRepoFailedBody'));
       } finally {
         setIsAddingRepo(false);
+        setAddRepoPath(null);
       }
     };
     await attemptAdd(false);
@@ -971,6 +978,7 @@ export default function SettingsScreen() {
         repoSearchQuery={repoSearchQuery}
         manualRepoInput={manualRepoInput}
         isAddingRepo={isAddingRepo}
+        addRepoPath={addRepoPath}
         isLoadingGithubRepos={isLoadingGithubRepos}
         tokenInput={tokenInput}
         tokenVisible={tokenVisible}

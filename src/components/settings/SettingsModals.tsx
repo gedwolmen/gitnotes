@@ -32,6 +32,7 @@ type SettingsModalsProps = {
   repoSearchQuery: string;
   manualRepoInput: string;
   isAddingRepo: boolean;
+  addRepoPath: string | null;
   isLoadingGithubRepos: boolean;
   tokenInput: string;
   tokenVisible: boolean;
@@ -68,6 +69,7 @@ export function SettingsModals(props: SettingsModalsProps) {
     repoSearchQuery,
     manualRepoInput,
     isAddingRepo,
+    addRepoPath,
     isLoadingGithubRepos,
     tokenInput,
     tokenVisible,
@@ -120,15 +122,21 @@ export function SettingsModals(props: SettingsModalsProps) {
               returnKeyType="done"
               onSubmitEditing={onAddManualRepo}
             />
-            <Button
-              testID="settings-modals.button.add-manual-repo"
-              label={t('common.add')}
-              onPress={onAddManualRepo}
-              disabled={!manualRepoInput.trim() || isAddingRepo}
-              variant="primary"
-              style={{ paddingHorizontal: 16 }}
-              textStyle={{ color: '#fff' }}
-            />
+            <View style={{ justifyContent: 'center', width: 80 }}>
+              {isAddingRepo ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Button
+                  testID="settings-modals.button.add-manual-repo"
+                  label={t('common.add')}
+                  onPress={onAddManualRepo}
+                  disabled={!manualRepoInput.trim() || isAddingRepo}
+                  variant="primary"
+                  style={{ paddingHorizontal: 16 }}
+                  textStyle={{ color: '#fff' }}
+                />
+              )}
+            </View>
           </View>
 
           {authState.isAuthenticated ? (
@@ -146,14 +154,15 @@ export function SettingsModals(props: SettingsModalsProps) {
               ) : (
                 filteredRepos.map((repo) => {
                   const alreadyAdded = repositories.some((item) => item.path === repo.full_name);
+                  const isAddingThis = addRepoPath === repo.full_name;
                   return (
                     <TouchableOpacity
                       key={repo.id}
                       testID="settings-modals.button.select-github-repo"
                       className="flex-row items-center px-4 py-3.5 border-b gap-3"
-                      style={[{ borderColor: colors.border }, alreadyAdded && { opacity: 0.4 }]}
+                      style={[{ borderColor: colors.border }, (!isAddingThis && alreadyAdded) && { opacity: 0.4 }]}
                       onPress={() => onSelectGithubRepo(repo)}
-                      disabled={alreadyAdded}
+                      disabled={alreadyAdded || isAddingRepo}
                     >
                       <Ionicons name={repo.private ? 'lock-closed-outline' : 'git-branch-outline'} size={18} color={colors.primary} />
                       <View className="flex-1">
@@ -164,7 +173,11 @@ export function SettingsModals(props: SettingsModalsProps) {
                           </Text>
                         ) : null}
                       </View>
-                      {alreadyAdded ? <Ionicons name="checkmark-circle" size={18} color={colors.primary} /> : null}
+                      {isAddingThis ? (
+                        <ActivityIndicator size="small" color={colors.primary} />
+                      ) : alreadyAdded ? (
+                        <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+                      ) : null}
                     </TouchableOpacity>
                   );
                 })

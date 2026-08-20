@@ -735,3 +735,149 @@ describe('SettingsScreen add-repo import (#938, todo 12)', () => {
     });
   });
 });
+
+// ═══════════════════════════════════════════════
+//  Todo 13 (#938/#936 overlap): double-tap guard
+// ═══════════════════════════════════════════════
+
+describe('SettingsScreen double-tap guard (#938, todo 13)', () => {
+  const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+
+  beforeEach(() => {
+    jest.useRealTimers();
+    alertSpy.mockClear();
+    mockAddRepository.mockReset().mockResolvedValue({ id: 'github:1', name: 'notes', path: 'octo/notes' });
+    mockRemoveRepository.mockClear();
+    mockRefreshNotes.mockClear();
+    mockRefreshCanvases.mockClear();
+    mockRefreshTodos.mockClear();
+    mockPullFromSingleRepo.mockReset().mockResolvedValue(IMPORTED_COUNTS);
+    mockGetMode.mockReset().mockResolvedValue('api');
+    mockGetSavedRepositories
+      .mockReset()
+      .mockResolvedValue([{ id: 'github:1', name: 'notes', path: 'octo/notes', branch: 'main' }]);
+    stableRepositories.length = 0;
+    (GitHubService.isAuthenticated as jest.Mock).mockReset().mockReturnValue(true);
+    (GitFsService.isCloned as jest.Mock).mockReset().mockResolvedValue(false);
+    (GitFsService.clone as jest.Mock).mockReset().mockResolvedValue(undefined);
+    (GitFsService.cloneExclusive as jest.Mock).mockReset().mockResolvedValue(undefined);
+    (GitFsService.getCommitOid as jest.Mock).mockReset().mockResolvedValue('abc123def456');
+  });
+
+  /**
+   * BUG BASELINE (#936). PRE-FIX CONTRACT (unmodified code): tapping a repo row
+   * or hitting the manual-add button twice in quick succession would fire two
+   * concurrent add flows — each calling `addRepo` and starting its own import.
+   */
+  it('BUG BASELINE flipped (#936): rapid double-tap on GitHub repo row fires addRepo exactly ONCE', async () => {
+    // Keep the import in-flight so isAddingRepo stays true long enough for
+    // a second tap to land before the early-return guard sees it change.
+    const pull = deferred<typeof IMPORTED_COUNTS>();
+    mockPullFromSingleRepo.mockReturnValue(pull.promise);
+
+    const { getByTestId, queryByTestId } = render(<SettingsScreen />);
+    await flushMicrotasks();
+    fireEvent.press(getByTestId('test-open-repo-picker'));
+    await flushMicrotasks();
+
+    // First tap starts add → import; isAddingRepo → true.
+    await act(async () => {
+      fireEvent.press(getByTestId('test-select-github-repo'));
+    });
+    await flushMicrotasks();
+
+    expect(mockAddRepository).toHaveBeenCalledTimes(1);
+    expect(getByTestId('test-adding-state').props.children).toBe('adding');
+    expect(getByTestId('test-repo-picker-modal')).toBeTruthy();
+
+    // Second tap — attemptAdd sees isAddingRepo === true, returns early.
+    await act(async () => {
+      fireEvent.press(getByTestId('test-select-github-repo'));
+    });
+    await flushMicrotasks();
+
+    // Still only one call — guard prevented the second.
+    expect(mockAddRepository).toHaveBeenCalledTimes(1);
+    expect(getByTestId('test-adding-state').props.children).toBe('adding');
+    expect(getByTestId('test-repo-picker-modal')).toBeTruthy();
+
+    // Resolve to let test clean up.
+    await act(async () => pull.resolve(IMPORTED_COUNTS));
+    await waitFor(() => expect(queryByTestId('test-repo-picker-modal')).toBeNull());
+    expect(mockAddRepository).toHaveBeenCalledTimes(1);
+  });
+
+  it('attempting manual add during active import fires addRepo exactly ONCE', async () => {
+    const pull = deferred<typeof IMPORTED_COUNTS>();
+    mockPullFromSingleRepo.mockReturnValue(pull.promise);
+
+    const { getByTestId, queryByTestId } = render(<SettingsScreen />);
+    await flushMicrotasks();
+    fireEvent.press(getByTestId('test-open-repo-picker'));
+    await flushMicrotasks();
+
+    // First tap adds via GitHub picker (the row-under-add pattern).
+    await act(async () => {
+      fireEvent.press(getByTestId('test-select-github-repo'));
+    });
+    await flushMicrotasks();
+
+    expect(mockAddRepository).toHaveBeenCalledTimes(1);
+    expect(getByTestId('test-adding-state').props.children).toBe('adding');
+
+    // Attempt another add action via manual text + press while import is in-flight.
+    // Early-return guard on `isAddingRepo` blocks this completely.
+    await act(async () => {
+      fireEvent.changeText(getByTestId('test-manual-repo-input'), 'another/repo');
+      await Promise.resolve();
+      fireEvent.press(getByTestId('test-add-manual-repo'));
+    });
+    await flushMicrotasks();
+
+    // Still exactly one call — manual-add guard prevented it.
+    expect(mockAddRepository).toHaveBeenCalledTimes(1);
+    expect(getByTestId('test-adding-state').props.children).toBe('adding');
+
+    // Resolve & clean up.
+    await act(async () => pull.resolve(IMPORTED_COUNTS));
+    await waitFor(() => expect(queryByTestId('test-repo-picker-modal')).toBeNull());
+    expect(mockAddRepository).toHaveBeenCalledTimes(1);
+  });
+
+  it('delayed import: second tap blocked by early-return while import is in flight', async () => {
+    // Use a deferred promise to keep isAddingRepo=true long enough for two taps.
+    const pull = deferred<typeof IMPORTED_COUNTS>();
+    mockPullFromSingleRepo.mockReturnValue(pull.promise);
+
+    const { getByTestId, queryByTestId } = render(<SettingsScreen />);
+    await flushMicrotasks();
+    fireEvent.press(getByTestId('test-open-repo-picker'));
+    await flushMicrotasks();
+
+    // First tap starts all the async machinery.
+    await act(async () => {
+      fireEvent.press(getByTestId('test-select-github-repo'));
+    });
+    await flushMicrotasks();
+
+    // Busy state visible, picker still open.
+    expect(mockAddRepository).toHaveBeenCalledTimes(1);
+    expect(getByTestId('test-adding-state').props.children).toBe('adding');
+    expect(getByTestId('test-repo-picker-modal')).toBeTruthy();
+
+    // Second tap — early-return guard blocks it.
+    await act(async () => {
+      fireEvent.press(getByTestId('test-select-github-repo'));
+    });
+    await flushMicrotasks();
+
+    // Exactly one addRepo still — not two.
+    expect(mockAddRepository).toHaveBeenCalledTimes(1);
+
+    // Now resolve the import.
+    await act(async () => {
+      pull.resolve(IMPORTED_COUNTS);
+    });
+    await waitFor(() => expect(queryByTestId('test-repo-picker-modal')).toBeNull());
+  });
+});
