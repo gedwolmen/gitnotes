@@ -49,6 +49,36 @@ export interface GiteaLikeTreeEntry {
   sha: string;
 }
 
+export interface GiteaLikeLabel {
+  id: number;
+  name: string;
+  color?: string;
+}
+
+export interface GiteaLikePR {
+  number: number;
+  title: string;
+  state: 'open' | 'closed' | string;
+  html_url: string;
+  head?: { ref?: string };
+  base?: { ref?: string };
+  user?: { login?: string };
+  draft?: boolean;
+  created_at: string;
+}
+
+export interface GiteaLikeIssue {
+  number: number;
+  title: string;
+  state: 'open' | 'closed' | string;
+  html_url: string;
+  labels?: GiteaLikeLabel[];
+  user?: { login?: string };
+  created_at: string;
+  updated_at?: string;
+  pull_request?: { url?: string } | null;
+}
+
 /**
  * Shared Gitea / Forgejo implementation. Their REST APIs are 1:1 — the
  * Forgejo project is a Gitea fork and keeps the same endpoints — so we
@@ -292,10 +322,22 @@ export class GiteaLikeHostService implements GitHostService, GitHostWriteService
     repo: string,
     state: GitHostItemState = 'open',
   ): Promise<GitHostPullRequest[]> {
-    void owner;
-    void repo;
-    void state;
-    return [];
+    const data = await this.authedFetch<GiteaLikePR[]>(
+      `${this.baseUrl}/repos/${owner}/${repo}/pulls?state=${state}&limit=50`,
+    );
+    if (!data) return [];
+    return data.map((p) => ({
+      id: p.number,
+      number: p.number,
+      title: p.title,
+      state: p.state === 'open' ? 'open' : 'closed',
+      webUrl: p.html_url,
+      headBranch: p.head?.ref ?? '',
+      baseBranch: p.base?.ref ?? '',
+      author: p.user?.login,
+      draft: p.draft ?? false,
+      createdAt: p.created_at,
+    }));
   }
 
   async listIssues(
@@ -303,10 +345,24 @@ export class GiteaLikeHostService implements GitHostService, GitHostWriteService
     repo: string,
     state: GitHostItemState = 'open',
   ): Promise<GitHostIssue[]> {
-    void owner;
-    void repo;
-    void state;
-    return [];
+    const data = await this.authedFetch<GiteaLikeIssue[]>(
+      `${this.baseUrl}/repos/${owner}/${repo}/issues?state=${state}&type=issues&limit=50`,
+    );
+    if (!data) return [];
+    // Gitea's /issues endpoint also returns PR items; drop anything with a pull_request payload.
+    return data
+      .filter((i) => i.pull_request == null)
+      .map((i) => ({
+        id: i.number,
+        number: i.number,
+        title: i.title,
+        state: i.state === 'open' ? 'open' : 'closed',
+        webUrl: i.html_url,
+        labels: (i.labels ?? []).map((l) => l.name),
+        author: i.user?.login,
+        createdAt: i.created_at,
+        updatedAt: i.updated_at,
+      }));
   }
 
   // ── Write operations (GitHostWriteService) ──────────────────────
