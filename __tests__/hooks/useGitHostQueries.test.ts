@@ -2,6 +2,11 @@ import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react-native';
 
+// The jest.setup.ts ships a global mock for these hooks so other tests can
+// render ExploreScreen without a QueryClientProvider. This file IS the
+// hook-under-test suite, so opt out of the global mock here.
+jest.unmock('../../src/hooks/useGitHostQueries');
+
 const mockListPullRequests = jest.fn();
 const mockListIssues = jest.fn();
 
