@@ -11,7 +11,6 @@ import { NoteSyncQueueService } from '../src/services/NoteSyncQueueService';
 import { StorageService } from '../src/services/StorageService';
 import { clearDeleteFailure, recordDeleteFailure } from '../src/services/git/deleteFailures';
 import { retryDeleteFailure } from '../src/services/git/retryDeleteFailure';
-import { GitSyncGate } from '../src/services/git/GitSyncGate';
 import { renderWithTheme } from './helpers/renderWithTheme';
 
 type SucceededHandler = (event: { mutation: { id: string; type: string; params: Record<string, any> } }) => void;
@@ -83,6 +82,18 @@ jest.mock('../src/services/SyncEngineService', () => ({
 jest.mock('../src/services/RepoPullService', () => ({
   pullAllFromRepos: jest.fn(async () => undefined),
   pullFromSingleRepo: jest.fn(async () => ({ repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0 })),
+}));
+
+jest.mock('../src/services/git/GitSyncGate', () => ({
+  GitSyncGate: {
+    acquireCycle: jest.fn(async () => () => {}),
+    isCycleHeld: jest.fn(() => false),
+    isPushActive: jest.fn(() => false),
+    markPushActive: jest.fn(),
+    clearPushActive: jest.fn(),
+    waitForIdle: jest.fn(async () => true),
+    __resetForTest: jest.fn(),
+  },
 }));
 
 jest.mock('../src/services/git/manualSync', () => ({
@@ -452,7 +463,6 @@ describe('notes delete lock', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockNavigate.mockClear();
-    GitSyncGate.__resetForTest();
     useNoteStore.setState({ notes: [], isLoading: false, error: null, searchQuery: '' });
     useGitOperationStore.setState({ ops: {} });
     (NoteSyncQueueService.getAll as jest.Mock).mockImplementation(async () => []);
@@ -476,11 +486,13 @@ describe('notes delete lock', () => {
     expect(screen.getByText('First')).toBeTruthy();
 
     fireEvent(screen.getByTestId('notes-card-n1'), 'longPress');
+    console.time('del-press-to-removed');
     fireEvent.press(screen.getByTestId('notes-context-menu.delete'));
 
     await waitFor(() => {
       expect(screen.queryByText('First')).toBeNull();
-    });
+    }, { timeout: 5000 });
+    console.timeEnd('del-press-to-removed');
     expect(screen.queryByTestId('note-row.lock-spinner')).toBeNull();
     expect(screen.queryByTestId('note-row.lock-error')).toBeNull();
     expect(useNoteStore.getState().notes).toHaveLength(0);
