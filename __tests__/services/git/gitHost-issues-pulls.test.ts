@@ -257,11 +257,13 @@ describe('GitLabService listPullRequests/listIssues', () => {
     expect(await unauthed.listPullRequests('o', 'r')).toEqual([]);
     expect(await unauthed.listIssues('o', 'r')).toEqual([]);
 
-    primeAuthAndEndpoint({ id: 1, username: 'me', name: 'Me' }, { message: 'denied' }, 403);
+    mockFetch.mockResolvedValueOnce(jsonResponse({ id: 1, username: 'me', name: 'Me' }));
     const svc = await authed();
+    // After setToken, make every subsequent fetch return a 403. mockResolvedValue
+    // persists until the next mockReset in beforeEach, so both listPullRequests
+    // and listIssues consume the same 403 response independently.
+    mockFetch.mockResolvedValue(jsonResponse({ message: 'denied' }, 403));
     expect(await svc.listPullRequests('o', 'r')).toEqual([]);
-
-    primeAuthAndEndpoint({ id: 1, username: 'me', name: 'Me' }, { message: 'denied' }, 403);
     expect(await svc.listIssues('o', 'r')).toEqual([]);
   });
 });
