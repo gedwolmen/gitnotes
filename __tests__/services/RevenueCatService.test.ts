@@ -36,7 +36,6 @@ import {
   restorePurchases,
   getCustomerInfo,
   onCustomerInfoUpdate,
-  isTrialEligible,
   getIntroEligibilities,
   trackPaywallImpression,
 } from '../../src/services/RevenueCatService';
@@ -250,25 +249,6 @@ describe('getCustomerInfo / listener', () => {
     unsubscribe();
     expect(PurchasesMock.removeCustomerInfoUpdateListener).toHaveBeenCalledWith(cb);
   });
-});
-
-describe('isTrialEligible', () => {
-  it('returns true when iOS eligibility is ELIGIBLE', async () => {
-    jest.replaceProperty(Platform, 'OS', 'ios');
-    PurchasesMock.checkTrialOrIntroductoryPriceEligibility.mockResolvedValue({
-      monthly: { status: 2 },
-    });
-    expect(await isTrialEligible('monthly')).toBe(true);
-  });
-
-  it('returns false when iOS eligibility is INELIGIBLE', async () => {
-    jest.replaceProperty(Platform, 'OS', 'ios');
-    PurchasesMock.checkTrialOrIntroductoryPriceEligibility.mockResolvedValue({
-      monthly: { status: 1 },
-    });
-    expect(await isTrialEligible('monthly')).toBe(false);
-  });
-
 });
 
 describe('getIntroEligibilities', () => {

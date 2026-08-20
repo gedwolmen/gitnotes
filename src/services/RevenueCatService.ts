@@ -46,6 +46,10 @@ export async function configureRevenueCat(): Promise<ConfigureResult> {
   return { configured: true };
 }
 
+export function isConfigured(): boolean {
+  return configured;
+}
+
 const matchIdentifier =
   (accepted: readonly string[]) => (pkg: PurchasesPackage): boolean =>
     accepted.includes(pkg.identifier);
@@ -106,17 +110,6 @@ export function getCustomerInfo(): Promise<CustomerInfo> {
 export function onCustomerInfoUpdate(cb: (info: CustomerInfo) => void): () => void {
   Purchases.addCustomerInfoUpdateListener(cb);
   return () => Purchases.removeCustomerInfoUpdateListener(cb);
-}
-
-/** @deprecated removed in the screen rewire (T10) */
-export async function isTrialEligible(productId: string): Promise<boolean> {
-  if (Platform.OS !== 'ios') return true;
-  try {
-    const eligibilities = await Purchases.checkTrialOrIntroductoryPriceEligibility([productId]);
-    return eligibilities[productId]?.status === Purchases.INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_ELIGIBLE;
-  } catch {
-    return false;
-  }
 }
 
 export async function getIntroEligibilities(productIds: string[]): Promise<Record<string, boolean>> {
