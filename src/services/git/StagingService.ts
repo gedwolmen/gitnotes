@@ -10,6 +10,33 @@ import type { GitHostUser } from './GitHost';
 import { githubActivity } from '../../stores/githubActivityStore';
 
 /**
+ * Stage-change emitter. Clone-mode staging commits are purely local — no
+ * other subsystem observes them — so StagingService broadcasts successful
+ * clone staging here. stageStore subscribes to reload pending counts, which
+ * also arms the idle auto-push via the scheduler's store subscription.
+ * API-mode enqueue does NOT fire this: the sync-queue subscription already
+ * covers that path, and notifying both would double-load the stage store.
+ */
+const STAGED_CHANGED_LISTENERS = new Set<() => void>();
+
+export function subscribeStagedChanged(fn: () => void): () => void {
+  STAGED_CHANGED_LISTENERS.add(fn);
+  return () => {
+    STAGED_CHANGED_LISTENERS.delete(fn);
+  };
+}
+
+export function notifyStagedChanged(): void {
+  for (const fn of [...STAGED_CHANGED_LISTENERS]) {
+    try {
+      fn();
+    } catch {
+      // Listener failures must not break staging.
+    }
+  }
+}
+
+/**
  * One staged change as surfaced to the Stage page. Queue-backed items
  * (both sync engines) carry their real file path; clone-mode commits that
  * never reached origin surface as a synthetic `(unpushed commits)` row
@@ -60,7 +87,9 @@ export class StagingService {
           author,
           push: false,
         });
-        return result.success ? { success: true } : { success: false, error: result.error };
+        if (!result.success) return { success: false, error: result.error };
+        notifyStagedChanged();
+        return { success: true };
       }
       await NoteSyncQueueService.enqueueNoteUpsert(params);
       return { success: true };
@@ -82,7 +111,9 @@ export class StagingService {
           author,
           push: false,
         });
-        return result.success ? { success: true } : { success: false, error: result.error };
+        if (!result.success) return { success: false, error: result.error };
+        notifyStagedChanged();
+        return { success: true };
       }
       await NoteSyncQueueService.enqueueNoteDelete(params);
       return { success: true };

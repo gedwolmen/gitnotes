@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { StagingService } from '../services/git/StagingService';
+import { StagingService, subscribeStagedChanged } from '../services/git/StagingService';
 import type { StagedItem } from '../services/git/StagingService';
 import { StorageService } from '../services/StorageService';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
@@ -36,9 +36,11 @@ interface StageActions {
   dequeueNext: () => string | null;
   shiftQueue: () => void;
   registerQueueSubscription: () => void;
+  unregisterQueueSubscription: () => void;
 }
 
 let queueUnsubscribe: (() => void) | null = null;
+let emitterUnsubscribe: (() => void) | null = null;
 
 /** Group staged items into one bucket per (repoPath, branch), preserving order. */
 export function groupStaged(items: StagedItem[]): StageGroup[] {
@@ -142,9 +144,19 @@ export const useStageStore = create<StageState & StageActions>()((set, get) => (
   shiftQueue: () => set((state) => ({ pushQueue: state.pushQueue.slice(1) })),
 
   registerQueueSubscription: () => {
-    if (queueUnsubscribe) return;
+    if (queueUnsubscribe || emitterUnsubscribe) return;
     queueUnsubscribe = NoteSyncQueueService.subscribe(() => {
       void get().loadStaged();
     });
+    emitterUnsubscribe = subscribeStagedChanged(() => {
+      void get().loadStaged();
+    });
+  },
+
+  unregisterQueueSubscription: () => {
+    queueUnsubscribe?.();
+    emitterUnsubscribe?.();
+    queueUnsubscribe = null;
+    emitterUnsubscribe = null;
   },
 }));
