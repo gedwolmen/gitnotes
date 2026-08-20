@@ -7,7 +7,8 @@
       "action",
       "purpose",
       "discipline"
-    ]
+    ],
+    "source": "Meditations, 10.16"
   },
   {
     "id": "aurelius-4",
@@ -16,7 +17,8 @@
     "tags": [
       "perseverance",
       "resilience"
-    ]
+    ],
+    "source": "Meditations, 5.20"
   },
   {
     "id": "aurelius-7",
@@ -25,7 +27,8 @@
     "tags": [
       "mindfulness",
       "focus"
-    ]
+    ],
+    "source": "Meditations, 7.29"
   },
   {
     "id": "seneca-1",
@@ -34,7 +37,8 @@
     "tags": [
       "mindfulness",
       "reflection"
-    ]
+    ],
+    "source": "Letters to Lucilius, 5.9"
   },
   {
     "id": "seneca-2",
@@ -43,7 +47,8 @@
     "tags": [
       "purpose",
       "reflection"
-    ]
+    ],
+    "source": "On the Shortness of Life, 1.1"
   },
   {
     "id": "seneca-5",
@@ -52,7 +57,8 @@
     "tags": [
       "purpose",
       "action"
-    ]
+    ],
+    "source": "Letters to Lucilius, 100.1"
   },
   {
     "id": "seneca-7",
@@ -61,7 +67,8 @@
     "tags": [
       "courage",
       "perseverance"
-    ]
+    ],
+    "source": "Letters to Lucilius, 13.5"
   },
   {
     "id": "epictetus-3",
@@ -70,7 +77,8 @@
     "tags": [
       "discipline",
       "freedom"
-    ]
+    ],
+    "source": "Enchiridion, 5"
   },
   {
     "id": "epictetus-4",
@@ -79,7 +87,8 @@
     "tags": [
       "purpose",
       "action"
-    ]
+    ],
+    "source": "Discourses, 3.24.3"
   },
   {
     "id": "lao-tzu-1",
@@ -88,7 +97,8 @@
     "tags": [
       "perseverance",
       "action"
-    ]
+    ],
+    "source": "Tao Te Ching, Ch. 64"
   },
   {
     "id": "lao-tzu-5",
@@ -97,7 +107,8 @@
     "tags": [
       "wisdom",
       "reflection"
-    ]
+    ],
+    "source": "Tao Te Ching, Ch. 33"
   },
   {
     "id": "lao-tzu-6",
@@ -106,7 +117,8 @@
     "tags": [
       "mindfulness",
       "patience"
-    ]
+    ],
+    "source": "Tao Te Ching, Ch. 68"
   },
   {
     "id": "confucius-3",
@@ -115,7 +127,8 @@
     "tags": [
       "humility",
       "wisdom"
-    ]
+    ],
+    "source": "Analects, 2.17"
   },
   {
     "id": "sartre-1",
@@ -124,7 +137,8 @@
     "tags": [
       "freedom",
       "action"
-    ]
+    ],
+    "source": "Existentialism Is a Humanism, 1946"
   },
   {
     "id": "sartre-2",
@@ -133,7 +147,8 @@
     "tags": [
       "freedom",
       "resilience"
-    ]
+    ],
+    "source": "Being and Nothingness, 1943"
   },
   {
     "id": "sartre-3",
@@ -142,7 +157,8 @@
     "tags": [
       "action",
       "purpose"
-    ]
+    ],
+    "source": "Existentialism Is a Humanism, 1946"
   },
   {
     "id": "sartre-4",
@@ -151,7 +167,8 @@
     "tags": [
       "purpose",
       "freedom"
-    ]
+    ],
+    "source": "Existentialism Is a Humanism, 1946"
   },
   {
     "id": "camus-1",
@@ -160,7 +177,8 @@
     "tags": [
       "resilience",
       "perseverance"
-    ]
+    ],
+    "source": "Return to Tipasa, in Summer (L'Été), 1954"
   },
   {
     "id": "kierkegaard-1",
@@ -169,7 +187,8 @@
     "tags": [
       "reflection",
       "action"
-    ]
+    ],
+    "source": "Journals, 11.A.134"
   },
   {
     "id": "kierkegaard-2",
@@ -178,7 +197,8 @@
     "tags": [
       "freedom",
       "reflection"
-    ]
+    ],
+    "source": "The Concept of Anxiety, 1844"
   },
   {
     "id": "nietzsche-1",
@@ -187,7 +207,8 @@
     "tags": [
       "resilience",
       "perseverance"
-    ]
+    ],
+    "source": "Twilight of the Idols, Maxims and Arrows §8"
   },
   {
     "id": "nietzsche-2",
@@ -196,7 +217,8 @@
     "tags": [
       "purpose",
       "perseverance"
-    ]
+    ],
+    "source": "Twilight of the Idols, Maxims and Arrows §12"
   },
   {
     "id": "nietzsche-4",
@@ -205,7 +227,8 @@
     "tags": [
       "creativity",
       "courage"
-    ]
+    ],
+    "source": "Thus Spoke Zarathustra, Prologue §5"
   },
   {
     "id": "nietzsche-5",
@@ -214,7 +237,8 @@
     "tags": [
       "perseverance",
       "patience"
-    ]
+    ],
+    "source": "Thus Spoke Zarathustra, Part 3"
   },
   {
     "id": "plato-1",
@@ -223,7 +247,8 @@
     "tags": [
       "learning",
       "wisdom"
-    ]
+    ],
+    "source": "Republic, 476e-479d"
   },
   {
     "id": "plato-2",
@@ -232,7 +257,8 @@
     "tags": [
       "action",
       "purpose"
-    ]
+    ],
+    "source": "Republic, 347c"
   },
   {
     "id": "socrates-1",
@@ -241,7 +267,8 @@
     "tags": [
       "reflection",
       "purpose"
-    ]
+    ],
+    "source": "Apology, 38a"
   },
   {
     "id": "thoreau-1",
@@ -250,7 +277,8 @@
     "tags": [
       "reflection",
       "purpose"
-    ]
+    ],
+    "source": "Walden, Economy"
   },
   {
     "id": "thoreau-2",
@@ -259,7 +287,8 @@
     "tags": [
       "courage",
       "action"
-    ]
+    ],
+    "source": "Walden, Conclusion"
   },
   {
     "id": "thoreau-3",
@@ -268,7 +297,8 @@
     "tags": [
       "simplicity",
       "focus"
-    ]
+    ],
+    "source": "Walden, Where I Lived"
   },
   {
     "id": "thoreau-4",
@@ -277,7 +307,8 @@
     "tags": [
       "reflection",
       "growth"
-    ]
+    ],
+    "source": "Journals, Nov 1857"
   },
   {
     "id": "emerson-3",
@@ -295,7 +326,8 @@
     "tags": [
       "action",
       "purpose"
-    ]
+    ],
+    "source": "Essays: First Series, Friendship"
   },
   {
     "id": "emerson-5",
@@ -304,7 +336,8 @@
     "tags": [
       "reflection",
       "courage"
-    ]
+    ],
+    "source": "Essays: First Series, Self-Reliance"
   },
   {
     "id": "james-2",
@@ -331,7 +364,8 @@
     "tags": [
       "gratitude",
       "mindfulness"
-    ]
+    ],
+    "source": "Letter to Menoeceus; Vatican Sayings 55"
   },
   {
     "id": "descartes-1",
@@ -340,7 +374,8 @@
     "tags": [
       "reflection",
       "wisdom"
-    ]
+    ],
+    "source": "Discourse on the Method, 1637"
   },
   {
     "id": "kant-1",
@@ -349,7 +384,8 @@
     "tags": [
       "discipline",
       "action"
-    ]
+    ],
+    "source": "Critique of Pure Reason, A51/B75"
   },
   {
     "id": "kant-2",
@@ -358,7 +394,8 @@
     "tags": [
       "action",
       "purpose"
-    ]
+    ],
+    "source": "Groundwork of the Metaphysics of Morals, 4:421"
   },
   {
     "id": "spinoza-1",
@@ -367,7 +404,8 @@
     "tags": [
       "purpose",
       "reflection"
-    ]
+    ],
+    "source": "Ethics, Part III, Definitions"
   },
   {
     "id": "wittgenstein-1",
@@ -376,7 +414,8 @@
     "tags": [
       "wisdom",
       "mindfulness"
-    ]
+    ],
+    "source": "Tractatus Logico-Philosophicus, Prop. 7"
   },
   {
     "id": "santayana-1",
@@ -385,7 +424,8 @@
     "tags": [
       "reflection",
       "learning"
-    ]
+    ],
+    "source": "The Life of Reason, Vol. 1, 1905"
   },
   {
     "id": "tzu-2",
@@ -403,7 +443,8 @@
     "tags": [
       "courage",
       "growth"
-    ]
+    ],
+    "source": "Man's Search for Meaning"
   },
   {
     "id": "frankl-2",
@@ -412,7 +453,8 @@
     "tags": [
       "freedom",
       "resilience"
-    ]
+    ],
+    "source": "Man's Search for Meaning"
   },
   {
     "id": "frankl-3",
@@ -421,7 +463,8 @@
     "tags": [
       "purpose",
       "perseverance"
-    ]
+    ],
+    "source": "Man's Search for Meaning"
   },
   {
     "id": "schopenhauer-1",
@@ -430,7 +473,8 @@
     "tags": [
       "creativity",
       "wisdom"
-    ]
+    ],
+    "source": "Essays and Aphorisms, 1904"
   },
   {
     "id": "montaigne-1",
@@ -439,7 +483,8 @@
     "tags": [
       "freedom",
       "reflection"
-    ]
+    ],
+    "source": "Essays, III:13"
   },
   {
     "id": "seneca-8",
@@ -2731,16 +2776,6 @@
     ]
   },
   {
-    "id": "tolstoy-3",
-    "text": "Everyone thinks of changing the world, but no one thinks of changing himself.",
-    "author": "Leo Tolstoy",
-    "source": "Anna Karenina, Part 1, Chapter 1",
-    "tags": [
-      "reflection",
-      "growth"
-    ]
-  },
-  {
     "id": "tolstoy-4",
     "text": "Spring is the time of plans and projects.",
     "author": "Leo Tolstoy",
@@ -2788,66 +2823,6 @@
     "tags": [
       "purpose",
       "discipline"
-    ]
-  },
-  {
-    "id": "camus-5",
-    "text": "In the depth of winter, I finally learned that within me there lay an invincible summer.",
-    "author": "Albert Camus",
-    "source": "Return to Tipasa",
-    "tags": [
-      "perseverance",
-      "gratitude"
-    ]
-  },
-  {
-    "id": "camus-6",
-    "text": "Should I kill myself, or have a cup of coffee?",
-    "author": "Albert Camus",
-    "source": "The Myth of Sisyphus",
-    "tags": [
-      "wisdom",
-      "reflection"
-    ]
-  },
-  {
-    "id": "beauvoir-1",
-    "text": "Change your life today. Don't gamble on the future, act now, without delay.",
-    "author": "Simone de Beauvoir",
-    "source": "The Ethics of Ambiguity",
-    "tags": [
-      "action",
-      "perseverance"
-    ]
-  },
-  {
-    "id": "beauvoir-2",
-    "text": "One's life has value so long as one attributes value to the life of others.",
-    "author": "Simone de Beauvoir",
-    "source": "The Ethics of Ambiguity",
-    "tags": [
-      "purpose",
-      "gratitude"
-    ]
-  },
-  {
-    "id": "arendt-1",
-    "text": "The most radical revolutionary act is to change the way we think.",
-    "author": "Hannah Arendt",
-    "source": "The Human Condition",
-    "tags": [
-      "growth",
-      "wisdom"
-    ]
-  },
-  {
-    "id": "arendt-2",
-    "text": "Nobody ever killed or dominated for the sake of freedom.",
-    "author": "Hannah Arendt",
-    "source": "Between Past and Future",
-    "tags": [
-      "freedom",
-      "wisdom"
     ]
   },
   {
@@ -3611,356 +3586,6 @@
     ]
   },
   {
-    "id": "montaigne-2",
-    "text": "The greatest thing in the world is to know how to belong to oneself.",
-    "author": "Michel de Montaigne",
-    "source": "Essays, Book III: Of Experience",
-    "tags": [
-      "freedom",
-      "wisdom"
-    ]
-  },
-  {
-    "id": "montaigne-3",
-    "text": "I have never seen a greater monster or miracle in the world than myself.",
-    "author": "Michel de Montaigne",
-    "source": "Essays, Book II: Of Repentance",
-    "tags": [
-      "reflection",
-      "wisdom"
-    ]
-  },
-  {
-    "id": "montaigne-4",
-    "text": "Other people's wisdom has made us eloquent; their foolishness, our own.",
-    "author": "Michel de Montaigne",
-    "source": "Essays, Book I",
-    "tags": [
-      "wisdom",
-      "reflection"
-    ]
-  },
-  {
-    "id": "montaigne-5",
-    "text": "I love a vigorous and masculine vigor in mind, and a manly and vigorous firmness in all that it undertakes.",
-    "author": "Michel de Montaigne",
-    "source": "Essays, Book I: Of the Cannibals",
-    "tags": [
-      "courage",
-      "discipline"
-    ]
-  },
-  {
-    "id": "bacon-1",
-    "text": "Read not to contradict and confute, nor to believe and take for granted, but to weigh and consider.",
-    "author": "Francis Bacon",
-    "source": "Of Studies, Essays",
-    "tags": [
-      "learning",
-      "wisdom"
-    ]
-  },
-  {
-    "id": "bacon-2",
-    "text": "Knowledge is power.",
-    "author": "Francis Bacon",
-    "source": "Meditationes Sacrae",
-    "tags": [
-      "learning",
-      "purpose"
-    ]
-  },
-  {
-    "id": "bacon-3",
-    "text": "Nature, to be commanded, must be obeyed.",
-    "author": "Francis Bacon",
-    "source": "Novum Organum",
-    "tags": [
-      "wisdom",
-      "action"
-    ]
-  },
-  {
-    "id": "bacon-4",
-    "text": "Hope is a good breakfast, but it is a bad supper.",
-    "author": "Francis Bacon",
-    "source": "Of Followers and Friends",
-    "tags": [
-      "wisdom",
-      "reflection"
-    ]
-  },
-  {
-    "id": "bacon-5",
-    "text": "A man that is young in years may be old in hours if he have not lost his time.",
-    "author": "Francis Bacon",
-    "source": "Of Youth and Age",
-    "tags": [
-      "focus",
-      "purpose"
-    ]
-  },
-  {
-    "id": "bacon-6",
-    "text": "Some books are to be tasted, others to be swallowed, and some few to be chewed and digested.",
-    "author": "Francis Bacon",
-    "source": "Of Studies, Essays",
-    "tags": [
-      "learning",
-      "wisdom"
-    ]
-  },
-  {
-    "id": "bacon-7",
-    "text": "Men fear death as children fear to go in the dark.",
-    "author": "Francis Bacon",
-    "source": "Of Death, Essays",
-    "tags": [
-      "courage",
-      "wisdom"
-    ]
-  },
-  {
-    "id": "bacon-8",
-    "text": "Virtue is like a rich stone, best plain set.",
-    "author": "Francis Bacon",
-    "source": "Of Beauty",
-    "tags": [
-      "wisdom",
-      "reflection"
-    ]
-  },
-  {
-    "id": "la-rochefoucauld-1",
-    "text": "We all have strength enough to endure the misfortunes of others.",
-    "author": "François de La Rochefoucauld",
-    "source": "Maxims, 409",
-    "tags": [
-      "wisdom",
-      "reflection"
-    ]
-  },
-  {
-    "id": "la-rochefoucauld-2",
-    "text": "Absence diminishes mediocre passions and increases great ones, as the wind extinguishes candles and fans a fire.",
-    "author": "François de La Rochefoucauld",
-    "source": "Maxims, 67",
-    "tags": [
-      "wisdom",
-      "reflection"
-    ]
-  },
-  {
-    "id": "la-rochefoucauld-3",
-    "text": "The desire to praise is itself a praise.",
-    "author": "François de La Rochefoucauld",
-    "source": "Maxims, 224",
-    "tags": [
-      "wisdom",
-      "reflection"
-    ]
-  },
-  {
-    "id": "la-rochefoucauld-4",
-    "text": "We are more often betrayed by our own suspicion than by the deceitfulness of others.",
-    "author": "François de La Rochefoucauld",
-    "source": "Maxims, 393",
-    "tags": [
-      "wisdom",
-      "mindfulness"
-    ]
-  },
-  {
-    "id": "la-rochefoucauld-5",
-    "text": "We should often forgive, but never trust.",
-    "author": "François de La Rochefoucauld",
-    "source": "Maxims",
-    "tags": [
-      "wisdom",
-      "reflection"
-    ]
-  },
-  {
-    "id": "la-rochefoucauld-6",
-    "text": "A man cannot die too soon if he dies leaving nothing undone that should be done.",
-    "author": "François de La Rochefoucauld",
-    "source": "Maxims",
-    "tags": [
-      "purpose",
-      "wisdom"
-    ]
-  },
-  {
-    "id": "la-rochefoucauld-7",
-    "text": "The mind is always the dupe of the heart.",
-    "author": "François de La Rochefoucauld",
-    "source": "Maxims, 218",
-    "tags": [
-      "wisdom",
-      "reflection"
-    ]
-  },
-  {
-    "id": "la-rochefoucauld-8",
-    "text": "We are all so weak that it is a kind of miracle to keep from falling in with those we love.",
-    "author": "François de La Rochefoucauld",
-    "source": "Maxims",
-    "tags": [
-      "wisdom",
-      "reflection"
-    ]
-  },
-  {
-    "id": "la-rochefoucauld-9",
-    "text": "We have not enough strength to follow our reason completely, but enough to follow our inclinations.",
-    "author": "François de La Rochefoucauld",
-    "source": "Maxims",
-    "tags": [
-      "wisdom",
-      "reflection"
-    ]
-  },
-  {
-    "id": "la-rochefoucauld-10",
-    "text": "The vices are introduced into the composition of virtues as poisons are into the composition of remedies.",
-    "author": "François de La Rochefoucauld",
-    "source": "Maxims, 218",
-    "tags": [
-      "wisdom",
-      "reflection"
-    ]
-  },
-  {
-    "id": "chamfort-1",
-    "text": "Public opinion is the worst of all religions; it has its saints, its martyrs, and its fools.",
-    "author": "Sébastien-Roch de Chamfort",
-    "source": "Maximes et Pensées",
-    "tags": [
-      "wisdom",
-      "courage"
-    ]
-  },
-  {
-    "id": "chamfort-2",
-    "text": "Society is composed of two great classes: those who are bored and those who are interesting.",
-    "author": "Sébastien-Roch de Chamfort",
-    "source": "Maximes et Pensées",
-    "tags": [
-      "wisdom",
-      "reflection"
-    ]
-  },
-  {
-    "id": "chamfort-3",
-    "text": "In the end, it is not the moments that cost us that we regret, but the ones we spent doing nothing.",
-    "author": "Sébastien-Roch de Chamfort",
-    "source": "Maximes et Pensées",
-    "tags": [
-      "purpose",
-      "reflection"
-    ]
-  },
-  {
-    "id": "chamfort-4",
-    "text": "To be happy, you must be wise. To be wise, you must be strong. And to be strong, you must be alone.",
-    "author": "Sébastien-Roch de Chamfort",
-    "source": "Maximes et Pensées",
-    "tags": [
-      "wisdom",
-      "perseverance"
-    ]
-  },
-  {
-    "id": "chamfort-5",
-    "text": "Laughter is the greatest of all weapons.",
-    "author": "Sébastien-Roch de Chamfort",
-    "source": "Maximes et Pensées",
-    "tags": [
-      "wisdom",
-      "reflection"
-    ]
-  },
-  {
-    "id": "chamfort-6",
-    "text": "One must be a little mad to be a little wise.",
-    "author": "Sébastien-Roch de Chamfort",
-    "source": "Maximes et Pensées",
-    "tags": [
-      "wisdom",
-      "reflection"
-    ]
-  },
-  {
-    "id": "chamfort-7",
-    "text": "The world is a comedy to those who think, a tragedy to those who feel.",
-    "author": "Sébastien-Roch de Chamfort",
-    "source": "Maximes et Pensées (attributed)",
-    "tags": [
-      "wisdom",
-      "reflection"
-    ]
-  },
-  {
-    "id": "chamfort-8",
-    "text": "The only way to be free is to stop caring what other people think.",
-    "author": "Sébastien-Roch de Chamfort",
-    "source": "Maximes et Pensées (attributed)",
-    "tags": [
-      "freedom",
-      "wisdom"
-    ]
-  },
-  {
-    "id": "vauvenargues-1",
-    "text": "Great thoughts come from the heart.",
-    "author": "Luc de Clapiers, marquis de Vauvenargues",
-    "source": "Réflexions et Maximes",
-    "tags": [
-      "wisdom",
-      "reflection"
-    ]
-  },
-  {
-    "id": "vauvenargues-2",
-    "text": "To know how to enjoy leisure is the height of civilization.",
-    "author": "Luc de Clapiers, marquis de Vauvenargues",
-    "source": "Réflexions et Maximes",
-    "tags": [
-      "wisdom",
-      "reflection"
-    ]
-  },
-  {
-    "id": "vauvenargues-3",
-    "text": "The desire to be occupied and the impossibility of being so, have made our life a burden.",
-    "author": "Luc de Clapiers, marquis de Vauvenargues",
-    "source": "Réflexions et Maximes",
-    "tags": [
-      "wisdom",
-      "reflection"
-    ]
-  },
-  {
-    "id": "vauvenargues-4",
-    "text": "One must be a master of oneself in order to be a master of others.",
-    "author": "Luc de Clapiers, marquis de Vauvenargues",
-    "source": "Réflexions et Maximes",
-    "tags": [
-      "discipline",
-      "wisdom"
-    ]
-  },
-  {
-    "id": "vauvenargues-5",
-    "text": "Idleness makes life dull, but occupation makes it delightful.",
-    "author": "Luc de Clapiers, marquis de Vauvenargues",
-    "source": "Réflexions et Maximes",
-    "tags": [
-      "purpose",
-      "wisdom"
-    ]
-  },
-  {
     "id": "pascal-1",
     "text": "The heart has its reasons, which reason knows not.",
     "author": "Blaise Pascal",
@@ -4011,146 +3636,6 @@
     ]
   },
   {
-    "id": "hazlitt-1",
-    "text": "The greatest pleasure in life is doing what people say you cannot do.",
-    "author": "William Hazlitt",
-    "source": "Table-Talk",
-    "tags": [
-      "courage",
-      "perseverance"
-    ]
-  },
-  {
-    "id": "hazlitt-2",
-    "text": "The more a man knows, the more he is disposed to forgive.",
-    "author": "William Hazlitt",
-    "source": "Table-Talk",
-    "tags": [
-      "wisdom",
-      "gratitude"
-    ]
-  },
-  {
-    "id": "hazlitt-3",
-    "text": "A man is never less alone than when he is alone with himself.",
-    "author": "William Hazlitt",
-    "source": "Table-Talk",
-    "tags": [
-      "reflection",
-      "wisdom"
-    ]
-  },
-  {
-    "id": "hazlitt-4",
-    "text": "The mind is its own place, and can make a heaven of hell, a hell of heaven.",
-    "author": "William Hazlitt",
-    "source": "Table-Talk",
-    "tags": [
-      "wisdom",
-      "reflection"
-    ]
-  },
-  {
-    "id": "hazlitt-5",
-    "text": "He who has seen but one man well studied, has a better fund of observation than he who has seen a hundred only slightly.",
-    "author": "William Hazlitt",
-    "source": "Table-Talk",
-    "tags": [
-      "wisdom",
-      "reflection"
-    ]
-  },
-  {
-    "id": "emerson-6",
-    "text": "To be yourself in a world that is constantly trying to make you something else is the greatest accomplishment.",
-    "author": "Ralph Waldo Emerson",
-    "source": "Essays (attributed)",
-    "tags": [
-      "courage",
-      "freedom"
-    ]
-  },
-  {
-    "id": "emerson-7",
-    "text": "Nothing is at last sacred but the integrity of your own mind.",
-    "author": "Ralph Waldo Emerson",
-    "source": "Self-Reliance",
-    "tags": [
-      "wisdom",
-      "courage"
-    ]
-  },
-  {
-    "id": "emerson-8",
-    "text": "Life is a journey, not a destination.",
-    "author": "Ralph Waldo Emerson",
-    "source": "Essays (attributed)",
-    "tags": [
-      "wisdom",
-      "reflection"
-    ]
-  },
-  {
-    "id": "emerson-9",
-    "text": "What you do speaks so loudly that I cannot hear what you say.",
-    "author": "Ralph Waldo Emerson",
-    "source": "Essays (attributed)",
-    "tags": [
-      "action",
-      "wisdom"
-    ]
-  },
-  {
-    "id": "emerson-10",
-    "text": "The only way to have a friend is to be one.",
-    "author": "Ralph Waldo Emerson",
-    "source": "Friendship",
-    "tags": [
-      "gratitude",
-      "wisdom"
-    ]
-  },
-  {
-    "id": "nietzsche-11",
-    "text": "That which does not kill us makes us stronger.",
-    "author": "Friedrich Nietzsche",
-    "source": "Twilight of the Idols, Maxims and Arrows 8",
-    "tags": [
-      "perseverance",
-      "courage"
-    ]
-  },
-  {
-    "id": "nietzsche-12",
-    "text": "The higher we soar, the smaller we appear to those who cannot fly.",
-    "author": "Friedrich Nietzsche",
-    "source": "Thus Spoke Zarathustra",
-    "tags": [
-      "wisdom",
-      "perseverance"
-    ]
-  },
-  {
-    "id": "nietzsche-13",
-    "text": "He who would learn to fly one day must first learn to stand and walk and run and climb and dance.",
-    "author": "Friedrich Nietzsche",
-    "source": "Thus Spoke Zarathustra",
-    "tags": [
-      "learning",
-      "perseverance"
-    ]
-  },
-  {
-    "id": "nietzsche-14",
-    "text": "You must have chaos within you to give birth to a dancing star.",
-    "author": "Friedrich Nietzsche",
-    "source": "Thus Spoke Zarathustra",
-    "tags": [
-      "creativity",
-      "perseverance"
-    ]
-  },
-  {
     "id": "buddha-9",
     "text": "Peace comes from within. Do not seek it without.",
     "author": "Buddha",
@@ -4178,86 +3663,6 @@
     "tags": [
       "mindfulness",
       "focus"
-    ]
-  },
-  {
-    "id": "thoreau-5",
-    "text": "The price of anything is the amount of life you exchange for it.",
-    "author": "Henry David Thoreau",
-    "source": "Walden",
-    "tags": [
-      "wisdom",
-      "simplicity"
-    ]
-  },
-  {
-    "id": "thoreau-6",
-    "text": "It is not what you look at that matters, it is what you see.",
-    "author": "Henry David Thoreau",
-    "source": "Journals",
-    "tags": [
-      "wisdom",
-      "mindfulness"
-    ]
-  },
-  {
-    "id": "thoreau-7",
-    "text": "Things do not change; we change.",
-    "author": "Henry David Thoreau",
-    "source": "Walden",
-    "tags": [
-      "growth",
-      "wisdom"
-    ]
-  },
-  {
-    "id": "thoreau-8",
-    "text": "Go confidently in the direction of your dreams. Live the life you have imagined.",
-    "author": "Henry David Thoreau",
-    "source": "Walden, Conclusion",
-    "tags": [
-      "courage",
-      "purpose"
-    ]
-  },
-  {
-    "id": "voltaire-3",
-    "text": "I may not agree with what you have to say, but I will fight to the death to defend your right to say it.",
-    "author": "Voltaire",
-    "source": "Letters (attributed)",
-    "tags": [
-      "freedom",
-      "courage"
-    ]
-  },
-  {
-    "id": "voltaire-4",
-    "text": "Common sense is not so common.",
-    "author": "Voltaire",
-    "source": "Essai sur les moeurs (attributed)",
-    "tags": [
-      "wisdom",
-      "reflection"
-    ]
-  },
-  {
-    "id": "voltaire-5",
-    "text": "Judge a man by his questions rather than by his answers.",
-    "author": "Voltaire",
-    "source": "Dialogue de la Philosophie (attributed)",
-    "tags": [
-      "wisdom",
-      "learning"
-    ]
-  },
-  {
-    "id": "kierkegaard-11",
-    "text": "Life can only be understood backwards; but it must be lived forwards.",
-    "author": "Søren Kierkegaard",
-    "source": "Journals, 11.A.134",
-    "tags": [
-      "wisdom",
-      "reflection"
     ]
   },
   {
@@ -4367,6 +3772,961 @@
     "source": "Notebooks (attributed)",
     "tags": [
       "simplicity",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "cicero-1",
+    "text": "A room without books is like a body without a soul.",
+    "author": "Cicero",
+    "source": "Pro Archia Poeta",
+    "tags": [
+      "wisdom",
+      "learning",
+      "reflection"
+    ]
+  },
+  {
+    "id": "cicero-2",
+    "text": "Gratitude is not only the greatest of virtues, but the parent of all others.",
+    "author": "Cicero",
+    "source": "De Officiis",
+    "tags": [
+      "gratitude",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "cicero-3",
+    "text": "The more you have, the more you want.",
+    "author": "Cicero",
+    "source": "De Finibus Bonorum et Malorum",
+    "tags": [
+      "wisdom",
+      "reflection",
+      "simplicity"
+    ]
+  },
+  {
+    "id": "cicero-4",
+    "text": "While there is life, there is hope.",
+    "author": "Cicero",
+    "source": "Ad Familiares, 9.15",
+    "tags": [
+      "perseverance",
+      "wisdom",
+      "courage"
+    ]
+  },
+  {
+    "id": "cicero-5",
+    "text": "The functions of the intellect are wisdom and counsel.",
+    "author": "Cicero",
+    "source": "De Officiis",
+    "tags": [
+      "wisdom",
+      "purpose"
+    ]
+  },
+  {
+    "id": "cleanthes-1",
+    "text": "Fate guides the willing, but drags the unwilling.",
+    "author": "Cleanthes",
+    "source": "Hymn to Zeus",
+    "tags": [
+      "wisdom",
+      "reflection"
+    ]
+  },
+  {
+    "id": "buddha-sutra-1",
+    "text": "Do not believe in anything simply because you have heard it.",
+    "author": "Buddha",
+    "source": "Kalama Sutta",
+    "tags": [
+      "wisdom",
+      "learning"
+    ]
+  },
+  {
+    "id": "buddha-sutra-2",
+    "text": "The root of suffering is attachment.",
+    "author": "Buddha",
+    "source": "Four Noble Truths, Dhammacakkappavattana Sutta",
+    "tags": [
+      "wisdom",
+      "reflection"
+    ]
+  },
+  {
+    "id": "buddha-sutra-3",
+    "text": "Better than a thousand hollow words is one word that brings peace.",
+    "author": "Buddha",
+    "source": "Dhammapada, Verse 100",
+    "tags": [
+      "wisdom",
+      "reflection"
+    ]
+  },
+  {
+    "id": "nietzsche-zara-1",
+    "text": "One must still have chaos in oneself to be able to give birth to a dancing star.",
+    "author": "Friedrich Nietzsche",
+    "source": "Thus Spoke Zarathustra, Prologue",
+    "tags": [
+      "creativity",
+      "perseverance"
+    ]
+  },
+  {
+    "id": "camus-mos-1",
+    "text": "In the depth of winter, I finally learned that within me there lay an invincible summer.",
+    "author": "Albert Camus",
+    "source": "Return to Tipasa",
+    "tags": [
+      "perseverance",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "thoreau-walden-1",
+    "text": "The mass of men lead lives of quiet desperation.",
+    "author": "Henry David Thoreau",
+    "source": "Walden, 'Where I Lived'",
+    "tags": [
+      "reflection",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "thoreau-walden-2",
+    "text": "Go confidently in the direction of your dreams. Live the life you have imagined.",
+    "author": "Henry David Thoreau",
+    "source": "Walden, Conclusion",
+    "tags": [
+      "courage",
+      "purpose"
+    ]
+  },
+  {
+    "id": "emerson-self-1",
+    "text": "Nothing is at last sacred but the integrity of your own mind.",
+    "author": "Ralph Waldo Emerson",
+    "source": "Self-Reliance",
+    "tags": [
+      "wisdom",
+      "courage"
+    ]
+  },
+  {
+    "id": "emerson-self-2",
+    "text": "A foolish consistency is the hobgoblin of little minds.",
+    "author": "Ralph Waldo Emerson",
+    "source": "Self-Reliance",
+    "tags": [
+      "creativity",
+      "courage"
+    ]
+  },
+  {
+    "id": "emerson-self-3",
+    "text": "To be great is to be misunderstood.",
+    "author": "Ralph Waldo Emerson",
+    "source": "Self-Reliance",
+    "tags": [
+      "courage",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "seneca-letter-1",
+    "text": "It is not the man who has too little, but the man who craves more, that is poor.",
+    "author": "Seneca",
+    "source": "Letter 2, Moral Epistles",
+    "tags": [
+      "simplicity",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "seneca-letter-2",
+    "text": "We are more often frightened than hurt, and we suffer more in imagination than in reality.",
+    "author": "Seneca",
+    "source": "Letter 5, Moral Epistles",
+    "tags": [
+      "perseverance",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "epictetus-ench-1",
+    "text": "Men are disturbed not by things, but by the views which they take of them.",
+    "author": "Epictetus",
+    "source": "Enchiridion, Chapter 5",
+    "tags": [
+      "mindfulness",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "epictetus-ench-2",
+    "text": "Wealth consists not in having great possessions, but in having few wants.",
+    "author": "Epictetus",
+    "source": "Enchiridion (attributed)",
+    "tags": [
+      "simplicity",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "lao-tzu-ttc-1",
+    "text": "Know others are wise; know yourself is enlightenment.",
+    "author": "Lao Tzu",
+    "source": "Tao Te Ching, Ch. 33",
+    "tags": [
+      "wisdom",
+      "reflection"
+    ]
+  },
+  {
+    "id": "lao-tzu-ttc-2",
+    "text": "The journey of a thousand miles begins with a single step.",
+    "author": "Lao Tzu",
+    "source": "Tao Te Ching, Ch. 64",
+    "tags": [
+      "perseverance",
+      "action"
+    ]
+  },
+  {
+    "id": "lao-tzu-ttc-3",
+    "text": "To lead people, walk beside them.",
+    "author": "Lao Tzu",
+    "source": "Tao Te Ching, Ch. 17 (attributed)",
+    "tags": [
+      "wisdom",
+      "humility"
+    ]
+  },
+  {
+    "id": "montaigne-essay-1",
+    "text": "On the highest throne in the world sits only a man.",
+    "author": "Michel de Montaigne",
+    "source": "Essays, Book I",
+    "tags": [
+      "wisdom",
+      "humility"
+    ]
+  },
+  {
+    "id": "montaigne-essay-2",
+    "text": "He who teaches men to die, teaches them to live.",
+    "author": "Michel de Montaigne",
+    "source": "Essays, Book I, Ch. 20",
+    "tags": [
+      "wisdom",
+      "reflection"
+    ]
+  },
+  {
+    "id": "pascal-pensee-1",
+    "text": "The eternal silence of these infinite spaces frightens me.",
+    "author": "Blaise Pascal",
+    "source": "Pensées, 199",
+    "tags": [
+      "wisdom",
+      "reflection"
+    ]
+  },
+  {
+    "id": "voltaire-candide-1",
+    "text": "We must cultivate our garden.",
+    "author": "Voltaire",
+    "source": "Candide",
+    "tags": [
+      "purpose",
+      "reflection"
+    ]
+  },
+  {
+    "id": "voltaire-candide-2",
+    "text": "Common sense is not so common.",
+    "author": "Voltaire",
+    "source": "Attributed",
+    "tags": [
+      "wisdom",
+      "reflection"
+    ]
+  },
+  {
+    "id": "kafka-diary-1",
+    "text": "I am a cage, in search of a bird.",
+    "author": "Franz Kafka",
+    "source": "Diaries, 1922",
+    "tags": [
+      "reflection",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "kafka-diary-2",
+    "text": "A book must be the axe for the frozen sea within us.",
+    "author": "Franz Kafka",
+    "source": "Letters to Oskar Pollak, 1904",
+    "tags": [
+      "creativity",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "dostoevsky-bk-1",
+    "text": "The mystery of human existence lies not in just staying alive, but in finding something to live for.",
+    "author": "Fyodor Dostoevsky",
+    "source": "The Brothers Karamazov",
+    "tags": [
+      "purpose",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "dostoevsky-bk-2",
+    "text": "Above all, don't lie to yourself. The man who lies to himself and listens to his own lie comes to a point where he cannot distinguish the truth within him, or around him, and so loses all respect for himself and for others.",
+    "author": "Fyodor Dostoevsky",
+    "source": "The Brothers Karamazov",
+    "tags": [
+      "wisdom",
+      "discipline"
+    ]
+  },
+  {
+    "id": "tolstoy-ak-1",
+    "text": "Everyone thinks of changing the world, but no one thinks of changing himself.",
+    "author": "Leo Tolstoy",
+    "source": "Anna Karenina",
+    "tags": [
+      "wisdom",
+      "reflection"
+    ]
+  },
+  {
+    "id": "woolf-lighthouse-1",
+    "text": "Life is not a series of gig lamps symmetrically arranged; life is a luminous halo.",
+    "author": "Virginia Woolf",
+    "source": "Modern Fiction",
+    "tags": [
+      "wisdom",
+      "reflection"
+    ]
+  },
+  {
+    "id": "beckett-wfg-1",
+    "text": "We have time to spare.",
+    "author": "Samuel Beckett",
+    "source": "Waiting for Godot",
+    "tags": [
+      "reflection",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "beckett-wfg-2",
+    "text": "Give birth to the future.",
+    "author": "Samuel Beckett",
+    "source": "Worstward Ho",
+    "tags": [
+      "perseverance",
+      "purpose"
+    ]
+  },
+  {
+    "id": "ibsen-adh-1",
+    "text": "The strongest man in the world is he who stands most alone.",
+    "author": "Henrik Ibsen",
+    "source": "An Enemy of the People",
+    "tags": [
+      "courage",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "chekhov-letter-1",
+    "text": "Don't tell me the moon is shining; show me the glint of light on broken glass.",
+    "author": "Anton Chekhov",
+    "source": "Letter to Alexander Chekhov, 1886",
+    "tags": [
+      "creativity",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "rilke-layp-1",
+    "text": "Be patient toward all that is unsolved in your heart and try to love the questions themselves.",
+    "author": "Rainer Maria Rilke",
+    "source": "Letters to a Young Poet, Letter 4",
+    "tags": [
+      "wisdom",
+      "patience"
+    ]
+  },
+  {
+    "id": "rilke-layp-2",
+    "text": "Perhaps all the dragons in our lives are princesses who are only waiting to see us act, just once, with beauty and courage.",
+    "author": "Rainer Maria Rilke",
+    "source": "Letters to a Young Poet, Letter 7",
+    "tags": [
+      "courage",
+      "perseverance"
+    ]
+  },
+  {
+    "id": "tagore-sb-1",
+    "text": "The butterfly counts not months but moments, and has time enough.",
+    "author": "Rabindranath Tagore",
+    "source": "Stray Birds, 81",
+    "tags": [
+      "mindfulness",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "dickinson-poem-1",
+    "text": "Hope is the thing with feathers that perches in the soul.",
+    "author": "Emily Dickinson",
+    "source": "Poem 254",
+    "tags": [
+      "perseverance",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "frost-road-1",
+    "text": "The best way out is always through.",
+    "author": "Robert Frost",
+    "source": "A Servant to Servants",
+    "tags": [
+      "perseverance",
+      "courage"
+    ]
+  },
+  {
+    "id": "frost-road-2",
+    "text": "In three words I can sum up everything I've learned about life: it goes on.",
+    "author": "Robert Frost",
+    "source": "Attributed",
+    "tags": [
+      "wisdom",
+      "perseverance"
+    ]
+  },
+  {
+    "id": "kipling-poem-1",
+    "text": "If you can meet with Triumph and Disaster and treat those two impostors just the same.",
+    "author": "Rudyard Kipling",
+    "source": "If—",
+    "tags": [
+      "wisdom",
+      "perseverance"
+    ]
+  },
+  {
+    "id": "kipling-poem-2",
+    "text": "The woman's cause is not to be won by entreaty, it is to be won by war.",
+    "author": "Rudyard Kipling",
+    "source": "The Betrothed",
+    "tags": [
+      "courage",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "wilde-dg-1",
+    "text": "I am not young enough to know everything.",
+    "author": "Oscar Wilde",
+    "source": "De Profundis",
+    "tags": [
+      "wisdom",
+      "humility"
+    ]
+  },
+  {
+    "id": "joyce-uly-1",
+    "text": "Mistakes are the portals of discovery.",
+    "author": "James Joyce",
+    "source": "Ulysses",
+    "tags": [
+      "wisdom",
+      "creativity"
+    ]
+  },
+  {
+    "id": "sartre-bn-1",
+    "text": "Man is condemned to be free.",
+    "author": "Jean-Paul Sartre",
+    "source": "Being and Nothingness",
+    "tags": [
+      "freedom",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "sartre-bn-2",
+    "text": "Life has no meaning a priori. You must invent your own meaning.",
+    "author": "Jean-Paul Sartre",
+    "source": "Existentialism Is a Humanism",
+    "tags": [
+      "purpose",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "kierkegaard-eo-1",
+    "text": "Purity of heart is to will one thing.",
+    "author": "Søren Kierkegaard",
+    "source": "Purity of Heart Is to Will One Thing",
+    "tags": [
+      "purpose",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "schopenhauer-wr-1",
+    "text": "Talent hits a target no one else can hit; genius hits a target no one else can see.",
+    "author": "Arthur Schopenhauer",
+    "source": "The World as Will and Representation",
+    "tags": [
+      "creativity",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "beauvoir-eoa-1",
+    "text": "To be free is not to have the power to do whatever one likes, but to be able to do what one should.",
+    "author": "Simone de Beauvoir",
+    "source": "The Ethics of Ambiguity",
+    "tags": [
+      "freedom",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "arendt-hc-1",
+    "text": "The most radical revolutionary act is to change the concept of the world.",
+    "author": "Hannah Arendt",
+    "source": "The Human Condition",
+    "tags": [
+      "wisdom",
+      "reflection"
+    ]
+  },
+  {
+    "id": "arendt-hc-2",
+    "text": "Nobody ever killed or dominated for the sake of freedom.",
+    "author": "Hannah Arendt",
+    "source": "Between Past and Future",
+    "tags": [
+      "freedom",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "twain-letter-1",
+    "text": "The best way to cheer yourself is to cheer somebody else up.",
+    "author": "Mark Twain",
+    "source": "Letter to Mrs. Fairbanks, attributed",
+    "tags": [
+      "wisdom",
+      "gratitude"
+    ]
+  },
+  {
+    "id": "twain-letter-2",
+    "text": "If you tell the truth, you don't have to remember anything.",
+    "author": "Mark Twain",
+    "source": "Notebook (attributed)",
+    "tags": [
+      "wisdom",
+      "discipline"
+    ]
+  },
+  {
+    "id": "russell-speech-1",
+    "text": "The world is full of people who are certain they are right.",
+    "author": "Bertrand Russell",
+    "source": "Attributed",
+    "tags": [
+      "wisdom",
+      "humility"
+    ]
+  },
+  {
+    "id": "frankl-msm-1",
+    "text": "Everything can be taken from a man but one thing: the last of the human freedoms.",
+    "author": "Viktor Frankl",
+    "source": "Man's Search for Meaning",
+    "tags": [
+      "freedom",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "frankl-msm-2",
+    "text": "Those who have a 'why' to live can bear with almost any 'how'.",
+    "author": "Viktor Frankl",
+    "source": "Man's Search for Meaning (quoting Nietzsche)",
+    "tags": [
+      "purpose",
+      "perseverance"
+    ]
+  },
+  {
+    "id": "cicero-6",
+    "text": "To be grateful is to recognize a debt that can never be paid.",
+    "author": "Cicero",
+    "source": "De Officiis (attributed)",
+    "tags": [
+      "gratitude",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "cicero-7",
+    "text": "The life of the dead is placed in the memory of the living.",
+    "author": "Cicero",
+    "source": "Philippicae",
+    "tags": [
+      "wisdom",
+      "reflection"
+    ]
+  },
+  {
+    "id": "musonius-1",
+    "text": "How else can a man learn that injustice is unjust unless he is treated unjustly?",
+    "author": "Musonius Rufus",
+    "source": "Discourses",
+    "tags": [
+      "wisdom",
+      "reflection"
+    ]
+  },
+  {
+    "id": "plutarch-lives-1",
+    "text": "What we obtain too cheap, we esteem too lightly.",
+    "author": "Plutarch",
+    "source": "Life of Alexander (attributed)",
+    "tags": [
+      "wisdom",
+      "reflection"
+    ]
+  },
+  {
+    "id": "plutarch-lives-2",
+    "text": "To arrive at the most exquisite knowledge of things, nothing is wanting but to want.",
+    "author": "Plutarch",
+    "source": "Moralia (attributed)",
+    "tags": [
+      "learning",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "seneca-brev-1",
+    "text": "Life is long if you know how to use it.",
+    "author": "Seneca",
+    "source": "On the Shortness of Life",
+    "tags": [
+      "purpose",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "seneca-brev-2",
+    "text": "We are not given a short life, but we make it short.",
+    "author": "Seneca",
+    "source": "On the Shortness of Life",
+    "tags": [
+      "purpose",
+      "reflexion"
+    ]
+  },
+  {
+    "id": "epictetus-disc-1",
+    "text": "First learn the meaning of what you say, and then speak.",
+    "author": "Epictetus",
+    "source": "Discourses",
+    "tags": [
+      "wisdom",
+      "reflection"
+    ]
+  },
+  {
+    "id": "aurelius-med-1",
+    "text": "The present is the only thing of which a man can be deprived.",
+    "author": "Marcus Aurelius",
+    "source": "Meditations, 2.14",
+    "tags": [
+      "wisdom",
+      "reflection"
+    ]
+  },
+  {
+    "id": "aurelius-med-2",
+    "text": "Everything is opinion and opinion is in your power.",
+    "author": "Marcus Aurelius",
+    "source": "Meditations, 12.22",
+    "tags": [
+      "wisdom",
+      "reflection"
+    ]
+  },
+  {
+    "id": "aurelius-med-3",
+    "text": "Do everything as if it were your last.",
+    "author": "Marcus Aurelius",
+    "source": "Meditations, 2.2",
+    "tags": [
+      "purpose",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "buddha-dhamma-1",
+    "text": "Better than a thousand hollow words is one word that brings peace.",
+    "author": "Buddha",
+    "source": "Dhammapada, Verse 100",
+    "tags": [
+      "wisdom",
+      "peace"
+    ]
+  },
+  {
+    "id": "buddha-dhamma-2",
+    "text": "Just as a treasure is lost in a house but found again through diligent search, so too the Dhamma is found through diligence.",
+    "author": "Buddha",
+    "source": "Dhammapada (attributed)",
+    "tags": [
+      "perseverance",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "lao-tzu-ttc-4",
+    "text": "He who knows does not speak; he who speaks does not know.",
+    "author": "Lao Tzu",
+    "source": "Tao Te Ching, Ch. 56",
+    "tags": [
+      "wisdom",
+      "reflexion"
+    ]
+  },
+  {
+    "id": "lao-tzu-ttc-5",
+    "text": "A trip of a thousand miles begins with a single step.",
+    "author": "Lao Tzu",
+    "source": "Tao Te Ching, Ch. 64",
+    "tags": [
+      "perseverance",
+      "action"
+    ]
+  },
+  {
+    "id": "confucius-an-1",
+    "text": "By three methods we may learn wisdom: first, by reflection, which is noblest; second, by imitation, which is easiest; and third by experience, which is the bitterest.",
+    "author": "Confucius",
+    "source": "Analects (attributed)",
+    "tags": [
+      "wisdom",
+      "learning"
+    ]
+  },
+  {
+    "id": "montaigne-ess-1",
+    "text": "To practice death is to practice freedom.",
+    "author": "Michel de Montaigne",
+    "source": "Essays, Book I, Ch. 20",
+    "tags": [
+      "freedom",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "montaigne-ess-2",
+    "text": "I study myself more than any other subject. That is my metaphysics, that is my physics.",
+    "author": "Michel de Montaigne",
+    "source": "Essays, Book III: Of Repentance",
+    "tags": [
+      "reflection",
+      "learning"
+    ]
+  },
+  {
+    "id": "descartes-dom-1",
+    "text": "The greatest minds are capable of the greatest vices as well as of the greatest virtues.",
+    "author": "René Descartes",
+    "source": "Discourse on the Method",
+    "tags": [
+      "wisdom",
+      "reflection"
+    ]
+  },
+  {
+    "id": "kant-cpr-1",
+    "text": "Out of the crooked timber of humanity, no straight thing was ever made.",
+    "author": "Immanuel Kant",
+    "source": "Idea for a Universal History",
+    "tags": [
+      "wisdom",
+      "reflection"
+    ]
+  },
+  {
+    "id": "kant-gmm-1",
+    "text": "Duty is the necessity of acting from respect for the law.",
+    "author": "Immanuel Kant",
+    "source": "Groundwork of the Metaphysics of Morals",
+    "tags": [
+      "discipline",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "pascal-pensee-2",
+    "text": "Men never do evil so completely and cheerfully as when they do it from religious conviction.",
+    "author": "Blaise Pascal",
+    "source": "Lettres Provinciales",
+    "tags": [
+      "wisdom",
+      "courage"
+    ]
+  },
+  {
+    "id": "spinoza-eth-1",
+    "text": "All excellent things are as difficult as they are rare.",
+    "author": "Baruch Spinoza",
+    "source": "Ethics (attributed)",
+    "tags": [
+      "perseverance",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "wittgenstein-tract-1",
+    "text": "The limits of my language mean the limits of my world.",
+    "author": "Ludwig Wittgenstein",
+    "source": "Tractatus Logico-Philosophicus, 5.6",
+    "tags": [
+      "wisdom",
+      "reflection"
+    ]
+  },
+  {
+    "id": "santayana-lr-1",
+    "text": "Those who cannot remember the past are condemned to repeat it.",
+    "author": "George Santayana",
+    "source": "The Life of Reason",
+    "tags": [
+      "wisdom",
+      "learning"
+    ]
+  },
+  {
+    "id": "thoreau-wald-1",
+    "text": "Not until we are lost do we begin to understand ourselves.",
+    "author": "Henry David Thoreau",
+    "source": "Walden, Where I Lived",
+    "tags": [
+      "reflection",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "emerson-ess-1",
+    "text": "Life is a progress and not a station.",
+    "author": "Ralph Waldo Emerson",
+    "source": "The American Scholar",
+    "tags": [
+      "perseverance",
+      "purpose"
+    ]
+  },
+  {
+    "id": "emerson-ess-2",
+    "text": "Adopt the pace of nature: her secret is patience.",
+    "author": "Ralph Waldo Emerson",
+    "sources": [
+      "Essays (attributed)"
+    ],
+    "tags": [
+      "patience",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "nietzsche-gm-1",
+    "text": "He who fights with monsters might take care lest he thereby become a monster.",
+    "author": "Friedrich Nietzsche",
+    "source": "Beyond Good and Evil, Aphorism 146",
+    "tags": [
+      "wisdom",
+      "reflection"
+    ]
+  },
+  {
+    "id": "kafka-meta-1",
+    "text": "I cannot transform the world, but I can transform myself.",
+    "author": "Franz Kafka",
+    "source": "Diaries (attributed)",
+    "tags": [
+      "wisdom",
+      "perseverance"
+    ]
+  },
+  {
+    "id": "beckett-attr-1",
+    "text": "Ever tried. Ever failed. No matter. Try again. Fail again. Fail better.",
+    "author": "Samuel Beckett",
+    "source": "Worstward Ho",
+    "tags": [
+      "perseverance",
+      "courage"
+    ]
+  },
+  {
+    "id": "woolf-md-1",
+    "text": "She felt somehow very like him—the young man who had killed himself.",
+    "author": "Virginia Woolf",
+    "source": "Mrs Dalloway",
+    "tags": [
+      "reflection",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "heraclitus-2",
+    "text": "Much learning does not teach understanding.",
+    "author": "Heraclitus",
+    "source": "Fragment B40",
+    "tags": [
+      "learning",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "socrates-3",
+    "text": "To find yourself, think for yourself.",
+    "author": "Socrates",
+    "source": "Socrates (attributed)",
+    "tags": [
+      "self",
+      "wisdom"
+    ]
+  },
+  {
+    "id": "aristotle-3",
+    "text": "Happiness depends upon ourselves.",
+    "author": "Aristotle",
+    "source": "Aristotle (attributed)",
+    "tags": [
+      "self",
       "wisdom"
     ]
   }
