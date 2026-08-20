@@ -54,11 +54,24 @@ export function DailyQuoteCard({
     );
   }
 
-  // Error-only state — muted, non-alarming.
+  // Error-only state — muted, non-alarming, with a retry affordance.
   if (error && !quote) {
     return (
       <View style={styles.container}>
         <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+        {onRefresh ? (
+          <TouchableOpacity
+            testID="daily-quote.retry"
+            onPress={onRefresh}
+            disabled={isRefreshing}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityLabel={t('common.retry', { defaultValue: 'Retry' })}
+          >
+            <Text style={[styles.retryText, { color: colors.primary }]}>
+              {t('common.retry', { defaultValue: 'Retry' })}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     );
   }
@@ -157,5 +170,9 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 13,
     fontStyle: 'italic',
+  },
+  retryText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
