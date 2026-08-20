@@ -14,8 +14,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 
 import { useTheme } from '../contexts/ThemeContext';
-import { useProGate } from '../hooks/useProGate';
-import { ProRequired } from '../components/paywall/ProRequired';
+import { useProScreenGuard } from '../hooks/useProScreenGuard';
 import { useRenderStyleStore } from '../stores/renderStyleStore';
 import StructuredRenderer from '../components/StructuredRenderer';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
@@ -175,11 +174,9 @@ export default function RenderStyleEditorScreen() {
 
   const sample = useMemo(() => sampleFor(format), [format]);
 
-  const { isPro } = useProGate();
+  const blocked = useProScreenGuard();
 
-  if (!isPro) {
-    return <ProRequired />;
-  }
+  if (blocked) return null;
 
   return (
     <SafeAreaView edges={['top', 'bottom']} className="flex-1" style={{ backgroundColor: colors.background }}>

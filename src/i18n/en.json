@@ -864,6 +864,18 @@
       "renderStyles": "Render styles",
       "multiAccount": "Multiple GitHub accounts"
     },
+    "featureDescriptions": {
+      "aiChat": "Ask your notes anything and get instant answers",
+      "aiActions": "Summarize, rewrite, and improve text right in the editor",
+      "thoughtDump": "Capture quick thoughts as they happen",
+      "voiceDump": "Speak your ideas and save them as notes",
+      "personalizedQuotes": "Daily quotes tuned to your writing by AI",
+      "githubTools": "Give the AI context from your GitHub repos",
+      "canvases": "Arrange notes visually on an infinite canvas",
+      "templates": "Start new notes from your own templates",
+      "renderStyles": "Choose exactly how your notes look",
+      "multiAccount": "Connect multiple GitHub accounts side by side"
+    },
     "monthly": {
       "trialCta": "Try 30 days free, then {{price}}/month",
       "price": "{{price}}/month",
@@ -895,8 +907,6 @@
     "statusTrial": "{{days}} days left in trial",
     "statusUpgrade": "Upgrade",
     "settingsRow": "GitNotēs Pro",
-    "gateTitle": "This is a Pro feature",
-    "gateBody": "Upgrade to unlock AI features and more.",
     "badge": "PRO",
     "lockedTitle": "Pro Feature",
     "lockedBody": "This feature requires GitNotēs Pro. Upgrade to unlock unlimited accounts, repos, AI, and more."

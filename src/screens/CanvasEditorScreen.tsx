@@ -1,7 +1,6 @@
 import React from 'react';
 import CanvasEditorContent from '../components/canvas/CanvasEditorContent';
-import { useProGate } from '../hooks/useProGate';
-import { ProRequired } from '../components/paywall/ProRequired';
+import { useProScreenGuard } from '../hooks/useProScreenGuard';
 
 export {
   clampCanvasTranslation,
@@ -11,7 +10,7 @@ export {
 } from '../components/canvas/CanvasEditorContent';
 
 export default function CanvasEditorScreen() {
-  const { isPro } = useProGate();
-  if (!isPro) return <ProRequired />;
+  const blocked = useProScreenGuard();
+  if (blocked) return null;
   return <CanvasEditorContent />;
 }

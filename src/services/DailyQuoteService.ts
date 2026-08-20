@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generateText } from 'ai';
 import type { Note } from '../models/Note';
 import { useAIStore } from '../stores/aiStore';
+import { useProStore, selectIsPro } from '../stores/proStore';
 import { initializeModel } from './AIService';
 import quotesJson from '../data/philosopher_quotes.json';
 
@@ -28,9 +29,11 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 const quotes: QuoteRow[] = quotesJson as QuoteRow[];
 
-type FallbackReason = 'no_model' | 'no_journals' | 'ai_failed' | 'error' | 'personalization_off' | 'quote_personalization_off';
+type FallbackReason = 'disabled' | 'no_model' | 'no_journals' | 'ai_failed' | 'error' | 'personalization_off' | 'quote_personalization_off';
 
 const FALLBACK_DESCRIPTIONS: Record<FallbackReason, string> = {
+  disabled:
+    'Daily Quote feature is disabled. Enable it in Settings → AI for personalized quotes.',
   no_model:
     'No AI model selected. Choose a model in Settings → AI to enable personalization.',
   no_journals:
@@ -44,6 +47,20 @@ const FALLBACK_DESCRIPTIONS: Record<FallbackReason, string> = {
     'A quote from our curated collection.',
 };
 
+const PRO_BLOCKED_REASONS: FallbackReason[] = ['disabled', 'no_model', 'personalization_off'];
+
+function resolveDescription(reason: FallbackReason): string {
+  try {
+    const isPro = selectIsPro(useProStore.getState());
+    if (!isPro && PRO_BLOCKED_REASONS.includes(reason)) {
+      return 'AI personalization requires GitNotēs Pro. Showing a quote from the collection.';
+    }
+  } catch {
+    // proStore may throw on bare useProStore.getState() in some test setups
+  }
+  return FALLBACK_DESCRIPTIONS[reason];
+}
+
 function makeFallbackQuote(reason: FallbackReason): DailyQuote {
   const random = quotes[Math.floor(Math.random() * quotes.length)];
   return {
@@ -52,7 +69,7 @@ function makeFallbackQuote(reason: FallbackReason): DailyQuote {
     author: random.author,
     tags: random.tags,
     source: random.source,
-    description: FALLBACK_DESCRIPTIONS[reason],
+    description: resolveDescription(reason),
     generatedAt: Date.now(),
   };
 }

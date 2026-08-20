@@ -234,6 +234,44 @@ describe('Settings Pro section', () => {
   });
 });
 
+describe('Settings Manage Templates — Pro gate', () => {
+  it('shows a locked Manage Templates row for a free user and routes to the paywall', () => {
+    const onOpenPaywall = jest.fn();
+    const onManageTemplates = jest.fn();
+    const alertSpy = autoConfirmUpgradeAlert();
+    const { getByTestId, queryByTestId, getAllByTestId } = renderContent({
+      isPro: false,
+      onOpenPaywall,
+      onManageTemplates,
+    });
+    expect(getByTestId('settings.row.manage-templates-locked')).toBeTruthy();
+    expect(queryByTestId('settings.button.manage-templates')).toBeNull();
+    expect(getAllByTestId('icon-lock-closed').length).toBeGreaterThan(0);
+    fireEvent.press(getByTestId('settings.row.manage-templates-locked'));
+    expect(onManageTemplates).not.toHaveBeenCalled();
+    expect(onOpenPaywall).toHaveBeenCalledTimes(1);
+    alertSpy.mockRestore();
+  });
+
+  it('keeps Manage Templates unlocked for a pro user and navigates on press', () => {
+    const onOpenPaywall = jest.fn();
+    const onManageTemplates = jest.fn();
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    const { getByTestId, queryByTestId } = renderContent({
+      isPro: true,
+      onOpenPaywall,
+      onManageTemplates,
+    });
+    expect(getByTestId('settings.button.manage-templates')).toBeTruthy();
+    expect(queryByTestId('settings.row.manage-templates-locked')).toBeNull();
+    fireEvent.press(getByTestId('settings.button.manage-templates'));
+    expect(onManageTemplates).toHaveBeenCalledTimes(1);
+    expect(onOpenPaywall).not.toHaveBeenCalled();
+    expect(alertSpy).not.toHaveBeenCalled();
+    alertSpy.mockRestore();
+  });
+});
+
 const oneAccountSummary = {
   accountId: 'a1',
   account: { id: 'a1', login: 'user' },

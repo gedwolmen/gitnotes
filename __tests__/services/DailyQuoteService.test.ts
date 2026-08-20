@@ -36,6 +36,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generateText } from 'ai';
 import { dailyQuoteService, type DailyQuote } from '../../src/services/DailyQuoteService';
 import { initializeModel } from '../../src/services/AIService';
+import { __setProState } from '../../src/stores/proStore';
 import type { Note } from '../../src/models/Note';
 import quotesJson from '../../src/data/philosopher_quotes.json';
 
@@ -243,5 +244,63 @@ describe('DailyQuoteService.regenerate', () => {
 
     const storedRaw = await AsyncStorage.getItem(CACHE_KEY);
     expect(JSON.parse(storedRaw ?? '')).toEqual(quote);
+  });
+});
+
+describe('DailyQuoteService Pro-aware fallback', () => {
+  it('non-Pro user with no model gets a neutral fallback (no Settings instruction)', async () => {
+    __setProState({ status: 'free', entitlementActive: false, isGrandfathered: false });
+    mockAIStoreState.selectedModelId = null;
+
+    const quote = await dailyQuoteService.getDailyQuote([], []);
+
+    expect(quote).not.toBeNull();
+    expect(quote!.description).not.toMatch(/Choose a model/);
+    expect(quote!.description).not.toMatch(/Settings/);
+    expect(quote!.description).toMatch(/GitNotēs Pro|collection/i);
+  });
+
+  it('Pro user with no model keeps the original "Choose a model" copy', async () => {
+    __setProState({ status: 'pro', entitlementActive: true, isGrandfathered: false });
+    mockAIStoreState.selectedModelId = null;
+
+    const quote = await dailyQuoteService.getDailyQuote([], []);
+
+    expect(quote).not.toBeNull();
+    expect(quote!.description).toMatch(/Choose a model/);
+  });
+
+  it('non-Pro user with personalization off gets the neutral Pro message', async () => {
+    __setProState({ status: 'free', entitlementActive: false, isGrandfathered: false });
+    mockAIStoreState.aiPersonalizationEnabled = false;
+
+    const quote = await dailyQuoteService.getDailyQuote([journalNote], [plainNote]);
+
+    expect(quote).not.toBeNull();
+    expect(quote!.description).not.toMatch(/data safety/);
+    expect(quote!.description).toMatch(/GitNotēs Pro/);
+  });
+
+  it('Pro user with personalization off keeps the original copy', async () => {
+    __setProState({ status: 'pro', entitlementActive: true, isGrandfathered: false });
+    mockAIStoreState.aiPersonalizationEnabled = false;
+
+    const quote = await dailyQuoteService.getDailyQuote([journalNote], [plainNote]);
+
+    expect(quote).not.toBeNull();
+    expect(quote!.description).toMatch(/data safety/);
+  });
+
+  it('always returns a real quote payload with the fallback', async () => {
+    __setProState({ status: 'free', entitlementActive: false, isGrandfathered: false });
+    mockAIStoreState.selectedModelId = null;
+
+    const quote = await dailyQuoteService.getDailyQuote([], []);
+
+    expect(quote).not.toBeNull();
+    expect(typeof quote!.quoteId).toBe('string');
+    expect(typeof quote!.text).toBe('string');
+    expect(typeof quote!.author).toBe('string');
+    expect(Array.isArray(quote!.tags)).toBe(true);
   });
 });

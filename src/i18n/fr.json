@@ -864,6 +864,18 @@
       "renderStyles": "Styles de rendu",
       "multiAccount": "Plusieurs comptes GitHub"
     },
+    "featureDescriptions": {
+      "aiChat": "Interrogez vos notes et obtenez des réponses instantanées",
+      "aiActions": "Résumez, réécrivez et améliorez le texte directement dans l'éditeur",
+      "thoughtDump": "Capturez rapidement vos pensées au fur et à mesure",
+      "voiceDump": "Exprimez vos idées et enregistrez-les en tant que notes",
+      "personalizedQuotes": "Citations quotidiennes adaptées à votre écriture par l'IA",
+      "githubTools": "Donnez du contexte à l'IA depuis vos dépôts GitHub",
+      "canvases": "Disposez visuellement vos notes sur un canevas infini",
+      "templates": "Commencez de nouvelles notes à partir de vos propres modèles",
+      "renderStyles": "Choisissez exactement l'apparence de vos notes",
+      "multiAccount": "Connectez plusieurs comptes GitHub côte à côte"
+    },
     "monthly": {
       "trialCta": "Essayez 30 jours gratuitement, puis {{price}}/mois",
       "price": "{{price}}/mois",
@@ -895,8 +907,6 @@
     "statusTrial": "{{days}} jours restants d'essai",
     "statusUpgrade": "Passer à Pro",
     "settingsRow": "GitNotēs Pro",
-    "gateTitle": "Fonctionnalité Pro",
-    "gateBody": "Passez à Pro pour débloquer l'IA et plus encore.",
     "badge": "PRO",
     "lockedTitle": "Fonctionnalité Pro",
     "lockedBody": "Cette fonctionnalité nécessite GitNotēs Pro. Passez à Pro pour débloquer comptes, dépôts, IA et plus, sans limite."

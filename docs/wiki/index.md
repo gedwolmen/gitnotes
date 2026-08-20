@@ -23,10 +23,11 @@
 | [Stage → Push UX](./stage-push-ux.md) | no row locks, vanish-immediate deletes, spinner-free grayed push buttons, determinate progress ring, body-text notifications, resume-on-foreground |
 | [Token Removal Repo Cascade](./repo-removal-cascade.md) | removing a token also removes its synced repos, with a confirmation warning |
 | [Token Scope Error Messaging](./token-scope-error-messaging.md) | 403s surface needed token scopes in the sync message and token-add UI |
-| [Pro Paywall & Monetization](./paywall-pro.md) | RevenueCat Pro paywall: 30-day trial / $2.99 mo / $40 lifetime, grandfathering, show-locked feature UX, gating map, store setup checklist |
+| [Pro Paywall & Monetization](./paywall-pro.md) | RevenueCat Pro paywall: 30-day trial / $2.99 mo / $40 lifetime, grandfathering, show-locked feature UX, gating map, store setup checklist; Pro page bento grid UI redesigned (#921) |
 | [Branding Asset Pipeline](./branding-pipeline.md) | one-master-SVG → generated icons/splash/favicon via sharp (`npm run branding`, #930) |
 | [Daily Quote Settings](./daily-quote-settings.md) | Dataset audit/expansion to 454 verified quotes with sources + two new settings: AI personalization toggle and source visibility toggle (#933, #934) |
 | [Quote Content Policy & Regression Gate](./quote-content-policy.md) | AGENTS.md Quote Content Policy enforced by `__tests__/data/philosopherQuotes.policy.test.ts`: schema/source/uniqueness/count/keyword-scan/tag-vocabulary checks with a documented secular allowlist (#933) |
+| [iPad Multi-Column Card Collapse Fix](./ipad-multicolumn-card-collapse-fix.md) | SwipeableListItem root `width: '100%'` so multi-column FlatList cards fill their column (#940, #941) |
 
 ## Quick Start
 
