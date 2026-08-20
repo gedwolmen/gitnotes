@@ -112,8 +112,82 @@ This cannot be automated — a human must complete it before real-device (sandbo
 7. Verify the build number: the paywall release must be **build ≥ 9** (iOS `buildNumber` in `app.json`) so `originalApplicationVersion < 9` correctly identifies pre-paywall users.
 8. App Store review may require real terms/privacy URLs in the paywall's `paywall.termsNote` text — decide before submission.
 
-## Testing notes
+## Pro page UI (bento grid)
 
+Replaced the old flat checkmark feature list on the PaywallScreen with a non-interactive bento-grid card showcase ([issue #921](https://github.com/gedwolmen/gitnotes/issues/921)). Pricing / purchase UX is unchanged.
+
+### Component path + purpose
+
+- Component: `src/components/paywall/ProFeatureBento.tsx` (default export)
+- Rendered inside `src/screens/PaywallScreen.tsx`, which replaces the previous inline flat checklist at the top of the screen body
+- Non-interactive showcase cards (plain Views; no onPress, not clickable)
+
+### Layout algorithm
+
+- Column count driven by `useResponsive('bento')` from `src/hooks/useResponsive.ts`: phone 2 / tablet 3 / desktop 4 / mac 4
+- Container measures its own width via an `onLayout` callback; per-card base width is `floor((W - 12·(cols-1)) / cols)` where `GAP = SPACING[3] = 12` px
+- The hero tile (`aiChat`) spans 2 columns via `span = Math.min(2, cols)`; all other features are `small` (1 column)
+- Last-tile stretch rule: after normal row-major packing, if the last feature does not fill its row and `cellsLeft >= 2`, that final card stretches to fill the remaining row width (`width = cellsLeft * cardBase + (cellsLeft - 1) * GAP`). This avoids a dangling single cell at the right edge when only one entry remains
+- Content width is capped by `maxContentWidth` when `screenWidth > maxContentWidth`
+
+### Card anatomy
+
+| Layer | Implementation detail |
+|-------|----------------------|
+| Outer View | `backgroundColor: colors.surface` (or `colors.primary + '14'` for hero); `borderColor: colors.border`; `borderRadius: RADII.md` (18); `padding: 14` |
+| Icon badge | 38×38 View, `borderRadius: 12`, `backgroundColor: colors.primary + '1F'` (hero uses `colors.accent + '1F'`); Ionicon rendered at size 20 |
+| Title Text | `fontWeight: '700'`, `fontSize: TYPE.sm` (14), `numberOfLines: 2`, color `colors.text` |
+| Description Text | `fontSize: TYPE.xs` (12), `numberOfLines: 3`, color `colors.textSecondary`, lineHeight 17 |
+| a11y | `accessible={true}`, `accessibilityLabel="${title}. ${description}"` |
+
+### Icon-per-feature map
+
+| Feature key | Ionicon name | Size |
+| --- | --- | --- |
+| aiChat | chatbubbles-outline | large (hero) |
+| aiActions | sparkles-outline | small |
+| thoughtDump | bulb-outline | small |
+| voiceDump | mic-outline | small |
+| personalizedQuotes | book-outline | small |
+| githubTools | logo-github | small |
+| canvases | easel-outline | small |
+| templates | layers-outline | small |
+| renderStyles | color-palette-outline | small |
+| multiAccount | people-outline | small |
+
+> Note: the original plan listed `quote-outline` for `personalizedQuotes`, but that glyph is not present in the Ionicons glyphmap. `book-outline` was substituted and confirmed valid against `@expo/vector-icons` types via `ts:check`.
+
+### i18n keys
+
+All existing title keys remain `paywall.features.<key>` (unchanged). Ten new description keys were added under `paywall.featureDescriptions.<key>`:
+
+```
+paywall.featureDescriptions.aiChat
+paywall.featureDescriptions.aiActions
+paywall.featureDescriptions.thoughtDump
+paywall.featureDescriptions.voiceDump
+paywall.featureDescriptions.personalizedQuotes
+paywall.featureDescriptions.githubTools
+paywall.featureDescriptions.canvases
+paywall.featureDescriptions.templates
+paywall.featureDescriptions.renderStyles
+paywall.featureDescriptions.multiAccount
+```
+
+These keys must exist in every locale (`en.json`, `es.json`, `fr.json`, `de.json`, `ja.json`, `ko.json`). `__tests__/i18n-key-parity.test.ts:27` has `ALLOWED_MISSING=[]`, so any missing translation fails CI. The static-key scan in `__tests__/paywall-i18n-keys.test.ts` cannot reach dynamically-assembled template literals like `t('paywall.featureDescriptions.' + key)`; coverage for these keys comes from the component test's case "g" key-resolution guard in `__tests__/components/paywall/ProFeatureBento.test.tsx`.
+
+### testIDs
+
+- Container: `paywall.features` (backward-compatible with the existing `PaywallScreen.test.tsx` assertion)
+- Per-card: `paywall.feature.<key>` (e.g. `paywall.feature.aiChat`)
+- Existing Maestro / e2e flows that query `paywall.features` continue working
+
+### Test pointers
+
+- New unit test: `__tests__/components/paywall/ProFeatureBento.test.tsx` — covers 7 cases: render + text content + accessible labels + tablet layout + icon token correctness + unknown-key-resolve guard
+- Extended test: `__tests__/screens/PaywallScreen.test.tsx` adds an assertion that each bento card description renders alongside its per-card testID
+
+## Testing notes
 - `react-native-purchases` is globally mocked in `jest.setup.ts`; `proStore` is globally mocked **defaulting to PRO** so existing tests stay green — gating tests flip state via `__setProState` (import from `src/stores/proStore`). `proStore.test.ts` uses `jest.requireActual` to test the real store.
 - New i18n keys must be added to all six locales (`en/es/fr/de/ja/ko`) or `__tests__/i18n-key-parity.test.ts` fails.
 - Real purchases require a development build (`eas build --profile development`); Expo Go cannot purchase.

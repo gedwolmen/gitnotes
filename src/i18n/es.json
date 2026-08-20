@@ -854,6 +854,18 @@
       "renderStyles": "Estilos de renderizado",
       "multiAccount": "Múltiples cuentas de GitHub"
     },
+    "featureDescriptions": {
+      "aiChat": "Pregunta lo que sea a tus notas y obtén respuestas al instante",
+      "aiActions": "Resume, reescribe y mejora texto directamente en el editor",
+      "thoughtDump": "Captura pensamientos rápidos justo cuando ocurren",
+      "voiceDump": "Expresa tus ideas y guárdalas como notas",
+      "personalizedQuotes": "Citas diarias personalizadas con IA según tu estilo de escritura",
+      "githubTools": "Proporciona contexto a la IA desde tus repositorios de GitHub",
+      "canvases": "Organiza notas visualmente en una canvas infinita",
+      "templates": "Empieza nuevas notas desde tus propias plantillas",
+      "renderStyles": "Elige exactamente cómo se ven tus notas",
+      "multiAccount": "Conecta varias cuentas de GitHub al mismo tiempo"
+    },
     "monthly": {
       "trialCta": "Prueba 30 días gratis, luego {{price}}/mes",
       "price": "{{price}}/mes",
