@@ -231,5 +231,46 @@ describe('useAIStore', () => {
       expect(parsed.isEnabled).toBe(false);
       expect(parsed.actionMode).toBe('manual');
     });
+
+    it('dailyQuotePersonalizationEnabled defaults to true when nothing stored', async () => {
+      (AsyncStorage as any).__reset?.();
+      await useAIStore.getState().loadSettings();
+      expect(useAIStore.getState().dailyQuotePersonalizationEnabled).toBe(true);
+    });
+
+    it('toggleDailyQuotePersonalization flips state to false', async () => {
+      useAIStore.setState({ dailyQuotePersonalizationEnabled: true });
+      await useAIStore.getState().toggleDailyQuotePersonalization();
+      expect(useAIStore.getState().dailyQuotePersonalizationEnabled).toBe(false);
+    });
+
+    it('toggleDailyQuotePersonalization twice returns to true', async () => {
+      useAIStore.setState({ dailyQuotePersonalizationEnabled: true });
+      await useAIStore.getState().toggleDailyQuotePersonalization();
+      await useAIStore.getState().toggleDailyQuotePersonalization();
+      expect(useAIStore.getState().dailyQuotePersonalizationEnabled).toBe(true);
+    });
+
+    it('persists false value to AsyncStorage', async () => {
+      useAIStore.setState({ dailyQuotePersonalizationEnabled: true });
+      await useAIStore.getState().toggleDailyQuotePersonalization();
+      await useAIStore.getState().persistSettings();
+      const stored = await AsyncStorage.getItem('ai-settings');
+      expect(stored).not.toBeNull();
+      const parsed = JSON.parse(stored!);
+      expect(parsed.dailyQuotePersonalizationEnabled).toBe(false);
+    });
+
+    it('loadSettings restores false from stored settings', async () => {
+      await AsyncStorage.setItem('ai-settings', JSON.stringify({ dailyQuotePersonalizationEnabled: false }));
+      await useAIStore.getState().loadSettings();
+      expect(useAIStore.getState().dailyQuotePersonalizationEnabled).toBe(false);
+    });
+
+    it('loadSettings defaults legacy blob (missing field) to true', async () => {
+      await AsyncStorage.setItem('ai-settings', JSON.stringify({ isEnabled: true }));
+      await useAIStore.getState().loadSettings();
+      expect(useAIStore.getState().dailyQuotePersonalizationEnabled).toBe(true);
+    });
   });
 });

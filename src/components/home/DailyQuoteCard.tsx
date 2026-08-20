@@ -2,6 +2,7 @@ import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAIStore } from '../../stores/aiStore';
 import type { DailyQuote } from '../../services/DailyQuoteService';
 import { useTranslation } from 'react-i18next';
 
@@ -36,6 +37,7 @@ export function DailyQuoteCard({
 }: DailyQuoteCardProps) {
   const { colors } = useTheme();
   const { t } = useTranslation();
+  const dailyQuoteSourceVisible = useAIStore((s) => s.dailyQuoteSourceVisible);
 
   // Feature disabled / no content / not loading → render nothing.
   if (!quote && !isLoading && !error) return null;
@@ -52,11 +54,24 @@ export function DailyQuoteCard({
     );
   }
 
-  // Error-only state — muted, non-alarming.
+  // Error-only state — muted, non-alarming, with a retry affordance.
   if (error && !quote) {
     return (
       <View style={styles.container}>
         <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+        {onRefresh ? (
+          <TouchableOpacity
+            testID="daily-quote.retry"
+            onPress={onRefresh}
+            disabled={isRefreshing}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityLabel={t('common.retry', { defaultValue: 'Retry' })}
+          >
+            <Text style={[styles.retryText, { color: colors.primary }]}>
+              {t('common.retry', { defaultValue: 'Retry' })}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     );
   }
@@ -86,7 +101,9 @@ export function DailyQuoteCard({
           </TouchableOpacity>
         ) : null}
       </View>
-      <Text style={[styles.author, { color: colors.primary }]}>— {quote.author}</Text>
+      <Text style={[styles.author, { color: colors.primary }]}>
+        — {quote.author}{dailyQuoteSourceVisible && quote.source ? `, ${quote.source}` : ''}
+      </Text>
       {quote.description ? (
         <Text style={[styles.description, { color: colors.textSecondary }]}>
           {quote.description}
@@ -153,5 +170,9 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 13,
     fontStyle: 'italic',
+  },
+  retryText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

@@ -163,7 +163,9 @@
     },
     "dailyQuoteDescription": "홈에 개인 철학자 명언 표시",
     "aiPersonalization": {
-      "title": "내 노트로 AI 맞춤화"
+      "title": "내 노트로 AI 맞춤화",
+      "label": "AI 맞춤화",
+      "description": "노트를 기반으로 명언 맞춤화"
     },
     "aiPersonalizationDescription": "끄면 AI가 데이터 보호를 위해 노트나 일지를 읽지 않습니다",
     "githubTools": {
@@ -327,7 +329,15 @@
     "resetOnboardingSuccess": "온보딩은 다음 실행 시 표시됩니다.",
     "clear": "지우기",
     "clearAllSuccess": "모든 노트가 지워졌습니다.",
-    "clearAllFailed": "노트를 지우지 못했습니다."
+    "clearAllFailed": "노트를 지우지 못했습니다.",
+    "dailyQuoteSource": {
+      "label": "출처 표시",
+      "description": "명언의 출처 책/작품 표시"
+    },
+    "dailyQuotePersonalization": {
+      "label": "AI 개인화",
+      "description": "노트를 기반으로 명언 개인화"
+    }
   },
   "ai": {
     "availability": {
@@ -490,7 +500,9 @@
       "reminders": "Set up reminders to review a note, folder, repo, or tag. The app sends a local notification at the scheduled time.",
       "dailyQuote": "홈 화면에 일일 철학자 명언을 표시합니다. 최근 일기 성찰을 기반으로 맞춤화됩니다.",
       "aiPersonalization": "활성화하면 AI가 노트와 일기를 읽어 맞춤화된 응답을 제공합니다. 데이터 프라이버시를 위해 끄면 AI는 현재 채팅 컨텍스트만 사용합니다.",
-      "githubTools": "활성화하면 AI 에이전트가 연결된 GitHub 계정으로 저장소 목록 보기, 이슈 생성, 풀 리퀘스트 열기, diff 변경 검토, 리뷰 게시를 할 수 있습니다. 이미 설정한 동일한 토큰을 사용합니다."
+      "githubTools": "활성화하면 AI 에이전트가 연결된 GitHub 계정으로 저장소 목록 보기, 이슈 생성, 풀 리퀘스트 열기, diff 변경 검토, 리뷰 게시를 할 수 있습니다. 이미 설정한 동일한 토큰을 사용합니다.",
+      "dailyQuotePersonalization": "활성화하면 AI가 일기 노트를 읽어 홈 화면에 표시되는 명언을 개인화합니다. 비활성화하면 매일 임의의 명언이 표시됩니다.",
+      "dailyQuoteShowSources": "명언의 출처가 된 원서나 작품을 저자 이름 옆에 표시합니다."
     },
     "title": "Hint"
   },

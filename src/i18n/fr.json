@@ -163,7 +163,9 @@
     },
     "dailyQuoteDescription": "Citation philosophique sur l'accueil",
     "aiPersonalization": {
-      "title": "Personnaliser l'IA avec mes notes"
+      "title": "Personnaliser l'IA avec mes notes",
+      "label": "Personnalisation de l'IA",
+      "description": "Personnalisez les citations en fonction de vos notes"
     },
     "aiPersonalizationDescription": "Si désactivé, l'IA ne lit pas vos notes ni journaux pour votre sécurité",
     "githubTools": {
@@ -327,7 +329,15 @@
     "resetOnboardingSuccess": "L'intégration s'affichera au prochain lancement.",
     "clear": "Effacer",
     "clearAllSuccess": "Toutes les notes ont été effacées.",
-    "clearAllFailed": "Échec de l’effacement des notes."
+    "clearAllFailed": "Échec de l’effacement des notes.",
+    "dailyQuoteSource": {
+      "label": "Afficher les Sources",
+      "description": "Afficher le livre/l'œuvre d'où provient la citation"
+    },
+    "dailyQuotePersonalization": {
+      "label": "Personnalisation IA",
+      "description": "Personnaliser les citations selon vos notes"
+    }
   },
   "ai": {
     "availability": {
@@ -490,7 +500,9 @@
       "reminders": "Set up reminders to review a note, folder, repo, or tag. The app sends a local notification at the scheduled time.",
       "dailyQuote": "Affiche une citation philosophique quotidienne sur votre écran d'accueil, personnalisée en fonction de vos réflexions récentes dans le journal.",
       "aiPersonalization": "Lorsqu'activée, l'IA lit vos notes et journaux pour fournir des réponses personnalisées. Désactivez pour la confidentialité — l'IA utilisera uniquement le contexte du chat actuel.",
-      "githubTools": "Lorsqu'ils sont activés, votre agent IA peut lister vos dépôts, créer des issues, ouvrir des pull requests, examiner les diffs et publier des revues via votre compte GitHub connecté. Utilise le même jeton que vous avez déjà configuré."
+      "githubTools": "Lorsqu'ils sont activés, votre agent IA peut lister vos dépôts, créer des issues, ouvrir des pull requests, examiner les diffs et publier des revues via votre compte GitHub connecté. Utilise le même jeton que vous avez déjà configuré.",
+      "dailyQuotePersonalization": "Lorsqu'elle est activée, l'IA lit les notes de votre journal pour personnaliser les citations affichées sur votre écran d'accueil. Désactivez-la pour voir une citation aléatoire chaque jour.",
+      "dailyQuoteShowSources": "Affiche le livre original ou l'œuvre d'où provient la citation, à côté du nom de l'auteur."
     },
     "title": "Hint"
   },
