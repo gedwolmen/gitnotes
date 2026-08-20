@@ -6,22 +6,10 @@ import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { ScreenHeader, useScreenHeaderHeight, Button, Surface } from '../components/ui';
+import ProFeatureBento from '../components/paywall/ProFeatureBento';
 import { useTheme } from '../contexts/ThemeContext';
 import { useProStore } from '../stores/proStore';
 import { isTrialEligible } from '../services/RevenueCatService';
-
-const FEATURE_KEYS = [
-  'paywall.features.aiChat',
-  'paywall.features.aiActions',
-  'paywall.features.thoughtDump',
-  'paywall.features.voiceDump',
-  'paywall.features.personalizedQuotes',
-  'paywall.features.githubTools',
-  'paywall.features.canvases',
-  'paywall.features.templates',
-  'paywall.features.renderStyles',
-  'paywall.features.multiAccount',
-];
 
 export default function PaywallScreen() {
   const { t } = useTranslation();
@@ -111,16 +99,7 @@ export default function PaywallScreen() {
           {t('paywall.subtitle')}
         </Text>
 
-        <View className="mt-6 gap-3" testID="paywall.features">
-          {FEATURE_KEYS.map((key) => (
-            <View key={key} className="flex-row items-center gap-3">
-              <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-              <Text className="text-[15px] flex-1" style={{ color: colors.text }}>
-                {t(key)}
-              </Text>
-            </View>
-          ))}
-        </View>
+        <ProFeatureBento />
 
         {!offeringsReady ? (
           <View className="mt-8 items-center" testID="paywall.loading">
