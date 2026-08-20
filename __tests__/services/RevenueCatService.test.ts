@@ -166,7 +166,42 @@ describe('getPackages', () => {
     const result = await getPackages();
     expect(result?.monthly.identifier).toBe('$rc_monthly');
     expect(result?.yearly?.identifier).toBe('$rc_annual');
-    expect(result?.lifetime?.identifier).toBe('$rc_lifetime');
+    expect(result?.lifetime.identifier).toBe('$rc_lifetime');
+  });
+
+  it('resolves packages via the offering duration shortcuts when identifiers drift', async () => {
+    const driftedMonthly = pkg('old_monthly_v1');
+    const driftedYearly = pkg('legacy_year');
+    PurchasesMock.getOfferings.mockResolvedValue({
+      current: {
+        availablePackages: [driftedYearly, driftedMonthly],
+        monthly: driftedMonthly,
+        annual: driftedYearly,
+        lifetime: null,
+      },
+    });
+    const result = await getPackages();
+    expect(result?.monthly).toBe(driftedMonthly);
+    expect(result?.yearly).toBe(driftedYearly);
+    expect(result?.lifetime).toBeUndefined();
+  });
+
+  it('falls back to the first available package when identifiers drift and shortcuts are absent', async () => {
+    const drifted = pkg('custom_plan_v2');
+    PurchasesMock.getOfferings.mockResolvedValue({
+      current: { availablePackages: [drifted] },
+    });
+    const result = await getPackages();
+    expect(result?.monthly).toBe(drifted);
+    expect(result?.yearly).toBeUndefined();
+    expect(result?.lifetime).toBeUndefined();
+  });
+
+  it('returns null when the offering has no available packages', async () => {
+    PurchasesMock.getOfferings.mockResolvedValue({
+      current: { availablePackages: [] },
+    });
+    expect(await getPackages()).toBeNull();
   });
 });
 

@@ -50,16 +50,26 @@ const matchIdentifier =
   (accepted: readonly string[]) => (pkg: PurchasesPackage): boolean =>
     accepted.includes(pkg.identifier);
 
+const findByIdentifier = (offering: PurchasesOffering, accepted: readonly string[]) =>
+  offering.availablePackages.find(matchIdentifier(accepted));
+
 export async function getPackages(): Promise<Packages | null> {
   const offerings = await Purchases.getOfferings();
   const current = offerings.current;
   if (!current) return null;
-  const monthly = current.availablePackages.find(matchIdentifier(['monthly', '$rc_monthly']));
+  const yearly = findByIdentifier(current, ['yearly', '$rc_annual']) ?? current.annual ?? undefined;
+  const lifetime =
+    findByIdentifier(current, ['lifetime', '$rc_lifetime', '$rc_one_time']) ??
+    current.lifetime ??
+    undefined;
+  // Last-resort monthly: the first package not already claimed by yearly/lifetime,
+  // so a lone lifetime package is never sold as the monthly plan (#935).
+  const monthly =
+    findByIdentifier(current, ['monthly', '$rc_monthly']) ??
+    current.monthly ??
+    current.availablePackages.find((pkg) => pkg !== yearly && pkg !== lifetime) ??
+    null;
   if (!monthly) return null;
-  const yearly = current.availablePackages.find(matchIdentifier(['yearly', '$rc_annual']));
-  const lifetime = current.availablePackages.find(
-    matchIdentifier(['lifetime', '$rc_lifetime', '$rc_one_time']),
-  );
   return { monthly, yearly, lifetime, offerings };
 }
 
