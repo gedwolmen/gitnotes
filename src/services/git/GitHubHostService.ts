@@ -8,6 +8,9 @@ import {
 import type {
   GitHostBranch,
   GitHostContent,
+  GitHostIssue,
+  GitHostItemState,
+  GitHostPullRequest,
   GitHostService,
   GitHostShaResult,
   GitHostTreeEntry,
@@ -140,6 +143,28 @@ export class GitHubHostService implements GitHostService, GitHostWriteService {
       console.warn('[GitHubHostService] getFileText failed:', error);
       return null;
     }
+  }
+
+  async listPullRequests(
+    owner: string,
+    repo: string,
+    state: GitHostItemState = 'open',
+  ): Promise<GitHostPullRequest[]> {
+    void owner;
+    void repo;
+    void state;
+    return [];
+  }
+
+  async listIssues(
+    owner: string,
+    repo: string,
+    state: GitHostItemState = 'open',
+  ): Promise<GitHostIssue[]> {
+    void owner;
+    void repo;
+    void state;
+    return [];
   }
 
   // ── Write operations (GitHostWriteService) ──────────────────────
