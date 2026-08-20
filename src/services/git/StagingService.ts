@@ -54,6 +54,21 @@ export interface StagedItem {
 export interface StagingResult {
   success: boolean;
   error?: string;
+  /**
+   * API-mode write-through (#927): the change is safely saved locally, but
+   * the push did not complete within the bounded save wait (e.g. slow or
+   * missing network). The mutation stays in the durable queue and syncs
+   * later. Set by the write-through path; callers may show a
+   * "saved locally, will sync" notice.
+   */
+  pendingSync?: boolean;
+  /**
+   * API-mode write-through (#927): the queued mutation was durably dropped
+   * (non-retryable failure such as a 409 conflict or auth error). The
+   * change is preserved locally; callers should surface the failure to the
+   * user instead of re-enqueueing.
+   */
+  droppedConflict?: boolean;
 }
 
 const UNPUSHED_COMMITS_PLACEHOLDER = '(unpushed commits)';

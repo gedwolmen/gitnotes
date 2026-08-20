@@ -48,6 +48,21 @@ function showDurableSyncFailureAlert(kind: ReturnType<typeof classifyGitHubSyncE
   }
 }
 
+type DurableSyncFailureKind = ReturnType<typeof classifyGitHubSyncError>['kind'];
+
+const DURABLE_DROP_KINDS: readonly DurableSyncFailureKind[] = [
+  'authentication',
+  'permission',
+  'saml',
+  'conflict',
+  'not_found',
+];
+
+function durableDropAlertKind(error: string | undefined): DurableSyncFailureKind {
+  const match = DURABLE_DROP_KINDS.find((kind) => kind === error);
+  return match ?? 'conflict';
+}
+
 function normalizeBranch(branch: string | undefined): string {
   return branch || 'main';
 }
@@ -408,6 +423,11 @@ export function useNoteEditorDocument({
                 [{ text: 'OK' }],
               );
             }
+            if (stageResult.pendingSync) {
+              Alert.alert(t('sync.pendingSyncTitle'), t('sync.pendingSyncBody'));
+            }
+          } else if (stageResult.droppedConflict) {
+            showDurableSyncFailureAlert(durableDropAlertKind(stageResult.error));
           } else {
             // Never orphan a locally-saved note: fall back to the durable queue (mirrors the retryable-failure path below).
             console.warn('[useNoteEditorDocument] stage failed:', stageResult.error);

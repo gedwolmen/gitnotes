@@ -566,7 +566,15 @@
     "deleteFailed": "削除に失敗しました",
     "retry": "再試行",
     "deleteInProgress": "このノートは削除中です。削除が完了するまで保存は無効です。",
-    "offlineBanner": "オフラインです — 変更は同期されません"
+    "offlineBanner": "オフラインです — 変更は同期されません",
+    "droppedTitle": "変更はローカルに保存されました",
+    "droppedBody": "変更はローカルに保存されましたが、同期できませんでした。Stageをタップしてプッシュしてください。",
+    "pendingSyncTitle": "同期待ち",
+    "pendingSyncBody": "変更はローカルに保存されています。ネットワークが利用可能になると同期されます。",
+    "dropReasonConflict": "同期の競合：ノートがGitHub側で変更されています。",
+    "dropReasonAuth": "GitHubの認証に失敗しました。設定でアカウントを再接続してください。",
+    "dropReasonNotFound": "リポジトリまたはファイルがGitHub上に見つかりませんでした。",
+    "dropReasonRetries": "同期が繰り返し失敗したため、自動再試行を停止しました。"
   },
   "onboarding": {
     "steps": {
