@@ -50,3 +50,37 @@ write preflight work immediately after adding an account.
   GitHubService token, and does not when connectHost fails.
 - `__tests__/theme-parity.test.tsx` snapshot regenerated for the corrected
   primary button.
+
+## Busy state + re-entry guard on row taps (#936)
+
+In the Add Repository picker, tapping a GitHub repo row started an
+asynchronous `addRepository` call (preflight `checkGitHubRepoAccess` +
+`GitService.addRepository` + storage write) that lasted several seconds.
+During that window the row was still fully tappable, so a user tapping
+again fired a second concurrent `addRepository` — duplicate storage
+writes, preflight races, and double auto-sync calls.
+
+Root cause: `SettingsScreen.tsx` owned an `isAddingRepo` boolean but the
+picker never read it, so there was zero feedback during the async add and
+no re-entry guard on either handler (`handleSelectGithubRepo` /
+`handleAddManualRepo`).
+
+Fix:
+
+- `SettingsScreen.tsx`: `isAddingRepo: boolean` → `isAddingRepoPath: string | null`.
+  Both handlers set the path of the repo currently being added, then
+  null it out in `finally`. Each handler now short-circuits when
+  `isAddingRepoPath !== null`, so a second tap during a pending add is
+  silently ignored.
+- `SettingsModals.tsx` (picker rows): row is
+  `disabled={alreadyAdded || isAddingRepoPath !== null}`, the tapped row
+  shows an inline `ActivityIndicator`, non-tapped rows dim to `opacity:
+  0.5`. The manual Add button mirrors the same busy indicator via its
+  `trailingIcon` slot. Pattern matches the existing correct
+  implementation in `ChatRepoPickerModal.tsx`.
+
+Tests: `SettingsModals.test.tsx` covers the busy-row indicator, the
+all-rows-disabled state, and the dim opacity.
+`SettingsScreen.test.tsx` covers the re-entry guard — three rapid
+`test-select-github-repo` presses while `addRepository` is a pending
+Promise must produce exactly one invocation.

@@ -355,11 +355,27 @@ jest.mock('../../src/components/ai/ChatRepoPickerModal', () => ({
 jest.mock('../../src/components/settings/SettingsModals', () => {
   const { Pressable, Text, TextInput, View } = require('react-native');
   return {
-    SettingsModals: ({ onAddManualRepo, onSetManualRepoInput }: any) => (
+    SettingsModals: ({ onAddManualRepo, onSetManualRepoInput, onSelectGithubRepo }: any) => (
       <View>
         <TextInput testID="test-manual-repo-input" onChangeText={onSetManualRepoInput} />
         <Pressable testID="test-add-manual-repo" onPress={onAddManualRepo}>
           <Text>Add manual repository</Text>
+        </Pressable>
+        <Pressable
+          testID="test-select-github-repo"
+          onPress={() =>
+            onSelectGithubRepo?.({
+              id: 1,
+              name: 'target',
+              full_name: 'owner/target',
+              owner: { login: 'owner' },
+              html_url: 'https://github.com/owner/target',
+              description: '',
+              private: false,
+            })
+          }
+        >
+          <Text>Select github repo</Text>
         </Pressable>
       </View>
     ),
@@ -671,5 +687,20 @@ describe('SettingsScreen', () => {
     const [removedHosts, counts] = mockRemoveRepositoriesForHosts.mock.calls[0];
     expect(removedHosts).toEqual([{ id: 'host-1', provider: 'github' }]);
     expect(counts.get('github')).toBe(1);
+  });
+
+  it('ignores rapid re-taps on the same github row while an add is in flight (#936)', async () => {
+    stableRepositories.length = 0;
+    const pending = new Promise<never>(() => {});
+    mockAddRepository.mockReturnValue(pending);
+
+    const { getByTestId } = render(<SettingsScreen />);
+
+    fireEvent.press(getByTestId('test-select-github-repo'));
+    fireEvent.press(getByTestId('test-select-github-repo'));
+    fireEvent.press(getByTestId('test-select-github-repo'));
+
+    await flushMicrotasks();
+    await waitFor(() => expect(mockAddRepository).toHaveBeenCalledTimes(1));
   });
 });
