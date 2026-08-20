@@ -486,13 +486,14 @@ describe('notes delete lock', () => {
     expect(screen.getByText('First')).toBeTruthy();
 
     fireEvent(screen.getByTestId('notes-card-n1'), 'longPress');
-    console.time('del-press-to-removed');
-    fireEvent.press(screen.getByTestId('notes-context-menu.delete'));
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('notes-context-menu.delete'));
+      for (let i = 0; i < 30; i += 1) await Promise.resolve();
+    });
 
     await waitFor(() => {
       expect(screen.queryByText('First')).toBeNull();
     }, { timeout: 5000 });
-    console.timeEnd('del-press-to-removed');
     expect(screen.queryByTestId('note-row.lock-spinner')).toBeNull();
     expect(screen.queryByTestId('note-row.lock-error')).toBeNull();
     expect(useNoteStore.getState().notes).toHaveLength(0);
@@ -515,7 +516,10 @@ describe('notes delete lock', () => {
 
     const screen = renderWithTheme(<NotesListScreen />);
     fireEvent(screen.getByTestId('notes-card-n2'), 'longPress');
-    fireEvent.press(screen.getByTestId('notes-context-menu.delete'));
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('notes-context-menu.delete'));
+      for (let i = 0; i < 30; i += 1) await Promise.resolve();
+    });
 
     await waitFor(() => {
       expect(screen.queryByText('Second')).toBeNull();
@@ -541,7 +545,10 @@ describe('notes delete lock', () => {
 
     const screen = renderWithTheme(<NotesListScreen />);
     fireEvent(screen.getByTestId('notes-card-n3'), 'longPress');
-    fireEvent.press(screen.getByTestId('notes-context-menu.delete'));
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('notes-context-menu.delete'));
+      for (let i = 0; i < 30; i += 1) await Promise.resolve();
+    });
 
     await waitFor(() => {
       expect(screen.queryByText('Third')).toBeNull();
