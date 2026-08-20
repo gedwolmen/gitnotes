@@ -1,6 +1,11 @@
 import { Platform } from 'react-native';
 import Purchases, { STOREKIT_VERSION } from 'react-native-purchases';
-import type { CustomerInfo, PurchasesOfferings, PurchasesPackage } from 'react-native-purchases';
+import type {
+  CustomerInfo,
+  PurchasesOffering,
+  PurchasesOfferings,
+  PurchasesPackage,
+} from 'react-native-purchases';
 
 const IOS_API_KEY_ENV = 'EXPO_PUBLIC_REVENUECAT_API_KEY_IOS';
 const ANDROID_API_KEY_ENV = 'EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID';
@@ -25,6 +30,8 @@ function isPlaceholderKey(apiKey: string | undefined): boolean {
   return !apiKey || apiKey.length === 0 || apiKey.includes('<PLACEHOLDER>');
 }
 
+let configured = false;
+
 export async function configureRevenueCat(): Promise<ConfigureResult> {
   const apiKey = Platform.OS === 'ios' ? process.env[IOS_API_KEY_ENV] : process.env[ANDROID_API_KEY_ENV];
   if (isPlaceholderKey(apiKey)) {
@@ -33,25 +40,40 @@ export async function configureRevenueCat(): Promise<ConfigureResult> {
   Purchases.setLogLevel(Purchases.LOG_LEVEL.WARN);
   await Purchases.configure({
     apiKey,
-    ...(Platform.OS === 'ios' ? { storeKitVersion: STOREKIT_VERSION.STOREKIT_1 } : {}),
+    ...(Platform.OS === 'ios' ? { storeKitVersion: STOREKIT_VERSION.STOREKIT_2 } : {}),
   });
+  configured = true;
   return { configured: true };
+}
+
+export function isConfigured(): boolean {
+  return configured;
 }
 
 const matchIdentifier =
   (accepted: readonly string[]) => (pkg: PurchasesPackage): boolean =>
     accepted.includes(pkg.identifier);
 
+const findByIdentifier = (offering: PurchasesOffering, accepted: readonly string[]) =>
+  offering.availablePackages.find(matchIdentifier(accepted));
+
 export async function getPackages(): Promise<Packages | null> {
   const offerings = await Purchases.getOfferings();
   const current = offerings.current;
   if (!current) return null;
-  const monthly = current.availablePackages.find(matchIdentifier(['monthly', '$rc_monthly']));
+  const yearly = findByIdentifier(current, ['yearly', '$rc_annual']) ?? current.annual ?? undefined;
+  const lifetime =
+    findByIdentifier(current, ['lifetime', '$rc_lifetime', '$rc_one_time']) ??
+    current.lifetime ??
+    undefined;
+  // Last-resort monthly: the first package not already claimed by yearly/lifetime,
+  // so a lone lifetime package is never sold as the monthly plan (#935).
+  const monthly =
+    findByIdentifier(current, ['monthly', '$rc_monthly']) ??
+    current.monthly ??
+    current.availablePackages.find((pkg) => pkg !== yearly && pkg !== lifetime) ??
+    null;
   if (!monthly) return null;
-  const yearly = current.availablePackages.find(matchIdentifier(['yearly', '$rc_annual']));
-  const lifetime = current.availablePackages.find(
-    matchIdentifier(['lifetime', '$rc_lifetime', '$rc_one_time']),
-  );
   return { monthly, yearly, lifetime, offerings };
 }
 
@@ -90,12 +112,25 @@ export function onCustomerInfoUpdate(cb: (info: CustomerInfo) => void): () => vo
   return () => Purchases.removeCustomerInfoUpdateListener(cb);
 }
 
-export async function isTrialEligible(productId: string): Promise<boolean> {
-  if (Platform.OS !== 'ios') return true;
+export async function getIntroEligibilities(productIds: string[]): Promise<Record<string, boolean>> {
+  const eligibilities: Record<string, boolean> = Object.fromEntries(productIds.map((id) => [id, false]));
+  if (Platform.OS !== 'ios') return eligibilities;
   try {
-    const eligibilities = await Purchases.checkTrialOrIntroductoryPriceEligibility([productId]);
-    return eligibilities[productId]?.status === Purchases.INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_ELIGIBLE;
+    const result = await Purchases.checkTrialOrIntroductoryPriceEligibility(productIds);
+    for (const id of productIds) {
+      eligibilities[id] = result[id]?.status === Purchases.INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_ELIGIBLE;
+    }
+    return eligibilities;
   } catch {
-    return false;
+    return eligibilities;
+  }
+}
+
+export async function trackPaywallImpression(offering?: PurchasesOffering | null): Promise<void> {
+  if (!configured) return;
+  try {
+    await Purchases.trackCustomPaywallImpression(offering ? { offering } : undefined);
+  } catch {
+    // analytics must never throw into the paywall
   }
 }

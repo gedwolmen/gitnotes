@@ -122,7 +122,7 @@ export default function SettingsScreen() {
   const [githubRepos, setGithubRepos] = useState<GitHubRepository[]>([]);
   const [isLoadingGithubRepos, setIsLoadingGithubRepos] = useState(false);
   const [manualRepoInput, setManualRepoInput] = useState('');
-  const [isAddingRepo, setIsAddingRepo] = useState(false);
+  const [isAddingRepoPath, setIsAddingRepoPath] = useState<string | null>(null);
   const [repoSearchQuery, setRepoSearchQuery] = useState('');
   const [showTokenModal, setShowTokenModal] = useState(false);
   const [tokenInput, setTokenInput] = useState('');
@@ -519,6 +519,7 @@ export default function SettingsScreen() {
   }, [authState.isAuthenticated]);
 
   const handleSelectGithubRepo = useCallback(async (repo: GitHubRepository) => {
+    if (isAddingRepoPath !== null) return;
     if (repositories.length >= 1 && !isPro) {
       promptProUpgrade(t, openPaywall);
       return;
@@ -528,7 +529,7 @@ export default function SettingsScreen() {
       return;
     }
     const attemptAdd = async (allowUnverifiedWrite: boolean): Promise<void> => {
-      setIsAddingRepo(true);
+      setIsAddingRepoPath(repo.full_name);
       try {
         if (allowUnverifiedWrite) {
           await addRepo(repo.full_name, repo.name, 'github', { allowUnverifiedWrite: true });
@@ -551,13 +552,14 @@ export default function SettingsScreen() {
         }
         Alert.alert(t('common.error'), t('settings.addRepoFailedBody'));
       } finally {
-        setIsAddingRepo(false);
+        setIsAddingRepoPath(null);
       }
     };
     await attemptAdd(false);
-  }, [addRepo, autoSyncAfterAdd, repositories, t, isPro, openPaywall]);
+  }, [addRepo, autoSyncAfterAdd, repositories, t, isPro, openPaywall, isAddingRepoPath]);
 
   const handleAddManualRepo = useCallback(async () => {
+    if (isAddingRepoPath !== null) return;
     const value = manualRepoInput.trim();
     if (!value) return;
     if (repositories.length >= 1 && !isPro) {
@@ -565,7 +567,7 @@ export default function SettingsScreen() {
       return;
     }
     const attemptAdd = async (allowUnverifiedWrite: boolean): Promise<void> => {
-      setIsAddingRepo(true);
+      setIsAddingRepoPath(value);
       try {
         if (allowUnverifiedWrite) {
           await addRepo(value, { allowUnverifiedWrite: true });
@@ -589,11 +591,11 @@ export default function SettingsScreen() {
         }
         Alert.alert(t('common.error'), t('settings.addRepoFailedBody'));
       } finally {
-        setIsAddingRepo(false);
+        setIsAddingRepoPath(null);
       }
     };
     await attemptAdd(false);
-  }, [addRepo, autoSyncAfterAdd, manualRepoInput, t, repositories, isPro, openPaywall]);
+  }, [addRepo, autoSyncAfterAdd, manualRepoInput, t, repositories, isPro, openPaywall, isAddingRepoPath]);
 
   const handleRemoveRepo = useCallback((repo: GitRepository) => {
     HapticService.warning();
@@ -923,7 +925,7 @@ export default function SettingsScreen() {
         showTokenModal={showTokenModal}
         repoSearchQuery={repoSearchQuery}
         manualRepoInput={manualRepoInput}
-        isAddingRepo={isAddingRepo}
+        isAddingRepoPath={isAddingRepoPath}
         isLoadingGithubRepos={isLoadingGithubRepos}
         tokenInput={tokenInput}
         tokenVisible={tokenVisible}

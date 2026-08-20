@@ -19,13 +19,13 @@
 | [Filter Persistence](./filter-persistence.md) | Filter state architecture and AsyncStorage |
 | [Importers](./importers.md) | Removed Google Keep and Apple Notes importers, for later re-integration |
 | [Git Core Hardening](./git-core-hardening.md) | git-core test-campaign fixes: binary decode integrity, case collisions, auth/preflight, API batch writes, pull/reconcile fixes (#876–#892) |
-| [Settings — Add Repo Fixes](./settings-add-repo-fixes.md) | invisible primary-button fix + repo list not loading after adding a token |
 | [Stage → Push UX](./stage-push-ux.md) | no row locks, vanish-immediate deletes, spinner-free grayed push buttons, determinate progress ring, body-text notifications, resume-on-foreground |
 | [Token Removal Repo Cascade](./repo-removal-cascade.md) | removing a token also removes its synced repos, with a confirmation warning |
 | [Token Scope Error Messaging](./token-scope-error-messaging.md) | 403s surface needed token scopes in the sync message and token-add UI |
-| [Pro Paywall & Monetization](./paywall-pro.md) | RevenueCat Pro paywall: 30-day trial / $2.99 mo / $40 lifetime, grandfathering, show-locked feature UX, gating map, store setup checklist; Pro page bento grid UI redesigned (#921) |
+| [Pro Paywall & Monetization](./paywall-pro.md) | StoreKit 2 revenue model: 30-day trial / $2.99 mo / $40 lifetime, grandfathering, show-locked feature UX, gating map, impressions & analytics, restore flow, intro-eligibility policy, legal links, bento grid layout (#921), store setup checklist |
 | [Branding Asset Pipeline](./branding-pipeline.md) | one-master-SVG → generated icons/splash/favicon via sharp (`npm run branding`, #930) |
 | [Explore Repo Hub](./explore-repo-hub.md) | Hub page for selected repo with Browse Files / Pull Requests / Issues / branch selector; multi-provider data layer (#937) |
+| [Settings — Add Repo Fixes](./settings-add-repo-fixes.md) | Invisible primary-button fix + repo list not loading after adding a token + busy-state re-entry guard on Add-Repo picker (#936) |
 | [iPad Multi-Column Card Collapse Fix](./ipad-multicolumn-card-collapse-fix.md) | SwipeableListItem root `width: '100%'` so multi-column FlatList cards fill their column (#940, #941) |
 
 ## Quick Start
