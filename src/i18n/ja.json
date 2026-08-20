@@ -327,7 +327,15 @@
     "resetOnboardingSuccess": "オンボーディングは次回起動時に表示されます。",
     "clear": "クリア",
     "clearAllSuccess": "すべてのノートが消去されました。",
-    "clearAllFailed": "ノートの消去に失敗しました。"
+    "clearAllFailed": "ノートの消去に失敗しました。",
+    "dailyQuoteSource": {
+      "label": "出典を表示",
+      "description": "引用元の書籍・作品を表示"
+    },
+    "dailyQuotePersonalization": {
+      "label": "AIパーソナライズ",
+      "description": "ノートに基づいて名言をパーソナライズ"
+    }
   },
   "ai": {
     "availability": {
@@ -482,7 +490,9 @@
       "reminders": "Set up reminders to review a note, folder, repo, or tag. The app sends a local notification at the scheduled time.",
       "dailyQuote": "ホーム画面に日替わりの哲学的な名言を表示します。最近の日記の振り返りに基づいてパーソナライズされます。",
       "aiPersonalization": "有効にすると、AIはノートと日記を読んでパーソナライズされた応答を提供します。プライバシーのためにオフにすると、AIは現在のチャットコンテキストのみを使用します。",
-      "githubTools": "有効にすると、AIエージェントが接続済みのGitHubアカウントを使って、リポジトリの一覧表示、Issueの作成、プルリクエストの作成、差分の変更レビュー、レビューの投稿を行えます。設定済みの同じトークンを使用します。"
+      "githubTools": "有効にすると、AIエージェントが接続済みのGitHubアカウントを使って、リポジトリの一覧表示、Issueの作成、プルリクエストの作成、差分の変更レビュー、レビューの投稿を行えます。設定済みの同じトークンを使用します。",
+      "dailyQuotePersonalization": "オンにすると、AIが日記を読んでホーム画面に表示される名言をパーソナライズします。オフにすると毎日ランダムな名言が表示されます。",
+      "dailyQuoteShowSources": "名言が引用された元の書籍や作品を、著者名の横に表示します。"
     },
     "title": "Hint"
   },

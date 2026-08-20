@@ -44,6 +44,10 @@ export interface AISettings {
   aiPersonalizationEnabled: boolean;
   /** Expose seven GitHub tools to the AI agent. Defaults to false (opt-in). */
   githubToolsEnabled: boolean;
+  /** When true, use AI personalization for daily quotes. Defaults to true. */
+  dailyQuotePersonalizationEnabled: boolean;
+  /** When true, show the source work in the quote card. Defaults to true. */
+  dailyQuoteSourceVisible: boolean;
 }
 
 export interface AIContextItem {

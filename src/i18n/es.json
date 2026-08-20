@@ -327,7 +327,15 @@
     "resetOnboardingSuccess": "La introducción se mostrará en el próximo inicio.",
     "clear": "Limpiar",
     "clearAllSuccess": "Todas las notas se han eliminado.",
-    "clearAllFailed": "No se pudieron eliminar las notas."
+    "clearAllFailed": "No se pudieron eliminar las notas.",
+    "dailyQuoteSource": {
+      "label": "Mostrar Fuentes",
+      "description": "Mostrar el libro/obra de donde proviene la cita"
+    },
+    "dailyQuotePersonalization": {
+      "label": "Personalización IA",
+      "description": "Personalizar citas según tus notas"
+    }
   },
   "ai": {
     "availability": {
@@ -482,7 +490,9 @@
       "reminders": "Set up reminders to review a note, folder, repo, or tag. The app sends a local notification at the scheduled time.",
       "dailyQuote": "Muestra una cita filosófica diaria en tu pantalla de inicio, personalizada según tus reflexiones recientes de diario.",
       "aiPersonalization": "Cuando está activada, la IA lee tus notas y diarios para ofrecer respuestas personalizadas. Desactiva para mayor privacidad — la IA solo usará el contexto del chat actual.",
-      "githubTools": "Cuando está activado, tu agente de IA puede listar tus repositorios, crear issues, abrir pull requests, revisar cambios de diff y publicar reseñas usando tu cuenta de GitHub conectada. Usa el mismo token que ya configuraste."
+      "githubTools": "Cuando está activado, tu agente de IA puede listar tus repositorios, crear issues, abrir pull requests, revisar cambios de diff y publicar reseñas usando tu cuenta de GitHub conectada. Usa el mismo token que ya configuraste.",
+      "dailyQuotePersonalization": "Cuando está activado, la IA lee las notas de tu diario para personalizar las citas que se muestran en tu pantalla de inicio. Desactívalo para ver una cita aleatoria cada día.",
+      "dailyQuoteShowSources": "Muestra el libro original o la obra de donde fue tomada la cita, al lado del nombre del autor."
     },
     "title": "Hint"
   },

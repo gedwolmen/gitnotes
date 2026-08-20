@@ -10,6 +10,7 @@ export interface DailyQuote {
   text: string;
   author: string;
   tags: string[];
+  source: string;
   description: string;
   generatedAt: number;
 }
@@ -19,6 +20,7 @@ interface QuoteRow {
   text: string;
   author: string;
   tags: string[];
+  source: string;
 }
 
 const CACHE_KEY = '@gitnotes:daily_quote';
@@ -26,11 +28,9 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 const quotes: QuoteRow[] = quotesJson as QuoteRow[];
 
-type FallbackReason = 'disabled' | 'no_model' | 'no_journals' | 'ai_failed' | 'error' | 'personalization_off';
+type FallbackReason = 'no_model' | 'no_journals' | 'ai_failed' | 'error' | 'personalization_off' | 'quote_personalization_off';
 
 const FALLBACK_DESCRIPTIONS: Record<FallbackReason, string> = {
-  disabled:
-    'Daily Quote feature is disabled. Enable it in Settings → AI for personalized quotes.',
   no_model:
     'No AI model selected. Choose a model in Settings → AI to enable personalization.',
   no_journals:
@@ -40,6 +40,8 @@ const FALLBACK_DESCRIPTIONS: Record<FallbackReason, string> = {
   error: 'Encountered an error. Showing a random quote from the collection.',
   personalization_off:
     'AI personalization is off for data safety. Showing a random quote from the collection.',
+  quote_personalization_off:
+    'A quote from our curated collection.',
 };
 
 function makeFallbackQuote(reason: FallbackReason): DailyQuote {
@@ -49,6 +51,7 @@ function makeFallbackQuote(reason: FallbackReason): DailyQuote {
     text: random.text,
     author: random.author,
     tags: random.tags,
+    source: random.source,
     description: FALLBACK_DESCRIPTIONS[reason],
     generatedAt: Date.now(),
   };
@@ -57,12 +60,22 @@ function makeFallbackQuote(reason: FallbackReason): DailyQuote {
 class DailyQuoteServiceClass {
   async getDailyQuote(journals: Note[], allNotes: Note[]): Promise<DailyQuote | null> {
     try {
+      const aiStore = useAIStore.getState();
+
+      if (!aiStore.dailyQuoteEnabled) {
+        return null;
+      }
+
+      if (!aiStore.dailyQuotePersonalizationEnabled) {
+        return makeFallbackQuote('quote_personalization_off');
+      }
+
       const cached = await this.readCache();
       if (cached) return cached;
 
-      const aiStore = useAIStore.getState();
-      if (!aiStore.dailyQuoteEnabled) return makeFallbackQuote('disabled');
-      if (!aiStore.aiPersonalizationEnabled) return makeFallbackQuote('personalization_off');
+      if (!aiStore.aiPersonalizationEnabled) {
+        return makeFallbackQuote('personalization_off');
+      }
 
       const selectedModel = aiStore.getSelectedModel();
       if (!selectedModel) return makeFallbackQuote('no_model');
@@ -156,6 +169,7 @@ class DailyQuoteServiceClass {
       text: quote.text,
       author: quote.author,
       tags: quote.tags,
+      source: quote.source,
       description: parsed.description.slice(0, 500),
       generatedAt: Date.now(),
     };
