@@ -259,7 +259,15 @@
     "emptyTitleNoMatches": "No matches",
     "emptySubtitleNoRepos": "Add a repo in Settings to get started",
     "emptySubtitleNoMatches": "Try a different search",
-    "browseFiles": "Browse Files"
+    "browseFiles": "Browse Files",
+    "pullRequests": "Pull Requests",
+    "issues": "Issues",
+    "noPullRequests": "No pull requests",
+    "noIssues": "No issues",
+    "filterOpen": "Open",
+    "filterClosed": "Closed",
+    "openInBrowser": "Open in browser",
+    "loadError": "Couldn't load — tap to retry"
   },
   "settings": {
     "title": "Settings",
@@ -855,16 +863,46 @@
     "title": "GitNotēs Pro",
     "subtitle": "Unlock the AI suite and advanced features",
     "features": {
-      "aiChat": "AI chat with your notes",
-      "aiActions": "AI actions in the editor",
-      "thoughtDump": "Thought dump",
-      "voiceDump": "Voice dump",
-      "personalizedQuotes": "Personalized daily quotes",
-      "githubTools": "GitHub tools for AI",
-      "canvases": "Canvases",
-      "templates": "Custom templates",
-      "renderStyles": "Render styles",
-      "multiAccount": "Multiple GitHub accounts"
+      "aiChat": {
+        "title": "AI chat with your notes",
+        "description": "Ask questions, get answers grounded in your notes"
+      },
+      "aiActions": {
+        "title": "AI actions in the editor",
+        "description": "Summarize, rewrite, and fix text right in the editor"
+      },
+      "thoughtDump": {
+        "title": "Thought dump",
+        "description": "Brain-dump thoughts; AI files them into notes"
+      },
+      "voiceDump": {
+        "title": "Voice dump",
+        "description": "Record voice memos, transcribed straight to notes"
+      },
+      "personalizedQuotes": {
+        "title": "Personalized daily quotes",
+        "description": "Daily quotes tuned to your notes and interests"
+      },
+      "githubTools": {
+        "title": "GitHub tools for AI",
+        "description": "Manage issues and repos from AI chat"
+      },
+      "canvases": {
+        "title": "Canvases",
+        "description": "Connect notes on an infinite visual canvas"
+      },
+      "templates": {
+        "title": "Custom templates",
+        "description": "Build and reuse your own note templates"
+      },
+      "renderStyles": {
+        "title": "Render styles",
+        "description": "Theme how Markdown, NORG, and Org render"
+      },
+      "multiAccount": {
+        "title": "Multiple GitHub accounts",
+        "description": "Sync multiple GitHub accounts side by side"
+      }
     },
     "featureDescriptions": {
       "aiChat": "Ask your notes anything and get instant answers",
@@ -889,6 +927,8 @@
     },
     "restore": "Restore purchases",
     "restored": "Purchases restored",
+    "restoring": "Restoring purchase…",
+    "nothingToRestore": "Nothing to restore on this device.",
     "purchaseError": "Purchase failed",
     "loading": "Loading…",
     "later": "Maybe later",
@@ -896,12 +936,17 @@
     "termsNote": "Subscriptions renew automatically until cancelled. Restore purchases to transfer them to this device. This app offers a 30-day free trial for new subscribers.",
     "yearly": {
       "title": "Yearly",
-      "cta": "{{price}}/year"
+      "cta": "{{price}}/year",
+      "trialCta": "Try 30 days free, then {{price}}/year"
     },
     "action": {
       "trial": "Start Free Trial",
       "subscribe": "Subscribe",
       "buy": "Buy Once"
+    },
+    "footer": {
+      "terms": "Terms of Use",
+      "privacy": "Privacy Policy"
     }
   },
   "pro": {

@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
-import type { PurchasesPackage } from 'react-native-purchases';
+import type { PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
 import {
   configureRevenueCat,
   getCustomerInfo,
@@ -10,6 +10,7 @@ import {
   restorePurchases,
 } from '../services/RevenueCatService';
 import { resolveGrandfatherStatus } from '../services/GrandfatherService';
+import * as PaywallAnalytics from '../services/PaywallAnalytics';
 
 const TRIAL_WAS_ACTIVE_KEY = '@gitnotes:trial_was_active';
 const TRIAL_EXPIRED_AT_KEY = '@gitnotes:trial_expired_at';
@@ -17,6 +18,8 @@ const INTERSTITIAL_SHOWN_KEY = '@gitnotes:interstitial_offer_shown';
 const INTERSTITIAL_DELAY = 3 * 24 * 60 * 60 * 1000;
 
 export type ProStatus = 'loading' | 'pro' | 'free';
+
+export type RestoreOutcome = 'restored' | 'nothing' | 'error';
 
 interface ProState {
   status: ProStatus;
@@ -29,6 +32,7 @@ interface ProState {
   monthlyPackage: PurchasesPackage | null;
   yearlyPackage: PurchasesPackage | null;
   lifetimePackage: PurchasesPackage | null;
+  currentOffering: PurchasesOffering | null;
   isPurchasing: boolean;
   isRestoring: boolean;
   error: string | null;
@@ -42,7 +46,7 @@ interface ProActions {
   purchaseMonthly: () => Promise<void>;
   purchaseYearly: () => Promise<void>;
   purchaseLifetime: () => Promise<void>;
-  restore: () => Promise<void>;
+  restore: () => Promise<RestoreOutcome>;
   loadOfferingsIfNeeded: () => Promise<void>;
   markInterstitialShown: () => Promise<void>;
 }
@@ -115,6 +119,7 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
   monthlyPackage: null,
   yearlyPackage: null,
   lifetimePackage: null,
+  currentOffering: null,
   isPurchasing: false,
   isRestoring: false,
   error: null,
@@ -169,7 +174,9 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
     const pkg = get().monthlyPackage;
     if (!pkg) return;
     set({ isPurchasing: true, error: null });
+    PaywallAnalytics.trackPurchaseAttempt(pkg.product.identifier);
     const result = await purchasePackageWith(pkg);
+    PaywallAnalytics.trackPurchaseOutcome(result.kind);
     set({ isPurchasing: false });
     if (result.kind === 'purchased') {
       await get().refresh();
@@ -182,7 +189,9 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
     const pkg = get().yearlyPackage;
     if (!pkg) return;
     set({ isPurchasing: true, error: null });
+    PaywallAnalytics.trackPurchaseAttempt(pkg.product.identifier);
     const result = await purchasePackageWith(pkg);
+    PaywallAnalytics.trackPurchaseOutcome(result.kind);
     set({ isPurchasing: false });
     if (result.kind === 'purchased') {
       await get().refresh();
@@ -195,7 +204,9 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
     const pkg = get().lifetimePackage;
     if (!pkg) return;
     set({ isPurchasing: true, error: null });
+    PaywallAnalytics.trackPurchaseAttempt(pkg.product.identifier);
     const result = await purchasePackageWith(pkg);
+    PaywallAnalytics.trackPurchaseOutcome(result.kind);
     set({ isPurchasing: false });
     if (result.kind === 'purchased') {
       await get().refresh();
@@ -206,12 +217,39 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
 
   restore: async () => {
     set({ isRestoring: true, error: null });
-    const result = await restorePurchases();
-    set({ isRestoring: false });
-    if (result.kind === 'purchased') {
+    PaywallAnalytics.trackRestoreTap();
+    try {
+      const result = await restorePurchases();
+      if (result.kind === 'error') {
+        set({ isRestoring: false, error: result.message });
+        PaywallAnalytics.trackRestoreOutcome('error');
+        return 'error';
+      }
+      if (result.kind === 'cancelled') {
+        // User dismissed the Apple sign-in sheet — neutral, no state change.
+        set({ isRestoring: false });
+        PaywallAnalytics.trackRestoreOutcome('nothing');
+        return 'nothing';
+      }
+      // 'purchased' alone does not distinguish found vs not-found: derive it
+      // from the returned customerInfo entitlements.
+      const proActive = Boolean(result.customerInfo?.entitlements?.active?.pro?.isActive);
+      if (!proActive) {
+        set({ isRestoring: false });
+        PaywallAnalytics.trackRestoreOutcome('nothing');
+        return 'nothing';
+      }
       await get().refresh();
-    } else if (result.kind === 'error') {
-      set({ error: result.message });
+      set({ isRestoring: false });
+      PaywallAnalytics.trackRestoreOutcome('restored');
+      return 'restored';
+    } catch (error) {
+      set({
+        isRestoring: false,
+        error: error instanceof Error ? error.message : 'Failed to restore purchases',
+      });
+      PaywallAnalytics.trackRestoreOutcome('error');
+      return 'error';
     }
   },
 
@@ -223,6 +261,7 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
         monthlyPackage: packages?.monthly ?? null,
         yearlyPackage: packages?.yearly ?? null,
         lifetimePackage: packages?.lifetime ?? null,
+        currentOffering: packages?.offerings?.current ?? null,
         offeringsReady: true,
         error: null,
       });

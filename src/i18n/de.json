@@ -441,7 +441,15 @@
     "emptyTitleNoMatches": "Keine Treffer",
     "emptySubtitleNoRepos": "Füge in den Einstellungen ein Repository hinzu, um loszulegen",
     "emptySubtitleNoMatches": "Versuche eine andere Suche",
-    "browseFiles": "Dateien durchsuchen"
+    "browseFiles": "Dateien durchsuchen",
+    "pullRequests": "Pull Requests",
+    "issues": "Issues",
+    "noPullRequests": "Keine Pull Requests",
+    "noIssues": "Keine Issues",
+    "filterOpen": "Offen",
+    "filterClosed": "Geschlossen",
+    "openInBrowser": "Im Browser öffnen",
+    "loadError": "Konnte nicht geladen werden — zum Wiederholen tippen"
   },
   "home": {
     "title": "Start",
@@ -855,16 +863,46 @@
     "title": "GitNotēs Pro",
     "subtitle": "Schalte die KI-Suite und erweiterte Funktionen frei",
     "features": {
-      "aiChat": "KI-Chat mit deinen Notizen",
-      "aiActions": "KI-Aktionen im Editor",
-      "thoughtDump": "Gedanken-Dump",
-      "voiceDump": "Sprach-Dump",
-      "personalizedQuotes": "Personalisierte Tageszitate",
-      "githubTools": "GitHub-Tools für KI",
-      "canvases": "Canvas",
-      "templates": "Benutzerdefinierte Vorlagen",
-      "renderStyles": "Renderstile",
-      "multiAccount": "Mehrere GitHub-Konten"
+      "aiChat": {
+        "title": "KI-Chat mit deinen Notizen",
+        "description": "Stelle Fragen, erhalte Antworten auf Basis deiner Notizen"
+      },
+      "aiActions": {
+        "title": "KI-Aktionen im Editor",
+        "description": "Fasse zusammen, schreibe um und korrigiere Text im Editor"
+      },
+      "thoughtDump": {
+        "title": "Gedanken-Dump",
+        "description": "Brain-Dump deine Gedanken; die KI sortiert sie in Notizen"
+      },
+      "voiceDump": {
+        "title": "Sprach-Dump",
+        "description": "Nimm Sprachmemos auf, direkt in Notizen transkribiert"
+      },
+      "personalizedQuotes": {
+        "title": "Personalisierte Tageszitate",
+        "description": "Tägliche Zitate, abgestimmt auf Notizen und Interessen"
+      },
+      "githubTools": {
+        "title": "GitHub-Tools für KI",
+        "description": "Verwalte Issues und Repos aus dem KI-Chat"
+      },
+      "canvases": {
+        "title": "Canvas",
+        "description": "Verbinde Notizen auf einer unendlichen visuellen Leinwand"
+      },
+      "templates": {
+        "title": "Benutzerdefinierte Vorlagen",
+        "description": "Erstelle und verwende eigene Notiz-Vorlagen wieder"
+      },
+      "renderStyles": {
+        "title": "Renderstile",
+        "description": "Bestimme, wie Markdown, NORG und Org gerendert werden"
+      },
+      "multiAccount": {
+        "title": "Mehrere GitHub-Konten",
+        "description": "Synchronisiere mehrere GitHub-Konten nebeneinander"
+      }
     },
     "featureDescriptions": {
       "aiChat": "Fragen Sie Ihre Notizen und erhalten Sie sofortige Antworten",
@@ -889,6 +927,8 @@
     },
     "restore": "Käufe wiederherstellen",
     "restored": "Käufe wiederhergestellt",
+    "restoring": "Kauf wird wiederhergestellt…",
+    "nothingToRestore": "Auf diesem Gerät gibt es nichts wiederherzustellen.",
     "purchaseError": "Kauf fehlgeschlagen",
     "loading": "Wird geladen…",
     "later": "Vielleicht später",
@@ -896,12 +936,17 @@
     "termsNote": "Abonnements verlängern sich automatisch bis zur Kündigung. Stelle Käufe wieder her, um sie auf dieses Gerät zu übertragen. Diese App bietet neuen Abonnenten eine 30-tägige kostenlose Testphase.",
     "yearly": {
       "title": "Jährlich",
-      "cta": "{{price}}/Jahr"
+      "cta": "{{price}}/Jahr",
+      "trialCta": "30 Tage kostenlos testen, dann {{price}}/Jahr"
     },
     "action": {
       "trial": "Kostenlose Testversion",
       "subscribe": "Abonnieren",
       "buy": "Jetzt kaufen"
+    },
+    "footer": {
+      "terms": "Nutzungsbedingungen",
+      "privacy": "Datenschutzerklärung"
     }
   },
   "pro": {
