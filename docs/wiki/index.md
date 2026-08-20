@@ -12,6 +12,7 @@
 | [Testing Guide](./testing-guide.md) | Test patterns, mocking, CI configuration |
 | [Sync Engine](./sync-engine.md) | Git sync architecture, push model, error handling |
 | [Sync Engine Modes](./sync-engine-modes.md) | Per-repo clone vs API mode selection, defaults, switching |
+| [Sync Write Modes](./sync-write-modes.md) | Sync contract: clone stage-then-push vs API write-through; blocking overlay; import-on-add |
 | [AI Integration](./ai-integration.md) | Vercel AI SDK, providers, token budgeting |
 | [i18n](./i18n.md) | Localization setup, adding languages, testing |
 | [Theme & Styling](./theme-styling.md) | NativeWind v5, theme tokens, dark mode |
