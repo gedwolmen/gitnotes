@@ -3,6 +3,7 @@ import {
   GitHubServiceStatic,
   GitHubUser,
   GitHubContent,
+  GitHubIssue,
   ShaResult,
 } from '../GitHubService';
 import type {
@@ -35,6 +36,10 @@ interface GitHubTreeEntryRaw {
 
 interface GitHubTreeResponse {
   tree?: GitHubTreeEntryRaw[];
+}
+
+interface GitHubIssueWithAuthor extends GitHubIssue {
+  user?: { login?: string } | null;
 }
 
 /**
@@ -150,10 +155,21 @@ export class GitHubHostService implements GitHostService, GitHostWriteService {
     repo: string,
     state: GitHostItemState = 'open',
   ): Promise<GitHostPullRequest[]> {
-    void owner;
-    void repo;
-    void state;
-    return [];
+    const prs = await GitHubService.getPullRequests(owner, repo, state);
+    return prs.map(
+      (p): GitHostPullRequest => ({
+        id: p.id,
+        number: p.number,
+        title: p.title,
+        state: p.state === 'open' ? 'open' : 'closed',
+        webUrl: p.html_url,
+        headBranch: '',
+        baseBranch: '',
+        author: p.user?.login,
+        draft: p.draft,
+        createdAt: p.created_at,
+      }),
+    );
   }
 
   async listIssues(
@@ -161,10 +177,20 @@ export class GitHubHostService implements GitHostService, GitHostWriteService {
     repo: string,
     state: GitHostItemState = 'open',
   ): Promise<GitHostIssue[]> {
-    void owner;
-    void repo;
-    void state;
-    return [];
+    const issues = (await GitHubService.getIssues(owner, repo, state)) as GitHubIssueWithAuthor[];
+    return issues.map(
+      (i): GitHostIssue => ({
+        id: i.id,
+        number: i.number,
+        title: i.title,
+        state: i.state === 'open' ? 'open' : 'closed',
+        webUrl: i.html_url,
+        labels: (i.labels ?? []).map((label) => label.name),
+        author: i.user?.login ?? undefined,
+        createdAt: i.created_at,
+        updatedAt: i.updated_at,
+      }),
+    );
   }
 
   // ── Write operations (GitHostWriteService) ──────────────────────
