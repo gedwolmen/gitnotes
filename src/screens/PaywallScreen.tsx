@@ -208,33 +208,33 @@ export default function PaywallScreen() {
           {t('paywall.subtitle')}
         </Text>
 
+        {error ? (
+          <View className="mt-6 rounded-xl border p-4 flex-row items-start gap-3" style={{ backgroundColor: colors.error + '14', borderColor: colors.error + '44' }} testID="paywall.error">
+            <Ionicons name="alert-circle" size={22} color={colors.error} />
+            <View className="flex-1">
+              <Text className="text-sm font-semibold" style={{ color: colors.error }}>
+                {t('paywall.purchaseError')}
+              </Text>
+              <Text className="text-[13px] mt-1 leading-[18px]" style={{ color: colors.textSecondary }}>
+                {error}
+              </Text>
+              <Button
+                testID="paywall.retry"
+                variant="secondary"
+                label={t('paywall.retry')}
+                onPress={() => void loadOfferingsIfNeeded()}
+                style={{ marginTop: 12 }}
+              />
+            </View>
+          </View>
+        ) : null}
+
         {!offeringsReady ? (
           <View className="mt-8 items-center" testID="paywall.loading">
             <ActivityIndicator color={colors.primary} size="large" />
           </View>
         ) : (
           <>
-            {error ? (
-              <View className="mt-6 rounded-xl border p-4 flex-row items-start gap-3" style={{ backgroundColor: colors.error + '14', borderColor: colors.error + '44' }} testID="paywall.error">
-                <Ionicons name="alert-circle" size={22} color={colors.error} />
-                <View className="flex-1">
-                  <Text className="text-sm font-semibold" style={{ color: colors.error }}>
-                    {t('paywall.purchaseError')}
-                  </Text>
-                  <Text className="text-[13px] mt-1 leading-[18px]" style={{ color: colors.textSecondary }}>
-                    {error}
-                  </Text>
-                  <Button
-                    testID="paywall.retry"
-                    variant="secondary"
-                    label={t('paywall.retry')}
-                    onPress={() => void loadOfferingsIfNeeded()}
-                    style={{ marginTop: 12 }}
-                  />
-                </View>
-              </View>
-            ) : null}
-
             {/* Payment options first for ease of access, features below. */}
             <View className="mt-6">
               <PaywallPlanGrid plans={plans} />

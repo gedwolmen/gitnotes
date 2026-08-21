@@ -266,7 +266,10 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
         error: null,
       });
     } catch (error) {
-      set({ error: error instanceof Error ? error.message : 'Failed to load offerings' });
+      set({
+        offeringsReady: true,
+        error: error instanceof Error ? error.message : 'Failed to load offerings',
+      });
     }
   },
 
