@@ -41,6 +41,14 @@ export interface ThoughtDumpCreateOptions {
   provider?: GitHostProvider;
 }
 
+export type ThoughtDumpCreateResult =
+  | { ok: true; dump: ThoughtDump }
+  | {
+      ok: false;
+      reason: 'not-authenticated' | 'no-repos' | 'invalid-repo' | 'write-failed';
+      error?: string;
+    };
+
 export interface ThoughtDumpDeleteOptions {
   repoPath: string;
   branch?: string;
@@ -57,8 +65,10 @@ async function getFirstRepo(): Promise<{ repoPath: string; branch?: string; prov
 }
 
 export class ThoughtDumpService {
-  static async create(text: string, options?: ThoughtDumpCreateOptions): Promise<ThoughtDump | null> {
-    if (!GitHubService.isAuthenticated()) return null;
+  static async create(text: string, options?: ThoughtDumpCreateOptions): Promise<ThoughtDumpCreateResult> {
+    if (!GitHubService.isAuthenticated()) {
+      return { ok: false, reason: 'not-authenticated' };
+    }
 
     let repoPath: string;
     let branch: string;
@@ -68,13 +78,13 @@ export class ThoughtDumpService {
       branch = await resolveBranch(repoPath, options.branch);
     } else {
       const repo = await getFirstRepo();
-      if (!repo) return null;
+      if (!repo) return { ok: false, reason: 'no-repos' };
       repoPath = repo.repoPath;
       branch = repo.branch ?? 'main';
     }
 
     const repoInfo = parseRepoPath(repoPath);
-    if (!repoInfo) return null;
+    if (!repoInfo) return { ok: false, reason: 'invalid-repo' };
 
     const dump = createThoughtDump(text);
     const content = serializeThoughtDump(dump);
@@ -91,10 +101,10 @@ export class ThoughtDumpService {
 
     if (!writeResult.success) {
       console.warn('[ThoughtDumpService] create failed:', writeResult.error);
-      return null;
+      return { ok: false, reason: 'write-failed', error: writeResult.error };
     }
 
-    return dump;
+    return { ok: true, dump };
   }
 
   static async list(options?: { repoPath?: string; branch?: string; provider?: GitHostProvider }): Promise<ThoughtDump[]> {

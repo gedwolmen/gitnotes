@@ -558,17 +558,18 @@ describe('staging rewire — ThoughtDumpService', () => {
   });
 
   it('create stages the upsert, no GitHubService/LocalGitWriter write', async () => {
-    const dump = await ThoughtDumpService.create('hello dump', {
+    const result = await ThoughtDumpService.create('hello dump', {
       repoPath: 'owner/repo',
       branch: 'main',
     });
 
-    expect(dump).not.toBeNull();
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('expected ok');
     expect(stageUpsertMock).toHaveBeenCalledWith(
       expect.objectContaining({
         repo: 'owner/repo',
         branch: 'main',
-        filePath: dump!.filePath,
+        filePath: result.dump.filePath,
         title: 'Thought dump',
       }),
     );

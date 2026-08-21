@@ -61,6 +61,7 @@ jest.mock('../../src/services/featureFlags', () => ({
 
 import { ThoughtDumpService } from '../../src/services/ThoughtDumpService';
 import { GitHubService } from '../../src/services/GitHubService';
+import { StorageService } from '../../src/services/StorageService';
 import { SyncEngineService } from '../../src/services/SyncEngineService';
 import { StagingService } from '../../src/services/git/StagingService';
 import { parseThoughtDump, serializeThoughtDump, createThoughtDump } from '../../src/models/ThoughtDump';
@@ -75,23 +76,25 @@ beforeEach(() => {
 
 describe('ThoughtDumpService.create', () => {
   it('stages the upsert for the new dump', async () => {
-    const dump = await ThoughtDumpService.create('my random thought', {
+    const result = await ThoughtDumpService.create('my random thought', {
       repoPath: 'org/repo',
       branch: 'main',
     });
 
-    expect(dump).not.toBeNull();
-    expect(dump!.text).toBe('my random thought');
-    expect(dump!.filePath).toMatch(/^thoughts\/\d{8}-\d{6}-[a-z0-9]+\.md$/);
-    expect(dump!.id).toBeTruthy();
-    expect(dump!.createdAt).toBeTruthy();
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('expected ok');
+    const dump = result.dump;
+    expect(dump.text).toBe('my random thought');
+    expect(dump.filePath).toMatch(/^thoughts\/\d{8}-\d{6}-[a-z0-9]+\.md$/);
+    expect(dump.id).toBeTruthy();
+    expect(dump.createdAt).toBeTruthy();
 
     expect(StagingService.stageUpsert).toHaveBeenCalledTimes(1);
     expect(StagingService.stageUpsert).toHaveBeenCalledWith(
       expect.objectContaining({
         repo: 'org/repo',
         branch: 'main',
-        filePath: dump!.filePath,
+        filePath: dump.filePath,
         title: 'Thought dump',
       }),
     );
@@ -101,10 +104,25 @@ describe('ThoughtDumpService.create', () => {
     expect(GitHubService.updateFile).not.toHaveBeenCalled();
   });
 
-  it('returns null when not authenticated', async () => {
+  it('returns not-authenticated when unauthenticated', async () => {
     (GitHubService.isAuthenticated as jest.Mock).mockReturnValue(false);
-    const dump = await ThoughtDumpService.create('test', { repoPath: 'org/repo' });
-    expect(dump).toBeNull();
+    const result = await ThoughtDumpService.create('test', { repoPath: 'org/repo' });
+    expect(result).toEqual({ ok: false, reason: 'not-authenticated' });
+  });
+
+  it('returns no-repos when there are no saved repositories', async () => {
+    (StorageService.getSavedRepositories as jest.Mock).mockResolvedValue([]);
+    const result = await ThoughtDumpService.create('test');
+    expect(result).toEqual({ ok: false, reason: 'no-repos' });
+  });
+
+  it('returns write-failed with the error when staging fails', async () => {
+    (StagingService.stageUpsert as jest.Mock).mockResolvedValue({
+      success: false,
+      error: 'boom',
+    });
+    const result = await ThoughtDumpService.create('test', { repoPath: 'org/repo', branch: 'main' });
+    expect(result).toEqual({ ok: false, reason: 'write-failed', error: 'boom' });
   });
 });
 
