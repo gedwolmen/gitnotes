@@ -26,13 +26,28 @@ const rects: Record<FloatingButtonId, FloatingButtonRect | null> = {
 
 const listeners = new Set<() => void>();
 
+let notifying = false;
+
 export function publishButtonRect(
   id: FloatingButtonId,
   rect: FloatingButtonRect,
 ): void {
   rects[id] = rect;
-  for (const listener of listeners) {
-    listener();
+  // Collision resolution publishes the yielding button's new rect from
+  // inside a subscriber. Guard against re-entrant notification so a
+  // publish→notify→publish cycle cannot recurse into a stack overflow
+  // (the other button's rect is already updated, so the next top-level
+  // publish still sees the fresh positions).
+  if (notifying) {
+    return;
+  }
+  notifying = true;
+  try {
+    for (const listener of listeners) {
+      listener();
+    }
+  } finally {
+    notifying = false;
   }
 }
 
@@ -182,10 +197,12 @@ export function useFloatingButtonCollision(
     return subscribeButtonRects(() => {
       const other = getButtonRect(otherId);
       if (other === null || dragActive.value) return;
-      const current = { x: translateX.value, y: translateY.value };
+      const published = getButtonRect(id);
+      const current = published ?? { x: translateX.value, y: translateY.value };
       const currentRect: FloatingButtonRect = { x: current.x, y: current.y, size };
       if (!rectsOverlap(currentRect, other, COLLISION_GAP)) return;
       const resolved = resolveNonOverlapping(id, current, size, geometry);
+      if (resolved.x === current.x && resolved.y === current.y) return;
       translateX.value = withSpring(resolved.x, COLLISION_SPRING);
       translateY.value = withSpring(resolved.y, COLLISION_SPRING);
       publishButtonRect(id, { x: resolved.x, y: resolved.y, size });
