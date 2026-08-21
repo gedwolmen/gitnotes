@@ -32,6 +32,7 @@
 | [iPad Multi-Column Card Collapse Fix](./ipad-multicolumn-card-collapse-fix.md) | SwipeableListItem root `width: '100%'` so multi-column FlatList cards fill their column (#940, #941) |
 | [Add Repo Picker — Clone Progress & First-Connect Fixes](./add-repo-picker-clone-progress.md) | Inline clone progress in the repo picker (no stacked native modal), manual-Add spinner padding, connectHost hydrating GitHubService, delete-note false-failure fix (#953, QA #932) |
 | [Add Repo Progress & Live Pull](./add-repo-progress-live-pull.md) | Throttled clone progress (createThrottledEmitter), pull-phase yielding (yieldToMain), pull shown in the same progress bar, animated status line, always-refresh stores after add-time import |
+| [Clone-Phase Yield Patch](./clone-phase-yield-patch.md) | isomorphic-git pack-indexing yields via patch-package (clone freeze), corruption-classifier over-match fix (zero-content imports), CI guard |
 | [Thought Dump Repo Picker](./thought-dump-repo-picker.md) | "Save to \<repo\> · \<branch\>" picker row + repo/branch modal, `ThoughtDumpRepoPreferenceService` persistence, distinct save errors, and empty-state disambiguation |
 
 ## Quick Start
