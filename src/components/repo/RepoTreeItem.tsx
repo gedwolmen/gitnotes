@@ -27,6 +27,8 @@ import {
 import { RepoTreeMoveDialog } from './RepoTreeMoveDialog';
 import { RepoTreeRenameDialog } from './RepoTreeRenameDialog';
 import { treeStyles } from './repoTreeStyles';
+import type { GitHostProvider } from '../../services/git/GitHost';
+import { getGitHostService } from '../../services/git/gitHostFactory';
 
 const DIVERGENCE_HINT =
   ' This usually means the branch has diverged from the remote — open the merge banner to resolve it.';
@@ -66,7 +68,7 @@ function failedTitleFor(kind: GitOp['kind']): string {
   }
 }
 
-export function RepoTreeItem({ node, owner, repo, branch, level, onFilePress, onRefresh, onChildDeleted }: TreeItemProps) {
+export function RepoTreeItem({ node, owner, repo, branch, provider, level, onFilePress, onRefresh, onChildDeleted }: TreeItemProps) {
   const { colors } = useTheme();
   const [expanded, setExpanded] = useState(false);
   const [children, setChildren] = useState<TreeItemProps['node'][]>([]);
@@ -165,7 +167,7 @@ export function RepoTreeItem({ node, owner, repo, branch, level, onFilePress, on
     if (!loaded) {
       setLoading(true);
       try {
-        const kids = await fetchChildren(owner, repo, node.path, branch);
+        const kids = await fetchChildren(owner, repo, node.path, branch, provider);
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setChildren(kids);
         setLoaded(true);
@@ -180,7 +182,7 @@ export function RepoTreeItem({ node, owner, repo, branch, level, onFilePress, on
 
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpanded((prev) => !prev);
-  }, [branch, isDir, loaded, node.path, owner, repo]);
+  }, [branch, isDir, loaded, node.path, owner, repo, provider]);
 
   const handleFileOnlyPress = useCallback(() => {
     if (isDir) return;
@@ -420,6 +422,7 @@ export function RepoTreeItem({ node, owner, repo, branch, level, onFilePress, on
               owner={owner}
               repo={repo}
               branch={branch}
+              provider={provider}
               level={level + 1}
               onFilePress={onFilePress}
               onRefresh={onRefresh}
@@ -465,7 +468,7 @@ export function RepoTreeItem({ node, owner, repo, branch, level, onFilePress, on
       />
 
       <RepoTreeRenameDialog visible={showRename} node={node} onClose={() => setShowRename(false)} onRename={handleRename} />
-      <RepoTreeMoveDialog visible={showMove} node={node} owner={owner} repo={repo} branch={branch} onClose={() => setShowMove(false)} onMove={handleMove} />
+      <RepoTreeMoveDialog visible={showMove} node={node} owner={owner} repo={repo} branch={branch} provider={provider} onClose={() => setShowMove(false)} onMove={handleMove} />
     </View>
   );
 }

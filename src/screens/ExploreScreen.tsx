@@ -404,6 +404,7 @@ export default function ExploreScreen() {
               owner={repoInfo.owner}
               repo={repoInfo.repo}
               branch={branch}
+              provider={repoProvider}
               onFilePress={(node: TreeNode) => {
                 const kind = classifyFile(node.name);
                 const params = {
