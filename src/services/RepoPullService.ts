@@ -19,6 +19,7 @@ import { NoteSyncQueueService } from './NoteSyncQueueService';
 import { getGitHostService } from './git/gitHostFactory';
 import { FEATURE_USE_MULTI_HOST_WRITE } from './featureFlags';
 import type { GitHostProvider } from './git/GitHost';
+import type { CloneProgressCallback } from './RepoImportService';
 
 async function hasUnpushedCommits(repoPath: string, branch: string): Promise<boolean> {
   try {
@@ -340,6 +341,7 @@ async function pullNotesFromRepo(
   repoPath: string,
   branch: string,
   provider?: GitHostProvider,
+  onProgress?: CloneProgressCallback,
 ): Promise<number> {
   try {
     const reader = await getRepoReader(repoPath, owner, repo, branch, provider);
@@ -413,8 +415,11 @@ async function pullNotesFromRepo(
       });
     }
 
+    let processedCount = 0;
     for (const item of fetched) {
       if (!item) continue;
+      processedCount++;
+      onProgress?.('Importing notes…', processedCount, noteBlobs.length);
       const isTombstoned = await NoteSyncQueueService.isTombstoned(repoPath, branch, item.path);
       if (isTombstoned) continue;
       const ext = item.path.split('.').pop()?.toLowerCase() ?? 'md';
@@ -520,6 +525,7 @@ async function pullCanvasesFromRepo(
   repoPath: string,
   branch: string,
   provider?: GitHostProvider,
+  onProgress?: CloneProgressCallback,
 ): Promise<number> {
   let pulled = 0;
   let files: { path: string; content: string }[] = [];
@@ -533,6 +539,8 @@ async function pullCanvasesFromRepo(
     directoryExists = false;
   }
 
+  let processed = 0;
+  const canvasJsonCount = files.filter((f) => f.path.endsWith('.json')).length;
   try {
     await StorageService.mutateCanvases((allCanvases) => {
       // Upsert: add / update canvases from files that still exist remotely.
@@ -540,6 +548,8 @@ async function pullCanvasesFromRepo(
         const remotePaths = new Set<string>();
         for (const file of files) {
           if (!file.path.endsWith('.json')) continue;
+          processed++;
+          onProgress?.('Importing canvases…', processed, canvasJsonCount);
           remotePaths.add(file.path);
 
           let scene: CanvasScene;
@@ -625,6 +635,7 @@ async function pullTodosFromRepo(
   repoPath: string,
   branch: string,
   provider?: GitHostProvider,
+  onProgress?: CloneProgressCallback,
 ): Promise<number> {
   let pulled = 0;
   let files: { path: string; content: string }[] = [];
@@ -637,6 +648,8 @@ async function pullTodosFromRepo(
     directoryExists = false;
   }
 
+  let processed = 0;
+  const todoJsonCount = files.filter((f) => f.path.endsWith('.json')).length;
   try {
     const allTodos = await StorageService.getAllTodos();
     let dirty = false;
@@ -645,6 +658,8 @@ async function pullTodosFromRepo(
     if (directoryExists) {
       for (const file of files) {
         if (!file.path.endsWith('.json')) continue;
+        processed++;
+        onProgress?.('Importing todos…', processed, todoJsonCount);
         remotePaths.add(file.path);
 
         let data: Record<string, any>;
@@ -733,6 +748,7 @@ async function pullTemplatesFromRepo(
   repo: string,
   branch: string,
   provider?: GitHostProvider,
+  onProgress?: CloneProgressCallback,
 ): Promise<number> {
   try {
     let tree: { type: string; path: string }[];
@@ -778,8 +794,11 @@ async function pullTemplatesFromRepo(
     }
 
     const remote: NoteTemplate[] = [];
+    let processed = 0;
     for (const f of fetched) {
       if (!f) continue;
+      processed++;
+      onProgress?.('Importing templates…', processed, blobs.length);
       const parsed = parseTemplateMarkdown(f.path, f.content);
       if (parsed) remote.push(parsed);
     }
@@ -827,10 +846,15 @@ export interface PullResult {
   templates: number;
 }
 
-export async function pullFromSingleRepo(repoPath: string): Promise<PullResult> {
+export async function pullFromSingleRepo(
+  repoPath: string,
+  onProgress?: CloneProgressCallback,
+): Promise<PullResult> {
   if (!GitHubService.isAuthenticated()) {
     return { repos: 0, notes: 0, canvases: 0, todos: 0, templates: 0 };
   }
+
+  onProgress?.('Reading repository…', 0, null);
 
   const repos = await StorageService.getSavedRepositories();
   const repo = repos.find((r) => r.path === repoPath);
@@ -845,14 +869,16 @@ export async function pullFromSingleRepo(repoPath: string): Promise<PullResult> 
   const branch = await resolveBranch(repo.path, repo.branch);
 
   const [notes, canvases, todos] = await Promise.all([
-    pullNotesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider),
-    pullCanvasesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider),
-    pullTodosFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider),
+    pullNotesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider, onProgress),
+    pullCanvasesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider, onProgress),
+    pullTodosFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider, onProgress),
   ]);
 
   const pref = await TemplateRepoPreferenceService.get();
   const templates =
-    pref && pref.repoPath === repoPath ? await pullTemplatesFromConfiguredRepo() : 0;
+    pref && pref.repoPath === repoPath
+      ? await pullTemplatesFromRepo(repoInfo.owner, repoInfo.repo, branch, repo.provider, onProgress)
+      : 0;
   return { repos: 1, notes, canvases, todos, templates };
 }
 
