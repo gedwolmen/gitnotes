@@ -213,6 +213,7 @@
     "about": "À propos",
     "version": "Version",
     "build": "Build",
+    "reportIssue": "Signaler des bugs et demander des fonctionnalités",
     "manageTemplates": "Gérer les modèles",
     "artificialIntelligence": "Intelligence artificielle",
     "enableAI": "Activer l'intelligence artificielle",
