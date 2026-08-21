@@ -30,10 +30,16 @@ jest.mock('../../../src/components/ui', () => {
   const React = require('react');
   const { View, Text, TouchableOpacity } = require('react-native');
   const Surface = (props: Record<string, unknown>) => React.createElement(View, props);
-  const Button = (props: { label?: string; onPress?: () => void; testID?: string; disabled?: boolean }) =>
+  const Button = (props: {
+    label?: string;
+    onPress?: () => void;
+    testID?: string;
+    disabled?: boolean;
+    style?: Record<string, unknown>;
+  }) =>
     React.createElement(
       TouchableOpacity,
-      { testID: props.testID, disabled: props.disabled, onPress: props.onPress },
+      { testID: props.testID, disabled: props.disabled, onPress: props.onPress, style: props.style },
       React.createElement(Text, null, props.label),
     );
   return { Surface, Button };
@@ -161,5 +167,41 @@ describe('PaywallPlanGrid', () => {
     expect(getByTestId('icon-calendar')).toBeTruthy();
     expect(getByTestId('icon-pricetag')).toBeTruthy();
     expect(getByTestId('icon-infinite')).toBeTruthy();
+  });
+
+  it('adds a border to secondary CTA buttons but not the primary', () => {
+    const { getByTestId } = render(
+      <PaywallPlanGrid
+        plans={[
+          plan({ id: 'monthly', variant: 'primary', ctaTestID: 'paywall.monthly.cta' }),
+          plan({ id: 'yearly', variant: 'secondary', ctaTestID: 'paywall.yearly.cta' }),
+          plan({ id: 'lifetime', variant: 'secondary', ctaTestID: 'paywall.lifetime.cta' }),
+        ]}
+      />,
+    );
+    expect(getByTestId('paywall.monthly.cta').props.style).not.toHaveProperty('borderWidth');
+    expect(getByTestId('paywall.yearly.cta').props.style).toEqual(
+      expect.objectContaining({ borderWidth: 1, borderColor: '#ddd' }),
+    );
+    expect(getByTestId('paywall.lifetime.cta').props.style).toEqual(
+      expect.objectContaining({ borderWidth: 1, borderColor: '#ddd' }),
+    );
+  });
+
+  it('lets the price line wrap to two lines instead of truncating', () => {
+    const { getByText } = render(
+      <PaywallPlanGrid
+        plans={[
+          plan({
+            id: 'monthly',
+            priceLine: 'Try 30 days free, then $2.99/month',
+            ctaTestID: 'paywall.monthly.cta',
+          }),
+        ]}
+      />,
+    );
+    const price = getByText('Try 30 days free, then $2.99/month');
+    expect(price.props.numberOfLines).toBe(2);
+    expect(price.props.style.lineHeight).toBe(18);
   });
 });

@@ -22,7 +22,7 @@ const CARD_PADDING = SPACING[3];
 // Screen horizontal margin consumed by the paywall scroll container (20/edge).
 const HORIZONTAL_MARGIN = 40;
 
-const ROW = { height: 96, badge: 40, icon: 20, titleSize: 15, priceSize: 13 } as const;
+const ROW = { height: 112, badge: 40, icon: 20, titleSize: 15, priceSize: 13 } as const;
 
 export default function PaywallPlanGrid({ plans }: { plans: PlanTileData[] }) {
   const { width } = useWindowDimensions();
@@ -76,7 +76,7 @@ function PlanTile({ plan, width }: { plan: PlanTileData; width: number }) {
           {plan.title}
         </Text>
         {plan.priceLine ? (
-          <Text numberOfLines={1} style={{ fontSize: ROW.priceSize, color: colors.textSecondary, marginTop: 2 }}>
+          <Text numberOfLines={2} style={{ fontSize: ROW.priceSize, color: colors.textSecondary, marginTop: 2, lineHeight: 18 }}>
             {plan.priceLine}
           </Text>
         ) : null}
@@ -87,6 +87,7 @@ function PlanTile({ plan, width }: { plan: PlanTileData; width: number }) {
         disabled={plan.disabled}
         label={plan.ctaLabel}
         onPress={plan.onPress}
+        style={plan.variant === 'secondary' ? { borderWidth: 1, borderColor: colors.border } : undefined}
       />
     </Surface>
   );
