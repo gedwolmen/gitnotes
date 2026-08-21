@@ -373,10 +373,12 @@ describe('offerings', () => {
     expect(useProStore.getState().lifetimePackage?.identifier).toBe('lifetime');
   });
 
-  it('surfaces an error when offerings fail to load', async () => {
+  it('surfaces an error and resolves the loading state when offerings fail to load', async () => {
     packagesMock.mockRejectedValue(new Error('no offerings'));
     await useProStore.getState().loadOfferingsIfNeeded();
-    expect(useProStore.getState().error).toBe('no offerings');
+    const s = useProStore.getState();
+    expect(s.error).toBe('no offerings');
+    expect(s.offeringsReady).toBe(true);
   });
 
   it('stores the current offering once offerings load', async () => {

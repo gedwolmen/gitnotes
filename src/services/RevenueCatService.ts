@@ -7,9 +7,6 @@ import type {
   PurchasesPackage,
 } from 'react-native-purchases';
 
-const IOS_API_KEY_ENV = 'EXPO_PUBLIC_REVENUECAT_API_KEY_IOS';
-const ANDROID_API_KEY_ENV = 'EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID';
-
 export interface ConfigureResult {
   configured: boolean;
 }
@@ -33,7 +30,10 @@ function isPlaceholderKey(apiKey: string | undefined): boolean {
 let configured = false;
 
 export async function configureRevenueCat(): Promise<ConfigureResult> {
-  const apiKey = Platform.OS === 'ios' ? process.env[IOS_API_KEY_ENV] : process.env[ANDROID_API_KEY_ENV];
+  const apiKey =
+    Platform.OS === 'ios'
+      ? process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_IOS
+      : process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID;
   if (isPlaceholderKey(apiKey)) {
     return { configured: false };
   }
