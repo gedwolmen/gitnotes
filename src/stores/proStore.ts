@@ -17,6 +17,8 @@ const TRIAL_EXPIRED_AT_KEY = '@gitnotes:trial_expired_at';
 const INTERSTITIAL_SHOWN_KEY = '@gitnotes:interstitial_offer_shown';
 const INTERSTITIAL_DELAY = 3 * 24 * 60 * 60 * 1000;
 
+export const PRO_ENTITLEMENT_ID = 'GitNotēs Pro';
+
 export type ProStatus = 'loading' | 'pro' | 'free';
 
 export type RestoreOutcome = 'restored' | 'nothing' | 'error';
@@ -70,7 +72,7 @@ function deriveTrialInfo(customerInfo: CustomerInfoLike | null): {
   trialEndsAt: number | null;
   entitlementExpiresAt: number | null;
 } {
-  const entitlement = customerInfo?.entitlements?.active?.pro;
+  const entitlement = customerInfo?.entitlements?.active?.[PRO_ENTITLEMENT_ID];
   const entitlementActive = Boolean(entitlement?.isActive);
   const trialActive = entitlementActive && entitlement?.periodType === 'TRIAL';
   const expiresMs = entitlement?.expiresDate ? Date.parse(entitlement.expiresDate) : NaN;
@@ -233,7 +235,9 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
       }
       // 'purchased' alone does not distinguish found vs not-found: derive it
       // from the returned customerInfo entitlements.
-      const proActive = Boolean(result.customerInfo?.entitlements?.active?.pro?.isActive);
+      const proActive = Boolean(
+        result.customerInfo?.entitlements?.active?.[PRO_ENTITLEMENT_ID]?.isActive,
+      );
       if (!proActive) {
         set({ isRestoring: false });
         PaywallAnalytics.trackRestoreOutcome('nothing');

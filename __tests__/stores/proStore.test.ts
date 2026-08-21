@@ -32,7 +32,7 @@ jest.mock('../../src/services/RevenueCatService', () => ({
   })),
   purchasePackage: jest.fn(async () => ({
     kind: 'purchased',
-    customerInfo: { entitlements: { active: { pro: { isActive: true, periodType: 'NORMAL' } } } },
+    customerInfo: { entitlements: { active: { 'GitNotēs Pro': { isActive: true, periodType: 'NORMAL' } } } },
   })),
   restorePurchases: jest.fn(async () => ({
     kind: 'purchased',
@@ -89,7 +89,7 @@ const restoreTapSpy = trackRestoreTap as jest.Mock;
 const restoreOutcomeSpy = trackRestoreOutcome as jest.Mock;
 
 const proCustomer = (periodType = 'NORMAL') => ({
-  entitlements: { active: { pro: { isActive: true, periodType, expiresDate: null } } },
+  entitlements: { active: { 'GitNotēs Pro': { isActive: true, periodType, expiresDate: null } } },
 });
 const freeCustomer = { entitlements: { active: {} } };
 
@@ -191,7 +191,7 @@ describe('trial + interstitial state machine', () => {
     customerInfoMock.mockResolvedValue({
       entitlements: {
         active: {
-          pro: { isActive: true, periodType: 'TRIAL', expiresDate: new Date(NOW + 86400000).toISOString() },
+          'GitNotēs Pro': { isActive: true, periodType: 'TRIAL', expiresDate: new Date(NOW + 86400000).toISOString() },
         },
       },
     });
