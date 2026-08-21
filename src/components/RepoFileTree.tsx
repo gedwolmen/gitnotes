@@ -12,6 +12,7 @@ import { Button } from './ui';
 import { RepoTreeItem } from './repo/RepoTreeItem';
 import { fetchChildren, TreeNode } from './repo/repoTreeShared';
 import { treeStyles } from './repo/repoTreeStyles';
+import type { GitHostProvider } from '../services/git/GitHost';
 
 export type { TreeNode } from './repo/repoTreeShared';
 
@@ -23,10 +24,11 @@ interface RepoFileTreeProps {
   owner: string;
   repo: string;
   branch?: string;
+  provider?: GitHostProvider;
   onFilePress?: (node: TreeNode) => void;
 }
 
-export default function RepoFileTree({ owner, repo, branch, onFilePress }: RepoFileTreeProps) {
+export default function RepoFileTree({ owner, repo, branch, provider, onFilePress }: RepoFileTreeProps) {
   const { colors } = useTheme();
   const [rootItems, setRootItems] = useState<TreeNode[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,7 +38,7 @@ export default function RepoFileTree({ owner, repo, branch, onFilePress }: RepoF
     setLoading(true);
     setError(false);
     try {
-      const items = await fetchChildren(owner, repo, '', branch);
+      const items = await fetchChildren(owner, repo, '', branch, provider);
       setRootItems(items);
     } catch (error) {
       console.warn('[RepoFileTree] loadRoot failed:', error);
@@ -45,7 +47,7 @@ export default function RepoFileTree({ owner, repo, branch, onFilePress }: RepoF
     } finally {
       setLoading(false);
     }
-  }, [owner, repo, branch]);
+  }, [owner, repo, branch, provider]);
 
   useEffect(() => {
     loadRoot();
@@ -90,6 +92,7 @@ export default function RepoFileTree({ owner, repo, branch, onFilePress }: RepoF
           owner={owner}
           repo={repo}
           branch={branch}
+          provider={provider}
           level={0}
           onFilePress={onFilePress}
           onRefresh={loadRoot}

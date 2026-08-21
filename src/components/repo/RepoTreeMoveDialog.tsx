@@ -6,6 +6,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { Button, GroupRow, Input, Modal } from '../ui';
 import { fetchChildren, TreeNode } from './repoTreeShared';
 import { dialogStyles } from './repoTreeStyles';
+import type { GitHostProvider } from '../../services/git/GitHost';
 
 interface RepoTreeMoveDialogProps {
   visible: boolean;
@@ -13,11 +14,12 @@ interface RepoTreeMoveDialogProps {
   owner: string;
   repo: string;
   branch?: string;
+  provider?: GitHostProvider;
   onClose: () => void;
   onMove: (oldPath: string, newPath: string) => void;
 }
 
-export function RepoTreeMoveDialog({ visible, node, owner, repo, branch, onClose, onMove }: RepoTreeMoveDialogProps) {
+export function RepoTreeMoveDialog({ visible, node, owner, repo, branch, provider, onClose, onMove }: RepoTreeMoveDialogProps) {
   const { colors } = useTheme();
   const [folders, setFolders] = useState<TreeNode[]>([]);
   const [loading, setLoading] = useState(false);
@@ -30,12 +32,12 @@ export function RepoTreeMoveDialog({ visible, node, owner, repo, branch, onClose
       setSelectedPath('');
       setCustomPath('');
       setLoading(true);
-      fetchChildren(owner, repo, '', branch)
+      fetchChildren(owner, repo, '', branch, provider)
         .then((items) => setFolders(items.filter((item) => item.type === 'dir')))
         .catch(() => setFolders([]))
         .finally(() => setLoading(false));
     }
-  }, [branch, node, owner, repo, visible]);
+  }, [branch, node, owner, provider, repo, visible]);
 
   const handleMove = useCallback(() => {
     if (!node) return;

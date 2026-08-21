@@ -5,6 +5,7 @@ import { SyncEngineService } from '../../services/SyncEngineService';
 import { LocalGitWriter } from '../../services/git/LocalGitWriter';
 import { batchDeleteFiles } from '../../services/git/BatchGitOperations';
 import { getGitHostService } from '../../services/git/gitHostFactory';
+import type { GitHostProvider } from '../../services/git/GitHost';
 
 export interface TreeNode {
   name: string;
@@ -19,6 +20,7 @@ export interface TreeItemProps {
   owner: string;
   repo: string;
   branch?: string;
+  provider?: GitHostProvider;
   level: number;
   onFilePress?: (node: TreeNode) => void;
   onRefresh?: () => void;
@@ -59,11 +61,13 @@ export async function fetchChildren(
   repo: string,
   path: string,
   branch?: string,
+  provider?: GitHostProvider,
 ): Promise<TreeNode[]> {
-  const items = await GitHubService.getRepoContents(owner, repo, path, branch);
+  const host = getGitHostService(provider);
+  const items = await host.listContents(owner, repo, path, branch);
   return items
-    .filter((item: GitHubContent) => item.type === 'dir' || item.type === 'file')
-    .map((item: GitHubContent) => ({
+    .filter((item) => item.type === 'dir' || item.type === 'file')
+    .map((item) => ({
       name: item.name,
       path: item.path,
       type: item.type as 'file' | 'dir',

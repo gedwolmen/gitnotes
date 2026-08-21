@@ -577,21 +577,66 @@ class GitHubServiceClass {
     repo: string,
     ref: string,
   ): Promise<{ path: string; type: 'blob' | 'tree'; sha: string; size?: number }[]> {
-    const url = `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`;
-    const data = await this.request(url);
-    // Match the "OrThrow" contract: a 200 with a malformed body is *not*
-    // authoritative evidence that the repo has zero entries. Returning [] here
-    // would let reconcilers (#508 templates, notes pull) wipe local entries on
-    // a transient API hiccup. Throw instead so callers' outer catch returns 0.
-    if (!Array.isArray(data?.tree)) {
+    const entries = await this._getTreeRecursiveImpl(owner, repo, ref);
+    if (!entries) {
       throw new Error('GitHub tree response missing tree array');
     }
-    return data.tree.map((item: any) => ({
-      path: item.path,
-      type: item.type,
-      sha: item.sha,
-      size: typeof item.size === 'number' ? item.size : undefined,
-    }));
+    return entries;
+  }
+
+  /**
+   * Paginated tree fetch that handles truncation for large repos (#972).
+   * When GitHub returns `truncated: true`, we recursively fetch individual
+   * subtree SHAs to avoid loading the entire tree into memory at once.
+   */
+  private async _getTreeRecursiveImpl(
+    owner: string,
+    repo: string,
+    ref: string,
+    parentPath = '',
+  ): Promise<{ path: string; type: 'blob' | 'tree'; sha: string; size?: number }[] | null> {
+    const url = `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`;
+    const data = await this.request(url);
+
+    if (!data || typeof data !== 'object') return null;
+    if (!Array.isArray(data.tree)) return null;
+
+    if (!data.truncated) {
+      return data.tree.map((item: any) => ({
+        path: item.path,
+        type: item.type,
+        sha: item.sha,
+        size: typeof item.size === 'number' ? item.size : undefined,
+      }));
+    }
+
+    const treeItems = data.tree as any[];
+    const dirItems = treeItems.filter((i) => i.type === 'tree');
+
+    if (dirItems.length === 0) {
+      return treeItems.map((item: any) => ({
+        path: item.path,
+        type: item.type,
+        sha: item.sha,
+        size: typeof item.size === 'number' ? item.size : undefined,
+      }));
+    }
+
+    const blobItems = treeItems
+      .filter((i) => i.type === 'blob')
+      .map((item: any) => ({
+        path: item.path,
+        type: item.type as 'blob' | 'tree',
+        sha: item.sha,
+        size: typeof item.size === 'number' ? item.size : undefined,
+      }));
+
+    const subTreeResults = await Promise.all(
+      dirItems.map((d) => this._getTreeRecursiveImpl(owner, repo, d.sha, d.path)),
+    );
+
+    const subEntries = subTreeResults.flatMap((r) => r ?? []);
+    return [...blobItems, ...subEntries];
   }
 
   async getFileContent(

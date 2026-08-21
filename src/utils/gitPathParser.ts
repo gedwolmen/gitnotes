@@ -3,9 +3,14 @@
 //   github.com/facebook/react
 //   https://github.com/facebook/react
 //   facebook/react.git
-//   vidwadeseram/test-notes.git/            (trailing slash)
+//   vidwadeseram/test-notes.git/              (trailing slash)
 //   git@github.com:vidwadeseram/test-notes.git  (scp syntax)
 //   ssh://git@github.com/vidwadeseram/test-notes.git
+//   https://gitlab.com/facebook/react
+//   https://gitlab.com/facebook/react.git
+//   gitlab.com/facebook/react
+//   https://gitea.com/facebook/react
+//   https://codeberg.org/facebook/react
 export function parseRepoPath(repoPath: string): { owner: string; repo: string } | null {
   let cleaned = repoPath.trim();
   if (!cleaned) return null;
@@ -23,9 +28,15 @@ export function parseRepoPath(repoPath: string): { owner: string; repo: string }
   // Drop the trailing `.git`.
   cleaned = cleaned.replace(/\.git$/, '');
 
-  // Drop leading GitHub web prefixes.
+  // Drop leading web prefixes for all supported hosts.
   cleaned = cleaned.replace(/^https?:\/\/github\.com\//i, '');
   cleaned = cleaned.replace(/^github\.com\//i, '');
+  cleaned = cleaned.replace(/^https?:\/\/gitlab\.com\//i, '');
+  cleaned = cleaned.replace(/^gitlab\.com\//i, '');
+  cleaned = cleaned.replace(/^https?:\/\/gitea\.com\//i, '');
+  cleaned = cleaned.replace(/^gitea\.com\//i, '');
+  cleaned = cleaned.replace(/^https?:\/\/codeberg\.org\//i, '');
+  cleaned = cleaned.replace(/^codeberg\.org\//i, '');
 
   const parts = cleaned.split('/');
   if (parts.length < 2) return null;
