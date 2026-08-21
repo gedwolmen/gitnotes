@@ -1,6 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StorageService } from './StorageService';
-import { GitHubService } from './GitHubService';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { fetchGitHubDefaultBranch, fetchGitLabDefaultBranch } from './git/branchResolver';
 import type { GitHostProvider } from './git/GitHost';

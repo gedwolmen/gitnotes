@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, act } from '@testing-library/react-native';
+import { fireEvent } from '@testing-library/react-native';
 
 jest.mock('@expo/vector-icons', () => {
   const { createElement } = require('react');

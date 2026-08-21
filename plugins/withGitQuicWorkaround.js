@@ -12,7 +12,7 @@
  * must happen at prebuild time — editing AppDelegate directly is wiped on the
  * next prebuild.
  */
-const { withAppDelegate, withInfoPlist } = require('@expo/config-plugins');
+const { withAppDelegate } = require('@expo/config-plugins');
 
 const GIT_HTTP11_PROTOCOL_SWIFT = `
 final class GitHttp11URLProtocol: URLProtocol {

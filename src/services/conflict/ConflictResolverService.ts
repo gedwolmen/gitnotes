@@ -1,6 +1,6 @@
 import git, { TREE } from 'isomorphic-git';
 import { parseRepoPath } from '../../utils/gitPathParser';
-import { makeGitFs, makeGitFs as makeFs } from '../git/gitFs';
+import { makeGitFs as makeFs } from '../git/gitFs';
 import { ConflictSet, FileConflict, FileFormat } from './types';
 import { threeWayMerge } from './threeWayMerge';
 import { GitFsService } from '../git/GitFsService';

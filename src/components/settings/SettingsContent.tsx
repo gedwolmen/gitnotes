@@ -167,9 +167,7 @@ export function SettingsContent(props: SettingsContentProps) {
     tabBarHeight,
     theme,
     uiStyle,
-    accounts,
     activeAccountId,
-    authState,
     accountSummaries,
     repositories,
     syncingRepo,
@@ -184,10 +182,6 @@ export function SettingsContent(props: SettingsContentProps) {
     providers,
     setTheme,
     setStyle,
-    onOpenConnectToken,
-    onOpenAddAccount,
-    onSwitchAccount,
-    onRemoveAccount,
     onRemoveToken,
     onDisconnectHost,
     onAddHost,
@@ -242,7 +236,7 @@ onSetSyncIntervalSeconds,
   } = props;
   // Tokens hook gives us spacing/radii/type so the styled disconnect
   // button matches the rest of the app without hardcoded values.
-  const { spacing, radii, type } = useTokens();
+  const { radii, type } = useTokens();
   const { t } = useTranslation();
   const [languagePref, setLanguagePref] = useState<string>('system');
   const [showTimeoutPicker, setShowTimeoutPicker] = useState(false);

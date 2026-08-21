@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 
 import NotesListScreen from '../../src/screens/NotesListScreen';
 import { Note } from '../../src/models/Note';

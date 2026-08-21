@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render } from '@testing-library/react-native';
 
 import NoteEditorScreen from '../../src/screens/NoteEditorScreen';
 

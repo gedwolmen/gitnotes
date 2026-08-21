@@ -135,7 +135,6 @@ describe('useAIStore', () => {
 
   describe('addProvider', () => {
     it('adds new provider and filters duplicates by id', async () => {
-      const initialProviders = useAIStore.getState().providers;
       await useAIStore.getState().addProvider(mockProvider);
       const providers = useAIStore.getState().providers;
       expect(providers.some((p) => p.id === 'test-provider')).toBe(true);

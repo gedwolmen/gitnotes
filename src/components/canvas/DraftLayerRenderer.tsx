@@ -81,7 +81,7 @@ export function DraftLayerRenderer({
   const commands = useDraftStore((s: any) => s.commands);
   const toggleChecked = useDraftStore((s: any) => s.toggleChecked);
   const discardCommand = useDraftStore((s: any) => s.discardCommand);
-  const acceptSingle = useDraftStore((s: any) => s.acceptCommand);
+
   const batchAcceptChecked = useDraftStore((s: any) => s.batchAcceptChecked);
   const batchAcceptAll = useDraftStore((s: any) => s.batchAcceptAll);
   const batchDiscardAll = useDraftStore((s: any) => s.batchDiscardAll);

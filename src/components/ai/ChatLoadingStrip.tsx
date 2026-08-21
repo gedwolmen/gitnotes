@@ -13,7 +13,7 @@ export interface ChatLoadingStripProps {
 }
 
 export function ChatLoadingStrip({ visible, model, provider, startedAt, onCancel }: ChatLoadingStripProps) {
-  const { colors, spacing, type, radii } = useTokens();
+  const { colors } = useTokens();
   const { t } = useTranslation();
   const [elapsedMs, setElapsedMs] = useState(() => Math.max(0, Date.now() - startedAt));
 

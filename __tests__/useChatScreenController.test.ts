@@ -37,7 +37,7 @@ jest.mock('../src/services/ai/tools', () => ({
   },
 }));
 
-import { act, renderHook, waitFor, fireEvent } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 
 import * as AIService from '../src/services/AIService';
 import * as ChatStorageService from '../src/services/ChatStorageService';
@@ -174,9 +174,6 @@ describe('useChatScreenController', () => {
     });
 
     // streamStartedAt should have been set by handleSend
-    const streamStartedAtBefore = useChatStore.getState().isStreaming
-      ? result.current.streamStartedAt
-      : 0;
 
     await act(async () => {
       await jest.runAllTimersAsync();
