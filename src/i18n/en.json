@@ -871,7 +871,20 @@
     "justNow": "just now",
     "voiceInput": "Voice input",
     "voiceUnavailable": "Voice input not available",
-    "voiceDump": "Voice dump"
+    "voiceDump": "Voice dump",
+    "repo": "Save to",
+    "chooseRepo": "Choose where to save",
+    "repoPickerTitle": "Choose save location",
+    "repoPickerDescription": "Thought dumps are saved as Markdown in the thoughts/ folder of the selected repository.",
+    "noRepoConfiguredTitle": "No repository set up",
+    "noRepoConfiguredBody": "Add a GitHub repository to start saving thought dumps.",
+    "noAuthTitle": "Connect your GitHub account",
+    "noAuthBody": "Sign in to save thought dumps to a repository.",
+    "errorNotAuthenticated": "Sign in to your GitHub account to save thought dumps.",
+    "errorNoRepo": "No repository selected. Choose where thought dumps are saved.",
+    "errorWriteFailed": "Couldn't save the thought dump. Check your network and repository write access.",
+    "errorInvalidRepo": "The selected repository is no longer available. Choose another save location.",
+    "goToSettings": "Go to Settings"
   },
   "paywall": {
     "title": "GitNotēs Pro",

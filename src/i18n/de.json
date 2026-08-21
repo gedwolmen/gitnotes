@@ -837,7 +837,20 @@
     "justNow": "gerade eben",
     "voiceInput": "Spracheingabe",
     "voiceUnavailable": "Spracheingabe nicht verfügbar",
-    "voiceDump": "Sprachablage"
+    "voiceDump": "Sprachablage",
+    "repo": "Speichern in",
+    "chooseRepo": "Wählen, wo gespeichert werden soll",
+    "repoPickerTitle": "Speicherort wählen",
+    "repoPickerDescription": "Gedankenablagen werden als Markdown im Ordner thoughts/ des ausgewählten Repositorys gespeichert.",
+    "noRepoConfiguredTitle": "Kein Repository eingerichtet",
+    "noRepoConfiguredBody": "Füge ein GitHub-Repository hinzu, um Gedankenablagen zu speichern.",
+    "noAuthTitle": "GitHub-Konto verbinden",
+    "noAuthBody": "Melde dich an, um Gedankenablagen in einem Repository zu speichern.",
+    "errorNotAuthenticated": "Melde dich bei deinem GitHub-Konto an, um Gedankenablagen zu speichern.",
+    "errorNoRepo": "Kein Repository ausgewählt. Wähle, wo Gedankenablagen gespeichert werden.",
+    "errorWriteFailed": "Gedankenablage konnte nicht gespeichert werden. Prüfe dein Netzwerk und den Schreibzugriff auf das Repository.",
+    "errorInvalidRepo": "Das ausgewählte Repository ist nicht mehr verfügbar. Wähle einen anderen Speicherort.",
+    "goToSettings": "Zu den Einstellungen"
   },
   "reminders": {
     "title": "New Reminder",
