@@ -208,10 +208,6 @@ export default function PaywallScreen() {
           {t('paywall.subtitle')}
         </Text>
 
-        <View className="mt-6">
-          <PaywallFeatureGrid />
-        </View>
-
         {!offeringsReady ? (
           <View className="mt-8 items-center" testID="paywall.loading">
             <ActivityIndicator color={colors.primary} size="large" />
@@ -239,8 +235,13 @@ export default function PaywallScreen() {
               </View>
             ) : null}
 
+            {/* Payment options first for ease of access, features below. */}
             <View className="mt-6">
               <PaywallPlanGrid plans={plans} />
+            </View>
+
+            <View className="mt-6">
+              <PaywallFeatureGrid />
             </View>
 
             <TouchableOpacity
