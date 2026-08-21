@@ -18,6 +18,7 @@ import { useConflictStore } from '../stores/conflictStore';
 import { NoteSyncQueueService } from './NoteSyncQueueService';
 import { getGitHostService } from './git/gitHostFactory';
 import { FEATURE_USE_MULTI_HOST_WRITE } from './featureFlags';
+import { yieldToMain } from '../utils/yieldToMain';
 import type { GitHostProvider } from './git/GitHost';
 import type { CloneProgressCallback } from './RepoImportService';
 
@@ -260,6 +261,7 @@ async function fetchInBatches<T, R>(
     const batch = items.slice(i, i + concurrency);
     const batchOut = await Promise.all(batch.map(fn));
     out.push(...batchOut);
+    await yieldToMain();
   }
   return out;
 }
@@ -418,6 +420,7 @@ async function pullNotesFromRepo(
     let processedCount = 0;
     for (const item of fetched) {
       if (!item) continue;
+      if (processedCount % 25 === 0) await yieldToMain();
       processedCount++;
       onProgress?.('Importing notes…', processedCount, noteBlobs.length);
       const isTombstoned = await NoteSyncQueueService.isTombstoned(repoPath, branch, item.path);
@@ -496,6 +499,7 @@ async function pullNotesFromRepo(
       if (!n.filePath) return true;
       return remoteFilePaths.has(n.filePath);
     });
+    await yieldToMain();
     await StorageService.saveAllNotes(allNotes);
 
     // Also invalidate the folders cache so editor folder dropdowns reflect
