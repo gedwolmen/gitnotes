@@ -948,6 +948,10 @@
     "later": "Plus tard",
     "retry": "Réessayer",
     "termsNote": "Les abonnements se renouvellent automatiquement jusqu'à annulation. Restaurez vos achats pour les transférer sur cet appareil. Cette app propose un essai gratuit de 30 jours aux nouveaux abonnés.",
+    "byok": {
+      "title": "Apportez vos propres clés d'IA",
+      "body": "Pro n'inclut pas de crédits de fournisseurs de LLM. Pour utiliser les fonctionnalités d'IA, ajoutez votre propre clé API d'OpenAI, d'Anthropic ou de tout fournisseur compatible."
+    },
     "yearly": {
       "title": "Annuel",
       "cta": "{{price}}/an",

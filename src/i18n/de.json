@@ -948,6 +948,10 @@
     "later": "Vielleicht später",
     "retry": "Erneut versuchen",
     "termsNote": "Abonnements verlängern sich automatisch bis zur Kündigung. Stelle Käufe wieder her, um sie auf dieses Gerät zu übertragen. Diese App bietet neuen Abonnenten eine 30-tägige kostenlose Testphase.",
+    "byok": {
+      "title": "Bring deine eigenen KI-Schlüssel mit",
+      "body": "Pro enthält keine LLM-Anbieter-Guthaben. Um KI-Funktionen zu nutzen, füge deinen eigenen API-Schlüssel von OpenAI, Anthropic oder einem kompatiblen Anbieter hinzu."
+    },
     "yearly": {
       "title": "Jährlich",
       "cta": "{{price}}/Jahr",

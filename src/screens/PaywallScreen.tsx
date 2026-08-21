@@ -208,6 +208,22 @@ export default function PaywallScreen() {
           {t('paywall.subtitle')}
         </Text>
 
+        <View
+          className="mt-4 rounded-xl border p-4 flex-row items-start gap-3"
+          style={{ backgroundColor: colors.accent + '14', borderColor: colors.accent + '44' }}
+          testID="paywall.byok-note"
+        >
+          <Ionicons name="key" size={22} color={colors.accent} />
+          <View className="flex-1">
+            <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+              {t('paywall.byok.title')}
+            </Text>
+            <Text className="text-[13px] mt-1 leading-[18px]" style={{ color: colors.textSecondary }}>
+              {t('paywall.byok.body')}
+            </Text>
+          </View>
+        </View>
+
         {error ? (
           <View className="mt-6 rounded-xl border p-4 flex-row items-start gap-3" style={{ backgroundColor: colors.error + '14', borderColor: colors.error + '44' }} testID="paywall.error">
             <Ionicons name="alert-circle" size={22} color={colors.error} />

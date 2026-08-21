@@ -948,6 +948,10 @@
     "later": "Quizás más tarde",
     "retry": "Reintentar",
     "termsNote": "Las suscripciones se renuevan automáticamente hasta que se cancelen. Restaura las compras para transferirlas a este dispositivo. Esta app ofrece una prueba gratuita de 30 días para nuevos suscriptores.",
+    "byok": {
+      "title": "Usa tus propias claves de IA",
+      "body": "Pro no incluye créditos de proveedores de LLM. Para usar las funciones de IA, añade tu propia clave de API de OpenAI, Anthropic o cualquier proveedor compatible."
+    },
     "yearly": {
       "title": "Anual",
       "cta": "{{price}}/año",
