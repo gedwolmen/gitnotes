@@ -17,10 +17,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const target = path.resolve(
-  __dirname,
-  '../node_modules/isomorphic-git/index.umd.min.js',
-);
+const target = path.resolve(__dirname, '../node_modules/isomorphic-git/index.umd.min.js');
 
 const anchor = '}),p++,d=e;const i=n[t];if(!i.oid)try{';
 const replacement =
