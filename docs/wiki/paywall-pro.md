@@ -264,11 +264,11 @@ The three pricing cards (Monthly / Yearly / Lifetime) previously rendered as ful
 
 | Layer | Implementation detail |
 |-------|----------------------|
-| Outer View | `Surface` with `elevation="raised"` `radius="md"`, `backgroundColor: colors.surface`, fixed height `96`, `padding: 12` |
+| Outer View | `Surface` with `elevation="raised"` `radius="md"`, `backgroundColor: colors.surface`, fixed height `112`, `padding: 12` |
 | Icon badge | 40×40, `borderRadius: RADII.sm`, `backgroundColor: colors.primary + '1F'`; Ionicon `calendar` (monthly) / `pricetag` (yearly) / `infinite` (lifetime) at size 20, color `colors.primary` |
 | Title Text | `fontWeight: '700'`, `fontSize: 15`, `numberOfLines: 1`, color `colors.text` |
-| Price line | `fontSize: 13`, `numberOfLines: 1`, color `colors.textSecondary`, `marginTop: 2`; carries the trial / plain / one-time price string (`paywall.monthly.trialCta` etc.) |
-| CTA | `Button` with the existing testIDs (`paywall.monthly.cta`, `paywall.yearly.cta`, `paywall.lifetime.cta`), variant `primary` (monthly) / `secondary` (yearly + lifetime), right-aligned in the row |
+| Price line | `fontSize: 13`, `numberOfLines: 2`, `lineHeight: 18`, color `colors.textSecondary`, `marginTop: 2`; carries the trial / plain / one-time price string (`paywall.monthly.trialCta` etc.) and wraps instead of truncating |
+| CTA | `Button` with the existing testIDs (`paywall.monthly.cta`, `paywall.yearly.cta`, `paywall.lifetime.cta`), variant `primary` (monthly, filled bg) / `secondary` (yearly + lifetime, `borderWidth: 1` + `borderColor: colors.border` outline), right-aligned in the row |
 | a11y | `accessibilityLabel="${title}. ${priceLine}"` |
 
 ### Screen placement
@@ -287,7 +287,7 @@ The three pricing cards (Monthly / Yearly / Lifetime) previously rendered as ful
 
 ### Test pointers
 
-- `__tests__/components/paywall/PaywallPlanGrid.test.tsx` — covers one-plan-per-full-width-row layout, title/price/CTA rendering, press + disabled behavior, a11y labels, and icon badges.
+- `__tests__/components/paywall/PaywallPlanGrid.test.tsx` — covers one-plan-per-full-width-row layout, title/price/CTA rendering, secondary-CTA border vs primary, two-line price wrapping, press + disabled behavior, a11y labels, and icon badges.
 
 ## Testing notes
 - `react-native-purchases` is globally mocked in `jest.setup.ts`; `proStore` is globally mocked **defaulting to PRO** so existing tests stay green — gating tests flip state via `__setProState` (import from `src/stores/proStore`). `proStore.test.ts` uses `jest.requireActual` to test the real store.
