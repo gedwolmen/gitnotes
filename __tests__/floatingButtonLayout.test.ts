@@ -148,4 +148,22 @@ describe('button rect registry', () => {
 
     expect(seenRects).toHaveLength(2);
   });
+
+  it('does not recurse infinitely when a subscriber publishes during notification', () => {
+    publishButtonRect('stage', { x: 16, y: 168, size: 56 });
+    const subscriberCalls: number[] = [];
+    const unsubscribe = subscribeButtonRects(() => {
+      const ai = getButtonRect('ai');
+      const stage = getButtonRect('stage');
+      if (ai === null || stage === null) return;
+      subscriberCalls.push(subscriberCalls.length);
+      publishButtonRect('stage', { x: ai.x + 40, y: ai.y + 40, size: 56 });
+    });
+
+    publishButtonRect('ai', { x: 16, y: 168, size: 56 });
+
+    // Without the re-entrancy guard this would blow the stack.
+    expect(subscriberCalls).toEqual([0]);
+    unsubscribe();
+  });
 });
