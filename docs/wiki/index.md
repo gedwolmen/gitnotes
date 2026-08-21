@@ -35,6 +35,7 @@
 | [Code Quality Findings](./codeql-quality-findings.md) | GitHub "Security and quality" Standard findings: 46 dead-code removals across 28 files (`yarn ts:check` / `yarn jest` 2752 tests / `yarn eslint` / `yarn format:check` all green); 78 findings remain — mostly `'worklet'` directives and a CodeQL `__setProState` resolution false-positive — documented for manual dismissal |
 | [Settings Keyboard & Quote Grouping](./settings-keyboard-quote-grouping.md) | iOS keyboard no longer covers inputs in Settings/AI (ModelSelector KAV, RenderStyleEditor scroll insets, ChatScreen persist-taps) + Daily Quote settings grouped under their own section |
 | [Floating Button Collision — Crash Fix](./floating-button-collision-crash-fix.md) | Re-entrancy guard on `publishButtonRect` + collision listener reads published rect so both FABs coexist without a stack-overflow recursion killing the AI button's hold animation |
+| [Security & Dependabot Alerts](./security-dependabot.md) | GitHub security surface, `uuid` fix via yarn resolutions (#4), `image-size` alerts deferred (no patched release, build-time only) |
 
 ## Quick Start
 
