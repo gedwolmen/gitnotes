@@ -7,6 +7,7 @@ jest.mock('@react-navigation/native', () => ({
 
 import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { Linking } from 'react-native';
 import OnboardingScreen from '../../src/screens/OnboardingScreen';
 import { __setProState } from '../../src/stores/proStore';
 import { OnboardingService } from '../../src/services/OnboardingService';
@@ -99,6 +100,18 @@ async function advanceToAIStep(getByTestId: ReturnType<typeof render>['getByTest
 }
 
 describe('OnboardingScreen — GitHub Tools Pro gate', () => {
+  const openUrlSpy = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+
+  it('shows the report-issue footer link and opens GitHub issues on press', () => {
+    const { getByTestId } = render(
+      <OnboardingScreen onComplete={mockOnComplete} onSkip={mockOnSkip} />
+    );
+
+    expect(getByTestId('onboarding.button.report-issue')).toBeTruthy();
+    fireEvent.press(getByTestId('onboarding.button.report-issue'));
+    expect(openUrlSpy).toHaveBeenCalledWith('https://github.com/gedwolmen/gitnotes/issues');
+  });
+
   it('skips the GitHub Tools step and completes onboarding for non-Pro users', async () => {
     const { getByTestId, queryByTestId } = render(
       <OnboardingScreen onComplete={mockOnComplete} onSkip={mockOnSkip} />
