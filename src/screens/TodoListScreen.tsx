@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { View, Alert, Platform, RefreshControl, LayoutChangeEvent } from 'react-native';
+import { Alert, Platform, RefreshControl, LayoutChangeEvent } from 'react-native';
 import { FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useIsFocused } from '@react-navigation/native';

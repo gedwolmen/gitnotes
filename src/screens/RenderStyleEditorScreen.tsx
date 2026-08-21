@@ -195,7 +195,11 @@ export default function RenderStyleEditorScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerClassName="pb-8">
+      <ScrollView
+        contentContainerClassName="pb-8"
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
+      >
         <Text className="text-xs font-semibold uppercase tracking-wide px-4 mt-4 mb-2" style={{ color: colors.textSecondary, letterSpacing: 0.5 }}>Live preview</Text>
         <View className="rounded-sm mx-3 p-4 border" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
           <MarkdownPreview value={sample} format={format} overrides={localOverrides} />

@@ -14,7 +14,7 @@ export interface GroupProps {
 export function Group(props: GroupProps) {
   const { title, badge, footer, style, children } = props;
   const { style: themeStyle } = useTheme();
-  const { colors, spacing, type } = useTokens();
+  const { colors, spacing } = useTokens();
   const items = React.Children.toArray(children).filter(Boolean);
 
   const surfaceStyle: StyleProp<ViewStyle> =

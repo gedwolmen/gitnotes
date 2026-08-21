@@ -1,6 +1,6 @@
 import React from 'react';
 import { Alert } from 'react-native';
-import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { render } from '@testing-library/react-native';
 
 import NotesListScreen from '../src/screens/NotesListScreen';
 import { Note } from '../src/models/Note';
@@ -193,24 +193,6 @@ const createNote = (id: string, title: string): Note => ({
   tags: [],
   format: 'markdown',
 });
-
-const confirmLatestDeleteAlert = async () => {
-  const alertCalls = (Alert.alert as jest.Mock).mock.calls;
-  const lastCall = alertCalls[alertCalls.length - 1];
-  if (!lastCall) {
-    throw new Error('Expected delete alert to be shown');
-  }
-
-  const buttons = lastCall[2] as Array<{ text?: string; onPress?: () => void | Promise<void> }>;
-  const deleteButton = buttons.find((button) => button.text === 'Delete');
-  if (!deleteButton?.onPress) {
-    throw new Error('Expected delete confirmation button');
-  }
-
-  await act(async () => {
-    await deleteButton.onPress?.();
-  });
-};
 
 describe('NotesListScreen swipe delete regression', () => {
   beforeEach(() => {

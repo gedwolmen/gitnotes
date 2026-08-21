@@ -17,6 +17,7 @@ import { OnboardingService } from '../services/OnboardingService';
 import { AuthService } from '../services/AuthService';
 import { GitHubService } from '../services/GitHubService';
 import { useAIStore } from '../stores/aiStore';
+import { useProGate } from '../hooks/useProGate';
 import { Button, Input, Surface } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 
@@ -66,6 +67,7 @@ const TOTAL_STEPS = INFO_STEPS.length + 3;
 export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScreenProps) {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const { isPro } = useProGate();
   const [currentStep, setCurrentStep] = useState(0);
   const [token, setToken] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
@@ -111,6 +113,14 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
     // Skipping leaves githubToolsEnabled at its default (false), so no toggle call
     await finish();
   }, [finish]);
+
+  const handleProContinue = useCallback(() => {
+    if (isPro) {
+      setCurrentStep(GITHUB_TOOLS_STEP);
+    } else {
+      void finish();
+    }
+  }, [isPro, finish]);
 
   const handleSkip = useCallback(async () => {
     await OnboardingService.completeOnboarding();
@@ -275,7 +285,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
                 variant="primary"
                 fullWidth
                 testID="onboarding.button.pro-continue"
-                onPress={() => setCurrentStep(GITHUB_TOOLS_STEP)}
+                onPress={handleProContinue}
                 label={t('common.continue', { defaultValue: 'Continue' })}
                 trailingIcon={<Ionicons name="arrow-forward" size={20} color={colors.accent} />}
                 iconAlign="edge"

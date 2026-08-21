@@ -1,6 +1,6 @@
 import React from 'react';
 import { Alert } from 'react-native';
-import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
 
 import ThoughtDumpScreen from '../src/screens/ThoughtDumpScreen';
 import { ThoughtDumpService } from '../src/services/ThoughtDumpService';
@@ -359,7 +359,7 @@ describe('ThoughtDumpScreen', () => {
     const newDump = makeDump({ id: 'new-dump', text: 'My thought' });
     mockCreate.mockResolvedValue({ ok: true, dump: newDump });
 
-    const { getByTestId, queryByTestId, getByText } = render(<ThoughtDumpScreen />);
+    const { getByTestId, getByText } = render(<ThoughtDumpScreen />);
 
     await waitFor(() => {
       expect(mockList).toHaveBeenCalled();

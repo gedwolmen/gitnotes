@@ -274,7 +274,7 @@ describe('StagingService', () => {
         return jest.fn();
       });
 
-      const drainPromise = new Promise<{ succeeded: number; failed: number; remaining: number }>((resolve) => {
+      new Promise<{ succeeded: number; failed: number; remaining: number }>((resolve) => {
         queueDrain.mockImplementation(async () => {
           for (const listener of dropListeners) {
             listener({ mutation: { id: 'mut_upsert' } });

@@ -5,7 +5,6 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { ChatThreadSummary } from '../../models/Chat';
 import { useTokens } from '../../contexts/ThemeContext';
-import { TYPE } from '../../theme/tokens';
 import { Surface } from '../ui/Surface';
 
 interface ChatThreadCardProps {
@@ -15,8 +14,7 @@ interface ChatThreadCardProps {
 }
 
 function ChatThreadCardImpl({ thread, onPress, onLongPress }: ChatThreadCardProps) {
-  const { colors, type } = useTokens();
-  const typography = type ?? TYPE;
+  const { colors } = useTokens();
 
   // formatDistanceToNow throws RangeError on a missing/NaN timestamp; never let a
   // persisted thread summary with an invalid updatedAt crash the whole chat render.

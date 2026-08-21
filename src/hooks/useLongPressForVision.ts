@@ -18,9 +18,9 @@
  * Pattern reference: useFloatingAIButtonPanGesture.ts (gesture handler).
  */
 
-import { useRef, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Alert } from 'react-native';
-import { GestureDetector, Gesture } from 'react-native-gesture-handler';
+import { Gesture } from 'react-native-gesture-handler';
 import { useDraftStore } from '../stores/draftStore';
 import { useAIStore } from '../stores/aiStore';
 import { AtlasComposer } from '../services/canvas/AtlasComposer';
@@ -60,7 +60,6 @@ export function useLongPressForVision({
   const addDraftCommands = useDraftStore(s => s.addDraftCommands);
   const selectedModelId = useAIStore((s: any) => s.selectedModelId);
   const providers = useAIStore((s: any) => s.providers);
-  const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleLongPress = useCallback(async () => {
     setError(null);

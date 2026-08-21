@@ -91,7 +91,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 jest.mock('../src/components/NoteCard', () => {
   const React = require('react');
-  const { View, Text, TouchableOpacity } = require('react-native');
+  const { Text, TouchableOpacity } = require('react-native');
   return (props: { note: any; isOffline?: boolean; isCached?: boolean; onPress?: (note: any) => void }) => {
     const { note, isOffline = false, isCached = true, onPress } = props;
     const isOfflineUncached = isOffline && !isCached;

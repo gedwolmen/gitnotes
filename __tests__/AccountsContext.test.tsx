@@ -4,10 +4,8 @@ import { act, render, waitFor } from '@testing-library/react-native';
 import { describe, expect, it, jest, beforeEach } from '@jest/globals';
 
 import { AccountsProvider, useAccounts } from '../src/contexts/AccountsContext';
-import { useAIStore } from '../src/stores/aiStore';
 import { AuthService } from '../src/services/AuthService';
 import { GitHubService } from '../src/services/GitHubService';
-import { AccountStorage } from '../src/services/AccountStorage';
 
 // ── Mocks ──────────────────────────────────────────────────────────────
 

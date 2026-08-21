@@ -25,7 +25,6 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import SettingsScreen from '../../src/screens/SettingsScreen';
 import { GitHubService } from '../../src/services/GitHubService';
 import { GitFsService } from '../../src/services/git/GitFsService';
-import { StorageService } from '../../src/services/StorageService';
 import { __resetImportDedupForTest } from '../../src/services/RepoImportService';
 
 const mockNavigate = jest.fn();
@@ -315,7 +314,6 @@ jest.mock('../../src/contexts/BiometricLockContext', () => ({
 }));
 
 jest.mock('../../src/components/ui', () => {
-  const ReactLocal = require('react');
   const { View, Text, Pressable } = require('react-native');
   return {
     ScreenHeader: ({ title }: { title: string }) => (
