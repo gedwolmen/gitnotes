@@ -852,34 +852,6 @@ onSetSyncIntervalSeconds,
           <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.enableAI')}</Text>
         </GroupRow>
         <GroupRow
-          testID={isPro ? 'settings.row.daily-quote' : 'settings.row.ai-locked-daily-quote'}
-          onPress={isPro ? undefined : () => promptProUpgrade(t, onOpenPaywall)}
-          trailing={
-            isPro ? (
-              <View className="flex-row items-center gap-2">
-                <Toggle
-                  testID="settings.toggle.daily-quote"
-                  value={isAIEnabled ? dailyQuoteEnabled : false}
-                  onValueChange={onToggleDailyQuote}
-                  disabled={!isAIEnabled}
-                />
-                <HintIcon hintKey="hints.settings.dailyQuote" testID="hint.daily-quote" />
-              </View>
-            ) : (
-              <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
-            )
-          }
-        >
-          <View>
-            <Text style={[styles.settingLabel, { color: colors.text }]}>
-              {t('settings.dailyQuote.title', { defaultValue: 'Daily Quote' })}
-            </Text>
-            <Text style={[styles.settingValue, { color: colors.textSecondary, fontSize: 12, marginTop: 2 }]}>
-              {t('settings.dailyQuoteDescription', { defaultValue: 'Show a personal philosopher quote on Home' })}
-            </Text>
-          </View>
-        </GroupRow>
-        <GroupRow
           testID={isPro ? 'settings.row.ai-personalization' : 'settings.row.ai-locked-personalization'}
           onPress={isPro ? undefined : () => promptProUpgrade(t, onOpenPaywall)}
           trailing={
@@ -932,6 +904,37 @@ onSetSyncIntervalSeconds,
             </Text>
             <Text style={[styles.settingValue, { color: colors.textSecondary, fontSize: 12, marginTop: 2 }]}>
               {t('settings.githubTools.description', { defaultValue: "Let AI manage issues, PRs, and repos via your active GitHub account." })}
+            </Text>
+          </View>
+        </GroupRow>
+      </Group>
+
+      <Group title={t('settings.dailyQuote.title', { defaultValue: 'Daily Quote' })}>
+        <GroupRow
+          testID={isPro ? 'settings.row.daily-quote' : 'settings.row.ai-locked-daily-quote'}
+          onPress={isPro ? undefined : () => promptProUpgrade(t, onOpenPaywall)}
+          trailing={
+            isPro ? (
+              <View className="flex-row items-center gap-2">
+                <Toggle
+                  testID="settings.toggle.daily-quote"
+                  value={isAIEnabled ? dailyQuoteEnabled : false}
+                  onValueChange={onToggleDailyQuote}
+                  disabled={!isAIEnabled}
+                />
+                <HintIcon hintKey="hints.settings.dailyQuote" testID="hint.daily-quote" />
+              </View>
+            ) : (
+              <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
+            )
+          }
+        >
+          <View>
+            <Text style={[styles.settingLabel, { color: colors.text }]}>
+              {t('settings.dailyQuote.title', { defaultValue: 'Daily Quote' })}
+            </Text>
+            <Text style={[styles.settingValue, { color: colors.textSecondary, fontSize: 12, marginTop: 2 }]}>
+              {t('settings.dailyQuoteDescription', { defaultValue: 'Show a personal philosopher quote on Home' })}
             </Text>
           </View>
         </GroupRow>
