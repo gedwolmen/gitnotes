@@ -509,9 +509,29 @@ describe('importRepoAtAdd (#938) — awaited import service', () => {
 
     expect(result).toEqual({ ok: true, counts: SAMPLE_COUNTS });
     expect(pullFromSingleRepo).toHaveBeenCalledTimes(1);
-    expect(pullFromSingleRepo).toHaveBeenCalledWith('owner/repo');
+    expect(pullFromSingleRepo).toHaveBeenCalledWith('owner/repo', undefined);
     expect(cloneExclusiveSpy).not.toHaveBeenCalled();
     expect(getCommitOidSpy).not.toHaveBeenCalled();
+  });
+
+  it('forwards onProgress to pullFromSingleRepo in api mode', async () => {
+    const importRepoAtAdd = loadImportRepoAtAdd();
+    (SyncEngineService.getMode as jest.Mock).mockResolvedValue('api');
+    const cb = jest.fn();
+
+    await importRepoAtAdd('owner/repo', 'repoName', cb);
+
+    expect(pullFromSingleRepo).toHaveBeenCalledWith('owner/repo', cb);
+  });
+
+  it('forwards onProgress to pullFromSingleRepo in clone mode', async () => {
+    const importRepoAtAdd = loadImportRepoAtAdd();
+    (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
+    const cb = jest.fn();
+
+    await importRepoAtAdd('owner/repo', 'repoName', cb);
+
+    expect(pullFromSingleRepo).toHaveBeenCalledWith('owner/repo', cb);
   });
 
   it('clone-mode import clones-then-pulls, skips pullFromSingleRepo only when clone succeeds', async () => {
