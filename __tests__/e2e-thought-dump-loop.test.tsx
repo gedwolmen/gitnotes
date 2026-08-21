@@ -121,15 +121,71 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 jest.mock('../src/services/ThoughtDumpService', () => ({
   ThoughtDumpService: {
     create: jest.fn(async (text: string) => ({
-      id: 'test-dump-id',
-      text,
-      createdAt: new Date().toISOString(),
-      filePath: `thoughts/20240101-000000-test-d.md`,
+      ok: true,
+      dump: {
+        id: 'test-dump-id',
+        text,
+        createdAt: new Date().toISOString(),
+        filePath: `thoughts/20240101-000000-test-d.md`,
+      },
     })),
     list: jest.fn(async () => []),
     delete: jest.fn(async () => true),
   },
 }));
+
+jest.mock('../src/services/StorageService', () => ({
+  StorageService: {
+    getSavedRepositories: jest.fn(async () => [
+      { id: 'repo-1', name: 'repo', path: 'owner/repo', branch: 'main' },
+    ]),
+  },
+}));
+
+jest.mock('../src/services/ThoughtDumpRepoPreferenceService', () => ({
+  ThoughtDumpRepoPreferenceService: {
+    get: jest.fn(async () => null),
+    set: jest.fn(),
+    clear: jest.fn(),
+  },
+}));
+
+jest.mock('../src/services/LastUsedRepoService', () => ({
+  LastUsedRepoService: {
+    get: jest.fn(async () => null),
+    set: jest.fn(),
+    clear: jest.fn(),
+  },
+}));
+
+jest.mock('../src/services/GitHubService', () => ({
+  GitHubService: {
+    isAuthenticated: jest.fn(() => true),
+  },
+}));
+
+jest.mock('../src/components/thoughts/ThoughtDumpRepoPickerModal', () => {
+  const React = require('react');
+  const { View, TouchableOpacity, Text } = require('react-native');
+  const ThoughtDumpRepoPickerModal = ({ visible, onClose, onSelected, onGoToSettings }: any) =>
+    visible ? (
+      <View testID="thought-dump-repo-picker-modal">
+        <TouchableOpacity
+          testID="repo-picker-modal.on-selected"
+          onPress={() => onSelected('owner/repo', 'main')}
+        >
+          <Text>select</Text>
+        </TouchableOpacity>
+        <TouchableOpacity testID="repo-picker-modal.on-close" onPress={onClose}>
+          <Text>close</Text>
+        </TouchableOpacity>
+        <TouchableOpacity testID="repo-picker-modal.on-go-to-settings" onPress={onGoToSettings}>
+          <Text>settings</Text>
+        </TouchableOpacity>
+      </View>
+    ) : null;
+  return { ThoughtDumpRepoPickerModal };
+});
 
 jest.mock('../src/services/ai/AIMemoryIndexService', () => {
   const entries = new Map<string, string>();
@@ -297,10 +353,13 @@ beforeEach(async () => {
   // by a timed-out test so they cannot leak into the next test.
   (ThoughtDumpService.create as jest.Mock).mockReset();
   (ThoughtDumpService.create as jest.Mock).mockImplementation(async (text: string) => ({
-    id: 'test-dump-id',
-    text,
-    createdAt: new Date().toISOString(),
-    filePath: `thoughts/20240101-000000-test-d.md`,
+    ok: true,
+    dump: {
+      id: 'test-dump-id',
+      text,
+      createdAt: new Date().toISOString(),
+      filePath: `thoughts/20240101-000000-test-d.md`,
+    },
   }));
   (ThoughtDumpService.list as jest.Mock).mockResolvedValue([]);
   (ThoughtDumpService.delete as jest.Mock).mockResolvedValue(true);
@@ -351,10 +410,13 @@ describe('e2e: FAB -> thought dump -> memory -> reset', () => {
 
   it('save entry on ThoughtDumpScreen calls indexDump', async () => {
     (ThoughtDumpService.create as jest.Mock).mockResolvedValueOnce({
-      id: 'e2e-dump-1',
-      text: 'My e2e test thought',
-      createdAt: '2024-01-01T00:00:00.000Z',
-      filePath: 'thoughts/20240101-000000-e2e-dum.md',
+      ok: true,
+      dump: {
+        id: 'e2e-dump-1',
+        text: 'My e2e test thought',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        filePath: 'thoughts/20240101-000000-e2e-dum.md',
+      },
     });
 
     const React = require('react');
@@ -369,6 +431,10 @@ describe('e2e: FAB -> thought dump -> memory -> reset', () => {
 
     const input = await waitFor(() => getByTestId('thought-dump-input'));
 
+    await waitFor(() => {
+      expect(ThoughtDumpService.list).toHaveBeenCalled();
+    });
+
     await act(async () => {
       fireEvent.changeText(input, 'My e2e test thought');
     });
@@ -379,7 +445,10 @@ describe('e2e: FAB -> thought dump -> memory -> reset', () => {
     });
 
     await waitFor(() => {
-      expect(ThoughtDumpService.create).toHaveBeenCalledWith('My e2e test thought');
+      expect(ThoughtDumpService.create).toHaveBeenCalledWith('My e2e test thought', {
+        repoPath: 'owner/repo',
+        branch: 'main',
+      });
     });
 
     await waitFor(() => {
@@ -453,16 +522,22 @@ describe('e2e: FAB -> thought dump -> memory -> reset', () => {
     expect(hub.goThoughtDump).toHaveBeenCalledWith(mockNavigation);
 
     (ThoughtDumpService.create as jest.Mock).mockResolvedValueOnce({
-      id: 'full-loop-dump',
-      text: 'full loop thought',
-      createdAt: new Date().toISOString(),
-      filePath: 'thoughts/20240101-000000-full-loo.md',
+      ok: true,
+      dump: {
+        id: 'full-loop-dump',
+        text: 'full loop thought',
+        createdAt: new Date().toISOString(),
+        filePath: 'thoughts/20240101-000000-full-loo.md',
+      },
     });
 
     const ThoughtDumpScreen = require('../src/screens/ThoughtDumpScreen').default;
     const screen = render(React.createElement(ThoughtDumpScreen, {}));
 
     const input = await waitFor(() => screen.getByTestId('thought-dump-input'));
+    await waitFor(() => {
+      expect(ThoughtDumpService.list).toHaveBeenCalled();
+    });
     await act(async () => {
       fireEvent.changeText(input, 'full loop thought');
     });
@@ -473,7 +548,10 @@ describe('e2e: FAB -> thought dump -> memory -> reset', () => {
     });
 
     await waitFor(() => {
-      expect(ThoughtDumpService.create).toHaveBeenCalledWith('full loop thought');
+      expect(ThoughtDumpService.create).toHaveBeenCalledWith('full loop thought', {
+        repoPath: 'owner/repo',
+        branch: 'main',
+      });
     });
 
     await waitFor(() => {

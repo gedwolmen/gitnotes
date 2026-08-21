@@ -837,7 +837,20 @@
     "justNow": "à l'instant",
     "voiceInput": "Saisie vocale",
     "voiceUnavailable": "Saisie vocale non disponible",
-    "voiceDump": "Vidage vocal"
+    "voiceDump": "Vidage vocal",
+    "repo": "Enregistrer dans",
+    "chooseRepo": "Choisir où enregistrer",
+    "repoPickerTitle": "Choisir l'emplacement d'enregistrement",
+    "repoPickerDescription": "Les vidages de pensées sont enregistrés en Markdown dans le dossier thoughts/ du dépôt sélectionné.",
+    "noRepoConfiguredTitle": "Aucun dépôt configuré",
+    "noRepoConfiguredBody": "Ajoutez un dépôt GitHub pour commencer à enregistrer des vidages de pensées.",
+    "noAuthTitle": "Connectez votre compte GitHub",
+    "noAuthBody": "Connectez-vous pour enregistrer des vidages de pensées dans un dépôt.",
+    "errorNotAuthenticated": "Connectez-vous à votre compte GitHub pour enregistrer des vidages de pensées.",
+    "errorNoRepo": "Aucun dépôt sélectionné. Choisissez où les vidages de pensées sont enregistrés.",
+    "errorWriteFailed": "Impossible d'enregistrer le vidage de pensées. Vérifiez votre réseau et l'accès en écriture au dépôt.",
+    "errorInvalidRepo": "Le dépôt sélectionné n'est plus disponible. Choisissez un autre emplacement d'enregistrement.",
+    "goToSettings": "Aller aux réglages"
   },
   "reminders": {
     "title": "New Reminder",

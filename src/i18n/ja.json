@@ -837,7 +837,20 @@
     "justNow": "たった今",
     "voiceInput": "音声入力",
     "voiceUnavailable": "音声入力を利用できません",
-    "voiceDump": "音声ダンプ"
+    "voiceDump": "音声ダンプ",
+    "repo": "保存先",
+    "chooseRepo": "保存先を選択",
+    "repoPickerTitle": "保存場所を選択",
+    "repoPickerDescription": "思考ダンプは、選択したリポジトリの thoughts/ フォルダに Markdown として保存されます。",
+    "noRepoConfiguredTitle": "リポジトリが設定されていません",
+    "noRepoConfiguredBody": "思考ダンプの保存を開始するには、GitHub リポジトリを追加してください。",
+    "noAuthTitle": "GitHub アカウントを接続",
+    "noAuthBody": "思考ダンプをリポジトリに保存するには、サインインしてください。",
+    "errorNotAuthenticated": "思考ダンプを保存するには、GitHub アカウントにサインインしてください。",
+    "errorNoRepo": "リポジトリが選択されていません。思考ダンプの保存先を選択してください。",
+    "errorWriteFailed": "思考ダンプを保存できませんでした。ネットワークとリポジトリへの書き込み権限を確認してください。",
+    "errorInvalidRepo": "選択したリポジトリは利用できなくなりました。別の保存場所を選択してください。",
+    "goToSettings": "設定へ移動"
   },
   "reminders": {
     "title": "New Reminder",

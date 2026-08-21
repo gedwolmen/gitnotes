@@ -837,7 +837,20 @@
     "justNow": "ahora mismo",
     "voiceInput": "Entrada de voz",
     "voiceUnavailable": "Entrada de voz no disponible",
-    "voiceDump": "Vaciado de voz"
+    "voiceDump": "Vaciado de voz",
+    "repo": "Guardar en",
+    "chooseRepo": "Elige dónde guardar",
+    "repoPickerTitle": "Elegir ubicación de guardado",
+    "repoPickerDescription": "Los vaciados de pensamientos se guardan como Markdown en la carpeta thoughts/ del repositorio seleccionado.",
+    "noRepoConfiguredTitle": "No hay ningún repositorio configurado",
+    "noRepoConfiguredBody": "Añade un repositorio de GitHub para empezar a guardar vaciados de pensamientos.",
+    "noAuthTitle": "Conecta tu cuenta de GitHub",
+    "noAuthBody": "Inicia sesión para guardar vaciados de pensamientos en un repositorio.",
+    "errorNotAuthenticated": "Inicia sesión en tu cuenta de GitHub para guardar vaciados de pensamientos.",
+    "errorNoRepo": "No hay ningún repositorio seleccionado. Elige dónde se guardan los vaciados de pensamientos.",
+    "errorWriteFailed": "No se pudo guardar el vaciado de pensamientos. Comprueba tu red y el acceso de escritura al repositorio.",
+    "errorInvalidRepo": "El repositorio seleccionado ya no está disponible. Elige otra ubicación de guardado.",
+    "goToSettings": "Ir a Ajustes"
   },
   "reminders": {
     "title": "New Reminder",

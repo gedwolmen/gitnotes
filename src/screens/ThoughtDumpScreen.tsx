@@ -11,11 +11,16 @@ import { useTokens } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/types';
 import { ThoughtDumpService } from '../services/ThoughtDumpService';
 import { StorageService } from '../services/StorageService';
+import { ThoughtDumpRepoPreferenceService } from '../services/ThoughtDumpRepoPreferenceService';
+import { LastUsedRepoService } from '../services/LastUsedRepoService';
+import { GitHubService } from '../services/GitHubService';
+import type { GitRepository } from '../services/GitService';
 import { ThoughtDump } from '../models/ThoughtDump';
 import { gitOperationRegistry } from '../stores/gitOperationStore';
 import { ScreenHeader, Button, Input, EmptyState, Modal } from '../components/ui';
 import { useScreenHeaderHeight } from '../components/ui';
 import VoiceInputModal from '../components/VoiceInputModal';
+import { ThoughtDumpRepoPickerModal } from '../components/thoughts/ThoughtDumpRepoPickerModal';
 import { indexDump, removeDump } from '../services/ai/thoughtDumpIndexing';
 import { SwipeableListItem } from '../components/list/SwipeableListItem';
 import { BulkActionBar } from '../components/list/BulkActionBar';
@@ -43,6 +48,9 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [repoPath, setRepoPath] = useState('');
   const [branch, setBranch] = useState<string | undefined>();
+  const [pickerVisible, setPickerVisible] = useState(false);
+  const [savedRepos, setSavedRepos] = useState<GitRepository[]>([]);
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
 
   const selectionMode = selectedIds.size > 0;
@@ -62,11 +70,33 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
     setIsLoading(true);
     try {
       const repos = await StorageService.getSavedRepositories();
-      if (repos.length > 0) {
-        setRepoPath(repos[0].path);
-        setBranch(repos[0].branch);
+      setSavedRepos(repos);
+      setIsAuthenticated(GitHubService.isAuthenticated());
+
+      const preference = await ThoughtDumpRepoPreferenceService.get();
+      const lastUsed = await LastUsedRepoService.get();
+
+      let resolvedRepoPath = '';
+      let resolvedBranch: string | undefined;
+
+      if (preference && repos.some((r) => r.path === preference.repoPath)) {
+        resolvedRepoPath = preference.repoPath;
+        resolvedBranch =
+          preference.branch ?? repos.find((r) => r.path === preference.repoPath)?.branch;
+      } else if (lastUsed && repos.some((r) => r.path === lastUsed)) {
+        resolvedRepoPath = lastUsed;
+        resolvedBranch = repos.find((r) => r.path === lastUsed)?.branch;
+      } else if (repos.length > 0) {
+        resolvedRepoPath = repos[0].path;
+        resolvedBranch = repos[0].branch;
       }
-      const result = await ThoughtDumpService.list();
+
+      setRepoPath(resolvedRepoPath);
+      setBranch(resolvedBranch);
+
+      const result = await ThoughtDumpService.list(
+        resolvedRepoPath ? { repoPath: resolvedRepoPath, branch: resolvedBranch } : undefined,
+      );
       setDumps(result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     } catch {
       // silently handled
@@ -95,19 +125,37 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
     const trimmed = text.trim();
     if (!trimmed) return;
 
+    if (!repoPath || !isAuthenticated || savedRepos.length === 0) {
+      setPickerVisible(true);
+      return;
+    }
+
     setIsSaving(true);
     try {
-      const dump = await ThoughtDumpService.create(trimmed);
-      if (dump) {
+      const result = await ThoughtDumpService.create(trimmed, { repoPath, branch });
+      if (result.ok) {
         setText('');
-        setDumps((prev) => [dump, ...prev]);
-        indexDump(dump);
-        onDumpChange?.(dump);
+        setDumps((prev) => [result.dump, ...prev]);
+        indexDump(result.dump);
+        onDumpChange?.(result.dump);
       } else {
-        Alert.alert(t('common.error'), t('thoughtDump.error'));
+        switch (result.reason) {
+          case 'not-authenticated':
+            Alert.alert(t('common.error'), t('thoughtDump.errorNotAuthenticated'));
+            break;
+          case 'no-repos':
+            Alert.alert(t('common.error'), t('thoughtDump.errorNoRepo'));
+            break;
+          case 'invalid-repo':
+            Alert.alert(t('common.error'), t('thoughtDump.errorInvalidRepo'));
+            break;
+          case 'write-failed':
+            Alert.alert(t('common.error'), t('thoughtDump.errorWriteFailed'));
+            break;
+        }
       }
     } catch {
-      Alert.alert(t('common.error'), t('thoughtDump.error'));
+      Alert.alert(t('common.error'), t('thoughtDump.errorWriteFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -243,6 +291,40 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
 
   const renderEmpty = () => {
     if (isLoading) return null;
+    if (!isAuthenticated) {
+      return (
+        <View style={styles.emptyContainer}>
+          <EmptyState
+            icon="lock-closed"
+            title={t('thoughtDump.noAuthTitle')}
+            subtitle={t('thoughtDump.noAuthBody')}
+          />
+          <Button
+            testID="thought-dump-empty-action"
+            label={t('thoughtDump.goToSettings')}
+            variant="primary"
+            onPress={() => navigation.navigate('MainTabs', { screen: 'SettingsTab' })}
+          />
+        </View>
+      );
+    }
+    if (savedRepos.length === 0) {
+      return (
+        <View style={styles.emptyContainer}>
+          <EmptyState
+            icon="folder-open"
+            title={t('thoughtDump.noRepoConfiguredTitle')}
+            subtitle={t('thoughtDump.noRepoConfiguredBody')}
+          />
+          <Button
+            testID="thought-dump-empty-action"
+            label={t('thoughtDump.goToSettings')}
+            variant="primary"
+            onPress={() => navigation.navigate('MainTabs', { screen: 'SettingsTab' })}
+          />
+        </View>
+      );
+    }
     return (
       <EmptyState
         icon="bulb"
@@ -259,6 +341,33 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <View style={{ flex: 1, paddingTop: headerHeight }}>
         <View style={[styles.composer, { padding: spacing[4] }]}>
+          <Pressable
+            testID="thought-dump-repo-picker"
+            accessibilityRole="button"
+            onPress={() => setPickerVisible(true)}
+            style={[
+              styles.repoPicker,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                padding: spacing[3],
+                marginBottom: spacing[3],
+              },
+            ]}
+          >
+            <Text style={[styles.repoPickerLabel, { color: colors.textSecondary }]}>
+              {t('thoughtDump.repo')}
+            </Text>
+            <View style={styles.repoPickerValueRow}>
+              <Text
+                style={[styles.repoPickerValue, { color: colors.text }]}
+                numberOfLines={1}
+              >
+                {repoPath ? (branch ? `${repoPath} · ${branch}` : repoPath) : t('thoughtDump.chooseRepo')}
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+            </View>
+          </Pressable>
           <Input
             testID="thought-dump-input"
             multiline
@@ -347,6 +456,21 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
         onClose={() => setShowVoiceModal(false)}
       />
 
+      <ThoughtDumpRepoPickerModal
+        visible={pickerVisible}
+        onClose={() => setPickerVisible(false)}
+        onSelected={(rp, br) => {
+          setRepoPath(rp);
+          setBranch(br);
+          setPickerVisible(false);
+          loadDumps();
+        }}
+        onGoToSettings={() => {
+          setPickerVisible(false);
+          navigation.navigate('MainTabs', { screen: 'SettingsTab' });
+        }}
+      />
+
       <ScreenHeader
         title={t('thoughtDump.title')}
         onBack={() => navigation.goBack()}
@@ -360,6 +484,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   composer: {},
+  repoPicker: {
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  repoPickerLabel: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  repoPickerValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  repoPickerValue: {
+    flex: 1,
+    fontSize: 15,
+    marginRight: 8,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+  },
   dumpItem: {
     borderRadius: 8,
   },

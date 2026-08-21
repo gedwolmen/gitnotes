@@ -5,6 +5,9 @@ import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import ThoughtDumpScreen from '../src/screens/ThoughtDumpScreen';
 import { ThoughtDumpService } from '../src/services/ThoughtDumpService';
 import { StorageService } from '../src/services/StorageService';
+import { ThoughtDumpRepoPreferenceService } from '../src/services/ThoughtDumpRepoPreferenceService';
+import { LastUsedRepoService } from '../src/services/LastUsedRepoService';
+import { GitHubService } from '../src/services/GitHubService';
 import type { ThoughtDump } from '../src/models/ThoughtDump';
 
 jest.mock('../src/services/ThoughtDumpService', () => ({
@@ -20,6 +23,51 @@ jest.mock('../src/services/StorageService', () => ({
     getSavedRepositories: jest.fn(),
   },
 }));
+
+jest.mock('../src/services/ThoughtDumpRepoPreferenceService', () => ({
+  ThoughtDumpRepoPreferenceService: {
+    get: jest.fn(),
+    set: jest.fn(),
+    clear: jest.fn(),
+  },
+}));
+
+jest.mock('../src/services/LastUsedRepoService', () => ({
+  LastUsedRepoService: {
+    get: jest.fn(),
+    set: jest.fn(),
+    clear: jest.fn(),
+  },
+}));
+
+jest.mock('../src/services/GitHubService', () => ({
+  GitHubService: {
+    isAuthenticated: jest.fn(),
+  },
+}));
+
+jest.mock('../src/components/thoughts/ThoughtDumpRepoPickerModal', () => {
+  const React = require('react');
+  const { View, Text, TouchableOpacity } = require('react-native');
+  const ThoughtDumpRepoPickerModal = ({ visible, onClose, onSelected, onGoToSettings }: any) =>
+    visible ? (
+      <View testID="thought-dump-repo-picker-modal">
+        <TouchableOpacity
+          testID="repo-picker-modal.on-selected"
+          onPress={() => onSelected('owner/repo', 'main')}
+        >
+          <Text>select</Text>
+        </TouchableOpacity>
+        <TouchableOpacity testID="repo-picker-modal.on-close" onPress={onClose}>
+          <Text>close</Text>
+        </TouchableOpacity>
+        <TouchableOpacity testID="repo-picker-modal.on-go-to-settings" onPress={onGoToSettings}>
+          <Text>settings</Text>
+        </TouchableOpacity>
+      </View>
+    ) : null;
+  return { ThoughtDumpRepoPickerModal };
+});
 
 jest.mock('../src/services/ai/thoughtDumpIndexing', () => ({
   indexDump: jest.fn(),
@@ -38,7 +86,7 @@ jest.mock('react-native-safe-area-context', () => ({
 jest.mock('@react-navigation/native', () => {
   const React = require('react');
   return {
-    useNavigation: () => ({ goBack: jest.fn(), canGoBack: () => true }),
+    useNavigation: () => ({ goBack: jest.fn(), canGoBack: () => true, navigate: jest.fn() }),
     useRoute: () => ({ params: {} }),
     useFocusEffect: (cb: () => unknown) => React.useEffect(cb),
   };
@@ -136,9 +184,10 @@ jest.mock('../src/components/ui', () => {
     />
   );
 
-  const EmptyState = ({ title }: any) => (
+  const EmptyState = ({ title, subtitle }: any) => (
     <View testID="empty-state">
       <Text>{title}</Text>
+      {subtitle ? <Text>{subtitle}</Text> : null}
     </View>
   );
 
@@ -163,6 +212,9 @@ const mockCreate = ThoughtDumpService.create as jest.MockedFunction<typeof Thoug
 const mockList = ThoughtDumpService.list as jest.MockedFunction<typeof ThoughtDumpService.list>;
 const mockDelete = ThoughtDumpService.delete as jest.MockedFunction<typeof ThoughtDumpService.delete>;
 const mockGetSavedRepositories = StorageService.getSavedRepositories as jest.MockedFunction<typeof StorageService.getSavedRepositories>;
+const mockGetPreference = ThoughtDumpRepoPreferenceService.get as jest.MockedFunction<typeof ThoughtDumpRepoPreferenceService.get>;
+const mockGetLastUsed = LastUsedRepoService.get as jest.MockedFunction<typeof LastUsedRepoService.get>;
+const mockIsAuthenticated = GitHubService.isAuthenticated as jest.MockedFunction<typeof GitHubService.isAuthenticated>;
 
 const makeDump = (overrides?: Partial<ThoughtDump>): ThoughtDump => ({
   id: 'dump-1',
@@ -176,13 +228,17 @@ describe('ThoughtDumpScreen', () => {
   beforeEach(() => {
     jest.restoreAllMocks();
     jest.clearAllMocks();
-    
+    jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+
     mockList.mockImplementation(async () => []);
-    mockCreate.mockImplementation(async () => null);
+    mockCreate.mockImplementation(async () => ({ ok: false, reason: 'no-repos' }));
     mockDelete.mockImplementation(async () => true);
     mockGetSavedRepositories.mockImplementation(async () => [
       { path: 'owner/repo', branch: 'main' },
     ]);
+    mockGetPreference.mockResolvedValue(null);
+    mockGetLastUsed.mockResolvedValue(null);
+    mockIsAuthenticated.mockReturnValue(true);
   });
 
   it('renders empty state when no dumps', async () => {
@@ -192,9 +248,92 @@ describe('ThoughtDumpScreen', () => {
     });
   });
 
+  it('renders repo picker row and tapping it opens the modal', async () => {
+    const { getByTestId, queryByTestId } = render(<ThoughtDumpScreen />);
+
+    await waitFor(() => {
+      expect(getByTestId('thought-dump-repo-picker')).toBeTruthy();
+    });
+
+    expect(queryByTestId('thought-dump-repo-picker-modal')).toBeNull();
+
+    fireEvent.press(getByTestId('thought-dump-repo-picker'));
+
+    await waitFor(() => {
+      expect(getByTestId('thought-dump-repo-picker-modal')).toBeTruthy();
+    });
+  });
+
+  it('save with no repo configured opens the picker instead of calling create', async () => {
+    mockGetSavedRepositories.mockResolvedValue([]);
+
+    const { getByTestId, getByText } = render(<ThoughtDumpScreen />);
+
+    await waitFor(() => {
+      expect(getByText('thoughtDump.chooseRepo')).toBeTruthy();
+    });
+
+    fireEvent.changeText(getByTestId('thought-dump-input'), 'My thought');
+    fireEvent.press(getByTestId('thought-dump-save'));
+
+    await waitFor(() => {
+      expect(getByTestId('thought-dump-repo-picker-modal')).toBeTruthy();
+    });
+
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['no-repos', 'thoughtDump.errorNoRepo'],
+    ['not-authenticated', 'thoughtDump.errorNotAuthenticated'],
+    ['invalid-repo', 'thoughtDump.errorInvalidRepo'],
+    ['write-failed', 'thoughtDump.errorWriteFailed'],
+  ] as const)('shows %s alert on create failure', async (reason, messageKey) => {
+    mockCreate.mockResolvedValue({ ok: false, reason });
+
+    const { getByTestId } = render(<ThoughtDumpScreen />);
+
+    await waitFor(() => {
+      expect(mockList).toHaveBeenCalled();
+    });
+
+    fireEvent.changeText(getByTestId('thought-dump-input'), 'My thought');
+    fireEvent.press(getByTestId('thought-dump-save'));
+
+    await waitFor(() => {
+      expect(Alert.alert).toHaveBeenCalledWith('common.error', messageKey);
+    });
+  });
+
+  it('renders not-authenticated empty state with go-to-settings action', async () => {
+    mockIsAuthenticated.mockReturnValue(false);
+
+    const { getByText, getByTestId } = render(<ThoughtDumpScreen />);
+
+    await waitFor(() => {
+      expect(getByText('thoughtDump.noAuthTitle')).toBeTruthy();
+      expect(getByText('thoughtDump.noAuthBody')).toBeTruthy();
+    });
+
+    expect(getByTestId('thought-dump-empty-action')).toBeTruthy();
+  });
+
+  it('renders no-repo empty state with go-to-settings action', async () => {
+    mockGetSavedRepositories.mockResolvedValue([]);
+
+    const { getByText, getByTestId } = render(<ThoughtDumpScreen />);
+
+    await waitFor(() => {
+      expect(getByText('thoughtDump.noRepoConfiguredTitle')).toBeTruthy();
+      expect(getByText('thoughtDump.noRepoConfiguredBody')).toBeTruthy();
+    });
+
+    expect(getByTestId('thought-dump-empty-action')).toBeTruthy();
+  });
+
   it('typing text + pressing save calls ThoughtDumpService.create with trimmed text', async () => {
     const newDump = makeDump({ text: 'My thought' });
-    mockCreate.mockResolvedValue(newDump);
+    mockCreate.mockResolvedValue({ ok: true, dump: newDump });
 
     const { getByTestId } = render(<ThoughtDumpScreen />);
 
@@ -209,13 +348,16 @@ describe('ThoughtDumpScreen', () => {
     fireEvent.press(saveButton);
 
     await waitFor(() => {
-      expect(mockCreate).toHaveBeenCalledWith('My thought');
+      expect(mockCreate).toHaveBeenCalledWith('My thought', {
+        repoPath: 'owner/repo',
+        branch: 'main',
+      });
     });
   }, 15000);
 
   it('after successful create, input clears and dump appears in list', async () => {
     const newDump = makeDump({ id: 'new-dump', text: 'My thought' });
-    mockCreate.mockResolvedValue(newDump);
+    mockCreate.mockResolvedValue({ ok: true, dump: newDump });
 
     const { getByTestId, queryByTestId, getByText } = render(<ThoughtDumpScreen />);
 
@@ -356,6 +498,88 @@ describe('ThoughtDumpScreen', () => {
 
     await waitFor(() => {
       expect(getByTestId('voice-input-modal.button.close-unavailable')).toBeTruthy();
+    });
+  });
+
+  describe('repo picker row and error/empty states', () => {
+    it('renders the repo picker row and tapping it opens the modal', async () => {
+      const { getByTestId, queryByTestId } = render(<ThoughtDumpScreen />);
+
+      await waitFor(() => {
+        expect(getByTestId('thought-dump-repo-picker')).toBeTruthy();
+      });
+      expect(queryByTestId('thought-dump-repo-picker-modal')).toBeNull();
+
+      fireEvent.press(getByTestId('thought-dump-repo-picker'));
+
+      await waitFor(() => {
+        expect(getByTestId('thought-dump-repo-picker-modal')).toBeTruthy();
+      });
+    });
+
+    it('save with no repo configured opens the picker instead of calling create', async () => {
+      mockGetSavedRepositories.mockResolvedValue([]);
+
+      const { getByTestId } = render(<ThoughtDumpScreen />);
+
+      await waitFor(() => {
+        expect(getByTestId('thought-dump-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('thought-dump-input'), 'some thought');
+      fireEvent.press(getByTestId('thought-dump-save'));
+
+      await waitFor(() => {
+        expect(getByTestId('thought-dump-repo-picker-modal')).toBeTruthy();
+      });
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['not-authenticated', 'thoughtDump.errorNotAuthenticated'],
+      ['no-repos', 'thoughtDump.errorNoRepo'],
+      ['invalid-repo', 'thoughtDump.errorInvalidRepo'],
+      ['write-failed', 'thoughtDump.errorWriteFailed'],
+    ] as const)('shows distinct alert for "%s" failure', async (reason, messageKey) => {
+      mockCreate.mockResolvedValue({ ok: false, reason });
+
+      const { getByTestId } = render(<ThoughtDumpScreen />);
+
+      await waitFor(() => {
+        expect(getByTestId('thought-dump-input')).toBeTruthy();
+      });
+
+      fireEvent.changeText(getByTestId('thought-dump-input'), 'some thought');
+      fireEvent.press(getByTestId('thought-dump-save'));
+
+      await waitFor(() => {
+        expect(Alert.alert).toHaveBeenCalledWith('common.error', messageKey);
+      });
+    });
+
+    it('shows not-authenticated empty state with go-to-settings action', async () => {
+      mockIsAuthenticated.mockReturnValue(false);
+      mockGetSavedRepositories.mockResolvedValue([]);
+
+      const { getByText, getByTestId } = render(<ThoughtDumpScreen />);
+
+      await waitFor(() => {
+        expect(getByText('thoughtDump.noAuthTitle')).toBeTruthy();
+        expect(getByText('thoughtDump.noAuthBody')).toBeTruthy();
+        expect(getByTestId('thought-dump-empty-action')).toBeTruthy();
+      });
+    });
+
+    it('shows no-repo empty state with go-to-settings action', async () => {
+      mockGetSavedRepositories.mockResolvedValue([]);
+
+      const { getByText, getByTestId } = render(<ThoughtDumpScreen />);
+
+      await waitFor(() => {
+        expect(getByText('thoughtDump.noRepoConfiguredTitle')).toBeTruthy();
+        expect(getByText('thoughtDump.noRepoConfiguredBody')).toBeTruthy();
+        expect(getByTestId('thought-dump-empty-action')).toBeTruthy();
+      });
     });
   });
 

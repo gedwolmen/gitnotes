@@ -837,7 +837,20 @@
     "justNow": "방금 전",
     "voiceInput": "음성 입력",
     "voiceUnavailable": "음성 입력을 사용할 수 없습니다",
-    "voiceDump": "음성 덤프"
+    "voiceDump": "음성 덤프",
+    "repo": "저장 위치",
+    "chooseRepo": "저장할 위치 선택",
+    "repoPickerTitle": "저장 위치 선택",
+    "repoPickerDescription": "생각 덤프는 선택한 리포지토리의 thoughts/ 폴더에 Markdown으로 저장됩니다.",
+    "noRepoConfiguredTitle": "설정된 리포지토리가 없음",
+    "noRepoConfiguredBody": "생각 덤프 저장을 시작하려면 GitHub 리포지토리를 추가하세요.",
+    "noAuthTitle": "GitHub 계정 연결",
+    "noAuthBody": "생각 덤프를 리포지토리에 저장하려면 로그인하세요.",
+    "errorNotAuthenticated": "생각 덤프를 저장하려면 GitHub 계정에 로그인하세요.",
+    "errorNoRepo": "선택된 리포지토리가 없습니다. 생각 덤프가 저장될 위치를 선택하세요.",
+    "errorWriteFailed": "생각 덤프를 저장할 수 없습니다. 네트워크와 리포지토리 쓰기 권한을 확인하세요.",
+    "errorInvalidRepo": "선택한 리포지토리를 더 이상 사용할 수 없습니다. 다른 저장 위치를 선택하세요.",
+    "goToSettings": "설정으로 이동"
   },
   "reminders": {
     "title": "New Reminder",
