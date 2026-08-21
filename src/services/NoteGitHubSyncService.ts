@@ -549,7 +549,7 @@ export async function syncNoteToGitHub(params: {
   } catch (error) {
     const code = (error as Error & { code?: string }).code;
     const message = error instanceof Error ? error.message : String(error);
-    if (code === 'NotFoundError' || /NotFoundError|Could not find|not foundobject/i.test(message)) {
+    if (code === 'NotFoundError' || /NotFoundError|Could not find object|not foundobject/i.test(message)) {
       fileExists = false;
     } else {
       console.warn('[NoteGitHubSync] fileExists check failed:', error);

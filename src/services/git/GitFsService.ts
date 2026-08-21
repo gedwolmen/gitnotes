@@ -169,7 +169,7 @@ export class GitFsService {
         lastError = cloneError;
         await GitFsService.removeRepo({ repoPath: opts.repoPath }).catch(() => undefined);
         const msg = cloneError instanceof Error ? cloneError.message : String(cloneError);
-        const isCorruption = /Packfile trailer mismatch|Could not find|not foundobject|NotFoundError|internal error caused this command to fail/i.test(msg);
+        const isCorruption = /Packfile trailer mismatch|Could not find object|not foundobject|NotFoundError|internal error caused this command to fail/i.test(msg);
         if (!isCorruption || attempt === MAX_CLONE_RETRIES) {
           throw cloneError;
         }
@@ -236,7 +236,7 @@ export class GitFsService {
       });
     } catch (fetchError) {
       const msg = fetchError instanceof Error ? fetchError.message : String(fetchError);
-      if (/Packfile trailer mismatch|Could not find|not foundobject|NotFoundError/i.test(msg)) {
+      if (/Packfile trailer mismatch|Could not find object|not foundobject|NotFoundError/i.test(msg)) {
         await cleanCorruptedPackfiles(opts.repoPath);
       }
       throw fetchError;
@@ -356,7 +356,7 @@ export class GitFsService {
       const code = (e as { code?: string }).code;
       const msg = e instanceof Error ? e.message : String(e);
       if (code === 'NotFoundError' || code === 'ENOENT') {
-        if (/Could not find|not foundobject|NotFoundError/i.test(msg)) {
+        if (/Could not find object|not foundobject|NotFoundError/i.test(msg)) {
           throw e;
         }
         return null;

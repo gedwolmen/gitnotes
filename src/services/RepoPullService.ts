@@ -44,7 +44,7 @@ async function handleCorruptionErrors<T>(fn: () => Promise<T>, repoPath: string,
     return await fn();
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    const isMissingObject = /Could not find|not foundobject|NotFoundError|Packfile trailer mismatch/i.test(errorMsg);
+    const isMissingObject = /Could not find object|not foundobject|NotFoundError|Packfile trailer mismatch/i.test(errorMsg);
     if (isMissingObject) {
       console.warn(`[RepoPullService] corruption detected during operation, re-cloning...`);
       const hasLocalCommits = await hasUnpushedCommits(repoPath, branch);
@@ -124,7 +124,7 @@ async function getRepoReader(
           };
         }
         const errorMsg = result.error ?? '';
-const isMissingObject = /Could not find|not foundobject|NotFoundError|Packfile trailer mismatch/i.test(errorMsg);
+const isMissingObject = /Could not find object|not foundobject|NotFoundError|Packfile trailer mismatch/i.test(errorMsg);
                 if (isMissingObject) {
                   console.warn(`[RepoPullService] clone appears corrupted (${errorMsg}), re-cloning...`);
                   // Check for local commits before removing - don't lose unpushed work
