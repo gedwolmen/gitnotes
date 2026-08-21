@@ -1,6 +1,6 @@
 import React from 'react';
 import { Alert } from 'react-native';
-import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, waitFor } from '@testing-library/react-native';
 
 import NotesListScreen from '../src/screens/NotesListScreen';
 import NoteEditorScreen from '../src/screens/NoteEditorScreen';
@@ -436,16 +436,6 @@ function emitSucceeded(mutation: any): void {
 function emitDropped(mutation: any, error = '401 unauthorized'): void {
   act(() => {
     droppedHandlers().forEach((fn) => fn({ mutation, reason: 'durable', error }));
-  });
-}
-
-function pressLatestRetryAlert(): void {
-  const calls = (Alert.alert as jest.Mock).mock.calls;
-  const lastCall = calls[calls.length - 1];
-  const buttons = lastCall[2] as Array<{ text?: string; onPress?: () => void }>;
-  const retry = buttons.find((b) => b.text === 'Retry');
-  act(() => {
-    retry?.onPress?.();
   });
 }
 

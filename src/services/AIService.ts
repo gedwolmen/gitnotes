@@ -360,7 +360,6 @@ export async function* streamChatResponse(
             }
           })();
           for (const chunk of chunks) {
-            yielded = true;
             yield chunk;
           }
           return;

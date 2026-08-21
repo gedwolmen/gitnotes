@@ -30,7 +30,7 @@ export interface ScreenHeaderProps {
 export function ScreenHeader(props: ScreenHeaderProps) {
   const { title, subtitle, badge, onBack, actions, style, footer, testID, onLayout } = props;
   const { isDark } = useTheme();
-  const { colors, spacing, type } = useTokens();
+  const { colors, spacing } = useTokens();
   const insets = useSafeAreaInsets();
 
   const headerContent = (

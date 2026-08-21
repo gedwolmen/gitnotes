@@ -16,7 +16,7 @@ import { Note } from '../models/Note';
 import { buildBacklinkIndex } from '../services/BacklinksService';
 import { parseWikiLinks } from '../utils/wikiLinksParser';
 import { RootStackParamList } from '../navigation/types';
-import { ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
+import { ScreenHeader } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import SearchBar from '../components/SearchBar';
 
@@ -305,14 +305,6 @@ export default function GraphViewScreen() {
     }
     return isNodeHighlighted(node) ? 1.0 : 0.3;
   }, [selectedNodeId, searchQuery, isNodeHighlighted]);
-
-  const isOrphanNode = useCallback((node: GraphNode): boolean => {
-    return node.connections.size === 0;
-  }, []);
-
-  const isWeaklyConnectedNode = useCallback((node: GraphNode): boolean => {
-    return node.connections.size > 0 && node.connections.size <= 2;
-  }, []);
 
   const handleNodePress = useCallback((nodeId: string) => {
     setSelectedNodeId(nodeId);

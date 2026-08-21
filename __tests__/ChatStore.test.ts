@@ -203,7 +203,7 @@ describe('ChatStore', () => {
 
   describe('updateMessage', () => {
     it('updates existing message', () => {
-      const thread = useChatStore.getState().createThread({
+      useChatStore.getState().createThread({
         repoOwner: 'test-owner',
         repoName: 'test-repo',
         branch: 'main',
@@ -218,7 +218,7 @@ describe('ChatStore', () => {
     });
 
     it('does nothing for non-existent message', () => {
-      const thread = useChatStore.getState().createThread({
+      useChatStore.getState().createThread({
         repoOwner: 'test-owner',
         repoName: 'test-repo',
         branch: 'main',

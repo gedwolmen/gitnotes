@@ -1,4 +1,3 @@
-import { TouchableOpacity } from 'react-native';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 jest.mock('@react-native-community/netinfo', () => {

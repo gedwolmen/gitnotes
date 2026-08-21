@@ -142,7 +142,6 @@ describe('NotePreviewRenderer link routing', () => {
 });
 
 describe('handleOpenLinkedNote path resolution', () => {
-  const mockNavigation = { navigate: jest.fn() } as any;
   const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
 
   afterEach(() => {
