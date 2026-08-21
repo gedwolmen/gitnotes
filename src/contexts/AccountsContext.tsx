@@ -168,6 +168,19 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
       const result = await AuthService.connectHost(input);
       await refreshAccounts();
       if (!result) return { ok: false, error: 'Invalid token' };
+      // Keep the legacy GitHubService singleton in sync so repo listing /
+      // preflight checks (which gate on GitHubService.isAuthenticated) work
+      // immediately after connecting a host, not just after an app restart.
+      // Mirrors the addAccount/setToken/switchToHost hydration pattern.
+      if (result.host.provider === 'github') {
+        await GitHubService.setToken(input.token, {
+          id: result.host.hostUserId,
+          login: result.host.hostLogin,
+          name: result.host.name ?? result.host.hostLogin,
+          email: result.host.email ?? '',
+          avatar_url: result.host.avatarUrl ?? '',
+        } as unknown as GhSetTokenUser).catch(() => undefined);
+      }
       return { ok: true, host: result.host };
     },
     [refreshAccounts],

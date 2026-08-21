@@ -167,10 +167,16 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
           if (success) {
             set((state) => ({ notes: state.notes.filter((n) => n.id !== id) }));
             gitOperationRegistry.succeed(opId);
+          } else if (!get().notes.some((n) => n.id === id)) {
+            // The write-through drain already completed the delete and its
+            // side-channel removed the row (note gone from state + storage).
+            // `StorageService.deleteNote` returns false for the already-removed
+            // id — treat that as success, not as a failed delete.
+            gitOperationRegistry.succeed(opId);
           } else {
             gitOperationRegistry.fail(opId, 'Failed to delete note locally');
           }
-          return success;
+          return success || !get().notes.some((n) => n.id === id);
         }
         // Repo-backed note with no derivable path: nothing to enqueue, so
         // fall through to the instant local delete below.

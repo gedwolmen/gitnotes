@@ -137,6 +137,28 @@ describe('useNoteStore', () => {
 
       expect(useNoteStore.getState().notes).toHaveLength(0);
     });
+
+    it('treats an already-removed row as success when the write-through side channel completed the delete (#932 QA)', async () => {
+      // API-mode write-through: stageDelete's drain already fired the queue
+      // side-channel, which removed the note from state + storage. The
+      // subsequent direct StorageService.deleteNote(id) returns false because
+      // the row is gone — deleteNote must report SUCCESS, not a failed delete.
+      const note = makeNote('1', { repo: 'me/repo', branch: 'main', filePath: 'notes/test.md' });
+      useNoteStore.setState({ notes: [note] });
+      // Simulate the write-through side channel removing the row during
+      // stageDelete (the drain completed the delete end-to-end).
+      (StagingService.stageDelete as jest.Mock).mockImplementation(async () => {
+        useNoteStore.setState({ notes: [] });
+        return { success: true };
+      });
+      (StorageService.deleteNote as jest.Mock).mockResolvedValue(false);
+
+      const result = await useNoteStore.getState().deleteNote('1');
+
+      expect(result).toBe(true);
+      expect(StagingService.stageDelete).toHaveBeenCalled();
+      expect(useGitOperationStore.getState().ops).toEqual({}); // op succeeded, not failed
+    });
   });
 
   describe('dropByFilePaths', () => {

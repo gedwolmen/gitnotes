@@ -16,28 +16,37 @@ interface CloneProgressModalProps {
   onRetry?: () => void;
 }
 
-export function CloneProgressModal({ progress, onCancel, onRetry }: CloneProgressModalProps) {
+/**
+ * The clone/import progress UI, decoupled from the native Modal wrapper so it
+ * can be rendered inline inside the Add-Repository picker bottom sheet as well
+ * as standalone. The picker path MUST NOT stack a second native Modal on top of
+ * the open picker modal — iOS Fabric rejects the presentation
+ * ("Attempt to present ... which is already presenting"), which silently
+ * swallowed the progress UI and left users staring at an endless row spinner.
+ */
+export function CloneProgressContent({
+  progress,
+  onCancel,
+  onRetry,
+}: {
+  progress: CloneProgress;
+  onCancel: () => void;
+  onRetry?: () => void;
+}) {
   const { colors } = useTheme();
   const { spacing, type } = useTokens();
 
-  const visible = progress !== null;
-  const hasError = progress?.error !== undefined;
+  const hasError = progress.error !== undefined;
   const pct =
-    progress && progress.total && progress.total > 0
+    progress.total && progress.total > 0
       ? Math.min(1, progress.loaded / progress.total)
       : null;
   const pctLabel = pct !== null ? `${Math.round(pct * 100)}%` : '…';
 
   return (
-    <Modal
-      visible={visible}
-      onRequestClose={onCancel}
-      dismissOnBackdrop={false}
-      bottomSheet
-      contentStyle={{ padding: spacing[5], paddingBottom: spacing[6] + 18 }}
-    >
+    <>
       <Text style={{ color: colors.text, fontSize: type.lg, fontWeight: '600', marginBottom: spacing[1] }}>
-        {hasError ? 'Clone Failed' : `Cloning ${progress?.repoName ?? ''}`}
+        {hasError ? 'Clone Failed' : `Cloning ${progress.repoName}`}
       </Text>
 
       {hasError ? (
@@ -58,7 +67,7 @@ export function CloneProgressModal({ progress, onCancel, onRetry }: CloneProgres
       ) : (
         <>
           <Text style={{ color: colors.textSecondary, fontSize: type.sm, marginBottom: spacing[4] }}>
-            {progress?.phase ?? 'Preparing'} · {pctLabel}
+            {progress.phase} · {pctLabel}
           </Text>
 
           <View
@@ -86,6 +95,26 @@ export function CloneProgressModal({ progress, onCancel, onRetry }: CloneProgres
           </Text>
         </>
       )}
+    </>
+  );
+}
+
+export function CloneProgressModal({ progress, onCancel, onRetry }: CloneProgressModalProps) {
+  const { spacing } = useTokens();
+
+  const visible = progress !== null;
+
+  return (
+    <Modal
+      visible={visible}
+      onRequestClose={onCancel}
+      dismissOnBackdrop={false}
+      bottomSheet
+      contentStyle={{ padding: spacing[5], paddingBottom: spacing[6] + 18 }}
+    >
+      {progress ? (
+        <CloneProgressContent progress={progress} onCancel={onCancel} onRetry={onRetry} />
+      ) : null}
     </Modal>
   );
 }
