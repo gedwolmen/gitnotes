@@ -137,7 +137,7 @@ The Pro upgrade page uses a bento-grid tile layout rather than full-width cards:
 - **Grid spec:** responsive two-column grid on screens ≥ 640pt width, single column below. Configurable via breakpoint constant `BENTO_BREAKPOINT_640PT`.
 - **Hero card:** the primary subscription card spans the full grid width on tablet breakpoints, centered visually with elevated shadow and accent-colored CTA.
 - **Tile structure:** each feature row renders as its own grid cell with rounded corners, padding gap 12pt, subtle background tint matching theme palette.
-- **i18n:** all tile labels live in translation keys under `paywall.bento.*` namespace (English, Spanish, French, German, Japanese, Korean). Grid column count itself is not translated — device width drives the layout.
+- **i18n:** all tile labels live in translation keys under `paywall.features.*` / `paywall.featureDescriptions.*` (English, Spanish, French, German, Japanese, Korean). Grid column count itself is not translated — device width drives the layout.
 
 ---
 
@@ -181,7 +181,7 @@ Replaced the old flat checkmark feature list on the PaywallScreen with a non-int
 
 ### Component path + purpose
 
-- Component: `src/components/paywall/ProFeatureBento.tsx` (default export)
+- Component: `src/components/paywall/PaywallFeatureGrid.tsx` (default export)
 - Rendered inside `src/screens/PaywallScreen.tsx`, which replaces the previous inline flat checklist at the top of the screen body
 - Non-interactive showcase cards (plain Views; no onPress, not clickable)
 
@@ -247,11 +247,47 @@ These keys must exist in every locale (`en.json`, `es.json`, `fr.json`, `de.json
 
 ### Test pointers
 
-- New unit test: `__tests__/components/paywall/ProFeatureBento.test.tsx` — covers 7 cases: render + text content + accessible labels + tablet layout + icon token correctness + unknown-key-resolve guard
+- New unit test: `__tests__/components/paywall/PaywallFeatureGrid.test.tsx` — covers render + text content + accessible labels + tablet layout + icon token correctness
 - Extended test: `__tests__/screens/PaywallScreen.test.tsx` adds an assertion that each bento card description renders alongside its per-card testID
+
+## Plan pricing bento grid
+
+The three pricing cards (Monthly / Yearly / Lifetime) previously rendered as full-width flat `Surface` rows. They are now a bento tile grid (`src/components/paywall/PaywallPlanGrid.tsx`) sharing the same card anatomy as the feature grid — `Surface elevation="raised" radius="md"`, icon badge (`colors.primary + '1F'` on `RADII.sm`), gap 12 (`SPACING[3]`), padding 12.
+
+### Layout algorithm
+
+- The `lifetime` plan is the **hero tile** and spans the full grid row (`width = usable = screenWidth − 40`, horizontal row layout with a centered CTA).
+- Monthly and Yearly (when offered) render as a **half-width pair** (`pairW = (usable − 12) / 2`, vertical column layout).
+- If only one non-hero plan is offered, it **stretches to the full row** (`width = usable`) so no row dangles a half-empty cell — same last-tile rule as the feature grid.
+- Grid container: `flexDirection: 'row'`, `flexWrap: 'wrap'`, `gap: SPACING[3]`; container testID `paywall.plans`.
+
+### Tile anatomy
+
+| Layer | Implementation detail |
+|-------|----------------------|
+| Outer View | `Surface` with `elevation="raised"` `radius="md"`, `backgroundColor: colors.surface`, fixed height (`SMALL 180` / `HERO 120`), `padding: 12` |
+| Icon badge | 38×38 (`HERO` 44), `borderRadius: RADII.sm`, `backgroundColor: colors.primary + '1F'`; Ionicon `calendar` (monthly) / `pricetag` (yearly) / `infinite` (lifetime) at size 20 (hero 22), color `colors.primary` |
+| Title Text | `fontWeight: '700'`, `fontSize: 15` (hero 17), `numberOfLines: 1`, color `colors.text` |
+| Price line | `fontSize: 13` (hero 14), `numberOfLines: 2`, color `colors.textSecondary`, `marginTop: 2`; carries the trial / plain / one-time price string (`paywall.monthly.trialCta` etc.) |
+| CTA | `Button` with the existing testIDs (`paywall.monthly.cta`, `paywall.yearly.cta`, `paywall.lifetime.cta`), `fullWidth` on small tiles, variant `primary` (monthly) / `secondary` (yearly + lifetime) |
+| a11y | `accessibilityLabel="${title}. ${priceLine}"` |
+
+### Data flow
+
+`PaywallScreen` builds a `PlanTileData[]` array (title, resolved price line, CTA label/testID/variant/disabled, `onPress`) from the proStore packages + intro-eligibility state and passes it to `<PaywallPlanGrid plans={plans} />`. Yearly is only pushed when `yearlyPackage` exists; lifetime only when `lifetimePackage` exists — so the grid (and the bento stretch rule) adapts to whatever packages the offering provides.
+
+### testIDs
+
+- Container: `paywall.plans`
+- Per-tile: `paywall.plan.<id>` (`monthly` / `yearly` / `lifetime`)
+- CTAs keep the pre-existing `paywall.<id>.cta` testIDs so Maestro flows and `PaywallScreen.test.tsx` keep working unchanged.
+
+### Test pointers
+
+- `__tests__/components/paywall/PaywallPlanGrid.test.tsx` — covers pair + hero widths at phone width, lone-plan stretch, title/price/CTA rendering, press + disabled behavior, a11y labels, and icon badges.
 
 ## Testing notes
 - `react-native-purchases` is globally mocked in `jest.setup.ts`; `proStore` is globally mocked **defaulting to PRO** so existing tests stay green — gating tests flip state via `__setProState` (import from `src/stores/proStore`). `proStore.test.ts` uses `jest.requireActual` to test the real store.
 - New i18n keys must be added to all six locales (`en/es/fr/de/ja/ko`) or `__tests__/i18n-key-parity.test.ts` fails.
 - Real purchases require a development build (`eas build --profile development`); Expo Go cannot purchase.
-- `PaywallAnalytics` module tests (7 cases) verify deterministic event emission via `console.warn` spy; swapping to any other log level breaks assertions. `PaywallFeatureGrid` component tests (Bento grid tile layout, responsive column breakpoints) cover the bento visual spec for #921.
+- `PaywallAnalytics` module tests (7 cases) verify deterministic event emission via `console.warn` spy; swapping to any other log level breaks assertions. `PaywallFeatureGrid` component tests (Bento grid tile layout, responsive column breakpoints) and `PaywallPlanGrid` component tests (pricing bento tiles: pair/hero widths, lone-plan stretch, CTA behavior) cover the bento visual spec for #921.

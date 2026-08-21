@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { ScreenHeader, useScreenHeaderHeight, Button, Surface } from '../components/ui';
 import PaywallFeatureGrid from '../components/paywall/PaywallFeatureGrid';
+import PaywallPlanGrid, { PlanTileData } from '../components/paywall/PaywallPlanGrid';
 import { useTheme } from '../contexts/ThemeContext';
 import { useProStore } from '../stores/proStore';
 import { getIntroEligibilities, trackPaywallImpression } from '../services/RevenueCatService';
@@ -136,6 +137,54 @@ export default function PaywallScreen() {
     // 'error' surfaces through the existing error banner path.
   }, [restore, navigation]);
 
+  const plans: PlanTileData[] = [
+    {
+      id: 'monthly',
+      title: t('paywall.monthly.title'),
+      priceLine: monthlyPrice
+        ? monthlyTrialEligible
+          ? t('paywall.monthly.trialCta', { price: monthlyPrice })
+          : t('paywall.monthly.price', { price: monthlyPrice })
+        : null,
+      ctaLabel: monthlyTrialEligible ? t('paywall.action.trial') : t('paywall.action.subscribe'),
+      ctaTestID: 'paywall.monthly.cta',
+      variant: 'primary',
+      disabled: busy || !monthlyPrice,
+      onPress: handleMonthly,
+      icon: 'calendar',
+    },
+  ];
+  if (yearlyPackage) {
+    plans.push({
+      id: 'yearly',
+      title: t('paywall.yearly.title'),
+      priceLine: yearlyPrice
+        ? yearlyTrialEligible
+          ? t('paywall.yearly.trialCta', { price: yearlyPrice })
+          : t('paywall.yearly.cta', { price: yearlyPrice })
+        : null,
+      ctaLabel: t('paywall.action.subscribe'),
+      ctaTestID: 'paywall.yearly.cta',
+      variant: 'secondary',
+      disabled: busy || !yearlyPrice,
+      onPress: handleYearly,
+      icon: 'pricetag',
+    });
+  }
+  if (lifetimePackage) {
+    plans.push({
+      id: 'lifetime',
+      title: t('paywall.lifetime.title'),
+      priceLine: lifetimePrice ? t('paywall.lifetime.cta', { price: lifetimePrice }) : null,
+      ctaLabel: t('paywall.action.buy'),
+      ctaTestID: 'paywall.lifetime.cta',
+      variant: 'secondary',
+      disabled: busy || !lifetimePrice,
+      onPress: handleLifetime,
+      icon: 'infinite',
+    });
+  }
+
   return (
     <SafeAreaView edges={['top']} className="flex-1" style={{ backgroundColor: colors.background }}>
       <ScreenHeader
@@ -190,79 +239,9 @@ export default function PaywallScreen() {
               </View>
             ) : null}
 
-            <Surface elevation="raised" radius="md" className="mt-6 p-5">
-              <View className="flex-row items-center justify-between">
-                <Text className="text-lg font-bold" style={{ color: colors.text }}>
-                  {t('paywall.monthly.title')}
-                </Text>
-                {monthlyPrice ? (
-                  <Text className="text-base font-semibold" style={{ color: colors.textSecondary }}>
-                    {monthlyTrialEligible
-                      ? t('paywall.monthly.trialCta', { price: monthlyPrice })
-                      : t('paywall.monthly.price', { price: monthlyPrice })}
-                  </Text>
-                ) : null}
-              </View>
-              <Button
-                testID="paywall.monthly.cta"
-                variant="primary"
-                fullWidth
-                disabled={busy || !monthlyPrice}
-                label={monthlyTrialEligible ? t('paywall.action.trial') : t('paywall.action.subscribe')}
-                onPress={handleMonthly}
-                style={{ marginTop: 14 }}
-              />
-            </Surface>
-
-            {yearlyPackage ? (
-            <Surface elevation="raised" radius="md" className="mt-4 p-5">
-              <View className="flex-row items-center justify-between">
-                <Text className="text-lg font-bold" style={{ color: colors.text }}>
-                  {t('paywall.yearly.title')}
-                </Text>
-                {yearlyPrice ? (
-                  <Text className="text-base font-semibold" style={{ color: colors.textSecondary }}>
-                    {yearlyTrialEligible
-                      ? t('paywall.yearly.trialCta', { price: yearlyPrice })
-                      : t('paywall.yearly.cta', { price: yearlyPrice })}
-                  </Text>
-                ) : null}
-              </View>
-              <Button
-                testID="paywall.yearly.cta"
-                variant="secondary"
-                fullWidth
-                disabled={busy || !yearlyPrice}
-                label={t('paywall.action.subscribe')}
-                onPress={handleYearly}
-                style={{ marginTop: 14, borderWidth: 1, borderColor: colors.border }}
-              />
-            </Surface>
-            ) : null}
-
-            {lifetimePackage ? (
-            <Surface elevation="raised" radius="md" className="mt-4 p-5">
-              <View className="flex-row items-center justify-between">
-                <Text className="text-lg font-bold" style={{ color: colors.text }}>
-                  {t('paywall.lifetime.title')}
-                </Text>
-                {lifetimePrice ? (
-                  <Text className="text-base font-semibold" style={{ color: colors.textSecondary }}>
-                    {t('paywall.lifetime.cta', { price: lifetimePrice })}
-                  </Text>
-                ) : null}
-              </View>
-              <Button
-                testID="paywall.lifetime.cta"
-                variant="secondary"
-                fullWidth
-                disabled={busy || !lifetimePrice}
-                label={t('paywall.action.buy')}
-                onPress={handleLifetime}
-                style={{ marginTop: 14, borderWidth: 1, borderColor: colors.border }}
-              />
-            </Surface>
-            ) : null}
+            <View className="mt-6">
+              <PaywallPlanGrid plans={plans} />
+            </View>
 
             <TouchableOpacity
               testID="paywall.restore"
