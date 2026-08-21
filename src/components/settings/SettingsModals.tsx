@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { ActivityIndicator, Linking, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -55,7 +55,90 @@ type SettingsModalsProps = {
   onPasteToken: () => void;
   onCopyToken: () => void;
   onSaveToken: () => void;
+  __onRepoPickerListRender?: () => void;
 };
+
+type RepoPickerListProps = {
+  githubRepos: GitHubRepository[];
+  repositories: GitRepository[];
+  searchQuery: string;
+  isLoading: boolean;
+  isAddingRepoPath: string | null;
+  onSelectGithubRepo: (repo: GitHubRepository) => void;
+  onSetRepoSearchQuery: (value: string) => void;
+  colors: ThemeColors;
+  __onRender?: () => void;
+};
+
+const RepoPickerList = memo(function RepoPickerList({
+  githubRepos,
+  repositories,
+  searchQuery,
+  isLoading,
+  isAddingRepoPath,
+  onSelectGithubRepo,
+  onSetRepoSearchQuery,
+  colors,
+  __onRender,
+}: RepoPickerListProps) {
+  __onRender?.();
+  const { t } = useTranslation();
+  const filteredRepos = searchQuery
+    ? githubRepos.filter(
+        (repo) =>
+          repo.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (repo.description ?? '').toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+    : githubRepos;
+  return (
+    <>
+      <View className="px-4 py-2">
+        <SearchBar value={searchQuery} onChangeText={onSetRepoSearchQuery} placeholder={t('explore.searchRepos')} />
+      </View>
+      <Text className="text-xs font-semibold uppercase tracking-wide px-4 py-2.5 border-b" style={{ color: colors.textSecondary, borderColor: colors.border }}>
+        {t('settings.yourGithubRepositories')}
+      </Text>
+      {isLoading ? (
+        <ActivityIndicator size="large" color={colors.primary} style={{ padding: 32 }} />
+      ) : filteredRepos.length === 0 ? (
+        <Text className="p-6 text-center text-sm" style={{ color: colors.textSecondary }}>
+          {searchQuery ? t('settings.noMatchingRepositories') : t('settings.noRepositoriesFound')}
+        </Text>
+      ) : (
+        filteredRepos.map((repo) => {
+          const alreadyAdded = repositories.some((item) => item.path === repo.full_name);
+          const isAddingThis = isAddingRepoPath === repo.full_name;
+          const disabled = alreadyAdded || isAddingRepoPath !== null;
+          return (
+            <TouchableOpacity
+              key={repo.id}
+              testID="settings-modals.button.select-github-repo"
+              className="flex-row items-center px-4 py-3.5 border-b gap-3"
+              style={[{ borderColor: colors.border }, disabled && !isAddingThis && { opacity: 0.5 }]}
+              onPress={() => onSelectGithubRepo(repo)}
+              disabled={disabled}
+            >
+              <Ionicons name={repo.private ? 'lock-closed-outline' : 'git-branch-outline'} size={18} color={colors.primary} />
+              <View className="flex-1">
+                <Text style={{ color: colors.text, fontSize: 15, fontWeight: '500' }}>{repo.full_name}</Text>
+                {repo.description ? (
+                  <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }} numberOfLines={1}>
+                    {repo.description}
+                  </Text>
+                ) : null}
+              </View>
+              {isAddingThis ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : alreadyAdded ? (
+                <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+              ) : null}
+            </TouchableOpacity>
+          );
+        })
+      )}
+    </>
+  );
+});
 
 export function SettingsModals(props: SettingsModalsProps) {
   const { t } = useTranslation();
@@ -94,15 +177,8 @@ export function SettingsModals(props: SettingsModalsProps) {
     onPasteToken,
     onCopyToken,
     onSaveToken,
+    __onRepoPickerListRender,
   } = props;
-
-  const filteredRepos = repoSearchQuery
-    ? githubRepos.filter(
-        (repo) =>
-          repo.full_name.toLowerCase().includes(repoSearchQuery.toLowerCase())
-          || repo.description?.toLowerCase().includes(repoSearchQuery.toLowerCase()),
-      )
-    : githubRepos;
 
   return (
     <>
@@ -151,50 +227,17 @@ export function SettingsModals(props: SettingsModalsProps) {
           ) : null}
 
           {authState.isAuthenticated ? (
-            <>
-              <View className="px-4 py-2">
-                <SearchBar value={repoSearchQuery} onChangeText={onSetRepoSearchQuery} placeholder={t('explore.searchRepos')} />
-              </View>
-              <Text className="text-xs font-semibold uppercase tracking-wide px-4 py-2.5 border-b" style={{ color: colors.textSecondary, borderColor: colors.border }}>{t('settings.yourGithubRepositories')}</Text>
-              {isLoadingGithubRepos ? (
-                <ActivityIndicator size="large" color={colors.primary} style={{ padding: 32 }} />
-              ) : filteredRepos.length === 0 ? (
-                <Text className="p-6 text-center text-sm" style={{ color: colors.textSecondary }}>
-                  {repoSearchQuery ? t('settings.noMatchingRepositories') : t('settings.noRepositoriesFound')}
-                </Text>
-              ) : (
-                filteredRepos.map((repo) => {
-                  const alreadyAdded = repositories.some((item) => item.path === repo.full_name);
-                  const isAddingThis = isAddingRepoPath === repo.full_name;
-                  const disabled = alreadyAdded || isAddingRepoPath !== null;
-                  return (
-                    <TouchableOpacity
-                      key={repo.id}
-                      testID="settings-modals.button.select-github-repo"
-                      className="flex-row items-center px-4 py-3.5 border-b gap-3"
-                      style={[{ borderColor: colors.border }, disabled && !isAddingThis && { opacity: 0.5 }]}
-                      onPress={() => onSelectGithubRepo(repo)}
-                      disabled={disabled}
-                    >
-                      <Ionicons name={repo.private ? 'lock-closed-outline' : 'git-branch-outline'} size={18} color={colors.primary} />
-                      <View className="flex-1">
-                        <Text style={{ color: colors.text, fontSize: 15, fontWeight: '500' }}>{repo.full_name}</Text>
-                        {repo.description ? (
-                          <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }} numberOfLines={1}>
-                            {repo.description}
-                          </Text>
-                        ) : null}
-                      </View>
-                      {isAddingThis ? (
-                        <ActivityIndicator size="small" color={colors.primary} />
-                      ) : alreadyAdded ? (
-                        <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
-                      ) : null}
-                    </TouchableOpacity>
-                  );
-                })
-              )}
-            </>
+            <RepoPickerList
+              githubRepos={githubRepos}
+              repositories={repositories}
+              searchQuery={repoSearchQuery}
+              isLoading={isLoadingGithubRepos}
+              isAddingRepoPath={isAddingRepoPath}
+              onSelectGithubRepo={onSelectGithubRepo}
+              onSetRepoSearchQuery={onSetRepoSearchQuery}
+              colors={colors}
+              __onRender={__onRepoPickerListRender}
+            />
           ) : null}
         </ScrollView>
       </Modal>
