@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
-import { Alert } from 'react-native';
+import { Alert, Linking } from 'react-native';
 import type { AlertButton } from 'react-native';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 
@@ -309,8 +309,8 @@ jest.mock('../../src/components/ui', () => {
         {children}
       </View>
     ),
-    GroupRow: ({ children, trailing, onPress }: any) => (
-      <Pressable testID="group-row" onPress={onPress}>
+    GroupRow: ({ children, trailing, onPress, testID }: any) => (
+      <Pressable testID={testID || 'group-row'} onPress={onPress}>
         {children}
         {trailing}
       </Pressable>
@@ -433,6 +433,7 @@ async function flushMicrotasks(): Promise<void> {
 
 describe('SettingsScreen', () => {
   const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+  const openUrlSpy = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
 
   beforeEach(() => {
     mockTheme = 'light';
@@ -442,6 +443,7 @@ describe('SettingsScreen', () => {
     mockSetStyle.mockClear();
     mockAddRepository.mockReset();
     alertSpy.mockClear();
+    openUrlSpy.mockClear();
     stableRepositories.length = 0;
     mockAccountSummaries.length = 0;
     mockDisconnectHost.mockReset();
@@ -475,6 +477,13 @@ describe('SettingsScreen', () => {
     const { getByText } = render(<SettingsScreen />);
     expect(getByText('About')).toBeTruthy();
     expect(getByText('Version')).toBeTruthy();
+  });
+
+  it('opens GitHub issues when the report-issue row is pressed', () => {
+    const { getByTestId, getByText } = render(<SettingsScreen />);
+    expect(getByText('Report bugs and feature requests')).toBeTruthy();
+    fireEvent.press(getByTestId('settings.row.report-issue'));
+    expect(openUrlSpy).toHaveBeenCalledWith('https://github.com/gedwolmen/gitnotes/issues');
   });
 
   it('shows Accounts entry pointing to Connect host when unauthenticated', () => {

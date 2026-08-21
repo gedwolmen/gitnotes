@@ -326,6 +326,7 @@
     "about": "About",
     "version": "Version",
     "build": "Build",
+    "reportIssue": "Report bugs and feature requests",
     "manageTemplates": "Manage templates",
     "artificialIntelligence": "Artificial Intelligence",
     "enableAI": "Enable Artificial Intelligence",

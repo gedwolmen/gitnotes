@@ -213,6 +213,7 @@
     "about": "概要",
     "version": "バージョン",
     "build": "ビルド",
+    "reportIssue": "バグや機能リクエストを報告",
     "manageTemplates": "テンプレートを管理",
     "artificialIntelligence": "AI（人工知能）",
     "enableAI": "AIを有効にする",

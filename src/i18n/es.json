@@ -213,6 +213,7 @@
     "about": "Acerca de",
     "version": "Versión",
     "build": "Compilación",
+    "reportIssue": "Reportar errores y solicitudes de funciones",
     "manageTemplates": "Gestionar plantillas",
     "artificialIntelligence": "Inteligencia artificial",
     "enableAI": "Habilitar inteligencia artificial",

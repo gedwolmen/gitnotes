@@ -309,6 +309,17 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
               iconAlign="edge"
             />
           )}
+
+          <Text className="text-center text-xs mt-6" style={{ color: colors.textSecondary }}>
+            Found a bug or have a feature request?{' '}
+            <Text
+              testID="onboarding.button.report-issue"
+              style={{ color: colors.accent, fontWeight: '600' }}
+              onPress={() => Linking.openURL('https://github.com/gedwolmen/gitnotes/issues')}
+            >
+              Report it on GitHub Issues
+            </Text>
+          </Text>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
