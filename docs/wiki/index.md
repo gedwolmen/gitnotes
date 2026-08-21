@@ -34,6 +34,7 @@
 | [Thought Dump Repo Picker](./thought-dump-repo-picker.md) | "Save to \<repo\> · \<branch\>" picker row + repo/branch modal, `ThoughtDumpRepoPreferenceService` persistence, distinct save errors, and empty-state disambiguation |
 | [Settings Keyboard & Quote Grouping](./settings-keyboard-quote-grouping.md) | iOS keyboard no longer covers inputs in Settings/AI (ModelSelector KAV, RenderStyleEditor scroll insets, ChatScreen persist-taps) + Daily Quote settings grouped under their own section |
 | [Floating Button Collision — Crash Fix](./floating-button-collision-crash-fix.md) | Re-entrancy guard on `publishButtonRect` + collision listener reads published rect so both FABs coexist without a stack-overflow recursion killing the AI button's hold animation |
+| [Security & Dependabot Alerts](./security-dependabot.md) | GitHub security surface, `uuid` fix via yarn resolutions (#4), `image-size` alerts deferred (no patched release, build-time only) |
 
 ## Quick Start
 
