@@ -61,7 +61,7 @@ beforeEach(() => {
 });
 
 describe('PaywallPlanGrid', () => {
-  it('renders a half-width pair (monthly + yearly) and a full-width lifetime hero at phone width', () => {
+  it('renders one plan per full-width row at phone width', () => {
     const { getByTestId } = render(
       <PaywallPlanGrid
         plans={[
@@ -71,14 +71,15 @@ describe('PaywallPlanGrid', () => {
         ]}
       />,
     );
-    // usable = 390 - 40 = 350; pairW = (350 - 12) / 2 = 169.
-    expect(getByTestId('paywall.plan.monthly').props.style.width).toBe(169);
-    expect(getByTestId('paywall.plan.yearly').props.style.width).toBe(169);
+    // usable = 390 - 40 = 350 — every tile spans the full row.
+    expect(getByTestId('paywall.plan.monthly').props.style.width).toBe(350);
+    expect(getByTestId('paywall.plan.yearly').props.style.width).toBe(350);
     expect(getByTestId('paywall.plan.lifetime').props.style.width).toBe(350);
+    expect(getByTestId('paywall.plan.monthly').props.style.flexDirection).toBe('row');
     expect(getByTestId('paywall.plan.lifetime').props.style.flexDirection).toBe('row');
   });
 
-  it('stretches a lone non-hero plan to the full row width', () => {
+  it('renders every offered plan as a full-width row regardless of count', () => {
     const { getByTestId } = render(
       <PaywallPlanGrid
         plans={[

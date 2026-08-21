@@ -22,44 +22,26 @@ const CARD_PADDING = SPACING[3];
 // Screen horizontal margin consumed by the paywall scroll container (20/edge).
 const HORIZONTAL_MARGIN = 40;
 
-const SMALL = { height: 180, badge: 38, icon: 20, titleSize: 15, priceSize: 13 } as const;
-const HERO = { height: 120, badge: 44, icon: 22, titleSize: 17, priceSize: 14 } as const;
+const ROW = { height: 96, badge: 40, icon: 20, titleSize: 15, priceSize: 13 } as const;
 
 export default function PaywallPlanGrid({ plans }: { plans: PlanTileData[] }) {
   const { width } = useWindowDimensions();
 
+  // One payment method per row — every tile spans the full content width so
+  // each plan reads as its own complete choice.
   const usable = width - HORIZONTAL_MARGIN;
-  const pairW = (usable - GAP) / 2;
-
-  // The lifetime plan is the bento hero (full row); everything before it packs
-  // side-by-side. A lone remaining plan stretches to the full row so no row
-  // ever dangles a half-empty cell (same rule as the feature grid).
-  const hero = plans.find((p) => p.id === 'lifetime');
-  const small = plans.filter((p) => p.id !== 'lifetime');
-  const smallWidth = small.length === 1 ? usable : pairW;
 
   return (
     <View testID="paywall.plans" style={styles.grid}>
-      {small.map((plan) => (
-        <PlanTile key={plan.id} plan={plan} width={smallWidth} size="small" />
+      {plans.map((plan) => (
+        <PlanTile key={plan.id} plan={plan} width={usable} />
       ))}
-      {hero ? <PlanTile key={hero.id} plan={hero} width={usable} size="hero" /> : null}
     </View>
   );
 }
 
-function PlanTile({
-  plan,
-  width,
-  size,
-}: {
-  plan: PlanTileData;
-  width: number;
-  size: 'small' | 'hero';
-}) {
+function PlanTile({ plan, width }: { plan: PlanTileData; width: number }) {
   const { colors } = useTheme();
-  const m = size === 'hero' ? HERO : SMALL;
-  const isHero = size === 'hero';
 
   return (
     <Surface
@@ -69,33 +51,32 @@ function PlanTile({
       accessibilityLabel={`${plan.title}. ${plan.priceLine ?? ''}`}
       style={{
         width,
-        height: m.height,
+        height: ROW.height,
         padding: CARD_PADDING,
         backgroundColor: colors.surface,
-        flexDirection: isHero ? 'row' : 'column',
-        alignItems: isHero ? 'center' : 'flex-start',
-        gap: isHero ? SPACING[3] : undefined,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: SPACING[3],
       }}
     >
       <View
         style={{
-          width: m.badge,
-          height: m.badge,
+          width: ROW.badge,
+          height: ROW.badge,
           borderRadius: RADII.sm,
           backgroundColor: colors.primary + '1F',
           alignItems: 'center',
           justifyContent: 'center',
-          marginBottom: isHero ? 0 : SPACING[2],
         }}
       >
-        <Ionicons name={plan.icon} size={m.icon} color={colors.primary} />
+        <Ionicons name={plan.icon} size={ROW.icon} color={colors.primary} />
       </View>
       <View style={styles.textBlock}>
-        <Text numberOfLines={1} style={{ fontSize: m.titleSize, fontWeight: '700', color: colors.text }}>
+        <Text numberOfLines={1} style={{ fontSize: ROW.titleSize, fontWeight: '700', color: colors.text }}>
           {plan.title}
         </Text>
         {plan.priceLine ? (
-          <Text numberOfLines={2} style={{ fontSize: m.priceSize, color: colors.textSecondary, marginTop: 2 }}>
+          <Text numberOfLines={1} style={{ fontSize: ROW.priceSize, color: colors.textSecondary, marginTop: 2 }}>
             {plan.priceLine}
           </Text>
         ) : null}
@@ -103,7 +84,6 @@ function PlanTile({
       <Button
         testID={plan.ctaTestID}
         variant={plan.variant}
-        fullWidth={!isHero}
         disabled={plan.disabled}
         label={plan.ctaLabel}
         onPress={plan.onPress}
@@ -114,8 +94,6 @@ function PlanTile({
 
 const styles = StyleSheet.create({
   grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: GAP,
   },
   textBlock: {
