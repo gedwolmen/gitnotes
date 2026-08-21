@@ -34,13 +34,13 @@ npm run branding && eas build   # production
 | `adaptive-icon.png` | 1024×1024 | Android adaptive icon **foreground** (transparent bg, artwork in safe zone) |
 | `splash-icon.png` | 1024×1024 | Square splash source with transparent padding |
 | `favicon.png` | 512×512 | Web favicon source |
-| `monochrome-icon.png` | 1024×1024 | Android themed icon — single-color alpha mask |
+| `monochrome-icon.png` | 1024×1024 | Android themed icon — grayscale depth mask |
 
 Pipeline details:
 
 - The SVG is supersampled (2048px), alpha-cropped to its bounding box, scaled to a target fraction of the canvas, and composited centered on a transparent square canvas. Aspect ratio is preserved, so artwork is always square and centered.
 - Icon fraction 0.82 (padding for iOS mask); adaptive/monochrome 0.62 (inside Android's circular safe zone); splash 0.96 (on-screen size is controlled by `imageWidth`); favicon 0.85.
-- Monochrome is a **black alpha mask** (never a grayscale copy): RGB zeroed, alpha kept. Android tints it with the system theme color.
+- Monochrome is a **grayscale depth mask**: each pixel's RGB is set to its BT.601 luminance of the source color, and alpha is preserved at full opacity. The SVG's distinct color sections naturally become distinct gray levels (e.g. three paths → three shades), so the monochrome icon keeps the visual depth of the full-color artwork where it is shown raw. Android still tints the alpha mask with the system theme color.
 
 ## Expo config (`app.json`)
 

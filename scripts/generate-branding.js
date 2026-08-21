@@ -10,7 +10,7 @@
  *   splash-icon.png     1024×1024  square splash source, logo ≈ image width
  *                                  (on-screen size = app.json imageWidth: 300dp ≈ 75% device width)
  *   favicon.png          512×512   web favicon source
- *   monochrome-icon.png 1024×1024  Android themed icon — single-color mask
+ *   monochrome-icon.png 1024×1024  Android themed icon — grayscale depth mask
  *
  * The artwork is auto-cropped to its alpha bounding box, scaled to a target
  * fraction of the canvas (safe padding), and composited centered on a
@@ -111,17 +111,23 @@ async function generateTarget(svgBuffer, { size, fraction, monochrome }) {
     .toBuffer();
 
   if (monochrome) {
-    // Android themed icons are alpha masks: Android tints the shape with the
-    // system theme color. Convert to a single-color (black) silhouette while
-    // keeping the original alpha — never a grayscale copy.
+    // Android themed icons tint the alpha mask with the system theme color.
+    // Collapse each source color to BT.601 luminance so the SVG's distinct
+    // color sections become distinct gray levels (preserves visual depth
+    // where the icon is shown raw). Alpha is kept at full opacity so the
+    // Android tint mask stays intact.
     const rawArt = await sharp(artwork).raw().toBuffer({ resolveWithObject: true });
     const { data: artData, info: artInfo } = rawArt;
     const mono = Buffer.alloc(artData.length);
     for (let i = 0; i < artInfo.width * artInfo.height; i += 1) {
-      mono[i * 4] = 0; // R
-      mono[i * 4 + 1] = 0; // G
-      mono[i * 4 + 2] = 0; // B
-      mono[i * 4 + 3] = artData[i * 4 + 3]; // alpha (mask)
+      const r = artData[i * 4];
+      const g = artData[i * 4 + 1];
+      const b = artData[i * 4 + 2];
+      const luma = (0.299 * r + 0.587 * g + 0.114 * b) | 0;
+      mono[i * 4] = luma;
+      mono[i * 4 + 1] = luma;
+      mono[i * 4 + 2] = luma;
+      mono[i * 4 + 3] = artData[i * 4 + 3];
     }
     artwork = await sharp(mono, {
       raw: { width: artInfo.width, height: artInfo.height, channels: 4 },
