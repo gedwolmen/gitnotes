@@ -118,6 +118,7 @@ export default function ChatScreen() {
         <View className="flex-1">
           <FlatList
             ref={flatListRef}
+            keyboardShouldPersistTaps="handled"
             data={messages}
             keyExtractor={(item) => item.id}
             extraData={isStreaming}
