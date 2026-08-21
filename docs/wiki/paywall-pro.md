@@ -59,6 +59,7 @@ Caveat: the Android fallback flag is device-local — a grandfathered user who u
 | Graph view | `NotesViewModePicker` / `NotesListScreen` — lock icon on graph option for free, tap → paywall |
 | Fancy UI style | `SettingsContent` `settings.row.updated-ui` — lock icon instead of toggle for free, tap → paywall; fresh installs default to `flat` |
 | AI button (FloatingAIButton) | `FloatingAIButton` returns `null` when `useProGate().isPro` is false (hidden for free users); `aiHubStore` still routes any free tap to Paywall as a backstop |
+| Onboarding "GitHub Tools" step | `OnboardingScreen.handleProContinue` — free users' "Continue" on the Pro upsell step calls `finish()` and never reaches the GitHub Tools step; Pro users (entitled or grandfathered) advance to the GitHub Tools step where they can enable the toggle or skip (`src/screens/OnboardingScreen.tsx`) |
 | All gates | `useProGate()` hook (src/hooks/useProGate.ts) for tap-level Paywall navigation; `useProScreenGuard()` hook (src/hooks/useProScreenGuard.ts) for screen-entry alert-and-exit guards firing the existing promptProUpgrade alert (src/utils/proAlerts.ts) |
 
 **Free for everyone:** notes, todos, journals, single-account git sync, tags/folders/search/backlinks, themes, reminders, one GitHub account, one repository. **Pro only:** biometric lock and the AI suite.
