@@ -171,6 +171,17 @@ describe('PaywallScreen', () => {
     expect(getByTestId('paywall.privacy-link')).toBeTruthy();
   });
 
+  it('renders the BYOK disclosure that AI provider credits are not included', async () => {
+    const { getByTestId, getByText } = await renderScreen();
+    expect(getByTestId('paywall.byok-note')).toBeTruthy();
+    expect(getByText('Bring your own AI keys')).toBeTruthy();
+    expect(
+      getByText(
+        "Pro does not include LLM provider credits. To use AI features, add your own API key from OpenAI, Anthropic, or any compatible provider.",
+      ),
+    ).toBeTruthy();
+  });
+
   it('tracks a paywall impression with the current offering when configured', async () => {
     const offering = { identifier: 'standard-offering' };
     setReadyState({ currentOffering: offering });

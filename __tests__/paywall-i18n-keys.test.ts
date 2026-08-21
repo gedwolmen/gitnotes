@@ -72,6 +72,8 @@ const NEW_PAYWALL_KEYS: readonly string[] = [
   'paywall.yearly.trialCta',
   'paywall.footer.terms',
   'paywall.footer.privacy',
+  'paywall.byok.title',
+  'paywall.byok.body',
 ];
 
 const LOCALES: Array<{ name: string; bundle: Bundle }> = [

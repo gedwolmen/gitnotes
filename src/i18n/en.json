@@ -948,6 +948,10 @@
     "later": "Maybe later",
     "retry": "Retry",
     "termsNote": "Subscriptions renew automatically until cancelled. Restore purchases to transfer them to this device. This app offers a 30-day free trial for new subscribers.",
+    "byok": {
+      "title": "Bring your own AI keys",
+      "body": "Pro does not include LLM provider credits. To use AI features, add your own API key from OpenAI, Anthropic, or any compatible provider."
+    },
     "yearly": {
       "title": "Yearly",
       "cta": "{{price}}/year",

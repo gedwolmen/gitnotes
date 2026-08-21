@@ -130,6 +130,15 @@ Both Terms of Service and Privacy Policy URLs must appear in the paywall footer.
 
 These serve as the referenced terms required by Apple App Store review guidelines for subscription purchases with free trials. See checklist item 8 below.
 
+## BYOK disclosure (AI credits not included)
+
+The paywall shows a "Bring your own AI keys" notice card directly under the subtitle so users see it before purchasing. It states that **Pro does not include LLM provider credits** — to use AI features the user must add their own API key (OpenAI, Anthropic, or any compatible provider).
+
+- **UI:** a tinted notice card (`testID: paywall.byok-note`) with a `key` Ionicon, styled like the error banner but with the accent color (`colors.accent + '14'` background, `+ '44'` border).
+- **i18n keys:** `paywall.byok.title` + `paywall.byok.body` in all six locales (en/es/fr/de/ja/ko); enforced by `__tests__/paywall-i18n-keys.test.ts` (`NEW_PAYWALL_KEYS`) and `__tests__/i18n-key-parity.test.ts`.
+- **Placement:** below the subtitle, above the error banner and plan grid, inside the ScrollView — always visible regardless of offerings loading state.
+- **Why:** the AI feature set is gated behind Pro, but AI inference is billed to the user's own provider keys. The disclosure prevents the expectation that a subscription includes AI usage credits.
+
 ## Bento layout (#921)
 
 The Pro upgrade page uses a bento-grid tile layout rather than full-width cards:
