@@ -63,6 +63,18 @@ function repoDirVirtual(owner: string, repo: string): string {
   return `/${owner}/${repo}`;
 }
 
+/**
+ * App callers (note/canvas editors) build filePath from a folderPath that
+ * carries a leading slash ('/notes/foo.md'). isomorphic-git requires
+ * repo-relative paths ('notes/foo.md'): a leading slash makes the on-disk
+ * write land at 'repo//notes/foo.md' while git reads 'repo/notes/foo.md' and
+ * throws "path should be a `path.relative()`d string" — the write never
+ * becomes a commit, so nothing surfaces on the Stage screen.
+ */
+function toRepoRelativePath(filePath: string): string {
+  return filePath.replace(/^\/+/, '');
+}
+
 function makeRepoFs() {
   return buildGitFs(clonesRoot());
 }
@@ -239,6 +251,8 @@ static async writeAndCommit(opts: WriteOpts): Promise<LocalGitWriterResult> {
       return { success: false, error: `Refusing to write file exceeding 5 MB (${Math.round(opts.content.length / 1024 / 1024)} MB) — possible data corruption` };
     }
 
+    const filePath = toRepoRelativePath(opts.filePath);
+
     try {
       return await handleCorruptionAndRetry(opts.repoPath, opts.branch, opts.token, async () => {
         const dir = repoDirVirtual(info.owner, info.repo);
@@ -247,14 +261,14 @@ static async writeAndCommit(opts: WriteOpts): Promise<LocalGitWriterResult> {
 
         await ensureOnBranch(fs, dir, opts.branch, opts.token);
 
-        const absVirtual = `${dir}/${opts.filePath}`;
+        const absVirtual = `${dir}/${filePath}`;
         const absUri = `${fsRoot}${absVirtual.replace(/^\//, '')}`;
         await ensureParentDirs(fsRoot, absVirtual);
         await FileSystem.writeAsStringAsync(absUri, opts.content);
 
-        await git.add({ fs, dir, filepath: opts.filePath });
+        await git.add({ fs, dir, filepath: filePath });
 
-        const fileStatus = await git.status({ fs, dir, filepath: opts.filePath });
+        const fileStatus = await git.status({ fs, dir, filepath: filePath });
         const hasTreeChange = fileStatus !== 'unmodified';
         if (hasTreeChange) {
           await git.commit({
@@ -298,8 +312,8 @@ static async writeAndCommit(opts: WriteOpts): Promise<LocalGitWriterResult> {
                 await ensureOnBranch(fs, dir, opts.branch, opts.token);
                 await ensureParentDirs(fsRoot, absVirtual);
                 await FileSystem.writeAsStringAsync(absUri, opts.content);
-                await git.add({ fs, dir, filepath: opts.filePath });
-                const replayStatus = await git.status({ fs, dir, filepath: opts.filePath });
+                await git.add({ fs, dir, filepath: filePath });
+                const replayStatus = await git.status({ fs, dir, filepath: filePath });
                 if (replayStatus !== 'unmodified') {
                   await git.commit({
                     fs,
@@ -356,6 +370,8 @@ static async deleteAndCommit(opts: DeleteOpts): Promise<LocalGitWriterResult> {
     const info = parseRepoPath(opts.repoPath);
     if (!info) return { success: false, error: `Invalid repo path: ${opts.repoPath}` };
 
+    const filePath = toRepoRelativePath(opts.filePath);
+
     try {
       return await handleCorruptionAndRetry(opts.repoPath, opts.branch, opts.token, async () => {
         const dir = repoDirVirtual(info.owner, info.repo);
@@ -374,11 +390,11 @@ static async deleteAndCommit(opts: DeleteOpts): Promise<LocalGitWriterResult> {
           console.warn('[LocalGitWriter] deleteAndCommit pull failed (continuing):', pullError);
         }
 
-        const absUri = `${fsRoot}${info.owner}/${info.repo}/${opts.filePath}`;
+        const absUri = `${fsRoot}${info.owner}/${info.repo}/${filePath}`;
         await FileSystem.deleteAsync(absUri, { idempotent: true });
 
         try {
-          await git.remove({ fs, dir, filepath: opts.filePath });
+          await git.remove({ fs, dir, filepath: filePath });
         } catch (removeError) {
           const code = (removeError as { code?: string }).code;
           const errorMsg = removeError instanceof Error ? removeError.message : String(removeError);
@@ -427,9 +443,9 @@ static async deleteAndCommit(opts: DeleteOpts): Promise<LocalGitWriterResult> {
                 await GitFsService.removeRepo({ repoPath: opts.repoPath });
                 await GitFsService.clone({ repoPath: opts.repoPath, branch: opts.branch, token: opts.token });
                 await ensureOnBranch(fs, dir, opts.branch, opts.token);
-                const absUri = `${fsRoot}${info.owner}/${info.repo}/${opts.filePath}`;
+                const absUri = `${fsRoot}${info.owner}/${info.repo}/${filePath}`;
                 await FileSystem.deleteAsync(absUri, { idempotent: true });
-                await git.remove({ fs, dir, filepath: opts.filePath });
+                await git.remove({ fs, dir, filepath: filePath });
                 await git.commit({
                   fs,
                   dir,
