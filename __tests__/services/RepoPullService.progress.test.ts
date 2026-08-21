@@ -112,15 +112,19 @@ describe('RepoPullService progress threading', () => {
     // First call announces the pull start with no known total.
     expect(calls[0]).toEqual({ phase: 'Reading repository…', loaded: 0, total: null });
 
-    // Distinct phase sequence — the per-type pulls each emit their phase as
-    // they process fetched files, and the templates pull is skipped entirely
-    // (no template repo configured).
-    expect([...new Set(calls.map((c) => c.phase))]).toEqual([
-      'Reading repository…',
-      'Importing notes…',
-      'Importing todos…',
-      'Importing canvases…',
-    ]);
+    // Distinct phase set — the per-type pulls each emit their phase as they
+    // process fetched files, and the templates pull is skipped entirely (no
+    // template repo configured). Order among the three concurrent per-type
+    // pulls is intentionally not asserted: the yieldToMain macrotask yields
+    // interleave their scheduling.
+    expect(new Set(calls.map((c) => c.phase))).toEqual(
+      new Set([
+        'Reading repository…',
+        'Importing notes…',
+        'Importing todos…',
+        'Importing canvases…',
+      ]),
+    );
 
     // Loaded counts must be monotonic (non-decreasing) within each phase and
     // must reach the phase total (3 notes, 1 todo, 1 canvas).
@@ -198,5 +202,34 @@ describe('RepoPullService progress threading', () => {
         'Importing templates…',
       ]),
     );
+  });
+
+  it('yields to the macrotask queue during the pull (batch + upsert + save)', async () => {
+    // Notes-only tree so the mocked getFileContent never calls setTimeout —
+    // any setTimeout(0) during the pull is from yieldToMain.
+    (GitHubService.getTreeRecursiveOrThrow as jest.Mock).mockResolvedValue([
+      { type: 'blob', path: 'notes/alpha.md', sha: 'a' },
+      { type: 'blob', path: 'notes/beta.md', sha: 'b' },
+      { type: 'blob', path: 'notes/gamma.md', sha: 'c' },
+    ]);
+    (GitHubService.getFileContent as jest.Mock).mockImplementation(
+      async (_owner: string, _repo: string, path: string) => `# ${path}`,
+    );
+
+    const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
+
+    const result = await pullFromSingleRepo('org/repo');
+
+    // yieldToMain calls setTimeout(0): 1 batch yield + 1 upsert-loop yield
+    // (first item) + 1 pre-save yield = 3.
+    const yieldCalls = setTimeoutSpy.mock.calls.filter(([, ms]) => ms === 0);
+    expect(yieldCalls.length).toBeGreaterThanOrEqual(2);
+
+    expect(result).toEqual({ repos: 1, notes: 3, canvases: 0, todos: 0, templates: 0 });
+    expect(StorageService.saveAllNotes).toHaveBeenCalledTimes(1);
+    const saved = (StorageService.saveAllNotes as jest.Mock).mock.calls[0][0] as unknown[];
+    expect(saved).toHaveLength(3);
+
+    setTimeoutSpy.mockRestore();
   });
 });

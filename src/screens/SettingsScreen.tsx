@@ -26,6 +26,7 @@ import { LfsService } from '../services/git/lfs';
 import { AuthService } from '../services/AuthService';
 import { OnboardingService } from '../services/OnboardingService';
 import { HapticService } from '../utils/haptics';
+import { createThrottledEmitter } from '../utils/progressThrottle';
 import { useTemplateStore } from '../stores/templateStore';
 import { useAIStore } from '../stores/aiStore';
 import type { AIProviderConfig } from '../models/AIProvider';
@@ -149,6 +150,8 @@ export default function SettingsScreen() {
   const [cloningRepo, setCloningRepo] = useState<string | null>(null);
   const [cloneProgress, setCloneProgress] = useState<CloneProgress | null>(null);
   const cloneAbortedRef = useRef(false);
+  const cloneProgressRef = useRef<CloneProgress | null>(null);
+  cloneProgressRef.current = cloneProgress;
   const cloneOuterRetriesRef = useRef(0);
   const [isSyncingExistingTemplates, setIsSyncingExistingTemplates] = useState(false);
   const [lfsPending, setLfsPending] = useState<Record<string, { count: number; bytes: number }>>({});
@@ -245,6 +248,7 @@ export default function SettingsScreen() {
     setCloningRepo(repo.path);
     cloneAbortedRef.current = false;
     setCloneProgress({ repoName: repo.name, phase: t('settings.clonePhasePreparing'), loaded: 0, total: null });
+    const throttled = createThrottledEmitter((phase, loaded, total) => setCloneProgress({ repoName: repo.name, phase, loaded, total }));
     try {
       const token = (await AuthService.getToken()) ?? undefined;
       const branch = repo.branch || 'main';
@@ -257,7 +261,7 @@ export default function SettingsScreen() {
             if (cloneAbortedRef.current) {
               throw new Error('CLONE_CANCELLED');
             }
-            setCloneProgress({ repoName: repo.name, phase, loaded, total });
+            throttled.push(phase, loaded, total);
           },
         });
       }
@@ -267,6 +271,7 @@ export default function SettingsScreen() {
       }
       await SyncEngineService.setMode(repo.path, 'clone');
       setSyncModes((prev) => ({ ...prev, [repo.path]: 'clone' }));
+      throttled.flush();
       setCloneProgress(null);
       void refreshLfsPending([repo.path]);
       HapticService.success();
@@ -342,7 +347,7 @@ export default function SettingsScreen() {
 
   const handleCancelClone = useCallback(() => {
     cloneAbortedRef.current = true;
-    if (cloneProgress?.error) {
+    if (cloneProgressRef.current?.error) {
       setCloneProgress(null);
       return;
     }
@@ -352,7 +357,7 @@ export default function SettingsScreen() {
         prev && prev.phase === t('settings.clonePhaseCancelling') ? null : prev,
       );
     }, CLONE_CANCEL_GRACE_MS);
-  }, [cloneProgress, t]);
+  }, [t]);
 
   const handleRetryClone = useCallback(() => {
     if (cloningRepo) {
@@ -518,12 +523,14 @@ export default function SettingsScreen() {
     };
     cloneAbortedRef.current = false;
     setCloneProgress({ repoName, phase: t('settings.clonePhasePreparing'), loaded: 0, total: null });
+    const throttled = createThrottledEmitter((phase, loaded, total) => setCloneProgress({ repoName, phase, loaded, total }));
     const result = await importRepoAtAdd(repoPath, repoName, (phase, loaded, total) => {
       if (cloneAbortedRef.current) {
         throw new Error('CLONE_CANCELLED');
       }
-      setCloneProgress({ repoName, phase, loaded, total });
+      throttled.push(phase, loaded, total);
     });
+    throttled.flush();
     setCloneProgress(null);
     if (cloneAbortedRef.current) {
       // Cancel: abort stops the import; the repo stays added and its
@@ -548,8 +555,20 @@ export default function SettingsScreen() {
       );
       return 'failed';
     }
-    if (result.counts.notes + result.counts.canvases + result.counts.todos > 0) {
-      await Promise.all([refreshNotes(), refreshCanvases(), refreshTodos()]);
+    await Promise.all([refreshNotes(), refreshCanvases(), refreshTodos()]);
+    if (
+      result.counts.notes === 0 &&
+      result.counts.canvases === 0 &&
+      result.counts.todos === 0 &&
+      result.counts.templates === 0
+    ) {
+      try {
+        const mode = await SyncEngineService.getMode(repoPath);
+        if (mode === 'clone') {
+          console.warn('[SettingsScreen] add-repo import pulled zero contents', { repoPath, counts: result.counts });
+        }
+      } catch {
+      }
     }
     setShowRepoPickerModal(false);
     return 'imported';

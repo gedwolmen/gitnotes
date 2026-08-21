@@ -18,6 +18,7 @@ import { useConflictStore } from '../stores/conflictStore';
 import { NoteSyncQueueService } from './NoteSyncQueueService';
 import { getGitHostService } from './git/gitHostFactory';
 import { FEATURE_USE_MULTI_HOST_WRITE } from './featureFlags';
+import { yieldToMain } from '../utils/yieldToMain';
 import type { GitHostProvider } from './git/GitHost';
 import type { CloneProgressCallback } from './RepoImportService';
 
@@ -43,7 +44,7 @@ async function handleCorruptionErrors<T>(fn: () => Promise<T>, repoPath: string,
     return await fn();
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    const isMissingObject = /Could not find|not foundobject|NotFoundError|Packfile trailer mismatch/i.test(errorMsg);
+    const isMissingObject = /Could not find object|not foundobject|NotFoundError|Packfile trailer mismatch/i.test(errorMsg);
     if (isMissingObject) {
       console.warn(`[RepoPullService] corruption detected during operation, re-cloning...`);
       const hasLocalCommits = await hasUnpushedCommits(repoPath, branch);
@@ -123,7 +124,7 @@ async function getRepoReader(
           };
         }
         const errorMsg = result.error ?? '';
-const isMissingObject = /Could not find|not foundobject|NotFoundError|Packfile trailer mismatch/i.test(errorMsg);
+const isMissingObject = /Could not find object|not foundobject|NotFoundError|Packfile trailer mismatch/i.test(errorMsg);
                 if (isMissingObject) {
                   console.warn(`[RepoPullService] clone appears corrupted (${errorMsg}), re-cloning...`);
                   // Check for local commits before removing - don't lose unpushed work
@@ -260,6 +261,7 @@ async function fetchInBatches<T, R>(
     const batch = items.slice(i, i + concurrency);
     const batchOut = await Promise.all(batch.map(fn));
     out.push(...batchOut);
+    await yieldToMain();
   }
   return out;
 }
@@ -418,6 +420,7 @@ async function pullNotesFromRepo(
     let processedCount = 0;
     for (const item of fetched) {
       if (!item) continue;
+      if (processedCount % 25 === 0) await yieldToMain();
       processedCount++;
       onProgress?.('Importing notes…', processedCount, noteBlobs.length);
       const isTombstoned = await NoteSyncQueueService.isTombstoned(repoPath, branch, item.path);
@@ -496,6 +499,7 @@ async function pullNotesFromRepo(
       if (!n.filePath) return true;
       return remoteFilePaths.has(n.filePath);
     });
+    await yieldToMain();
     await StorageService.saveAllNotes(allNotes);
 
     // Also invalidate the folders cache so editor folder dropdowns reflect

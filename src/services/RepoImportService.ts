@@ -106,9 +106,9 @@ async function runImport(
       if (headOid === null) {
         return { ok: true, counts: EMPTY_REPO_COUNTS };
       }
-      return { ok: true, counts: await pullFromSingleRepo(repoPath) };
+      return { ok: true, counts: await pullFromSingleRepo(repoPath, onProgress) };
     }
-    return { ok: true, counts: await pullFromSingleRepo(repoPath) };
+    return { ok: true, counts: await pullFromSingleRepo(repoPath, onProgress) };
   } catch (error) {
     const classified = classifyImportError(error);
     return { ok: false, error: `${label}: ${classified.message}`, retryable: classified.retryable };

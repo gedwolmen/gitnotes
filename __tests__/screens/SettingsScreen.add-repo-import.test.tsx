@@ -581,7 +581,7 @@ describe('SettingsScreen add-repo import (#938, todo 12)', () => {
     await waitFor(() => expect(getByTestId('test-adding-state').props.children).toBe('idle'));
     expect(queryByTestId('test-progress-modal')).toBeNull();
     // The real RepoImportService ran the api-mode import through pullFromSingleRepo.
-    expect(mockPullFromSingleRepo).toHaveBeenCalledWith('octo/notes');
+    expect(mockPullFromSingleRepo).toHaveBeenCalledWith('octo/notes', expect.any(Function));
   });
 
   it('repo picker closes only after import completes', async () => {
@@ -614,7 +614,7 @@ describe('SettingsScreen add-repo import (#938, todo 12)', () => {
     expect(alertSpy).not.toHaveBeenCalledWith('Error', expect.anything(), expect.anything());
   });
 
-  it('empty repo import closes the picker quietly without refreshing stores', async () => {
+  it('empty repo import still refreshes stores and closes the picker', async () => {
     mockPullFromSingleRepo.mockResolvedValue(EMPTY_COUNTS);
 
     const { getByTestId, queryByTestId } = render(<SettingsScreen />);
@@ -627,10 +627,49 @@ describe('SettingsScreen add-repo import (#938, todo 12)', () => {
 
     await waitFor(() => expect(queryByTestId('test-repo-picker-modal')).toBeNull());
     expect(getByTestId('test-adding-state').props.children).toBe('idle');
-    expect(mockRefreshNotes).not.toHaveBeenCalled();
-    expect(mockRefreshCanvases).not.toHaveBeenCalled();
-    expect(mockRefreshTodos).not.toHaveBeenCalled();
+    expect(mockRefreshNotes).toHaveBeenCalledTimes(1);
+    expect(mockRefreshCanvases).toHaveBeenCalledTimes(1);
+    expect(mockRefreshTodos).toHaveBeenCalledTimes(1);
     expect(alertSpy).not.toHaveBeenCalled();
+  });
+
+  it('clone-mode zero-count import fires the warn (api mode does not)', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    mockPullFromSingleRepo.mockResolvedValue(EMPTY_COUNTS);
+
+    const { getByTestId, queryByTestId } = render(<SettingsScreen />);
+    await flushMicrotasks();
+    mockGetMode.mockResolvedValue('clone' as any);
+    fireEvent.press(getByTestId('test-open-repo-picker'));
+    await flushMicrotasks();
+    await act(async () => {
+      fireEvent.press(getByTestId('test-select-github-repo'));
+    });
+    await waitFor(() => expect(queryByTestId('test-repo-picker-modal')).toBeNull());
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[SettingsScreen] add-repo import pulled zero contents',
+      expect.objectContaining({ repoPath: 'octo/notes', counts: EMPTY_COUNTS }),
+    );
+    warnSpy.mockRestore();
+
+    // api mode (default beforeEach) must NOT fire the warn.
+    const warnSpy2 = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    mockPullFromSingleRepo.mockResolvedValue(EMPTY_COUNTS);
+    mockGetMode.mockResolvedValue('api' as any);
+    const { getByTestId: g2, queryByTestId: q2 } = render(<SettingsScreen />);
+    await flushMicrotasks();
+    g2('test-open-repo-picker');
+    await flushMicrotasks();
+    await act(async () => {
+      g2('test-select-github-repo');
+    });
+    await waitFor(() => expect(q2('test-repo-picker-modal')).toBeNull());
+    expect(warnSpy2).not.toHaveBeenCalledWith(
+      '[SettingsScreen] add-repo import pulled zero contents',
+      expect.anything(),
+      expect.anything(),
+    );
+    warnSpy2.mockRestore();
   });
 
   it('on import failure with retryable error, Retry button re-calls importRepoAtAdd', async () => {

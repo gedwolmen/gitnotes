@@ -314,4 +314,27 @@ describe('SettingsModals inline clone progress (#953)', () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
     expect(getByTestId('modal')).toBeTruthy();
   });
+
+  it('RepoPickerList does NOT re-render when only cloneProgress changes', () => {
+    const renderSpy = jest.fn();
+    const baseProps = makeProps({
+      showRepoPickerModal: true,
+      authState: { isAuthenticated: true },
+      __onRepoPickerListRender: renderSpy,
+    });
+    const { rerender } = render(<SettingsModals {...baseProps} />);
+    expect(renderSpy).toHaveBeenCalledTimes(1);
+    rerender(
+      <SettingsModals
+        {...baseProps}
+        cloneProgress={{
+          repoName: 'me/notes',
+          phase: 'phase-2',
+          loaded: 50,
+          total: 100,
+        }}
+      />,
+    );
+    expect(renderSpy).toHaveBeenCalledTimes(1);
+  });
 });
