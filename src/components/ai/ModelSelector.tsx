@@ -8,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
+  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -123,7 +124,10 @@ export function ModelSelector({ visible, onClose }: ModelSelectorProps) {
 
   return (
     <Modal visible={visible} transparent animationType="slide">
-      <View style={styles.modalOverlay}>
+      <KeyboardAvoidingView
+        style={styles.modalOverlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>Select AI Model</Text>
@@ -259,7 +263,7 @@ export function ModelSelector({ visible, onClose }: ModelSelectorProps) {
               })}
           </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
