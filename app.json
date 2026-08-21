@@ -75,6 +75,7 @@
     "plugins": [
       "expo-font",
       "expo-web-browser",
+      "./plugins/withGitQuicWorkaround",
       [
         "expo-notifications",
         {
