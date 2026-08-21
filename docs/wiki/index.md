@@ -30,6 +30,7 @@
 | [Explore Repo Hub](./explore-repo-hub.md) | Hub page for selected repo with Browse Files / Pull Requests / Issues / branch selector; multi-provider data layer (#937) |
 | [Settings — Add Repo Fixes](./settings-add-repo-fixes.md) | Invisible primary-button fix + repo list not loading after adding a token + busy-state re-entry guard on Add-Repo picker (#936) |
 | [iPad Multi-Column Card Collapse Fix](./ipad-multicolumn-card-collapse-fix.md) | SwipeableListItem root `width: '100%'` so multi-column FlatList cards fill their column (#940, #941) |
+| [Add Repo Picker — Clone Progress & First-Connect Fixes](./add-repo-picker-clone-progress.md) | Inline clone progress in the repo picker (no stacked native modal), manual-Add spinner padding, connectHost hydrating GitHubService, delete-note false-failure fix (#953, QA #932) |
 
 ## Quick Start
 

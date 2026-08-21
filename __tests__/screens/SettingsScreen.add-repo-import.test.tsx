@@ -393,7 +393,10 @@ jest.mock('../../src/components/settings/SettingsContent', () => {
 });
 
 // Test surface for the picker: exposes visibility + busy props as nodes so
-// timing assertions can observe them directly.
+// timing assertions can observe them directly. The clone progress now renders
+// INLINE inside the picker modal (iOS cannot stack a second native Modal on
+// top of the picker — "Attempt to present ... which is already presenting"),
+// so the mock mirrors that: progress nodes appear when cloneProgress is set.
 jest.mock('../../src/components/settings/SettingsModals', () => {
   const { Pressable, Text, TextInput, View } = require('react-native');
   return {
@@ -420,6 +423,20 @@ jest.mock('../../src/components/settings/SettingsModals', () => {
           }>
           <Text>Select github repo</Text>
         </Pressable>
+        {props.cloneProgress ? (
+          <View testID="test-progress-modal">
+            <Text testID="test-progress-phase">{props.cloneProgress.phase}</Text>
+            {props.cloneProgress.error ? (
+              <Text testID="test-progress-error">{props.cloneProgress.error}</Text>
+            ) : null}
+            <Pressable testID="test-progress-cancel" onPress={props.onCancelClone}>
+              <Text>Cancel</Text>
+            </Pressable>
+            <Pressable testID="test-progress-retry" onPress={props.onRetryClone}>
+              <Text>Retry</Text>
+            </Pressable>
+          </View>
+        ) : null}
       </View>
     ),
   };

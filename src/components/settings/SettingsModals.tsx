@@ -8,6 +8,7 @@ import { Modal, Input, Button } from '../ui';
 import type { GitRepository } from '../../services/GitService';
 import type { GitHubRepository } from '../../services/GitHubService';
 import type { TemplateRepoPreference } from '../../services/TemplateRepoPreferenceService';
+import { CloneProgressContent, type CloneProgress } from './CloneProgressModal';
 
 type ThemeColors = {
   background: string;
@@ -33,6 +34,9 @@ type SettingsModalsProps = {
   manualRepoInput: string;
   isAddingRepoPath: string | null;
   isLoadingGithubRepos: boolean;
+  cloneProgress: CloneProgress | null;
+  onCancelClone: () => void;
+  onRetryClone: () => void;
   tokenInput: string;
   tokenVisible: boolean;
   tokenError: string | null;
@@ -69,6 +73,9 @@ export function SettingsModals(props: SettingsModalsProps) {
     manualRepoInput,
     isAddingRepoPath,
     isLoadingGithubRepos,
+    cloneProgress,
+    onCancelClone,
+    onRetryClone,
     tokenInput,
     tokenVisible,
     tokenError,
@@ -129,9 +136,19 @@ export function SettingsModals(props: SettingsModalsProps) {
               style={{ paddingHorizontal: 16 }}
               textStyle={{ color: '#fff' }}
               trailingIcon={isAddingRepoPath !== null ? <ActivityIndicator size="small" color="#fff" /> : undefined}
-              iconAlign="edge"
+              iconAlign="inline"
             />
           </View>
+
+          {cloneProgress != null ? (
+            <View className="px-4 py-4 border-b" style={{ borderColor: colors.border }}>
+              <CloneProgressContent
+                progress={cloneProgress}
+                onCancel={onCancelClone}
+                onRetry={onRetryClone}
+              />
+            </View>
+          ) : null}
 
           {authState.isAuthenticated ? (
             <>

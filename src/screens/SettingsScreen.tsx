@@ -982,6 +982,9 @@ export default function SettingsScreen() {
         manualRepoInput={manualRepoInput}
         isAddingRepoPath={isAddingRepoPath}
         isLoadingGithubRepos={isLoadingGithubRepos}
+        cloneProgress={cloneProgress}
+        onCancelClone={handleCancelClone}
+        onRetryClone={handleRetryClone}
         tokenInput={tokenInput}
         tokenVisible={tokenVisible}
         tokenError={tokenError}
@@ -1009,7 +1012,13 @@ export default function SettingsScreen() {
         onSelected={() => setShowChatRepoPicker(false)}
         onGoToSettings={() => { setShowChatRepoPicker(false); void openRepoPicker(); }}
       />
-      <CloneProgressModal progress={cloneProgress} onCancel={handleCancelClone} onRetry={handleRetryClone} />
+      {/* When the repo picker is open, clone progress renders inline inside
+          the picker modal (iOS cannot stack a second native Modal on top of
+          the picker). The standalone modal only presents for flows with no
+          picker open (e.g. the sync-engine clone toggle). */}
+      {!showRepoPickerModal ? (
+        <CloneProgressModal progress={cloneProgress} onCancel={handleCancelClone} onRetry={handleRetryClone} />
+      ) : null}
       <ConnectHostModal
         visible={showConnectHostModal}
         onClose={() => { setShowConnectHostModal(false); setConnectHostPreset(undefined); }}

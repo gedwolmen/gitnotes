@@ -94,6 +94,12 @@ let capturedMethods: {
   disconnectHost: (id: string) => Promise<void>;
   clearToken: () => Promise<void>;
   addAccount: (token: string) => Promise<unknown>;
+  connectHost: (input: {
+    provider: string;
+    token: string;
+    instanceBaseUrl?: string | null;
+    accountId?: string;
+  }) => Promise<unknown>;
   accountSummaries: Array<{ account: { id: string }; hosts: Array<{ id: string }> }>;
   activeAccountId: string | null;
 } | null = null;
@@ -105,6 +111,7 @@ function TestProbe() {
     disconnectHost: ctx.disconnectHost,
     clearToken: ctx.clearToken,
     addAccount: ctx.addAccount,
+    connectHost: ctx.connectHost,
     accountSummaries: ctx.accountSummaries,
     activeAccountId: ctx.activeAccountId,
   };
@@ -464,6 +471,67 @@ describe('AccountsContext — chat repo clearing on removal', () => {
       const added = await capturedMethods!.addAccount('bad-token');
 
       expect(added).toBeNull();
+      expect(GitHubService.setToken).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── connectHost (#953) ──────────────────────────────────────────────
+
+  describe('connectHost', () => {
+    it('hydrates the GitHubService singleton for github connects so repo listing works immediately', async () => {
+      (AuthService.listAccountSummaries as jest.Mock).mockResolvedValue([]);
+      (AuthService.getActiveSummary as jest.Mock).mockResolvedValue(null);
+      (AuthService.getToken as jest.Mock).mockResolvedValue(null);
+      (AuthService.connectHost as jest.Mock).mockResolvedValue({
+        ok: true,
+        host: {
+          id: 'h1',
+          provider: 'github',
+          hostUserId: 42,
+          hostLogin: 'alice',
+          name: 'Alice',
+          email: 'alice@example.com',
+          avatarUrl: null,
+          instanceBaseUrl: null,
+        },
+        account: { id: 'acc-1' },
+      });
+
+      const { getByTestId } = renderProvider();
+      await waitFor(() => expect(getByTestId('probe')).toBeTruthy());
+
+      const result = await capturedMethods!.connectHost({
+        provider: 'github',
+        token: 'ghp_secret',
+      });
+
+      expect(result).toEqual({ ok: true, host: expect.objectContaining({ id: 'h1' }) });
+      expect(GitHubService.setToken).toHaveBeenCalledWith(
+        'ghp_secret',
+        expect.objectContaining({
+          id: 42,
+          login: 'alice',
+          name: 'Alice',
+          email: 'alice@example.com',
+        }),
+      );
+    });
+
+    it('does not hydrate GitHubService when connectHost fails', async () => {
+      (AuthService.listAccountSummaries as jest.Mock).mockResolvedValue([]);
+      (AuthService.getActiveSummary as jest.Mock).mockResolvedValue(null);
+      (AuthService.getToken as jest.Mock).mockResolvedValue(null);
+      (AuthService.connectHost as jest.Mock).mockResolvedValue(null);
+
+      const { getByTestId } = renderProvider();
+      await waitFor(() => expect(getByTestId('probe')).toBeTruthy());
+
+      const result = await capturedMethods!.connectHost({
+        provider: 'github',
+        token: 'ghp_secret',
+      });
+
+      expect(result).toEqual({ ok: false, error: 'Invalid token' });
       expect(GitHubService.setToken).not.toHaveBeenCalled();
     });
   });
