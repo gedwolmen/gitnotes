@@ -339,4 +339,15 @@ describe('NotesListScreen', () => {
     const { getByText } = render(<NotesListScreen />);
     expect(getByText('Something went wrong')).toBeTruthy();
   });
+
+  it('configures FlatList virtualization so large repos do not hang CoreText on mount', () => {
+    const { UNSAFE_queryByType } = render(<NotesListScreen />);
+    const FlatList = require('react-native').FlatList;
+    const list = UNSAFE_queryByType(FlatList);
+    expect(list).toBeTruthy();
+    expect(list.props.initialNumToRender).toBeLessThanOrEqual(10);
+    expect(list.props.maxToRenderPerBatch).toBeLessThanOrEqual(6);
+    expect(list.props.windowSize).toBeLessThanOrEqual(7);
+    expect(list.props.removeClippedSubviews).toBe(true);
+  });
 });
