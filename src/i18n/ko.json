@@ -343,7 +343,8 @@
     "dailyQuotePersonalization": {
       "label": "AI 개인화",
       "description": "노트를 기반으로 명언 개인화"
-    }
+    },
+    "lastSyncFailed": "마지막 동기화 실패"
   },
   "ai": {
     "availability": {

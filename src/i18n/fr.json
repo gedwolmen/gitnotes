@@ -343,7 +343,8 @@
     "dailyQuotePersonalization": {
       "label": "Personnalisation IA",
       "description": "Personnaliser les citations selon vos notes"
-    }
+    },
+    "lastSyncFailed": "Dernière synchronisation échouée"
   },
   "ai": {
     "availability": {

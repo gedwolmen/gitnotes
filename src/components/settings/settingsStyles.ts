@@ -8,6 +8,8 @@ export const settingsStyles = StyleSheet.create({
   emptyReposText: { fontSize: 15, fontWeight: '500' },
   repoName: { fontSize: 15, fontWeight: '500' },
   repoPath: { fontSize: 12 },
+  healthRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flex: 1 },
+  healthTime: { fontSize: 12 },
   creditsWrap: { paddingTop: 24, marginHorizontal: -8, alignItems: 'center' },
   creditsText: { fontSize: 12, textAlign: 'center', lineHeight: 18 },
   bottomPad: { height: 40 },

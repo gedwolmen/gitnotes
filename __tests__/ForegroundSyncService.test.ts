@@ -53,6 +53,7 @@ import { GitHubService } from '../src/services/GitHubService';
 import {
   __resetForegroundSyncForTest,
   __runPullForTest,
+  getForegroundSyncHealth,
   isForegroundSyncInFlight,
   startForegroundWatcher,
 } from '../src/services/ForegroundSyncService';
@@ -331,5 +332,33 @@ describe('ForegroundSyncService', () => {
 
     randomSpy.mockRestore();
     logSpy.mockRestore();
+  });
+
+  test('reports healthy after a successful pull', async () => {
+    await __runPullForTest();
+
+    const health = getForegroundSyncHealth();
+    expect(health.healthy).toBe(true);
+    expect(health.lastSyncAt).toBeGreaterThan(0);
+  });
+
+  test('reports unhealthy after a pull failure', async () => {
+    pullMock.mockRejectedValueOnce(new Error('pull failed'));
+
+    await __runPullForTest('first');
+
+    const health = getForegroundSyncHealth();
+    expect(health.healthy).toBe(false);
+    expect(health.lastFailedAt).toBeGreaterThan(0);
+  });
+
+  test('recovers to healthy after a later success', async () => {
+    pullMock.mockRejectedValueOnce(new Error('pull failed'));
+    await __runPullForTest('first');
+    expect(getForegroundSyncHealth().healthy).toBe(false);
+
+    jest.setSystemTime(10_000 + 31_000);
+    await __runPullForTest('second');
+    expect(getForegroundSyncHealth().healthy).toBe(true);
   });
 });

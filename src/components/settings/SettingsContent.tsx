@@ -18,6 +18,7 @@ import {
 } from '../../i18n';
 import { ReminderSection } from './ReminderSection';
 import { settingsStyles as styles } from './settingsStyles';
+import type { ForegroundSyncHealth } from '../../services/ForegroundSyncService';
 import type { GitRepository } from '../../services/GitService';
 import type { TemplateRepoPreference } from '../../services/TemplateRepoPreferenceService';
 import type { AIProviderConfig } from '../../models/AIProvider';
@@ -64,6 +65,11 @@ type AuthState = {
   user?: { login?: string | null; name?: string | null; avatar_url?: string | null } | null;
 };
 
+function formatHealthTime(timestamp: number): string {
+  const minutes = Math.max(1, Math.round((Date.now() - timestamp) / 60_000));
+  return `${minutes}m ago`;
+}
+
 type SettingsContentProps = {
   colors: ThemeColors;
   headerHeight: number;
@@ -76,6 +82,7 @@ type SettingsContentProps = {
   repositories: GitRepository[];
   syncingRepo: string | null;
   syncModes: Record<string, 'api' | 'clone'>;
+  syncHealth: ForegroundSyncHealth;
   cloningRepo: string | null;
   templatesRepoPref: TemplateRepoPreference | null;
   isSyncingExistingTemplates: boolean;
@@ -172,6 +179,7 @@ export function SettingsContent(props: SettingsContentProps) {
     repositories,
     syncingRepo,
     syncModes,
+    syncHealth,
     cloningRepo,
     templatesRepoPref,
     isSyncingExistingTemplates,
@@ -632,6 +640,23 @@ onSetSyncIntervalSeconds,
 
       {repositories.length > 0 ? (
         <Group title={t('settings.syncEngine')}>
+          {syncHealth && !syncHealth.healthy ? (
+            <GroupRow
+              testID="settings.row.sync-health-failed"
+              leading={<Ionicons name="alert-circle" size={20} color={colors.error} />}
+            >
+              <View style={styles.healthRow}>
+                <Text style={[styles.settingLabel, { color: colors.error }]}>
+                  {t('settings.lastSyncFailed')}
+                </Text>
+                {syncHealth.lastFailedAt > 0 ? (
+                  <Text style={[styles.healthTime, { color: colors.textSecondary }]}>
+                    {formatHealthTime(syncHealth.lastFailedAt)}
+                  </Text>
+                ) : null}
+              </View>
+            </GroupRow>
+          ) : null}
           {repositories.map((repo) => {
             const mode = syncModes[repo.path] ?? 'clone';
             const isClone = mode === 'clone';

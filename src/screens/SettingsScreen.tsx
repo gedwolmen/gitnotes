@@ -13,6 +13,7 @@ import { useTodos } from '../contexts/TodoContext';
 import { useBiometricLock } from '../contexts/BiometricLockContext';
 import { useBackgroundSync } from '../hooks/useBackgroundSync';
 import { useForegroundSyncSettings } from '../hooks/useForegroundSyncSettings';
+import { useForegroundSyncHealth } from '../hooks/useForegroundSyncHealth';
 import type { RootStackParamList } from '../navigation/types';
 import { GitHubService, type GitHubRepository } from '../services/GitHubService';
 import { RepoFileSyncService } from '../services/RepoFileSyncService';
@@ -106,6 +107,7 @@ export default function SettingsScreen() {
     setSyncFrequentlyEnabled,
     setSyncIntervalSeconds,
   } = useForegroundSyncSettings();
+  const syncHealth = useForegroundSyncHealth();
   const isAIEnabled = useAIStore((state) => state.isEnabled);
   const selectedModelId = useAIStore((state) => state.selectedModelId);
   const actionMode = useAIStore((state) => state.actionMode);
@@ -899,6 +901,7 @@ export default function SettingsScreen() {
         repositories={repositories}
         syncingRepo={syncingRepo}
         syncModes={syncModes}
+        syncHealth={syncHealth}
         cloningRepo={cloningRepo}
         templatesRepoPref={templatesRepoPref}
         isSyncingExistingTemplates={isSyncingExistingTemplates}

@@ -313,6 +313,7 @@
     "noRepositories": "No repositories added yet",
     "addRepository": "Add Repository",
     "syncEngine": "Sync engine",
+    "lastSyncFailed": "Last sync failed",
     "templates": "Templates",
     "templatesRepository": "Templates repository",
     "syncCustomTemplates": "Sync custom templates",

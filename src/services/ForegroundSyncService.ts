@@ -59,6 +59,27 @@ const MAX_BACKOFF_MS = 300_000;
 let consecutiveSkips = 0;
 let lastSkipLogAt = 0;
 
+// Pull-health state for the UI (#1007): the last foreground sync outcome is
+// tracked so Settings can show a "Last sync failed" indicator instead of a
+// stalled pull being invisible-but-permanent.
+export interface ForegroundSyncHealth {
+  healthy: boolean;
+  lastSyncAt: number;
+  lastFailedAt: number;
+}
+
+let lastSyncOutcome: 'ok' | 'failed' | 'none' = 'none';
+let lastSyncAt = 0;
+let lastFailedAtForHealth = 0;
+
+export function getForegroundSyncHealth(): ForegroundSyncHealth {
+  return {
+    healthy: lastSyncOutcome !== 'failed',
+    lastSyncAt,
+    lastFailedAt: lastFailedAtForHealth,
+  };
+}
+
 const listeners = new Set<Listener>();
 
 function notify(): void {
@@ -183,9 +204,13 @@ async function runPull(reason: string): Promise<void> {
     }
     if (success) {
       consecutiveFailures = 0;
+      lastSyncOutcome = 'ok';
+      lastSyncAt = Date.now();
     } else {
       consecutiveFailures++;
       lastFailedAt = Date.now();
+      lastSyncOutcome = 'failed';
+      lastFailedAtForHealth = Date.now();
     }
     notify();
   }
@@ -344,5 +369,8 @@ export function __resetForegroundSyncForTest(): void {
   lastFailedAt = 0;
   consecutiveSkips = 0;
   lastSkipLogAt = 0;
+  lastSyncOutcome = 'none';
+  lastSyncAt = 0;
+  lastFailedAtForHealth = 0;
   listeners.clear();
 }
