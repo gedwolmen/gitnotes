@@ -158,10 +158,17 @@ export class GitFsService {
           ref: opts.branch,
           singleBranch: true,
           depth: opts.depth ?? 1,
+          noCheckout: true,
           onAuth: ensureToken(opts.token),
           onProgress: opts.onProgress
             ? (event) => opts.onProgress!(event.phase, event.loaded, event.total ?? null)
             : undefined,
+        });
+        await git.checkout({
+          fs: makeRepoFs(),
+          dir,
+          ref: opts.branch,
+          batchSize: 64,
         });
         lastError = undefined;
         break;
