@@ -161,9 +161,12 @@ describe('gitHttp.request streaming (issue #790)', () => {
         body: responseBody,
       }) as unknown as typeof fetch;
 
-    await expect(
-      gitHttp.request(buildRequest('https://example.git/info/refs')),
-    ).rejects.toThrow('unexpected EOF during stream');
+    const resp = await gitHttp.request(buildRequest('https://example.git/info/refs'));
+    await expect(async () => {
+      for await (const _chunk of resp.body!) {
+        // consume
+      }
+    }).rejects.toThrow('unexpected EOF during stream');
 
     expect(cancel).toHaveBeenCalledTimes(1);
   });
@@ -192,9 +195,12 @@ describe('gitHttp.request streaming (issue #790)', () => {
         body: responseBody,
       }) as unknown as typeof fetch;
 
-    await expect(
-      gitHttp.request(buildRequest('https://example.git/info/refs')),
-    ).rejects.toThrow(/timed out/);
+    const resp = await gitHttp.request(buildRequest('https://example.git/info/refs'));
+    await expect(async () => {
+      for await (const _chunk of resp.body!) {
+        // consume
+      }
+    }).rejects.toThrow(/timed out/);
 
     expect(cancel).toHaveBeenCalledTimes(1);
   });
@@ -245,6 +251,47 @@ describe('gitHttp.request streaming (issue #790)', () => {
     await assertion;
 
     jest.useRealTimers();
+  });
+
+  test('Case G: body is consumed lazily — no read until the consumer pulls (#1021)', async () => {
+    const chunk1 = new Uint8Array([1, 2, 3]);
+    const chunk2 = new Uint8Array([4, 5, 6]);
+    const chunks = [chunk1, chunk2];
+    let i = 0;
+    const reader = {
+      read: jest.fn().mockImplementation(async () => {
+        if (i >= chunks.length) return { done: true, value: undefined };
+        return { done: false, value: chunks[i++] };
+      }),
+      cancel: jest.fn().mockResolvedValue(undefined),
+    };
+    const responseBody = { getReader: () => reader };
+    const mockHeaders = { forEach: (_cb: (v: string, k: string) => void) => {} };
+
+    (globalThis as { fetch?: typeof fetch }).fetch = jest
+      .fn()
+      .mockResolvedValue({
+        url: 'https://example.git/info/refs',
+        status: 200,
+        statusText: 'OK',
+        headers: mockHeaders,
+        body: responseBody,
+        arrayBuffer: jest.fn(),
+      }) as unknown as typeof fetch;
+
+    const resp = await gitHttp.request(buildRequest('https://example.git/info/refs'));
+    expect(reader.read).not.toHaveBeenCalled();
+
+    const iterator = resp.body![Symbol.asyncIterator]();
+    const first = await iterator.next();
+    expect(first.value).toEqual(chunk1);
+    expect(reader.read).toHaveBeenCalledTimes(1);
+
+    const second = await iterator.next();
+    expect(second.value).toEqual(chunk2);
+
+    const third = await iterator.next();
+    expect(third.done).toBe(true);
   });
 
   test('Case F: cancelInflightGitHttp aborts an in-flight request (#1013)', async () => {
