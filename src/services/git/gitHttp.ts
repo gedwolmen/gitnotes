@@ -6,6 +6,17 @@ async function* yieldOnce(bytes: Uint8Array): AsyncIterableIterator<Uint8Array> 
   yield bytes;
 }
 
+// Yields response chunks as they were read instead of merging them into one
+// contiguous buffer. isomorphic-git still collects the packfile into memory
+// on its side (`Buffer.from(await collect(response.packfile))` in 1.40.0),
+// but skipping our own merge removes a second full-size copy of the packfile
+// from peak memory during a large clone/fetch (#982).
+async function* yieldChunks(chunks: Uint8Array[]): AsyncIterableIterator<Uint8Array> {
+  for (const chunk of chunks) {
+    yield chunk;
+  }
+}
+
 async function consumeBody(
   body: GitHttpRequest['body'],
 ): Promise<Uint8Array | undefined> {
@@ -62,12 +73,11 @@ export const gitHttp: HttpClient = {
     // Try to stream the response body when the environment supports
     // ReadableStream (iOS/Android modern RN, Web). Falls back to
     // `arrayBuffer()` for environments without streaming support
-    // (legacy RN, older Hermes). Streaming bounds memory to incremental
-    // chunks (typically ~64KB from isomorphic-git) instead of materialising
-    // a 100MB+ packfile as one ArrayBuffer — fixing "Packfile trailer
-    // mismatch" errors on large repos (issue #790).
-    let bytes: Uint8Array;
-
+    // (legacy RN, older Hermes). Chunks are yielded as read (never merged
+    // into one contiguous buffer) so a large packfile is not held twice in
+    // memory (#982) — fixing "Packfile trailer mismatch" errors on large
+    // repos (issue #790).
+    let outBody: AsyncIterableIterator<Uint8Array>;
     const responseBody = response.body as (ReadableStream<Uint8Array> & { getReader?: () => ReadableStreamDefaultReader<Uint8Array> }) | null;
     const hasStreaming = !!responseBody && typeof responseBody.getReader === 'function';
 
@@ -93,14 +103,7 @@ export const gitHttp: HttpClient = {
       }
 
       clearTimeout(timeoutId);
-      let total = 0;
-      for (const c of chunks) total += c.length;
-      bytes = new Uint8Array(total);
-      let off = 0;
-      for (const c of chunks) {
-        bytes.set(c, off);
-        off += c.length;
-      }
+      outBody = yieldChunks(chunks);
     } else {
       let buffer: ArrayBuffer;
       try {
@@ -113,7 +116,7 @@ export const gitHttp: HttpClient = {
         throw arrayBufferError;
       }
       clearTimeout(timeoutId);
-      bytes = new Uint8Array(buffer);
+      outBody = yieldOnce(new Uint8Array(buffer));
     }
 
     const responseHeaders: Record<string, string> = {};
@@ -127,7 +130,7 @@ export const gitHttp: HttpClient = {
       headers: responseHeaders,
       statusCode: response.status,
       statusMessage: response.statusText,
-      body: yieldOnce(bytes),
+      body: outBody,
     };
   },
 };

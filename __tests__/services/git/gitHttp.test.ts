@@ -80,6 +80,43 @@ describe('gitHttp.request streaming (issue #790)', () => {
     expect(resp.statusCode).toBe(200);
   });
 
+  test('Case A2: preserves chunk granularity instead of merging into one buffer (#982)', async () => {
+    const chunk1 = new Uint8Array([1, 2, 3, 4]);
+    const chunk2 = new Uint8Array([5, 6, 7, 8]);
+    const chunk3 = new Uint8Array([9, 10, 11, 12]);
+    const chunks = [chunk1, chunk2, chunk3];
+    let i = 0;
+    const reader = {
+      read: jest.fn().mockImplementation(async () => {
+        if (i >= chunks.length) return { done: true, value: undefined };
+        return { done: false, value: chunks[i++] };
+      }),
+      cancel: jest.fn().mockResolvedValue(undefined),
+    };
+    const responseBody = { getReader: () => reader };
+    const mockHeaders = { forEach: (_cb: (v: string, k: string) => void) => {} };
+
+    (globalThis as { fetch?: typeof fetch }).fetch = jest
+      .fn()
+      .mockResolvedValue({
+        url: 'https://example.git/info/refs',
+        status: 200,
+        statusText: 'OK',
+        headers: mockHeaders,
+        body: responseBody,
+        arrayBuffer: jest.fn(),
+      }) as unknown as typeof fetch;
+
+    const resp = await gitHttp.request(buildRequest('https://example.git/info/refs'));
+    const yielded: Uint8Array[] = [];
+    for await (const ch of resp.body!) yielded.push(ch);
+
+    expect(yielded).toHaveLength(3);
+    expect(yielded[0]).toEqual(chunk1);
+    expect(yielded[1]).toEqual(chunk2);
+    expect(yielded[2]).toEqual(chunk3);
+  });
+
   test('Case B: falls back to arrayBuffer when response.body is null', async () => {
     const mockHeaders = { forEach: (_cb: (v: string, k: string) => void) => {} };
     const arrayBuffer = jest
