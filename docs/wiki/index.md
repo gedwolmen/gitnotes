@@ -45,6 +45,7 @@
 | [Clone-Perf Optimization](./clone-perf-optimization.md) | Five ordered patches closing the simulator freeze gap: `noCheckout` + batched full checkout, 3-concurrent-pull dedup, LFS-after-clone, UTF-8 fast path, depth-3 floor measurement flag |
 | [v1.5.0 App Store Rejection](./v1.5.0-app-store-rejection.md) | 2.1.0 App Completeness SIGABRT on first launch — root cause: `useNavigation()` outside `NavigationContainer` in `useProGate.ts`; fix already on `main` (`c5362e86`); build from `main HEAD` to resubmit |
 | [Git Test E2E Report](./git-test-e2e-report.md) | Live round-trip timings against `test-notes` for all 12 scenarios (6 clone-mode + 6 API-mode) with per-action breakdown, syncTiming instrumentation seam, and Mac vs simulator scope |
+| [Git Test Big Repo](./git-test-big-repo.md) | Same 12-scenario matrix on a 429-file / 11MB / 28-commit synthetic repo (local bare remote) — linear scaling, no quadratic blowup; small-vs-big comparison table |
 
 ## Quick Start
 
