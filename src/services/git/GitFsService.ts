@@ -187,14 +187,14 @@ export class GitFsService {
     if (lastError) throw lastError;
 
     // isomorphic-git has no smudge filter pipeline, so any LFS-tracked
-    // binaries land on disk as ~130-byte pointer text files. Scan now and
-    // remember them so the UI can surface a "Download" affordance and the
-    // user isn't left wondering why their PDF won't open.
-    try {
-      await LfsService.scanRepo(opts.repoPath, GitFsService.workingTreeUri({ repoPath: opts.repoPath }));
-    } catch {
-      // best-effort; pointer detection failure shouldn't fail the clone.
-    }
+    // binaries land on disk as ~130-byte pointer text files. Scan after clone
+    // resolves so the object-download phase is never blocked by the tree walk.
+    // Pointer detection is eventually-consistent — the UI must check
+    // LfsService.isPending / hasUnresolved before surfacing a Download button.
+    void LfsService.scanRepo(
+      opts.repoPath,
+      GitFsService.workingTreeUri({ repoPath: opts.repoPath }),
+    ).catch((err: unknown) => console.warn('[GitFsService] LFS scan failed:', err));
   }
 
   /**
