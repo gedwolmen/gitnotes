@@ -52,6 +52,7 @@
 | [LFS Pointer Scan — Parallel Walk](./lfs-scan-parallel-walk.md) | `scanForPointers` walks the working tree with bounded concurrency (`SCAN_CONCURRENCY=16` via `mapLimit`) instead of one serial bridge round-trip per file (#980) |
 | [Todo Pull Parse Errors — Silent Data Loss Fix](./todo-pull-parse-fix.md) | `pullTodosFromRepo` no longer silently swallows todo JSON parse errors: `{`-content guard skips non-JSON files silently, genuine failures log `error` with the file path, and a skipped-count summary surfaces the loss (#1008) |
 | [ForegroundSync Watchdog — Sync Health Surfacing](./foreground-sync-health.md) | `ForegroundSyncService` now tracks `syncHealth` (`idle/syncing/ok/failed/timedout` + failure count), exposed via `getForegroundSyncHealth()` / `useForegroundSyncHealth()` and a Settings → Sync status row — a stalled pull is no longer invisible (#1007) |
+| [gitHttp Packfile Buffering — Remove Redundant Copy](./git-http-packfile-buffering.md) | `gitHttp` yields raw response chunks instead of merging them into one `Uint8Array`, halving peak packfile memory on large clones; true disk streaming blocked by isomorphic-git's internal `collect()` (follow-up) (#982) |
 
 ## Quick Start
 
