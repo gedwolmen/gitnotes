@@ -500,4 +500,79 @@ describe('StagePushScheduler', () => {
 
     expect(GitSyncGate.acquireCycle).toHaveBeenCalledWith('manual');
   });
+
+  test('drainPushQueue resets globalPushing in the OUTER finally even when pushStaged throws', async () => {
+    useStageStore.setState({
+      staged: [],
+      isPushing: {},
+      globalPushing: true,
+      pushQueue: ['a/repo::main'],
+      pendingCount: 0,
+    });
+    (StagingService.pushStaged as jest.Mock).mockImplementationOnce(async () => {
+      throw new Error('push blew up');
+    });
+
+    await drainPushQueue('manual');
+    await flushAsync();
+
+    expect(useStageStore.getState().globalPushing).toBe(false);
+    expect(useStageStore.getState().isPushing['a/repo::main']).toBe(false);
+    expect(useStageStore.getState().pushQueue).toHaveLength(0);
+  });
+
+  test('drainPushQueue releases the gate cycle and resets isPushing even if acquireCycle hangs (set finally)', async () => {
+    // Reproduces the "stuck gray spinner" symptom: a previous holder kept the
+    // cycle indefinitely. The drain sets isPushing[key] BEFORE acquireCycle,
+    // so without the outer finally an indefinite acquireCycle wait would
+    // leave isPushing[key] TRUE forever.
+    let releaseStuckCycle: (() => void) | null = null;
+    (GitSyncGate.acquireCycle as jest.Mock).mockImplementationOnce(
+      () =>
+        new Promise<() => void>((resolve) => {
+          releaseStuckCycle = () => resolve(() => undefined);
+        }),
+    );
+    useStageStore.setState({
+      staged: [],
+      isPushing: {},
+      globalPushing: false,
+      pushQueue: ['a/repo::main'],
+      pendingCount: 0,
+    });
+
+    const drainPromise = drainPushQueue('manual');
+    // Yield so drainPushQueue reaches `await GitSyncGate.acquireCycle`.
+    await flushAsync();
+    expect(useStageStore.getState().isPushing['a/repo::main']).toBe(true);
+
+    // Force-unlock the cycle while the drain is still awaiting.
+    releaseStuckCycle?.();
+    await drainPromise;
+    await flushAsync();
+
+    expect(useStageStore.getState().isPushing['a/repo::main']).toBe(false);
+    expect(useStageStore.getState().globalPushing).toBe(false);
+    expect(useStageStore.getState().pushQueue).toHaveLength(0);
+  });
+
+  test('forceUnlockPushState clears stuck isPushing / globalPushing / pushProgress without draining', async () => {
+    useStageStore.setState({
+      staged: [],
+      isPushing: { 'a/repo::main': true, 'b/repo::main': true },
+      globalPushing: true,
+      pushQueue: ['a/repo::main', 'b/repo::main'],
+      pendingCount: 0,
+      pushProgress: 0.42,
+    });
+
+    useStageStore.getState().forceUnlockPushState();
+
+    expect(useStageStore.getState().globalPushing).toBe(false);
+    expect(useStageStore.getState().pushProgress).toBeNull();
+    expect(useStageStore.getState().isPushing).toEqual({ 'a/repo::main': false, 'b/repo::main': false });
+    // Queue is preserved — pending pushes will still drain on the next trigger.
+    expect(useStageStore.getState().pushQueue).toEqual(['a/repo::main', 'b/repo::main']);
+    expect(StagingService.pushStaged).not.toHaveBeenCalled();
+  });
 });
