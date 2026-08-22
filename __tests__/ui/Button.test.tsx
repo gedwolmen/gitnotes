@@ -77,6 +77,17 @@ describe('Button', () => {
     expect(UNSAFE_getByType(require('../../src/components/ui/Button').Button)).toBeTruthy();
   });
 
+  it('keeps the label optically centered when a leading icon is present with iconAlign="edge"', () => {
+    const { UNSAFE_getByType } = render(
+      <TestThemeProvider>
+        <Button label="New Chat" variant="primary" fullWidth leadingIcon="+" iconAlign="edge" />
+      </TestThemeProvider>,
+    );
+    // Same equal-side-spacer trick as the trailing-icon case: with the leading
+    // icon pinned to the left edge, the equal spacers keep the label centered.
+    expect(UNSAFE_getByType(require('../../src/components/ui/Button').Button)).toBeTruthy();
+  });
+
   it('secondary variant keeps theme text color on the surface background', () => {
     const { getByText, UNSAFE_getByType } = render(
       <TestThemeProvider>

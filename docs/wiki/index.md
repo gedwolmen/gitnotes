@@ -60,6 +60,8 @@
 | [Todo Pull Parse Errors — Silent Data Loss Fix](./todo-pull-parse-fix.md) | `pullTodosFromRepo` no longer silently swallows todo JSON parse errors: `{`-content guard skips non-JSON files silently, genuine failures log `error` with the file path, and a skipped-count summary surfaces the loss (#1008) |
 | [ForegroundSync Watchdog — Sync Health Surfacing](./foreground-sync-health.md) | `ForegroundSyncService` now tracks `syncHealth` (`idle/syncing/ok/failed/timedout` + failure count), exposed via `getForegroundSyncHealth()` / `useForegroundSyncHealth()` and a Settings → Sync status row — a stalled pull is no longer invisible (#1007) |
 | [gitHttp Packfile Buffering — Remove Redundant Copy](./git-http-packfile-buffering.md) | `gitHttp` yields raw response chunks instead of merging them into one `Uint8Array`, halving peak packfile memory on large clones; true disk streaming blocked by isomorphic-git's internal `collect()` (follow-up) (#982) |
+| [New Chat Button — Label Centering](./new-chat-button-centering.md) | `Button` edge mode now handles leading icons (pinned `absolute left-5` + equal side spacers), so the full-width New Chat button's label sits at the button's true center instead of ~half-an-icon right |
+| [GO_BACK Unhandled — Deep-Linked Root Screens](./goback-deep-link-root-fix.md) | `The action 'GO_BACK' was not handled by any navigator` when tapping the header back button on a deep-link root screen (`gitnotes://chat` et al.); `useSafeBack()` hook pops when possible, falls back to MainTabs |
 
 ## Quick Start
 
