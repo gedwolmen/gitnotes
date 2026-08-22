@@ -133,13 +133,39 @@ describe('StagePushScheduler', () => {
     startScheduler();
 
     jest.advanceTimersByTime(2 * 60 * 1000);
-    onStagedChanged();
+    const prevState = useStageStore.getState();
+    useStageStore.setState({
+      staged: [item(REPO_A, 'main', 'notes/a.md'), item(REPO_A, 'main', 'notes/b.md')],
+      pendingCount: 2,
+    });
+    const nextState = useStageStore.getState();
+    onStagedChanged(nextState, prevState);
 
     jest.advanceTimersByTime(STAGE_PUSH_IDLE_MS - 1);
     await flushAsync();
     expect(StagingService.pushStaged).not.toHaveBeenCalled();
 
     jest.advanceTimersByTime(1);
+    await flushAsync();
+    expect(StagingService.pushStaged).toHaveBeenCalledTimes(1);
+  });
+
+  test('push-state churn does NOT restart the idle window (only staged-set changes do, #1020)', async () => {
+    useStageStore.setState({
+      staged: [item(REPO_A, 'main', 'notes/a.md')],
+      pendingCount: 1,
+    });
+
+    startScheduler();
+
+    // Simulate an in-flight push churning pushProgress / isPushing while the
+    // staged SET is unchanged — the idle countdown must not be reset.
+    jest.advanceTimersByTime(2 * 60 * 1000);
+    const prevState = useStageStore.getState();
+    useStageStore.setState({ pushProgress: 0.5 });
+    const nextState = useStageStore.getState();
+    onStagedChanged(nextState, prevState);
+    jest.advanceTimersByTime(3 * 60 * 1000);
     await flushAsync();
     expect(StagingService.pushStaged).toHaveBeenCalledTimes(1);
   });

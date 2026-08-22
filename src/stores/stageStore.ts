@@ -16,7 +16,7 @@ export interface StageGroup {
   items: StagedItem[];
 }
 
-interface StageState {
+export interface StageState {
   staged: StagedItem[];
   isPushing: Record<string, boolean>;
   globalPushing: boolean;

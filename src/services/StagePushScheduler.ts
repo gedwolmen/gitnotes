@@ -1,8 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { StagingService } from './git/StagingService';
+import { StagingService, type StagedItem } from './git/StagingService';
 import { GitSyncGate, type CycleSource } from './git/GitSyncGate';
 import { useStageStore } from '../stores/stageStore';
 import { githubActivity } from '../stores/githubActivityStore';
+import type { StageState } from '../stores/stageStore';
 
 /**
  * Foreground idle-timeout auto-push for staged changes.
@@ -95,8 +96,18 @@ function clearIdleTimer(): void {
   }
 }
 
+function stagedSignature(staged: StagedItem[]): string {
+  return staged
+    .map((item) => `${item.repoPath}|${item.branch}|${item.filePath}|${item.kind}|${item.mode}|${item.localCommitOid ?? ''}`)
+    .join('\n');
+}
+
 /** Enqueue every unique staged (repo, branch) key, then start the FIFO drain. */
-export function flushStaged(): void {
+export async function flushStaged(): Promise<void> {
+  // Refresh from git before reading: the store may be stale or empty (a
+  // timer that fired before loadStaged populated) — otherwise a just-staged
+  // clone-mode commit is missed and nothing re-triggers the push (#1020).
+  await useStageStore.getState().loadStaged();
   const store = useStageStore.getState();
   const keys = new Set<string>();
   for (const item of store.staged) {
@@ -165,9 +176,17 @@ export async function drainPushQueue(source: CycleSource): Promise<void> {
   }
 }
 
-/** Subscription callback: any staged change resets the idle window. */
-export function onStagedChanged(): void {
-  resetIdleTimer();
+/**
+ * Subscription callback: only a change to the staged SET restarts the idle
+ * window. Zustand notifies on every store update — including pushProgress /
+ * isPushing / pushQueue churn from an in-flight push — and resetting the
+ * countdown on those would keep pushing the auto-push out indefinitely
+ * (#1020).
+ */
+export function onStagedChanged(state: StageState, prevState: StageState): void {
+  if (stagedSignature(state.staged) !== stagedSignature(prevState.staged)) {
+    resetIdleTimer();
+  }
 }
 
 /** Start the scheduler. */
