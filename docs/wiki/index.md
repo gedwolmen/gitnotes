@@ -40,6 +40,7 @@
 | [Floating Button Collision — Crash Fix](./floating-button-collision-crash-fix.md) | Re-entrancy guard on `publishButtonRect` + collision listener reads published rect so both FABs coexist without a stack-overflow recursion killing the AI button's hold animation |
 | [Security & Dependabot Alerts](./security-dependabot.md) | GitHub security surface, `uuid` fix via yarn resolutions (#4), `image-size` alerts deferred (no patched release, build-time only) |
 | [Report Bugs & Feature Requests](./report-issue-links.md) | Settings About-row + onboarding footer link to `github.com/gedwolmen/gitnotes/issues`, i18n'd across all six locales |
+| [E2E Sync Testing](./e2e-sync-testing.md) | E2E test harness: 6 scenarios × 2 modes, timing instrumentation, push-trigger verification, staged-visibility sub-checks, blocking overlay, remote verification |
 
 ## Quick Start
 
