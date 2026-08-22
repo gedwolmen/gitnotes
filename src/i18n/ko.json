@@ -611,7 +611,9 @@
     "overlay": {
       "syncing": "동기화 중…",
       "pushing": "전송 중…",
-      "pulling": "수신 중…"
+      "pulling": "수신 중…",
+      "cancel": "취소",
+      "cancelling": "취소 중…"
     }
   },
   "onboarding": {

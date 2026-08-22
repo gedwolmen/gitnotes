@@ -12,7 +12,7 @@
  */
 
 import type { GitHttpRequest } from 'isomorphic-git';
-import { gitHttp } from '../../../src/services/git/gitHttp';
+import { gitHttp, cancelInflightGitHttp } from '../../../src/services/git/gitHttp';
 
 const buildRequest = (url: string): GitHttpRequest => ({
   url,
@@ -197,5 +197,79 @@ describe('gitHttp.request streaming (issue #790)', () => {
     ).rejects.toThrow(/timed out/);
 
     expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
+  test('Case E: push requests (git-receive-pack) abort after 60s, not 600s (#1013)', async () => {
+    jest.useFakeTimers();
+    const abortListeningFetch = jest.fn(
+      (_url: string, opts: { signal: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          opts.signal.addEventListener('abort', () =>
+            reject(Object.assign(new Error('aborted'), { name: 'AbortError' })),
+          );
+        }),
+    );
+    (globalThis as { fetch?: typeof fetch }).fetch =
+      abortListeningFetch as unknown as typeof fetch;
+
+    const pushPromise = gitHttp.request(
+      buildRequest('https://example.git/git-receive-pack'),
+    );
+    const assertion = expect(pushPromise).rejects.toThrow('timed out after 60000ms');
+    await jest.advanceTimersByTimeAsync(60_000);
+    await assertion;
+
+    jest.useRealTimers();
+  });
+
+  test('Case E2: clone/fetch requests (git-upload-pack) keep the 600s timeout (#1013)', async () => {
+    jest.useFakeTimers();
+    const abortListeningFetch = jest.fn(
+      (_url: string, opts: { signal: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          opts.signal.addEventListener('abort', () =>
+            reject(Object.assign(new Error('aborted'), { name: 'AbortError' })),
+          );
+        }),
+    );
+    (globalThis as { fetch?: typeof fetch }).fetch =
+      abortListeningFetch as unknown as typeof fetch;
+
+    const fetchPromise = gitHttp.request(
+      buildRequest('https://example.git/git-upload-pack'),
+    );
+    const assertion = expect(fetchPromise).rejects.toThrow('timed out after 600000ms');
+    await jest.advanceTimersByTimeAsync(60_000);
+    expect(abortListeningFetch).toHaveBeenCalledTimes(1);
+    await jest.advanceTimersByTimeAsync(540_000);
+    await assertion;
+
+    jest.useRealTimers();
+  });
+
+  test('Case F: cancelInflightGitHttp aborts an in-flight request (#1013)', async () => {
+    jest.useFakeTimers();
+    const abortListeningFetch = jest.fn(
+      (_url: string, opts: { signal: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          opts.signal.addEventListener('abort', () =>
+            reject(Object.assign(new Error('aborted'), { name: 'AbortError' })),
+          );
+        }),
+    );
+    (globalThis as { fetch?: typeof fetch }).fetch =
+      abortListeningFetch as unknown as typeof fetch;
+
+    const requestPromise = gitHttp.request(
+      buildRequest('https://example.git/git-upload-pack'),
+    );
+    const assertion = expect(requestPromise).rejects.toThrow('cancelled by user');
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(cancelInflightGitHttp()).toBe(true);
+    await assertion;
+    expect(cancelInflightGitHttp()).toBe(false);
+
+    jest.useRealTimers();
   });
 });

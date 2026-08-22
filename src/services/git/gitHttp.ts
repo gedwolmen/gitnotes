@@ -1,6 +1,28 @@
 import type { GitHttpRequest, GitHttpResponse, HttpClient } from 'isomorphic-git';
 
+// Large clone/fetch (git-upload-pack) downloads can legitimately take
+// minutes on big repos, so keep the long timeout there (#790). The push
+// path (git-receive-pack) uploads only local objects — a push stuck longer
+// than a minute means the network is bad and the user should get an error
+// instead of a 10-minute frozen spinner (#1013).
 const FETCH_TIMEOUT_MS = 600_000;
+const PUSH_TIMEOUT_MS = 60_000;
+
+let inflightController: AbortController | null = null;
+let userCancelled = false;
+
+/**
+ * Aborts the currently in-flight git HTTP request, if any. Used by the
+ * SyncBlockOverlay cancel button so a stuck push/fetch can be escaped
+ * without force-quitting the app (#1013). Returns true if a request was
+ * aborted.
+ */
+export function cancelInflightGitHttp(): boolean {
+  if (!inflightController) return false;
+  userCancelled = true;
+  inflightController.abort();
+  return true;
+}
 
 async function* yieldOnce(bytes: Uint8Array): AsyncIterableIterator<Uint8Array> {
   yield bytes;
@@ -51,8 +73,12 @@ export const gitHttp: HttpClient = {
     const body = await consumeBody(req.body);
     const headers: Record<string, string> = { ...req.headers };
 
+    const isPush = req.url.includes('/git-receive-pack');
+    const timeoutMs = isPush ? PUSH_TIMEOUT_MS : FETCH_TIMEOUT_MS;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    inflightController = controller;
+    userCancelled = false;
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     let response: Response;
     try {
@@ -64,8 +90,12 @@ export const gitHttp: HttpClient = {
       });
     } catch (fetchError) {
       clearTimeout(timeoutId);
+      if (inflightController === controller) inflightController = null;
       if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-        throw new Error(`Git HTTP request timed out after ${FETCH_TIMEOUT_MS}ms: ${req.url}`);
+        if (userCancelled) {
+          throw new Error(`Git HTTP request cancelled by user: ${req.url}`);
+        }
+        throw new Error(`Git HTTP request timed out after ${timeoutMs}ms: ${req.url}`);
       }
       throw fetchError;
     }
@@ -96,13 +126,18 @@ export const gitHttp: HttpClient = {
       } catch (readError) {
         try { await reader.cancel(); } catch { /* ignore */ }
         clearTimeout(timeoutId);
+        if (inflightController === controller) inflightController = null;
         if (readError instanceof Error && readError.name === 'AbortError') {
-          throw new Error(`Git HTTP response body read timed out after ${FETCH_TIMEOUT_MS}ms: ${req.url}`);
+          if (userCancelled) {
+            throw new Error(`Git HTTP request cancelled by user: ${req.url}`);
+          }
+          throw new Error(`Git HTTP response body read timed out after ${timeoutMs}ms: ${req.url}`);
         }
         throw readError;
       }
 
       clearTimeout(timeoutId);
+      if (inflightController === controller) inflightController = null;
       outBody = yieldChunks(chunks);
     } else {
       let buffer: ArrayBuffer;
@@ -110,12 +145,17 @@ export const gitHttp: HttpClient = {
         buffer = await response.arrayBuffer();
       } catch (arrayBufferError) {
         clearTimeout(timeoutId);
+        if (inflightController === controller) inflightController = null;
         if (arrayBufferError instanceof Error && arrayBufferError.name === 'AbortError') {
-          throw new Error(`Git HTTP response body read timed out after ${FETCH_TIMEOUT_MS}ms: ${req.url}`);
+          if (userCancelled) {
+            throw new Error(`Git HTTP request cancelled by user: ${req.url}`);
+          }
+          throw new Error(`Git HTTP response body read timed out after ${timeoutMs}ms: ${req.url}`);
         }
         throw arrayBufferError;
       }
       clearTimeout(timeoutId);
+      if (inflightController === controller) inflightController = null;
       outBody = yieldOnce(new Uint8Array(buffer));
     }
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { AccessibilityInfo } from 'react-native';
-import { render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 
 import { SyncBlockOverlay } from '../../../src/components/ui/SyncBlockOverlay';
 import { TestThemeProvider } from '../../ui/testThemeProvider';
@@ -27,6 +27,16 @@ jest.mock('../../../src/services/git/GitSyncGate', () => ({
   },
 }));
 
+const mockCancelInflightGitHttp = jest.fn();
+jest.mock('../../../src/services/git/gitHttp', () => ({
+  cancelInflightGitHttp: (...args: unknown[]) => mockCancelInflightGitHttp(...args),
+}));
+
+jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn(async () => undefined),
+  ImpactFeedbackStyle: { Light: 1, Medium: 2, Heavy: 3, Soft: 4, Rigid: 5 },
+}));
+
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => {
@@ -34,6 +44,8 @@ jest.mock('react-i18next', () => ({
         'sync.overlay.syncing': 'Syncing…',
         'sync.overlay.pushing': 'Pushing…',
         'sync.overlay.pulling': 'Pulling…',
+        'sync.overlay.cancel': 'Cancel',
+        'sync.overlay.cancelling': 'Cancelling…',
       };
       return map[key] ?? key;
     },
@@ -192,5 +204,52 @@ describe('SyncBlockOverlay', () => {
     mockOps = { 'op-save': makeCycleOp('save') };
     const { getByText } = render(<SyncBlockOverlay />, { wrapper });
     expect(getByText('Pushing…')).toBeTruthy();
+  });
+
+  /* --- cancel button (#1013) --- */
+
+  it('does not show the cancel button during the first seconds of a block', () => {
+    jest.useFakeTimers();
+    mockOps = { 'op-save': makeCycleOp('save') };
+    const { queryByTestId } = render(<SyncBlockOverlay />, { wrapper });
+    expect(queryByTestId('sync-block-overlay.cancel')).toBeNull();
+    jest.useRealTimers();
+  });
+
+  it('shows the cancel button after the block persists past the arm delay', () => {
+    jest.useFakeTimers();
+    mockOps = { 'op-save': makeCycleOp('save') };
+    const { getByTestId } = render(<SyncBlockOverlay />, { wrapper });
+    act(() => {
+      jest.advanceTimersByTime(5_000);
+    });
+    expect(getByTestId('sync-block-overlay.cancel')).toBeTruthy();
+    jest.useRealTimers();
+  });
+
+  it('pressing cancel aborts the in-flight git HTTP request and shows "Cancelling…"', () => {
+    jest.useFakeTimers();
+    mockOps = { 'op-save': makeCycleOp('save') };
+    mockCancelInflightGitHttp.mockReturnValue(true);
+    const { getByTestId, getByText } = render(<SyncBlockOverlay />, { wrapper });
+    act(() => {
+      jest.advanceTimersByTime(5_000);
+    });
+    fireEvent.press(getByTestId('sync-block-overlay.cancel'));
+    expect(mockCancelInflightGitHttp).toHaveBeenCalledTimes(1);
+    expect(getByText('Cancelling…')).toBeTruthy();
+    jest.useRealTimers();
+  });
+
+  it('hides the cancel button when the block clears before arming', () => {
+    jest.useFakeTimers();
+    mockOps = { 'op-save': makeCycleOp('save') };
+    const { queryByTestId } = render(<SyncBlockOverlay />, { wrapper });
+    mockOps = {};
+    act(() => {
+      jest.advanceTimersByTime(5_000);
+    });
+    expect(queryByTestId('sync-block-overlay.cancel')).toBeNull();
+    jest.useRealTimers();
   });
 });

@@ -611,7 +611,9 @@
     "overlay": {
       "syncing": "同期中…",
       "pushing": "送信中…",
-      "pulling": "受信中…"
+      "pulling": "受信中…",
+      "cancel": "キャンセル",
+      "cancelling": "キャンセル中…"
     }
   },
   "onboarding": {
