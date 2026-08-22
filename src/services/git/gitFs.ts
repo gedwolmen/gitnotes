@@ -214,12 +214,16 @@ export function makeGitFs(root: string): PromiseFsClient {
       }
       const encoding = typeof opts === 'string' ? opts : opts?.encoding;
       if (encoding === 'utf8' || (!encoding && isTextExtension(filepath))) {
-        return await FileSystem.readAsStringAsync(uri);
+        const text = await FileSystem.readAsStringAsync(uri);
+        await maybeYield();
+        return text;
       }
       const b64 = await FileSystem.readAsStringAsync(uri, {
         encoding: FileSystem.EncodingType.Base64,
       });
-      return await base64ToBytesAsync(b64);
+      const bytes = await base64ToBytesAsync(b64);
+      await maybeYield();
+      return bytes;
     },
 
     async writeFile(
@@ -306,7 +310,9 @@ export function makeGitFs(root: string): PromiseFsClient {
       if (!info.isDirectory) {
         throw new FsError('ENOTDIR', `ENOTDIR: not a directory '${filepath}'`);
       }
-      return await FileSystem.readDirectoryAsync(uri);
+      const entries = await FileSystem.readDirectoryAsync(uri);
+      await maybeYield();
+      return entries;
     },
 
     async mkdir(filepath: string): Promise<void> {
