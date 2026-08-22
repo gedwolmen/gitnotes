@@ -14,9 +14,10 @@ import { Note } from '../models/Note';
 import { GitHubService } from '../services/GitHubService';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import type { NoteDeleteParams } from '../services/NoteSyncQueueService';
-import { gitOperationRegistry, useGitOperationStore } from '../stores/gitOperationStore';
+import { SyncEngineService } from '../services/SyncEngineService';
+import { useGitOperationStore } from '../stores/gitOperationStore';
+import { deriveDefaultNotePath } from '../stores/noteStore';
 import { GitSyncGate } from '../services/git/GitSyncGate';
-import { deriveDefaultNotePath, useNoteStore } from '../stores/noteStore';
 import { syncNow } from '../services/git/manualSync';
 import ColorPicker from '../components/ColorPicker';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
@@ -261,48 +262,41 @@ export default function NotesListScreen() {
             setIsDeleting(true);
             try {
               const selectedNotes = notes.filter((note) => selectedIds.has(note.id));
-              const deleteTargets: { note: Note; filePath: string }[] = [];
-              const localOnlyIds: string[] = [];
+              const apiParams: NoteDeleteParams[] = [];
+              let localFailure = false;
               for (const note of selectedNotes) {
                 if (!note.repo) {
-                  localOnlyIds.push(note.id);
+                  const removed = await deleteNote(note.id);
+                  if (!removed) localFailure = true;
                   continue;
                 }
                 const filePath = note.filePath ?? deriveDefaultNotePath(note);
-                if (filePath) deleteTargets.push({ note, filePath });
-                else localOnlyIds.push(note.id);
-              }
-              if (deleteTargets.length > 0) {
-                // All rows lock simultaneously; each is removed only on its queue success event.
-                for (const { note, filePath } of deleteTargets) {
-                  gitOperationRegistry.begin({
-                    kind: 'delete',
-                    repo: note.repo!,
+                if (!filePath) {
+                  const removed = await deleteNote(note.id);
+                  if (!removed) localFailure = true;
+                  continue;
+                }
+                const mode = await SyncEngineService.getMode(note.repo);
+                if (mode === 'clone') {
+                  // Clone mode: commit the delete locally right now
+                  // (push:false) so the next pull can't resurrect the file.
+                  // The batch-queue path never drained in clone mode, so the
+                  // file stayed in the tree and the pull re-imported it (#1030).
+                  const removed = await deleteNote(note.id);
+                  if (!removed) localFailure = true;
+                } else {
+                  apiParams.push({
+                    repo: note.repo,
                     branch: note.branch,
-                    path: filePath,
-                    entityIds: [note.id],
-                    status: 'running',
-                    attempts: 0,
+                    filePath,
+                    title: note.title,
+                    accountId: note.accountId,
+                    localNoteId: note.id,
                   });
                 }
-                const params: NoteDeleteParams[] = deleteTargets.map(({ note, filePath }) => ({
-                  repo: note.repo!,
-                  branch: note.branch,
-                  filePath,
-                  title: note.title,
-                  accountId: note.accountId,
-                  localNoteId: note.id,
-                }));
-                await NoteSyncQueueService.enqueueNoteDeletes(params);
               }
-              let localFailure = false;
-              for (const id of localOnlyIds) {
-                try {
-                  const removed = await useNoteStore.getState().deleteNote(id);
-                  if (!removed) localFailure = true;
-                } catch {
-                  localFailure = true;
-                }
+              if (apiParams.length > 0) {
+                await NoteSyncQueueService.enqueueNoteDeletes(apiParams);
               }
               if (localFailure) {
                 HapticService.warning();
