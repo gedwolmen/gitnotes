@@ -611,7 +611,9 @@
     "overlay": {
       "syncing": "Synchronisation…",
       "pushing": "Envoi…",
-      "pulling": "Réception…"
+      "pulling": "Réception…",
+      "cancel": "Annuler",
+      "cancelling": "Annulation…"
     }
   },
   "onboarding": {

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, ActivityIndicator, Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useTranslation } from 'react-i18next';
@@ -6,13 +6,20 @@ import { useTranslation } from 'react-i18next';
 import { useTheme, useTokens } from '../../contexts/ThemeContext';
 import { useGitOperationStore, GIT_OP_ALL_REPOS } from '../../stores/gitOperationStore';
 import { GitSyncGate } from '../../services/git/GitSyncGate';
+import { cancelInflightGitHttp } from '../../services/git/gitHttp';
+import { HapticService } from '../../utils/haptics';
 
 /**
  * Full-screen blocking overlay shown during foreground sync cycles (#926).
  * Blocks pointer events and announces via VoiceOver so the user knows an
  * in-flight save or manual sync is occupying the sync gate. Hidden for
  * idle / background / startup cycles (non-blocking pill handles those).
+ *
+ * A Cancel button appears once the block has lasted CANCEL_ARM_MS so a
+ * stuck push/fetch can be escaped instead of forcing a force-quit (#1013).
  */
+
+const CANCEL_ARM_MS = 5_000;
 
 function useBlockingSyncVisible(): boolean {
   return useGitOperationStore((s) =>
@@ -33,6 +40,8 @@ export function SyncBlockOverlay() {
   const { colors, spacing, type } = useTokens();
   const opacity = useRef(new Animated.Value(0)).current;
   const prevVisibleRef = useRef(false);
+  const [cancelArmed, setCancelArmed] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   // Pick label: "pushing" when push markers are active, else "syncing".
   const hasPushMarkers = GitSyncGate.isPushActive();
@@ -46,6 +55,25 @@ export function SyncBlockOverlay() {
       useNativeDriver: true,
     }).start();
   }, [visible, opacity]);
+
+  // Arm the cancel button only after the block has persisted — short syncs
+  // are normal and shouldn't invite cancelling.
+  useEffect(() => {
+    if (!visible) {
+      setCancelArmed(false);
+      setCancelling(false);
+      return;
+    }
+    const timer = setTimeout(() => setCancelArmed(true), CANCEL_ARM_MS);
+    return () => clearTimeout(timer);
+  }, [visible]);
+
+  const handleCancel = () => {
+    if (cancelling) return;
+    setCancelling(true);
+    void HapticService.error();
+    cancelInflightGitHttp();
+  };
 
   // Announce to VoiceOver / TalkBack on visible→true transition only.
   useEffect(() => {
@@ -72,6 +100,21 @@ export function SyncBlockOverlay() {
         <Text style={{ color: colors.text, fontSize: type.sm, fontWeight: '600' }} numberOfLines={1}>
           {label}
         </Text>
+        {cancelArmed && (
+          <Pressable
+            testID="sync-block-overlay.cancel"
+            onPress={handleCancel}
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              styles.cancelButton,
+              { backgroundColor: pressed ? colors.shadow + '30' : colors.shadow + '14' },
+            ]}
+          >
+            <Text style={{ color: colors.text, fontSize: type.sm, fontWeight: '600' }}>
+              {cancelling ? t('sync.overlay.cancelling') : t('sync.overlay.cancel')}
+            </Text>
+          </Pressable>
+        )}
       </View>
     </Animated.View>
   );
@@ -94,5 +137,11 @@ const styles = StyleSheet.create({
   content: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  cancelButton: {
+    marginTop: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 999,
   },
 });

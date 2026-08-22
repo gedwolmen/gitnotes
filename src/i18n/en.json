@@ -571,7 +571,9 @@
     "overlay": {
       "syncing": "Syncing…",
       "pushing": "Pushing…",
-      "pulling": "Pulling…"
+      "pulling": "Pulling…",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…"
     }
   },
   "onboarding": {

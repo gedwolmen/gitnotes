@@ -611,7 +611,9 @@
     "overlay": {
       "syncing": "Sincronizando…",
       "pushing": "Enviando…",
-      "pulling": "Descargando…"
+      "pulling": "Descargando…",
+      "cancel": "Cancelar",
+      "cancelling": "Cancelando…"
     }
   },
   "onboarding": {
