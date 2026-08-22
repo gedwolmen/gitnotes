@@ -204,6 +204,13 @@ function renderSettings() {
       syncIntervalSeconds={60}
       onToggleSyncFrequently={jest.fn()}
       onSetSyncIntervalSeconds={jest.fn()}
+      syncHealth={{
+        status: 'idle',
+        lastRunAt: 0,
+        lastCompletedAt: 0,
+        lastFailedAt: 0,
+        consecutiveFailures: 0,
+      }}
     />,
   );
 }
@@ -329,6 +336,13 @@ describe('Settings - Reset AI Memory', () => {
         syncIntervalSeconds={60}
         onToggleSyncFrequently={jest.fn()}
         onSetSyncIntervalSeconds={jest.fn()}
+        syncHealth={{
+          status: 'idle',
+          lastRunAt: 0,
+          lastCompletedAt: 0,
+          lastFailedAt: 0,
+          consecutiveFailures: 0,
+        }}
       />,
     );
 
