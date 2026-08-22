@@ -28,14 +28,40 @@ async function* yieldOnce(bytes: Uint8Array): AsyncIterableIterator<Uint8Array> 
   yield bytes;
 }
 
-// Yields response chunks as they were read instead of merging them into one
-// contiguous buffer. isomorphic-git still collects the packfile into memory
-// on its side (`Buffer.from(await collect(response.packfile))` in 1.40.0),
-// but skipping our own merge removes a second full-size copy of the packfile
-// from peak memory during a large clone/fetch (#982).
-async function* yieldChunks(chunks: Uint8Array[]): AsyncIterableIterator<Uint8Array> {
-  for (const chunk of chunks) {
-    yield chunk;
+/**
+ * Lazily reads the response body from the reader, yielding each chunk as it
+ * arrives instead of collecting the whole stream first. isomorphic-git still
+ * buffers the packfile on its side (`Buffer.from(await collect(...))` in
+ * 1.40.0), but we never hold a second full-size copy, and the consumer gets
+ * the first chunk as soon as the network delivers it (#982, #1021).
+ */
+async function* streamResponseBody(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  controller: AbortController,
+  timeoutId: ReturnType<typeof setTimeout>,
+  timeoutMs: number,
+  url: string,
+): AsyncIterableIterator<Uint8Array> {
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value && value.length > 0) {
+        yield value;
+      }
+    }
+  } catch (readError) {
+    try { await reader.cancel(); } catch { /* ignore */ }
+    if (readError instanceof Error && readError.name === 'AbortError') {
+      if (userCancelled) {
+        throw new Error(`Git HTTP request cancelled by user: ${url}`);
+      }
+      throw new Error(`Git HTTP response body read timed out after ${timeoutMs}ms: ${url}`);
+    }
+    throw readError;
+  } finally {
+    clearTimeout(timeoutId);
+    if (inflightController === controller) inflightController = null;
   }
 }
 
@@ -103,42 +129,17 @@ export const gitHttp: HttpClient = {
     // Try to stream the response body when the environment supports
     // ReadableStream (iOS/Android modern RN, Web). Falls back to
     // `arrayBuffer()` for environments without streaming support
-    // (legacy RN, older Hermes). Chunks are yielded as read (never merged
-    // into one contiguous buffer) so a large packfile is not held twice in
-    // memory (#982) — fixing "Packfile trailer mismatch" errors on large
-    // repos (issue #790).
+    // (legacy RN, older Hermes). The body is a lazy generator: chunks are
+    // read and yielded as the consumer pulls, never accumulated here (#982,
+    // #1021) — fixing "Packfile trailer mismatch" errors on large repos
+    // (issue #790).
     let outBody: AsyncIterableIterator<Uint8Array>;
     const responseBody = response.body as (ReadableStream<Uint8Array> & { getReader?: () => ReadableStreamDefaultReader<Uint8Array> }) | null;
     const hasStreaming = !!responseBody && typeof responseBody.getReader === 'function';
 
     if (hasStreaming) {
       const reader = responseBody!.getReader!();
-      const chunks: Uint8Array[] = [];
-      try {
-         
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          if (value && value.length > 0) {
-            chunks.push(value);
-          }
-        }
-      } catch (readError) {
-        try { await reader.cancel(); } catch { /* ignore */ }
-        clearTimeout(timeoutId);
-        if (inflightController === controller) inflightController = null;
-        if (readError instanceof Error && readError.name === 'AbortError') {
-          if (userCancelled) {
-            throw new Error(`Git HTTP request cancelled by user: ${req.url}`);
-          }
-          throw new Error(`Git HTTP response body read timed out after ${timeoutMs}ms: ${req.url}`);
-        }
-        throw readError;
-      }
-
-      clearTimeout(timeoutId);
-      if (inflightController === controller) inflightController = null;
-      outBody = yieldChunks(chunks);
+      outBody = streamResponseBody(reader, controller, timeoutId, timeoutMs, req.url);
     } else {
       let buffer: ArrayBuffer;
       try {
