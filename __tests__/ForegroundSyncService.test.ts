@@ -262,4 +262,74 @@ describe('ForegroundSyncService', () => {
 
     expect(drainPushQueueMock).not.toHaveBeenCalled();
   });
+
+  test('throttles repeated busy-skip log lines to one per window', async () => {
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    let resolvePull: ((result: PullResult) => void) | undefined;
+    pullMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolvePull = resolve;
+        }),
+    );
+
+    const firstPull = __runPullForTest('interval');
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await __runPullForTest('interval');
+    await __runPullForTest('interval');
+    await __runPullForTest('interval');
+
+    const skipLines = logSpy.mock.calls.filter(([msg]) => String(msg).includes('[ForegroundSync] skip'));
+    expect(skipLines.length).toBe(1);
+
+    resolvePull?.(pullResult);
+    await firstPull;
+    logSpy.mockRestore();
+  });
+
+  test('backs off interval checks while a pull stays stuck', async () => {
+    const randomSpy = jest.spyOn(Math, 'random').mockReturnValue(0.5);
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    let resolvePull: ((result: PullResult) => void) | undefined;
+    pullMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolvePull = resolve;
+        }),
+    );
+    startForegroundWatcher({ syncFrequentlyEnabled: true, syncIntervalSeconds: 2 });
+    mockAppStateChangeListener?.('active');
+    await jest.advanceTimersByTimeAsync(0);
+    expect(pullMock).toHaveBeenCalledTimes(1);
+    expect(isForegroundSyncInFlight()).toBe(true);
+
+    // A fixed 2s interval would fire ~30 times over a minute of stuck pull;
+    // the jittered back-off must keep the pull single-flight throughout.
+    await jest.advanceTimersByTimeAsync(60_000);
+    expect(pullMock).toHaveBeenCalledTimes(1);
+
+    await jest.advanceTimersByTimeAsync(540_000);
+    expect(isForegroundSyncInFlight()).toBe(false);
+    expect(pullMock).toHaveBeenCalledTimes(1);
+
+    const skipLines = logSpy.mock.calls.filter(([msg]) => String(msg).includes('[ForegroundSync] skip'));
+    expect(skipLines.length).toBeGreaterThan(0);
+    expect(skipLines.length).toBeLessThanOrEqual(10);
+
+    const callsBeforeRecovery = pullMock.mock.calls.length;
+    resolvePull?.(pullResult);
+    await jest.advanceTimersByTimeAsync(0);
+    await jest.advanceTimersByTimeAsync(200_000);
+    expect(pullMock.mock.calls.length).toBeGreaterThan(callsBeforeRecovery);
+
+    randomSpy.mockRestore();
+    logSpy.mockRestore();
+  });
 });
