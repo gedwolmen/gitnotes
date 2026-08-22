@@ -392,3 +392,68 @@ describe('offerings', () => {
     expect(useProStore.getState().offeringsReady).toBe(true);
   });
 });
+
+describe('DEV_FORCE_PRO override', () => {
+  /** Case A: iOS simulator — override is active. */
+  it('selectIsPro returns true even with no entitlement or grandfather status', () => {
+    let captured: any;
+    jest.isolateModules(() => {
+      jest.doMock('expo-device', () => ({ isDevice: false }));
+      captured = require('../../src/stores/proStore');
+    });
+    expect(captured.DEV_FORCE_PRO).toBe(true);
+    expect(captured.selectIsPro({ entitlementActive: false, isGrandfathered: false } as never)).toBe(true);
+  });
+
+  it('initialize sets status to pro regardless of RevenueCat result when isDevice=false on iOS', async () => {
+    let captured: any;
+    jest.isolateModules(() => {
+      jest.doMock('expo-device', () => ({ isDevice: false }));
+      captured = require('../../src/stores/proStore');
+    });
+    captured.useProStore.setState({ status: 'loading', entitlementActive: false, isGrandfathered: false });
+    await captured.useProStore.getState().initialize();
+    expect(captured.useProStore.getState().status).toBe('pro');
+  });
+
+  it('initialize catch path also returns pro when override is active', async () => {
+    let captured: any;
+    jest.isolateModules(() => {
+      jest.doMock('expo-device', () => ({ isDevice: false }));
+      jest.doMock('../../src/services/RevenueCatService', () => ({
+        configureRevenueCat: jest.fn(async () => { throw new Error('simulated init failure'); }),
+        getCustomerInfo: jest.fn(),
+        getPackages: jest.fn(),
+        purchasePackage: jest.fn(),
+        restorePurchases: jest.fn(),
+        onCustomerInfoUpdate: jest.fn(),
+      }));
+      captured = require('../../src/stores/proStore');
+    });
+    captured.useProStore.setState({ status: 'loading' });
+    await captured.useProStore.getState().initialize();
+    expect(captured.useProStore.getState().status).toBe('pro');
+  });
+
+  /** Case B: real iOS device or non-iOS platform — override is inert, existing behavior preserved. */
+  it('selectIsPro returns false when isDevice=true even on iOS', () => {
+    let captured: any;
+    jest.isolateModules(() => {
+      jest.doMock('expo-device', () => ({ isDevice: true }));
+      captured = require('../../src/stores/proStore');
+    });
+    expect(captured.DEV_FORCE_PRO).toBe(false);
+    expect(captured.selectIsPro({ entitlementActive: false, isGrandfathered: false } as never)).toBe(false);
+  });
+
+  it('with isDevice=true, initialize falls back to free when no entitlement', async () => {
+    let captured: any;
+    jest.isolateModules(() => {
+      jest.doMock('expo-device', () => ({ isDevice: true }));
+      captured = require('../../src/stores/proStore');
+    });
+    captured.useProStore.setState({ status: 'loading', entitlementActive: false, isGrandfathered: false });
+    await captured.useProStore.getState().initialize();
+    expect(captured.useProStore.getState().status).toBe('free');
+  });
+});

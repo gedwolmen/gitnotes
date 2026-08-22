@@ -40,6 +40,7 @@
 | [Floating Button Collision — Crash Fix](./floating-button-collision-crash-fix.md) | Re-entrancy guard on `publishButtonRect` + collision listener reads published rect so both FABs coexist without a stack-overflow recursion killing the AI button's hold animation |
 | [Security & Dependabot Alerts](./security-dependabot.md) | GitHub security surface, `uuid` fix via yarn resolutions (#4), `image-size` alerts deferred (no patched release, build-time only) |
 | [Report Bugs & Feature Requests](./report-issue-links.md) | Settings About-row + onboarding footer link to `github.com/gedwolmen/gitnotes/issues`, i18n'd across all six locales |
+| [Pro Dev Override](./pro-dev-override.md) | `__DEV__`-only iOS-simulator override that forces Pro gate for QA — NOT a payment bypass; RevenueCat unchanged; gate triple `__DEV__ && Platform.OS==='ios' && !Device.isDevice` |
 
 ## Quick Start
 
