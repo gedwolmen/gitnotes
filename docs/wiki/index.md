@@ -41,6 +41,7 @@
 | [Security & Dependabot Alerts](./security-dependabot.md) | GitHub security surface, `uuid` fix via yarn resolutions (#4), `image-size` alerts deferred (no patched release, build-time only) |
 | [Report Bugs & Feature Requests](./report-issue-links.md) | Settings About-row + onboarding footer link to `github.com/gedwolmen/gitnotes/issues`, i18n'd across all six locales |
 | [Pro Dev Override](./pro-dev-override.md) | `__DEV__`-only iOS-simulator override that forces Pro gate for QA — NOT a payment bypass; RevenueCat unchanged; gate triple `__DEV__ && Platform.OS==='ios' && !Device.isDevice` |
+| [E2E Sync Testing](./e2e-sync-testing.md) | E2E test harness: 6 scenarios × 2 modes, timing instrumentation, push-trigger verification, staged-visibility sub-checks, blocking overlay, remote verification
 
 ## Quick Start
 
