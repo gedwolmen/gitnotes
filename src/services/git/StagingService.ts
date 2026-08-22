@@ -226,6 +226,12 @@ export class StagingService {
    * All staged changes: queued mutations (both engines) plus clone-mode
    * commits that never reached origin. When the remote ref is missing the
    * whole local branch counts as unpushed.
+   *
+   * API-mode repos have no staging concept — writes are write-through
+   * (queued mutations drain inside the same save cycle), so we never surface
+   * their queue items here. Surfacing them showed a push button / Stage
+   * screen entry in API mode that does nothing the user can act on (the
+   * change is already in flight and will sync on its own).
    */
   static async listStaged(repoPath?: string, branch?: string): Promise<StagedItem[]> {
     const items: StagedItem[] = [];
@@ -237,6 +243,7 @@ export class StagingService {
       if (repoPath && itemRepo !== repoPath) continue;
       if (branch && itemBranch !== branch) continue;
       const mode = await SyncEngineService.getMode(itemRepo);
+      if (mode === 'api') continue;
       items.push({
         repoPath: itemRepo,
         branch: itemBranch,
