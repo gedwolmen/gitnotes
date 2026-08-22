@@ -81,3 +81,12 @@ Eight new `explore.*` keys added to all six locales (en/es/fr/de/ja/ko): `pullRe
 - `src/i18n/{en,es,fr,de,ja,ko}.json` — 14 new keys each (8 from the feature + 6 from the polish: `permissionTitle`, `loadErrorTitle`, `browseFilesSub`, `pullRequestsSub`, `issuesSub`, `openSettings`)
 - `__tests__/services/git/gitHost-issues-pulls.test.ts` — host tests
 - `__tests__/hooks/useGitHostQueries.test.ts` — hook tests
+
+## Hub header — branch chip removed
+
+The repo-hub page's top-right branch chip (`explore.hub.branch-picker`, an
+`actions` slot on the hub `ScreenHeader`) was removed — the hub header now
+shows only the repo name + back button. Branch selection remains available
+from the file-tree view (`explore.button.branch-picker`), so no branch-picker
+functionality was lost; only the redundant header chip is gone.
+

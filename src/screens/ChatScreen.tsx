@@ -20,6 +20,7 @@ import { useChatScreenController } from '../components/chat/useChatScreenControl
 import { useAIStore } from '../stores/aiStore';
 import { useTranslation } from 'react-i18next';
 import { useProScreenGuard } from '../hooks/useProScreenGuard';
+import { useSafeBack } from '../hooks/useSafeBack';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'ChatScreen'>;
 type ChatScreenRouteProp = RouteProp<RootStackParamList, 'ChatScreen'>;
@@ -27,6 +28,7 @@ type ChatScreenRouteProp = RouteProp<RootStackParamList, 'ChatScreen'>;
 export default function ChatScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<NavigationProp>();
+  const safeBack = useSafeBack();
   const route = useRoute<ChatScreenRouteProp>();
   const { colors, spacing, type } = useTokens();
   const headerHeight = useScreenHeaderHeight({ subtitle: true });
@@ -227,7 +229,7 @@ export default function ChatScreen() {
       <ScreenHeader
         title={thread?.title ?? t('chat.title')}
         subtitle={thread ? t('chat.messageCount', { count: messages.length }) : t('chat.loadingConversation')}
-        onBack={() => navigation.goBack()}
+        onBack={safeBack}
       />
     </SafeAreaView>
   );

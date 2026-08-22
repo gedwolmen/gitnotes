@@ -96,25 +96,33 @@ export function Button(props: ButtonProps) {
     </View>
   );
 
-  // A trailing icon optically shifts the centered label: the icon adds width
-  // to one side, so the text sits left of the button's true center. Pin the
-  // trailing icon to the right edge (absolute) and reserve the same space on
-  // the left so the label stays dead-center (onboarding "Next" bug).
+  // An edge icon (leading or trailing) optically shifts the centered label:
+  // the icon adds width to one side, so the text sits off the button's true
+  // center. Pin the icon(s) to the edge (absolute) and reserve the same space
+  // on both sides so the label stays dead-center. This fixes the trailing
+  // onboarding "Next" bug and the leading-icon "New Chat" button, which
+  // rendered its label ~half-an-icon right of center with inline alignment.
   //
   // iconAlign="edge" keeps that behavior for wide/fullWidth buttons where the
   // pinned icon has room. iconAlign="inline" (default) renders the icon next
   // to the label in the flex row instead — needed for narrow buttons (e.g. the
   // header "Save" button) where the absolutely-pinned icon overlaps the text.
+  const hasLeadingIcon = leadingIcon != null;
   const hasTrailingIcon = trailingIcon != null;
-  const useEdgeIcon = hasTrailingIcon && iconAlign === 'edge';
+  const useEdgeIcon = (hasLeadingIcon || hasTrailingIcon) && iconAlign === 'edge';
   const centeredContent = (
     <View className="flex-row items-center justify-center">
-      <View style={{ width: hasTrailingIcon ? 20 : 0 }} />
+      <View style={{ width: hasLeadingIcon || hasTrailingIcon ? 20 : 0 }} />
       {labelNode}
       {childrenNode}
-      <View style={{ width: hasTrailingIcon ? 20 : 0 }} />
+      <View style={{ width: hasLeadingIcon || hasTrailingIcon ? 20 : 0 }} />
     </View>
   );
+  const edgeLeadingIcon = hasLeadingIcon ? (
+    <View className="absolute left-5">
+      {leadingIcon}
+    </View>
+  ) : null;
   const edgeIcon = hasTrailingIcon ? (
     <View className="absolute right-5">
       {trailingIcon}
@@ -144,6 +152,7 @@ export function Button(props: ButtonProps) {
         {useEdgeIcon ? (
           <>
             {centeredContent}
+            {edgeLeadingIcon}
             {edgeIcon}
           </>
         ) : content}
@@ -182,6 +191,7 @@ export function Button(props: ButtonProps) {
             {useEdgeIcon ? (
               <>
                 {centeredContent}
+                {edgeLeadingIcon}
                 {edgeIcon}
               </>
             ) : content}

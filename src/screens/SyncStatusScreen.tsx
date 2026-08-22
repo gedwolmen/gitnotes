@@ -12,6 +12,7 @@ import type { FileConflict } from '../services/conflict/types';
 import type { RootStackParamList } from '../navigation/types';
 import { ScreenHeader } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
+import { useSafeBack } from '../hooks/useSafeBack';
 
 const MANAGE_THRESHOLD = 5;
 
@@ -60,6 +61,7 @@ interface SyncStatusScreenProps {
 export default function SyncStatusScreen({ onAiFixRemaining }: SyncStatusScreenProps = {}) {
   const { colors } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const safeBack = useSafeBack();
   const route = useRoute<RouteProp<RootStackParamList, 'Conflicts'>>();
   const conflicts = useConflictStore((s) => s.conflicts);
   const hasAiModel = useAIStore((s) => s.getSelectedModel() !== undefined);
@@ -223,7 +225,7 @@ export default function SyncStatusScreen({ onAiFixRemaining }: SyncStatusScreenP
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }}>
       <ScreenHeader
         title={isManageMode ? 'Manage Conflicts' : 'Sync Conflicts'}
-        onBack={() => navigation.goBack()}
+        onBack={safeBack}
         actions={
           hasAiModel ? (
             <TouchableOpacity

@@ -27,6 +27,7 @@ import { useNoteEditorDocument } from '../components/editor/useNoteEditorDocumen
 import { useNoteEditorPreview } from '../components/editor/useNoteEditorPreview';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { useTranslation } from 'react-i18next';
+import { useSafeBack } from '../hooks/useSafeBack';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'NoteEditor'>;
 type NoteEditorRouteProp = RouteProp<RootStackParamList, 'NoteEditor'>;
@@ -42,6 +43,7 @@ export default function NoteEditorScreen() {
 function NoteEditorScreenInner() {
   const { t } = useTranslation();
   const navigation = useNavigation<NavigationProp>();
+  const safeBack = useSafeBack();
   const route = useRoute<NoteEditorRouteProp>();
   const { colors, isDark } = useTheme();
   const { authState, activeAccountId } = useAuth();
@@ -134,7 +136,7 @@ function NoteEditorScreenInner() {
         isSpeaking={preview.isSpeaking}
         tocEntries={preview.tocEntries}
         showToc={preview.showToc}
-        onBack={() => navigation.goBack()}
+        onBack={safeBack}
         onToggleToc={() => preview.setShowToc(true)}
         onToggleSpeak={preview.handleToggleSpeak}
         onEdit={() => document.setIsEditing(true)}

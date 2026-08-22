@@ -25,6 +25,7 @@ import { indexDump, removeDump } from '../services/ai/thoughtDumpIndexing';
 import { SwipeableListItem } from '../components/list/SwipeableListItem';
 import { BulkActionBar } from '../components/list/BulkActionBar';
 import { useProScreenGuard } from '../hooks/useProScreenGuard';
+import { useSafeBack } from '../hooks/useSafeBack';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -35,6 +36,7 @@ interface Props {
 export default function ThoughtDumpScreen({ onDumpChange }: Props) {
   const { t } = useTranslation();
   const navigation = useNavigation<NavigationProp>();
+  const safeBack = useSafeBack();
   const route = useRoute<RouteProp<RootStackParamList, 'ThoughtDump'>>();
   const { colors, spacing } = useTokens();
   const headerHeight = useScreenHeaderHeight();
@@ -473,7 +475,7 @@ export default function ThoughtDumpScreen({ onDumpChange }: Props) {
 
       <ScreenHeader
         title={t('thoughtDump.title')}
-        onBack={() => navigation.goBack()}
+        onBack={safeBack}
       />
     </SafeAreaView>
   );
