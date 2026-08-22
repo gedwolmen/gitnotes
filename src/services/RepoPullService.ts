@@ -659,6 +659,8 @@ async function pullTodosFromRepo(
   }
 
   let processed = 0;
+  let skipped = 0;
+  const skippedPaths: string[] = [];
   const todoJsonCount = files.filter((f) => f.path.endsWith('.json')).length;
   try {
     const allTodos = await StorageService.getAllTodos();
@@ -672,11 +674,20 @@ async function pullTodosFromRepo(
         onProgress?.('Importing todos…', processed, todoJsonCount);
         remotePaths.add(file.path);
 
+        const trimmed = file.content.trim();
+        if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+          skipped++;
+          skippedPaths.push(file.path);
+          continue;
+        }
+
         let data: Record<string, any>;
         try {
-          data = JSON.parse(file.content);
+          data = JSON.parse(trimmed);
         } catch (error) {
-          console.warn('[RepoPullService] Failed to parse todo JSON:', error);
+          skipped++;
+          skippedPaths.push(file.path);
+          console.error(`[RepoPullService] Failed to parse todo JSON (${file.path}):`, error);
           continue;
         }
 
@@ -717,6 +728,12 @@ async function pullTodosFromRepo(
           pulled++;
         }
       }
+    }
+
+    if (skipped > 0) {
+      console.error(
+        `[RepoPullService] Skipped ${skipped} todo file(s) with invalid JSON content: ${skippedPaths.join(', ')}`,
+      );
     }
 
     // Reconcile: drop local todos whose backing file was deleted remotely.
