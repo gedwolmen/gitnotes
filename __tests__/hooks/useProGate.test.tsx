@@ -6,7 +6,7 @@ jest.mock('@react-navigation/native', () => ({
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { fireEvent, render } from '@testing-library/react-native';
-import { useProGate } from '../../src/hooks/useProGate';
+import { useProGate, useProStatus } from '../../src/hooks/useProGate';
 import { __setProState } from '../../src/stores/proStore';
 
 function Harness() {
@@ -16,6 +16,16 @@ function Harness() {
       <Text testID="isPro">{String(isPro)}</Text>
       <Text testID="loading">{String(loading)}</Text>
       <TouchableOpacity testID="open" onPress={openPaywall} />
+    </View>
+  );
+}
+
+function StatusHarness() {
+  const { isPro, loading } = useProStatus();
+  return (
+    <View>
+      <Text testID="status-isPro">{String(isPro)}</Text>
+      <Text testID="status-loading">{String(loading)}</Text>
     </View>
   );
 }
@@ -61,5 +71,19 @@ describe('useProGate', () => {
     const { getByTestId } = render(<Harness />);
     fireEvent.press(getByTestId('open'));
     expect(mockNavigate).toHaveBeenCalledWith('Paywall');
+  });
+});
+
+describe('useProStatus', () => {
+  it('reports pro status without requiring navigation', () => {
+    const { getByTestId } = render(<StatusHarness />);
+    expect(getByTestId('status-isPro').props.children).toBe('true');
+    expect(getByTestId('status-loading').props.children).toBe('false');
+  });
+
+  it('reports loading state', () => {
+    __setProState({ status: 'loading', entitlementActive: false, isGrandfathered: false });
+    const { getByTestId } = render(<StatusHarness />);
+    expect(getByTestId('status-loading').props.children).toBe('true');
   });
 });

@@ -17,7 +17,7 @@ import { OnboardingService } from '../services/OnboardingService';
 import { AuthService } from '../services/AuthService';
 import { GitHubService } from '../services/GitHubService';
 import { useAIStore } from '../stores/aiStore';
-import { useProGate } from '../hooks/useProGate';
+import { useProStatus } from '../hooks/useProGate';
 import { Button, Input, Surface } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 
@@ -67,7 +67,7 @@ const TOTAL_STEPS = INFO_STEPS.length + 3;
 export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScreenProps) {
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const { isPro } = useProGate();
+  const { isPro } = useProStatus();
   const [currentStep, setCurrentStep] = useState(0);
   const [token, setToken] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
