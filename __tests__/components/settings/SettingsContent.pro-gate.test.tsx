@@ -122,6 +122,13 @@ function renderContent(props: Record<string, unknown> = {}) {
     isPro: true,
     proStatusLabel: 'pro.statusActive',
     onOpenPaywall: jest.fn(),
+    syncHealth: {
+      status: 'idle',
+      lastRunAt: 0,
+      lastCompletedAt: 0,
+      lastFailedAt: 0,
+      consecutiveFailures: 0,
+    },
     ...props,
   };
   return render(React.createElement(SettingsContent as React.ComponentType<Record<string, unknown>>, base));
