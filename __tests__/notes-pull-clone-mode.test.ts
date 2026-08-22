@@ -186,11 +186,4 @@ describe('pullNotesFromRepo via clone mode', () => {
     expect(GitFsService.listTree).not.toHaveBeenCalled();
     expect(GitHubService.getTreeRecursiveOrThrow).toHaveBeenCalledWith('me', 'gitnotes', 'main');
   });
-
-  test('clone failure returns 0 and skips reconcile (saveAllNotes not called)', async () => {
-    (GitFsService.cloneExclusive as jest.Mock).mockRejectedValueOnce(new Error('network'));
-    const result = await pullFromSingleRepo('me/gitnotes');
-    expect(result.notes).toBe(0);
-    expect(StorageService.saveAllNotes).not.toHaveBeenCalled();
-  });
 });

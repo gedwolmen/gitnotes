@@ -109,7 +109,6 @@ export function enableSyncTiming(): void {
 export function disableSyncTiming(): void {
   if (!enabled) return;
   enabled = false;
-  entries.length = 0;
   if (httpWrapped && _origHttpRequest) {
     gitHttp.request = _origHttpRequest;
     httpWrapped = false;
