@@ -46,6 +46,9 @@
 | [v1.5.0 App Store Rejection](./v1.5.0-app-store-rejection.md) | 2.1.0 App Completeness SIGABRT on first launch — root cause: `useNavigation()` outside `NavigationContainer` in `useProGate.ts`; fix already on `main` (`c5362e86`); build from `main HEAD` to resubmit |
 | [Git Test E2E Report](./git-test-e2e-report.md) | Live round-trip timings against `test-notes` for all 12 scenarios (6 clone-mode + 6 API-mode) with per-action breakdown, syncTiming instrumentation seam, and Mac vs simulator scope |
 | [Git Test Big Repo](./git-test-big-repo.md) | Same 12-scenario matrix on a 429-file / 11MB / 28-commit synthetic repo (local bare remote) — linear scaling, no quadratic blowup; small-vs-big comparison table |
+| [ForegroundSync Busy-Loop](./foreground-sync-busy-loop.md) | `ForegroundSync` skip-spam fix (#984): log throttle (10s window), busy-skip `consecutiveSkips` counter, jittered exponential interval back-off via self-scheduling `setTimeout` |
+| [gitFs Write-Path Text Fast Path](./gitfs-write-text-fast-path.md) | `gitFs.writeFile` now decodes `Uint8Array` payloads for text extensions (`md/norg/org/txt/json`) with `fatal:true` UTF-8 + base64 fallback — kills the write-side base64 round-trip (#986) |
+| [LFS Pointer Scan — Parallel Walk](./lfs-scan-parallel-walk.md) | `scanForPointers` walks the working tree with bounded concurrency (`SCAN_CONCURRENCY=16` via `mapLimit`) instead of one serial bridge round-trip per file (#980) |
 
 ## Quick Start
 
