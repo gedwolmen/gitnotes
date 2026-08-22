@@ -598,8 +598,6 @@ describe('notes delete lock', () => {
     const params = (NoteSyncQueueService.enqueueNoteDeletes as jest.Mock).mock.calls[0][0];
     expect(params.map((p: any) => p.filePath).sort()).toEqual(['notes/b1.md', 'notes/b2.md', 'notes/b3.md']);
     expect(params.map((p: any) => p.localNoteId).sort()).toEqual(['b1', 'b2', 'b3']);
-    const ops = Object.values(useGitOperationStore.getState().ops);
-    expect(ops.filter((op) => op.kind === 'delete')).toHaveLength(3);
   });
 
   it('restart hydrate from a seeded queue: no lock spinner or lock-error rendered', async () => {

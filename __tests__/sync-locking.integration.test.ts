@@ -725,12 +725,9 @@ describe('sync-locking integration scenarios S1–S8', () => {
     expect(useNoteStore.getState().notes).toHaveLength(0);
   });
 
-  it('S5 (clone mode) — bulk delete of 10 notes is ONE queue write; no lock spinner; the group flushes with exactly ONE LocalGitWriter.push', async () => {
+  it('S5 (clone mode) — bulk delete commits each delete locally (push:false); no queue write, no push; rows removed before the next pull (#1030)', async () => {
     (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
-    let resolvePush: ((value: { success: boolean }) => void) | undefined;
-    (LocalGitWriter.push as jest.Mock).mockImplementation(
-      () => new Promise((res) => { resolvePush = res; }),
-    );
+    (LocalGitWriter.deleteAndCommit as jest.Mock).mockResolvedValue({ success: true, filePath: 'x' });
 
     const notes = Array.from({ length: 10 }, (_, i) =>
       createNote({
@@ -750,35 +747,22 @@ describe('sync-locking integration scenarios S1–S8', () => {
     fireEvent.press(screen.getByTestId('bulk-action-bar.delete'));
     await pressAlertButtonAsync('Delete');
 
-    void NoteSyncQueueService.drain();
-
     const queueWrites = (AsyncStorage.setItem as jest.Mock).mock.calls.filter(
       ([key]: [string]) => key === QUEUE_KEY,
     );
-    expect(queueWrites).toHaveLength(1);
+    expect(queueWrites).toHaveLength(0);
 
     expect(screen.queryByTestId('note-row.lock-spinner')).toBeNull();
 
-    await act(async () => {
-      await flushMicrotasks();
-    });
-    expect(batchDeleteFiles).not.toHaveBeenCalled();
-    expect(LocalGitWriter.push).toHaveBeenCalledTimes(1);
-    expect(LocalGitWriter.push).toHaveBeenCalledWith({
-      repoPath: 'owner/repo',
-      branch: 'main',
-      token: 'tok',
-    });
-    const deleteCalls = (deleteNoteFromGitHub as jest.Mock).mock.calls;
-    expect(deleteCalls).toHaveLength(10);
-    for (const [args] of deleteCalls) {
+    const commitCalls = (LocalGitWriter.deleteAndCommit as jest.Mock).mock.calls;
+    expect(commitCalls).toHaveLength(10);
+    for (const [args] of commitCalls) {
       expect(args.push).toBe(false);
     }
-
-    await act(async () => {
-      resolvePush?.({ success: true });
-    });
+    // Stage-then-push: no eager push; the idle trigger pushes later.
+    expect(LocalGitWriter.push).not.toHaveBeenCalled();
     expect(await NoteSyncQueueService.pendingCount()).toBe(0);
+    expect(await NoteSyncQueueService.getAll()).toHaveLength(0);
     expect(useNoteStore.getState().notes).toHaveLength(0);
   });
 
