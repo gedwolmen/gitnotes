@@ -529,7 +529,11 @@ export default function NotesListScreen() {
         key={`${viewMode}-${columnCount}`}
         numColumns={viewMode === 'journal' ? 1 : columnCount}
         extraData={displayNotes}
-        removeClippedSubviews={false}
+        initialNumToRender={10}
+        maxToRenderPerBatch={6}
+        windowSize={7}
+        updateCellsBatchingPeriod={50}
+        removeClippedSubviews={true}
         contentContainerStyle={{
           padding: 12,
           paddingTop: headerBlurHeight + 4,
