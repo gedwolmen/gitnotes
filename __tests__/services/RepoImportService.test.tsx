@@ -688,6 +688,72 @@ describe('importRepoAtAdd (#938) — awaited import service', () => {
     expect(cloneExclusiveSpy).toHaveBeenCalledTimes(1);
     expect(pullFromSingleRepo).toHaveBeenCalledTimes(1);
   });
+
+  it('large-repo preflight (clone mode + repoSizeKb > threshold) returns {ok:false, largeRepo:true} WITHOUT calling cloneExclusive', async () => {
+    const importRepoAtAdd = loadImportRepoAtAdd();
+    (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
+    const { LARGE_REPO_THRESHOLD_KB } = require('../../src/services/RepoImportService');
+
+    const result = await importRepoAtAdd('owner/repo', 'repoName', undefined, LARGE_REPO_THRESHOLD_KB + 1);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.largeRepo).toBe(true);
+      expect(result.retryable).toBe(false);
+      expect(result.error).toMatch(/large/i);
+    }
+    expect(cloneExclusiveSpy).not.toHaveBeenCalled();
+    expect(pullFromSingleRepo).not.toHaveBeenCalled();
+  });
+
+  it('large-repo preflight is skipped when repoSizeKb is undefined (manual-add path without size data)', async () => {
+    const importRepoAtAdd = loadImportRepoAtAdd();
+    (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
+
+    const result = await importRepoAtAdd('owner/repo', 'repoName', undefined, undefined);
+
+    expect(result).toEqual({ ok: true, counts: SAMPLE_COUNTS });
+    expect(cloneExclusiveSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('large-repo preflight is skipped when repoSizeKb is below the threshold', async () => {
+    const importRepoAtAdd = loadImportRepoAtAdd();
+    (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
+
+    const result = await importRepoAtAdd('owner/repo', 'repoName', undefined, 1024);
+
+    expect(result).toEqual({ ok: true, counts: SAMPLE_COUNTS });
+    expect(cloneExclusiveSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('large-repo preflight does not trigger in API mode (API mode never clones)', async () => {
+    const importRepoAtAdd = loadImportRepoAtAdd();
+    (SyncEngineService.getMode as jest.Mock).mockResolvedValue('api');
+    const { LARGE_REPO_THRESHOLD_KB } = require('../../src/services/RepoImportService');
+
+    const result = await importRepoAtAdd('owner/repo', 'repoName', undefined, LARGE_REPO_THRESHOLD_KB * 10);
+
+    expect(result).toEqual({ ok: true, counts: SAMPLE_COUNTS });
+    expect(cloneExclusiveSpy).not.toHaveBeenCalled();
+    expect(pullFromSingleRepo).toHaveBeenCalledTimes(1);
+  });
+
+  it('CloneOutOfMemoryError from cloneExclusive surfaces as largeRepo: true', async () => {
+    const importRepoAtAdd = loadImportRepoAtAdd();
+    (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
+    const { CloneOutOfMemoryError } = require('../../src/services/git/GitFsService');
+    cloneExclusiveSpy.mockRejectedValueOnce(new CloneOutOfMemoryError('oom during packfile indexing'));
+
+    const result = await importRepoAtAdd('owner/repo', 'repoName');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.largeRepo).toBe(true);
+      expect(result.retryable).toBe(false);
+      expect(result.error).toMatch(/out of memory|api mode/i);
+    }
+    expect(pullFromSingleRepo).not.toHaveBeenCalled();
+  });
 });
 
 describe('GitFsService.cloneExclusive — per-repo clone dedup (#938 contention guard)', () => {

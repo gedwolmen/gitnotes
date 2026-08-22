@@ -117,6 +117,8 @@ export interface GitHubRepository {
   html_url: string;
   description: string;
   private: boolean;
+  /** GitHub repo size in KB (0 if unknown). Drives the large-repo API-mode nudge. */
+  size?: number;
 }
 
 export interface GitHubIssue {
