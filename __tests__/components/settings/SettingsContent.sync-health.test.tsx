@@ -21,14 +21,6 @@ jest.mock('../../../src/contexts/ThemeContext', () => ({
   }),
 }));
 
-jest.mock('expo-haptics', () => ({
-  selectionAsync: jest.fn(() => Promise.resolve()),
-  impactAsync: jest.fn(() => Promise.resolve()),
-  notificationAsync: jest.fn(() => Promise.resolve()),
-  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
-  NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
-}));
-
 jest.mock('../../../src/components/ui', () => {
   const React = require('react');
   const { View, Text, TouchableOpacity, Switch } = require('react-native');
@@ -62,11 +54,11 @@ jest.mock('../../../src/components/settings/ReminderSection', () => {
 });
 
 import React from 'react';
-import * as Haptics from 'expo-haptics';
-import { fireEvent, render } from '@testing-library/react-native';
+import { render } from '@testing-library/react-native';
 import { SettingsContent } from '../../../src/components/settings/SettingsContent';
+import type { ForegroundSyncHealth } from '../../../src/services/ForegroundSyncService';
 
-function renderContent(props: Record<string, unknown> = {}) {
+function renderContent(health: ForegroundSyncHealth) {
   const base = {
     colors: {
       background: '#fff', surface: '#f4f4f4', primary: '#2563eb', accent: '#2563eb',
@@ -118,51 +110,41 @@ function renderContent(props: Record<string, unknown> = {}) {
     isPro: true,
     proStatusLabel: 'pro.statusActive',
     onOpenPaywall: jest.fn(),
-    syncHealth: {
-      status: 'idle',
-      lastRunAt: 0,
-      lastCompletedAt: 0,
-      lastFailedAt: 0,
-      consecutiveFailures: 0,
-    },
-    ...props,
+    syncHealth: health,
   };
   return render(React.createElement(SettingsContent as React.ComponentType<Record<string, unknown>>, base));
 }
 
-describe('Settings dark mode toggle', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
+const idle: ForegroundSyncHealth = {
+  status: 'idle', lastRunAt: 0, lastCompletedAt: 0, lastFailedAt: 0, consecutiveFailures: 0,
+};
+
+describe('SettingsContent sync health row (#1007)', () => {
+  it('does not render a health row before any sync has run', () => {
+    const { queryByTestId } = renderContent(idle);
+    expect(queryByTestId('settings.row.sync-health')).toBeNull();
   });
 
-  it('toggling ON from system theme fires a selection haptic and calls setTheme("dark")', () => {
-    const setTheme = jest.fn();
-    const { getByTestId } = renderContent({ theme: 'system', setTheme });
-    fireEvent(getByTestId('settings.toggle.theme'), 'onValueChange', true);
-    expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
-    expect(setTheme).toHaveBeenCalledTimes(1);
-    expect(setTheme).toHaveBeenCalledWith('dark');
+  it('renders the healthy state after a successful sync', () => {
+    const { getByTestId, getByText } = renderContent({ ...idle, status: 'ok' });
+    expect(getByTestId('settings.row.sync-health')).toBeTruthy();
+    expect(getByText('Sync up to date')).toBeTruthy();
   });
 
-  it('toggling OFF from dark theme fires a selection haptic and calls setTheme("light")', () => {
-    const setTheme = jest.fn();
-    const { getByTestId } = renderContent({ theme: 'dark', setTheme });
-    fireEvent(getByTestId('settings.toggle.theme'), 'onValueChange', false);
-    expect(Haptics.selectionAsync).toHaveBeenCalledTimes(1);
-    expect(setTheme).toHaveBeenCalledTimes(1);
-    expect(setTheme).toHaveBeenCalledWith('light');
+  it('renders the failed state with a failure count', () => {
+    const { getByTestId, getByText } = renderContent({
+      ...idle, status: 'failed', consecutiveFailures: 3,
+    });
+    expect(getByTestId('settings.row.sync-health')).toBeTruthy();
+    expect(getByText('Last sync failed')).toBeTruthy();
+    expect(getByText('3 consecutive failures')).toBeTruthy();
   });
 
-  it('shows Use System Theme as Active while in system theme', () => {
-    const { getByText } = renderContent({ theme: 'system' });
-    const row = getByText('Use System Theme');
-    expect(row).toBeTruthy();
-    expect(getByText('Active')).toBeTruthy();
-  });
-
-  it('shows Use System Theme as Inactive once an explicit theme is set', () => {
-    const { getByText } = renderContent({ theme: 'dark' });
-    expect(getByText('Use System Theme')).toBeTruthy();
-    expect(getByText('Inactive')).toBeTruthy();
+  it('renders the timed-out state', () => {
+    const { getByTestId, getByText } = renderContent({
+      ...idle, status: 'timedout', consecutiveFailures: 1,
+    });
+    expect(getByTestId('settings.row.sync-health')).toBeTruthy();
+    expect(getByText('Last sync timed out')).toBeTruthy();
   });
 });

@@ -53,6 +53,7 @@ import { GitHubService } from '../src/services/GitHubService';
 import {
   __resetForegroundSyncForTest,
   __runPullForTest,
+  getForegroundSyncHealth,
   isForegroundSyncInFlight,
   startForegroundWatcher,
 } from '../src/services/ForegroundSyncService';
@@ -292,6 +293,53 @@ describe('ForegroundSyncService', () => {
     resolvePull?.(pullResult);
     await firstPull;
     logSpy.mockRestore();
+  });
+
+  test('reports healthy sync state after a successful pull', async () => {
+    expect(getForegroundSyncHealth().status).toBe('idle');
+
+    await __runPullForTest('appstate-active');
+
+    const health = getForegroundSyncHealth();
+    expect(health.status).toBe('ok');
+    expect(health.consecutiveFailures).toBe(0);
+    expect(health.lastCompletedAt).toBeGreaterThan(0);
+  });
+
+  test('reports failed sync state after a failed pull', async () => {
+    pullMock.mockRejectedValueOnce(new Error('pull failed'));
+
+    await __runPullForTest('appstate-active');
+
+    const health = getForegroundSyncHealth();
+    expect(health.status).toBe('failed');
+    expect(health.consecutiveFailures).toBe(1);
+    expect(health.lastFailedAt).toBeGreaterThan(0);
+  });
+
+  test('reports timed-out sync state when the pull watchdog fires', async () => {
+    let resolvePull: ((result: PullResult) => void) | undefined;
+    pullMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolvePull = resolve;
+        }),
+    );
+
+    const pull = __runPullForTest('interval');
+    await jest.advanceTimersByTimeAsync(0);
+    expect(getForegroundSyncHealth().status).toBe('syncing');
+
+    await jest.advanceTimersByTimeAsync(60_000);
+    await jest.advanceTimersByTimeAsync(540_000);
+
+    const health = getForegroundSyncHealth();
+    expect(health.status).toBe('timedout');
+    expect(health.consecutiveFailures).toBe(1);
+
+    resolvePull?.(pullResult);
+    await jest.advanceTimersByTimeAsync(0);
+    await pull;
   });
 
   test('backs off interval checks while a pull stays stuck', async () => {

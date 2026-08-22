@@ -23,6 +23,7 @@ import type { TemplateRepoPreference } from '../../services/TemplateRepoPreferen
 import type { AIProviderConfig } from '../../models/AIProvider';
 import { TIMEOUT_OPTIONS, type BiometricKind, type LockTimeout } from '../../contexts/BiometricLockContext';
 import { SYNC_INTERVAL_OPTIONS, type SyncIntervalSeconds } from '../../hooks/useForegroundSyncSettings';
+import type { ForegroundSyncHealth } from '../../services/ForegroundSyncService';
 import { useProvidersAvailability } from '../../hooks/useProviderAvailability';
 import { describeAvailability } from '../../services/ai/providerAvailabilityCopy';
 import type { GitHostProvider } from '../../services/git/GitHost';
@@ -151,6 +152,7 @@ onRemoveAccount: (id: string, login: string) => void;
   syncIntervalSeconds: SyncIntervalSeconds;
   onToggleSyncFrequently: (value: boolean) => void;
   onSetSyncIntervalSeconds: (value: SyncIntervalSeconds) => void;
+  syncHealth: ForegroundSyncHealth;
 };
 
 function formatLfsBytes(bytes: number): string {
@@ -232,7 +234,8 @@ export function SettingsContent(props: SettingsContentProps) {
     syncFrequentlyEnabled,
     syncIntervalSeconds,
     onToggleSyncFrequently,
-onSetSyncIntervalSeconds,
+    onSetSyncIntervalSeconds,
+    syncHealth,
   } = props;
   // Tokens hook gives us spacing/radii/type so the styled disconnect
   // button matches the rest of the app without hardcoded values.
@@ -817,6 +820,40 @@ onSetSyncIntervalSeconds,
             <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.backgroundSync')}</Text>
           </View>
         </GroupRow>
+        {syncHealth.status !== 'idle' && (
+          <GroupRow testID="settings.row.sync-health">
+            <View className="flex-row items-center gap-2">
+              {syncHealth.status === 'syncing' ? (
+                <ActivityIndicator size="small" color={colors.textSecondary} />
+              ) : (
+                <Ionicons
+                  name={syncHealth.status === 'ok' ? 'checkmark-circle-outline' : 'alert-circle-outline'}
+                  size={20}
+                  color={syncHealth.status === 'ok' ? colors.primary : colors.error}
+                />
+              )}
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[
+                    styles.settingLabel,
+                    { color: syncHealth.status === 'ok' ? colors.text : colors.error },
+                  ]}
+                >
+                  {syncHealth.status === 'syncing' && t('settings.syncInProgress')}
+                  {syncHealth.status === 'ok' && t('settings.syncUpToDate')}
+                  {syncHealth.status === 'failed' && t('settings.syncLastFailed')}
+                  {syncHealth.status === 'timedout' && t('settings.syncLastTimedOut')}
+                </Text>
+                {(syncHealth.status === 'failed' || syncHealth.status === 'timedout') &&
+                  syncHealth.consecutiveFailures > 1 && (
+                    <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>
+                      {t('settings.syncFailureCount', { count: syncHealth.consecutiveFailures })}
+                    </Text>
+                  )}
+              </View>
+            </View>
+          </GroupRow>
+        )}
       </Group>
 
       <Group title={t('settings.data')}>

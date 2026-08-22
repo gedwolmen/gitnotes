@@ -52,6 +52,26 @@ let lastFailedAt = 0;
 const BASE_BACKOFF_MS = 30_000;
 const MAX_BACKOFF_MS = 300_000;
 
+export type ForegroundSyncHealthStatus = 'idle' | 'syncing' | 'ok' | 'failed' | 'timedout';
+
+export interface ForegroundSyncHealth {
+  status: ForegroundSyncHealthStatus;
+  lastRunAt: number;
+  lastCompletedAt: number;
+  lastFailedAt: number;
+  consecutiveFailures: number;
+}
+
+const INITIAL_HEALTH: ForegroundSyncHealth = {
+  status: 'idle',
+  lastRunAt: 0,
+  lastCompletedAt: 0,
+  lastFailedAt: 0,
+  consecutiveFailures: 0,
+};
+
+let health: ForegroundSyncHealth = { ...INITIAL_HEALTH };
+
 // Busy-skip state: consecutive interval cycles that find a pull still in
 // flight (or a timed-out pull still pending) grow the next-check delay
 // exponentially with jitter, and the skip log line is throttled, so a stuck
@@ -124,6 +144,7 @@ async function runPull(reason: string): Promise<void> {
   consecutiveSkips = 0;
   inFlight = true;
   lastRunAt = Date.now();
+  health = { ...health, status: 'syncing', lastRunAt };
   notify();
 
   let watchdogTimedOut = false;
@@ -183,9 +204,16 @@ async function runPull(reason: string): Promise<void> {
     }
     if (success) {
       consecutiveFailures = 0;
+      health = { ...health, status: 'ok', lastCompletedAt: Date.now(), consecutiveFailures: 0 };
     } else {
       consecutiveFailures++;
       lastFailedAt = Date.now();
+      health = {
+        ...health,
+        status: watchdogTimedOut ? 'timedout' : 'failed',
+        lastFailedAt: Date.now(),
+        consecutiveFailures,
+      };
     }
     notify();
   }
@@ -303,6 +331,10 @@ export function isForegroundSyncInFlight(): boolean {
   return inFlight || externalSyncCount > 0;
 }
 
+export function getForegroundSyncHealth(): ForegroundSyncHealth {
+  return { ...health };
+}
+
 export function acquireExternalSync(): () => void {
   externalSyncCount++;
   if (externalSyncCount === 1) {
@@ -344,5 +376,6 @@ export function __resetForegroundSyncForTest(): void {
   lastFailedAt = 0;
   consecutiveSkips = 0;
   lastSkipLogAt = 0;
+  health = { ...INITIAL_HEALTH };
   listeners.clear();
 }
