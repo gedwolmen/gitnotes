@@ -225,6 +225,11 @@ jest.mock('../../src/services/git/CloneMigrationService', () => ({
   CloneMigrationService: { migrateRepo: jest.fn(async () => ({ notes: 0, todos: 0, canvases: 0, templates: 0, failures: [] })) },
 }));
 
+const mockCancelInflightGitHttp = jest.fn();
+jest.mock('../../src/services/git/gitHttp', () => ({
+  cancelInflightGitHttp: (...args: unknown[]) => mockCancelInflightGitHttp(...args),
+}));
+
 jest.mock('../../src/services/AuthService', () => ({
   AuthService: { getToken: jest.fn(async () => null) },
 }));
@@ -450,6 +455,7 @@ describe('SettingsScreen', () => {
     mockRemoveAccount.mockReset();
     mockClearToken.mockReset();
     mockRemoveRepositoriesForHosts.mockReset();
+    mockCancelInflightGitHttp.mockReset();
     jest.useRealTimers();
     (GitHubService.isAuthenticated as jest.Mock).mockReset().mockReturnValue(false);
     (GitFsService.clone as jest.Mock).mockReset().mockResolvedValue(undefined);
@@ -627,6 +633,23 @@ describe('SettingsScreen', () => {
     expect(getByText('Clone Failed')).toBeTruthy();
     expect(getByText(/Bad credentials/)).toBeTruthy();
     expect(GitFsService.clone).toHaveBeenCalledTimes(1);
+  });
+
+  it('aborts the in-flight git HTTP request when clone cancel is pressed (#1016)', async () => {
+    (GitHubService.isAuthenticated as jest.Mock).mockReturnValue(true);
+    (GitFsService.clone as jest.Mock).mockImplementation(() => new Promise<void>(() => {}));
+    stableRepositories.push(cloneRepo);
+
+    const { getByTestId, getByText } = render(<SettingsScreen />);
+    await flushMicrotasks();
+    fireEvent.press(getByTestId('settings.toggle.sync-engine-enable-octo-notes'));
+    expect(getByTestId('modal')).toBeTruthy();
+
+    mockCancelInflightGitHttp.mockReturnValue(true);
+    fireEvent.press(getByTestId('button-Cancel'));
+
+    expect(mockCancelInflightGitHttp).toHaveBeenCalledTimes(1);
+    expect(getByText(/Cancelling/)).toBeTruthy();
   });
 
   it('caps the automatic outer retry at one for a persistently corrupt packfile', async () => {
