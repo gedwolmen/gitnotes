@@ -518,7 +518,7 @@ export default function SettingsScreen() {
     const retryImport = async (): Promise<void> => {
       setIsAddingRepoPath(repoPath);
       try {
-        await importRepoAtAdd(repoPath, repoName, undefined, repoSizeKb);
+        await importRepoAfterAdd(repoPath, repoName, repoSizeKb);
       } finally {
         setIsAddingRepoPath(null);
       }

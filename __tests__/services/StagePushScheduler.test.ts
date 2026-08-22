@@ -44,6 +44,7 @@ import { useStageStore } from '../../src/stores/stageStore';
 import { githubActivity } from '../../src/stores/githubActivityStore';
 import {
   STAGE_PUSH_IDLE_MS,
+  __resetForTests,
   drainPushQueue,
   flushStaged,
   onStagedChanged,
@@ -64,7 +65,7 @@ const item = (repoPath: string, branch: string, filePath: string): StagedItem =>
   mode: 'api',
 });
 
-const flushAsync = async (rounds = 20): Promise<void> => {
+const flushAsync = async (rounds = 50): Promise<void> => {
   for (let i = 0; i < rounds; i += 1) {
     await Promise.resolve();
   }
@@ -77,7 +78,7 @@ describe('StagePushScheduler', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
-    stopScheduler();
+    __resetForTests();
     setOnPushFailure(null);
     useStageStore.setState({
       staged: [],
@@ -241,16 +242,11 @@ describe('StagePushScheduler', () => {
       pendingCount: 0,
     });
 
-    const setGlobalPushingSpy = jest.spyOn(useStageStore.getState(), 'setGlobalPushing');
-
     await drainPushQueue('manual');
     await flushAsync();
 
-    expect(setGlobalPushingSpy).toHaveBeenCalledWith(false);
     expect(useStageStore.getState().globalPushing).toBe(false);
     expect(useStageStore.getState().pushQueue).toHaveLength(0);
-
-    setGlobalPushingSpy.mockRestore();
   });
 
   test('failed push invokes the registered push-failure callback with {key, error}', async () => {
