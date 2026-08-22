@@ -19,6 +19,15 @@ const CLONES_SUBDIR = 'GitNotes/';
 const MIN_DIVERGENCE_HISTORY_DEPTH = 3;
 
 /**
+ * Experiment flag: allows depth-2 fetches for the divergence-conflict E2E scenario.
+ * When `GITNOTES_EXPERIMENT_DEPTH_2` is set, fetch/pull operations use depth 2 instead
+ * of the default depth-3 floor. This lets the E2E harness measure whether depth 2
+ * still produces correct conflict detection. Default (flag absent) is unchanged.
+ */
+const DEPTH_FOR_FETCH =
+  process.env.GITNOTES_EXPERIMENT_DEPTH_2 === '1' ? 2 : MIN_DIVERGENCE_HISTORY_DEPTH;
+
+/**
  * Tree entry shape that mirrors `GitHubService.getTreeRecursiveOrThrow` so
  * later phases can swap one for the other behind the SyncEngine flag without
  * the callers caring which transport produced the listing.
@@ -158,10 +167,17 @@ export class GitFsService {
           ref: opts.branch,
           singleBranch: true,
           depth: opts.depth ?? 1,
+          noCheckout: true,
           onAuth: ensureToken(opts.token),
           onProgress: opts.onProgress
             ? (event) => opts.onProgress!(event.phase, event.loaded, event.total ?? null)
             : undefined,
+        });
+        await git.checkout({
+          fs: makeRepoFs(),
+          dir,
+          ref: opts.branch,
+          batchSize: 64,
         });
         lastError = undefined;
         break;
@@ -180,14 +196,14 @@ export class GitFsService {
     if (lastError) throw lastError;
 
     // isomorphic-git has no smudge filter pipeline, so any LFS-tracked
-    // binaries land on disk as ~130-byte pointer text files. Scan now and
-    // remember them so the UI can surface a "Download" affordance and the
-    // user isn't left wondering why their PDF won't open.
-    try {
-      await LfsService.scanRepo(opts.repoPath, GitFsService.workingTreeUri({ repoPath: opts.repoPath }));
-    } catch {
-      // best-effort; pointer detection failure shouldn't fail the clone.
-    }
+    // binaries land on disk as ~130-byte pointer text files. Scan after clone
+    // resolves so the object-download phase is never blocked by the tree walk.
+    // Pointer detection is eventually-consistent — the UI must check
+    // LfsService.isPending / hasUnresolved before surfacing a Download button.
+    void LfsService.scanRepo(
+      opts.repoPath,
+      GitFsService.workingTreeUri({ repoPath: opts.repoPath }),
+    ).catch((err: unknown) => console.warn('[GitFsService] LFS scan failed:', err));
   }
 
   /**
@@ -230,7 +246,7 @@ export class GitFsService {
         dir,
         ref: opts.branch,
         singleBranch: true,
-        depth: Math.max(opts.depth ?? MIN_DIVERGENCE_HISTORY_DEPTH, MIN_DIVERGENCE_HISTORY_DEPTH),
+        depth: Math.max(opts.depth ?? DEPTH_FOR_FETCH, DEPTH_FOR_FETCH),
         tags: false,
         onAuth: ensureToken(opts.token),
       });
@@ -270,7 +286,7 @@ export class GitFsService {
         dir,
         ref: opts.branch,
         singleBranch: true,
-        depth: Math.max(opts.depth ?? MIN_DIVERGENCE_HISTORY_DEPTH, MIN_DIVERGENCE_HISTORY_DEPTH),
+        depth: Math.max(opts.depth ?? DEPTH_FOR_FETCH, DEPTH_FOR_FETCH),
         tags: false,
         onAuth: ensureToken(opts.token),
       });

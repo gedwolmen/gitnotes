@@ -70,17 +70,19 @@ async function handleCorruptionErrors<T>(fn: () => Promise<T>, repoPath: string,
  * `listTree` returns `{ path, type, sha }[]` and `readFile` returns
  * `string | null` — so callers can swap transports without branching.
  */
+export type RepoReader = {
+  mode: 'api' | 'clone';
+  listTree: () => Promise<{ path: string; type: 'blob' | 'tree'; sha: string; size?: number }[]>;
+  readFile: (path: string) => Promise<string | null>;
+};
+
 async function getRepoReader(
   repoPath: string,
   owner: string,
   repo: string,
   branch: string,
   provider?: GitHostProvider,
-): Promise<{
-  mode: 'api' | 'clone';
-  listTree: () => Promise<{ path: string; type: 'blob' | 'tree'; sha: string; size?: number }[]>;
-  readFile: (path: string) => Promise<string | null>;
-}> {
+): Promise<RepoReader> {
   const mode = await SyncEngineService.getMode(repoPath);
   if (mode === 'clone') {
     const token = (await AuthService.getToken()) ?? undefined;
@@ -182,13 +184,14 @@ async function fetchDirectoryFiles(
   dirPath: string,
   branch: string,
   provider?: GitHostProvider,
+  reader?: RepoReader,
 ): Promise<{ path: string; content: string }[]> {
   // Route through the mode-aware reader so clone mode reads todos/canvases
   // from the local clone (no Contents-API calls) and the recursive tree
   // pulls nested files under `dirPath/` (#885). The `dirPath + '/'` prefix
   // guards against sibling-dir false matches (e.g. `todos/` vs `todos-archive/`).
-  const reader = await getRepoReader(repoPath, owner, repo, branch, provider);
-  const tree = await reader.listTree();
+  const resolvedReader = reader ?? await getRepoReader(repoPath, owner, repo, branch, provider);
+  const tree = await resolvedReader.listTree();
   const files = tree.filter(
     (item) => item.type === 'blob' && item.path.startsWith(dirPath + '/'),
   );
@@ -197,7 +200,7 @@ async function fetchDirectoryFiles(
     files,
     async (file) => {
       try {
-        const content = await reader.readFile(file.path);
+        const content = await resolvedReader.readFile(file.path);
         return content === null ? null : { path: file.path, content };
       } catch (error) {
         console.warn(`[RepoPullService] Failed to fetch ${file.path}:`, error);
@@ -344,16 +347,17 @@ async function pullNotesFromRepo(
   branch: string,
   provider?: GitHostProvider,
   onProgress?: CloneProgressCallback,
+  reader?: RepoReader,
 ): Promise<number> {
   try {
-    const reader = await getRepoReader(repoPath, owner, repo, branch, provider);
+    const resolvedReader = reader ?? await getRepoReader(repoPath, owner, repo, branch, provider);
     // Use the strict listTree contract so an actual API/clone failure (auth /
     // rate-limit / network / fsck) throws and is caught below, returning early
     // *without* running the reconciliation pass. A successful fetch that
     // returns zero note blobs is authoritative — the user has deleted every
     // notes file on the remote — and must run reconcile so local copies for
     // this scope are dropped.
-    const tree = await reader.listTree();
+    const tree = await resolvedReader.listTree();
     const noteBlobs = tree.filter((item) => {
       if (item.type !== 'blob') return false;
       if (!item.path.startsWith('notes/')) return false;
@@ -366,7 +370,7 @@ async function pullNotesFromRepo(
     const fetched = await fetchInBatches(
       noteBlobs,
       async (blob) => {
-        const content = await reader.readFile(blob.path);
+        const content = await resolvedReader.readFile(blob.path);
         return content === null ? null : { path: blob.path, content };
       },
       FILE_FETCH_CONCURRENCY,
@@ -391,7 +395,7 @@ async function pullNotesFromRepo(
     // here would DELETE a note the user just wrote — data loss after a
     // restart mid-push. Only drop a note when we are sure the remote no
     // longer has it AND nothing local is waiting to push it.
-    const protectedPaths = await collectPendingPaths(repoPath, branch, reader.mode, 'notes/');
+    const protectedPaths = await collectPendingPaths(repoPath, branch, resolvedReader.mode, 'notes/');
     for (const p of protectedPaths) remoteFilePaths.add(p);
 
     let allNotes = await StorageService.getAllNotes();
@@ -530,13 +534,14 @@ async function pullCanvasesFromRepo(
   branch: string,
   provider?: GitHostProvider,
   onProgress?: CloneProgressCallback,
+  reader?: RepoReader,
 ): Promise<number> {
   let pulled = 0;
   let files: { path: string; content: string }[] = [];
   let directoryExists = false;
 
   try {
-    files = await fetchDirectoryFiles(owner, repo, repoPath, 'canvases', branch, provider);
+    files = await fetchDirectoryFiles(owner, repo, repoPath, 'canvases', branch, provider, reader);
     directoryExists = true;
   } catch {
     // Directory doesn't exist remotely (404) — treat as all canvases deleted.
@@ -640,13 +645,14 @@ async function pullTodosFromRepo(
   branch: string,
   provider?: GitHostProvider,
   onProgress?: CloneProgressCallback,
+  reader?: RepoReader,
 ): Promise<number> {
   let pulled = 0;
   let files: { path: string; content: string }[] = [];
   let directoryExists = false;
 
   try {
-    files = await fetchDirectoryFiles(owner, repo, repoPath, 'todos', branch, provider);
+    files = await fetchDirectoryFiles(owner, repo, repoPath, 'todos', branch, provider, reader);
     directoryExists = true;
   } catch {
     directoryExists = false;
@@ -872,10 +878,12 @@ export async function pullFromSingleRepo(
   }
   const branch = await resolveBranch(repo.path, repo.branch);
 
+  const sharedReader = await getRepoReader(repo.path, repoInfo.owner, repoInfo.repo, branch, repo.provider);
+
   const [notes, canvases, todos] = await Promise.all([
-    pullNotesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider, onProgress),
-    pullCanvasesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider, onProgress),
-    pullTodosFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider, onProgress),
+    pullNotesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider, onProgress, sharedReader),
+    pullCanvasesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider, onProgress, sharedReader),
+    pullTodosFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider, onProgress, sharedReader),
   ]);
 
   const pref = await TemplateRepoPreferenceService.get();
@@ -903,10 +911,12 @@ export async function pullAllFromRepos(): Promise<PullResult> {
 
     const branch = await resolveBranch(repo.path, repo.branch);
 
+    const sharedReader = await getRepoReader(repo.path, repoInfo.owner, repoInfo.repo, branch, repo.provider);
+
     const [notes, canvases, todos] = await Promise.all([
-      pullNotesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider),
-      pullCanvasesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider),
-      pullTodosFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider),
+      pullNotesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider, undefined, sharedReader),
+      pullCanvasesFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider, undefined, sharedReader),
+      pullTodosFromRepo(repoInfo.owner, repoInfo.repo, repo.path, branch, repo.provider, undefined, sharedReader),
     ]);
 
     totalNotes += notes;

@@ -67,11 +67,16 @@ jest.mock('expo-file-system/legacy', () => {
         }
       }
       const encoding = opts?.encoding === EncodingType.Base64 ? 'base64' : 'utf8';
-      const size =
-        encoding === 'utf8'
-          ? new TextEncoder().encode(contents).length
-          : globalThis.atob(contents).length;
-      store.set(uri, { type: 'file', data: contents, encoding, size, mtime: Date.now() / 1000 });
+      if (encoding === 'utf8') {
+        const size = new TextEncoder().encode(contents).length;
+        store.set(uri, { type: 'file', data: contents, encoding, size, mtime: Date.now() / 1000 });
+      } else {
+        // expo-file-system's real behavior: `encoding: 'base64'` means the caller
+        // passes a base64 string and we store the decoded bytes. Store the raw
+        // base64 so readAsStringAsync with base64 returns the same base64 string.
+        const size = contents.length;
+        store.set(uri, { type: 'file', data: contents, encoding, size, mtime: Date.now() / 1000 });
+      }
     },
     async deleteAsync(uri: string, opts?: { idempotent?: boolean }) {
       if (!store.has(uri) && !opts?.idempotent) throw new Error(`delete: not found ${uri}`);
@@ -312,5 +317,73 @@ describe('gitFs adapter', () => {
     expect(await fs.promises.readFile('/notes/Foo.md', { encoding: 'utf8' })).toBe(
       'first',
     );
+  });
+
+  test('UTF-8 fast path: text extensions bypass base64 round-trip', async () => {
+    const fs = makeGitFs('file:///doc/git/');
+    const content = '# Hello World\n\nThis is a test note.';
+    await fs.promises.writeFile('/notes/test.md', content);
+    const read = await fs.promises.readFile('/notes/test.md');
+    expect(read).toBe(content);
+    expect(typeof read).toBe('string');
+  });
+
+  test('UTF-8 fast path: sha-identical round-trip for json', async () => {
+    const fs = makeGitFs('file:///doc/git/');
+    const scene = { version: 1, width: 800, height: 600, elements: [] };
+    const content = JSON.stringify(scene);
+    await fs.promises.writeFile('/canvases/board.json', content);
+    const read = await fs.promises.readFile('/canvases/board.json');
+    expect(read).toBe(content);
+    expect(typeof read).toBe('string');
+    expect(JSON.parse(read as string)).toEqual(scene);
+  });
+
+  test('UTF-8 fast path: norg and org extensions also use fast path', async () => {
+    const fs = makeGitFs('file:///doc/git/');
+    await fs.promises.writeFile('/notes/test.norg', 'Norg content');
+    const norg = await fs.promises.readFile('/notes/test.norg');
+    expect(norg).toBe('Norg content');
+    expect(typeof norg).toBe('string');
+
+    await fs.promises.writeFile('/notes/test.org', '* Org content');
+    const org = await fs.promises.readFile('/notes/test.org');
+    expect(org).toBe('* Org content');
+    expect(typeof org).toBe('string');
+  });
+
+  test('binary files still use base64 path', async () => {
+    const fs = makeGitFs('file:///doc/git/');
+    const bytes = new Uint8Array([0, 1, 2, 3, 254, 255, 32, 64, 128]);
+    await fs.promises.writeFile('/images/photo.png', bytes);
+    const read = await fs.promises.readFile('/images/photo.png');
+    expect(read).toBeInstanceOf(Uint8Array);
+    expect(Array.from(read as Uint8Array)).toEqual(Array.from(bytes));
+  });
+
+  test('writeFile Uint8Array to text extension uses text path, round-trips byte-exact', async () => {
+    const fs = makeGitFs('file:///doc/git/');
+    const content = '# Checkout\n\nemoji 🎉 and 日本語 — byte-exact round-trip';
+    const bytes = new TextEncoder().encode(content);
+    await fs.promises.writeFile('/notes/checkout.md', bytes);
+    const back = await fs.promises.readFile('/notes/checkout.md');
+    expect(back).toBe(content);
+    expect(typeof back).toBe('string');
+  });
+
+  test('writeFile non-UTF-8 bytes to text extension falls back to base64 (no corruption)', async () => {
+    const fs = makeGitFs('file:///doc/git/');
+    // 0xff 0xfe is an invalid UTF-8 sequence — the fatal decoder must reject
+    // it and fall back to the byte-exact base64 path instead of writing a
+    // silent U+FFFD replacement to disk.
+    const bytes = new Uint8Array([0xff, 0xfe, 0x41, 0x00, 0x80]);
+    await fs.promises.writeFile('/notes/odd.md', bytes);
+    const entry = getStore().get('file:///doc/git/notes/odd.md');
+    expect(entry?.encoding).toBe('base64');
+    // Decode the stored base64 back and confirm the bytes match exactly.
+    const bin = globalThis.atob(entry!.data!);
+    const stored = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) stored[i] = bin.charCodeAt(i);
+    expect(Array.from(stored)).toEqual(Array.from(bytes));
   });
 });

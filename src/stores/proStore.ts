@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import { create } from 'zustand';
 import type { PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
 import {
@@ -11,6 +12,25 @@ import {
 } from '../services/RevenueCatService';
 import { resolveGrandfatherStatus } from '../services/GrandfatherService';
 import * as PaywallAnalytics from '../services/PaywallAnalytics';
+
+let _isDevice: boolean | null = null;
+function isSimulator(): boolean {
+  if (_isDevice === null) {
+    try { _isDevice = require('expo-device').isDevice; } catch { _isDevice = true; }
+  }
+  return _isDevice === false;
+}
+/** Dev-only override: forces Pro gate open on iOS simulator so QA can test paid features without IAP.
+ *
+ * NOT a payment bypass — RevenueCat calls (initialize/refresh/purchase/restore) run unchanged.
+ * Only the derived gate (`selectIsPro` + `status`) is forced to `true` / `'pro'` in this path.
+ *
+ * Gate triple: `__DEV__ && Platform.OS === 'ios' && !Device.isDevice`
+ * - `__DEV__`: compiled out in production builds.
+ * - `Platform.OS === 'ios'`: Android and web are unaffected.
+ * - `!Device.isDevice`: only true in the iOS simulator (not on a real device).
+ */
+export const DEV_FORCE_PRO = __DEV__ && Platform.OS === 'ios' && isSimulator();
 
 const TRIAL_WAS_ACTIVE_KEY = '@gitnotes:trial_was_active';
 const TRIAL_EXPIRED_AT_KEY = '@gitnotes:trial_expired_at';
@@ -54,7 +74,7 @@ interface ProActions {
 }
 
 export const selectIsPro = (state: ProState): boolean =>
-  state.entitlementActive || state.isGrandfathered;
+  DEV_FORCE_PRO || state.entitlementActive || state.isGrandfathered;
 
 interface CustomerInfoLike {
   entitlements?: {
@@ -139,7 +159,7 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
           const derived = deriveTrialInfo(info);
           set((state) => ({
             ...derived,
-            status: derived.entitlementActive || state.isGrandfathered ? 'pro' : 'free',
+            status: DEV_FORCE_PRO ? 'pro' : (derived.entitlementActive || state.isGrandfathered ? 'pro' : 'free'),
           }));
           void evaluateInterstitial(derived.entitlementActive, set);
         });
@@ -149,11 +169,11 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
       set({
         ...derived,
         isGrandfathered: grandfather.isGrandfathered,
-        status: derived.entitlementActive || grandfather.isGrandfathered ? 'pro' : 'free',
+        status: DEV_FORCE_PRO ? 'pro' : (derived.entitlementActive || grandfather.isGrandfathered ? 'pro' : 'free'),
       });
       await evaluateInterstitial(derived.entitlementActive, set);
     } catch (error) {
-      set({ error: error instanceof Error ? error.message : 'Failed to initialize Pro', status: 'free' });
+      set({ error: error instanceof Error ? error.message : 'Failed to initialize Pro', status: DEV_FORCE_PRO ? 'pro' : 'free' });
     }
   },
 
@@ -163,7 +183,7 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
       const derived = deriveTrialInfo(customerInfo);
       set((state) => ({
         ...derived,
-        status: derived.entitlementActive || state.isGrandfathered ? 'pro' : 'free',
+        status: DEV_FORCE_PRO ? 'pro' : (derived.entitlementActive || state.isGrandfathered ? 'pro' : 'free'),
         error: null,
       }));
       await evaluateInterstitial(derived.entitlementActive, set);

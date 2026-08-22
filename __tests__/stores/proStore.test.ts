@@ -392,3 +392,7 @@ describe('offerings', () => {
     expect(useProStore.getState().offeringsReady).toBe(true);
   });
 });
+
+describe('DEV_FORCE_PRO override', () => {
+  // See __tests__/stores/proStore.devForcePro.test.ts
+});

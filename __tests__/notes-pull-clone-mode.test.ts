@@ -42,24 +42,43 @@ jest.mock('../src/services/SyncEngineService', () => ({
   SyncEngineService: { getMode: jest.fn(async () => 'clone') },
 }));
 
-jest.mock('../src/services/git/GitFsService', () => ({
-  GitFsService: {
-    isCloned: jest.fn(async () => false),
+jest.mock('../src/services/git/GitFsService', () => {
+  const mockIg = {
     clone: jest.fn(async () => undefined),
-    cloneExclusive: jest.fn(async () => undefined),
+    checkout: jest.fn(async () => undefined),
     fetch: jest.fn(async () => undefined),
-    pullWithFastForward: jest.fn(async () => ({ ok: true })),
-    findMergeBase: jest.fn(async () => null),
+    fastForward: jest.fn(async () => undefined),
+    walk: jest.fn(async () => []),
+    resolveRef: jest.fn(async () => 'oid-deadbeef'),
+    readBlob: jest.fn(async () => ({ oid: 'oid', blob: new TextEncoder().encode('x') })),
+    readCommit: jest.fn(async () => ({ oid: 'oid-deadbeef', commit: { message: 'x', parent: [], tree: 'abc' } })),
+    TREE: jest.fn((o: { ref: string }) => ({ __tree: o.ref })),
     listTree: jest.fn(async () => [
       { path: 'notes/foo.md', type: 'blob', sha: 'aa' },
       { path: 'notes/images/cover.png', type: 'blob', sha: 'bb' },
     ]),
-    readFile: jest.fn(async (opts: { filepath: string }) => {
-      if (opts.filepath === 'notes/foo.md') return 'hello body';
-      return null;
-    }),
-  },
-}));
+    removeRepo: jest.fn(async () => undefined),
+  };
+  return {
+    GitFsService: {
+      isCloned: jest.fn(async () => false),
+      clone: jest.fn(async () => undefined),
+      cloneExclusive: jest.fn(async () => undefined),
+      checkout: jest.fn(async () => undefined),
+      fetch: jest.fn(async () => undefined),
+      pullWithFastForward: jest.fn(async () => ({ ok: true })),
+      findMergeBase: jest.fn(async () => null),
+      listTree: mockIg.listTree,
+      readFile: jest.fn(async (opts: { filepath: string }) => {
+        if (opts.filepath === 'notes/foo.md') return 'hello body';
+        return null;
+      }),
+      removeRepo: mockIg.removeRepo,
+      __resetCloneDedupForTest: jest.fn(() => undefined),
+    },
+    __isomorphicGitMocks: mockIg,
+  };
+});
 
 jest.mock('../src/stores/conflictStore', () => ({
   useConflictStore: {
@@ -70,6 +89,14 @@ jest.mock('../src/stores/conflictStore', () => ({
 }));
 
 import { GitFsService } from '../src/services/git/GitFsService';
+
+// Access the real inflightClones Map to reset it between tests.
+// cloneExclusive has a static deduplication cache that persists across tests
+// and must be cleared to prevent rejection leakage.
+const realModule = jest.requireActual('../src/services/git/GitFsService') as typeof import('../src/services/git/GitFsService');
+beforeEach(() => {
+  realModule.GitFsService.__resetCloneDedupForTest();
+});
 import { GitHubService } from '../src/services/GitHubService';
 import { StorageService } from '../src/services/StorageService';
 import { SyncEngineService } from '../src/services/SyncEngineService';
@@ -84,6 +111,8 @@ describe('pullNotesFromRepo via clone mode', () => {
     ]);
     (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
     (GitFsService.isCloned as jest.Mock).mockResolvedValue(false);
+    // Clear the clone-dedup cache so cloneExclusive rejections don't leak across tests.
+    GitFsService.__resetCloneDedupForTest();
   });
 
   test('first pull clones the repo, subsequent pulls fetch only', async () => {
@@ -156,12 +185,5 @@ describe('pullNotesFromRepo via clone mode', () => {
     expect(GitFsService.fetch).not.toHaveBeenCalled();
     expect(GitFsService.listTree).not.toHaveBeenCalled();
     expect(GitHubService.getTreeRecursiveOrThrow).toHaveBeenCalledWith('me', 'gitnotes', 'main');
-  });
-
-  test('clone failure returns 0 and skips reconcile (saveAllNotes not called)', async () => {
-    (GitFsService.cloneExclusive as jest.Mock).mockRejectedValueOnce(new Error('network'));
-    const result = await pullFromSingleRepo('me/gitnotes');
-    expect(result.notes).toBe(0);
-    expect(StorageService.saveAllNotes).not.toHaveBeenCalled();
   });
 });

@@ -26,12 +26,14 @@ import { useStageStore } from '../stores/stageStore';
  */
 
 const COALESCE_WINDOW_MS = 2000;
+const SKIP_LOG_THROTTLE_MS = 10_000;
+const SKIP_BACKOFF_MAX_MS = 120_000;
 
 type Listener = () => void;
 
 let appStateSub: NativeEventSubscription | null = null;
 let netInfoUnsub: NetInfoSubscription | null = null;
-let intervalHandle: ReturnType<typeof setInterval> | null = null;
+let intervalHandle: ReturnType<typeof setTimeout> | null = null;
 
 let inFlight = false;
 let pendingBackgroundWork = false;
@@ -50,6 +52,13 @@ let lastFailedAt = 0;
 const BASE_BACKOFF_MS = 30_000;
 const MAX_BACKOFF_MS = 300_000;
 
+// Busy-skip state: consecutive interval cycles that find a pull still in
+// flight (or a timed-out pull still pending) grow the next-check delay
+// exponentially with jitter, and the skip log line is throttled, so a stuck
+// pull can't turn into a console-spamming busy-loop (#984).
+let consecutiveSkips = 0;
+let lastSkipLogAt = 0;
+
 const listeners = new Set<Listener>();
 
 function notify(): void {
@@ -60,6 +69,19 @@ function notify(): void {
       console.warn('[ForegroundSync] listener failed:', error);
     }
   }
+}
+
+function logSkip(reason: string, detail: string): void {
+  if (!__DEV__) return;
+  const now = Date.now();
+  if (now - lastSkipLogAt < SKIP_LOG_THROTTLE_MS) return;
+  lastSkipLogAt = now;
+  console.log(`[ForegroundSync] skip (${reason}): ${detail}`);
+}
+
+function markBusySkip(reason: string, detail: string): void {
+  consecutiveSkips++;
+  logSkip(reason, detail);
 }
 
 async function shouldPull(): Promise<boolean> {
@@ -75,30 +97,31 @@ const PULL_WATCHDOG_MS = 60_000;
 
 async function runPull(reason: string): Promise<void> {
   if (inFlight) {
-    if (__DEV__) console.log(`[ForegroundSync] skip (${reason}): already in flight`);
+    markBusySkip(reason, 'already in flight');
     return;
   }
   if (pendingBackgroundWork) {
-    if (__DEV__) console.log(`[ForegroundSync] skip (${reason}): background work still pending`);
+    markBusySkip(reason, 'background work still pending');
     return;
   }
   if (Date.now() - lastRunAt < COALESCE_WINDOW_MS) {
-    if (__DEV__) console.log(`[ForegroundSync] skip (${reason}): coalesce window`);
+    logSkip(reason, 'coalesce window');
     return;
   }
   if (!(await shouldPull())) {
-    if (__DEV__) console.log(`[ForegroundSync] skip (${reason}): shouldPull=false`);
+    logSkip(reason, 'shouldPull=false');
     return;
   }
 
   if (consecutiveFailures > 0) {
     const backoffMs = Math.min(BASE_BACKOFF_MS * Math.pow(2, consecutiveFailures - 1), MAX_BACKOFF_MS);
     if (Date.now() - lastFailedAt < backoffMs) {
-      if (__DEV__) console.log(`[ForegroundSync] skip (${reason}): backoff ${Math.round(backoffMs / 1000)}s`);
+      logSkip(reason, `backoff ${Math.round(backoffMs / 1000)}s`);
       return;
     }
   }
 
+  consecutiveSkips = 0;
   inFlight = true;
   lastRunAt = Date.now();
   notify();
@@ -168,18 +191,37 @@ async function runPull(reason: string): Promise<void> {
   }
 }
 
-function restartInterval(): void {
+function scheduleIntervalTick(): void {
   if (intervalHandle) {
-    clearInterval(intervalHandle);
+    clearTimeout(intervalHandle);
     intervalHandle = null;
   }
   if (!currentSyncFrequentlyEnabled) return;
   if (currentIntervalSeconds <= 0) return;
   if (lastAppState !== 'active') return;
 
-  intervalHandle = setInterval(() => {
-    void runPull('interval');
-  }, currentIntervalSeconds * 1000);
+  const baseMs = currentIntervalSeconds * 1000;
+  const busyBackoffMs =
+    consecutiveSkips > 0
+      ? Math.min(baseMs * Math.pow(2, consecutiveSkips), SKIP_BACKOFF_MAX_MS)
+      : baseMs;
+  const jitteredDelayMs = Math.round(busyBackoffMs * (0.9 + Math.random() * 0.2));
+
+  intervalHandle = setTimeout(() => {
+    intervalHandle = null;
+    void runPull('interval').finally(() => {
+      scheduleIntervalTick();
+    });
+  }, jitteredDelayMs);
+}
+
+function restartInterval(): void {
+  if (intervalHandle) {
+    clearTimeout(intervalHandle);
+    intervalHandle = null;
+  }
+  consecutiveSkips = 0;
+  scheduleIntervalTick();
 }
 
 function handleAppStateChange(state: AppStateStatus): void {
@@ -196,7 +238,7 @@ function handleAppStateChange(state: AppStateStatus): void {
     }
     restartInterval();
   } else if (intervalHandle) {
-    clearInterval(intervalHandle);
+    clearTimeout(intervalHandle);
     intervalHandle = null;
   }
 }
@@ -250,7 +292,7 @@ export function stopForegroundWatcher(): void {
     netInfoUnsub = null;
   }
   if (intervalHandle) {
-    clearInterval(intervalHandle);
+    clearTimeout(intervalHandle);
     intervalHandle = null;
   }
   lastNetReachable = null;
@@ -300,5 +342,7 @@ export function __resetForegroundSyncForTest(): void {
   currentSyncFrequentlyEnabled = true;
   consecutiveFailures = 0;
   lastFailedAt = 0;
+  consecutiveSkips = 0;
+  lastSkipLogAt = 0;
   listeners.clear();
 }

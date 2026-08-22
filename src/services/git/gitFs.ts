@@ -93,6 +93,15 @@ async function bytesToBase64Async(bytes: Uint8Array): Promise<string> {
   return result;
 }
 
+// Text extensions used by gitnotes scopes (notes, todos, canvases, templates).
+// These files are UTF-8 plain text and do not need the base64 round-trip.
+const TEXT_EXTS = new Set(['md', 'markdown', 'norg', 'org', 'txt', 'json']);
+
+function isTextExtension(filepath: string): boolean {
+  const ext = filepath.split('.').pop()?.toLowerCase();
+  return ext !== undefined && TEXT_EXTS.has(ext);
+}
+
 function joinUri(root: string, virtualPath: string): string {
   // virtualPath is git's view: "/foo/bar" or "foo/bar". Map onto the on-disk
   // root which already ends in "file:///.../<base>/".
@@ -204,7 +213,7 @@ export function makeGitFs(root: string): PromiseFsClient {
         throw new FsError('EISDIR', `EISDIR: illegal operation on directory '${filepath}'`);
       }
       const encoding = typeof opts === 'string' ? opts : opts?.encoding;
-      if (encoding === 'utf8') {
+      if (encoding === 'utf8' || (!encoding && isTextExtension(filepath))) {
         return await FileSystem.readAsStringAsync(uri);
       }
       const b64 = await FileSystem.readAsStringAsync(uri, {
@@ -240,6 +249,34 @@ export function makeGitFs(root: string): PromiseFsClient {
           );
         }
         await FileSystem.writeAsStringAsync(uri, data);
+        await maybeYield();
+      } else if (isTextExtension(filepath)) {
+        // Text-extension files (notes, canvases, todos) are UTF-8 plain text
+        // even when isomorphic-git hands us raw bytes (checkout writes blobs
+        // as Uint8Array). Decode once and write via the text path instead of
+        // the base64 round-trip. Fatal decoding guarantees the round-trip is
+        // byte-exact: any non-UTF-8 payload falls back to the base64 path so
+        // no data is silently rewritten (#986).
+        let text: string | null = null;
+        const TD: typeof TextDecoder | undefined = (
+          globalThis as unknown as { TextDecoder?: typeof TextDecoder }
+        ).TextDecoder;
+        if (TD) {
+          try {
+            text = new TD('utf-8', { fatal: true }).decode(data);
+          } catch {
+            text = null;
+          }
+        }
+        if (text !== null) {
+          await FileSystem.writeAsStringAsync(uri, text);
+          await maybeYield();
+          return;
+        }
+        const b64 = await bytesToBase64Async(data);
+        await FileSystem.writeAsStringAsync(uri, b64, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
         await maybeYield();
       } else {
         const b64 = await bytesToBase64Async(data);
