@@ -59,6 +59,7 @@ import type { RootStackParamList } from '../../navigation/types';
 import { DraftLayerRenderer } from './DraftLayerRenderer';
 import { AcceptDiscardBar } from './AcceptDiscardBar';
 import { useLongPressForVision } from '../../hooks/useLongPressForVision';
+import { useSafeBack } from '../../hooks/useSafeBack';
 import type { DraftCommand } from '../../stores/draftStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'CanvasEditor'>;
@@ -383,6 +384,7 @@ function convertDraftToElement(cmd: DraftCommand): CanvasElement | null {
 
 export default function CanvasEditorContent() {
   const navigation = useNavigation<NavigationProp>();
+  const safeBack = useSafeBack();
   const route = useRoute<RouteType>();
   const { canvasId, canvasWidth, canvasTitle } = route.params;
 
@@ -1506,7 +1508,7 @@ export default function CanvasEditorContent() {
       <View style={styles.header}>
         <TouchableOpacity
           testID="canvas-editor.button.back"
-          onPress={() => navigation.goBack()}
+          onPress={safeBack}
           style={styles.backBtn}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           accessibilityRole="button"

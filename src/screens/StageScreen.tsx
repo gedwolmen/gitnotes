@@ -1,7 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../contexts/ThemeContext';
 import { ScreenHeader, useScreenHeaderHeight } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
@@ -9,9 +7,9 @@ import { groupStaged, useStageStore, type StageGroup } from '../stores/stageStor
 import { drainPushQueue } from '../services/StagePushScheduler';
 import { useGitHubActivityStore } from '../stores/githubActivityStore';
 import type { StagedItem } from '../services/git/StagingService';
-import type { RootStackParamList } from '../navigation/types';
 import { readDeleteFailures, parseDeleteFailureKey } from '../services/git/deleteFailures';
 import { retryDeleteFailure } from '../services/git/retryDeleteFailure';
+import { useSafeBack } from '../hooks/useSafeBack';
 
 const UPSERT_COLOR = '#22c55e';
 
@@ -75,7 +73,7 @@ function StageRow({ item }: { item: StagedItem }) {
 
 export default function StageScreen() {
   const { colors } = useTheme();
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const safeBack = useSafeBack();
   const staged = useStageStore((s) => s.staged);
   const isPushing = useStageStore((s) => s.isPushing);
   const globalPushing = useStageStore((s) => s.globalPushing);
@@ -242,7 +240,7 @@ export default function StageScreen() {
     <SafeAreaView edges={[]} className="flex-1" style={{ backgroundColor: colors.background }}>
       <ScreenHeader
         title="Staged Changes"
-        onBack={() => navigation.goBack()}
+        onBack={safeBack}
         onLayout={(event) => setHeaderBlurHeight(event.nativeEvent.layout.height)}
         footer={
           visible ? (

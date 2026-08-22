@@ -21,12 +21,14 @@ import { ChatThreadContextMenu } from '../components/chat/ChatThreadContextMenu'
 import { HapticService } from '../utils/haptics';
 import { useTranslation } from 'react-i18next';
 import { useProScreenGuard } from '../hooks/useProScreenGuard';
+import { useSafeBack } from '../hooks/useSafeBack';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function ChatThreadListScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<NavigationProp>();
+  const safeBack = useSafeBack();
   const { colors, spacing } = useTokens();
   const headerHeight = useScreenHeaderHeight();
   const tabBarHeight = useTabBarHeight();
@@ -369,7 +371,7 @@ export default function ChatThreadListScreen() {
 
       <ScreenHeader
         title={t('chat.title')}
-        onBack={() => navigation.goBack()}
+        onBack={safeBack}
       />
     </SafeAreaView>
   );
