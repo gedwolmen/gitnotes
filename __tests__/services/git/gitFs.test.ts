@@ -360,4 +360,30 @@ describe('gitFs adapter', () => {
     expect(read).toBeInstanceOf(Uint8Array);
     expect(Array.from(read as Uint8Array)).toEqual(Array.from(bytes));
   });
+
+  test('writeFile Uint8Array to text extension uses text path, round-trips byte-exact', async () => {
+    const fs = makeGitFs('file:///doc/git/');
+    const content = '# Checkout\n\nemoji 🎉 and 日本語 — byte-exact round-trip';
+    const bytes = new TextEncoder().encode(content);
+    await fs.promises.writeFile('/notes/checkout.md', bytes);
+    const back = await fs.promises.readFile('/notes/checkout.md');
+    expect(back).toBe(content);
+    expect(typeof back).toBe('string');
+  });
+
+  test('writeFile non-UTF-8 bytes to text extension falls back to base64 (no corruption)', async () => {
+    const fs = makeGitFs('file:///doc/git/');
+    // 0xff 0xfe is an invalid UTF-8 sequence — the fatal decoder must reject
+    // it and fall back to the byte-exact base64 path instead of writing a
+    // silent U+FFFD replacement to disk.
+    const bytes = new Uint8Array([0xff, 0xfe, 0x41, 0x00, 0x80]);
+    await fs.promises.writeFile('/notes/odd.md', bytes);
+    const entry = getStore().get('file:///doc/git/notes/odd.md');
+    expect(entry?.encoding).toBe('base64');
+    // Decode the stored base64 back and confirm the bytes match exactly.
+    const bin = globalThis.atob(entry!.data!);
+    const stored = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) stored[i] = bin.charCodeAt(i);
+    expect(Array.from(stored)).toEqual(Array.from(bytes));
+  });
 });
