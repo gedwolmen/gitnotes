@@ -39,7 +39,8 @@
         ],
         "UIFileSharingEnabled": true,
         "LSSupportsOpeningDocumentsInPlace": true,
-        "NSDocumentsFolderUsageDescription": "GitNot\u0113s stores your cloned repositories and note files here so you can browse and back them up from the Files app."
+        "NSDocumentsFolderUsageDescription": "GitNot\u0113s stores your cloned repositories and note files here so you can browse and back them up from the Files app.",
+        "EXDevMenuShowFloatingActionButton": false
       }
     },
     "android": {

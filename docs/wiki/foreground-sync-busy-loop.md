@@ -17,7 +17,7 @@
 
 | Risk | Reversible | Verified |
 |---|---|---|
-| Low — pull semantics unchanged (`shouldPull` gate, coalesce, failure backoff all preserved); only skip logging + interval cadence under busy conditions changed | Yes | `__tests__/ForegroundSyncService.test.ts` (11/12 pass; one new back-off test iterating) |
+| Low — pull semantics unchanged (`shouldPull` gate, coalesce, failure backoff all preserved); only skip logging + interval cadence under busy conditions changed | Yes | `__tests__/ForegroundSyncService.test.ts` (12/12 pass: throttling + back-off + recovery) |
 
 ## Notes
 

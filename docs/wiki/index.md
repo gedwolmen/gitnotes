@@ -43,11 +43,12 @@
 | [Pro Dev Override](./pro-dev-override.md) | `__DEV__`-only iOS-simulator override that forces Pro gate for QA — NOT a payment bypass; RevenueCat unchanged; gate triple `__DEV__ && Platform.OS==='ios' && !Device.isDevice` |
 | [E2E Sync Testing](./e2e-sync-testing.md) | E2E test harness: 6 scenarios × 2 modes, timing instrumentation, push-trigger verification, staged-visibility sub-checks, blocking overlay, remote verification |
 | [Clone-Perf Optimization](./clone-perf-optimization.md) | Five ordered patches closing the simulator freeze gap: `noCheckout` + batched full checkout, 3-concurrent-pull dedup, LFS-after-clone, UTF-8 fast path, depth-3 floor measurement flag |
-| [v1.5.0 App Store Rejection](./v1.5.0-app-store-rejection.md) | 2.1.0 App Completeness SIGABRT on first launch — root cause: `useNavigation()` outside `NavigationContainer` in `useProGate.ts`; fix already on `main` (`c5362e86`); build from `main HEAD` to resubmit |
+| [v1.5.0 App Store Rejection](./v1.5.0-app-store-rejection.md) | 2.1.0 App Completeness SIGABRT on first launch — root cause: `useNavigation()` outside `NavigationContainer` in `useProGate.ts`; fix on `main` (`c5362e86`) then hardened by splitting `useProGate` into `useProGate()`/`useProStatus()` (#1004) |
 | [Git Test E2E Report](./git-test-e2e-report.md) | Live round-trip timings against `test-notes` for all 12 scenarios (6 clone-mode + 6 API-mode) with per-action breakdown, syncTiming instrumentation seam, and Mac vs simulator scope |
 | [Git Test Big Repo](./git-test-big-repo.md) | Same 12-scenario matrix on a 429-file / 11MB / 28-commit synthetic repo (local bare remote) — linear scaling, no quadratic blowup; small-vs-big comparison table |
 | [ForegroundSync Busy-Loop](./foreground-sync-busy-loop.md) | `ForegroundSync` skip-spam fix (#984): log throttle (10s window), busy-skip `consecutiveSkips` counter, jittered exponential interval back-off via self-scheduling `setTimeout` |
 | [gitFs Write-Path Text Fast Path](./gitfs-write-text-fast-path.md) | `gitFs.writeFile` now decodes `Uint8Array` payloads for text extensions (`md/norg/org/txt/json`) with `fatal:true` UTF-8 + base64 fallback — kills the write-side base64 round-trip (#986) |
+| [DevMenu Floating "Tools" Button Overlap](./dev-menu-fab-overlap.md) | expo-dev-menu's FAB defaults to the top-right corner over the header action buttons, so Edit/Add-note taps opened the DevMenu; dev-only startup disable + `EXDevMenuShowFloatingActionButton=false` default + `useProGate` split (#977, #1004) |
 | [LFS Pointer Scan — Parallel Walk](./lfs-scan-parallel-walk.md) | `scanForPointers` walks the working tree with bounded concurrency (`SCAN_CONCURRENCY=16` via `mapLimit`) instead of one serial bridge round-trip per file (#980) |
 
 ## Quick Start

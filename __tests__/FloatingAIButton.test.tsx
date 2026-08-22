@@ -87,6 +87,11 @@ jest.mock('../src/stores/aiStore', () => ({
 }));
 
 jest.mock('../src/hooks/useProGate', () => ({
+  useProStatus: () => ({
+    isPro: mockIsPro,
+    status: mockIsPro ? 'pro' : 'free',
+    loading: false,
+  }),
   useProGate: () => ({
     isPro: mockIsPro,
     status: mockIsPro ? 'pro' : 'free',

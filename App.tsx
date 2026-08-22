@@ -51,6 +51,7 @@ import { LastSelectionPreferenceService } from './src/services/LastSelectionPref
 import { useProStore } from './src/stores/proStore';
 import * as PushNotificationService from './src/services/PushNotificationService';
 import * as StagePushScheduler from './src/services/StagePushScheduler';
+import { hideDevMenuFloatingActionButton } from './src/utils/devMenuFab';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -60,6 +61,10 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+if (__DEV__) {
+  hideDevMenuFloatingActionButton();
+}
 
 export default function App() {
   const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
