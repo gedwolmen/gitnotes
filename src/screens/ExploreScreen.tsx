@@ -429,20 +429,6 @@ export default function ExploreScreen() {
         <ScreenHeader
           title={selectedRepo.name}
           onBack={handleBack}
-          actions={
-            <TouchableOpacity
-              testID="explore.hub.branch-picker"
-              className="flex-row items-center gap-1.5 rounded-full px-3 py-1.5"
-              style={{ backgroundColor: colors.primary + '15' }}
-              onPress={openBranchPicker}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="git-branch-outline" size={14} color={colors.primary} />
-              <Text className="text-xs font-semibold" style={{ color: colors.primary }} numberOfLines={1}>
-                {selectedBranch ?? selectedRepo.branch ?? t('settings.branchDefault')}
-              </Text>
-            </TouchableOpacity>
-          }
         />
       </SafeAreaView>
     );
