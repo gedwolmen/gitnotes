@@ -24,9 +24,7 @@ module.exports = function withKeychainAccessGroup(config) {
   return withEntitlementsPlist(config, (config) => {
     const existing = config.modResults['keychain-access-groups'];
     if (!Array.isArray(existing) || existing.length === 0) {
-      config.modResults['keychain-access-groups'] = [
-        '$(AppIdentifierPrefix)$(CFBundleIdentifier)',
-      ];
+      config.modResults['keychain-access-groups'] = ['$(AppIdentifierPrefix)$(CFBundleIdentifier)'];
     }
     return config;
   });
