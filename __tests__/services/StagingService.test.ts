@@ -110,7 +110,7 @@ jest.mock('../../src/stores/githubActivityStore', () => ({
 }));
 
 import { __resetImportDedupForTest } from '../../src/services/RepoImportService';
-import { StagingService } from '../../src/services/git/StagingService';
+import { StagingService, subscribeStagedChanged } from '../../src/services/git/StagingService';
 import type { StagedItem } from '../../src/services/git/StagingService';
 import { NoteSyncQueueService } from '../../src/services/NoteSyncQueueService';
 import { LocalGitWriter } from '../../src/services/git/LocalGitWriter';
@@ -752,6 +752,78 @@ getCommitOid.mockResolvedValue(null);
 
       capturedOnProgress?.({ phase: 'Writing objects', loaded: 0, total: 0 });
       expect(onProgress).toHaveBeenCalledWith(null);
+    });
+
+    test('successful clone push broadcasts staged-changed so the floating push button hides', async () => {
+      getMode.mockResolvedValue('clone');
+      getSavedRepositories.mockResolvedValue([
+        { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
+      ]);
+      getCommitOid.mockImplementation(
+        async ({ ref }: { ref: string }) =>
+          ref.startsWith('refs/heads') ? 'local-oid' : 'remote-oid',
+      );
+
+      const listener = jest.fn();
+      const unsubscribe = subscribeStagedChanged(listener);
+
+      try {
+        const result = await StagingService.pushStaged('owner/repo', 'main');
+
+        expect(result).toEqual({ success: true });
+        expect(writerPush).toHaveBeenCalledTimes(1);
+        expect(listener).toHaveBeenCalledTimes(1);
+      } finally {
+        unsubscribe();
+      }
+    });
+
+    test('failed clone push does NOT broadcast staged-changed (button stays)', async () => {
+      getMode.mockResolvedValue('clone');
+      getSavedRepositories.mockResolvedValue([
+        { id: '1', name: 'repo', path: 'owner/repo', branch: 'main' },
+      ]);
+      getCommitOid.mockImplementation(
+        async ({ ref }: { ref: string }) =>
+          ref.startsWith('refs/heads') ? 'local-oid' : 'remote-oid',
+      );
+      writerPush.mockResolvedValue({ success: false, error: 'push rejected' });
+
+      const listener = jest.fn();
+      const unsubscribe = subscribeStagedChanged(listener);
+
+      try {
+        const result = await StagingService.pushStaged('owner/repo', 'main');
+
+        expect(result).toEqual({ success: false, error: 'push rejected' });
+        expect(listener).not.toHaveBeenCalled();
+      } finally {
+        unsubscribe();
+      }
+    });
+
+    test('api-mode push does NOT broadcast staged-changed (queue notify covers it)', async () => {
+      queueGetAll.mockResolvedValue([
+        queueItem('note.upsert', {
+          repo: 'owner/repo',
+          branch: 'main',
+          filePath: 'notes/a.md',
+          title: 'A',
+        }),
+      ]);
+      getMode.mockResolvedValue('api');
+
+      const listener = jest.fn();
+      const unsubscribe = subscribeStagedChanged(listener);
+
+      try {
+        const result = await StagingService.pushStaged();
+
+        expect(result).toEqual({ success: true });
+        expect(listener).not.toHaveBeenCalled();
+      } finally {
+        unsubscribe();
+      }
     });
   });
 });

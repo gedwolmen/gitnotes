@@ -22,6 +22,7 @@
 | [Git Core Hardening](./git-core-hardening.md) | git-core test-campaign fixes: binary decode integrity, case collisions, auth/preflight, API batch writes, pull/reconcile fixes (#876–#892) |
 | [Stage → Push UX](./stage-push-ux.md) | no row locks, vanish-immediate deletes, spinner-free grayed push buttons, determinate progress ring, body-text notifications, resume-on-foreground |
 | [Push Button Missing on Folder-Backed Updates](./push-button-update-fix.md) | `LocalGitWriter` normalizes leading-slash `filePath`s so folder-backed note/canvas/todo updates commit locally and surface the push button |
+| [Floating Push Button Not Hiding After Push](./push-button-hide-after-push.md) | `pushStaged` broadcasts `notifyStagedChanged()` after a successful clone push so `pendingCount` drops to 0 and the button hides immediately |
 | [Token Removal Repo Cascade](./repo-removal-cascade.md) | removing a token also removes its synced repos, with a confirmation warning |
 | [Token Scope Error Messaging](./token-scope-error-messaging.md) | 403s surface needed token scopes in the sync message and token-add UI |
 | [Pro Paywall & Monetization](./paywall-pro.md) | StoreKit 2 revenue model: 30-day trial / $2.99 mo / $40 lifetime, grandfathering, show-locked feature UX, gating map, impressions & analytics, restore flow, intro-eligibility policy, legal links, bento grid layout (#921), store setup checklist |
