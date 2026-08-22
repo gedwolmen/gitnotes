@@ -12,13 +12,13 @@ Every blob under `todos/` with a `.json` extension went straight into `JSON.pars
 
 1. **Content guard before parsing** — the trimmed content must start with `{` (the canonical payload is JSON serialized by `TodoGitHubSyncService` as `todos/<slug>.json`). Non-JSON content (markdown/frontmatter, arrays, empty/partial uploads) is skipped **silently** — it is not a todo in this app's schema, so it is not an error condition. This kills the repeated WARN spam for every non-JSON file.
 2. **Error-level logging with the file path** — a genuine parse failure on a `{`-prefixed file now logs `console.error` with `todos/<file>.json` in the message, so the failing file is identifiable in production Metro/device logs.
-3. **Skipped counter + aggregate summary** — failures increment `skipped`; after the loop a `console.warn` reports `Skipped N malformed todo file(s) in todos/` so a pull that silently lost todos is at least visible at a glance.
+3. **Skipped counter + path-listing summary** — every skip (guard or parse failure) is counted and its path collected; after the loop a single `console.error` reports `Skipped N todo file(s) with invalid JSON content: <paths>` so a pull that silently lost todos is observable at a glance.
 
 Reconcile behavior is unchanged: the remote path is added to `remotePaths` before parsing, so a malformed remote file still protects the existing local todo from being dropped (no local data loss).
 
 | Risk | Reversible | Verified |
 |---|---|---|
-| Low — valid-JSON pull path unchanged; only non-JSON content is now skipped instead of logged, and genuine failures are logged louder | Yes | `__tests__/services/RepoPullService.todo-parse.test.ts` (6/6: valid pull, malformed skip + error log w/ path, silent markdown skip, silent array skip, no-data-loss reconcile, skip summary) |
+| Low — valid-JSON pull path unchanged; only non-JSON content is now skipped instead of logged, and genuine failures are logged louder | Yes | `__tests__/services/RepoPullService.todo-parse.test.ts` (7/7: valid pull, malformed skip + parse-error log w/ path, silent markdown skip, silent array skip, no-data-loss reconcile, skip summary w/ paths, `.md` files untouched) |
 
 ## Notes
 

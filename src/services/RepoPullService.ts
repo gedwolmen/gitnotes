@@ -666,6 +666,7 @@ async function pullTodosFromRepo(
     const remotePaths = new Set<string>();
 
     let skipped = 0;
+    const skippedPaths: string[] = [];
     if (directoryExists) {
       for (const file of files) {
         if (!file.path.endsWith('.json')) continue;
@@ -680,13 +681,18 @@ async function pullTodosFromRepo(
         // app's schema, so skip them silently instead of logging a parse
         // error for every one (#1008).
         const content = file.content.trim();
-        if (!content.startsWith('{')) continue;
+        if (!content.startsWith('{')) {
+          skipped++;
+          skippedPaths.push(file.path);
+          continue;
+        }
 
         let data: Record<string, any>;
         try {
           data = JSON.parse(content);
         } catch (error) {
           skipped++;
+          skippedPaths.push(file.path);
           console.error(
             `[RepoPullService] Failed to parse todo JSON in ${file.path} (skipping):`,
             error instanceof Error ? error.message : error,
@@ -732,8 +738,8 @@ async function pullTodosFromRepo(
         }
       }
       if (skipped > 0) {
-        console.warn(
-          `[RepoPullService] Skipped ${skipped} malformed todo file(s) in todos/ — see errors above.`,
+        console.error(
+          `[RepoPullService] Skipped ${skipped} todo file(s) with invalid JSON content: ${skippedPaths.join(', ')}`,
         );
       }
     }

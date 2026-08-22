@@ -40,7 +40,6 @@ import { GitHubService } from '../../src/services/GitHubService';
 import { StorageService } from '../../src/services/StorageService';
 
 const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
-const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
 
 const seed = (paths: Record<string, string>) => {
   (GitHubService.getTreeRecursiveOrThrow as jest.Mock).mockResolvedValue(
@@ -77,35 +76,45 @@ describe('RepoPullService todo parse handling (#1008)', () => {
     expect(errorSpy).not.toHaveBeenCalled();
   });
 
-  it('skips a malformed JSON todo without crashing and logs with the file path', async () => {
+  it('skips a malformed JSON todo without crashing and logs the parse error with the path', async () => {
     seed({ 'todos/broken.json': '{ "text": "truncated' });
 
     const result = await pullFromSingleRepo('org/repo');
 
     expect(result.todos).toBe(0);
     expect(mockLocalTodos).toHaveLength(0);
-    expect(errorSpy).toHaveBeenCalledTimes(1);
-    expect(String(errorSpy.mock.calls[0][0])).toContain('todos/broken.json');
+    const parseError = errorSpy.mock.calls.find(([msg]) =>
+      String(msg).includes('Failed to parse todo JSON'),
+    );
+    expect(parseError).toBeTruthy();
+    expect(String(parseError?.[0])).toContain('todos/broken.json');
   });
 
-  it('silently skips non-JSON content (markdown/frontmatter) in a .json file', async () => {
+  it('skips non-JSON content (markdown/frontmatter) in a .json file without a per-file error', async () => {
     seed({ 'todos/note.md.json': '---\nid: 1\ntext: Buy milk\n---\n' });
 
     const result = await pullFromSingleRepo('org/repo');
 
     expect(result.todos).toBe(0);
     expect(mockLocalTodos).toHaveLength(0);
-    expect(errorSpy).not.toHaveBeenCalled();
+    expect(
+      errorSpy.mock.calls.find(([msg]) => String(msg).includes('Failed to parse todo JSON')),
+    ).toBeUndefined();
+    expect(
+      errorSpy.mock.calls.find(([msg]) => String(msg).includes('todos/note.md.json')),
+    ).toBeTruthy();
   });
 
-  it('silently skips a JSON array (not a todo object) in a .json file', async () => {
+  it('skips a JSON array (not a todo object) in a .json file', async () => {
     seed({ 'todos/list.json': '[1, 2, 3]' });
 
     const result = await pullFromSingleRepo('org/repo');
 
     expect(result.todos).toBe(0);
     expect(mockLocalTodos).toHaveLength(0);
-    expect(errorSpy).not.toHaveBeenCalled();
+    expect(
+      errorSpy.mock.calls.find(([msg]) => String(msg).includes('Failed to parse todo JSON')),
+    ).toBeUndefined();
   });
 
   it('keeps an existing local todo when its remote file is malformed (no data loss)', async () => {
@@ -125,13 +134,28 @@ describe('RepoPullService todo parse handling (#1008)', () => {
     expect(mockLocalTodos.find((t: any) => t.filePath === 'todos/milk.json')).toBeDefined();
   });
 
-  it('logs a summary when any todo files were skipped', async () => {
+  it('logs an error summary listing the skipped files', async () => {
     seed({ 'todos/broken.json': '{ broken' });
 
     await pullFromSingleRepo('org/repo');
 
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Skipped 1 malformed todo file(s) in todos/'),
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'Skipped 1 todo file(s) with invalid JSON content: todos/broken.json',
+      ),
     );
+  });
+
+  it('leaves markdown todo files (.md) untouched and unimported', async () => {
+    seed({
+      'todos/note-style.md': '---\nid: x\ntext: Markdown todo\ncompleted: false\n---',
+      'todos/valid.json': JSON.stringify({ text: 'Only real todo', completed: false }),
+    });
+
+    const result = await pullFromSingleRepo('org/repo');
+
+    expect(result.todos).toBe(1);
+    expect(mockLocalTodos).toHaveLength(1);
+    expect(mockLocalTodos[0].filePath).toBe('todos/valid.json');
   });
 });
