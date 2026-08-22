@@ -665,6 +665,7 @@ async function pullTodosFromRepo(
     let dirty = false;
     const remotePaths = new Set<string>();
 
+    let skipped = 0;
     if (directoryExists) {
       for (const file of files) {
         if (!file.path.endsWith('.json')) continue;
@@ -672,11 +673,24 @@ async function pullTodosFromRepo(
         onProgress?.('Importing todos…', processed, todoJsonCount);
         remotePaths.add(file.path);
 
+        // The canonical todo payload is JSON serialized by
+        // TodoGitHubSyncService (todos/<slug>.json). Files whose content is
+        // not a JSON object — markdown/frontmatter that happens to carry a
+        // .json extension, empty or partial uploads — are not todos in this
+        // app's schema, so skip them silently instead of logging a parse
+        // error for every one (#1008).
+        const content = file.content.trim();
+        if (!content.startsWith('{')) continue;
+
         let data: Record<string, any>;
         try {
-          data = JSON.parse(file.content);
+          data = JSON.parse(content);
         } catch (error) {
-          console.warn('[RepoPullService] Failed to parse todo JSON:', error);
+          skipped++;
+          console.error(
+            `[RepoPullService] Failed to parse todo JSON in ${file.path} (skipping):`,
+            error instanceof Error ? error.message : error,
+          );
           continue;
         }
 
@@ -716,6 +730,11 @@ async function pullTodosFromRepo(
           dirty = true;
           pulled++;
         }
+      }
+      if (skipped > 0) {
+        console.warn(
+          `[RepoPullService] Skipped ${skipped} malformed todo file(s) in todos/ — see errors above.`,
+        );
       }
     }
 

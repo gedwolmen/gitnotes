@@ -50,6 +50,7 @@
 | [gitFs Write-Path Text Fast Path](./gitfs-write-text-fast-path.md) | `gitFs.writeFile` now decodes `Uint8Array` payloads for text extensions (`md/norg/org/txt/json`) with `fatal:true` UTF-8 + base64 fallback — kills the write-side base64 round-trip (#986) |
 | [DevMenu Floating "Tools" Button Overlap](./dev-menu-fab-overlap.md) | expo-dev-menu's FAB defaults to the top-right corner over the header action buttons, so Edit/Add-note taps opened the DevMenu; dev-only startup disable + `EXDevMenuShowFloatingActionButton=false` default + `useProGate` split (#977, #1004) |
 | [LFS Pointer Scan — Parallel Walk](./lfs-scan-parallel-walk.md) | `scanForPointers` walks the working tree with bounded concurrency (`SCAN_CONCURRENCY=16` via `mapLimit`) instead of one serial bridge round-trip per file (#980) |
+| [Todo Pull Parse Errors — Silent Data Loss Fix](./todo-pull-parse-fix.md) | `pullTodosFromRepo` no longer silently swallows todo JSON parse errors: `{`-content guard skips non-JSON files silently, genuine failures log `error` with the file path, and a skipped-count summary surfaces the loss (#1008) |
 
 ## Quick Start
 
