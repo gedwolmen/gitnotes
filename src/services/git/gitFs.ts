@@ -93,6 +93,15 @@ async function bytesToBase64Async(bytes: Uint8Array): Promise<string> {
   return result;
 }
 
+// Text extensions used by gitnotes scopes (notes, todos, canvases, templates).
+// These files are UTF-8 plain text and do not need the base64 round-trip.
+const TEXT_EXTS = new Set(['md', 'markdown', 'norg', 'org', 'txt', 'json']);
+
+function isTextExtension(filepath: string): boolean {
+  const ext = filepath.split('.').pop()?.toLowerCase();
+  return ext !== undefined && TEXT_EXTS.has(ext);
+}
+
 function joinUri(root: string, virtualPath: string): string {
   // virtualPath is git's view: "/foo/bar" or "foo/bar". Map onto the on-disk
   // root which already ends in "file:///.../<base>/".
@@ -204,7 +213,7 @@ export function makeGitFs(root: string): PromiseFsClient {
         throw new FsError('EISDIR', `EISDIR: illegal operation on directory '${filepath}'`);
       }
       const encoding = typeof opts === 'string' ? opts : opts?.encoding;
-      if (encoding === 'utf8') {
+      if (encoding === 'utf8' || (!encoding && isTextExtension(filepath))) {
         return await FileSystem.readAsStringAsync(uri);
       }
       const b64 = await FileSystem.readAsStringAsync(uri, {
