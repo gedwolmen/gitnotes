@@ -22,6 +22,7 @@ import { serializeTemplate, templateSlug } from '../services/TemplateMarkdownSer
 import { StagingService } from '../services/git/StagingService';
 import { SyncEngineService, type SyncEngineMode } from '../services/SyncEngineService';
 import { GitFsService } from '../services/git/GitFsService';
+import { cancelInflightGitHttp } from '../services/git/gitHttp';
 import { CloneMigrationService } from '../services/git/CloneMigrationService';
 import { LfsService } from '../services/git/lfs';
 import { AuthService } from '../services/AuthService';
@@ -349,6 +350,10 @@ export default function SettingsScreen() {
 
   const handleCancelClone = useCallback(() => {
     cloneAbortedRef.current = true;
+    // Abort the in-flight git HTTP request so a clone stuck inside the
+    // fetch (never reaching onProgress) is actually cancelled instead of
+    // waiting out the full timeout with the blocking modal open (#1016).
+    cancelInflightGitHttp();
     if (cloneProgressRef.current?.error) {
       setCloneProgress(null);
       return;
