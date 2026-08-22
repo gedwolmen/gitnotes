@@ -461,7 +461,8 @@
     "filterOpen": "Offen",
     "filterClosed": "Geschlossen",
     "openInBrowser": "Im Browser öffnen",
-    "loadError": "Konnte nicht geladen werden — zum Wiederholen tippen"
+    "loadError": "Konnte nicht geladen werden — zum Wiederholen tippen",
+    "permissionError": "Zugriff verweigert — GitHub-Token-Berechtigungen prüfen"
   },
   "home": {
     "title": "Start",

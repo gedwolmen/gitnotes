@@ -461,7 +461,8 @@
     "filterOpen": "オープン",
     "filterClosed": "クローズ",
     "openInBrowser": "ブラウザで開く",
-    "loadError": "読み込めませんでした — タップして再試行"
+    "loadError": "読み込めませんでした — タップして再試行",
+    "permissionError": "アクセス拒否 — GitHubトークンの権限を確認してください"
   },
   "home": {
     "title": "ホーム",

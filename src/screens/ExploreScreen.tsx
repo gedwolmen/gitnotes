@@ -550,7 +550,11 @@ export default function ExploreScreen() {
         ) : prQuery.isError ? (
           <View className="flex-1 items-center justify-center px-6">
             <Ionicons name="alert-circle-outline" size={40} color={colors.textSecondary} />
-            <Text className="text-sm mt-3" style={{ color: colors.textSecondary }}>{t('explore.loadError')}</Text>
+            <Text className="text-sm mt-3" style={{ color: colors.textSecondary }}>
+              {(prQuery.error as Error & { status?: number })?.status === 403
+                ? t('explore.permissionError')
+                : t('explore.loadError')}
+            </Text>
           </View>
         ) : prData.length === 0 ? (
           <EmptyState icon="git-pull-request-outline" title={t('explore.noPullRequests')} />
@@ -627,7 +631,11 @@ export default function ExploreScreen() {
         ) : issueQuery.isError ? (
           <View className="flex-1 items-center justify-center px-6">
             <Ionicons name="alert-circle-outline" size={40} color={colors.textSecondary} />
-            <Text className="text-sm mt-3" style={{ color: colors.textSecondary }}>{t('explore.loadError')}</Text>
+            <Text className="text-sm mt-3" style={{ color: colors.textSecondary }}>
+              {(issueQuery.error as Error & { status?: number })?.status === 403
+                ? t('explore.permissionError')
+                : t('explore.loadError')}
+            </Text>
           </View>
         ) : issueData.length === 0 ? (
           <EmptyState icon="alert-circle-outline" title={t('explore.noIssues')} />

@@ -408,15 +408,10 @@ class GitHubServiceClass {
     repo: string,
     state: GitHubItemState = 'open',
   ): Promise<GitHubIssue[]> {
-    try {
-      const data = await this.request(
-        `https://api.github.com/repos/${owner}/${repo}/issues?state=${state}&per_page=50`
-      );
-      return Array.isArray(data) ? data : [];
-    } catch (error) {
-      console.warn('[GitHubService] Failed to get issues:', error);
-      return [];
-    }
+    const data = await this.request(
+      `https://api.github.com/repos/${owner}/${repo}/issues?state=${state}&per_page=50`
+    );
+    return Array.isArray(data) ? data : [];
   }
 
   async getPullRequests(
@@ -424,15 +419,10 @@ class GitHubServiceClass {
     repo: string,
     state: GitHubItemState = 'open',
   ): Promise<GitHubPullRequest[]> {
-    try {
-      const data = await this.request(
-        `https://api.github.com/repos/${owner}/${repo}/pulls?state=${state}&per_page=50`
-      );
-      return Array.isArray(data) ? data : [];
-    } catch (error) {
-      console.warn('[GitHubService] Failed to get pull requests:', error);
-      return [];
-    }
+    const data = await this.request(
+      `https://api.github.com/repos/${owner}/${repo}/pulls?state=${state}&per_page=50`
+    );
+    return Array.isArray(data) ? data : [];
   }
 
   async createPullRequest(opts: {

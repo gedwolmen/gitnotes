@@ -461,7 +461,8 @@
     "filterOpen": "열림",
     "filterClosed": "닫힘",
     "openInBrowser": "브라우저에서 열기",
-    "loadError": "로드할 수 없습니다 — 눌러서 다시 시도"
+    "loadError": "로드할 수 없습니다 — 눌러서 다시 시도",
+    "permissionError": "액세스 거부됨 — GitHub 토큰 권한을 확인하세요"
   },
   "home": {
     "title": "홈",
