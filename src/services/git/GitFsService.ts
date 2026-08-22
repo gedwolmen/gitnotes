@@ -19,6 +19,15 @@ const CLONES_SUBDIR = 'GitNotes/';
 const MIN_DIVERGENCE_HISTORY_DEPTH = 3;
 
 /**
+ * Experiment flag: allows depth-2 fetches for the divergence-conflict E2E scenario.
+ * When `GITNOTES_EXPERIMENT_DEPTH_2` is set, fetch/pull operations use depth 2 instead
+ * of the default depth-3 floor. This lets the E2E harness measure whether depth 2
+ * still produces correct conflict detection. Default (flag absent) is unchanged.
+ */
+const DEPTH_FOR_FETCH =
+  process.env.GITNOTES_EXPERIMENT_DEPTH_2 === '1' ? 2 : MIN_DIVERGENCE_HISTORY_DEPTH;
+
+/**
  * Tree entry shape that mirrors `GitHubService.getTreeRecursiveOrThrow` so
  * later phases can swap one for the other behind the SyncEngine flag without
  * the callers caring which transport produced the listing.
@@ -237,7 +246,7 @@ export class GitFsService {
         dir,
         ref: opts.branch,
         singleBranch: true,
-        depth: Math.max(opts.depth ?? MIN_DIVERGENCE_HISTORY_DEPTH, MIN_DIVERGENCE_HISTORY_DEPTH),
+        depth: Math.max(opts.depth ?? DEPTH_FOR_FETCH, DEPTH_FOR_FETCH),
         tags: false,
         onAuth: ensureToken(opts.token),
       });
@@ -277,7 +286,7 @@ export class GitFsService {
         dir,
         ref: opts.branch,
         singleBranch: true,
-        depth: Math.max(opts.depth ?? MIN_DIVERGENCE_HISTORY_DEPTH, MIN_DIVERGENCE_HISTORY_DEPTH),
+        depth: Math.max(opts.depth ?? DEPTH_FOR_FETCH, DEPTH_FOR_FETCH),
         tags: false,
         onAuth: ensureToken(opts.token),
       });
