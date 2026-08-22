@@ -363,6 +363,7 @@
     "syncLastFailed": "Last sync failed",
     "syncLastTimedOut": "Last sync timed out",
     "syncFailureCount": "{{count}} consecutive failures",
+    "syncTimeAgo": "{{time}} ago",
     "credits": "Made with love by Vidwa De Seram in collaboration with Xaventra",
     "yourGithubRepositories": "Your GitHub Repositories",
     "noMatchingRepositories": "No matching repositories",

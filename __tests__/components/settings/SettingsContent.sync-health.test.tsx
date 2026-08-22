@@ -131,20 +131,27 @@ describe('SettingsContent sync health row (#1007)', () => {
     expect(getByText('Sync up to date')).toBeTruthy();
   });
 
-  it('renders the failed state with a failure count', () => {
+  it('renders the failed state with elapsed time and failure count', () => {
     const { getByTestId, getByText } = renderContent({
-      ...idle, status: 'failed', consecutiveFailures: 3,
+      ...idle,
+      status: 'failed',
+      consecutiveFailures: 3,
+      lastFailedAt: Date.now() - 5 * 60_000,
     });
     expect(getByTestId('settings.row.sync-health')).toBeTruthy();
     expect(getByText('Last sync failed')).toBeTruthy();
-    expect(getByText('3 consecutive failures')).toBeTruthy();
+    expect(getByText('5m ago · 3 consecutive failures')).toBeTruthy();
   });
 
-  it('renders the timed-out state', () => {
+  it('renders the timed-out state with elapsed time', () => {
     const { getByTestId, getByText } = renderContent({
-      ...idle, status: 'timedout', consecutiveFailures: 1,
+      ...idle,
+      status: 'timedout',
+      consecutiveFailures: 1,
+      lastFailedAt: Date.now() - 2 * 60_000,
     });
     expect(getByTestId('settings.row.sync-health')).toBeTruthy();
     expect(getByText('Last sync timed out')).toBeTruthy();
+    expect(getByText('2m ago')).toBeTruthy();
   });
 });

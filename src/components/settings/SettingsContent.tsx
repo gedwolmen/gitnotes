@@ -162,6 +162,14 @@ function formatLfsBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
+function formatSyncElapsed(timestamp: number): string {
+  const minutes = Math.max(1, Math.round((Date.now() - timestamp) / 60_000));
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  return `${Math.round(hours / 24)}d`;
+}
+
 export function SettingsContent(props: SettingsContentProps) {
   const {
     colors,
@@ -844,12 +852,14 @@ export function SettingsContent(props: SettingsContentProps) {
                   {syncHealth.status === 'failed' && t('settings.syncLastFailed')}
                   {syncHealth.status === 'timedout' && t('settings.syncLastTimedOut')}
                 </Text>
-                {(syncHealth.status === 'failed' || syncHealth.status === 'timedout') &&
-                  syncHealth.consecutiveFailures > 1 && (
-                    <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>
-                      {t('settings.syncFailureCount', { count: syncHealth.consecutiveFailures })}
-                    </Text>
-                  )}
+                {(syncHealth.status === 'failed' || syncHealth.status === 'timedout') && (
+                  <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>
+                    {t('settings.syncTimeAgo', { time: formatSyncElapsed(syncHealth.lastFailedAt) })}
+                    {syncHealth.consecutiveFailures > 1
+                      ? ` · ${t('settings.syncFailureCount', { count: syncHealth.consecutiveFailures })}`
+                      : ''}
+                  </Text>
+                )}
               </View>
             </View>
           </GroupRow>

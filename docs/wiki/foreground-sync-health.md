@@ -22,9 +22,9 @@
 `src/components/settings/SettingsContent.tsx` — a **sync health row** in the Sync group (below Background Sync) that renders only once a sync has run:
 - `syncing` → spinner + "Syncing…"
 - `ok` → primary-colored checkmark + "Sync up to date"
-- `failed` / `timedout` → red alert icon + "Last sync failed" / "Last sync timed out", with a "N consecutive failures" subtitle when `consecutiveFailures > 1`.
+- `failed` / `timedout` → red alert icon + "Last sync failed" / "Last sync timed out", with a relative-time subtitle (`5m ago`) and an "N consecutive failures" suffix when `consecutiveFailures > 1`.
 
-`src/i18n/en.json` — five new keys (`syncUpToDate`, `syncInProgress`, `syncLastFailed`, `syncLastTimedOut`, `syncFailureCount`); other locales fall back to English via `fallbackLng`.
+`src/i18n/*.json` — six new keys (`syncUpToDate`, `syncInProgress`, `syncLastFailed`, `syncLastTimedOut`, `syncFailureCount`, `syncTimeAgo`) added to **all six locales** (the `i18n-key-parity` regression guard requires en.json keys to exist in es/fr/de/ja/ko).
 
 Backoff behavior was **not** changed — it already covers the watchdog path via `consecutiveFailures` + busy-skip; this issue's gap was visibility.
 
