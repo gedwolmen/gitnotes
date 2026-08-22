@@ -461,7 +461,8 @@
     "filterOpen": "Abiertas",
     "filterClosed": "Cerradas",
     "openInBrowser": "Abrir en navegador",
-    "loadError": "No se pudo cargar — toca para reintentar"
+    "loadError": "No se pudo cargar — toca para reintentar",
+    "permissionError": "Acceso denegado — verifica los permisos de tu token de GitHub"
   },
   "home": {
     "title": "Inicio",

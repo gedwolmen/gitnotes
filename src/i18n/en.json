@@ -267,7 +267,8 @@
     "filterOpen": "Open",
     "filterClosed": "Closed",
     "openInBrowser": "Open in browser",
-    "loadError": "Couldn't load — tap to retry"
+    "loadError": "Couldn't load — tap to retry",
+    "permissionError": "Access denied — check your GitHub token permissions"
   },
   "settings": {
     "title": "Settings",
