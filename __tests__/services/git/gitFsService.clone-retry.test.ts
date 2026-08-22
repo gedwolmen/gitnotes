@@ -10,6 +10,7 @@
 jest.mock('isomorphic-git', () => {
   const mockIg = {
     clone: jest.fn(async (..._args: unknown[]) => undefined),
+    checkout: jest.fn(async (..._args: unknown[]) => undefined),
     fetch: jest.fn(async (..._args: unknown[]) => ({ defaultBranch: 'main' })),
     fastForward: jest.fn(async (..._args: unknown[]) => undefined),
     walk: jest.fn(async () => []),
@@ -26,6 +27,7 @@ jest.mock('isomorphic-git', () => {
     __esModule: true,
     default: {
       clone: mockIg.clone,
+      checkout: mockIg.checkout,
       fetch: mockIg.fetch,
       fastForward: mockIg.fastForward,
       walk: mockIg.walk,

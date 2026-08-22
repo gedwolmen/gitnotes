@@ -7,6 +7,7 @@ jest.mock('isomorphic-git', () => {
   // would otherwise be evaluated AFTER the factory's first invocation).
   const mocks = {
     clone: jest.fn(async (..._args: any[]) => undefined),
+    checkout: jest.fn(async (..._args: any[]) => undefined),
     fetch: jest.fn(async (..._args: any[]) => ({ defaultBranch: 'main' })),
     fastForward: jest.fn(async (..._args: any[]) => undefined),
     walk: jest.fn(async (..._args: any[]): Promise<any[]> => []),
@@ -26,6 +27,7 @@ jest.mock('isomorphic-git', () => {
     __esModule: true,
     default: {
       clone: mocks.clone,
+      checkout: mocks.checkout,
       fetch: mocks.fetch,
       fastForward: mocks.fastForward,
       walk: mocks.walk,
@@ -40,6 +42,7 @@ jest.mock('isomorphic-git', () => {
 function getGitMocks() {
   return (globalThis as any).__isomorphicGitMocks as {
     clone: jest.Mock;
+    checkout: jest.Mock;
     fetch: jest.Mock;
     fastForward: jest.Mock;
     walk: jest.Mock;
