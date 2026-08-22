@@ -344,6 +344,12 @@ export class StagingService {
         if (failures.length > 0) {
           return { success: false, error: failures.join('; ') };
         }
+        // Clone-mode pushes moved refs/heads/<branch> to origin — the only
+        // store refresh that fired during this call (the sync-queue notify
+        // from drain()) ran BEFORE these pushes, so the stage store still
+        // shows the just-pushed commits as staged. Broadcast so subscribers
+        // reload and the floating push button hides after a successful push.
+        notifyStagedChanged();
       }
 
       return { success: true };
