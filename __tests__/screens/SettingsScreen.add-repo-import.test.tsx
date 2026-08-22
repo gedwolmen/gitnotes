@@ -236,16 +236,22 @@ jest.mock('../../src/services/AuthService', () => {
 });
 
 jest.mock('../../src/services/git/GitFsService', () => ({
-  GitFsService: {
-    isCloned: jest.fn(async () => false),
-    clone: jest.fn(async () => undefined),
-    cloneExclusive: jest.fn(async () => undefined),
-    getCommitOid: jest.fn(async () => 'abc123def456'),
-    getCurrentBranch: jest.fn(async () => null),
-    removeRepo: jest.fn(async () => undefined),
-    workingTreeUri: jest.fn(() => 'file:///tmp/repo'),
-  },
-}));
+   GitFsService: {
+     isCloned: jest.fn(async () => false),
+     clone: jest.fn(async () => undefined),
+     cloneExclusive: jest.fn(async () => undefined),
+     getCommitOid: jest.fn(async () => 'abc123def456'),
+     getCurrentBranch: jest.fn(async () => null),
+     removeRepo: jest.fn(async () => undefined),
+     workingTreeUri: jest.fn(() => 'file:///tmp/repo'),
+   },
+   CloneOutOfMemoryError: class CloneOutOfMemoryError extends Error {
+     constructor(message: string) {
+       super(message);
+       this.name = 'CloneOutOfMemoryError';
+     }
+   },
+ }));
 
 jest.mock('../../src/services/git/CloneMigrationService', () => ({
   CloneMigrationService: { migrateRepo: jest.fn(async () => ({ notes: 0, todos: 0, canvases: 0, templates: 0, failures: [] })) },

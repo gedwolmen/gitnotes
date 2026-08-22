@@ -243,3 +243,18 @@ export function stopScheduler(): void {
   unsubscribeStaged?.();
   unsubscribeStaged = null;
 }
+
+/**
+ * Test-only seam: reset every piece of module-level state so tests that fire
+ * `void drainPushQueue(...)` (never awaited) can't leak a stuck `draining`
+ * flag or a live idle timer into the next test. Tests that leave a drain
+ * in-flight used to make later assertions flaky depending on test order.
+ */
+export function __resetForTests(): void {
+  clearIdleTimer();
+  schedulerRunning = false;
+  draining = false;
+  unsubscribeStaged?.();
+  unsubscribeStaged = null;
+  onPushFailure = null;
+}
