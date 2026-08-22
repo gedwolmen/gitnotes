@@ -87,6 +87,7 @@
       "expo-image-picker",
       "@react-native/datetimepicker",
       "expo-secure-store",
+      "./plugins/withKeychainAccessGroup",
       "expo-image",
       "expo-sharing",
       "expo-background-task",
