@@ -462,7 +462,13 @@
     "filterClosed": "Cerradas",
     "openInBrowser": "Abrir en navegador",
     "loadError": "No se pudo cargar — toca para reintentar",
-    "permissionError": "Acceso denegado — verifica los permisos de tu token de GitHub"
+    "loadErrorTitle": "No se pudo cargar",
+    "permissionError": "Acceso denegado — verifica los permisos de tu token de GitHub",
+    "permissionTitle": "Acceso denegado",
+    "browseFilesSub": "Archivos y carpetas",
+    "pullRequestsSub": "Abiertas y cerradas",
+    "issuesSub": "Abiertas y cerradas",
+    "openSettings": "Abrir Ajustes"
   },
   "home": {
     "title": "Inicio",

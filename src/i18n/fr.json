@@ -462,7 +462,13 @@
     "filterClosed": "Fermés",
     "openInBrowser": "Ouvrir dans le navigateur",
     "loadError": "Impossible de charger — appuyez pour réessayer",
-    "permissionError": "Accès refusé — vérifiez les permissions de votre token GitHub"
+    "loadErrorTitle": "Échec du chargement",
+    "permissionError": "Accès refusé — vérifiez les permissions de votre token GitHub",
+    "permissionTitle": "Accès refusé",
+    "browseFilesSub": "Fichiers et dossiers",
+    "pullRequestsSub": "Ouverts et fermés",
+    "issuesSub": "Ouverts et fermés",
+    "openSettings": "Ouvrir les Réglages"
   },
   "home": {
     "title": "Accueil",

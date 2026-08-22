@@ -3,6 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
+  Pressable,
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
@@ -24,7 +25,7 @@ import { useGitOperationStore, hasActivePull } from '../stores/gitOperationStore
 import RepoFileTree, { TreeNode } from '../components/RepoFileTree';
 import { treeStyles } from '../components/repo/repoTreeStyles';
 import { RootStackParamList } from '../navigation/types';
-import { EmptyState, Modal, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
+import { EmptyState, Button, Modal, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
 import SearchBar from '../components/SearchBar';
@@ -318,37 +319,112 @@ export default function ExploreScreen() {
           )}
         </View>
 
-        <View className="px-4 mt-6 gap-2">
-          <TouchableOpacity
-            testID="explore.button.open-file-tree"
-            className="flex-row items-center justify-center py-3.5 rounded-md gap-2"
-            style={{ backgroundColor: colors.primary }}
-            onPress={handleOpenFileTree}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="folder-open-outline" size={20} color="#fff" />
-            <Text className="text-white text-base font-semibold">{t('explore.browseFiles')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            testID="explore.button.open-pr-list"
-            className="flex-row items-center justify-center py-3.5 rounded-md gap-2"
-            style={{ backgroundColor: colors.primary + 'CC' }}
-            onPress={handleOpenPrList}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="git-pull-request-outline" size={20} color="#fff" />
-            <Text className="text-white text-base font-semibold">{t('explore.pullRequests')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+        <View className="px-4 mt-6 gap-3">
+          <View className="flex-row items-stretch gap-3 overflow-hidden">
+            <Pressable
+              testID="explore.button.open-file-tree"
+              onPress={handleOpenFileTree}
+              accessibilityRole="button"
+              accessibilityLabel={t('explore.browseFiles')}
+              style={({ pressed }) => [
+                {
+                  flex: 1,
+                  minWidth: 0,
+                  height: 130,
+                  borderRadius: 20,
+                  padding: 16,
+                  overflow: 'hidden',
+                  justifyContent: 'flex-end',
+                  backgroundColor: colors.primary,
+                  opacity: pressed ? 0.92 : 1,
+                  transform: [{ scale: pressed ? 0.985 : 1 }],
+                },
+              ]}
+            >
+              <View className="absolute top-4 left-4 w-9 h-9 rounded-full bg-white items-center justify-center">
+                <Ionicons name="folder-open-outline" size={18} color={colors.primary} />
+              </View>
+              <View className="absolute" style={{ top: -50, right: -50, opacity: 0.3 }}>
+                <Ionicons name="folder-open-outline" size={120} color="#FFFFFF" />
+              </View>
+              <View className="gap-1">
+                <Text className="text-xl font-bold text-white" style={{ letterSpacing: -0.3 }} numberOfLines={1}>
+                  {t('explore.browseFiles')}
+                </Text>
+                <Text className="text-xs font-medium text-white opacity-80" numberOfLines={1}>
+                  {t('explore.browseFilesSub')}
+                </Text>
+              </View>
+            </Pressable>
+
+            <Pressable
+              testID="explore.button.open-pr-list"
+              onPress={handleOpenPrList}
+              accessibilityRole="button"
+              accessibilityLabel={t('explore.pullRequests')}
+              style={({ pressed }) => [
+                {
+                  flex: 1,
+                  minWidth: 0,
+                  height: 130,
+                  borderRadius: 20,
+                  padding: 16,
+                  overflow: 'hidden',
+                  justifyContent: 'flex-end',
+                  backgroundColor: colors.primary,
+                  opacity: pressed ? 0.92 : 1,
+                  transform: [{ scale: pressed ? 0.985 : 1 }],
+                },
+              ]}
+            >
+              <View className="absolute top-4 left-4 w-9 h-9 rounded-full bg-white items-center justify-center">
+                <Ionicons name="git-pull-request-outline" size={18} color={colors.primary} />
+              </View>
+              <View className="absolute" style={{ top: -50, right: -50, opacity: 0.3 }}>
+                <Ionicons name="git-pull-request-outline" size={120} color="#FFFFFF" />
+              </View>
+              <View className="gap-1">
+                <Text className="text-xl font-bold text-white" style={{ letterSpacing: -0.3 }} numberOfLines={1}>
+                  {t('explore.pullRequests')}
+                </Text>
+                <Text className="text-xs font-medium text-white opacity-80" numberOfLines={1}>
+                  {t('explore.pullRequestsSub')}
+                </Text>
+              </View>
+            </Pressable>
+          </View>
+
+          <Pressable
             testID="explore.button.open-issues-list"
-            className="flex-row items-center justify-center py-3.5 rounded-md gap-2"
-            style={{ backgroundColor: colors.primary + '99' }}
             onPress={handleOpenIssueList}
-            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={t('explore.issues')}
+            style={({ pressed }) => [
+              {
+                width: '100%',
+                minHeight: 130,
+                borderRadius: 20,
+                padding: 16,
+                justifyContent: 'space-between',
+                overflow: 'hidden',
+                backgroundColor: colors.accent,
+                opacity: pressed ? 0.92 : 1,
+                transform: [{ scale: pressed ? 0.985 : 1 }],
+              },
+            ]}
           >
-            <Ionicons name="alert-circle-outline" size={20} color="#fff" />
-            <Text className="text-white text-base font-semibold">{t('explore.issues')}</Text>
-          </TouchableOpacity>
+            <View className="w-10 h-10 rounded-md items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
+              <Ionicons name="alert-circle-outline" size={22} color="#FFFFFF" />
+            </View>
+            <View style={{ gap: 6 }}>
+              <Text className="text-base font-bold" style={{ color: '#FFFFFF', letterSpacing: -0.2 }} numberOfLines={1}>
+                {t('explore.issues')}
+              </Text>
+              <Text className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.85)' }} numberOfLines={2}>
+                {t('explore.issuesSub')}
+              </Text>
+            </View>
+          </Pressable>
         </View>
         <ScreenHeader
           title={selectedRepo.name}
@@ -377,7 +453,7 @@ export default function ExploreScreen() {
     const branchLabel = branch ?? t('settings.branchDefault');
 
     return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['top', 'bottom']}>
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['bottom']}>
         <View
           testID="explore.file-tree.banner-region"
           pointerEvents="box-none"
@@ -519,8 +595,9 @@ export default function ExploreScreen() {
 
   if (view === 'prList' && selectedRepo && repoInfo) {
     const prData = prQuery.data ?? [];
+    const prIsPermission = (prQuery.error as (Error & { status?: number }) | null)?.status === 403;
     return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['top', 'bottom']}>
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['bottom']}>
         <View style={{ paddingTop: headerHeight }}>
           <OfflineBanner />
         </View>
@@ -548,13 +625,32 @@ export default function ExploreScreen() {
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
         ) : prQuery.isError ? (
-          <View className="flex-1 items-center justify-center px-6">
-            <Ionicons name="alert-circle-outline" size={40} color={colors.textSecondary} />
-            <Text className="text-sm mt-3" style={{ color: colors.textSecondary }}>
-              {(prQuery.error as Error & { status?: number })?.status === 403
-                ? t('explore.permissionError')
-                : t('explore.loadError')}
-            </Text>
+          <View className="flex-1">
+            <EmptyState
+              icon={prIsPermission ? 'lock-closed-outline' : 'cloud-offline-outline'}
+              title={prIsPermission ? t('explore.permissionTitle') : t('explore.loadErrorTitle')}
+              subtitle={prIsPermission ? t('explore.permissionError') : t('explore.loadError')}
+              testID="explore.pr.error-state"
+            />
+            <View className="px-6 pb-10 gap-2">
+              <Button
+                label={t('common.retry')}
+                variant="primary"
+                fullWidth
+                onPress={() => prQuery.refetch()}
+                leadingIcon={<Ionicons name="refresh" size={18} color="#fff" />}
+                testID="explore.pr.button.retry"
+              />
+              {prIsPermission ? (
+                <Button
+                  label={t('explore.openSettings')}
+                  variant="ghost"
+                  fullWidth
+                  onPress={() => navigation.navigate('MainTabs', { screen: 'SettingsTab' })}
+                  testID="explore.pr.button.open-settings"
+                />
+              ) : null}
+            </View>
           </View>
         ) : prData.length === 0 ? (
           <EmptyState icon="git-pull-request-outline" title={t('explore.noPullRequests')} />
@@ -600,8 +696,9 @@ export default function ExploreScreen() {
 
   if (view === 'issueList' && selectedRepo && repoInfo) {
     const issueData = issueQuery.data ?? [];
+    const issueIsPermission = (issueQuery.error as (Error & { status?: number }) | null)?.status === 403;
     return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['top', 'bottom']}>
+      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['bottom']}>
         <View style={{ paddingTop: headerHeight }}>
           <OfflineBanner />
         </View>
@@ -629,13 +726,32 @@ export default function ExploreScreen() {
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
         ) : issueQuery.isError ? (
-          <View className="flex-1 items-center justify-center px-6">
-            <Ionicons name="alert-circle-outline" size={40} color={colors.textSecondary} />
-            <Text className="text-sm mt-3" style={{ color: colors.textSecondary }}>
-              {(issueQuery.error as Error & { status?: number })?.status === 403
-                ? t('explore.permissionError')
-                : t('explore.loadError')}
-            </Text>
+          <View className="flex-1">
+            <EmptyState
+              icon={issueIsPermission ? 'lock-closed-outline' : 'cloud-offline-outline'}
+              title={issueIsPermission ? t('explore.permissionTitle') : t('explore.loadErrorTitle')}
+              subtitle={issueIsPermission ? t('explore.permissionError') : t('explore.loadError')}
+              testID="explore.issue.error-state"
+            />
+            <View className="px-6 pb-10 gap-2">
+              <Button
+                label={t('common.retry')}
+                variant="primary"
+                fullWidth
+                onPress={() => issueQuery.refetch()}
+                leadingIcon={<Ionicons name="refresh" size={18} color="#fff" />}
+                testID="explore.issue.button.retry"
+              />
+              {issueIsPermission ? (
+                <Button
+                  label={t('explore.openSettings')}
+                  variant="ghost"
+                  fullWidth
+                  onPress={() => navigation.navigate('MainTabs', { screen: 'SettingsTab' })}
+                  testID="explore.issue.button.open-settings"
+                />
+              ) : null}
+            </View>
           </View>
         ) : issueData.length === 0 ? (
           <EmptyState icon="alert-circle-outline" title={t('explore.noIssues')} />

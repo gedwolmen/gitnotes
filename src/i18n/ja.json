@@ -462,7 +462,13 @@
     "filterClosed": "クローズ",
     "openInBrowser": "ブラウザで開く",
     "loadError": "読み込めませんでした — タップして再試行",
-    "permissionError": "アクセス拒否 — GitHubトークンの権限を確認してください"
+    "loadErrorTitle": "読み込みに失敗しました",
+    "permissionError": "アクセス拒否 — GitHubトークンの権限を確認してください",
+    "permissionTitle": "アクセス拒否",
+    "browseFilesSub": "ファイルとフォルダ",
+    "pullRequestsSub": "オープンとクローズ",
+    "issuesSub": "オープンとクローズ",
+    "openSettings": "設定を開く"
   },
   "home": {
     "title": "ホーム",
