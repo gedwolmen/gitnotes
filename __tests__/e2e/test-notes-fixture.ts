@@ -18,8 +18,6 @@ import type { SyncMode } from '../../src/services/git/syncTiming';
 // Content factories
 // ---------------------------------------------------------------------------
 
-const FIXTURE_EPOCH_MS = 1_724_000_000_000; // deterministic base timestamp
-
 let _counter = 0;
 function nextId(): string {
   return `fixture-${String(++_counter).padStart(4, '0')}`;

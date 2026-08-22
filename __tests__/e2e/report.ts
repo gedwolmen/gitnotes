@@ -103,7 +103,7 @@ function scenarioSection(report: ScenarioReport, mode: SyncMode): string {
 |---|---|---|
 | T0 save start | ${d.t0SaveStart ?? '—'} | |
 | T1 stage/enqueue | ${t1delta} | |
-| T2 git ops (http+fs) | ${t2delta} | http:${http} ops, fs:${fs} ops, ${bytes} bytes |
+| T2 git ops (http+fs) | ${t2delta} | http:${http} ops, fs:${fs} ops, ${bytes} bytes, ${dur}ms total |
 | T3 GitHub visible | ${t3delta} | |
 | Push propagation latency | ${latency} | |
 

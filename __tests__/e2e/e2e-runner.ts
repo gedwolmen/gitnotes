@@ -144,11 +144,6 @@ async function firePushTrigger(trigger: ClonePushTrigger): Promise<void> {
       break;
     }
     case 'foreground-resume': {
-      const { ForegroundSyncService } = await import(
-        '../../src/services/ForegroundSyncService'
-      );
-      // Trigger foreground sync path — in tests this is a no-op unless
-      // jest fake timers are advanced.
       break;
     }
   }
