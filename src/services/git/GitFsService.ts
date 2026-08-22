@@ -280,6 +280,9 @@ export class GitFsService {
     const fs = makeRepoFs();
 
     try {
+      const remoteRef = `refs/remotes/origin/${opts.branch}`;
+      const refBefore = await git.resolveRef({ fs, dir, ref: remoteRef }).catch(() => null);
+      const startedAt = Date.now();
       await git.fetch({
         fs,
         http: gitHttp,
@@ -298,10 +301,20 @@ export class GitFsService {
         singleBranch: true,
         onAuth: ensureToken(opts.token),
       });
-      try {
-        await LfsService.scanRepo(opts.repoPath, GitFsService.workingTreeUri({ repoPath: opts.repoPath }));
-      } catch {
-        // best-effort
+      // The LFS pointer walk is the most expensive step after a fetch. Skip it
+      // when the remote ref did not move — no new objects arrived, so no new
+      // placeholders can exist. This makes idle pulls (nothing changed on the
+      // remote) avoid the full working-tree walk (#1022).
+      const refAfter = await git.resolveRef({ fs, dir, ref: remoteRef }).catch(() => null);
+      if (refBefore !== refAfter) {
+        try {
+          await LfsService.scanRepo(opts.repoPath, GitFsService.workingTreeUri({ repoPath: opts.repoPath }));
+        } catch {
+          // best-effort
+        }
+      }
+      if (__DEV__) {
+        console.log(`[GitFsService] pullWithFastForward (${opts.repoPath}@${opts.branch}) in ${Date.now() - startedAt}ms (${refBefore === refAfter ? 'no new objects' : 'fetched'})`);
       }
       return { ok: true };
     } catch (e) {

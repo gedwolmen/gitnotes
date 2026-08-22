@@ -83,6 +83,7 @@ function getFsStore(): Map<string, { type: 'file' | 'dir' }> {
 }
 
 import { GitFsService } from '../../../src/services/git/GitFsService';
+import { LfsService } from '../../../src/services/git/lfs';
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -311,5 +312,34 @@ describe('GitFsService', () => {
     if (!result.ok) {
       expect(result.reason).toBe('diverged');
     }
+  });
+
+  test('pullWithFastForward skips the LFS scan when the remote ref did not move (#1022)', async () => {
+    const scanSpy = jest.spyOn(LfsService, 'scanRepo');
+    const result = await GitFsService.pullWithFastForward({
+      repoPath: 'me/repo',
+      branch: 'main',
+      token: 'tok',
+    });
+    expect(result.ok).toBe(true);
+    expect(scanSpy).not.toHaveBeenCalled();
+    scanSpy.mockRestore();
+  });
+
+  test('pullWithFastForward runs the LFS scan when the fetch moved the remote ref (#1022)', async () => {
+    let calls = 0;
+    getGitMocks().resolveRef.mockImplementation(async () => {
+      calls += 1;
+      return calls === 1 ? 'oid-before' : 'oid-after';
+    });
+    const scanSpy = jest.spyOn(LfsService, 'scanRepo');
+    const result = await GitFsService.pullWithFastForward({
+      repoPath: 'me/repo',
+      branch: 'main',
+      token: 'tok',
+    });
+    expect(result.ok).toBe(true);
+    expect(scanSpy).toHaveBeenCalledTimes(1);
+    scanSpy.mockRestore();
   });
 });
