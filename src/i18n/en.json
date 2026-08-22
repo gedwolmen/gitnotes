@@ -268,7 +268,13 @@
     "filterClosed": "Closed",
     "openInBrowser": "Open in browser",
     "loadError": "Couldn't load — tap to retry",
-    "permissionError": "Access denied — check your GitHub token permissions"
+    "loadErrorTitle": "Couldn't load",
+    "permissionError": "Access denied — check your GitHub token permissions",
+    "permissionTitle": "Permission denied",
+    "browseFilesSub": "Files & folders",
+    "pullRequestsSub": "Open & closed",
+    "issuesSub": "Open & closed",
+    "openSettings": "Open Settings"
   },
   "settings": {
     "title": "Settings",

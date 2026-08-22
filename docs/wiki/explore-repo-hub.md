@@ -31,17 +31,25 @@ Two new TanStack Query hooks in `src/hooks/useGitHostQueries.ts` (`useGitHostPul
 
 ## Hub UI
 
-`ExploreScreen.tsx` now treats `repoDetail` as a hub with three stacked action buttons:
+`ExploreScreen.tsx` treats `repoDetail` as a hub rendered with the same bento-grid language as the Home screen (`HomeScreen.tsx`), so the Explore tab feels like the rest of the app instead of a settings page:
 
-- **Browse Files** (existing — still the primary CTA)
-- **Pull Requests** (opens a list view with an open/closed segmented filter)
-- **Issues** (opens a list view with an open/closed segmented filter)
+- **Row 1** — two filled-primary tiles side-by-side: **Browse Files** (left) + **Pull Requests** (right). Each tile is 130 pt tall with a 20 pt corner radius, a white circular icon badge top-left, a large faded background icon, and a bold white title + small white subtitle. Press feedback matches the Home tiles (opacity 0.92 + scale 0.985).
+- **Row 2** — one full-width accent-colored tile: **Issues**. Uses the same dimensions and badge treatment but on the accent surface (the same surface Home's "Thought Dump" tile uses), with a translucent-white square badge so the accent reads through.
 
-Each PR/Issue row shows `#number title`, author, an open/closed icon, and an "open in browser" affordance; tapping the row calls `Linking.openURL(item.webUrl)`. No native detail screen was built — this is the minimum bar listed in issue #937.
+Tapping any tile navigates into the corresponding view (`fileTree`, `prList`, `issueList`). Browse Files is the primary CTA; PRs and Issues are first-class peers (per #937).
 
-The branch picker pill was promoted to the hub header (it already existed in the `fileTree` header on `ExploreScreen.tsx:376-388`). Both the hub and the file tree share a single `selectedBranch` state plus the existing `openBranchPicker` callback, so a branch picked on the hub is reflected in the file tree without duplicate state.
+The branch picker pill was promoted to the hub header (it already existed in the `fileTree` header on `ExploreScreen.tsx`). Both the hub and the file tree share a single `selectedBranch` state plus the existing `openBranchPicker` callback, so a branch picked on the hub is reflected in the file tree without duplicate state.
 
 The ExploreScreen is now provider-agnostic: `grep -r "GitHubService" src/screens/ExploreScreen.tsx` returns zero results. Pull/issue data is obtained exclusively via `getGitHostService(selectedRepo.provider)`.
+
+## Error states
+
+`prList` and `issueList` use the shared `<EmptyState>` component (icon + title + subtitle, centered with the standard `py-16 px-6` rhythm) plus a `<Button primary>` **Retry** action that calls `query.refetch()`. The icon, title, and copy swap by error subtype:
+
+- **HTTP 403** → `lock-closed-outline` icon, `permissionTitle` ("Permission denied"), `permissionError` subtitle, **and** a secondary **Open Settings** ghost button that navigates to `MainTabs → SettingsTab` (where the user can re-authorize the token).
+- **Other errors** → `cloud-offline-outline` icon, `loadErrorTitle` ("Couldn't load"), `loadError` subtitle, **Retry** only.
+
+This replaces the previous ad-hoc `View` + `Ionicons` + `Text` block that rendered a generic `alert-circle-outline` glyph and a single sentence in `textSecondary` color — which had no action, no icon hierarchy, and no title/subtitle split, and read like a `console.error` left on screen.
 
 ## i18n
 
@@ -51,6 +59,10 @@ Eight new `explore.*` keys added to all six locales (en/es/fr/de/ja/ko): `pullRe
 
 - `__tests__/services/git/gitHost-issues-pulls.test.ts` — 13 tests across all 4 providers covering normalization, state mappings (`merged` → `closed` for GitLab, `opened` → `open`, PR-item filtering for Gitea/Forgejo `/issues`), auth headers (`PRIVATE-TOKEN` vs `Authorization: token X`), and empty-on-error paths.
 - `__tests__/hooks/useGitHostQueries.test.ts` — 5 tests: normalization happy path, the empty owner/repo "disabled" gate, and default-state behavior.
+
+## Bug fixes
+
+- **Double top safe-area inset in the three hub views** — `fileTree`, `prList`, and `issueList` used `<SafeAreaView edges={['top', 'bottom']}>` while also padding their content by `headerHeight` (which already includes `insets.top`). That added a full extra status-bar-height (~59 pt) of blank space between the header and the first row. Fixed by switching all three to `edges={['bottom']}`, matching `repoList`/`repoDetail`.
 
 ## Must NOT do (out of scope)
 
@@ -66,6 +78,6 @@ Eight new `explore.*` keys added to all six locales (en/es/fr/de/ja/ko): `pullRe
 - `src/services/git/GiteaLikeHostService.ts` — Gitea + Forgejo (shared class)
 - `src/hooks/useGitHostQueries.ts` — TanStack Query hooks
 - `src/screens/ExploreScreen.tsx` — hub UI + prList/issueList views
-- `src/i18n/{en,es,fr,de,ja,ko}.json` — 8 new keys each
+- `src/i18n/{en,es,fr,de,ja,ko}.json` — 14 new keys each (8 from the feature + 6 from the polish: `permissionTitle`, `loadErrorTitle`, `browseFilesSub`, `pullRequestsSub`, `issuesSub`, `openSettings`)
 - `__tests__/services/git/gitHost-issues-pulls.test.ts` — host tests
 - `__tests__/hooks/useGitHostQueries.test.ts` — hook tests
