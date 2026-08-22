@@ -122,11 +122,50 @@ export async function flushStaged(): Promise<void> {
   void drainPushQueue('idle');
 }
 
+async function runOnePush(
+  source: CycleSource,
+  key: string,
+  repoPath: string,
+  branch: string,
+): Promise<void> {
+  useStageStore.getState().setPushing(key, true);
+  // Everything that flips push UI state MUST be in a try/finally so a stuck
+  // acquireCycle (cycle held by a long pull up to GitSyncGate's 10-min
+  // watchdog) or a throw from `githubActivity.begin` cannot leave isPushing
+  // / globalPushing stuck TRUE. The user sees a grayed + spinner button that
+  // never recovers until app restart — the exact "stuck forever" symptom.
+  let releaseCycle: (() => void) | null = null;
+  try {
+    releaseCycle = await GitSyncGate.acquireCycle(source);
+    githubActivity.begin('Pushing changes');
+    try {
+      const result = await StagingService.pushStaged(repoPath, branch, (fraction) => {
+        useStageStore.getState().setPushProgress(fraction);
+      });
+      if (!result.success) {
+        notifyPushFailure(key, result.error ?? 'Staged push failed');
+      }
+    } catch (error) {
+      notifyPushFailure(key, error instanceof Error ? error.message : String(error));
+    } finally {
+      githubActivity.end();
+    }
+  } finally {
+    if (releaseCycle) releaseCycle();
+    useStageStore.getState().setPushing(key, false);
+    useStageStore.getState().shiftQueue();
+  }
+}
+
 /**
  * FIFO executor: serially run one push per queued key. The store's
  * isPushing guard prevents a key from being queued twice, so no two pushes
  * for the same (repo, branch) can overlap; the `draining` guard additionally
  * stops a re-entrant call from starting a second loop over the same queue.
+ *
+ * globalPushing is reset in the OUTER finally — not after the while-loop —
+ * so a re-entrant drain that arrives while the queue still has items cannot
+ * leave globalPushing TRUE with no drain running.
  */
 export async function drainPushQueue(source: CycleSource): Promise<void> {
   if (draining) return;
@@ -144,36 +183,31 @@ export async function drainPushQueue(source: CycleSource): Promise<void> {
       }
       const { repoPath, branch } = parts;
 
-      useStageStore.getState().setPushing(key, true);
-      const releaseCycle = await GitSyncGate.acquireCycle(source);
-      githubActivity.begin('Pushing changes');
-      try {
-        const result = await StagingService.pushStaged(repoPath, branch, (fraction) => {
-          useStageStore.getState().setPushProgress(fraction);
-        });
-        if (!result.success) {
-          notifyPushFailure(key, result.error ?? 'Staged push failed');
-        }
-      } catch (error) {
-        notifyPushFailure(key, error instanceof Error ? error.message : String(error));
-      } finally {
-        githubActivity.end();
-        releaseCycle();
-        useStageStore.getState().setPushing(key, false);
-        useStageStore.getState().shiftQueue();
-      }
+      await runOnePush(source, key, repoPath, branch);
     }
 
-    if (useStageStore.getState().dequeueNext() === null) {
-      useStageStore.getState().setPushProgress(null);
-      if (useStageStore.getState().globalPushing) {
-        useStageStore.getState().setGlobalPushing(false);
-      }
-      await clearPushSession();
+    useStageStore.getState().setPushProgress(null);
+    if (useStageStore.getState().globalPushing) {
+      useStageStore.getState().setGlobalPushing(false);
     }
+    await clearPushSession();
   } finally {
+    useStageStore.getState().setPushProgress(null);
+    useStageStore.getState().setGlobalPushing(false);
     draining = false;
   }
+}
+
+/**
+ * Force-unlock escape hatch: clear isPushing / globalPushing / pushProgress
+ * WITHOUT waiting for the gate or any in-flight push. Use only when an
+ * out-of-band event (e.g. SyncBlockOverlay cancel, settings mode switch,
+ * app-foreground push-session resume) needs to guarantee the button isn't
+ * stuck grayed. The real implementation lives on `useStageStore.getState().forceUnlockPushState`
+ * to avoid the import cycle between this module and stageStore.
+ */
+export function forceUnlockPushState(): void {
+  useStageStore.getState().forceUnlockPushState();
 }
 
 /**

@@ -431,7 +431,10 @@ describe('StagingService', () => {
           title: 'C',
         }),
       ]);
-      getMode.mockResolvedValue('api');
+      // Clone mode keeps the API-mode filter engaged for clone repos
+      // (queue items belong to the repo's CURRENT mode; API-mode repos are
+      // filtered out — covered by StagingService.listStaged.test.ts).
+      getMode.mockResolvedValue('clone');
 
       const staged = await StagingService.listStaged();
 
@@ -440,14 +443,14 @@ describe('StagingService', () => {
 
       const repoMain = groups.get('owner/repo::main');
       expect(repoMain?.map((i) => i.kind).sort()).toEqual(['delete', 'upsert']);
-      expect(repoMain?.every((i) => i.mode === 'api')).toBe(true);
+      expect(repoMain?.every((i) => i.mode === 'clone')).toBe(true);
       expect(repoMain?.map((i) => i.filePath).sort()).toEqual(['notes/a.md', 'notes/b.md']);
 
       const otherDev = groups.get('other/repo::dev');
       expect(otherDev).toHaveLength(1);
       expect(otherDev?.[0]).toMatchObject({
         kind: 'upsert',
-        mode: 'api',
+        mode: 'clone',
         filePath: 'notes/c.md',
       });
     });
@@ -542,7 +545,7 @@ getCommitOid.mockResolvedValue(null);
           title: 'C',
         }),
       ]);
-      getMode.mockResolvedValue('api');
+      getMode.mockResolvedValue('clone');
 
       const byRepo = await StagingService.listStaged('owner/repo');
       expect(byRepo.map((i) => i.repoPath)).toEqual(['owner/repo']);
@@ -553,7 +556,10 @@ getCommitOid.mockResolvedValue(null);
   });
 
   describe('pushStaged', () => {
-    test('api mode drains the queue exactly once', async () => {
+    test('api mode is a no-op for pushStaged (no floating button in API mode)', async () => {
+      // The push button is hidden in API mode and the staged list filters
+      // out API-mode items, so pushStaged never sees them. verify the
+      // safety net is harmless: returns success without draining or pushing.
       queueGetAll.mockResolvedValue([
         queueItem('note.upsert', {
           repo: 'owner/repo',
@@ -567,7 +573,7 @@ getCommitOid.mockResolvedValue(null);
       const result = await StagingService.pushStaged();
 
       expect(result).toEqual({ success: true });
-      expect(queueDrain).toHaveBeenCalledTimes(1);
+      expect(queueDrain).not.toHaveBeenCalled();
       expect(writerPush).not.toHaveBeenCalled();
     });
 
@@ -693,8 +699,8 @@ getCommitOid.mockResolvedValue(null);
       const result = await StagingService.pushStaged(undefined, undefined, onProgress);
 
       expect(result).toEqual({ success: true });
-      expect(queueDrain).toHaveBeenCalledTimes(1);
-      expect(queueDrain).toHaveBeenCalledWith(onProgress);
+      expect(queueDrain).not.toHaveBeenCalled();
+      expect(onProgress).not.toHaveBeenCalled();
     });
 
     test('clone mode forwards onProgress fraction and githubActivity.setProgress', async () => {

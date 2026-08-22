@@ -37,6 +37,7 @@ interface StageActions {
   shiftQueue: () => void;
   registerQueueSubscription: () => void;
   unregisterQueueSubscription: () => void;
+  forceUnlockPushState: () => void;
 }
 
 let queueUnsubscribe: (() => void) | null = null;
@@ -158,5 +159,22 @@ export const useStageStore = create<StageState & StageActions>()((set, get) => (
     emitterUnsubscribe?.();
     queueUnsubscribe = null;
     emitterUnsubscribe = null;
+  },
+
+  forceUnlockPushState: () => {
+    const current = useStageStore.getState();
+    const nextIsPushing = { ...current.isPushing };
+    let changed = false;
+    for (const key of Object.keys(nextIsPushing)) {
+      if (nextIsPushing[key]) {
+        nextIsPushing[key] = false;
+        changed = true;
+      }
+    }
+    set({
+      globalPushing: false,
+      pushProgress: null,
+      ...(changed ? { isPushing: nextIsPushing } : null),
+    });
   },
 }));

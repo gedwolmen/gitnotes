@@ -134,6 +134,26 @@ async function cleanCorruptedPackfiles(repoPath: string): Promise<void> {
  */
 const inflightClones = new Map<string, Promise<void>>();
 
+/**
+ * Thrown when the JS heap can't hold the incoming packfile. isomorphic-git
+ * itself collects the whole packfile into one Buffer before indexing
+ * (the `gitHttp` streaming patch removed only the app-side second copy), so
+ * very large repos can OOM Hermes. The picker / clone toggle treats this as
+ * a recommendation to switch to API mode instead of clone mode.
+ */
+export class CloneOutOfMemoryError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'CloneOutOfMemoryError';
+  }
+}
+
+function looksLikeOutOfMemory(error: unknown): boolean {
+  if (error instanceof RangeError) return true;
+  const message = error instanceof Error ? error.message : String(error);
+  return /out of memory|allocation failed|Array buffer allocation failed|exceeded memory|heap/i.test(message);
+}
+
 export class GitFsService {
   /**
    * Clone a repo into the per-app document directory. Defaults to depth=1
@@ -186,6 +206,11 @@ export class GitFsService {
         await GitFsService.removeRepo({ repoPath: opts.repoPath }).catch(() => undefined);
         const msg = cloneError instanceof Error ? cloneError.message : String(cloneError);
         const isCorruption = /Packfile trailer mismatch|Could not find object|not foundobject|NotFoundError|internal error caused this command to fail/i.test(msg);
+        if (looksLikeOutOfMemory(cloneError)) {
+          throw new CloneOutOfMemoryError(
+            `Out of memory while cloning ${opts.repoPath}. The repo is too large for clone mode on this device — switch to API mode.`,
+          );
+        }
         if (!isCorruption || attempt === MAX_CLONE_RETRIES) {
           throw cloneError;
         }

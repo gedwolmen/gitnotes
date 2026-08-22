@@ -178,3 +178,41 @@ describe('StagingService.listStaged — default-clone repos without override (#9
     expect(rows).toHaveLength(0);
   });
 });
+
+describe('StagingService.listStaged — API-mode items never surface (#push-button-in-api-mode)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    getMode.mockImplementation(async (path: string) =>
+      path === 'api/repo' ? 'api' : 'clone',
+    );
+  });
+
+  it('drops queue items whose repo is in API mode (no floating button / Stage screen row)', async () => {
+    queueGetAll.mockResolvedValueOnce([
+      { type: 'note.upsert', params: { repo: 'api/repo', branch: 'main', filePath: 'notes/a.md' } },
+      { type: 'note.upsert', params: { repo: 'clone/repo', branch: 'main', filePath: 'notes/b.md' } },
+    ]);
+    getSavedRepositories.mockResolvedValueOnce([]);
+
+    const staged = await StagingService.listStaged();
+
+    expect(staged).toHaveLength(1);
+    expect(staged[0].repoPath).toBe('clone/repo');
+    expect(staged[0].mode).toBe('clone');
+  });
+
+  it('drops clone-mode unpushed-commits rows for repos in API mode', async () => {
+    queueGetAll.mockResolvedValueOnce([]);
+    getSavedRepositories.mockResolvedValueOnce([
+      { path: 'api/repo', branch: 'main' },
+    ]);
+    getCommitOid.mockImplementation(async ({ ref }: { ref: string }) =>
+      ref.startsWith('refs/heads') ? 'LOCAL_OID' : 'REMOTE_OID',
+    );
+    findMergeBase.mockResolvedValueOnce('LOCAL_OID');
+
+    const staged = await StagingService.listStaged();
+
+    expect(staged).toHaveLength(0);
+  });
+});
