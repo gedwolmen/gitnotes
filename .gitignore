@@ -96,3 +96,6 @@ appstore_screenshots/
 
 # Xcode StoreKit configuration (workspace-specific; regenerated from App Store Connect)
 *.storekit
+
+# Agent dogfood/QA output (screenshots, traces, videos)
+dogfood-output/

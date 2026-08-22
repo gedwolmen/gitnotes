@@ -15,6 +15,7 @@ config.transformer.getTransformOptions = async () => ({
 config.resolver.blockList = [
   /.*\/\.worktrees\/.*/,
   /.*\/\.claude\/worktrees\/.*/,
+  /.*\/dogfood-output\/.*/,
 ];
 config.resolver.unstable_conditionNames = ['require', 'default'];
 config.watchFolders = [__dirname];
