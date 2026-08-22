@@ -429,11 +429,6 @@ export default function SettingsScreen() {
           await SyncEngineService.setMode(repo.path, 'api');
           setSyncModes((prev) => ({ ...prev, [repo.path]: 'api' }));
           HapticService.success();
-          Alert.alert(
-            t('settings.apiModeWarningTitle'),
-            t('settings.apiModeWarningBody'),
-            [{ text: t('common.ok') }],
-          );
         },
       },
     ]);
@@ -519,11 +514,11 @@ export default function SettingsScreen() {
    * handleEnableCloneMode); the one packfile-corruption retry happens inside
    * GitFsService.cloneExclusive.
    */
-  const importRepoAfterAdd = useCallback(async (repoPath: string, repoName: string): Promise<ImportAtAddOutcome> => {
+  const importRepoAfterAdd = useCallback(async (repoPath: string, repoName: string, repoSizeKb?: number): Promise<ImportAtAddOutcome> => {
     const retryImport = async (): Promise<void> => {
       setIsAddingRepoPath(repoPath);
       try {
-        await importRepoAfterAdd(repoPath, repoName);
+        await importRepoAtAdd(repoPath, repoName, undefined, repoSizeKb);
       } finally {
         setIsAddingRepoPath(null);
       }
@@ -536,7 +531,7 @@ export default function SettingsScreen() {
         throw new Error('CLONE_CANCELLED');
       }
       throttled.push(phase, loaded, total);
-    });
+    }, repoSizeKb);
     throttled.flush();
     setCloneProgress(null);
     if (cloneAbortedRef.current) {
@@ -550,6 +545,24 @@ export default function SettingsScreen() {
     }
     if (!result.ok) {
       HapticService.error();
+      if (result.largeRepo) {
+        Alert.alert(
+          t('settings.largeRepoTitle'),
+          result.error,
+          [
+            { text: t('common.cancel'), style: 'cancel' },
+            {
+              text: t('settings.useApi'),
+              onPress: async () => {
+                await SyncEngineService.setMode(repoPath, 'api');
+                setSyncModes((prev) => ({ ...prev, [repoPath]: 'api' }));
+                setShowRepoPickerModal(false);
+              },
+            },
+          ],
+        );
+        return 'failed';
+      }
       Alert.alert(
         t('settings.autoSyncFailedTitle'),
         result.error,
@@ -616,7 +629,7 @@ export default function SettingsScreen() {
           await addRepo(repo.full_name, repo.name);
         }
         HapticService.success();
-        await importRepoAfterAdd(repo.full_name, repo.name);
+        await importRepoAfterAdd(repo.full_name, repo.name, repo.size);
       } catch (error) {
         if (error instanceof RepoAccessPreflightError && error.canRetry && !allowUnverifiedWrite) {
           confirmUnverifiedWrite(t, () => void attemptAdd(true));
