@@ -20,6 +20,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useProStore } from '../stores/proStore';
 import { getIntroEligibilities, trackPaywallImpression } from '../services/RevenueCatService';
 import * as PaywallAnalytics from '../services/PaywallAnalytics';
+import { LEGAL_URLS } from '../utils/constants';
 
 export default function PaywallScreen() {
   const { t } = useTranslation();
@@ -297,7 +298,7 @@ export default function PaywallScreen() {
                 testID="paywall.terms-link"
                 role="link"
                 accessibilityRole="link"
-                onPress={() => void Linking.openURL('https://www.gitnotes.org/terms')}
+                onPress={() => void Linking.openURL(LEGAL_URLS.terms)}
               >
                 <Text className="text-xs font-medium" style={{ color: colors.accent }}>
                   {t('paywall.footer.terms')}
@@ -307,7 +308,7 @@ export default function PaywallScreen() {
                 testID="paywall.privacy-link"
                 role="link"
                 accessibilityRole="link"
-                onPress={() => void Linking.openURL('https://www.gitnotes.org/privacy')}
+                onPress={() => void Linking.openURL(LEGAL_URLS.privacy)}
               >
                 <Text className="text-xs font-medium" style={{ color: colors.accent }}>
                   {t('paywall.footer.privacy')}
