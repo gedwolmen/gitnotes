@@ -1,6 +1,8 @@
 const mockSetToken = jest.fn();
 const mockClearToken = jest.fn();
 
+let mockActiveAccountId: string | null = null;
+
 jest.mock('../../src/services/GitHubService', () => ({
   GitHubService: {
     setToken: (...args: unknown[]) => mockSetToken(...args),
@@ -12,37 +14,33 @@ jest.mock('../../src/services/GitHubService', () => ({
 jest.mock('../../src/services/AuthService', () => ({
   AuthService: {
     switchAccount: jest.fn(async (accountId: string) => {
-      if (accountId === 'acc-A') {
-        return {
-          ok: true,
-          isAuthenticated: true,
-          token: 'token-A',
-          user: { login: 'alice', id: 1, name: 'Alice' },
-          accountId: 'acc-A',
-          activeHostId: 'host-A',
-        };
+      if (accountId === 'acc-A' || accountId === 'acc-B') {
+        mockActiveAccountId = accountId;
+        return { ok: true, summary: { account: { id: accountId } } };
       }
-      if (accountId === 'acc-B') {
-        return {
-          ok: true,
-          isAuthenticated: true,
-          token: 'token-B',
-          user: { login: 'bob', id: 2, name: 'Bob' },
-          accountId: 'acc-B',
-          activeHostId: 'host-B',
-        };
-      }
-      return { ok: false };
+      return { ok: false, reason: 'not-found' };
     }),
     switchToHost: jest.fn(async () => ({ ok: true })),
     removeAccount: jest.fn(async () => undefined),
     connectHost: jest.fn(async () => null),
     clearToken: jest.fn(async () => undefined),
-    checkAuthState: jest.fn(async () => ({
-      isAuthenticated: true,
-      token: 'token-A',
-      user: { login: 'alice', id: 1, name: 'Alice' },
-    })),
+    checkAuthState: jest.fn(async () => {
+      if (mockActiveAccountId === 'acc-A') {
+        return {
+          isAuthenticated: true,
+          token: 'token-A',
+          user: { login: 'alice', id: 1, name: 'Alice' },
+        };
+      }
+      if (mockActiveAccountId === 'acc-B') {
+        return {
+          isAuthenticated: true,
+          token: 'token-B',
+          user: { login: 'bob', id: 2, name: 'Bob' },
+        };
+      }
+      return { isAuthenticated: false, token: null, user: null };
+    }),
     listAccountSummaries: jest.fn(async () => []),
     getActiveSummary: jest.fn(async () => null),
   },
@@ -86,6 +84,7 @@ beforeEach(() => {
   mockClearToken.mockReset();
   mockSetToken.mockResolvedValue(null);
   mockClearToken.mockResolvedValue(undefined);
+  mockActiveAccountId = null;
 });
 
 function useAccountsWithProvider() {

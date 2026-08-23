@@ -232,8 +232,9 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
       // SECURITY: re-sync GitHubService singleton with the new account's
       // token — without this, the previous account's token is still in
       // memory and direct GitHubService calls run as the wrong user.
-      if (result.token) {
-        await GitHubService.setToken(result.token, result.user as unknown as GhSetTokenUser).catch(
+      const state = await AuthService.checkAuthState();
+      if (state.isAuthenticated && state.token) {
+        await GitHubService.setToken(state.token, state.user as unknown as GhSetTokenUser).catch(
           () => undefined,
         );
       }
