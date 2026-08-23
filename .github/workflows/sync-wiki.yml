@@ -27,6 +27,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           COMMIT_SHA: ${{ github.sha }}
+          WIKI_SRC: ${{ github.workspace }}/docs/wiki
         run: |
           set -euo pipefail
 
@@ -58,7 +59,7 @@ jobs:
           }
 
           # Sync each docs/wiki/*.md → wiki/, renaming index.md → Home.md
-          for f in ../../docs/wiki/*.md; do
+          for f in "${WIKI_SRC}"/*.md; do
             bn="$(basename "$f")"
             if [ "$bn" = "index.md" ]; then
               tmp="$(mktemp)"
@@ -78,7 +79,7 @@ jobs:
             if [ "$existing" = "Home.md" ]; then
               bn_in_docs="index.md"
             fi
-            if [ ! -f "../../docs/wiki/$bn_in_docs" ]; then
+            if [ ! -f "${WIKI_SRC}/${bn_in_docs}" ]; then
               rm "$existing"
             fi
           done
