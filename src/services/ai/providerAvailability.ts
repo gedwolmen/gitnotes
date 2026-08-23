@@ -56,6 +56,29 @@ async function probeApple(): Promise<Availability> {
     };
   }
 
+  // Apple Intelligence cannot generate on the iOS simulator — there are no
+  // on-device Foundation Model weights. `AppleFoundationModels.isAvailable()`
+  // can report .available on the simulator anyway (the framework exists in
+  // the SDK), so probing it alone lets chat proceed and crash natively in
+  // PromptKit/TokenGeneration (EXC_BREAKPOINT during _streamResponse). Treat
+  // the simulator as ineligible up front.
+  let isDevice = true;
+  try {
+    const Device = require('expo-device') as typeof import('expo-device');
+    isDevice = Device.isDevice;
+  } catch {
+    // expo-device unavailable — assume device, let the native probe decide.
+  }
+  if (!isDevice) {
+    return {
+      kind: 'unavailable',
+      reason: {
+        code: 'device-ineligible',
+        message: 'Apple Intelligence is not available on the simulator',
+      },
+    };
+  }
+
   let nativeAvailable = false;
   let nativeError: unknown = null;
   try {
