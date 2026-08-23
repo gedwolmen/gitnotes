@@ -34,6 +34,7 @@ jest.mock('../../src/services/StorageService', () => ({
 jest.mock('../../src/services/GitHubService', () => ({
   GitHubService: {
     isAuthenticated: jest.fn(() => true),
+    initialize: jest.fn(async () => undefined),
   },
 }));
 
@@ -116,5 +117,21 @@ describe('BackgroundSyncService notification decision', () => {
     expect(result).toBe(BackgroundTask.BackgroundTaskResult.Success);
     expect(pullAllFromRepos).not.toHaveBeenCalled();
     expect(NotificationService.schedulePushProgress).not.toHaveBeenCalled();
+  });
+
+  test('calls GitHubService.initialize before checking isAuthenticated (cold-launch)', async () => {
+    (GitHubService.isAuthenticated as jest.Mock).mockReturnValue(false);
+    (GitHubService.initialize as jest.Mock).mockImplementation(async () => {
+      (GitHubService.isAuthenticated as jest.Mock).mockReturnValue(true);
+    });
+    (pullAllFromRepos as jest.Mock).mockResolvedValue({
+      repos: 1, notes: 5, canvases: 0, todos: 0, templates: 0,
+    });
+
+    const result = await runTask();
+
+    expect(GitHubService.initialize).toHaveBeenCalledTimes(1);
+    expect(pullAllFromRepos).toHaveBeenCalledTimes(1);
+    expect(result).toBe(BackgroundTask.BackgroundTaskResult.Success);
   });
 });

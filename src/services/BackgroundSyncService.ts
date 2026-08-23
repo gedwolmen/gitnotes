@@ -21,6 +21,9 @@ let taskRegistered = false;
 // what re-registers the handler.
 TaskManager.defineTask(TASK_NAME, async () => {
   try {
+    // SECURITY: load token from storage first — on OS cold-launch the
+    // singleton hasn't been initialized, so the auth check would silently no-op.
+    await GitHubService.initialize();
     if (!GitHubService.isAuthenticated()) {
       return BackgroundTask.BackgroundTaskResult.Success;
     }
