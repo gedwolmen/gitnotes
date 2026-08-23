@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Pressable, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -149,8 +149,14 @@ export default function HomeScreen() {
 
   const recentLimit = deviceType === 'mac' ? 16 : deviceType === 'desktop' ? 12 : isTablet ? 12 : 10;
   const pinnedLimit = deviceType === 'mac' ? 16 : deviceType === 'desktop' ? 12 : isTablet ? 12 : 6;
-  const recentItems = buildRecentFeed(notes, canvases, { excludePinned: true, limit: recentLimit });
-  const pinnedItems = buildPinnedFeed(notes, canvases, pinnedLimit);
+  const recentItems = useMemo(
+    () => buildRecentFeed(notes, canvases, { excludePinned: true, limit: recentLimit }),
+    [notes, canvases, recentLimit],
+  );
+  const pinnedItems = useMemo(
+    () => buildPinnedFeed(notes, canvases, pinnedLimit),
+    [notes, canvases, pinnedLimit],
+  );
 
   const handleOpenRecentItem = useCallback(
     (item: RecentItem) => {
