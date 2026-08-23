@@ -43,9 +43,12 @@ export function SyncBlockOverlay() {
   const [cancelArmed, setCancelArmed] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
-  // Pick label: "pushing" when push markers are active, else "syncing".
+  // Always show "Syncing" as the main label. When push markers are active
+  // (background push queued), add a subtitle so the user understands why
+  // they see "Syncing" even when they didn't initiate a push (#1066).
   const hasPushMarkers = GitSyncGate.isPushActive();
-  const label = hasPushMarkers ? t('sync.overlay.pushing') : t('sync.overlay.syncing');
+  const label = t('sync.overlay.syncing');
+  const subtitle = hasPushMarkers ? t('sync.overlay.includingPush') : undefined;
 
   useEffect(() => {
     Animated.timing(opacity, {
@@ -100,6 +103,11 @@ export function SyncBlockOverlay() {
         <Text style={{ color: colors.text, fontSize: type.sm, fontWeight: '600' }} numberOfLines={1}>
           {label}
         </Text>
+        {subtitle && (
+          <Text style={{ color: colors.textSecondary, fontSize: type.xs }} numberOfLines={1}>
+            {subtitle}
+          </Text>
+        )}
         {cancelArmed && (
           <Pressable
             testID="sync-block-overlay.cancel"

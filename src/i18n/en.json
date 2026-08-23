@@ -580,7 +580,8 @@
       "pushing": "Pushing…",
       "pulling": "Pulling…",
       "cancel": "Cancel",
-      "cancelling": "Cancelling…"
+      "cancelling": "Cancelling…",
+      "includingPush": "including push"
     }
   },
   "onboarding": {
