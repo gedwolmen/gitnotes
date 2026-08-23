@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   FlatList,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator } from 'react-native';
@@ -104,7 +106,11 @@ export default function TemplateSelector({ visible, onClose, onSelect }: Templat
       fullWidth
       contentStyle={styles.modalContent}
     >
-      <View style={[styles.container, { backgroundColor: colors.elevated }]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+        <View style={[styles.container, { backgroundColor: colors.elevated }]}>
         <View style={[styles.header, { backgroundColor: colors.elevated, borderBottomColor: colors.border }]}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>Choose a Template</Text>
           <TouchableOpacity onPress={onClose}>
@@ -161,6 +167,7 @@ export default function TemplateSelector({ visible, onClose, onSelect }: Templat
           }
         />
       </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

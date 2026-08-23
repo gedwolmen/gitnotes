@@ -10,6 +10,8 @@ import {
   Alert,
   TextInput,
   Keyboard,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -467,8 +469,12 @@ export default function MoveNoteDialog({ visible, note, onClose, onMoved }: Move
       fullWidth
       contentStyle={exploreStyles.modalContent}
     >
-      <DragDropBoundary>
-        <SafeAreaView style={[exploreStyles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+        <DragDropBoundary>
+          <SafeAreaView style={[exploreStyles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
           <View style={[exploreStyles.header, { borderBottomColor: colors.border }]}>
             <TouchableOpacity testID="move-note.button.close" onPress={onClose} style={exploreStyles.headerBtn}>
               <Text style={[exploreStyles.headerBtnText, { color: colors.primary }]}>Cancel</Text>
@@ -583,7 +589,8 @@ export default function MoveNoteDialog({ visible, note, onClose, onMoved }: Move
             </ListDropContainer>
           )}
         </SafeAreaView>
-      </DragDropBoundary>
+        </DragDropBoundary>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

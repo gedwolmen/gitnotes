@@ -7,6 +7,8 @@ import {
   Alert,
   Modal,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -249,7 +251,11 @@ export default function CanvasListScreen() {
           accessible={false}
           onPress={() => setShowSizePicker(false)}
         >
-          <View className="w-full rounded-lg p-5" style={{ backgroundColor: colors.surface }} onStartShouldSetResponder={() => true}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={{ width: '100%' }}
+          >
+            <View className="w-full rounded-lg p-5" style={{ backgroundColor: colors.surface }} onStartShouldSetResponder={() => true}>
             <Text className="text-lg font-bold text-center mb-3" style={{ color: colors.text }}>{t('canvases.newCanvas')}</Text>
 
             <TextInput
@@ -328,6 +334,7 @@ export default function CanvasListScreen() {
               <Text className="text-base" style={{ color: colors.textSecondary }}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
+          </KeyboardAvoidingView>
         </TouchableOpacity>
       </Modal>
       <ScreenHeader
