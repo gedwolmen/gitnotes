@@ -304,7 +304,7 @@ static async writeAndCommit(opts: WriteOpts): Promise<LocalGitWriterResult> {
                 if (hasLocal) {
                   throw new Error(
                     `Clone corruption detected with unpushed local commits in ${opts.repoPath}@${opts.branch}. ` +
-                    `Please push your changes or reset before continuing.`,
+                      `Please push your changes or reset before continuing.`,
                   );
                 }
                 await GitFsService.removeRepo({ repoPath: opts.repoPath });
@@ -334,6 +334,8 @@ static async writeAndCommit(opts: WriteOpts): Promise<LocalGitWriterResult> {
               } else if (ffResult.reason === 'diverged') {
                 await surfaceConflictsOnDiverged(opts.repoPath, opts.branch);
                 return { success: false, error: 'conflict-detected' };
+              } else {
+                throw new Error(`Push failed: ${ffError || ffResult.reason}`);
               }
             }
             await git.push({
