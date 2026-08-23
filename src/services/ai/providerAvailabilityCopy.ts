@@ -21,9 +21,7 @@ export function describeAvailability(t: TFunction, reason: AvailabilityReason): 
     case 'llama-not-installed':
       return reason.message || t('ai.availability.llamaNotInstalled');
     case 'unknown':
-    default: {
-      const msg = 'message' in reason && reason.message ? reason.message : null;
-      return msg ? `${t('ai.availability.unknown')} (${msg})` : t('ai.availability.unknown');
-    }
+    default:
+      return reason.message ? `${t('ai.availability.unknown')} (${reason.message})` : t('ai.availability.unknown');
   }
 }

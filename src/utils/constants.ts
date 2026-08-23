@@ -52,3 +52,8 @@ export const NOTE_COLORS = {
   purple: '#AF52DE',
   pink: '#FF2D55',
 } as const;
+
+export const LEGAL_URLS = {
+  terms: 'https://www.gitnotes.org/terms',
+  privacy: 'https://www.gitnotes.org/privacy',
+} as const;
