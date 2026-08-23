@@ -78,9 +78,9 @@ jest.mock('../../src/stores/aiStore', () => {
   };
 });
 
-const TOKEN_STEP_INDEX = 6; // 6 INFO_STEPS
-const AI_STEP_INDEX = 7;
-const GITHUB_TOOLS_STEP_INDEX = 8;
+const TOKEN_STEP_INDEX = 5; // 5 INFO_STEPS (removed Scheduled Learning in #1104)
+const AI_STEP_INDEX = 6;
+const GITHUB_TOOLS_STEP_INDEX = 7;
 
 beforeEach(() => {
   jest.clearAllMocks();
