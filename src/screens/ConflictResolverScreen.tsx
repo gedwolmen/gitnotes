@@ -10,6 +10,7 @@ import { ConflictResolverService } from '../services/conflict/ConflictResolverSe
 import { proposeMerge } from '../services/conflict/AiConflictResolver';
 import { GitFsService } from '../services/git/GitFsService';
 import { LocalGitWriter } from '../services/git/LocalGitWriter';
+import { SyncEngineService } from '../services/SyncEngineService';
 import { AuthService } from '../services/AuthService';
 import type { FileConflict } from '../services/conflict/types';
 import type { RootStackParamList } from '../navigation/types';
@@ -205,11 +206,26 @@ export default function ConflictResolverScreen() {
         }
 
         await removeConflict(repoPath, branch);
-        Alert.alert(
-          'Conflicts resolved',
-          'Your changes have been committed locally. Push to sync with GitHub.',
-          [{ text: 'OK', onPress: () => navigation.goBack() }],
-        );
+
+        const isApiMode = (await SyncEngineService.getMode(repoPath)) === 'api';
+        if (isApiMode) {
+          const pushResult = await LocalGitWriter.push({ repoPath, branch, token });
+          if (!pushResult.success) {
+            Alert.alert('Push failed', pushResult.error ?? 'Unknown error', [
+              { text: 'OK', onPress: () => navigation.goBack() },
+            ]);
+            return;
+          }
+          Alert.alert('Conflicts resolved', 'Your changes have been pushed to GitHub.', [
+            { text: 'OK', onPress: () => navigation.goBack() },
+          ]);
+        } else {
+          Alert.alert(
+            'Conflicts resolved',
+            'Your changes have been committed locally. Use the push button to sync with GitHub.',
+            [{ text: 'OK', onPress: () => navigation.goBack() }],
+          );
+        }
       } catch (e) {
         Alert.alert('Error', e instanceof Error ? e.message : String(e));
       } finally {

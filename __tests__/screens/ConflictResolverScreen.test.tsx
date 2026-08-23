@@ -27,6 +27,8 @@ const mockDeleteAndCommit = jest.fn(async () => undefined);
 const mockMergeCommit = jest.fn(async () => ({}));
 const mockGetToken = jest.fn(async () => null);
 const mockGetUser = jest.fn();
+const mockGetMode = jest.fn(async () => 'api');
+const mockLocalGitWriterPush = jest.fn(async () => ({ success: true }));
 
 let alertSpy: jest.SpyInstance;
 let alertButtons: { text: string; onPress?: () => void; style?: string }[] = [];
@@ -67,6 +69,13 @@ jest.mock('../../src/services/git/LocalGitWriter', () => ({
   LocalGitWriter: {
     writeAndCommit: (...args: unknown[]) => mockWriteAndCommit(...args),
     deleteAndCommit: (...args: unknown[]) => mockDeleteAndCommit(...args),
+    push: (...args: unknown[]) => mockLocalGitWriterPush(...args),
+  },
+}));
+
+jest.mock('../../src/services/SyncEngineService', () => ({
+  SyncEngineService: {
+    getMode: (...args: unknown[]) => mockGetMode(...args),
   },
 }));
 
@@ -247,6 +256,10 @@ describe('ConflictResolverScreen AI-fix flow', () => {
     });
 
     expect(mockRemoveConflict).toHaveBeenCalledWith('owner/repo', 'main');
+    expect(mockGetMode).toHaveBeenCalledWith('owner/repo');
+    expect(mockLocalGitWriterPush).toHaveBeenCalled();
+    expect(mockGoBack).not.toHaveBeenCalled();
+    alertButtons[0]?.onPress?.();
     expect(mockGoBack).toHaveBeenCalled();
   });
 
