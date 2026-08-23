@@ -89,14 +89,10 @@ describe('LocalGitWriter push-rejected recovery (bug-hunt loop4 #15)', () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/network timeout/);
-    // The stale-branch retry must not run when the refresh pull failed.
     expect(getGitMocks().push).toHaveBeenCalledTimes(1);
   });
 
   test('push treats "Could not find <sha>" as corruption error and recovers via re-clone', async () => {
-    // First push fails with isomorphic-git missing-object error.
-    // hasUnpushedLocalCommits returns false (local === remote === merge-base),
-    // so the corruption recovery path re-clones and retries.
     getGitMocks().push
       .mockRejectedValueOnce(new Error('Could not find fc19c489cbd51e123949d74aecb9cf1a9267641a'))
       .mockResolvedValueOnce({ ok: true });
@@ -114,16 +110,13 @@ describe('LocalGitWriter push-rejected recovery (bug-hunt loop4 #15)', () => {
       branch: 'main',
       token: 'tok',
     });
-    // Two pushes: one failed, one succeeded after re-clone
     expect(getGitMocks().push).toHaveBeenCalledTimes(2);
   });
 
   test('push surfaces error when "Could not find" fires but local commits exist', async () => {
-    // hasUnpushedLocalCommits returns true (localOid !== mergeBase)
     (GitFsService.getCommitOid as jest.Mock)
-      .mockResolvedValueOnce('local-commit') // localRef
-      .mockResolvedValueOnce('remote-commit') // remoteRef
-      .mockResolvedValueOnce('base-commit'); // findMergeBase
+      .mockResolvedValueOnce('local-commit')
+      .mockResolvedValueOnce('remote-commit');
     (GitFsService.findMergeBase as jest.Mock).mockResolvedValueOnce('base-commit');
 
     getGitMocks().push.mockRejectedValueOnce(
@@ -137,8 +130,7 @@ describe('LocalGitWriter push-rejected recovery (bug-hunt loop4 #15)', () => {
     });
 
     expect(result.success).toBe(false);
-    expect(result.error).toMatch(/Clone corruption detected with unpushed local commits/);
-    // Must NOT attempt re-clone when local commits exist — user must push or reset
+    expect(result.error).toMatch(/Clone corruption with unpushed commits/);
     expect(GitFsService.removeRepo).not.toHaveBeenCalled();
     expect(GitFsService.clone).not.toHaveBeenCalled();
   });

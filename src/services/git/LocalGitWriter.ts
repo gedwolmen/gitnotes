@@ -572,7 +572,22 @@ static async deleteAndCommit(opts: DeleteOpts): Promise<LocalGitWriterResult> {
         }
         await GitFsService.removeRepo({ repoPath: opts.repoPath });
         await GitFsService.clone({ repoPath: opts.repoPath, branch: opts.branch, token: opts.token });
-        return { success: false, error: 'Clone corruption detected, push failed. Please retry.' };
+        try {
+          await git.push({
+            fs,
+            dir,
+            http: gitHttp,
+            ref: opts.branch,
+            remoteRef: opts.branch,
+            onAuth: tokenAuth(opts.token),
+            onProgress: opts.onProgress,
+          });
+          return { success: true };
+        } catch (retryError) {
+          const retryRaw = retryError instanceof Error ? retryError.message : String(retryError);
+          console.warn('[LocalGitWriter] push after clone recovery failed:', retryRaw);
+          return { success: false, error: retryRaw };
+        }
       }
       if (!isPushRejected(raw)) {
         console.warn('[LocalGitWriter] push failed:', raw);
@@ -592,7 +607,22 @@ static async deleteAndCommit(opts: DeleteOpts): Promise<LocalGitWriterResult> {
           }
           await GitFsService.removeRepo({ repoPath: opts.repoPath });
           await GitFsService.clone({ repoPath: opts.repoPath, branch: opts.branch, token: opts.token });
-          return { success: false, error: 'Clone corruption detected, push failed. Please retry.' };
+          try {
+            await git.push({
+              fs,
+              dir,
+              http: gitHttp,
+              ref: opts.branch,
+              remoteRef: opts.branch,
+              onAuth: tokenAuth(opts.token),
+              onProgress: opts.onProgress,
+            });
+            return { success: true };
+          } catch (retryError) {
+            const retryRaw = retryError instanceof Error ? retryError.message : String(retryError);
+            console.warn('[LocalGitWriter] push after clone recovery failed:', retryRaw);
+            return { success: false, error: retryRaw };
+          }
         }
         if (ffResult.reason === 'diverged') {
           await surfaceConflictsOnDiverged(opts.repoPath, opts.branch);
