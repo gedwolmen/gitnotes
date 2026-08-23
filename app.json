@@ -2,7 +2,7 @@
   "expo": {
     "name": "GitNot\u0113s",
     "slug": "gitnotes",
-    "version": "1.5.0",
+    "version": "1.5.1",
     "orientation": "portrait",
     "icon": "./assets/generated/icon.png",
     "userInterfaceStyle": "automatic",
@@ -12,7 +12,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.xaventra.gitnotes",
-      "buildNumber": "9",
+      "buildNumber": "10",
       "scheme": "gitnotes",
       "icon": "./assets/generated/icon.png",
       "infoPlist": {
