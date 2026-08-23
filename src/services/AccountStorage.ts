@@ -60,7 +60,8 @@ export function makeHostId(
   provider: GitHostProvider,
   instanceBaseUrl: string | null,
 ): string {
-  const instanceKey = (instanceBaseUrl ?? 'default').replace(/[^a-zA-Z0-9._-]/g, '_');
+  const normalized = instanceBaseUrl ? instanceBaseUrl.replace(/\/+$/, '') : null;
+  const instanceKey = (normalized ?? 'default').replace(/[^a-zA-Z0-9._-]/g, '_');
   return `${accountId}:${provider}:${instanceKey}`;
 }
 

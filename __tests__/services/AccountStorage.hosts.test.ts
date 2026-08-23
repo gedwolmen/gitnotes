@@ -293,6 +293,16 @@ describe('AuthService.switchToHost / switchAccount', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toBe('not-found');
   });
+
+  it('makeHostId normalizes trailing slashes in instanceBaseUrl (bug-hunt 2026-08 loop2 #10)', () => {
+    const id1 = makeHostId('acc-1', 'github', 'https://github.com');
+    const id2 = makeHostId('acc-1', 'github', 'https://github.com/');
+    expect(id1).toBe(id2);
+
+    const id3 = makeHostId('acc-1', 'gitlab', 'https://gitlab.example.com/api/v4');
+    const id4 = makeHostId('acc-1', 'gitlab', 'https://gitlab.example.com/api/v4/');
+    expect(id3).toBe(id4);
+  });
 });
 
 describe('AuthService.listAccountSummaries', () => {
