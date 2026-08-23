@@ -306,6 +306,14 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
                 label="See Plans"
                 style={{ marginTop: 8 }}
               />
+              <Button
+                variant="ghost"
+                fullWidth
+                testID="onboarding.button.skip-ai"
+                onPress={handleSkipGithubTools}
+                label="Skip for Now"
+                style={{ marginTop: 8 }}
+              />
             </View>
           ) : (
             <Button
