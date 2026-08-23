@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 
 interface HistoryState<T> {
   past: T[];
@@ -25,16 +25,9 @@ export function useUndo<T>(initialState: T): UseUndoReturn<T> {
     future: [],
   });
 
-  const skipNextUpdate = useRef(false);
-
   const setState = useCallback((newState: T | ((prev: T) => T)) => {
-    if (skipNextUpdate.current) {
-      skipNextUpdate.current = false;
-      return;
-    }
-
     setHistory((prev) => {
-      const resolvedNewState = typeof newState === 'function' 
+      const resolvedNewState = typeof newState === 'function'
         ? (newState as (prev: T) => T)(prev.present)
         : newState;
 
@@ -62,8 +55,6 @@ export function useUndo<T>(initialState: T): UseUndoReturn<T> {
       const newPast = [...prev.past];
       const previousState = newPast.pop()!;
 
-      skipNextUpdate.current = true;
-
       return {
         past: newPast,
         present: previousState,
@@ -78,8 +69,6 @@ export function useUndo<T>(initialState: T): UseUndoReturn<T> {
 
       const [nextState, ...newFuture] = prev.future;
 
-      skipNextUpdate.current = true;
-
       return {
         past: [...prev.past, prev.present],
         present: nextState,
@@ -89,7 +78,6 @@ export function useUndo<T>(initialState: T): UseUndoReturn<T> {
   }, []);
 
   const reset = useCallback((newState: T) => {
-    skipNextUpdate.current = true;
     setHistory({
       past: [],
       present: newState,
