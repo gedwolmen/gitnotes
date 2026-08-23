@@ -1,0 +1,94 @@
+name: Sync Wiki
+
+on:
+  push:
+    branches: [main]
+    paths: ['docs/wiki/**', '.github/workflows/sync-wiki.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: wiki-sync
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    name: Sync docs/wiki/ → GitHub Wiki
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Sync
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          # Configure git identity (required for the wiki commit)
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Clone the wiki as a separate working tree
+          WIKI_DIR="$(mktemp -d)"
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.wiki.git" "$WIKI_DIR"
+
+          cd "$WIKI_DIR"
+
+          # Patch the CHANGELOG.md link in copied index.md → Home.md to an absolute
+          # GitHub URL. In docs/wiki/, the relative path ../../CHANGELOG.md resolves
+          # to repo root; in the GitHub Wiki (flat namespace) it does not.
+          patch_changelog_link() {
+            sed -i 's|\.\./\.\./CHANGELOG\.md|https://github.com/'"${REPO}"'/blob/main/CHANGELOG.md|g' "$1"
+          }
+
+          # Copy a source file to its wiki target only if content differs (avoids
+          # no-op rewrite commits when docs/wiki/ hasn't changed).
+          sync_file() {
+            local src="$1" dst="$2"
+            if [ -f "$dst" ] && diff -q "$src" "$dst" > /dev/null 2>&1; then
+              return 0
+            fi
+            cp "$src" "$dst"
+          }
+
+          # Sync each docs/wiki/*.md → wiki/, renaming index.md → Home.md
+          for f in ../../docs/wiki/*.md; do
+            bn="$(basename "$f")"
+            if [ "$bn" = "index.md" ]; then
+              tmp="$(mktemp)"
+              cp "$f" "$tmp"
+              patch_changelog_link "$tmp"
+              sync_file "$tmp" "Home.md"
+              rm "$tmp"
+            else
+              sync_file "$f" "$bn"
+            fi
+          done
+
+          # Remove wiki pages that no longer exist in docs/wiki/
+          for existing in *.md; do
+            [ -f "$existing" ] || continue
+            bn_in_docs="$existing"
+            if [ "$existing" = "Home.md" ]; then
+              bn_in_docs="index.md"
+            fi
+            if [ ! -f "../../docs/wiki/$bn_in_docs" ]; then
+              rm "$existing"
+            fi
+          done
+
+          # Skip commit if there are no changes
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No wiki changes to sync"
+            exit 0
+          fi
+
+          git add -A
+          git commit -m "docs(wiki): sync from docs/wiki/ @ ${COMMIT_SHA:0:7}"
+          git push
