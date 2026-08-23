@@ -373,12 +373,27 @@ describe('offerings', () => {
     expect(useProStore.getState().lifetimePackage?.identifier).toBe('lifetime');
   });
 
-  it('surfaces an error and resolves the loading state when offerings fail to load', async () => {
+  it('surfaces an error and keeps offeringsReady false so the Retry button can re-fire', async () => {
     packagesMock.mockRejectedValue(new Error('no offerings'));
     await useProStore.getState().loadOfferingsIfNeeded();
     const s = useProStore.getState();
     expect(s.error).toBe('no offerings');
-    expect(s.offeringsReady).toBe(true);
+    expect(s.offeringsReady).toBe(false);
+  });
+
+  it('retries offerings load after a failure once the underlying error clears', async () => {
+    packagesMock.mockRejectedValueOnce(new Error('no offerings'));
+    await useProStore.getState().loadOfferingsIfNeeded();
+    expect(useProStore.getState().offeringsReady).toBe(false);
+    expect(useProStore.getState().error).toBe('no offerings');
+
+    packagesMock.mockResolvedValueOnce({
+      monthly: { identifier: 'monthly', product: { identifier: 'm', priceString: '$2.99' } },
+      offerings: { current: { identifier: 'default' } },
+    });
+    await useProStore.getState().loadOfferingsIfNeeded();
+    expect(useProStore.getState().offeringsReady).toBe(true);
+    expect(useProStore.getState().error).toBeNull();
   });
 
   it('stores the current offering once offerings load', async () => {
