@@ -32,7 +32,7 @@ import { RootStackParamList } from './types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAIStore } from '../stores/aiStore';
 import { useAIHubStore } from '../stores/aiHubStore';
-import { useProStore } from '../stores/proStore';
+import { useProStore, selectIsPro } from '../stores/proStore';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -88,15 +88,16 @@ export default function AppNavigator() {
   const closeChatRepoPicker = useAIHubStore((state) => state.closeChatRepoPicker);
   const [currentRouteName, setCurrentRouteName] = useState<string | undefined>(undefined);
   const interstitialEligible = useProStore((s) => s.interstitialEligible);
+  const isPro = useProStore(selectIsPro);
   const markInterstitialShown = useProStore((s) => s.markInterstitialShown);
 
   useEffect(() => {
-    if (!interstitialEligible) return;
+    if (!interstitialEligible || isPro) return;
     markInterstitialShown();
     if (navigationRef.isReady()) {
       navigationRef.navigate('Paywall');
     }
-  }, [interstitialEligible, markInterstitialShown]);
+  }, [interstitialEligible, isPro, markInterstitialShown, navigationRef]);
 
   const baseTheme = isDark ? DarkTheme : DefaultTheme;
   const navigationTheme = {
