@@ -67,7 +67,7 @@ export default function HomeScreen() {
   const [pickerRemember, setPickerRemember] = useState<boolean>(false);
   const [contextMenuItem, setContextMenuItem] = useState<RecentItem | null>(null);
   const [colorPickerItem, setColorPickerItem] = useState<RecentItem | null>(null);
-  const { quote, isLoading: quoteLoading, refresh: quoteRefresh } = useDailyQuote();
+  const { quote, isLoading: quoteLoading, refresh: quoteRefresh, error: quoteError } = useDailyQuote();
 
   useEffect(() => {
     (async () => {
@@ -292,7 +292,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView edges={[]} className="flex-1" style={{ backgroundColor: colors.background }}>
       <ScrollView className="flex-1" contentContainerStyle={{ padding: 20, paddingTop: headerHeight, paddingBottom: tabBarHeight + 20 }} showsVerticalScrollIndicator={false}>
-      <DailyQuoteCard quote={quote} isLoading={quoteLoading} onRefresh={quoteRefresh} />
+      <DailyQuoteCard quote={quote} isLoading={quoteLoading} error={quoteError} onRefresh={quoteRefresh} />
       <View className="gap-3 mt-2 mb-6">
         <View className="flex-row items-stretch gap-3 overflow-hidden">
           <Pressable
