@@ -138,6 +138,17 @@ class NoteSyncQueueServiceClass {
   private listeners = new Set<() => void>();
   private droppedListeners = new Set<(event: DroppedMutationEvent) => void>();
   private succeededListeners = new Set<(event: MutationSucceededEvent) => void>();
+  private enqueueChain: Promise<void> = Promise.resolve();
+
+  private async withEnqueueLock<T>(fn: () => Promise<T>): Promise<T> {
+    const previous = this.enqueueChain;
+    const next = previous.then(fn, fn);
+    this.enqueueChain = next.then(
+      () => undefined,
+      () => undefined,
+    );
+    return next;
+  }
 
   subscribe(fn: () => void): () => void {
     this.listeners.add(fn);
@@ -319,6 +330,7 @@ class NoteSyncQueueServiceClass {
    * need the id to detect their own mutation's drop-vs-pushed outcome).
    */
   async enqueueNoteDeletes(items: NoteDeleteParams[]): Promise<{ ids: string[] }> {
+    return this.withEnqueueLock(async () => {
     if (items.length === 0) return { ids: [] };
     const branches = await this.resolveBranchesOnce(
       items.map((params) => ({ repo: params.repo, hint: params.branch })),
@@ -379,6 +391,7 @@ class NoteSyncQueueServiceClass {
       }
     } catch { /* best-effort */ }
     return { ids };
+    });
   }
 
   /**
@@ -393,6 +406,7 @@ class NoteSyncQueueServiceClass {
     items: NoteUpsertParams[],
     localNoteIds?: (string | undefined)[],
   ): Promise<{ ids: string[] }> {
+    return this.withEnqueueLock(async () => {
     if (items.length === 0) return { ids: [] };
     const branches = await this.resolveBranchesOnce(
       items.map((params) => ({ repo: params.repo, hint: params.branch })),
@@ -446,6 +460,7 @@ class NoteSyncQueueServiceClass {
     }
     await this.saveAll([...queue, ...batchMutations]);
     return { ids };
+    });
   }
 
   async enqueueNoteUpsert(params: NoteUpsertParams, localNoteId?: string): Promise<{ id: string }> {
