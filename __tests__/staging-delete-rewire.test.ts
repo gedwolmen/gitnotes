@@ -53,6 +53,7 @@ jest.mock('../src/services/git/LocalGitWriter', () => ({
   LocalGitWriter: {
     writeAndCommit: jest.fn(async () => ({ success: true })),
     deleteAndCommit: jest.fn(async () => ({ success: true })),
+    push: jest.fn(async () => ({ success: true })),
   },
 }));
 
@@ -204,6 +205,17 @@ async function pressCommitAndPushButton(): Promise<void> {
   const commit = buttons.find((b) => b.text === 'Commit & Push');
   await act(async () => {
     await commit?.onPress?.();
+  });
+  // Wait for the async commitAndPush to show its alert, then press OK
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 50));
+  });
+  const newCalls = (Alert.alert as jest.Mock).mock.calls;
+  const lastAlert = newCalls[newCalls.length - 1];
+  const alertButtons = lastAlert[2] as Array<{ text?: string; onPress?: () => void | Promise<void> }>;
+  const okButton = alertButtons.find((b) => b.text === 'OK');
+  await act(async () => {
+    await okButton?.onPress?.();
   });
 }
 
