@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   ScrollView,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -579,32 +581,37 @@ export default function RepoFolderPickerModal({
         )}
 
         <Modal visible={showNewFolderModal} onRequestClose={() => { setShowNewFolderModal(false); setNewFolderName(''); }}>
-          <Text style={[styles.modalTitle, { color: colors.text }]}>New Folder</Text>
-          <TextInput
-            style={[styles.modalInput, { color: colors.text, backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}
-            placeholder="Folder name"
-            placeholderTextColor={colors.textSecondary}
-            value={newFolderName}
-            onChangeText={setNewFolderName}
-            autoFocus
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          <View style={styles.modalButtons}>
-            <TouchableOpacity
-              style={[styles.modalBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              onPress={() => { setShowNewFolderModal(false); setNewFolderName(''); }}
-            >
-              <Text style={[styles.modalBtnText, { color: colors.text }]}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modalBtn, { backgroundColor: colors.primary }, !newFolderName.trim() && styles.useButtonDisabled]}
-              onPress={handleCreateFolder}
-              disabled={!newFolderName.trim() || isLoading}
-            >
-              <Text style={styles.modalBtnText}>Create</Text>
-            </TouchableOpacity>
-          </View>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={{ flex: 1 }}
+          >
+            <Text style={[styles.modalTitle, { color: colors.text }]}>New Folder</Text>
+            <TextInput
+              style={[styles.modalInput, { color: colors.text, backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}
+              placeholder="Folder name"
+              placeholderTextColor={colors.textSecondary}
+              value={newFolderName}
+              onChangeText={setNewFolderName}
+              autoFocus
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                onPress={() => { setShowNewFolderModal(false); setNewFolderName(''); }}
+              >
+                <Text style={[styles.modalBtnText, { color: colors.text }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: colors.primary }, !newFolderName.trim() && styles.useButtonDisabled]}
+                onPress={handleCreateFolder}
+                disabled={!newFolderName.trim() || isLoading}
+              >
+                <Text style={styles.modalBtnText}>Create</Text>
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
         </Modal>
       </SafeAreaView>
     </Modal>

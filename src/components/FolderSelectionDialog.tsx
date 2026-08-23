@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -240,7 +241,11 @@ export default function FolderSelectionDialog({
       fullWidth
       contentStyle={styles.modalContent}
     >
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
         <View style={[styles.header, { borderBottomColor: colors.border }]}> 
           <View style={styles.headerSide}>
             <TouchableOpacity testID="folder-selection.button.close" onPress={onClose} hitSlop={8} style={styles.headerActionButton}>
@@ -351,6 +356,7 @@ export default function FolderSelectionDialog({
           )}
         </ScrollView>
       </SafeAreaView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
