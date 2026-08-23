@@ -321,6 +321,11 @@ export class AccountStorage {
     }
     await writeHostConnections(remainingHosts);
 
+    // SECURITY: clear AI provider API keys from SecureStore and wipe the
+    // AI settings blob so a re-added account can't inherit the previous
+    // user's provider keys (bug-hunt 2026-08).
+    await this.clearAccountAiState();
+
     const activeId = await this.getActiveAccountId();
     if (activeId === id) {
       await this.setActiveAccountId(remaining[0]?.id ?? null);
@@ -329,6 +334,24 @@ export class AccountStorage {
     if (activeHostId && !remainingHosts.some((h) => h.id === activeHostId)) {
       await this.setActiveHostId(remainingHosts[0]?.id ?? null);
     }
+  }
+
+  private static async clearAccountAiState(): Promise<void> {
+    try {
+      const raw = await AsyncStorage.getItem('ai-settings');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const providers: Array<{ id?: string }> = Array.isArray(parsed?.providers) ? parsed.providers : [];
+        await Promise.all(
+          providers
+            .filter((p): p is { id: string } => typeof p?.id === 'string')
+            .map((p) => SecureStore.deleteItemAsync(`ai-provider-key-${p.id}`).catch(() => undefined)),
+        );
+      }
+    } catch { /* best-effort */ }
+    try {
+      await AsyncStorage.removeItem('ai-settings');
+    } catch { /* best-effort */ }
   }
 
   static async clearAll(): Promise<void> {
