@@ -143,6 +143,7 @@ export default function ConflictResolverScreen() {
     async (cs: typeof conflict) => {
       if (!cs) return;
       setIsResolving(true);
+      const skippedFiles: string[] = [];
       try {
         const token = (await AuthService.getToken()) ?? undefined;
         const user = token ? await AuthService.getUser(token) : null;
@@ -175,13 +176,16 @@ export default function ConflictResolverScreen() {
               push: false,
             });
           } else {
-            // Refuse to delete: this is a binary both-changed-different
-            // conflict whose blob wasn't carried through the conflict model.
-            // The user must re-resolve manually.
-            console.warn(
-              `[ConflictResolverScreen] skipping unresolved file ${f.path} (kind=${f.kind}, format=${f.format}); refusing to delete.`,
-            );
+            skippedFiles.push(f.path);
           }
+        }
+
+        if (skippedFiles.length > 0) {
+          Alert.alert(
+            'Some conflicts could not be resolved',
+            `The following files still have unresolved conflicts and were skipped: ${skippedFiles.join(', ')}. Please resolve them manually before the next sync.`,
+            [{ text: 'OK' }],
+          );
         }
 
         const result = await GitFsService.mergeCommit({
