@@ -22,7 +22,6 @@ import TemplateManagerScreen from '../screens/TemplateManagerScreen';
 import SyncStatusScreen from '../screens/SyncStatusScreen';
 import StageScreen from '../screens/StageScreen';
 import ConflictResolverScreen from '../screens/ConflictResolverScreen';
-import NeumorphicGallery from '../screens/__dev__/NeumorphicGallery';
 import { FloatingAIButton } from '../components/ai/FloatingAIButton';
 import { FloatingStageButton } from '../components/git/FloatingStageButton';
 import { ChatRepoPickerModal } from '../components/ai/ChatRepoPickerModal';
@@ -37,35 +36,47 @@ import { useProStore } from '../stores/proStore';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-const linking: LinkingOptions<RootStackParamList> = {
-  // Only the custom-scheme prefix is accepted until the gitnotes.app domain
-  // hosts an apple-app-site-association / .well-known/assetlinks.json with
-  // matching associatedDomains entitlement (iOS) + android:autoVerify intent
-  // filter (Android). Without that, another app on the same OS can register
-  // the same https:// pattern and hijack the link — see #266.
-  prefixes: ['gitnotes://'],
-  config: {
-    screens: {
-      MainTabs: {
-        screens: {
-          HomeTab: 'home',
-          NotesTab: 'notes',
-          ExploreTab: 'explore',
-          SettingsTab: 'settings',
-          CanvasList: 'canvases',
+const getLinkingConfig = (): LinkingOptions<RootStackParamList> => {
+  const baseConfig: LinkingOptions<RootStackParamList> = {
+    // Only the custom-scheme prefix is accepted until the gitnotes.app domain
+    // hosts an apple-app-site-association / .well-known/assetlinks.json with
+    // matching associatedDomains entitlement (iOS) + android:autoVerify intent
+    // filter (Android). Without that, another app on the same OS can register
+    // the same https:// pattern and hijack the link — see #266.
+    prefixes: ['gitnotes://'],
+    config: {
+      screens: {
+        MainTabs: {
+          screens: {
+            HomeTab: 'home',
+            NotesTab: 'notes',
+            ExploreTab: 'explore',
+            SettingsTab: 'settings',
+            CanvasList: 'canvases',
+          },
         },
+        NoteEditor: 'note/:noteId',
+        CanvasEditor: 'canvas/:canvasId',
+        ChatThreadList: 'chat',
+        ChatScreen: 'chat/:threadId',
+        ThoughtDump: 'thought-dump',
+        Stage: 'stage',
+        Conflicts: 'conflicts',
       },
-      NoteEditor: 'note/:noteId',
-      CanvasEditor: 'canvas/:canvasId',
-      ChatThreadList: 'chat',
-      ChatScreen: 'chat/:threadId',
-      ThoughtDump: 'thought-dump',
-      Stage: 'stage',
-      Conflicts: 'conflicts',
-      NeumorphicGallery: '__dev__/neumorphic',
     },
-  },
+  };
+
+  if (__DEV__) {
+    // NeumorphicGallery is a dev-only screen for testing neumorphic UI components
+    // Guard both the deep link and import to prevent production builds from
+    // including or registering this dev artifact — see #1073
+    (baseConfig.config as NonNullable<typeof baseConfig.config>).screens.NeumorphicGallery = '__dev__/neumorphic';
+  }
+
+  return baseConfig;
 };
+
+const linking = getLinkingConfig();
 
 export default function AppNavigator() {
   const { isDark, colors } = useTheme();
@@ -247,7 +258,7 @@ export default function AppNavigator() {
             {__DEV__ && (
               <Stack.Screen
                 name="NeumorphicGallery"
-                component={NeumorphicGallery}
+                component={require('../screens/__dev__/NeumorphicGallery').default}
                 options={{ headerShown: true, title: 'Neumorphic Gallery' }}
               />
             )}
