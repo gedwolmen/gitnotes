@@ -35,7 +35,6 @@ const INFO_STEP_ICONS = [
   'folder-outline',
   'rocket-outline',
   'bulb-outline',
-  'help-circle-outline',
 ] as const;
 
 export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScreenProps) {
@@ -66,11 +65,6 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
       title: t('onboarding.steps.thoughtDumpTitle'),
       description: t('onboarding.steps.thoughtDumpDescription'),
       icon: INFO_STEP_ICONS[4],
-    },
-    {
-      title: t('onboarding.steps.scheduledTitle'),
-      description: t('onboarding.steps.scheduledDescription'),
-      icon: INFO_STEP_ICONS[5],
     },
   ];
 
