@@ -543,9 +543,15 @@ async function pullCanvasesFromRepo(
   try {
     files = await fetchDirectoryFiles(owner, repo, repoPath, 'canvases', branch, provider, reader);
     directoryExists = true;
-  } catch {
-    // Directory doesn't exist remotely (404) — treat as all canvases deleted.
-    directoryExists = false;
+  } catch (error) {
+    // Fetch failed (network/auth/rate-limit). Don't treat this as
+    // "remote directory deleted" — that would wipe every local canvas.
+    // Leave local data untouched and let the next pull retry.
+    console.warn(
+      `[RepoPullService] canvases pull failed, preserving local data (${owner}/${repo}@${branch}):`,
+      error instanceof Error ? error.message : error,
+    );
+    return pulled;
   }
 
   let processed = 0;
@@ -654,8 +660,15 @@ async function pullTodosFromRepo(
   try {
     files = await fetchDirectoryFiles(owner, repo, repoPath, 'todos', branch, provider, reader);
     directoryExists = true;
-  } catch {
-    directoryExists = false;
+  } catch (error) {
+    // Fetch failed (network/auth/rate-limit). Don't treat this as
+    // "remote directory deleted" — that would wipe every local todo.
+    // Leave local data untouched and let the next pull retry.
+    console.warn(
+      `[RepoPullService] todos pull failed, preserving local data (${owner}/${repo}@${branch}):`,
+      error instanceof Error ? error.message : error,
+    );
+    return pulled;
   }
 
   let processed = 0;
