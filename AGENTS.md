@@ -54,9 +54,9 @@ Open issues tracking current gaps against this truth: #925 (clone staging never 
 There are two documentation surfaces, and they serve different purposes:
 
 - **`CHANGELOG.md`** (repo root) — **single-PR fixes and narrow bug-fix entries**. Grouped by date descending, one section per entry: title, area (conventional-commit prefix), 2-4 line summary, PR reference. Default location for any new fix.
-- **`docs/wiki/`** — **architecture, services, contributor guides, feature deep-dives, post-mortems, and multi-PR campaigns**. A new wiki page is appropriate only when the change crosses architectural boundaries (new service, new major feature, cross-cutting refactor) or teaches something contributors need to understand the system. Each new wiki page MUST be added to `docs/wiki/index.md`.
+- **GitHub Wiki** ([gedwolmen/gitnotes/wiki](https://github.com/gedwolmen/gitnotes/wiki)) — **the public-facing main wiki**. Architecture, services, contributor guides, feature deep-dives, post-mortems, and multi-PR campaigns. A new wiki page is appropriate only when the change crosses architectural boundaries (new service, new major feature, cross-cutting refactor) or teaches something contributors need to understand the system.
 
-Pre-2026-08 fixes lived in single-PR wiki pages. Those pages were retired; their full content is preserved in git history via `git log -p -- docs/wiki/<file>.md`.
+Editing the wiki: write the page in `docs/wiki/<name>.md` (this repo, source-controlled), add it to `docs/wiki/index.md`, and open a PR. The CI sync workflow (`.github/workflows/sync-wiki.yml`) mirrors `docs/wiki/` → GitHub Wiki on every merge to `main`. Manual edits on `github.com/gedwolmen/gitnotes/wiki` will be overwritten on the next sync.
 
 Wiki documentation is part of the definition of done for **architecture-level changes only**.
 

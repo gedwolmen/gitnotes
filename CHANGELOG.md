@@ -4,9 +4,9 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 > **Format**: loosely based on [Keep a Changelog](https://keepachangelog.com/), grouped by date descending. Each entry references the originating PR (when available) and names the area from the conventional-commit prefix.
 >
-> **Wiki**: `docs/wiki/` is reserved for architecture, services, contributor guides, and feature deep-dives. New single-PR fixes should be added here, not as new wiki pages.
+> **Wiki**: the [GitHub Wiki](https://github.com/gedwolmen/gitnotes/wiki) is the public-facing main wiki — architecture, services, contributor guides, and feature deep-dives. Source-controlled editing surface is `docs/wiki/` in this repo; CI (`.github/workflows/sync-wiki.yml`) mirrors it to the GitHub Wiki on every merge to `main`. New single-PR fixes should be added here, not as new wiki pages.
 >
-> **History**: prior fixes (pre-2026-08) lived in single-PR wiki pages. Those pages were retired in [#1046-era cleanup]; their full diagnostic content is preserved in git history via `git log -p -- docs/wiki/<file>.md`.
+> **History**: prior fixes (pre-2026-08) lived in single-PR wiki pages. Those pages were retired in [#1047](https://github.com/gedwolmen/gitnotes/pull/1047); their full diagnostic content is preserved in git history via `git log -p -- docs/wiki/<file>.md`.
 
 ## 2026-08-23
 
