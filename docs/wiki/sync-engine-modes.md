@@ -53,7 +53,7 @@ There is **no post-switch warning** — API mode is a fully supported sync engin
 
 ## Large-repo preflight (#1037 — clone disabled for large repos)
 
-**Clone mode is disabled for repos above `LARGE_REPO_THRESHOLD_KB = 200 MB`.** A large repo OOMs Hermes natively during packfile download/indexing (`hermesvm: GCBase::oom` → SIGABRT) or hangs the main thread past the iOS watchdog (`0x8BADF00D` SIGKILL) — neither is catchable in JS. The only safe behavior is to never attempt the clone:
+**Clone mode is disabled for repos above `LARGE_REPO_THRESHOLD_KB = 100 MB`.** A large repo OOMs Hermes natively during packfile download/indexing (`hermesvm: GCBase::oom` → SIGABRT) or hangs the main thread past the iOS watchdog (`0x8BADF00D` SIGKILL) — neither is catchable in JS. The only safe behavior is to never attempt the clone:
 
 - **At add time:** if the picker's `repo.size` (KB) exceeds the threshold, the repo is added **directly in API mode** (`SyncEngineService.setMode(repo, 'api')` before import), so the import runs the pull-only API path and never the clone path.
 - **At the API → Clone toggle:** `SettingsScreen.handleEnableCloneMode` looks up the repo size via `GitHubService.getRepositorySize(owner, repo)` before cloning. If it exceeds the threshold, clone is refused with an alert (largeRepoCloneBlockedBody) recommending API mode.

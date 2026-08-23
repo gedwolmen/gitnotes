@@ -21,7 +21,7 @@ const EMPTY_REPO_COUNTS: PullResult = { repos: 1, notes: 0, canvases: 0, todos: 
  * for the long tail of repos where the initial packfile can OOM the JS
  * heap even with the streaming + batched-checkout mitigations.
  */
-export const LARGE_REPO_THRESHOLD_KB = 200 * 1024;
+export const LARGE_REPO_THRESHOLD_KB = 100 * 1024;
 
 const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 const NON_RETRYABLE_STATUS = new Set([401, 403, 404, 410]);
