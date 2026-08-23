@@ -61,7 +61,8 @@ function resolveDescription(reason: FallbackReason): string {
   return FALLBACK_DESCRIPTIONS[reason];
 }
 
-function makeFallbackQuote(reason: FallbackReason): DailyQuote {
+function makeFallbackQuote(reason: FallbackReason): DailyQuote | null {
+  if (quotes.length === 0) return null;
   const random = quotes[Math.floor(Math.random() * quotes.length)];
   return {
     quoteId: random.id,
