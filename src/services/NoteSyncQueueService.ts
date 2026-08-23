@@ -401,7 +401,7 @@ class NoteSyncQueueServiceClass {
     let queue = await this.getAll();
     const batchMutations: QueuedMutation[] = [];
     const ids: string[] = [];
-    items.forEach((rawParams, index) => {
+    for (const [index, rawParams] of items.entries()) {
       const branch = branches.get(this.branchCacheKey(rawParams.repo, rawParams.branch))!;
       const resolvedParams: NoteUpsertParams = { ...rawParams, branch };
       const sameRepoBranchPath = (m: QueuedMutation) =>
@@ -416,9 +416,22 @@ class NoteSyncQueueServiceClass {
       // filePath guard also keeps two un-pathed new notes from collapsing.
       const keepExisting = (m: QueuedMutation): boolean =>
         !(resolvedParams.filePath && sameRepoBranchPath(m));
+      const droppedPrior = queue.filter((m) => !keepExisting(m));
       queue = queue.filter(keepExisting);
       for (let i = batchMutations.length - 1; i >= 0; i -= 1) {
         if (!keepExisting(batchMutations[i])) batchMutations.splice(i, 1);
+      }
+      // Clear tombstones for any prior same-path deletes the upsert
+      // supersedes — otherwise the 24h tombstone TTL blocks the next
+      // pull from re-importing the recreated note on other devices.
+      for (const dropped of droppedPrior) {
+        if (dropped.type === 'note.delete') {
+          await this.removeTombstone(
+            dropped.params.repo,
+            dropped.params.branch,
+            dropped.params.filePath,
+          );
+        }
       }
       const id = this.newMutationId();
       ids.push(id);
@@ -430,7 +443,7 @@ class NoteSyncQueueServiceClass {
         localNoteId: localNoteIds?.[index],
         params: resolvedParams,
       });
-    });
+    }
     await this.saveAll([...queue, ...batchMutations]);
     return { ids };
   }
@@ -816,26 +829,37 @@ class NoteSyncQueueServiceClass {
     }
 
     if (isClone && pendingFlush.length > 0) {
-      const token = (await AuthService.getToken()) ?? undefined;
-      const flushResult = await LocalGitWriter.push({
-        repoPath,
-        branch,
-        token,
-      });
-      if (flushResult.success) {
-        for (const { item, result } of pendingFlush) {
-          if (item.type === 'note.upsert') {
-            await this.applyPostSyncStorageUpdate(item, result);
-          } else if (item.type === 'note.delete') {
-            await this.removeTombstone(item.params.repo, item.params.branch, item.params.filePath);
+      const byAccount = new Map<string, typeof pendingFlush>();
+      for (const entry of pendingFlush) {
+        const key = entry.item.params.accountId ?? '__default__';
+        const arr = byAccount.get(key) ?? [];
+        arr.push(entry);
+        byAccount.set(key, arr);
+      }
+      for (const [accountKey, entries] of byAccount) {
+        const token = accountKey === '__default__'
+          ? (await AuthService.getToken()) ?? undefined
+          : (await AuthService.getTokenById(accountKey)) ?? undefined;
+        const flushResult = await LocalGitWriter.push({
+          repoPath,
+          branch,
+          token,
+        });
+        if (flushResult.success) {
+          for (const { item, result } of entries) {
+            if (item.type === 'note.upsert') {
+              await this.applyPostSyncStorageUpdate(item, result);
+            } else if (item.type === 'note.delete') {
+              await this.removeTombstone(item.params.repo, item.params.branch, item.params.filePath);
+            }
+            succeeded++;
+            droppedIds.add(item.id);
+            this.emitMutationSucceeded({ mutation: item });
           }
-          succeeded++;
-          droppedIds.add(item.id);
-          this.emitMutationSucceeded({ mutation: item });
+        } else {
+          console.warn('[NoteSyncQueue] coalesced push failed:', flushResult.error);
+          for (const { item } of entries) await recordFailure(item, flushResult.error);
         }
-      } else {
-        console.warn('[NoteSyncQueue] coalesced push failed:', flushResult.error);
-        for (const { item } of pendingFlush) await recordFailure(item, flushResult.error);
       }
     }
 
