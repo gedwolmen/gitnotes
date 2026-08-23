@@ -489,13 +489,54 @@ static async deleteAndCommit(opts: DeleteOpts): Promise<LocalGitWriterResult> {
   }
 
   /**
+   * Discard all unpushed local commits by resetting the local branch to
+   * origin/<branch>. This is a hard reset — any working-tree changes are
+   * also discarded. Used by the "Discard changes" button on the Stage screen.
+   */
+  static async resetToRemote(opts: {
+    repoPath: string;
+    branch: string;
+    token?: string;
+  }): Promise<LocalGitWriterResult> {
+    const info = parseRepoPath(opts.repoPath);
+    if (!info) return { success: false, error: `Invalid repo path: ${opts.repoPath}` };
+
+    const dir = repoDirVirtual(info.owner, info.repo);
+    const fs = makeRepoFs();
+
+    try {
+      await ensureOnBranch(fs, dir, opts.branch, opts.token);
+
+      const remoteRef = `refs/remotes/origin/${opts.branch}`;
+      const remoteOid = await GitFsService.getCommitOid({ repoPath: opts.repoPath, ref: remoteRef });
+      if (remoteOid === null) {
+        return { success: false, error: `No remote ref found for ${opts.branch}; cannot discard without an origin to reset to.` };
+      }
+
+      await git.branch({
+        fs,
+        dir,
+        ref: `refs/heads/${opts.branch}`,
+        object: remoteOid,
+        force: true,
+        checkout: true,
+      });
+      return { success: true };
+    } catch (e) {
+      const raw = e instanceof Error ? e.message : String(e);
+      console.warn('[LocalGitWriter] resetToRemote failed:', raw);
+      return { success: false, error: raw };
+    }
+  }
+
+  /**
    * Push pending local commits to the remote without staging or committing
    * anything new. Used by `NoteSyncQueueService.drain` to flush a coalesced
    * batch of write calls that ran with `push: false` (issue #565 phase
    * B.1). On non-fast-forward rejection we pull once and retry the push,
    * mirroring the pattern in `writeAndCommit` / `deleteAndCommit`.
    */
-static async push(opts: {
+  static async push(opts: {
     repoPath: string;
     branch: string;
     token?: string;

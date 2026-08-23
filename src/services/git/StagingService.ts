@@ -285,14 +285,35 @@ export class StagingService {
         continue;
       }
 
-      items.push({
+      const remoteRef = hasRemote ? `refs/remotes/origin/${repoBranch}` : `refs/heads/${repoBranch}`;
+      const changedFiles = await GitFsService.getChangedFilesBetweenRefs({
         repoPath: repo.path,
-        branch: repoBranch,
-        filePath: UNPUSHED_COMMITS_PLACEHOLDER,
-        kind: 'upsert',
-        mode: 'clone',
-        localCommitOid: localOid ?? undefined,
+        fromRef: mergeBase ?? remoteRef,
+        toRef: `refs/heads/${repoBranch}`,
+        maxCommits: 20,
       });
+
+      if (changedFiles.length === 0) {
+        items.push({
+          repoPath: repo.path,
+          branch: repoBranch,
+          filePath: UNPUSHED_COMMITS_PLACEHOLDER,
+          kind: 'upsert',
+          mode: 'clone',
+          localCommitOid: localOid ?? undefined,
+        });
+      } else {
+        for (const filePath of changedFiles) {
+          items.push({
+            repoPath: repo.path,
+            branch: repoBranch,
+            filePath,
+            kind: 'upsert',
+            mode: 'clone',
+            localCommitOid: localOid ?? undefined,
+          });
+        }
+      }
     }
 
     return items;
@@ -359,6 +380,36 @@ export class StagingService {
         notifyStagedChanged();
       }
 
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  /**
+   * Discard all staged local changes for a given repo/branch by resetting
+   * the local branch to origin. Used by the "Discard changes" button on the
+   * Stage screen.
+   */
+  static async discardStaged(
+    repoPath: string,
+    branch: string,
+  ): Promise<StagingResult> {
+    try {
+      const mode = await SyncEngineService.getMode(repoPath);
+      if (mode !== 'clone') {
+        return { success: false, error: 'Discard is only supported in clone sync mode.' };
+      }
+
+      const token = await AuthService.getToken();
+      const result = await LocalGitWriter.resetToRemote({
+        repoPath,
+        branch,
+        token: token ?? undefined,
+      });
+      if (!result.success) return { success: false, error: result.error };
+
+      notifyStagedChanged();
       return { success: true };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : String(error) };

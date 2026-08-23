@@ -102,6 +102,7 @@ jest.mock('../src/services/git/GitFsService', () => ({
     getCommitOid: jest.fn(async () => null),
     removeRepo: jest.fn(async () => undefined),
     readBlobAtRef: jest.fn(async () => null),
+    getChangedFilesBetweenRefs: jest.fn(async () => []),
   },
 }));
 

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { ScreenHeader, useScreenHeaderHeight } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
@@ -81,6 +82,7 @@ export default function StageScreen() {
   const registerQueueSubscription = useStageStore((s) => s.registerQueueSubscription);
   const requestPush = useStageStore((s) => s.requestPush);
   const pushAll = useStageStore((s) => s.pushAll);
+  const discardStaged = useStageStore((s) => s.discardStaged);
   const { progress, visible, label } = useGitHubActivityStore();
   const [refreshing, setRefreshing] = useState(false);
   const headerHeight = useScreenHeaderHeight();
@@ -134,6 +136,24 @@ export default function StageScreen() {
     void drainPushQueue('manual');
   }, [pushAll]);
 
+  const handleDiscardGroup = useCallback(
+    (group: StageGroup) => {
+      Alert.alert(
+        'Discard Changes',
+        `Discard all staged changes for ${repoName(group.repoPath)} / ${group.branch}? This cannot be undone.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => void discardStaged(group.repoPath, group.branch),
+          },
+        ],
+      );
+    },
+    [discardStaged],
+  );
+
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -148,7 +168,7 @@ export default function StageScreen() {
       const pushing = isPushing[item.key] ?? false;
       return (
         <View>
-          <View className="flex-row items-center justify-between px-4 pt-4 pb-2">
+          <View className="flex-row items-center gap-2 px-4 pt-4 pb-2">
             <View className="flex-1 mr-3">
               <Text className="text-sm font-bold" style={{ color: colors.text }} numberOfLines={1}>
                 {repoName(item.repoPath)}
@@ -170,6 +190,17 @@ export default function StageScreen() {
                 Push
               </Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              testID={`stage.discard.${item.key}`}
+              onPress={() => handleDiscardGroup(item)}
+              disabled={pushing}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: pushing }}
+              className="px-3 py-1.5 rounded-md"
+              style={{ backgroundColor: pushing ? colors.border : colors.error }}
+            >
+              <Ionicons name="trash" size={13} color="#ffffff" />
+            </TouchableOpacity>
           </View>
           {item.items.map((row) => (
             <StageRow key={`${item.key}:${row.filePath}:${row.localCommitOid ?? ''}`} item={row} />
@@ -177,7 +208,7 @@ export default function StageScreen() {
         </View>
       );
     },
-    [colors, handlePushGroup, isPushing],
+    [colors, handlePushGroup, handleDiscardGroup, isPushing],
   );
 
   const renderEmpty = useCallback(
@@ -256,19 +287,49 @@ export default function StageScreen() {
           ) : null
         }
         actions={
-          <TouchableOpacity
-            testID="stage.push-all"
-            onPress={handlePushAll}
-            disabled={pushAllDisabled}
-            accessibilityRole="button"
-            accessibilityState={{ disabled: pushAllDisabled }}
-            className="px-3 py-1.5 rounded-md"
-            style={{ backgroundColor: pushAllDisabled ? colors.border : colors.primary }}
-          >
-            <Text className="text-xs font-bold" style={{ color: '#ffffff' }}>
-              Push all
-            </Text>
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity
+              testID="stage.discard-all"
+              onPress={() => {
+                Alert.alert(
+                  'Discard All Changes',
+                  'Discard all staged changes across all repositories? This cannot be undone.',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Discard All',
+                      style: 'destructive',
+                      onPress: async () => {
+                        for (const group of groups) {
+                          await discardStaged(group.repoPath, group.branch);
+                        }
+                      },
+                    },
+                  ],
+                );
+              }}
+              disabled={pushAllDisabled}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: pushAllDisabled }}
+              className="px-3 py-1.5 rounded-md"
+              style={{ backgroundColor: pushAllDisabled ? colors.border : colors.error }}
+            >
+              <Ionicons name="trash" size={13} color="#ffffff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              testID="stage.push-all"
+              onPress={handlePushAll}
+              disabled={pushAllDisabled}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: pushAllDisabled }}
+              className="px-3 py-1.5 rounded-md"
+              style={{ backgroundColor: pushAllDisabled ? colors.border : colors.primary }}
+            >
+              <Text className="text-xs font-bold" style={{ color: '#ffffff' }}>
+                Push all
+              </Text>
+            </TouchableOpacity>
+          </>
         }
       />
 

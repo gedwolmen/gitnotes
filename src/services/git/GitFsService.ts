@@ -502,6 +502,51 @@ export class GitFsService {
     }
   }
 
+  static async getChangedFilesBetweenRefs(opts: {
+    repoPath: string;
+    fromRef: string;
+    toRef: string;
+    maxCommits?: number;
+  }): Promise<string[]> {
+    const info = parseRepoPath(opts.repoPath);
+    if (!info) return [];
+    const dir = repoDirVirtual(info.owner, info.repo);
+    const fs = makeRepoFs();
+    const files = new Set<string>();
+    const depth = opts.maxCommits ?? 20;
+
+    try {
+      const commits = await git.log({ fs, dir, ref: opts.toRef, depth });
+      for (const commit of commits) {
+        if (commit.oid === opts.fromRef) break;
+        const tree = await git.readTree({ fs, dir, oid: commit.commit.tree });
+        const parentOid = commit.commit.parent[0] ?? null;
+        if (parentOid) {
+          const parentTree = await git.readTree({ fs, dir, oid: parentOid });
+          const parentMap = new Map(parentTree.tree.map((e) => [e.path, e.oid]));
+          for (const entry of tree.tree) {
+            const prevOid = parentMap.get(entry.path);
+            if (!prevOid || prevOid !== entry.oid) {
+              files.add(entry.path);
+            }
+          }
+          for (const entry of parentTree.tree) {
+            if (!tree.tree.find((e) => e.path === entry.path)) {
+              files.add(entry.path);
+            }
+          }
+        } else {
+          for (const entry of tree.tree) {
+            files.add(entry.path);
+          }
+        }
+      }
+    } catch {
+      // Shallow clone may not have full history; return empty to trigger placeholder
+    }
+    return [...files];
+  }
+
   static async mergeCommit(opts: {
     repoPath: string;
     branch: string;
