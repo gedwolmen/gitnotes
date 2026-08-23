@@ -222,7 +222,7 @@ export function ModelSelector({ visible, onClose }: ModelSelectorProps) {
                             </Text>
                             {isUnavailable && (
                               <Text style={[styles.modelDesc, { color: colors.textSecondary }]}>
-                                {t('ai.availability.unknown')}
+                                {unavailableReason ?? t('ai.availability.unknown')}
                               </Text>
                             )}
                             {needsDownload && !downloading && (
