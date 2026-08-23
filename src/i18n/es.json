@@ -307,6 +307,7 @@
     "switchToApiBody": "Esto eliminará el clon local de {{name}} y volverá a la API de contenidos de GitHub.",
     "switch": "Cambiar",
     "largeRepoTitle": "Repositorio demasiado grande para el modo clon",
+    "largeRepoCloneBlockedBody": "{{name}} tiene {{size}} MB, demasiado grande para clonarlo en este dispositivo. Permanecer en el modo API evita un bloqueo de memoria. Vuelve al modo API si ya lo clonaste.",
     "nothingToSyncTitle": "Nada que sincronizar",
     "nothingToSyncBody": "Todas las plantillas personalizadas ya están en el repositorio de plantillas.",
     "templatesSyncDoneTitle": "Listo",
