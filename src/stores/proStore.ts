@@ -14,6 +14,8 @@ import { resolveGrandfatherStatus } from '../services/GrandfatherService';
 import * as PaywallAnalytics from '../services/PaywallAnalytics';
 
 let _isDevice: boolean | null = null;
+let _customerInfoCleanup: (() => void) | null = null;
+
 function isSimulator(): boolean {
   if (_isDevice === null) {
     try { _isDevice = require('expo-device').isDevice; } catch { _isDevice = true; }
@@ -156,7 +158,8 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
       set({ configured });
       if (configured) {
         customerInfo = await getCustomerInfo();
-        onCustomerInfoUpdate((info) => {
+        _customerInfoCleanup?.();
+        _customerInfoCleanup = onCustomerInfoUpdate((info) => {
           const derived = deriveTrialInfo(info);
           set((state) => ({
             ...derived,
