@@ -85,7 +85,7 @@ function tokenAuth(token: string | undefined) {
 }
 
 function isCorruptionError(errorMsg: string): boolean {
-  return /Could not find object|not foundobject|NotFoundError|Packfile trailer mismatch/i.test(errorMsg);
+  return /Could not find|NotFoundError|Packfile trailer mismatch/i.test(errorMsg);
 }
 
 async function handleCorruptionAndRetry<T>(
