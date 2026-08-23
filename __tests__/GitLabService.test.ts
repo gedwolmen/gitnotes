@@ -106,14 +106,30 @@ describe('GitLabService', () => {
     expect(await svc.getDefaultBranch('x', 'y')).toBeNull();
   });
 
-  it('setBaseUrl updates the API base for subsequent calls', async () => {
+  it('setToken with a baseUrl uses that baseUrl', async () => {
     primeAuthAndEndpoint({ id: 1, username: 'me', name: 'Me' });
     const svc = new GitLabService();
-    svc.setBaseUrl('https://gitlab.example.com/api/v4');
-    await svc.setToken('glpat-abc');
+    await svc.setToken('glpat-abc', 'https://gitlab.example.com/api/v4');
     expect(mockFetch).toHaveBeenCalledWith(
       'https://gitlab.example.com/api/v4/user',
       expect.any(Object),
     );
+  });
+
+  it('setToken without baseUrl resets to default (not stale from previous connection)', async () => {
+    primeAuthAndEndpoint({ id: 1, username: 'me', name: 'Me' });
+    const svc = new GitLabService();
+    svc.setBaseUrl('https://self-hosted-gitlab.example.com/api/v4');
+    await svc.setToken('glpat-abc');
+
+    mockFetch.mockReset();
+    primeAuthAndEndpoint({ id: 2, username: 'saas-user', name: 'SaaS' });
+    await svc.setToken('glpat-saas');
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://gitlab.com/api/v4/user',
+      expect.any(Object),
+    );
+    expect(svc.getBaseUrl()).toBe('https://gitlab.com/api/v4');
   });
 });

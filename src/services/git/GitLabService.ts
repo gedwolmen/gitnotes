@@ -133,10 +133,11 @@ export class GitLabService implements GitHostService, GitHostWriteService {
   async setToken(token: string, baseUrl?: string): Promise<GitLabUser | null> {
     this.token = token;
     await AsyncStorage.setItem(GITLAB_TOKEN_KEY, token);
-    if (baseUrl) {
-      this.setBaseUrl(baseUrl);
-      await AsyncStorage.setItem(GITLAB_BASE_KEY, this.baseUrl);
-    }
+    // SECURITY: always reset baseUrl so a SaaS connect after a self-hosted
+    // connect doesn't verify the token against the stale self-hosted instance.
+    const nextBaseUrl = (baseUrl ?? GITLAB_BASE_DEFAULT).replace(/\/+$/, '');
+    this.baseUrl = nextBaseUrl;
+    await AsyncStorage.setItem(GITLAB_BASE_KEY, nextBaseUrl);
     const user = await this.fetchUser();
     this.user = user;
     if (user) {
