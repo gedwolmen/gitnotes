@@ -248,7 +248,21 @@ export default function PaywallScreen() {
 
         {!offeringsReady ? (
           <View className="mt-8 items-center" testID="paywall.loading">
-            <ActivityIndicator color={colors.primary} size="large" />
+            {error ? (
+              <View className="items-center gap-4">
+                <Ionicons name="warning-outline" size={48} color={colors.error} />
+                <Text className="text-sm text-center" style={{ color: colors.textSecondary }}>
+                  {error}
+                </Text>
+                <Button
+                  variant="secondary"
+                  onPress={() => void loadOfferingsIfNeeded()}
+                  label="Retry"
+                />
+              </View>
+            ) : (
+              <ActivityIndicator color={colors.primary} size="large" />
+            )}
           </View>
         ) : (
           <>
