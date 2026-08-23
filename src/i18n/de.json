@@ -769,7 +769,7 @@
     },
     "namePlaceholder": "Name (z. B. Mein Ollama, OpenAI)",
     "baseUrlPlaceholder": "Basis-URL (z. B. http://localhost:11434/v1)",
-    "apiKeyPlaceholder": "API-Schlüssel (Optional)",
+    "apiKeyPlaceholder": "API-Schlüssel",
     "appleDescription": "Verwendet Apple Foundation Models — keine Konfiguration erforderlich.",
     "llamaDescription": "Läuft lokal auf deinem Gerät — lade das Modell über die Modellauswahl herunter.",
     "testConnection": "Verbindung testen",
