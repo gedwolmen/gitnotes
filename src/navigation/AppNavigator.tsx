@@ -97,7 +97,7 @@ export default function AppNavigator() {
     if (navigationRef.isReady()) {
       navigationRef.navigate('Paywall');
     }
-  }, [interstitialEligible, isPro, markInterstitialShown]);
+  }, [interstitialEligible, isPro, markInterstitialShown, navigationRef]);
 
   const baseTheme = isDark ? DarkTheme : DefaultTheme;
   const navigationTheme = {
