@@ -23,9 +23,11 @@ See [AI Providers](./ai-providers.md) for detailed provider documentation.
 ### Provider Types
 
 ```typescript
-type AIProviderType = 
-  | 'openai-compatible'  // OpenAI, OpenRouter, Ollama, etc.
-  | 'anthropic';         // Claude models
+type AIProviderType =
+  | 'apple'               // Apple Intelligence (on-device, iOS 18+)
+  | 'llama'               // On-device Llama via llama.rn
+  | 'openai-compatible'   // OpenAI, OpenRouter, Ollama, etc.
+  | 'anthropic';          // Claude models
 ```
 
 ### Provider Configuration
@@ -91,6 +93,8 @@ async function generate(prompt: string, provider: AIProviderConfig) {
 ```typescript
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { createAnthropic } from '@ai-sdk/anthropic';
+// Apple Intelligence and on-device Llama bypass the Vercel AI SDK and
+// stream via @react-native-ai/apple / llama.rn directly (see providerFactory.ts).
 
 function createModel(provider: AIProviderConfig) {
   if (provider.type === 'anthropic') {
@@ -100,13 +104,19 @@ function createModel(provider: AIProviderConfig) {
     });
     return anthropic('claude-sonnet-4-20250514');
   }
-  
-  const openai = createOpenAICompatible({
-    name: provider.id,
-    baseURL: provider.baseURL,
-    apiKey: provider.apiKey,
-  });
-  return openai('gpt-4o-mini');
+
+  if (provider.type === 'openai-compatible') {
+    const openai = createOpenAICompatible({
+      name: provider.id,
+      baseURL: provider.baseURL,
+      apiKey: provider.apiKey,
+    });
+    return openai('gpt-4o-mini');
+  }
+
+  // 'apple' and 'llama' are dispatched in providerFactory.ts and use the
+  // native streaming surface — they never reach createModel().
+  throw new Error(`Unsupported provider type: ${provider.type}`);
 }
 ```
 
@@ -118,9 +128,15 @@ function createModel(provider: AIProviderConfig) {
 // src/services/ai/modelLimits.ts
 
 export const MODEL_LIMITS: Record<string, number> = {
+  // Apple Intelligence (on-device) — context window varies by device/memory
+  'apple-on-device': 8192,
+  // On-device Llama — limited by llama.rn KV cache
+  'llama-3.1-8b-instruct': 8192,
+  // OpenAI-compatible
   'gpt-4o-mini': 128000,
   'gpt-4o': 128000,
   'gpt-3.5-turbo': 16385,
+  // Anthropic
   'claude-sonnet-4-20250514': 200000,
   'claude-haiku-3-5-20241022': 200000,
 };
