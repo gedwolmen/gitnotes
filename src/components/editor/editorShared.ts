@@ -13,6 +13,7 @@ export const FORMAT_OPTIONS: { label: string; value: NoteFormat }[] = [
   { label: '.md', value: 'markdown' },
   { label: '.norg', value: 'neorg' },
   { label: '.org', value: 'org' },
+  { label: '.json', value: 'json' },
 ];
 
 export function normalizeNotePathForLookup(path: string): string {
