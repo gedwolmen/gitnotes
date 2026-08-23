@@ -38,7 +38,15 @@ Existing users are detected with **two mechanisms**, evaluated **once per instal
 
 The decision is persisted once as `@gitnotes:pro_grandfathered` / `@gitnotes:grandfather_checked`. The flag **only ever adds Pro, never revokes it**. RevenueCat remains the source of truth for purchases.
 
-Caveat: the Android fallback flag is device-local — a grandfathered user who uninstalls and reinstalls loses it (RevenueCat's own anonymous identity has the same limitation, since there are no app accounts).
+### Android reinstall durability (Auto Backup)
+
+The grandfather flag lives in AsyncStorage, which on Android is the SQLite DB `RKStorage`. To survive an **uninstall + reinstall** on the same Google account/device, Android Auto Backup must back up that DB:
+
+- `plugins/withGrandfatherBackup.js` sets `android:allowBackup="true"` and points `android:fullBackupContent` / `android:dataExtractionRules` at rules XML that **include `database/RKStorage`** (the AsyncStorage DB → the grandfather flag) **and** `sharedpref`, while still **excluding `SecureStore`** (the GitHub token stays device-only).
+- The rules files are written to `android/app/src/main/res/xml/` at prebuild time.
+- Registered in `app.json` after `expo-secure-store` (its plugin only includes `sharedpref`, so this is what actually covers the DB).
+
+Caveats: Auto Backup requires Google backup to be enabled and runs periodically (not instantly after install). A grandfathered user who reinstalls on a different device or with backup off still falls back to `customerInfo.originalApplicationVersion` (best-effort when the Android RevenueCat key is set) and otherwise loses the flag. iOS is unaffected — the receipt-backed `originalApplicationVersion` survives reinstalls natively.
 
 ### Gating map (Pro = AI suite + advanced features)
 
