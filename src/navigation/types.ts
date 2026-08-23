@@ -17,7 +17,7 @@ type ProductionStackParamList = {
   TemplateManager: undefined;
   SyncStatus: undefined;
   Stage: undefined;
-  Conflicts: { mode?: 'manage' } | undefined;
+  Conflicts: { mode?: 'manage'; repoPath?: string; branch?: string } | undefined;
   ConflictResolver: { repoPath: string; branch: string; filePath: string };
   AddReminder: undefined;
   ThoughtDump: { openVoiceOnMount?: boolean } | undefined;

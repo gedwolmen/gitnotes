@@ -87,7 +87,11 @@ export default function App() {
       const data = response.notification.request.content.data;
       if (data?.kind === 'push-failure') {
         await Linking.openURL(
-          PushNotificationService.resolvePushFailureRoute(data.conflict === true),
+          PushNotificationService.resolvePushFailureRoute(
+            data.conflict === true,
+            data.repoPath ? String(data.repoPath) : undefined,
+            data.branch ? String(data.branch) : undefined,
+          ),
         );
         return;
       }

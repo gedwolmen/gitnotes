@@ -13,8 +13,16 @@ function appIsForegrounded(): boolean {
 let lastProgressSentAt = 0;
 let unsubscribeProgress: (() => void) | null = null;
 
-/** Plain push failures open the stage page; conflict-caused ones open the conflicts page. */
-export function resolvePushFailureRoute(conflict: boolean): string {
+/** Plain push failures open the stage page; conflict-caused ones open the conflicts page
+ *  with specific repo/branch if provided. */
+export function resolvePushFailureRoute(
+  conflict: boolean,
+  repoPath?: string,
+  branch?: string,
+): string {
+  if (conflict && repoPath && branch) {
+    return `gitnotes://conflicts/${encodeURIComponent(repoPath)}/${encodeURIComponent(branch)}`;
+  }
   return conflict ? 'gitnotes://conflicts' : 'gitnotes://stage';
 }
 
