@@ -205,7 +205,11 @@ export default function ConflictResolverScreen() {
         }
 
         await removeConflict(repoPath, branch);
-        navigation.goBack();
+        Alert.alert(
+          'Conflicts resolved',
+          'Your changes have been committed locally. Push to sync with GitHub.',
+          [{ text: 'OK', onPress: () => navigation.goBack() }],
+        );
       } catch (e) {
         Alert.alert('Error', e instanceof Error ? e.message : String(e));
       } finally {
