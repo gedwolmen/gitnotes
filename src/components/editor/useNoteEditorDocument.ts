@@ -156,6 +156,10 @@ export function useNoteEditorDocument({
   const [noteFormat, setNoteFormat] = useState<NoteFormat>(initialFormat ?? 'markdown');
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const contentRef = useRef(content);
+  const titleRef = useRef(title);
+  contentRef.current = content;
+  titleRef.current = title;
   const [isEditing, setIsEditing] = useState(!noteId);
   const [tags, setTags] = useState<string[]>(initialTags ?? []);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -348,6 +352,8 @@ export function useNoteEditorDocument({
     }
 
     const finalContent = applyHardWrap(content.trim(), hardWrapEnabled && noteFormat === 'markdown');
+    const contentAtSaveStart = contentRef.current;
+    const titleAtSaveStart = titleRef.current;
 
     setIsSaving(true);
     try {
@@ -372,8 +378,6 @@ export function useNoteEditorDocument({
           Alert.alert('Error', 'Failed to save note locally. Please try again.');
           return;
         }
-        setHasChanges(false);
-        setIsEditing(false);
         HapticService.success();
       } else {
         const newNote = await createNote({
@@ -511,6 +515,11 @@ export function useNoteEditorDocument({
           if (upsertOpId) gitOperationRegistry.succeed(upsertOpId);
           githubActivity.end();
         }
+      }
+
+      if (contentRef.current === contentAtSaveStart && titleRef.current === titleAtSaveStart) {
+        setHasChanges(false);
+        setIsEditing(false);
       }
 
       if (!noteId) {

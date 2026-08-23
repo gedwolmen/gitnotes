@@ -85,7 +85,10 @@ export function threeWayMerge(base: string, local: string, remote: string): Merg
   const localMap = new Map<number, DiffHunk[]>();
   for (const h of localDiff) {
     if (h.type !== 'equal') {
-      for (let k = h.baseStart; k < h.baseEnd; k++) {
+      // Pure inserts are zero-width; the range loop below would skip them
+      // and silently drop the insert. Anchor at baseStart+1.
+      const end = h.baseStart === h.baseEnd ? h.baseStart + 1 : h.baseEnd;
+      for (let k = h.baseStart; k < end; k++) {
         if (!localMap.has(k)) localMap.set(k, []);
         localMap.get(k)!.push(h);
       }
@@ -95,7 +98,8 @@ export function threeWayMerge(base: string, local: string, remote: string): Merg
   const remoteMap = new Map<number, DiffHunk[]>();
   for (const h of remoteDiff) {
     if (h.type !== 'equal') {
-      for (let k = h.baseStart; k < h.baseEnd; k++) {
+      const end = h.baseStart === h.baseEnd ? h.baseStart + 1 : h.baseEnd;
+      for (let k = h.baseStart; k < end; k++) {
         if (!remoteMap.has(k)) remoteMap.set(k, []);
         remoteMap.get(k)!.push(h);
       }

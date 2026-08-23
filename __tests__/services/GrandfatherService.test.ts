@@ -71,24 +71,53 @@ describe('resolveGrandfatherStatus', () => {
     expect(isOnboardingCompletedMock).not.toHaveBeenCalled();
   });
 
-  it('grants via onboarding when onboarding was already completed', async () => {
+  it('does NOT grant via onboarding alone (paywall bypass prevention)', async () => {
     isOnboardingCompletedMock.mockResolvedValue(true);
     const result = await resolveGrandfatherStatus(null);
-    expect(result).toEqual({ isGrandfathered: true, reason: 'onboarding' });
+    expect(result).toEqual({ isGrandfathered: false, reason: 'none' });
     const dump = store.__dump();
-    expect(dump[GRANDFATHERED_KEY]).toBe('true');
+    expect(dump[GRANDFATHERED_KEY]).toBeUndefined();
     expect(dump[GRANDFATHER_CHECKED_KEY]).toBe('true');
   });
 
+  it('grants via combined onboarding + iOS install version < 9 (pre-paywall install)', async () => {
+    isOnboardingCompletedMock.mockResolvedValue(true);
+    const result = await resolveGrandfatherStatus({ originalApplicationVersion: '7' });
+    expect(result).toEqual({ isGrandfathered: true, reason: 'ios-build' });
+    expect(store.__dump()[GRANDFATHERED_KEY]).toBe('true');
+  });
+
+  it('does NOT grant via onboarding + iOS install version >= 9 (post-paywall install)', async () => {
+    isOnboardingCompletedMock.mockResolvedValue(true);
+    const result = await resolveGrandfatherStatus({ originalApplicationVersion: '12' });
+    expect(result).toEqual({ isGrandfathered: false, reason: 'none' });
+    expect(store.__dump()[GRANDFATHERED_KEY]).toBeUndefined();
+  });
+
+  it('does NOT grant via onboarding alone when originalApplicationVersion is null (Android / no signal)', async () => {
+    isOnboardingCompletedMock.mockResolvedValue(true);
+    const result = await resolveGrandfatherStatus(null);
+    expect(result).toEqual({ isGrandfathered: false, reason: 'none' });
+    expect(store.__dump()[GRANDFATHERED_KEY]).toBeUndefined();
+  });
+
   it('grants via iOS build when originalApplicationVersion < 9', async () => {
+    isOnboardingCompletedMock.mockResolvedValue(true);
     const result = await resolveGrandfatherStatus({ originalApplicationVersion: '7' });
     expect(result).toEqual({ isGrandfathered: true, reason: 'ios-build' });
     expect(store.__dump()[GRANDFATHERED_KEY]).toBe('true');
   });
 
   it('grants via iOS build at the exact boundary 8 < 9', async () => {
+    isOnboardingCompletedMock.mockResolvedValue(true);
     const result = await resolveGrandfatherStatus({ originalApplicationVersion: '8' });
     expect(result.isGrandfathered).toBe(true);
+  });
+
+  it('does NOT grant via iOS build alone without onboarding completion', async () => {
+    const result = await resolveGrandfatherStatus({ originalApplicationVersion: '7' });
+    expect(result).toEqual({ isGrandfathered: false, reason: 'none' });
+    expect(store.__dump()[GRANDFATHERED_KEY]).toBeUndefined();
   });
 
   it('does not grant when the iOS build is 9 or newer', async () => {
@@ -109,7 +138,7 @@ describe('resolveGrandfatherStatus', () => {
 
   it('is one-shot: a second call after granting returns the flag and never re-evaluates', async () => {
     isOnboardingCompletedMock.mockResolvedValue(true);
-    const first = await resolveGrandfatherStatus(null);
+    const first = await resolveGrandfatherStatus({ originalApplicationVersion: '7' });
     expect(first.isGrandfathered).toBe(true);
     expect(isOnboardingCompletedMock).toHaveBeenCalledTimes(1);
 

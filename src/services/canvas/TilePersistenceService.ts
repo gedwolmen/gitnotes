@@ -67,7 +67,7 @@ function parseTileKey(key: string): { canvasId: string; x: number; y: number } |
 export class TilePersistenceService {
   private pendingSaves: Map<string, PendingSave> = new Map();
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
-  private flushPromise: Promise<void> | null = null;
+  private flushChain: Promise<void> = Promise.resolve();
   private batchWaiters: Array<() => void> = [];
 
   private savedListeners: TileSavedCallback[] = [];
@@ -124,10 +124,7 @@ export class TilePersistenceService {
     if (!this.flushTimer) {
       this.flushTimer = setTimeout(() => {
         this.flushTimer = null;
-        this.flushPromise = this.flushPendingSaves();
-        this.flushPromise.finally(() => {
-          this.flushPromise = null;
-        });
+        this.flushChain = this.flushChain.then(() => this.flushPendingSaves());
       }, BATCH_WINDOW_MS);
     }
 
@@ -241,14 +238,9 @@ export class TilePersistenceService {
     if (this.flushTimer) {
       clearTimeout(this.flushTimer);
       this.flushTimer = null;
-      this.flushPromise = this.flushPendingSaves();
-      this.flushPromise.finally(() => {
-        this.flushPromise = null;
-      });
+      this.flushChain = this.flushChain.then(() => this.flushPendingSaves());
     }
-    if (this.flushPromise) {
-      await this.flushPromise;
-    }
+    await this.flushChain;
   }
 
   private async flushPendingSaves(): Promise<void> {

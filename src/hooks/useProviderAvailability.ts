@@ -6,6 +6,10 @@ import {
 } from '../services/ai/providerAvailability';
 
 const PENDING: Availability = { kind: 'available' };
+const PROBE_FAILED: Availability = {
+  kind: 'unavailable',
+  reason: { code: 'unknown', message: 'Provider availability probe failed' },
+};
 
 export function useProviderAvailability(provider: AIProviderConfig | null | undefined): Availability {
   const [availability, setAvailability] = useState<Availability>(PENDING);
@@ -22,7 +26,7 @@ export function useProviderAvailability(provider: AIProviderConfig | null | unde
         if (!cancelled) setAvailability(result);
       })
       .catch(() => {
-        if (!cancelled) setAvailability(PENDING);
+        if (!cancelled) setAvailability(PROBE_FAILED);
       });
 
     return () => {
@@ -47,7 +51,7 @@ export function useProvidersAvailability(
             const result = await resolveProviderAvailability(provider);
             return [provider.id, result] as const;
           } catch {
-            return [provider.id, PENDING] as const;
+            return [provider.id, PROBE_FAILED] as const;
           }
         })
       );

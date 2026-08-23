@@ -80,8 +80,16 @@ export default function ConflictResolverScreen() {
 
   const handleSaveMerged = useCallback(() => {
     if (!conflict) return;
+    const merged = file?.mergedContent ?? '';
+    if (!merged || merged.includes('<<<<<<<') || merged.includes('=======') || merged.includes('>>>>>>>')) {
+      Alert.alert(
+        'Unresolved conflict',
+        'Resolve the conflict markers in the merged view before saving — otherwise the file would be persisted empty or with raw markers.',
+      );
+      return;
+    }
     const updated = ConflictResolverService.applyResolution(conflict, filePath, {
-      content: file?.mergedContent ?? '',
+      content: merged,
     });
     updateConflict(repoPath, branch, () => updated);
     checkAndFinish(updated);
@@ -153,7 +161,10 @@ export default function ConflictResolverScreen() {
               token,
               push: false,
             });
-          } else {
+          } else if (
+            f.kind === 'local-modified-remote-deleted' ||
+            f.kind === 'local-deleted-remote-modified'
+          ) {
             await LocalGitWriter.deleteAndCommit({
               repoPath,
               branch,
@@ -163,6 +174,13 @@ export default function ConflictResolverScreen() {
               token,
               push: false,
             });
+          } else {
+            // Refuse to delete: this is a binary both-changed-different
+            // conflict whose blob wasn't carried through the conflict model.
+            // The user must re-resolve manually.
+            console.warn(
+              `[ConflictResolverScreen] skipping unresolved file ${f.path} (kind=${f.kind}, format=${f.format}); refusing to delete.`,
+            );
           }
         }
 

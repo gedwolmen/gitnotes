@@ -149,10 +149,11 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
   configured: false,
 
   initialize: async () => {
+    let customerInfo: CustomerInfoLike | null = null;
+    let rcError: string | null = null;
     try {
       const { configured } = await configureRevenueCat();
       set({ configured });
-      let customerInfo: CustomerInfoLike | null = null;
       if (configured) {
         customerInfo = await getCustomerInfo();
         onCustomerInfoUpdate((info) => {
@@ -164,16 +165,22 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
           void evaluateInterstitial(derived.entitlementActive, set);
         });
       }
+    } catch (error) {
+      rcError = error instanceof Error ? error.message : 'Failed to initialize RevenueCat';
+    }
+
+    try {
       const grandfather = await resolveGrandfatherStatus(customerInfo);
       const derived = deriveTrialInfo(customerInfo);
       set({
         ...derived,
         isGrandfathered: grandfather.isGrandfathered,
         status: DEV_FORCE_PRO ? 'pro' : (derived.entitlementActive || grandfather.isGrandfathered ? 'pro' : 'free'),
+        ...(rcError ? { error: rcError } : {}),
       });
       await evaluateInterstitial(derived.entitlementActive, set);
     } catch (error) {
-      set({ error: error instanceof Error ? error.message : 'Failed to initialize Pro', status: DEV_FORCE_PRO ? 'pro' : 'free' });
+      set({ error: error instanceof Error ? error.message : 'Failed to resolve grandfather status' });
     }
   },
 
@@ -291,7 +298,7 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
       });
     } catch (error) {
       set({
-        offeringsReady: true,
+        offeringsReady: false,
         error: error instanceof Error ? error.message : 'Failed to load offerings',
       });
     }

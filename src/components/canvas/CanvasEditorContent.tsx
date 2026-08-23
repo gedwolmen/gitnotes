@@ -1279,7 +1279,11 @@ export default function CanvasEditorContent() {
         content: JSON.stringify(scene, null, 2),
       });
       if (!stageResult.success) {
-        console.warn('[CanvasEditorContent] stage canvas failed:', stageResult.error);
+        Alert.alert(
+          'Save failed',
+          `Could not stage canvas to Git: ${stageResult.error ?? 'unknown error'}. Your edits are kept — try again or check connection.`,
+        );
+        return;
       }
     }
 
