@@ -620,7 +620,8 @@
       "pushing": "送信中…",
       "pulling": "受信中…",
       "cancel": "キャンセル",
-      "cancelling": "キャンセル中…"
+      "cancelling": "キャンセル中…",
+      "includingPush": "Pushを含む"
     }
   },
   "onboarding": {

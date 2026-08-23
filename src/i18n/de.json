@@ -620,7 +620,8 @@
       "pushing": "Hochladen…",
       "pulling": "Herunterladen…",
       "cancel": "Abbrechen",
-      "cancelling": "Wird abgebrochen…"
+      "cancelling": "Wird abgebrochen…",
+      "includingPush": "inkl. Push"
     }
   },
   "onboarding": {
