@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { View, Text, FlatList, TouchableOpacity, Alert } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
@@ -83,6 +83,17 @@ export default function SyncStatusScreen({ onAiFixRemaining }: SyncStatusScreenP
     }
     return Array.from(byKey.values());
   }, [conflicts]);
+
+  useEffect(() => {
+    const { repoPath, branch } = route.params ?? {};
+    if (repoPath && branch) {
+      const group = groups.find((g) => g.repoPath === repoPath && g.branch === branch);
+      const firstFile = group?.files[0];
+      if (firstFile) {
+        navigation.navigate('ConflictResolver', { repoPath, branch, filePath: firstFile.path });
+      }
+    }
+  }, [route.params, groups, navigation]);
 
   const rows = useMemo<Row[]>(() => {
     const out: Row[] = [];

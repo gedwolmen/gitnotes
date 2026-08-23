@@ -61,7 +61,7 @@ const getLinkingConfig = (): LinkingOptions<RootStackParamList> => {
         ChatScreen: 'chat/:threadId',
         ThoughtDump: 'thought-dump',
         Stage: 'stage',
-        Conflicts: 'conflicts',
+        Conflicts: 'conflicts/:repoPath/:branch',
       },
     },
   };
