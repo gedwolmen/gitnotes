@@ -528,6 +528,24 @@ export default function NotesListScreen() {
         windowSize={7}
         updateCellsBatchingPeriod={50}
         removeClippedSubviews={true}
+        onScrollToIndexFailed={({ index, highestMeasuredFrameIndex, averageItemLength }) => {
+          // Without this, scrollToIndex for a search match beyond the
+          // measured window silently fails — search nav appears broken.
+          const offset = Math.max(
+            0,
+            (highestMeasuredFrameIndex < index
+              ? highestMeasuredFrameIndex
+              : index - 1) * averageItemLength,
+          );
+          listRef.current?.scrollToOffset({ offset, animated: true });
+          setTimeout(() => {
+            listRef.current?.scrollToIndex({
+              index,
+              animated: true,
+              viewPosition: 0.4,
+            });
+          }, 250);
+        }}
         contentContainerStyle={{
           padding: 12,
           paddingTop: headerBlurHeight + 4,
