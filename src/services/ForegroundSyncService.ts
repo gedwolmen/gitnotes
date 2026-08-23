@@ -272,6 +272,9 @@ function handleAppStateChange(state: AppStateStatus): void {
 }
 
 function handleNetInfo(reachable: boolean): void {
+  // SECURITY: don't pull while backgrounded — the OS suspends JS mid-pull,
+  // leaving inFlight stuck true and the cycle held for ~10 minutes.
+  if (lastAppState !== 'active') return;
   const cameOnline = lastNetReachable === false && reachable === true;
   lastNetReachable = reachable;
   if (cameOnline) void runPull('online');

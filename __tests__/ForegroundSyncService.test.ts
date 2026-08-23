@@ -1,8 +1,13 @@
+let mockNetInfoListener: ((state: NetInfoState) => void) | undefined;
+
 jest.mock('@react-native-community/netinfo', () => ({
   __esModule: true,
   NetInfoStateType: { wifi: 'wifi', none: 'none' },
   default: {
-    addEventListener: jest.fn(() => jest.fn()),
+    addEventListener: jest.fn((listener: (state: NetInfoState) => void) => {
+      mockNetInfoListener = listener;
+      return jest.fn();
+    }),
     fetch: jest.fn(),
   },
 }));
@@ -379,5 +384,19 @@ describe('ForegroundSyncService', () => {
 
     randomSpy.mockRestore();
     logSpy.mockRestore();
+  });
+
+  test('does NOT pull when NetInfo fires reachable=true while app is backgrounded', async () => {
+    startForegroundWatcher({ syncFrequentlyEnabled: false, syncIntervalSeconds: 0 });
+    expect(mockNetInfoListener).toBeDefined();
+    mockNetInfoListener!(offlineState);
+    await Promise.resolve();
+    pullMock.mockClear();
+    mockNetInfoListener!(reachableState);
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    await jest.advanceTimersByTimeAsync(0);
+    expect(pullMock).not.toHaveBeenCalled();
   });
 });

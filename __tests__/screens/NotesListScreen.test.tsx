@@ -302,6 +302,14 @@ describe('NotesListScreen', () => {
     expect(getByText('Try adjusting your search or filters')).toBeTruthy();
   });
 
+  it('FlatList has onScrollToIndexFailed so search nav works for offscreen matches', () => {
+    const { UNSAFE_queryByType } = render(<NotesListScreen />);
+    const { FlatList } = require('react-native');
+    const list = UNSAFE_queryByType(FlatList);
+    expect(list).toBeTruthy();
+    expect(typeof list.props.onScrollToIndexFailed).toBe('function');
+  });
+
   it('renders a list of notes', () => {
     mockNotesSeed = [
       createNote({ id: 'n1', title: 'First Note' }),

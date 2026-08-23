@@ -60,7 +60,8 @@ export function makeHostId(
   provider: GitHostProvider,
   instanceBaseUrl: string | null,
 ): string {
-  const instanceKey = (instanceBaseUrl ?? 'default').replace(/[^a-zA-Z0-9._-]/g, '_');
+  const normalized = instanceBaseUrl ? instanceBaseUrl.replace(/\/+$/, '') : null;
+  const instanceKey = (normalized ?? 'default').replace(/[^a-zA-Z0-9._-]/g, '_');
   return `${accountId}:${provider}:${instanceKey}`;
 }
 
@@ -482,6 +483,12 @@ export class AccountStorage {
       // alive — pick the first remaining host on that account.
       const stillActive = accountsToKeep.find((a) => a.id === activeAccountId);
       await this.setActiveHostId(stillActive?.hostIds[0] ?? null);
+    }
+
+    // SECURITY: clear AI keys only when the account is actually dropped
+    // (not on every host disconnect), mirroring removeAccount.
+    if (removedAccountIds.length > 0) {
+      await this.clearAccountAiState();
     }
   }
 
