@@ -14,6 +14,7 @@ import { useViewMode } from '../contexts/ViewModeContext';
 import { useAIStore } from '../stores/aiStore';
 import { Note } from '../models/Note';
 import { buildBacklinkIndex } from '../services/BacklinksService';
+import { computeForceLayout } from '../utils/forceLayout';
 import { parseWikiLinks } from '../utils/wikiLinksParser';
 import { RootStackParamList } from '../navigation/types';
 import { ScreenHeader } from '../components/ui';
@@ -37,13 +38,6 @@ interface GraphEdge {
 
 const NODE_SIZE = 72;
 const CANVAS_SIZE = 2000;
-const REPULSION = 12000;
-const ATTRACTION = 0.012;
-const DAMPING = 0.88;
-const MIN_DISTANCE = 150;
-const CENTERING_FORCE = 0.003;
-const COLLISION_RADIUS = 60;
-const SIM_ITERATIONS = 250;
 const BASE_SCALE = 1.0;
 const MIN_SCALE = 0.25;
 const MAX_SCALE = 2.5;
@@ -133,99 +127,10 @@ export default function GraphViewScreen() {
     };
   }, [notes, canvasWidth, canvasHeight]);
 
-  const layoutNodes = useMemo(() => {
-    if (!nodes.length) return [];
-
-    const simNodes = nodes.map((n) => ({ ...n, vx: 0, vy: 0 }));
-
-    let alpha = 1.0;
-    const alphaDecay = 0.02;
-    const repulsionRadius = 80;
-
-    for (let iter = 0; iter < SIM_ITERATIONS; iter++) {
-      alpha = Math.max(0.001, alpha * (1 - alphaDecay));
-
-      for (let i = 0; i < simNodes.length; i++) {
-        for (let j = i + 1; j < simNodes.length; j++) {
-          const dx = simNodes[j].x - simNodes[i].x;
-          const dy = simNodes[j].y - simNodes[i].y;
-          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-
-          if (dist < repulsionRadius) {
-            simNodes[i].vx -= dx * 0.5;
-            simNodes[i].vy -= dy * 0.5;
-            simNodes[j].vx += dx * 0.5;
-            simNodes[j].vy += dy * 0.5;
-          } else {
-            const force = REPULSION / (dist * dist);
-            const fx = (dx / dist) * force * alpha;
-            const fy = (dy / dist) * force * alpha;
-            simNodes[i].vx -= fx;
-            simNodes[i].vy -= fy;
-            simNodes[j].vx += fx;
-            simNodes[j].vy += fy;
-          }
-        }
-      }
-
-      for (const edge of edges) {
-        const source = simNodes.find((n) => n.id === edge.from);
-        const target = simNodes.find((n) => n.id === edge.to);
-        if (source && target) {
-          const dx = target.x - source.x;
-          const dy = target.y - source.y;
-          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          if (dist > MIN_DISTANCE) {
-            const force = (dist - MIN_DISTANCE) * ATTRACTION * alpha;
-            const fx = (dx / dist) * force;
-            const fy = (dy / dist) * force;
-            source.vx += fx;
-            source.vy += fy;
-            target.vx -= fx;
-            target.vy -= fy;
-          }
-        }
-      }
-
-      const centerX = canvasWidth / 2;
-      const centerY = canvasHeight / 2;
-      for (const node of simNodes) {
-        node.vx += (centerX - node.x) * CENTERING_FORCE * alpha;
-        node.vy += (centerY - node.y) * CENTERING_FORCE * alpha;
-      }
-
-      const collisionPadding = NODE_SIZE / 2 + 20;
-      for (let i = 0; i < simNodes.length; i++) {
-        for (let j = i + 1; j < simNodes.length; j++) {
-          const dx = simNodes[j].x - simNodes[i].x;
-          const dy = simNodes[j].y - simNodes[i].y;
-          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          const minDist = COLLISION_RADIUS * 2;
-
-          if (dist < minDist && dist > 0) {
-            const overlap = (minDist - dist) / 2;
-            const fx = (dx / dist) * overlap;
-            const fy = (dy / dist) * overlap;
-            simNodes[i].vx -= fx;
-            simNodes[i].vy -= fy;
-            simNodes[j].vx += fx;
-            simNodes[j].vy += fy;
-          }
-        }
-      }
-
-      for (const node of simNodes) {
-        node.vx *= DAMPING;
-        node.vy *= DAMPING;
-        node.x += node.vx;
-        node.y += node.vy;
-        node.x = Math.max(collisionPadding, Math.min(canvasWidth - collisionPadding, node.x));
-        node.y = Math.max(collisionPadding, Math.min(canvasHeight - collisionPadding, node.y));
-      }
-    }
-
-    return simNodes.map(({ vx: _vx, vy: _vy, ...node }) => node);
-  }, [nodes, edges, canvasWidth, canvasHeight]);
+  const layoutNodes = useMemo(
+    () => computeForceLayout(nodes, edges, canvasWidth, canvasHeight),
+    [nodes, edges, canvasWidth, canvasHeight],
+  );
 
   const centerGraph = useCallback(() => {
     const nodesToCenter = localNodesRef.current;
@@ -410,9 +315,10 @@ export default function GraphViewScreen() {
 
   const edgePath = useMemo(() => {
     const path = Skia.Path.Make();
+    const nodeById = new Map(localNodes.map((n) => [n.id, n]));
     edges.forEach((edge) => {
-      const source = localNodes.find((n) => n.id === edge.from);
-      const target = localNodes.find((n) => n.id === edge.to);
+      const source = nodeById.get(edge.from);
+      const target = nodeById.get(edge.to);
       if (source && target) {
         path.moveTo(source.x, source.y);
         path.lineTo(target.x, target.y);
