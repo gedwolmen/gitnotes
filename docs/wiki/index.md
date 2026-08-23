@@ -51,6 +51,7 @@
 | [i18n](./i18n.md) | Localization setup, adding languages, testing |
 | [v1.5.0 App Store Rejection](./v1.5.0-app-store-rejection.md) | 2.1.0 App Completeness SIGABRT on first launch — root cause: `useNavigation()` outside `NavigationContainer` in `useProGate.ts`; fix on `main` (`c5362e86`) then hardened by splitting `useProGate` into `useProGate()`/`useProStatus()` (#1004) |
 | [Code Quality Findings](./codeql-quality-findings.md) | GitHub "Security and quality" Standard findings: 46 dead-code removals across 28 files (`yarn ts:check` / `yarn jest` 2752 tests / `yarn eslint` / `yarn format:check` all green); 78 findings remain — mostly `'worklet'` directives and a CodeQL `__setProState` resolution false-positive — documented for manual dismissal |
+| [Code Audit — 2026-08-23](./code-audit-2026-08.md) | First-pass audit of `src/`: prioritized list of code-quality wins across `any`-type tightening, oversized-file decomposition, test-coverage gaps, and explicit stubs. **Reference doc, not a TODO board.** |
 | [Security & Dependabot Alerts](./security-dependabot.md) | GitHub security surface, `uuid` fix via yarn resolutions (#4), `image-size` alerts deferred (no patched release, build-time only) |
 
 ### Test reports
