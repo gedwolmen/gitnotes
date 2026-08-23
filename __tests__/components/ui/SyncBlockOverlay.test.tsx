@@ -46,6 +46,7 @@ jest.mock('react-i18next', () => ({
         'sync.overlay.pulling': 'Pulling…',
         'sync.overlay.cancel': 'Cancel',
         'sync.overlay.cancelling': 'Cancelling…',
+        'sync.overlay.includingPush': 'including push',
       };
       return map[key] ?? key;
     },
@@ -178,11 +179,11 @@ describe('SyncBlockOverlay', () => {
     expect(announceSpy).toHaveBeenCalledWith('Syncing…');
   });
 
-  it('announces "Pushing…" when push markers are active', () => {
+  it('announces "Syncing…" when push markers are active (subtitle shown separately)', () => {
     mockIsPushActive = true;
     mockOps = { 'op-save': makeCycleOp('save') };
     render(<SyncBlockOverlay />, { wrapper });
-    expect(announceSpy).toHaveBeenCalledWith('Pushing…');
+    expect(announceSpy).toHaveBeenCalledWith('Syncing…');
   });
 
   it('does NOT announce when overlay is not blocking', () => {
@@ -199,11 +200,12 @@ describe('SyncBlockOverlay', () => {
     expect(getByText('Syncing…')).toBeTruthy();
   });
 
-  it('displays "Pushing…" label when push markers are active', () => {
+  it('displays "Syncing…" label with subtitle when push markers are active', () => {
     mockIsPushActive = true;
     mockOps = { 'op-save': makeCycleOp('save') };
     const { getByText } = render(<SyncBlockOverlay />, { wrapper });
-    expect(getByText('Pushing…')).toBeTruthy();
+    expect(getByText('Syncing…')).toBeTruthy();
+    expect(getByText('including push')).toBeTruthy();
   });
 
   /* --- cancel button (#1013) --- */
