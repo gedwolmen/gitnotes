@@ -62,8 +62,8 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
       icon: INFO_STEP_ICONS[3],
     },
     {
-      title: t('onboarding.steps.thoughtDumpTitle'),
-      description: t('onboarding.steps.thoughtDumpDescription'),
+      title: t('onboarding.steps.dumpTitle'),
+      description: t('onboarding.steps.dumpDescription'),
       icon: INFO_STEP_ICONS[4],
     },
   ];
@@ -300,33 +300,15 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
               />
             </View>
           ) : isAIStep ? (
-            <View className="w-full">
-              <Button
-                variant="primary"
-                fullWidth
-                testID="onboarding.button.pro-continue"
-                onPress={handleProContinue}
-                label={t('common.continue', { defaultValue: 'Continue' })}
-                trailingIcon={<Ionicons name="arrow-forward" size={20} color={colors.accent} />}
-                iconAlign="edge"
-              />
-              <Button
-                variant="ghost"
-                fullWidth
-                testID="onboarding.button.see-plans"
-                onPress={handleSeePlans}
-                label="See Plans"
-                style={{ marginTop: 8 }}
-              />
-              <Button
-                variant="ghost"
-                fullWidth
-                testID="onboarding.button.skip-ai"
-                onPress={handleSkipGithubTools}
-                label="Skip for Now"
-                style={{ marginTop: 8 }}
-              />
-            </View>
+            <Button
+              variant="primary"
+              fullWidth
+              testID="onboarding.button.pro-continue"
+              onPress={handleProContinue}
+              label={t('common.continue', { defaultValue: 'Continue' })}
+              trailingIcon={<Ionicons name="arrow-forward" size={20} color={colors.accent} />}
+              iconAlign="edge"
+            />
           ) : (
             <Button
               variant="primary"
