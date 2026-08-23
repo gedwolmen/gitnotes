@@ -219,6 +219,15 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
             <Text className="text-[13px] text-center leading-[18px] mt-2 opacity-80" style={{ color: colors.textSecondary }}>
               {t('onboarding.pro.reminder', { defaultValue: 'You can upgrade anytime in Settings → GitNotēs Pro.' })}
             </Text>
+            <TouchableOpacity
+              testID="onboarding.button.configure-api-key"
+              onPress={() => navigation.navigate('MainTabs', { screen: 'SettingsTab' })}
+              className="mt-4"
+            >
+              <Text className="text-[13px] font-medium" style={{ color: colors.accent }}>
+                Configure API Key
+              </Text>
+            </TouchableOpacity>
           </View>
         ) : isGithubToolsStep ? (
           <View className="flex-1 px-10 items-center">
