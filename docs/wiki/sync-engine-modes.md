@@ -51,15 +51,16 @@ There is **no post-switch warning** — API mode is a fully supported sync engin
 3. Optional LFS migration prompt if the repo has LFS objects.
 4. Mode entry is deleted (falls back to default `'clone'`).
 
-## Large-repo preflight (#clone-crash-on-large)
+## Large-repo preflight (#1037 — clone disabled for large repos)
 
-Repos whose `repo.size` (KB, from the GitHub `GET /repos` payload) exceeds **`LARGE_REPO_THRESHOLD_KB = 200 MB`** are intercepted before `git.clone` is invoked:
+**Clone mode is disabled for repos above `LARGE_REPO_THRESHOLD_KB = 200 MB`.** A large repo OOMs Hermes natively during packfile download/indexing (`hermesvm: GCBase::oom` → SIGABRT) or hangs the main thread past the iOS watchdog (`0x8BADF00D` SIGKILL) — neither is catchable in JS. The only safe behavior is to never attempt the clone:
 
-- `RepoImportService.runImport` returns `{ ok: false, error, retryable: false, largeRepo: true }` with the actual repo size in the message.
-- `SettingsScreen.importRepoAfterAdd` surfaces a confirmation alert offering **Use API** as a one-tap recovery.
-- `GitFsService.clone` additionally catches `RangeError` (Hermes heap allocation failure) and `error.message` matching `out of memory|allocation failed|heap` and re-throws as `CloneOutOfMemoryError`, which `runImport` maps to `largeRepo: true`.
+- **At add time:** if the picker's `repo.size` (KB) exceeds the threshold, the repo is added **directly in API mode** (`SyncEngineService.setMode(repo, 'api')` before import), so the import runs the pull-only API path and never the clone path.
+- **At the API → Clone toggle:** `SettingsScreen.handleEnableCloneMode` looks up the repo size via `GitHubService.getRepositorySize(owner, repo)` before cloning. If it exceeds the threshold, clone is refused with an alert (largeRepoCloneBlockedBody) recommending API mode.
+- **Manual add (no size in hand):** `importRepoAfterAdd` resolves the size via `getRepositorySize` when the caller didn't supply it, so the `runImport` guard still refuses the clone.
+- **Backstop:** `RepoImportService.runImport` returns `{ ok: false, error, retryable: false, largeRepo: true }` and `GitFsService.clone` re-throws `CloneOutOfMemoryError` for the OOM case that JS can catch.
 
-This prevents the OOM during packfile indexing that would otherwise leave the app on the splash screen with no recovery path.
+This prevents both crash modes (Hermes OOM SIGABRT and watchdog SIGKILL) during packfile indexing.
 
 ## Default mode change (PR #N)
 

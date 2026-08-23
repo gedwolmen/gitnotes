@@ -307,6 +307,7 @@
     "switchToApiBody": "{{name}}のローカルクローンが削除され、GitHub Contents APIに戻ります。",
     "switch": "切り替え",
     "largeRepoTitle": "リポジトリが大きすぎてクローンモードに対応できません",
+    "largeRepoCloneBlockedBody": "{{name}}は{{size}} MBあり、このデバイスではクローンできません。APIモードのままにするとメモリクラッシュを防げます。すでにクローンしている場合はAPIモードに戻してください。",
     "nothingToSyncTitle": "同期するものはありません",
     "nothingToSyncBody": "すべてのカスタムテンプレートはすでにテンプレートリポジトリにあります。",
     "templatesSyncDoneTitle": "完了",

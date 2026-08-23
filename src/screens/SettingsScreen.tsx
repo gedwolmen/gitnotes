@@ -22,6 +22,8 @@ import { serializeTemplate, templateSlug } from '../services/TemplateMarkdownSer
 import { StagingService } from '../services/git/StagingService';
 import { SyncEngineService, type SyncEngineMode } from '../services/SyncEngineService';
 import { GitFsService } from '../services/git/GitFsService';
+import { parseRepoPath } from '../utils/gitPathParser';
+import { LARGE_REPO_THRESHOLD_KB } from '../services/RepoImportService';
 import { cancelInflightGitHttp } from '../services/git/gitHttp';
 import { CloneMigrationService } from '../services/git/CloneMigrationService';
 import { LfsService } from '../services/git/lfs';
@@ -251,6 +253,26 @@ export default function SettingsScreen() {
     setCloningRepo(repo.path);
     cloneAbortedRef.current = false;
     setCloneProgress({ repoName: repo.name, phase: t('settings.clonePhasePreparing'), loaded: 0, total: null });
+    // Clone guard (#1037): a large repo OOMs Hermes natively during packfile
+    // download/indexing — `hermesvm: GCBase::oom` → SIGABRT, which JS cannot
+    // catch. Refuse clone-mode and keep API mode instead.
+    const parsed = parseRepoPath(repo.path);
+    if (parsed) {
+      const repoSizeKb = await GitHubService.getRepositorySize(parsed.owner, parsed.repo);
+      if (typeof repoSizeKb === 'number' && repoSizeKb > LARGE_REPO_THRESHOLD_KB) {
+        setCloningRepo(null);
+        setCloneProgress(null);
+        Alert.alert(
+          t('settings.largeRepoTitle'),
+          t('settings.largeRepoCloneBlockedBody', {
+            name: repo.name,
+            size: (repoSizeKb / 1024).toFixed(0),
+          }),
+          [{ text: t('common.ok') }],
+        );
+        return;
+      }
+    }
     const throttled = createThrottledEmitter((phase, loaded, total) => setCloneProgress({ repoName: repo.name, phase, loaded, total }));
     try {
       const token = (await AuthService.getToken()) ?? undefined;
@@ -526,12 +548,16 @@ export default function SettingsScreen() {
     cloneAbortedRef.current = false;
     setCloneProgress({ repoName, phase: t('settings.clonePhasePreparing'), loaded: 0, total: null });
     const throttled = createThrottledEmitter((phase, loaded, total) => setCloneProgress({ repoName, phase, loaded, total }));
+    // Look up the size when the caller didn't supply one (manual add) so the
+    // large-repo guard in runImport can still refuse the clone (#1037).
+    const parsed = parseRepoPath(repoPath);
+    const resolvedSizeKb = repoSizeKb ?? (parsed ? await GitHubService.getRepositorySize(parsed.owner, parsed.repo) ?? undefined : undefined);
     const result = await importRepoAtAdd(repoPath, repoName, (phase, loaded, total) => {
       if (cloneAbortedRef.current) {
         throw new Error('CLONE_CANCELLED');
       }
       throttled.push(phase, loaded, total);
-    }, repoSizeKb);
+    }, resolvedSizeKb);
     throttled.flush();
     setCloneProgress(null);
     if (cloneAbortedRef.current) {
@@ -629,6 +655,14 @@ export default function SettingsScreen() {
           await addRepo(repo.full_name, repo.name);
         }
         HapticService.success();
+        // Large-repo default: add in API mode directly so no clone is ever
+        // attempted (native Hermes OOM on big packfiles — #1037). The repo
+        // picker's size is in KB; importRepoAfterAdd then runs the API path
+        // (pull only), never the clone path.
+        if (typeof repo.size === 'number' && repo.size > LARGE_REPO_THRESHOLD_KB) {
+          await SyncEngineService.setMode(repo.full_name, 'api');
+          setSyncModes((prev) => ({ ...prev, [repo.full_name]: 'api' }));
+        }
         await importRepoAfterAdd(repo.full_name, repo.name, repo.size);
       } catch (error) {
         if (error instanceof RepoAccessPreflightError && error.canRetry && !allowUnverifiedWrite) {

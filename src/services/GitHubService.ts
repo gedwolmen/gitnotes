@@ -405,6 +405,23 @@ class GitHubServiceClass {
     }
   }
 
+  /**
+   * Fetch a single repository's GitHub-reported size (KB, 0 if unknown).
+   * `GET /user/repos` omits `size` when it's null; the per-repo endpoint
+   * returns it consistently. Used by the clone-mode guard to refuse clone
+   * for repos over LARGE_REPO_THRESHOLD_KB (native Hermes OOM on big
+   * packfiles — #1037).
+   */
+  async getRepositorySize(owner: string, repo: string): Promise<number | null> {
+    try {
+      const data = await this.request<{ size?: number }>(`https://api.github.com/repos/${owner}/${repo}`);
+      return typeof data?.size === 'number' ? data.size : null;
+    } catch (error) {
+      console.warn('[GitHubService] Failed to get repository size:', error);
+      return null;
+    }
+  }
+
   async getIssues(
     owner: string,
     repo: string,
