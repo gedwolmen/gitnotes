@@ -41,6 +41,8 @@ jest.mock('../../../src/services/git/GitFsService', () => ({
     pullWithFastForward: jest.fn(async () => ({ ok: true })),
     removeRepo: jest.fn(async () => undefined),
     clone: jest.fn(async () => undefined),
+    getCommitOid: jest.fn(async () => 'same-commit'),
+    findMergeBase: jest.fn(async () => 'same-commit'),
   },
 }));
 
@@ -89,6 +91,56 @@ describe('LocalGitWriter push-rejected recovery (bug-hunt loop4 #15)', () => {
     expect(result.error).toMatch(/network timeout/);
     // The stale-branch retry must not run when the refresh pull failed.
     expect(getGitMocks().push).toHaveBeenCalledTimes(1);
+  });
+
+  test('push treats "Could not find <sha>" as corruption error and recovers via re-clone', async () => {
+    // First push fails with isomorphic-git missing-object error.
+    // hasUnpushedLocalCommits returns false (local === remote === merge-base),
+    // so the corruption recovery path re-clones and retries.
+    getGitMocks().push
+      .mockRejectedValueOnce(new Error('Could not find fc19c489cbd51e123949d74aecb9cf1a9267641a'))
+      .mockResolvedValueOnce({ ok: true });
+
+    const result = await LocalGitWriter.push({
+      repoPath: 'me/repo',
+      branch: 'main',
+      token: 'tok',
+    });
+
+    expect(result.success).toBe(true);
+    expect(GitFsService.removeRepo).toHaveBeenCalledWith({ repoPath: 'me/repo' });
+    expect(GitFsService.clone).toHaveBeenCalledWith({
+      repoPath: 'me/repo',
+      branch: 'main',
+      token: 'tok',
+    });
+    // Two pushes: one failed, one succeeded after re-clone
+    expect(getGitMocks().push).toHaveBeenCalledTimes(2);
+  });
+
+  test('push surfaces error when "Could not find" fires but local commits exist', async () => {
+    // hasUnpushedLocalCommits returns true (localOid !== mergeBase)
+    (GitFsService.getCommitOid as jest.Mock)
+      .mockResolvedValueOnce('local-commit') // localRef
+      .mockResolvedValueOnce('remote-commit') // remoteRef
+      .mockResolvedValueOnce('base-commit'); // findMergeBase
+    (GitFsService.findMergeBase as jest.Mock).mockResolvedValueOnce('base-commit');
+
+    getGitMocks().push.mockRejectedValueOnce(
+      new Error('Could not find fc19c489cbd51e123949d74aecb9cf1a9267641a'),
+    );
+
+    const result = await LocalGitWriter.push({
+      repoPath: 'me/repo',
+      branch: 'main',
+      token: 'tok',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/Clone corruption detected with unpushed local commits/);
+    // Must NOT attempt re-clone when local commits exist — user must push or reset
+    expect(GitFsService.removeRepo).not.toHaveBeenCalled();
+    expect(GitFsService.clone).not.toHaveBeenCalled();
   });
 
   test('deleteAndCommit surfaces unknown pull failure (parity with existing behavior)', async () => {
