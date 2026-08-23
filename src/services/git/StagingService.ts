@@ -84,7 +84,7 @@ const UNPUSHED_COMMITS_PLACEHOLDER = '(unpushed commits)';
  * carries `pendingSync: true` and the chain continues detached — its
  * `finally` block releases the cycle so the mutex is never leaked.
  */
-const SYNC_SAVE_WAIT_MS = 45_000;
+export const SYNC_SAVE_WAIT_MS = 45_000;
 
 async function resolveStageAuthor(): Promise<{ name: string; email: string }> {
   const user: GitHostUser | null = await getGitHostService('github').getAuthenticatedUser();
@@ -110,7 +110,7 @@ async function refreshStoresAfterPull(): Promise<void> {
  * returns `pendingSync: true` but lets the chain continue detached —
  * its `finally` block releases the cycle so the mutex is never leaked.
  */
-async function writeThroughPush(
+export async function writeThroughPush(
   repoPath: string,
   mutationId: string,
 ): Promise<StagingResult> {
@@ -148,22 +148,19 @@ async function writeThroughPush(
       }
     } finally {
       releaseCycle();
+      unsubDrop();
     }
   })();
 
-  try {
-    return await Promise.race([
-      chain,
-      new Promise<StagingResult>((resolve) =>
-        setTimeout(
-          () => resolve({ success: true, pendingSync: true }),
-          SYNC_SAVE_WAIT_MS,
-        ),
+  return await Promise.race([
+    chain,
+    new Promise<StagingResult>((resolve) =>
+      setTimeout(
+        () => resolve({ success: true, pendingSync: true }),
+        SYNC_SAVE_WAIT_MS,
       ),
-    ]);
-  } finally {
-    unsubDrop();
-  }
+    ),
+  ]);
 }
 
 /**
