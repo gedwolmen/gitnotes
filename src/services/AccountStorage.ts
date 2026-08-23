@@ -483,6 +483,12 @@ export class AccountStorage {
       const stillActive = accountsToKeep.find((a) => a.id === activeAccountId);
       await this.setActiveHostId(stillActive?.hostIds[0] ?? null);
     }
+
+    // SECURITY: clear AI keys only when the account is actually dropped
+    // (not on every host disconnect), mirroring removeAccount.
+    if (removedAccountIds.length > 0) {
+      await this.clearAccountAiState();
+    }
   }
 
   // ── Legacy ───────────────────────────────────────────────────────────

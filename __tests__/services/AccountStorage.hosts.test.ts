@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 jest.mock('expo-secure-store', () => {
   const mem: Record<string, string> = {};
@@ -303,6 +304,95 @@ describe('AuthService.listAccountSummaries', () => {
     expect(summaries[0].hosts).toHaveLength(1);
     expect(summaries[0].hosts[0].provider).toBe('github');
     expect(summaries[0].activeHostId).toBe(summaries[0].hosts[0].id);
+  });
+});
+
+describe('AccountStorage.removeHostConnection clears AI state when account is dropped', () => {
+  it('clears ai-settings blob and ai-provider-key-* SecureStore entries when last host disconnect drops the account', async () => {
+    const account = await AccountStorage.addAccount('gh-tok', {
+      login: 'octocat',
+      name: 'Octo Cat',
+      email: 'octo@example.com',
+      avatarUrl: 'https://example.com/octo.png',
+    });
+    const host = await AccountStorage.upsertHostConnection({
+      accountId: account.id,
+      provider: 'github',
+      instanceBaseUrl: null,
+      hostLogin: 'octocat',
+      hostUserId: 42,
+      hostDisplayName: 'Octo Cat',
+      hostAvatarUrl: 'https://example.com/octo.png',
+      token: 'gh-host-tok',
+    });
+
+    await AsyncStorage.setItem(
+      'ai-settings',
+      JSON.stringify({
+        providers: [
+          { id: 'openai-key', apiKey: 'sk-OAI' },
+          { id: 'anthropic-key', apiKey: 'sk-ANT' },
+        ],
+      }),
+    );
+    await SecureStore.setItemAsync('ai-provider-key-openai-key', 'sk-OAI');
+    await SecureStore.setItemAsync('ai-provider-key-anthropic-key', 'sk-ANT');
+
+    expect(await SecureStore.getItemAsync('ai-provider-key-openai-key')).toBe('sk-OAI');
+    expect(await AsyncStorage.getItem('ai-settings')).not.toBeNull();
+
+    await AccountStorage.removeHostConnection(host.id);
+
+    const remainingAccounts = await AccountStorage.listAccounts();
+    expect(remainingAccounts.find((a) => a.id === account.id)).toBeUndefined();
+
+    expect(await SecureStore.getItemAsync('ai-provider-key-openai-key')).toBeNull();
+    expect(await SecureStore.getItemAsync('ai-provider-key-anthropic-key')).toBeNull();
+    expect(await AsyncStorage.getItem('ai-settings')).toBeNull();
+  });
+
+  it('does NOT clear AI state when disconnecting a non-last host (account still has other hosts)', async () => {
+    const account = await AccountStorage.addAccount('gh-tok', {
+      login: 'octocat',
+      name: 'Octo Cat',
+      email: 'octo@example.com',
+      avatarUrl: 'https://example.com/octo.png',
+    });
+    const host1 = await AccountStorage.upsertHostConnection({
+      accountId: account.id,
+      provider: 'github',
+      instanceBaseUrl: null,
+      hostLogin: 'octocat',
+      hostUserId: 42,
+      hostDisplayName: 'GitHub',
+      hostAvatarUrl: 'https://example.com/octo.png',
+      token: 'gh-host-tok-1',
+    });
+    const host2 = await AccountStorage.upsertHostConnection({
+      accountId: account.id,
+      provider: 'gitlab',
+      instanceBaseUrl: 'https://gitlab.example.com',
+      hostLogin: 'octocat',
+      hostUserId: 42,
+      hostDisplayName: 'GitLab',
+      hostAvatarUrl: 'https://example.com/octo.png',
+      token: 'gl-host-tok',
+    });
+
+    await AsyncStorage.setItem(
+      'ai-settings',
+      JSON.stringify({ providers: [{ id: 'openai-key', apiKey: 'sk-OAI' }] }),
+    );
+    await SecureStore.setItemAsync('ai-provider-key-openai-key', 'sk-OAI');
+
+    await AccountStorage.removeHostConnection(host1.id);
+
+    const remainingAccounts = await AccountStorage.listAccounts();
+    expect(remainingAccounts.find((a) => a.id === account.id)).toBeDefined();
+    expect(remainingAccounts.find((a) => a.id === account.id)?.hostIds).toEqual([host2.id]);
+
+    expect(await SecureStore.getItemAsync('ai-provider-key-openai-key')).toBe('sk-OAI');
+    expect(await AsyncStorage.getItem('ai-settings')).not.toBeNull();
   });
 });
 
