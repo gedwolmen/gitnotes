@@ -11,24 +11,27 @@ GitNotēs uses **isomorphic-git** for Git operations (clone, commit, push, pull)
 ```
 User edits note
   ↓
-NoteService.save() → AsyncStorage (fast)
+repoStore.saveNote() → AsyncStorage (fast)
   ↓
-SyncEngineService.queueChange()
-  ↓
-GitService.commit() [local]
-  ↓
-NetworkService.isOnline() ?
-  ├─ Yes → GitService.push() [remote]
-  └─ No  → Queue in syncStore (retry later)
+Sync mode (per repo, see SyncEngineService.getMode):
+  ├─ clone → LocalGitWriter.writeAndCommit(..., push: false)
+  │           → Stage screen / floating-button long-press /
+  │             StagePushScheduler (3-min idle) / OS background-task drain
+  │           → LocalGitWriter.push
+  └─ api   → NoteSyncQueueService.enqueue
+             → on push trigger: drainPushQueue → NoteSyncQueueService.drain
 ```
+
+Network state is read from the `useNetworkStatus` hook (NetInfo) — pull and push both gate on `isConnected && isInternetReachable`.
 
 ## Key Services
 
-### GitService
+### GitService (clone-mode facade)
 
-Core Git operations:
+Core clone-mode Git operations live behind `GitService.ts`; low-level write/commit/push is in `src/services/git/LocalGitWriter.ts`.
 
 ```typescript
+// GitService.ts — public surface
 class GitService {
   async cloneRepo(repoUrl: string, branch: string): Promise<void> {
     const fs = this.getFS();
@@ -40,6 +43,7 @@ class GitService {
       ref: branch,
       singleBranch: true,
       depth: 1,
+      noCheckout: true, // batched full checkout via checkout-orphan
     });
   }
 
@@ -81,132 +85,95 @@ class GitService {
 
 ### SyncEngineService
 
-Queue-based sync:
+Per-repo sync-mode registry. `getMode(repoPath)` returns `'clone' | 'api'`; the per-repo override map is persisted under `@gitnotes:sync_engine_modes` (default `'clone'`).
 
 ```typescript
 class SyncEngineService {
-  async queueChange(change: SyncChange): Promise<void> {
-    const queue = await StorageService.get<SyncChange[]>('syncQueue', []);
-    queue.push(change);
-    await StorageService.set('syncQueue', queue);
+  async getMode(repoPath: string): Promise<'clone' | 'api'> {
+    const overrides = await StorageService.get<Record<string, 'clone' | 'api'>>(
+      '@gitnotes:sync_engine_modes',
+      {},
+    );
+    return overrides[repoPath] ?? 'clone';
   }
 
-  async processQueue(): Promise<void> {
-    const queue = await StorageService.get<SyncChange[]>('syncQueue', []);
-    if (queue.length === 0) return;
-
-    const networkStatus = await NetworkService.getStatus();
-    if (!networkStatus.isConnected) return;
-
-    try {
-      // Commit all queued changes
-      const files = queue.map(c => c.filePath);
-      const message = `Sync ${queue.length} change(s)`;
-      await gitService.commit(message, files);
-      
-      // Push to remote
-      await gitService.push(token);
-      
-      // Clear queue on success
-      await StorageService.set('syncQueue', []);
-    } catch (error) {
-      console.error('Sync failed:', error);
-      // Keep queue for retry
-    }
+  async setMode(repoPath: string, mode: 'clone' | 'api'): Promise<void> {
+    // Persist override
   }
 }
 ```
 
-### NetworkService
+The actual mutation queue lives in `NoteSyncQueueService` (API mode) and `StagingService` (clone mode). Pull orchestration lives in `ForegroundSyncService` and the OS background task.
 
-Online/offline detection:
+### Network status (hook, not service)
+
+Online/offline detection is a hook, not a service:
 
 ```typescript
+// src/hooks/useNetworkStatus.ts
 import NetInfo from '@react-native-community/netinfo';
 
-class NetworkService {
-  async getStatus(): Promise<NetworkStatus> {
-    const state = await NetInfo.fetch();
-    return {
-      isConnected: state.isConnected ?? false,
-      isInternetReachable: state.isInternetReachable ?? false,
-      type: state.type,
-    };
-  }
+export function useNetworkStatus() {
+  const [status, setStatus] = useState<NetworkStatus>({
+    isConnected: true,
+    isInternetReachable: true,
+    type: 'unknown',
+  });
 
-  subscribe(callback: (status: NetworkStatus) => void): () => void {
-    return NetInfo.addEventListener(callback);
-  }
+  useEffect(() => {
+    return NetInfo.addEventListener(setStatus);
+  }, []);
+
+  return status;
 }
 ```
 
 ## Sync Flows
 
-### Auto-Sync (on app focus)
+### Foreground pull (app focus, online transitions, interval)
 
 ```typescript
-// App.tsx
-useEffect(() => {
-  const subscription = AppState.addEventListener('change', (state) => {
-    if (state === 'active') {
-      syncEngineService.processQueue();
-    }
-  });
-  return () => subscription.remove();
-}, []);
+// ForegroundSyncService.runPull — called from App.tsx / hook subscriptions
+await foregroundSyncService.runPull({ reason: 'appFocus' | 'onlineTransition' | 'interval' });
 ```
 
-### Manual Sync
+### Manual sync (pull-only)
 
 ```typescript
-// SyncButton.tsx
+// src/services/git/manualSync.ts
+import { runSyncCycle } from '../src/services/git/manualSync';
+
 const handleSync = async () => {
   setLoading(true);
-  await gitService.pull(token);
-  await syncEngineService.processQueue();
+  await runSyncCycle({ reason: 'manual' }); // pull + store refresh, never pushes
   setLoading(false);
 };
 ```
 
-### Periodic Sync (background)
+### Background sync (OS task)
 
-```typescript
-// App.tsx
-useEffect(() => {
-  const interval = setInterval(async () => {
-    const status = await NetworkService.getStatus();
-    if (status.isConnected) {
-      await syncEngineService.processQueue();
-    }
-  }, 5 * 60 * 1000); // 5 minutes
-  return () => clearInterval(interval);
-}, []);
-```
+`BackgroundSyncService` is the entry point registered with `expo-background-task`. It calls `pullAllFromRepos()` and surfaces a single local notification when the pull changed something (sum of `notes + canvases + todos + templates` > 0). Pushes never run from the OS background task except for small sets (≤ 10 files) via the dedicated background-push path.
 
 ## Conflict Resolution
 
 ### 3-Way Merge
 
 ```typescript
+// src/services/conflict/ConflictResolverService.ts
+import { threeWayMerge } from './threeWayMerge';
+
 class ConflictResolverService {
-  async resolve(localContent: string, remoteContent: string, baseContent: string): Promise<string> {
-    // Use isomorphic-git's merge strategy
-    const merged = await git.merge({
-      fs,
-      dir: repoDir,
-      ours: 'HEAD',
-      theirs: 'origin/main',
-    });
-    
-    if (merged.conflicts) {
-      // Manual resolution UI
-      return openConflictResolver(merged.conflicts);
-    }
-    
-    return merged.result;
+  async resolve(
+    localContent: string,
+    remoteContent: string,
+    baseContent: string,
+  ): Promise<{ merged: string; conflicts: ConflictBlock[] }> {
+    return threeWayMerge({ base: baseContent, ours: localContent, theirs: remoteContent });
   }
 }
 ```
+
+`AiConflictResolver.ts` (same folder) layers AI suggestions on top when an AI provider is configured.
 
 ### Conflict UI
 
@@ -229,15 +196,17 @@ const handleResolve = (resolution: 'local' | 'remote' | 'merge') => {
 ### Network Errors
 
 ```typescript
+import { formatSyncError } from '../src/services/git/formatSyncError';
+
 try {
   await gitService.push(token);
 } catch (error) {
-  if (error.message.includes('Network request failed')) {
-    // Queue for retry
-    await syncEngineService.queueChange(change);
-    showToast('Offline — changes queued for sync');
-  } else if (error.message.includes('401')) {
-    // Token expired
+  const msg = formatSyncError(error);
+  if (msg.kind === 'offline') {
+    // Clone mode keeps the commit staged; API mode retries via NoteSyncQueueService backoff
+    showToast('Offline — changes will sync when online');
+  } else if (msg.kind === 'unauthorized') {
+    // Token expired / revoked
     await refreshToken();
     await gitService.push(newToken);
   } else {
@@ -248,47 +217,27 @@ try {
 
 ### Auth Errors
 
-```typescript
-try {
-  await gitService.push(token);
-} catch (error) {
-  if (error.message.includes('403')) {
-    alert('No push access to repository');
-  } else if (error.message.includes('404')) {
-    alert('Repository not found');
-  }
-}
-```
+`formatSyncError` distinguishes rate-limit 403s from permission/scope 403s (the latter includes the exact scopes needed — fine-grained `Contents: Read and write` with the repo selected, or a classic token with the `repo` scope). 404s surface "Repository not found" with a re-auth path.
 
 ### Sync Queue Persistence
 
 ```typescript
-interface SyncChange {
+// NoteSyncQueueService — API mode
+interface PendingMutation {
   id: string;
   type: 'create' | 'update' | 'delete';
   filePath: string;
   content?: string;
-  timestamp: number;
+  attempts: number;
+  nextAttemptAt: number; // epoch ms
 }
 
-// Retry logic
-async function processQueue() {
+// Retry loop with exponential backoff (BACKOFF_BASE_MS = 500, BACKOFF_CAP_MS = 30_000, MAX_ATTEMPTS = 8)
+async function drain(onProgress?: (fraction: number | null) => void) {
   const queue = await getQueue();
-  const networkStatus = await NetworkService.getStatus();
-  
-  if (!networkStatus.isConnected) {
-    return; // Retry later
-  }
-  
-  for (const change of queue) {
-    try {
-      await applyChange(change);
-      await removeFromQueue(change.id);
-    } catch (error) {
-      console.error('Failed to sync change:', change.id, error);
-      // Keep in queue for retry
-    }
-  }
+  const now = Date.now();
+  const due = queue.filter(m => m.nextAttemptAt <= now);
+  // ... group by (repo, branch), Promise.all per group, fire onProgress per resolution
 }
 ```
 
