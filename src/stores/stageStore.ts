@@ -33,6 +33,7 @@ interface StageActions {
   setGlobalPushing: (bool: boolean) => void;
   setPushProgress: (fraction: number | null) => void;
   pushAll: () => void;
+  discardStaged: (repoPath: string, branch: string) => Promise<void>;
   dequeueNext: () => string | null;
   shiftQueue: () => void;
   registerQueueSubscription: () => void;
@@ -138,6 +139,15 @@ export const useStageStore = create<StageState & StageActions>()((set, get) => (
       }
     }
     set({ pushQueue });
+  },
+
+  discardStaged: async (repoPath: string, branch: string) => {
+    const { StagingService } = await import('../services/git/StagingService');
+    const result = await StagingService.discardStaged(repoPath, branch);
+    if (!result.success) {
+      console.warn('[stageStore] discardStaged failed:', result.error);
+    }
+    void get().loadStaged();
   },
 
   dequeueNext: () => get().pushQueue[0] ?? null,

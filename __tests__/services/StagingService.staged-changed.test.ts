@@ -27,6 +27,7 @@ jest.mock('../../src/services/git/GitFsService', () => ({
   GitFsService: {
     getCommitOid: jest.fn(async () => null),
     findMergeBase: jest.fn(async () => null),
+    getChangedFilesBetweenRefs: jest.fn(async () => []),
   },
 }));
 
