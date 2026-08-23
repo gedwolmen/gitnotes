@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
+ 
 import type { AIProviderConfig } from '../../src/models/AIProvider';
 
 const mockState: {
@@ -6,11 +6,13 @@ const mockState: {
   appleAvailable: boolean;
   appleThrows: boolean;
   modelId: string | null;
+  isDevice: boolean;
 } = {
   os: 'ios',
   appleAvailable: false,
   appleThrows: false,
   modelId: null,
+  isDevice: true,
 };
 
 jest.mock('react-native', () => ({
@@ -29,10 +31,13 @@ jest.mock('@react-native-ai/apple', () => ({
 }));
 
 jest.mock('expo-device', () => ({
-  get modelId() {
-    return mockState.modelId;
-  },
-}));
+   get modelId() {
+     return mockState.modelId;
+   },
+   get isDevice() {
+     return mockState.isDevice;
+   },
+ }));
 
 const baseProvider = (overrides: Partial<AIProviderConfig>): AIProviderConfig => ({
   id: 'apple-default',
@@ -46,7 +51,13 @@ const baseProvider = (overrides: Partial<AIProviderConfig>): AIProviderConfig =>
 });
 
 function setMocks(opts: Partial<typeof mockState>) {
-  Object.assign(mockState, opts);
+  Object.assign(mockState, {
+    os: 'ios',
+    appleAvailable: false,
+    appleThrows: false,
+    modelId: null,
+    isDevice: true,
+  }, opts);
 }
 
 describe('resolveProviderAvailability', () => {
@@ -85,8 +96,20 @@ describe('resolveProviderAvailability', () => {
     expect(result.kind).toBe('available');
   });
 
+  test('reports unavailable on the simulator even if native isAvailable() is true (PromptKit crash guard)', async () => {
+    // AppleFoundationModels.isAvailable() can return true on the simulator
+    // (framework present in the SDK) even though there are no Foundation
+    // Model weights — letting chat proceed crashes natively in PromptKit
+    // (EXC_BREAKPOINT in TokenGenerator._streamResponse).
+    setMocks({ os: 'ios', appleAvailable: true, modelId: 'iPhone16,1', isDevice: false });
+    const { resolveProviderAvailability } = require('../../src/services/ai/providerAvailability');
+    const result = await resolveProviderAvailability(baseProvider({ id: 'apple-simulator' }));
+    expect(result.kind).toBe('unavailable');
+    expect(result.reason.code).toBe('device-ineligible');
+  });
+
   test('eligible device but Apple Intelligence not active reports apple-intelligence-disabled', async () => {
-    setMocks({ os: 'ios', appleAvailable: false, modelId: 'iPhone17,3' }); // iPhone 16 family
+    setMocks({ os: 'ios', appleAvailable: false, modelId: 'iPhone17,3', isDevice: true }); // iPhone 16 family
     const { resolveProviderAvailability } = require('../../src/services/ai/providerAvailability');
     const result = await resolveProviderAvailability(baseProvider({ id: 'apple-iphone16-disabled' }));
     expect(result.kind).toBe('unavailable');
