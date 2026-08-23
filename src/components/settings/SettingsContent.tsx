@@ -959,9 +959,8 @@ export function SettingsContent(props: SettingsContentProps) {
               <View className="flex-row items-center gap-2">
                 <Toggle
                   testID="settings.toggle.daily-quote"
-                  value={isAIEnabled ? dailyQuoteEnabled : false}
+                  value={dailyQuoteEnabled}
                   onValueChange={onToggleDailyQuote}
-                  disabled={!isAIEnabled}
                 />
                 <HintIcon hintKey="hints.settings.dailyQuote" testID="hint.daily-quote" />
               </View>
