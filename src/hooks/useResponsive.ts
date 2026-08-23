@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useSyncExternalStore } from 'react';
 import { Dimensions } from 'react-native';
 
 export type DeviceType = 'phone' | 'tablet' | 'desktop' | 'mac';
@@ -84,15 +84,32 @@ function calculateResponsive(): ResponsiveInfo {
   };
 }
 
+let sharedInfo: ResponsiveInfo = calculateResponsive();
+let sharedListenerCount = 0;
+const sharedListeners = new Set<(info: ResponsiveInfo) => void>();
+
+function ensureSharedSubscription(): void {
+  if (sharedListenerCount > 0) return;
+  Dimensions.addEventListener('change', () => {
+    sharedInfo = calculateResponsive();
+    for (const listener of sharedListeners) listener(sharedInfo);
+  });
+}
+
 export function useResponsive(layoutType: 'list' | 'bento' = 'list'): ResponsiveInfo {
-  const [info, setInfo] = useState<ResponsiveInfo>(calculateResponsive);
-
-  useEffect(() => {
-    const update = () => setInfo(calculateResponsive());
-
-    const subscription = Dimensions.addEventListener('change', update);
-    return () => subscription.remove();
-  }, []);
+  const info = useSyncExternalStore(
+    (onStoreChange) => {
+      sharedListeners.add(onStoreChange);
+      ensureSharedSubscription();
+      sharedListenerCount += 1;
+      return () => {
+        sharedListeners.delete(onStoreChange);
+        sharedListenerCount -= 1;
+      };
+    },
+    () => sharedInfo,
+    () => sharedInfo,
+  );
 
   if (layoutType === 'bento') {
     return {
