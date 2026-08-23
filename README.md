@@ -29,21 +29,21 @@
 - **Files, not a database.** Every note is a real file in your Git repo — nothing locks you in.
 - **Versioned by default.** Edit, branch, diff, and rebase your notes the same way you do code.
 - **Works offline.** Edits queue locally and sync when you're back online.
-- **Open formats.** Markdown, Neorg, Org, JSON, PDF — pick what fits.
+- **Open formats.** Markdown, Neorg, Org, JSON — pick what fits.
 - **Open source.** MPL-2.0; contributions and forks welcome.
 
 ## Highlights
 
 - Notes, todos, journals, and Excalidraw-style canvases — all backed by Git
 - Folders, tags, colors, pins, wiki-links, backlinks, custom templates
-- Multiple GitHub accounts; per-repo API or full-clone sync modes
-- Deprecated importers (Google Keep, Apple Notes) are documented in the [wiki: importers](https://github.com/gedwolmen/gitnotes/wiki/importers)
+- Multi-provider sync (GitHub, GitLab, Gitea-like); per-repo API or full-clone sync modes
+- Optional Pro tier with Neumorphic "Fancy UI", advanced AI, multi-host paywall, and trial/lifetime via StoreKit 2 (RevenueCat) — see the [wiki: Pro Paywall](https://github.com/gedwolmen/gitnotes/wiki/paywall-pro)
 - Optional AI chat layer (Anthropic, OpenAI-compatible providers, Apple Intelligence, on-device Llama)
 - Biometric lock, multilingual UI (EN, ES, FR, DE, JA, KO), light / dark / system themes
 
 ## Stack
 
-Expo SDK 56 · React Native 0.85 · TypeScript 5.7 · isomorphic-git · React Navigation v7 · TanStack Query · Zustand · Vercel AI SDK v6 · Reanimated · FlashList.
+Expo SDK 56 · React Native 0.85 · TypeScript 6 · isomorphic-git · React Navigation v7 · TanStack Query · Zustand · Vercel AI SDK v6 · Reanimated · FlashList · NativeWind v5.
 
 ## Contributing
 

@@ -31,37 +31,24 @@ Components (className prop)
 
 ```json
 {
-  "nativewind": "^5.0.3",
-  "tailwindcss": "^3.4.1",
-  "react-native-css-interop": "^0.1.3"
+  "nativewind": "^5.0.0-preview.4",
+  "tailwindcss": "^4.3.3",
+  "react-native-css": "^3.0.7",
+  "@tailwindcss/postcss": "^4.3.3"
 }
 ```
 
-### Tailwind Config
+Tailwind v4 uses **CSS-based config** — there is no `tailwind.config.js`. Tokens are declared inside an `@theme { … }` block in `global.css`, and the PostCSS pipeline is wired by `postcss.config.js` (`@tailwindcss/postcss`). NativeWind v5's preset/theme is imported once at the top of `global.css`.
+
+### PostCSS config
 
 ```javascript
-// tailwind.config.js
+// postcss.config.js
 
 module.exports = {
-  content: ['./src/**/*.{js,jsx,ts,tsx}'],
-  presets: [require('nativewind/preset')],
-  theme: {
-    extend: {
-      colors: {
-        // Light theme
-        primary: 'rgb(var(--color-primary) / <alpha-value>)',
-        background: 'rgb(var(--color-background) / <alpha-value>)',
-        card: 'rgb(var(--color-card) / <alpha-value>)',
-        text: 'rgb(var(--color-text) / <alpha-value>)',
-        border: 'rgb(var(--color-border) / <alpha-value>)',
-      },
-      fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
-      },
-    },
+  plugins: {
+    '@tailwindcss/postcss': {},
   },
-  plugins: [],
 };
 ```
 
@@ -70,28 +57,69 @@ module.exports = {
 ```css
 /* global.css */
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/preflight.css' layer(base);
+@import 'tailwindcss/utilities.css';
+@import 'nativewind/theme';
 
-@layer base {
-  :root {
-    --color-primary: 59 130 246;      /* blue-500 */
-    --color-background: 255 255 255;  /* white */
-    --color-card: 249 250 251;        /* gray-50 */
-    --color-text: 17 24 39;           /* gray-900 */
-    --color-border: 229 231 235;      /* gray-200 */
-  }
+@theme {
+  --color-bg: #f2f2f2;
+  --color-surface: #ffffff;
+  --color-highlight: #ffffff;
+  --color-shadow: #bfbfbf;
+  --color-text: #1c1c1e;
+  --color-text-secondary: #6e6e73;
+  --color-accent: #7b8cde;
+  --color-accent-muted: #a8b3e5;
+  --color-error: #e07a7a;
 
-  .dark {
-    --color-primary: 96 165 250;      /* blue-400 */
-    --color-background: 17 24 39;     /* gray-900 */
-    --color-card: 31 41 55;           /* gray-800 */
-    --color-text: 243 244 246;        /* gray-100 */
-    --color-border: 55 65 81;         /* gray-700 */
-  }
+  --color-background: #f2f2f2;
+  --color-surface-secondary: #f5f5f5;
+  --color-primary: #7b8cde;
+  --color-border: #d8d8d8;
+  --color-card: #ffffff;
+  --color-elevated: #ffffff;
+  --color-secondary: #f5f5f5;
+  --color-foreground: #1c1c1e;
+  --color-muted: #f5f5f5;
+  --color-muted-foreground: #6e6e73;
+  --color-destructive: #e07a7a;
+
+  --spacing: 4px;
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+  --radius-pill: 999px;
+}
+
+.dark {
+  --color-bg: #1c1c1e;
+  --color-surface: #2c2c2e;
+  --color-highlight: #3a3a3c;
+  --color-shadow: #000000;
+  --color-text: #f2f2f2;
+  --color-text-secondary: #98989d;
+  --color-background: #1c1c1e;
+  --color-surface-secondary: #2c2c2e;
+  --color-card: #2c2c2e;
+  --color-elevated: #3a3a3c;
+  --color-secondary: #2c2c2e;
+  --color-foreground: #f2f2f2;
+  --color-muted: #2c2c2e;
+  --color-muted-foreground: #98989d;
+  --color-border: #3a3a3c;
 }
 ```
+
+See the real `global.css` for the full token list (spacing, radius, typography).
 
 ## Theme Context
 
@@ -193,73 +221,39 @@ function SettingsRow({ label }: { label: string }) {
 
 ## Design Tokens
 
-### Colors
+Tokens live in `global.css` under `@theme { … }` (Tailwind v4 CSS config). NativeWind reads them as Tailwind classes: `bg-primary`, `text-foreground`, `border-border`, `rounded-lg`, etc.
 
-```typescript
-// src/theme/tokens.ts
+### Spacing scale
 
-export const colors = {
-  light: {
-    primary: '#3B82F6',
-    background: '#FFFFFF',
-    card: '#F9FAFB',
-    text: '#111827',
-    border: '#E5E7EB',
-    muted: '#6B7280',
-    accent: '#8B5CF6',
-  },
-  dark: {
-    primary: '#60A5FA',
-    background: '#111827',
-    card: '#1F2937',
-    text: '#F3F4F6',
-    border: '#374151',
-    muted: '#9CA3AF',
-    accent: '#A78BFA',
-  },
-};
+The app uses a 4px-based spacing scale declared in `global.css`:
+
+```css
+@theme {
+  --spacing: 4px;
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+}
 ```
 
-### Spacing
+### Radius scale
 
-```typescript
-export const spacing = {
-  1: 4,
-  2: 8,
-  3: 12,
-  4: 16,
-  5: 20,
-  6: 24,
-  8: 32,
-  10: 40,
-  12: 48,
-};
+```css
+@theme {
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+  --radius-pill: 999px;
+}
 ```
 
-### Typography
+### Color tokens
 
-```typescript
-export const typography = {
-  fontFamily: {
-    sans: 'Inter',
-    mono: 'JetBrains Mono',
-  },
-  fontSize: {
-    xs: 12,
-    sm: 14,
-    base: 16,
-    lg: 18,
-    xl: 20,
-    '2xl': 24,
-  },
-  fontWeight: {
-    normal: '400',
-    medium: '500',
-    semibold: '600',
-    bold: '700',
-  },
-};
-```
+All semantic colors (`primary`, `background`, `card`, `surface`, `border`, `text`, `foreground`, `muted`, `muted-foreground`, `accent`, `destructive`, …) are declared as `--color-*` in `@theme` and overridden under `.dark` for dark mode. See `global.css` for the canonical list — light + dark values live there.
 
 ## Component Examples
 
@@ -390,9 +384,17 @@ yarn install
 
 ### Tailwind classes not recognized
 
+Tailwind v4 uses **CSS-based config** — there is no `tailwind.config.js`. Tokens live in `global.css` under `@theme { … }`. If a class isn't applying:
+
 ```bash
-# Check tailwind.config.js content paths
-# Should include: './src/**/*.{js,jsx,ts,tsx}'
+# Confirm the @tailwindcss/postcss plugin is wired
+cat postcss.config.js    # should list '@tailwindcss/postcss'
+
+# Confirm global.css imports nativewind/theme
+head -5 global.css       # should include @import 'nativewind/theme';
+
+# Reset Metro + transform cache
+yarn start --clear
 ```
 
 ### Button label centering with trailing icons

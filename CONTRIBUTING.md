@@ -92,16 +92,22 @@ Example: `feat: add dark mode support for canvas editor`
 ```
 src/
 ├── components/     # Reusable UI components
-├── contexts/       # React contexts
+├── contexts/       # React contexts (Accounts, Auth, Note, Repo, Theme, ...)
+├── data/           # Static data (philosopher quotes dataset)
 ├── hooks/          # Custom React hooks
-├── i18n/           # Internationalization
-├── models/         # Data models
+├── i18n/           # Internationalization (en, es, fr, de, ja, ko)
+├── lib/            # Shared utilities (cn helper, etc.)
+├── models/         # TypeScript interfaces (Note, Todo, Canvas, AIProvider, ...)
 ├── navigation/     # Navigation configuration
-├── screens/        # App screens
+├── screens/        # App screens (Notes, Canvas, Chat, Settings, ...)
 ├── services/       # Business logic services
+│   ├── ai/         # AI provider factory, model limits, anthropic defaults
+│   ├── canvas/     # Sparse-tile canvas persistence + vision helpers
+│   ├── conflict/   # 3-way merge + AI conflict resolver
+│   └── git/        # Clone/push/pull, staging, sync gate, host factory
 ├── stores/         # Zustand stores
-├── theme/          # Theme configuration
-├── types/          # TypeScript type definitions
+├── theme/          # NativeWind theme configuration
+├── types/          # Shared type definitions (RenderStyle, SortTypes)
 └── utils/          # Utility functions
 ```
 

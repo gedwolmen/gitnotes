@@ -70,12 +70,13 @@ yarn install
 # Run
 yarn ios          # iOS
 yarn android      # Android
-yarn dev          # Web
+yarn web          # Web
 
 # Test
-yarn ts:check     # Type check
-yarn jest         # Run tests
-yarn eslint . --ext .ts,.tsx  # Lint
+yarn ts:check         # Type check
+yarn jest             # Run tests
+yarn lint             # ESLint
+yarn format:check     # Prettier check
 ```
 
 ## Project Structure
@@ -83,16 +84,22 @@ yarn eslint . --ext .ts,.tsx  # Lint
 ```
 src/
 ├── components/       # Reusable UI components
-├── contexts/         # React contexts (ThemeContext, NoteContext)
+├── contexts/         # React contexts (Accounts, Auth, Canvas, Note, Repo, Theme, Todo, ...)
+├── data/             # Static data (philosopher quotes dataset)
 ├── hooks/            # Custom React hooks
 ├── i18n/             # Localization (en/es/fr/de/ja/ko)
-├── models/           # TypeScript interfaces
+├── lib/              # Shared utilities (cn helper, etc.)
+├── models/           # TypeScript interfaces (Note, Todo, Canvas, AIProvider, ...)
 ├── navigation/       # Navigation configuration
-├── screens/          # Screen components
-├── services/         # Business logic (AI, Git, quotes, etc.)
+├── screens/          # Screen components (Notes, Canvas, Chat, Settings, ...)
+├── services/         # Business logic (AI, Git, quotes, sync, paywall, ...)
+│   ├── ai/           # AI provider factory, model limits, anthropic defaults
+│   ├── canvas/       # Sparse-tile canvas persistence + vision helpers
+│   ├── conflict/     # 3-way merge + AI conflict resolver
+│   └── git/          # Clone/push/pull, staging, sync gate, host factory
 ├── stores/           # Zustand stores
 ├── theme/            # NativeWind theme configuration
-└── types/            # Shared type definitions
+└── types/            # Shared type definitions (RenderStyle, SortTypes)
 ```
 
 ## Key Files
@@ -102,6 +109,9 @@ src/
 | `AGENTS.md` | Rules for AI coding agents |
 | `CHANGELOG.md` | Single-PR fixes and narrow bug-fix entries, grouped by date descending |
 | `package.json` | Dependencies and scripts |
-| `tsconfig.json` | TypeScript configuration |
+| `tsconfig.json` | TypeScript configuration (strict mode, path aliases) |
 | `jest.config.js` | Jest configuration |
-| `babel.config.cjs` | Babel configuration |
+| `babel.config.js` | Babel configuration (`babel-preset-expo` + `react-native-worklets/plugin`) |
+| `eslint.config.js` | Flat ESLint config (TS + React hooks + Prettier) |
+| `global.css` | NativeWind v4 `@theme` tokens (light + dark) |
+| `metro.config.js` | Metro bundler config |

@@ -20,9 +20,6 @@ cd gitnotes
 # Install dependencies
 yarn install
 
-# Install iOS pods (macOS only)
-cd ios && pod install && cd ..
-
 # Start Metro bundler
 yarn start
 
@@ -33,7 +30,7 @@ yarn ios
 yarn android
 
 # Run on web
-yarn dev
+yarn web
 ```
 
 ## Environment Variables
@@ -54,35 +51,26 @@ GITHUB_TOKEN=ghp_...
 yarn start                  # Start Metro
 yarn ios                    # Run on iOS
 yarn android                # Run on Android
-yarn dev                    # Run on web (Expo)
-yarn clean                  # CleanMetro cache
-yarn reset                  # Reset all caches
+yarn web                    # Run on web (Expo)
 ```
 
 ### Testing
 
 ```bash
-yarn jest                   # Run all tests
-yarn jest --watch           # Watch mode
-yarn jest --coverage        # Coverage report
-yarn jest path/to/test.ts   # Specific file
-yarn ts:check               # Type check (tsc --noEmit)
+yarn jest                       # Run all tests
+yarn jest --watch               # Watch mode
+yarn jest --coverage            # Coverage report
+yarn jest path/to/test.ts       # Specific file
+yarn ts:check                   # Type check (tsc --noEmit)
 ```
 
 ### Linting & Formatting
 
 ```bash
-yarn eslint . --ext .ts,.tsx    # Lint
-yarn eslint . --ext .ts,.tsx --fix  # Auto-fix
-yarn prettier --write .         # Format all
-yarn lint                       # eslint + prettier
-```
-
-### Git
-
-```bash
-yarn commit                 # Interactive commit (commitizen)
-yarn release                # Semantic release (bump version)
+yarn lint                       # ESLint (flat config)
+yarn lint:fix                   # ESLint --fix
+yarn format                     # Prettier --write
+yarn format:check               # Prettier --check
 ```
 
 ## Build & Deploy
@@ -128,9 +116,6 @@ yarn ios
 ### Type errors
 
 ```bash
-# Regenerate types
-yarn generate-types
-
 # Check all
 yarn ts:check
 ```
@@ -141,22 +126,30 @@ yarn ts:check
 gitnotes/
 ├── src/
 │   ├── components/     # UI components
-│   ├── contexts/       # React contexts
+│   ├── contexts/       # React contexts (Accounts, Auth, Note, Repo, Theme, ...)
+│   ├── data/           # Static data (philosopher quotes)
 │   ├── hooks/          # Custom hooks
-│   ├── i18n/           # Localization
+│   ├── i18n/           # Localization (en/es/fr/de/ja/ko)
+│   ├── lib/            # Shared utilities (cn helper, ...)
 │   ├── models/         # TypeScript interfaces
 │   ├── navigation/     # Nav config
 │   ├── screens/        # Screen components
 │   ├── services/       # Business logic
+│   │   ├── ai/         # AI provider factory + model limits
+│   │   ├── canvas/     # Sparse-tile canvas persistence
+│   │   ├── conflict/   # 3-way merge + AI conflict resolver
+│   │   └── git/        # Clone/push/pull + sync gate + host factory
 │   ├── stores/         # Zustand stores
-│   ├── theme/          # NativeWind theme
-│   └── types/          # Shared types
+│   ├── theme/          # NativeWind theme tokens
+│   └── types/          # Shared types (RenderStyle, SortTypes)
 ├── __tests__/          # Jest tests
-├── docs/               # Documentation
+├── docs/               # Documentation + wiki source
 ├── ios/                # Native iOS code
 ├── android/            # Native Android code
 ├── assets/             # Images, fonts
 ├── AGENTS.md           # AI agent rules
+├── CHANGELOG.md        # Single-PR fixes, grouped by date
+├── CONTRIBUTING.md     # Contributor guide
 └── package.json        # Dependencies
 ```
 
@@ -165,7 +158,7 @@ gitnotes/
 1. Fork the repo
 2. Create a feature branch (`feature/my-feature`)
 3. Make changes, add tests
-4. Run `yarn lint` and `yarn jest`
+4. Run `yarn lint`, `yarn ts:check`, and `yarn jest`
 5. Commit with descriptive message
 6. Push and open a PR
 

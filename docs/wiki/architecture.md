@@ -26,23 +26,44 @@ GitNotēs is a React Native (Expo) note-taking app with **Git sync** (isomorphic
 
 ### `src/services/`
 
-Business logic layer:
+Business logic layer (top-level + subdirectories):
 
+- `AIService.ts` — Vercel AI SDK integration (`buildProviderInstance`, `initializeModel`)
+- `AuthService.ts` — Git-host token storage + multi-host switching
+- `AccountStorage.ts` — Multi-account persistence
 - `DailyQuoteService.ts` — Philosopher quote generation with AI personalization
-- `AIService.ts` — Vercel AI SDK integration
-- `GitService.ts` — Git clone, commit, push, pull via isomorphic-git
-- `NoteService.ts` — Note CRUD and parsing
-- `JournalService.ts` — Journal entry management
-- `TodoService.ts` — Todo item management
+- `ExportService.ts` — Export notes (Markdown, PDF, share sheet)
+- `RepoImportService.ts`, `RepoPullService.ts` — Import + pull from remote
+- `NoteGitHubSyncService.ts`, `TodoGitHubSyncService.ts`, `CanvasGitHubSyncService.ts`, `TemplateGitHubSyncService.ts` — Per-entity Git sync
+- `NoteSyncQueueService.ts`, `SyncEngineService.ts` — Sync queue + mode registry
+- `BackgroundSyncService.ts`, `ForegroundSyncService.ts` — OS background task + foreground sync loop
+- `StagePushScheduler.ts` — 3-minute idle-push window
+- `LocalGitWriter.ts` (in `git/`) — Clone-mode write/commits/push
+- `StagingService.ts` (in `git/`) — Stage-then-push mutation staging
+- `ConflictResolverService.ts`, `AiConflictResolver.ts` (in `conflict/`) — 3-way merge + AI assist
+- `AtlasComposer.ts`, `AtlasEncoder.ts`, `SparseTileService.ts` (in `canvas/`) — Sparse-tile canvas persistence
+- `providerFactory.ts`, `modelLimits.ts`, `anthropicDefaults.ts` (in `ai/`) — AI provider registry
 
 ### `src/stores/`
 
 Zustand stores:
 
-- `aiStore.ts` — AI settings (providers, personalization toggle)
-- `noteStore.ts` — Active note state
-- `gitStore.ts` — Git repository state
-- `syncStore.ts` — Sync status and queue
+- `noteStore.ts` — Active note state, drafts
+- `todoStore.ts` — Todo items
+- `canvasStore.ts` — Canvas state
+- `chatStore.ts` — AI chat threads/messages
+- `repoStore.ts` — Selected repository + multi-host registry
+- `folderStore.ts` — Folder tree
+- `templateStore.ts` — User-defined note templates
+- `renderStyleStore.ts` — Custom Markdown render styles
+- `draftStore.ts` — Edit drafts
+- `reminderStore.ts` — Note reminders
+- `conflictStore.ts` — Unresolved merge conflicts
+- `stageStore.ts` — Stage-then-push queue + push progress
+- `gitOperationStore.ts` — Per-repo/per-path busy locks
+- `githubActivityStore.ts` — GitHub activity feed
+- `aiStore.ts`, `aiHubStore.ts` — AI providers, model selection
+- `proStore.ts` — Pro tier state (RevenueCat)
 - `themeStore.ts` — Theme mode (light/dark/system)
 
 ### `src/hooks/`
@@ -50,11 +71,18 @@ Zustand stores:
 Custom hooks:
 
 - `useDailyQuote.ts` — Daily quote with cache and refresh
-- `useNote.ts` — Note operations
-- `useAI.ts` — AI chat and generation
-- `useGit.ts` — Git operations wrapper
-- `useSync.ts` — Sync status and progress
-- `useTheme.ts` — Theme access
+- `useEntityList.ts`, `useEntityFilter.ts`, `useNoteTags.ts` — Generic note/todo list filtering
+- `useNetworkStatus.ts` — `NetInfo` wrapper
+- `useBackgroundSync.ts` — Background sync task trigger
+- `useForegroundSyncHealth.ts`, `useForegroundSyncSettings.ts` — Foreground sync introspection
+- `useGitHostQueries.ts`, `useGitHubQueries.ts` — Git host data queries
+- `useProviderAvailability.ts` — AI provider runtime availability
+- `useProGate.ts`, `useProScreenGuard.ts` — Pro tier gate enforcement
+- `useUndoRedo.ts` — Editor undo/redo with concurrent-save guard
+- `useSafeBack.ts` — Header-back with deep-link safety
+- `useResponsive.ts` — Shared `Dimensions` subscription
+- `useRecognitionIndexing.ts`, `useLongPressForVision.ts` — Canvas vision helpers
+- `useHardWrap.ts` — Hard-wrap text editor
 
 ### `src/contexts/`
 
@@ -62,17 +90,37 @@ React contexts:
 
 - `ThemeContext.tsx` — Theme colors, mode, tokens
 - `NoteContext.tsx` — Active note, unsaved changes
-- `SyncContext.tsx` — Sync status provider
+- `TodoContext.tsx` — Active todo
+- `CanvasContext.tsx` — Canvas state
+- `FolderContext.tsx` — Folder navigation
+- `RepoContext.tsx` — Active repository + sync mode
+- `AccountsContext.tsx`, `AuthContext.tsx` — Multi-account/token state
+- `GitHubAuthContext.tsx`, `HostAuthContext.tsx` — Per-host auth
+- `BacklinksContext.tsx` — Wiki-link backlinks
+- `BiometricLockContext.tsx` — Face/Touch ID lock
+- `ViewModeContext.tsx` — List/grid view toggle
 
 ### `src/screens/`
 
 Screen components:
 
-- `HomeScreen.tsx` — Note list with filters and search
-- `NoteEditorScreen.tsx` — Rich text editor
-- `SettingsScreen.tsx` — App settings and AI config
-- `GitSyncScreen.tsx` — Git repository management
-- `AIScreen.tsx` — AI chat interface
+- `HomeScreen.tsx` — Recent + pinned feed
+- `NotesListScreen.tsx`, `NoteEditorScreen.tsx` — Note CRUD
+- `TodoListScreen.tsx` — Todo CRUD
+- `CanvasListScreen.tsx`, `CanvasEditorScreen.tsx` — Canvas CRUD
+- `ChatScreen.tsx`, `ChatThreadListScreen.tsx` — AI chat
+- `SettingsScreen.tsx` — App settings + AI config
+- `StageScreen.tsx` — Staged changes + Push / Push-all
+- `SyncStatusScreen.tsx` — Sync health row
+- `PaywallScreen.tsx` — StoreKit 2 paywall
+- `OnboardingScreen.tsx` — First-run onboarding
+- `ConflictResolverScreen.tsx` — 3-way merge UI
+- `ExploreScreen.tsx` — Repo browse (files, PRs, issues, branches)
+- `GraphViewScreen.tsx` — Backlink graph
+- `TemplateManagerScreen.tsx` — Note template CRUD
+- `RenderStyleSettingsScreen.tsx`, `RenderStyleEditorScreen.tsx` — Render style CRUD
+- `ThoughtDumpScreen.tsx` — Quick capture
+- `FileViewerScreen.tsx`, `ImageViewerScreen.tsx`, `PdfViewerScreen.tsx`, `VideoViewerScreen.tsx` — File viewers
 
 ## Data Flow
 
@@ -80,23 +128,24 @@ Screen components:
 
 ```
 User types in editor
-  → NoteEditorScreen state
-  → NoteContext.updateNote()
-  → NoteService.save() [AsyncStorage]
-  → SyncService.queueChange() [sync queue]
-  → GitService.commit() [isomorphic-git]
-  → GitService.push() [if online]
+  → NoteEditorScreen state (local)
+  → repoStore.saveNote() (AsyncStorage + dirty mark)
+  → Stage-or-queue: clone mode → LocalGitWriter.writeAndCommit
+                   API mode   → NoteSyncQueueService.enqueue
+  → StagePushScheduler drains on the 3-min idle window, on the
+    Stage screen's Push / Push-all, on a long-press of the floating
+    push button, or on the OS background task (≤ 10 files)
 ```
 
 ### AI Chat
 
 ```
 User sends message
-  → AIScreen state
-  → AIService.chat(messages)
-  → Vercel AI SDK (streamText)
+  → ChatScreen state
+  → AIService.chat(messages, provider)
+  → Vercel AI SDK (streamText) via providerFactory
   → Token budget check (modelLimits.ts)
-  → Provider selection (AIProviderType)
+  → Provider selection (AIProviderType: apple | llama | openai-compatible | anthropic)
   → Stream response to UI
 ```
 
@@ -108,7 +157,7 @@ HomeScreen mounts
   → Check cache (cacheKey + Date.now())
   → If stale: DailyQuoteService.fetchQuote()
     → Check aiPersonalizationEnabled
-    → If disabled: return generic quote
+    → If disabled: return generic quote from src/data/philosopher_quotes.json
     → If enabled: generate with AI (journals context)
   → Update cache (AsyncStorage)
   → Render DailyQuoteCard
@@ -118,17 +167,29 @@ HomeScreen mounts
 
 | Store | Purpose | Persistence |
 |-------|---------|-------------|
-| `aiStore` | AI settings | AsyncStorage + SecureStore (API keys) |
-| `noteStore` | Active note | AsyncStorage |
-| `gitStore` | Git repo state | AsyncStorage |
-| `syncStore` | Sync queue | AsyncStorage |
+| `aiStore`, `aiHubStore` | AI settings | AsyncStorage + SecureStore (API keys) |
+| `noteStore` | Active note + drafts | AsyncStorage |
+| `todoStore` | Todo items | AsyncStorage |
+| `canvasStore` | Canvas state | AsyncStorage |
+| `chatStore` | AI chat threads | AsyncStorage |
+| `repoStore` | Multi-host repo registry + sync mode | AsyncStorage + SecureStore |
+| `folderStore` | Folder tree | AsyncStorage |
+| `templateStore` | Note templates | AsyncStorage |
+| `renderStyleStore` | Markdown render styles | AsyncStorage |
+| `draftStore` | Unsaved drafts | AsyncStorage |
+| `reminderStore` | Note reminders | AsyncStorage + Notifications |
+| `conflictStore` | Unresolved merge conflicts | AsyncStorage |
+| `stageStore` | Stage-then-push queue + push progress | AsyncStorage |
+| `gitOperationStore` | Per-repo/per-path busy locks | in-memory |
+| `githubActivityStore` | GitHub activity feed | AsyncStorage |
+| `proStore` | Pro tier state | SecureStore + RevenueCat |
 | `themeStore` | Theme mode | AsyncStorage |
-| `settingsStore` | App settings | AsyncStorage |
 
 ## Offline Strategy
 
 1. **Write to AsyncStorage first** (fast, reliable)
-2. **Queue changes in syncStore** (change type + data)
-3. **Git commit locally** (isomorphic-git on device)
-4. **Push when online** (syncService checks NetInfo)
-5. **Pull on app focus** (fetch remote changes)
+2. **Queue changes in `stageStore` / `NoteSyncQueueService`** (clone vs API branch)
+3. **Clone mode: local commit via `LocalGitWriter.writeAndCommit`** (isomorphic-git on device, `push: false`)
+4. **Push when online** — clone mode drains via `StagePushScheduler` / Stage screen / floating-button long-press / OS background task; API mode pushes immediately on save
+5. **Pull on app focus** — `ForegroundSyncService.runPull` checks `NetInfo`, app state, and pull intervals
+6. **Resolve conflicts** — `ConflictResolverService` (3-way merge) with optional AI assist via `AiConflictResolver`
