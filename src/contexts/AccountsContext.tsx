@@ -229,6 +229,14 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
     async (accountId: string): Promise<boolean> => {
       const result = await AuthService.switchAccount(accountId);
       if (!result.ok) return false;
+      // SECURITY: re-sync GitHubService singleton with the new account's
+      // token — without this, the previous account's token is still in
+      // memory and direct GitHubService calls run as the wrong user.
+      if (result.token) {
+        await GitHubService.setToken(result.token, result.user as unknown as GhSetTokenUser).catch(
+          () => undefined,
+        );
+      }
       await refreshAccounts();
       return true;
     },
