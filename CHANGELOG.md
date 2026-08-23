@@ -8,6 +8,12 @@ All notable fixes and feature changes to GitNotēs are documented here.
 >
 > **History**: prior fixes (pre-2026-08) lived in single-PR wiki pages. Those pages were retired in [#1047](https://github.com/gedwolmen/gitnotes/pull/1047); their full diagnostic content is preserved in git history via `git log -p -- docs/wiki/<file>.md`.
 
+## 2026-08-24
+
+### Play Console Deobfuscation Warning — EAS Mapping Upload Setup (#1046)
+
+**chore(android)** — Added wiki documentation for EAS mapping-file auto-upload setup. The Play Console warning for version code 10 is resolved by enabling "Auto-upload mapping files" in EAS Project Settings → Submit → Google Play Store. Wiki page added at `docs/wiki/eas-mapping-upload.md`.
+
 ## 2026-08-23
 
 ### Simulator Keychain Entitlement (#1036)
