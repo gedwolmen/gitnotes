@@ -29,46 +29,55 @@ interface OnboardingScreenProps {
   onSkip: () => void;
 }
 
-const INFO_STEPS = [
-  {
-    title: 'Welcome to GitNotēs',
-    description: 'Your development notes, perfectly organized with Git integration.',
-    icon: 'journal-outline' as const,
-  },
-  {
-    title: 'Link to Git Repositories',
-    description: 'Connect your notes to GitHub repositories and track changes.',
-    icon: 'code-slash-outline' as const,
-  },
-  {
-    title: 'Organize with Folders',
-    description: 'Create folders to organize your notes by project or topic.',
-    icon: 'folder-outline' as const,
-  },
-  {
-    title: 'Stay Productive',
-    description: 'Pin important notes, use checklists, and track your progress.',
-    icon: 'rocket-outline' as const,
-  },
-  {
-    title: 'Dump Your Thoughts',
-    description: "Thought Dump lets you capture fleeting ideas, half-formed questions, and stream-of-consciousness reflections as Markdown files in your repo. They're indexed for smart search and feed context into your AI chats.",
-    icon: 'bulb-outline' as const,
-  },
-  {
-    title: 'Scheduled Learning',
-    description: 'Let AI generate daily or weekly learning notes on your topics. You can also get Questioner notes with questions you answer and get graded — perfect for active recall and spaced repetition.',
-    icon: 'help-circle-outline' as const,
-  },
-];
-
-const TOKEN_STEP = INFO_STEPS.length;
-const AI_STEP = TOKEN_STEP + 1;
-const GITHUB_TOOLS_STEP = AI_STEP + 1;
-const TOTAL_STEPS = INFO_STEPS.length + 3;
+const INFO_STEP_ICONS = [
+  'journal-outline',
+  'code-slash-outline',
+  'folder-outline',
+  'rocket-outline',
+  'bulb-outline',
+  'help-circle-outline',
+] as const;
 
 export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScreenProps) {
   const { t } = useTranslation();
+
+  const INFO_STEPS = [
+    {
+      title: t('onboarding.steps.welcomeTitle'),
+      description: t('onboarding.steps.welcomeDescription'),
+      icon: INFO_STEP_ICONS[0],
+    },
+    {
+      title: t('onboarding.steps.linkTitle'),
+      description: t('onboarding.steps.linkDescription'),
+      icon: INFO_STEP_ICONS[1],
+    },
+    {
+      title: t('onboarding.steps.foldersTitle'),
+      description: t('onboarding.steps.foldersDescription'),
+      icon: INFO_STEP_ICONS[2],
+    },
+    {
+      title: t('onboarding.steps.productiveTitle'),
+      description: t('onboarding.steps.productiveDescription'),
+      icon: INFO_STEP_ICONS[3],
+    },
+    {
+      title: t('onboarding.steps.thoughtDumpTitle'),
+      description: t('onboarding.steps.thoughtDumpDescription'),
+      icon: INFO_STEP_ICONS[4],
+    },
+    {
+      title: t('onboarding.steps.scheduledTitle'),
+      description: t('onboarding.steps.scheduledDescription'),
+      icon: INFO_STEP_ICONS[5],
+    },
+  ];
+
+  const TOKEN_STEP = INFO_STEPS.length;
+  const AI_STEP = TOKEN_STEP + 1;
+  const GITHUB_TOOLS_STEP = AI_STEP + 1;
+  const TOTAL_STEPS = INFO_STEPS.length + 3;
   const { colors } = useTheme();
   const { isPro } = useProGate();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
