@@ -73,4 +73,27 @@ describe('GitHubService Git-Data batch primitives', () => {
       data: { tree },
     });
   });
+
+  test('getRepositorySize returns the repo size in KB (#1037)', async () => {
+    mockHttpRequest.mockResolvedValueOnce({ data: { size: 262144 } });
+
+    await expect(GitHubService.getRepositorySize('owner', 'repo')).resolves.toBe(262144);
+    expect(mockHttpRequest).toHaveBeenCalledWith({
+      url: 'https://api.github.com/repos/owner/repo',
+      method: 'GET',
+      data: undefined,
+    });
+  });
+
+  test('getRepositorySize returns null when size is absent', async () => {
+    mockHttpRequest.mockResolvedValueOnce({ data: { name: 'repo' } });
+
+    await expect(GitHubService.getRepositorySize('owner', 'repo')).resolves.toBeNull();
+  });
+
+  test('getRepositorySize returns null on request failure', async () => {
+    mockHttpRequest.mockRejectedValueOnce(new Error('network down'));
+
+    await expect(GitHubService.getRepositorySize('owner', 'repo')).resolves.toBeNull();
+  });
 });

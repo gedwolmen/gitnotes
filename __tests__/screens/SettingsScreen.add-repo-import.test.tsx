@@ -190,6 +190,7 @@ jest.mock('../../src/services/GitHubService', () => ({
     setToken: jest.fn(),
     isAuthenticated: jest.fn(() => false),
     getRepositories: jest.fn(async () => []),
+    getRepositorySize: jest.fn(async () => null),
   },
 }));
 
