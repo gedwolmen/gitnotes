@@ -11,15 +11,18 @@ import {
   Clipboard,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../contexts/ThemeContext';
 import { OnboardingService } from '../services/OnboardingService';
 import { AuthService } from '../services/AuthService';
 import { GitHubService } from '../services/GitHubService';
 import { useAIStore } from '../stores/aiStore';
-import { useProStatus } from '../hooks/useProGate';
+import { useProGate } from '../hooks/useProGate';
 import { Button, Input, Surface } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
+import type { RootStackParamList } from '../navigation/types';
 
 interface OnboardingScreenProps {
   onComplete: () => void;
@@ -67,7 +70,8 @@ const TOTAL_STEPS = INFO_STEPS.length + 3;
 export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScreenProps) {
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const { isPro } = useProStatus();
+  const { isPro } = useProGate();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [currentStep, setCurrentStep] = useState(0);
   const [token, setToken] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
@@ -121,6 +125,10 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
       void finish();
     }
   }, [isPro, finish]);
+
+  const handleSeePlans = useCallback(() => {
+    navigation.navigate('Paywall');
+  }, [navigation]);
 
   const handleSkip = useCallback(async () => {
     await OnboardingService.completeOnboarding();
@@ -289,6 +297,14 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
                 label={t('common.continue', { defaultValue: 'Continue' })}
                 trailingIcon={<Ionicons name="arrow-forward" size={20} color={colors.accent} />}
                 iconAlign="edge"
+              />
+              <Button
+                variant="ghost"
+                fullWidth
+                testID="onboarding.button.see-plans"
+                onPress={handleSeePlans}
+                label="See Plans"
+                style={{ marginTop: 8 }}
               />
             </View>
           ) : (
