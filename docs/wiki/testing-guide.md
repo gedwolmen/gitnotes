@@ -15,21 +15,39 @@ GitNotēs uses **Jest** with **React Native Testing Library**. Tests run in Node
 ```javascript
 module.exports = {
   preset: '@react-native/jest-preset',
+  transform: {
+    '^.+\\.js$': 'babel-jest',
+    '^.+\\.ts$': 'babel-jest',
+    '^.+\\.tsx$': 'babel-jest',
+  },
+  testEnvironment: 'node',
+  testMatch: [
+    '**/__tests__/**/*.test.{ts,tsx}',
+    '**/?(*.)+(spec|test).{ts,tsx}',
+  ],
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+  moduleNameMapper: {
+    '\\.(css)$': '<rootDir>/__mocks__/styleMock.js',
+    '^expo-blur$': '<rootDir>/__mocks__/expo-blur.ts',
+    '^expo-file-system/legacy$': '<rootDir>/__mocks__/expo-file-system-legacy.ts',
+    '^expo-image$': '<rootDir>/__mocks__/expo-image.ts',
+    '^expo-secure-store$': '<rootDir>/__mocks__/expo-secure-store.ts',
+    '^@ai-sdk/anthropic$': '<rootDir>/__mocks__/ai-sdk-anthropic.ts',
+  },
+  setupFiles: ['<rootDir>/jest.setup.ts'],
   testPathIgnorePatterns: [
     '/node_modules/',
-    '/.worktrees/',  // Excludes git worktrees
+    '/.worktrees/',
   ],
   transformIgnorePatterns: [
-    'node_modules/(?!(react-native|@react-native|expo|...))',
+    'node_modules/(?!(react-native|@react-native|@react-navigation|expo|expo-[^/]+|@expo|react-native-reanimated|@shopify|nativewind|react-native-css|@rn-primitives|class-variance-authority|tailwind-merge|tailwindcss-animate)/)',
   ],
   collectCoverage: true,
   coveragePathIgnorePatterns: [
     '/node_modules/',
+    '/__tests__/',
     '/.worktrees/',
   ],
-  moduleNameMapper: {
-    '\\.(css|less)$': '<rootDir>/__mocks__/styleMock.js',
-  },
 };
 ```
 
@@ -268,26 +286,34 @@ jest.mock('@react-native-async-storage/async-storage', () => {
 
 ```yaml
 name: CI
-on: [push, pull_request]
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  test:
+  build-test:
+    name: TypeScript + Jest
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: 'yarn'
-      
+
       - run: yarn install --frozen-lockfile
       - run: yarn ts:check
+      - run: yarn lint
+      - run: yarn format:check
       - run: yarn jest --coverage
-      - run: yarn eslint . --ext .ts,.tsx
-      
-      - uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
 ```
 
 ## Coverage
