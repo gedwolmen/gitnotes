@@ -42,6 +42,7 @@
 | [Pro Dev Override](./pro-dev-override.md) | `__DEV__`-only iOS-simulator override that forces Pro gate for QA — NOT a payment bypass; RevenueCat unchanged; gate triple `__DEV__ && Platform.OS==='ios' && !Device.isDevice` |
 | [Token Removal Repo Cascade](./repo-removal-cascade.md) | removing a token also removes its synced repos, with a confirmation warning |
 | [Report Bugs & Feature Requests](./report-issue-links.md) | Settings About-row + onboarding footer link to `github.com/gedwolmen/gitnotes/issues`, i18n'd across all six locales |
+| [EAS Mapping File Auto-Upload](./eas-mapping-upload.md) | Configure EAS Build to auto-upload R8 mapping files to Google Play Console for deobfuscated crash traces (#1046) |
 
 ### Theming, i18n, quality
 
