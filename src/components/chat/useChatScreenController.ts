@@ -333,8 +333,12 @@ export function useChatScreenController(threadId: string) {
       updateMessage(assistantMessageId, { content: assistantText });
     };
 
+    // Scale flush interval with accumulated length: full re-parse per
+    // flush is O(n²) over a long streaming response otherwise.
     const scheduleFlush = () => {
-      if (!pendingFlush) pendingFlush = setTimeout(flushAssistantText, STREAM_RENDER_FLUSH_MS);
+      if (pendingFlush) return;
+      const scale = 1 + Math.floor(assistantText.length / 2000);
+      pendingFlush = setTimeout(flushAssistantText, STREAM_RENDER_FLUSH_MS * scale);
     };
 
     try {
