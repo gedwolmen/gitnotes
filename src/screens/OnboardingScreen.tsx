@@ -169,7 +169,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
               testID="onboarding.button.open-link"
               onPress={() => Linking.openURL('https://github.com/settings/personal-access-tokens/new?description=GitNotes')}
               leadingIcon={<Ionicons name="open-outline" size={14} color={colors.accent} />}
-              label="Open GitHub token settings"
+              label="Open token settings"
               textStyle={{ color: colors.text, fontSize: 14, fontWeight: '500' }}
               style={{ marginBottom: 16 }}
             />
