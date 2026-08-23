@@ -28,6 +28,7 @@ import { ChatRepoPickerModal } from '../components/ai/ChatRepoPickerModal';
 import { AddReminderScreen } from '../components/settings/AddReminderScreen';
 import ThoughtDumpScreen from '../screens/ThoughtDumpScreen';
 import PaywallScreen from '../screens/PaywallScreen';
+import OnboardingScreen from '../screens/OnboardingScreen';
 import { RootStackParamList } from './types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAIStore } from '../stores/aiStore';
@@ -78,7 +79,13 @@ const getLinkingConfig = (): LinkingOptions<RootStackParamList> => {
 
 const linking = getLinkingConfig();
 
-export default function AppNavigator() {
+interface AppNavigatorProps {
+  showOnboarding?: boolean;
+  onOnboardingComplete?: () => void;
+  onOnboardingSkip?: () => void;
+}
+
+export default function AppNavigator({ showOnboarding, onOnboardingComplete, onOnboardingSkip }: AppNavigatorProps) {
   const { isDark, colors } = useTheme();
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
   const chatRepoOwner = useAIStore((state) => state.chatRepoOwner);
@@ -152,7 +159,13 @@ export default function AppNavigator() {
         onStateChange={handleStateChange}
       >
         <View style={{ flex: 1 }}>
-          <Stack.Navigator initialRouteName="MainTabs">
+          <Stack.Navigator initialRouteName={showOnboarding ? 'Onboarding' : 'MainTabs'}>
+            <Stack.Screen
+              name="Onboarding"
+              options={{ headerShown: false }}
+            >
+              {() => <OnboardingScreen onComplete={onOnboardingComplete!} onSkip={onOnboardingSkip!} />}
+            </Stack.Screen>
             <Stack.Screen 
               name="MainTabs" 
               component={TabNavigator}

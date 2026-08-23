@@ -29,7 +29,6 @@ import { BiometricLockProvider } from './src/contexts/BiometricLockContext';
 import { BiometricLockScreen } from './src/components/BiometricLockScreen';
 import { BacklinksProvider } from './src/contexts/BacklinksContext';
 import AppNavigator from './src/navigation/AppNavigator';
-import OnboardingScreen from './src/screens/OnboardingScreen';
 import { OnboardingService } from './src/services/OnboardingService';
 import { NotificationService } from './src/services/NotificationService';
 import * as Notifications from 'expo-notifications';
@@ -155,22 +154,6 @@ export default function App() {
     );
   }
 
-  if (showOnboarding) {
-  return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <NativeWindThemeProvider>
-          <StatusBar style="auto" />
-          <OnboardingScreen
-            onComplete={handleOnboardingComplete}
-            onSkip={handleOnboardingSkip}
-          />
-        </NativeWindThemeProvider>
-      </ThemeProvider>
-    </SafeAreaProvider>
-  );
-  }
-
   return (
     <QueryClientProvider client={queryClient}>
     <SafeAreaProvider>
@@ -188,7 +171,11 @@ export default function App() {
                           <BiometricLockProvider>
                             <StatusBar style="auto" />
                             <StartupSyncGate>
-                              <AppNavigator />
+                              <AppNavigator
+              showOnboarding={showOnboarding}
+              onOnboardingComplete={handleOnboardingComplete}
+              onOnboardingSkip={handleOnboardingSkip}
+            />
                             </StartupSyncGate>
                             <GitHubActivityIndicator />
                             <SyncBlockOverlay />

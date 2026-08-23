@@ -22,6 +22,7 @@ type ProductionStackParamList = {
   AddReminder: undefined;
   ThoughtDump: { openVoiceOnMount?: boolean } | undefined;
   Paywall: undefined;
+  Onboarding: undefined;
 };
 
 type DevOnlyStackParamList = {
