@@ -194,8 +194,8 @@ async function cleanupProbeFile(probeUrl: string, token: string, sha: string | u
         body,
       });
       if (response.ok) return;
-    } catch {
-      // Ignore; cleanup is best-effort and must not affect the write verdict.
+    } catch (err) {
+      console.warn(`[GitNotes] Preflight cleanup failed for ${probeUrl}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 }
