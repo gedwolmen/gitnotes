@@ -94,6 +94,59 @@ function ensureToken(token: string | undefined) {
   return () => ({ username: 'x-access-token', password: token });
 }
 
+/**
+ * Repair a corrupted .git/HEAD before any ref operation. isomorphic-git's
+ * checkout can write a nested symbolic target (`ref: refs/heads/refs/heads/main`,
+ * #1189), and a dangling symbolic target jams every later git op; both are
+ * rewritten to point at the requested branch.
+ */
+export async function repairHeadRef(
+  fs: ReturnType<typeof makeGitFs>,
+  dir: string,
+  branch: string,
+): Promise<void> {
+  // Best-effort by contract: any failure here must not take down the
+  // surrounding pull/push — an unrepaired HEAD just fails again downstream.
+  try {
+    await repairHeadRefInner(fs, dir, branch);
+  } catch {
+    // ignore — next op will retry
+  }
+}
+
+async function repairHeadRefInner(
+  fs: ReturnType<typeof makeGitFs>,
+  dir: string,
+  branch: string,
+): Promise<void> {
+  const headPath = `${dir}/.git/HEAD`;
+  const healthyHead = `ref: refs/heads/${branch}\n`;
+
+  let raw: string;
+  try {
+    raw = String(await fs.promises.readFile(headPath, 'utf8'));
+  } catch {
+    return;
+  }
+
+  const trimmed = raw.trim();
+  if (trimmed === healthyHead.trim()) return;
+
+  if (trimmed.startsWith('ref: refs/heads/refs/heads/')) {
+    await fs.promises.writeFile(headPath, healthyHead, 'utf8');
+    return;
+  }
+
+  if (trimmed.startsWith('ref: ')) {
+    try {
+      await git.resolveRef({ fs, dir, ref: trimmed.slice(5).trim() });
+      return;
+    } catch {
+      await fs.promises.writeFile(headPath, healthyHead, 'utf8');
+    }
+  }
+}
+
 function authedRemote(owner: string, repo: string): string {
   return `https://github.com/${owner}/${repo}.git`;
 }
@@ -297,12 +350,17 @@ export class GitFsService {
    * UX is a separate, larger product surface.
    */
   static async pullWithFastForward(opts: FetchOpts): Promise<
-    { ok: true } | { ok: false; reason: 'diverged' | 'unknown'; error?: string }
+    { ok: true } | { ok: false; reason: 'diverged' | 'timeout' | 'network' | 'unknown'; error?: string }
   > {
     const info = parseRepoPath(opts.repoPath);
     if (!info) return { ok: false, reason: 'unknown', error: `Invalid repo path: ${opts.repoPath}` };
     const dir = repoDirVirtual(info.owner, info.repo);
     const fs = makeRepoFs();
+
+    // A corrupted HEAD (#1189) makes fast-forward throw for reasons that have
+    // nothing to do with the remote; repair it so the pull below judges the
+    // real divergence state.
+    await repairHeadRef(fs, dir, opts.branch);
 
     try {
       const remoteRef = `refs/remotes/origin/${opts.branch}`;
@@ -355,6 +413,12 @@ export class GitFsService {
         return { ok: false, reason: 'diverged', error: message };
       }
       await cleanCorruptedPackfiles(opts.repoPath);
+      if (/timed?\s*-?out|etimedout/i.test(message)) {
+        return { ok: false, reason: 'timeout', error: message };
+      }
+      if (/network|econn|enotfound|dns|offline|socket/i.test(message)) {
+        return { ok: false, reason: 'network', error: message };
+      }
       return { ok: false, reason: 'unknown', error: message };
     }
   }

@@ -75,6 +75,11 @@ jest.mock('expo-file-system/legacy', () => {
       if (!e || e.type !== 'file') throw new Error('File not found');
       return e.content ?? '';
     },
+    async writeAsStringAsync(uri: string, data?: string) {
+      const e = fsStore.get(uri);
+      if (e && e.type === 'file') e.content = String(data ?? '');
+      else fsStore.set(uri, { type: 'file', content: String(data ?? '') });
+    },
   };
 });
 
@@ -268,16 +273,38 @@ describe('GitFsService', () => {
     }
   });
 
-  test('pullWithFastForward classifies network failure as unknown', async () => {
-    getGitMocks().fetch.mockRejectedValueOnce(new Error('network'));
+  test('pullWithFastForward classifies network failure as network (#1191)', async () => {
+    getGitMocks().fetch.mockRejectedValueOnce(new Error('network request failed'));
     const result = await GitFsService.pullWithFastForward({
       repoPath: 'me/repo',
       branch: 'main',
     });
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.reason).toBe('unknown');
+      expect(result.reason).toBe('network');
     }
+  });
+
+  test('pullWithFastForward classifies timeouts as timeout (#1191)', async () => {
+    getGitMocks().fetch.mockRejectedValueOnce(Object.assign(new Error('request timed out'), { code: 'ETIMEDOUT' }));
+    const result = await GitFsService.pullWithFastForward({
+      repoPath: 'me/repo',
+      branch: 'main',
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe('timeout');
+    }
+  });
+
+  test('pullWithFastForward repairs a nested symbolic HEAD before pulling (#1192)', async () => {
+    const headUri = 'file:///doc/GitNotes/me/repo/.git/HEAD';
+    getFsStore().set(headUri, { type: 'file', content: 'ref: refs/heads/refs/heads/main\n' });
+
+    const result = await GitFsService.pullWithFastForward({ repoPath: 'me/repo', branch: 'main' });
+
+    expect(result.ok).toBe(true);
+    expect(getFsStore().get(headUri)?.content).toBe('ref: refs/heads/main\n');
   });
 
   test('clone failure cleans up partial clone by calling removeRepo', async () => {

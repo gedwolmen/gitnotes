@@ -32,7 +32,7 @@ jest.mock('../../src/services/GitService', () => ({
   },
 }));
 
-import { pullFromSingleRepo } from '../../src/services/RepoPullService';
+import { __resetCanvasParseLogForTests, pullFromSingleRepo } from '../../src/services/RepoPullService';
 import { GitHubService } from '../../src/services/GitHubService';
 import { StorageService } from '../../src/services/StorageService';
 
@@ -58,6 +58,7 @@ describe('RepoPullService canvas pull + reconcile', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockLocalCanvases.length = 0;
+    __resetCanvasParseLogForTests();
     (GitHubService.isAuthenticated as jest.Mock).mockReturnValue(true);
     (StorageService.getSavedRepositories as jest.Mock).mockResolvedValue([
       { path: 'org/repo', branch: 'main' },
@@ -105,6 +106,31 @@ describe('RepoPullService canvas pull + reconcile', () => {
     );
     expect(parseWarning).toBeTruthy();
     expect(parseWarning).toContain('canvases/broken.json');
+    warnSpy.mockRestore();
+  });
+
+  // Bug #1191: a malformed remote canvas re-warned on every pull; it should
+  // warn once per session and stay quiet until it parses cleanly again.
+  it('warns a malformed canvas only once across repeat pulls', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const seedBroken = () => {
+      (GitHubService.getTreeRecursiveOrThrow as jest.Mock).mockResolvedValue([
+        { type: 'blob', path: 'canvases/broken.json', sha: 'a' },
+      ]);
+      (GitHubService.getFileContent as jest.Mock).mockImplementation(
+        async (_owner: string, _repo: string, path: string) =>
+          path === 'canvases/broken.json' ? '{ truncated' : null,
+      );
+    };
+    seedBroken();
+
+    await pullFromSingleRepo('org/repo');
+    await pullFromSingleRepo('org/repo');
+
+    const warns = warnSpy.mock.calls.filter(([msg]) =>
+      String(msg).includes('Failed to parse canvas JSON'),
+    );
+    expect(warns).toHaveLength(1);
     warnSpy.mockRestore();
   });
 
