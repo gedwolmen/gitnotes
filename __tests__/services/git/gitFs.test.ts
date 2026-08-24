@@ -319,37 +319,55 @@ describe('gitFs adapter', () => {
     );
   });
 
-  test('UTF-8 fast path: text extensions bypass base64 round-trip', async () => {
+  test('unencoded read of text extension returns byte-exact Uint8Array (not string) (#1221)', async () => {
+    // isomorphic-git's blob-hash / status paths read working-tree files
+    // WITHOUT an encoding and require raw bytes. Returning a JS string made
+    // GitObject.wrap compute the blob length in UTF-16 units and emit a
+    // zero-filled blob for any file with multi-byte characters.
+    const fs = makeGitFs('file:///doc/git/');
+    const content = '# Hello — World\n\nThis is a test note with an em-dash.';
+    await fs.promises.writeFile('/notes/test.md', content);
+    const read = await fs.promises.readFile('/notes/test.md');
+    expect(read).toBeInstanceOf(Uint8Array);
+    const expected = new TextEncoder().encode(content);
+    expect(Array.from(read as Uint8Array)).toEqual(Array.from(expected));
+  });
+
+  test('explicit utf8 read of text extension still returns a string', async () => {
     const fs = makeGitFs('file:///doc/git/');
     const content = '# Hello World\n\nThis is a test note.';
     await fs.promises.writeFile('/notes/test.md', content);
-    const read = await fs.promises.readFile('/notes/test.md');
+    const read = await fs.promises.readFile('/notes/test.md', { encoding: 'utf8' });
     expect(read).toBe(content);
     expect(typeof read).toBe('string');
   });
 
-  test('UTF-8 fast path: sha-identical round-trip for json', async () => {
+  test('explicit utf8 read round-trips json', async () => {
     const fs = makeGitFs('file:///doc/git/');
     const scene = { version: 1, width: 800, height: 600, elements: [] };
     const content = JSON.stringify(scene);
     await fs.promises.writeFile('/canvases/board.json', content);
-    const read = await fs.promises.readFile('/canvases/board.json');
+    const read = await fs.promises.readFile('/canvases/board.json', { encoding: 'utf8' });
     expect(read).toBe(content);
     expect(typeof read).toBe('string');
     expect(JSON.parse(read as string)).toEqual(scene);
   });
 
-  test('UTF-8 fast path: norg and org extensions also use fast path', async () => {
+  test('unencoded read of norg/org returns byte-exact Uint8Array', async () => {
     const fs = makeGitFs('file:///doc/git/');
     await fs.promises.writeFile('/notes/test.norg', 'Norg content');
     const norg = await fs.promises.readFile('/notes/test.norg');
-    expect(norg).toBe('Norg content');
-    expect(typeof norg).toBe('string');
+    expect(norg).toBeInstanceOf(Uint8Array);
+    expect(Array.from(norg as Uint8Array)).toEqual(
+      Array.from(new TextEncoder().encode('Norg content')),
+    );
 
     await fs.promises.writeFile('/notes/test.org', '* Org content');
     const org = await fs.promises.readFile('/notes/test.org');
-    expect(org).toBe('* Org content');
-    expect(typeof org).toBe('string');
+    expect(org).toBeInstanceOf(Uint8Array);
+    expect(Array.from(org as Uint8Array)).toEqual(
+      Array.from(new TextEncoder().encode('* Org content')),
+    );
   });
 
   test('binary files still use base64 path', async () => {
@@ -367,8 +385,8 @@ describe('gitFs adapter', () => {
     const bytes = new TextEncoder().encode(content);
     await fs.promises.writeFile('/notes/checkout.md', bytes);
     const back = await fs.promises.readFile('/notes/checkout.md');
-    expect(back).toBe(content);
-    expect(typeof back).toBe('string');
+    expect(back).toBeInstanceOf(Uint8Array);
+    expect(Array.from(back as Uint8Array)).toEqual(Array.from(bytes));
   });
 
   test('writeFile non-UTF-8 bytes to text extension falls back to base64 (no corruption)', async () => {
