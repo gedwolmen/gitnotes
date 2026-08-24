@@ -706,7 +706,7 @@ async function pullTodosFromRepo(
         } catch (error) {
           skipped++;
           skippedPaths.push(file.path);
-          console.error(
+          console.warn(
             `[RepoPullService] Failed to parse todo JSON in ${file.path} (skipping):`,
             error instanceof Error ? error.message : error,
           );
@@ -751,7 +751,7 @@ async function pullTodosFromRepo(
         }
       }
       if (skipped > 0) {
-        console.error(
+        console.warn(
           `[RepoPullService] Skipped ${skipped} todo file(s) with invalid JSON content: ${skippedPaths.join(', ')}`,
         );
       }
