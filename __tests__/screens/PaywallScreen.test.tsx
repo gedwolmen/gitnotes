@@ -240,30 +240,30 @@ describe('PaywallScreen', () => {
   it('uses the trial CTA label for the monthly option when the product is trial-eligible', async () => {
     eligibilityMock.mockResolvedValue({ 'monthly-product': true });
     const { getAllByText } = await renderScreen();
-    expect(getAllByText('Try 14 days free, then $2.99/month').length).toBeGreaterThanOrEqual(1);
+    expect(getAllByText('Try 14 days free, then $3.99/month').length).toBeGreaterThanOrEqual(1);
   });
 
   it('uses the plain price label when the user is not trial-eligible', async () => {
     const { getByText } = await renderScreen();
-    expect(getByText('$2.99/month')).toBeTruthy();
+    expect(getByText('$3.99/month')).toBeTruthy();
   });
 
   it('uses the yearly trial price line when the yearly product is trial-eligible', async () => {
     eligibilityMock.mockResolvedValue({ 'yearly-product': true });
     setReadyState({ yearlyPackage: yearlyPkg });
     const { getByText } = await renderScreen();
-    expect(getByText('Try 14 days free, then $19.99/year')).toBeTruthy();
+    expect(getByText('Try 14 days free, then $34.99/year')).toBeTruthy();
   });
 
   it('uses the standard yearly price line when the yearly product is not trial-eligible', async () => {
     setReadyState({ yearlyPackage: yearlyPkg });
     const { getByText } = await renderScreen();
-    expect(getByText('$19.99/year')).toBeTruthy();
+    expect(getByText('$34.99/year')).toBeTruthy();
   });
 
   it('shows the lifetime CTA with the price', async () => {
     const { getByText } = await renderScreen();
-    expect(getByText('$40.00 one-time')).toBeTruthy();
+    expect(getByText('$39.99 one-time')).toBeTruthy();
   });
 
   it('hides the yearly option when no yearly package is offered', async () => {
@@ -284,7 +284,7 @@ describe('PaywallScreen', () => {
     setReadyState({ yearlyPackage: yearlyPkg, purchaseYearly });
     const { getByTestId, getByText } = await renderScreen();
     expect(getByTestId('paywall.yearly.cta')).toBeTruthy();
-    expect(getByText('$19.99/year')).toBeTruthy();
+    expect(getByText('$34.99/year')).toBeTruthy();
     await act(async () => {
       fireEvent.press(getByTestId('paywall.yearly.cta'));
     });
