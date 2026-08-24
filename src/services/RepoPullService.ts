@@ -571,7 +571,7 @@ async function pullCanvasesFromRepo(
           try {
             scene = JSON.parse(file.content);
           } catch (error) {
-            console.warn('[RepoPullService] Failed to parse canvas JSON:', error);
+            console.warn('[RepoPullService] Failed to parse canvas JSON:', file.path, error);
             continue;
           }
 
