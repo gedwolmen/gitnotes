@@ -237,6 +237,7 @@ jest.mock('../../src/services/AuthService', () => {
 });
 
 jest.mock('../../src/services/git/GitFsService', () => ({
+  repairHeadRef: jest.fn(async () => undefined),
    GitFsService: {
      isCloned: jest.fn(async () => false),
      clone: jest.fn(async () => undefined),
