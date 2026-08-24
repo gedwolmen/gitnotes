@@ -11,7 +11,6 @@ import { Linking } from 'react-native';
 import OnboardingScreen from '../../src/screens/OnboardingScreen';
 import { __setProState } from '../../src/stores/proStore';
 import { OnboardingService } from '../../src/services/OnboardingService';
-import { useAIStore } from '../../src/stores/aiStore';
 
 jest.mock('../../src/contexts/ThemeContext', () => ({
   useTheme: () => ({
@@ -65,22 +64,8 @@ jest.mock('../../src/services/GitHubService', () => ({
   },
 }));
 
-jest.mock('../../src/stores/aiStore', () => {
-  const state = {
-    githubToolsEnabled: false,
-    toggleGithubTools: jest.fn(async () => undefined),
-  };
-  return {
-    useAIStore: Object.assign(
-      jest.fn((selector?: (s: typeof state) => unknown) => (selector ? selector(state) : state)),
-      { getState: () => state }
-    ),
-  };
-});
-
-const TOKEN_STEP_INDEX = 5; // 5 INFO_STEPS (removed Scheduled Learning in #1104)
+const TOKEN_STEP_INDEX = 5;
 const AI_STEP_INDEX = 6;
-const GITHUB_TOOLS_STEP_INDEX = 7;
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -95,7 +80,6 @@ async function advanceToAIStep(getByTestId: ReturnType<typeof render>['getByTest
   for (let i = 0; i < TOKEN_STEP_INDEX; i++) {
     fireEvent.press(getByTestId('onboarding.button.next'));
   }
-  // Token step: skip token, just press Connect-or-Skip
   fireEvent.press(getByTestId('onboarding.button.next'));
 }
 
@@ -112,16 +96,14 @@ describe('OnboardingScreen — GitHub Tools Pro gate', () => {
     expect(openUrlSpy).toHaveBeenCalledWith('https://github.com/gedwolmen/gitnotes/issues');
   });
 
-  it('skips the GitHub Tools step and completes onboarding for non-Pro users', async () => {
+  it('completes onboarding for non-Pro users on AI step', async () => {
     const { getByTestId, queryByTestId } = render(
       <OnboardingScreen onComplete={mockOnComplete} onSkip={mockOnSkip} />
     );
 
     await advanceToAIStep(getByTestId);
 
-    // Sanity: we are on the AI step.
     expect(getByTestId('onboarding.button.pro-continue')).toBeTruthy();
-
     fireEvent.press(getByTestId('onboarding.button.pro-continue'));
 
     await waitFor(() => {
@@ -129,38 +111,14 @@ describe('OnboardingScreen — GitHub Tools Pro gate', () => {
       expect(mockOnComplete).toHaveBeenCalledTimes(1);
     });
 
-    // The GitHub Tools "Enable" button must never have been rendered.
     expect(queryByTestId('onboarding.button.enable-github-tools')).toBeNull();
     expect(queryByTestId('onboarding.button.skip-github-tools')).toBeNull();
-
-    // Toggle must never have been invoked.
-    expect(useAIStore.getState().toggleGithubTools).not.toHaveBeenCalled();
   });
 
-  it('does not advance to the GitHub Tools step index for non-Pro users', async () => {
-    const { getByTestId } = render(
-      <OnboardingScreen onComplete={mockOnComplete} onSkip={mockOnSkip} />
-    );
-
-    await advanceToAIStep(getByTestId);
-    fireEvent.press(getByTestId('onboarding.button.pro-continue'));
-
-    await waitFor(() => {
-      expect(mockOnComplete).toHaveBeenCalledTimes(1);
-    });
-
-    // AI step is the last step non-Pro users can be on before finish() runs.
-    // GITHUB_TOOLS_STEP_INDEX must not be reachable; we verify by ensuring
-    // the GitHub Tools enable button (only rendered at that index) never appeared.
-    expect(() => getByTestId('onboarding.button.enable-github-tools')).toThrow();
-    // Reference the index so the test fails loudly if the constant shifts in src.
-    expect(GITHUB_TOOLS_STEP_INDEX).toBeGreaterThan(AI_STEP_INDEX);
-  });
-
-  it('shows the GitHub Tools step for Pro users and lets them enable the toggle', async () => {
+  it('completes onboarding for Pro users on AI step', async () => {
     __setProState({ status: 'pro', entitlementActive: true, isGrandfathered: false });
 
-    const { getByTestId } = render(
+    const { getByTestId, queryByTestId } = render(
       <OnboardingScreen onComplete={mockOnComplete} onSkip={mockOnSkip} />
     );
 
@@ -168,19 +126,15 @@ describe('OnboardingScreen — GitHub Tools Pro gate', () => {
     fireEvent.press(getByTestId('onboarding.button.pro-continue'));
 
     await waitFor(() => {
-      expect(getByTestId('onboarding.button.enable-github-tools')).toBeTruthy();
-    });
-
-    fireEvent.press(getByTestId('onboarding.button.enable-github-tools'));
-
-    await waitFor(() => {
-      expect(useAIStore.getState().toggleGithubTools).toHaveBeenCalledTimes(1);
       expect(OnboardingService.completeOnboarding).toHaveBeenCalledTimes(1);
       expect(mockOnComplete).toHaveBeenCalledTimes(1);
     });
+
+    expect(queryByTestId('onboarding.button.enable-github-tools')).toBeNull();
+    expect(queryByTestId('onboarding.button.skip-github-tools')).toBeNull();
   });
 
-  it('shows the GitHub Tools step for grandfathered users (treated as Pro)', async () => {
+  it('completes onboarding for grandfathered users on AI step', async () => {
     __setProState({ status: 'pro', entitlementActive: false, isGrandfathered: true });
 
     const { getByTestId } = render(
@@ -191,28 +145,6 @@ describe('OnboardingScreen — GitHub Tools Pro gate', () => {
     fireEvent.press(getByTestId('onboarding.button.pro-continue'));
 
     await waitFor(() => {
-      expect(getByTestId('onboarding.button.enable-github-tools')).toBeTruthy();
-    });
-  });
-
-  it('lets Pro users skip the GitHub Tools step without enabling the toggle', async () => {
-    __setProState({ status: 'pro', entitlementActive: true, isGrandfathered: false });
-
-    const { getByTestId } = render(
-      <OnboardingScreen onComplete={mockOnComplete} onSkip={mockOnSkip} />
-    );
-
-    await advanceToAIStep(getByTestId);
-    fireEvent.press(getByTestId('onboarding.button.pro-continue'));
-
-    await waitFor(() => {
-      expect(getByTestId('onboarding.button.skip-github-tools')).toBeTruthy();
-    });
-
-    fireEvent.press(getByTestId('onboarding.button.skip-github-tools'));
-
-    await waitFor(() => {
-      expect(useAIStore.getState().toggleGithubTools).not.toHaveBeenCalled();
       expect(OnboardingService.completeOnboarding).toHaveBeenCalledTimes(1);
       expect(mockOnComplete).toHaveBeenCalledTimes(1);
     });
