@@ -115,8 +115,21 @@ export async function writeThroughPush(
   mutationId: string,
 ): Promise<StagingResult> {
   let dropped = false;
+  let settled = false;
+
   const unsubDrop = NoteSyncQueueService.onDroppedMutation((event) => {
-    if (event.mutation.id === mutationId) dropped = true;
+    if (event.mutation.id === mutationId) {
+      dropped = true;
+      if (settled) {
+        // Mutation was dropped AFTER we returned success to the caller.
+        // We can't notify via SyncDropNotifier here (no Alert context),
+        // but we can at least log it clearly.
+        console.warn('[writeThroughPush] mutation dropped post-timeout', {
+          mutationId,
+          repoPath,
+        });
+      }
+    }
   });
 
   const chain = (async (): Promise<StagingResult> => {
@@ -147,13 +160,21 @@ export async function writeThroughPush(
         githubActivity.end();
       }
     } finally {
-      releaseCycle();
+      settled = true;
       unsubDrop();
+      releaseCycle();
     }
   })();
 
+  // If the timeout fires, attach a detached error handler so drops don't go silent
+  const timeoutHandle = setTimeout(() => {
+    chain.catch((error) => {
+      console.warn('[writeThroughPush] detached chain failed post-timeout', { mutationId, repoPath, error });
+    });
+  }, 0);
+
   return await Promise.race([
-    chain,
+    chain.finally(() => clearTimeout(timeoutHandle)),
     new Promise<StagingResult>((resolve) =>
       setTimeout(
         () => resolve({ success: true, pendingSync: true }),
