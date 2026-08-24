@@ -1,5 +1,5 @@
 import React, { Fragment, ReactNode } from 'react';
-import { Pressable, StyleProp, Text, View, ViewStyle, StyleSheet } from 'react-native';
+import { Pressable, StyleProp, Text, View, ViewStyle, StyleSheet, AccessibilityRole } from 'react-native';
 import { Surface } from './Surface';
 import { useTheme, useTokens } from '../../contexts/ThemeContext';
 
@@ -85,10 +85,11 @@ export interface GroupRowProps {
   style?: StyleProp<ViewStyle>;
   children?: ReactNode;
   testID?: string;
+  accessibilityRole?: AccessibilityRole;
 }
 
 export function GroupRow(props: GroupRowProps) {
-  const { onPress, onLongPress, disabled, leading, trailing, style, children, testID } = props;
+  const { onPress, onLongPress, disabled, leading, trailing, style, children, testID, accessibilityRole } = props;
   const { colors, spacing } = useTokens();
 
   const content = (
@@ -115,6 +116,7 @@ export function GroupRow(props: GroupRowProps) {
   return (
     <Pressable
       testID={testID}
+      accessibilityRole={accessibilityRole}
       onPress={disabled ? undefined : onPress}
       onLongPress={disabled ? undefined : onLongPress}
       disabled={disabled}

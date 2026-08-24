@@ -266,6 +266,10 @@ export function SettingsContent(props: SettingsContentProps) {
       }),
     [providers],
   );
+  const totalHosts = useMemo(
+    () => accountSummaries.reduce((sum, s) => sum + s.hosts.length, 0),
+    [accountSummaries],
+  );
   const providerAvailability = useProvidersAvailability(visibleProviders);
   const intervalLabel =
     SYNC_INTERVAL_OPTIONS.find((opt) => opt.value === syncIntervalSeconds)?.label ?? t('settings.everyMinute');
@@ -467,6 +471,7 @@ export function SettingsContent(props: SettingsContentProps) {
                 <React.Fragment key={summary.accountId}>
                   <GroupRow
                     testID="settings.row.account"
+                    accessibilityRole="button"
                     leading={summary.account.avatarUrl ? <Image source={{ uri: summary.account.avatarUrl }} style={styles.avatar} /> : null}
                   >
                     <Text style={[styles.settingLabel, { color: colors.text }]}>
@@ -583,7 +588,7 @@ export function SettingsContent(props: SettingsContentProps) {
               </Text>
             </GroupRow>
 
-            {accountSummaries.length < 2 ? (
+            {totalHosts > 1 ? (
               <GroupRow testID="settings.button.remove-token" onPress={onRemoveToken}>
                 <Text style={[styles.settingLabel, { color: colors.error }]}>
                   {t('accounts.removeActiveConnection')}
