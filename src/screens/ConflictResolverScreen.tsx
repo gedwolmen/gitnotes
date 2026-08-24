@@ -10,6 +10,7 @@ import { ConflictResolverService } from '../services/conflict/ConflictResolverSe
 import { proposeMerge } from '../services/conflict/AiConflictResolver';
 import { GitFsService } from '../services/git/GitFsService';
 import { LocalGitWriter } from '../services/git/LocalGitWriter';
+import { notifyStagedChanged } from '../services/git/StagingService';
 import { SyncEngineService } from '../services/SyncEngineService';
 import { AuthService } from '../services/AuthService';
 import type { FileConflict } from '../services/conflict/types';
@@ -204,6 +205,8 @@ export default function ConflictResolverScreen() {
           Alert.alert('Push failed', result.error);
           return;
         }
+
+        notifyStagedChanged();
 
         await removeConflict(repoPath, branch);
 

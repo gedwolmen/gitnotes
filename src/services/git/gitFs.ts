@@ -213,11 +213,13 @@ export function makeGitFs(root: string): PromiseFsClient {
         throw new FsError('EISDIR', `EISDIR: illegal operation on directory '${filepath}'`);
       }
       const encoding = typeof opts === 'string' ? opts : opts?.encoding;
-      if (encoding === 'utf8' || (!encoding && isTextExtension(filepath))) {
+      if (encoding === 'utf8') {
         const text = await FileSystem.readAsStringAsync(uri);
         await maybeYield();
         return text;
       }
+      // Blob-hash/status reads need raw bytes; a string breaks GitObject.wrap
+      // for multi-byte files (UTF-16 length, zero-filled blob, #1221).
       const b64 = await FileSystem.readAsStringAsync(uri, {
         encoding: FileSystem.EncodingType.Base64,
       });
