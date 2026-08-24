@@ -31,6 +31,7 @@ export function MarkdownToolbar({ onFormat, format }: Props) {
             onPress={() => onFormat(action)}
             style={styles.button}
             accessibilityLabel={label}
+            accessibilityRole="button"
           >
             <Text style={styles.buttonText}>{label}</Text>
           </TouchableOpacity>
