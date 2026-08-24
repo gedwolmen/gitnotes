@@ -67,6 +67,14 @@ const MATCHERS: Matcher[] = [
     needles: ['internal error caused this command to fail', 'isomorphic-git'],
     message: 'Sync failed. Pull to retry.',
   },
+  {
+    needles: ['could not generate', 'PushRejectedError', 'branch has diverged'],
+    message: 'Push rejected — your branch has diverged from remote. Pull remote changes first.',
+  },
+  {
+    needles: ['could not find', 'not found', 'no remote ref found', 'cannot discard without an origin'],
+    message: 'Push rejected — branch may not exist on remote or remote ref is missing. Push a commit first.',
+  },
 ];
 
 function fallbackFor(op?: SyncOp): string {
