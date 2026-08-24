@@ -85,10 +85,12 @@ export interface GroupRowProps {
   style?: StyleProp<ViewStyle>;
   children?: ReactNode;
   testID?: string;
+  accessibilityRole?: 'button' | 'link' | 'none';
+  accessibilityLabel?: string;
 }
 
 export function GroupRow(props: GroupRowProps) {
-  const { onPress, onLongPress, disabled, leading, trailing, style, children, testID } = props;
+  const { onPress, onLongPress, disabled, leading, trailing, style, children, testID, accessibilityRole, accessibilityLabel } = props;
   const { colors, spacing } = useTokens();
 
   const content = (
@@ -120,6 +122,8 @@ export function GroupRow(props: GroupRowProps) {
       disabled={disabled}
       android_ripple={{ color: colors.shadow + '20' }}
       style={({ pressed }) => ({ backgroundColor: pressed ? colors.shadow + '14' : 'transparent' })}
+      accessibilityRole={accessibilityRole}
+      accessibilityLabel={accessibilityLabel}
     >
       {content}
     </Pressable>

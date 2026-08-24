@@ -317,7 +317,9 @@ export function SettingsContent(props: SettingsContentProps) {
       <Group title={t('pro.settingsRow')}>
         <GroupRow
           testID="settings.row.pro"
-          onPress={() => { if (!isPro) onOpenPaywall(); }}
+          onPress={isPro ? undefined : () => onOpenPaywall()}
+          accessibilityRole={isPro ? 'none' : 'button'}
+          accessibilityLabel={isPro ? `${t('pro.settingsRow')}, ${proStatusLabel}` : undefined}
           trailing={
             <Text style={[styles.settingValue, { color: colors.textSecondary }]}>
               {proStatusLabel}
@@ -543,6 +545,8 @@ export function SettingsContent(props: SettingsContentProps) {
                         <TouchableOpacity
                           onPress={() => onDisconnectHost(host.id)}
                           testID={`settings.button.disconnect-host.${host.id}`}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${GIT_HOST_LABELS[host.provider]} ${t('accounts.disconnect')}`}
                           activeOpacity={0.75}
                           className="flex-row items-center gap-1.5 px-3 py-2 border"
                           style={{ borderRadius: radii.md, borderColor: colors.error }}
@@ -583,13 +587,15 @@ export function SettingsContent(props: SettingsContentProps) {
               </Text>
             </GroupRow>
 
-            {accountSummaries.length < 2 ? (
-              <GroupRow testID="settings.button.remove-token" onPress={onRemoveToken}>
+            {accountSummaries.length < 2 && accountSummaries.every((s) => s.hosts.length <= 1) ? (
+              null
+            ) : (
+              <GroupRow testID="settings.button.remove-token" onPress={onRemoveToken} accessibilityRole="button">
                 <Text style={[styles.settingLabel, { color: colors.error }]}>
                   {t('accounts.removeActiveConnection')}
                 </Text>
               </GroupRow>
-            ) : null}
+            )}
           </>
         )}
       </Group>
