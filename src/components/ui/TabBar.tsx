@@ -50,6 +50,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
           paddingBottom: insets.bottom + spacing[3],
           paddingTop: spacing[4],
           backgroundColor: 'transparent',
+          zIndex: 10000,
         }}
       >
         <View
@@ -123,6 +124,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
         paddingBottom: insets.bottom + spacing[3],
         paddingTop: spacing[4],
         backgroundColor: 'transparent',
+        zIndex: 10000,
       }}
     >
       <BlurView
