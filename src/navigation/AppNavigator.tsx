@@ -106,6 +106,16 @@ export default function AppNavigator({ showOnboarding, onOnboardingComplete, onO
     }
   }, [interstitialEligible, isPro, markInterstitialShown, navigationRef]);
 
+  useEffect(() => {
+    if (showOnboarding) return;
+    if (navigationRef.isReady()) {
+      navigationRef.reset({
+        index: 0,
+        routes: [{ name: 'MainTabs' }],
+      });
+    }
+  }, [showOnboarding, navigationRef]);
+
   const baseTheme = isDark ? DarkTheme : DefaultTheme;
   const navigationTheme = {
     ...baseTheme,
