@@ -31,6 +31,7 @@ jest.mock('../src/services/NoteSyncQueueService', () => ({
 
 jest.mock('../src/services/git/StagingService', () => ({
   StagingService: { stageDelete: jest.fn(), stageUpsert: jest.fn() },
+  notifyStagedChanged: jest.fn(),
 }));
 
 jest.mock('../src/services/SyncEngineService', () => ({
