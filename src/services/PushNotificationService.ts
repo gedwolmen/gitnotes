@@ -1,5 +1,5 @@
 import { AppState } from 'react-native';
-import { setOnPushFailure } from './StagePushScheduler';
+import { addOnPushFailure } from './StagePushScheduler';
 import { useStageStore } from '../stores/stageStore';
 import { NotificationService } from './NotificationService';
 
@@ -12,6 +12,7 @@ function appIsForegrounded(): boolean {
 
 let lastProgressSentAt = 0;
 let unsubscribeProgress: (() => void) | null = null;
+let unsubscribePushFailure: (() => void) | null = null;
 
 /** Plain push failures open the stage page; conflict-caused ones open the conflicts page
  *  with specific repo/branch if provided. */
@@ -37,7 +38,8 @@ function parsePushKey(key: string): { repoPath: string; branch: string } | null 
 
 /** Route StagePushScheduler push failures into a deep-linkable local notification. */
 export function attachToScheduler(): void {
-  setOnPushFailure(({ key, error }) => {
+  unsubscribePushFailure?.();
+  unsubscribePushFailure = addOnPushFailure(({ key, error }) => {
     const parts = parsePushKey(key);
     if (parts === null) return;
     const { repoPath, branch } = parts;

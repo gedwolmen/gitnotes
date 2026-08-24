@@ -16,9 +16,10 @@ jest.mock('../../src/services/NotificationService', () => ({
   },
 }));
 
-const mockSetOnPushFailure = jest.fn();
+const mockAddOnPushFailure = jest.fn(() => jest.fn());
 jest.mock('../../src/services/StagePushScheduler', () => ({
-  setOnPushFailure: mockSetOnPushFailure,
+  setOnPushFailure: jest.fn(),
+  addOnPushFailure: mockAddOnPushFailure,
 }));
 
 const mockSubscribe = jest.fn(() => jest.fn());
@@ -54,7 +55,7 @@ describe('PushNotificationService', () => {
 
   test('failure notification is scheduled with the push-failure payload shape', () => {
     pushService.attachToScheduler();
-    const handler = mockSetOnPushFailure.mock.calls[0][0] as FailureHandler;
+    const handler = mockAddOnPushFailure.mock.calls[0][0] as FailureHandler;
 
     handler({ key: '/repo/path::main', error: 'boom' });
 
@@ -68,7 +69,7 @@ describe('PushNotificationService', () => {
 
   test('conflict-caused failures are flagged conflict: true', () => {
     pushService.attachToScheduler();
-    const handler = mockSetOnPushFailure.mock.calls[0][0] as FailureHandler;
+    const handler = mockAddOnPushFailure.mock.calls[0][0] as FailureHandler;
 
     handler({ key: '/repo/path::main', error: 'conflict-detected' });
     expect(mockSchedulePushFailure).toHaveBeenLastCalledWith(

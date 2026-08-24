@@ -60,17 +60,29 @@ let idleTimer: ReturnType<typeof setTimeout> | null = null;
 let schedulerRunning = false;
 let draining = false;
 let unsubscribeStaged: (() => void) | null = null;
-let onPushFailure: PushFailureHandler | null = null;
+const pushFailureHandlers = new Set<PushFailureHandler>();
 
-/** Register the push-failure hook (notification wiring lands in todo 9). */
+/**
+ * Add a push-failure handler. Returns an unsubscribe function.
+ * Multiple handlers can coexist — all are called on each push failure (#1217).
+ */
+export function addOnPushFailure(handler: PushFailureHandler): () => void {
+  pushFailureHandlers.add(handler);
+  return () => pushFailureHandlers.delete(handler);
+}
+
+/** @deprecated Use addOnPushFailure instead. Kept for backward compatibility. */
 export function setOnPushFailure(handler: PushFailureHandler | null): void {
-  onPushFailure = handler;
+  if (handler === null) return;
+  pushFailureHandlers.add(handler);
 }
 
 function notifyPushFailure(key: string, error: string): void {
   const formatted = formatSyncError(error);
   console.warn('[StagePushScheduler] push failed:', formatted);
-  onPushFailure?.({ key, error: formatted });
+  for (const handler of [...pushFailureHandlers]) {
+    handler({ key, error: formatted });
+  }
 }
 
 function keyParts(key: string): { repoPath: string; branch: string } | null {
@@ -292,5 +304,5 @@ export function __resetForTests(): void {
   draining = false;
   unsubscribeStaged?.();
   unsubscribeStaged = null;
-  onPushFailure = null;
+  pushFailureHandlers.clear();
 }

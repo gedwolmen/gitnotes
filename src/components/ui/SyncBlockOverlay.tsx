@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useTheme, useTokens } from '../../contexts/ThemeContext';
 import { useGitOperationStore, GIT_OP_ALL_REPOS } from '../../stores/gitOperationStore';
+import { useStageStore } from '../../stores/stageStore';
 import { GitSyncGate } from '../../services/git/GitSyncGate';
 import { cancelInflightGitHttp } from '../../services/git/gitHttp';
 import { HapticService } from '../../utils/haptics';
@@ -76,6 +77,7 @@ export function SyncBlockOverlay() {
     setCancelling(true);
     void HapticService.error();
     cancelInflightGitHttp();
+    useStageStore.getState().forceUnlockPushState();
   };
 
   // Announce to VoiceOver / TalkBack on visible→true transition only.
