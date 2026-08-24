@@ -82,9 +82,11 @@ function keyParts(key: string): { repoPath: string; branch: string } | null {
   };
 }
 
-async function hasUnresolvedConflicts(repoPath: string, branch: string): Promise<boolean> {
+export async function hasUnresolvedConflicts(repoPath: string, branch: string): Promise<boolean> {
   await useConflictStore.getState().loadConflicts();
-  const repoConflicts = useConflictStore.getState().conflicts.filter(
+  const state = useConflictStore.getState();
+  if (state.loadError) return true;
+  const repoConflicts = state.conflicts.filter(
     (c) => c.repoPath === repoPath && c.branch === branch,
   );
   return repoConflicts.some((c) => c.files.some((f) => !f.autoResolved));

@@ -7,11 +7,12 @@ const STORAGE_KEY = 'gitnotes_conflicts';
 interface ConflictState {
   conflicts: ConflictSet[];
   isLoading: boolean;
+  loadError: boolean;
 }
 
 interface ConflictActions {
   loadConflicts: () => Promise<void>;
-  addConflict: (conflict: ConflictSet) => Promise<void>;
+  addConflict: (conflict: ConflictSet) => void;
   updateConflict: (repoPath: string, branch: string, updater: (c: ConflictSet) => ConflictSet) => Promise<void>;
   removeConflict: (repoPath: string, branch: string) => Promise<void>;
   getConflict: (repoPath: string, branch: string) => ConflictSet | undefined;
@@ -29,24 +30,27 @@ async function persist(conflicts: ConflictSet[]): Promise<void> {
 export const useConflictStore = create<ConflictState & ConflictActions>()((set, get) => ({
   conflicts: [],
   isLoading: true,
+  loadError: false,
 
   loadConflicts: async () => {
     try {
       const raw = await AsyncStorage.getItem(STORAGE_KEY);
       const conflicts: ConflictSet[] = raw ? JSON.parse(raw) : [];
-      set({ conflicts, isLoading: false });
+      set({ conflicts, isLoading: false, loadError: false });
     } catch {
-      set({ isLoading: false });
+      set({ isLoading: false, loadError: true });
     }
   },
 
-  addConflict: async (conflict) => {
-    const filtered = get().conflicts.filter(
-      (c) => !(c.repoPath === conflict.repoPath && c.branch === conflict.branch),
-    );
-    const next = [...filtered, conflict];
-    set({ conflicts: next });
-    await persist(next);
+  addConflict: (conflict) => {
+    set((state) => {
+      const filtered = state.conflicts.filter(
+        (c) => !(c.repoPath === conflict.repoPath && c.branch === conflict.branch),
+      );
+      const next = [...filtered, conflict];
+      void persist(next);
+      return { conflicts: next };
+    });
   },
 
   updateConflict: async (repoPath, branch, updater) => {
