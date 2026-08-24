@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StagingService, type StagedItem } from './git/StagingService';
 import { GitSyncGate, type CycleSource } from './git/GitSyncGate';
+import { formatSyncError } from './git/formatSyncError';
 import { useStageStore } from '../stores/stageStore';
 import { useConflictStore } from '../stores/conflictStore';
 import { githubActivity } from '../stores/githubActivityStore';
@@ -67,8 +68,9 @@ export function setOnPushFailure(handler: PushFailureHandler | null): void {
 }
 
 function notifyPushFailure(key: string, error: string): void {
-  console.warn('[StagePushScheduler] push failed:', error);
-  onPushFailure?.({ key, error });
+  const formatted = formatSyncError(error);
+  console.warn('[StagePushScheduler] push failed:', formatted);
+  onPushFailure?.({ key, error: formatted });
 }
 
 function keyParts(key: string): { repoPath: string; branch: string } | null {
