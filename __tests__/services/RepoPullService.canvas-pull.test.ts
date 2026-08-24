@@ -87,6 +87,27 @@ describe('RepoPullService canvas pull + reconcile', () => {
     expect(pulledCanvas.lastPulledScene).toBe(JSON.stringify(scene));
   });
 
+  // Bug #1160: canvas JSON parse failures warned without naming the file.
+  it('includes the file path in a canvas JSON parse warning', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    (GitHubService.getTreeRecursiveOrThrow as jest.Mock).mockResolvedValue([
+      { type: 'blob', path: 'canvases/broken.json', sha: 'a' },
+    ]);
+    (GitHubService.getFileContent as jest.Mock).mockImplementation(
+      async (_owner: string, _repo: string, path: string) =>
+        path === 'canvases/broken.json' ? '{ truncated' : null,
+    );
+
+    await pullFromSingleRepo('org/repo');
+
+    const parseWarning = warnSpy.mock.calls.find(([msg]) =>
+      String(msg).includes('Failed to parse canvas JSON'),
+    );
+    expect(parseWarning).toBeTruthy();
+    expect(parseWarning).toContain('canvases/broken.json');
+    warnSpy.mockRestore();
+  });
+
   // Bug #886: a canvas whose remote file was deleted, and which was NOT edited
   // locally since the last pull, must be dropped.
   it('drops a locally-unmodified canvas whose remote file was deleted', async () => {
