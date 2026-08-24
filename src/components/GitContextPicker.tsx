@@ -175,6 +175,7 @@ export default function GitContextPicker({
     <View>
       <TouchableOpacity
         testID="git-context-picker.button.open"
+        accessibilityRole="button"
         style={[
           styles.triggerButton,
           { backgroundColor: colors.surface, borderColor: repo ? colors.primary : colors.border },
@@ -231,7 +232,7 @@ export default function GitContextPicker({
 
             {view === 'main' && (
               <View style={styles.content}>
-                <TouchableOpacity testID="todo-editor.button.repo" style={styles.selector} onPress={goToRepoView}>
+                <TouchableOpacity testID="todo-editor.button.repo" accessibilityRole="button" style={styles.selector} onPress={goToRepoView}>
                   <Text style={[styles.selectorLabel, { color: colors.textSecondary }]}>Repository</Text>
                   <View style={[styles.selectorValue, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                     <Text
@@ -249,7 +250,7 @@ export default function GitContextPicker({
 
                 <View testID="note-editor-form.picker.branch">
                   {repo && (
-                    <TouchableOpacity testID="todo-editor.button.branch" style={styles.selector} onPress={goToBranchView}>
+                    <TouchableOpacity testID="todo-editor.button.branch" accessibilityRole="button" style={styles.selector} onPress={goToBranchView}>
                     <Text style={[styles.selectorLabel, { color: colors.textSecondary }]}>Branch</Text>
                     <View style={[styles.selectorValue, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                       <Text
@@ -269,7 +270,7 @@ export default function GitContextPicker({
 
                 <View testID="note-editor-form.picker.commit" />
                 {(repo || branch) && (
-                  <TouchableOpacity style={styles.clearButton} onPress={handleClearContext}>
+                  <TouchableOpacity style={styles.clearButton} accessibilityRole="button" onPress={handleClearContext}>
                     <Ionicons name="trash-outline" size={16} color={colors.error} />
                     <Text style={[styles.clearButtonText, { color: colors.error }]}>Clear Git Context</Text>
                   </TouchableOpacity>
@@ -317,6 +318,7 @@ export default function GitContextPicker({
                     renderItem={({ item }) => (
                       <TouchableOpacity
                         testID="git-context-picker.picker.pick"
+                        accessibilityRole="button"
                         style={[styles.listItem, { borderBottomColor: colors.border }]}
                         onPress={() => handleRepoPick(item.path)}
                       >
@@ -379,6 +381,7 @@ export default function GitContextPicker({
                     contentContainerStyle={styles.listContent}
                     renderItem={({ item }) => (
                       <TouchableOpacity
+                        accessibilityRole="button"
                         style={[
                           styles.listItem,
                           { borderBottomColor: colors.border },

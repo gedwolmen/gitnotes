@@ -133,6 +133,7 @@ export function Button(props: ButtonProps) {
     return (
       <Pressable
         testID={testID}
+        accessibilityRole="button"
         onPress={disabled ? undefined : onPress}
         onLongPress={disabled ? undefined : onLongPress}
         onPressIn={disabled ? undefined : handlePressIn}
