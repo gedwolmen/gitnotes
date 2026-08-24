@@ -142,6 +142,8 @@ export default function SettingsScreen() {
   const [tokenInput, setTokenInput] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [tokenError, setTokenError] = useState<string | null>(null);
+  const [isTestingToken, setIsTestingToken] = useState(false);
+  const [tokenTestResult, setTokenTestResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [tokenVisible, setTokenVisible] = useState(false);
   const [tokenModalMode, setTokenModalMode] = useState<'connect' | 'add'>('connect');
   const [showConnectHostModal, setShowConnectHostModal] = useState(false);
@@ -763,9 +765,37 @@ export default function SettingsScreen() {
       setTokenModalMode('connect');
     } else {
       HapticService.error();
-      setTokenError(t('settings.tokenInvalid'));
+      // Paste-time diagnostics (#1190): distinguish a rejected token from a
+      // network failure instead of one generic copy.
+      const diag = await AuthService.validateToken(tokenInput.trim());
+      if (!diag.ok && diag.reason === 'invalid') {
+        setTokenError(t('settings.tokenTestInvalid'));
+      } else if (!diag.ok && diag.reason === 'network') {
+        setTokenError(t('settings.tokenTestNetwork'));
+      } else {
+        setTokenError(t('settings.tokenInvalid'));
+      }
     }
   }, [addAccount, setToken, tokenInput, tokenModalMode, t]);
+
+  const handleTestToken = useCallback(async () => {
+    const candidate = tokenInput.trim();
+    if (!candidate || isTestingToken) return;
+    setIsTestingToken(true);
+    setTokenTestResult(null);
+    const diag = await AuthService.validateToken(candidate);
+    if (diag.ok) {
+      HapticService.success();
+      setTokenTestResult({ ok: true, text: t('settings.tokenTestOk', { login: diag.user.login }) });
+    } else {
+      HapticService.error();
+      setTokenTestResult({
+        ok: false,
+        text: diag.reason === 'invalid' ? t('settings.tokenTestInvalid') : t('settings.tokenTestNetwork'),
+      });
+    }
+    setIsTestingToken(false);
+  }, [isTestingToken, tokenInput, t]);
 
   const handleSwitchAccount = useCallback(async (id: string) => {
     if (id === activeAccountId) return;
@@ -965,7 +995,7 @@ export default function SettingsScreen() {
         providers={providers}
         setTheme={setTheme}
         setStyle={setStyle}
-        onOpenConnectToken={() => { setTokenModalMode('connect'); setTokenInput(''); setTokenError(null); setTokenVisible(false); setShowTokenModal(true); }}
+        onOpenConnectToken={() => { setTokenModalMode('connect'); setTokenInput(''); setTokenError(null); setTokenTestResult(null); setTokenVisible(false); setShowTokenModal(true); }}
         onOpenAddAccount={() => {
           if (accounts.length >= 1 && !isPro) {
             promptProUpgrade(t, openPaywall);
@@ -1076,11 +1106,14 @@ export default function SettingsScreen() {
         onCloseTemplatesRepoPicker={() => setShowTemplatesRepoPicker(false)}
         onPickTemplatesRepo={(repo) => void handlePickTemplatesRepo(repo)}
         onCloseTokenModal={() => { setShowTokenModal(false); setTokenVisible(false); }}
-        onSetTokenInput={(value) => { setTokenInput(value); setTokenError(null); }}
+        onSetTokenInput={(value) => { setTokenInput(value); setTokenError(null); setTokenTestResult(null); }}
         onToggleTokenVisible={() => setTokenVisible((value) => !value)}
         onPasteToken={() => void handlePasteToken()}
         onCopyToken={() => void handleCopyToken()}
         onSaveToken={() => void handleSaveToken()}
+        onTestToken={() => void handleTestToken()}
+        isTestingToken={isTestingToken}
+        tokenTestResult={tokenTestResult}
       />
       <ModelSelector visible={showModelSelector} onClose={() => setShowModelSelector(false)} />
       <ProviderConfigModal visible={showProviderConfig} provider={editingProvider} onClose={() => { setShowProviderConfig(false); setEditingProvider(undefined); }} />
