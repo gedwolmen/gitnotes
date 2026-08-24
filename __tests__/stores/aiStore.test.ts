@@ -217,7 +217,7 @@ describe('useAIStore', () => {
       (AsyncStorage as any).__reset?.();
       await useAIStore.getState().loadSettings();
       const state = useAIStore.getState();
-      expect(state.isEnabled).toBe(true);
+      expect(state.isEnabled).toBe(false);
       expect(state.isLoading).toBe(false);
     });
 
@@ -231,10 +231,10 @@ describe('useAIStore', () => {
       expect(parsed.actionMode).toBe('manual');
     });
 
-    it('dailyQuotePersonalizationEnabled defaults to true when nothing stored', async () => {
+    it('dailyQuotePersonalizationEnabled defaults to false when nothing stored (#1172)', async () => {
       (AsyncStorage as any).__reset?.();
       await useAIStore.getState().loadSettings();
-      expect(useAIStore.getState().dailyQuotePersonalizationEnabled).toBe(true);
+      expect(useAIStore.getState().dailyQuotePersonalizationEnabled).toBe(false);
     });
 
     it('toggleDailyQuotePersonalization flips state to false', async () => {
@@ -266,10 +266,23 @@ describe('useAIStore', () => {
       expect(useAIStore.getState().dailyQuotePersonalizationEnabled).toBe(false);
     });
 
-    it('loadSettings defaults legacy blob (missing field) to true', async () => {
+    it('loadSettings defaults legacy blob (missing field) to false (#1172)', async () => {
       await AsyncStorage.setItem('ai-settings', JSON.stringify({ isEnabled: true }));
       await useAIStore.getState().loadSettings();
-      expect(useAIStore.getState().dailyQuotePersonalizationEnabled).toBe(true);
+      expect(useAIStore.getState().dailyQuotePersonalizationEnabled).toBe(false);
+    });
+  });
+
+  describe('fresh-install defaults', () => {
+    it('keeps AI off and curated daily quote on with no model selected (#1172)', async () => {
+      (AsyncStorage as any).__reset?.();
+      await useAIStore.getState().loadSettings();
+      const state = useAIStore.getState();
+      expect(state.isEnabled).toBe(false);
+      expect(state.selectedModelId).toBeNull();
+      expect(state.aiPersonalizationEnabled).toBe(false);
+      expect(state.dailyQuotePersonalizationEnabled).toBe(false);
+      expect(state.dailyQuoteEnabled).toBe(true);
     });
   });
 });

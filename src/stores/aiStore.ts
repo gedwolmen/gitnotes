@@ -91,7 +91,7 @@ const createDefaultProviders = (): AIProviderConfig[] => [
 ];
 
 const createDefaultSettings = (): AISettings => ({
-  isEnabled: true,
+  isEnabled: false,
   selectedModelId: null,
   actionMode: 'auto',
   chatRepoOwner: null,
@@ -100,9 +100,9 @@ const createDefaultSettings = (): AISettings => ({
   chatRepoAccountId: null,
   providers: createDefaultProviders(),
   dailyQuoteEnabled: true,
-  aiPersonalizationEnabled: true,
+  aiPersonalizationEnabled: false,
   githubToolsEnabled: false,
-  dailyQuotePersonalizationEnabled: true,
+  dailyQuotePersonalizationEnabled: false,
   dailyQuoteSourceVisible: true,
 });
 
