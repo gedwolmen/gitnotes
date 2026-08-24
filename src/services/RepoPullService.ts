@@ -33,6 +33,16 @@ export function __resetSkippedTodoLogForTests(): void {
   reportedSkippedTodos.clear();
 }
 
+// Session-scoped dedup for canvas JSON parse warnings (#1191): without it a
+// malformed remote canvas re-warns on every pull. Files that later parse
+// cleanly drop out of the set, so a future breakage re-warns again.
+const reportedCanvasParseWarns = new Map<string, Set<string>>();
+
+/** Test-only seam: clear the per-repo canvas parse-warn dedup cache. */
+export function __resetCanvasParseLogForTests(): void {
+  reportedCanvasParseWarns.clear();
+}
+
 async function hasUnpushedCommits(repoPath: string, branch: string): Promise<boolean> {
   try {
     const localRef = `refs/heads/${branch}`;
@@ -157,9 +167,11 @@ const isMissingObject = /Could not find object|not foundobject|NotFoundError|Pac
                       GitFsService.readFile({ repoPath, ref: branch, filepath: path }),
                   };
                 }
+                // Diverged pulls are resolved above (conflict surface), so
+                // everything reaching here is transient — retry beats advice.
+                const detail = result.error ? ` — ${result.error}` : '';
                 throw new Error(
-                  `Local repo ${repoPath}@${branch} pull failed (${result.reason}). ` +
-                    `Push or reset your local commits before the next pull.`,
+                  `Local repo ${repoPath}@${branch} pull failed (${result.reason}${detail}). Will retry automatically.`,
                 );
       }
     }
@@ -567,6 +579,8 @@ async function pullCanvasesFromRepo(
 
   let processed = 0;
   const canvasJsonCount = files.filter((f) => f.path.endsWith('.json')).length;
+  const previouslyWarnedCanvasPaths = reportedCanvasParseWarns.get(repoPath) ?? new Set<string>();
+  const freshBadCanvasPaths: string[] = [];
   try {
     await StorageService.mutateCanvases((allCanvases) => {
       // Upsert: add / update canvases from files that still exist remotely.
@@ -582,7 +596,10 @@ async function pullCanvasesFromRepo(
           try {
             scene = JSON.parse(file.content);
           } catch (error) {
-            console.warn('[RepoPullService] Failed to parse canvas JSON:', file.path, error);
+            freshBadCanvasPaths.push(file.path);
+            if (!previouslyWarnedCanvasPaths.has(file.path)) {
+              console.warn('[RepoPullService] Failed to parse canvas JSON:', file.path, error);
+            }
             continue;
           }
 
@@ -614,6 +631,12 @@ async function pullCanvasesFromRepo(
             );
             pulled++;
           }
+        }
+
+        if (freshBadCanvasPaths.length > 0) {
+          reportedCanvasParseWarns.set(repoPath, new Set(freshBadCanvasPaths));
+        } else {
+          reportedCanvasParseWarns.delete(repoPath);
         }
 
         // Reconcile: drop local canvases whose backing file was deleted remotely.
