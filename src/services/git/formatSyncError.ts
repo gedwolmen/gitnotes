@@ -29,7 +29,8 @@ const MATCHERS: Matcher[] = [
   },
   {
     needles: ['bad credentials', '401', 'not authorized'],
-    message: 'Sign in to GitHub again.',
+    message:
+      "GitHub rejected the token. Check you copied the full token (starts with ghp_ or github_pat_) — and that it wasn't expired or revoked.",
   },
   {
     // Must precede the generic 403 matcher: GitHub signals API rate limits
