@@ -15,6 +15,7 @@ import { readDeleteFailures, parseDeleteFailureKey } from '../services/git/delet
 import { retryDeleteFailure } from '../services/git/retryDeleteFailure';
 import { useSafeBack } from '../hooks/useSafeBack';
 import type { RootStackParamList } from '../navigation/types';
+import { pullFromSingleRepo } from '../services/RepoPullService';
 
 const UPSERT_COLOR = '#22c55e';
 
@@ -188,6 +189,23 @@ export default function StageScreen() {
     [requestPush],
   );
 
+  const handlePullGroup = useCallback(
+    async (group: StageGroup) => {
+      try {
+        const result = await pullFromSingleRepo(group.repoPath);
+        if (!result || result.repos === 0) {
+          Alert.alert('Pull Failed', 'Could not pull from remote. Check your network connection.');
+        } else {
+          void loadStaged();
+          void useConflictStore.getState().loadConflicts();
+        }
+      } catch (error) {
+        Alert.alert('Pull Failed', error instanceof Error ? error.message : 'Unknown error');
+      }
+    },
+    [loadStaged],
+  );
+
   const handlePushAll = useCallback(() => {
     pushAll();
     void drainPushQueue('manual');
@@ -263,13 +281,24 @@ export default function StageScreen() {
               </Text>
             </View>
             <TouchableOpacity
-              testID={`stage.push.${item.key}`}
-              onPress={() => handlePushGroup(item)}
+              testID={`stage.pull.${item.key}`}
+              onPress={() => handlePullGroup(item)}
               disabled={pushing}
               accessibilityRole="button"
               accessibilityState={{ disabled: pushing }}
               className="px-3 py-1.5 rounded-md"
               style={{ backgroundColor: pushing ? colors.border : colors.primary }}
+            >
+              <Ionicons name="git-pull-request-outline" size={13} color="#ffffff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              testID={`stage.push.${item.key}`}
+              onPress={() => handlePushGroup(item)}
+              disabled={pushing || hasGroupConflicts}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: pushing || hasGroupConflicts }}
+              className="px-3 py-1.5 rounded-md"
+              style={{ backgroundColor: pushing || hasGroupConflicts ? colors.border : colors.primary }}
             >
               <Text className="text-xs font-bold" style={{ color: '#ffffff' }}>
                 Push
@@ -338,7 +367,7 @@ export default function StageScreen() {
         </View>
       );
     },
-    [colors, conflictFilesByGroup, handlePushGroup, handleDiscardGroup, isPushing, navigation, pushErrors, dismissPushError],
+    [colors, conflictFilesByGroup, handlePushGroup, handlePullGroup, handleDiscardGroup, isPushing, navigation, pushErrors, dismissPushError],
   );
 
   const renderEmpty = useCallback(
