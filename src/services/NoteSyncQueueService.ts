@@ -479,6 +479,8 @@ class NoteSyncQueueServiceClass {
   async drain(
     onProgress?: (fraction: number | null) => void,
     source: CycleSource = 'background',
+    repoPath?: string,
+    branch?: string,
   ): Promise<{ succeeded: number; failed: number; remaining: number }> {
     if (this.isDraining) {
       const items = await this.getAll();
@@ -493,7 +495,13 @@ class NoteSyncQueueServiceClass {
     const releaseCycle = GitSyncGate.isCycleHeld() ? null : await GitSyncGate.acquireCycle(source);
 
     try {
-      const initial = await this.getAll();
+      let initial = await this.getAll();
+      if (repoPath !== undefined) {
+        initial = initial.filter((m) => m.params.repo === repoPath);
+        if (branch !== undefined) {
+          initial = initial.filter((m) => (m.params.branch ?? 'main') === branch);
+        }
+      }
       const now = Date.now();
 
       // Group items by (repo, branch). Within a clone-mode group every

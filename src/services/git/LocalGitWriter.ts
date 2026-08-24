@@ -178,7 +178,7 @@ export async function hasUnpushedLocalCommits(repoPath: string, branch: string):
     if (localOid === mergeBase) return false;
     return true;
   } catch {
-    return false;
+    return true;
   }
 }
 
