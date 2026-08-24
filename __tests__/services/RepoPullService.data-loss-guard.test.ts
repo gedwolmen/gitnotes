@@ -36,6 +36,7 @@ jest.mock('../../src/services/SyncEngineService', () => ({
 }));
 
 jest.mock('../../src/services/git/GitFsService', () => ({
+  repairHeadRef: jest.fn(async () => undefined),
   GitFsService: {
     listTree: jest.fn(async () => []),
     isCloned: jest.fn(async () => true),

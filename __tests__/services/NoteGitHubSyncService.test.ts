@@ -29,6 +29,7 @@ jest.mock('../../src/services/git/LocalGitWriter', () => ({
 }));
 
 jest.mock('../../src/services/git/GitFsService', () => ({
+  repairHeadRef: jest.fn(async () => undefined),
   GitFsService: {
     isCloned: jest.fn(async () => false),
     readFile: jest.fn(async () => null),

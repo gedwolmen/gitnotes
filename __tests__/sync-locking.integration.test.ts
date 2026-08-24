@@ -90,6 +90,7 @@ jest.mock('../src/services/GitService', () => ({
 }));
 
 jest.mock('../src/services/git/GitFsService', () => ({
+  repairHeadRef: jest.fn(async () => undefined),
   GitFsService: {
     getCurrentBranch: jest.fn(async () => null),
     isCloned: jest.fn(async () => false),

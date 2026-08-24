@@ -42,6 +42,7 @@ jest.mock('expo-file-system/legacy', () => {
 });
 
 jest.mock('../src/services/git/GitFsService', () => ({
+  repairHeadRef: jest.fn(async () => undefined),
   GitFsService: {
     pullWithFastForward: jest.fn(),
     findMergeBase: jest.fn(),
