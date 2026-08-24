@@ -18,8 +18,6 @@ import { useTheme } from '../contexts/ThemeContext';
 import { OnboardingService } from '../services/OnboardingService';
 import { AuthService } from '../services/AuthService';
 import { GitHubService } from '../services/GitHubService';
-import { useAIStore } from '../stores/aiStore';
-import { useProGate } from '../hooks/useProGate';
 import { Button, Input, Surface } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import type { RootStackParamList } from '../navigation/types';
@@ -70,10 +68,8 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
 
   const TOKEN_STEP = INFO_STEPS.length;
   const AI_STEP = TOKEN_STEP + 1;
-  const GITHUB_TOOLS_STEP = AI_STEP + 1;
-  const TOTAL_STEPS = INFO_STEPS.length + 3;
+  const TOTAL_STEPS = INFO_STEPS.length + 2;
   const { colors } = useTheme();
-  const { isPro } = useProGate();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [currentStep, setCurrentStep] = useState(0);
   const [token, setToken] = useState('');
@@ -105,33 +101,9 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
         setCurrentStep(AI_STEP);
       }
     } else if (currentStep === AI_STEP) {
-      setCurrentStep(GITHUB_TOOLS_STEP);
-    } else if (currentStep === GITHUB_TOOLS_STEP) {
       await finish();
     }
   }, [currentStep, token, finish]);
-
-  const handleEnableGithubTools = useCallback(async () => {
-    await useAIStore.getState().toggleGithubTools();
-    await finish();
-  }, [finish]);
-
-  const handleSkipGithubTools = useCallback(async () => {
-    // Skipping leaves githubToolsEnabled at its default (false), so no toggle call
-    await finish();
-  }, [finish]);
-
-  const handleProContinue = useCallback(() => {
-    if (isPro) {
-      setCurrentStep(GITHUB_TOOLS_STEP);
-    } else {
-      void finish();
-    }
-  }, [isPro, finish]);
-
-  const handleSeePlans = useCallback(() => {
-    navigation.navigate('Paywall');
-  }, [navigation]);
 
   const handleSkip = useCallback(async () => {
     await OnboardingService.completeOnboarding();
@@ -140,7 +112,6 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
 
   const isTokenStep = currentStep === TOKEN_STEP;
   const isAIStep = currentStep === AI_STEP;
-  const isGithubToolsStep = currentStep === GITHUB_TOOLS_STEP;
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['top', 'bottom']}>
@@ -232,25 +203,6 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
               </Text>
             </TouchableOpacity>
           </View>
-        ) : isGithubToolsStep ? (
-          <ScrollView
-            className="flex-1 px-10"
-            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', gap: 16 }}
-            showsVerticalScrollIndicator={false}
-          >
-            <Surface elevation="raised" radius="pill" className="w-[140px] h-[140px] items-center justify-center">
-              <Ionicons name="git-branch-outline" size={72} color={colors.accent} />
-            </Surface>
-            <Text className="text-[28px] font-bold text-center" style={{ color: colors.text }}>
-              {t('onboarding.githubTools.title', { defaultValue: 'GitHub Agent Tools' })}
-            </Text>
-            <Text className="text-base text-center leading-6" style={{ color: colors.textSecondary }}>
-              {t('onboarding.githubTools.body', { defaultValue: 'Your AI can now list repos, create issues, open pull requests, review changes, and post PR reviews using your connected GitHub account. All write operations respect your Action Mode setting.' })}
-            </Text>
-            <Text className="text-[13px] text-center leading-[18px] opacity-80" style={{ color: colors.textSecondary }}>
-              {t('onboarding.githubTools.bodyReminder', { defaultValue: 'You can turn this on or off anytime in Settings → AI → GitHub Tools.' })}
-            </Text>
-          </ScrollView>
         ) : (
           <View className="flex-1 px-10 items-center">
             <Surface elevation="raised" radius="pill" className="w-[140px] h-[140px] items-center justify-center mb-6">
@@ -283,34 +235,14 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
             ))}
           </View>
 
-          {isGithubToolsStep ? (
-            <View className="w-full">
-              <Button
-                variant="primary"
-                fullWidth
-                testID="onboarding.button.enable-github-tools"
-                onPress={handleEnableGithubTools}
-                label={t('onboarding.githubTools.enable', { defaultValue: 'Enable GitHub Tools' })}
-                trailingIcon={<Ionicons name="git-branch-outline" size={20} color={colors.accent} />}
-                iconAlign="edge"
-              />
-              <Button
-                variant="ghost"
-                fullWidth
-                testID="onboarding.button.skip-github-tools"
-                onPress={handleSkipGithubTools}
-                label="Skip for Now"
-                style={{ marginTop: 8 }}
-              />
-            </View>
-          ) : isAIStep ? (
+          {isAIStep ? (
             <Button
               variant="primary"
               fullWidth
               testID="onboarding.button.pro-continue"
-              onPress={handleProContinue}
+              onPress={handleNext}
               label={t('common.continue', { defaultValue: 'Continue' })}
-              trailingIcon={<Ionicons name="arrow-forward" size={20} color={colors.accent} />}
+              trailingIcon={<Ionicons name="checkmark" size={20} color={colors.accent} />}
               iconAlign="edge"
             />
           ) : (
