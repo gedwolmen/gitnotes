@@ -418,6 +418,7 @@ export default function HomeScreen() {
               testID={`home.button.select-format-${option.value}`}
               onPress={() => handleSelectFormat(option.value)}
               padding={14}
+              accessibilityRole="button"
             >
               <View className="flex-row justify-between items-center">
                 <Text className="text-base font-medium" style={{ color: colors.text }}>{t(option.labelKey)}</Text>

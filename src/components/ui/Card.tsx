@@ -1,12 +1,12 @@
 import React, { ReactNode, useCallback, useState } from 'react';
-import { Pressable, StyleProp, ViewStyle } from 'react-native';
+import { AccessibilityProps, Pressable, StyleProp, ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Surface } from './Surface';
 import { useTokens } from '../../contexts/ThemeContext';
 import { Radius } from '../../theme/tokens';
 
-export interface CardProps {
+export interface CardProps extends AccessibilityProps {
   onPress?: () => void;
   onLongPress?: () => void;
   disabled?: boolean;
@@ -18,7 +18,7 @@ export interface CardProps {
 }
 
 export function Card(props: CardProps) {
-  const { onPress, onLongPress, disabled, radius = 'lg', padding, style, testID, children } = props;
+  const { onPress, onLongPress, disabled, radius = 'lg', padding, style, testID, children, ...accessibilityProps } = props;
   const { spacing } = useTokens();
   const [isPressed, setIsPressed] = useState(false);
   const scale = useSharedValue(1);
@@ -63,6 +63,7 @@ export function Card(props: CardProps) {
         onPressIn={disabled ? undefined : handlePressIn}
         onPressOut={disabled ? undefined : handlePressOut}
         disabled={disabled}
+        {...accessibilityProps}
       >
         {surface}
       </Pressable>
