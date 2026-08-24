@@ -111,7 +111,7 @@ Services encapsulate business logic. They're React-independent, testable with Je
 
 | Service | Responsibility |
 |---------|---------------|
-| `RevenueCatService.ts` | StoreKit 2 wrapper (trial / $2.99 mo / $40 lifetime) |
+| `RevenueCatService.ts` | StoreKit 2 wrapper (trial / $3.99 mo / $39.99 lifetime) |
 | `PaywallAnalytics.ts` | Impression + conversion telemetry |
 | `GrandfatherService.ts` | Pre-Pro-tier user grandfathering |
 

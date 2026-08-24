@@ -79,9 +79,9 @@ const impressionMock = trackPaywallImpression as jest.Mock;
 const eligibilityMock = getIntroEligibilities as jest.Mock;
 const analytics = PaywallAnalytics as jest.Mocked<typeof PaywallAnalytics>;
 
-const monthlyPkg = { identifier: 'monthly', product: { identifier: 'monthly-product', priceString: '$2.99' } };
-const yearlyPkg = { identifier: 'yearly', product: { identifier: 'yearly-product', priceString: '$19.99' } };
-const lifetimePkg = { identifier: 'lifetime', product: { identifier: 'lifetime-product', priceString: '$40.00' } };
+const monthlyPkg = { identifier: 'monthly', product: { identifier: 'monthly-product', priceString: '$3.99' } };
+const yearlyPkg = { identifier: 'yearly', product: { identifier: 'yearly-product', priceString: '$34.99' } };
+const lifetimePkg = { identifier: 'lifetime', product: { identifier: 'lifetime-product', priceString: '$39.99' } };
 
 const FEATURE_IDS = [
   'aiChat',
@@ -240,7 +240,7 @@ describe('PaywallScreen', () => {
   it('uses the trial CTA label for the monthly option when the product is trial-eligible', async () => {
     eligibilityMock.mockResolvedValue({ 'monthly-product': true });
     const { getAllByText } = await renderScreen();
-    expect(getAllByText('Try 30 days free, then $2.99/month').length).toBeGreaterThanOrEqual(1);
+    expect(getAllByText('Try 14 days free, then $2.99/month').length).toBeGreaterThanOrEqual(1);
   });
 
   it('uses the plain price label when the user is not trial-eligible', async () => {
@@ -252,7 +252,7 @@ describe('PaywallScreen', () => {
     eligibilityMock.mockResolvedValue({ 'yearly-product': true });
     setReadyState({ yearlyPackage: yearlyPkg });
     const { getByText } = await renderScreen();
-    expect(getByText('Try 30 days free, then $19.99/year')).toBeTruthy();
+    expect(getByText('Try 14 days free, then $19.99/year')).toBeTruthy();
   });
 
   it('uses the standard yearly price line when the yearly product is not trial-eligible', async () => {
