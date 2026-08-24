@@ -1,16 +1,20 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../contexts/ThemeContext';
 import { ScreenHeader, useScreenHeaderHeight } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { groupStaged, useStageStore, type StageGroup } from '../stores/stageStore';
+import { useConflictStore } from '../stores/conflictStore';
 import { drainPushQueue, setOnPushFailure } from '../services/StagePushScheduler';
 import { useGitHubActivityStore } from '../stores/githubActivityStore';
 import type { StagedItem } from '../services/git/StagingService';
 import { readDeleteFailures, parseDeleteFailureKey } from '../services/git/deleteFailures';
 import { retryDeleteFailure } from '../services/git/retryDeleteFailure';
 import { useSafeBack } from '../hooks/useSafeBack';
+import type { RootStackParamList } from '../navigation/types';
 
 const UPSERT_COLOR = '#22c55e';
 
@@ -41,27 +45,36 @@ function repoName(repoPath: string): string {
   return segments[segments.length - 1] || repoPath;
 }
 
-function StageRow({ item }: { item: StagedItem }) {
+function StageRow({ item, isConflict }: { item: StagedItem; isConflict?: boolean }) {
   const { colors } = useTheme();
   const isUpsert = item.kind === 'upsert';
-  const badgeColor = isUpsert ? UPSERT_COLOR : colors.error;
+  const badgeColor = isConflict ? colors.error : isUpsert ? UPSERT_COLOR : colors.error;
+  const textColor = isConflict ? colors.error : colors.text;
 
   return (
     <View
       className="flex-row items-center justify-between px-4 py-3 border-b"
-      style={{ borderBottomWidth: 0.5, borderBottomColor: colors.border }}
+      style={{ borderBottomWidth: 0.5, borderBottomColor: isConflict ? colors.error : colors.border }}
     >
       <View className="flex-1 mr-3">
-        <Text className="text-[15px] font-medium" style={{ color: colors.text }} numberOfLines={1}>
+        <Text className="text-[15px] font-medium" style={{ color: textColor }} numberOfLines={1}>
           {item.filePath}
         </Text>
       </View>
       <View className="flex-row items-center gap-2">
-        <View className="px-2 py-0.5 rounded-md" style={{ backgroundColor: `${badgeColor}20` }}>
-          <Text className="text-[11px] font-bold" style={{ color: badgeColor }}>
-            {isUpsert ? 'UPDATED' : 'DELETED'}
-          </Text>
-        </View>
+        {isConflict ? (
+          <View className="px-2 py-0.5 rounded-md" style={{ backgroundColor: `${colors.error}20` }}>
+            <Text className="text-[11px] font-bold" style={{ color: colors.error }}>
+              CONFLICT
+            </Text>
+          </View>
+        ) : (
+          <View className="px-2 py-0.5 rounded-md" style={{ backgroundColor: `${badgeColor}20` }}>
+            <Text className="text-[11px] font-bold" style={{ color: badgeColor }}>
+              {isUpsert ? 'UPDATED' : 'DELETED'}
+            </Text>
+          </View>
+        )}
         <View className="px-2 py-0.5 rounded-md" style={{ backgroundColor: `${colors.primary}20` }}>
           <Text className="text-[11px] font-bold" style={{ color: colors.primary }}>
             {formatChip(item.filePath)}
@@ -73,6 +86,7 @@ function StageRow({ item }: { item: StagedItem }) {
 }
 
 export default function StageScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { colors } = useTheme();
   const safeBack = useSafeBack();
   const staged = useStageStore((s) => s.staged);
@@ -83,6 +97,7 @@ export default function StageScreen() {
   const requestPush = useStageStore((s) => s.requestPush);
   const pushAll = useStageStore((s) => s.pushAll);
   const discardStaged = useStageStore((s) => s.discardStaged);
+  const conflicts = useConflictStore((s) => s.conflicts);
   const { progress, visible, label } = useGitHubActivityStore();
   const [refreshing, setRefreshing] = useState(false);
   const headerHeight = useScreenHeaderHeight();
@@ -90,6 +105,12 @@ export default function StageScreen() {
   const [deleteFailures, setDeleteFailures] = useState<readonly DeleteFailureRow[]>([]);
   const [retryingKey, setRetryingKey] = useState<string | null>(null);
   const [pushErrors, setPushErrors] = useState<Record<string, string>>({});
+
+  // Load conflicts proactively when StageScreen mounts so per-group conflict status
+  // is available immediately without requiring a push attempt first.
+  useEffect(() => {
+    void useConflictStore.getState().loadConflicts();
+  }, []);
 
   const loadDeleteFailures = useCallback(async () => {
     const map = await readDeleteFailures();
@@ -140,6 +161,20 @@ export default function StageScreen() {
 
   const groups = groupStaged(staged);
 
+  const conflictFilesByGroup = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const conflict of conflicts) {
+      const key = `${conflict.repoPath}::${conflict.branch}`;
+      if (!map.has(key)) map.set(key, new Set());
+      for (const file of conflict.files) {
+        if (!file.autoResolved) {
+          map.get(key)!.add(file.path);
+        }
+      }
+    }
+    return map;
+  }, [conflicts]);
+
   useEffect(() => {
     void loadStaged();
     registerQueueSubscription();
@@ -179,7 +214,7 @@ export default function StageScreen() {
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await Promise.all([loadStaged(), loadDeleteFailures()]);
+      await Promise.all([loadStaged(), loadDeleteFailures(), useConflictStore.getState().loadConflicts()]);
     } finally {
       setRefreshing(false);
     }
@@ -197,14 +232,27 @@ export default function StageScreen() {
     ({ item }: { item: StageGroup }) => {
       const pushing = isPushing[item.key] ?? false;
       const pushError = pushErrors[item.key];
-      const isConflict = pushError?.includes('conflict-detected') ?? false;
+      const pushRejected = pushError?.includes('conflict-detected') ?? false;
+      const groupConflictFiles = conflictFilesByGroup.get(item.key) ?? new Set<string>();
+      const hasGroupConflicts = groupConflictFiles.size > 0;
+      const unresolvedCount = groupConflictFiles.size;
+
       return (
         <View>
           <View className="flex-row items-center gap-2 px-4 pt-4 pb-2">
             <View className="flex-1 mr-3">
-              <Text className="text-sm font-bold" style={{ color: colors.text }} numberOfLines={1}>
-                {repoName(item.repoPath)}
-              </Text>
+              <View className="flex-row items-center gap-2">
+                <Text className="text-sm font-bold" style={{ color: colors.text }} numberOfLines={1}>
+                  {repoName(item.repoPath)}
+                </Text>
+                {hasGroupConflicts ? (
+                  <View className="px-2 py-0.5 rounded-md" style={{ backgroundColor: `${colors.error}20` }}>
+                    <Text className="text-[10px] font-bold" style={{ color: colors.error }}>
+                      ⚠ {unresolvedCount} CONFLICT{unresolvedCount !== 1 ? 'S' : ''}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
               <Text className="text-xs mt-0.5" style={{ color: colors.textSecondary }} numberOfLines={1}>
                 {item.branch}
               </Text>
@@ -234,19 +282,33 @@ export default function StageScreen() {
               <Ionicons name="trash" size={13} color="#ffffff" />
             </TouchableOpacity>
           </View>
+          {hasGroupConflicts ? (
+            <View className="flex-row items-center mx-4 mb-2">
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Conflicts', { repoPath: item.repoPath, branch: item.branch })}
+                className="flex-row items-center gap-1.5 px-3 py-2 rounded-md"
+                style={{ backgroundColor: `${colors.error}15`, borderWidth: 1, borderColor: `${colors.error}40` }}
+              >
+                <Ionicons name="git-merge" size={14} style={{ color: colors.error }} />
+                <Text className="text-xs font-medium" style={{ color: colors.error }}>
+                  Resolve Conflicts ({unresolvedCount})
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
           {pushError ? (
             <View
               className="flex-row items-start gap-2 mx-4 mb-2 px-3 py-2 rounded-md"
               style={{ backgroundColor: `${colors.error}18`, borderWidth: 1, borderColor: `${colors.error}40` }}
             >
               <Ionicons
-                name={isConflict ? 'git-merge' : 'alert-circle'}
+                name={pushRejected ? 'git-merge' : 'alert-circle'}
                 size={15}
                 style={{ color: colors.error, marginTop: 1 }}
               />
               <View className="flex-1 mr-2">
                 <Text className="text-xs font-medium" style={{ color: colors.error }}>
-                  {isConflict
+                  {pushRejected
                     ? 'Push rejected: merge conflict detected. Pull latest changes or resolve conflicts manually.'
                     : `Push failed: ${pushError}`}
                 </Text>
@@ -262,12 +324,16 @@ export default function StageScreen() {
             </View>
           ) : null}
           {item.items.map((row) => (
-            <StageRow key={`${item.key}:${row.filePath}:${row.localCommitOid ?? ''}`} item={row} />
+            <StageRow
+              key={`${item.key}:${row.filePath}:${row.localCommitOid ?? ''}`}
+              item={row}
+              isConflict={groupConflictFiles.has(row.filePath)}
+            />
           ))}
         </View>
       );
     },
-    [colors, handlePushGroup, handleDiscardGroup, isPushing, pushErrors, dismissPushError],
+    [colors, conflictFilesByGroup, handlePushGroup, handleDiscardGroup, isPushing, navigation, pushErrors, dismissPushError],
   );
 
   const renderEmpty = useCallback(
