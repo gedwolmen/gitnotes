@@ -38,6 +38,7 @@ import {
   onCustomerInfoUpdate,
   getIntroEligibilities,
   trackPaywallImpression,
+  __resetConfiguredFlagForTests,
 } from '../../src/services/RevenueCatService';
 
 const PurchasesMock = Purchases as unknown as {
@@ -78,6 +79,10 @@ afterEach(() => {
 });
 
 describe('configureRevenueCat', () => {
+  beforeEach(() => {
+    __resetConfiguredFlagForTests();
+  });
+
   it('configures with the iOS key on iOS using StoreKit 2', async () => {
     process.env[IOS_KEY] = 'appl_live_key';
     jest.replaceProperty(Platform, 'OS', 'ios');
@@ -110,6 +115,18 @@ describe('configureRevenueCat', () => {
     const result = await configureRevenueCat();
     expect(result).toEqual({ configured: false });
     expect(PurchasesMock.configure).not.toHaveBeenCalled();
+  });
+
+  it('does not reconfigure when already configured (#1162)', async () => {
+    process.env[IOS_KEY] = 'appl_live_key';
+    jest.replaceProperty(Platform, 'OS', 'ios');
+    await configureRevenueCat();
+    expect(PurchasesMock.configure).toHaveBeenCalledTimes(1);
+
+    const second = await configureRevenueCat();
+
+    expect(second).toEqual({ configured: true });
+    expect(PurchasesMock.configure).toHaveBeenCalledTimes(1);
   });
 });
 
