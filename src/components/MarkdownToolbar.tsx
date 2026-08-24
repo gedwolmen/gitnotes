@@ -44,6 +44,7 @@ export function MarkdownToolbar({ onFormat, format }: Props) {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 0,
+    flexShrink: 1,
   },
   content: {
     flexDirection: 'row',
