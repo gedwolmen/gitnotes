@@ -111,12 +111,6 @@ export async function flushStaged(): Promise<void> {
   // clone-mode commit is missed and nothing re-triggers the push (#1020).
   await useStageStore.getState().loadStaged();
 
-  // Skip idle auto-push when conflicts exist — user must resolve them first.
-  // The notification + floating button red state already guide them to Conflicts.
-  if (useConflictStore.getState().totalUnresolvedFiles() > 0) {
-    return;
-  }
-
   const store = useStageStore.getState();
   const keys = new Set<string>();
   for (const item of store.staged) {
@@ -125,6 +119,16 @@ export async function flushStaged(): Promise<void> {
   for (const key of keys) {
     const parts = keyParts(key);
     if (parts !== null) {
+      const repoConflicts = useConflictStore.getState().conflicts.filter(
+        (c) => c.repoPath === parts.repoPath && c.branch === parts.branch,
+      );
+      const unresolvedCount = repoConflicts.reduce(
+        (sum, c) => sum + c.files.filter((f) => !f.autoResolved).length,
+        0,
+      );
+      if (unresolvedCount > 0) {
+        continue;
+      }
       store.requestPush(parts.repoPath, parts.branch);
     }
   }
