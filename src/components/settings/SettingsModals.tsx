@@ -55,6 +55,9 @@ type SettingsModalsProps = {
   onPasteToken: () => void;
   onCopyToken: () => void;
   onSaveToken: () => void;
+  onTestToken?: () => void;
+  isTestingToken?: boolean;
+  tokenTestResult?: { ok: boolean; text: string } | null;
   __onRepoPickerListRender?: () => void;
 };
 
@@ -178,6 +181,9 @@ export function SettingsModals(props: SettingsModalsProps) {
     onPasteToken,
     onCopyToken,
     onSaveToken,
+    onTestToken,
+    isTestingToken,
+    tokenTestResult,
     __onRepoPickerListRender,
   } = props;
 
@@ -365,6 +371,26 @@ export function SettingsModals(props: SettingsModalsProps) {
               <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>{t('common.copy')}</Text>
             </TouchableOpacity>
           </View>
+          {onTestToken ? (
+            <TouchableOpacity
+              testID="settings-modals.button.test-token"
+              className="flex-row items-center justify-center py-2.5 px-3 rounded-lg border mb-2 gap-1.5"
+              style={[{ borderColor: colors.border }, { opacity: tokenInput.trim() ? 1 : 0.4 }]}
+              onPress={onTestToken}
+              disabled={isTestingToken || !tokenInput.trim()}
+              accessibilityLabel={t('settings.tokenTest')}
+            >
+              <Ionicons name="shield-checkmark-outline" size={16} color={colors.primary} />
+              <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>
+                {isTestingToken ? t('settings.testingToken') : t('settings.tokenTest')}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+          {tokenTestResult ? (
+            <Text style={{ color: tokenTestResult.ok ? '#34C759' : '#FF3B30', fontSize: 13, marginBottom: 10 }}>
+              {tokenTestResult.text}
+            </Text>
+          ) : null}
           {tokenError ? <Text style={{ color: '#FF3B30', fontSize: 13, marginBottom: 10 }}>{tokenError}</Text> : null}
           <Button
             testID="settings-modals.button.save-token"
