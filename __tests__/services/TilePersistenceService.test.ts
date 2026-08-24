@@ -113,12 +113,16 @@ describe('TilePersistenceService', () => {
     }
     await AsyncStorage.multiSet(entries);
 
+    // Perf guard: catches accidental per-tile awaits or O(n^2) scans, which
+    // land in the seconds range. The 100ms budget (vs ~1-5ms typical) leaves
+    // headroom for CPU contention when the whole suite runs in parallel —
+    // a single-shot wall-clock read at 10ms flaked under load.
     const start = Date.now();
     const tiles = await service.listTiles(CANVAS_ID);
     const elapsed = Date.now() - start;
 
     expect(tiles).toHaveLength(500);
-    expect(elapsed).toBeLessThan(10);
+    expect(elapsed).toBeLessThan(100);
   });
 
   it('fires onTileSaved after a successful save', async () => {
