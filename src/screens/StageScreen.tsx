@@ -8,7 +8,7 @@ import { ScreenHeader, useScreenHeaderHeight } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { groupStaged, useStageStore, type StageGroup } from '../stores/stageStore';
 import { useConflictStore } from '../stores/conflictStore';
-import { drainPushQueue, setOnPushFailure } from '../services/StagePushScheduler';
+import { drainPushQueue, addOnPushFailure } from '../services/StagePushScheduler';
 import { useGitHubActivityStore } from '../stores/githubActivityStore';
 import type { StagedItem } from '../services/git/StagingService';
 import { readDeleteFailures, parseDeleteFailureKey } from '../services/git/deleteFailures';
@@ -130,9 +130,10 @@ export default function StageScreen() {
   }, [loadDeleteFailures]);
 
   useEffect(() => {
-    setOnPushFailure(({ key, error }) => {
+    const unsub = addOnPushFailure(({ key, error }) => {
       setPushErrors((prev) => ({ ...prev, [key]: error }));
     });
+    return unsub;
   }, []);
 
   useEffect(() => {
