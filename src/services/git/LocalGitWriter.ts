@@ -181,17 +181,58 @@ async function ensureParentDirs(rootDir: string, virtualPath: string): Promise<v
  * If the branch ref is missing locally (single-branch clone of a different
  * branch), we fetch it from origin first and then check out.
  */
+/**
+ * Repair a corrupted .git/HEAD before any ref operation. isomorphic-git's
+ * checkout can write a nested symbolic target (`ref: refs/heads/refs/heads/main`,
+ * #1189), and a dangling symbolic target jams every later git op; both are
+ * rewritten to point at the requested branch.
+ */
+async function repairHeadRef(
+  fs: ReturnType<typeof makeRepoFs>,
+  dir: string,
+  branch: string,
+): Promise<void> {
+  const headPath = `${dir}/.git/HEAD`;
+  const healthyHead = `ref: refs/heads/${branch}\n`;
+
+  let raw: string;
+  try {
+    raw = String(await fs.promises.readFile(headPath, 'utf8'));
+  } catch {
+    return;
+  }
+
+  const trimmed = raw.trim();
+  if (trimmed === healthyHead.trim()) return;
+
+  if (trimmed.startsWith('ref: refs/heads/refs/heads/')) {
+    await fs.promises.writeFile(headPath, healthyHead, 'utf8');
+    return;
+  }
+
+  if (trimmed.startsWith('ref: ')) {
+    try {
+      await git.resolveRef({ fs, dir, ref: trimmed.slice(5).trim() });
+      return;
+    } catch {
+      await fs.promises.writeFile(headPath, healthyHead, 'utf8');
+    }
+  }
+}
+
 async function ensureOnBranch(
   fs: ReturnType<typeof makeRepoFs>,
   dir: string,
   branch: string,
   token: string | undefined,
 ): Promise<void> {
+  await repairHeadRef(fs, dir, branch);
+
   const current = await git.currentBranch({ fs, dir, fullname: false }).catch(() => null);
   if (current === branch) return;
 
   try {
-    await git.checkout({ fs, dir, ref: branch });
+    await git.checkout({ fs, dir, ref: `refs/heads/${branch}` });
     return;
   } catch {
     // local branch ref is missing - fetch then retry checkout below.
@@ -207,7 +248,7 @@ async function ensureOnBranch(
     tags: false,
     onAuth: tokenAuth(token),
   });
-  await git.checkout({ fs, dir, ref: branch });
+  await git.checkout({ fs, dir, ref: `refs/heads/${branch}` });
 }
 
 /**
