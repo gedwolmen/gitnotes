@@ -365,7 +365,7 @@ export class StagingService {
       // Always drain: listStaged tags leftover API-mode mutations with the
       // repo's current mode, so a hasApi gate would strand queue items in
       // clone-mode repos forever. drain() handles clone groups internally.
-      await NoteSyncQueueService.drain(onProgress);
+      await NoteSyncQueueService.drain(onProgress, 'manual', repoPath, branch);
 
       if (cloneKeys.size > 0) {
         const token = await AuthService.getToken();
