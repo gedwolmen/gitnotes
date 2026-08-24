@@ -92,6 +92,7 @@ async function handleCorruptionAndRetry<T>(
   repoPath: string,
   branch: string,
   token: string | undefined,
+  filePathForRecoveryCheck: string | undefined,
   operation: () => Promise<T>,
 ): Promise<T> {
   try {
@@ -99,6 +100,33 @@ async function handleCorruptionAndRetry<T>(
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     if (!isCorruptionError(errorMsg)) throw error;
+
+    // Before attempting recovery, check if there are uncommitted working tree
+    // changes that would be lost. If so, skip recovery to preserve user data.
+    if (filePathForRecoveryCheck !== undefined) {
+      const info = parseRepoPath(repoPath);
+      if (info) {
+        const dir = repoDirVirtual(info.owner, info.repo);
+        const fs = makeRepoFs();
+        try {
+          const status = await git.status({ fs, dir, filepath: filePathForRecoveryCheck });
+          if (status !== 'unmodified') {
+            console.warn(
+              `[LocalGitWriter] clone corruption detected with uncommitted changes to '${filePathForRecoveryCheck}' in ${repoPath}@${branch} — skipping recovery to preserve user data`,
+            );
+            throw new Error(
+              `Clone corruption detected with uncommitted changes to '${filePathForRecoveryCheck}' in ${repoPath}@${branch}. ` +
+              `Please commit your changes before continuing.`,
+            );
+          }
+        } catch (statusCheckError) {
+          // If status check itself failed (e.g., repo already corrupt), be
+          // conservative and propagate the original corruption error
+          if (statusCheckError !== error) throw error;
+        }
+      }
+    }
+
     console.warn(`[LocalGitWriter] clone corruption detected, attempting recovery...`);
     const hasLocalCommits = await hasUnpushedLocalCommits(repoPath, branch);
     if (hasLocalCommits) {
@@ -151,6 +179,20 @@ export async function hasUnpushedLocalCommits(repoPath: string, branch: string):
     return true;
   } catch {
     return false;
+  }
+}
+
+async function getUncommittedWorkingChanges(
+  fs: ReturnType<typeof makeRepoFs>,
+  dir: string,
+): Promise<string[]> {
+  try {
+    const matrix = await git.statusMatrix({ fs, dir });
+    return matrix
+      .filter(([, head, workdir]) => head !== workdir)
+      .map(([filepath]) => filepath);
+  } catch {
+    return [];
   }
 }
 
@@ -287,7 +329,7 @@ static async writeAndCommit(opts: WriteOpts): Promise<LocalGitWriterResult> {
     const filePath = toRepoRelativePath(opts.filePath);
 
     try {
-      return await handleCorruptionAndRetry(opts.repoPath, opts.branch, opts.token, async () => {
+      return await handleCorruptionAndRetry(opts.repoPath, opts.branch, opts.token, filePath, async () => {
         const dir = repoDirVirtual(info.owner, info.repo);
         const fs = makeRepoFs();
         const fsRoot = clonesRoot();
@@ -408,7 +450,7 @@ static async deleteAndCommit(opts: DeleteOpts): Promise<LocalGitWriterResult> {
     const filePath = toRepoRelativePath(opts.filePath);
 
     try {
-      return await handleCorruptionAndRetry(opts.repoPath, opts.branch, opts.token, async () => {
+      return await handleCorruptionAndRetry(opts.repoPath, opts.branch, opts.token, filePath, async () => {
         const dir = repoDirVirtual(info.owner, info.repo);
         const fs = makeRepoFs();
         const fsRoot = clonesRoot();
