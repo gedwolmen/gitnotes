@@ -209,6 +209,11 @@ jest.mock('../src/stores/todoStore', () => ({
     selector({ deleteTodo: jest.fn() }),
 }));
 
+jest.mock('../src/hooks/useGitHostQueries', () => ({
+  useGitHostPullRequests: () => ({ data: [], isLoading: false, isError: false, isSuccess: true, refetch: jest.fn() }),
+  useGitHostIssues: () => ({ data: [], isLoading: false, isError: false, isSuccess: true, refetch: jest.fn() }),
+}));
+
 jest.mock('../src/hooks/useEntityFilter', () => ({
   useEntityFilter: () => ({
     applyFilters: (items: unknown[]) => items,
