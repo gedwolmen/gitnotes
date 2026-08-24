@@ -22,6 +22,17 @@ import { yieldToMain } from '../utils/yieldToMain';
 import type { GitHostProvider } from './git/GitHost';
 import type { CloneProgressCallback } from './RepoImportService';
 
+// Paths of todo files already reported as unparseable, per repo. Without this
+// cache the same malformed remote files re-warn on every pull (#1161); a file
+// that later parses cleanly drops out of the set, so a future breakage is
+// reported again.
+const reportedSkippedTodos = new Map<string, Set<string>>();
+
+/** Test-only seam: clear the per-repo skipped-todo dedup cache. */
+export function __resetSkippedTodoLogForTests(): void {
+  reportedSkippedTodos.clear();
+}
+
 async function hasUnpushedCommits(repoPath: string, branch: string): Promise<boolean> {
   try {
     const localRef = `refs/heads/${branch}`;
@@ -680,6 +691,7 @@ async function pullTodosFromRepo(
 
     let skipped = 0;
     const skippedPaths: string[] = [];
+    const previouslyReported = reportedSkippedTodos.get(repoPath) ?? new Set<string>();
     if (directoryExists) {
       for (const file of files) {
         if (!file.path.endsWith('.json')) continue;
@@ -706,10 +718,12 @@ async function pullTodosFromRepo(
         } catch (error) {
           skipped++;
           skippedPaths.push(file.path);
-          console.warn(
-            `[RepoPullService] Failed to parse todo JSON in ${file.path} (skipping):`,
-            error instanceof Error ? error.message : error,
-          );
+          if (!previouslyReported.has(file.path)) {
+            console.warn(
+              `[RepoPullService] Failed to parse todo JSON in ${file.path} (skipping):`,
+              error instanceof Error ? error.message : error,
+            );
+          }
           continue;
         }
 
@@ -751,9 +765,15 @@ async function pullTodosFromRepo(
         }
       }
       if (skipped > 0) {
-        console.warn(
-          `[RepoPullService] Skipped ${skipped} todo file(s) with invalid JSON content: ${skippedPaths.join(', ')}`,
-        );
+        reportedSkippedTodos.set(repoPath, new Set(skippedPaths));
+        const freshPaths = skippedPaths.filter((p) => !previouslyReported.has(p));
+        if (freshPaths.length > 0) {
+          console.warn(
+            `[RepoPullService] Skipped ${freshPaths.length} todo file(s) with invalid JSON content: ${freshPaths.join(', ')}`,
+          );
+        }
+      } else {
+        reportedSkippedTodos.delete(repoPath);
       }
     }
 
