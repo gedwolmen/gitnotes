@@ -82,6 +82,14 @@ function keyParts(key: string): { repoPath: string; branch: string } | null {
   };
 }
 
+async function hasUnresolvedConflicts(repoPath: string, branch: string): Promise<boolean> {
+  await useConflictStore.getState().loadConflicts();
+  const repoConflicts = useConflictStore.getState().conflicts.filter(
+    (c) => c.repoPath === repoPath && c.branch === branch,
+  );
+  return repoConflicts.some((c) => c.files.some((f) => !f.autoResolved));
+}
+
 /** Restart the idle countdown; fires `flushStaged` when the window elapses. */
 export function resetIdleTimer(): void {
   if (idleTimer !== null) {
@@ -112,6 +120,11 @@ export async function flushStaged(): Promise<void> {
   // timer that fired before loadStaged populated) — otherwise a just-staged
   // clone-mode commit is missed and nothing re-triggers the push (#1020).
   await useStageStore.getState().loadStaged();
+
+  // The conflict store hydrates from storage only when a UI screen mounts;
+  // a timer firing before that sees an empty array and re-pushes into the
+  // same divergence rejection every cycle (#1164).
+  await useConflictStore.getState().loadConflicts();
 
   const store = useStageStore.getState();
   const keys = new Set<string>();
@@ -151,6 +164,12 @@ async function runOnePush(
   // never recovers until app restart — the exact "stuck forever" symptom.
   let releaseCycle: (() => void) | null = null;
   try {
+    // Direct drains (manual long-press push-all, foreground-resume resume)
+    // bypass flushStaged's conflict gate — enforce it here so every push
+    // path honors unresolved conflicts (#1164).
+    if (await hasUnresolvedConflicts(repoPath, branch)) {
+      return;
+    }
     releaseCycle = await GitSyncGate.acquireCycle(source);
     githubActivity.begin('Pushing changes');
     try {
