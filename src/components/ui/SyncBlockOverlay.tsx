@@ -77,6 +77,7 @@ export function SyncBlockOverlay() {
     setCancelling(true);
     void HapticService.error();
     cancelInflightGitHttp();
+    GitSyncGate.forceReleaseCycle();
     useStageStore.getState().forceUnlockPushState();
   };
 

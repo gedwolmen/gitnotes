@@ -137,7 +137,7 @@ async function surfaceConflictsOnDiverged(repoPath: string, branch: string): Pro
   }
 }
 
-async function hasUnpushedLocalCommits(repoPath: string, branch: string): Promise<boolean> {
+export async function hasUnpushedLocalCommits(repoPath: string, branch: string): Promise<boolean> {
   try {
     const localRef = `refs/heads/${branch}`;
     const remoteRef = `refs/remotes/origin/${branch}`;

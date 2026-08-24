@@ -20,6 +20,7 @@ import { RepoFileSyncService } from '../services/RepoFileSyncService';
 import { TemplateRepoPreferenceService, type TemplateRepoPreference } from '../services/TemplateRepoPreferenceService';
 import { serializeTemplate, templateSlug } from '../services/TemplateMarkdownService';
 import { StagingService } from '../services/git/StagingService';
+import { hasUnpushedLocalCommits } from '../services/git/LocalGitWriter';
 import { SyncEngineService, type SyncEngineMode } from '../services/SyncEngineService';
 import { GitFsService } from '../services/git/GitFsService';
 import { parseRepoPath } from '../utils/gitPathParser';
@@ -451,6 +452,15 @@ export default function SettingsScreen() {
         text: t('settings.switch'),
         style: 'destructive',
         onPress: async () => {
+          const branch = repo.branch ?? (await GitFsService.getCurrentBranch({ repoPath: repo.path }));
+          if (branch && (await hasUnpushedLocalCommits(repo.path, branch))) {
+            HapticService.error();
+            Alert.alert(
+              t('settings.unpushedCommitsTitle'),
+              t('settings.unpushedCommitsBody', { name: repo.name, branch }),
+            );
+            return;
+          }
           await GitFsService.removeRepo({ repoPath: repo.path });
           await SyncEngineService.setMode(repo.path, 'api');
           setSyncModes((prev) => ({ ...prev, [repo.path]: 'api' }));

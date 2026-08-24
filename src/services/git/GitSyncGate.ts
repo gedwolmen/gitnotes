@@ -189,6 +189,20 @@ class GitSyncGateClass {
     this.handOffOrReleaseCycle();
   }
 
+  /**
+   * Force-release a held cycle without waiting for the watchdog. Used by the
+   * blocking-overlay Cancel button (#1220) so a stuck push/pull can be escaped
+   * immediately instead of holding the gate for up to CYCLE_WATCHDOG_MS.
+   */
+  forceReleaseCycle(): void {
+    if (!this.cycleHeld) return;
+    const opId = this.cycleRegistryOpId;
+    this.cycleRegistryOpId = null;
+    this.cycleToken += 1;
+    if (opId) gitOperationRegistry.succeed(opId);
+    this.handOffOrReleaseCycle();
+  }
+
   private handOffOrReleaseCycle(): void {
     const next = this.cycleWaiters.shift();
     if (next) {

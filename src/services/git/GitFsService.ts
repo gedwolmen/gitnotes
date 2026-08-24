@@ -640,6 +640,18 @@ export class GitFsService {
         ref: opts.branch,
       });
 
+      const branchRef = `refs/heads/${opts.branch}`;
+      const actualRef = await git.resolveRef({ fs, dir, ref: branchRef });
+      if (actualRef !== sha) {
+        await git.branch({
+          fs,
+          dir,
+          ref: opts.branch,
+          object: sha,
+          force: true,
+        });
+      }
+
       if (opts.push !== false) {
         await git.push({
           fs,
