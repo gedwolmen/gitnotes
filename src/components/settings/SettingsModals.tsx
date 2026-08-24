@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useState } from 'react';
 import { ActivityIndicator, Linking, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -143,6 +143,7 @@ const RepoPickerList = memo(function RepoPickerList({
 export function SettingsModals(props: SettingsModalsProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const [tokenGuideExpanded, setTokenGuideExpanded] = useState(false);
   const {
     colors,
     authState,
@@ -291,7 +292,27 @@ export function SettingsModals(props: SettingsModalsProps) {
         </View>
         <ScrollView className="px-4 py-4" keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 16 }}>
           <Text className="text-sm mb-3 leading-5" style={{ color: colors.textSecondary }}>{t('settings.tokenDescription')}</Text>
-          <TouchableOpacity className="flex-row items-center gap-1 mb-4" onPress={() => Linking.openURL('https://github.com/settings/personal-access-tokens/new?description=GitNotes')}>
+          <TouchableOpacity
+            testID="settings-modals.button.token-guide"
+            className="flex-row items-center gap-1 mb-2"
+            onPress={() => setTokenGuideExpanded((v) => !v)}
+          >
+            <Ionicons name={tokenGuideExpanded ? 'chevron-down' : 'chevron-forward'} size={14} color={colors.primary} />
+            <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '500' }}>{t('settings.tokenGuideTitle')}</Text>
+          </TouchableOpacity>
+          {tokenGuideExpanded ? (
+            <View className="mb-3 ml-1 gap-1">
+              {[1, 2, 3, 4, 5].map((step) => (
+                <Text key={step} className="text-xs leading-4" style={{ color: colors.textSecondary }}>
+                  {t(`settings.tokenGuideStep${step}`)}
+                </Text>
+              ))}
+              <Text className="text-xs leading-4 mt-1" style={{ color: colors.textSecondary }}>
+                {t('settings.tokenGuideClassic')}
+              </Text>
+            </View>
+          ) : null}
+          <TouchableOpacity className="flex-row items-center gap-1 mb-4" onPress={() => Linking.openURL('https://github.com/settings/personal-access-tokens/new?description=GitNotes&type=beta')}>
             <Ionicons name="open-outline" size={14} color={colors.primary} />
             <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '500' }}>{t('settings.openGithubTokenSettings')}</Text>
           </TouchableOpacity>

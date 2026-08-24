@@ -27,7 +27,7 @@ describe('formatSyncError', () => {
 
   test.each([
     ['push rejected', 'Someone else changed this on GitHub. Pull and try again.'],
-    ['GitHub API error: 401', 'Sign in to GitHub again.'],
+    ['GitHub API error: 401', "GitHub rejected the token. Check you copied the full token (starts with ghp_ or github_pat_) — and that it wasn't expired or revoked."],
     ['GitHub API error: 409', 'This file changed on GitHub. Pull and try again.'],
     ['GitHub API error: 422', 'GitHub rejected the change. Try again.'],
     ['GitHub API error: 503', 'GitHub is having trouble — will retry.'],
