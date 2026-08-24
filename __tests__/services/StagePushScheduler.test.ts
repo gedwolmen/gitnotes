@@ -42,6 +42,7 @@ jest.mock('../../src/stores/conflictStore', () => ({
     getState: () => ({
       conflicts: (globalThis as any).__mockConflicts ?? [],
       loadConflicts: (globalThis as any).__mockLoadConflicts ?? (async () => undefined),
+      loadError: (globalThis as any).__mockLoadError ?? false,
     }),
   },
 }));
@@ -56,6 +57,7 @@ import {
   __resetForTests,
   drainPushQueue,
   flushStaged,
+  hasUnresolvedConflicts,
   onStagedChanged,
   setOnPushFailure,
   startScheduler,
@@ -661,5 +663,15 @@ describe('StagePushScheduler', () => {
     expect(StagingService.pushStaged).not.toHaveBeenCalled();
     expect(useStageStore.getState().isPushing['a/repo::main']).toBe(false);
     expect(useStageStore.getState().globalPushing).toBe(false);
+  });
+
+  test('hasUnresolvedConflicts returns true when conflict store load fails (#1219)', async () => {
+    (globalThis as any).__mockLoadConflicts = async () => {
+      (globalThis as any).__mockLoadError = true;
+    };
+
+    const result = await hasUnresolvedConflicts('test/repo', 'main');
+
+    expect(result).toBe(true);
   });
 });
