@@ -37,6 +37,15 @@ jest.mock('../../src/stores/githubActivityStore', () => ({
   },
 }));
 
+jest.mock('../../src/stores/conflictStore', () => ({
+  useConflictStore: {
+    getState: () => ({
+      conflicts: (globalThis as any).__mockConflicts ?? [],
+      loadConflicts: (globalThis as any).__mockLoadConflicts ?? (async () => undefined),
+    }),
+  },
+}));
+
 import { StagingService } from '../../src/services/git/StagingService';
 import { GitSyncGate } from '../../src/services/git/GitSyncGate';
 import { StorageService } from '../../src/services/StorageService';
@@ -80,6 +89,8 @@ describe('StagePushScheduler', () => {
     jest.clearAllMocks();
     __resetForTests();
     setOnPushFailure(null);
+    (globalThis as any).__mockConflicts = [];
+    (globalThis as any).__mockLoadConflicts = jest.fn(async () => undefined);
     useStageStore.setState({
       staged: [],
       isPushing: {},
@@ -215,6 +226,25 @@ describe('StagePushScheduler', () => {
     expect(StagingService.pushStaged).toHaveBeenCalledWith(REPO_B, 'main');
   });
 
+  test('background flush skips repos with unresolved conflicts (#1164)', async () => {
+    (StagingService.listStaged as jest.Mock).mockImplementation(async () => [
+      item(REPO_A, 'main', 'notes/a.md'),
+      item(REPO_B, 'main', 'notes/small.md'),
+    ]);
+    (globalThis as any).__mockConflicts = [
+      {
+        repoPath: REPO_A,
+        branch: 'main',
+        files: [{ path: 'notes/a.md', autoResolved: false }],
+      },
+    ];
+
+    await flushStagedSetsForBackgroundTask();
+
+    expect(StagingService.pushStaged).toHaveBeenCalledTimes(1);
+    expect(StagingService.pushStaged).toHaveBeenCalledWith(REPO_B, 'main');
+  });
+
   test('restart with an in-flight push does not deadlock (isPushing reset, queue survives)', async () => {
     useStageStore.setState({
       staged: [],
@@ -268,7 +298,9 @@ describe('StagePushScheduler', () => {
     jest.advanceTimersByTime(STAGE_PUSH_IDLE_MS);
     await flushAsync();
 
-    expect(failures).toEqual([{ key: 'a/repo::main', error: 'boom' }]);
+    // notifyPushFailure routes raw errors through formatSyncError; 'boom'
+    // hits the generic fallback message (#1169).
+    expect(failures).toEqual([{ key: 'a/repo::main', error: 'Sync to GitHub failed' }]);
     expect(useStageStore.getState().isPushing['a/repo::main']).toBe(false);
     expect(useStageStore.getState().pushQueue).toHaveLength(0);
   });
@@ -570,5 +602,64 @@ describe('StagePushScheduler', () => {
     // Queue is preserved — pending pushes will still drain on the next trigger.
     expect(useStageStore.getState().pushQueue).toEqual(['a/repo::main', 'b/repo::main']);
     expect(StagingService.pushStaged).not.toHaveBeenCalled();
+  });
+
+  test('idle flush hydrates the conflict store before checking (#1164)', async () => {
+    useStageStore.setState({
+      staged: [item(REPO_A, 'main', 'notes/a.md')],
+      pendingCount: 1,
+    });
+    const loadConflicts = (globalThis as any).__mockLoadConflicts;
+
+    startScheduler();
+    jest.advanceTimersByTime(STAGE_PUSH_IDLE_MS);
+    await flushAsync();
+
+    expect(loadConflicts).toHaveBeenCalled();
+  });
+
+  test('idle flush skips a repo with unresolved conflicts but still pushes clean repos (#1164)', async () => {
+    useStageStore.setState({
+      staged: [item(REPO_A, 'main', 'notes/a.md'), item(REPO_B, 'main', 'notes/b.md')],
+      pendingCount: 2,
+    });
+    (globalThis as any).__mockConflicts = [
+      {
+        repoPath: REPO_A,
+        branch: 'main',
+        files: [{ path: 'notes/a.md', autoResolved: false }],
+      },
+    ];
+
+    startScheduler();
+    jest.advanceTimersByTime(STAGE_PUSH_IDLE_MS);
+    await flushAsync();
+
+    expect(StagingService.pushStaged).toHaveBeenCalledTimes(1);
+    expect(StagingService.pushStaged).toHaveBeenCalledWith(REPO_B, 'main', expect.any(Function));
+  });
+
+  test('direct drain skips queued pushes for conflicted repos (#1164)', async () => {
+    useStageStore.setState({
+      staged: [],
+      isPushing: {},
+      globalPushing: false,
+      pushQueue: ['a/repo::main'],
+      pendingCount: 0,
+    });
+    (globalThis as any).__mockConflicts = [
+      {
+        repoPath: REPO_A,
+        branch: 'main',
+        files: [{ path: 'notes/a.md', autoResolved: false }],
+      },
+    ];
+
+    await drainPushQueue('manual');
+    await flushAsync();
+
+    expect(StagingService.pushStaged).not.toHaveBeenCalled();
+    expect(useStageStore.getState().isPushing['a/repo::main']).toBe(false);
+    expect(useStageStore.getState().globalPushing).toBe(false);
   });
 });

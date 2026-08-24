@@ -7,6 +7,7 @@ import { pullAllFromRepos } from './RepoPullService';
 import { GitSyncGate } from './git/GitSyncGate';
 import { StagingService } from './git/StagingService';
 import { NotificationService } from './NotificationService';
+import { useConflictStore } from '../stores/conflictStore';
 
 const TASK_NAME = 'background-sync';
 
@@ -82,8 +83,17 @@ export async function flushStagedSetsForBackgroundTask(): Promise<void> {
       counts.set(key, { repoPath: item.repoPath, branch: item.branch, files: 1 });
     }
   }
+  // The conflict store only hydrates when a UI screen mounts; a cold
+  // OS-launched background task never mounted one, so without this reload it
+  // pushed blindly into known diverged branches (#1164).
+  await useConflictStore.getState().loadConflicts();
   for (const { repoPath, branch, files } of counts.values()) {
     if (files > STAGE_PUSH_MAX_FILES) continue;
+    const repoConflicts = useConflictStore.getState().conflicts.filter(
+      (c) => c.repoPath === repoPath && c.branch === branch,
+    );
+    const hasUnresolved = repoConflicts.some((c) => c.files.some((f) => !f.autoResolved));
+    if (hasUnresolved) continue;
     const result = await StagingService.pushStaged(repoPath, branch);
     if (!result.success) {
       console.warn(`[BackgroundSync] staged push failed for ${repoPath}@${branch}:`, result.error);
