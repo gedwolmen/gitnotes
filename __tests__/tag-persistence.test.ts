@@ -91,7 +91,7 @@ describe('tag persistence', () => {
       format: 'markdown',
     })).resolves.toMatchObject({
       success: false,
-      error: 'Permission denied',
+      error: "Your token can't access this repo — use a fine-grained token with Contents: Read and write (and the repo selected) or a classic token with the repo scope.",
       status: 403,
     });
   });
@@ -109,7 +109,7 @@ describe('tag persistence', () => {
       title: 'Forbidden Note',
     })).resolves.toMatchObject({
       success: false,
-      error: 'Permission denied',
+      error: "Your token can't access this repo — use a fine-grained token with Contents: Read and write (and the repo selected) or a classic token with the repo scope.",
       status: 403,
     });
   });

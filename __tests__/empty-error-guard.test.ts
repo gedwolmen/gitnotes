@@ -66,7 +66,8 @@ describe('empty-error guard', () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toBeTruthy();
-    expect(result.error).toBe('Unknown error');
+    // Empty errors surface formatSyncError's generic copy, never an empty string.
+    expect(result.error).toBe('Sync to GitHub failed');
   });
 
   test('gitOperationStore treats an empty error string on a failed delete record as missing', async () => {
