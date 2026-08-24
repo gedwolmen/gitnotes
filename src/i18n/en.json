@@ -419,6 +419,8 @@
     "switchToApiTitle": "Switch to API mode?",
     "switchToApiBody": "This will remove the local clone of {{name}} and revert to the GitHub Contents API.",
     "switch": "Switch",
+    "unpushedCommitsTitle": "Cannot Switch Modes",
+    "unpushedCommitsBody": "{{name}} on branch \"{{branch}}\" has unpushed local commits. Please push your changes before switching to API mode.",
     "largeRepoTitle": "Repository too large for clone mode",
     "largeRepoCloneBlockedBody": "{{name}} is {{size}} MB — too large to clone on this device. Staying in API mode avoids a memory crash. Switch back to API mode if you already cloned it.",
     "nothingToSyncTitle": "Nothing to sync",

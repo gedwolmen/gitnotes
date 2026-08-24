@@ -24,6 +24,7 @@ let mockIsPushActive = false;
 jest.mock('../../../src/services/git/GitSyncGate', () => ({
   GitSyncGate: {
     isPushActive: jest.fn(() => mockIsPushActive),
+    forceReleaseCycle: jest.fn(),
   },
 }));
 

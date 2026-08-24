@@ -175,16 +175,20 @@ export class GitService {
     }
   }
 
-  private static async fetchFromGitHub<T>(url: string): Promise<T | null> {
+  private static async fetchFromGitHub<T>(url: string, authToken?: string): Promise<T | null> {
     try {
-      const response = await fetch(url, {
-        headers: {
-          'Accept': 'application/vnd.github.v3+json',
-        },
-      });
+      const headers: Record<string, string> = {
+        'Accept': 'application/vnd.github.v3+json',
+      };
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+      const response = await fetch(url, { headers });
       
       if (!response.ok) {
-        if (response.status !== 404) {
+        if (response.status === 401 || response.status === 403) {
+          console.warn(`[GitService] GitHub API auth error: ${response.status} - missing or invalid token`);
+        } else if (response.status !== 404) {
           console.warn(`[GitService] GitHub API error: ${response.status}`);
         }
         return null;
@@ -197,7 +201,11 @@ export class GitService {
     }
   }
 
-  static async getBranches(repoPath: string, provider: GitHostProvider = 'github'): Promise<GitBranch[]> {
+  static async getBranches(
+    repoPath: string,
+    provider: GitHostProvider = 'github',
+    authToken?: string,
+  ): Promise<GitBranch[]> {
     const cacheKey = `branches_${provider}_${repoPath.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
     // Check cache first
@@ -217,36 +225,53 @@ export class GitService {
           await this.setCachedData(cacheKey, result);
           return result;
         }
+        // Host returned empty - try authenticated GitHub API directly if token provided
+        if (authToken && provider === 'github') {
+          const branchesUrl = `${GITHUB_API_BASE}/repos/${repoInfo.owner}/${repoInfo.repo}/branches`;
+          const metaUrl = `${GITHUB_API_BASE}/repos/${repoInfo.owner}/${repoInfo.repo}`;
+          const [ghBranches, ghMeta] = await Promise.all([
+            this.fetchFromGitHub<Array<{ name: string }>>(branchesUrl, authToken),
+            this.fetchFromGitHub<{ default_branch?: string }>(metaUrl, authToken),
+          ]);
+          if (ghBranches && ghBranches.length > 0) {
+            const defaultBranch = ghMeta?.default_branch;
+            const result = ghBranches.map((b) => ({
+              name: b.name,
+              isCurrent: defaultBranch ? b.name === defaultBranch : false,
+            }));
+            await this.setCachedData(cacheKey, result);
+            return result;
+          }
+        }
       } catch (error) {
         console.warn('[GitService] host listBranches failed:', error);
       }
     }
 
-    // Fallback to mock data
-    return [
-      { name: 'main', isCurrent: true },
-      { name: 'master', isCurrent: false },
-      { name: 'develop', isCurrent: false },
-    ];
+    // Return empty array on failure - no fake data fallback (#1212)
+    return [];
   }
 
-  static async getCommits(repoPath: string, branch?: string, limit = 50): Promise<GitCommit[]> {
+  static async getCommits(
+    repoPath: string,
+    branch?: string,
+    limit = 50,
+    authToken?: string,
+  ): Promise<GitCommit[]> {
     const branchKey = branch || 'main';
     const cacheKey = `commits_${repoPath.replace(/[^a-zA-Z0-9]/g, '_')}_${branchKey}`;
     
-    // Check cache first
     const cached = await this.getCachedData<GitCommit[]>(cacheKey);
     if (cached) return cached;
 
     const repoInfo = parseRepoPath(repoPath);
     
     if (repoInfo) {
-      // Try GitHub API
       const url = `${GITHUB_API_BASE}/repos/${repoInfo.owner}/${repoInfo.repo}/commits?sha=${branchKey}&per_page=${limit}`;
       const commits = await this.fetchFromGitHub<Array<{
         sha: string;
         commit: { message: string; author: { name: string; date: string } };
-      }>>(url);
+      }>>(url, authToken);
       
       if (commits) {
         const result = commits.map((c) => ({
@@ -261,16 +286,7 @@ export class GitService {
       }
     }
 
-    // Fallback to mock data
-    return [
-      {
-        hash: 'abc123def456',
-        shortHash: 'abc123d',
-        message: 'Initial commit',
-        author: 'Developer',
-        date: new Date().toISOString().split('T')[0],
-      },
-    ];
+    return [];
   }
 
   static async getRepositoryFolders(
