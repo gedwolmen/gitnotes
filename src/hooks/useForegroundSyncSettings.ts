@@ -7,6 +7,7 @@ import {
 
 const ENABLED_KEY = '@gitnotes:sync_frequently_enabled';
 const INTERVAL_KEY = '@gitnotes:sync_interval_seconds';
+const PAUSED_KEY = '@gitnotes:foreground_sync_paused';
 
 export const SYNC_INTERVAL_OPTIONS = [
   { value: 30, label: 'Every 30 seconds' },
@@ -18,6 +19,7 @@ export const SYNC_INTERVAL_OPTIONS = [
 export type SyncIntervalSeconds = (typeof SYNC_INTERVAL_OPTIONS)[number]['value'];
 
 export const DEFAULT_SYNC_FREQUENTLY_ENABLED = true;
+export const DEFAULT_SYNC_PAUSED = false;
 export const DEFAULT_SYNC_INTERVAL_SECONDS: SyncIntervalSeconds = 60;
 
 const ALLOWED_INTERVALS = new Set<number>(SYNC_INTERVAL_OPTIONS.map((opt) => opt.value));
@@ -33,10 +35,12 @@ function coerceInterval(raw: string | null): SyncIntervalSeconds {
 export async function loadForegroundSyncConfig(): Promise<{
   syncFrequentlyEnabled: boolean;
   syncIntervalSeconds: SyncIntervalSeconds;
+  syncPaused: boolean;
 }> {
-  const [rawEnabled, rawInterval] = await Promise.all([
+  const [rawEnabled, rawInterval, rawPaused] = await Promise.all([
     AsyncStorage.getItem(ENABLED_KEY),
     AsyncStorage.getItem(INTERVAL_KEY),
+    AsyncStorage.getItem(PAUSED_KEY),
   ]);
   // Default-on for the toggle: only `'false'` opts out. `null` (first launch)
   // and any other value fall through to the default.
@@ -44,6 +48,7 @@ export async function loadForegroundSyncConfig(): Promise<{
   return {
     syncFrequentlyEnabled: enabled,
     syncIntervalSeconds: coerceInterval(rawInterval),
+    syncPaused: rawPaused === 'true',
   };
 }
 
@@ -54,6 +59,7 @@ export function useForegroundSyncSettings() {
   const [syncIntervalSeconds, setSyncIntervalSecondsState] = useState<SyncIntervalSeconds>(
     DEFAULT_SYNC_INTERVAL_SECONDS,
   );
+  const [syncPaused, setSyncPausedState] = useState<boolean>(DEFAULT_SYNC_PAUSED);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -63,6 +69,7 @@ export function useForegroundSyncSettings() {
       if (cancelled) return;
       setSyncFrequentlyEnabledState(cfg.syncFrequentlyEnabled);
       setSyncIntervalSecondsState(cfg.syncIntervalSeconds);
+      setSyncPausedState(cfg.syncPaused);
       setHydrated(true);
     })();
     return () => {
@@ -94,12 +101,27 @@ export function useForegroundSyncSettings() {
     [syncFrequentlyEnabled],
   );
 
+  const setSyncPaused = useCallback(
+    async (next: boolean) => {
+      setSyncPausedState(next);
+      await AsyncStorage.setItem(PAUSED_KEY, String(next));
+      updateForegroundWatcherConfig({
+        syncFrequentlyEnabled,
+        syncIntervalSeconds,
+        syncPaused: next,
+      });
+    },
+    [syncFrequentlyEnabled, syncIntervalSeconds],
+  );
+
   return {
     hydrated,
     syncFrequentlyEnabled,
     syncIntervalSeconds,
+    syncPaused,
     setSyncFrequentlyEnabled,
     setSyncIntervalSeconds,
+    setSyncPaused,
   };
 }
 

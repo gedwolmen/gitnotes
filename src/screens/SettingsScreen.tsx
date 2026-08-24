@@ -107,6 +107,8 @@ export default function SettingsScreen() {
   const {
     syncFrequentlyEnabled,
     syncIntervalSeconds,
+    syncPaused,
+    setSyncPaused,
     setSyncFrequentlyEnabled,
     setSyncIntervalSeconds,
   } = useForegroundSyncSettings();
@@ -1041,6 +1043,8 @@ export default function SettingsScreen() {
         syncIntervalSeconds={syncIntervalSeconds}
         onToggleSyncFrequently={(value) => void setSyncFrequentlyEnabled(value)}
         onSetSyncIntervalSeconds={(value) => void setSyncIntervalSeconds(value)}
+        syncPaused={syncPaused}
+        onToggleSyncPaused={(value) => void setSyncPaused(value)}
         syncHealth={syncHealth}
       />
       <SettingsModals

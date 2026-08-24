@@ -152,6 +152,8 @@ onRemoveAccount: (id: string, login: string) => void;
   syncIntervalSeconds: SyncIntervalSeconds;
   onToggleSyncFrequently: (value: boolean) => void;
   onSetSyncIntervalSeconds: (value: SyncIntervalSeconds) => void;
+  syncPaused: boolean;
+  onToggleSyncPaused: (value: boolean) => void;
   syncHealth: ForegroundSyncHealth;
 };
 
@@ -243,6 +245,8 @@ export function SettingsContent(props: SettingsContentProps) {
     syncIntervalSeconds,
     onToggleSyncFrequently,
     onSetSyncIntervalSeconds,
+    syncPaused,
+    onToggleSyncPaused,
     syncHealth,
   } = props;
   // Tokens hook gives us spacing/radii/type so the styled disconnect
@@ -793,6 +797,25 @@ export function SettingsContent(props: SettingsContentProps) {
               <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.syncFrequently')}</Text>
               <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>
                 {t('settings.syncFrequentlySub')}
+              </Text>
+            </View>
+          </View>
+        </GroupRow>
+        <GroupRow
+          trailing={
+            <Toggle
+              testID="settings.toggle.pause-sync"
+              value={syncPaused}
+              onValueChange={onToggleSyncPaused}
+            />
+          }
+        >
+          <View className="flex-row items-center gap-2">
+            <Ionicons name="pause-circle-outline" size={20} color={syncPaused ? colors.error : colors.text} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.pauseForegroundSync')}</Text>
+              <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>
+                {t('settings.pauseForegroundSyncSub')}
               </Text>
             </View>
           </View>

@@ -363,6 +363,8 @@
     "download": "Download",
     "syncFrequently": "Sync frequently",
     "syncFrequentlySub": "Recommended for multi-device",
+    "pauseForegroundSync": "Pause foreground sync",
+    "pauseForegroundSyncSub": "Debug: stops automatic pulls so local commits can diverge (#1174)",
     "syncInterval": "Sync interval",
     "backgroundSync": "Background Sync",
     "syncUpToDate": "Sync up to date",

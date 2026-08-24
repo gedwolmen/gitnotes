@@ -3,6 +3,7 @@ import { AppState } from 'react-native';
 import { GitHubService } from '../services/GitHubService';
 import {
   isForegroundSyncInFlight,
+  isForegroundSyncPaused,
   subscribeForegroundSync,
   acquireExternalSync,
 } from '../services/ForegroundSyncService';
@@ -67,6 +68,7 @@ export function StartupSyncGate({ children }: { children: React.ReactNode }) {
     const drainAndPull = async () => {
       if (drainInFlight) return;
       if (isSyncing.current) return;
+      if (isForegroundSyncPaused()) return;
       if (isForegroundSyncInFlight()) return;
       drainInFlight = true;
       const releaseExternalSync = acquireExternalSync();

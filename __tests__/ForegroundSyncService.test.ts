@@ -61,6 +61,7 @@ import {
   getForegroundSyncHealth,
   isForegroundSyncInFlight,
   startForegroundWatcher,
+  updateForegroundWatcherConfig,
 } from '../src/services/ForegroundSyncService';
 import { pullAllFromRepos } from '../src/services/RepoPullService';
 import { hasPushSession, drainPushQueue } from '../src/services/StagePushScheduler';
@@ -142,6 +143,26 @@ describe('ForegroundSyncService', () => {
     await __runPullForTest();
 
     expect(pullMock).not.toHaveBeenCalled();
+  });
+
+  test('does not pull while paused and resumes after unpausing (#1174)', async () => {
+    updateForegroundWatcherConfig({
+      syncFrequentlyEnabled: true,
+      syncIntervalSeconds: 60,
+      syncPaused: true,
+    });
+
+    await __runPullForTest();
+    expect(pullMock).not.toHaveBeenCalled();
+
+    updateForegroundWatcherConfig({
+      syncFrequentlyEnabled: true,
+      syncIntervalSeconds: 60,
+      syncPaused: false,
+    });
+
+    await __runPullForTest();
+    expect(pullMock).toHaveBeenCalledTimes(1);
   });
 
   test('skips a trigger while another foreground sync is in flight', async () => {

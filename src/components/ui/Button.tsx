@@ -21,6 +21,7 @@ export interface ButtonProps {
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
   testID?: string;
+  accessibilityLabel?: string;
   children?: ReactNode;
 }
 
@@ -38,6 +39,7 @@ export function Button(props: ButtonProps) {
     style,
     textStyle,
     testID,
+    accessibilityLabel,
     children,
   } = props;
   const { colors, type } = useTokens();
@@ -134,6 +136,7 @@ export function Button(props: ButtonProps) {
       <Pressable
         testID={testID}
         accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
         onPress={disabled ? undefined : onPress}
         onLongPress={disabled ? undefined : onLongPress}
         onPressIn={disabled ? undefined : handlePressIn}
@@ -165,6 +168,8 @@ export function Button(props: ButtonProps) {
     <Animated.View style={[{ opacity: disabled ? 0.5 : 1 }, animatedStyle]} className={cn(fullWidth && 'self-stretch')}>
       <Pressable
         testID={testID}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
         onPress={disabled ? undefined : onPress}
         onLongPress={disabled ? undefined : onLongPress}
         onPressIn={disabled ? undefined : handlePressIn}

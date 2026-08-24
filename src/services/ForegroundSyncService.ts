@@ -43,6 +43,7 @@ let lastRunAt = 0;
 
 let currentIntervalSeconds = 0;
 let currentSyncFrequentlyEnabled = true;
+let currentSyncPaused = false;
 
 let lastNetReachable: boolean | null = null;
 let lastAppState: AppStateStatus = AppState.currentState;
@@ -116,6 +117,10 @@ async function shouldPull(): Promise<boolean> {
 const PULL_WATCHDOG_MS = 60_000;
 
 async function runPull(reason: string): Promise<void> {
+  if (currentSyncPaused) {
+    logSkip(reason, 'paused');
+    return;
+  }
   if (inFlight) {
     markBusySkip(reason, 'already in flight');
     return;
@@ -280,13 +285,20 @@ function handleNetInfo(reachable: boolean): void {
   if (cameOnline) void runPull('online');
 }
 
+/** Debug/testing escape hatch (#1174): stops every automatic pull trigger. */
+export function isForegroundSyncPaused(): boolean {
+  return currentSyncPaused;
+}
+
 export interface ForegroundSyncConfig {
   syncFrequentlyEnabled: boolean;
   syncIntervalSeconds: number;
+  syncPaused?: boolean;
 }
 
 export function startForegroundWatcher(config: ForegroundSyncConfig): void {
   currentSyncFrequentlyEnabled = config.syncFrequentlyEnabled;
+  currentSyncPaused = config.syncPaused ?? false;
   currentIntervalSeconds = config.syncIntervalSeconds;
 
   if (!appStateSub) {
@@ -309,6 +321,7 @@ export function startForegroundWatcher(config: ForegroundSyncConfig): void {
 
 export function updateForegroundWatcherConfig(config: ForegroundSyncConfig): void {
   currentSyncFrequentlyEnabled = config.syncFrequentlyEnabled;
+  currentSyncPaused = config.syncPaused ?? false;
   currentIntervalSeconds = config.syncIntervalSeconds;
   restartInterval();
 }
@@ -375,6 +388,7 @@ export function __resetForegroundSyncForTest(): void {
   lastRunAt = 0;
   currentIntervalSeconds = 0;
   currentSyncFrequentlyEnabled = true;
+  currentSyncPaused = false;
   consecutiveFailures = 0;
   lastFailedAt = 0;
   consecutiveSkips = 0;
