@@ -16,6 +16,7 @@ export interface SortPickerProps {
    * `bar` matches the 40px SearchBar row used in TodosListHeader.
    */
   size?: 'chip' | 'bar';
+  iconOnly?: boolean;
 }
 
 const SORT_FIELDS: Array<{ field: SortField; label: string }> = [
@@ -54,7 +55,7 @@ function formatSortLabel(mode: SortMode): string {
   return `${DIRECTION_LABELS[mode.field][mode.direction]} ${SORT_FIELDS.find((item) => item.field === mode.field)?.label ?? ''}`;
 }
 
-export default function SortPicker({ currentSort, onSortChange, entityType, size = 'chip' }: SortPickerProps) {
+export default function SortPicker({ currentSort, onSortChange, entityType, size = 'chip', iconOnly = false }: SortPickerProps) {
   const { colors, tokens } = useTheme();
   const [open, setOpen] = useState(false);
   const [isHydrating, setIsHydrating] = useState(true);
@@ -123,7 +124,7 @@ export default function SortPicker({ currentSort, onSortChange, entityType, size
         }}
       >
         <Ionicons name="swap-vertical" size={iconSize} color={colors.primary} />
-        <Text style={{ color: colors.textSecondary, fontSize: textSize }}>{formatSortLabel(currentSort)}</Text>
+        {!iconOnly && <Text style={{ color: colors.textSecondary, fontSize: textSize }}>{formatSortLabel(currentSort)}</Text>}
       </TouchableOpacity>
 
       <Modal visible={open} onRequestClose={() => setOpen(false)} fullWidth>
