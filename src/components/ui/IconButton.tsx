@@ -57,7 +57,7 @@ export function IconButton(props: IconButtonProps) {
 
   if (variant === 'ghost') {
     return (
-      <Animated.View accessibilityViewIsModal style={[{ opacity: disabled ? 0.5 : 1 }, animatedStyle]}>
+      <Animated.View accessibilityViewIsModal accessibilityRole="button" style={[{ opacity: disabled ? 0.5 : 1 }, animatedStyle]}>
         <Pressable
           testID={testID}
           accessibilityLabel={accessibilityLabel}
