@@ -51,7 +51,7 @@ export function NotesListHeader({
           style={styles.searchBar}
         />
         <View testID="notes-list.sort.change">
-          <SortPicker currentSort={sortMode} onSortChange={onSortChange} entityType="notes" size="bar" />
+          <SortPicker currentSort={sortMode} onSortChange={onSortChange} entityType="notes" size="bar" iconOnly />
         </View>
       </View>
 
