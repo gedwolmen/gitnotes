@@ -99,6 +99,7 @@ export function NoteEditorForm({
 
       <TouchableOpacity
         testID="note-editor-form.button.open-folder"
+        accessibilityRole="button"
         style={[
           styles.folderSelector,
           { backgroundColor: colors.surfaceSecondary, borderColor: colors.border },
@@ -137,6 +138,7 @@ export function NoteEditorForm({
             <TouchableOpacity
               key={value}
               testID="note-editor-form.picker.format"
+              accessibilityRole="button"
               style={[
                 styles.formatChip,
                 { borderColor: colors.border },
