@@ -72,6 +72,10 @@ const MATCHERS: Matcher[] = [
     message: 'Push rejected — your branch has diverged from remote. Pull remote changes first.',
   },
   {
+    needles: ['modified on github since', 'was modified on github since'],
+    message: 'SHA conflict — remote was updated. Pull to merge, then push again.',
+  },
+  {
     needles: ['could not find', 'not found', 'no remote ref found', 'cannot discard without an origin'],
     message: 'Push rejected — branch may not exist on remote or remote ref is missing. Push a commit first.',
   },
