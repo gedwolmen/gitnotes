@@ -139,6 +139,7 @@ export function NoteEditorForm({
               key={value}
               testID="note-editor-form.picker.format"
               accessibilityRole="button"
+              accessibilityState={{ selected: noteFormat === value }}
               style={[
                 styles.formatChip,
                 { borderColor: colors.border },
