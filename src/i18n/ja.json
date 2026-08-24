@@ -264,6 +264,8 @@
     "download": "ダウンロード",
     "syncFrequently": "頻繁に同期",
     "syncFrequentlySub": "複数デバイスで推奨",
+    "pauseForegroundSync": "フォアグラウンド同期を一時停止",
+    "pauseForegroundSyncSub": "デバッグ：自動pullを停止し、ローカルコミットの分岐を許可 (#1174)",
     "syncInterval": "同期間隔",
     "backgroundSync": "バックグラウンド同期",
     "syncUpToDate": "同期済み",

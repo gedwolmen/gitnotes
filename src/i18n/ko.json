@@ -264,6 +264,8 @@
     "download": "다운로드",
     "syncFrequently": "자주 동기화",
     "syncFrequentlySub": "여러 기기에서 권장",
+    "pauseForegroundSync": "포그라운드 동기화 일시중지",
+    "pauseForegroundSyncSub": "디버그: 자동 pull을 중지하여 로컬 커밋 분기 허용 (#1174)",
     "syncInterval": "동기화 간격",
     "backgroundSync": "백그라운드 동기화",
     "syncUpToDate": "동기화 완료",

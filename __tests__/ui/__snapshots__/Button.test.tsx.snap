@@ -19,6 +19,7 @@ exports[`Button snapshots primary in light + dark: primary-dark 1`] = `
   }
 >
   <View
+    accessibilityRole="button"
     accessibilityState={
       {
         "busy": undefined,
@@ -147,6 +148,7 @@ exports[`Button snapshots primary in light + dark: primary-light 1`] = `
   }
 >
   <View
+    accessibilityRole="button"
     accessibilityState={
       {
         "busy": undefined,

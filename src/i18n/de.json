@@ -264,6 +264,8 @@
     "download": "Herunterladen",
     "syncFrequently": "Häufig synchronisieren",
     "syncFrequentlySub": "Empfohlen für mehrere Geräte",
+    "pauseForegroundSync": "Vordergrund-Sync pausieren",
+    "pauseForegroundSyncSub": "Debug: stoppt automatische Pulls, damit lokale Commits abweichen können (#1174)",
     "syncInterval": "Synchronisierungsintervall",
     "backgroundSync": "Hintergrundsynchronisierung",
     "syncUpToDate": "Synchronisierung auf dem neuesten Stand",
