@@ -1,15 +1,15 @@
 # Pro Paywall & Monetization
 
-> GitNotēs Pro: 30-day free trial, $2.99/month subscription, $40 lifetime one-time purchase — powered by RevenueCat.
+> GitNotēs Pro: 14-day free trial, $3.99/month subscription, $39.99 lifetime one-time purchase — powered by RevenueCat.
 
 ## Monetization model
 
 | Plan | Price | Product type |
 |------|-------|--------------|
-| Free trial | 30 days | Store intro offer (App Store Connect introductory offer / Play Console free-trial base plan) |
-| Monthly | $2.99/month (after trial) | Auto-renewable subscription |
-| Yearly | $19.99/year (when configured) | Auto-renewable subscription |
-| Lifetime | $40 one-time | Non-consumable in-app purchase |
+| Free trial | 14 days | Store intro offer (App Store Connect introductory offer / Play Console free-trial base plan) |
+| Monthly | $3.99/month (after trial) | Auto-renewable subscription |
+| Yearly | $34.99/year (when configured) | Auto-renewable subscription |
+| Lifetime | $39.99 one-time | Non-consumable in-app purchase |
 
 Existing users (installed before the paywall release) are grandfathered as Pro forever and never see the paywall.
 
@@ -187,8 +187,8 @@ This cannot be automated — a human must complete it before real-device (sandbo
 1. **RevenueCat dashboard**: create the project, add the iOS app (`com.xaventra.gitnotes`) and Android app (`org.gitnotes.app`), and copy the SDK keys into `.env`.
 2. **App Store Connect keys** (Users and Access → Integrations): generate an **In-App Purchase** key (`SubscriptionKey_XXXX.p8`) for the RevenueCat in-app purchase key config, and an **App Store Connect API** key (`AuthKey_XXXX.p8`) for product import/price sync. Fill Key ID + Issuer ID (UUID at top of the Integrations page) into the RevenueCat app settings.
 3. **RevenueCat custom URL scheme**: RevenueCat assigns a per-app scheme (e.g. `rc-0aadf77f9f`). It is registered in `app.json` — iOS via `infoPlist.CFBundleURLTypes` (alongside the existing `gitnotes` scheme) and Android via `intentFilters`. Regenerate native folders with `npx expo prebuild --clean` after changing. Registering the scheme alone only opens the app — presenting the preview paywall needs `react-native-purchases-ui` + URL handling.
-4. **App Store Connect**: create the auto-renewable subscriptions `com.xaventra.gitnotes.monthly` at $2.99 (with a **30-day free trial** introductory offer) and `com.xaventra.gitnotes.yearly` at $19.99, plus the non-consumable `com.xaventra.gitnotes.lifetime` at $40.
-5. **Google Play Console**: create the subscriptions `gitnotes_monthly` at $2.99 (**free-trial base plan**, 30 days) and `gitnotes_yearly` at $19.99, plus the one-time product `gitnotes_lifetime` at $40.
+4. **App Store Connect**: create the auto-renewable subscriptions `com.xaventra.gitnotes.monthly` at $3.99 (with a **14-day free trial** introductory offer) and `com.xaventra.gitnotes.yearly` at $34.99, plus the non-consumable `com.xaventra.gitnotes.lifetime` at $39.99.
+5. **Google Play Console**: create the subscriptions `gitnotes_monthly` at $3.99 (**free-trial base plan**, 14 days) and `gitnotes_yearly` at $34.99, plus the one-time product `gitnotes_lifetime` at $39.99.
 6. **RevenueCat dashboard**: create the `pro` entitlement, link ALL products to it, create the `default` offering with `monthly` + `yearly` + `lifetime` packages (yearly is optional — the paywall hides it when absent), and mark it current.
 7. Verify the build number: the paywall release must be **build ≥ 9** (iOS `buildNumber` in `app.json`) so `originalApplicationVersion < 9` correctly identifies pre-paywall users.
 8. **Legal links (RESOLVED):** Terms of Service (`https://gitnotes.org/terms`) and Privacy Policy (`https://gitnotes.org/privacy`) are present in the paywall footer. App Store review requirement satisfied.

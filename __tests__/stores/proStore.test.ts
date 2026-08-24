@@ -25,9 +25,9 @@ jest.mock('../../src/services/RevenueCatService', () => ({
   configureRevenueCat: jest.fn(async () => ({ configured: true })),
   getCustomerInfo: jest.fn(async () => ({ entitlements: { active: {} } })),
   getPackages: jest.fn(async () => ({
-    monthly: { identifier: 'monthly', product: { identifier: 'monthly-product', priceString: '$2.99' } },
-    yearly: { identifier: 'yearly', product: { identifier: 'yearly-product', priceString: '$19.99' } },
-    lifetime: { identifier: 'lifetime', product: { identifier: 'lifetime-product', priceString: '$40.00' } },
+    monthly: { identifier: 'monthly', product: { identifier: 'monthly-product', priceString: '$3.99' } },
+    yearly: { identifier: 'yearly', product: { identifier: 'yearly-product', priceString: '$34.99' } },
+    lifetime: { identifier: 'lifetime', product: { identifier: 'lifetime-product', priceString: '$39.99' } },
     offerings: { current: null },
   })),
   purchasePackage: jest.fn(async () => ({
@@ -123,9 +123,9 @@ beforeEach(() => {
   configureMock.mockResolvedValue({ configured: true });
   customerInfoMock.mockResolvedValue(freeCustomer);
   packagesMock.mockResolvedValue({
-    monthly: { identifier: 'monthly', product: { identifier: 'm', priceString: '$2.99' } },
-    yearly: { identifier: 'yearly', product: { identifier: 'y', priceString: '$19.99' } },
-    lifetime: { identifier: 'lifetime', product: { identifier: 'l', priceString: '$40.00' } },
+    monthly: { identifier: 'monthly', product: { identifier: 'm', priceString: '$3.99' } },
+    yearly: { identifier: 'yearly', product: { identifier: 'y', priceString: '$34.99' } },
+    lifetime: { identifier: 'lifetime', product: { identifier: 'l', priceString: '$39.99' } },
     offerings: { current: null },
   });
   purchaseMock.mockResolvedValue({ kind: 'purchased', customerInfo: proCustomer() });
@@ -388,7 +388,7 @@ describe('offerings', () => {
     expect(useProStore.getState().error).toBe('no offerings');
 
     packagesMock.mockResolvedValueOnce({
-      monthly: { identifier: 'monthly', product: { identifier: 'm', priceString: '$2.99' } },
+      monthly: { identifier: 'monthly', product: { identifier: 'm', priceString: '$3.99' } },
       offerings: { current: { identifier: 'default' } },
     });
     await useProStore.getState().loadOfferingsIfNeeded();
@@ -399,7 +399,7 @@ describe('offerings', () => {
   it('stores the current offering once offerings load', async () => {
     const offering = { identifier: 'default', serverDescription: 'Default' };
     packagesMock.mockResolvedValue({
-      monthly: { identifier: 'monthly', product: { identifier: 'm', priceString: '$2.99' } },
+      monthly: { identifier: 'monthly', product: { identifier: 'm', priceString: '$3.99' } },
       offerings: { current: offering },
     });
     await useProStore.getState().loadOfferingsIfNeeded();

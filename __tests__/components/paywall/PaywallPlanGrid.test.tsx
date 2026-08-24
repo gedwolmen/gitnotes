@@ -102,15 +102,15 @@ describe('PaywallPlanGrid', () => {
     const { getByText, getByTestId } = render(
       <PaywallPlanGrid
         plans={[
-          plan({ id: 'monthly', title: 'Monthly', priceLine: '$2.99/month', ctaTestID: 'paywall.monthly.cta' }),
-          plan({ id: 'lifetime', title: 'Lifetime', priceLine: '$40.00 one-time', ctaTestID: 'paywall.lifetime.cta' }),
+          plan({ id: 'monthly', title: 'Monthly', priceLine: '$3.99/month', ctaTestID: 'paywall.monthly.cta' }),
+          plan({ id: 'lifetime', title: 'Lifetime', priceLine: '$39.99 one-time', ctaTestID: 'paywall.lifetime.cta' }),
         ]}
       />,
     );
     expect(getByText('Monthly')).toBeTruthy();
-    expect(getByText('$2.99/month')).toBeTruthy();
+    expect(getByText('$3.99/month')).toBeTruthy();
     expect(getByText('Lifetime')).toBeTruthy();
-    expect(getByText('$40.00 one-time')).toBeTruthy();
+    expect(getByText('$39.99 one-time')).toBeTruthy();
     expect(getByTestId('paywall.monthly.cta')).toBeTruthy();
     expect(getByTestId('paywall.lifetime.cta')).toBeTruthy();
   });
@@ -145,13 +145,13 @@ describe('PaywallPlanGrid', () => {
     const { getByTestId } = render(
       <PaywallPlanGrid
         plans={[
-          plan({ id: 'monthly', title: 'Monthly', priceLine: '$2.99/month' }),
-          plan({ id: 'lifetime', title: 'Lifetime', priceLine: '$40.00 one-time' }),
+          plan({ id: 'monthly', title: 'Monthly', priceLine: '$3.99/month' }),
+          plan({ id: 'lifetime', title: 'Lifetime', priceLine: '$39.99 one-time' }),
         ]}
       />,
     );
-    expect(getByTestId('paywall.plan.monthly').props.accessibilityLabel).toBe('Monthly. $2.99/month');
-    expect(getByTestId('paywall.plan.lifetime').props.accessibilityLabel).toBe('Lifetime. $40.00 one-time');
+    expect(getByTestId('paywall.plan.monthly').props.accessibilityLabel).toBe('Monthly. $3.99/month');
+    expect(getByTestId('paywall.plan.lifetime').props.accessibilityLabel).toBe('Lifetime. $39.99 one-time');
   });
 
   it('renders the per-plan icon badge in every tile', () => {
@@ -194,13 +194,13 @@ describe('PaywallPlanGrid', () => {
         plans={[
           plan({
             id: 'monthly',
-            priceLine: 'Try 30 days free, then $2.99/month',
+            priceLine: 'Try 14 days free, then $3.99/month',
             ctaTestID: 'paywall.monthly.cta',
           }),
         ]}
       />,
     );
-    const price = getByText('Try 30 days free, then $2.99/month');
+    const price = getByText('Try 14 days free, then $3.99/month');
     expect(price.props.numberOfLines).toBe(2);
     expect(price.props.style.lineHeight).toBe(18);
   });
