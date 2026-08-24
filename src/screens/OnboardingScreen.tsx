@@ -233,8 +233,12 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
             </TouchableOpacity>
           </View>
         ) : isGithubToolsStep ? (
-          <View className="flex-1 px-10 items-center">
-            <Surface elevation="raised" radius="pill" className="w-[140px] h-[140px] items-center justify-center mb-6">
+          <ScrollView
+            className="flex-1 px-10"
+            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', gap: 16 }}
+            showsVerticalScrollIndicator={false}
+          >
+            <Surface elevation="raised" radius="pill" className="w-[140px] h-[140px] items-center justify-center">
               <Ionicons name="git-branch-outline" size={72} color={colors.accent} />
             </Surface>
             <Text className="text-[28px] font-bold text-center" style={{ color: colors.text }}>
@@ -243,10 +247,10 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
             <Text className="text-base text-center leading-6" style={{ color: colors.textSecondary }}>
               {t('onboarding.githubTools.body', { defaultValue: 'Your AI can now list repos, create issues, open pull requests, review changes, and post PR reviews using your connected GitHub account. All write operations respect your Action Mode setting.' })}
             </Text>
-            <Text className="text-[13px] text-center leading-[18px] mt-2 opacity-80" style={{ color: colors.textSecondary }}>
+            <Text className="text-[13px] text-center leading-[18px] opacity-80" style={{ color: colors.textSecondary }}>
               {t('onboarding.githubTools.bodyReminder', { defaultValue: 'You can turn this on or off anytime in Settings → AI → GitHub Tools.' })}
             </Text>
-          </View>
+          </ScrollView>
         ) : (
           <View className="flex-1 px-10 items-center">
             <Surface elevation="raised" radius="pill" className="w-[140px] h-[140px] items-center justify-center mb-6">
