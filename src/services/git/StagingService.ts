@@ -404,7 +404,20 @@ export class StagingService {
         branch,
         token: token ?? undefined,
       });
-      if (!result.success) return { success: false, error: result.error };
+      if (!result.success) {
+        if (
+          result.error?.includes('No remote ref found') ||
+          result.error?.includes('cannot discard without an origin')
+        ) {
+          const staged = await StagingService.listStaged(repoPath, branch);
+          if (staged.length > 0) {
+            await GitFsService.unstageFiles({ repoPath, files: staged.map((s) => s.filePath) });
+          }
+          notifyStagedChanged();
+          return { success: true };
+        }
+        return { success: false, error: result.error };
+      }
 
       notifyStagedChanged();
       return { success: true };

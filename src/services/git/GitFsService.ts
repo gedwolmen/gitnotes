@@ -612,4 +612,14 @@ export class GitFsService {
       return null;
     }
   }
+
+  static async unstageFiles(opts: { repoPath: string; files: string[] }): Promise<void> {
+    const info = parseRepoPath(opts.repoPath);
+    if (!info) return;
+    const dir = repoDirVirtual(info.owner, info.repo);
+    const fs = makeRepoFs();
+    for (const file of opts.files) {
+      await git.resetIndex({ fs, dir, ref: 'HEAD', filepath: file });
+    }
+  }
 }

@@ -203,7 +203,12 @@ export default function StageScreen() {
           {
             text: 'Discard',
             style: 'destructive',
-            onPress: () => void discardStaged(group.repoPath, group.branch),
+            onPress: async () => {
+              const error = await discardStaged(group.repoPath, group.branch);
+              if (error) {
+                Alert.alert('Discard Failed', error);
+              }
+            },
           },
         ],
       );
@@ -472,11 +477,16 @@ export default function StageScreen() {
                     {
                       text: 'Discard All',
                       style: 'destructive',
-                      onPress: async () => {
-                        for (const group of groups) {
-                          await discardStaged(group.repoPath, group.branch);
-                        }
-                      },
+              onPress: async () => {
+                const errors: string[] = [];
+                for (const group of groups) {
+                  const error = await discardStaged(group.repoPath, group.branch);
+                  if (error) errors.push(error);
+                }
+                if (errors.length > 0) {
+                  Alert.alert('Discard Failed', errors.join('\n'));
+                }
+              },
                     },
                   ],
                 );
