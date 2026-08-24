@@ -35,8 +35,8 @@ export function FloatingStageButton({ currentRouteName }: FloatingStageButtonPro
   const pendingCount = useStageStore((s) => s.pendingCount);
   const globalPushing = useStageStore((s) => s.globalPushing);
   const isPushing = useStageStore((s) => s.isPushing);
-  const conflicts = useConflictStore((s) => s.conflicts);
-  const hasConflicts = conflicts.some((c) => c.files.some((f) => !f.autoResolved));
+  const totalUnresolved = useConflictStore((s) => s.totalUnresolvedFiles());
+  const hasConflicts = totalUnresolved > 0;
   const position = useStageButtonPosition();
 
   // Ensure conflict store is loaded before first render — checkOnboarding fires
