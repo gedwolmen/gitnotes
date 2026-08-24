@@ -2,7 +2,13 @@ jest.mock('ai', () => ({
   generateText: jest.fn(),
 }));
 
-const mockAIStoreState = {
+const mockAIStoreState: {
+  dailyQuoteEnabled: boolean;
+  dailyQuotePersonalizationEnabled: boolean;
+  aiPersonalizationEnabled: boolean;
+  selectedModelId: string | null;
+  getSelectedModelOverride?: () => { id: string; name: string; providerId: string; providerType: string } | undefined;
+} = {
   dailyQuoteEnabled: true,
   dailyQuotePersonalizationEnabled: true,
   aiPersonalizationEnabled: true,
@@ -16,14 +22,16 @@ jest.mock('../../src/stores/aiStore', () => ({
       dailyQuotePersonalizationEnabled: mockAIStoreState.dailyQuotePersonalizationEnabled,
       aiPersonalizationEnabled: mockAIStoreState.aiPersonalizationEnabled,
       getSelectedModel: () =>
-        mockAIStoreState.selectedModelId
-          ? {
-              id: mockAIStoreState.selectedModelId,
-              name: 'Test Model',
-              providerId: 'test-provider',
-              providerType: 'anthropic',
-            }
-          : undefined,
+        mockAIStoreState.getSelectedModelOverride
+          ? mockAIStoreState.getSelectedModelOverride()
+          : mockAIStoreState.selectedModelId
+            ? {
+                id: mockAIStoreState.selectedModelId,
+                name: 'Test Model',
+                providerId: 'test-provider',
+                providerType: 'anthropic',
+              }
+            : undefined,
     }),
   }),
 }));
@@ -36,9 +44,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generateText } from 'ai';
 import { dailyQuoteService, type DailyQuote } from '../../src/services/DailyQuoteService';
 import { initializeModel } from '../../src/services/AIService';
-import { __setProState } from '../../src/stores/proStore';
 import type { Note } from '../../src/models/Note';
 import quotesJson from '../../src/data/philosopher_quotes.json';
+
+// Self-contained proStore double: the jest.setup.ts global mock registers by
+// main-tree path, which worktree checkouts resolve differently (#1170).
+const mockProState = { status: 'free', entitlementActive: false, isGrandfathered: false };
+jest.mock('../../src/stores/proStore', () => ({
+  __esModule: true,
+  selectIsPro: (state: { status: string }) => state.status === 'pro',
+  __setProState: (partial: Record<string, unknown>) => Object.assign(mockProState, partial),
+  useProStore: { getState: () => mockProState },
+}));
+
+const __setProState = (partial: Record<string, unknown>) => Object.assign(mockProState, partial);
 
 const mockGenerateText = jest.mocked(generateText);
 
@@ -113,10 +132,12 @@ beforeEach(async () => {
   mockAIStoreState.dailyQuotePersonalizationEnabled = true;
   mockAIStoreState.aiPersonalizationEnabled = true;
   mockAIStoreState.selectedModelId = 'test-model';
+  mockAIStoreState.getSelectedModelOverride = undefined;
 });
 
 afterEach(() => {
   jest.restoreAllMocks();
+  mockAIStoreState.getSelectedModelOverride = undefined;
 });
 
 describe('DailyQuoteService 4-state matrix', () => {
@@ -185,6 +206,38 @@ describe('DailyQuoteService 4-state matrix', () => {
     expect(generateText).toHaveBeenCalledTimes(1);
     expect(quote).not.toBeNull();
     expect(quote?.quoteId).toBe(quotes[0].id);
+    expect(quote?.description).toBe(AI_FAILED_DESCRIPTION);
+  });
+
+  it('maps a model that disappears mid-flight to the no_model fallback, not ai_failed (#1170)', async () => {
+    __setProState({ status: 'pro', entitlementActive: true, isGrandfathered: false });
+    let calls = 0;
+    mockAIStoreState.getSelectedModelOverride = () => {
+      calls += 1;
+      return calls === 1
+        ? { id: 'test-model', name: 'Test Model', providerId: 'test-provider', providerType: 'anthropic' }
+        : undefined;
+    };
+    jest.spyOn(Math, 'random').mockReturnValue(0);
+
+    const quote = await dailyQuoteService.getDailyQuote([journalNote], [plainNote]);
+
+    expect(calls).toBe(2);
+    expect(initializeModel).not.toHaveBeenCalled();
+    expect(quote).not.toBeNull();
+    expect(quote?.description).toBe(
+      'No AI model selected. Choose a model in Settings → AI to enable personalization.',
+    );
+  });
+
+  it('still maps provider initialization failures to the ai_failed fallback (#1170)', async () => {
+    (initializeModel as jest.Mock).mockRejectedValueOnce(new Error('ProviderUnavailableError'));
+    jest.spyOn(Math, 'random').mockReturnValue(0);
+
+    const quote = await dailyQuoteService.getDailyQuote([journalNote], [plainNote]);
+
+    expect(initializeModel).toHaveBeenCalledTimes(1);
+    expect(quote).not.toBeNull();
     expect(quote?.description).toBe(AI_FAILED_DESCRIPTION);
   });
 });
