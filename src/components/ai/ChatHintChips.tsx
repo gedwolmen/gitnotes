@@ -105,6 +105,7 @@ export function ChatHintChips({ onPressHint }: ChatHintChipsProps) {
         testID="chat-hints-scroller"
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={{ flexGrow: 0 }}
         contentContainerStyle={{ gap: spacing[2], paddingHorizontal: spacing[2] }}
       >
         {HINTS.map((hint) => (
