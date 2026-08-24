@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StagingService, type StagedItem } from './git/StagingService';
 import { GitSyncGate, type CycleSource } from './git/GitSyncGate';
 import { useStageStore } from '../stores/stageStore';
+import { useConflictStore } from '../stores/conflictStore';
 import { githubActivity } from '../stores/githubActivityStore';
 import type { StageState } from '../stores/stageStore';
 
@@ -109,6 +110,13 @@ export async function flushStaged(): Promise<void> {
   // timer that fired before loadStaged populated) — otherwise a just-staged
   // clone-mode commit is missed and nothing re-triggers the push (#1020).
   await useStageStore.getState().loadStaged();
+
+  // Skip idle auto-push when conflicts exist — user must resolve them first.
+  // The notification + floating button red state already guide them to Conflicts.
+  if (useConflictStore.getState().totalUnresolvedFiles() > 0) {
+    return;
+  }
+
   const store = useStageStore.getState();
   const keys = new Set<string>();
   for (const item of store.staged) {

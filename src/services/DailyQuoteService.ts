@@ -157,20 +157,33 @@ class DailyQuoteServiceClass {
       .map((j, i) => `[Journal ${i + 1}]\n${j.content.slice(0, 800)}`)
       .join('\n\n');
 
-    const result = await generateText({
-      model,
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are a wise philosophical mentor. Review the user\'s recent journal entries and select ONE quote from the provided list that best resonates with their current themes. Then write a personalized 2-3 sentence description connecting the quote to their reflections. Reply ONLY with valid JSON in this EXACT format:\n{"quoteId": "the-quote-id", "description": "your personalized description"}',
-        },
-        {
-          role: 'user',
-          content: `Recent journal entries:\n\n${journalText}\n\nAvailable quotes to choose from (each has id, text, author, tags):\n${JSON.stringify(sampleQuotes, null, 2)}\n\nSelect the best matching quote and write a personalized description.`,
-        },
-      ],
-    });
+    let result;
+    try {
+      result = await generateText({
+        model,
+        messages: [
+          {
+            role: 'system',
+            content:
+              'You are a wise philosophical mentor. Review the user\'s recent journal entries and select ONE quote from the provided list that best resonates with their current themes. Then write a personalized 2-3 sentence description connecting the quote to their reflections. Reply ONLY with valid JSON in this EXACT format:\n{"quoteId": "the-quote-id", "description": "your personalized description"}',
+          },
+          {
+            role: 'user',
+            content: `Recent journal entries:\n\n${journalText}\n\nAvailable quotes to choose from (each has id, text, author, tags):\n${JSON.stringify(sampleQuotes, null, 2)}\n\nSelect the best matching quote and write a personalized description.`,
+          },
+        ],
+      });
+    } catch (error) {
+      console.warn(
+        '[DailyQuoteService] generateText failed:',
+        error,
+        '| model:',
+        selectedModel.id,
+        '| hasJournals:',
+        recentJournals.length > 0,
+      );
+      return null;
+    }
 
     const raw = (result.text || '').trim();
     const jsonMatch = raw.match(/\{[\s\S]*?\}/);

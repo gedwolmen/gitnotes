@@ -9,6 +9,7 @@ import Animated, {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useStageStore } from '../../stores/stageStore';
+import { useConflictStore } from '../../stores/conflictStore';
 import { drainPushQueue } from '../../services/StagePushScheduler';
 import { useTheme } from '../../contexts/ThemeContext';
 import { HapticService } from '../../utils/haptics';
@@ -34,7 +35,16 @@ export function FloatingStageButton({ currentRouteName }: FloatingStageButtonPro
   const pendingCount = useStageStore((s) => s.pendingCount);
   const globalPushing = useStageStore((s) => s.globalPushing);
   const isPushing = useStageStore((s) => s.isPushing);
+  const conflicts = useConflictStore((s) => s.conflicts);
+  const hasConflicts = conflicts.some((c) => c.files.some((f) => !f.autoResolved));
   const position = useStageButtonPosition();
+
+  // Ensure conflict store is loaded before first render — checkOnboarding fires
+  // loadConflicts() without await, so the button may mount before it completes.
+  useEffect(() => {
+    void useConflictStore.getState().loadConflicts();
+  }, []);
+
   const [reduceMotionEnabled, setReduceMotionEnabled] = useState(true);
   const [reduceMotionResolved, setReduceMotionResolved] = useState(false);
 
@@ -103,8 +113,12 @@ export function FloatingStageButton({ currentRouteName }: FloatingStageButtonPro
 
   const handleTap = useCallback(() => {
     HapticService.selection();
-    navigation.navigate('Stage');
-  }, [navigation]);
+    if (hasConflicts) {
+      navigation.navigate('Conflicts');
+    } else {
+      navigation.navigate('Stage');
+    }
+  }, [navigation, hasConflicts]);
 
   const handleLongPress = useCallback(() => {
     if (anyPushing) return;
@@ -145,8 +159,8 @@ export function FloatingStageButton({ currentRouteName }: FloatingStageButtonPro
           <Pressable
             testID="floating-stage.button.navigate-stage"
             accessibilityRole="button"
-            accessibilityLabel="View staged changes"
-            accessibilityHint="Tap to view staged changes. Press and hold to push all staged changes."
+            accessibilityLabel={hasConflicts ? 'Resolve conflicts' : 'View staged changes'}
+            accessibilityHint={hasConflicts ? 'Tap to resolve merge conflicts.' : 'Tap to view staged changes. Press and hold to push all staged changes.'}
             accessibilityState={{ busy: anyPushing }}
             onPress={handleTap}
             onLongPress={handleLongPress}
@@ -155,11 +169,11 @@ export function FloatingStageButton({ currentRouteName }: FloatingStageButtonPro
             delayLongPress={FLOATING_AI_BUTTON_LONG_PRESS_MS}
             style={({ pressed }) => [
               styles.button,
-              { backgroundColor: anyPushing ? colors.border : colors.primary },
+              { backgroundColor: hasConflicts ? colors.error : anyPushing ? colors.border : colors.primary },
               pressed ? styles.pressed : null,
             ]}
           >
-            <Ionicons name="cloud-upload" size={24} color={anyPushing ? colors.textSecondary : '#FFFFFF'} />
+            <Ionicons name={hasConflicts ? 'git-merge' : 'cloud-upload'} size={24} color={hasConflicts ? '#FFFFFF' : anyPushing ? colors.textSecondary : '#FFFFFF'} />
           </Pressable>
         </Animated.View>
       </GestureDetector>
