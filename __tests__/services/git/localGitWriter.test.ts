@@ -11,6 +11,7 @@ jest.mock('isomorphic-git', () => {
     // B.1) doesn't short-circuit the existing tests. Tests that exercise
     // the unmodified path can override per-call.
     status: jest.fn(async (..._a: any[]) => 'modified'),
+    resolveRef: jest.fn(async (..._a: any[]) => 'resolved-sha'),
   };
   (globalThis as any).__lgwGitMocks = mocks;
   return {
@@ -21,20 +22,31 @@ jest.mock('isomorphic-git', () => {
 
 jest.mock('expo-file-system/legacy', () => {
   const fsStore = new Map<string, { type: 'file' | 'dir' }>();
+  const contentStore = new Map<string, string>();
   (globalThis as any).__lgwFsStore = fsStore;
+  (globalThis as any).__lgwFsContent = contentStore;
   return {
     __esModule: true,
     documentDirectory: 'file:///doc/',
     EncodingType: { Base64: 'base64', UTF8: 'utf8' },
     async getInfoAsync(uri: string) {
       const e = fsStore.get(uri);
-      return e ? { exists: true, uri, isDirectory: e.type === 'dir' } : { exists: false, uri };
+      if (e) return { exists: true, uri, isDirectory: e.type === 'dir' };
+      if (contentStore.has(uri)) return { exists: true, uri, isDirectory: false };
+      return { exists: false, uri };
     },
-    async writeAsStringAsync(uri: string) {
+    readAsStringAsync: jest.fn(async (uri: string) => {
+      const c = contentStore.get(uri);
+      if (c === undefined) throw new Error(`ENOENT: ${uri}`);
+      return c;
+    }),
+    writeAsStringAsync: jest.fn(async (uri: string, data?: string) => {
       fsStore.set(uri, { type: 'file' });
-    },
+      if (typeof data === 'string') contentStore.set(uri, data);
+    }),
     async deleteAsync(uri: string) {
       fsStore.delete(uri);
+      contentStore.delete(uri);
     },
     async makeDirectoryAsync(uri: string) {
       fsStore.set(uri, { type: 'dir' });
@@ -55,6 +67,20 @@ function getGitMocks() {
     fetch: jest.Mock;
     status: jest.Mock;
   };
+}
+
+function getFsContent() {
+  return (globalThis as any).__lgwFsContent as Map<string, string>;
+}
+
+const HEAD_URI = 'file:///doc/GitNotes/owner/repo/.git/HEAD';
+
+function getHeadContent(): string | undefined {
+  return getFsContent().get(HEAD_URI);
+}
+
+function getGitMocksExtra() {
+  return (globalThis as any).__lgwGitMocks as { resolveRef: jest.Mock };
 }
 
 function getFsStore() {
@@ -192,5 +218,69 @@ describe('LocalGitWriter', () => {
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/Invalid repo path/);
     expect(getGitMocks().add).not.toHaveBeenCalled();
+  });
+});
+
+describe('HEAD ref repair (#1189)', () => {
+  const REPO = 'owner/repo';
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    getFsContent().delete(HEAD_URI);
+    getGitMocks().currentBranch.mockResolvedValue('main');
+    getGitMocksExtra().resolveRef.mockResolvedValue('resolved-sha');
+  });
+
+  test('rewrites a nested refs/heads prefix to the healthy symbolic ref', async () => {
+    getFsContent().set(HEAD_URI, 'ref: refs/heads/refs/heads/main\n');
+    const fsmod = jest.requireMock('expo-file-system/legacy');
+    // eslint-disable-next-line no-console
+    const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await LocalGitWriter.resetToRemote({ repoPath: REPO, branch: 'main' });
+
+    // eslint-disable-next-line no-console
+    console.log('PROBE reads:', (fsmod.readAsStringAsync as jest.Mock).mock.calls.filter(([u]) => String(u).includes('.git/HEAD')).length,
+      'writes:', (fsmod.writeAsStringAsync as jest.Mock).mock.calls.filter(([u]) => String(u).includes('.git/HEAD')).length,
+      'content now:', JSON.stringify(getHeadContent()));
+    spy.mockRestore();
+    expect(getHeadContent()).toBe('ref: refs/heads/main\n');
+  });
+
+  test('rewrites a dangling symbolic HEAD and checks out the full ref', async () => {
+    getFsContent().set(HEAD_URI, 'ref: refs/heads/gone\n');
+    const git = getGitMocks();
+    getGitMocksExtra().resolveRef.mockRejectedValueOnce(new Error('does not exist upstream'));
+    git.currentBranch.mockResolvedValue('dev');
+
+    await LocalGitWriter.resetToRemote({ repoPath: REPO, branch: 'main' });
+
+    expect(getHeadContent()).toBe('ref: refs/heads/main\n');
+    expect(git.checkout).toHaveBeenCalledWith(
+      expect.objectContaining({ ref: 'refs/heads/main' }),
+    );
+  });
+
+  test('leaves a healthy HEAD untouched', async () => {
+    getFsContent().set(HEAD_URI, 'ref: refs/heads/main\n');
+    const writeMock = jest.requireMock('expo-file-system/legacy').writeAsStringAsync;
+    writeMock.mockClear();
+
+    await LocalGitWriter.resetToRemote({ repoPath: REPO, branch: 'main' });
+
+    expect(getHeadContent()).toBe('ref: refs/heads/main\n');
+    const headWrites = writeMock.mock.calls.filter(([uri]) => uri === HEAD_URI);
+    expect(headWrites).toHaveLength(0);
+  });
+
+  test('survives a missing HEAD file (fresh init)', async () => {
+    const git = getGitMocks();
+    git.currentBranch.mockResolvedValue('dev');
+
+    await LocalGitWriter.resetToRemote({ repoPath: REPO, branch: 'main' });
+
+    expect(git.checkout).toHaveBeenCalledWith(
+      expect.objectContaining({ ref: 'refs/heads/main' }),
+    );
   });
 });
