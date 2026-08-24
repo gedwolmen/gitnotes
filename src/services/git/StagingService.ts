@@ -301,6 +301,7 @@ export class StagingService {
         });
       } else {
         for (const filePath of changedFiles) {
+          if (filePath.endsWith('.tmp')) continue;
           items.push({
             repoPath: repo.path,
             branch: repoBranch,

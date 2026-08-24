@@ -66,6 +66,7 @@ export function setOnPushFailure(handler: PushFailureHandler | null): void {
 }
 
 function notifyPushFailure(key: string, error: string): void {
+  console.warn('[StagePushScheduler] Push failed:', key, error);
   onPushFailure?.({ key, error });
 }
 
