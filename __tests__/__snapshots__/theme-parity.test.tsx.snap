@@ -20,6 +20,7 @@ exports[`NativeWind theme parity matches the pre-migration key-kit snapshots in 
     }
   >
     <View
+      accessibilityRole="button"
       accessibilityState={
         {
           "busy": undefined,
@@ -274,6 +275,7 @@ exports[`NativeWind theme parity matches the pre-migration key-kit snapshots in 
     }
   >
     <View
+      accessibilityRole="button"
       accessibilityState={
         {
           "busy": undefined,

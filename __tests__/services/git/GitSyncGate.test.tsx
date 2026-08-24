@@ -19,6 +19,7 @@ jest.mock('../../../src/stores/todoStore', () => ({
 // test asserts the cycle source through the actual syncNow chain).
 jest.mock('../../../src/services/ForegroundSyncService', () => ({
   isForegroundSyncInFlight: jest.fn(() => false),
+  isForegroundSyncPaused: jest.fn(() => false),
   subscribeForegroundSync: jest.fn(() => jest.fn()),
   acquireExternalSync: jest.fn(() => jest.fn()),
 }));

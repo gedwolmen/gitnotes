@@ -264,6 +264,8 @@
     "download": "Télécharger",
     "syncFrequently": "Synchroniser fréquemment",
     "syncFrequentlySub": "Recommandé pour plusieurs appareils",
+    "pauseForegroundSync": "Suspendre la synchro au premier plan",
+    "pauseForegroundSyncSub": "Débogage : arrête les pulls automatiques pour permettre la divergence locale (#1174)",
     "syncInterval": "Intervalle de synchronisation",
     "backgroundSync": "Synchronisation en arrière-plan",
     "syncUpToDate": "Synchronisation à jour",

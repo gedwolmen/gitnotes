@@ -264,6 +264,8 @@
     "download": "Descargar",
     "syncFrequently": "Sincronizar con frecuencia",
     "syncFrequentlySub": "Recomendado para varios dispositivos",
+    "pauseForegroundSync": "Pausar sincronización en primer plano",
+    "pauseForegroundSyncSub": "Depuración: detiene las descargas automáticas para que los commits locales diverjan (#1174)",
     "syncInterval": "Intervalo de sincronización",
     "backgroundSync": "Sincronización en segundo plano",
     "syncUpToDate": "Sincronización al día",
