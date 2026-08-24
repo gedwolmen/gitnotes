@@ -52,9 +52,22 @@ function NoteCardImpl({
 
   const { allTags: mergedTags } = useNoteTags(note.tags ?? [], note.content ?? '');
 
+  const title = note.title || 'Untitled Note';
+  const formattedDate = format(new Date(note.updatedAt), showCompact ? 'MMM d' : 'MMM d, yyyy');
+  const noteFormat = (() => {
+    const f = note.format ?? 'markdown';
+    if (f === 'neorg') return '.norg';
+    if (f === 'org') return '.org';
+    if (f === 'pdf') return '.pdf';
+    if (f === 'json') return '.json';
+    return '.md';
+  })();
+
   return (
     <TouchableOpacity
       testID={`note-card-${note.id}`}
+      accessibilityLabel={`${title}, ${formattedDate}, ${noteFormat}`}
+      accessibilityRole="button"
       style={[
         styles.card,
         {
