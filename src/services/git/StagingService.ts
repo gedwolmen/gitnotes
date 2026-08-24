@@ -300,7 +300,7 @@ export class StagingService {
           localCommitOid: localOid ?? undefined,
         });
       } else {
-        for (const filePath of changedFiles) {
+        for (const filePath of changedFiles.filter(f => !f.endsWith('.tmp'))) {
           items.push({
             repoPath: repo.path,
             branch: repoBranch,
