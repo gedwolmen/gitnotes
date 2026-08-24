@@ -518,11 +518,14 @@ class NoteSyncQueueServiceClass {
       // Process all (repo, branch) groups in parallel — they're
       // independent of each other. Within a single group the processing
       // stays serial so write ordering against the same repo is
-      // preserved (issue #565 phase B.3).
+      // preserved (issue #565 phase B.3). Promise.allSettled is used so
+      // that all groups complete even if one rejects — no group's backoff
+      // state is lost (issue #1205).
       const totalDue = due.length;
       let completed = 0;
-      const perGroupOutcomes = await Promise.all(
-        Array.from(groups.entries()).map(([key, items]) =>
+      const groupEntries = Array.from(groups.entries());
+      const groupResults = await Promise.allSettled(
+        groupEntries.map(([key, items]) =>
           this.drainGroup(key, items, now).then((outcome) => {
             completed += items.length;
             if (onProgress) {
@@ -531,6 +534,45 @@ class NoteSyncQueueServiceClass {
             return outcome;
           }),
         ),
+      );
+
+      // Process each settled result. For rejected groups, re-process to
+      // apply backoff rather than silently losing retry state (issue #1205).
+      const perGroupOutcomes = await Promise.all(
+        groupResults.map(async (result, index) => {
+          if (result.status === 'fulfilled') {
+            return result.value;
+          }
+          const [key, items] = groupEntries[index];
+          console.warn('[NoteSyncQueue] drainGroup rejected, re-processing for backoff:', result.reason);
+          const sep = key.indexOf('\n');
+          const repoPath = key.slice(0, sep);
+          const branch = key.slice(sep + 1);
+          GitSyncGate.markPushActive(repoPath, branch);
+          try {
+            const groupOutcome = await this.processDrainGroup(repoPath, branch, items, now);
+            // Merge: count the group's failed items and apply backoff entries
+            // for any item not already in updatedById or droppedIds.
+            const merged: typeof groupOutcome = {
+              ...groupOutcome,
+              updatedById: new Map(groupOutcome.updatedById),
+            };
+            for (const item of items) {
+              if (!merged.updatedById.has(item.id) && !merged.droppedIds.has(item.id)) {
+                merged.updatedById.set(item.id, {
+                  ...item,
+                  attempts: item.attempts + 1,
+                  lastError: result.reason?.message ?? String(result.reason),
+                  nextRetryAt: now + backoffMsForAttempts(item.attempts + 1),
+                });
+                merged.failed++;
+              }
+            }
+            return merged;
+          } finally {
+            GitSyncGate.clearPushActive(repoPath, branch);
+          }
+        }),
       );
 
       const updatedById = new Map<string, QueuedMutation>();
@@ -653,7 +695,7 @@ class NoteSyncQueueServiceClass {
         if (repoInfo) {
           const subgroups = new Map<string, (QueuedMutation & { type: 'note.delete' })[]>();
           for (const item of dueDeletes) {
-            const key = item.params.accountId ?? '';
+            const key = item.params.accountId !== undefined ? item.params.accountId : '__default__';
             const arr = subgroups.get(key) ?? [];
             arr.push(item);
             subgroups.set(key, arr);
@@ -722,7 +764,7 @@ class NoteSyncQueueServiceClass {
         if (repoInfo) {
           const subgroups = new Map<string, BatchEligibleUpsert[]>();
           for (const item of dueUpserts) {
-            const key = item.params.accountId ?? '';
+            const key = item.params.accountId !== undefined ? item.params.accountId : '__default__';
             const arr = subgroups.get(key) ?? [];
             arr.push(item);
             subgroups.set(key, arr);
@@ -846,7 +888,7 @@ class NoteSyncQueueServiceClass {
     if (isClone && pendingFlush.length > 0) {
       const byAccount = new Map<string, typeof pendingFlush>();
       for (const entry of pendingFlush) {
-        const key = entry.item.params.accountId ?? '__default__';
+        const key = entry.item.params.accountId !== undefined ? entry.item.params.accountId : '__default__';
         const arr = byAccount.get(key) ?? [];
         arr.push(entry);
         byAccount.set(key, arr);

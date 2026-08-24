@@ -431,8 +431,11 @@ export class StagingService {
           result.error?.includes('cannot discard without an origin')
         ) {
           const staged = await StagingService.listStaged(repoPath, branch);
-          if (staged.length > 0) {
-            await GitFsService.unstageFiles({ repoPath, files: staged.map((s) => s.filePath) });
+          const realFiles = staged
+            .map((s) => s.filePath)
+            .filter((f) => f !== UNPUSHED_COMMITS_PLACEHOLDER);
+          if (realFiles.length > 0) {
+            await GitFsService.unstageFiles({ repoPath, files: realFiles });
           }
           notifyStagedChanged();
           return { success: true };
