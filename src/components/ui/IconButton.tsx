@@ -57,7 +57,7 @@ export function IconButton(props: IconButtonProps) {
 
   if (variant === 'ghost') {
     return (
-      <Animated.View style={[{ opacity: disabled ? 0.5 : 1 }, animatedStyle]}>
+      <Animated.View accessibilityViewIsModal style={[{ opacity: disabled ? 0.5 : 1 }, animatedStyle]}>
         <Pressable
           testID={testID}
           accessibilityLabel={accessibilityLabel}
@@ -87,7 +87,7 @@ export function IconButton(props: IconButtonProps) {
   const elevation = variant === 'primary' ? 'raised' : 'raised';
 
   return (
-    <Animated.View style={[{ opacity: disabled ? 0.5 : 1 }, animatedStyle]}>
+    <Animated.View accessibilityViewIsModal style={[{ opacity: disabled ? 0.5 : 1 }, animatedStyle]}>
       <Pressable
         testID={testID}
         accessibilityLabel={accessibilityLabel}
