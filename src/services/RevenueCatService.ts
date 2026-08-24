@@ -30,6 +30,9 @@ function isPlaceholderKey(apiKey: string | undefined): boolean {
 let configured = false;
 
 export async function configureRevenueCat(): Promise<ConfigureResult> {
+  if (configured) {
+    return { configured: true };
+  }
   const apiKey =
     Platform.OS === 'ios'
       ? process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_IOS
@@ -48,6 +51,11 @@ export async function configureRevenueCat(): Promise<ConfigureResult> {
 
 export function isConfigured(): boolean {
   return configured;
+}
+
+/** Test-only seam: clear the module-level configured flag (#1162). */
+export function __resetConfiguredFlagForTests(): void {
+  configured = false;
 }
 
 const matchIdentifier =
