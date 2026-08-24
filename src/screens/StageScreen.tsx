@@ -5,7 +5,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { ScreenHeader, useScreenHeaderHeight } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { groupStaged, useStageStore, type StageGroup } from '../stores/stageStore';
-import { drainPushQueue } from '../services/StagePushScheduler';
+import { drainPushQueue, setOnPushFailure } from '../services/StagePushScheduler';
 import { useGitHubActivityStore } from '../stores/githubActivityStore';
 import type { StagedItem } from '../services/git/StagingService';
 import { readDeleteFailures, parseDeleteFailureKey } from '../services/git/deleteFailures';
@@ -89,6 +89,7 @@ export default function StageScreen() {
   const [headerBlurHeight, setHeaderBlurHeight] = useState(headerHeight);
   const [deleteFailures, setDeleteFailures] = useState<readonly DeleteFailureRow[]>([]);
   const [retryingKey, setRetryingKey] = useState<string | null>(null);
+  const [pushErrors, setPushErrors] = useState<Record<string, string>>({});
 
   const loadDeleteFailures = useCallback(async () => {
     const map = await readDeleteFailures();
@@ -105,6 +106,27 @@ export default function StageScreen() {
   useEffect(() => {
     void loadDeleteFailures();
   }, [loadDeleteFailures]);
+
+  useEffect(() => {
+    setOnPushFailure(({ key, error }) => {
+      setPushErrors((prev) => ({ ...prev, [key]: error }));
+    });
+  }, []);
+
+  useEffect(() => {
+    for (const key of Object.keys(isPushing)) {
+      if (isPushing[key]) {
+        setPushErrors((prev) => {
+          if (prev[key]) {
+            const next = { ...prev };
+            delete next[key];
+            return next;
+          }
+          return prev;
+        });
+      }
+    }
+  }, [isPushing]);
 
   const handleRetryDelete = useCallback(async (row: DeleteFailureRow) => {
     setRetryingKey(row.key);
@@ -163,9 +185,19 @@ export default function StageScreen() {
     }
   }, [loadStaged, loadDeleteFailures]);
 
+  const dismissPushError = useCallback((key: string) => {
+    setPushErrors((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }, []);
+
   const renderGroup = useCallback(
     ({ item }: { item: StageGroup }) => {
       const pushing = isPushing[item.key] ?? false;
+      const pushError = pushErrors[item.key];
+      const isConflict = pushError?.includes('conflict-detected') ?? false;
       return (
         <View>
           <View className="flex-row items-center gap-2 px-4 pt-4 pb-2">
@@ -202,13 +234,40 @@ export default function StageScreen() {
               <Ionicons name="trash" size={13} color="#ffffff" />
             </TouchableOpacity>
           </View>
+          {pushError ? (
+            <View
+              className="flex-row items-start gap-2 mx-4 mb-2 px-3 py-2 rounded-md"
+              style={{ backgroundColor: `${colors.error}18`, borderWidth: 1, borderColor: `${colors.error}40` }}
+            >
+              <Ionicons
+                name={isConflict ? 'git-merge' : 'alert-circle'}
+                size={15}
+                style={{ color: colors.error, marginTop: 1 }}
+              />
+              <View className="flex-1 mr-2">
+                <Text className="text-xs font-medium" style={{ color: colors.error }}>
+                  {isConflict
+                    ? 'Push rejected: merge conflict detected. Pull latest changes or resolve conflicts manually.'
+                    : `Push failed: ${pushError}`}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => dismissPushError(item.key)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Dismiss error"
+              >
+                <Ionicons name="close" size={14} style={{ color: colors.error }} />
+              </TouchableOpacity>
+            </View>
+          ) : null}
           {item.items.map((row) => (
             <StageRow key={`${item.key}:${row.filePath}:${row.localCommitOid ?? ''}`} item={row} />
           ))}
         </View>
       );
     },
-    [colors, handlePushGroup, handleDiscardGroup, isPushing],
+    [colors, handlePushGroup, handleDiscardGroup, isPushing, pushErrors, dismissPushError],
   );
 
   const renderEmpty = useCallback(
@@ -264,6 +323,54 @@ export default function StageScreen() {
       </View>
     );
   }, [colors, deleteFailures, handleRetryDelete, retryingKey]);
+
+  const renderPushErrors = useCallback(() => {
+    const errorKeys = Object.keys(pushErrors);
+    if (errorKeys.length === 0) return null;
+    return (
+      <View className="px-4 py-3" style={{ backgroundColor: `${colors.error}15` }}>
+        {errorKeys.map((key) => {
+          const error = pushErrors[key];
+          const separatorIndex = key.indexOf('::');
+          const repoPath = separatorIndex !== -1 ? key.slice(0, separatorIndex) : key;
+          const branch = separatorIndex !== -1 ? key.slice(separatorIndex + 2) : '';
+          const isConflict = error.toLowerCase().includes('conflict');
+          return (
+            <View key={key} className="flex-row items-center gap-2 py-1">
+              <Ionicons
+                name={isConflict ? 'git-merge' : 'alert-circle'}
+                size={16}
+                color={colors.error}
+              />
+              <View className="flex-1 mr-2">
+                <Text className="text-sm font-medium" style={{ color: colors.error }}>
+                  {isConflict
+                    ? 'Push rejected: merge conflict detected. Pull latest changes or resolve conflicts manually.'
+                    : `Push failed: ${error}`}
+                </Text>
+                <Text className="text-xs mt-0.5" style={{ color: colors.textSecondary }} numberOfLines={1}>
+                  {repoName(repoPath)} · {branch}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() =>
+                  setPushErrors((prev) => {
+                    const next = { ...prev };
+                    delete next[key];
+                    return next;
+                  })
+                }
+                accessibilityRole="button"
+                className="p-1"
+              >
+                <Ionicons name="close" size={16} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+          );
+        })}
+      </View>
+    );
+  }, [colors, pushErrors]);
 
   const pushAllDisabled = staged.length === 0 || globalPushing;
 
@@ -338,7 +445,16 @@ export default function StageScreen() {
         keyExtractor={(item) => item.key}
         renderItem={renderGroup}
         ListEmptyComponent={renderEmpty}
-        ListHeaderComponent={renderFailedDeletes}
+        ListHeaderComponent={
+          pushErrors && Object.keys(pushErrors).length > 0 ? (
+            <View>
+              {renderPushErrors()}
+              {renderFailedDeletes()}
+            </View>
+          ) : (
+            renderFailedDeletes()
+          )
+        }
         contentContainerStyle={{
           paddingTop: headerBlurHeight + 8,
           paddingBottom: 32,

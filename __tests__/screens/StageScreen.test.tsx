@@ -45,6 +45,7 @@ jest.mock('../../src/services/StorageService', () => ({
 
 jest.mock('../../src/services/StagePushScheduler', () => ({
   drainPushQueue: jest.fn(async () => undefined),
+  setOnPushFailure: jest.fn(),
 }));
 
 jest.mock('../../src/stores/stageStore', () => {
