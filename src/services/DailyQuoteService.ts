@@ -49,6 +49,8 @@ const FALLBACK_DESCRIPTIONS: Record<FallbackReason, string> = {
 
 const PRO_BLOCKED_REASONS: FallbackReason[] = ['disabled', 'no_model', 'personalization_off'];
 
+const NO_MODEL_SELECTED = new Error('daily-quote-no-model-selected');
+
 function resolveDescription(reason: FallbackReason): string {
   try {
     const isPro = selectIsPro(useProStore.getState());
@@ -100,7 +102,12 @@ class DailyQuoteServiceClass {
 
       if (journals.length === 0) return makeFallbackQuote('no_journals');
 
-      const aiQuote = await this.generateAIQuote(journals, allNotes).catch(() => null);
+      let aiQuote: DailyQuote | null = null;
+      try {
+        aiQuote = await this.generateAIQuote(journals, allNotes);
+      } catch (error) {
+        if (error === NO_MODEL_SELECTED) return makeFallbackQuote('no_model');
+      }
       if (aiQuote) {
         await this.writeCache(aiQuote).catch(() => {});
         return aiQuote;
@@ -145,7 +152,7 @@ class DailyQuoteServiceClass {
   private async generateAIQuote(journals: Note[], allNotes: Note[]): Promise<DailyQuote | null> {
     const aiStore = useAIStore.getState();
     const selectedModel = aiStore.getSelectedModel();
-    if (!selectedModel) return null;
+    if (!selectedModel) throw NO_MODEL_SELECTED;
 
     const model = await initializeModel(selectedModel);
 
