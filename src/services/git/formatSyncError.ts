@@ -20,8 +20,12 @@ interface Matcher {
 
 const MATCHERS: Matcher[] = [
   {
-    needles: ['push rejected', 'not a simple fast-forward', 'non-fast-forward', 'one or more branches were not updated'],
+    needles: ['push rejected', 'not a simple fast-forward', 'non-fast-forward', 'one or more branches were not updated', 'fetch first'],
     message: 'Someone else changed this on GitHub. Pull and try again.',
+  },
+  {
+    needles: ['shallow', 'unshallow', 'shallow update not allowed'],
+    message: 'Local clone history is incomplete. Pull to refresh it, then Push again.',
   },
   {
     needles: ['cannot lock ref'],

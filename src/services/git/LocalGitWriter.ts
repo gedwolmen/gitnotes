@@ -213,6 +213,37 @@ async function ensureOnBranch(
 }
 
 /**
+ * Shallow clones (depth-limited clone/fetch) can miss parent objects needed
+ * to build a valid push pack (#1196): isomorphic-git then fails with errors
+ * that surface as generic sync failures. Detect the shallow marker and deepen
+ * with one full fetch; foreground pulls may re-mark shallowness afterwards,
+ * so this intentionally re-runs on every push.
+ */
+async function ensureNotShallow(
+  fs: ReturnType<typeof makeRepoFs>,
+  dir: string,
+  branch: string,
+  token: string | undefined,
+): Promise<void> {
+  const shallowPath = `${dir}/.git/shallow`;
+  try {
+    await fs.promises.readFile(shallowPath, 'utf8');
+  } catch {
+    return;
+  }
+  await git.fetch({
+    fs,
+    http: gitHttp,
+    dir,
+    ref: branch,
+    singleBranch: true,
+    tags: false,
+    onAuth: tokenAuth(token),
+  });
+  await fs.promises.unlink(shallowPath).catch(() => undefined);
+}
+
+/**
  * Backwards-compatible thin re-export of the shared sanitizer. New
  * callers should use `formatSyncError` directly from
  * `services/git/formatSyncError`; this wrapper keeps the existing import
@@ -555,6 +586,7 @@ static async deleteAndCommit(opts: DeleteOpts): Promise<LocalGitWriterResult> {
     const fs = makeRepoFs();
     try {
       await ensureOnBranch(fs, dir, opts.branch, opts.token);
+      await ensureNotShallow(fs, dir, opts.branch, opts.token);
       await git.push({
         fs,
         dir,

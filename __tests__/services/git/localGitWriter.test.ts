@@ -284,3 +284,57 @@ describe('HEAD ref repair (#1189)', () => {
     );
   });
 });
+
+describe('push shallow handling (#1196)', () => {
+  const SHALLOW_URI = 'file:///doc/GitNotes/me/repo/.git/shallow';
+
+  beforeEach(() => {
+    getFsStore().delete(SHALLOW_URI);
+    getFsContent().delete(SHALLOW_URI);
+    getFsContent().delete('file:///doc/GitNotes/me/repo/.git/HEAD');
+    getGitMocks().currentBranch.mockResolvedValue('main');
+  });
+
+  afterEach(() => {
+    getFsStore().delete(SHALLOW_URI);
+    getFsContent().delete(SHALLOW_URI);
+  });
+
+  test('deepens a shallow clone before pushing (#1196)', async () => {
+    // Existence is judged by fsStore; content lives in the separate map the
+    // harness readAsStringAsync reads from — both must be seeded.
+    getFsStore().set(SHALLOW_URI, { type: 'file' });
+    getFsContent().set(SHALLOW_URI, 'oid-shallow-base\n');
+    const order: string[] = [];
+    getGitMocks().fetch.mockImplementationOnce(async () => {
+      order.push('fetch');
+    });
+    getGitMocks().push.mockImplementationOnce(async () => {
+      order.push('push');
+      return { ok: true };
+    });
+
+    const result = await LocalGitWriter.push({ repoPath: 'me/repo', branch: 'main' });
+
+    expect(result.success).toBe(true);
+    expect(order).toEqual(['fetch', 'push']);
+    expect(getFsStore().has(SHALLOW_URI)).toBe(false);
+  });
+
+  test('skips deepening when the clone is not shallow (#1196)', async () => {
+    const order: string[] = [];
+    getGitMocks().fetch.mockImplementation(async () => {
+      order.push('fetch');
+      return undefined;
+    });
+    getGitMocks().push.mockImplementationOnce(async () => {
+      order.push('push');
+      return { ok: true };
+    });
+
+    const result = await LocalGitWriter.push({ repoPath: 'me/repo', branch: 'main' });
+
+    expect(result.success).toBe(true);
+    expect(order).toEqual(['push']);
+  });
+});
