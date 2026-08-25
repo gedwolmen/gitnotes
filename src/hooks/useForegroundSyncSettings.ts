@@ -18,7 +18,7 @@ export const SYNC_INTERVAL_OPTIONS = [
 
 export type SyncIntervalSeconds = (typeof SYNC_INTERVAL_OPTIONS)[number]['value'];
 
-export const DEFAULT_SYNC_FREQUENTLY_ENABLED = true;
+export const DEFAULT_SYNC_FREQUENTLY_ENABLED = false;
 export const DEFAULT_SYNC_PAUSED = false;
 export const DEFAULT_SYNC_INTERVAL_SECONDS: SyncIntervalSeconds = 60;
 

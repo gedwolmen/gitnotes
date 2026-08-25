@@ -40,7 +40,7 @@ let externalSyncCount = 0;
 let lastRunAt = 0;
 
 let currentIntervalSeconds = 0;
-let currentSyncFrequentlyEnabled = true;
+let currentSyncFrequentlyEnabled = false;
 let currentSyncPaused = false;
 
 let lastNetReachable: boolean | null = null;
@@ -380,7 +380,7 @@ export function __resetForegroundSyncForTest(): void {
   externalSyncCount = 0;
   lastRunAt = 0;
   currentIntervalSeconds = 0;
-  currentSyncFrequentlyEnabled = true;
+  currentSyncFrequentlyEnabled = false;
   currentSyncPaused = false;
   consecutiveFailures = 0;
   lastFailedAt = 0;
