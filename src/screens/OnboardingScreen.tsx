@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAccounts } from '../contexts/AccountsContext';
 import { OnboardingService } from '../services/OnboardingService';
 import { AuthService } from '../services/AuthService';
 import { GitHubService } from '../services/GitHubService';
@@ -71,6 +72,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
   const TOTAL_STEPS = INFO_STEPS.length + 2;
   const { colors } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { refreshAccounts } = useAccounts();
   const [currentStep, setCurrentStep] = useState(0);
   const [token, setToken] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
@@ -91,6 +93,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
         const state = await AuthService.setToken(token.trim());
         if (state.isAuthenticated) {
           await GitHubService.setToken(token.trim());
+          await refreshAccounts();
           setIsVerifying(false);
           setCurrentStep(AI_STEP);
         } else {
@@ -103,7 +106,7 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
     } else if (currentStep === AI_STEP) {
       await finish();
     }
-  }, [currentStep, token, finish]);
+  }, [currentStep, token, finish, refreshAccounts]);
 
   const handleSkip = useCallback(async () => {
     await OnboardingService.completeOnboarding();
