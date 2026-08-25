@@ -172,7 +172,7 @@ export function NotesFilterModal({
               )}
             </View>
 
-            {selectedRepo && allBranches.length > 0 ? (
+            {selectedRepo ? (
               <>
                 <Text style={[styles.label, { color: colors.textSecondary }]}>{t('notesFilter.branch')}</Text>
                 <View style={styles.chipWrap}>

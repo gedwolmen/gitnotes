@@ -311,7 +311,7 @@ export function EntityFilterModal<T extends FilterableItem>(props: Props<T>) {
             }}
           />
 
-          {selectedRepo && allBranches.length > 0 && (
+          {selectedRepo && (
             <>
               <Text style={[styles.label, { color: colors.textSecondary }]}>Branch</Text>
               {renderChipRow(allBranches, selectedBranch, setSelectedBranch, 'git-branch-outline')}
