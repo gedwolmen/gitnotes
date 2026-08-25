@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AccessibilityInfo,
-  ActivityIndicator,
   Alert,
   Pressable,
   StyleSheet,
@@ -322,15 +321,11 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
             disabled={isPushing}
             style={({ pressed }) => [
               styles.button,
-              { backgroundColor: colors.primary },
-              pressed ? styles.pressed : null,
+              { backgroundColor: isPushing ? colors.border : colors.primary },
+              pressed && !isPushing ? styles.pressed : null,
             ]}
           >
-            {isPushing ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Ionicons name="cloud-upload" size={24} color="#FFFFFF" />
-            )}
+            <Ionicons name="cloud-upload" size={24} color="#FFFFFF" />
           </Pressable>
           {unpushedCount > 0 ? (
             <View style={[styles.badge, { backgroundColor: colors.error }]}>
