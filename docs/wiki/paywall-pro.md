@@ -161,11 +161,11 @@ The Pro upgrade page uses a bento-grid tile layout rather than full-width cards:
 
 ## RevenueCat configuration
 
-- Entitlement: `pro` (both products grant it)
+- Entitlement: `GitNotēs Pro` (both products grant it)
 - Offering: `default` with packages `monthly` + `yearly` (optional) + `lifetime`
 - Product identifiers (must match the stores exactly):
   - iOS: `com.xaventra.gitnotes.monthly`, `com.xaventra.gitnotes.yearly`, `com.xaventra.gitnotes.lifetime`
-  - Android: `gitnotes_monthly`, `gitnotes_yearly`, `gitnotes_lifetime`
+  - Android: `com.xaventra.gitnotes.monthly:monthly-base`, `com.xaventra.gitnotes.yearly:yearly-base`, `com.xaventra.gitnotes.lifetime`
 
 ## Environment variables
 

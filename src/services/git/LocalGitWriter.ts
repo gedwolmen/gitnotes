@@ -235,7 +235,7 @@ async function ensureOnBranch(
   if (current === branch) return;
 
   try {
-    await git.checkout({ fs, dir, ref: `refs/heads/${branch}` });
+    await git.checkout({ fs, dir, ref: branch });
     return;
   } catch {
     // local branch ref is missing - fetch then retry checkout below.
@@ -251,7 +251,7 @@ async function ensureOnBranch(
     tags: false,
     onAuth: tokenAuth(token),
   });
-  await git.checkout({ fs, dir, ref: `refs/heads/${branch}` });
+  await git.checkout({ fs, dir, ref: branch });
 }
 
 /**

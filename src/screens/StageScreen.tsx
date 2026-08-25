@@ -13,6 +13,9 @@ import { useGitHubActivityStore } from '../stores/githubActivityStore';
 import type { StagedItem } from '../services/git/StagingService';
 import { readDeleteFailures, parseDeleteFailureKey } from '../services/git/deleteFailures';
 import { retryDeleteFailure } from '../services/git/retryDeleteFailure';
+import { readStrandedCommits, clearStrandedCommit, type StrandedCommitEntry } from '../services/git/strandedCommits';
+import { AuthService } from '../services/AuthService';
+import { LocalGitWriter } from '../services/git/LocalGitWriter';
 import { useSafeBack } from '../hooks/useSafeBack';
 import type { RootStackParamList } from '../navigation/types';
 import { pullFromSingleRepo } from '../services/RepoPullService';
@@ -106,6 +109,8 @@ export default function StageScreen() {
   const [deleteFailures, setDeleteFailures] = useState<readonly DeleteFailureRow[]>([]);
   const [retryingKey, setRetryingKey] = useState<string | null>(null);
   const [pushErrors, setPushErrors] = useState<Record<string, string>>({});
+  const [strandedCommits, setStrandedCommits] = useState<readonly StrandedCommitEntry[]>([]);
+  const [strandedActionInProgress, setStrandedActionInProgress] = useState<string | null>(null);
 
   // Load conflicts proactively when StageScreen mounts so per-group conflict status
   // is available immediately without requiring a push attempt first.
@@ -125,9 +130,19 @@ export default function StageScreen() {
     setDeleteFailures(rows);
   }, []);
 
+  const loadStrandedCommits = useCallback(async () => {
+    const map = await readStrandedCommits();
+    const rows: StrandedCommitEntry[] = Object.values(map);
+    setStrandedCommits(rows);
+  }, []);
+
   useEffect(() => {
     void loadDeleteFailures();
   }, [loadDeleteFailures]);
+
+  useEffect(() => {
+    void loadStrandedCommits();
+  }, [loadStrandedCommits]);
 
   useEffect(() => {
     const unsub = addOnPushFailure(({ key, error }) => {
@@ -160,6 +175,59 @@ export default function StageScreen() {
     }
     void loadDeleteFailures();
   }, [loadDeleteFailures]);
+
+  const handlePushStranded = useCallback(async (entry: StrandedCommitEntry) => {
+    setStrandedActionInProgress(entry.oid);
+    try {
+      const token = await AuthService.getToken();
+      const result = await LocalGitWriter.push({
+        repoPath: entry.repo,
+        branch: entry.branch,
+        token: token ?? undefined,
+      });
+      if (result.success) {
+        await clearStrandedCommit(entry.repo, entry.branch, entry.oid);
+        void loadStrandedCommits();
+      } else {
+        Alert.alert('Push failed', result.error ?? 'Unknown error');
+      }
+    } finally {
+      setStrandedActionInProgress(null);
+    }
+  }, [loadStrandedCommits]);
+
+  const handleDiscardStranded = useCallback(async (entry: StrandedCommitEntry) => {
+    Alert.alert(
+      'Discard Stranded Commit',
+      `Discard the stranded commit "${entry.message}"? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Discard',
+          style: 'destructive',
+          onPress: async () => {
+            setStrandedActionInProgress(entry.oid);
+            try {
+              const token = await AuthService.getToken();
+              const result = await LocalGitWriter.resetToRemote({
+                repoPath: entry.repo,
+                branch: entry.branch,
+                token: token ?? undefined,
+              });
+              if (result.success) {
+                await clearStrandedCommit(entry.repo, entry.branch, entry.oid);
+                void loadStrandedCommits();
+              } else {
+                Alert.alert('Discard failed', result.error ?? 'Unknown error');
+              }
+            } finally {
+              setStrandedActionInProgress(null);
+            }
+          },
+        },
+      ],
+    );
+  }, [loadStrandedCommits]);
 
   const groups = groupStaged(staged);
 
@@ -425,6 +493,69 @@ export default function StageScreen() {
     );
   }, [colors, deleteFailures, handleRetryDelete, retryingKey]);
 
+  const renderStrandedCommits = useCallback(() => {
+    if (strandedCommits.length === 0) return null;
+    return (
+      <View className="px-4 pb-2">
+        <Text className="text-sm font-bold pt-4 pb-2" style={{ color: colors.text }}>
+          Stranded commits
+        </Text>
+        {strandedCommits.map((entry) => (
+          <View
+            key={entry.oid}
+            className="flex-row items-center justify-between py-2 border-b"
+            style={{ borderBottomWidth: 0.5, borderBottomColor: colors.border }}
+          >
+            <View className="flex-1 mr-3">
+              <View className="flex-row items-center gap-2">
+                <Text className="text-[15px] font-medium" style={{ color: colors.text }} numberOfLines={1}>
+                  {entry.sha}
+                </Text>
+                <Text className="text-xs" style={{ color: colors.textSecondary }} numberOfLines={1}>
+                  {entry.repo} · {entry.branch}
+                </Text>
+              </View>
+              <Text className="text-xs mt-0.5" style={{ color: colors.textSecondary }} numberOfLines={1}>
+                {entry.message}
+              </Text>
+              <Text className="text-xs mt-0.5" style={{ color: colors.error }} numberOfLines={1}>
+                {entry.error}
+              </Text>
+            </View>
+            <View className="flex-row items-center gap-2">
+              <TouchableOpacity
+                testID={`stage.push-stranded.${entry.oid}`}
+                onPress={() => handlePushStranded(entry)}
+                disabled={strandedActionInProgress === entry.oid}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: strandedActionInProgress === entry.oid }}
+                className="px-3 py-1.5 rounded-md"
+                style={{ backgroundColor: strandedActionInProgress === entry.oid ? colors.border : colors.primary }}
+              >
+                <Text className="text-xs font-bold" style={{ color: '#ffffff' }}>
+                  Push
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                testID={`stage.discard-stranded.${entry.oid}`}
+                onPress={() => handleDiscardStranded(entry)}
+                disabled={strandedActionInProgress === entry.oid}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: strandedActionInProgress === entry.oid }}
+                className="px-3 py-1.5 rounded-md"
+                style={{ backgroundColor: strandedActionInProgress === entry.oid ? colors.border : colors.error }}
+              >
+                <Text className="text-xs font-bold" style={{ color: '#ffffff' }}>
+                  Discard
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ))}
+      </View>
+    );
+  }, [colors, strandedCommits, handlePushStranded, handleDiscardStranded, strandedActionInProgress]);
+
   const renderPushErrors = useCallback(() => {
     const errorKeys = Object.keys(pushErrors);
     if (errorKeys.length === 0) return null;
@@ -556,9 +687,13 @@ export default function StageScreen() {
             <View>
               {renderPushErrors()}
               {renderFailedDeletes()}
+              {renderStrandedCommits()}
             </View>
           ) : (
-            renderFailedDeletes()
+            <View>
+              {renderFailedDeletes()}
+              {renderStrandedCommits()}
+            </View>
           )
         }
         contentContainerStyle={{
