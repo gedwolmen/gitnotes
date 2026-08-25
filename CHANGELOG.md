@@ -10,6 +10,10 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-08-26
 
+### Immediate floating push-button refresh
+
+**fix(git)** — Clone-mode writes and deletes performed through `LocalGitWriter` now increment the Git activity revision immediately after their local commit succeeds. The floating push button refreshes its unpushed-commit count at once rather than waiting for its 30-second polling interval.
+
 ### CI: clear 8 remaining failures after #1284 (#1285)
 
 **fix(sync)** — `ForegroundSyncService.isForegroundSyncInFlight()` no longer returns true forever after a pull times out: `pendingBackgroundWork` stays as the "skip a new foreground sync while the gate cycle is held" gate, but the in-flight predicate drops it so the UI releases the busy state. `LocalGitWriter.ensureOnBranch` passes the full `refs/heads/<branch>` ref to `git.checkout` instead of the short ref, completing the HEAD-ref-repair path from #1189.
