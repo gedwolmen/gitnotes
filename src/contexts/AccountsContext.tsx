@@ -12,6 +12,7 @@ import { GitHubService } from '../services/GitHubService';
 import { AccountStorage, StoredAccount } from '../services/AccountStorage';
 import { clearActiveGitHostCache } from '../services/git/activeHost';
 import { useAIStore } from '../stores/aiStore';
+import { useProStore } from '../stores/proStore';
 
 interface ConnectHostResult {
   ok: boolean;
@@ -65,6 +66,31 @@ function flattenAccounts(summaries: AccountSummary[]): StoredAccount[] {
   return summaries.map((s) => s.account);
 }
 
+// RevenueCat appUserID is derived from the active GitHub host's numeric id,
+// stable across devices so entitlements follow the account (not the install).
+function rcAppUserIdFor(host: HostConnectionSummary | null): string | null {
+  if (!host) return null;
+  return `gitnotes:${host.provider}:${host.hostUserId}`;
+}
+
+async function syncRevenueCatIdentity(summary: AccountSummary | null): Promise<void> {
+  const host = summary?.hosts.find((h) => h.id === summary.activeHostId) ?? summary?.hosts[0] ?? null;
+  const appUserID = rcAppUserIdFor(host);
+  const { bindAccount, unbindAccount } = useProStore.getState();
+  if (appUserID) {
+    await bindAccount(appUserID);
+  } else {
+    await unbindAccount();
+  }
+}
+
+// AccountsContext mounts before App's checkOnboarding → initialize() configures
+// RevenueCat, so a cold boot bind would no-op. App re-invokes this after init.
+export async function rebindRevenueCatToActiveAccount(): Promise<void> {
+  const summary = await AuthService.getActiveSummary();
+  await syncRevenueCatIdentity(summary);
+}
+
 export function AccountsProvider({ children }: { children: ReactNode }) {
   const [authState, setAuthState] = useState<AuthState>(EMPTY_AUTH);
   const [accountSummaries, setAccountSummaries] = useState<AccountSummary[]>([]);
@@ -97,6 +123,7 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
       setAuthState(EMPTY_AUTH);
     }
     clearActiveGitHostCache();
+    await syncRevenueCatIdentity(activeSummary);
   }, []);
 
   // Hydrate legacy GitHub service on first mount so any code paths that

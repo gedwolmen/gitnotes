@@ -115,6 +115,31 @@ export function getCustomerInfo(): Promise<CustomerInfo> {
   return Purchases.getCustomerInfo();
 }
 
+/**
+ * Bind the current (anonymous) RevenueCat identity to a stable app user ID so
+ * entitlements carry across devices. Returns the refreshed customer info, or
+ * null when not configured or the bind fails (caller falls back to anonymous).
+ */
+export async function logInAppUser(appUserID: string): Promise<CustomerInfo | null> {
+  if (!configured) return null;
+  try {
+    const result = await Purchases.logIn(appUserID);
+    return result.customerInfo;
+  } catch {
+    return null;
+  }
+}
+
+/** Detach the current RevenueCat identity back to anonymous. */
+export async function logOutAppUser(): Promise<void> {
+  if (!configured) return;
+  try {
+    await Purchases.logOut();
+  } catch {
+    // best-effort; leaving the stale identity is harmless
+  }
+}
+
 export function onCustomerInfoUpdate(cb: (info: CustomerInfo) => void): () => void {
   Purchases.addCustomerInfoUpdateListener(cb);
   return () => Purchases.removeCustomerInfoUpdateListener(cb);

@@ -334,11 +334,11 @@ describe('restore outcomes', () => {
     expect(restoreOutcomeSpy).toHaveBeenCalledWith('restored');
   });
 
-  it('returns nothing when the restore sheet is cancelled', async () => {
+  it('returns cancelled when the restore sheet is dismissed', async () => {
     await useProStore.getState().initialize();
     restoreMock.mockResolvedValue({ kind: 'cancelled' });
     const outcome = await useProStore.getState().restore();
-    expect(outcome).toBe('nothing');
+    expect(outcome).toBe('cancelled');
     expect(useProStore.getState().status).toBe('free');
     expect(useProStore.getState().error).toBeNull();
   });

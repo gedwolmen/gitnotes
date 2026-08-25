@@ -18,10 +18,22 @@ import type { RootStackParamList } from '../navigation/types';
 import { ScreenHeader } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { cn } from '../lib/utils';
+import MarkdownEditor from '../components/MarkdownEditor';
+import type { NoteFormat } from '../models/Note';
 
 type Tab = 'merged' | 'local' | 'remote';
 type Nav = NativeStackNavigationProp<RootStackParamList, 'ConflictResolver'>;
 type ConflictRoute = RouteProp<RootStackParamList, 'ConflictResolver'>;
+
+function noteFormatFromPath(path: string): NoteFormat {
+  const ext = path.split('.').pop()?.toLowerCase();
+  switch (ext) {
+    case 'org': return 'org';
+    case 'norg': return 'neorg';
+    case 'json': return 'json';
+    default: return 'markdown';
+  }
+}
 
 export default function ConflictResolverScreen() {
   const route = useRoute<ConflictRoute>();
@@ -43,6 +55,9 @@ export default function ConflictResolverScreen() {
   const [isProposing, setIsProposing] = useState(false);
   const [aiNote, setAiNote] = useState<string | undefined>(undefined);
   const [aiConfidence, setAiConfidence] = useState<'high' | 'low' | undefined>(undefined);
+  // User's manual edits to the merged content, seeded from the last known
+  // mergedContent. `null` means "not yet edited — fall back to the store value".
+  const [editedMergedContent, setEditedMergedContent] = useState<string | null>(null);
 
   const hasAiModel = useAIStore((s) => s.getSelectedModel() !== undefined);
   const isFileResolved = file?.autoResolved === true;
@@ -52,9 +67,10 @@ export default function ConflictResolverScreen() {
     switch (activeTab) {
       case 'local': return file.localContent ?? '(deleted)';
       case 'remote': return file.remoteContent ?? '(deleted)';
-      case 'merged': return file.mergedContent ?? file.localContent ?? file.remoteContent ?? '';
+      case 'merged':
+        return editedMergedContent ?? file.mergedContent ?? file.localContent ?? file.remoteContent ?? '';
     }
-  }, [file, activeTab]);
+  }, [file, activeTab, editedMergedContent]);
 
   const isDeleteVsModify =
     file?.kind === 'local-deleted-remote-modified' ||
@@ -82,7 +98,7 @@ export default function ConflictResolverScreen() {
 
   const handleSaveMerged = useCallback(() => {
     if (!conflict) return;
-    const merged = file?.mergedContent ?? '';
+    const merged = editedMergedContent ?? file?.mergedContent ?? '';
     if (!merged || merged.includes('<<<<<<<') || merged.includes('=======') || merged.includes('>>>>>>>')) {
       Alert.alert(
         'Unresolved conflict',
@@ -95,7 +111,7 @@ export default function ConflictResolverScreen() {
     });
     updateConflict(repoPath, branch, () => updated);
     checkAndFinish(updated);
-  }, [conflict, filePath, file, repoPath, branch, updateConflict]);
+  }, [conflict, filePath, file, repoPath, branch, updateConflict, editedMergedContent]);
 
   const handleAiFix = useCallback(async () => {
     if (!file || !conflict) return;
@@ -115,6 +131,7 @@ export default function ConflictResolverScreen() {
           content: proposal.mergedContent,
         });
         updateConflict(repoPath, branch, () => updated);
+        setEditedMergedContent(null);
         setActiveTab('merged');
       }
     } finally {
@@ -287,9 +304,21 @@ export default function ConflictResolverScreen() {
         ))}
       </View>
 
-      <ScrollView className="flex-1" contentContainerClassName="p-4">
-        <Text className="font-mono text-sm leading-[22px]" style={{ color: colors.text }}>{displayContent}</Text>
-      </ScrollView>
+      {activeTab === 'merged' && !isBinary && !isDeleteVsModify ? (
+        <View className="flex-1 px-4 py-2">
+          <MarkdownEditor
+            content={displayContent}
+            onContentChange={setEditedMergedContent}
+            showToolbar
+            inputTestID="conflict-resolver.merged-editor"
+            format={noteFormatFromPath(file?.path ?? '')}
+          />
+        </View>
+      ) : (
+        <ScrollView className="flex-1" contentContainerClassName="p-4">
+          <Text className="font-mono text-sm leading-[22px]" style={{ color: colors.text }}>{displayContent}</Text>
+        </ScrollView>
+      )}
 
       {hasAiModel && !isBinary && !isDeleteVsModify && (
         <View
