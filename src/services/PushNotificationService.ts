@@ -62,7 +62,12 @@ export function attachToScheduler(): void {
     if (lastNotified !== undefined && now - lastNotified < PUSH_FAILURE_DEDUP_WINDOW_MS) return;
     lastFailureNotifiedAt.set(key, now);
 
-    const errorStr = event.error ?? 'Push failed after retries';
+    let errorStr: string;
+    if (event.error) {
+      errorStr = event.error;
+    } else {
+      errorStr = 'Push failed after retries';
+    }
     const conflict = /conflict/i.test(errorStr);
     void NotificationService.schedulePushFailure('Push failed', errorStr, {
       kind: 'push-failure',
