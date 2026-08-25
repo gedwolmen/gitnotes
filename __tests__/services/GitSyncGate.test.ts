@@ -278,7 +278,7 @@ describe('GitSyncGate', () => {
   });
 
   test('a throwing drain body releases the cycle and clears push markers in finally', async () => {
-    (SyncEngineService.getMode as jest.Mock).mockRejectedValueOnce(new Error('mode lookup exploded'));
+    (SyncEngineService.getMode as jest.Mock).mockRejectedValue(new Error('mode lookup exploded'));
     await NoteSyncQueueService.enqueueNoteUpsert({
       repo: 'r', branch: 'main', filePath: 'a', title: 'A', content: '', format: 'markdown',
     });

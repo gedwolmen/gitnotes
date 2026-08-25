@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { Button, Modal } from '../ui';
 import { useTheme, useTokens } from '../../contexts/ThemeContext';
@@ -28,11 +28,22 @@ interface CloneProgressModalProps {
 function CloneProgressSpinner({ phase }: { phase: string }) {
   const { colors } = useTheme();
   const { spacing, type } = useTokens();
+  const [dotCount, setDotCount] = useState(1);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDotCount((count) => (count % 3) + 1);
+    }, 400);
+    return () => clearInterval(interval);
+  }, []);
+
+  const dots = '.'.repeat(dotCount);
+
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[3], marginBottom: spacing[4] }}>
       <ActivityIndicator size="small" color={colors.primary} />
       <Text style={{ color: colors.textSecondary, fontSize: type.sm }}>
-        {phase}
+        {phase} {dots}
       </Text>
     </View>
   );

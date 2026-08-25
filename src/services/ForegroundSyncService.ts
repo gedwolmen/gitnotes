@@ -337,7 +337,7 @@ export function stopForegroundWatcher(): void {
 }
 
 export function isForegroundSyncInFlight(): boolean {
-  return inFlight || externalSyncCount > 0 || pendingBackgroundWork;
+  return inFlight || externalSyncCount > 0;
 }
 
 export function getForegroundSyncHealth(): ForegroundSyncHealth {
