@@ -77,13 +77,38 @@ describe('PushNotificationService', () => {
       expect.any(String),
       { kind: 'push-failure', repoPath: '/repo/path', branch: 'main', conflict: true },
     );
+  });
 
-    handler({ key: '/repo/path::main', error: 'remote branch has conflicting changes' });
-    expect(mockSchedulePushFailure).toHaveBeenLastCalledWith(
-      'Push failed',
-      expect.any(String),
-      { kind: 'push-failure', repoPath: '/repo/path', branch: 'main', conflict: true },
-    );
+  test('repeated push failures for the same (repo, branch) within the dedup window are suppressed', () => {
+    pushService.attachToScheduler();
+    const handler = mockAddOnPushFailure.mock.calls[0][0] as FailureHandler;
+
+    handler({ key: '/repo/path::main', error: 'boom' });
+    expect(mockSchedulePushFailure).toHaveBeenCalledTimes(1);
+
+    jest.setSystemTime(5000 + 30 * 1000);
+    handler({ key: '/repo/path::main', error: 'still failing' });
+    expect(mockSchedulePushFailure).toHaveBeenCalledTimes(1);
+  });
+
+  test('push failures for different (repo, branch) are not deduped against each other', () => {
+    pushService.attachToScheduler();
+    const handler = mockAddOnPushFailure.mock.calls[0][0] as FailureHandler;
+
+    handler({ key: '/repo/a::main', error: 'boom' });
+    handler({ key: '/repo/b::main', error: 'boom' });
+    expect(mockSchedulePushFailure).toHaveBeenCalledTimes(2);
+  });
+
+  test('push failures for the same (repo, branch) past the dedup window are notified again', () => {
+    pushService.attachToScheduler();
+    const handler = mockAddOnPushFailure.mock.calls[0][0] as FailureHandler;
+
+    handler({ key: '/repo/path::main', error: 'boom' });
+    expect(mockSchedulePushFailure).toHaveBeenCalledTimes(1);
+    jest.setSystemTime(5000 + 3 * 60 * 1000);
+    handler({ key: '/repo/path::main', error: 'boom' });
+    expect(mockSchedulePushFailure).toHaveBeenCalledTimes(2);
   });
 
   test('start notification fires via dismissAndReschedule with body-text file count', () => {
