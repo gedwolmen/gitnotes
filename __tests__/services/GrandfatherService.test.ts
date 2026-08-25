@@ -114,10 +114,10 @@ describe('resolveGrandfatherStatus', () => {
     expect(result.isGrandfathered).toBe(true);
   });
 
-  it('does NOT grant via iOS build alone without onboarding completion', async () => {
+  it('grants via iOS build alone without onboarding completion (#1226 anti-bypass)', async () => {
     const result = await resolveGrandfatherStatus({ originalApplicationVersion: '7' });
-    expect(result).toEqual({ isGrandfathered: false, reason: 'none' });
-    expect(store.__dump()[GRANDFATHERED_KEY]).toBeUndefined();
+    expect(result).toEqual({ isGrandfathered: true, reason: 'ios-build' });
+    expect(store.__dump()[GRANDFATHERED_KEY]).toBe('true');
   });
 
   it('does not grant when the iOS build is 9 or newer', async () => {
@@ -137,14 +137,13 @@ describe('resolveGrandfatherStatus', () => {
   });
 
   it('is one-shot: a second call after granting returns the flag and never re-evaluates', async () => {
-    isOnboardingCompletedMock.mockResolvedValue(true);
     const first = await resolveGrandfatherStatus({ originalApplicationVersion: '7' });
     expect(first.isGrandfathered).toBe(true);
-    expect(isOnboardingCompletedMock).toHaveBeenCalledTimes(1);
+    expect(isOnboardingCompletedMock).toHaveBeenCalledTimes(0);
 
     const second = await resolveGrandfatherStatus(null);
     expect(second).toEqual({ isGrandfathered: true, reason: 'flag' });
-    expect(isOnboardingCompletedMock).toHaveBeenCalledTimes(1);
+    expect(isOnboardingCompletedMock).toHaveBeenCalledTimes(0);
   });
 
   it('never revokes: a checked new user who later onboarded stays non-grandfathered', async () => {
