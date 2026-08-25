@@ -18,6 +18,7 @@ import { NoteTemplate, NoteTemplateIcon } from '../services/TemplateService';
 import { HapticService } from '../utils/haptics';
 import { TemplateRepoPreferenceService, TemplateRepoPreference } from '../services/TemplateRepoPreferenceService';
 import { pullTemplatesFromConfiguredRepo } from '../services/RepoPullService';
+import { syncTemplateToGitHub } from '../services/TemplateGitHubSyncService';
 import {
   commitPendingTag,
   parseTagInput,
@@ -166,6 +167,7 @@ export default function TemplateManagerScreen() {
     const finalTags = commitPendingTag(tagDraft, draftTags);
 
     try {
+      let savedTemplate: NoteTemplate | null = null;
       if (editingId) {
         await updateTemplate(editingId, {
           name,
@@ -175,8 +177,9 @@ export default function TemplateManagerScreen() {
           content: draftContent,
           tags: finalTags,
         });
+        savedTemplate = getAllTemplates().find((t) => t.id === editingId) ?? null;
       } else {
-        await createTemplate({
+        savedTemplate = await createTemplate({
           name,
           icon: draftIcon,
           description,
@@ -185,6 +188,15 @@ export default function TemplateManagerScreen() {
           tags: finalTags,
         });
       }
+
+      if (savedTemplate && templatesRepoPref) {
+        await syncTemplateToGitHub({
+          repoPath: templatesRepoPref.repoPath,
+          branch: templatesRepoPref.branch,
+          template: savedTemplate,
+        });
+      }
+
       HapticService.success();
       setShowEditor(false);
     } catch (error) {
@@ -203,6 +215,8 @@ export default function TemplateManagerScreen() {
     editingId,
     createTemplate,
     updateTemplate,
+    templatesRepoPref,
+    getAllTemplates,
     t,
   ]);
 
