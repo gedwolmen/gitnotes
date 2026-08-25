@@ -437,12 +437,14 @@ export class StagingService {
           if (realFiles.length > 0) {
             await GitFsService.unstageFiles({ repoPath, files: realFiles });
           }
+          await NoteSyncQueueService.purgeForRepoAndBranch(repoPath, branch);
           notifyStagedChanged();
           return { success: true };
         }
         return { success: false, error: result.error };
       }
 
+      await NoteSyncQueueService.purgeForRepoAndBranch(repoPath, branch);
       notifyStagedChanged();
       return { success: true };
     } catch (error) {
