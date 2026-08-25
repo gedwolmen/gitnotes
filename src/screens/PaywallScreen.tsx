@@ -135,7 +135,7 @@ export default function PaywallScreen() {
     } else if (outcome === 'nothing') {
       setRestoreNotice('nothing');
     }
-    // 'error' surfaces through the existing error banner path.
+    // 'cancelled' — user dismissed the sheet; silent, no message.
   }, [restore, navigation]);
 
   const plans: PlanTileData[] = [

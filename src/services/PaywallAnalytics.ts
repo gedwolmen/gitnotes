@@ -25,5 +25,5 @@ export const trackPurchaseOutcome = (kind: 'purchased' | 'cancelled' | 'error'):
 
 export const trackRestoreTap = (): void => emit('restore_tap');
 
-export const trackRestoreOutcome = (outcome: 'restored' | 'nothing' | 'error'): void =>
+export const trackRestoreOutcome = (outcome: 'restored' | 'nothing' | 'error' | 'cancelled'): void =>
   emit('restore_outcome', { outcome });

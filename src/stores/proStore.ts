@@ -48,7 +48,7 @@ export const PRO_ENTITLEMENT_ID = 'GitNotēs Pro';
 
 export type ProStatus = 'loading' | 'pro' | 'free';
 
-export type RestoreOutcome = 'restored' | 'nothing' | 'error';
+export type RestoreOutcome = 'restored' | 'nothing' | 'cancelled' | 'error';
 
 interface ProState {
   status: ProStatus;
@@ -265,8 +265,8 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
       if (result.kind === 'cancelled') {
         // User dismissed the Apple sign-in sheet — neutral, no state change.
         set({ isRestoring: false });
-        PaywallAnalytics.trackRestoreOutcome('nothing');
-        return 'nothing';
+        PaywallAnalytics.trackRestoreOutcome('cancelled');
+        return 'cancelled';
       }
       // 'purchased' alone does not distinguish found vs not-found: derive it
       // from the returned customerInfo entitlements.
