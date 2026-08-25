@@ -10,7 +10,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-08-26
 
-### Immediate floating push-button refresh
+### Immediate floating push-button refresh (#1287)
 
 **fix(git)** — Clone-mode writes and deletes performed through `LocalGitWriter` now increment the Git activity revision immediately after their local commit succeeds. The floating push button refreshes its unpushed-commit count at once rather than waiting for its 30-second polling interval.
 
