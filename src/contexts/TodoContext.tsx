@@ -4,6 +4,7 @@ import { StorageService } from '../services/StorageService';
 import { NotificationService } from '../services/NotificationService';
 import { useTodoStore } from '../stores/todoStore';
 import { syncTodoToGitHub } from '../services/TodoGitHubSyncService';
+import { useGitActivityStore } from '../stores/gitActivityStore';
 
 /** Mirrors TodoGitHubSyncService.serializeTodo so synced todos keep the on-disk shape. */
 function serializeTodoForStage(todo: Partial<Todo>): string {
