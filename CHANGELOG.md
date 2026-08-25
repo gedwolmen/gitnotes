@@ -10,6 +10,18 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-08-26
 
+### CI: clear 8 remaining failures after #1284 (#1285)
+
+**fix(sync)** — `ForegroundSyncService.isForegroundSyncInFlight()` no longer returns true forever after a pull times out: `pendingBackgroundWork` stays as the "skip a new foreground sync while the gate cycle is held" gate, but the in-flight predicate drops it so the UI releases the busy state. `LocalGitWriter.ensureOnBranch` passes the full `refs/heads/<branch>` ref to `git.checkout` instead of the short ref, completing the HEAD-ref-repair path from #1189.
+
+**feat(ui)** — Notes list now shows a persistent cloud-upload badge (`icon-cloud-upload` testID + count) when there are pending queue items, so users can see unpushed work between transient activity affordances. Hidden during active sync.
+
+**fix(ui)** — `CloneProgressModal` clone progress now shows the cycling-dot alive indicator (`.` → `..` → `...` at 400ms) when the total size is unknown, instead of a static label.
+
+**test(infra)** — Added a `@shopify/react-native-skia` jest mock (mapped via `jest.config.js`) so canvas-touching suites render without the native binary.
+
+**test(sync)** — `OnboardingScreen.pro-gate` mocks `useAccounts`/`useAuth` so the screen renders without `AccountsProvider`. `GitSyncGate` "throwing drain body" test switched from `mockRejectedValueOnce` to `mockRejectedValue` so the retry-clearing-by-default path doesn't mask the error. `git-state-ui` sync-button-on-cloud-icon test (removed when FAB replaced it in #1249) marked `.skip`. `header-blur` padding assertion updated to the wrapping View introduced by #1278.
+
 ### CI: backfill i18n locales and align 4 stale tests with #1249 (#1284)
 
 **fix(i18n)** — Recent PRs added 4 keys to `en.json` (`common.connecting`, `settings.unpushedCommitsTitle`, `settings.unpushedCommitsBody`, `hints.settings.pauseForegroundSync`) without mirroring them in `es/fr/de/ja/ko`. The i18n-key-parity test treated every missing key as a failure and broke CI on every locale. Translations backfilled for all 5 locales.
