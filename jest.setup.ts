@@ -386,7 +386,7 @@ jest.mock('react-native-purchases', () => {
     configure: jest.fn(async () => undefined),
     getOfferings: jest.fn(async () => ({ current: null })),
     purchasePackage: jest.fn(async () => ({
-      customerInfo: { entitlements: { active: { pro: { isActive: true, periodType: 'NORMAL' } } } },
+      customerInfo: { entitlements: { active: { 'GitNotēs Pro': { isActive: true, periodType: 'NORMAL' } } } },
     })),
     restorePurchases: jest.fn(async () => ({ entitlements: { active: {} } })),
     getCustomerInfo: jest.fn(async () => ({

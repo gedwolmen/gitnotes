@@ -15,6 +15,7 @@ export interface GrandfatherResult {
 
 export interface GrandfatherCustomerInfo {
   originalApplicationVersion?: string | null;
+  firstSeenAppVersion?: string | null;
 }
 
 async function getStoredValue(key: string): Promise<string | null> {
@@ -39,10 +40,14 @@ export async function resolveGrandfatherStatus(
   const checked = await getStoredValue(GRANDFATHER_CHECKED_KEY);
   if (checked === 'true') return { isGrandfathered: false, reason: 'checked' };
 
-  // ios-build path: originalApplicationVersion < 9 is a strong anti-bypass signal.
-  const originalVersion = customerInfo?.originalApplicationVersion;
-  if (originalVersion != null) {
-    const parsed = Number.parseInt(originalVersion, 10);
+  // ios-build path: originalApplicationVersion on iOS, firstSeenAppVersion on Android.
+  // Only treat as build number if it is a pure integer — marketing version strings
+  // like '1.0.0' must NOT grant free Pro (parseInt('1.0.0') = 1 < 9 would bypass).
+  const version =
+    customerInfo?.originalApplicationVersion ?? customerInfo?.firstSeenAppVersion;
+  if (version != null) {
+    const isPureBuildNumber = /^\d+$/.test(version);
+    const parsed = isPureBuildNumber ? Number.parseInt(version, 10) : NaN;
     if (Number.isFinite(parsed) && parsed < PRO_PAYWALL_FIRST_BUILD) {
       await markGrandfathered();
       return { isGrandfathered: true, reason: 'ios-build' };

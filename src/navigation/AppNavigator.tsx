@@ -94,17 +94,25 @@ export default function AppNavigator({ showOnboarding, onOnboardingComplete, onO
   const openChatRepoPicker = useAIHubStore((state) => state.openChatRepoPicker);
   const closeChatRepoPicker = useAIHubStore((state) => state.closeChatRepoPicker);
   const [currentRouteName, setCurrentRouteName] = useState<string | undefined>(undefined);
+  const [navigationReady, setNavigationReady] = useState(false);
   const isPro = useProStore(selectIsPro);
   const interstitialEligible = useProStore((s) => s.interstitialEligible);
   const markInterstitialShown = useProStore((s) => s.markInterstitialShown);
 
+  // Deferred interstitial: only consume the one-shot flag after confirming navigation is ready.
+  // navigationReady state variable ensures re-check when onReady fires.
+  const hasNavigatedToInterstitial = React.useRef(false);
   useEffect(() => {
-    if (!interstitialEligible || isPro) return;
+    if (!interstitialEligible || isPro || hasNavigatedToInterstitial.current) return;
+    if (!navigationRef.isReady()) return;
+    hasNavigatedToInterstitial.current = true;
     markInterstitialShown();
-    if (navigationRef.isReady()) {
-      navigationRef.navigate('Paywall');
-    }
-  }, [interstitialEligible, isPro, markInterstitialShown, navigationRef]);
+    navigationRef.navigate('Paywall');
+  }, [interstitialEligible, isPro, markInterstitialShown, navigationRef, navigationReady]);
+
+  const handleOnReady = React.useCallback(() => {
+    setNavigationReady(true);
+  }, []);
 
   useEffect(() => {
     if (showOnboarding) return;
@@ -165,7 +173,10 @@ export default function AppNavigator({ showOnboarding, onOnboardingComplete, onO
         linking={linking}
         theme={navigationTheme}
         ref={navigationRef}
-        onReady={handleStateChange}
+        onReady={() => {
+          handleStateChange();
+          setNavigationReady(true);
+        }}
         onStateChange={handleStateChange}
       >
         <View style={{ flex: 1 }}>

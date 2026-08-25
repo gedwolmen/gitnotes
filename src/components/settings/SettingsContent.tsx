@@ -10,6 +10,7 @@ import { HintIcon } from '../ui/HintIcon';
 import { aiMemoryIndex } from '../../services/ai/AIMemoryIndexService';
 import { HapticService } from '../../utils/haptics';
 import { promptProUpgrade } from '../../utils/proAlerts';
+import { FREE_TIER_MAX_REPOS } from '../../services/TierLimits';
 import {
   SUPPORTED_LANGUAGES,
   getLanguagePreference,
@@ -638,11 +639,11 @@ export function SettingsContent(props: SettingsContentProps) {
           ))
         )}
         <GroupRow
-          testID={!isPro && repositories.length >= 1 ? 'settings.row.add-repo-locked' : 'settings.button.repo-picker'}
-          onPress={!isPro && repositories.length >= 1 ? () => promptProUpgrade(t, onOpenPaywall) : onOpenRepoPicker}
+          testID={!isPro && repositories.length >= FREE_TIER_MAX_REPOS ? 'settings.row.add-repo-locked' : 'settings.button.repo-picker'}
+          onPress={!isPro && repositories.length >= FREE_TIER_MAX_REPOS ? () => promptProUpgrade(t, onOpenPaywall) : onOpenRepoPicker}
           leading={<Ionicons name="add" size={20} color={colors.primary} />}
           trailing={
-            !isPro && repositories.length >= 1 ? (
+            !isPro && repositories.length >= FREE_TIER_MAX_REPOS ? (
               <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
             ) : undefined
           }
