@@ -20,7 +20,7 @@ import { ThemeProvider } from './src/contexts/ThemeContext';
 import { NativeWindThemeProvider } from './src/theme/nativewind';
 import { FolderProvider } from './src/contexts/FolderContext';
 import { ViewModeProvider } from './src/contexts/ViewModeContext';
-import { AccountsProvider } from './src/contexts/AccountsContext';
+import { AccountsProvider, rebindRevenueCatToActiveAccount } from './src/contexts/AccountsContext';
 import { HostAuthProvider } from './src/contexts/HostAuthContext';
 import { TodoProvider } from './src/contexts/TodoContext';
 import { CanvasProvider } from './src/contexts/CanvasContext';
@@ -83,6 +83,7 @@ export default function App() {
     try {
       await useProStore.getState().initialize();
       await enforceTierLimits();
+      await rebindRevenueCatToActiveAccount();
     } catch (error) {
       console.warn('[App] tier-limit enforcement failed:', error);
     }

@@ -114,6 +114,33 @@ jest.mock('../../src/components/ui', () => {
   };
 });
 
+// The merged tab now hosts a full editor; mock it down to a transparent
+// Text + onContentChange bridge so existing getByText assertions still hold
+// while the screen's save/AI-fix logic remains under test.
+jest.mock('../../src/components/MarkdownEditor', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+  return {
+    __esModule: true,
+    default: ({
+      content,
+      onContentChange,
+    }: {
+      content: string;
+      onContentChange: (text: string) => void;
+    }) => {
+      const ref = React.useRef(false);
+      React.useEffect(() => {
+        if (!ref.current) {
+          ref.current = true;
+          onContentChange(content);
+        }
+      }, [content, onContentChange]);
+      return React.createElement(Text, { testID: 'conflict-resolver.merged-editor' }, content);
+    },
+  };
+});
+
 const TEST_MODEL: AIModelConfig = {
   id: 'test-model',
   name: 'Test Model',

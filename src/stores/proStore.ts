@@ -6,6 +6,8 @@ import {
   configureRevenueCat,
   getCustomerInfo,
   getPackages,
+  logInAppUser,
+  logOutAppUser,
   onCustomerInfoUpdate,
   purchasePackage as purchasePackageWith,
   restorePurchases,
@@ -78,6 +80,8 @@ interface ProActions {
   restore: () => Promise<RestoreOutcome>;
   loadOfferingsIfNeeded: () => Promise<void>;
   markInterstitialShown: () => Promise<void>;
+  bindAccount: (appUserID: string) => Promise<void>;
+  unbindAccount: () => Promise<void>;
 }
 
 export const selectIsPro = (state: ProState): boolean =>
@@ -315,5 +319,21 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
   markInterstitialShown: async () => {
     await AsyncStorage.setItem(INTERSTITIAL_SHOWN_KEY, 'true');
     set({ interstitialEligible: false });
+  },
+
+  bindAccount: async (appUserID) => {
+    if (!get().configured) return;
+    const customerInfo = await logInAppUser(appUserID);
+    if (!customerInfo) return;
+    const derived = deriveTrialInfo(customerInfo);
+    set((state) => ({
+      ...derived,
+      status: DEV_FORCE_PRO ? 'pro' : (derived.entitlementActive || state.isGrandfathered ? 'pro' : 'free'),
+    }));
+  },
+
+  unbindAccount: async () => {
+    if (!get().configured) return;
+    await logOutAppUser();
   },
 }));

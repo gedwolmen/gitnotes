@@ -446,6 +446,8 @@ const mockProStoreState: Record<string, unknown> = {
   restore: jest.fn(async () => undefined),
   loadOfferingsIfNeeded: jest.fn(async () => undefined),
   markInterstitialShown: jest.fn(async () => undefined),
+  bindAccount: jest.fn(async () => undefined),
+  unbindAccount: jest.fn(async () => undefined),
 };
 jest.mock('./src/stores/proStore', () => {
   const useProStore = (selector: (state: Record<string, unknown>) => unknown) =>
