@@ -271,6 +271,18 @@ class NoteSyncQueueServiceClass {
     } catch { /* best-effort */ }
   }
 
+  async purgeForRepoAndBranch(repoPath: string, branch: string): Promise<void> {
+    const queue = await this.getAll();
+    const remaining = queue.filter((m) => {
+      if (m.params.repo !== repoPath) return true;
+      const mBranch = m.params.branch || 'main';
+      return mBranch !== branch;
+    });
+    if (remaining.length < queue.length) {
+      await this.saveAll(remaining);
+    }
+  }
+
   async purgeForRepo(repoPath: string): Promise<void> {
     const queue = await this.getAll();
     const remaining = queue.filter((m) => m.params.repo !== repoPath);
