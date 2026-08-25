@@ -449,9 +449,8 @@ export default function NotesListScreen() {
   );
 
   // Only show full-screen spinner for initial load when there are no cached notes.
-  // Pull-to-refresh sets isLoading=true but the list already has notes, so we
-  // rely on the RefreshControl spinner instead of blocking the UI.
-  if (isLoading && notes.length === 0) {
+  // Pull-to-refresh uses the RefreshControl spinner instead.
+  if (isLoading && notes.length === 0 && !isPullRefreshing) {
     return (
       <View className="flex-1 items-center justify-center" style={{ backgroundColor: colors.background }}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -475,59 +474,59 @@ export default function NotesListScreen() {
         }}
       />
 
-      <FlatList
-        ref={listRef}
-        data={displayNotes}
-        renderItem={renderNote}
-        keyExtractor={(item) => item.id}
-        key={`${viewMode}-${columnCount}`}
-        numColumns={viewMode === 'journal' ? 1 : columnCount}
-        extraData={displayNotes}
-        initialNumToRender={10}
-        maxToRenderPerBatch={6}
-        windowSize={7}
-        updateCellsBatchingPeriod={50}
-        removeClippedSubviews={true}
-        onScrollToIndexFailed={({ index, highestMeasuredFrameIndex, averageItemLength }) => {
-          // Without this, scrollToIndex for a search match beyond the
-          // measured window silently fails — search nav appears broken.
-          const offset = Math.max(
-            0,
-            (highestMeasuredFrameIndex < index
-              ? highestMeasuredFrameIndex
-              : index - 1) * averageItemLength,
-          );
-          listRef.current?.scrollToOffset({ offset, animated: true });
-          setTimeout(() => {
-            listRef.current?.scrollToIndex({
-              index,
-              animated: true,
-              viewPosition: 0.4,
-            });
-          }, 250);
-        }}
-        contentContainerStyle={{
-          padding: 12,
-          paddingTop: headerBlurHeight + 4,
-          paddingBottom: tabBarHeight + 16,
-          flexGrow: 1,
-        }}
-        columnWrapperStyle={viewMode !== 'journal' && columnCount > 1 ? { gap: 8 } : undefined}
-        refreshControl={
-          gitOperationActive ? undefined : (
-            <RefreshControl
-              testID="notes-list.swipe.pull-refresh"
-              refreshing={isPullRefreshing}
-              onRefresh={handlePullToRefresh}
-              enabled={!gateBusy}
-              tintColor={colors.primary}
-              colors={[colors.primary]}
-              progressViewOffset={headerBlurHeight}
-            />
-          )
-        }
-        ListEmptyComponent={<NotesEmptyState isFiltered={!!searchQuery || activeFilterCount > 0} />}
-      />
+      <View style={{ flex: 1, paddingTop: headerBlurHeight + 4 }}>
+        <FlatList
+          ref={listRef}
+          data={displayNotes}
+          renderItem={renderNote}
+          keyExtractor={(item) => item.id}
+          key={`${viewMode}-${columnCount}`}
+          numColumns={viewMode === 'journal' ? 1 : columnCount}
+          extraData={displayNotes}
+          initialNumToRender={10}
+          maxToRenderPerBatch={6}
+          windowSize={7}
+          updateCellsBatchingPeriod={50}
+          removeClippedSubviews={true}
+          onScrollToIndexFailed={({ index, highestMeasuredFrameIndex, averageItemLength }) => {
+            // Without this, scrollToIndex for a search match beyond the
+            // measured window silently fails — search nav appears broken.
+            const offset = Math.max(
+              0,
+              (highestMeasuredFrameIndex < index
+                ? highestMeasuredFrameIndex
+                : index - 1) * averageItemLength,
+            );
+            listRef.current?.scrollToOffset({ offset, animated: true });
+            setTimeout(() => {
+              listRef.current?.scrollToIndex({
+                index,
+                animated: true,
+                viewPosition: 0.4,
+              });
+            }, 250);
+          }}
+          contentContainerStyle={{
+            padding: 12,
+            paddingBottom: tabBarHeight + 16,
+            flexGrow: 1,
+          }}
+          columnWrapperStyle={viewMode !== 'journal' && columnCount > 1 ? { gap: 8 } : undefined}
+          refreshControl={
+            gitOperationActive ? undefined : (
+              <RefreshControl
+                testID="notes-list.swipe.pull-refresh"
+                refreshing={isPullRefreshing}
+                onRefresh={handlePullToRefresh}
+                enabled={!gateBusy}
+                tintColor={colors.primary}
+                colors={[colors.primary]}
+              />
+            )
+          }
+          ListEmptyComponent={<NotesEmptyState isFiltered={!!searchQuery || activeFilterCount > 0} />}
+        />
+      </View>
 
       <NotesFilterModal
         visible={showFilterModal}
