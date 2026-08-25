@@ -11,6 +11,7 @@ import { LocalGitWriter } from './git/LocalGitWriter';
 import { classifyGitHubSyncError, isRetryableFailure, syncStatusForError } from './git/syncFailure';
 import { resolveBranch } from './git/resolveBranch';
 import { clearDeleteFailure, clearDeleteFailuresForRepo, readDeleteFailures, recordDeleteFailure, DELETE_FAILURES_STORAGE_KEY } from './git/deleteFailures';
+import { recordStrandedCommit, getStrandedCommitOid } from './git/strandedCommits';
 import { GitSyncGate, type CycleSource } from './git/GitSyncGate';
 import { batchDeleteFiles, batchUpsertFiles } from './git/BatchGitOperations';
 import type { BatchDeleteFilesResult, BatchUpsertFilesResult } from './git/BatchGitOperations';
@@ -676,6 +677,12 @@ class NoteSyncQueueServiceClass {
             kind: 'exhausted',
             at: Date.now(),
           });
+        }
+        if (isClone) {
+          const stranded = await getStrandedCommitOid(repoPath, branch);
+          if (stranded) {
+            await recordStrandedCommit(repoPath, branch, stranded.oid, stranded.message, error || 'push failed after max retries');
+          }
         }
       } else {
         updatedById.set(item.id, {
