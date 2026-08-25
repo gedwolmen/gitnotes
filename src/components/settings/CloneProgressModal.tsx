@@ -1,5 +1,5 @@
-import { memo, useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { memo } from 'react';
+import { ActivityIndicator, Text, View } from 'react-native';
 import { Button, Modal } from '../ui';
 import { useTheme, useTokens } from '../../contexts/ThemeContext';
 
@@ -25,23 +25,16 @@ interface CloneProgressModalProps {
  * ("Attempt to present ... which is already presenting"), which silently
  * swallowed the progress UI and left users staring at an endless row spinner.
  */
-function AnimatedProgressDots({ phase }: { phase: string }) {
+function CloneProgressSpinner({ phase }: { phase: string }) {
   const { colors } = useTheme();
   const { spacing, type } = useTokens();
-  const [step, setStep] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => {
-      setStep((s) => (s + 1) % 3);
-    }, 400);
-    return () => clearInterval(id);
-  }, []);
-  useEffect(() => {
-    setStep(0);
-  }, [phase]);
   return (
-    <Text style={{ color: colors.textSecondary, fontSize: type.sm, marginBottom: spacing[4] }}>
-      {phase} {'.'.repeat(step + 1)}
-    </Text>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[3], marginBottom: spacing[4] }}>
+      <ActivityIndicator size="small" color={colors.primary} />
+      <Text style={{ color: colors.textSecondary, fontSize: type.sm }}>
+        {phase}
+      </Text>
+    </View>
   );
 }
 
@@ -88,7 +81,7 @@ export const CloneProgressContent = memo(function CloneProgressContent({
       ) : (
         <>
           {progress.total === null ? (
-            <AnimatedProgressDots phase={progress.phase} />
+            <CloneProgressSpinner phase={progress.phase} />
           ) : (
             <Text style={{ color: colors.textSecondary, fontSize: type.sm, marginBottom: spacing[4] }}>
               {progress.phase} · {pctLabel}

@@ -471,9 +471,10 @@ export const ThoughtDumpRepoPickerModal: React.FC<ThoughtDumpRepoPickerModalProp
             variant="primary"
             onPress={handleConfirm}
             disabled={!selectedRepoPath || isInitializing}
+            leadingIcon={isInitializing ? <ActivityIndicator size="small" color="#fff" /> : undefined}
           >
             {isInitializing
-              ? 'Saving...'
+              ? 'Saving'
               : initError
                 ? 'Retry'
                 : 'Confirm Selection'}
