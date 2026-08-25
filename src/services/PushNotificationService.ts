@@ -19,7 +19,7 @@ let lastProgressSentAt = 0;
 let unsubscribeProgress: (() => void) | null = null;
 let unsubscribePushFailure: (() => void) | null = null;
 
-/** Plain push failures open the stage page; conflict-caused ones open the conflicts page
+/** Plain push failures open the home page; conflict-caused ones open the conflicts page
  *  with specific repo/branch if provided. */
 export function resolvePushFailureRoute(
   conflict: boolean,
@@ -29,7 +29,7 @@ export function resolvePushFailureRoute(
   if (conflict && repoPath && branch) {
     return `gitnotes://conflicts/${encodeURIComponent(repoPath)}/${encodeURIComponent(branch)}`;
   }
-  return conflict ? 'gitnotes://conflicts' : 'gitnotes://stage';
+  return conflict ? 'gitnotes://conflicts' : 'gitnotes://home';
 }
 
 function parsePushKey(key: string): { repoPath: string; branch: string } | null {

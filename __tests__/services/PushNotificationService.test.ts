@@ -193,8 +193,8 @@ describe('PushNotificationService', () => {
     expect(mockDismissAndReschedule).not.toHaveBeenCalled();
   });
 
-  test('resolvePushFailureRoute maps plain failures to stage and conflicts to conflicts', () => {
-    expect(pushService.resolvePushFailureRoute(false)).toBe('gitnotes://stage');
+  test('resolvePushFailureRoute maps plain failures to home and conflicts to conflicts', () => {
+    expect(pushService.resolvePushFailureRoute(false)).toBe('gitnotes://home');
     expect(pushService.resolvePushFailureRoute(true)).toBe('gitnotes://conflicts');
   });
 });

@@ -115,13 +115,12 @@ describe('useNoteStore', () => {
     it('stages the delete for repo-backed notes (api mode removes row immediately and succeeds the op)', async () => {
       const note = makeNote('1', { repo: 'me/repo', branch: 'main', filePath: 'notes/test.md' });
       useNoteStore.setState({ notes: [note] });
-      (StagingService.stageDelete as jest.Mock).mockResolvedValue({ success: true });
+      (NoteSyncQueueService.enqueueNoteDelete as jest.Mock).mockResolvedValue({ id: 'queue-1' });
       (StorageService.deleteNote as jest.Mock).mockResolvedValue(true);
 
       await useNoteStore.getState().deleteNote('1');
 
-      expect(StagingService.stageDelete).toHaveBeenCalled();
-      expect(NoteSyncQueueService.drain).not.toHaveBeenCalled();
+      expect(NoteSyncQueueService.enqueueNoteDelete).toHaveBeenCalled();
       expect(StorageService.deleteNote).toHaveBeenCalledWith('1');
       expect(useNoteStore.getState().notes).toHaveLength(0);
       expect(useGitOperationStore.getState().ops).toEqual({});
@@ -137,24 +136,24 @@ describe('useNoteStore', () => {
     });
 
     it('treats an already-removed row as success when the write-through side channel completed the delete (#932 QA)', async () => {
-      // API-mode write-through: stageDelete's drain already fired the queue
-      // side-channel, which removed the note from state + storage. The
-      // subsequent direct StorageService.deleteNote(id) returns false because
-      // the row is gone — deleteNote must report SUCCESS, not a failed delete.
+      // API-mode write-through: enqueueNoteDelete succeeded but the
+      // side-channel (onMutationSucceeded) already removed the note from
+      // state + storage. The subsequent direct StorageService.deleteNote(id)
+      // returns false — deleteNote must report SUCCESS, not a failed delete.
       const note = makeNote('1', { repo: 'me/repo', branch: 'main', filePath: 'notes/test.md' });
       useNoteStore.setState({ notes: [note] });
       // Simulate the write-through side channel removing the row during
-      // stageDelete (the drain completed the delete end-to-end).
-      (StagingService.stageDelete as jest.Mock).mockImplementation(async () => {
+      // enqueueNoteDelete (the queue processed the delete end-to-end).
+      (NoteSyncQueueService.enqueueNoteDelete as jest.Mock).mockImplementation(async () => {
         useNoteStore.setState({ notes: [] });
-        return { success: true };
+        return { id: 'queue-1' };
       });
       (StorageService.deleteNote as jest.Mock).mockResolvedValue(false);
 
       const result = await useNoteStore.getState().deleteNote('1');
 
       expect(result).toBe(true);
-      expect(StagingService.stageDelete).toHaveBeenCalled();
+      expect(NoteSyncQueueService.enqueueNoteDelete).toHaveBeenCalled();
       expect(useGitOperationStore.getState().ops).toEqual({}); // op succeeded, not failed
     });
   });
