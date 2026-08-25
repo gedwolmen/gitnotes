@@ -45,6 +45,7 @@
     "reset": "Reset",
     "next": "Next",
     "continue": "Continue",
+    "connecting": "Connecting...",
     "viewMode": "View mode",
     "searchPlaceholder": "Search...",
     "upgrade": "Upgrade"

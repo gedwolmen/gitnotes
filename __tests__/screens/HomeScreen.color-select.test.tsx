@@ -1,28 +1,25 @@
 /**
  * Tests for the HomeScreen color-tag fix (issue #794).
  *
- * We don't render HomeScreen directly here because the component pulls in
- * many heavy native modules (Skia, Reanimated, Gesture Handler) that are
- * expensive to mock. Instead, we verify the fix through two complementary
- * tests:
+ * Verifies two things:
+ *   1. The broken `'color' in item.data` guard has been removed from HomeScreen.
+ *   2. After `updateNote`, HomeScreen enqueues the upsert through
+ *      NoteSyncQueueService so the color tag is committed via the sync queue
+ *      (commit-on-save architecture, refactor #1249).
  *
- *   1. A source-level regression test confirming the broken `'color' in
- *      item.data` guard has been removed and the stage call has been added.
- *   2. A behavioural test of the stage helper used by `handleColorSelect`,
- *      mirroring the same logic used in `useNotesListNoteActions`.
- *
- * The stage logic is shared by design (HomeScreen and Notes-list perform
- * the same side effect after `updateNote`), so verifying it once here is
- * sufficient.
+ * We do not render HomeScreen here because the component pulls in many heavy
+ * native modules (Skia, Reanimated, Gesture Handler) that are expensive to
+ * mock. The source-level test catches regressions cheaply; the behavioural
+ * test exercises the same post-update enqueue helper used by HomeScreen and
+ * NotesList.
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
 
-// ----- Sync helper (mirrors HomeScreen.handleColorSelect) -----
 type NoteColorValue = import('../../src/models/Note').NoteColor;
 
-interface StageInput {
+interface UpsertInput {
   repo?: string;
   branch?: string;
   filePath?: string;
@@ -33,18 +30,15 @@ interface StageInput {
   color: NoteColorValue | null;
 }
 
-async function colorStageAfterUpdateNote(
-  updated: { id: string } & Partial<StageInput>,
+async function syncAfterUpdateNote(
+  updated: { id: string } & Partial<UpsertInput>,
   color: NoteColorValue | null,
-  deps: {
-    stageUpsert: (params: StageInput) => Promise<{ success: boolean }>;
-    enqueueNoteUpsert: (params: StageInput, id: string) => Promise<void>;
-  },
+  enqueueNoteUpsert: (params: UpsertInput, id: string) => Promise<void>,
 ): Promise<void> {
   if (!updated.repo || !updated.filePath || !(updated.content ?? '').trim()) {
     return;
   }
-  const syncParams: StageInput = {
+  const syncParams: UpsertInput = {
     repo: updated.repo!,
     branch: updated.branch,
     filePath: updated.filePath!,
@@ -55,9 +49,9 @@ async function colorStageAfterUpdateNote(
     color,
   };
   try {
-    await deps.stageUpsert(syncParams);
+    await enqueueNoteUpsert(syncParams, updated.id);
   } catch (error) {
-    await deps.enqueueNoteUpsert(syncParams, updated.id);
+    console.warn('[HomeScreen] sync after color update failed:', error);
   }
 }
 
@@ -69,47 +63,34 @@ describe('HomeScreen color-tag fix (issue #794)', () => {
     );
 
     test('broken \'color\' in item.data guard has been removed', () => {
-      // The guard `'color' in item.data` was wrong because `JSON.stringify`
-      // strips `undefined` fields, so notes without an existing color would
-      // fail the check and never reach the update logic.
       const hasBrokenGuard = /'color'\s+in\s+item\.data/.test(homeScreenSrc);
       expect(hasBrokenGuard).toBe(false);
     });
 
-    test('handleColorSelect stages via StagingService and never calls syncNoteToGitHub', () => {
-      expect(homeScreenSrc).toContain('StagingService.stageUpsert');
+    test('handleColorSelect enqueues via NoteSyncQueueService.enqueueNoteUpsert after updateNote', () => {
       expect(homeScreenSrc).toContain('NoteSyncQueueService');
       expect(homeScreenSrc).toContain('enqueueNoteUpsert');
+      expect(homeScreenSrc).not.toContain('StagingService.stageUpsert');
       expect(homeScreenSrc).not.toContain('syncNoteToGitHub');
     });
 
-    test('imports the stage services', () => {
-      expect(homeScreenSrc).toMatch(
-        /import\s*\{\s*StagingService\s*\}\s*from\s*['"]\.\.\/services\/git\/StagingService['"]/,
-      );
+    test('imports NoteSyncQueueService', () => {
       expect(homeScreenSrc).toMatch(
         /import\s*\{\s*NoteSyncQueueService\s*\}\s*from\s*['"]\.\.\/services\/NoteSyncQueueService['"]/,
       );
     });
   });
 
-  describe('stage behaviour after color update', () => {
-    test('Case A: skips staging for a note without a repo or filePath', async () => {
-      const stage = jest.fn();
+  describe('sync behaviour after color update', () => {
+    test('skips enqueue for a note without a repo or filePath', async () => {
       const enqueue = jest.fn();
-      await colorStageAfterUpdateNote(
-        { id: 'n1', content: 'body' },
-        'red',
-        { stageUpsert: stage, enqueueNoteUpsert: enqueue },
-      );
-      expect(stage).not.toHaveBeenCalled();
+      await syncAfterUpdateNote({ id: 'n1', content: 'body' }, 'red', enqueue);
       expect(enqueue).not.toHaveBeenCalled();
     });
 
-    test('Case B: stages the upsert with the selected color', async () => {
-      const stage = jest.fn().mockResolvedValue({ success: true });
-      const enqueue = jest.fn();
-      await colorStageAfterUpdateNote(
+    test('enqueues the upsert with the selected color', async () => {
+      const enqueue = jest.fn().mockResolvedValue(undefined);
+      await syncAfterUpdateNote(
         {
           id: 'n1',
           repo: 'o/r',
@@ -118,50 +99,29 @@ describe('HomeScreen color-tag fix (issue #794)', () => {
           content: 'body',
         },
         'blue',
-        { stageUpsert: stage, enqueueNoteUpsert: enqueue },
-      );
-      expect(stage).toHaveBeenCalledWith(
-        expect.objectContaining({ repo: 'o/r', filePath: 'notes/a.md', color: 'blue' }),
-      );
-      expect(enqueue).not.toHaveBeenCalled();
-    });
-
-    test('Case C: enqueues via NoteSyncQueueService when stageUpsert throws', async () => {
-      const stage = jest.fn().mockRejectedValue(new Error('network down'));
-      const enqueue = jest.fn();
-      await colorStageAfterUpdateNote(
-        {
-          id: 'n1',
-          repo: 'o/r',
-          branch: 'main',
-          filePath: 'notes/a.md',
-          content: 'body',
-        },
-        'green',
-        { stageUpsert: stage, enqueueNoteUpsert: enqueue },
+        enqueue,
       );
       expect(enqueue).toHaveBeenCalledWith(
-        expect.objectContaining({ color: 'green' }),
+        expect.objectContaining({ repo: 'o/r', filePath: 'notes/a.md', color: 'blue' }),
         'n1',
       );
     });
 
-    test('Case C (variant): a failed stage does not enqueue (only a throw does)', async () => {
-      const stage = jest.fn().mockResolvedValue({ success: false });
-      const enqueue = jest.fn();
-      await colorStageAfterUpdateNote(
-        {
-          id: 'n1',
-          repo: 'o/r',
-          branch: 'main',
-          filePath: 'notes/a.md',
-          content: 'body',
-        },
-        'purple',
-        { stageUpsert: stage, enqueueNoteUpsert: enqueue },
-      );
-      expect(stage).toHaveBeenCalled();
-      expect(enqueue).not.toHaveBeenCalled();
+    test('a failing enqueue does not throw out of handleColorSelect', async () => {
+      const enqueue = jest.fn().mockRejectedValue(new Error('queue offline'));
+      await expect(
+        syncAfterUpdateNote(
+          {
+            id: 'n1',
+            repo: 'o/r',
+            branch: 'main',
+            filePath: 'notes/a.md',
+            content: 'body',
+          },
+          'green',
+          enqueue,
+        ),
+      ).resolves.toBeUndefined();
     });
   });
 });

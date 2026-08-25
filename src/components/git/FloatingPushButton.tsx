@@ -293,6 +293,7 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
     || currentRouteName === 'ChatThreadList'
     || currentRouteName === 'ChatScreen'
     || currentRouteName === 'Paywall'
+    || currentRouteName === 'Push'
   ) {
     return null;
   }
