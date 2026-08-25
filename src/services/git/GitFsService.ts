@@ -469,14 +469,14 @@ export class GitFsService {
   }): Promise<{ ok: true } | { ok: false; reason: 'conflict' | 'unknown'; error?: string }> {
     const { fs, dir, branch, remoteOid } = opts;
     try {
-      const author = await readCommitAuthor(fs, dir, `refs/heads/${branch}`).catch(() => null);
+      const author = await readCommitAuthor(fs, dir, `refs/heads/${branch}`);
 
       await git.merge({
         fs,
         dir,
         ours: branch,
         theirs: remoteOid,
-        ...(author ? { author } : {}),
+        author,
         message: `Merge remote-tracking branch 'origin/${branch}' into ${branch}`,
       });
 
@@ -775,14 +775,17 @@ async function readCommitAuthor(
   fs: ReturnType<typeof makeGitFs>,
   dir: string,
   ref: string,
-): Promise<{ name: string; email: string } | null> {
+): Promise<{ name: string; email: string }> {
+  const fallback = { name: 'gitnotes', email: 'gitnotes@users.noreply.gitnotes' };
   try {
-    const commit = await git.readCommit({ fs, dir, oid: ref });
+    const oid = await git.resolveRef({ fs, dir, ref }).catch(() => null);
+    if (!oid) return fallback;
+    const commit = await git.readCommit({ fs, dir, oid });
     const author = commit.commit.author;
-    if (!author?.name || !author?.email) return null;
+    if (!author?.name || !author?.email) return fallback;
     return { name: author.name, email: author.email };
   } catch {
-    return null;
+    return fallback;
   }
 }
 
