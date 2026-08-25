@@ -8,6 +8,7 @@ import { LocalGitWriter } from './LocalGitWriter';
 import { getGitHostService } from './gitHostFactory';
 import type { GitHostUser } from './GitHost';
 import { repairHeadRef } from './GitFsService';
+import { useGitActivityStore } from '../../stores/gitActivityStore';
 
 const CLONES_SUBDIR = 'GitNotes/';
 
@@ -117,6 +118,7 @@ export class CommitService {
         push: false,
       });
       if (!result.success) return { success: false, error: result.error };
+      useGitActivityStore.getState().incrementRevision();
       return { success: true };
     }
 
@@ -148,6 +150,7 @@ export class CommitService {
       push: false,
     });
     if (!result.success) return { success: false, error: result.error };
+    useGitActivityStore.getState().incrementRevision();
     return { success: true };
   }
 
@@ -205,6 +208,7 @@ export class CommitService {
         author: { name: opts.author.name, email: opts.author.email },
       });
 
+      useGitActivityStore.getState().incrementRevision();
       return { success: true, oid: sha };
     } catch (e) {
       const raw = e instanceof Error ? e.message : String(e);
