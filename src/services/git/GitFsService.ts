@@ -395,7 +395,21 @@ export class GitFsService {
       if (localOid && remoteOid && localOid !== remoteOid) {
         const localHasRemote = await git.isDescendent({ fs, dir, oid: remoteOid, ancestor: localOid }).catch(() => false);
         if (!localHasRemote) {
-          return { ok: false, reason: 'diverged', error: 'Local branch has unpushed commits that diverged from remote' };
+          const mergeResult = await this.tryMergeDivergedBranch({
+            fs,
+            dir,
+            branch: opts.branch,
+            localOid,
+            remoteOid,
+            token: opts.token,
+          });
+          if (mergeResult.ok) {
+            return { ok: true };
+          }
+          if (mergeResult.reason === 'conflict') {
+            return { ok: false, reason: 'diverged', error: mergeResult.error ?? 'Merge produced file conflicts' };
+          }
+          return { ok: false, reason: 'unknown', error: mergeResult.error ?? 'Merge failed' };
         }
       }
       // The LFS pointer walk is the most expensive step after a fetch. Skip it
@@ -432,6 +446,49 @@ export class GitFsService {
       }
       if (/network|econn|enotfound|dns|offline|socket/i.test(message)) {
         return { ok: false, reason: 'network', error: message };
+      }
+      return { ok: false, reason: 'unknown', error: message };
+    }
+  }
+
+  /**
+   * Try to merge a remote branch into the local branch when the local is
+   * ahead of the remote and the histories have diverged. Uses isomorphic-git's
+   * `git.merge` to create a merge commit, so the push retry can succeed
+   * without a force-push. Returns `ok: true` when the merge produced no file
+   * conflicts, `reason: 'conflict'` when the working tree has conflicts that
+   * the user must resolve, or `reason: 'unknown'` for unexpected failures.
+   */
+  static async tryMergeDivergedBranch(opts: {
+    fs: ReturnType<typeof makeRepoFs>;
+    dir: string;
+    branch: string;
+    localOid: string;
+    remoteOid: string;
+    token?: string;
+  }): Promise<{ ok: true } | { ok: false; reason: 'conflict' | 'unknown'; error?: string }> {
+    const { fs, dir, branch, remoteOid } = opts;
+    try {
+      const author = await readCommitAuthor(fs, dir, `refs/heads/${branch}`).catch(() => null);
+
+      await git.merge({
+        fs,
+        dir,
+        ours: branch,
+        theirs: remoteOid,
+        ...(author ? { author } : {}),
+        message: `Merge remote-tracking branch 'origin/${branch}' into ${branch}`,
+      });
+
+      const conflicted = await listConflictedFiles(fs, dir);
+      if (conflicted.length > 0) {
+        return { ok: false, reason: 'conflict', error: `Merge produced file conflicts in: ${conflicted.join(', ')}` };
+      }
+      return { ok: true };
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      if (/conflict|MergeNotSupportedError|CheckoutConflictError/i.test(message)) {
+        return { ok: false, reason: 'conflict', error: message };
       }
       return { ok: false, reason: 'unknown', error: message };
     }
@@ -711,5 +768,34 @@ export class GitFsService {
     for (const file of opts.files) {
       await git.resetIndex({ fs, dir, ref: 'HEAD', filepath: file });
     }
+  }
+}
+
+async function readCommitAuthor(
+  fs: ReturnType<typeof makeGitFs>,
+  dir: string,
+  ref: string,
+): Promise<{ name: string; email: string } | null> {
+  try {
+    const commit = await git.readCommit({ fs, dir, oid: ref });
+    const author = commit.commit.author;
+    if (!author?.name || !author?.email) return null;
+    return { name: author.name, email: author.email };
+  } catch {
+    return null;
+  }
+}
+
+async function listConflictedFiles(
+  fs: ReturnType<typeof makeGitFs>,
+  dir: string,
+): Promise<string[]> {
+  try {
+    const matrix = await git.statusMatrix({ fs, dir });
+    return matrix
+      .filter(([, , workdir, stage]) => workdir !== stage && stage === 2)
+      .map(([filepath]) => filepath);
+  } catch {
+    return [];
   }
 }
