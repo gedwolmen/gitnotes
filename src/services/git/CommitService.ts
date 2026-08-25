@@ -4,7 +4,7 @@ import { parseRepoPath } from '../../utils/gitPathParser';
 import { makeGitFs as buildGitFs } from './gitFs';
 import { gitHttp } from './gitHttp';
 import { SyncEngineService } from '../SyncEngineService';
-import { LocalGitWriter } from './LocalGitWriter';
+import { LocalGitWriter, isCorruptionError } from './LocalGitWriter';
 import { getGitHostService } from './gitHostFactory';
 import type { GitHostUser } from './GitHost';
 import { repairHeadRef } from './GitFsService';
@@ -189,7 +189,18 @@ export class CommitService {
       await ensureOnBranch(fs, dir, opts.branch);
 
       // 1. Stage deletion of the old file
-      await git.remove({ fs, dir, filepath: prevRelPath });
+      try {
+        await git.remove({ fs, dir, filepath: prevRelPath });
+      } catch (removeError) {
+        const code = (removeError as { code?: string }).code;
+        const errorMsg = removeError instanceof Error ? removeError.message : String(removeError);
+        if (code === 'NotFoundError' || code === 'ENOENT') {
+          if (isCorruptionError(errorMsg)) throw removeError;
+          console.warn('[CommitService] commitRename: old file already gone, skipping remove:', prevRelPath);
+        } else {
+          throw removeError;
+        }
+      }
 
       // 2. Write the new file to disk
       const newAbsVirtual = `${dir}/${newRelPath}`;
