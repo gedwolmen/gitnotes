@@ -22,6 +22,7 @@ import {
   FLOATING_AI_BUTTON_LONG_PRESS_MS,
   useFloatingAIButtonAffordances,
 } from '../ai/useFloatingAIButtonAffordances';
+import { HoldProgressRing } from '../ui/HoldProgressRing';
 import { useTabBarHeight } from '../ui/TabBar';
 import { STAGE_BUTTON_SIZE } from './stageButtonGeometry';
 
@@ -243,6 +244,12 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
 
   return (
     <Animated.View style={[styles.container, animatedStyle]} pointerEvents="box-none">
+      <HoldProgressRing
+        progress={affordances.holdProgress}
+        size={BUTTON_SIZE}
+        color={colors.primary}
+        reduceMotionEnabled={reduceMotionEnabled}
+      />
       <GestureDetector gesture={panGesture}>
         <Animated.View style={triggerAnimatedStyle}>
           <Pressable
