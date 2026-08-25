@@ -941,7 +941,7 @@ class NoteSyncQueueServiceClass {
             this.emitMutationSucceeded({ mutation: item });
           }
         } else {
-          console.warn('[NoteSyncQueue] coalesced push failed:', flushResult.error);
+          console.warn(`[NoteSyncQueue] coalesced push failed for ${repoPath}@${branch}:`, flushResult.error);
           for (const { item } of entries) await recordFailure(item, flushResult.error);
         }
       }

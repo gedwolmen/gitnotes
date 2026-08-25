@@ -114,7 +114,7 @@ export function Modal(props: ModalProps) {
                 }
               : {
                   width: fullWidth ? slotWidth : undefined,
-                  maxWidth: 480,
+                  maxWidth: fullWidth ? undefined : 480,
                   height: slotHeight,
                   alignItems: 'stretch',
                   justifyContent: 'center',
