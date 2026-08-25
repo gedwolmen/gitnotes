@@ -43,6 +43,21 @@ jest.mock('../../src/contexts/ThemeContext', () => ({
   }),
 }));
 
+jest.mock('../../src/contexts/AccountsContext', () => ({
+  useAccounts: () => ({
+    refreshAccounts: jest.fn(async () => undefined),
+  }),
+  useAuth: () => ({
+    authState: { isAuthenticated: false, user: null, token: null },
+    activeAccountId: null,
+    activeHostId: null,
+    refreshAccounts: jest.fn(async () => undefined),
+    setActiveAccount: jest.fn(),
+    signIn: jest.fn(),
+    signOut: jest.fn(),
+  }),
+}));
+
 jest.mock('../../src/services/OnboardingService', () => ({
   OnboardingService: {
     completeOnboarding: jest.fn(async () => undefined),

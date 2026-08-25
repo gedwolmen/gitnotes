@@ -369,21 +369,17 @@ describe('blurred title + tools header treatment', () => {
     const searchBar = screen.getByTestId('notes-list.search-bar.search');
     expect(hasAncestorWithTestID(searchBar, 'notes-list.header-blur')).toBe(true);
 
-    // Initial padding uses the bare header height estimate (60) so the list is
-    // never under the header before onLayout fires.
     const list = screen.UNSAFE_getByType(FlatList);
-    const initialPaddingTop = (list.props.contentContainerStyle as { paddingTop: number }).paddingTop;
-    expect(initialPaddingTop).toBe(60 + 4);
+    const paddedParent = list.parent as { props?: { style?: { paddingTop?: number } } };
+    expect(paddedParent?.props?.style?.paddingTop).toBe(60 + 4);
 
-    // After the unified header measures itself, the padding tracks that single height.
     fireEvent(screen.getByTestId('notes-list.header-blur'), 'layout', {
       nativeEvent: { layout: { height: 130 } },
     });
 
-    const paddedList = screen.UNSAFE_getByType(FlatList);
-    expect((paddedList.props.contentContainerStyle as { paddingTop: number }).paddingTop).toBe(
-      130 + 4,
-    );
+    const relaidList = screen.UNSAFE_getByType(FlatList);
+    const relaidParent = relaidList.parent as { props?: { style?: { paddingTop?: number } } };
+    expect(relaidParent?.props?.style?.paddingTop).toBe(130 + 4);
   });
 
   it('renders the TodoList title AND search bar inside a SINGLE blurred header', () => {

@@ -234,8 +234,9 @@ async function ensureOnBranch(
   const current = await git.currentBranch({ fs, dir, fullname: false }).catch(() => null);
   if (current === branch) return;
 
+  const fullRef = `refs/heads/${branch}`;
   try {
-    await git.checkout({ fs, dir, ref: branch });
+    await git.checkout({ fs, dir, ref: fullRef });
     return;
   } catch {
     // local branch ref is missing - fetch then retry checkout below.
@@ -251,7 +252,7 @@ async function ensureOnBranch(
     tags: false,
     onAuth: tokenAuth(token),
   });
-  await git.checkout({ fs, dir, ref: branch });
+  await git.checkout({ fs, dir, ref: fullRef });
 }
 
 /**
