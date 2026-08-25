@@ -3,10 +3,10 @@ import { Todo } from '../models/Todo';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { AuthService } from './AuthService';
 import { SyncEngineService } from './SyncEngineService';
-import { LocalGitWriter } from './git/LocalGitWriter';
+import { CommitService } from './git/CommitService';
+import { resolveDefaultFolder, resolveDefaultRepo } from './git/defaultsPolicy';
 import { GitFsService } from './git/GitFsService';
 import { resolveBranch } from './git/resolveBranch';
-import { githubActivity } from '../stores/githubActivityStore';
 
 async function resolveToken(accountId?: string): Promise<string | undefined> {
   if (!accountId) return undefined;
@@ -42,7 +42,13 @@ export async function syncTodoToGitHub(params: {
   todo: Partial<Todo>;
   accountId?: string;
 }): Promise<TodoGitHubSyncResult> {
-  const { repo: repoPath, branch, filePath, text, todo, accountId } = params;
+  const { repo, branch, filePath, text, todo, accountId } = params;
+  let repoPath: string;
+  try {
+    repoPath = repo ?? await resolveDefaultRepo();
+  } catch {
+    return { success: false, error: 'No repository configured' };
+  }
   const tokenOverride = await resolveToken(accountId);
 
   if (!tokenOverride && !GitHubService.isAuthenticated()) {
@@ -64,7 +70,7 @@ export async function syncTodoToGitHub(params: {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '')
       || 'untitled';
-    targetPath = `todos/${slug}.json`;
+    targetPath = `${resolveDefaultFolder('todo')}${slug}.json`;
   }
 
   const content = serializeTodo(todo);
@@ -100,26 +106,17 @@ export async function syncTodoToGitHub(params: {
   // Clone-mode write path (#514). Same on-disk shape as the API path so a
   // mode flip later doesn't surface a no-op churn commit.
   if (mode === 'clone') {
-    const user = GitHubService.getUser();
-    const author = {
-      name: user?.name || user?.login || 'gitnotes',
-      email: user?.email || `${user?.login ?? 'gitnotes'}@users.noreply.github.com`,
-    };
-    const tokenForPush = tokenOverride ?? (await AuthService.getToken()) ?? undefined;
-    const writeResult = await LocalGitWriter.writeAndCommit({
-      repoPath,
+    const commitResult = await CommitService.commit({
+      repo: repoPath,
       branch: targetBranch,
       filePath: targetPath,
       content,
       message,
-      author,
-      token: tokenForPush,
-      onProgress: (progress) => githubActivity.setProgress(progress),
     });
-    if (writeResult.success) {
+    if (commitResult.success) {
       return { success: true, filePath: targetPath };
     }
-    return { success: false, error: writeResult.error };
+    return { success: false, error: commitResult.error };
   }
 
   try {
@@ -169,21 +166,18 @@ export async function deleteTodoFromGitHub(params: {
 
   const mode = await SyncEngineService.getMode(repoPath);
   if (mode === 'clone') {
-    const user = GitHubService.getUser();
-    const author = {
-      name: user?.name || user?.login || 'gitnotes',
-      email: user?.email || `${user?.login ?? 'gitnotes'}@users.noreply.github.com`,
-    };
-    const tokenForPush = tokenOverride ?? (await AuthService.getToken()) ?? undefined;
-    return LocalGitWriter.deleteAndCommit({
-      repoPath,
+    const commitResult = await CommitService.commit({
+      repo: repoPath,
       branch: targetBranch,
       filePath,
+      content: '',
       message: `Delete todo: ${text || filePath}`,
-      author,
-      token: tokenForPush,
-      onProgress: (progress) => githubActivity.setProgress(progress),
+      delete: true,
     });
+    if (commitResult.success) {
+      return { success: true, filePath };
+    }
+    return { success: false, error: commitResult.error };
   }
 
   try {

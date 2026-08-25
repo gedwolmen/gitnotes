@@ -90,7 +90,7 @@ Fix: the auto branch now enqueues a `NoteUpsert` for the updated note when a cha
 
 ### #879 — phantom "(unpushed commits)" row when local is strictly behind (HIGH, false push state)
 
-`listStaged` emitted the synthetic unpushed row whenever `localOid !== remoteOid` — including when origin descended from local (nothing to push).
+`listUnpushed` emitted the synthetic unpushed row whenever `localOid !== remoteOid` — including when origin descended from local (nothing to push).
 
 Fix: the row is gated on `localOid !== mergeBase && localOid !== remoteOid`, mirroring `LocalGitWriter.hasUnpushedLocalCommits`.
 

@@ -1,30 +1,42 @@
 # Sync Write Modes
 
-> The sync contract: clone mode stages locally (stage-then-push); API mode pushes live on save (write-through). Blocking overlay; import-on-add semantics; retry surfaces.
+> The sync contract: clone mode commits on save (commit-on-save); API mode pushes live on save (write-through). Blocking overlay; import-on-add semantics; retry surfaces.
 
-## Clone mode: stage-then-push
+## Clone mode: commit-on-save
 
-In clone mode (`SyncEngineService.getMode` returns `'clone'`, which is also the **[default](./sync-engine-modes.md)** — `DEFAULT_MODE = 'clone'`), every user git action (note save / create / delete / color change / todo toggle / canvas edit / thought-dump) **stages locally only** — nothing reaches GitHub at save time.
+In clone mode (`SyncEngineService.getMode` returns `'clone'`, which is also the **[default](./sync-engine-modes.md)** — `DEFAULT_MODE = 'clone'`), every user git action (note save / create / delete / color change / todo toggle / canvas edit / thought-dump) **commits locally immediately on save** — nothing reaches GitHub at save time.
 
-### How staging works
+### How commit-on-save works
 
-1. `StagingService.stageUpsert` or `stageDelete` (clone branch path) delegates to [`LocalGitWriter.writeAndCommit`](src/services/git/localGitWriter.ts) with `push:false`, producing a local git commit without any network call.
-2. The operation key is appended to the pending stage set in [`stageStore`](src/stores/stageStore.ts): `pendingSet` grows, `pendingCount` increments.
-3. The floating push button ([`FloatingStageButton`](src/components/FloatingStageButton.tsx)) picks up the count via `[stageStore.pendingCount]` selector in the app shell, so the badge always reflects current staged items for default-clone repos.
-4. The **Stage screen** ([`StageScreen`](src/screens/StageScreen.tsx)) reads from `stageStore/loadStaged()`, which now iterates ALL repo paths (not just override-map keys) so that `@gitnotes:sync_engine_modes` entry-less repos appear immediately.
+1. Clone-mode sync entry points (`NoteGitHubSyncService`, `TodoGitHubSyncService`, `CanvasGitHubSyncService`, `TemplateGitHubSyncService`, `noteStore`) call [`CommitService.commit`](src/services/git/CommitService.ts) instead of the staging API.
+2. `CommitService.commit` produces a **local git commit with `push:false`** — no network call at save time.
+   - Upsert: writes file to disk → `git.add` → `git.commit`
+   - Delete: `git.remove` → `git.commit`
+   - Rename: `git.remove(old)` → write(new) → `git.add(new)` → single `git.commit`
+3. The commit is atomic and self-contained — no separate staging layer.
+
+### Tracking unpushed commits
+
+[`UnpushedCommitsService`](src/services/git/UnpushedCommitsService.ts) tracks commits between local `HEAD` and remote `origin/<branch>`:
+
+1. Resolve local OID (`refs/heads/<branch>`) and remote OID (`refs/remotes/origin/<branch>`) via `GitFsService.getCommitOid`
+2. Compute merge base (or use remote OID when merge base unavailable)
+3. Walk commits from merge-base to local HEAD via `git.log` (up to 20 commits)
+4. Returns per-commit summary: `subject`, `oid`, `author`, `timestamp`, `filesChangedCount`
+
+For changed files per commit, `UnpushedCommitsService.listFiles` diffs the commit tree against its parent tree.
 
 ### Push triggers
 
-Nothing pushes automatically on save. Pushing happens exactly when one of these fires:
+Nothing pushes automatically on save. Pushing happens **only on explicit trigger**:
 
 | Trigger | Code path | Behavior |
 |---------|-----------|----------|
-| Long-press floating button | `handleLongPress` in `FloatingStageButton` | Enqueues + immediate `drainPushQueue()` via `StagePushScheduler` |
-| Push / Push-all on Stage screen | `handlePushGroup` / `handlePushAll` in `StageScreen` | Same drain-after-enqueue pattern |
-| 3-minute foreground idle timer | `StagePushScheduler.flushStaged` | `drainPushQueue()` after idle window with no staged changes |
+| Long-press floating button | `handleLongPress` in `FloatingPushButton` | Pushes all unpushed commits for the repo |
+| Push / Push-all on Push screen | `handlePush` / `handlePushAll` in `PushScreen` | Pushes selected or all unpushed commits |
 | OS background task | `BackgroundSyncService.applyPolicy` | Drains ≤ 10 files (policy cap) |
 
-See [Stage → Push UX](./stage-push-ux.md) for the full ring, notification, and resume-on-foreground flow.
+See [Push UX](./push-ux.md) for the full ring, notification, and resume-on-foreground flow.
 
 ## API mode: live write-through
 
@@ -114,9 +126,28 @@ After a durable failure or a dropped queue mutation, the following surfaces exis
 
 | Surface | What it does | Code reference |
 |---------|-------------|----------------|
-| Stage screen (push per-group / push-all) | Clears group stale failures + drains queue | [`StageScreen`](src/screens/StageScreen.tsx) handlers calling `StagingService.pushStaged` |
+| Push screen (push per-commit / push-all) | Pushes selected or all unpushed commits | [`PushScreen`](src/screens/PushScreen.tsx) handlers calling `UnpushedCommitsService` |
 | Cloud-icon manual sync (pull-only) | Runs `manualSync.syncNow` → pulls latest state → refreshes stores. Does NOT drain the sync queue. | [`ManualSync`](src/services/git/manualSync.ts) |
 | OS background task | Automatic drain of small sets behind the scenes | [`BackgroundSyncService`](src/services/BackgroundSyncService.ts) |
+
+---
+
+### [DEPRECATED] Clone mode: stage-then-push (archived)
+
+> **This section describes the pre-PushScreen architecture that has been removed.**
+> The `StagingService`, `stageStore`, `FloatingStageButton`, `StageScreen`, and `StagePushScheduler` have all been deleted.
+> This description is kept for historical reference only.
+
+In the old architecture:
+
+- `StagingService.stageUpsert` or `stageDelete` (clone branch path) delegated to [`LocalGitWriter.writeAndCommit`](src/services/git/localGitWriter.ts) with `push:false`, producing a local git commit without any network call.
+- The operation key was appended to the pending stage set in [`stageStore`](src/stores/stageStore.ts): `pendingSet` grew, `pendingCount` incremented.
+- The floating push button ([`FloatingStageButton`](src/components/FloatingStageButton.tsx)) picked up the count via `[stageStore.pendingCount]` selector in the app shell, so the badge always reflected current staged items for default-clone repos.
+- The **Stage screen** ([`StageScreen`](src/screens/StageScreen.tsx)) read from `stageStore/loadStaged()`, which iterated ALL repo paths (not just override-map keys) so that `@gitnotes:sync_engine_modes` entry-less repos appeared immediately.
+
+Push triggers were: long-press floating button (`StagePushScheduler.drainPushQueue`), push/push-all on Stage screen, 3-minute foreground idle timer, and OS background task (≤ 10 files).
+
+This was replaced by the commit-on-save + `UnpushedCommitsService` + `PushScreen` architecture.
 
 ## Related issues
 

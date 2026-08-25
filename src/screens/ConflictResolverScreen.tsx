@@ -10,7 +10,6 @@ import { ConflictResolverService } from '../services/conflict/ConflictResolverSe
 import { proposeMerge } from '../services/conflict/AiConflictResolver';
 import { GitFsService } from '../services/git/GitFsService';
 import { LocalGitWriter } from '../services/git/LocalGitWriter';
-import { notifyStagedChanged } from '../services/git/StagingService';
 import { SyncEngineService } from '../services/SyncEngineService';
 import { AuthService } from '../services/AuthService';
 import type { FileConflict } from '../services/conflict/types';
@@ -223,8 +222,6 @@ export default function ConflictResolverScreen() {
           return;
         }
 
-        notifyStagedChanged();
-
         await removeConflict(repoPath, branch);
 
         const isApiMode = (await SyncEngineService.getMode(repoPath)) === 'api';
@@ -417,6 +414,22 @@ export default function ConflictResolverScreen() {
           </>
         )}
       </View>
+
+      {isResolving && (
+        <View
+          testID="conflict-resolver.committing-overlay"
+          pointerEvents="auto"
+          className="absolute inset-0 items-center justify-center z-50"
+        >
+          <View className="absolute inset-0 bg-black/40" />
+          <View className="items-center gap-3 bg-components-bg-secondary rounded-2xl p-6 shadow-xl border border-components-border">
+            <ActivityIndicator size="large" color={colors.primary ?? colors.text} />
+            <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+              Resolving conflict…
+            </Text>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }

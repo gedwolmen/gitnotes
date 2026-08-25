@@ -3,9 +3,9 @@ import { Todo, TodoCreateInput, TodoUpdateInput, reorderTodos } from '../models/
 import { StorageService } from '../services/StorageService';
 import { NotificationService } from '../services/NotificationService';
 import { useTodoStore } from '../stores/todoStore';
-import { StagingService } from '../services/git/StagingService';
+import { syncTodoToGitHub } from '../services/TodoGitHubSyncService';
 
-/** Mirrors TodoGitHubSyncService.serializeTodo so staged todos keep the on-disk shape. */
+/** Mirrors TodoGitHubSyncService.serializeTodo so synced todos keep the on-disk shape. */
 function serializeTodoForStage(todo: Partial<Todo>): string {
   const data = {
     text: todo.text ?? '',
@@ -128,15 +128,15 @@ export function useTodos(): TodoContextValue {
     }
 
     if (todo.repo) {
-      const stageResult = await StagingService.stageUpsert({
+      const syncResult = await syncTodoToGitHub({
         repo: todo.repo,
         branch: todo.branch,
         filePath: todo.filePath,
-        title: finalTodo.text,
-        content: serializeTodoForStage(finalTodo),
+        text: finalTodo.text,
+        todo: finalTodo,
       });
-      if (!stageResult.success) {
-        console.warn('[TodoContext] GitHub stage failed:', stageResult.error);
+      if (!syncResult.success) {
+        console.warn('[TodoContext] GitHub sync failed:', syncResult.error);
       }
     }
 

@@ -66,11 +66,35 @@ This prevents both crash modes (Hermes OOM SIGABRT and watchdog SIGKILL) during 
 
 Changed from `'api'` to `'clone'`. Existing users with no stored mode preference silently switch to clone mode. Users who explicitly enabled clone keep their entry; users who explicitly switched to API keep their override.
 
-## Push-button visibility
+## Clone mode
 
-The push button (floating cloud-upload FAB and per-group Push button on the Staged Changes screen) is only meaningful in **clone mode** — API mode writes are write-through and complete before the save resolves. `StagingService.listStaged` filters out items whose repo is in API mode, so:
+Clone mode uses a **commit-on-save** architecture: every user change is committed locally as a git commit with `push:false` at save time, then pushed to GitHub through explicit user action or idle timers.
 
-- `stageStore.pendingCount` is 0 in API mode for API-only repos → floating button hidden.
-- Stage screen shows no grouped items → per-group Push / Push-all absent.
+### Commit on save
 
-In clone mode the button reappears for any queued mutation or unpushed clone-mode commit, exactly as before.
+`CommitService.commit()` creates a local git commit with `push:false` via `LocalGitWriter` on every save. The commit is atomic (one per mutation) and includes the full diff of changed content. Nothing reaches GitHub at save time — the commit exists only in the local clone.
+
+### Tracking unpushed commits
+
+`UnpushedCommitsService` tracks commits that have been created locally but not yet pushed:
+
+- `count()` — returns the number of unpushed commits per repo (drives the floating button badge)
+- `list()` — returns commit metadata (sha, message, author, timestamp) for the PushScreen history
+- `listFiles()` — returns the list of files changed in unpushed commits for the per-commit diff view
+
+### Push UI
+
+**`FloatingPushButton`** — the cloud-upload FAB shown in the bottom-right corner of the app. Press-and-hold triggers an immediate push of all unpushed commits. The badge count comes from `UnpushedCommitsService.count()`.
+
+**`PushScreen`** — the Staged Changes screen showing per-commit diffs. Each commit row shows the list of changed files; tapping a row expands the diff. Per-commit **Push** and **Push-all** buttons trigger push for individual commits or all unpushed commits respectively.
+
+### Push triggers
+
+A commit is pushed to GitHub when ONE of these fires:
+
+1. **Press-and-hold** the floating push button — immediate push of all unpushed commits
+2. **Push / Push-all** button on the PushScreen — per-commit or bulk push
+3. **3-minute foreground idle** — `StagePushScheduler` pushes automatically when the app has been in the foreground for 3 minutes without user interaction and there are unpushed commits
+4. **OS background task** — small sets (≤ 10 files) are pushed by the background sync job
+
+> **Deprecated:** The term "stage-then-push" is deprecated. The architecture is commit-on-save, not stage-then-push. The stage concept (staging area before commit) is an implementation detail of `LocalGitWriter` and is not user-facing. The user-facing concept is **unpushed commits**, not staged changes.

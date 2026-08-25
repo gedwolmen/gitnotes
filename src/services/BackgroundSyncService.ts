@@ -5,15 +5,9 @@ import { StorageService } from './StorageService';
 import { NoteSyncQueueService } from './NoteSyncQueueService';
 import { pullAllFromRepos } from './RepoPullService';
 import { GitSyncGate } from './git/GitSyncGate';
-import { StagingService } from './git/StagingService';
 import { NotificationService } from './NotificationService';
-import { useConflictStore } from '../stores/conflictStore';
 
 const TASK_NAME = 'background-sync';
-
-// OS time budgets make large pushes unreliable in the background; staged sets
-// bigger than this wait for the foreground scheduler instead.
-const STAGE_PUSH_MAX_FILES = 10;
 
 let taskRegistered = false;
 
@@ -40,7 +34,6 @@ TaskManager.defineTask(TASK_NAME, async () => {
     try {
       await NoteSyncQueueService.drain();
       const result = await pullAllFromRepos();
-      await flushStagedSetsForBackgroundTask();
 
       const pulled = result.notes + result.canvases + result.todos + result.templates;
       if (pulled > 0) {
@@ -64,42 +57,6 @@ TaskManager.defineTask(TASK_NAME, async () => {
     return BackgroundTask.BackgroundTaskResult.Failed;
   }
 });
-
-/**
- * Push staged changes in the background cycle. Only (repo, branch) sets with
- * at most `STAGE_PUSH_MAX_FILES` files are pushed here — bigger sets wait for
- * the foreground scheduler. Failures are logged only; the failure-notification
- * surface is owned by the foreground scheduler (todo 9).
- */
-export async function flushStagedSetsForBackgroundTask(): Promise<void> {
-  const staged = await StagingService.listStaged();
-  const counts = new Map<string, { repoPath: string; branch: string; files: number }>();
-  for (const item of staged) {
-    const key = `${item.repoPath}\n${item.branch}`;
-    const entry = counts.get(key);
-    if (entry) {
-      entry.files += 1;
-    } else {
-      counts.set(key, { repoPath: item.repoPath, branch: item.branch, files: 1 });
-    }
-  }
-  // The conflict store only hydrates when a UI screen mounts; a cold
-  // OS-launched background task never mounted one, so without this reload it
-  // pushed blindly into known diverged branches (#1164).
-  await useConflictStore.getState().loadConflicts();
-  for (const { repoPath, branch, files } of counts.values()) {
-    if (files > STAGE_PUSH_MAX_FILES) continue;
-    const repoConflicts = useConflictStore.getState().conflicts.filter(
-      (c) => c.repoPath === repoPath && c.branch === branch,
-    );
-    const hasUnresolved = repoConflicts.some((c) => c.files.some((f) => !f.autoResolved));
-    if (hasUnresolved) continue;
-    const result = await StagingService.pushStaged(repoPath, branch);
-    if (!result.success) {
-      console.warn(`[BackgroundSync] staged push failed for ${repoPath}@${branch}:`, result.error);
-    }
-  }
-}
 
 export async function startBackgroundSync(): Promise<void> {
   if (taskRegistered) return;

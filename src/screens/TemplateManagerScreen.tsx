@@ -10,6 +10,7 @@ import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '../contexts/ThemeContext';
+import { useResponsive } from '../hooks/useResponsive';
 import { ScreenHeader, IconButton, useScreenHeaderHeight } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { useTemplateStore } from '../stores/templateStore';
@@ -33,6 +34,7 @@ export default function TemplateManagerScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation();
   const { colors } = useTheme();
+  const { isTablet } = useResponsive();
   const headerHeight = useScreenHeaderHeight({ subtitle: true });
 
   const customTemplates = useTemplateStore((s) => s.customTemplates);
@@ -249,7 +251,7 @@ export default function TemplateManagerScreen() {
     <SafeAreaView edges={['bottom']} className="flex-1" style={{ backgroundColor: colors.background }}>
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ padding: 16, paddingBottom: 40, gap: 10, flexGrow: 1 }}
+        contentContainerStyle={{ paddingHorizontal: isTablet ? 24 : 16, paddingTop: 16, paddingBottom: 40, gap: 10, flexGrow: 1 }}
         style={{ paddingTop: headerHeight }}
         keyboardShouldPersistTaps="handled"
         refreshControl={

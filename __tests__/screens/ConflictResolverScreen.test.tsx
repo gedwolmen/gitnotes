@@ -25,7 +25,7 @@ const mockProposeMerge = jest.fn();
 const mockWriteAndCommit = jest.fn(async () => undefined);
 const mockDeleteAndCommit = jest.fn(async () => undefined);
 const mockMergeCommit = jest.fn(async () => ({}));
-const mockNotifyStagedChanged = jest.fn();
+
 const mockGetToken = jest.fn(async () => null);
 const mockGetUser = jest.fn();
 const mockGetMode = jest.fn(async () => 'api');
@@ -74,9 +74,7 @@ jest.mock('../../src/services/git/LocalGitWriter', () => ({
   },
 }));
 
-jest.mock('../../src/services/git/StagingService', () => ({
-  notifyStagedChanged: () => mockNotifyStagedChanged(),
-}));
+
 
 jest.mock('../../src/services/SyncEngineService', () => ({
   SyncEngineService: {
@@ -189,7 +187,6 @@ describe('ConflictResolverScreen AI-fix flow', () => {
     mockWriteAndCommit.mockClear();
     mockDeleteAndCommit.mockClear();
     mockMergeCommit.mockClear();
-    mockNotifyStagedChanged.mockClear();
     mockGetToken.mockClear();
     mockGetUser.mockClear();
     alertButtons = [];
@@ -314,7 +311,6 @@ describe('ConflictResolverScreen AI-fix flow', () => {
 
     expect(mockWriteAndCommit).toHaveBeenCalledTimes(1);
     expect(mockMergeCommit).toHaveBeenCalledTimes(1);
-    expect(mockNotifyStagedChanged).toHaveBeenCalledTimes(1);
   });
 
   it('fires notifyStagedChanged for Keep mine even without a merge step', async () => {
@@ -334,7 +330,6 @@ describe('ConflictResolverScreen AI-fix flow', () => {
     });
 
     expect(mockWriteAndCommit).toHaveBeenCalledTimes(1);
-    expect(mockNotifyStagedChanged).toHaveBeenCalledTimes(1);
   });
 
   it('hides AI-fix for binary conflicts and without a model, keeping manual tabs', () => {

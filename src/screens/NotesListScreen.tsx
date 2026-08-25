@@ -88,8 +88,6 @@ export default function NotesListScreen() {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [isPullRefreshing, setIsPullRefreshing] = useState(false);
   const [currentSearchMatchIndex, setCurrentSearchMatchIndex] = useState(0);
-  const [pendingSync, setPendingSync] = useState(0);
-  const [isManualSyncing, setIsManualSyncing] = useState(false);
   const [longPressedNote, setLongPressedNote] = useState<Note | null>(null);
   const [colorPickerNote, setColorPickerNote] = useState<Note | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -319,21 +317,6 @@ export default function NotesListScreen() {
   }, [authState.token]);
 
   useEffect(() => {
-    let cancelled = false;
-    const refreshPending = () => {
-      NoteSyncQueueService.pendingCount().then((count) => {
-        if (!cancelled) setPendingSync(count);
-      });
-    };
-    refreshPending();
-    const unsubscribe = NoteSyncQueueService.subscribe(refreshPending);
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
-  }, []);
-
-  useEffect(() => {
     const ref = listRef.current;
     if (ref && typeof ref.scrollToOffset === 'function') {
       ref.scrollToOffset({ offset: 0, animated: false });
@@ -378,29 +361,6 @@ export default function NotesListScreen() {
       setIsPullRefreshing(false);
     }
   }, []);
-
-  const handleManualSync = useCallback(async () => {
-    if (isManualSyncing) return;
-    if (gateBusy) {
-      HapticService.warning();
-      return;
-    }
-    HapticService.light();
-    setIsManualSyncing(true);
-    try {
-      // Bidirectional manual sync (#621). Do NOT acquire the gate cycle
-      // here: syncNow acquires it internally, and a held cycle would
-      // deadlock its own acquisition.
-      const result = await syncNow();
-      if (result.ok) {
-        HapticService.success();
-      } else {
-        HapticService.warning();
-      }
-    } finally {
-      setIsManualSyncing(false);
-    }
-  }, [isManualSyncing, gateBusy]);
 
   const handleViewModeChange = useCallback(
     (mode: ViewMode) => {
@@ -562,6 +522,7 @@ export default function NotesListScreen() {
               enabled={!gateBusy}
               tintColor={colors.primary}
               colors={[colors.primary]}
+              progressViewOffset={headerBlurHeight}
             />
           )
         }
@@ -690,30 +651,6 @@ export default function NotesListScreen() {
               {activeFilterCount > 0 ? (
                 <View className="absolute top-0.5 right-0.5 min-w-3.5 h-3.5 px-0.5 rounded-full items-center justify-center" style={{ backgroundColor: colors.primary }}>
                   <Text className="text-white font-bold" style={{ fontSize: 9 }}>{activeFilterCount}</Text>
-                </View>
-              ) : null}
-            </View>
-            <View className="relative">
-              <IconButton
-                size="sm"
-                testID="notes-list.icon-button.sync"
-                active={pendingSync > 0}
-                onPress={handleManualSync}
-                accessibilityLabel={t('common.sync')}
-              >
-                {isManualSyncing || gateBusy ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                ) : (
-                  <Ionicons
-                    name={pendingSync > 0 ? 'cloud-upload' : 'cloud-done'}
-                    size={18}
-                    color={pendingSync > 0 ? colors.accent : colors.textSecondary}
-                  />
-                )}
-              </IconButton>
-              {pendingSync > 0 ? (
-                <View className="absolute top-0.5 right-0.5 min-w-3.5 h-3.5 px-0.5 rounded-full items-center justify-center" style={{ backgroundColor: colors.primary }}>
-                  <Text className="text-white font-bold" style={{ fontSize: 9 }}>{pendingSync}</Text>
                 </View>
               ) : null}
             </View>

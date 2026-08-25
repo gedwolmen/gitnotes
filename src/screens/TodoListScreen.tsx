@@ -12,7 +12,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { slugifyTodoText, Todo, TodoPriority } from '../models/Todo';
 import { SortMode } from '../types/SortTypes';
 import { HapticService } from '../utils/haptics';
-import { StagingService } from '../services/git/StagingService';
+import { syncTodoToGitHub } from '../services/TodoGitHubSyncService';
 import { syncNow } from '../services/git/manualSync';
 import { batchDeleteFiles } from '../services/git/BatchGitOperations';
 import { resolveBranch } from '../services/git/resolveBranch';
@@ -387,15 +387,16 @@ export default function TodoListScreen() {
     });
 
     if (todoRepo && newTodo) {
-      const stageResult = await StagingService.stageUpsert({
+      const syncResult = await syncTodoToGitHub({
         repo: todoRepo,
         branch: todoBranch,
         filePath: todoFilePath,
-        title: todoText.trim(),
-        content: serializeTodoForStage(newTodo),
+        text: todoText.trim(),
+        todo: newTodo,
+        accountId: activeAccountId ?? undefined,
       });
-      if (!stageResult.success) {
-        console.warn('[TodoList] GitHub stage failed:', stageResult.error);
+      if (!syncResult.success) {
+        console.warn('[TodoList] GitHub sync failed:', syncResult.error);
       }
     }
 
@@ -440,12 +441,12 @@ export default function TodoListScreen() {
       accountId: editAccountId,
     });
 
-    const stageResult = await StagingService.stageUpsert({
+    const syncResult = await syncTodoToGitHub({
       repo: todoRepo,
       branch: todoBranch,
       filePath: todoFilePath,
-      title: todoText.trim(),
-      content: serializeTodoForStage({
+      text: todoText.trim(),
+      todo: {
         text: todoText.trim(),
         completed: editingTodo.completed,
         priority: todoPriority,
@@ -454,10 +455,11 @@ export default function TodoListScreen() {
         dueDate: todoDueDate,
         createdAt: editingTodo.createdAt,
         updatedAt: Date.now(),
-      }),
+      },
+      accountId: editAccountId,
     });
-    if (!stageResult.success) {
-      console.warn('[TodoList] GitHub stage failed:', stageResult.error);
+    if (!syncResult.success) {
+      console.warn('[TodoList] GitHub sync failed:', syncResult.error);
     }
 
     resetForm();

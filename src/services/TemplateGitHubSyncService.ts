@@ -3,9 +3,9 @@ import { parseRepoPath } from '../utils/gitPathParser';
 import { serializeTemplate, templateSlug } from './TemplateMarkdownService';
 import type { NoteTemplate } from './TemplateService';
 import { SyncEngineService } from './SyncEngineService';
-import { LocalGitWriter } from './git/LocalGitWriter';
-import { AuthService } from './AuthService';
-import { githubActivity } from '../stores/githubActivityStore';
+import { CommitService } from './git/CommitService';
+import { resolveDefaultFolder } from './git/defaultsPolicy';
+import { resolveDefaultRepo } from './git/defaultsPolicy';
 
 function resolveAuthor() {
   const user = GitHubService.getUser();
@@ -26,7 +26,13 @@ export async function syncTemplateToGitHub(params: {
   branch: string;
   template: NoteTemplate;
 }): Promise<TemplateSyncResult> {
-  const { repoPath, branch, template } = params;
+  const { repoPath: inputRepoPath, branch, template } = params;
+  let repoPath: string;
+  try {
+    repoPath = inputRepoPath ?? await resolveDefaultRepo();
+  } catch {
+    return { success: false, error: 'No repository configured' };
+  }
 
   if (!GitHubService.isAuthenticated()) {
     return { success: false, error: 'GitHub not authenticated' };
@@ -34,7 +40,7 @@ export async function syncTemplateToGitHub(params: {
   const info = parseRepoPath(repoPath);
   if (!info) return { success: false, error: `Invalid repo path: ${repoPath}` };
 
-  const targetPath = template.filePath || `templates/${templateSlug(template.name)}.md`;
+  const targetPath = template.filePath || `${resolveDefaultFolder('template')}${templateSlug(template.name)}.md`;
   const isUpdate = Boolean(template.filePath);
   const message = `${isUpdate ? 'Update' : 'Add'} template ${template.name}`;
   const body = serializeTemplate({ ...template, filePath: undefined });
@@ -44,19 +50,16 @@ export async function syncTemplateToGitHub(params: {
   // *that* repo, not the editing repo.
   const mode = await SyncEngineService.getMode(repoPath);
   if (mode === 'clone') {
-    const tokenForPush = (await AuthService.getToken()) ?? undefined;
-    const writeResult = await LocalGitWriter.writeAndCommit({
-      repoPath,
+    const commitResult = await CommitService.commit({
+      repo: repoPath,
       branch,
       filePath: targetPath,
       content: body,
       message,
       author: resolveAuthor(),
-      token: tokenForPush,
-      onProgress: (progress) => githubActivity.setProgress(progress),
     });
-    if (writeResult.success) return { success: true, filePath: targetPath };
-    return { success: false, error: writeResult.error };
+    if (commitResult.success) return { success: true, filePath: targetPath };
+    return { success: false, error: commitResult.error };
   }
 
   try {
@@ -88,16 +91,16 @@ export async function deleteTemplateFromGitHub(params: {
   // Clone-mode delete path (#514).
   const mode = await SyncEngineService.getMode(repoPath);
   if (mode === 'clone') {
-    const tokenForPush = (await AuthService.getToken()) ?? undefined;
-    return LocalGitWriter.deleteAndCommit({
-      repoPath,
+    const commitResult = await CommitService.commit({
+      repo: repoPath,
       branch,
       filePath,
       message: `Delete template ${name}`,
       author: resolveAuthor(),
-      token: tokenForPush,
-      onProgress: (progress) => githubActivity.setProgress(progress),
+      delete: true,
     });
+    if (commitResult.success) return { success: true, filePath };
+    return { success: false, error: commitResult.error };
   }
 
   let resolvedSha = sha;

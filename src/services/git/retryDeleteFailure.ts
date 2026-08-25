@@ -9,9 +9,6 @@ import { clearDeleteFailure } from './deleteFailures';
  * delete through the sync queue.
  *
  * Does NOT trigger a push — the caller decides when to drain.
- *
- * Extracted from `useGitOpLock.retry()` so StageScreen can call it
- * without depending on the hook (which is scheduled for deletion).
  */
 export async function retryDeleteFailure(
   repo: string,

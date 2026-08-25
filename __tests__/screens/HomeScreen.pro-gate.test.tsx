@@ -91,9 +91,6 @@ jest.mock('../../src/contexts/RepoContext', () => ({
 jest.mock('../../src/services/NoteSyncQueueService', () => ({
   NoteSyncQueueService: { enqueue: jest.fn() },
 }));
-jest.mock('../../src/services/git/StagingService', () => ({
-  StagingService: { stageNote: jest.fn() },
-}));
 jest.mock('../../src/utils/requireRepo', () => ({
   requireRepo: () => true,
 }));

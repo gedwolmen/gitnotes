@@ -51,13 +51,6 @@ jest.mock('../../src/services/NotificationService', () => ({
   },
 }));
 
-jest.mock('../../src/services/git/StagingService', () => ({
-  StagingService: {
-    listStaged: jest.fn(async () => []),
-    pushStaged: jest.fn(async () => ({ success: true })),
-  },
-}));
-
 import * as BackgroundTask from 'expo-background-task';
 import * as TaskManager from 'expo-task-manager';
 import { GitHubService } from '../../src/services/GitHubService';

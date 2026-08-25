@@ -47,7 +47,7 @@ import {
   slugifyCanvasTitle,
 } from '../../models/Canvas';
 import GitContextPicker from '../GitContextPicker';
-import { StagingService } from '../../services/git/StagingService';
+import { syncCanvasToGitHub } from '../../services/CanvasGitHubSyncService';
 import { useAuth } from '../../contexts/AuthContext';
 import { renderSceneToPng } from '../../utils/canvasPngExport';
 import { parseChartLabels, parseChartValues } from '../../utils/chartParsing';
@@ -1271,17 +1271,17 @@ export default function CanvasEditorContent() {
     }
 
     if (repo) {
-      const stageResult = await StagingService.stageUpsert({
+      const syncResult = await syncCanvasToGitHub({
         repo,
         branch,
         filePath: canvasFilePath,
         title: title.trim(),
-        content: JSON.stringify(scene, null, 2),
+        scene,
       });
-      if (!stageResult.success) {
+      if (!syncResult.success) {
         Alert.alert(
           'Save failed',
-          `Could not stage canvas to Git: ${stageResult.error ?? 'unknown error'}. Your edits are kept — try again or check connection.`,
+          `Could not sync canvas to Git: ${syncResult.error ?? 'unknown error'}. Your edits are kept — try again or check connection.`,
         );
         return;
       }

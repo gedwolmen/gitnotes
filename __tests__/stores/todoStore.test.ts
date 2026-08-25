@@ -14,8 +14,8 @@ jest.mock('../../src/services/GitHubService', () => ({
   },
 }));
 
-jest.mock('../../src/services/git/StagingService', () => ({
-  StagingService: { stageDelete: jest.fn(), stageUpsert: jest.fn() },
+jest.mock('../../src/services/TodoGitHubSyncService', () => ({
+  deleteTodoFromGitHub: jest.fn(),
 }));
 
 jest.mock('../../src/services/git/formatSyncError', () => ({
@@ -25,7 +25,8 @@ jest.mock('../../src/services/git/formatSyncError', () => ({
 import { useTodoStore } from '../../src/stores/todoStore';
 import { StorageService } from '../../src/services/StorageService';
 import { GitHubService } from '../../src/services/GitHubService';
-import { StagingService } from '../../src/services/git/StagingService';
+import { deleteTodoFromGitHub } from '../../src/services/TodoGitHubSyncService';
+
 import type { Todo } from '../../src/models/Todo';
 
 const makeTodo = (id: string, overrides: Partial<Todo> = {}): Todo => ({
@@ -94,24 +95,24 @@ describe('useTodoStore', () => {
       await useTodoStore.getState().deleteTodo('1');
 
       expect(StorageService.deleteTodo).toHaveBeenCalledWith('1');
-      expect(StagingService.stageDelete).not.toHaveBeenCalled();
+      expect(deleteTodoFromGitHub).not.toHaveBeenCalled();
       expect(useTodoStore.getState().todos).toHaveLength(0);
     });
 
-    it('stages the delete for repo-backed todos before local delete', async () => {
+    it('deletes repo-backed todos via GitHub sync before local delete', async () => {
       const repoTodo = makeTodo('1', { repo: 'me/repo', branch: 'main', filePath: 'todos/test.json', text: 'test' });
       useTodoStore.setState({ todos: [repoTodo] });
       (GitHubService.isAuthenticated as jest.Mock).mockReturnValue(true);
-      (StagingService.stageDelete as jest.Mock).mockResolvedValue({ success: true });
+      (deleteTodoFromGitHub as jest.Mock).mockResolvedValue({ success: true });
       (StorageService.deleteTodo as jest.Mock).mockResolvedValue(true);
 
       await useTodoStore.getState().deleteTodo('1');
 
-      expect(StagingService.stageDelete).toHaveBeenCalled();
+      expect(deleteTodoFromGitHub).toHaveBeenCalled();
       expect(StorageService.deleteTodo).toHaveBeenCalledWith('1');
     });
 
-    it('returns false without staging for unauthenticated repo-backed delete', async () => {
+    it('returns false without git sync for unauthenticated repo-backed delete', async () => {
       const repoTodo = makeTodo('1', { repo: 'me/repo', branch: 'main', filePath: 'todos/test.json' });
       useTodoStore.setState({ todos: [repoTodo] });
       (GitHubService.isAuthenticated as jest.Mock).mockReturnValue(false);
@@ -119,7 +120,7 @@ describe('useTodoStore', () => {
       const result = await useTodoStore.getState().deleteTodo('1');
 
       expect(result).toBe(false);
-      expect(StagingService.stageDelete).not.toHaveBeenCalled();
+      expect(deleteTodoFromGitHub).not.toHaveBeenCalled();
     });
   });
 });

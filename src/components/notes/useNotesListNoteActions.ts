@@ -7,7 +7,6 @@ import { parseRepoPath } from '../../utils/gitPathParser';
 import { HapticService } from '../../utils/haptics';
 import { ShareFormat, ShareService } from '../../services/ShareService';
 import { NoteSyncQueueService } from '../../services/NoteSyncQueueService';
-import { StagingService } from '../../services/git/StagingService';
 import { githubActivity } from '../../stores/githubActivityStore';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -92,13 +91,9 @@ export function useNotesListNoteActions({
             color,
           };
           try {
-            const staged = await StagingService.stageUpsert(syncParams);
-            if (!staged.success) {
-              console.warn('[useNotesListNoteActions] stage after color update failed:', staged.error);
-            }
-          } catch (error) {
-            console.warn('[useNotesListNoteActions] stage after color update failed:', error);
             await NoteSyncQueueService.enqueueNoteUpsert(syncParams, updated.id);
+          } catch (error) {
+            console.warn('[useNotesListNoteActions] sync after color update failed:', error);
           }
         }
       } catch {

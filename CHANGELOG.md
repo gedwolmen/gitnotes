@@ -8,6 +8,18 @@ All notable fixes and feature changes to GitNotēs are documented here.
 >
 > **History**: prior fixes (pre-2026-08) lived in single-PR wiki pages. Those pages were retired in [#1047](https://github.com/gedwolmen/gitnotes/pull/1047); their full diagnostic content is preserved in git history via `git log -p -- docs/wiki/<file>.md`.
 
+## 2026-08-25
+
+### Git Sync: Remove staging, move to commit-based model (#1249)
+
+**refactor(sync)** — Replaces Clone-mode stage-then-push with isomorphic-git commit-on-save + explicit push-with-diff. `CommitService.commit()` creates local `push:false` commits on every save. `UnpushedCommitsService` tracks unpushed commits. Push triggers: FAB press-and-hold, Push/Push-all buttons on PushScreen, 3-min foreground idle, OS background task (≤10 files). API mode unchanged.
+
+**fix(sync)** — Fixes 19 bugs: FloatingPushButton replaces FloatingStageButton; full-page spinner during conflict resolution; pull-to-refresh spinner positioning; push auth error surfaces real message; Settings sync-frequency defaults off for new users; folder selector shows current branch; custom-folder notes persist; and more.
+
+**fix(ui)** — Removes Sync button from Notes toolbar. Canvas list shows previews. Template editor full-width on iPad.
+
+**docs** — Updates 10 wiki pages, removes all staging/StagePushScheduler/StagingService references.
+
 ## 2026-08-24
 
 ### Play Console Deobfuscation Warning — EAS Mapping Upload Setup (#1046)

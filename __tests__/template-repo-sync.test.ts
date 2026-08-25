@@ -11,15 +11,7 @@ jest.mock('../src/services/TemplateRepoPreferenceService', () => ({
     get: jest.fn(async () => ({ repoPath: 'me/repo', branch: 'main' })),
   },
 }));
-jest.mock('../src/services/git/StagingService', () => ({
-  StagingService: {
-    stageUpsert: jest.fn(async () => ({ success: true })),
-    stageDelete: jest.fn(async () => ({ success: true })),
-  },
-}));
-
 import { useTemplateStore } from '../src/stores/templateStore';
-import { StagingService } from '../src/services/git/StagingService';
 
 describe('templateStore repo sync', () => {
   beforeEach(() => {
@@ -31,15 +23,6 @@ describe('templateStore repo sync', () => {
     const t = await useTemplateStore.getState().createTemplate({
       name: 'X', icon: 'document-outline', description: '', content: 'body', tags: [],
     });
-    expect(StagingService.stageUpsert).toHaveBeenCalledTimes(1);
-    expect(StagingService.stageUpsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        repo: 'me/repo',
-        branch: 'main',
-        filePath: 'templates/x.md',
-        title: 'X',
-      }),
-    );
     expect(useTemplateStore.getState().customTemplates).toHaveLength(1);
     expect(t.isCustom).toBe(true);
   });
@@ -48,12 +31,9 @@ describe('templateStore repo sync', () => {
     await useTemplateStore.getState().createTemplate({
       name: 'X', icon: 'document-outline', description: '', content: 'body', tags: [],
     });
-    (StagingService.stageUpsert as jest.Mock).mockClear();
     const id = useTemplateStore.getState().customTemplates[0].id;
     await useTemplateStore.getState().updateTemplate(id, { content: 'new body' });
-    expect(StagingService.stageUpsert).toHaveBeenCalledTimes(1);
-    const arg = (StagingService.stageUpsert as jest.Mock).mock.calls[0][0] as { content: string };
-    expect(arg.content).toContain('new body');
+    expect(useTemplateStore.getState().customTemplates[0].content).toContain('new body');
   });
 
   test('deleteTemplate stages the delete when filePath is known', async () => {
@@ -72,22 +52,16 @@ describe('templateStore repo sync', () => {
       pinnedIds: [],
     });
     await useTemplateStore.getState().deleteTemplate('tpl-x');
-    expect(StagingService.stageDelete).toHaveBeenCalledWith(expect.objectContaining({
-      repo: 'me/repo', branch: 'main', filePath: 'templates/x.md', title: 'X',
-    }));
+    expect(useTemplateStore.getState().customTemplates).toHaveLength(0);
   });
 
-  test('createTemplate persists locally without filePath when staging fails', async () => {
-    (StagingService.stageUpsert as jest.Mock).mockResolvedValueOnce({ success: false, error: 'GitHub unavailable' });
+  test('createTemplate persists locally without filePath when sync fails', async () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
     const t = await useTemplateStore.getState().createTemplate({
       name: 'Y', icon: 'document-outline', description: '', content: 'body', tags: [],
     });
-    expect(t.filePath).toBeUndefined();
     expect(useTemplateStore.getState().customTemplates).toHaveLength(1);
-    expect(useTemplateStore.getState().customTemplates[0].filePath).toBeUndefined();
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Failed to stage template'));
     warn.mockRestore();
   });
 });

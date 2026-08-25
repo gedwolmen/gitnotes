@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Modal } from '../ui';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useTranslation } from 'react-i18next';
+import { useResponsive } from '../../hooks/useResponsive';
 import { NoteTemplateIcon } from '../../services/TemplateService';
 import { TEMPLATE_MAX_TAGS, TEMPLATE_MAX_TAG_LENGTH } from '../../utils/templateTags';
 import { ICON_OPTIONS } from './templateManagerShared';
@@ -54,12 +55,13 @@ export function TemplateEditorModal({
 }: TemplateEditorModalProps) {
   const { colors } = useTheme();
   const { t } = useTranslation();
+  const { isTablet } = useResponsive();
   const previewName = draftName.trim() || (editingId ? t('templates.untitled') : t('templates.newTemplate'));
   const previewDescription = draftDescription.trim() || t('templates.noDescription');
   const tagLimitReached = draftTags.length >= TEMPLATE_MAX_TAGS;
 
   return (
-    <Modal visible={visible} onRequestClose={onClose} contentStyle={{ width: '100%', maxWidth: 480, flex: 1 }}>
+    <Modal visible={visible} onRequestClose={onClose} contentStyle={{ width: '100%', maxWidth: isTablet ? undefined : 480, flex: 1 }}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1 pt-3 px-5 pb-3">
         <Text className="text-[22px] font-bold mb-[18px]" style={{ color: colors.text }}>{editingId ? t('templates.editTemplate') : t('templates.newTemplate')}</Text>
 
