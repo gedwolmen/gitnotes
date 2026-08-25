@@ -28,6 +28,7 @@ import { useEntityFilter } from '../hooks/useEntityFilter';
 import { useResponsive } from '../hooks/useResponsive';
 import { useTranslation } from 'react-i18next';
 import { useProGate } from '../hooks/useProGate';
+import CanvasThumbnail from '../components/CanvasThumbnail';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -66,6 +67,9 @@ function CanvasRow({ item, onOpen, onDelete }: CanvasRowProps) {
       onPress={() => onOpen(item.id)}
       activeOpacity={0.7}
     >
+      <View className="mr-3 rounded overflow-hidden" style={{ width: 60, height: 60 }}>
+        <CanvasThumbnail scene={item.scene} width={60} height={60} />
+      </View>
       <View className="flex-1">
         <View className="flex-row items-center gap-2 mb-1">
           <Ionicons name="easel-outline" size={18} color={colors.primary} />
