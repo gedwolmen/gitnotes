@@ -36,10 +36,12 @@ Business logic layer (top-level + subdirectories):
 - `RepoImportService.ts`, `RepoPullService.ts` — Import + pull from remote
 - `NoteGitHubSyncService.ts`, `TodoGitHubSyncService.ts`, `CanvasGitHubSyncService.ts`, `TemplateGitHubSyncService.ts` — Per-entity Git sync
 - `NoteSyncQueueService.ts`, `SyncEngineService.ts` — Sync queue + mode registry
-- `BackgroundSyncService.ts`, `ForegroundSyncService.ts` — OS background task + foreground sync loop
-- `StagePushScheduler.ts` — 3-minute idle-push window
+- `BackgroundSyncService.ts`, `ForegroundSyncService.ts` — OS background task + foreground sync loop (background is pull-only)
+- `CommitService.ts` (in `git/`) — Clone-mode commit-on-save; produces local git commit with `push:false`
+- `UnpushedCommitsService.ts` (in `git/`) — Tracks commits between local `HEAD` and remote `origin/<branch>`; exposes count + per-commit summaries
 - `LocalGitWriter.ts` (in `git/`) — Clone-mode write/commits/push
-- `StagingService.ts` (in `git/`) — Stage-then-push mutation staging
+- `StagingService.ts` (in `git/`) — **[DEPRECATED]** clone-mode staging; replaced by `CommitService`
+- `StagePushScheduler.ts` — **[REMOVED]** idle-push window; replaced by `UnpushedCommitsService` + explicit push triggers
 - `ConflictResolverService.ts`, `AiConflictResolver.ts` (in `conflict/`) — 3-way merge + AI assist
 - `AtlasComposer.ts`, `AtlasEncoder.ts`, `SparseTileService.ts` (in `canvas/`) — Sparse-tile canvas persistence
 - `providerFactory.ts`, `modelLimits.ts`, `anthropicDefaults.ts` (in `ai/`) — AI provider registry
@@ -110,7 +112,8 @@ Screen components:
 - `CanvasListScreen.tsx`, `CanvasEditorScreen.tsx` — Canvas CRUD
 - `ChatScreen.tsx`, `ChatThreadListScreen.tsx` — AI chat
 - `SettingsScreen.tsx` — App settings + AI config
-- `StageScreen.tsx` — Staged changes + Push / Push-all
+- `StageScreen.tsx` — **[DEPRECATED]** Stage-then-push UI; replaced by `PushScreen`
+- `PushScreen.tsx` — Unpushed commits + Push / Push-all with diff review
 - `SyncStatusScreen.tsx` — Sync health row
 - `PaywallScreen.tsx` — StoreKit 2 paywall
 - `OnboardingScreen.tsx` — First-run onboarding
@@ -188,8 +191,9 @@ HomeScreen mounts
 ## Offline Strategy
 
 1. **Write to AsyncStorage first** (fast, reliable)
-2. **Queue changes in `stageStore` / `NoteSyncQueueService`** (clone vs API branch)
-3. **Clone mode: local commit via `LocalGitWriter.writeAndCommit`** (isomorphic-git on device, `push: false`)
-4. **Push when online** — clone mode drains via `StagePushScheduler` / Stage screen / floating-button long-press / OS background task; API mode pushes immediately on save
-5. **Pull on app focus** — `ForegroundSyncService.runPull` checks `NetInfo`, app state, and pull intervals
-6. **Resolve conflicts** — `ConflictResolverService` (3-way merge) with optional AI assist via `AiConflictResolver`
+2. **Clone mode: commit-on-save via `CommitService`** — every save produces a local git commit with `push:false`; tracked by `UnpushedCommitsService`
+3. **API mode: queue via `NoteSyncQueueService`** — pushes immediately on save (write-through)
+4. **Explicit push** — user triggers push via `FloatingPushButton` (long-press) or `PushScreen` (Push / Push-all with diff review); no automatic staging drain
+5. **OS background task** — `BackgroundSyncService` drains ≤ 10 unpushed files when policy fires; pull-only on foreground idle
+6. **Pull on app focus** — `ForegroundSyncService.runPull` checks `NetInfo`, app state, and pull intervals
+7. **Resolve conflicts** — `ConflictResolverService` (3-way merge) with optional AI assist via `AiConflictResolver`
