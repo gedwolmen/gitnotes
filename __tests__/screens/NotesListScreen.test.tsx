@@ -356,6 +356,6 @@ describe('NotesListScreen', () => {
     expect(list.props.initialNumToRender).toBeLessThanOrEqual(10);
     expect(list.props.maxToRenderPerBatch).toBeLessThanOrEqual(6);
     expect(list.props.windowSize).toBeLessThanOrEqual(7);
-    expect(list.props.removeClippedSubviews).toBe(true);
+    expect(list.props.removeClippedSubviews).toBe(false);
   });
 });

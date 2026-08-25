@@ -475,7 +475,7 @@ export default function NotesListScreen() {
           maxToRenderPerBatch={6}
           windowSize={7}
           updateCellsBatchingPeriod={50}
-          removeClippedSubviews={true}
+          removeClippedSubviews={false}
           onScrollToIndexFailed={({ index, highestMeasuredFrameIndex, averageItemLength }) => {
             // Without this, scrollToIndex for a search match beyond the
             // measured window silently fails — search nav appears broken.
