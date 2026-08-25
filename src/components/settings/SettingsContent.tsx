@@ -804,11 +804,14 @@ export function SettingsContent(props: SettingsContentProps) {
         </GroupRow>
         <GroupRow
           trailing={
-            <Toggle
-              testID="settings.toggle.pause-sync"
-              value={syncPaused}
-              onValueChange={onToggleSyncPaused}
-            />
+            <View className="flex-row items-center gap-2">
+              <Toggle
+                testID="settings.toggle.pause-sync"
+                value={syncPaused}
+                onValueChange={onToggleSyncPaused}
+              />
+              <HintIcon hintKey="hints.settings.pauseForegroundSync" testID="hint.pause-foreground-sync" />
+            </View>
           }
         >
           <View className="flex-row items-center gap-2">

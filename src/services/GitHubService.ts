@@ -645,7 +645,16 @@ class GitHubServiceClass {
     );
 
     const subEntries = subTreeResults.flatMap((r) => r ?? []);
-    return [...blobItems, ...subEntries];
+
+    // Include dirItems as 'tree' type entries so getRepositoryFolders can
+    // discover folders. Without this, truncated repos have no folder entries.
+    const dirEntries = dirItems.map((item) => ({
+      path: item.path,
+      type: 'tree' as const,
+      sha: item.sha,
+    }));
+
+    return [...blobItems, ...dirEntries, ...subEntries];
   }
 
   async getFileContent(

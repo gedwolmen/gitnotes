@@ -476,9 +476,10 @@ export const ChatRepoPickerModal: React.FC<ChatRepoPickerModalProps> = ({
             variant="primary"
             onPress={handleConfirm}
             disabled={!selectedRepoPath || isInitializing}
+            leadingIcon={isInitializing ? <ActivityIndicator size="small" color="#fff" /> : undefined}
           >
             {isInitializing
-              ? 'Initializing...'
+              ? 'Initializing'
               : initError
                 ? 'Retry'
                 : 'Confirm Selection'}
