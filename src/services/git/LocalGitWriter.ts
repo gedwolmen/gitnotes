@@ -84,7 +84,7 @@ function tokenAuth(token: string | undefined) {
   return () => ({ username: 'x-access-token', password: token });
 }
 
-function isCorruptionError(errorMsg: string): boolean {
+export function isCorruptionError(errorMsg: string): boolean {
   return /Could not find|NotFoundError|Packfile trailer mismatch/i.test(errorMsg);
 }
 
@@ -308,6 +308,43 @@ function isPushRejected(raw: string): boolean {
     m.includes('non-fast-forward') ||
     m.includes('one or more branches were not updated')
   );
+}
+
+function classifyPushError(raw: string): string {
+  const lower = raw.toLowerCase();
+
+  if (
+    lower.includes('unauthorized') ||
+    lower.includes('authentication failed') ||
+    lower.includes('credentials') ||
+    lower.includes('401') ||
+    lower.includes('403') ||
+    lower.includes('permission denied')
+  ) {
+    return `push failed: authentication error — ${raw}`;
+  }
+
+  if (
+    lower.includes('timeout') ||
+    lower.includes('network') ||
+    lower.includes('econnrefused') ||
+    lower.includes('enotfound') ||
+    lower.includes('fetch failed') ||
+    lower.includes('connection refused') ||
+    lower.includes('eai_again') ||
+    lower.includes('socket')
+  ) {
+    return `push failed: network error — ${raw}`;
+  }
+
+  if (
+    lower.includes('branch') &&
+    (lower.includes('not found') || lower.includes('does not exist') || lower.includes('failed'))
+  ) {
+    return `push failed: branch not found — ${raw}`;
+  }
+
+  return `push failed — ${raw}`;
 }
 
 export class LocalGitWriter {
@@ -661,13 +698,15 @@ static async deleteAndCommit(opts: DeleteOpts): Promise<LocalGitWriterResult> {
           return { success: true };
         } catch (retryError) {
           const retryRaw = retryError instanceof Error ? retryError.message : String(retryError);
-          console.warn('[LocalGitWriter] push after clone recovery failed:', retryRaw);
-          return { success: false, error: retryRaw };
+          const classifiedError = classifyPushError(retryRaw);
+          console.warn(`[LocalGitWriter] push after clone recovery failed (branch: ${opts.branch}):`, classifiedError);
+          return { success: false, error: classifiedError };
         }
       }
       if (!isPushRejected(raw)) {
-        console.warn('[LocalGitWriter] push failed:', raw);
-        return { success: false, error: raw };
+        const classifiedError = classifyPushError(raw);
+        console.warn(`[LocalGitWriter] push failed (branch: ${opts.branch}):`, classifiedError);
+        return { success: false, error: classifiedError };
       }
       const ffResult = await GitFsService.pullWithFastForward({
         repoPath: opts.repoPath,
@@ -696,8 +735,9 @@ static async deleteAndCommit(opts: DeleteOpts): Promise<LocalGitWriterResult> {
             return { success: true };
           } catch (retryError) {
             const retryRaw = retryError instanceof Error ? retryError.message : String(retryError);
-            console.warn('[LocalGitWriter] push after clone recovery failed:', retryRaw);
-            return { success: false, error: retryRaw };
+            const classifiedError = classifyPushError(retryRaw);
+            console.warn(`[LocalGitWriter] push after clone recovery failed (branch: ${opts.branch}):`, classifiedError);
+            return { success: false, error: classifiedError };
           }
         }
         if (ffResult.reason === 'diverged') {
@@ -719,8 +759,9 @@ static async deleteAndCommit(opts: DeleteOpts): Promise<LocalGitWriterResult> {
         return { success: true };
       } catch (retryError) {
         const retryRaw = retryError instanceof Error ? retryError.message : String(retryError);
-        console.warn('[LocalGitWriter] push retry failed:', retryRaw);
-        return { success: false, error: retryRaw };
+        const classifiedError = classifyPushError(retryRaw);
+        console.warn(`[LocalGitWriter] push retry failed (branch: ${opts.branch}):`, classifiedError);
+        return { success: false, error: classifiedError };
       }
     }
   }
