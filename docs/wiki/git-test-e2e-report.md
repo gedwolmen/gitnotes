@@ -24,7 +24,7 @@ These are Mac-only native numbers. The simulator path (isomorphic-git + RN bridg
 
 ## Clone mode — `git` CLI round-trip via add → commit → pull --rebase → push
 
-The clone-mode flow as performed by the app is `LocalGitWriter.writeAndCommit (push:false)` → `StagingService.listStaged` (visible on Stage screen + floating button) → push trigger fires → `pull --rebase + push`. We measure the latter half (the visible push round-trip after staging).
+The clone-mode flow as performed by the app is `LocalGitWriter.writeAndCommit (push:false)` → `UnpushedCommitsService.listUnpushed` (visible on Push screen + floating button) → push trigger fires → `pull --rebase + push`. We measure the latter half (the visible push round-trip after commit).
 
 | # | Scenario | Write | Commit | pull+push | **TOTAL** |
 |---|---|---|---|---:|---:|
@@ -41,7 +41,7 @@ The clone-mode flow as performed by the app is `LocalGitWriter.writeAndCommit (p
 
 ## API mode — GitHub REST Contents API direct
 
-The API-mode flow as performed by the app is `StagingService.stageUpsert/Delete (api branch)` → `NoteSyncQueueService.enqueueNoteUpsert/Delete` → `writeThroughPush` → drain → PUT/DELETE → `pullFromSingleRepo`. We exercise the Contents API directly.
+The API-mode flow as performed by the app is `CommitService.commitUpsert/Delete (api branch)` → `NoteSyncQueueService.enqueueNoteUpsert/Delete` → `writeThroughPush` → drain → PUT/DELETE → `pullFromSingleRepo`. We exercise the Contents API directly.
 
 | # | Scenario | Operation | Time | Cumulative |
 |---|---|---|---:|---:|
@@ -65,7 +65,7 @@ The API-mode flow as performed by the app is `StagingService.stageUpsert/Delete 
 | 1 mutation | ~3.5 s | ~1.0 s |
 | 2 mutations | ~6.9 s | ~2.3 s (or ~3.5 s batched) |
 | 3 mutations | ~7.1 s | ~3.0 s (or ~5.5 s batched) |
-| Offline-capable | ✅ (staged until push trigger) | ❌ (live write-through) |
+| Offline-capable | ✅ (committed until push trigger) | ❌ (live write-through) |
 | Blocking UI during save | ❌ (local commit, no cycle) | ✅ (`SyncBlockOverlay` for `'save'` cycle) |
 | Failure mode | local commit, retry next push | immediate error, user-visible |
 

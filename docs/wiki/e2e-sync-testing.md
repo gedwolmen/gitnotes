@@ -1,6 +1,6 @@
 # E2E Sync Testing
 
-> End-to-end test harness for the gitnotes sync engine. Covers 6 scenarios × 2 modes with timing instrumentation, push-trigger verification, staged-visibility sub-checks, blocking-overlay verification, and remote verification.
+> End-to-end test harness for the gitnotes sync engine. Covers 6 scenarios × 2 modes with timing instrumentation, push-trigger verification, uncommitted-changes sub-checks, blocking-overlay verification, and remote verification.
 
 ## Running the Harness
 
@@ -40,19 +40,19 @@ __tests__/e2e/report.ts           # assembleReport(rows) → Markdown + JSON
 
 | # | Scenario | API mode | Clone mode | Clone push trigger | Timing checkpoints |
 |---|---|---|---|---|---|
-| 1 | add-only | PUT → file on GitHub immediately | local commit staged → Stage + floating count | long-press floating btn | T0→T1→T2→T3 |
-| 2 | edit-only | PUT w/ sha → updated immediately | staged edit → push | Stage push-all | T0→T1→T2→T3 |
-| 3 | delete-only | DELETE (sha-cached) → gone | staged delete → push | per-group push | T0→T1→T2→T3 |
-| 4 | add+edit | 2 PUTs batched → GitHub immediately | 2 staged commits → push | 3-min idle auto-push | T0→T1→T2→T3 |
-| 5 | edit+delete | PUT + DELETE → both live | staged edit+delete → push | OS bg task (≤10 files) | T0→T1→T2→T3 |
-| 6 | add+edit+delete | full batch chain → live | all staged → push | foreground resume | T0→T1→T2→T3 |
+| 1 | add-only | PUT → file on GitHub immediately | local commit → floating push btn count | long-press floating btn | T0→T1→T2→T3 |
+| 2 | edit-only | PUT w/ sha → updated immediately | committed edit → push | Push all | T0→T1→T2→T3 |
+| 3 | delete-only | DELETE (sha-cached) → gone | committed delete → push | per-group push | T0→T1→T2→T3 |
+| 4 | add+edit | 2 PUTs batched → GitHub immediately | 2 commits → push | 3-min idle auto-push | T0→T1→T2→T3 |
+| 5 | edit+delete | PUT + DELETE → both live | committed edit+delete → push | OS bg task (≤10 files) | T0→T1→T2→T3 |
+| 6 | add+edit+delete | full batch chain → live | all committed → push | foreground resume | T0→T1→T2→T3 |
 
 ### Timing Checkpoints
 
 | Checkpoint | Meaning |
 |---|---|
 | T0 | Save start — user triggers save/complete |
-| T1 | Stage/enqueue — local commit formed (clone) or queue insert (API) |
+| T1 | Commit/enqueue — local commit formed (clone) or queue insert (API) |
 | T2 | Git ops complete — last HTTP or FS call returned |
 | T3 | GitHub visible — remote reflects the change (verified via `git pull` + `gh api`) |
 
@@ -60,16 +60,16 @@ __tests__/e2e/report.ts           # assembleReport(rows) → Markdown + JSON
 
 For each clone-mode scenario the runner asserts:
 
-1. **Staged-visibility before push**: after executing ops but before the trigger fires:
-   - `StagingService.listStaged(repoPath, branch)` returns the expected staged items
-   - `stageStore.pendingCount > 0`
-   - Floating push button count reflects the staged set
+1. **Uncommitted-visibility before push**: after executing ops but before the trigger fires:
+   - `UnpushedCommitsService.listUnpushed(repoPath, branch)` returns the expected unpushed commits
+   - `unpushedCommitsStore.pendingCount > 0`
+   - Floating push button count reflects the uncommitted set
 
 2. **No remote change before push**: before the trigger fires, `gh api` returns the pre-scenario state for all affected paths.
 
 3. **Push-trigger fires**: the designated trigger (`long-press-floating-btn`, `stage-push-all`, `per-group-push`, `3-min-idle-autopush`, `os-bg-task`, `foreground-resume`) is called.
 
-4. **Staged cleared after push**: `StagingService.listStaged` returns an empty set post-trigger.
+4. **Uncommitted cleared after push**: `UnpushedCommitsService.listUnpushed` returns an empty set post-trigger.
 
 ## Blocking-Overlay Verification (API Mode)
 
@@ -78,7 +78,7 @@ Per [Sync Write Modes](./sync-write-modes.md#blocking-ui-syncblockoverlay), `Syn
 API-mode scenarios assert:
 
 - **`blockOverlayFired`**: `gitOperationStore` recorded a `source:'save'` cycle during the save window — proxy for `SyncBlockOverlay` having rendered and blocked input.
-- **`pullAfterPush`**: `pullFromSingleRepo` was called after push, confirming the pull-after-push refresh path (StagingService.ts:143).
+- **`pullAfterPush`**: `pullFromSingleRepo` was called after push, confirming the pull-after-push refresh path.
 
 ## Remote Verification Commands
 
@@ -106,12 +106,12 @@ gh api "repos/vidwadeseram/test-notes/contents/notes/<id>.md" --jq .content | ba
 | Checkpoint | Time (ms) | Notes |
 |---|---|---|
 | T0 save start | — | |
-| T1 stage/enqueue | +T1-T0 | API: queue insert; clone: local commit w/ push:false |
+| T1 commit/enqueue | +T1-T0 | API: queue insert; clone: local commit w/ push:false |
 | T2 git ops (http+fs) | +T2-T0 | from syncTiming: http ops count/bytes, fs ops count |
 | T3 GitHub visible | +T3-T0 | via git pull (Mac) + gh api |
 | Push propagation latency | T3-T2 | |
 
-Push trigger used: [floating long-press | Stage push-all | per-group push | 3-min idle | OS bg task | foreground resume]
+Push trigger used: [floating long-press | Push all | per-group push | 3-min idle | OS bg task | foreground resume]
 Remote verification: [files present/absent/content-sha — PASS/FAIL]
 Blocking overlay (API only): [blocked during save / released after — PASS/FAIL]
 Overall: PASS / FAIL (reason)
@@ -122,10 +122,10 @@ Overall: PASS / FAIL (reason)
 | Contract element | Clone mode | API mode |
 |---|---|---|
 | Save behaviour | local commit with `push:false` | write-through to GitHub immediately |
-| Stage screen | shows staged items + pending count | shows queue depth |
+| Push screen | shows unpushed commits + pending count | shows queue depth |
 | Floating button | shows pending count badge | shows sync-in-flight spinner |
 | Push trigger | required — user action | not applicable (immediate) |
-| `StagingService.listStaged` | returns local staged items | returns queue-backed items |
+| `UnpushedCommitsService.listUnpushed` | returns local unpushed commits | returns queue-backed items |
 | `SyncBlockOverlay` | never fires | fires during `source:'save'` cycle |
 | Pull after push | not on save path | `pullFromSingleRepo` after push |
 
