@@ -1,10 +1,13 @@
 import { create } from 'zustand';
-import { Canvas, CanvasCreateInput, CanvasUpdateInput, sortCanvasesByUpdated } from '../models/Canvas';
+import { Canvas, CanvasCreateInput, CanvasUpdateInput, sortCanvasesByUpdated, slugifyCanvasTitle } from '../models/Canvas';
 import { StorageService } from '../services/StorageService';
 import { GitHubService } from '../services/GitHubService';
 import { formatSyncError } from '../services/git/formatSyncError';
 import { deleteCanvasFromGitHub } from '../services/CanvasGitHubSyncService';
 import { gitOperationRegistry } from './gitOperationStore';
+import { SyncEngineService } from '../services/SyncEngineService';
+import { CommitService } from '../services/git/CommitService';
+import { resolveDefaultFolder } from '../services/git/defaultsPolicy';
 
 interface CanvasState {
   canvases: Canvas[];
@@ -40,6 +43,27 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()((set, get) =
   createCanvas: async (input) => {
     try {
       set({ error: null });
+
+      const slug = input.title ? slugifyCanvasTitle(input.title) : `canvas-${Date.now()}`;
+      const filePath = `${resolveDefaultFolder('canvas')}${slug}.json`;
+
+      const mode = await SyncEngineService.getMode(input.repo ?? '');
+      if (mode === 'clone' && input.repo) {
+        const scene = input.scene ?? { elements: [], viewportX: 0, viewportY: 0, viewportWidth: 0, viewportHeight: 0 };
+        const content = JSON.stringify(scene, null, 2);
+        const commitResult = await CommitService.commit({
+          repo: input.repo,
+          branch: input.branch ?? 'main',
+          filePath,
+          content,
+          message: `Create canvas: ${input.title || filePath}`,
+        });
+        if (!commitResult.success) {
+          set({ error: commitResult.error ?? 'Failed to create canvas' });
+          return null;
+        }
+      }
+
       const newCanvas = await StorageService.createCanvas(input);
       set((state) => ({ canvases: sortCanvasesByUpdated([...state.canvases, newCanvas]) }));
       return newCanvas;
