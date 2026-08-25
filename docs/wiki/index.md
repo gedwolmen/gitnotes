@@ -22,7 +22,7 @@
 |------|-------------|
 | [Sync Engine](./sync-engine.md) | Git sync architecture, push model, error handling |
 | [Sync Engine Modes](./sync-engine-modes.md) | Per-repo clone vs API mode selection, defaults, switching, large-repo preflight |
-| [Sync Write Modes](./sync-write-modes.md) | Sync contract: clone stage-then-push vs API write-through; blocking overlay; import-on-add |
+| [Sync Write Modes](./sync-write-modes.md) | Sync contract: clone commit-on-save + explicit push vs API write-through; blocking overlay; import-on-add |
 | [Clone-Perf Optimization](./clone-perf-optimization.md) | Five ordered patches closing the simulator freeze gap: `noCheckout` + batched full checkout, 3-concurrent-pull dedup, LFS-after-clone, UTF-8 fast path, depth-3 floor measurement flag |
 | [Git Core Hardening](./git-core-hardening.md) | git-core test-campaign fixes: binary decode integrity, case collisions, auth/preflight, API batch writes, pull/reconcile fixes (#876–#892) |
 

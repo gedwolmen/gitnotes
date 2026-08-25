@@ -28,7 +28,7 @@ ln -sfn "$(pwd)/node_modules" .worktrees/<scope>-<slug>/node_modules
 ### Rules
 
 - **One worktree per branch.** Never branch from another worktree's branch — always branch from `main` (or the upstream you're targeting). After `git fetch origin` in the main repo, base new worktrees on the updated `origin/main`.
-- **Coordinate before touching shared files.** Before editing `conflictStore.ts`, `StagePushScheduler.ts`, `LocalGitWriter.ts`, or any file another agent's `git status` shows as modified in the main working tree, check `git worktree list` and `git status` in the other worktrees. If another session has uncommitted work on the same files, wait or scope your change to a different file.
+- **Coordinate before touching shared files.** Before editing `conflictStore.ts`, `AutoPushScheduler.ts`, `LocalGitWriter.ts`, or any file another agent's `git status` shows as modified in the main working tree, check `git worktree list` and `git status` in the other worktrees. If another session has uncommitted work on the same files, wait or scope your change to a different file.
 - **Metro serves from main.** The Expo dev-client connects to Metro on the main worktree's port (8081). If you need your branch code to be served by Metro (e.g. for sim surface verification), copy the changed files from your worktree into main's working tree temporarily and revert after verification — Metro cannot serve from a worktree (`.worktrees/` is in `metro.config.js`'s `resolver.blockList`).
 - **Do not commit secrets / tokens / Metro debug output** — review `git diff` before committing. This applies whether you are in a worktree or not.
 - **Clean up** with `git worktree remove <path>` when a branch is merged and the worktree is no longer needed. Branches are cheap to recreate.
@@ -68,13 +68,13 @@ yarn eslint . --ext .ts,.tsx  # Linting
 
 Every repo has a sync mode (`SyncEngineService.getMode`, `src/services/SyncEngineService.ts`, default `'clone'`, per-repo override map `@gitnotes:sync_engine_modes`). The two modes behave differently ON PURPOSE; do not "fix" one into the other:
 
-- **Clone mode — stage-then-push (write-behind):**
-  - User changes are **staged locally** (local git commit with `push:false` via `StagingService` / `LocalGitWriter`). Nothing reaches GitHub at save time.
-  - Pushed only when ONE of these fires: **press-and-hold the floating push button**, a **Push / Push-all** button on the Staged Changes (Stage) screen, the **3-minute foreground idle auto-push** (`StagePushScheduler`), or the **OS background task** (small sets ≤ 10 files).
-  - Until a push trigger runs, the change must be visible as staged (Stage screen + floating button count).
+- **Clone mode — commit-on-save + explicit push (write-behind):**
+  - User changes are **committed locally** (local git commit with `push:false` via `CommitService` / `LocalGitWriter`). Nothing reaches GitHub at save time.
+  - Pushed only when ONE of these fires: **press-and-hold the floating push button**, a **Push / Push-all** button on the Push screen, the **3-minute foreground idle auto-push** (`AutoPushScheduler`), or the **OS background task** (small sets ≤ 10 files).
+  - Until a push trigger runs, the change must be visible as unpushed (Push screen + floating button count).
 
 - **API mode — everything live (write-through):**
-  - Changes **push to GitHub immediately on save/complete** — no stage-and-wait, no idle-timer dependency.
+  - Changes **push to GitHub immediately on save/complete** — no commit-and-wait, no idle-timer dependency.
   - After a successful push, **pull** to keep local state consistent.
   - While a push or pull is in flight, **the user must not be able to make changes** (spinner / blocked UI) — no concurrent edits racing the sync operation.
 

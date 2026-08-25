@@ -38,7 +38,7 @@ Services encapsulate business logic. They're React-independent, testable with Je
 | `NoteSyncQueueService.ts` | FIFO mutation queue with exponential backoff | AsyncStorage |
 | `BackgroundSyncService.ts` | OS background-task entry point | `expo-background-task`, `expo-task-manager` |
 | `ForegroundSyncService.ts` | App-focus / interval pull loop | `NetInfo`, `AppState` |
-| `StagePushScheduler.ts` | 3-min idle-push window + explicit drain | AsyncStorage |
+| `AutoPushScheduler.ts` | 3-min idle-push window + explicit drain | AsyncStorage |
 | `GitService.ts` | Clone-mode core (isomorphic-git facade) | `isomorphic-git` |
 | `NoteGitHubSyncService.ts`, `TodoGitHubSyncService.ts`, `CanvasGitHubSyncService.ts`, `TemplateGitHubSyncService.ts` | Per-entity Git sync | Axios, Git |
 | `RepoImportService.ts`, `RepoPullService.ts` | Import + pull from remote | `isomorphic-git` |
@@ -50,7 +50,7 @@ Services encapsulate business logic. They're React-independent, testable with Je
 | Service | Responsibility |
 |---------|---------------|
 | `LocalGitWriter.ts` | Clone-mode write/commit/push (`writeAndCommit`, `deleteAndCommit`) |
-| `StagingService.ts` | Stage-then-push mutation staging (`stageUpdate`, `stageDelete`, `pushStaged`) |
+| `CommitService.ts` | Commit-on-save mutation tracking (`commitUpdate`, `commitDelete`, `push`) |
 | `GitFsService.ts`, `gitFs.ts` | Filesystem facade for isomorphic-git |
 | `gitHttp.ts`, `http.ts` | Streaming `git-upload-pack` / `git-receive-pack` with cancel |
 | `gitHostFactory.ts`, `GitHost.ts`, `activeHost.ts`, `branchResolver.ts`, `resolveBranch.ts` | Multi-host routing |

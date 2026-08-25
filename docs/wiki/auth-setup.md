@@ -38,7 +38,7 @@ Tokens are managed at <https://github.com/settings/tokens> (fine-grained tab lis
 |---|---|---|
 | "GitHub rejected the token…" | Copied a partial/expired/revoked token | Re-copy the full token; check it hasn't expired |
 | "Your token can't access this repo…" | Repo not selected under Repository access, or Contents is Read-only | Edit the token: add the repo, set Contents: Read and write |
-| Push rejected, branch diverged | Normal git divergence, not a token problem | Use Stage screen → Pull, resolve, push |
+| Push rejected, branch diverged | Normal git divergence, not a token problem | Use Push screen → Pull, resolve, push |
 | 403 "Resource not accessible" | Fine-grained token created with no permissions picked | Add Contents: Read and write under Repository permissions |
 
 ## Storage & security
