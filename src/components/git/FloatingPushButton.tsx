@@ -22,6 +22,7 @@ import {
   FLOATING_AI_BUTTON_LONG_PRESS_MS,
   useFloatingAIButtonAffordances,
 } from '../ai/useFloatingAIButtonAffordances';
+import { HoldProgressRing } from '../ui/HoldProgressRing';
 import { useTabBarHeight } from '../ui/TabBar';
 import { STAGE_BUTTON_SIZE } from './stageButtonGeometry';
 
@@ -67,6 +68,12 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
       const repo = repositories.find((r) => r.path === targetPath);
       if (!isMounted) return;
 
+      if (!repo) {
+        setActiveRepoPath(null);
+        setActiveBranch('main');
+        return;
+      }
+
       setActiveRepoPath(targetPath);
       setActiveBranch(repo?.branch ?? 'main');
     };
@@ -75,7 +82,10 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
   }, [repositories]);
 
   useEffect(() => {
-    if (!activeRepoPath) return;
+    if (!activeRepoPath) {
+      setUnpushedCount(0);
+      return;
+    }
     let isMounted = true;
 
     const load = async () => {
@@ -243,6 +253,12 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
 
   return (
     <Animated.View style={[styles.container, animatedStyle]} pointerEvents="box-none">
+      <HoldProgressRing
+        progress={affordances.holdProgress}
+        size={BUTTON_SIZE}
+        color={colors.primary}
+        reduceMotionEnabled={reduceMotionEnabled}
+      />
       <GestureDetector gesture={panGesture}>
         <Animated.View style={triggerAnimatedStyle}>
           <Pressable
