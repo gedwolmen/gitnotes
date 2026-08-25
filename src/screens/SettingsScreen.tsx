@@ -51,7 +51,7 @@ import { importRepoAtAdd } from '../services/RepoImportService';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { RepoAccessPreflightError } from '../services/git/repoAccessPreflight';
-import { useProGate } from '../hooks/useProGate';
+import { useProStatus } from '../hooks/useProGate';
 import { useProStore } from '../stores/proStore';
 import { promptProUpgrade } from '../utils/proAlerts';
 
@@ -76,7 +76,11 @@ function confirmUnverifiedWrite(t: TFunction, onConfirm: () => void): void {
 export default function SettingsScreen() {
   const { t } = useTranslation();
   const { theme, colors, setTheme, style: uiStyle, setStyle } = useTheme();
-  const { isPro, openPaywall } = useProGate();
+  const { isPro } = useProStatus();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const openPaywall = useCallback(() => {
+    navigation.navigate('Paywall');
+  }, [navigation]);
   const trialActive = useProStore((s) => s.trialActive);
   const trialEndsAt = useProStore((s) => s.trialEndsAt);
   const proStatusLabel = useMemo(() => {
@@ -87,7 +91,6 @@ export default function SettingsScreen() {
     if (isPro) return t('pro.statusActive');
     return t('pro.statusUpgrade');
   }, [isPro, trialActive, trialEndsAt, t]);
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const headerHeight = useScreenHeaderHeight();
   const tabBarHeight = useTabBarHeight();
   const { clearAllNotes, refreshNotes } = useNotes();
