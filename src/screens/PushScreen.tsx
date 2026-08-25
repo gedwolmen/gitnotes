@@ -365,7 +365,7 @@ export default function PushScreen() {
             accessibilityRole="button"
             accessibilityLabel="Push all commits"
             accessibilityState={{ disabled: pushing }}
-            className="py-3 rounded-[10px] items-center"
+            className="py-3 mb-3 rounded-[10px] items-center"
             style={{ backgroundColor: pushing ? colors.border : colors.primary }}
           >
             {pushing ? (
