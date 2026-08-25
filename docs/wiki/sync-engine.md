@@ -14,9 +14,9 @@ User edits note
 repoStore.saveNote() → AsyncStorage (fast)
   ↓
 Sync mode (per repo, see SyncEngineService.getMode):
-  ├─ clone → LocalGitWriter.writeAndCommit(..., push: false)
-  │           → Stage screen / floating-button long-press /
-  │             StagePushScheduler (3-min idle) / OS background-task drain
+  ├─ clone → CommitService.commit(..., push: false)
+  │           → FloatingPushButton (unpushed badge) / PushScreen /
+  │             3-min foreground idle / OS background-task drain (≤ 10 files)
   │           → LocalGitWriter.push
   └─ api   → NoteSyncQueueService.enqueue
              → on push trigger: drainPushQueue → NoteSyncQueueService.drain
@@ -103,7 +103,7 @@ class SyncEngineService {
 }
 ```
 
-The actual mutation queue lives in `NoteSyncQueueService` (API mode) and `StagingService` (clone mode). Pull orchestration lives in `ForegroundSyncService` and the OS background task.
+The actual mutation queue lives in `NoteSyncQueueService` (API mode) and `UnpushedCommitsService` (clone mode — replaces the deprecated `StagingService` / `stageStore` / `StagePushScheduler` pattern). Pull orchestration lives in `ForegroundSyncService` and the OS background task.
 
 ### Network status (hook, not service)
 
@@ -263,55 +263,55 @@ their path locks via `isPathLocked` (`src/stores/gitOperationStore.ts`).
 
 ## Push model
 
-Refresh, startup, and manual sync entry points are pull-only. They pull remote state and refresh the stores, but they never push staged changes:
+> **DEPRECATED:** The `StagingService` / `stageStore` / `StagePushScheduler` "stage-then-push" pattern has been deleted. All clone-mode saves now go through `CommitService` directly. `StagingService.stageUpsert`, `StagingService.stageDelete`, and `StagePushScheduler.flushStaged()` are no longer available.
 
-- `ForegroundSyncService.runPull` (`src/services/ForegroundSyncService.ts`) pulls every tracked repo on app focus, online transitions, and the foreground interval. No queue drain.
-- `manualSync.runSyncCycle` (`src/services/git/manualSync.ts`) backs pull-to-refresh, the cloud-icon sync button, and startup sync via `syncNow`. Pull and store refresh only.
-- `retryDeleteFailure` (`src/services/git/retryDeleteFailure.ts`) clears the durable delete-failure entry and re-enqueues the delete; it does not drain the sync queue. It is triggered from the Stage screen's "Failed to delete" section.
+In clone mode, saving or deleting a note **commits locally but never pushes automatically**. Push is always explicit, triggered by the user.
 
-Pushes flow only through three paths: the stage scheduler (`StagePushScheduler`, a 3-minute idle window that resets on staged changes), the explicit Push / Push-all buttons on the Stage screen, or the OS background task. The sync queue drains only when one of those push paths runs. Saving or deleting a note by itself never starts a push.
+### Commit on save
 
-### Immediate drain on explicit push
+Every clone-mode save entry point — `NoteGitHubSyncService`, `TodoGitHubSyncService`, `CanvasGitHubSyncService`, `TemplateGitHubSyncService`, and `noteStore` — calls [`CommitService.commit`](src/services/git/CommitService.ts) instead of any staging API:
 
-When a user taps Push / Push-all on the Stage screen or long-presses the floating stage button, the call site enqueues keys via `stageStore.pushAll()` or `stageStore.requestPush()` and then immediately calls `void drainPushQueue()`. Previously, explicit push only enqueued work; the actual drain waited for the 3-minute idle timer. Now the drain starts right away, and the idle-timer path (`flushStaged`) continues to serve the auto-push use case.
+```typescript
+// CommitService.commit — local commit with push:false
+const result = await CommitService.commit({
+  repo, branch, filePath, content, message,
+  // author resolved internally; push:false is always enforced
+});
+```
 
-The circular-import constraint is preserved: `stageStore` must not import `StagePushScheduler`. The drain trigger lives at UI call sites, not in the store.
+`CommitService.commit` handles upserts, deletes, and renames atomically. The `push: false` flag means no network call at save time. Commits accumulate locally until the user explicitly pushes.
 
-### Parallel group drain and progress aggregation
+### Tracking unpushed commits
 
-`drainPushQueue` processes the FIFO queue one key at a time, each inside a `GitSyncGate` cycle. For each key it calls `StagingService.pushStaged(repoPath, branch, onProgress)`, which delegates to `NoteSyncQueueService.drain(onProgress)` for API mode or `LocalGitWriter.push` for clone mode.
+[`UnpushedCommitsService.list`](src/services/git/UnpushedCommitsService.ts) computes the unpushed commit range by:
 
-`drain()` groups pending mutations by `(repo, branch)` and processes groups in parallel via `Promise.all`. A shared `completed` counter incremented in per-group `.then()` callbacks fires `onProgress(completed / totalDue)` after each group resolves, giving coarse per-group granularity. When `totalDue === 0` (all items skipped by backoff), `onProgress(null)` is called. After the loop, `onProgress(1)` signals completion.
+1. Resolving local OID (`refs/heads/<branch>`) and remote OID (`refs/remotes/origin/<branch>`) via `GitFsService.getCommitOid`
+2. Computing the merge base (or using the remote OID when merge base is unavailable)
+3. Walking commits from merge-base to local HEAD via `git.log` (up to 20 commits)
+4. Returning per-commit summary: `subject`, `oid`, `author`, `timestamp`, `filesChangedCount`
 
-The progress fraction (`number | null`, range 0..1) flows from `drainPushQueue` into `stageStore.setPushProgress`. A `null` value means "unknown total" and the floating button's progress ring clamps at 0.9 to avoid an infinite indeterminate animation. See [Stage Push UX](./stage-push-ux.md) for the full ring and notification behavior.
+[`UnpushedCommitsService.listFiles`](src/services/git/UnpushedCommitsService.ts) diffs a commit tree against its parent to produce per-file breakdown: `path`, `status` (`added | modified | deleted`).
 
-### Resume on foreground
+### Push triggers
 
-`drainPushQueue` sets an AsyncStorage marker (`gitnotes-push-session`) when the FIFO loop starts and clears it when the queue drains. If the app is backgrounded mid-push (OS reclaim, user switching apps, kill), the marker persists.
+Nothing pushes automatically on save. Push happens only on explicit trigger:
 
-`ForegroundSyncService.handleAppStateChange` checks `hasPushSession()` on `AppState → active`. When the marker exists and `stageStore.staged.length > 0`, it calls `drainPushQueue()` immediately. The re-entrancy guard (`draining` flag) prevents overlap. Clone push re-pushes the same refs safely (idempotent), and API-mode drain re-runs whatever mutations remain in the sync queue.
+| Trigger | Code path | Behavior |
+|---------|-----------|----------|
+| Tap / long-press floating button | [`FloatingPushButton`](src/components/git/FloatingPushButton.tsx) navigates to Push screen | Opens PushScreen for the active repo |
+| Push / Push-all on Push screen | [`PushScreen`](src/screens/PushScreen.tsx) `handlePushAll` | Calls `LocalGitWriter.push()` + `pullFromSingleRepo()` |
+| 3-minute foreground idle | [`ForegroundSyncService`](src/services/ForegroundSyncService.ts) idle window | Auto-push when app is foregrounded and no push has occurred within 3 minutes |
+| OS background task | [`BackgroundSyncService.applyPolicy`](src/services/BackgroundSyncService.ts) | Drains ≤ 10 files (policy cap) |
 
-### Backoff constants
+The floating button ([`FloatingPushButton`](src/components/git/FloatingPushButton.tsx)) shows an unpushed count badge driven by `UnpushedCommitsService.count()`, polled every 30 seconds. Tap and long-press both navigate to the Push screen.
 
-`NoteSyncQueueService` uses exponential backoff for transient failures:
+### Push execution
 
-- `BACKOFF_BASE_MS = 500` (initial retry delay)
-- `BACKOFF_CAP_MS = 30_000` (maximum retry delay)
-- `MAX_ATTEMPTS = 8` (mutations are dropped after 8 failures)
+`PushScreen.handlePushAll` calls `LocalGitWriter.push({ repoPath, branch, token })` with a 60-second timeout. On success it calls `pullFromSingleRepo(repoPath)` to refresh local state, then navigates back. On failure it routes 409 conflicts to the Conflict screen and surfaces other errors in an alert.
 
-The formula: `Math.min(500 * 2^(attempts-1), 30000)`. This turns a transient network blip from 8 immediate retries into roughly 1 minute of wall-clock retries, giving the foreground/auto-pull path time to resolve the underlying issue.
+### Background sync (OS task)
 
-## Push progress & failure notifications
-
-Immediate local notifications (push progress, push failure, background-pull) use a `TIME_INTERVAL` trigger with `seconds: 1` instead of a near-future date, which avoids expo-notifications rejecting past dates. Date-trigger scheduling (`scheduleDateTrigger` in `src/services/NotificationService.ts`) re-checks the trigger against `Date.now()` after the permission round-trip, so a date that lapses while the permission prompt is open is skipped rather than rejected. Native scheduling failures never throw: they log with `console.warn`, return `null`, and callers fire-and-forget.
-
-## Background pull notification
-
-The OS background sync task (`BackgroundSyncService`) schedules a local notification only when a pull changed something. After `pullAllFromRepos()`, the task sums the `PullResult` counts (`notes + canvases + todos + templates`) and, when the sum is greater than zero, calls `NotificationService.schedulePushProgress('Synced with origin', ...)` with `{ kind: 'background-pull' }`. A background pull that changed nothing stays silent.
-
-## `globalPushing` reset
-
-The stage store's `globalPushing` flag resets to `false` once the push queue drains. `StagePushScheduler.drainPushQueue` calls `setGlobalPushing(false)` after the FIFO loop ends and `dequeueNext()` returns `null`, so the Stage screen "Push all" button and the floating stage button stop spinning as soon as a push completes. While any key is still in flight (`isPushing[key]` true), the flag stays `true`.
+`BackgroundSyncService` schedules a local notification only when a pull changed something. After `pullAllFromRepos()`, the task sums the `PullResult` counts (`notes + canvases + todos + templates`) and, when the sum is greater than zero, calls `NotificationService.schedulePushProgress('Synced with origin', ...)` with `{ kind: 'background-pull' }`. A background pull that changed nothing stays silent. Background push runs only for small sets (≤ 10 files) via the OS background-task path.
 
 ## Testing
 
@@ -337,4 +337,3 @@ describe('GitService', () => {
     expect(queue).toHaveLength(1);
   });
 });
-```
