@@ -27,6 +27,9 @@ All notable fixes and feature changes to GitNotēs are documented here.
 **fix(i18n)** — Recent PRs added 4 keys to `en.json` (`common.connecting`, `settings.unpushedCommitsTitle`, `settings.unpushedCommitsBody`, `hints.settings.pauseForegroundSync`) without mirroring them in `es/fr/de/ja/ko`. The i18n-key-parity test treated every missing key as a failure and broke CI on every locale. Translations backfilled for all 5 locales.
 
 **test(sync)** — Four test files were left referring to the staging layer deleted by #1249 (`StagingService`, `stageStore`). Updated to assert the new commit-on-save flow: `HomeScreen.color-select` asserts `NoteSyncQueueService.enqueueNoteUpsert`; `todo-delete-sync` and `notes-delete-lock` drop drain-on-save assertions (#927 tracks the API-mode write-through gap); `sync-locking.integration` S2 checks the queue holds the mutation, S3 marked `.skip`. Before: 14 suites / 27 tests failed. After: 9 suites / 13 tests fail (separate categories: Skia mocks, `AccountsProvider` wrap, behavior gaps in `localGitWriter` / `GitSyncGate` / `ForegroundSyncService` / `git-state-ui` / `header-blur` / `CloneProgressModal`).
+### iPad Notes grid shows all Markdown files (#1280)
+
+**fix(ui)** — `SwipeableListItem` now uses `flex: 1` instead of claiming the full row with `width: '100%'`, so every Markdown note remains visible in its assigned iPad multi-column grid slot. The regression test covers four notes in a two-column layout while preserving single- and three-column coverage.
 
 ### Push screen bottom button spacing (#1281)
 

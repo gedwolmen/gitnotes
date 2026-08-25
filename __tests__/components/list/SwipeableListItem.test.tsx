@@ -6,13 +6,13 @@
  *
  * SwipeableListItem is the shared item wrapper for every grid list
  * (TodoListScreen, NotesListScreen, ThoughtDumpScreen). Its root
- * Animated.View must carry an explicit `width: '100%'` so each card
- * stretches to its column slot.
+ * Animated.View must carry `flex: 1` so each card stretches to its column
+ * slot without claiming the entire row.
  *
  * Jest runs no native layout engine, so the tests apply React Native's
- * documented layout contract: a root with `width: '100%'` resolves to the
- * full column slot (containerWidth - gaps) / numColumns, while a root
- * without an explicit width collapses to the card content's intrinsic width.
+ * documented layout contract: a root with `flex: 1` resolves to the full
+ * column slot (containerWidth - gaps) / numColumns, while a root without
+ * an explicit flex value collapses to the card content's intrinsic width.
  */
 import React from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
@@ -70,6 +70,7 @@ const CONTAINER_WIDTH = 1000;
 // Inter-column gap the screens apply via columnWrapperStyle when
 // numColumns > 1.
 const COLUMN_GAP = 8;
+const EXPECTED_TWO_COLUMN_WIDTH = (CONTAINER_WIDTH - COLUMN_GAP) / 2;
 // Intrinsic width of the stub card content. Models the fixed-width TodoCard /
 // NoteCard content that an unpatched wrapper collapses onto (#940 measured
 // 90px, #941 measured 263px on device).
@@ -87,13 +88,13 @@ function flattenedStyle(element: ElementWithStyle): ViewStyle | undefined {
 }
 
 /**
- * Width the item visually occupies in its row. `width: '100%'` fills the
- * column slot the FlatList assigns; without an explicit width the wrapper
+ * Width the item visually occupies in its row. `flex: 1` fills the
+ * column slot the FlatList assigns equally; without flex the wrapper
  * shrinks to the card content's intrinsic width (the #940/#941 collapse).
  */
 function measuredItemWidth(element: ElementWithStyle, numColumns: number): number {
   const style = flattenedStyle(element);
-  if (style?.width === '100%') {
+  if (style?.flex === 1) {
     return (CONTAINER_WIDTH - (numColumns - 1) * COLUMN_GAP) / numColumns;
   }
   return STUB_CONTENT_WIDTH;
@@ -153,11 +154,30 @@ describe('SwipeableListItem', () => {
     }
   });
 
+  it('keeps every note visible inside its assigned iPad grid column (#1280)', () => {
+    const view = render(
+      <GridHarness itemIds={['note-a', 'note-b', 'note-c', 'note-d']} numColumns={2} />,
+    );
+
+    const items = view.getAllByTestId(/^swipeable-/);
+    expect(items).toHaveLength(4);
+
+    for (const item of items) {
+      expect(measuredItemWidth(item, 2)).toBe(EXPECTED_TWO_COLUMN_WIDTH);
+      const style = flattenedStyle(item);
+      expect(style?.flex).toBe(1);
+      expect(style?.width).toBeUndefined();
+    }
+  });
+
   it('fills the full container width in single-column layout', () => {
     const view = render(<GridHarness itemIds={['solo']} numColumns={1} />);
 
     const width = measuredItemWidth(view.getByTestId('swipeable-solo'), 1);
+    const style = flattenedStyle(view.getByTestId('swipeable-solo'));
     expect(width).toBe(CONTAINER_WIDTH);
+    expect(style?.flex).toBe(1);
+    expect(style?.width).toBeUndefined();
   });
 
   it('still fires onToggleSelect when the selection-mode toggle is pressed', () => {
@@ -219,7 +239,7 @@ describe('SwipeableListItem', () => {
     );
 
     const style = flattenedStyle(view.getByTestId('swipeable-sel'));
-    expect(style?.width).toBe('100%');
+    expect(style?.flex).toBe(1);
     expect(style?.shadowColor).toBe('#dc2626');
     expect(style?.elevation).toBe(8);
   });
