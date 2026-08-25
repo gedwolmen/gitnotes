@@ -255,7 +255,13 @@ export default function OnboardingScreen({ onComplete, onSkip }: OnboardingScree
               testID="onboarding.button.next"
               onPress={handleNext}
               disabled={isVerifying}
-              label={isVerifying ? '' : isTokenStep ? (token.trim() ? 'Connect' : 'Skip for Now') : 'Next'}
+              label={
+                isVerifying
+                  ? t('common.connecting', { defaultValue: 'Connecting...' })
+                  : isTokenStep
+                    ? (token.trim() ? 'Connect' : 'Skip for Now')
+                    : 'Next'
+              }
               trailingIcon={
                 isVerifying ? (
                   <ActivityIndicator color={colors.accent} />
