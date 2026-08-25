@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AccessibilityInfo, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  AccessibilityInfo,
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -18,6 +26,9 @@ import { useRepoStore } from '../../stores/repoStore';
 import { useGitActivityStore } from '../../stores/gitActivityStore';
 import { LastUsedRepoService } from '../../services/LastUsedRepoService';
 import { UnpushedCommitsService } from '../../services/git/UnpushedCommitsService';
+import { LocalGitWriter } from '../../services/git/LocalGitWriter';
+import { AuthService } from '../../services/AuthService';
+import { pullFromSingleRepo } from '../../services/RepoPullService';
 import {
   FLOATING_AI_BUTTON_LONG_PRESS_MS,
   useFloatingAIButtonAffordances,
@@ -53,6 +64,7 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
   const [activeRepoPath, setActiveRepoPath] = useState<string | null>(null);
   const [activeBranch, setActiveBranch] = useState<string>('main');
   const [unpushedCount, setUnpushedCount] = useState(0);
+  const [isPushing, setIsPushing] = useState(false);
   const commitRevision = useGitActivityStore((s) => s.commitRevision);
 
   useEffect(() => {
@@ -229,11 +241,46 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
     navigateToPush();
   }, [navigateToPush]);
 
-  const handleLongPress = useCallback(() => {
+  const handleLongPress = useCallback(async () => {
     affordances.handleHoldComplete();
     HapticService.selection();
-    navigateToPush();
-  }, [affordances, navigateToPush]);
+    if (isPushing || !activeRepoPath) return;
+    setIsPushing(true);
+    try {
+      const token = (await AuthService.getToken()) ?? undefined;
+      const pushPromise = LocalGitWriter.push({
+        repoPath: activeRepoPath,
+        branch: activeBranch,
+        token,
+      });
+      const timeoutMs = 60_000;
+      const timeoutPromise = new Promise<{ success: false; error: string }>((_, reject) =>
+        setTimeout(() => reject(new Error('Push timed out after 60s. Pull and try again.')), timeoutMs),
+      );
+      const result = await Promise.race([pushPromise, timeoutPromise]);
+      if (result.success) {
+        await pullFromSingleRepo(activeRepoPath);
+        useGitActivityStore.getState().incrementRevision();
+        Alert.alert('Pushed', 'All commits have been pushed to GitHub.');
+      } else {
+        const error = result.error ?? 'Unknown error';
+        if (error.includes('conflict-detected')) {
+          navigation.navigate('Conflicts', { repoPath: activeRepoPath, branch: activeBranch });
+        } else {
+          Alert.alert('Push failed', error);
+        }
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      if (message.includes('60s')) {
+        Alert.alert('Push timed out', 'Push timed out after 60s. Pull and try again.');
+      } else {
+        Alert.alert('Push failed', message);
+      }
+    } finally {
+      setIsPushing(false);
+    }
+  }, [affordances, isPushing, activeRepoPath, activeBranch, navigation]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
@@ -265,19 +312,25 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
             testID="floating-push.button.navigate-push"
             accessibilityRole="button"
             accessibilityLabel={`Push ${unpushedCount} commits`}
-            accessibilityHint="Tap to view and push unpushed commits"
+            accessibilityHint="Tap to view unpushed commits. Press and hold to push them now."
+            accessibilityState={{ busy: isPushing }}
             onPress={handleTap}
             onLongPress={handleLongPress}
             onPressIn={affordances.handlePressIn}
             onPressOut={affordances.handlePressOut}
             delayLongPress={FLOATING_AI_BUTTON_LONG_PRESS_MS}
+            disabled={isPushing}
             style={({ pressed }) => [
               styles.button,
               { backgroundColor: colors.primary },
               pressed ? styles.pressed : null,
             ]}
           >
-            <Ionicons name="cloud-upload" size={24} color="#FFFFFF" />
+            {isPushing ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Ionicons name="cloud-upload" size={24} color="#FFFFFF" />
+            )}
           </Pressable>
           {unpushedCount > 0 ? (
             <View style={[styles.badge, { backgroundColor: colors.error }]}>
