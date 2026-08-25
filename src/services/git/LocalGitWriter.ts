@@ -338,8 +338,18 @@ function classifyPushError(raw: string): string {
   }
 
   if (
+    lower.includes('non-fast-forward') ||
+    lower.includes('not a simple fast-forward') ||
+    lower.includes('push rejected') ||
+    (lower.includes('one or more branches were not updated') && lower.includes('failed'))
+  ) {
+    return `push failed: remote rejected non-fast-forward — ${raw}`;
+  }
+
+  if (
     lower.includes('branch') &&
-    (lower.includes('not found') || lower.includes('does not exist') || lower.includes('failed'))
+    (lower.includes('not found') || lower.includes('does not exist')) &&
+    !lower.includes('one or more branches were not updated')
   ) {
     return `push failed: branch not found — ${raw}`;
   }
