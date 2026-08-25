@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StorageService } from './StorageService';
+import { AuthService } from './AuthService';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { fetchGitHubDefaultBranch, fetchGitLabDefaultBranch } from './git/branchResolver';
 import type { GitHostProvider } from './git/GitHost';
@@ -225,13 +226,36 @@ export class GitService {
           await this.setCachedData(cacheKey, result);
           return result;
         }
-        // Host returned empty - try authenticated GitHub API directly if token provided
-        if (authToken && provider === 'github') {
+        // Host returned empty - try authenticated GitHub API directly.
+        // For private repos, unauthenticated requests are rate-limited so they
+        // return empty. Try with token if available, or fetch one.
+        const token = authToken ?? (provider === 'github' ? await AuthService.getToken() : null);
+        if (provider === 'github' && !token) {
+          // No token yet, try to get one
+          const fetchedToken = await AuthService.getToken();
+          if (fetchedToken) {
+            const branchesUrl = `${GITHUB_API_BASE}/repos/${repoInfo.owner}/${repoInfo.repo}/branches`;
+            const metaUrl = `${GITHUB_API_BASE}/repos/${repoInfo.owner}/${repoInfo.repo}`;
+            const [ghBranches, ghMeta] = await Promise.all([
+              this.fetchFromGitHub<Array<{ name: string }>>(branchesUrl, fetchedToken),
+              this.fetchFromGitHub<{ default_branch?: string }>(metaUrl, fetchedToken),
+            ]);
+            if (ghBranches && ghBranches.length > 0) {
+              const defaultBranch = ghMeta?.default_branch;
+              const result = ghBranches.map((b) => ({
+                name: b.name,
+                isCurrent: defaultBranch ? b.name === defaultBranch : false,
+              }));
+              await this.setCachedData(cacheKey, result);
+              return result;
+            }
+          }
+        } else if (token) {
           const branchesUrl = `${GITHUB_API_BASE}/repos/${repoInfo.owner}/${repoInfo.repo}/branches`;
           const metaUrl = `${GITHUB_API_BASE}/repos/${repoInfo.owner}/${repoInfo.repo}`;
           const [ghBranches, ghMeta] = await Promise.all([
-            this.fetchFromGitHub<Array<{ name: string }>>(branchesUrl, authToken),
-            this.fetchFromGitHub<{ default_branch?: string }>(metaUrl, authToken),
+            this.fetchFromGitHub<Array<{ name: string }>>(branchesUrl, token),
+            this.fetchFromGitHub<{ default_branch?: string }>(metaUrl, token),
           ]);
           if (ghBranches && ghBranches.length > 0) {
             const defaultBranch = ghMeta?.default_branch;
