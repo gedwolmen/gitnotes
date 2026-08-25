@@ -73,6 +73,7 @@ import { CommitService } from '../../../src/services/git/CommitService';
 import { SyncEngineService } from '../../../src/services/SyncEngineService';
 import { getGitHostService } from '../../../src/services/git/gitHostFactory';
 import { LocalGitWriter } from '../../../src/services/git/LocalGitWriter';
+import { useGitActivityStore } from '../../../src/stores/gitActivityStore';
 
 function getFsStore() {
   return (globalThis as any).__csFsStore as Map<string, { type: 'file' | 'dir' }>;
@@ -88,6 +89,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   getFsStore()?.clear();
   getFsContent()?.clear();
+  useGitActivityStore.setState({ commitRevision: 0 });
 
   // Reset SyncEngineService mock
   (SyncEngineService.getMode as jest.Mock).mockReset();
@@ -153,6 +155,7 @@ describe('CommitService', () => {
         author,
         push: false,
       });
+      expect(useGitActivityStore.getState().commitRevision).toBe(0);
     });
 
     test('falls back to resolveStageAuthor when no author provided', async () => {
@@ -211,6 +214,7 @@ describe('CommitService', () => {
         author,
         push: false,
       });
+      expect(useGitActivityStore.getState().commitRevision).toBe(0);
     });
 
     test('returns failure when LocalGitWriter.deleteAndCommit fails', async () => {

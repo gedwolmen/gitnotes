@@ -55,6 +55,7 @@ jest.mock('expo-file-system/legacy', () => {
 });
 
 import { LocalGitWriter } from '../../../src/services/git/LocalGitWriter';
+import { useGitActivityStore } from '../../../src/stores/gitActivityStore';
 
 function getGitMocks() {
   return (globalThis as any).__lgwGitMocks as {
@@ -92,6 +93,7 @@ const author = { name: 'Test', email: 'test@example.com' };
 beforeEach(() => {
   jest.clearAllMocks();
   getFsStore().clear();
+  useGitActivityStore.setState({ commitRevision: 0 });
 });
 
 describe('LocalGitWriter', () => {
@@ -143,6 +145,20 @@ describe('LocalGitWriter', () => {
     expect(getGitMocks().push).not.toHaveBeenCalled();
   });
 
+  test('increments the push-state revision after a deferred local write', async () => {
+    await LocalGitWriter.writeAndCommit({
+      repoPath: 'me/repo',
+      branch: 'main',
+      filePath: 'notes/bar.md',
+      content: 'x',
+      message: 'm',
+      author,
+      push: false,
+    });
+
+    expect(useGitActivityStore.getState().commitRevision).toBe(1);
+  });
+
   test('writeAndCommit returns failure when commit throws', async () => {
     getGitMocks().commit.mockRejectedValueOnce(new Error('nothing to commit'));
     const result = await LocalGitWriter.writeAndCommit({
@@ -177,6 +193,21 @@ describe('LocalGitWriter', () => {
     });
     expect(getGitMocks().commit).toHaveBeenCalled();
     expect(getGitMocks().push).toHaveBeenCalled();
+  });
+
+  test('increments the push-state revision after a deferred local delete', async () => {
+    getFsStore().set('file:///doc/GitNotes/me/repo/notes/old.md', { type: 'file' });
+
+    await LocalGitWriter.deleteAndCommit({
+      repoPath: 'me/repo',
+      branch: 'main',
+      filePath: 'notes/old.md',
+      message: 'Delete note: old',
+      author,
+      push: false,
+    });
+
+    expect(useGitActivityStore.getState().commitRevision).toBe(1);
   });
 
   test('push only flushes pending commits without staging anything new', async () => {

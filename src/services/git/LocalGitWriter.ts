@@ -7,6 +7,7 @@ import { formatSyncError } from './formatSyncError';
 import { GitFsService, repairHeadRef } from './GitFsService';
 import { ConflictResolverService } from '../conflict/ConflictResolverService';
 import { useConflictStore } from '../../stores/conflictStore';
+import { useGitActivityStore } from '../../stores/gitActivityStore';
 
 const CLONES_SUBDIR = 'GitNotes/';
 
@@ -400,6 +401,7 @@ static async writeAndCommit(opts: WriteOpts): Promise<LocalGitWriterResult> {
             message: opts.message,
             author: { name: opts.author.name, email: opts.author.email },
           });
+          useGitActivityStore.getState().incrementRevision();
         }
 
         if (opts.push !== false) {
@@ -444,6 +446,7 @@ static async writeAndCommit(opts: WriteOpts): Promise<LocalGitWriterResult> {
                     message: opts.message,
                     author: { name: opts.author.name, email: opts.author.email },
                   });
+                  useGitActivityStore.getState().incrementRevision();
                 }
                 await git.push({
                   fs,
@@ -536,6 +539,7 @@ static async deleteAndCommit(opts: DeleteOpts): Promise<LocalGitWriterResult> {
           message: opts.message,
           author: { name: opts.author.name, email: opts.author.email },
         });
+        useGitActivityStore.getState().incrementRevision();
 
         if (opts.push !== false) {
           try {
@@ -577,6 +581,7 @@ static async deleteAndCommit(opts: DeleteOpts): Promise<LocalGitWriterResult> {
                   message: opts.message,
                   author: { name: opts.author.name, email: opts.author.email },
                 });
+                useGitActivityStore.getState().incrementRevision();
                 await git.push({
                   fs,
                   dir,

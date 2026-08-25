@@ -118,7 +118,6 @@ export class CommitService {
         push: false,
       });
       if (!result.success) return { success: false, error: result.error };
-      useGitActivityStore.getState().incrementRevision();
       return { success: true };
     }
 
@@ -150,7 +149,6 @@ export class CommitService {
       push: false,
     });
     if (!result.success) return { success: false, error: result.error };
-    useGitActivityStore.getState().incrementRevision();
     return { success: true };
   }
 

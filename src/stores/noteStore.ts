@@ -9,7 +9,6 @@ import { CommitService } from '../services/git/CommitService';
 import { resolveDefaultFolder, resolveDefaultRepo } from '../services/git/defaultsPolicy';
 import { recordDeleteFailure } from '../services/git/deleteFailures';
 import { gitOperationRegistry, useGitOperationStore } from './gitOperationStore';
-import { useGitActivityStore } from './gitActivityStore';
 import type { GitOp } from './gitOperationStore';
 import { slugifyLocal, getExtensionForFormat } from '../components/editor/editorShared';
 import { parseRepoPath } from '../utils/gitPathParser';
@@ -99,10 +98,8 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
       const filePath = `${folderPath}/${slug}${ext}`;
 
       // Clone mode: commit the new note to git BEFORE saving to storage.
-      // Increment revision BEFORE commit so push button appears immediately.
       const mode = await SyncEngineService.getMode(repo);
       if (mode === 'clone') {
-        useGitActivityStore.getState().incrementRevision();
         const commitResult = await CommitService.commit({
           repo,
           branch: input.branch ?? 'main',

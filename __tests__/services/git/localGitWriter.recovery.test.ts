@@ -49,6 +49,7 @@ jest.mock('../../../src/services/git/GitFsService', () => ({
 
 import { LocalGitWriter } from '../../../src/services/git/LocalGitWriter';
 import { GitFsService } from '../../../src/services/git/GitFsService';
+import { useGitActivityStore } from '../../../src/stores/gitActivityStore';
 
 function getGitMocks() {
   return (globalThis as any).__lgw2GitMocks as {
@@ -65,6 +66,7 @@ const author = { name: 'Test', email: 'test@example.com' };
 beforeEach(() => {
   jest.clearAllMocks();
   (globalThis as any).__lgw2FsStore.clear();
+  useGitActivityStore.setState({ commitRevision: 0 });
 });
 
 describe('LocalGitWriter push-rejected recovery (bug-hunt loop4 #15)', () => {
