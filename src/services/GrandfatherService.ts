@@ -1,6 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getBootValue } from './StorageBootstrap';
-import { OnboardingService } from './OnboardingService';
 
 export const PRO_PAYWALL_FIRST_BUILD = 9;
 
@@ -40,11 +39,9 @@ export async function resolveGrandfatherStatus(
   const checked = await getStoredValue(GRANDFATHER_CHECKED_KEY);
   if (checked === 'true') return { isGrandfathered: false, reason: 'checked' };
 
-  // SECURITY: onboarding alone must never grant — that is a paywall bypass.
-  // Grandfather requires the persisted flag OR a pre-paywall iOS install.
-  const onboarded = await OnboardingService.isOnboardingCompleted();
+  // ios-build path: originalApplicationVersion < 9 is a strong anti-bypass signal.
   const originalVersion = customerInfo?.originalApplicationVersion;
-  if (onboarded && originalVersion != null) {
+  if (originalVersion != null) {
     const parsed = Number.parseInt(originalVersion, 10);
     if (Number.isFinite(parsed) && parsed < PRO_PAYWALL_FIRST_BUILD) {
       await markGrandfathered();
