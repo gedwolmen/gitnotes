@@ -15,6 +15,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { HapticService } from '../../utils/haptics';
 import type { RootStackParamList } from '../../navigation/types';
 import { useRepoStore } from '../../stores/repoStore';
+import { useGitActivityStore } from '../../stores/gitActivityStore';
 import { LastUsedRepoService } from '../../services/LastUsedRepoService';
 import { UnpushedCommitsService } from '../../services/git/UnpushedCommitsService';
 import {
@@ -51,6 +52,7 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
   const [activeRepoPath, setActiveRepoPath] = useState<string | null>(null);
   const [activeBranch, setActiveBranch] = useState<string>('main');
   const [unpushedCount, setUnpushedCount] = useState(0);
+  const commitRevision = useGitActivityStore((s) => s.commitRevision);
 
   useEffect(() => {
     let isMounted = true;
@@ -94,7 +96,7 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
       isMounted = false;
       clearInterval(interval);
     };
-  }, [activeRepoPath, activeBranch]);
+  }, [activeRepoPath, activeBranch, commitRevision]);
 
   const defaultX = viewportWidth - BUTTON_SIZE - insets.right - EDGE_INSET;
   const safeBottom = viewportHeight - Math.max(tabBarHeight, insets.bottom + EDGE_INSET);
