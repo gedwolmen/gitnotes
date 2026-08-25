@@ -5,6 +5,11 @@ import { NotificationService } from './NotificationService';
 
 const PROGRESS_THROTTLE_MS = 1000;
 
+/** Dedup window for push-failure notifications: a stuck push that retries
+ * every interval cycle otherwise spams the user with identical alerts. */
+const PUSH_FAILURE_DEDUP_WINDOW_MS = 2 * 60 * 1000;
+const lastFailureNotifiedAt = new Map<string, number>();
+
 /** Foregrounded app shows progress in-UI (ring + activity banner) — no banner needed. */
 function appIsForegrounded(): boolean {
   return AppState.currentState === 'active';
@@ -43,6 +48,10 @@ export function attachToScheduler(): void {
     const parts = parsePushKey(key);
     if (parts === null) return;
     const { repoPath, branch } = parts;
+    const dedupKey = `${repoPath}::${branch}`;
+    const last = lastFailureNotifiedAt.get(dedupKey);
+    if (last !== undefined && Date.now() - last < PUSH_FAILURE_DEDUP_WINDOW_MS) return;
+    lastFailureNotifiedAt.set(dedupKey, Date.now());
     const conflict = error.toLowerCase().includes('conflict');
     void NotificationService.schedulePushFailure(
       'Push failed',
