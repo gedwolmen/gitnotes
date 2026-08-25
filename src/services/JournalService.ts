@@ -2,8 +2,20 @@ import { format, startOfDay, endOfDay, isWithinInterval, parseISO } from 'date-f
 import { Note, NoteCreateInput } from '../models/Note';
 
 const JOURNAL_TAG = 'journal';
-const JOURNAL_FOLDER = 'Journal';
+const JOURNAL_FOLDER = 'journals';
+const LEGACY_JOURNAL_FOLDER = 'journal';
 const JOURNAL_TITLE_PREFIX = 'Journal ';
+
+function isUnderJournalFolder(path: string | undefined): boolean {
+  if (!path) return false;
+  const normalized = path.trim().replace(/^\/+|\/+$/g, '').toLowerCase();
+  return (
+    normalized === JOURNAL_FOLDER ||
+    normalized.startsWith(`${JOURNAL_FOLDER}/`) ||
+    normalized === LEGACY_JOURNAL_FOLDER ||
+    normalized.startsWith(`${LEGACY_JOURNAL_FOLDER}/`)
+  );
+}
 
 export function formatJournalDate(date: Date): string {
   return format(date, 'yyyy-MM-dd');
@@ -14,7 +26,7 @@ export function journalNoteTitle(date: Date): string {
 }
 
 export function isJournalEntry(note: Note): boolean {
-  return note.tags.includes(JOURNAL_TAG);
+  return isUnderJournalFolder(note.filePath) || isUnderJournalFolder(note.folderPath);
 }
 
 export function getJournalEntries(notes: Note[], startDate: Date, endDate: Date): Note[] {

@@ -102,6 +102,30 @@ describe('RepoPullService notes reconciliation', () => {
     expect(saved.map((n: any) => n.id).sort()).toEqual(['keep']);
   });
 
+  it('imports markdown, neorg, and org files as notes', async () => {
+    (GitHubService.getTreeRecursiveOrThrow as jest.Mock).mockResolvedValue([
+      { type: 'blob', path: 'notes/markdown.md', sha: 'md' },
+      { type: 'blob', path: 'notes/neorg.norg', sha: 'norg' },
+      { type: 'blob', path: 'notes/org.org', sha: 'org' },
+    ]);
+    (GitHubService.getFileContent as jest.Mock).mockImplementation(
+      async (_owner: string, _repo: string, path: string) => `# ${path}`,
+    );
+    (StorageService.getAllNotes as jest.Mock).mockResolvedValue([]);
+
+    await pullFromSingleRepo('org/repo');
+
+    const saved = (StorageService.saveAllNotes as jest.Mock).mock.calls[0][0] as Array<{
+      filePath: string;
+      format: string;
+    }>;
+    expect(saved.map((note) => [note.filePath, note.format])).toEqual([
+      ['notes/markdown.md', 'markdown'],
+      ['notes/neorg.norg', 'neorg'],
+      ['notes/org.org', 'org'],
+    ]);
+  });
+
   // Pending uploads have no filePath until NoteSyncQueueService writes one
   // back after a successful push. They must survive reconciliation regardless
   // of the remote state, otherwise a pull racing a queued upload would erase

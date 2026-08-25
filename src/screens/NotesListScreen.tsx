@@ -30,7 +30,7 @@ import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { useProGate } from '../hooks/useProGate';
 import { GitHubActivityIndicator } from '../components/GitHubActivityIndicator';
 import { ViewMode, VIEW_MODE_ICONS } from '../utils/viewModes';
-import { formatJournalDate } from '../services/JournalService';
+import { formatJournalDate, isJournalEntry } from '../services/JournalService';
 import { NoteCard as NotesListCard } from '../components/notes/NoteCard';
 import { NotesListHeader } from '../components/notes/NotesListHeader';
 import { NotesViewModePicker } from '../components/notes/NotesViewModePicker';
@@ -96,6 +96,15 @@ export default function NotesListScreen() {
   const isFocused = useIsFocused();
   const { inflight } = useGitHubActivityStore();
 
+  const viewScopedNotes = useMemo(
+    () => (viewMode === 'journal' ? notes.filter(isJournalEntry) : notes),
+    [notes, viewMode],
+  );
+  const viewScopedFilteredNotes = useMemo(
+    () => (viewMode === 'journal' ? filteredNotes.filter(isJournalEntry) : filteredNotes),
+    [filteredNotes, viewMode],
+  );
+
   // GitSyncGate publishes registry ops for the held cycle (kind 'pull')
   // and push markers (kind 'push'); the registry is the reactive busy source.
   const gateBusy = useGitOperationStore((s) =>
@@ -148,7 +157,12 @@ export default function NotesListScreen() {
     handleSelectFolder,
     handleToggleTag,
     handleToggleColor,
-  } = useNotesListFilters({ notes, filteredNotes, searchQuery, persistenceKey: '@gitnotes:filters:notes-list' });
+  } = useNotesListFilters({
+    notes: viewScopedNotes,
+    filteredNotes: viewScopedFilteredNotes,
+    searchQuery,
+    persistenceKey: '@gitnotes:filters:notes-list',
+  });
 
   // Consume pending reminder filter pushed by App.tsx on notification tap.
   const consumePendingFilter = useReminderStore((s) => s.consumePendingFilter);

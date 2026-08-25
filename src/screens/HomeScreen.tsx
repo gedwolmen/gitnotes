@@ -20,6 +20,7 @@ import { NoteFormatPreferenceService } from '../services/NoteFormatPreferenceSer
 import {
   buildJournalEditorParams,
   findJournalEntry,
+  isJournalEntry,
   journalNoteTitle,
 } from '../services/JournalService';
 import { useResponsive } from '../hooks/useResponsive';
@@ -136,7 +137,9 @@ export default function HomeScreen() {
   }, [navigation, notes, repositories.length, openSettings]);
 
   const todaysJournalTitle = journalNoteTitle(new Date());
-  const hasTodaysJournal = notes.some((n) => n.title === todaysJournalTitle);
+  const hasTodaysJournal = notes.some(
+    (note) => isJournalEntry(note) && note.title === todaysJournalTitle,
+  );
 
   const handleTemplateSelect = useCallback((template: NoteTemplate) => {
     setShowTemplateSelector(false);

@@ -17,7 +17,7 @@ const mockNotes: Note[] = [
   makeNote({
     id: 'journal-1',
     title: 'Journal 2026-08-20',
-    tags: ['journal'],
+    filePath: 'journals/2026-08-20.md',
     content: 'Reflecting on patience.',
   }),
   makeNote({ id: 'plain-1', title: 'Shopping', tags: ['errands'] }),

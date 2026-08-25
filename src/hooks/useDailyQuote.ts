@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNotes } from '../contexts/NoteContext';
 import { dailyQuoteService, type DailyQuote } from '../services/DailyQuoteService';
+import { isJournalEntry } from '../services/JournalService';
 import { useAIStore } from '../stores/aiStore';
 
 interface UseDailyQuoteReturn {
@@ -34,7 +35,7 @@ export function useDailyQuote(): UseDailyQuoteReturn {
       setIsLoading(true);
       setError(null);
       const currentNotes = notesRef.current;
-      const journals = currentNotes.filter((n) => n.tags.includes('journal'));
+      const journals = currentNotes.filter(isJournalEntry);
       const result = await dailyQuoteService.getDailyQuote(journals, currentNotes);
       setQuote(result);
     } catch (err) {
@@ -56,7 +57,7 @@ export function useDailyQuote(): UseDailyQuoteReturn {
       setIsLoading(true);
       setError(null);
       const currentNotes = notesRef.current;
-      const journals = currentNotes.filter((n) => n.tags.includes('journal'));
+      const journals = currentNotes.filter(isJournalEntry);
       const result = await dailyQuoteService.regenerate(journals, currentNotes);
       setQuote(result);
     } catch (err) {
