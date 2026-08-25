@@ -21,6 +21,7 @@ import { LocalGitWriter } from '../services/git/LocalGitWriter';
 import { AuthService } from '../services/AuthService';
 import { pullFromSingleRepo } from '../services/RepoPullService';
 import { useSafeBack } from '../hooks/useSafeBack';
+import { useGitActivityStore } from '../stores/gitActivityStore';
 import type { RootStackParamList } from '../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Push'>;
@@ -242,6 +243,7 @@ export default function PushScreen() {
       const result = await Promise.race([pushPromise, timeoutPromise]);
       if (result.success) {
         await pullFromSingleRepo(repoPath);
+        useGitActivityStore.getState().incrementRevision();
         Alert.alert('Pushed', 'All commits have been pushed to GitHub.', [
           { text: 'OK', onPress: () => navigation.goBack() },
         ]);
