@@ -64,6 +64,21 @@ export function useTodos(): TodoContextValue {
       console.warn('[TodoContext] Notification schedule failed:', err);
     }
 
+    if (finalTodo.repo) {
+      const syncResult = await syncTodoToGitHub({
+        repo: finalTodo.repo,
+        branch: finalTodo.branch,
+        filePath: finalTodo.filePath,
+        text: finalTodo.text,
+        todo: finalTodo,
+      });
+      if (!syncResult.success) {
+        console.warn('[TodoContext] GitHub sync failed:', syncResult.error);
+      } else if (syncResult.filePath && !finalTodo.filePath) {
+        finalTodo = (await StorageService.updateTodo({ id: finalTodo.id, filePath: syncResult.filePath })) ?? finalTodo;
+      }
+    }
+
     useTodoStore.setState((s) => ({ todos: [finalTodo, ...s.todos] }));
     return finalTodo;
   }, []);
@@ -98,6 +113,20 @@ export function useTodos(): TodoContextValue {
     try {
       const todo = useTodoStore.getState().todos.find((t) => t.id === id);
       if (todo) await NotificationService.cancelAllForTodo(todo);
+
+      if (todo?.repo && todo?.filePath) {
+        const syncResult = await syncTodoToGitHub({
+          repo: todo.repo,
+          branch: todo.branch,
+          filePath: todo.filePath,
+          text: todo.text,
+          todo,
+        });
+        if (!syncResult.success) {
+          console.warn('[TodoContext] GitHub delete sync failed:', syncResult.error);
+        }
+      }
+
       const ok = await StorageService.deleteTodo(id);
       if (ok) useTodoStore.setState((s) => ({ todos: s.todos.filter((t) => t.id !== id) }));
       return ok;

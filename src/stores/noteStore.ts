@@ -88,6 +88,32 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
     }
     try {
       set({ error: null });
+
+      // Derive filePath for clone-mode commit (same logic as deriveDefaultNotePath
+      // but computed from input fields since the Note object doesn't exist yet)
+      const title = (input.title ?? '').trim();
+      const slug = title ? slugifyLocal(title) : `note-${Date.now()}`;
+      const ext = getExtensionForFormat(input.format ?? 'markdown');
+      const folderPath = input.folderPath ?? resolveDefaultFolder('note');
+      const filePath = `${folderPath}/${slug}${ext}`;
+
+      // Clone mode: commit the new note to git BEFORE saving to storage.
+      // This ensures the push button appears immediately (unpushed commit exists).
+      const mode = await SyncEngineService.getMode(repo);
+      if (mode === 'clone') {
+        const commitResult = await CommitService.commit({
+          repo,
+          branch: input.branch ?? 'main',
+          filePath,
+          content: input.content ?? '',
+          message: `Create note: ${title || filePath}`,
+        });
+        if (!commitResult.success) {
+          set({ error: commitResult.error ?? 'Failed to create note' });
+          return null;
+        }
+      }
+
       const newNote = await StorageService.createNote({ ...input, repo });
       set((state) => ({ notes: sortNotesWithPinnedFirst([...state.notes, newNote]) }));
       return newNote;
