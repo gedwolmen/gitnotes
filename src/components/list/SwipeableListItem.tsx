@@ -77,7 +77,7 @@ export function SwipeableListItem({
       testID={`swipeable-${itemId}`}
       className="rounded-sm"
       style={[
-        { width: '100%' },
+        { flex: 1 },
         selected && {
           shadowColor: colors.error,
           shadowOpacity: 0.55,
