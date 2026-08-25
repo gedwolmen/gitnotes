@@ -470,6 +470,7 @@ export class GitFsService {
     const { fs, dir, branch, remoteOid } = opts;
     try {
       const author = await readCommitAuthor(fs, dir, `refs/heads/${branch}`);
+      const mergeMessage = `Merge remote-tracking branch 'origin/${branch}' into ${branch}`;
 
       await git.merge({
         fs,
@@ -477,13 +478,29 @@ export class GitFsService {
         ours: branch,
         theirs: remoteOid,
         author,
-        message: `Merge remote-tracking branch 'origin/${branch}' into ${branch}`,
+        message: mergeMessage,
       });
 
       const conflicted = await listConflictedFiles(fs, dir);
       if (conflicted.length > 0) {
         return { ok: false, reason: 'conflict', error: `Merge produced file conflicts in: ${conflicted.join(', ')}` };
       }
+
+      // git.merge stages the merge changes but does NOT create the merge
+      // commit or update the branch ref. The local branch still points to
+      // the pre-merge commit, so the subsequent push would still be
+      // rejected as non-fast-forward. Commit the staged merge explicitly
+      // with both parents so the local branch advances past the remote.
+      const parents = [opts.localOid, remoteOid];
+      const mergeCommitOid = await git.commit({
+        fs,
+        dir,
+        message: mergeMessage,
+        author,
+        parent: parents,
+      });
+      await git.writeRef({ fs, dir, ref: `refs/heads/${branch}`, value: mergeCommitOid, force: true });
+
       return { ok: true };
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
