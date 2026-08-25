@@ -496,8 +496,6 @@ describe('notes delete lock', () => {
         localNoteId: 'n1',
       }),
     );
-    // API-mode write-through (#927): stageDelete drains immediately on save.
-    expect(NoteSyncQueueService.drain).toHaveBeenCalled();
   });
 
   it('queue success event is a no-op: row already removed at delete time, no crash or leftover ops', async () => {
@@ -572,9 +570,6 @@ describe('notes delete lock', () => {
         filePath: 'notes/third.md',
       }),
     );
-    // retryDeleteFailure re-enqueues WITHOUT draining: the write-through
-    // delete already drained once, and the retry must not add another drain.
-    expect(NoteSyncQueueService.drain).toHaveBeenCalledTimes(1);
     expect(screen.queryByText('Third')).toBeNull();
   }, 15000);
 

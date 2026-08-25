@@ -61,7 +61,7 @@ describe('todo delete GitHub sync', () => {
     useTodoStore.setState({ todos: [], isLoading: false, error: null });
   });
 
-  test('stages the delete, removes the local row, and keeps it gone after refresh', async () => {
+  test('API-mode write-through delete: removes remote via deleteFile, then the local row, and keeps it gone after refresh', async () => {
     const syncedTodo = {
       id: 'todo-1',
       text: 'Ship it',
@@ -78,7 +78,7 @@ describe('todo delete GitHub sync', () => {
 
     await useTodoStore.getState().deleteTodo('todo-1');
 
-    expect(GitHubService.deleteFile).not.toHaveBeenCalled();
+    expect(GitHubService.deleteFile).toHaveBeenCalledTimes(1);
     expect(StorageService.deleteTodo).toHaveBeenCalledWith('todo-1');
     expect(useTodoStore.getState().todos).toEqual([]);
 
@@ -87,7 +87,8 @@ describe('todo delete GitHub sync', () => {
     expect(useTodoStore.getState().todos).toEqual([]);
   });
 
-  test('keeps the todo locally when the delete stage fails so pull does not re-import it', async () => {
+  test('keeps the todo locally when remote delete fails so pull does not re-import it', async () => {
+    (GitHubService.deleteFile as jest.Mock).mockResolvedValueOnce(null);
     const syncedTodo = {
       id: 'todo-2',
       text: 'Keep on failure',
@@ -105,8 +106,6 @@ describe('todo delete GitHub sync', () => {
     const ok = await useTodoStore.getState().deleteTodo('todo-2');
 
     expect(ok).toBe(false);
-    // Local storage MUST NOT be mutated when staging fails — otherwise
-    // the next pull-to-refresh would re-create the todo (issue #489).
     expect(StorageService.deleteTodo).not.toHaveBeenCalled();
     expect(useTodoStore.getState().todos).toEqual([syncedTodo]);
     expect(useTodoStore.getState().error).toBeTruthy();
@@ -155,7 +154,7 @@ describe('todo delete GitHub sync', () => {
     const ok = await useTodoStore.getState().deleteTodo('todo-stale');
 
     expect(ok).toBe(true);
-    expect(GitHubService.deleteFile).not.toHaveBeenCalled();
+    expect(GitHubService.deleteFile).toHaveBeenCalledTimes(1);
     expect(StorageService.deleteTodo).toHaveBeenCalledWith('todo-stale');
     expect(useTodoStore.getState().todos).toEqual([]);
   });
