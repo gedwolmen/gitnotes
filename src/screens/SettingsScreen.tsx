@@ -54,6 +54,7 @@ import { RepoAccessPreflightError } from '../services/git/repoAccessPreflight';
 import { useProStatus } from '../hooks/useProGate';
 import { useProStore } from '../stores/proStore';
 import { promptProUpgrade } from '../utils/proAlerts';
+import { FREE_TIER_MAX_REPOS, FREE_TIER_MAX_ACCOUNTS } from '../services/TierLimits';
 
 // Mirrors GitFsService's MAX_CLONE_RETRIES so a failing repo can't loop the outer flow.
 const MAX_OUTER_CLONE_RETRIES = 1;
@@ -655,7 +656,7 @@ export default function SettingsScreen() {
 
   const handleSelectGithubRepo = useCallback(async (repo: GitHubRepository) => {
     if (isAddingRepoPath !== null) return;
-    if (repositories.length >= 1 && !isPro) {
+    if (repositories.length >= FREE_TIER_MAX_REPOS && !isPro) {
       promptProUpgrade(t, openPaywall);
       return;
     }
@@ -704,7 +705,7 @@ export default function SettingsScreen() {
     if (isAddingRepoPath !== null) return;
     const value = manualRepoInput.trim();
     if (!value) return;
-    if (repositories.length >= 1 && !isPro) {
+    if (repositories.length >= FREE_TIER_MAX_REPOS && !isPro) {
       promptProUpgrade(t, openPaywall);
       return;
     }
@@ -1010,7 +1011,7 @@ export default function SettingsScreen() {
         setStyle={setStyle}
         onOpenConnectToken={() => { setTokenModalMode('connect'); setTokenInput(''); setTokenError(null); setTokenTestResult(null); setTokenVisible(false); setShowTokenModal(true); }}
         onOpenAddAccount={() => {
-          if (accounts.length >= 1 && !isPro) {
+          if (accounts.length >= FREE_TIER_MAX_ACCOUNTS && !isPro) {
             promptProUpgrade(t, openPaywall);
             return;
           }
@@ -1025,7 +1026,7 @@ export default function SettingsScreen() {
           setShowConnectHostModal(true);
         }}
         onAddHostLocked={() => {
-          if (accounts.length >= 1 && !isPro) {
+          if (accounts.length >= FREE_TIER_MAX_ACCOUNTS && !isPro) {
             promptProUpgrade(t, openPaywall);
           } else {
             setConnectHostPreset(undefined);

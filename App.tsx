@@ -48,6 +48,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { reconcileThoughtDumps } from './src/services/ai/thoughtDumpIndexing';
 import { LastSelectionPreferenceService } from './src/services/LastSelectionPreferenceService';
 import { useProStore } from './src/stores/proStore';
+import { enforceTierLimits } from './src/services/TierLimits';
 import * as PushNotificationService from './src/services/PushNotificationService';
 import * as StagePushScheduler from './src/services/StagePushScheduler';
 import { hideDevMenuFloatingActionButton } from './src/utils/devMenuFab';
@@ -76,7 +77,15 @@ export default function App() {
     void hydrateGitOperationRegistry();
     void useConflictStore.getState().loadConflicts();
     void useRenderStyleStore.getState().hydrate();
-    void useProStore.getState().initialize();
+    // Resolve Pro entitlement before surfacing restored data so the free-tier
+    // repo/account caps can be enforced on data brought back by Android backup
+    // restore (#1233) — before the stores render it, not after.
+    try {
+      await useProStore.getState().initialize();
+      await enforceTierLimits();
+    } catch (error) {
+      console.warn('[App] tier-limit enforcement failed:', error);
+    }
     const completed = await OnboardingService.isOnboardingCompleted();
     setShowOnboarding(!completed);
     await NotificationService.requestPermissions();
