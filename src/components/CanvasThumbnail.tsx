@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import {
   Canvas as SkiaCanvas,
   Path,
@@ -290,6 +291,14 @@ export default function CanvasThumbnail({ scene, width, height, background }: Ca
 
     return null;
   };
+
+  if (!scene || elements.length === 0) {
+    return (
+      <View style={[styles.wrap, { width, height, backgroundColor: fillColor, justifyContent: 'center', alignItems: 'center' }]} pointerEvents="none">
+        <Ionicons name="easel-outline" size={Math.min(width, height) * 0.4} color="#9CA3AF" />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.wrap, { width, height }]} pointerEvents="none">
