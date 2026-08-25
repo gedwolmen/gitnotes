@@ -3,9 +3,7 @@ import { parseRepoPath } from '../utils/gitPathParser';
 import { serializeTemplate, templateSlug } from './TemplateMarkdownService';
 import type { NoteTemplate } from './TemplateService';
 import { SyncEngineService } from './SyncEngineService';
-import { LocalGitWriter } from './git/LocalGitWriter';
-import { AuthService } from './AuthService';
-import { githubActivity } from '../stores/githubActivityStore';
+import { CommitService } from './git/CommitService';
 
 function resolveAuthor() {
   const user = GitHubService.getUser();
@@ -44,19 +42,16 @@ export async function syncTemplateToGitHub(params: {
   // *that* repo, not the editing repo.
   const mode = await SyncEngineService.getMode(repoPath);
   if (mode === 'clone') {
-    const tokenForPush = (await AuthService.getToken()) ?? undefined;
-    const writeResult = await LocalGitWriter.writeAndCommit({
-      repoPath,
+    const commitResult = await CommitService.commit({
+      repo: repoPath,
       branch,
       filePath: targetPath,
       content: body,
       message,
       author: resolveAuthor(),
-      token: tokenForPush,
-      onProgress: (progress) => githubActivity.setProgress(progress),
     });
-    if (writeResult.success) return { success: true, filePath: targetPath };
-    return { success: false, error: writeResult.error };
+    if (commitResult.success) return { success: true, filePath: targetPath };
+    return { success: false, error: commitResult.error };
   }
 
   try {
@@ -88,16 +83,16 @@ export async function deleteTemplateFromGitHub(params: {
   // Clone-mode delete path (#514).
   const mode = await SyncEngineService.getMode(repoPath);
   if (mode === 'clone') {
-    const tokenForPush = (await AuthService.getToken()) ?? undefined;
-    return LocalGitWriter.deleteAndCommit({
-      repoPath,
+    const commitResult = await CommitService.commit({
+      repo: repoPath,
       branch,
       filePath,
       message: `Delete template ${name}`,
       author: resolveAuthor(),
-      token: tokenForPush,
-      onProgress: (progress) => githubActivity.setProgress(progress),
+      delete: true,
     });
+    if (commitResult.success) return { success: true, filePath };
+    return { success: false, error: commitResult.error };
   }
 
   let resolvedSha = sha;

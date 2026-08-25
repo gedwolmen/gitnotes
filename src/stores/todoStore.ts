@@ -3,7 +3,7 @@ import { Todo, TodoCreateInput, TodoUpdateInput, reorderTodos } from '../models/
 import { StorageService } from '../services/StorageService';
 import { GitHubService } from '../services/GitHubService';
 import { formatSyncError } from '../services/git/formatSyncError';
-import { StagingService } from '../services/git/StagingService';
+import { deleteTodoFromGitHub } from '../services/TodoGitHubSyncService';
 import { gitOperationRegistry } from './gitOperationStore';
 
 interface TodoState {
@@ -98,16 +98,17 @@ export const useTodoStore = create<TodoState & TodoActions>()((set, get) => ({
             if (opId) gitOperationRegistry.fail(opId, 'Cannot delete repo-backed todo while signed out of GitHub');
             return false;
           }
-          const staged = await StagingService.stageDelete({
+          const deleteResult = await deleteTodoFromGitHub({
             repo: todoToDelete!.repo!,
             branch: todoToDelete!.branch,
             filePath: todoToDelete!.filePath!,
-            title: todoToDelete!.text,
+            text: todoToDelete!.text,
+            accountId: todoToDelete!.accountId,
           });
-          if (!staged.success) {
-            if (staged.error) console.warn('[TodoStore] delete stage failed:', staged.error);
-            set({ error: formatSyncError(staged.error, 'delete') });
-            if (opId) gitOperationRegistry.fail(opId, staged.error ?? 'Delete failed');
+          if (!deleteResult.success) {
+            if (deleteResult.error) console.warn('[TodoStore] delete failed:', deleteResult.error);
+            set({ error: formatSyncError(deleteResult.error, 'delete') });
+            if (opId) gitOperationRegistry.fail(opId, deleteResult.error ?? 'Delete failed');
             return false;
           }
         }

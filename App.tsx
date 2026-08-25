@@ -50,7 +50,6 @@ import { LastSelectionPreferenceService } from './src/services/LastSelectionPref
 import { useProStore } from './src/stores/proStore';
 import { enforceTierLimits } from './src/services/TierLimits';
 import * as PushNotificationService from './src/services/PushNotificationService';
-import * as StagePushScheduler from './src/services/StagePushScheduler';
 import { hideDevMenuFloatingActionButton } from './src/utils/devMenuFab';
 
 const queryClient = new QueryClient({
@@ -138,7 +137,6 @@ export default function App() {
     }
     PushNotificationService.attachToScheduler();
     PushNotificationService.subscribeToPushProgress();
-    StagePushScheduler.startScheduler();
     void reconcileThoughtDumps().catch(() => {});
     void LastSelectionPreferenceService.migrateFromLegacy();
   }, []);

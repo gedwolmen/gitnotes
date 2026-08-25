@@ -14,9 +14,7 @@ jest.mock('../../src/services/GitHubService', () => ({
   },
 }));
 
-jest.mock('../../src/services/git/StagingService', () => ({
-  StagingService: { stageDelete: jest.fn(), stageUpsert: jest.fn() },
-}));
+
 
 jest.mock('../../src/services/git/formatSyncError', () => ({
   formatSyncError: jest.fn((err) => err ?? 'sync error'),
@@ -25,7 +23,7 @@ jest.mock('../../src/services/git/formatSyncError', () => ({
 import { useTodoStore } from '../../src/stores/todoStore';
 import { StorageService } from '../../src/services/StorageService';
 import { GitHubService } from '../../src/services/GitHubService';
-import { StagingService } from '../../src/services/git/StagingService';
+
 import type { Todo } from '../../src/models/Todo';
 
 const makeTodo = (id: string, overrides: Partial<Todo> = {}): Todo => ({

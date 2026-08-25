@@ -20,9 +20,7 @@ jest.mock('../../src/services/SyncEngineService', () => ({
   SyncEngineService: { getMode: jest.fn(async () => 'api') },
 }));
 
-jest.mock('../../src/services/git/StagingService', () => ({
-  StagingService: { stageDelete: jest.fn(), stageUpsert: jest.fn() },
-}));
+;
 
 jest.mock('../../src/components/editor/editorShared', () => ({
   slugifyLocal: jest.fn((s: string) => s.toLowerCase().replace(/\s+/g, '-')),
@@ -33,7 +31,7 @@ import { useNoteStore } from '../../src/stores/noteStore';
 import { useGitOperationStore } from '../../src/stores/gitOperationStore';
 import { StorageService } from '../../src/services/StorageService';
 import { NoteSyncQueueService } from '../../src/services/NoteSyncQueueService';
-import { StagingService } from '../../src/services/git/StagingService';
+
 import type { Note } from '../../src/models/Note';
 
 const makeNote = (id: string, overrides: Partial<Note> = {}): Note => ({

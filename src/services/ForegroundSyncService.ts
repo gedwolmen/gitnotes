@@ -5,8 +5,6 @@ import { StorageService } from './StorageService';
 import { pullAllFromRepos } from './RepoPullService';
 import { reconcileThoughtDumps } from './ai/thoughtDumpIndexing';
 import { GitSyncGate } from './git/GitSyncGate';
-import { hasPushSession, drainPushQueue } from './StagePushScheduler';
-import { useStageStore } from '../stores/stageStore';
 
 /**
  * Foreground auto-pull driver: pulls every tracked repo when the app becomes
@@ -263,11 +261,6 @@ function handleAppStateChange(state: AppStateStatus): void {
   if (state === 'active') {
     if (wasInactive) {
       void runPull('appstate-active');
-      hasPushSession().then((active) => {
-        if (active && useStageStore.getState().staged.length > 0) {
-          void drainPushQueue('idle');
-        }
-      }).catch(() => undefined);
     }
     restartInterval();
   } else if (intervalHandle) {

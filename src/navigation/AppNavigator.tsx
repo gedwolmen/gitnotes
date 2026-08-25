@@ -20,10 +20,10 @@ import RenderStyleSettingsScreen from '../screens/RenderStyleSettingsScreen';
 import RenderStyleEditorScreen from '../screens/RenderStyleEditorScreen';
 import TemplateManagerScreen from '../screens/TemplateManagerScreen';
 import SyncStatusScreen from '../screens/SyncStatusScreen';
-import StageScreen from '../screens/StageScreen';
+import PushScreen from '../screens/PushScreen';
 import ConflictResolverScreen from '../screens/ConflictResolverScreen';
 import { FloatingAIButton } from '../components/ai/FloatingAIButton';
-import { FloatingStageButton } from '../components/git/FloatingStageButton';
+import { FloatingPushButton } from '../components/git/FloatingPushButton';
 import { ChatRepoPickerModal } from '../components/ai/ChatRepoPickerModal';
 import { AddReminderScreen } from '../components/settings/AddReminderScreen';
 import ThoughtDumpScreen from '../screens/ThoughtDumpScreen';
@@ -61,7 +61,7 @@ const getLinkingConfig = (): LinkingOptions<RootStackParamList> => {
         ChatThreadList: 'chat',
         ChatScreen: 'chat/:threadId',
         ThoughtDump: 'thought-dump',
-        Stage: 'stage',
+        Push: 'push/:repoPath/:branch',
         Conflicts: 'conflicts/:repoPath/:branch',
       },
     },
@@ -258,8 +258,8 @@ export default function AppNavigator({ showOnboarding, onOnboardingComplete, onO
               options={{ headerShown: false }}
             />
             <Stack.Screen
-              name="Stage"
-              component={StageScreen}
+              name="Push"
+              component={PushScreen}
               options={{ headerShown: false }}
             />
             {/* TODO(todo 11): point Conflicts at the upgraded SyncStatusScreen
@@ -299,7 +299,7 @@ export default function AppNavigator({ showOnboarding, onOnboardingComplete, onO
             )}
           </Stack.Navigator>
           <FloatingAIButton currentRouteName={currentRouteName} />
-          <FloatingStageButton currentRouteName={currentRouteName} />
+          <FloatingPushButton currentRouteName={currentRouteName} />
         </View>
       </NavigationContainer>
         <ChatRepoPickerModal

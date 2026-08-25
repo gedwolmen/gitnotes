@@ -28,16 +28,9 @@ jest.mock('../src/services/RepoPullService', () => ({
   pullAllFromRepos: jest.fn(),
 }));
 
-jest.mock('../src/services/StagePushScheduler', () => ({
-  hasPushSession: jest.fn(),
-  drainPushQueue: jest.fn(),
-}));
+;
 
-jest.mock('../src/stores/stageStore', () => ({
-  useStageStore: {
-    getState: jest.fn(),
-  },
-}));
+
 
 let mockAppStateChangeListener: ((state: AppStateStatus) => void) | undefined;
 
@@ -64,9 +57,9 @@ import {
   updateForegroundWatcherConfig,
 } from '../src/services/ForegroundSyncService';
 import { pullAllFromRepos } from '../src/services/RepoPullService';
-import { hasPushSession, drainPushQueue } from '../src/services/StagePushScheduler';
+
 import { StorageService } from '../src/services/StorageService';
-import { useStageStore } from '../src/stores/stageStore';
+
 import type { PullResult } from '../src/services/RepoPullService';
 import type { GitRepository } from '../src/services/GitService';
 
@@ -74,9 +67,7 @@ const authMock = jest.mocked(GitHubService.isAuthenticated);
 const reposMock = jest.mocked(StorageService.getSavedRepositories);
 const netInfoFetchMock = jest.mocked(NetInfo.fetch);
 const pullMock = jest.mocked(pullAllFromRepos);
-const hasPushSessionMock = jest.mocked(hasPushSession);
-const drainPushQueueMock = jest.mocked(drainPushQueue);
-const useStageStoreMock = jest.mocked(useStageStore);
+
 
 const repository: GitRepository = { id: 'repo-id', name: 'repo', path: 'owner/repo' };
 const reachableState: NetInfoState = {
@@ -255,39 +246,6 @@ describe('ForegroundSyncService', () => {
     await jest.advanceTimersByTimeAsync(0);
 
     expect(pullMock).toHaveBeenCalledTimes(2);
-  });
-
-  test('resumes push drain when foreground returns with active session and staged items', async () => {
-    hasPushSessionMock.mockResolvedValue(true);
-    useStageStoreMock.getState.mockReturnValue({ staged: [{ id: '1' }] } as never);
-    startForegroundWatcher({ syncFrequentlyEnabled: false, syncIntervalSeconds: 0 });
-
-    mockAppStateChangeListener?.('active');
-    await jest.advanceTimersByTimeAsync(0);
-
-    expect(drainPushQueueMock).toHaveBeenCalledTimes(1);
-  });
-
-  test('does not resume push drain when foreground returns without active session', async () => {
-    hasPushSessionMock.mockResolvedValue(false);
-    useStageStoreMock.getState.mockReturnValue({ staged: [{ id: '1' }] } as never);
-    startForegroundWatcher({ syncFrequentlyEnabled: false, syncIntervalSeconds: 0 });
-
-    mockAppStateChangeListener?.('active');
-    await jest.advanceTimersByTimeAsync(0);
-
-    expect(drainPushQueueMock).not.toHaveBeenCalled();
-  });
-
-  test('does not resume push drain when foreground returns with active session but no staged items', async () => {
-    hasPushSessionMock.mockResolvedValue(true);
-    useStageStoreMock.getState.mockReturnValue({ staged: [] } as never);
-    startForegroundWatcher({ syncFrequentlyEnabled: false, syncIntervalSeconds: 0 });
-
-    mockAppStateChangeListener?.('active');
-    await jest.advanceTimersByTimeAsync(0);
-
-    expect(drainPushQueueMock).not.toHaveBeenCalled();
   });
 
   test('throttles repeated busy-skip log lines to one per window', async () => {

@@ -5,7 +5,7 @@ import { StorageService } from '../services/StorageService';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import type { MutationSucceededEvent, DroppedMutationEvent, NoteDeleteParams } from '../services/NoteSyncQueueService';
 import { SyncEngineService } from '../services/SyncEngineService';
-import { StagingService } from '../services/git/StagingService';
+import { CommitService } from '../services/git/CommitService';
 import { recordDeleteFailure } from '../services/git/deleteFailures';
 import { gitOperationRegistry, useGitOperationStore } from './gitOperationStore';
 import type { GitOp } from './gitOperationStore';
@@ -93,6 +93,48 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
   updateNote: async (input) => {
     try {
       set({ error: null });
+
+      // Detect title/folder changes that would alter the derived path (rename).
+      // In clone mode, use CommitService.commit with prevFilePath to produce one
+      // atomic rename commit instead of a delete+create pair.
+      const existingNote = get().notes.find((n) => n.id === input.id);
+      const titleChanged = input.title !== undefined && existingNote?.title !== input.title;
+      const folderPathChanged = input.folderPath !== undefined && existingNote?.folderPath !== input.folderPath;
+
+      if (existingNote?.repo && (titleChanged || folderPathChanged)) {
+        const oldPath = existingNote.filePath ?? deriveDefaultNotePath(existingNote);
+        // Virtual note with the updated title/folderPath to derive new path
+        const virtualNote = {
+          ...existingNote,
+          title: input.title ?? existingNote.title,
+          folderPath: input.folderPath ?? existingNote.folderPath,
+          format: input.format ?? existingNote.format,
+        };
+        const newPath = input.filePath ?? deriveDefaultNotePath(virtualNote);
+
+        if (oldPath && newPath && oldPath !== newPath) {
+          const mode = await SyncEngineService.getMode(existingNote.repo);
+          if (mode === 'clone') {
+            const content = input.content ?? existingNote.content ?? '';
+            const commitResult = await CommitService.commit({
+              repo: existingNote.repo,
+              branch: existingNote.branch ?? 'main',
+              prevFilePath: oldPath,
+              filePath: newPath,
+              content,
+              message: `Rename note: ${input.title ?? existingNote.title}`,
+            });
+            if (!commitResult.success) {
+              set({ error: commitResult.error ?? 'Failed to rename note' });
+              return null;
+            }
+            // Commit succeeded — update filePath on the note so subsequent syncs
+            // use the correct path and don't try to re-create the file.
+            input = { ...input, filePath: newPath };
+          }
+        }
+      }
+
       const updatedNote = await StorageService.updateNote(input);
       if (updatedNote) {
         set((state) => ({
@@ -140,16 +182,22 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
               attempts: 0,
             });
           const mode = await SyncEngineService.getMode(repoPath);
-          const stageResult = await StagingService.stageDelete(deleteParams);
-          if (!stageResult.success) {
-            set({ error: stageResult.error ?? 'Failed to delete note' });
-            return false;
-          }
           if (mode === 'clone') {
-            // Clone-mode stageDelete commits the delete locally with no
-            // queue mutation, so the side-channel completion handlers
-            // never fire — finish the local delete right here.
+            // Clone-mode: commit the delete locally with CommitService,
+            // then finish the local delete here.
             const opId = beginDeleteOp();
+            const commitResult = await CommitService.commit({
+              repo: repoPath,
+              branch: note.branch ?? 'main',
+              filePath,
+              message: `Delete note: ${note.title ?? filePath}`,
+              delete: true,
+            });
+            if (!commitResult.success) {
+              gitOperationRegistry.fail(opId, commitResult.error ?? 'Failed to delete note');
+              set({ error: commitResult.error ?? 'Failed to delete note' });
+              return false;
+            }
             const success = await StorageService.deleteNote(id);
             if (success) {
               set((state) => ({ notes: state.notes.filter((n) => n.id !== id) }));
@@ -159,7 +207,13 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
             }
             return success;
           }
-          // API mode: stageDelete succeeded; the queue holds the mutation.
+          // API mode: enqueue the delete, then remove locally immediately.
+          try {
+            await NoteSyncQueueService.enqueueNoteDelete(deleteParams);
+          } catch (err) {
+            set({ error: err instanceof Error ? err.message : 'Failed to enqueue note delete' });
+            return false;
+          }
           // Remove locally now — the row must vanish immediately; the
           // push button (not the row) signals pending work.
           const opId = beginDeleteOp();

@@ -22,10 +22,7 @@ jest.mock('../../src/services/StagePushScheduler', () => ({
   addOnPushFailure: mockAddOnPushFailure,
 }));
 
-const mockSubscribe = jest.fn(() => jest.fn());
-jest.mock('../../src/stores/stageStore', () => ({
-  useStageStore: { subscribe: mockSubscribe },
-}));
+
 
 let mockAppState = 'background';
 jest.mock('react-native', () => ({

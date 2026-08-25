@@ -3,7 +3,7 @@ import { CanvasScene, slugifyCanvasTitle } from '../models/Canvas';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { AuthService } from './AuthService';
 import { SyncEngineService } from './SyncEngineService';
-import { LocalGitWriter } from './git/LocalGitWriter';
+import { CommitService } from './git/CommitService';
 import { resolveBranch } from './git/resolveBranch';
 
 async function resolveToken(accountId?: string): Promise<string | undefined> {
@@ -60,15 +60,13 @@ export async function syncCanvasToGitHub(params: {
       name: user?.name || user?.login || 'gitnotes',
       email: user?.email || `${user?.login ?? 'gitnotes'}@users.noreply.github.com`,
     };
-    const tokenForPush = tokenOverride ?? (await AuthService.getToken()) ?? undefined;
-    const writeResult = await LocalGitWriter.writeAndCommit({
-      repoPath,
+    const writeResult = await CommitService.commit({
+      repo: repoPath,
       branch: targetBranch,
       filePath: targetPath,
       content,
       message,
       author,
-      token: tokenForPush,
     });
     if (writeResult.success) {
       return { success: true, filePath: targetPath };
@@ -128,15 +126,19 @@ export async function deleteCanvasFromGitHub(params: {
       name: user?.name || user?.login || 'gitnotes',
       email: user?.email || `${user?.login ?? 'gitnotes'}@users.noreply.github.com`,
     };
-    const tokenForPush = tokenOverride ?? (await AuthService.getToken()) ?? undefined;
-    return LocalGitWriter.deleteAndCommit({
-      repoPath,
+    const deleteResult = await CommitService.commit({
+      repo: repoPath,
       branch: targetBranch,
       filePath,
+      content: '',
       message: `Delete canvas: ${title || filePath}`,
       author,
-      token: tokenForPush,
+      delete: true,
     });
+    if (deleteResult.success) {
+      return { success: true, filePath };
+    }
+    return { success: false, error: deleteResult.error };
   }
 
   try {

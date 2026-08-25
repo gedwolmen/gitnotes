@@ -13,6 +13,7 @@ import { FEATURE_USE_MULTI_HOST_WRITE } from './featureFlags';
 import { classifyGitHubSyncError, extractHttpErrorDetails, syncStatusForError } from './git/syncFailure';
 import { formatSyncError } from './git/formatSyncError';
 import type { GitHostProvider } from './git/GitHost';
+import { CommitService } from './git/CommitService';
 
 async function resolveAuthor(provider: GitHostProvider = 'github'): Promise<{ name: string; email: string }> {
   const host = getGitHostService(provider);
@@ -567,17 +568,13 @@ export async function syncNoteToGitHub(params: {
   // flip modes without their next pull seeing churn.
   if (mode === 'clone') {
     const author = await resolveAuthor(params.provider);
-    const tokenForPush = tokenOverride ?? (await AuthService.getToken()) ?? undefined;
-    const writeResult = await LocalGitWriter.writeAndCommit({
-      repoPath,
+    const writeResult = await CommitService.commit({
+      repo: repoPath,
       branch: targetBranch,
       filePath: targetPath,
       content: finalContent,
       message,
       author,
-      token: tokenForPush,
-      push,
-      onProgress: (progress) => githubActivity.setProgress(progress),
     });
     if (writeResult.success) {
       return { success: true, filePath: targetPath, finalContent };

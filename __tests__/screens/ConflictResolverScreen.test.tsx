@@ -25,7 +25,7 @@ const mockProposeMerge = jest.fn();
 const mockWriteAndCommit = jest.fn(async () => undefined);
 const mockDeleteAndCommit = jest.fn(async () => undefined);
 const mockMergeCommit = jest.fn(async () => ({}));
-const mockNotifyStagedChanged = jest.fn();
+
 const mockGetToken = jest.fn(async () => null);
 const mockGetUser = jest.fn();
 const mockGetMode = jest.fn(async () => 'api');
@@ -74,9 +74,7 @@ jest.mock('../../src/services/git/LocalGitWriter', () => ({
   },
 }));
 
-jest.mock('../../src/services/git/StagingService', () => ({
-  notifyStagedChanged: () => mockNotifyStagedChanged(),
-}));
+
 
 jest.mock('../../src/services/SyncEngineService', () => ({
   SyncEngineService: {
