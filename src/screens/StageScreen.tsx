@@ -111,6 +111,8 @@ export default function StageScreen() {
   const [pushErrors, setPushErrors] = useState<Record<string, string>>({});
   const [strandedCommits, setStrandedCommits] = useState<readonly StrandedCommitEntry[]>([]);
   const [strandedActionInProgress, setStrandedActionInProgress] = useState<string | null>(null);
+  const [pullInProgress, setPullInProgress] = useState<Record<string, boolean>>({});
+  const [discardInProgress, setDiscardInProgress] = useState<Record<string, boolean>>({});
 
   // Load conflicts proactively when StageScreen mounts so per-group conflict status
   // is available immediately without requiring a push attempt first.
@@ -260,6 +262,7 @@ export default function StageScreen() {
 
   const handlePullGroup = useCallback(
     async (group: StageGroup) => {
+      setPullInProgress((prev) => ({ ...prev, [group.key]: true }));
       try {
         const result = await pullFromSingleRepo(group.repoPath);
         if (!result || result.repos === 0) {
@@ -267,9 +270,16 @@ export default function StageScreen() {
         } else {
           void loadStaged();
           void useConflictStore.getState().loadConflicts();
+          Alert.alert('Pulled', `Pulled latest changes for ${repoName(group.repoPath)}.`);
         }
       } catch (error) {
         Alert.alert('Pull Failed', error instanceof Error ? error.message : 'Unknown error');
+      } finally {
+        setPullInProgress((prev) => {
+          const next = { ...prev };
+          delete next[group.key];
+          return next;
+        });
       }
     },
     [loadStaged],
@@ -291,9 +301,20 @@ export default function StageScreen() {
             text: 'Discard',
             style: 'destructive',
             onPress: async () => {
-              const error = await discardStaged(group.repoPath, group.branch);
-              if (error) {
-                Alert.alert('Discard Failed', error);
+              setDiscardInProgress((prev) => ({ ...prev, [group.key]: true }));
+              try {
+                const error = await discardStaged(group.repoPath, group.branch);
+                if (error) {
+                  Alert.alert('Discard Failed', error);
+                } else {
+                  Alert.alert('Discarded', 'All staged changes have been discarded.');
+                }
+              } finally {
+                setDiscardInProgress((prev) => {
+                  const next = { ...prev };
+                  delete next[group.key];
+                  return next;
+                });
               }
             },
           },
@@ -323,6 +344,8 @@ export default function StageScreen() {
   const renderGroup = useCallback(
     ({ item }: { item: StageGroup }) => {
       const pushing = isPushing[item.key] ?? false;
+      const pulling = pullInProgress[item.key] ?? false;
+      const discarding = discardInProgress[item.key] ?? false;
       const pushError = pushErrors[item.key];
       const pushRejected = pushError?.includes('conflict-detected') ?? false;
       const groupConflictFiles = conflictFilesByGroup.get(item.key) ?? new Set<string>();
@@ -352,13 +375,17 @@ export default function StageScreen() {
             <TouchableOpacity
               testID={`stage.pull.${item.key}`}
               onPress={() => handlePullGroup(item)}
-              disabled={pushing}
+              disabled={pushing || pulling}
               accessibilityRole="button"
-              accessibilityState={{ disabled: pushing }}
+              accessibilityState={{ disabled: pushing || pulling }}
               className="px-3 py-1.5 rounded-md"
-              style={{ backgroundColor: pushing ? colors.border : colors.primary }}
+              style={{ backgroundColor: pushing || pulling ? colors.border : colors.primary }}
             >
-              <Ionicons name="git-pull-request-outline" size={13} color="#ffffff" />
+              {pulling ? (
+                <Ionicons name="hourglass" size={13} color="#ffffff" />
+              ) : (
+                <Ionicons name="git-pull-request-outline" size={13} color="#ffffff" />
+              )}
             </TouchableOpacity>
             <TouchableOpacity
               testID={`stage.push.${item.key}`}
@@ -376,13 +403,17 @@ export default function StageScreen() {
             <TouchableOpacity
               testID={`stage.discard.${item.key}`}
               onPress={() => handleDiscardGroup(item)}
-              disabled={pushing}
+              disabled={pushing || discarding}
               accessibilityRole="button"
-              accessibilityState={{ disabled: pushing }}
+              accessibilityState={{ disabled: pushing || discarding }}
               className="px-3 py-1.5 rounded-md"
-              style={{ backgroundColor: pushing ? colors.border : colors.error }}
+              style={{ backgroundColor: pushing || discarding ? colors.border : colors.error }}
             >
-              <Ionicons name="trash" size={13} color="#ffffff" />
+              {discarding ? (
+                <Ionicons name="hourglass" size={13} color="#ffffff" />
+              ) : (
+                <Ionicons name="trash" size={13} color="#ffffff" />
+              )}
             </TouchableOpacity>
           </View>
           {hasGroupConflicts ? (
@@ -436,7 +467,7 @@ export default function StageScreen() {
         </View>
       );
     },
-    [colors, conflictFilesByGroup, handlePushGroup, handlePullGroup, handleDiscardGroup, isPushing, navigation, pushErrors, dismissPushError],
+    [colors, conflictFilesByGroup, handlePushGroup, handlePullGroup, handleDiscardGroup, isPushing, pullInProgress, discardInProgress, navigation, pushErrors, dismissPushError],
   );
 
   const renderEmpty = useCallback(
