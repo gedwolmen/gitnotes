@@ -8,6 +8,12 @@ All notable fixes and feature changes to GitNotēs are documented here.
 >
 > **History**: prior fixes (pre-2026-08) lived in single-PR wiki pages. Those pages were retired in [#1047](https://github.com/gedwolmen/gitnotes/pull/1047); their full diagnostic content is preserved in git history via `git log -p -- docs/wiki/<file>.md`.
 
+## 2026-08-26
+
+### Push screen bottom button spacing (#1281)
+
+**fix(ui)** — Added `mb-3` to the "Push N commits" `TouchableOpacity` on `PushScreen` so the button has visible breathing room below it instead of sitting flush against the bottom edge of the screen.
+
 ## 2026-08-25
 
 ### Git Sync: Remove staging, move to commit-based model (#1249)
