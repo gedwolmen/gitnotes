@@ -384,6 +384,20 @@ export class GitFsService {
         singleBranch: true,
         onAuth: ensureToken(opts.token),
       });
+      // git.fastForward is a no-op when the local branch is already ahead of
+      // the remote (e.g. a freshly-created local commit) — it doesn't throw,
+      // it just returns silently. The push retry that follows would then fail
+      // with the same non-fast-forward rejection. Detect this explicitly and
+      // surface divergence so the caller can handle it instead of pushing
+      // a divergent branch.
+      const localOid = await git.resolveRef({ fs, dir, ref: `refs/heads/${opts.branch}` }).catch(() => null);
+      const remoteOid = await git.resolveRef({ fs, dir, ref: remoteRef }).catch(() => null);
+      if (localOid && remoteOid && localOid !== remoteOid) {
+        const localHasRemote = await git.isDescendent({ fs, dir, oid: remoteOid, ancestor: localOid }).catch(() => false);
+        if (!localHasRemote) {
+          return { ok: false, reason: 'diverged', error: 'Local branch has unpushed commits that diverged from remote' };
+        }
+      }
       // The LFS pointer walk is the most expensive step after a fetch. Skip it
       // when the remote ref did not move — no new objects arrived, so no new
       // placeholders can exist. This makes idle pulls (nothing changed on the
