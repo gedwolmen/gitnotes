@@ -34,23 +34,28 @@ describe('journalNoteTitle', () => {
 });
 
 describe('isJournalEntry', () => {
-  test('returns true for notes with journal tag', () => {
-    const note = baseNote({ tags: ['journal'] });
+  test('returns true for notes under the journals folder', () => {
+    const note = baseNote({ filePath: 'journals/2026-05-05.md' });
     expect(isJournalEntry(note)).toBe(true);
   });
 
-  test('returns true for notes with journal among other tags', () => {
-    const note = baseNote({ tags: ['personal', 'journal', 'daily'] });
+  test('returns true for a new journal with a journals folderPath', () => {
+    const note = baseNote({ folderPath: 'journals' });
     expect(isJournalEntry(note)).toBe(true);
   });
 
-  test('returns false for notes without journal tag', () => {
-    const note = baseNote({ tags: ['personal'] });
+  test('keeps legacy Journal folder entries discoverable', () => {
+    const note = baseNote({ filePath: 'Journal/2026-05-05.md' });
+    expect(isJournalEntry(note)).toBe(true);
+  });
+
+  test('returns false for a tagged note outside the journals folder', () => {
+    const note = baseNote({ tags: ['journal'], filePath: 'notes/meeting.md' });
     expect(isJournalEntry(note)).toBe(false);
   });
 
-  test('returns false for notes with no tags', () => {
-    const note = baseNote({ tags: [] });
+  test('returns false for an untagged note outside the journals folder', () => {
+    const note = baseNote({ tags: [], filePath: 'notes/meeting.md' });
     expect(isJournalEntry(note)).toBe(false);
   });
 });
@@ -78,6 +83,7 @@ describe('findJournalEntry', () => {
     const note = baseNote({
       title: 'Journal 2026-05-05',
       tags: ['journal'],
+      filePath: 'journals/2026-05-05.md',
       createdAt: new Date(2026, 4, 5).getTime(),
     });
     const result = findJournalEntry([note], new Date(2026, 4, 5));
@@ -88,6 +94,7 @@ describe('findJournalEntry', () => {
     const note = baseNote({
       title: 'Journal 2026-05-04',
       tags: ['journal'],
+      filePath: 'journals/2026-05-04.md',
     });
     const result = findJournalEntry([note], new Date(2026, 4, 5));
     expect(result).toBeUndefined();
@@ -97,6 +104,7 @@ describe('findJournalEntry', () => {
     const note = baseNote({
       title: 'Journal 2026-05-05',
       tags: ['personal'],
+      filePath: 'notes/Journal 2026-05-05.md',
     });
     const result = findJournalEntry([note], new Date(2026, 4, 5));
     expect(result).toBeUndefined();
@@ -109,18 +117,21 @@ describe('getJournalEntries', () => {
       id: 'may3',
       title: 'Journal 2026-05-03',
       tags: ['journal'],
+      filePath: 'journals/2026-05-03.md',
       createdAt: new Date(2026, 4, 3).getTime(),
     });
     const may5 = baseNote({
       id: 'may5',
       title: 'Journal 2026-05-05',
       tags: ['journal'],
+      filePath: 'journals/2026-05-05.md',
       createdAt: new Date(2026, 4, 5).getTime(),
     });
     const may10 = baseNote({
       id: 'may10',
       title: 'Journal 2026-05-10',
       tags: ['journal'],
+      filePath: 'journals/2026-05-10.md',
       createdAt: new Date(2026, 4, 10).getTime(),
     });
     const nonJournal = baseNote({
@@ -142,6 +153,7 @@ describe('getJournalEntries', () => {
     const note = baseNote({
       title: 'Journal 2026-01-01',
       tags: ['journal'],
+      filePath: 'journals/2026-01-01.md',
       createdAt: new Date(2026, 0, 1).getTime(),
     });
     const result = getJournalEntries([note], new Date(2026, 4, 1), new Date(2026, 4, 7));
@@ -155,7 +167,7 @@ describe('buildJournalNoteInput', () => {
     const input = buildJournalNoteInput(date);
     expect(input.title).toBe('Journal 2026-05-05');
     expect(input.tags).toEqual(['journal']);
-    expect(input.folderPath).toBe('Journal');
+    expect(input.folderPath).toBe('journals');
     expect(input.format).toBe('markdown');
     expect(input.content).toBe('');
   });
