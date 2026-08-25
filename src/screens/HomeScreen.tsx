@@ -31,7 +31,6 @@ import { HomeNoteContextMenu } from '../components/home/HomeNoteContextMenu';
 import ColorPicker from '../components/ColorPicker';
 import { ShareFormat } from '../services/ShareService';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
-import { StagingService } from '../services/git/StagingService';
 import { useTranslation } from 'react-i18next';
 import { DailyQuoteCard } from '../components/home/DailyQuoteCard';
 import { useDailyQuote } from '../hooks/useDailyQuote';
@@ -245,13 +244,9 @@ export default function HomeScreen() {
             color,
           };
           try {
-            const staged = await StagingService.stageUpsert(syncParams);
-            if (!staged.success) {
-              console.warn('[HomeScreen] stage after color update failed:', staged.error);
-            }
-          } catch (error) {
-            console.warn('[HomeScreen] stage after color update failed:', error);
             await NoteSyncQueueService.enqueueNoteUpsert(syncParams, updated.id);
+          } catch (error) {
+            console.warn('[HomeScreen] sync after color update failed:', error);
           }
         }
       } catch {

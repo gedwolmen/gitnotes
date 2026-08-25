@@ -106,9 +106,6 @@ describe('ForegroundSyncService', () => {
     reposMock.mockResolvedValue([repository]);
     netInfoFetchMock.mockResolvedValue(reachableState);
     pullMock.mockResolvedValue(pullResult);
-    hasPushSessionMock.mockResolvedValue(false);
-    drainPushQueueMock.mockResolvedValue(undefined);
-    useStageStoreMock.getState.mockReturnValue({ staged: [] } as never);
   });
 
   afterEach(() => {

@@ -6,7 +6,7 @@ import { SyncEngineService } from './SyncEngineService';
 import { resolveBranch } from './git/branchResolver';
 import { getGitHostService } from './git/gitHostFactory';
 import { FEATURE_USE_MULTI_HOST_WRITE } from './featureFlags';
-import { StagingService } from './git/StagingService';
+import { NoteSyncQueueService } from './NoteSyncQueueService';
 import type { GitHostProvider } from './git/GitHost';
 
 const THOUGHTS_DIR = 'thoughts/';
@@ -90,7 +90,7 @@ export class ThoughtDumpService {
     const content = serializeThoughtDump(dump);
 
     const writeResult = await enqueueRepoWrite(repoInfo.owner, repoInfo.repo, branch, async () =>
-      StagingService.stageUpsert({
+      NoteSyncQueueService.enqueueNoteUpsert({
         repo: repoPath,
         branch,
         filePath: dump.filePath,
@@ -99,9 +99,9 @@ export class ThoughtDumpService {
       }),
     );
 
-    if (!writeResult.success) {
-      console.warn('[ThoughtDumpService] create failed:', writeResult.error);
-      return { ok: false, reason: 'write-failed', error: writeResult.error };
+    if (!writeResult) {
+      console.warn('[ThoughtDumpService] create failed');
+      return { ok: false, reason: 'write-failed' };
     }
 
     return { ok: true, dump };
@@ -189,15 +189,20 @@ export class ThoughtDumpService {
     const repoInfo = parseRepoPath(repoPath);
     if (!repoInfo) return false;
 
-    const result = await enqueueRepoWrite(repoInfo.owner, repoInfo.repo, branch, async () =>
-      StagingService.stageDelete({
-        repo: repoPath,
-        branch,
-        filePath: options.filePath,
-        title: 'Thought dump',
-      }),
-    );
+    const result = await enqueueRepoWrite(repoInfo.owner, repoInfo.repo, branch, async () => {
+      try {
+        await NoteSyncQueueService.enqueueNoteDelete({
+          repo: repoPath,
+          branch,
+          filePath: options.filePath,
+          title: 'Thought dump',
+        });
+        return true;
+      } catch {
+        return false;
+      }
+    });
 
-    return result.success;
+    return result;
   }
 }

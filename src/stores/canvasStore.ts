@@ -3,7 +3,7 @@ import { Canvas, CanvasCreateInput, CanvasUpdateInput, sortCanvasesByUpdated } f
 import { StorageService } from '../services/StorageService';
 import { GitHubService } from '../services/GitHubService';
 import { formatSyncError } from '../services/git/formatSyncError';
-import { StagingService } from '../services/git/StagingService';
+import { deleteCanvasFromGitHub } from '../services/CanvasGitHubSyncService';
 import { gitOperationRegistry } from './gitOperationStore';
 
 interface CanvasState {
@@ -97,14 +97,14 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()((set, get) =
             if (opId) gitOperationRegistry.fail(opId, 'Sign in to GitHub to delete synced canvases');
             return false;
           }
-          const staged = await StagingService.stageDelete({
+          const staged = await deleteCanvasFromGitHub({
             repo: canvas.repo,
             branch: canvas.branch,
             filePath: canvas.filePath,
             title: canvas.title,
           });
           if (!staged.success) {
-            if (staged.error) console.warn('[CanvasStore] delete stage failed:', staged.error);
+            if (staged.error) console.warn('[CanvasStore] delete failed:', staged.error);
             set({ error: formatSyncError(staged.error, 'delete') });
             if (opId) gitOperationRegistry.fail(opId, staged.error ?? 'Delete failed');
             return false;

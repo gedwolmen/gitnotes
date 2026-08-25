@@ -4,8 +4,6 @@ import { StorageService } from '../services/StorageService';
 import { TemplateRepoPreferenceService } from '../services/TemplateRepoPreferenceService';
 import { serializeTemplate, templateSlug } from '../services/TemplateMarkdownService';
 import { generateId } from '../utils/ids';
-import { formatSyncError } from '../services/git/formatSyncError';
-import { StagingService } from '../services/git/StagingService';
 
 interface TemplateState {
   customTemplates: NoteTemplate[];
@@ -43,19 +41,6 @@ export const useTemplateStore = create<TemplateState>()((set, get) => ({
     };
 
     const synced = template;
-    const pref = await TemplateRepoPreferenceService.get();
-    if (pref) {
-      const staged = await StagingService.stageUpsert({
-        repo: pref.repoPath,
-        branch: pref.branch,
-        filePath: template.filePath ?? `templates/${templateSlug(template.name)}.md`,
-        title: template.name,
-        content: serializeTemplate({ ...template, filePath: undefined }),
-      });
-      if (!staged.success) {
-        console.warn(`[templateStore] Failed to stage template "${template.name}" to GitHub: ${formatSyncError(staged.error, 'upsert')}`);
-      }
-    }
 
     const next = [...get().customTemplates, synced];
     await StorageService.saveCustomTemplates(next);
@@ -69,20 +54,6 @@ export const useTemplateStore = create<TemplateState>()((set, get) => ({
 
     const merged: NoteTemplate = { ...current, ...updates, updatedAt: Date.now() };
 
-    const pref = await TemplateRepoPreferenceService.get();
-    if (pref) {
-      const staged = await StagingService.stageUpsert({
-        repo: pref.repoPath,
-        branch: pref.branch,
-        filePath: merged.filePath ?? `templates/${templateSlug(merged.name)}.md`,
-        title: merged.name,
-        content: serializeTemplate({ ...merged, filePath: undefined }),
-      });
-      if (!staged.success) {
-        console.warn(`[templateStore] Failed to stage template "${merged.name}" to GitHub: ${formatSyncError(staged.error, 'upsert')}`);
-      }
-    }
-
     const next = get().customTemplates.map((t) => (t.id === id ? merged : t));
     await StorageService.saveCustomTemplates(next);
     set({ customTemplates: next });
@@ -91,19 +62,6 @@ export const useTemplateStore = create<TemplateState>()((set, get) => ({
   deleteTemplate: async (id) => {
     const template = get().customTemplates.find((t) => t.id === id);
     if (!template?.isCustom) return;
-
-    const pref = await TemplateRepoPreferenceService.get();
-    if (pref && template.filePath) {
-      const staged = await StagingService.stageDelete({
-        repo: pref.repoPath,
-        branch: pref.branch,
-        filePath: template.filePath,
-        title: template.name,
-      });
-      if (!staged.success) {
-        console.warn(`[templateStore] Failed to stage template "${template.name}" deletion: ${formatSyncError(staged.error, 'delete')}`);
-      }
-    }
 
     const next = get().customTemplates.filter((t) => t.id !== id);
     await StorageService.saveCustomTemplates(next);

@@ -135,8 +135,6 @@ export default function App() {
     } catch (error) {
       console.warn('[App] foreground sync watcher start failed:', error);
     }
-    PushNotificationService.attachToScheduler();
-    PushNotificationService.subscribeToPushProgress();
     void reconcileThoughtDumps().catch(() => {});
     void LastSelectionPreferenceService.migrateFromLegacy();
   }, []);

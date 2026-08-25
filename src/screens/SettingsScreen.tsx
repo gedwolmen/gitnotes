@@ -19,7 +19,7 @@ import { GitHubService, type GitHubRepository } from '../services/GitHubService'
 import { RepoFileSyncService } from '../services/RepoFileSyncService';
 import { TemplateRepoPreferenceService, type TemplateRepoPreference } from '../services/TemplateRepoPreferenceService';
 import { serializeTemplate, templateSlug } from '../services/TemplateMarkdownService';
-import { StagingService } from '../services/git/StagingService';
+import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import { hasUnpushedLocalCommits } from '../services/git/LocalGitWriter';
 import { SyncEngineService, type SyncEngineMode } from '../services/SyncEngineService';
 import { GitFsService } from '../services/git/GitFsService';
@@ -487,17 +487,17 @@ export default function SettingsScreen() {
     try {
       for (const template of unsynced) {
         const filePath = `templates/${templateSlug(template.name)}.md`;
-        const staged = await StagingService.stageUpsert({
-          repo: templatesRepoPref.repoPath,
-          branch: templatesRepoPref.branch,
-          filePath,
-          title: template.name,
-          content: serializeTemplate({ ...template, filePath: undefined }),
-        });
-        if (staged.success) {
+        try {
+          await NoteSyncQueueService.enqueueNoteUpsert({
+            repo: templatesRepoPref.repoPath,
+            branch: templatesRepoPref.branch,
+            filePath,
+            title: template.name,
+            content: serializeTemplate({ ...template, filePath: undefined }),
+          });
           await useTemplateStore.getState().updateTemplate(template.id, { filePath });
           synced++;
-        } else {
+        } catch {
           failed++;
         }
       }

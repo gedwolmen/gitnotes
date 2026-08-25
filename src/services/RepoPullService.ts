@@ -383,7 +383,7 @@ async function pullNotesFromRepo(
     const tree = await resolvedReader.listTree();
     const noteBlobs = tree.filter((item) => {
       if (item.type !== 'blob') return false;
-      if (!item.path.startsWith('notes/')) return false;
+      // Skip images subdirectory of notes folder
       if (item.path.startsWith('notes/images/')) return false;
       if (item.path.startsWith('thoughts/')) return false;
       const ext = item.path.split('.').pop()?.toLowerCase();
@@ -418,7 +418,7 @@ async function pullNotesFromRepo(
     // here would DELETE a note the user just wrote — data loss after a
     // restart mid-push. Only drop a note when we are sure the remote no
     // longer has it AND nothing local is waiting to push it.
-    const protectedPaths = await collectPendingPaths(repoPath, branch, resolvedReader.mode, 'notes/');
+    const protectedPaths = await collectPendingPaths(repoPath, branch, resolvedReader.mode, '');
     for (const p of protectedPaths) remoteFilePaths.add(p);
 
     let allNotes = await StorageService.getAllNotes();

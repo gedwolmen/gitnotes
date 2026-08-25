@@ -4,6 +4,7 @@ import { parseRepoPath } from '../utils/gitPathParser';
 import { AuthService } from './AuthService';
 import { SyncEngineService } from './SyncEngineService';
 import { CommitService } from './git/CommitService';
+import { resolveDefaultFolder, resolveDefaultRepo } from './git/defaultsPolicy';
 import { GitFsService } from './git/GitFsService';
 import { resolveBranch } from './git/resolveBranch';
 
@@ -41,7 +42,13 @@ export async function syncTodoToGitHub(params: {
   todo: Partial<Todo>;
   accountId?: string;
 }): Promise<TodoGitHubSyncResult> {
-  const { repo: repoPath, branch, filePath, text, todo, accountId } = params;
+  const { repo, branch, filePath, text, todo, accountId } = params;
+  let repoPath: string;
+  try {
+    repoPath = repo ?? await resolveDefaultRepo();
+  } catch {
+    return { success: false, error: 'No repository configured' };
+  }
   const tokenOverride = await resolveToken(accountId);
 
   if (!tokenOverride && !GitHubService.isAuthenticated()) {
@@ -63,7 +70,7 @@ export async function syncTodoToGitHub(params: {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '')
       || 'untitled';
-    targetPath = `todos/${slug}.json`;
+    targetPath = `${resolveDefaultFolder('todo')}${slug}.json`;
   }
 
   const content = serializeTodo(todo);

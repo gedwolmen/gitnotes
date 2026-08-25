@@ -20,10 +20,6 @@ jest.mock('../src/services/SyncEngineService', () => ({
   },
 }));
 
-jest.mock('../src/services/git/StagingService', () => ({
-  StagingService: { stageDelete: jest.fn(), stageUpsert: jest.fn() },
-}));
-
 jest.mock('../src/services/AuthService', () => ({
   AuthService: {
     getTokenById: jest.fn(async () => null),
@@ -34,7 +30,6 @@ jest.mock('../src/services/AuthService', () => ({
 import { useTodoStore } from '../src/stores/todoStore';
 import { StorageService } from '../src/services/StorageService';
 import { GitHubService } from '../src/services/GitHubService';
-import { StagingService } from '../src/services/git/StagingService';
 
 describe('todo delete GitHub sync', () => {
   let storageTodos: Array<{
@@ -63,7 +58,6 @@ describe('todo delete GitHub sync', () => {
       content: { sha: 'deleted-sha' },
       commit: { sha: 'commit-sha' },
     });
-    (StagingService.stageDelete as jest.Mock).mockResolvedValue({ success: true });
     useTodoStore.setState({ todos: [], isLoading: false, error: null });
   });
 
@@ -84,14 +78,6 @@ describe('todo delete GitHub sync', () => {
 
     await useTodoStore.getState().deleteTodo('todo-1');
 
-    expect(StagingService.stageDelete).toHaveBeenCalledWith(
-      expect.objectContaining({
-        repo: 'owner/repo',
-        branch: 'main',
-        filePath: 'todos/ship-it.json',
-        title: 'Ship it',
-      }),
-    );
     expect(GitHubService.deleteFile).not.toHaveBeenCalled();
     expect(StorageService.deleteTodo).toHaveBeenCalledWith('todo-1');
     expect(useTodoStore.getState().todos).toEqual([]);
@@ -115,11 +101,6 @@ describe('todo delete GitHub sync', () => {
 
     storageTodos = [syncedTodo];
     useTodoStore.setState({ todos: [syncedTodo], isLoading: false, error: null });
-
-    (StagingService.stageDelete as jest.Mock).mockResolvedValueOnce({
-      success: false,
-      error: 'staging boom',
-    });
 
     const ok = await useTodoStore.getState().deleteTodo('todo-2');
 
@@ -174,7 +155,6 @@ describe('todo delete GitHub sync', () => {
     const ok = await useTodoStore.getState().deleteTodo('todo-stale');
 
     expect(ok).toBe(true);
-    expect(StagingService.stageDelete).toHaveBeenCalledTimes(1);
     expect(GitHubService.deleteFile).not.toHaveBeenCalled();
     expect(StorageService.deleteTodo).toHaveBeenCalledWith('todo-stale');
     expect(useTodoStore.getState().todos).toEqual([]);

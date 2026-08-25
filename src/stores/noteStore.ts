@@ -6,6 +6,7 @@ import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import type { MutationSucceededEvent, DroppedMutationEvent, NoteDeleteParams } from '../services/NoteSyncQueueService';
 import { SyncEngineService } from '../services/SyncEngineService';
 import { CommitService } from '../services/git/CommitService';
+import { resolveDefaultFolder, resolveDefaultRepo } from '../services/git/defaultsPolicy';
 import { recordDeleteFailure } from '../services/git/deleteFailures';
 import { gitOperationRegistry, useGitOperationStore } from './gitOperationStore';
 import type { GitOp } from './gitOperationStore';
@@ -42,7 +43,7 @@ export function deriveDefaultNotePath(note: Note): string | null {
   if (!title) return null;
   const slug = slugifyLocal(title);
   const ext = getExtensionForFormat(note.format);
-  return note.folderPath ? `${note.folderPath}/${slug}${ext}` : `notes/${slug}${ext}`;
+  return note.folderPath ? `${note.folderPath}/${slug}${ext}` : `${resolveDefaultFolder('note')}${slug}${ext}`;
 }
 
 export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
@@ -78,9 +79,16 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
   },
 
   createNote: async (input) => {
+    let repo: string;
+    try {
+      repo = input.repo ?? await resolveDefaultRepo();
+    } catch {
+      set({ error: 'No repository configured' });
+      return null;
+    }
     try {
       set({ error: null });
-      const newNote = await StorageService.createNote(input);
+      const newNote = await StorageService.createNote({ ...input, repo });
       set((state) => ({ notes: sortNotesWithPinnedFirst([...state.notes, newNote]) }));
       return newNote;
     } catch (err) {

@@ -4,6 +4,7 @@ import { parseRepoPath } from '../utils/gitPathParser';
 import { AuthService } from './AuthService';
 import { SyncEngineService } from './SyncEngineService';
 import { CommitService } from './git/CommitService';
+import { resolveDefaultFolder, resolveDefaultRepo } from './git/defaultsPolicy';
 import { resolveBranch } from './git/resolveBranch';
 
 async function resolveToken(accountId?: string): Promise<string | undefined> {
@@ -26,7 +27,13 @@ export async function syncCanvasToGitHub(params: {
   scene: CanvasScene;
   accountId?: string;
 }): Promise<CanvasGitHubSyncResult> {
-  const { repo: repoPath, branch, filePath, title, scene, accountId } = params;
+  const { repo, branch, filePath, title, scene, accountId } = params;
+  let repoPath: string;
+  try {
+    repoPath = repo ?? await resolveDefaultRepo();
+  } catch {
+    return { success: false, error: 'No repository configured' };
+  }
   const tokenOverride = await resolveToken(accountId);
 
   if (!tokenOverride && !GitHubService.isAuthenticated()) {
@@ -44,7 +51,7 @@ export async function syncCanvasToGitHub(params: {
   let targetPath = filePath;
   if (!targetPath) {
     const slug = slugifyCanvasTitle(title);
-    targetPath = `canvases/${slug}.json`;
+    targetPath = `${resolveDefaultFolder('canvas')}${slug}.json`;
   }
 
   const content = JSON.stringify(scene, null, 2);

@@ -4,6 +4,8 @@ import { serializeTemplate, templateSlug } from './TemplateMarkdownService';
 import type { NoteTemplate } from './TemplateService';
 import { SyncEngineService } from './SyncEngineService';
 import { CommitService } from './git/CommitService';
+import { resolveDefaultFolder } from './git/defaultsPolicy';
+import { resolveDefaultRepo } from './git/defaultsPolicy';
 
 function resolveAuthor() {
   const user = GitHubService.getUser();
@@ -24,7 +26,13 @@ export async function syncTemplateToGitHub(params: {
   branch: string;
   template: NoteTemplate;
 }): Promise<TemplateSyncResult> {
-  const { repoPath, branch, template } = params;
+  const { repoPath: inputRepoPath, branch, template } = params;
+  let repoPath: string;
+  try {
+    repoPath = inputRepoPath ?? await resolveDefaultRepo();
+  } catch {
+    return { success: false, error: 'No repository configured' };
+  }
 
   if (!GitHubService.isAuthenticated()) {
     return { success: false, error: 'GitHub not authenticated' };
@@ -32,7 +40,7 @@ export async function syncTemplateToGitHub(params: {
   const info = parseRepoPath(repoPath);
   if (!info) return { success: false, error: `Invalid repo path: ${repoPath}` };
 
-  const targetPath = template.filePath || `templates/${templateSlug(template.name)}.md`;
+  const targetPath = template.filePath || `${resolveDefaultFolder('template')}${templateSlug(template.name)}.md`;
   const isUpdate = Boolean(template.filePath);
   const message = `${isUpdate ? 'Update' : 'Add'} template ${template.name}`;
   const body = serializeTemplate({ ...template, filePath: undefined });

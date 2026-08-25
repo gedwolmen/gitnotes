@@ -1,200 +1,215 @@
-import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
+jest.mock('expo-notifications');
+jest.mock('../../src/services/NotificationService');
 
-type PushState = { isPushing: Record<string, boolean>; pushProgress?: number | null; pendingCount?: number };
-type PushFailure = { key: string; error: string };
-type ProgressListener = (state: PushState, prevState: PushState) => void;
-type FailureHandler = (failure: PushFailure) => void;
-type NotificationContent = { title: string; body: string; data: Record<string, unknown> };
+const mockOnDropped = jest.fn();
+const mockQueueSubscribe = jest.fn();
+const mockGetAll = jest.fn();
+const mockGitOpSubscribe = jest.fn();
 
-const mockDismissAndReschedule = jest.fn(async () => 'reschedule-id');
-const mockSchedulePushFailure = jest.fn(async () => 'failure-id');
-
-jest.mock('../../src/services/NotificationService', () => ({
-  NotificationService: {
-    dismissAndReschedule: mockDismissAndReschedule,
-    schedulePushFailure: mockSchedulePushFailure,
+jest.mock('../../src/services/NoteSyncQueueService', () => ({
+  __esModule: true,
+  get NoteSyncQueueService() {
+    return {
+      onDroppedMutation: mockOnDropped,
+      subscribe: mockQueueSubscribe,
+      getAll: mockGetAll,
+    };
   },
 }));
 
-const mockAddOnPushFailure = jest.fn(() => jest.fn());
-jest.mock('../../src/services/StagePushScheduler', () => ({
-  setOnPushFailure: jest.fn(),
-  addOnPushFailure: mockAddOnPushFailure,
+jest.mock('../../src/stores/gitOperationStore', () => ({
+  __esModule: true,
+  get useGitOperationStore() {
+    return {
+      subscribe: mockGitOpSubscribe,
+      getState: jest.fn(() => ({ ops: {} })),
+    };
+  },
 }));
 
+import { afterEach, beforeEach, expect, jest, test } from '@jest/globals';
+import { NotificationService } from '../../src/services/NotificationService';
+import { useGitOperationStore } from '../../src/stores/gitOperationStore';
+import * as PushNotificationService from '../../src/services/PushNotificationService';
 
-
+// Mock react-native AFTER imports to ensure correct ordering
 let mockAppState = 'background';
 jest.mock('react-native', () => ({
   AppState: {
-    get currentState() {
-      return mockAppState;
-    },
+    get currentState() { return mockAppState; },
   },
 }));
 
-let pushService: typeof import('../../src/services/PushNotificationService');
-
 describe('PushNotificationService', () => {
+  let droppedCb: any;
+  let gitOpCb: any;
+
   beforeEach(() => {
     jest.useFakeTimers();
     jest.setSystemTime(5000);
     jest.clearAllMocks();
     mockAppState = 'background';
-    jest.isolateModules(() => {
-      pushService = require('../../src/services/PushNotificationService');
+
+    PushNotificationService._resetPushStartState();
+
+    mockOnDropped.mockImplementation((cb: any) => {
+      droppedCb = cb;
+      return () => {};
+    });
+
+    mockQueueSubscribe.mockImplementation((cb: any) => {
+      return () => {};
+    });
+
+    mockGetAll.mockResolvedValue([]);
+
+    mockGitOpSubscribe.mockImplementation((cb: any) => {
+      gitOpCb = cb;
+      return () => {};
     });
   });
 
   afterEach(() => {
     jest.useRealTimers();
+    jest.setSystemTime(5000);
+    droppedCb = null;
+    gitOpCb = null;
   });
-
-  test('failure notification is scheduled with the push-failure payload shape', () => {
-    pushService.attachToScheduler();
-    const handler = mockAddOnPushFailure.mock.calls[0][0] as FailureHandler;
-
-    handler({ key: '/repo/path::main', error: 'boom' });
-
-    expect(mockSchedulePushFailure).toHaveBeenCalledTimes(1);
-    expect(mockSchedulePushFailure).toHaveBeenCalledWith(
-      'Push failed',
-      expect.any(String),
+  
+  test('resolvePushFailureRoute maps plain failures to home and conflicts to conflicts', () => {
+    expect(PushNotificationService.resolvePushFailureRoute(false)).toBe('gitnotes://home');
+    expect(PushNotificationService.resolvePushFailureRoute(true)).toBe('gitnotes://conflicts');
+  });
+  
+  test('attachToScheduler calls schedulePushFailure on permanent failure', () => {
+    PushNotificationService.attachToScheduler();
+    
+    droppedCb({
+      mutation: { id: '1', type: 'note.upsert', params: { repo: '/repo/path', branch: 'main', filePath: 'foo.md' }, attempts: 8, createdAt: 0 },
+      reason: 'exhausted',
+      error: 'boom',
+    });
+    
+    expect(NotificationService.schedulePushFailure).toHaveBeenCalledTimes(1);
+    expect(NotificationService.schedulePushFailure).toHaveBeenCalledWith(
+      'Push failed', 'boom',
       { kind: 'push-failure', repoPath: '/repo/path', branch: 'main', conflict: false },
     );
   });
-
-  test('conflict-caused failures are flagged conflict: true', () => {
-    pushService.attachToScheduler();
-    const handler = mockAddOnPushFailure.mock.calls[0][0] as FailureHandler;
-
-    handler({ key: '/repo/path::main', error: 'conflict-detected' });
-    expect(mockSchedulePushFailure).toHaveBeenLastCalledWith(
-      'Push failed',
-      expect.any(String),
+  
+  test('attachToScheduler marks conflict: true when error contains conflict', () => {
+    PushNotificationService.attachToScheduler();
+    
+    droppedCb({
+      mutation: { id: '1', type: 'note.upsert', params: { repo: '/repo/path', branch: 'main', filePath: 'foo.md' }, attempts: 8, createdAt: 0 },
+      reason: 'exhausted',
+      error: 'conflict-detected',
+    });
+    
+    expect(NotificationService.schedulePushFailure).toHaveBeenLastCalledWith(
+      'Push failed', 'conflict-detected',
       { kind: 'push-failure', repoPath: '/repo/path', branch: 'main', conflict: true },
     );
   });
-
-  test('repeated push failures for the same (repo, branch) within the dedup window are suppressed', () => {
-    pushService.attachToScheduler();
-    const handler = mockAddOnPushFailure.mock.calls[0][0] as FailureHandler;
-
-    handler({ key: '/repo/path::main', error: 'boom' });
-    expect(mockSchedulePushFailure).toHaveBeenCalledTimes(1);
-
+  
+  test('attachToScheduler suppresses duplicate failures within dedup window', () => {
+    PushNotificationService.attachToScheduler();
+    
+    droppedCb({
+      mutation: { id: '1', type: 'note.upsert', params: { repo: '/repo/path', branch: 'main', filePath: 'foo.md' }, attempts: 8, createdAt: 0 },
+      reason: 'exhausted',
+      error: 'boom',
+    });
+    expect(NotificationService.schedulePushFailure).toHaveBeenCalledTimes(1);
+    
     jest.setSystemTime(5000 + 30 * 1000);
-    handler({ key: '/repo/path::main', error: 'still failing' });
-    expect(mockSchedulePushFailure).toHaveBeenCalledTimes(1);
+    droppedCb({
+      mutation: { id: '2', type: 'note.upsert', params: { repo: '/repo/path', branch: 'main', filePath: 'bar.md' }, attempts: 8, createdAt: 0 },
+      reason: 'exhausted',
+      error: 'still failing',
+    });
+    expect(NotificationService.schedulePushFailure).toHaveBeenCalledTimes(1);
   });
-
-  test('push failures for different (repo, branch) are not deduped against each other', () => {
-    pushService.attachToScheduler();
-    const handler = mockAddOnPushFailure.mock.calls[0][0] as FailureHandler;
-
-    handler({ key: '/repo/a::main', error: 'boom' });
-    handler({ key: '/repo/b::main', error: 'boom' });
-    expect(mockSchedulePushFailure).toHaveBeenCalledTimes(2);
+  
+  test('attachToScheduler notifies for different (repo, branch) independently', () => {
+    PushNotificationService.attachToScheduler();
+    
+    droppedCb({
+      mutation: { id: '1', type: 'note.upsert', params: { repo: '/repo/a', branch: 'main', filePath: 'foo.md' }, attempts: 8, createdAt: 0 },
+      reason: 'exhausted',
+      error: 'boom',
+    });
+    droppedCb({
+      mutation: { id: '2', type: 'note.upsert', params: { repo: '/repo/b', branch: 'main', filePath: 'bar.md' }, attempts: 8, createdAt: 0 },
+      reason: 'exhausted',
+      error: 'boom',
+    });
+    expect(NotificationService.schedulePushFailure).toHaveBeenCalledTimes(2);
   });
-
-  test('push failures for the same (repo, branch) past the dedup window are notified again', () => {
-    pushService.attachToScheduler();
-    const handler = mockAddOnPushFailure.mock.calls[0][0] as FailureHandler;
-
-    handler({ key: '/repo/path::main', error: 'boom' });
-    expect(mockSchedulePushFailure).toHaveBeenCalledTimes(1);
+  
+  test('attachToScheduler re-notifies past the dedup window', () => {
+    PushNotificationService.attachToScheduler();
+    
+    droppedCb({
+      mutation: { id: '1', type: 'note.upsert', params: { repo: '/repo/path', branch: 'main', filePath: 'foo.md' }, attempts: 8, createdAt: 0 },
+      reason: 'exhausted',
+      error: 'boom',
+    });
+    expect(NotificationService.schedulePushFailure).toHaveBeenCalledTimes(1);
+    
     jest.setSystemTime(5000 + 3 * 60 * 1000);
-    handler({ key: '/repo/path::main', error: 'boom' });
-    expect(mockSchedulePushFailure).toHaveBeenCalledTimes(2);
+    droppedCb({
+      mutation: { id: '2', type: 'note.upsert', params: { repo: '/repo/path', branch: 'main', filePath: 'bar.md' }, attempts: 8, createdAt: 0 },
+      reason: 'exhausted',
+      error: 'boom',
+    });
+    expect(NotificationService.schedulePushFailure).toHaveBeenCalledTimes(2);
   });
+  
+  test('subscribeToPushProgress fires start notification via dismissAndReschedule', async () => {
+    mockGetAll.mockResolvedValue([{},{},{},{},{}]);
 
-  test('start notification fires via dismissAndReschedule with body-text file count', () => {
-    pushService.subscribeToPushProgress();
-    const listener = mockSubscribe.mock.calls[0][0] as ProgressListener;
+    PushNotificationService.subscribeToPushProgress();
 
-    listener(
-      { isPushing: { 'a/repo::main': true }, pendingCount: 5, pushProgress: null },
-      { isPushing: {}, pendingCount: 5, pushProgress: null },
-    );
+    gitOpCb({ 'push-1': { id: 'push-1', kind: 'push', status: 'running', repo: 'a/repo', branch: 'main' } });
+    await Promise.resolve();
 
-    expect(mockDismissAndReschedule).toHaveBeenCalledTimes(1);
-    const [id, content] = mockDismissAndReschedule.mock.calls[0] as [string, NotificationContent];
+    expect(NotificationService.dismissAndReschedule).toHaveBeenCalledTimes(1);
+    const [id, content] = (NotificationService.dismissAndReschedule as jest.Mock).mock.calls[0] as [string, any];
     expect(id).toBe('gitnotes-push-progress');
     expect(content.title).toBe('Pushing changes…');
-    expect(content.body).toBe('Pushing 0/5 files…');
     expect(content.data).toEqual({ kind: 'push-progress' });
   });
+  
+  test('subscribeToPushProgress completion notification fires when isPushing clears', async () => {
+    mockGetAll.mockResolvedValue([{},{},{}]);
 
-  test('throttled body-text updates during push', () => {
-    pushService.subscribeToPushProgress();
-    const listener = mockSubscribe.mock.calls[0][0] as ProgressListener;
+    PushNotificationService.subscribeToPushProgress();
 
-    listener(
-      { isPushing: { a: true }, pendingCount: 10, pushProgress: 0 },
-      { isPushing: {}, pendingCount: 10, pushProgress: null },
-    );
-    expect(mockDismissAndReschedule).toHaveBeenCalledTimes(1);
+    gitOpCb({ 'push-1': { id: 'push-1', kind: 'push', status: 'running', repo: 'a/repo', branch: 'main' } });
+    await Promise.resolve();
 
-    listener(
-      { isPushing: { a: true }, pendingCount: 10, pushProgress: 0.3 },
-      { isPushing: { a: true }, pendingCount: 10, pushProgress: 0 },
-    );
-    expect(mockDismissAndReschedule).toHaveBeenCalledTimes(1);
+    mockGetAll.mockResolvedValue([]);
+    jest.setSystemTime(6000);
+    gitOpCb({});
+    await Promise.resolve();
 
-    jest.advanceTimersByTime(1000);
-    listener(
-      { isPushing: { a: true }, pendingCount: 10, pushProgress: 0.6 },
-      { isPushing: { a: true }, pendingCount: 10, pushProgress: 0.3 },
-    );
-    expect(mockDismissAndReschedule).toHaveBeenCalledTimes(2);
-    const [, updatedContent] = mockDismissAndReschedule.mock.calls[1] as [string, NotificationContent];
-    expect(updatedContent.body).toBe('Pushing 6/10 files…');
+    const calls = (NotificationService.dismissAndReschedule as jest.Mock).mock.calls;
+    const lastCall = calls[calls.length - 1];
+    const [, content] = lastCall as [string, any];
+    expect(content.title).toBe('Push complete');
+    expect(content.body).toBe('All staged changes pushed to GitHub');
   });
-
-  test('completion notification fires when push ends', () => {
-    pushService.subscribeToPushProgress();
-    const listener = mockSubscribe.mock.calls[0][0] as ProgressListener;
-
-    listener(
-      { isPushing: { a: true }, pendingCount: 3, pushProgress: null },
-      { isPushing: {}, pendingCount: 3, pushProgress: null },
-    );
-    expect(mockDismissAndReschedule).toHaveBeenCalledTimes(1);
-
-    listener(
-      { isPushing: {}, pendingCount: 0, pushProgress: null },
-      { isPushing: { a: true }, pendingCount: 3, pushProgress: 1 },
-    );
-    expect(mockDismissAndReschedule).toHaveBeenCalledTimes(2);
-    const [, completionContent] = mockDismissAndReschedule.mock.calls[1] as [string, NotificationContent];
-    expect(completionContent.title).toBe('Push complete');
-    expect(completionContent.body).toBe('All staged changes pushed to GitHub');
-    expect(completionContent.data).toEqual({ kind: 'push-complete' });
-  });
-
-  test('no notifications fire while the app is foregrounded (start/progress/completion)', () => {
+  
+  test('subscribeToPushProgress no notifications fire while app is foregrounded', async () => {
     mockAppState = 'active';
-    pushService.subscribeToPushProgress();
-    const listener = mockSubscribe.mock.calls[0][0] as ProgressListener;
-
-    listener(
-      { isPushing: { a: true }, pendingCount: 3, pushProgress: null },
-      { isPushing: {}, pendingCount: 3, pushProgress: null },
-    );
-    listener(
-      { isPushing: { a: true }, pendingCount: 3, pushProgress: 0.5 },
-      { isPushing: { a: true }, pendingCount: 3, pushProgress: 0.25 },
-    );
-    listener(
-      { isPushing: {}, pendingCount: 0, pushProgress: null },
-      { isPushing: { a: true }, pendingCount: 3, pushProgress: 1 },
-    );
-
-    expect(mockDismissAndReschedule).not.toHaveBeenCalled();
-  });
-
-  test('resolvePushFailureRoute maps plain failures to home and conflicts to conflicts', () => {
-    expect(pushService.resolvePushFailureRoute(false)).toBe('gitnotes://home');
-    expect(pushService.resolvePushFailureRoute(true)).toBe('gitnotes://conflicts');
+    mockGetAll.mockResolvedValue([{},{},{}]);
+    
+    PushNotificationService.subscribeToPushProgress();
+    
+    gitOpCb({ 'push-1': { id: 'push-1', kind: 'push', status: 'running', repo: 'a/repo', branch: 'main' } });
+    gitOpCb({});
+    
+    expect(NotificationService.dismissAndReschedule).not.toHaveBeenCalled();
   });
 });

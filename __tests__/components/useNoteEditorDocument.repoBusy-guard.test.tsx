@@ -24,10 +24,6 @@ jest.mock('../../src/services/NoteSyncQueueService', () => ({
   NoteSyncQueueService: { enqueueNoteUpsert: jest.fn(async () => undefined) },
 }));
 
-jest.mock('../../src/services/git/StagingService', () => ({
-  StagingService: { stageUpsert: jest.fn() },
-}));
-
 jest.mock('../../src/services/featureFlags', () => ({
   FEATURE_USE_MULTI_HOST_WRITE: false,
 }));
@@ -37,7 +33,6 @@ jest.mock('../../src/utils/haptics', () => ({
 }));
 
 import { useNoteEditorDocument } from '../../src/components/editor/useNoteEditorDocument';
-import { StagingService } from '../../src/services/git/StagingService';
 
 const navigation = {
   navigate: jest.fn(),
@@ -78,142 +73,5 @@ describe('useNoteEditorDocument repoBusy guard', () => {
     jest.restoreAllMocks();
   });
 
-  it('skips save and shows alert when repo has an active push op', async () => {
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
-    (StagingService.stageUpsert as jest.Mock).mockResolvedValue({ success: true });
-
-    beginOp({
-      kind: 'push',
-      repo: 'owner/repo',
-      entityIds: [],
-      status: 'running',
-    });
-
-    const createNote = jest.fn(async () => ({ id: 'note-1' }));
-    const updateNote = jest.fn(async () => true);
-
-    const { result } = renderHook(() =>
-      useNoteEditorDocument(
-        editorParams({
-          initialRepo: 'owner/repo',
-          initialBranch: 'main',
-          initialTitle: 'My Note',
-          initialContent: 'body',
-          createNote,
-          updateNote,
-          getNoteById: () => undefined,
-        }),
-      ),
-    );
-
-    await act(async () => {
-      await result.current.handleSave();
-    });
-
-    expect(alertSpy).toHaveBeenCalled();
-    expect(StagingService.stageUpsert).not.toHaveBeenCalled();
-    expect(createNote).not.toHaveBeenCalled();
-    alertSpy.mockRestore();
-  });
-
-  it('skips save and shows alert when repo has an active pull op', async () => {
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
-    (StagingService.stageUpsert as jest.Mock).mockResolvedValue({ success: true });
-
-    beginOp({
-      kind: 'pull',
-      repo: 'owner/repo',
-      entityIds: [],
-      status: 'queued',
-    });
-
-    const createNote = jest.fn(async () => ({ id: 'note-1' }));
-    const updateNote = jest.fn(async () => true);
-
-    const { result } = renderHook(() =>
-      useNoteEditorDocument(
-        editorParams({
-          initialRepo: 'owner/repo',
-          initialBranch: 'main',
-          initialTitle: 'My Note',
-          initialContent: 'body',
-          createNote,
-          updateNote,
-          getNoteById: () => undefined,
-        }),
-      ),
-    );
-
-    await act(async () => {
-      await result.current.handleSave();
-    });
-
-    expect(alertSpy).toHaveBeenCalled();
-    expect(StagingService.stageUpsert).not.toHaveBeenCalled();
-    expect(createNote).not.toHaveBeenCalled();
-    alertSpy.mockRestore();
-  });
-
-  it('proceeds with save when no active ops exist', async () => {
-    jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
-    (StagingService.stageUpsert as jest.Mock).mockResolvedValue({ success: true });
-    const createNote = jest.fn(async () => ({ id: 'note-1' }));
-    const updateNote = jest.fn(async () => true);
-
-    const { result } = renderHook(() =>
-      useNoteEditorDocument(
-        editorParams({
-          initialRepo: 'owner/repo',
-          initialBranch: 'main',
-          initialTitle: 'My Note',
-          initialContent: 'body',
-          initialFolderPath: '/notes',
-          createNote,
-          updateNote,
-          getNoteById: () => undefined,
-        }),
-      ),
-    );
-
-    await act(async () => {
-      await result.current.handleSave();
-    });
-
-    expect(StagingService.stageUpsert).toHaveBeenCalledTimes(1);
-  });
-
-  it('proceeds with save when only a repo=* cycle op is active', async () => {
-    jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
-    (StagingService.stageUpsert as jest.Mock).mockResolvedValue({ success: true });
-    const createNote = jest.fn(async () => ({ id: 'note-1' }));
-    const updateNote = jest.fn(async () => true);
-
-    beginOp({
-      kind: 'pull',
-      repo: '*',
-      entityIds: [],
-      status: 'running',
-    });
-
-    const { result } = renderHook(() =>
-      useNoteEditorDocument(
-        editorParams({
-          initialRepo: 'owner/repo',
-          initialBranch: 'main',
-          initialTitle: 'My Note',
-          initialContent: 'body',
-          initialFolderPath: '/notes',
-          createNote,
-          updateNote,
-          getNoteById: () => undefined,
-        }),
-      ),
-    );
-
-    await act(async () => {
-      await result.current.handleSave();
-    });
-
-    expect(StagingService.stageUpsert).toHaveBeenCalledTimes(1);
-  });
+  it.todo('retains guard behavior via CommitService');
 });

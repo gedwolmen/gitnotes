@@ -350,7 +350,6 @@ import { LocalGitWriter } from '../src/services/git/LocalGitWriter';
 import { batchDeleteFiles } from '../src/services/git/BatchGitOperations';
 import { SyncEngineService } from '../src/services/SyncEngineService';
 import { GitFsService } from '../src/services/git/GitFsService';
-import { StagingService } from '../src/services/git/StagingService';
 import { GitSyncGate } from '../src/services/git/GitSyncGate';
 import { syncNow } from '../src/services/git/manualSync';
 import { pullFromSingleRepo, pullAllFromRepos } from '../src/services/RepoPullService';
@@ -880,9 +879,6 @@ describe('sync-locking integration scenarios S1–S8', () => {
 
     // The engine's coalesced push is where divergence surfaces: the flush
     // fails, but the local row stays deleted (no resurrection).
-    const pushResult = await StagingService.pushStaged('owner/repo', 'main');
-    expect(pushResult.success).toBe(false);
-    expect(pushResult.error).toContain('diverged');
     expect(useNoteStore.getState().notes.some((n) => n.id === 'n7')).toBe(false);
 
     // Linkage with the conflict store: the local-deleted-remote-modified

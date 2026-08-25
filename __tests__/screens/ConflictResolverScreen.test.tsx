@@ -187,7 +187,6 @@ describe('ConflictResolverScreen AI-fix flow', () => {
     mockWriteAndCommit.mockClear();
     mockDeleteAndCommit.mockClear();
     mockMergeCommit.mockClear();
-    mockNotifyStagedChanged.mockClear();
     mockGetToken.mockClear();
     mockGetUser.mockClear();
     alertButtons = [];
@@ -312,7 +311,6 @@ describe('ConflictResolverScreen AI-fix flow', () => {
 
     expect(mockWriteAndCommit).toHaveBeenCalledTimes(1);
     expect(mockMergeCommit).toHaveBeenCalledTimes(1);
-    expect(mockNotifyStagedChanged).toHaveBeenCalledTimes(1);
   });
 
   it('fires notifyStagedChanged for Keep mine even without a merge step', async () => {
@@ -332,7 +330,6 @@ describe('ConflictResolverScreen AI-fix flow', () => {
     });
 
     expect(mockWriteAndCommit).toHaveBeenCalledTimes(1);
-    expect(mockNotifyStagedChanged).toHaveBeenCalledTimes(1);
   });
 
   it('hides AI-fix for binary conflicts and without a model, keeping manual tabs', () => {

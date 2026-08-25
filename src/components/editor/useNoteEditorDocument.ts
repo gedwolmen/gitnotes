@@ -14,7 +14,6 @@ import { HapticService } from '../../utils/haptics';
 import { useUndo } from '../../utils/useUndo';
 import { NoteSyncQueueService } from '../../services/NoteSyncQueueService';
 import { classifyGitHubSyncError, isRetryableFailure, syncStatusForError } from '../../services/git/syncFailure';
-import { StagingService } from '../../services/git/StagingService';
 import { githubActivity } from '../../stores/githubActivityStore';
 import { useGitOperationStore, gitOperationRegistry, GIT_OP_ALL_REPOS } from '../../stores/gitOperationStore';
 import type { GitOp } from '../../stores/gitOperationStore';
@@ -438,8 +437,8 @@ export function useNoteEditorDocument({
             knownSha: commit,
           };
 
-          const stageResult = await StagingService.stageUpsert(syncParams);
-          if (stageResult.success) {
+          try {
+            await NoteSyncQueueService.enqueueNoteUpsert(syncParams, savedNoteId);
             const updated = await updateNote({
               id: savedNoteId,
               filePath: syncPath,
@@ -447,32 +446,17 @@ export function useNoteEditorDocument({
             if (!updated) {
               Alert.alert(
                 'Partial Save',
-                'Your note was staged but local metadata could not be updated.',
+                'Your note was queued but local metadata could not be updated.',
                 [{ text: 'OK' }],
               );
             }
-            if (stageResult.pendingSync) {
-              Alert.alert(t('sync.pendingSyncTitle'), t('sync.pendingSyncBody'));
-            }
-          } else if (stageResult.droppedConflict) {
-            showDurableSyncFailureAlert(durableDropAlertKind(stageResult.error));
-          } else {
-            // Never orphan a locally-saved note: fall back to the durable queue (mirrors the retryable-failure path below).
-            console.warn('[useNoteEditorDocument] stage failed:', stageResult.error);
-            try {
-              await NoteSyncQueueService.enqueueNoteUpsert(syncParams, savedNoteId);
-              Alert.alert(
-                'Note Saved Locally',
-                'Your note was saved but could not be pushed to GitHub yet. It will sync automatically when connection is restored.',
-                [{ text: 'OK' }],
-              );
-            } catch {
-              Alert.alert(
-                'Save Failed',
-                'Your note was saved locally but could not be queued for sync. Please try again.',
-                [{ text: 'OK' }],
-              );
-            }
+          } catch (error) {
+            console.warn('[useNoteEditorDocument] sync failed:', error);
+            Alert.alert(
+              'Save Failed',
+              'Your note was saved locally but could not be queued for sync. Please try again.',
+              [{ text: 'OK' }],
+            );
           }
         } catch (error) {
           console.warn('[useNoteEditorDocument] note sync threw:', error);

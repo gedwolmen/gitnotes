@@ -89,8 +89,9 @@ describe('useNoteStore', () => {
 
   describe('createNote', () => {
     it('creates note and adds to list', async () => {
-      const newNote = makeNote('new');
+      const newNote = makeNote('new', { repo: 'me/repo' });
       (StorageService.createNote as jest.Mock).mockResolvedValue(newNote);
+      (StorageService.getSavedRepositories as jest.Mock).mockResolvedValue([{ path: 'me/repo' }]);
 
       const result = await useNoteStore.getState().createNote({ title: 'test' });
 

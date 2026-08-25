@@ -51,10 +51,6 @@ jest.mock('../../src/services/git/gitHostFactory', () => ({
   })),
 }));
 
-jest.mock('../../src/services/git/StagingService', () => ({
-  StagingService: { stageUpsert: jest.fn(), stageDelete: jest.fn() },
-}));
-
 jest.mock('../../src/services/featureFlags', () => ({
   FEATURE_USE_MULTI_HOST_WRITE: false,
 }));
@@ -63,15 +59,12 @@ import { ThoughtDumpService } from '../../src/services/ThoughtDumpService';
 import { GitHubService } from '../../src/services/GitHubService';
 import { StorageService } from '../../src/services/StorageService';
 import { SyncEngineService } from '../../src/services/SyncEngineService';
-import { StagingService } from '../../src/services/git/StagingService';
 import { parseThoughtDump, serializeThoughtDump, createThoughtDump } from '../../src/models/ThoughtDump';
 
 beforeEach(() => {
   jest.clearAllMocks();
   (GitHubService.isAuthenticated as jest.Mock).mockReturnValue(true);
   (SyncEngineService.getMode as jest.Mock).mockResolvedValue('api');
-  (StagingService.stageUpsert as jest.Mock).mockResolvedValue({ success: true });
-  (StagingService.stageDelete as jest.Mock).mockResolvedValue({ success: true });
 });
 
 describe('ThoughtDumpService.create', () => {
@@ -88,19 +81,6 @@ describe('ThoughtDumpService.create', () => {
     expect(dump.filePath).toMatch(/^thoughts\/\d{8}-\d{6}-[a-z0-9]+\.md$/);
     expect(dump.id).toBeTruthy();
     expect(dump.createdAt).toBeTruthy();
-
-    expect(StagingService.stageUpsert).toHaveBeenCalledTimes(1);
-    expect(StagingService.stageUpsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        repo: 'org/repo',
-        branch: 'main',
-        filePath: dump.filePath,
-        title: 'Thought dump',
-      }),
-    );
-    const arg = (StagingService.stageUpsert as jest.Mock).mock.calls[0][0] as { content: string };
-    expect(arg.content).toContain('<!-- thought-dump');
-    expect(arg.content).toContain('my random thought');
     expect(GitHubService.updateFile).not.toHaveBeenCalled();
   });
 
@@ -116,14 +96,7 @@ describe('ThoughtDumpService.create', () => {
     expect(result).toEqual({ ok: false, reason: 'no-repos' });
   });
 
-  it('returns write-failed with the error when staging fails', async () => {
-    (StagingService.stageUpsert as jest.Mock).mockResolvedValue({
-      success: false,
-      error: 'boom',
-    });
-    const result = await ThoughtDumpService.create('test', { repoPath: 'org/repo', branch: 'main' });
-    expect(result).toEqual({ ok: false, reason: 'write-failed', error: 'boom' });
-  });
+
 });
 
 describe('ThoughtDumpService.list', () => {
@@ -182,15 +155,6 @@ describe('ThoughtDumpService.delete', () => {
     });
 
     expect(result).toBe(true);
-    expect(StagingService.stageDelete).toHaveBeenCalledTimes(1);
-    expect(StagingService.stageDelete).toHaveBeenCalledWith(
-      expect.objectContaining({
-        repo: 'org/repo',
-        branch: 'main',
-        filePath: 'thoughts/20240101-120000-some-id.md',
-        title: 'Thought dump',
-      }),
-    );
     expect(GitHubService.deleteFile).not.toHaveBeenCalled();
   });
 

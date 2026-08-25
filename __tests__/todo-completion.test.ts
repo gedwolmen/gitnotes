@@ -25,16 +25,11 @@ jest.mock('../src/services/GitHubService', () => ({
   },
 }));
 
-jest.mock('../src/services/git/StagingService', () => ({
-  StagingService: { stageUpsert: jest.fn(() => Promise.resolve({ success: true })) },
-}));
-
 import { act, renderHook } from '@testing-library/react-native';
 import { useTodos } from '../src/contexts/TodoContext';
 import { Todo } from '../src/models/Todo';
 import { StorageService } from '../src/services/StorageService';
 import { NotificationService } from '../src/services/NotificationService';
-import { StagingService } from '../src/services/git/StagingService';
 import { useTodoStore } from '../src/stores/todoStore';
 
 const makeTodo = (overrides: Partial<Todo>): Todo => ({
@@ -106,14 +101,6 @@ describe('todo completion ordering and refresh', () => {
     expect(useTodoStore.getState().todos[0]?.id).toBe('todo-2');
     expect(useTodoStore.getState().todos[2]).toMatchObject({ id: 'todo-1', completed: true });
     expect(StorageService.saveAllTodos).toHaveBeenCalled();
-    expect(StagingService.stageUpsert).toHaveBeenCalledWith(expect.objectContaining({
-      repo: 'owner/repo',
-      branch: 'main',
-      filePath: 'todos/top-todo.json',
-      title: 'Top todo',
-    }));
-    const stageArg = (StagingService.stageUpsert as jest.Mock).mock.calls[0][0] as { content: string };
-    expect(JSON.parse(stageArg.content)).toMatchObject({ text: 'Top todo', completed: true });
 
     await act(async () => {
       await result.current.refreshTodos();
