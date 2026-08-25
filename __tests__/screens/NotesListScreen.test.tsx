@@ -9,6 +9,7 @@ let mockNotesSeed: Note[] = [];
 let mockSearchQuery = '';
 let mockIsLoading = false;
 let mockError: string | null = null;
+let mockViewMode: 'list' | 'journal' = 'list';
 
 const mockSetSearchQuery = jest.fn();
 const mockDeleteNote = jest.fn(async () => true);
@@ -64,7 +65,7 @@ jest.mock('../../src/contexts/RepoContext', () => ({
 }));
 
 jest.mock('../../src/contexts/ViewModeContext', () => ({
-  useViewMode: () => ({ viewMode: 'list' as const, setViewMode: jest.fn() }),
+  useViewMode: () => ({ viewMode: mockViewMode, setViewMode: jest.fn() }),
 }));
 
 jest.mock('../../src/contexts/NoteContext', () => ({
@@ -268,6 +269,7 @@ describe('NotesListScreen', () => {
     mockSearchQuery = '';
     mockIsLoading = false;
     mockError = null;
+    mockViewMode = 'list';
     mockNavigate.mockClear();
     mockSetSearchQuery.mockClear();
     mockDeleteNote.mockClear();
@@ -312,9 +314,9 @@ describe('NotesListScreen', () => {
 
   it('renders a list of notes', () => {
     mockNotesSeed = [
-      createNote({ id: 'n1', title: 'First Note' }),
-      createNote({ id: 'n2', title: 'Second Note' }),
-      createNote({ id: 'n3', title: 'Third Note' }),
+      createNote({ id: 'n1', title: 'First Note', format: 'markdown', filePath: 'notes/first.md' }),
+      createNote({ id: 'n2', title: 'Second Note', format: 'org', filePath: 'notes/second.org' }),
+      createNote({ id: 'n3', title: 'Third Note', format: 'neorg', filePath: 'notes/third.norg' }),
     ];
 
     const { getByText, getByTestId } = render(<NotesListScreen />);
@@ -322,6 +324,21 @@ describe('NotesListScreen', () => {
     expect(getByText('First Note')).toBeTruthy();
     expect(getByText('Second Note')).toBeTruthy();
     expect(getByText('Third Note')).toBeTruthy();
+  });
+
+  it('shows only notes under journals/ in journal view', () => {
+    mockViewMode = 'journal';
+    mockNotesSeed = [
+      createNote({ id: 'journal', title: 'Journal entry', folderPath: 'journals', filePath: 'journals/2026-08-26.md' }),
+      createNote({ id: 'markdown', title: 'Markdown note', folderPath: 'notes', filePath: 'notes/readme.md' }),
+      createNote({ id: 'org', title: 'Org note', format: 'org', filePath: 'org-note.org' }),
+    ];
+
+    const { getByText, queryByText } = render(<NotesListScreen />);
+
+    expect(getByText('Journal entry')).toBeTruthy();
+    expect(queryByText('Markdown note')).toBeNull();
+    expect(queryByText('Org note')).toBeNull();
   });
 
   it('passes search query changes to setSearchQuery', () => {
