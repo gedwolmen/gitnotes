@@ -17,6 +17,7 @@ module.exports = {
     '^expo-file-system/legacy$': '<rootDir>/__mocks__/expo-file-system-legacy.ts',
     '^expo-image$': '<rootDir>/__mocks__/expo-image.ts',
     '^expo-secure-store$': '<rootDir>/__mocks__/expo-secure-store.ts',
+    '^@shopify/react-native-skia$': '<rootDir>/__mocks__/react-native-skia.ts',
     '^@ai-sdk/anthropic$': '<rootDir>/__mocks__/ai-sdk-anthropic.ts',
   },
   setupFiles: ['<rootDir>/jest.setup.ts'],
