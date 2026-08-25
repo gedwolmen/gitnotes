@@ -77,7 +77,6 @@ export default function NotesListScreen() {
 
   const listRef = useRef<FlatList<Note>>(null);
   const isPullRefreshingRef = useRef(false);
-  const [gitOperationActive, setGitOperationActive] = useState(false);
 
   // Unified height of the single blurred header region (title + banners + tools).
   // Initial estimate is the bare header height so the list is never under the header
@@ -114,17 +113,6 @@ export default function NotesListScreen() {
       setIsPullRefreshing(false);
     }
   }, [isFocused]);
-
-  useEffect(() => {
-    if (inflight > 0) {
-      setGitOperationActive(true);
-      return;
-    }
-    const timer = setTimeout(() => {
-      setGitOperationActive(false);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [inflight]);
 
   const selectionMode = selectedIds.size > 0;
 
@@ -513,16 +501,14 @@ export default function NotesListScreen() {
           }}
           columnWrapperStyle={viewMode !== 'journal' && columnCount > 1 ? { gap: 8 } : undefined}
           refreshControl={
-            gitOperationActive ? undefined : (
-              <RefreshControl
-                testID="notes-list.swipe.pull-refresh"
-                refreshing={isPullRefreshing}
-                onRefresh={handlePullToRefresh}
-                enabled={!gateBusy}
-                tintColor={colors.primary}
-                colors={[colors.primary]}
-              />
-            )
+            <RefreshControl
+              testID="notes-list.swipe.pull-refresh"
+              refreshing={isPullRefreshing}
+              onRefresh={handlePullToRefresh}
+              enabled={!gateBusy}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
           }
           ListEmptyComponent={<NotesEmptyState isFiltered={!!searchQuery || activeFilterCount > 0} />}
         />
