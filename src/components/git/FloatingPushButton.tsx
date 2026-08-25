@@ -68,6 +68,12 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
       const repo = repositories.find((r) => r.path === targetPath);
       if (!isMounted) return;
 
+      if (!repo) {
+        setActiveRepoPath(null);
+        setActiveBranch('main');
+        return;
+      }
+
       setActiveRepoPath(targetPath);
       setActiveBranch(repo?.branch ?? 'main');
     };
@@ -76,7 +82,10 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
   }, [repositories]);
 
   useEffect(() => {
-    if (!activeRepoPath) return;
+    if (!activeRepoPath) {
+      setUnpushedCount(0);
+      return;
+    }
     let isMounted = true;
 
     const load = async () => {
