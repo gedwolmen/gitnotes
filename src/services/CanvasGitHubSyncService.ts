@@ -3,7 +3,7 @@ import { CanvasScene, slugifyCanvasTitle } from '../models/Canvas';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { AuthService } from './AuthService';
 import { SyncEngineService } from './SyncEngineService';
-import { CommitService } from './git/CommitService';
+import { CloneSyncService } from './CloneSyncService';
 import { resolveDefaultFolder, resolveDefaultRepo } from './git/defaultsPolicy';
 import { resolveBranch } from './git/resolveBranch';
 
@@ -59,26 +59,25 @@ export async function syncCanvasToGitHub(params: {
     ? `Update canvas: ${title}`
     : `Create canvas: ${title}`;
 
-  // Clone-mode write path (#514).
+  // Clone-mode: delegate to CloneSyncService.save which handles gate,
+  // local commit, best-effort push, revision bump, and pending-queue
+  // enqueue in one serial sequence.
   const mode = await SyncEngineService.getMode(repoPath);
   if (mode === 'clone') {
-    const user = GitHubService.getUser();
-    const author = {
-      name: user?.name || user?.login || 'gitnotes',
-      email: user?.email || `${user?.login ?? 'gitnotes'}@users.noreply.github.com`,
-    };
-    const writeResult = await CommitService.commit({
-      repo: repoPath,
+    const saveResult = await CloneSyncService.save({
+      repoPath,
       branch: targetBranch,
       filePath: targetPath,
       content,
       message,
-      author,
+      intent: 'upsert',
     });
-    if (writeResult.success) {
+    // 'queued' means local commit succeeded but push was deferred — the
+    // canvas IS saved locally, which is the expected clone-mode outcome.
+    if (saveResult.success || saveResult.error === 'queued') {
       return { success: true, filePath: targetPath };
     }
-    return { success: false, error: writeResult.error };
+    return { success: false, error: saveResult.error };
   }
 
   try {
@@ -128,24 +127,17 @@ export async function deleteCanvasFromGitHub(params: {
 
   const mode = await SyncEngineService.getMode(repoPath);
   if (mode === 'clone') {
-    const user = GitHubService.getUser();
-    const author = {
-      name: user?.name || user?.login || 'gitnotes',
-      email: user?.email || `${user?.login ?? 'gitnotes'}@users.noreply.github.com`,
-    };
-    const deleteResult = await CommitService.commit({
-      repo: repoPath,
+    const saveResult = await CloneSyncService.save({
+      repoPath,
       branch: targetBranch,
       filePath,
-      content: '',
       message: `Delete canvas: ${title || filePath}`,
-      author,
-      delete: true,
+      intent: 'delete',
     });
-    if (deleteResult.success) {
+    if (saveResult.success || saveResult.error === 'queued') {
       return { success: true, filePath };
     }
-    return { success: false, error: deleteResult.error };
+    return { success: false, error: saveResult.error };
   }
 
   try {

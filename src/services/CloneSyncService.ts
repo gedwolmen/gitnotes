@@ -32,7 +32,7 @@ export interface SaveParams {
   repoPath: string;
   branch: string;
   filePath: string;
-  content: string;
+  content?: string;
   message: string;
   intent: SaveIntent;
   prevFilePath?: string;
