@@ -82,6 +82,32 @@ Fix: the probe catch treats NotFound-style errors (`code === 'NotFoundError'` or
 
 ## Clone-mode sync
 
+Clone-mode sync commits locally on every save and pushes immediately when online (8s budget via `tryPushNow`). Offline edits queue in `ClonePendingQueue` and flush when connectivity returns. Conflicts (409 / non-fast-forward) block the user on `ConflictResolverScreen` with editor-first UX. No separate push step is needed.
+
+File operations are handled by decomposed helpers:
+
+- **`commitOps.commitWrite`** — writes a file and commits atomically
+- **`commitOps.commitDelete`** — deletes a file and commits atomically
+- **`commitOps.commitRename`** — renames a file and commits atomically
+- **`recovery.pushWithRecovery`** — push with automatic conflict detection and retry
+- **`recovery.surfaceConflictsOnDiverged`** — surfaces divergence conflicts to the UI
+
+### #925 — clone staging never surfaced push (resolved)
+
+Clone-mode changes were committed locally but never pushed to GitHub, leaving the user unaware of unpushed work. Resolved by the write-through clone architecture: changes now push immediately on save via `tryPushNow` (8s foreground budget), with offline changes queued in `ClonePendingQueue` and flushed on connectivity return.
+
+### #926 — no blocking sync UI during push/pull (resolved)
+
+While a push or pull was in flight, users could continue editing, racing the sync operation and producing unpredictable merge state. Resolved by `ConflictResolverScreen` with editor-first UX: the user is blocked on a conflict screen when a divergence is detected (409 / non-fast-forward), preventing concurrent edits from racing the sync operation.
+
+### #927 — API mode not write-through (out-of-scope)
+
+API mode changes were committed locally and pushed asynchronously instead of pushing to GitHub immediately on save. Documented as out-of-scope for the clone-mode decompose refactor; a separate effort will address API-mode write-through.
+
+### #938 — contents not imported on add (tracked separately)
+
+When adding an existing remote repo, the initial clone did not import file contents into the local store, leaving the repo empty until the first manual sync. Tracked separately from the clone-mode sync refactor.
+
 ### #889 — AI `edit_note` never enqueued a sync (MEDIUM)
 
 The `edit_note` tool edited only locally — `updateNote` neither enqueued nor staged, so the edit never reached git in either mode (silent divergence).

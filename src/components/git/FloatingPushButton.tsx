@@ -28,8 +28,8 @@ import { useGitOperationStore } from '../../stores/gitOperationStore';
 import { LastUsedRepoService } from '../../services/LastUsedRepoService';
 import { SyncEngineService, type SyncEngineMode } from '../../services/SyncEngineService';
 import { UnpushedCommitsService } from '../../services/git/UnpushedCommitsService';
-import { LocalGitWriter } from '../../services/git/LocalGitWriter';
-import { AuthService } from '../../services/AuthService';
+import { CloneSyncService } from '../../services/CloneSyncService';
+import { formatSyncError } from '../../services/git/formatSyncError';
 import { pullFromSingleRepo } from '../../services/RepoPullService';
 import { NoteSyncQueueService } from '../../services/NoteSyncQueueService';
 import {
@@ -116,50 +116,44 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
     };
   }, [activeRepoPath]);
 
-  useEffect(() => {
+  const loadUnpushedCount = useCallback(async () => {
     if (!activeRepoPath) {
       setUnpushedCount(0);
       return;
     }
-    let isMounted = true;
-
-    const load = async () => {
-      try {
-        let count = 0;
-        if (syncMode === 'clone') {
-          count = await UnpushedCommitsService.count({
-            repo: activeRepoPath,
-            branch: activeBranch,
-          });
-        } else {
-          const items = await NoteSyncQueueService.getAll();
-          count = items.filter(
-            (m) =>
-              m.params.repo === activeRepoPath &&
-              (m.params.branch ?? 'main') === activeBranch,
-          ).length;
-        }
-        if (isMounted) setUnpushedCount(count);
-      } catch {
-        if (isMounted) setUnpushedCount(0);
+    try {
+      let count = 0;
+      if (syncMode === 'clone') {
+        count = await UnpushedCommitsService.count({
+          repo: activeRepoPath,
+          branch: activeBranch,
+        });
+      } else {
+        const items = await NoteSyncQueueService.getAll();
+        count = items.filter(
+          (m) =>
+            m.params.repo === activeRepoPath &&
+            (m.params.branch ?? 'main') === activeBranch,
+        ).length;
       }
-    };
-
-    void load();
-
-    if (syncMode === 'clone') {
-      const interval = setInterval(() => void load(), 30_000);
-      return () => {
-        isMounted = false;
-        clearInterval(interval);
-      };
+      setUnpushedCount(count);
+    } catch {
+      setUnpushedCount(0);
     }
-    const unsubscribe = NoteSyncQueueService.subscribe(load);
+  }, [activeRepoPath, activeBranch, syncMode]);
+
+  useEffect(() => {
+    void loadUnpushedCount();
+  }, []);
+
+  useEffect(() => {
+    const unsubGitActivity = useGitActivityStore.subscribe(loadUnpushedCount);
+    const unsubNoteSync = NoteSyncQueueService.subscribe(loadUnpushedCount);
     return () => {
-      isMounted = false;
-      unsubscribe();
+      unsubGitActivity();
+      unsubNoteSync();
     };
-  }, [activeRepoPath, activeBranch, syncMode, commitRevision]);
+  }, [loadUnpushedCount]);
 
   const inFlightCount = useMemo(() => {
     if (syncMode !== 'clone' || !activeRepoPath) return 0;
@@ -321,29 +315,17 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
         return;
       }
 
-      const token = (await AuthService.getToken()) ?? undefined;
-      const pushPromise = LocalGitWriter.push({
-        repoPath: activeRepoPath,
-        branch: activeBranch,
-        token,
-      });
-      const timeoutMs = 60_000;
-      const timeoutPromise = new Promise<{ success: false; error: string }>((_, reject) =>
-        setTimeout(() => reject(new Error('Push timed out after 60s. Pull and try again.')), timeoutMs),
-      );
-      const result = await Promise.race([pushPromise, timeoutPromise]);
-      if (result.success) {
+      const result = await CloneSyncService.pushPending(activeRepoPath, activeBranch);
+      if (result.conflicted) {
+        navigation.navigate('Conflicts', { repoPath: activeRepoPath, branch: activeBranch });
+      } else if (result.succeeded > 0) {
         await pullFromSingleRepo(activeRepoPath);
         useGitActivityStore.getState().incrementRevision();
-        Alert.alert('Pushed', 'All commits have been pushed to GitHub.');
-      } else {
-        const error = result.error ?? 'Unknown error';
-        if (error.includes('conflict-detected')) {
-          navigation.navigate('Conflicts', { repoPath: activeRepoPath, branch: activeBranch });
+        if (result.failed > 0) {
+          Alert.alert('Pushed with errors', `${result.succeeded} pushed, ${result.failed} failed.`);
         } else {
-          Alert.alert('Push failed', error);
+          Alert.alert('Pushed', 'All commits have been pushed to GitHub.');
         }
-      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       if (message.includes('60s')) {
@@ -360,8 +342,9 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
             },
           ],
         );
+      }
       } else {
-        Alert.alert('Push failed', message);
+        Alert.alert('Push failed', formatSyncError(undefined));
       }
     } finally {
       setIsPushing(false);
