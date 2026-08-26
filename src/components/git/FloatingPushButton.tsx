@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AccessibilityInfo,
+  ActivityIndicator,
   Alert,
   Pressable,
   StyleSheet,
@@ -23,6 +24,7 @@ import { HapticService } from '../../utils/haptics';
 import type { RootStackParamList } from '../../navigation/types';
 import { useRepoStore } from '../../stores/repoStore';
 import { useGitActivityStore } from '../../stores/gitActivityStore';
+import { useGitOperationStore } from '../../stores/gitOperationStore';
 import { LastUsedRepoService } from '../../services/LastUsedRepoService';
 import { SyncEngineService, type SyncEngineMode } from '../../services/SyncEngineService';
 import { UnpushedCommitsService } from '../../services/git/UnpushedCommitsService';
@@ -68,6 +70,7 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
   const [unpushedCount, setUnpushedCount] = useState(0);
   const [isPushing, setIsPushing] = useState(false);
   const commitRevision = useGitActivityStore((s) => s.commitRevision);
+  const gitOps = useGitOperationStore((s) => s.ops);
 
   useEffect(() => {
     let isMounted = true;
@@ -157,6 +160,20 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
       unsubscribe();
     };
   }, [activeRepoPath, activeBranch, syncMode, commitRevision]);
+
+  const inFlightCount = useMemo(() => {
+    if (syncMode !== 'clone' || !activeRepoPath) return 0;
+    return Object.values(gitOps).filter(
+      (op) =>
+        (op.status === 'queued' || op.status === 'running') &&
+        op.repo === activeRepoPath &&
+        (op.branch ?? 'main') === activeBranch &&
+        (op.kind === 'upsert' || op.kind === 'delete' || op.kind === 'rename' || op.kind === 'move'),
+    ).length;
+  }, [gitOps, activeRepoPath, activeBranch, syncMode]);
+
+  const displayCount = unpushedCount + inFlightCount;
+  const isCommitting = inFlightCount > 0;
 
   const defaultX = viewportWidth - BUTTON_SIZE - insets.right - EDGE_INSET;
   const safeBottom = viewportHeight - Math.max(tabBarHeight, insets.bottom + EDGE_INSET);
@@ -347,7 +364,7 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
   }));
 
   if (
-    unpushedCount === 0
+    displayCount === 0
     || currentRouteName === 'ChatThreadList'
     || currentRouteName === 'ChatScreen'
     || currentRouteName === 'Paywall'
@@ -369,9 +386,9 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
           <Pressable
             testID="floating-push.button.navigate-push"
             accessibilityRole="button"
-            accessibilityLabel={`Push ${unpushedCount} commits`}
+            accessibilityLabel={isCommitting ? 'Committing changes' : `Push ${displayCount} commits`}
             accessibilityHint="Tap to view unpushed commits. Press and hold to push them now."
-            accessibilityState={{ busy: isPushing }}
+            accessibilityState={{ busy: isPushing || isCommitting }}
             onPress={handleTap}
             onLongPress={handleLongPress}
             onPressIn={affordances.handlePressIn}
@@ -380,16 +397,20 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
             disabled={isPushing}
             style={({ pressed }) => [
               styles.button,
-              { backgroundColor: isPushing ? colors.border : colors.primary },
-              pressed && !isPushing ? styles.pressed : null,
+              { backgroundColor: isPushing || isCommitting ? colors.border : colors.primary },
+              pressed && !isPushing && !isCommitting ? styles.pressed : null,
             ]}
           >
-            <Ionicons name="cloud-upload" size={24} color="#FFFFFF" />
+            {isCommitting ? (
+              <ActivityIndicator size="small" color="#FFFFFF" testID="floating-push.spinner" />
+            ) : (
+              <Ionicons name="cloud-upload" size={24} color="#FFFFFF" />
+            )}
           </Pressable>
-          {unpushedCount > 0 ? (
-            <View style={[styles.badge, { backgroundColor: colors.error }]}>
+          {displayCount > 0 ? (
+            <View style={[styles.badge, { backgroundColor: isCommitting ? colors.primary : colors.error }]}>
               <Text style={styles.badgeText}>
-                {unpushedCount > 99 ? '99+' : unpushedCount}
+                {displayCount > 99 ? '99+' : displayCount}
               </Text>
             </View>
           ) : null}

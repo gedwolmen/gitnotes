@@ -10,6 +10,10 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-08-26
 
+### Floating push button shows optimistic count + spinner while commits are in flight
+
+**fix(ui)** — `FloatingPushButton` now reflects an in-flight local commit immediately. `noteStore.createNote` (clone mode) and `noteStore.updateNote` (clone-mode rename) wrap their `CommitService.commit` calls in `gitOperationRegistry.begin({kind:'upsert'|'rename', status:'running'})` and `succeed`/`fail` on completion. The FAB subscribes to `useGitOperationStore` and, in clone mode, adds the count of those running ops to its displayed number — so the button appears the moment the user taps save, before the local git commit completes — and swaps the cloud-upload icon for an `ActivityIndicator` (badge background also swaps to the primary color) so the user sees that work is happening. The display reverts to the real unpushed-commit count once the op succeeds.
+
 ### Unify pending-work indicator into a single floating push button
 
 **fix(ui)** — `FloatingPushButton` is now the only surface for "unpushed work" pending notification. In **clone mode** it counts unpushed git commits (`UnpushedCommitsService.count`); in **API mode** it counts pending sync-queue items for the active repo+branch (`NoteSyncQueueService.getAll`, filtered). Each mode refreshes on its own trigger (commit revision + 30s poll for clone; queue subscription for API). The long-press action is also mode-aware: clone mode pushes unpushed commits as before; API mode drains the queue then pulls. The duplicate top-right `UnpushedQueueBadge` rendered inside `NotesListScreen` is removed — it tracked a different counter and caused two push indicators to appear at once.

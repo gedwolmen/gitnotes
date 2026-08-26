@@ -100,16 +100,32 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
       // Clone mode: commit the new note to git BEFORE saving to storage.
       const mode = await SyncEngineService.getMode(repo);
       if (mode === 'clone') {
-        const commitResult = await CommitService.commit({
+        const opId = gitOperationRegistry.begin({
+          kind: 'upsert',
           repo,
           branch: input.branch ?? 'main',
-          filePath,
-          content: input.content ?? '',
-          message: `Create note: ${title || filePath}`,
+          path: filePath,
+          entityIds: [],
+          status: 'running',
+          attempts: 0,
         });
-        if (!commitResult.success) {
-          set({ error: commitResult.error ?? 'Failed to create note' });
-          return null;
+        try {
+          const commitResult = await CommitService.commit({
+            repo,
+            branch: input.branch ?? 'main',
+            filePath,
+            content: input.content ?? '',
+            message: `Create note: ${title || filePath}`,
+          });
+          if (!commitResult.success) {
+            gitOperationRegistry.fail(opId, commitResult.error ?? 'Failed to create note');
+            set({ error: commitResult.error ?? 'Failed to create note' });
+            return null;
+          }
+          gitOperationRegistry.succeed(opId);
+        } catch (commitError) {
+          gitOperationRegistry.fail(opId, commitError instanceof Error ? commitError.message : 'Commit failed');
+          throw commitError;
         }
       }
 
@@ -149,17 +165,33 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
           const mode = await SyncEngineService.getMode(existingNote.repo);
           if (mode === 'clone') {
             const content = input.content ?? existingNote.content ?? '';
-            const commitResult = await CommitService.commit({
+            const opId = gitOperationRegistry.begin({
+              kind: 'rename',
               repo: existingNote.repo,
               branch: existingNote.branch ?? 'main',
-              prevFilePath: oldPath,
-              filePath: newPath,
-              content,
-              message: `Rename note: ${input.title ?? existingNote.title}`,
+              path: newPath,
+              entityIds: [existingNote.id],
+              status: 'running',
+              attempts: 0,
             });
-            if (!commitResult.success) {
-              set({ error: commitResult.error ?? 'Failed to rename note' });
-              return null;
+            try {
+              const commitResult = await CommitService.commit({
+                repo: existingNote.repo,
+                branch: existingNote.branch ?? 'main',
+                prevFilePath: oldPath,
+                filePath: newPath,
+                content,
+                message: `Rename note: ${input.title ?? existingNote.title}`,
+              });
+              if (!commitResult.success) {
+                gitOperationRegistry.fail(opId, commitResult.error ?? 'Failed to rename note');
+                set({ error: commitResult.error ?? 'Failed to rename note' });
+                return null;
+              }
+              gitOperationRegistry.succeed(opId);
+            } catch (renameError) {
+              gitOperationRegistry.fail(opId, renameError instanceof Error ? renameError.message : 'Rename failed');
+              throw renameError;
             }
             // Commit succeeded — update filePath on the note so subsequent syncs
             // use the correct path and don't try to re-create the file.
