@@ -21,7 +21,6 @@ import { GitSyncGate } from '../services/git/GitSyncGate';
 import { syncNow } from '../services/git/manualSync';
 import ColorPicker from '../components/ColorPicker';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
-import { ConflictBanner } from '../components/ui/ConflictBanner';
 import { IconButton, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { requireRepo } from '../utils/requireRepo';
@@ -585,7 +584,6 @@ export default function NotesListScreen() {
         footer={
           <>
             <OfflineBanner />
-            <ConflictBanner />
 
             {error ? (
               <View className="mx-3 mb-1 p-2.5 rounded-sm border-l-4" style={{ backgroundColor: colors.error + '20', borderLeftColor: colors.error }}>

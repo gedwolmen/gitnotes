@@ -1,25 +1,20 @@
 /**
  * CloneSyncService.ts — clone-mode sync orchestration.
  *
- * Coordinates the commit-on-save + explicit-push cycle for clone mode:
- * - save()       — commit locally then attempt push; pre-pull before delete intent
- * - tryPushNow() — single-shot push with budget timeout, conflict detection, offline queue
- * - pushPending() — drain the pending queue serially
- * - subscribe()  — revision-bump event subscription
+ * Coordinates the commit-on-save + force-push cycle for clone mode:
+ * - save() — commit locally then force-push immediately; local always wins
+ * - subscribe() — revision-bump event subscription
  *
  * Key ordering constraints enforced here:
  * 1. intent:'delete' pre-pull BEFORE commit (preserves LocalGitWriter.deleteAndCommit behaviour)
- * 2. tryPushNow does NOT navigate — callers handle 'conflict-detected' via screen navigation
- * 3. save() holds the gate for the full commit+push serial sequence
- * 4. save() enqueues to ClonePendingQueue with correct path/oid before returning 'queued'
+ * 2. save() holds the gate for the full commit+push serial sequence
+ * 3. Push uses force:true so local always wins — no conflict UI, no queue, no retry
  */
 
-import NetInfo from '@react-native-community/netinfo';
 import { GitSyncGate } from './git/GitSyncGate';
 import { CommitService } from './git/CommitService';
 import { GitFsService } from './git/GitFsService';
-import { ClonePendingQueue } from './git/ClonePendingQueue';
-import { pushWithRecovery, surfaceConflictsOnDiverged } from './git/recovery';
+import { pushWithForce } from './git/recovery';
 import { pullFromSingleRepo } from './RepoPullService';
 import { useGitActivityStore } from '../stores/gitActivityStore';
 import { AuthService } from './AuthService';
@@ -40,19 +35,7 @@ export interface SaveParams {
 
 export interface SaveResult {
   success: boolean;
-  error?: 'queued' | 'conflict-detected' | string;
-}
-
-export interface TryPushResult {
-  success: boolean;
-  error?: 'queued' | 'conflict-detected' | string;
-}
-
-export interface PushPendingResult {
-  succeeded: number;
-  failed: number;
-  conflicted: boolean;
-  queuedItems: number;
+  error?: string;
 }
 
 // ─── CloneSyncService ─────────────────────────────────────────────────────────
@@ -82,10 +65,10 @@ class CloneSyncServiceClass {
   }
 
   /**
-   * Save flow: acquire gate → (pre-pull if delete) → commit → tryPushNow → enqueue → release gate.
+   * Save flow: acquire gate → (pre-pull if delete) → commit → force-push → release gate.
    *
    * The editor's save button stays blocked for the full duration.
-   * When tryPushNow returns 'queued', save() enqueues with correct path/oid.
+   * Local always wins — push uses force:true and errors are logged, not surfaced.
    */
   async save(params: SaveParams): Promise<SaveResult> {
     const { repoPath, branch, filePath, content, message, intent, prevFilePath } = params;
@@ -117,125 +100,28 @@ class CloneSyncServiceClass {
       useGitActivityStore.getState().incrementRevision();
       this.notify();
 
-      // 4. Attempt push under the same gate hold
-      const pushResult = await tryPushNowImpl(repoPath, branch, 8000);
+      // 4. Force-push immediately — local always wins
+      const token = (await AuthService.getToken()) ?? undefined;
+      const pushResult = await pushWithForce({ repoPath, branch, token });
 
-      // 5. Enqueue with correct path/oid if push returned 'queued'
-      if (!pushResult.success && pushResult.error === 'queued') {
-        const pendingIntent = intent === 'rename' ? 'upsert' : intent;
-        await ClonePendingQueue.enqueuePush(repoPath, branch, [
-          { path: filePath, oid: commitResult.oid ?? '', intent: pendingIntent },
-        ]);
-      }
-
-      return pushResult;
-    } finally {
-      releaseCycle();
-    }
-  }
-
-  /**
-   * Single-shot push with budget timeout.
-   *
-   * Returns 'queued' when offline, unreachable, or timeout — save() handles enqueueing
-   * with correct path/oid. Returns 'conflict-detected' for 409/non-FF — callers
-   * handle navigation.
-   */
-  async tryPushNow(repoPath: string, branch: string, budgetMs = 8000): Promise<TryPushResult> {
-    return tryPushNowImpl(repoPath, branch, budgetMs);
-  }
-
-  /**
-   * Drain pending queue items for a repo/branch.
-   *
-   * Uses 'manual' cycle source so concurrent pushes don't deadlock with saves.
-   * Stops early on 'conflict-detected' (block-and-resolve) or 'queued'.
-   */
-  async pushPending(repoPath: string, branch: string): Promise<PushPendingResult> {
-    const releaseCycle = await GitSyncGate.acquireCycle('manual');
-
-    try {
-      const pending = await ClonePendingQueue.listPending(repoPath, branch);
-      let succeeded = 0;
-      let failed = 0;
-      let conflicted = false;
-      const queuedItems = pending.length;
-
-      for (const item of pending) {
-        const result = await tryPushNowImpl(repoPath, branch, 8000);
-
-        if (result.success) {
-          succeeded++;
-          await ClonePendingQueue.markSuccess(repoPath, branch, item.path);
-        } else if (result.error === 'conflict-detected') {
-          conflicted = true;
-          break;
-        } else if (result.error === 'queued') {
-          // network / timeout / auth — try next item
-          failed++;
-        } else {
-          failed++;
+      if (pushResult.success) {
+        // Pull latest remote state to keep local in sync
+        try {
+          await pullFromSingleRepo(repoPath);
+        } catch {
+          // pull failure is non-fatal — the push itself succeeded
         }
+        useGitActivityStore.getState().incrementRevision();
+        return { success: true };
       }
 
-      return { succeeded, failed, conflicted, queuedItems };
+      // Push failed — just log, don't queue, don't surface conflicts
+      console.warn('[CloneSyncService] force-push failed:', pushResult.error);
+      return { success: false, error: pushResult.error };
     } finally {
       releaseCycle();
     }
   }
-}
-
-// ─── Internal push implementation ──────────────────────────────────────────────
-
-async function tryPushNowImpl(repoPath: string, branch: string, budgetMs: number): Promise<TryPushResult> {
-  const token = (await AuthService.getToken()) ?? undefined;
-
-  // Check network reachability
-  const netState = await NetInfo.fetch();
-  const isConnected = netState.isConnected === true;
-  const isInternetReachable = netState.isInternetReachable !== false;
-
-  if (!isConnected || !isInternetReachable) {
-    return { success: false, error: 'queued' };
-  }
-
-  // Race push against budget timeout
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error('push-timeout')), budgetMs);
-  });
-
-  let pushResult: { success: boolean; error?: string };
-
-  try {
-    pushResult = await Promise.race([
-      pushWithRecovery({ repoPath, branch, token }),
-      timeoutPromise,
-    ]);
-  } catch {
-    return { success: false, error: 'queued' };
-  }
-
-  if (pushResult.success) {
-    // Pull latest remote state to keep local in sync
-    try {
-      await pullFromSingleRepo(repoPath);
-    } catch {
-      // pull failure is non-fatal — the push itself succeeded
-    }
-    useGitActivityStore.getState().incrementRevision();
-    return { success: true };
-  }
-
-  // Push failed
-  const errorStr = pushResult.error ?? '';
-
-  if (errorStr === 'conflict-detected') {
-    // Surface conflicts — NO navigation here; the calling screen handles navigation
-    await surfaceConflictsOnDiverged({ repoPath, branch });
-    return { success: false, error: 'conflict-detected' };
-  }
-
-  return { success: false, error: 'queued' };
 }
 
 export const CloneSyncService = new CloneSyncServiceClass();

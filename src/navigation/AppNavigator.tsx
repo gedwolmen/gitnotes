@@ -20,10 +20,7 @@ import RenderStyleSettingsScreen from '../screens/RenderStyleSettingsScreen';
 import RenderStyleEditorScreen from '../screens/RenderStyleEditorScreen';
 import TemplateManagerScreen from '../screens/TemplateManagerScreen';
 import SyncStatusScreen from '../screens/SyncStatusScreen';
-import PushScreen from '../screens/PushScreen';
-import ConflictResolverScreen from '../screens/ConflictResolverScreen';
 import { FloatingAIButton } from '../components/ai/FloatingAIButton';
-import { FloatingPushButton } from '../components/git/FloatingPushButton';
 import { ChatRepoPickerModal } from '../components/ai/ChatRepoPickerModal';
 import { AddReminderScreen } from '../components/settings/AddReminderScreen';
 import ThoughtDumpScreen from '../screens/ThoughtDumpScreen';
@@ -61,8 +58,6 @@ const getLinkingConfig = (): LinkingOptions<RootStackParamList> => {
         ChatThreadList: 'chat',
         ChatScreen: 'chat/:threadId',
         ThoughtDump: 'thought-dump',
-        Push: 'push/:repoPath/:branch',
-        Conflicts: 'conflicts/:repoPath/:branch',
       },
     },
   };
@@ -258,24 +253,6 @@ export default function AppNavigator({ showOnboarding, onOnboardingComplete, onO
               options={{ headerShown: false }}
             />
             <Stack.Screen
-              name="Push"
-              component={PushScreen}
-              options={{ headerShown: false }}
-            />
-            {/* TODO(todo 11): point Conflicts at the upgraded SyncStatusScreen
-                (conflicts management page). It aliases SyncStatusScreen today so
-                the gitnotes://conflicts push-failure deep link resolves. */}
-            <Stack.Screen
-              name="Conflicts"
-              component={SyncStatusScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="ConflictResolver"
-              component={ConflictResolverScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
               name="AddReminder"
               component={AddReminderScreen}
               options={{ headerShown: false }}
@@ -299,7 +276,6 @@ export default function AppNavigator({ showOnboarding, onOnboardingComplete, onO
             )}
           </Stack.Navigator>
           <FloatingAIButton currentRouteName={currentRouteName} />
-          <FloatingPushButton currentRouteName={currentRouteName} />
         </View>
       </NavigationContainer>
         <ChatRepoPickerModal

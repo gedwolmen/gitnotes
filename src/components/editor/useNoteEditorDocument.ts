@@ -439,15 +439,6 @@ export function useNoteEditorDocument({
             color: existingForColor?.color ?? null,
           });
 
-          if (syncResult.success === false && syncResult.error === 'conflict-detected') {
-            navigation.navigate('ConflictResolver', {
-              repoPath: repo,
-              branch: normalizeBranch(branch),
-              filePath: syncPath,
-            });
-            return;
-          }
-
           if (!syncResult.success) {
             Alert.alert(
               'Save Failed',

@@ -4,7 +4,7 @@
  * Provides:
  * - `repairCloneAfterCorruption` — remove-and-reclone a corrupted clone
  * - `pushWithRecovery` — push with non-fast-forward detection + recovery
- * - `surfaceConflictsOnDiverged` — detect and surface diverged-branch conflicts
+ * - `pushWithForce` — force-push without conflict detection
  * - `classifyPushError` / `isPushRejected` — push error classification
  *
  * Internal helpers (not exported):
@@ -18,9 +18,6 @@ import { parseRepoPath } from '../../utils/gitPathParser';
 import { makeGitFs as buildGitFs } from './gitFs';
 import { gitHttp } from './gitHttp';
 import { GitFsService, repairHeadRef } from './GitFsService';
-import { ConflictResolverService } from '../conflict/ConflictResolverService';
-import { ConflictSet } from '../conflict/types';
-import { useConflictStore } from '../../stores/conflictStore';
 
 const CLONES_SUBDIR = 'GitNotes/';
 
@@ -309,7 +306,6 @@ export async function pushWithRecovery(
             return { success: false, error: classifiedError };
           }
         } else if (ffResult.reason === 'diverged') {
-          await surfaceConflictsOnDiverged({ repoPath, branch });
           return { success: false, error: 'conflict-detected' };
         } else {
           return { success: false, error: `Push failed: ${ffError || ffResult.reason}` };
@@ -341,34 +337,56 @@ export async function pushWithRecovery(
   }
 }
 
-/**
- * Detect diverged local/remote branches and surface conflicts in the conflict
- * store. Only adds to the store when `findMergeBase` succeeds.
- */
-export async function surfaceConflictsOnDiverged({
-  repoPath,
-  branch,
-}: {
+// ---------------------------------------------------------------------------
+// Force push — local always wins
+// ---------------------------------------------------------------------------
+
+export interface PushWithForceOptions {
   repoPath: string;
   branch: string;
-}): Promise<ConflictSet | null> {
-  const localRef = `refs/heads/${branch}`;
-  const remoteRef = `refs/remotes/origin/${branch}`;
+  token?: string;
+  onProgress?: (progress: { phase: string; loaded: number; total: number }) => void;
+}
 
-  const mergeBase = await GitFsService.findMergeBase({ repoPath, ref1: localRef, ref2: remoteRef });
-  if (!mergeBase) return null;
+export interface PushWithForceResult {
+  success: boolean;
+  error?: string;
+}
 
-  const conflictSet = await ConflictResolverService.detectConflicts({
-    repoPath,
-    branch,
-    localRef,
-    remoteRef,
-    mergeBaseRef: mergeBase,
-  });
+/**
+ * Force-push to remote. Local always wins — used by CloneSyncService save()
+ * to implement commit + instant force-push without any queue or conflict UI.
+ */
+export async function pushWithForce(
+  opts: PushWithForceOptions,
+): Promise<PushWithForceResult> {
+  const { repoPath, branch, token, onProgress } = opts;
+  const info = parseRepoPath(repoPath);
+  if (!info) return { success: false, error: `Invalid repo path: ${repoPath}` };
 
-  const resolved = await ConflictResolverService.autoResolve(conflictSet);
-  await useConflictStore.getState().addConflict(resolved);
-  return resolved;
+  const dir = repoDirVirtual(info.owner, info.repo);
+  const fs = makeRepoFs();
+
+  try {
+    await ensureOnBranch(fs, dir, branch, token);
+    await ensureCloneNotShallow(fs, dir, branch, token);
+    await git.push({
+      fs,
+      http: gitHttp,
+      dir,
+      ref: branch,
+      remoteRef: branch,
+      force: true,
+      onAuth: tokenAuth(token),
+      onProgress: onProgress ?? undefined,
+    });
+    return { success: true };
+  } catch (pushError) {
+    const raw = pushError instanceof Error ? pushError.message : String(pushError);
+    const classifiedError = classifyPushError(raw);
+    console.warn(`[recovery] force-push failed (branch: ${branch}):`, classifiedError);
+    return { success: false, error: classifiedError };
+  }
 }
 
 /**

@@ -156,10 +156,6 @@ onRemoveAccount: (id: string, login: string) => void;
   syncPaused: boolean;
   onToggleSyncPaused: (value: boolean) => void;
   syncHealth: ForegroundSyncHealth;
-  clonePushIdleEnabled: boolean;
-  onToggleClonePushIdle: (value: boolean) => void;
-  clonePushBackgroundEnabled: boolean;
-  onToggleClonePushBackground: (value: boolean) => void;
 };
 
 function formatLfsBytes(bytes: number): string {
@@ -253,10 +249,6 @@ export function SettingsContent(props: SettingsContentProps) {
     syncPaused,
     onToggleSyncPaused,
     syncHealth,
-    clonePushIdleEnabled,
-    onToggleClonePushIdle,
-    clonePushBackgroundEnabled,
-    onToggleClonePushBackground,
   } = props;
   // Tokens hook gives us spacing/radii/type so the styled disconnect
   // button matches the rest of the app without hardcoded values.
@@ -867,48 +859,6 @@ export function SettingsContent(props: SettingsContentProps) {
           <View className="flex-row items-center gap-2">
             <Ionicons name="cloud-download-outline" size={20} color={colors.text} />
             <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.backgroundSync')}</Text>
-          </View>
-        </GroupRow>
-        <GroupRow
-          trailing={
-            <Toggle
-              testID="settings.toggle.clone-push-idle"
-              value={clonePushIdleEnabled}
-              onValueChange={onToggleClonePushIdle}
-            />
-          }
-        >
-          <View className="flex-row items-center gap-2">
-            <Ionicons name="time-outline" size={20} color={colors.text} />
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.settingLabel, { color: colors.text }]}>
-                {t('settings.clonePushIdle', { defaultValue: 'Auto-push on idle (3 min)' })}
-              </Text>
-              <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>
-                {t('settings.clonePushIdleSub', { defaultValue: 'Push unpushed changes after 3 minutes of inactivity' })}
-              </Text>
-            </View>
-          </View>
-        </GroupRow>
-        <GroupRow
-          trailing={
-            <Toggle
-              testID="settings.toggle.clone-push-background"
-              value={clonePushBackgroundEnabled}
-              onValueChange={onToggleClonePushBackground}
-            />
-          }
-        >
-          <View className="flex-row items-center gap-2">
-            <Ionicons name="cloud-upload-outline" size={20} color={colors.text} />
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.settingLabel, { color: colors.text }]}>
-                {t('settings.clonePushBackground', { defaultValue: 'Background-task push' })}
-              </Text>
-              <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>
-                {t('settings.clonePushBackgroundSub', { defaultValue: 'Push unpushed changes when app enters background' })}
-              </Text>
-            </View>
           </View>
         </GroupRow>
         {syncHealth.status !== 'idle' && (

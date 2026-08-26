@@ -23,7 +23,6 @@ import { parseRepoPath } from '../utils/gitPathParser';
 import { IconButton, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
-import { ConflictBanner } from '../components/ui/ConflictBanner';
 import { EntityFilterModal } from '../components/EntityFilterModal';
 import { FilterBar, FilterChip } from '../components/FilterBar';
 import { useEntityFilter } from '../hooks/useEntityFilter';
@@ -705,7 +704,6 @@ export default function TodoListScreen() {
         footer={
           <>
             <OfflineBanner />
-            <ConflictBanner />
 
             <TodosListHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} sortMode={sortMode} onSortChange={setSortMode} />
 
