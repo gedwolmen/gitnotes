@@ -103,7 +103,7 @@ class SyncEngineService {
 }
 ```
 
-The actual mutation queue lives in `NoteSyncQueueService` (API mode) and `UnpushedCommitsService` (clone mode — replaces the deprecated `StagingService` / `stageStore` / `StagePushScheduler` pattern). Pull orchestration lives in `ForegroundSyncService` and the OS background task.
+The actual mutation queue lives in `NoteSyncQueueService` (API mode) and `ClonePendingQueue` (clone mode — replaces the deprecated `StagingService` / `stageStore` / `StagePushScheduler` pattern). Pull orchestration lives in `ForegroundSyncService` and the OS background task.
 
 ### Network status (hook, not service)
 
@@ -263,55 +263,44 @@ their path locks via `isPathLocked` (`src/stores/gitOperationStore.ts`).
 
 ## Push model
 
-> **DEPRECATED:** The `StagingService` / `stageStore` / `StagePushScheduler` "stage-then-push" pattern has been deleted. All clone-mode saves now go through `CommitService` directly. `StagingService.stageUpsert`, `StagingService.stageDelete`, and `StagePushScheduler.flushStaged()` are no longer available.
-
-In clone mode, saving or deleting a note **commits locally but never pushes automatically**. Push is always explicit, triggered by the user.
+All clone-mode saves go through `CloneSyncService.save`, which commits locally and immediately attempts a push (8s budget). If offline, the mutation is durably queued in `ClonePendingQueue` and pushed when connectivity returns. If a conflict is detected (409/non-fast-forward), the user is blocked on `ConflictResolverScreen` with editor-first UX.
 
 ### Commit on save
 
-Every clone-mode save entry point — `NoteGitHubSyncService`, `TodoGitHubSyncService`, `CanvasGitHubSyncService`, `TemplateGitHubSyncService`, and `noteStore` — calls [`CommitService.commit`](src/services/git/CommitService.ts) instead of any staging API:
+Every clone-mode save entry point — `noteStore.upsert`, `noteStore.deleteNote`, `NoteGitHubSyncService`, `TodoGitHubSyncService`, `CanvasGitHubSyncService`, `TemplateGitHubSyncService` — calls `CloneSyncService.save` instead of any staging API:
 
 ```typescript
-// CommitService.commit — local commit with push:false
-const result = await CommitService.commit({
-  repo, branch, filePath, content, message,
-  // author resolved internally; push:false is always enforced
+const result = await CloneSyncService.save({
+  repoPath, branch, filePath, content, message, intent: 'upsert' | 'delete'
 });
 ```
 
-`CommitService.commit` handles upserts, deletes, and renames atomically. The `push: false` flag means no network call at save time. Commits accumulate locally until the user explicitly pushes.
-
-### Tracking unpushed commits
-
-[`UnpushedCommitsService.list`](src/services/git/UnpushedCommitsService.ts) computes the unpushed commit range by:
-
-1. Resolving local OID (`refs/heads/<branch>`) and remote OID (`refs/remotes/origin/<branch>`) via `GitFsService.getCommitOid`
-2. Computing the merge base (or using the remote OID when merge base is unavailable)
-3. Walking commits from merge-base to local HEAD via `git.log` (up to 20 commits)
-4. Returning per-commit summary: `subject`, `oid`, `author`, `timestamp`, `filesChangedCount`
-
-[`UnpushedCommitsService.listFiles`](src/services/git/UnpushedCommitsService.ts) diffs a commit tree against its parent to produce per-file breakdown: `path`, `status` (`added | modified | deleted`).
+`CloneSyncService.save` runs commit + `tryPushNow` under one gate. On conflict, returns `{ error: 'conflict-detected' }` — the calling screen navigates to `ConflictResolverScreen`.
 
 ### Push triggers
 
-Nothing pushes automatically on save. Push happens only on explicit trigger:
+Push is triggered automatically by `ClonePushTriggers`:
 
 | Trigger | Code path | Behavior |
 |---------|-----------|----------|
-| Tap / long-press floating button | [`FloatingPushButton`](src/components/git/FloatingPushButton.tsx) navigates to Push screen | Opens PushScreen for the active repo |
-| Push / Push-all on Push screen | [`PushScreen`](src/screens/PushScreen.tsx) `handlePushAll` | Calls `LocalGitWriter.push()` + `pullFromSingleRepo()` |
-| 3-minute foreground idle | [`ForegroundSyncService`](src/services/ForegroundSyncService.ts) idle window | Auto-push when app is foregrounded and no push has occurred within 3 minutes |
-| OS background task | [`BackgroundSyncService.applyPolicy`](src/services/BackgroundSyncService.ts) | Drains ≤ 10 files (policy cap) |
+| AppState → active | `ClonePushTriggers` (foreground-active) | Calls `pushPending` for all repos with pending items |
+| Online transition | `ClonePushTriggers` (NetInfo listener) | Calls `pushPending` for all repos with pending items (1s debounce) |
+| 3-minute idle | `ClonePushTriggers` (idle timer) | Calls `pushPending` for all repos; resets on every `gitActivityStore.commitRevision` bump |
+| OS background task | `ClonePushTriggers` (background handler) | Logs intent; actual scheduling via OS task runner |
 
-The floating button ([`FloatingPushButton`](src/components/git/FloatingPushButton.tsx)) shows an unpushed count badge driven by `UnpushedCommitsService.count()`, polled every 30 seconds. Tap and long-press both navigate to the Push screen.
+Manual push: FAB long-press, PushScreen Push-all button, and ConflictResolver "Commit & Push" all call `CloneSyncService.pushPending(repoPath, branch)`.
 
 ### Push execution
 
-`PushScreen.handlePushAll` calls `LocalGitWriter.push({ repoPath, branch, token })` with a 60-second timeout. On success it calls `pullFromSingleRepo(repoPath)` to refresh local state, then navigates back. On failure it routes 409 conflicts to the Conflict screen and surfaces other errors in an alert.
+`CloneSyncService.pushPending` drains `ClonePendingQueue.listPending(repoPath, branch)` in insertion order, calling `tryPushNow` per item. On conflict, it breaks and routes to `ConflictResolverScreen`. On offline/timeout, it re-queues with exponential backoff (max 8 attempts, then `SyncDropNotifier`).
 
-### Background sync (OS task)
+The floating button count is driven by `ClonePendingQueue.listAllPending()` — refreshed via `gitActivityStore.subscribe` (no polling).
 
-`BackgroundSyncService` schedules a local notification only when a pull changed something. After `pullAllFromRepos()`, the task sums the `PullResult` counts (`notes + canvases + todos + templates`) and, when the sum is greater than zero, calls `NotificationService.schedulePushProgress('Synced with origin', ...)` with `{ kind: 'background-pull' }`. A background pull that changed nothing stays silent. Background push runs only for small sets (≤ 10 files) via the OS background-task path.
+### Durable pending queue
+
+`ClonePendingQueue` persists to AsyncStorage (`@gitnotes:clone_pending_push`). Items survive app kill. On retry exhaustion, emits `onDroppedMutation` event → `SyncDropNotifier` surfaces a localized alert.
+
+References: `CloneSyncService.ts`, `ClonePushTriggers.ts`, `ClonePendingQueue.ts`.
 
 ## Testing
 

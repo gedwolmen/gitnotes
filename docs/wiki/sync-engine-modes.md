@@ -68,33 +68,43 @@ Changed from `'api'` to `'clone'`. Existing users with no stored mode preference
 
 ## Clone mode
 
-Clone mode uses a **commit-on-save** architecture: every user change is committed locally as a git commit with `push:false` at save time, then pushed to GitHub through explicit user action or idle timers.
+Clone mode uses a **commit-on-save + write-through push** architecture: every user change is committed locally as a git commit, then a push is attempted automatically after a short delay. If offline, changes queue locally until connectivity returns. If a conflict blocks the push, the user must resolve it before continuing.
 
-### Commit on save
+### Save flow: `CloneSyncService.save`
 
-`CommitService.commit()` creates a local git commit with `push:false` via `LocalGitWriter` on every save. The commit is atomic (one per mutation) and includes the full diff of changed content. Nothing reaches GitHub at save time — the commit exists only in the local clone.
+When the user saves a change, `CloneSyncService.save()` executes a two-step flow:
 
-### Tracking unpushed commits
+1. **Commit** — `CommitService.commit()` creates a local git commit with the changed content via `LocalGitWriter`. The commit is atomic (one per mutation) and includes the full diff.
+2. **Push attempt** — 8 seconds after the commit, `CloneSyncService` attempts to push the commit to GitHub. If the push succeeds, the change is complete. If it fails, the commit remains unpushed and retry logic kicks in.
 
-`UnpushedCommitsService` tracks commits that have been created locally but not yet pushed:
+This is not the old "commit locally, push later" model. The push is attempted automatically, delivering changes to GitHub without requiring explicit user action.
 
-- `count()` — returns the number of unpushed commits per repo (drives the floating button badge)
-- `list()` — returns commit metadata (sha, message, author, timestamp) for the PushScreen history
-- `listFiles()` — returns the list of files changed in unpushed commits for the per-commit diff view
+### Offline: `ClonePendingQueue`
 
-### Push UI
+When the device is offline, the push attempt fails silently. The commit remains in the local clone, and the mutation is queued in `ClonePendingQueue`:
 
-**`FloatingPushButton`** — the cloud-upload FAB shown in the bottom-right corner of the app. Press-and-hold triggers an immediate push of all unpushed commits. The badge count comes from `UnpushedCommitsService.count()`.
+- Queued items are retried on the next connectivity event
+- The queue persists across app restarts
+- `UnpushedCommitsService` still counts these pending commits, so the floating button badge and PushScreen reflect the correct state
 
-**`PushScreen`** — the Staged Changes screen showing per-commit diffs. Each commit row shows the list of changed files; tapping a row expands the diff. Per-commit **Push** and **Push-all** buttons trigger push for individual commits or all unpushed commits respectively.
+### Conflict: `ConflictResolverScreen`
 
-### Push triggers
+If GitHub has newer changes on the same branch (conflict), the push fails with a conflict error. Clone mode blocks the user on `ConflictResolverScreen` until the conflict is resolved:
 
-A commit is pushed to GitHub when ONE of these fires:
+- The screen shows the conflicting file and both versions (local and remote)
+- User chooses local, remote, or manually merges
+- After resolution, the push retries automatically
 
-1. **Press-and-hold** the floating push button — immediate push of all unpushed commits
-2. **Push / Push-all** button on the PushScreen — per-commit or bulk push
-3. **3-minute foreground idle** — `StagePushScheduler` pushes automatically when the app has been in the foreground for 3 minutes without user interaction and there are unpushed commits
-4. **OS background task** — small sets (≤ 10 files) are pushed by the background sync job
+The user cannot make further changes until the conflict is resolved, preventing race conditions.
 
-> **Deprecated:** The term "stage-then-push" is deprecated. The architecture is commit-on-save, not stage-then-push. The stage concept (staging area before commit) is an implementation detail of `LocalGitWriter` and is not user-facing. The user-facing concept is **unpushed commits**, not staged changes.
+### Push triggers: `ClonePushTriggers`
+
+Beyond the automatic 8-second push, additional triggers handle edge cases:
+
+1. **Auto-push on connectivity** — when the device comes back online, `ClonePendingQueue` drains and pushes queued commits
+2. **Press-and-hold** the floating push button — immediate manual push of all unpushed commits
+3. **Push / Push-all** button on the PushScreen — per-commit or bulk push from the history screen
+4. **3-minute foreground idle** — `ClonePushTriggers` pushes when the app has been in the foreground for 3 minutes without user interaction
+5. **OS background task** — small sets (≤ 10 files) are pushed by the background sync job
+
+The 8-second delay gives the user time to make additional edits before the first push fires, while the other triggers ensure eventual delivery even if the device goes offline or the app is backgrounded.

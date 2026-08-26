@@ -8,6 +8,25 @@ All notable fixes and feature changes to GitNotēs are documented here.
 >
 > **History**: prior fixes (pre-2026-08) lived in single-PR wiki pages. Those pages were retired in [#1047](https://github.com/gedwolmen/gitnotes/pull/1047); their full diagnostic content is preserved in git history via `git log -p -- docs/wiki/<file>.md`.
 
+## [Unreleased] — Write-through clone mode
+
+### refactor(sync) — Clone mode is now write-through
+
+**What:** Clone mode now commits and pushes immediately when online (8s budget), queues offline changes in a durable pending queue, and blocks on `ConflictResolverScreen` with editor-first UX on conflict. Previously clone mode committed locally and required a separate push step.
+
+**PRs:** #1299 (foundation), #1300 (entry points), #1301 (push callers), #1302 (triggers + settings)
+
+**Breaking:** None — clone mode was previously an opt-in beta feature.
+
+**Details:**
+- New `CloneSyncService` with `save`, `tryPushNow`, `pushPending` — all pushes go through one pipeline
+- New `ClonePendingQueue` with AsyncStorage durability and exponential backoff retry
+- New `ClonePushTriggers` — foreground-active, online-transition, 3-min idle, OS background triggers
+- FAB and PushScreen now use event subscription instead of 30s polling
+- ConflictResolverScreen now shows editor-first UX for text conflicts (Save button only, no Keep mine/Keep theirs)
+- Settings: Auto-push on idle (3 min) and Background-task push toggles
+- i18n: 6 locales updated with clone mode description
+
 ## 2026-08-26
 
 ### Floating push button shows optimistic count + spinner while commits are in flight
