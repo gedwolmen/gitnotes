@@ -49,33 +49,6 @@ import { useTranslation } from 'react-i18next';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-function UnpushedQueueBadge() {
-  const [pendingCount, setPendingCount] = useState(0);
-  const visible = useGitHubActivityStore((s) => s.visible);
-
-  useEffect(() => {
-    const refresh = () => {
-      NoteSyncQueueService.pendingCount().then(setPendingCount);
-    };
-    refresh();
-    const unsubscribe = NoteSyncQueueService.subscribe(refresh);
-    return unsubscribe;
-  }, []);
-
-  if (visible || pendingCount === 0) {
-    return null;
-  }
-
-  return (
-    <View testID="icon-cloud-upload" style={{ position: 'absolute', top: 8, right: 12, flexDirection: 'row', alignItems: 'center', gap: 4, zIndex: 999 }}>
-      <Ionicons name="cloud-upload-outline" size={18} color="#2563eb" />
-      <Text style={{ fontSize: 12, fontWeight: '600', color: '#2563eb' }} testID="unpushed-queue-badge.count">
-        {pendingCount}
-      </Text>
-    </View>
-  );
-}
-
 export default function NotesListScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<NavigationProp>();
@@ -490,7 +463,6 @@ export default function NotesListScreen() {
   return (
     <SafeAreaView edges={[]} className="flex-1" style={{ backgroundColor: colors.background }}>
       {isDeleting ? <GitHubActivityIndicator /> : null}
-      <UnpushedQueueBadge />
 
       <NotesViewModePicker
         visible={showViewModePicker}

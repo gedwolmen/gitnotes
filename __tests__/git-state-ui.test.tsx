@@ -318,18 +318,15 @@ describe('git-state surfaces', () => {
     GitSyncGate.__resetForTest();
   });
 
-  it('shows the persistent cloud-upload badge with the queue count while the pill is hidden', async () => {
+  it('does not render the legacy top-right queue badge (now unified into the FloatingPushButton)', async () => {
     mockPendingCount = 2;
 
-    const { getByTestId, getByText, queryByTestId } = renderWithTheme(<NotesListScreen />);
+    const { queryByTestId, queryByText } = renderWithTheme(<NotesListScreen />);
 
-    await waitFor(() => expect(getByText('2')).toBeTruthy());
-    expect(getByTestId('icon-cloud-upload')).toBeTruthy();
-    // Transient activity affordance is not rendered while the persistent
-    // queue badge is: no HTTP activity means no pill, but pending>0 still
-    // shows the count.
-    expect(queryByTestId('github-activity-indicator')).toBeNull();
-    expect(useGitHubActivityStore.getState().visible).toBe(false);
+    await waitFor(() => {
+      expect(queryByTestId('icon-cloud-upload')).toBeNull();
+      expect(queryByText('2')).toBeNull();
+    });
   });
 
   it.skip('renders a spinner on the cloud icon and no-ops the press while the gate cycle is held', () => {
