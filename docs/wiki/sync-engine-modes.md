@@ -8,7 +8,7 @@ Each repository can independently operate in one of two sync modes:
 
 | Mode | Transport | Storage | Offline | Default |
 |------|-----------|---------|---------|---------|
-| **clone** | Full git clone via `isomorphic-git` | Local working tree under `FileSystem.documentDirectory` | Yes | ✅ |
+| **clone** | Full git clone via git2-rs (Rust native module) | Local working tree under `FileSystem.documentDirectory` | Yes | ✅ |
 | **api** | GitHub Contents API (per-file GET/PUT) | In-memory + AsyncStorage | No | |
 
 **Clone mode is the default.** Users who need lightweight per-file sync without a local clone — or who are adding a large repo that would OOM the JS heap during clone — can switch a repo to API mode from Settings → Sync Engine.

@@ -39,19 +39,23 @@ Services encapsulate business logic. They're React-independent, testable with Je
 | `BackgroundSyncService.ts` | OS background-task entry point | `expo-background-task`, `expo-task-manager` |
 | `ForegroundSyncService.ts` | App-focus / interval pull loop | `NetInfo`, `AppState` |
 | `AutoPushScheduler.ts` | 3-min idle-push window + explicit drain | AsyncStorage |
-| `GitService.ts` | Clone-mode core (isomorphic-git facade) | `isomorphic-git` |
+| `GitService.ts` | Clone-mode core (isomorphic-git facade — **legacy, superseded by git2-rs**) | `isomorphic-git` (deprecated) |
 | `NoteGitHubSyncService.ts`, `TodoGitHubSyncService.ts`, `CanvasGitHubSyncService.ts`, `TemplateGitHubSyncService.ts` | Per-entity Git sync | Axios, Git |
-| `RepoImportService.ts`, `RepoPullService.ts` | Import + pull from remote | `isomorphic-git` |
+| `RepoImportService.ts`, `RepoPullService.ts` | Import + pull from remote | `isomorphic-git` (legacy path) |
 | `GitHubService.ts` | GitHub REST API client | Axios |
 | `AuthService.ts` | Git-host token storage + multi-host switching | SecureStore |
 
 ### Git Subdirectory (`src/services/git/`)
 
+> **Legacy.** These services were built for the isomorphic-git backend. The git2-rs
+> UI (`src/features/git2/`) uses `Git2Client` from `modules/expo-git2-rs` directly.
+> Legacy services remain for API-mode compatibility and as reference implementations.
+
 | Service | Responsibility |
 |---------|---------------|
 | `LocalGitWriter.ts` | Clone-mode write/commit/push (`writeAndCommit`, `deleteAndCommit`) |
 | `CommitService.ts` | Commit-on-save mutation tracking (`commitUpdate`, `commitDelete`, `push`) |
-| `GitFsService.ts`, `gitFs.ts` | Filesystem facade for isomorphic-git |
+| `GitFsService.ts`, `gitFs.ts` | Filesystem facade for isomorphic-git (**legacy, superseded by git2-rs**) |
 | `gitHttp.ts`, `http.ts` | Streaming `git-upload-pack` / `git-receive-pack` with cancel |
 | `gitHostFactory.ts`, `GitHost.ts`, `activeHost.ts`, `branchResolver.ts`, `resolveBranch.ts` | Multi-host routing |
 | `GitHubHostService.ts`, `GitLabService.ts`, `GiteaLikeHostService.ts` | Per-host implementations |
@@ -66,6 +70,16 @@ Services encapsulate business logic. They're React-independent, testable with Je
 | `syncTiming.ts` | Timing instrumentation seam |
 | `deleteFailures.ts`, `retryDeleteFailure.ts` | Durable delete-failure map |
 | `featureFlags.ts` | Per-build feature flags |
+
+### git2-rs Native Module (`modules/expo-git2-rs/`)
+
+| Component | Responsibility |
+|-----------|---------------|
+| `Git2Client.ts` | TypeScript facade over the Rust native module; all Git2 UI calls go through here |
+| `types.ts` | Request/result type definitions for every Git operation |
+| `errors.ts` | Error type mapping from Rust panics/codes |
+| `rust/src/api/*.rs` | Rust implementations: branch, clone, commit, diff, fetch, log, merge, pull, push, remote, status, tag |
+| `rust/src/lib.rs` | NAPI-RS entry point exposing Rust functions to JavaScript |
 
 ### AI Services
 

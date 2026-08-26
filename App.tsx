@@ -42,6 +42,10 @@ import { useProStore } from './src/stores/proStore';
 import { enforceTierLimits } from './src/services/TierLimits';
 import * as PushNotificationService from './src/services/PushNotificationService';
 import { hideDevMenuFloatingActionButton } from './src/utils/devMenuFab';
+import { registerAndroidAdapters, unregisterAndroidAdapters } from './src/features/git2/settings/AndroidEntryAdapters';
+import { registerIOSShortcuts, unregisterIOSShortcuts } from './src/features/git2/settings/IOSShortcutAdapters';
+import { registerBackgroundSyncTask } from './src/features/git2/sync/backgroundTask';
+import { useGit2SettingsStore } from './src/features/git2/settings/git2SettingsStore';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -119,6 +123,11 @@ export default function App() {
 
     void reconcileThoughtDumps().catch(() => {});
     void LastSelectionPreferenceService.migrateFromLegacy();
+
+    void useGit2SettingsStore.getState().hydrate();
+    registerAndroidAdapters();
+    registerIOSShortcuts();
+    void registerBackgroundSyncTask().catch(() => {});
   }, []);
 
   useEffect(() => {

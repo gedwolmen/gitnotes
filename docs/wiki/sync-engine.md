@@ -4,7 +4,9 @@
 
 ## Overview
 
-GitNotēs uses **isomorphic-git** for Git operations (clone, commit, push, pull) in React Native. Sync runs in background, offline-first, with conflict resolution.
+GitNotēs uses **git2-rs** (Rust native module) for Git operations (clone, commit, push, pull) in React Native. Sync runs in background, offline-first, with conflict resolution.
+
+> **Note:** Legacy isomorphic-git infrastructure has been removed. Some compatibility shims remain in `src/services/git/` but are not used by the git2-rs UI (`src/features/git2/`). See [GPL provenance](gitsync-gpl-provenance.md) for migration details.
 
 ## Architecture
 
@@ -303,6 +305,10 @@ The floating button count is driven by `ClonePendingQueue.listAllPending()` — 
 References: `CloneSyncService.ts`, `ClonePushTriggers.ts`, `ClonePendingQueue.ts`.
 
 ## Testing
+
+> **Legacy example.** This test pattern mocks `isomorphic-git`, which has been
+> removed from the git2-rs UI. New tests should mock `Git2Client` from
+> `modules/expo-git2-rs/src/Git2Client` instead.
 
 ```typescript
 jest.mock('isomorphic-git', () => ({

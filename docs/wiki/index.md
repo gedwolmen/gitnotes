@@ -25,12 +25,13 @@
 | [Sync Write Modes](./sync-write-modes.md) | Sync contract: clone commit-on-save + explicit push vs API write-through; blocking overlay; import-on-add |
 | [Clone-Perf Optimization](./clone-perf-optimization.md) | Five ordered patches closing the simulator freeze gap: `noCheckout` + batched full checkout, 3-concurrent-pull dedup, LFS-after-clone, UTF-8 fast path, depth-3 floor measurement flag |
 | [Git Core Hardening](./git-core-hardening.md) | git-core test-campaign fixes: binary decode integrity, case collisions, auth/preflight, API batch writes, pull/reconcile fixes (#876–#892) |
+| [Git2-rs Migration](./gitsync-gpl-provenance.md) | git2-rs native module: Rust bindings, GitSync provenance, GPL obligations, data purge, build prerequisites, no-store gate |
 
 ### License & provenance
 
 | Page | Description |
 |------|-------------|
-| [GitSync GPL Provenance](./gitsync-gpl-provenance.md) | GPL-3.0 derivative attribution, upstream GitSync provenance, corresponding source, app-store release prohibition |
+| [GitSync GPL Provenance](./gitsync-gpl-provenance.md) | GPL-3.0 derivative attribution, upstream GitSync provenance, corresponding source, source-path inventory, data purge obligations, no-test debt, build prerequisites, app-store release prohibition, legal-clearance gate |
 
 ### Features
 
@@ -72,12 +73,17 @@
 ## Quick Start
 
 ```bash
-# Install
+# Install JS dependencies
 yarn install
 
+# Build the Rust native module (requires Rust 1.75+)
+cd modules/expo-git2-rs/rust
+./scripts/build-rust.sh
+cd ../..
+
 # Run
-yarn ios          # iOS
-yarn android      # Android
+yarn ios          # iOS dev client
+yarn android      # Android dev client
 yarn web          # Web
 
 # Test
@@ -94,6 +100,7 @@ src/
 ├── components/       # Reusable UI components
 ├── contexts/         # React contexts (Accounts, Auth, Canvas, Note, Repo, Theme, Todo, ...)
 ├── data/             # Static data (philosopher quotes dataset)
+├── features/git2/    # git2-rs UI: auth, browser, history, management, sync, repos, containers, settings, providers
 ├── hooks/            # Custom React hooks
 ├── i18n/             # Localization (en/es/fr/de/ja/ko)
 ├── lib/              # Shared utilities (cn helper, etc.)
@@ -108,6 +115,12 @@ src/
 ├── stores/           # Zustand stores
 ├── theme/            # NativeWind theme configuration
 └── types/            # Shared type definitions (RenderStyle, SortTypes)
+
+modules/
+└── expo-git2-rs/     # Rust native module (git2-rs bindings)
+    ├── rust/src/     # Rust source (api/, lib.rs, error.rs, protocol.rs)
+    ├── src/          # TypeScript bindings (Git2Client, types, errors)
+    └── scripts/      # Build scripts (build-rust.sh)
 ```
 
 ## Key Files
@@ -116,6 +129,7 @@ src/
 |------|---------|
 | `AGENTS.md` | Rules for AI coding agents |
 | `CHANGELOG.md` | Single-PR fixes and narrow bug-fix entries, grouped by date descending |
+| `NOTICE` | GPL-3.0 derivative work notice: GitSync provenance, source-path inventory, app-store prohibition |
 | `package.json` | Dependencies and scripts |
 | `tsconfig.json` | TypeScript configuration (strict mode, path aliases) |
 | `jest.config.js` | Jest configuration |

@@ -4,7 +4,7 @@
 
 ## Overview
 
-GitNotēs is a React Native (Expo) note-taking app with **Git sync** (isomorphic-git), **AI assistance** (Vercel AI SDK), and **offline-first design** (AsyncStorage).
+GitNotēs is a React Native (Expo) note-taking app with **Git sync** (git2-rs via Rust native module), **AI assistance** (Vercel AI SDK), and **offline-first design** (AsyncStorage).
 
 ## Tech Stack
 
@@ -15,7 +15,7 @@ GitNotēs is a React Native (Expo) note-taking app with **Git sync** (isomorphic
 | State | Zustand (stores), React Context |
 | Styling | NativeWind v5 (Tailwind) |
 | Navigation | React Navigation v7 |
-| Git | isomorphic-git |
+| Git | git2-rs (Rust native module) |
 | AI | Vercel AI SDK v6 |
 | Storage | AsyncStorage, expo-secure-store |
 | i18n | i18next (6 languages) |

@@ -25,6 +25,13 @@ type ProductionStackParamList = {
   Git2Repo: { repoId: string };
   ConflictResolver: { repoId: string };
   SyncSettings: { repoId: string };
+  Git2Settings: undefined;
+  Git2AuthorIdentity: undefined;
+  Git2CommitTemplates: undefined;
+  Git2SyncScheduling: undefined;
+  Git2SslPolicy: undefined;
+  Git2Gitignore: undefined;
+  Git2PerRepoBehavior: undefined;
 };
 
 type DevOnlyStackParamList = {

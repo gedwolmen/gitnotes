@@ -28,6 +28,69 @@ All notable fixes and feature changes to GitNotēs are documented here.
 - [GitSync](https://github.com/ViscousPot/GitSync) — GPL-3.0 Flutter/Rust Git client
 - See [NOTICE](NOTICE) and [docs/wiki/gitsync-gpl-provenance.md](docs/wiki/gitsync-gpl-provenance.md) for provenance details
 
+## [Unreleased] — git2-rs migration
+
+### chore(migration) — git-free husk, data purge, and git2-rs native rebuild
+
+**What:** The entire isomorphic-git backend was ripped out and replaced with a git2-rs native module. Between removal and re-implementation, the app existed as a "git-free husk" with no working Git operations at all. A deliberate data purge runs on first launch to clear all legacy state.
+
+**Migration summary:**
+- Removed `isomorphic-git` as a dependency along with all JavaScript Git plumbing (`gitHttp`, `gitFs`, `CommitService` clone-mode paths, `LocalGitWriter`, `ForegroundSyncService` clone orchestration, `CloneSyncService`, `ClonePendingQueue`, `ClonePushTriggers`)
+- Removed legacy sync infrastructure: `StagingService`, `StagePushScheduler`, `stageStore`, `StagingService.stageDelete` paths
+- Purged all stored legacy Git data on first launch via `LegacyGitPurgeService`: credentials/tokens in SecureStore, cloned repository directories in `documentDirectory`, sync queues and operation registries in AsyncStorage, unpushed commit records
+- New `modules/expo-git2-rs/` Rust native module provides all Git operations through `git2-rs` bindings, exposed to TypeScript via `Git2Client`
+- New `src/features/git2/` feature set: auth, repositories, file browser, commit history, diff viewer, branch/remote/tag management, sync engine with state machine, conflict resolution, settings, background tasks
+- Some legacy services (`SyncEngineService`, `GitService`, `GitFsService`, `NoteSyncQueueService`, `GitHubService`, `AuthService`) remain as compatibility shims or for API-mode paths; they are not used by the git2-rs UI
+- App-store release remains blocked pending legal clearance
+
+**Related:**
+- [NOTICE](NOTICE) for complete source-path provenance
+- [docs/wiki/gitsync-gpl-provenance.md](docs/wiki/gitsync-gpl-provenance.md) for GPL obligations
+
+### refactor(core) — Migrate from isomorphic-git to git2-rs native module
+
+**What:** Replaced the JavaScript-based isomorphic-git implementation with a native git2-rs module for Git operations.
+
+**Details:**
+- New `modules/expo-git2-rs/` native module with Rust git2-rs bindings
+- New `src/features/git2/` UI feature set: file browser, history, diff viewer, branch/remote/tag management, sync settings
+- Removed all legacy isomorphic-git infrastructure and dependencies
+- Deliberate purge of all legacy Git device data at first launch (via `LegacyGitPurgeService`)
+- This is a development-only build. **App-store release is blocked pending explicit owner legal clearance.**
+
+**Git2Client capabilities:**
+- Clone, fetch, pull, push, commit operations
+- Branch management (list, create, checkout, delete)
+- Remote management (list, add, remove)
+- Tag operations (available in Rust, exposed to UI)
+- File status and staging
+- Commit history and diff viewing
+
+**Not yet available (future work):**
+- Merge and rebase operations
+- Full conflict resolution with 3-way merge
+- SSH authentication
+
+**Build from source:**
+```bash
+# iOS (requires Rust toolchain)
+cd modules/expo-git2-rs/rust
+rustup default stable
+cargo build --release
+cd ../..
+yarn ios
+
+# Android (requires Rust toolchain)
+cd modules/expo-git2-rs/rust
+cargo build --release
+cd ../..
+yarn android
+```
+
+**Related:**
+- [NOTICE](NOTICE) for complete source-path provenance
+- [docs/wiki/gitsync-gpl-provenance.md](docs/wiki/gitsync-gpl-provenance.md) for GPL obligations
+
 ## [Unreleased] — Write-through clone mode
 
 ### refactor(sync) — Clone mode is now write-through

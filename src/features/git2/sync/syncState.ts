@@ -30,6 +30,7 @@ import type {
 } from '../../../../modules/expo-git2-rs/src/types';
 import { GitOperationError } from '../../../../modules/expo-git2-rs/src/errors';
 import { useAuthStore } from '../auth/authStore';
+import { useGit2SettingsStore } from '../settings/git2SettingsStore';
 import type { GitRepository } from '../repositories/repoStore';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -334,11 +335,16 @@ export const useSyncStore = create<SyncState>((set, get) => ({
           },
         }));
 
+        const settingsStore = useGit2SettingsStore.getState();
+        const authorName = settingsStore.author.name || 'GitNotēs';
+        const authorEmail = settingsStore.author.email || 'app@gitnotes.dev';
+        const commitPrefix = settingsStore.getCommitPrefix();
+
         await Git2Client.commit(
           repo.localPath,
-          `Sync: ${stagedPaths.length} file(s) changed`,
-          'GitNotēs',
-          'app@gitnotes.dev',
+          `${commitPrefix}${stagedPaths.length} file(s) changed`,
+          authorName,
+          authorEmail,
         );
       }
 
@@ -452,11 +458,13 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     }
 
     // Commit
+    const settingsStore = useGit2SettingsStore.getState();
+    const conflictPrefix = settingsStore.getCommitPrefix();
     await Git2Client.commit(
       repo.localPath,
-      `Resolve conflicts in ${repoState.conflictQueue.length} file(s)`,
-      'GitNotēs',
-      'app@gitnotes.dev',
+      `${conflictPrefix}resolve conflicts in ${repoState.conflictQueue.length} file(s)`,
+      settingsStore.author.name || 'GitNotēs',
+      settingsStore.author.email || 'app@gitnotes.dev',
     );
 
     // Push

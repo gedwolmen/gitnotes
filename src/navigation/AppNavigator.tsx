@@ -29,6 +29,15 @@ import { RootStackParamList } from './types';
 import { Git2ReposScreen } from '../features/git2/repositories/Git2ReposScreen';
 import { Git2RepoScreen } from '../features/git2/repositories/Git2RepoScreen';
 import { ConflictResolverScreen, SyncSettingsScreen } from '../features/git2/sync';
+import {
+  Git2SettingsScreen,
+  AuthorIdentityScreen,
+  CommitTemplatesScreen,
+  SyncSchedulingScreen,
+  SslPolicyScreen,
+  GitignoreScreen,
+  PerRepoBehaviorScreen,
+} from '../features/git2/settings';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAIStore } from '../stores/aiStore';
 import { useAIHubStore } from '../stores/aiHubStore';
@@ -60,6 +69,13 @@ const getLinkingConfig = (): LinkingOptions<RootStackParamList> => {
         ChatThreadList: 'chat',
         ChatScreen: 'chat/:threadId',
         ThoughtDump: 'thought-dump',
+        Git2Settings: 'git2/settings',
+        Git2AuthorIdentity: 'git2/author',
+        Git2CommitTemplates: 'git2/templates',
+        Git2SyncScheduling: 'git2/scheduling',
+        Git2SslPolicy: 'git2/ssl',
+        Git2Gitignore: 'git2/gitignore',
+        Git2PerRepoBehavior: 'git2/repo-behavior',
       },
     },
   };
@@ -283,6 +299,41 @@ export default function AppNavigator({ showOnboarding, onOnboardingComplete, onO
               name="SyncSettings"
               component={SyncSettingsScreen}
               options={{ title: 'Sync Settings' }}
+            />
+            <Stack.Screen
+              name="Git2Settings"
+              component={Git2SettingsScreen}
+              options={{ title: 'Git2 Sync Settings' }}
+            />
+            <Stack.Screen
+              name="Git2AuthorIdentity"
+              component={AuthorIdentityScreen}
+              options={{ title: 'Author Identity' }}
+            />
+            <Stack.Screen
+              name="Git2CommitTemplates"
+              component={CommitTemplatesScreen}
+              options={{ title: 'Commit Templates' }}
+            />
+            <Stack.Screen
+              name="Git2SyncScheduling"
+              component={SyncSchedulingScreen}
+              options={{ title: 'Sync Scheduling' }}
+            />
+            <Stack.Screen
+              name="Git2SslPolicy"
+              component={SslPolicyScreen}
+              options={{ title: 'SSL Policy' }}
+            />
+            <Stack.Screen
+              name="Git2Gitignore"
+              component={GitignoreScreen}
+              options={{ title: '.gitignore Rules' }}
+            />
+            <Stack.Screen
+              name="Git2PerRepoBehavior"
+              component={PerRepoBehaviorScreen}
+              options={{ title: 'Per-Repo Behavior' }}
             />
             {__DEV__ && (
               <Stack.Screen

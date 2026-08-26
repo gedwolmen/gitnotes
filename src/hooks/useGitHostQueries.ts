@@ -21,7 +21,7 @@ export function useGitHostPullRequests(
 ) {
   return useQuery({
     queryKey: ['githost', provider, 'prs', owner, repo, state],
-    queryFn: () => getGitHostService(provider).listPullRequests(owner, repo, state),
+    queryFn: () => getGitHostService(provider)?.listPullRequests(owner, repo, state),
     staleTime: STALE_TIMES.prs,
     enabled: !!owner && !!repo,
   });
@@ -35,7 +35,7 @@ export function useGitHostIssues(
 ) {
   return useQuery({
     queryKey: ['githost', provider, 'issues', owner, repo, state],
-    queryFn: () => getGitHostService(provider).listIssues(owner, repo, state),
+    queryFn: () => getGitHostService(provider)?.listIssues(owner, repo, state),
     staleTime: STALE_TIMES.issues,
     enabled: !!owner && !!repo,
   });

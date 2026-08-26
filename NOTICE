@@ -19,7 +19,149 @@ URL: https://github.com/gedwolmen/gitnotes
 License: GNU General Public License v3.0
 
 The following source/asset paths were copied or derived from GitSync:
-(to be completed as files are ported in subsequent todos)
+
+## Native Module (expo-git2-rs)
+
+| Path | Description | GitSync Origin |
+|------|-------------|----------------|
+| `modules/expo-git2-rs/` | Full Rust native module with git2-rs bindings | Ported from GitSync's Rust git core |
+
+### Rust Source Files
+| Path | Description |
+|------|-------------|
+| `modules/expo-git2-rs/rust/src/api/branch.rs` | Branch operations (list, create, checkout, delete) |
+| `modules/expo-git2-rs/rust/src/api/clone.rs` | Clone operations |
+| `modules/expo-git2-rs/rust/src/api/commit.rs` | Commit operations |
+| `modules/expo-git2-rs/rust/src/api/diff.rs` | Diff operations |
+| `modules/expo-git2-rs/rust/src/api/fetch.rs` | Fetch operations |
+| `modules/expo-git2-rs/rust/src/api/git_manager.rs` | Core git manager |
+| `modules/expo-git2-rs/rust/src/api/log.rs` | Commit log operations |
+| `modules/expo-git2-rs/rust/src/api/merge.rs` | Merge operations |
+| `modules/expo-git2-rs/rust/src/api/mod.rs` | Module declarations |
+| `modules/expo-git2-rs/rust/src/api/pull.rs` | Pull operations |
+| `modules/expo-git2-rs/rust/src/api/push.rs` | Push operations |
+| `modules/expo-git2-rs/rust/src/api/remote.rs` | Remote operations |
+| `modules/expo-git2-rs/rust/src/api/status.rs` | File status operations |
+| `modules/expo-git2-rs/rust/src/api/tag.rs` | Tag operations |
+| `modules/expo-git2-rs/rust/src/lib.rs` | Main library entry |
+| `modules/expo-git2-rs/rust/src/error.rs` | Error types |
+| `modules/expo-git2-rs/rust/src/main.rs` | Binary entry point |
+| `modules/expo-git2-rs/rust/src/protocol.rs` | Protocol definitions |
+
+### Build Configuration
+| Path | Description |
+|------|-------------|
+| `modules/expo-git2-rs/rust/Cargo.toml` | Rust package manifest |
+| `modules/expo-git2-rs/rust/Cargo.lock` | Dependency lock file |
+| `modules/expo-git2-rs/rust/rust-toolchain.toml` | Rust toolchain pinning |
+| `modules/expo-git2-rs/scripts/build-rust.sh` | Cross-compilation build script |
+
+### TypeScript Bindings
+| Path | Description |
+|------|-------------|
+| `modules/expo-git2-rs/src/Git2Client.ts` | Main TypeScript client |
+| `modules/expo-git2-rs/src/types.ts` | TypeScript type definitions |
+| `modules/expo-git2-rs/src/errors.ts` | Error definitions |
+| `modules/expo-git2-rs/src/index.ts` | Module exports |
+
+### Native Bridge (iOS)
+| Path | Description | GitSync Origin |
+|------|-------------|----------------|
+| `modules/expo-git2-rs/ios/ExpoGit2RsModule.swift` | Expo module bridge, Swift/Rust FFI | Adapted from GitSync's Rust bridge |
+| `modules/expo-git2-rs/ios/ExpoGit2Rs.podspec` | CocoaPods spec for iOS native module | New (Expo convention) |
+
+### Native Bridge (Android)
+| Path | Description | GitSync Origin |
+|------|-------------|----------------|
+| `modules/expo-git2-rs/android/app/src/main/java/com/gitnotes/expo/git2rs/ExpoGit2RsModule.kt` | Expo module bridge, Kotlin/Rust FFI | Adapted from GitSync's Rust bridge |
+| `modules/expo-git2-rs/android/app/src/main/java/com/gitnotes/expo/git2rs/ExpoGit2RsPackage.kt` | Android package registration | New (Expo convention) |
+| `modules/expo-git2-rs/android/app/build.gradle` | Android build configuration | New (Expo convention) |
+| `modules/expo-git2-rs/android/app/src/main/AndroidManifest.xml` | Android manifest | New (Expo convention) |
+
+### Module Metadata
+| Path | Description |
+|------|-------------|
+| `modules/expo-git2-rs/package.json` | Expo module package manifest |
+| `modules/expo-git2-rs/README.md` | Module documentation |
+| `modules/expo-git2-rs/NOTICE` | Nested provenance notice |
+| `modules/expo-git2-rs/LICENSE` | Nested GPL-3.0 license |
+
+## Git2 UI Features (src/features/git2/)
+
+### Authentication
+| Path | Description | GitSync Origin |
+|------|-------------|----------------|
+| `src/features/git2/auth/authStore.ts` | Auth state management | Derived from GitSync auth |
+| `src/features/git2/auth/screens/OnboardingScreen.tsx` | Onboarding UI | Derived from GitSync onboarding |
+| `src/features/git2/auth/screens/index.ts` | Barrel exports | Derived from GitSync auth |
+
+### Repository Management
+| Path | Description | GitSync Origin |
+|------|-------------|----------------|
+| `src/features/git2/repositories/repoStore.ts` | Repository state | Derived from GitSync repo store |
+| `src/features/git2/repositories/Git2ReposScreen.tsx` | Repository list | Derived from GitSync repos screen |
+| `src/features/git2/repositories/Git2RepoScreen.tsx` | Single repo view | Derived from GitSync repo detail |
+
+### File Browser
+| Path | Description | GitSync Origin |
+|------|-------------|----------------|
+| `src/features/git2/browser/fileTreeStore.ts` | File tree state | Derived from GitSync file browser |
+| `src/features/git2/browser/FileTreeScreen.tsx` | File tree UI | Derived from GitSync file browser |
+| `src/features/git2/browser/FileViewerScreen.tsx` | File viewer UI | Derived from GitSync file viewer |
+| `src/features/git2/browser/index.ts` | Barrel exports | Derived from GitSync file browser |
+
+### History
+| Path | Description | GitSync Origin |
+|------|-------------|----------------|
+| `src/features/git2/history/CommitHistoryScreen.tsx` | Commit history UI | Derived from GitSync history |
+| `src/features/git2/history/DiffScreen.tsx` | Diff viewer UI | Derived from GitSync diff view |
+| `src/features/git2/history/index.ts` | Barrel exports | Derived from GitSync history |
+
+### Branch/Remote/Tag Management
+| Path | Description | GitSync Origin |
+|------|-------------|----------------|
+| `src/features/git2/management/branchStore.ts` | Branch state management | Derived from GitSync branch mgmt |
+| `src/features/git2/management/BranchManagerScreen.tsx` | Branch manager UI | Derived from GitSync branch manager |
+| `src/features/git2/management/remoteStore.ts` | Remote state management | Derived from GitSync remote mgmt |
+| `src/features/git2/management/RemoteManagerScreen.tsx` | Remote manager UI | Derived from GitSync remote manager |
+| `src/features/git2/management/tagStore.ts` | Tag state management | Derived from GitSync tag mgmt |
+| `src/features/git2/management/TagManagerScreen.tsx` | Tag manager UI | Derived from GitSync tag manager |
+| `src/features/git2/management/index.ts` | Barrel exports | Derived from GitSync management |
+
+### Sync
+| Path | Description | GitSync Origin |
+|------|-------------|----------------|
+| `src/features/git2/sync/syncState.ts` | Sync state machine | Derived from GitSync sync engine |
+| `src/features/git2/sync/ConflictResolverScreen.tsx` | Conflict resolution UI | Derived from GitSync conflict resolver |
+| `src/features/git2/sync/SyncSettingsScreen.tsx` | Sync settings UI | Derived from GitSync settings |
+| `src/features/git2/sync/backgroundTask.ts` | Background sync | Derived from GitSync background tasks |
+| `src/features/git2/sync/index.ts` | Barrel exports | Derived from GitSync sync |
+
+### Containers
+| Path | Description | GitSync Origin |
+|------|-------------|----------------|
+| `src/features/git2/containers/containerStore.ts` | Container state | Derived from GitSync container |
+
+### Settings
+| Path | Description | GitSync Origin |
+|------|-------------|----------------|
+| `src/features/git2/settings/Git2SettingsScreen.tsx` | Git settings UI | Derived from GitSync settings |
+| `src/features/git2/settings/git2SettingsStore.ts` | Settings state | Derived from GitSync settings |
+| `src/features/git2/settings/AuthorIdentityScreen.tsx` | Author name/email config | Derived from GitSync author identity |
+| `src/features/git2/settings/CommitTemplatesScreen.tsx` | Commit message templates | Derived from GitSync templates |
+
+### Auth Providers
+| Path | Description | GitSync Origin |
+|------|-------------|----------------|
+| `src/features/git2/providers/oauthStore.ts` | OAuth token state | Derived from GitSync auth providers |
+| `src/features/git2/providers/restClient.ts` | REST API client for GitHub | Derived from GitSync API layer |
+| `src/features/git2/providers/types.ts` | Provider type definitions | Derived from GitSync provider types |
+
+## Supporting Services
+
+| Path | Description | GitSync Origin |
+|------|-------------|----------------|
+| `src/services/LegacyGitPurgeService.ts` | Purges legacy isomorphic-git data | New (compatibility layer) |
 
 Modifications to upstream GitSync code are marked with:
 - Date of modification
@@ -32,11 +174,27 @@ This product intentionally purges all legacy isomorphic-git data including:
 - All sync queues and operation registries
 - All unpushed commit records
 
+Test Debt
+---------
+The native git2-rs module (Rust + Expo bridge) does not yet have unit or
+integration tests. The Rust crate is tested upstream in git2-rs; the Expo
+binding layer and TypeScript client are covered manually during development
+builds. A CI test gate will be added when the Rust FFI surface stabilises.
+
 Corresponding Source
 ------------------
 Pursuant to GNU GPL v3 section 1, the corresponding source for this
 derivative work is available from the GitSync repository at the pinned
-commit identified above.
+commit identified above, and from this repository's own source tree.
+Both surfaces must remain publicly accessible while any binary is
+distributed.
+
+Source Availability
+-------------------
+All source code for this derivative work (Rust, TypeScript, Swift, Kotlin)
+is published in this repository. Contributors must be able to build both
+the development iOS client and the development Android client from source
+using the instructions in README.md. No prebuilt binaries are distributed.
 
 App-Store Release Prohibition
 -----------------------------

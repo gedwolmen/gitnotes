@@ -136,6 +136,7 @@ export default function RepoFolderPickerModal({
     setIsLoadingFolders(true);
     try {
       const host = getGitHostService(selectedProvider);
+      if (!host) { setIsLoadingFolders(false); return; }
       const contents = await host.listContents(
         parsedRepo.owner,
         parsedRepo.repo,
@@ -177,6 +178,7 @@ export default function RepoFolderPickerModal({
       return;
     }
     const host = getGitHostService(selectedProvider);
+    if (!host) { setIsLoadingFolders(false); return; }
     host.listContents(
       parsedRepo.owner,
       parsedRepo.repo,

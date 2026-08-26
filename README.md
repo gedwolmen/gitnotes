@@ -24,30 +24,71 @@
 
 ---
 
+## Status
+
+**Development-only build.** This branch uses git2-rs (Rust) for Git operations.
+App-store release is blocked pending explicit owner legal clearance. See [GPL provenance](docs/wiki/gitsync-gpl-provenance.md) for details.
+
 ## Why
 
 - **Files, not a database.** Every note is a real file in your Git repo — nothing locks you in.
 - **Versioned by default.** Edit, branch, diff, and rebase your notes the same way you do code.
 - **Works offline.** Edits queue locally and sync when you're back online.
 - **Open formats.** Markdown, Neorg, Org, JSON — pick what fits.
-- **Open source.** GPL-3.0; source available at GitSync; contributions and forks welcome.
+- **Open source.** GPL-3.0; source available at [GitSync](https://github.com/ViscousPot/GitSync); contributions and forks welcome.
 
 ## Highlights
 
 - Notes, todos, journals, and Excalidraw-style canvases — all backed by Git
 - Folders, tags, colors, pins, wiki-links, backlinks, custom templates
-- Multi-provider sync (GitHub, GitLab, Gitea-like); per-repo API or full-clone sync modes
-- Optional Pro tier with Neumorphic "Fancy UI", advanced AI, multi-host paywall, and trial/lifetime via StoreKit 2 (RevenueCat) — see the [wiki: Pro Paywall](https://github.com/gedwolmen/gitnotes/wiki/paywall-pro)
+- Multi-provider sync (GitHub, GitLab, Gitea-like)
 - Optional AI chat layer (Anthropic, OpenAI-compatible providers, Apple Intelligence, on-device Llama)
 - Biometric lock, multilingual UI (EN, ES, FR, DE, JA, KO), light / dark / system themes
 
+## Build Prerequisites
+
+Building from source requires the Rust toolchain and native SDKs:
+
+| Requirement | Version | Notes |
+|-------------|---------|-------|
+| Rust | 1.75+ | `rustup default stable` |
+| Android NDK | r25+ | Required for cross-compilation to Android targets |
+| Xcode | 15+ | iOS builds only |
+| Node.js | 20.18+ | Expo and Metro |
+| Expo CLI | SDK 56+ | `npx expo run:ios` / `npx expo run:android` |
+
+```bash
+# Build from source
+cd modules/expo-git2-rs/rust
+./scripts/build-rust.sh    # installs cross-compilation targets
+cd ../..
+yarn install
+yarn ios                   # iOS dev client
+yarn android               # Android dev client
+```
+
+### Target Matrix
+
+| Platform | Build Command | Rust Target | Distribution |
+|----------|---------------|-------------|-------------|
+| iOS Simulator | `yarn ios` | `aarch64-apple-ios-sim` | Development only |
+| iOS Device | `yarn ios` | `aarch64-apple-ios` | Development only |
+| Android Emulator | `yarn android` | `x86_64-linux-android` | Development only |
+| Android Device | `yarn android` | `aarch64-linux-android` | Development only |
+
+### Status
+
+This is a **development-only build**. The Rust git2-rs binding layer and Expo bridge have not been through app-store review. No prebuilt binaries are distributed; contributors must build from source using the instructions above. **App-store distribution is blocked** pending explicit owner legal clearance.
+
 ## Stack
 
-Expo SDK 56 · React Native 0.85 · TypeScript 6 · git2-rs (Rust) · React Navigation v7 · TanStack Query · Zustand · Vercel AI SDK v6 · Reanimated · FlashList · NativeWind v5.
+Expo SDK 56 · React Native 0.85 · TypeScript 6 · [git2-rs](https://github.com/rust-lang/git2-rs) (Rust) · React Navigation v7 · TanStack Query · Zustand · Vercel AI SDK v6 · Reanimated · FlashList · NativeWind v5.
 
 ## Contributing
 
 Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and commit guidelines.
+
+This project is a GPL-3.0 derivative of [GitSync](https://github.com/ViscousPot/GitSync). All contributions are licensed under GPL-3.0. See [NOTICE](NOTICE) for the complete source-path provenance of GitSync-derived code.
 
 For a full project knowledge base see [the GitHub Wiki](https://github.com/gedwolmen/gitnotes/wiki)
 
@@ -55,4 +96,6 @@ For bugs or feature requests, [open an issue](https://github.com/gedwolmen/gitno
 
 ## License
 
-[GNU General Public License v3.0](LICENSE) — GPL-3.0 derivative of [GitSync](https://github.com/ViscousPot/GitSync). See [NOTICE](NOTICE) for provenance details.
+[GNU General Public License v3.0](LICENSE) — GPL-3.0 derivative of [GitSync](https://github.com/ViscousPot/GitSync). See [NOTICE](NOTICE) for provenance details and the complete source-path inventory.
+
+**App-store distribution is not permitted** without explicit written legal clearance from the repository owner. This is a hard prerequisite; see [GPL provenance](docs/wiki/gitsync-gpl-provenance.md).
