@@ -10,6 +10,10 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-08-26
 
+### Push-timeout alert offers a Pull action
+
+**fix(ui)** — When `LocalGitWriter.push` times out after 60s, the alert now offers a real **Pull** button instead of telling the user to "Pull and try again" without a way to do so. Tapping it runs `pullFromSingleRepo(repoPath)` for the active repo. Applied to both the `FloatingPushButton` long-press flow and the `PushScreen.handlePushAll` flow.
+
 ### Floating push button shows optimistic count + spinner while commits are in flight
 
 **fix(ui)** — `FloatingPushButton` now reflects an in-flight local commit immediately. `noteStore.createNote` (clone mode) and `noteStore.updateNote` (clone-mode rename) wrap their `CommitService.commit` calls in `gitOperationRegistry.begin({kind:'upsert'|'rename', status:'running'})` and `succeed`/`fail` on completion. The FAB subscribes to `useGitOperationStore` and, in clone mode, adds the count of those running ops to its displayed number — so the button appears the moment the user taps save, before the local git commit completes — and swaps the cloud-upload icon for an `ActivityIndicator` (badge background also swaps to the primary color) so the user sees that work is happening. The display reverts to the real unpushed-commit count once the op succeeds.

@@ -257,7 +257,19 @@ export default function PushScreen() {
       }
     } catch (error) {
       if (error instanceof Error && error.message.includes('60s')) {
-        Alert.alert('Push timed out', 'Push timed out after 60s. Pull and try again.');
+        Alert.alert(
+          'Push timed out',
+          'Push timed out after 60s. Pull the latest changes and try again.',
+          [
+            { text: 'OK', style: 'cancel' },
+            {
+              text: 'Pull',
+              onPress: () => {
+                void pullFromSingleRepo(repoPath);
+              },
+            },
+          ],
+        );
       } else {
         Alert.alert('Push failed', error instanceof Error ? error.message : 'Unknown error');
       }
