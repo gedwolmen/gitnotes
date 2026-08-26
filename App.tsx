@@ -36,14 +36,11 @@ import { useReminderStore, type ReminderNavigationFilter } from './src/stores/re
 import { ReminderService } from './src/services/ReminderService';
 import { StartupSyncGate } from './src/components/StartupSyncGate';
 import { GitHubActivityIndicator } from './src/components/GitHubActivityIndicator';
-import { SyncDropNotifier } from './src/components/git/SyncDropNotifier';
 import { SyncBlockOverlay } from './src/components/ui/SyncBlockOverlay';
 import { bootstrapStorage } from './src/services/StorageBootstrap';
 import { hydrate as hydrateGitOperationRegistry } from './src/stores/gitOperationStore';
-import { useConflictStore } from './src/stores/conflictStore';
 import { useRenderStyleStore } from './src/stores/renderStyleStore';
 import { startForegroundWatcher } from './src/services/ForegroundSyncService';
-import { startClonePushTriggers } from './src/services/ClonePushTriggers';
 import { loadForegroundSyncConfig } from './src/hooks/useForegroundSyncSettings';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { reconcileThoughtDumps } from './src/services/ai/thoughtDumpIndexing';
@@ -75,7 +72,6 @@ export default function App() {
     // Restore durable git-operation locks (queued mutations + failed deletes)
     // before StartupSyncGate drains/pulls and the UI reads lock state.
     void hydrateGitOperationRegistry();
-    void useConflictStore.getState().loadConflicts();
     void useRenderStyleStore.getState().hydrate();
     // Resolve Pro entitlement before surfacing restored data so the free-tier
     // repo/account caps can be enforced on data brought back by Android backup
@@ -136,7 +132,7 @@ export default function App() {
     } catch (error) {
       console.warn('[App] foreground sync watcher start failed:', error);
     }
-    startClonePushTriggers({ idleMs: 180_000, backgroundCap: 50 });
+
     void reconcileThoughtDumps().catch(() => {});
     void LastSelectionPreferenceService.migrateFromLegacy();
   }, []);
@@ -187,7 +183,6 @@ export default function App() {
                             </StartupSyncGate>
                             <GitHubActivityIndicator />
                             <SyncBlockOverlay />
-                            <SyncDropNotifier />
                             <BiometricLockScreen />
                           </BiometricLockProvider>
                         </ViewModeProvider>

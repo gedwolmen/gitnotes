@@ -13,8 +13,6 @@ import { SyncEngineService } from './SyncEngineService';
 import { GitFsService } from './git/GitFsService';
 import { resolveBranch } from './git/branchResolver';
 import { AuthService } from './AuthService';
-import { ConflictResolverService } from './conflict/ConflictResolverService';
-import { useConflictStore } from '../stores/conflictStore';
 import { NoteSyncQueueService } from './NoteSyncQueueService';
 import { getGitHostService } from './git/gitHostFactory';
 import { FEATURE_USE_MULTI_HOST_WRITE } from './featureFlags';
@@ -121,23 +119,7 @@ async function getRepoReader(
       const result = await GitFsService.pullWithFastForward({ repoPath, branch, token });
       if (!result.ok) {
         if (result.reason === 'diverged') {
-          try {
-            const localRef = `refs/heads/${branch}`;
-            const remoteRef = `refs/remotes/origin/${branch}`;
-            const mergeBase = await GitFsService.findMergeBase({ repoPath, ref1: localRef, ref2: remoteRef });
-            if (mergeBase) {
-              const conflictSet = await ConflictResolverService.detectConflicts({
-                repoPath, branch, localRef, remoteRef, mergeBaseRef: mergeBase,
-              });
-              const resolved = await ConflictResolverService.autoResolve(conflictSet);
-              await useConflictStore.getState().addConflict(resolved);
-            }
-          } catch (error) {
-            console.warn(`[RepoPullService] conflict-resolve failed for ${repoPath}@${branch}:`, error);
-          }
           // Read against origin so the user keeps seeing remote changes.
-          // Their local commits remain in the clone and the conflict store
-          // is now populated for the merge UI to drive resolution.
           const remoteRefName = `refs/remotes/origin/${branch}`;
           return {
             mode,

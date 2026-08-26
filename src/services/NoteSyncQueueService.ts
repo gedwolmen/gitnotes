@@ -5,21 +5,16 @@ import {
   NoteGitHubSyncResult,
 } from './NoteGitHubSyncService';
 import { StorageService } from './StorageService';
-import { SyncEngineService } from './SyncEngineService';
-import { CloneSyncService } from './CloneSyncService';
 import { AuthService } from './AuthService';
 import { LocalGitWriter } from './git/LocalGitWriter';
 import { classifyGitHubSyncError, isRetryableFailure, syncStatusForError } from './git/syncFailure';
 import { resolveBranch } from './git/resolveBranch';
 import { clearDeleteFailure, clearDeleteFailuresForRepo, readDeleteFailures, recordDeleteFailure, DELETE_FAILURES_STORAGE_KEY } from './git/deleteFailures';
-import { recordStrandedCommit, getStrandedCommitOid } from './git/strandedCommits';
 import { GitSyncGate, type CycleSource } from './git/GitSyncGate';
 import { batchDeleteFiles, batchUpsertFiles } from './git/BatchGitOperations';
 import type { BatchDeleteFilesResult, BatchUpsertFilesResult } from './git/BatchGitOperations';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { NoteColor, NoteFormat } from '../models/Note';
-import { useConflictStore } from '../stores/conflictStore';
-
 const QUEUE_KEY = '@gitnotes:sync_queue_v1';
 const TOMBSTONE_KEY = '@gitnotes:delete_tombstones_v1';
 const TOMBSTONE_TTL_MS = 24 * 60 * 60 * 1_000; // 24 hours
@@ -666,8 +661,6 @@ class NoteSyncQueueServiceClass {
     droppedIds: Set<string>;
     updatedById: Map<string, QueuedMutation>;
   }> {
-    const isClone = (await SyncEngineService.getMode(repoPath)) === 'clone';
-
     const droppedIds = new Set<string>();
     const updatedById = new Map<string, QueuedMutation>();
     let succeeded = 0;
@@ -691,12 +684,6 @@ class NoteSyncQueueServiceClass {
             at: Date.now(),
           });
         }
-        if (isClone) {
-          const stranded = await getStrandedCommitOid(repoPath, branch);
-          if (stranded) {
-            await recordStrandedCommit(repoPath, branch, stranded.oid, stranded.message, error || 'push failed after max retries');
-          }
-        }
       } else {
         updatedById.set(item.id, {
           ...item,
@@ -714,62 +701,60 @@ class NoteSyncQueueServiceClass {
     // a group that throws is left for the per-item loop below so its items
     // get the full deleteNoteFromGitHub classification instead.
     const handledByBatch = new Set<string>();
-    if (!isClone) {
-      const dueDeletes = items.filter(
-        (m): m is QueuedMutation & { type: 'note.delete' } => m.type === 'note.delete',
-      );
-      if (dueDeletes.length >= 2) {
-        const repoInfo = parseRepoPath(repoPath);
-        if (repoInfo) {
-          const subgroups = new Map<string, (QueuedMutation & { type: 'note.delete' })[]>();
-          for (const item of dueDeletes) {
-            const key = item.params.accountId !== undefined ? item.params.accountId : '__default__';
-            const arr = subgroups.get(key) ?? [];
-            arr.push(item);
-            subgroups.set(key, arr);
+    const dueDeletes = items.filter(
+      (m): m is QueuedMutation & { type: 'note.delete' } => m.type === 'note.delete',
+    );
+    if (dueDeletes.length >= 2) {
+      const repoInfo = parseRepoPath(repoPath);
+      if (repoInfo) {
+        const subgroups = new Map<string, (QueuedMutation & { type: 'note.delete' })[]>();
+        for (const item of dueDeletes) {
+          const key = item.params.accountId !== undefined ? item.params.accountId : '__default__';
+          const arr = subgroups.get(key) ?? [];
+          arr.push(item);
+          subgroups.set(key, arr);
+        }
+        for (const [accountId, group] of subgroups) {
+          if (group.length < 2) continue;
+          let tokenOverride: string | undefined;
+          if (accountId) {
+            tokenOverride = (await AuthService.getTokenById(accountId)) ?? undefined;
           }
-          for (const [accountId, group] of subgroups) {
-            if (group.length < 2) continue;
-            let tokenOverride: string | undefined;
-            if (accountId) {
-              tokenOverride = (await AuthService.getTokenById(accountId)) ?? undefined;
-            }
-            let batchResult: BatchDeleteFilesResult | null = null;
-            try {
-              batchResult = await batchDeleteFiles({
-                owner: repoInfo.owner,
-                repo: repoInfo.repo,
-                branch,
-                paths: group.map((item) => item.params.filePath),
-                message: `Delete ${group.length} notes`,
-                ...(tokenOverride ? { opts: { tokenOverride } } : {}),
-              });
-            } catch (batchError) {
-              console.warn('[NoteSyncQueue] batch delete threw; group reverts to per-item processing:', batchError);
-            }
-            if (batchResult) {
-              const byPath = new Map(group.map((item) => [item.params.filePath, item]));
-              const deletedPaths = new Set(batchResult.deleted);
-              for (const item of group) {
-                if (deletedPaths.has(item.params.filePath)) {
-                  await this.removeTombstone(item.params.repo, item.params.branch, item.params.filePath);
-                  succeeded += 1;
-                  droppedIds.add(item.id);
-                  this.emitMutationSucceeded({ mutation: item });
-                  handledByBatch.add(item.id);
-                }
-              }
-              for (const failure of batchResult.failed) {
-                const item = byPath.get(failure.path);
-                if (!item) continue;
+          let batchResult: BatchDeleteFilesResult | null = null;
+          try {
+            batchResult = await batchDeleteFiles({
+              owner: repoInfo.owner,
+              repo: repoInfo.repo,
+              branch,
+              paths: group.map((item) => item.params.filePath),
+              message: `Delete ${group.length} notes`,
+              ...(tokenOverride ? { opts: { tokenOverride } } : {}),
+            });
+          } catch (batchError) {
+            console.warn('[NoteSyncQueue] batch delete threw; group reverts to per-item processing:', batchError);
+          }
+          if (batchResult) {
+            const byPath = new Map(group.map((item) => [item.params.filePath, item]));
+            const deletedPaths = new Set(batchResult.deleted);
+            for (const item of group) {
+              if (deletedPaths.has(item.params.filePath)) {
+                await this.removeTombstone(item.params.repo, item.params.branch, item.params.filePath);
+                succeeded += 1;
+                droppedIds.add(item.id);
+                this.emitMutationSucceeded({ mutation: item });
                 handledByBatch.add(item.id);
-                await this.classifyBatchDeleteFailure(item, failure.error, droppedIds, recordFailure);
               }
-              for (const item of group) {
-                if (!handledByBatch.has(item.id)) {
-                  handledByBatch.add(item.id);
-                  await recordFailure(item, 'Batch delete returned no outcome for path');
-                }
+            }
+            for (const failure of batchResult.failed) {
+              const item = byPath.get(failure.path);
+              if (!item) continue;
+              handledByBatch.add(item.id);
+              await this.classifyBatchDeleteFailure(item, failure.error, droppedIds, recordFailure);
+            }
+            for (const item of group) {
+              if (!handledByBatch.has(item.id)) {
+                handledByBatch.add(item.id);
+                await recordFailure(item, 'Batch delete returned no outcome for path');
               }
             }
           }
@@ -785,67 +770,65 @@ class NoteSyncQueueServiceClass {
     // deletes flow through the per-item loop. A batch that throws reverts
     // its group to per-item syncNoteToGitHub so items keep their full
     // classification.
-    if (!isClone) {
-      const dueUpserts = items.filter(isBatchEligibleUpsert);
-      if (dueUpserts.length >= 2) {
-        const repoInfo = parseRepoPath(repoPath);
-        if (repoInfo) {
-          const subgroups = new Map<string, BatchEligibleUpsert[]>();
-          for (const item of dueUpserts) {
-            const key = item.params.accountId !== undefined ? item.params.accountId : '__default__';
-            const arr = subgroups.get(key) ?? [];
-            arr.push(item);
-            subgroups.set(key, arr);
+    const dueUpserts = items.filter(isBatchEligibleUpsert);
+    if (dueUpserts.length >= 2) {
+      const repoInfo = parseRepoPath(repoPath);
+      if (repoInfo) {
+        const subgroups = new Map<string, BatchEligibleUpsert[]>();
+        for (const item of dueUpserts) {
+          const key = item.params.accountId !== undefined ? item.params.accountId : '__default__';
+          const arr = subgroups.get(key) ?? [];
+          arr.push(item);
+          subgroups.set(key, arr);
+        }
+        for (const [accountId, group] of subgroups) {
+          if (group.length < 2) continue;
+          let tokenOverride: string | undefined;
+          if (accountId) {
+            tokenOverride = (await AuthService.getTokenById(accountId)) ?? undefined;
           }
-          for (const [accountId, group] of subgroups) {
-            if (group.length < 2) continue;
-            let tokenOverride: string | undefined;
-            if (accountId) {
-              tokenOverride = (await AuthService.getTokenById(accountId)) ?? undefined;
-            }
-            let batchResult: BatchUpsertFilesResult | null = null;
-            try {
-              batchResult = await batchUpsertFiles({
-                owner: repoInfo.owner,
-                repo: repoInfo.repo,
-                branch,
-                files: group.map((item) => ({
-                  path: item.params.filePath,
-                  content: item.params.content,
-                })),
-                message: `Update ${group.length} notes`,
-                ...(tokenOverride ? { opts: { tokenOverride } } : {}),
-              });
-            } catch (batchError) {
-              console.warn('[NoteSyncQueue] batch upsert threw; group reverts to per-item processing:', batchError);
-            }
-            if (batchResult) {
-              const byPath = new Map(group.map((item) => [item.params.filePath, item]));
-              const upsertedPaths = new Set(batchResult.upserted);
-              for (const item of group) {
-                if (upsertedPaths.has(item.params.filePath)) {
-                  await this.applyPostSyncStorageUpdate(item, {
-                    success: true,
-                    filePath: item.params.filePath,
-                    finalContent: item.params.content,
-                  });
-                  succeeded += 1;
-                  droppedIds.add(item.id);
-                  this.emitMutationSucceeded({ mutation: item });
-                  handledByBatch.add(item.id);
-                }
-              }
-              for (const failure of batchResult.failed) {
-                const item = byPath.get(failure.path);
-                if (!item) continue;
+          let batchResult: BatchUpsertFilesResult | null = null;
+          try {
+            batchResult = await batchUpsertFiles({
+              owner: repoInfo.owner,
+              repo: repoInfo.repo,
+              branch,
+              files: group.map((item) => ({
+                path: item.params.filePath,
+                content: item.params.content,
+              })),
+              message: `Update ${group.length} notes`,
+              ...(tokenOverride ? { opts: { tokenOverride } } : {}),
+            });
+          } catch (batchError) {
+            console.warn('[NoteSyncQueue] batch upsert threw; group reverts to per-item processing:', batchError);
+          }
+          if (batchResult) {
+            const byPath = new Map(group.map((item) => [item.params.filePath, item]));
+            const upsertedPaths = new Set(batchResult.upserted);
+            for (const item of group) {
+              if (upsertedPaths.has(item.params.filePath)) {
+                await this.applyPostSyncStorageUpdate(item, {
+                  success: true,
+                  filePath: item.params.filePath,
+                  finalContent: item.params.content,
+                });
+                succeeded += 1;
+                droppedIds.add(item.id);
+                this.emitMutationSucceeded({ mutation: item });
                 handledByBatch.add(item.id);
-                await this.handleBatchUpsertFailure(item, failure.error, droppedIds, recordFailure);
               }
-              for (const item of group) {
-                if (!handledByBatch.has(item.id)) {
-                  handledByBatch.add(item.id);
-                  await recordFailure(item, 'Batch upsert returned no outcome for path');
-                }
+            }
+            for (const failure of batchResult.failed) {
+              const item = byPath.get(failure.path);
+              if (!item) continue;
+              handledByBatch.add(item.id);
+              await this.handleBatchUpsertFailure(item, failure.error, droppedIds, recordFailure);
+            }
+            for (const item of group) {
+              if (!handledByBatch.has(item.id)) {
+                handledByBatch.add(item.id);
+                await recordFailure(item, 'Batch upsert returned no outcome for path');
               }
             }
           }
@@ -853,23 +836,15 @@ class NoteSyncQueueServiceClass {
       }
     }
 
-    // Items whose local write/delete+commit succeeded but whose push is
-    // deferred to the group flush. Recorded so we can apply the post-
-    // success StorageService.updateNote (upserts only) and drop them
-    // only once the flush succeeds.
-    const pendingFlush: { item: QueuedMutation; result: NoteGitHubSyncResult }[] = [];
-
     for (const item of items) {
       if (handledByBatch.has(item.id)) continue;
       const result =
         item.type === 'note.upsert'
           ? await syncNoteToGitHub({
               ...item.params,
-              push: isClone ? false : undefined,
             })
           : await deleteNoteFromGitHub({
               ...item.params,
-              push: isClone ? false : undefined,
             });
 
       if (!result.success) {
@@ -899,73 +874,14 @@ class NoteSyncQueueServiceClass {
         continue;
       }
 
-      if (isClone) {
-        pendingFlush.push({ item, result });
-      } else {
-        if (item.type === 'note.upsert') {
-          await this.applyPostSyncStorageUpdate(item, result);
-        } else if (item.type === 'note.delete') {
-          await this.removeTombstone(item.params.repo, item.params.branch, item.params.filePath);
-        }
-        succeeded++;
-        droppedIds.add(item.id);
-        this.emitMutationSucceeded({ mutation: item });
+      if (item.type === 'note.upsert') {
+        await this.applyPostSyncStorageUpdate(item, result);
+      } else if (item.type === 'note.delete') {
+        await this.removeTombstone(item.params.repo, item.params.branch, item.params.filePath);
       }
-    }
-
-    if (isClone && pendingFlush.length > 0) {
-      const byAccount = new Map<string, typeof pendingFlush>();
-      for (const entry of pendingFlush) {
-        const key = entry.item.params.accountId !== undefined ? entry.item.params.accountId : '__default__';
-        const arr = byAccount.get(key) ?? [];
-        arr.push(entry);
-        byAccount.set(key, arr);
-      }
-      for (const [accountKey, entries] of byAccount) {
-        const existingConflict = useConflictStore.getState().getConflict(repoPath, branch);
-        if (existingConflict) {
-          console.info(`[NoteSyncQueue] skipping push for ${repoPath}@${branch} — conflict already exists`);
-          for (const { item } of entries) {
-            droppedIds.add(item.id);
-            this.emitDroppedMutation({ mutation: item, reason: 'conflict-existing', error: undefined });
-          }
-          continue;
-        }
-        let flushResult: { success: boolean; error?: string } = { success: false };
-        const isCloneMode = (await SyncEngineService.getMode(repoPath)) === 'clone';
-        if (isCloneMode) {
-          const pushResult = await CloneSyncService.pushPending(repoPath, branch);
-          flushResult = { success: !pushResult.conflicted && pushResult.succeeded > 0, error: pushResult.conflicted ? 'conflict-detected' : undefined };
-        } else {
-          const token = accountKey === '__default__'
-            ? (await AuthService.getToken()) ?? undefined
-            : (await AuthService.getTokenById(accountKey)) ?? undefined;
-          flushResult = await LocalGitWriter.push({ repoPath, branch, token });
-        }
-        if (flushResult.success) {
-          for (const { item, result } of entries) {
-            if (item.type === 'note.upsert') {
-              await this.applyPostSyncStorageUpdate(item, result);
-            } else if (item.type === 'note.delete') {
-              await this.removeTombstone(item.params.repo, item.params.branch, item.params.filePath);
-            }
-            succeeded++;
-            droppedIds.add(item.id);
-            this.emitMutationSucceeded({ mutation: item });
-          }
-        } else {
-          const isConflict = (flushResult.error ?? '').includes('conflict');
-          if (isConflict) {
-            for (const { item } of entries) {
-              droppedIds.add(item.id);
-              this.emitDroppedMutation({ mutation: item, reason: 'conflict-detected', error: flushResult.error });
-            }
-          } else {
-            console.warn(`[NoteSyncQueue] coalesced push failed for ${repoPath}@${branch}:`, flushResult.error);
-            for (const { item } of entries) await recordFailure(item, flushResult.error);
-          }
-        }
-      }
+      succeeded++;
+      droppedIds.add(item.id);
+      this.emitMutationSucceeded({ mutation: item });
     }
 
     return { succeeded, failed, droppedIds, updatedById };
