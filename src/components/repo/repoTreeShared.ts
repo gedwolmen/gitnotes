@@ -20,9 +20,6 @@ function getGitHostService(_provider: GitHostProvider): GitHostService {
   };
 }
 
-const SyncEngineService = { getMode: async () => 'clone' as const };
-
-
 export interface TreeNode {
   name: string;
   path: string;

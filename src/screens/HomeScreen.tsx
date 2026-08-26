@@ -31,7 +31,6 @@ import { buildPinnedFeed, buildRecentFeed, RecentItem } from '../utils/recentIte
 import { HomeNoteContextMenu } from '../components/home/HomeNoteContextMenu';
 import ColorPicker from '../components/ColorPicker';
 import { ShareFormat } from '../services/ShareService';
-import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import { useTranslation } from 'react-i18next';
 import { DailyQuoteCard } from '../components/home/DailyQuoteCard';
 import { useDailyQuote } from '../hooks/useDailyQuote';
@@ -235,23 +234,6 @@ export default function HomeScreen() {
           return;
         }
         HapticService.success();
-        if (updated.repo && updated.filePath && (updated.content ?? '').trim()) {
-          const syncParams = {
-            repo: updated.repo,
-            branch: updated.branch ?? 'main',
-            filePath: updated.filePath,
-            title: updated.title,
-            content: updated.content,
-            format: updated.format,
-            tags: updated.tags,
-            color,
-          };
-          try {
-            await NoteSyncQueueService.enqueueNoteUpsert(syncParams, updated.id);
-          } catch (error) {
-            console.warn('[HomeScreen] sync after color update failed:', error);
-          }
-        }
       } catch {
         HapticService.error();
         Alert.alert(t('errors.failedUpdateColorTitle'), t('errors.failedUpdateColorBody'));

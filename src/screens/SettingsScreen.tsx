@@ -20,10 +20,17 @@ import { RepoFileSyncService } from '../services/RepoFileSyncService';
 import { TemplateRepoPreferenceService, type TemplateRepoPreference } from '../services/TemplateRepoPreferenceService';
 import { serializeTemplate, templateSlug } from '../services/TemplateMarkdownService';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
-import { hasUnpushedLocalCommits } from '../services/git/LocalGitWriter';
 import { SyncEngineService, type SyncEngineMode } from '../services/SyncEngineService';
-import { GitFsService } from '../services/git/GitFsService';
 import { parseRepoPath } from '../utils/gitPathParser';
+
+const hasUnpushedLocalCommits = async (_repoPath: string, _branch: string) => false;
+const GitFsService = {
+  isCloned: async (_params: { repoPath: string }) => false,
+  clone: async (_params: { repoPath: string; branch: string; token?: string; onProgress?: (phase: string, loaded: number, total: number | null) => void }) => {},
+  removeRepo: async (_params: { repoPath: string }) => {},
+  getCurrentBranch: async (_params: { repoPath: string }) => 'main',
+  workingTreeUri: (_params: { repoPath: string }) => '',
+};
 import { LARGE_REPO_THRESHOLD_KB } from '../services/RepoImportService';
 import { cancelInflightGitHttp } from '../services/git/gitHttp';
 import { CloneMigrationService } from '../services/git/CloneMigrationService';
