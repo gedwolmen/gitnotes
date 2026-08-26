@@ -13,6 +13,7 @@ import { useTodos } from '../contexts/TodoContext';
 import { useBiometricLock } from '../contexts/BiometricLockContext';
 import { useBackgroundSync } from '../hooks/useBackgroundSync';
 import { useForegroundSyncSettings } from '../hooks/useForegroundSyncSettings';
+import { useClonePushSettings } from '../hooks/useClonePushSettings';
 import { useForegroundSyncHealth } from '../hooks/useForegroundSyncHealth';
 import type { RootStackParamList } from '../navigation/types';
 import { GitHubService, type GitHubRepository } from '../services/GitHubService';
@@ -118,6 +119,7 @@ export default function SettingsScreen() {
     setSyncIntervalSeconds,
   } = useForegroundSyncSettings();
   const syncHealth = useForegroundSyncHealth();
+  const { idleEnabled: clonePushIdleEnabled, backgroundEnabled: clonePushBackgroundEnabled, setIdleEnabled: setClonePushIdleEnabled, setBackgroundEnabled: setClonePushBackgroundEnabled } = useClonePushSettings();
   const isAIEnabled = useAIStore((state) => state.isEnabled);
   const selectedModelId = useAIStore((state) => state.selectedModelId);
   const actionMode = useAIStore((state) => state.actionMode);
@@ -1090,6 +1092,10 @@ export default function SettingsScreen() {
         syncPaused={syncPaused}
         onToggleSyncPaused={(value) => void setSyncPaused(value)}
         syncHealth={syncHealth}
+        clonePushIdleEnabled={clonePushIdleEnabled}
+        onToggleClonePushIdle={(value) => void setClonePushIdleEnabled(value)}
+        clonePushBackgroundEnabled={clonePushBackgroundEnabled}
+        onToggleClonePushBackground={(value) => void setClonePushBackgroundEnabled(value)}
       />
       <SettingsModals
         colors={colors}

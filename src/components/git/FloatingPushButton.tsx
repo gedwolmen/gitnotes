@@ -116,50 +116,44 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
     };
   }, [activeRepoPath]);
 
-  useEffect(() => {
+  const loadUnpushedCount = useCallback(async () => {
     if (!activeRepoPath) {
       setUnpushedCount(0);
       return;
     }
-    let isMounted = true;
-
-    const load = async () => {
-      try {
-        let count = 0;
-        if (syncMode === 'clone') {
-          count = await UnpushedCommitsService.count({
-            repo: activeRepoPath,
-            branch: activeBranch,
-          });
-        } else {
-          const items = await NoteSyncQueueService.getAll();
-          count = items.filter(
-            (m) =>
-              m.params.repo === activeRepoPath &&
-              (m.params.branch ?? 'main') === activeBranch,
-          ).length;
-        }
-        if (isMounted) setUnpushedCount(count);
-      } catch {
-        if (isMounted) setUnpushedCount(0);
+    try {
+      let count = 0;
+      if (syncMode === 'clone') {
+        count = await UnpushedCommitsService.count({
+          repo: activeRepoPath,
+          branch: activeBranch,
+        });
+      } else {
+        const items = await NoteSyncQueueService.getAll();
+        count = items.filter(
+          (m) =>
+            m.params.repo === activeRepoPath &&
+            (m.params.branch ?? 'main') === activeBranch,
+        ).length;
       }
-    };
-
-    void load();
-
-    if (syncMode === 'clone') {
-      const interval = setInterval(() => void load(), 30_000);
-      return () => {
-        isMounted = false;
-        clearInterval(interval);
-      };
+      setUnpushedCount(count);
+    } catch {
+      setUnpushedCount(0);
     }
-    const unsubscribe = NoteSyncQueueService.subscribe(load);
+  }, [activeRepoPath, activeBranch, syncMode]);
+
+  useEffect(() => {
+    void loadUnpushedCount();
+  }, []);
+
+  useEffect(() => {
+    const unsubGitActivity = useGitActivityStore.subscribe(loadUnpushedCount);
+    const unsubNoteSync = NoteSyncQueueService.subscribe(loadUnpushedCount);
     return () => {
-      isMounted = false;
-      unsubscribe();
+      unsubGitActivity();
+      unsubNoteSync();
     };
-  }, [activeRepoPath, activeBranch, syncMode, commitRevision]);
+  }, [loadUnpushedCount]);
 
   const inFlightCount = useMemo(() => {
     if (syncMode !== 'clone' || !activeRepoPath) return 0;

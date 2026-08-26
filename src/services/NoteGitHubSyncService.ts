@@ -4,24 +4,14 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { AuthService } from './AuthService';
 import { SyncEngineService } from './SyncEngineService';
-import { LocalGitWriter } from './git/LocalGitWriter';
 import { GitFsService } from './git/GitFsService';
 import { resolveBranch } from './git/resolveBranch';
-import { githubActivity } from '../stores/githubActivityStore';
 import { getGitHostService } from './git/gitHostFactory';
 import { FEATURE_USE_MULTI_HOST_WRITE } from './featureFlags';
 import { classifyGitHubSyncError, extractHttpErrorDetails, syncStatusForError } from './git/syncFailure';
 import { formatSyncError } from './git/formatSyncError';
 import type { GitHostProvider } from './git/GitHost';
-import { CommitService } from './git/CommitService';
-
-async function resolveAuthor(provider: GitHostProvider = 'github'): Promise<{ name: string; email: string }> {
-  const host = getGitHostService(provider);
-  const user = await host.getAuthenticatedUser();
-  const name = user?.login || 'gitnotes';
-  const email = user?.email || `${name}@users.noreply.gitnotes`;
-  return { name, email };
-}
+import { CloneSyncService } from './CloneSyncService';
 
 async function resolveToken(accountId?: string): Promise<string | undefined> {
   if (!accountId) return undefined;
@@ -363,7 +353,7 @@ export async function deleteNoteFromGitHub(params: {
    */
   push?: boolean;
 }): Promise<NoteGitHubSyncResult> {
-  const { repo: repoPath, branch, filePath, title, accountId, push } = params;
+  const { repo: repoPath, branch, filePath, title, accountId } = params;
   const tokenOverride = await resolveToken(accountId);
 
   if (!tokenOverride && !GitHubService.isAuthenticated()) {
@@ -380,18 +370,16 @@ export async function deleteNoteFromGitHub(params: {
 
   const mode = await SyncEngineService.getMode(repoPath);
   if (mode === 'clone') {
-    const author = await resolveAuthor();
-    const tokenForPush = tokenOverride ?? (await AuthService.getToken()) ?? undefined;
-    return LocalGitWriter.deleteAndCommit({
+    const saveResult = await CloneSyncService.save({
       repoPath,
       branch: targetBranch,
       filePath,
       message: `Delete note: ${title || filePath}`,
-      author,
-      token: tokenForPush,
-      push,
-      onProgress: (progress) => githubActivity.setProgress(progress),
+      intent: 'delete',
     });
+    return saveResult.success
+      ? { success: true, filePath }
+      : { success: false, error: saveResult.error };
   }
 
   if (FEATURE_USE_MULTI_HOST_WRITE) {
@@ -567,19 +555,18 @@ export async function syncNoteToGitHub(params: {
   // identical to what the Contents API would publish — that means a user can
   // flip modes without their next pull seeing churn.
   if (mode === 'clone') {
-    const author = await resolveAuthor(params.provider);
-    const writeResult = await CommitService.commit({
-      repo: repoPath,
+    const saveResult = await CloneSyncService.save({
+      repoPath,
       branch: targetBranch,
       filePath: targetPath,
       content: finalContent,
       message,
-      author,
+      intent: 'upsert',
     });
-    if (writeResult.success) {
+    if (saveResult.success) {
       return { success: true, filePath: targetPath, finalContent };
     }
-    return { success: false, error: writeResult.error };
+    return { success: false, error: saveResult.error };
   }
 
   if (FEATURE_USE_MULTI_HOST_WRITE) {

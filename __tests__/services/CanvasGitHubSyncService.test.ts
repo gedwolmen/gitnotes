@@ -25,9 +25,9 @@ jest.mock('../../src/services/AuthService', () => ({
   },
 }));
 
-jest.mock('../../src/services/git/CommitService', () => ({
-  CommitService: {
-    commit: jest.fn(async () => ({ success: true })),
+jest.mock('../../src/services/CloneSyncService', () => ({
+  CloneSyncService: {
+    save: jest.fn(async () => ({ success: true })),
   },
 }));
 
@@ -83,7 +83,7 @@ jest.mock('expo-file-system/legacy', () => ({
 import { syncCanvasToGitHub, deleteCanvasFromGitHub } from '../../src/services/CanvasGitHubSyncService';
 import { GitHubService } from '../../src/services/GitHubService';
 import { SyncEngineService } from '../../src/services/SyncEngineService';
-import { CommitService } from '../../src/services/git/CommitService';
+import { CloneSyncService } from '../../src/services/CloneSyncService';
 
 const mockScene = { nodes: [], edges: [] };
 
@@ -97,7 +97,7 @@ describe('CanvasGitHubSyncService', () => {
       email: 'test@test.com',
     });
     (SyncEngineService.getMode as jest.Mock).mockResolvedValue('api');
-    (CommitService.commit as jest.Mock).mockResolvedValue({ success: true });
+    (CloneSyncService.save as jest.Mock).mockResolvedValue({ success: true });
   });
 
   describe('syncCanvasToGitHub', () => {
@@ -106,7 +106,7 @@ describe('CanvasGitHubSyncService', () => {
         (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
       });
 
-      test('calls CommitService.commit with correct params for create', async () => {
+      test('calls CloneSyncService.save with upsert intent for create', async () => {
         const result = await syncCanvasToGitHub({
           repo: 'owner/repo',
           title: 'My Canvas',
@@ -116,21 +116,17 @@ describe('CanvasGitHubSyncService', () => {
         expect(result.success).toBe(true);
         expect(result.filePath).toBe('canvases/my-canvas.json');
 
-        expect(CommitService.commit).toHaveBeenCalledTimes(1);
-        const call = (CommitService.commit as jest.Mock).mock.calls[0][0];
-        expect(call.repo).toBe('owner/repo');
+        expect(CloneSyncService.save).toHaveBeenCalledTimes(1);
+        const call = (CloneSyncService.save as jest.Mock).mock.calls[0][0];
+        expect(call.repoPath).toBe('owner/repo');
         expect(call.branch).toBe('main');
         expect(call.filePath).toBe('canvases/my-canvas.json');
         expect(call.content).toBe(JSON.stringify(mockScene, null, 2));
         expect(call.message).toBe('Create canvas: My Canvas');
-        expect(call.author).toEqual({
-          name: 'Test User',
-          email: 'test@test.com',
-        });
-        expect(call.delete).toBeUndefined();
+        expect(call.intent).toBe('upsert');
       });
 
-      test('calls CommitService.commit with Update message when filePath is provided', async () => {
+      test('calls CloneSyncService.save with Update message when filePath is provided', async () => {
         const result = await syncCanvasToGitHub({
           repo: 'owner/repo',
           filePath: 'canvases/existing.json',
@@ -141,13 +137,13 @@ describe('CanvasGitHubSyncService', () => {
         expect(result.success).toBe(true);
         expect(result.filePath).toBe('canvases/existing.json');
 
-        const call = (CommitService.commit as jest.Mock).mock.calls[0][0];
+        const call = (CloneSyncService.save as jest.Mock).mock.calls[0][0];
         expect(call.message).toBe('Update canvas: Updated Canvas');
         expect(call.filePath).toBe('canvases/existing.json');
       });
 
-      test('returns error when CommitService.commit fails', async () => {
-        (CommitService.commit as jest.Mock).mockResolvedValue({
+      test('returns error when CloneSyncService.save fails', async () => {
+        (CloneSyncService.save as jest.Mock).mockResolvedValue({
           success: false,
           error: 'write failed',
         });
@@ -160,6 +156,38 @@ describe('CanvasGitHubSyncService', () => {
 
         expect(result.success).toBe(false);
         expect(result.error).toBe('write failed');
+      });
+
+      test('treats queued as success since local commit succeeded', async () => {
+        (CloneSyncService.save as jest.Mock).mockResolvedValue({
+          success: false,
+          error: 'queued',
+        });
+
+        const result = await syncCanvasToGitHub({
+          repo: 'owner/repo',
+          title: 'My Canvas',
+          scene: mockScene as any,
+        });
+
+        expect(result.success).toBe(true);
+        expect(result.filePath).toBe('canvases/my-canvas.json');
+      });
+
+      test('propagates conflict-detected error from CloneSyncService.save', async () => {
+        (CloneSyncService.save as jest.Mock).mockResolvedValue({
+          success: false,
+          error: 'conflict-detected',
+        });
+
+        const result = await syncCanvasToGitHub({
+          repo: 'owner/repo',
+          title: 'My Canvas',
+          scene: mockScene as any,
+        });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('conflict-detected');
       });
 
       test('does not call GitHubService.updateFile in clone mode', async () => {
@@ -194,14 +222,14 @@ describe('CanvasGitHubSyncService', () => {
         expect(call[5]).toBe('main');
       });
 
-      test('does not call CommitService.commit in api mode', async () => {
+      test('does not call CloneSyncService.save in api mode', async () => {
         await syncCanvasToGitHub({
           repo: 'owner/repo',
           title: 'My Canvas',
           scene: mockScene as any,
         });
 
-        expect(CommitService.commit).not.toHaveBeenCalled();
+        expect(CloneSyncService.save).not.toHaveBeenCalled();
       });
 
       test('returns error when GitHubService.updateFile fails', async () => {
@@ -267,7 +295,7 @@ describe('CanvasGitHubSyncService', () => {
         (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
       });
 
-      test('calls CommitService.commit with delete:true for clone mode', async () => {
+      test('calls CloneSyncService.save with delete intent', async () => {
         const result = await deleteCanvasFromGitHub({
           repo: 'owner/repo',
           filePath: 'canvases/my-canvas.json',
@@ -277,17 +305,13 @@ describe('CanvasGitHubSyncService', () => {
         expect(result.success).toBe(true);
         expect(result.filePath).toBe('canvases/my-canvas.json');
 
-        expect(CommitService.commit).toHaveBeenCalledTimes(1);
-        const call = (CommitService.commit as jest.Mock).mock.calls[0][0];
-        expect(call.repo).toBe('owner/repo');
+        expect(CloneSyncService.save).toHaveBeenCalledTimes(1);
+        const call = (CloneSyncService.save as jest.Mock).mock.calls[0][0];
+        expect(call.repoPath).toBe('owner/repo');
         expect(call.branch).toBe('main');
         expect(call.filePath).toBe('canvases/my-canvas.json');
         expect(call.message).toBe('Delete canvas: My Canvas');
-        expect(call.delete).toBe(true);
-        expect(call.author).toEqual({
-          name: 'Test User',
-          email: 'test@test.com',
-        });
+        expect(call.intent).toBe('delete');
       });
 
       test('uses filePath as message fallback when title is missing', async () => {
@@ -296,12 +320,12 @@ describe('CanvasGitHubSyncService', () => {
           filePath: 'canvases/my-canvas.json',
         });
 
-        const call = (CommitService.commit as jest.Mock).mock.calls[0][0];
+        const call = (CloneSyncService.save as jest.Mock).mock.calls[0][0];
         expect(call.message).toBe('Delete canvas: canvases/my-canvas.json');
       });
 
-      test('returns error when CommitService.commit fails', async () => {
-        (CommitService.commit as jest.Mock).mockResolvedValue({
+      test('returns error when CloneSyncService.save fails', async () => {
+        (CloneSyncService.save as jest.Mock).mockResolvedValue({
           success: false,
           error: 'delete failed',
         });
@@ -314,6 +338,38 @@ describe('CanvasGitHubSyncService', () => {
 
         expect(result.success).toBe(false);
         expect(result.error).toBe('delete failed');
+      });
+
+      test('treats queued as success since local commit succeeded', async () => {
+        (CloneSyncService.save as jest.Mock).mockResolvedValue({
+          success: false,
+          error: 'queued',
+        });
+
+        const result = await deleteCanvasFromGitHub({
+          repo: 'owner/repo',
+          filePath: 'canvases/my-canvas.json',
+          title: 'My Canvas',
+        });
+
+        expect(result.success).toBe(true);
+        expect(result.filePath).toBe('canvases/my-canvas.json');
+      });
+
+      test('propagates conflict-detected error from CloneSyncService.save', async () => {
+        (CloneSyncService.save as jest.Mock).mockResolvedValue({
+          success: false,
+          error: 'conflict-detected',
+        });
+
+        const result = await deleteCanvasFromGitHub({
+          repo: 'owner/repo',
+          filePath: 'canvases/my-canvas.json',
+          title: 'My Canvas',
+        });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('conflict-detected');
       });
 
       test('does not call GitHubService.deleteFile in clone mode', async () => {
@@ -349,14 +405,14 @@ describe('CanvasGitHubSyncService', () => {
         expect(deleteArgs[3]).toBe('Delete canvas: My Canvas');
       });
 
-      test('does not call CommitService.commit in api mode', async () => {
+      test('does not call CloneSyncService.save in api mode', async () => {
         await deleteCanvasFromGitHub({
           repo: 'owner/repo',
           filePath: 'canvases/my-canvas.json',
           title: 'My Canvas',
         });
 
-        expect(CommitService.commit).not.toHaveBeenCalled();
+        expect(CloneSyncService.save).not.toHaveBeenCalled();
       });
 
       test('treats not-found as success', async () => {

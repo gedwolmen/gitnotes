@@ -11,6 +11,8 @@ import { proposeMerge } from '../services/conflict/AiConflictResolver';
 import { GitFsService } from '../services/git/GitFsService';
 import { LocalGitWriter } from '../services/git/LocalGitWriter';
 import { SyncEngineService } from '../services/SyncEngineService';
+import { CloneSyncService } from '../services/CloneSyncService';
+import { pullFromSingleRepo } from '../services/RepoPullService';
 import { AuthService } from '../services/AuthService';
 import type { FileConflict } from '../services/conflict/types';
 import type { RootStackParamList } from '../navigation/types';
@@ -237,11 +239,22 @@ export default function ConflictResolverScreen() {
             { text: 'OK', onPress: () => navigation.goBack() },
           ]);
         } else {
-          Alert.alert(
-            'Conflicts resolved',
-            'Your changes have been committed locally. Use the push button to sync with GitHub.',
-            [{ text: 'OK', onPress: () => navigation.goBack() }],
-          );
+          // Clone mode — push through CloneSyncService
+          const pushResult = await CloneSyncService.pushPending(repoPath, branch);
+          if (pushResult.conflicted) {
+            Alert.alert('Push conflicted', 'A new conflict was detected. Please resolve it.', [
+              { text: 'OK', onPress: () => navigation.goBack() },
+            ]);
+          } else if (pushResult.succeeded > 0) {
+            await pullFromSingleRepo(repoPath);
+            Alert.alert('Conflicts resolved', 'Your changes have been pushed to GitHub.', [
+              { text: 'OK', onPress: () => navigation.goBack() },
+            ]);
+          } else {
+            Alert.alert('Push failed', 'Changes committed but could not be pushed. Try again manually.', [
+              { text: 'OK', onPress: () => navigation.goBack() },
+            ]);
+          }
         }
       } catch (e) {
         Alert.alert('Error', e instanceof Error ? e.message : String(e));

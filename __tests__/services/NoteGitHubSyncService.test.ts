@@ -3,8 +3,15 @@ jest.mock('../../src/services/GitHubService', () => ({
     isAuthenticated: jest.fn(() => true),
     getFileShaOrNull: jest.fn(async () => null),
     updateFile: jest.fn(async () => ({ content: { sha: 'newsha' }, commit: { sha: 'commitsha' } })),
+    deleteFile: jest.fn(async () => true),
     uploadBinaryFile: jest.fn(async () => null),
     getRepoPrivacy: jest.fn(async () => true),
+  },
+}));
+
+jest.mock('../../src/services/CloneSyncService', () => ({
+  CloneSyncService: {
+    save: jest.fn(async () => ({ success: true })),
   },
 }));
 
@@ -18,13 +25,6 @@ jest.mock('../../src/services/AuthService', () => ({
   AuthService: {
     getToken: jest.fn(async () => 'test-token'),
     getTokenById: jest.fn(async () => 'test-token'),
-  },
-}));
-
-jest.mock('../../src/services/git/LocalGitWriter', () => ({
-  LocalGitWriter: {
-    writeAndCommit: jest.fn(async () => ({ success: true })),
-    deleteAndCommit: jest.fn(async () => ({ success: true })),
   },
 }));
 
@@ -50,20 +50,11 @@ jest.mock('../../src/services/featureFlags', () => ({
   FEATURE_USE_MULTI_HOST_WRITE: false,
 }));
 
-jest.mock('../../src/stores/githubActivityStore', () => ({
-  githubActivity: {
-    begin: jest.fn(),
-    end: jest.fn(),
-    reset: jest.fn(),
-    setProgress: jest.fn(),
-  },
-}));
-
-import { syncNoteToGitHub } from '../../src/services/NoteGitHubSyncService';
+import { syncNoteToGitHub, deleteNoteFromGitHub } from '../../src/services/NoteGitHubSyncService';
 import { GitHubService } from '../../src/services/GitHubService';
 import { SyncEngineService } from '../../src/services/SyncEngineService';
-import { LocalGitWriter } from '../../src/services/git/LocalGitWriter';
 import { GitFsService } from '../../src/services/git/GitFsService';
+import { CloneSyncService } from '../../src/services/CloneSyncService';
 
 describe('NoteGitHubSyncService.syncNoteToGitHub', () => {
   beforeEach(() => {
@@ -73,7 +64,7 @@ describe('NoteGitHubSyncService.syncNoteToGitHub', () => {
     (SyncEngineService.getMode as jest.Mock).mockResolvedValue('api');
     (GitFsService.isCloned as jest.Mock).mockResolvedValue(false);
     (GitFsService.readFile as jest.Mock).mockResolvedValue(null);
-    (LocalGitWriter.writeAndCommit as jest.Mock).mockResolvedValue({ success: true });
+    (CloneSyncService.save as jest.Mock).mockResolvedValue({ success: true });
   });
 
   describe('clone mode existence probe (#890)', () => {
@@ -103,8 +94,13 @@ describe('NoteGitHubSyncService.syncNoteToGitHub', () => {
       expect(result.success).toBe(true);
       expect(result.filePath).toBe('notes/foo.md');
 
-      const writeArg = (LocalGitWriter.writeAndCommit as jest.Mock).mock.calls[0][0];
-      expect(writeArg.message).toMatch(/^Create note:/);
+      expect(CloneSyncService.save).toHaveBeenCalledTimes(1);
+      const saveArg = (CloneSyncService.save as jest.Mock).mock.calls[0][0];
+      expect(saveArg.repoPath).toBe('owner/repo');
+      expect(saveArg.branch).toBe('main');
+      expect(saveArg.filePath).toBe('notes/foo.md');
+      expect(saveArg.intent).toBe('upsert');
+      expect(saveArg.message).toMatch(/^Create note:/);
 
       const warned = warnSpy.mock.calls.some((args) =>
         String(args[0]).includes('fileExists check failed'),
@@ -130,8 +126,9 @@ describe('NoteGitHubSyncService.syncNoteToGitHub', () => {
       expect(result.success).toBe(true);
       // Unknown probe failure -> fileExists null -> heuristic falls back to
       // caller intent (no filePath / knownSha) -> still a Create verb.
-      const writeArg = (LocalGitWriter.writeAndCommit as jest.Mock).mock.calls[0][0];
-      expect(writeArg.message).toMatch(/^Create note:/);
+      expect(CloneSyncService.save).toHaveBeenCalledTimes(1);
+      const saveArg = (CloneSyncService.save as jest.Mock).mock.calls[0][0];
+      expect(saveArg.message).toMatch(/^Create note:/);
 
       const warned = warnSpy.mock.calls.some((args) =>
         String(args[0]).includes('fileExists check failed'),
@@ -179,6 +176,80 @@ describe('NoteGitHubSyncService.syncNoteToGitHub', () => {
       expect(GitHubService.updateFile).toHaveBeenCalledTimes(1);
       const opts = (GitHubService.updateFile as jest.Mock).mock.calls[0][6];
       expect(opts.expectExists).toBe(true);
+    });
+  });
+});
+
+describe('NoteGitHubSyncService.deleteNoteFromGitHub', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (GitHubService.isAuthenticated as jest.Mock).mockReturnValue(true);
+    (SyncEngineService.getMode as jest.Mock).mockResolvedValue('api');
+    (CloneSyncService.save as jest.Mock).mockResolvedValue({ success: true });
+  });
+
+  describe('clone mode', () => {
+    beforeEach(() => {
+      (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
+    });
+
+    test('routes through CloneSyncService.save with intent delete', async () => {
+      const result = await deleteNoteFromGitHub({
+        repo: 'owner/repo',
+        branch: 'main',
+        filePath: 'notes/foo.md',
+        title: 'Foo',
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.filePath).toBe('notes/foo.md');
+
+      expect(CloneSyncService.save).toHaveBeenCalledTimes(1);
+      const saveArg = (CloneSyncService.save as jest.Mock).mock.calls[0][0];
+      expect(saveArg.repoPath).toBe('owner/repo');
+      expect(saveArg.branch).toBe('main');
+      expect(saveArg.filePath).toBe('notes/foo.md');
+      expect(saveArg.message).toBe('Delete note: Foo');
+      expect(saveArg.intent).toBe('delete');
+    });
+
+    test('returns failure when CloneSyncService.save fails', async () => {
+      (CloneSyncService.save as jest.Mock).mockResolvedValue({
+        success: false,
+        error: 'queued',
+      });
+
+      const result = await deleteNoteFromGitHub({
+        repo: 'owner/repo',
+        branch: 'main',
+        filePath: 'notes/foo.md',
+        title: 'Foo',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('queued');
+    });
+
+    test('uses filePath fallback in message when title is absent', async () => {
+      await deleteNoteFromGitHub({
+        repo: 'owner/repo',
+        branch: 'main',
+        filePath: 'notes/bar.md',
+      });
+
+      const saveArg = (CloneSyncService.save as jest.Mock).mock.calls[0][0];
+      expect(saveArg.message).toBe('Delete note: notes/bar.md');
+    });
+
+    test('does not call GitHubService in clone mode', async () => {
+      await deleteNoteFromGitHub({
+        repo: 'owner/repo',
+        branch: 'main',
+        filePath: 'notes/foo.md',
+        title: 'Foo',
+      });
+
+      expect(GitHubService.getFileShaOrNull).not.toHaveBeenCalled();
     });
   });
 });

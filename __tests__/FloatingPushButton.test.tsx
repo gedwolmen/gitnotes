@@ -20,7 +20,10 @@ jest.mock('../src/stores/repoStore', () => ({
 }));
 
 jest.mock('../src/stores/gitActivityStore', () => ({
-  useGitActivityStore: () => ({ commitRevision: 0, incrementRevision: jest.fn() }),
+  useGitActivityStore: Object.assign(
+    jest.fn(() => ({ commitRevision: 0, incrementRevision: jest.fn() })),
+    { subscribe: jest.fn(() => jest.fn()) },
+  ),
 }));
 
 jest.mock('../src/services/LastUsedRepoService', () => ({
