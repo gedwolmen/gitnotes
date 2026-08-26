@@ -5,6 +5,7 @@ import { StorageService } from '../services/StorageService';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import type { MutationSucceededEvent, DroppedMutationEvent, NoteDeleteParams } from '../services/NoteSyncQueueService';
 import { SyncEngineService } from '../services/SyncEngineService';
+import { CloneSyncService, type SaveResult } from '../services/CloneSyncService';
 import { CommitService } from '../services/git/CommitService';
 import { resolveDefaultFolder, resolveDefaultRepo } from '../services/git/defaultsPolicy';
 import { recordDeleteFailure } from '../services/git/deleteFailures';
@@ -29,6 +30,16 @@ interface NoteActions {
   loadNotes: () => Promise<void>;
   createNote: (input: NoteCreateInput) => Promise<Note | null>;
   updateNote: (input: NoteUpdateInput) => Promise<Note | null>;
+  /**
+   * Upsert a note's content to git (clone mode) or enqueue for API push (API mode).
+   * Returns SaveResult — caller (editor screen) decides navigation based on success.
+   */
+  upsertNote: (input: NoteUpdateInput & {
+    repoPath: string;
+    branch: string;
+    filePath: string;
+    content: string;
+  }) => Promise<SaveResult>;
   deleteNote: (id: string) => Promise<boolean>;
   dropByFilePaths: (repo: string, paths: string[]) => Promise<number>;
   clearAllNotes: () => Promise<boolean>;
@@ -216,6 +227,58 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
     }
   },
 
+  upsertNote: async (input) => {
+    const { repoPath, branch, filePath, content, id } = input;
+    const mode = await SyncEngineService.getMode(repoPath);
+
+    if (mode === 'clone') {
+      try {
+        const saveResult = await CloneSyncService.save({
+          repoPath,
+          branch,
+          filePath,
+          content,
+          message: `Update note: ${input.title ?? filePath}`,
+          intent: 'upsert',
+        });
+        if (!saveResult.success) {
+          return saveResult;
+        }
+        const updatedNote = await StorageService.updateNote(input);
+        if (updatedNote) {
+          set((state) => ({
+            notes: sortNotesWithPinnedFirst(
+              state.notes.map((note) => (note.id === updatedNote.id ? updatedNote : note))
+            ),
+          }));
+        }
+        return saveResult;
+      } catch {
+        return { success: false, error: 'unknown' };
+      }
+    }
+
+    await NoteSyncQueueService.enqueueNoteUpsert({
+      repo: repoPath,
+      branch,
+      filePath,
+      title: input.title ?? '',
+      content,
+      format: input.format,
+      tags: input.tags,
+      color: input.color,
+    });
+    const updatedNote = await StorageService.updateNote(input);
+    if (updatedNote) {
+      set((state) => ({
+        notes: sortNotesWithPinnedFirst(
+          state.notes.map((note) => (note.id === updatedNote.id ? updatedNote : note))
+        ),
+      }));
+    }
+    return { success: true };
+  },
+
   deleteNote: async (id) => {
     try {
       set({ error: null });
@@ -248,29 +311,41 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
             });
           const mode = await SyncEngineService.getMode(repoPath);
           if (mode === 'clone') {
-            // Clone-mode: commit the delete locally with CommitService,
-            // then finish the local delete here.
+            // Clone-mode: route through CloneSyncService.save which handles
+            // pre-pull, commit, push attempt, and offline queue.
             const opId = beginDeleteOp();
-            const commitResult = await CommitService.commit({
-              repo: repoPath,
+            const saveResult = await CloneSyncService.save({
+              repoPath,
               branch: note.branch ?? 'main',
               filePath,
+              content: undefined,
               message: `Delete note: ${note.title ?? filePath}`,
-              delete: true,
+              intent: 'delete',
             });
-            if (!commitResult.success) {
-              gitOperationRegistry.fail(opId, commitResult.error ?? 'Failed to delete note');
-              set({ error: commitResult.error ?? 'Failed to delete note' });
-              return false;
+            if (saveResult.success) {
+              const success = await StorageService.deleteNote(id);
+              if (success) {
+                set((state) => ({ notes: state.notes.filter((n) => n.id !== id) }));
+                gitOperationRegistry.succeed(opId);
+              } else {
+                gitOperationRegistry.fail(opId, 'Failed to delete note locally');
+              }
+              return success;
             }
-            const success = await StorageService.deleteNote(id);
-            if (success) {
-              set((state) => ({ notes: state.notes.filter((n) => n.id !== id) }));
-              gitOperationRegistry.succeed(opId);
-            } else {
-              gitOperationRegistry.fail(opId, 'Failed to delete note locally');
+            if (saveResult.error === 'queued') {
+              const success = await StorageService.deleteNote(id);
+              if (success) {
+                set((state) => ({ notes: state.notes.filter((n) => n.id !== id) }));
+                gitOperationRegistry.succeed(opId);
+              } else {
+                gitOperationRegistry.fail(opId, 'Failed to delete note locally');
+              }
+              return success;
             }
-            return success;
+            // 'conflict-detected' or other errors
+            gitOperationRegistry.fail(opId, saveResult.error ?? 'Failed to delete note');
+            set({ error: saveResult.error ?? 'Failed to delete note' });
+            return false;
           }
           // API mode: enqueue the delete, then remove locally immediately.
           try {

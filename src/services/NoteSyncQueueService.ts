@@ -6,6 +6,7 @@ import {
 } from './NoteGitHubSyncService';
 import { StorageService } from './StorageService';
 import { SyncEngineService } from './SyncEngineService';
+import { CloneSyncService } from './CloneSyncService';
 import { AuthService } from './AuthService';
 import { LocalGitWriter } from './git/LocalGitWriter';
 import { classifyGitHubSyncError, isRetryableFailure, syncStatusForError } from './git/syncFailure';
@@ -930,14 +931,17 @@ class NoteSyncQueueServiceClass {
           }
           continue;
         }
-        const token = accountKey === '__default__'
-          ? (await AuthService.getToken()) ?? undefined
-          : (await AuthService.getTokenById(accountKey)) ?? undefined;
-        const flushResult = await LocalGitWriter.push({
-          repoPath,
-          branch,
-          token,
-        });
+        let flushResult: { success: boolean; error?: string } = { success: false };
+        const isCloneMode = (await SyncEngineService.getMode(repoPath)) === 'clone';
+        if (isCloneMode) {
+          const pushResult = await CloneSyncService.pushPending(repoPath, branch);
+          flushResult = { success: !pushResult.conflicted && pushResult.succeeded > 0, error: pushResult.conflicted ? 'conflict-detected' : undefined };
+        } else {
+          const token = accountKey === '__default__'
+            ? (await AuthService.getToken()) ?? undefined
+            : (await AuthService.getTokenById(accountKey)) ?? undefined;
+          flushResult = await LocalGitWriter.push({ repoPath, branch, token });
+        }
         if (flushResult.success) {
           for (const { item, result } of entries) {
             if (item.type === 'note.upsert') {

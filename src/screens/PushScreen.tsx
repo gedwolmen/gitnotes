@@ -17,8 +17,7 @@ import { ScreenHeader, useScreenHeaderHeight } from '../components/ui';
 import { SafeAreaView } from '../components/ui/SafeAreaView';
 import { UnpushedCommitsService } from '../services/git/UnpushedCommitsService';
 import type { CommitSummary, ChangedFile } from '../services/git/UnpushedCommitsService';
-import { LocalGitWriter } from '../services/git/LocalGitWriter';
-import { AuthService } from '../services/AuthService';
+import { CloneSyncService } from '../services/CloneSyncService';
 import { pullFromSingleRepo } from '../services/RepoPullService';
 import { useSafeBack } from '../hooks/useSafeBack';
 import { useGitActivityStore } from '../stores/gitActivityStore';
@@ -230,37 +229,22 @@ export default function PushScreen() {
     if (pushing) return;
     setPushing(true);
     try {
-      const token = (await AuthService.getToken()) ?? undefined;
-      const pushPromise = LocalGitWriter.push({
-        repoPath,
-        branch,
-        token,
-      });
-      const timeoutMs = 60_000;
-      const timeoutPromise = new Promise<{ success: false; error: string }>((_, reject) =>
-        setTimeout(() => reject(new Error('Push timed out after 60s. Pull and try again.')), timeoutMs)
-      );
-      const result = await Promise.race([pushPromise, timeoutPromise]);
-      if (result.success) {
+      const result = await CloneSyncService.pushPending(repoPath, branch);
+      if (result.conflicted) {
+        navigation.navigate('Conflicts', { repoPath, branch });
+      } else if (result.succeeded > 0) {
         await pullFromSingleRepo(repoPath);
         useGitActivityStore.getState().incrementRevision();
-        Alert.alert('Pushed', 'All commits have been pushed to GitHub.', [
+        Alert.alert('Pushed', `${result.succeeded} commit(s) pushed to GitHub.`, [
           { text: 'OK', onPress: () => navigation.goBack() },
         ]);
+      } else if (result.failed > 0) {
+        Alert.alert('Push partially failed', `${result.succeeded} succeeded, ${result.failed} failed.`);
       } else {
-        const error = result.error ?? 'Unknown error';
-        if (error.includes('conflict-detected')) {
-          navigation.navigate('Conflicts', { repoPath, branch });
-        } else {
-          Alert.alert('Push failed', error);
-        }
+        Alert.alert('Push failed', 'No commits were pushed. Check your connection and try again.');
       }
     } catch (error) {
-      if (error instanceof Error && error.message.includes('60s')) {
-        Alert.alert('Push timed out', 'Push timed out after 60s. Pull and try again.');
-      } else {
-        Alert.alert('Push failed', error instanceof Error ? error.message : 'Unknown error');
-      }
+      Alert.alert('Push failed', error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setPushing(false);
     }

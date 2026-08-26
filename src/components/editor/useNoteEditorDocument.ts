@@ -14,6 +14,7 @@ import { HapticService } from '../../utils/haptics';
 import { useUndo } from '../../utils/useUndo';
 import { NoteSyncQueueService } from '../../services/NoteSyncQueueService';
 import { classifyGitHubSyncError, isRetryableFailure, syncStatusForError } from '../../services/git/syncFailure';
+import { useNoteStore } from '../../stores/noteStore';
 import { githubActivity } from '../../stores/githubActivityStore';
 import { useGitOperationStore, gitOperationRegistry, GIT_OP_ALL_REPOS } from '../../stores/gitOperationStore';
 import type { GitOp } from '../../stores/gitOperationStore';
@@ -424,37 +425,33 @@ export function useNoteEditorDocument({
         githubActivity.begin('Pushing note');
         try {
           const existingForColor = getNoteByIdRef.current(savedNoteId);
-          const syncParams = {
-            repo,
-            branch,
+
+          const syncResult = await useNoteStore.getState().upsertNote({
+            id: savedNoteId,
+            repoPath: repo,
+            branch: normalizeBranch(branch),
             filePath: syncPath,
-            title: title.trim(),
             content: finalContent,
+            title: title.trim(),
             format: noteFormat,
             accountId,
             tags,
             color: existingForColor?.color ?? null,
-            knownSha: commit,
-          };
+          });
 
-          try {
-            await NoteSyncQueueService.enqueueNoteUpsert(syncParams, savedNoteId);
-            const updated = await updateNote({
-              id: savedNoteId,
+          if (syncResult.success === false && syncResult.error === 'conflict-detected') {
+            navigation.navigate('ConflictResolver', {
+              repoPath: repo,
+              branch: normalizeBranch(branch),
               filePath: syncPath,
             });
-            if (!updated) {
-              Alert.alert(
-                'Partial Save',
-                'Your note was queued but local metadata could not be updated.',
-                [{ text: 'OK' }],
-              );
-            }
-          } catch (error) {
-            console.warn('[useNoteEditorDocument] sync failed:', error);
+            return;
+          }
+
+          if (!syncResult.success) {
             Alert.alert(
               'Save Failed',
-              'Your note was saved locally but could not be queued for sync. Please try again.',
+              'Your note was saved locally but could not be synced. Please try again.',
               [{ text: 'OK' }],
             );
           }
