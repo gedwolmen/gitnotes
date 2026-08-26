@@ -23,6 +23,8 @@ type ProductionStackParamList = {
   Onboarding: undefined;
   Git2Repos: undefined;
   Git2Repo: { repoId: string };
+  ConflictResolver: { repoId: string };
+  SyncSettings: { repoId: string };
 };
 
 type DevOnlyStackParamList = {

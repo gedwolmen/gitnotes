@@ -28,6 +28,7 @@ import OnboardingScreen from '../screens/OnboardingScreen';
 import { RootStackParamList } from './types';
 import { Git2ReposScreen } from '../features/git2/repositories/Git2ReposScreen';
 import { Git2RepoScreen } from '../features/git2/repositories/Git2RepoScreen';
+import { ConflictResolverScreen, SyncSettingsScreen } from '../features/git2/sync';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAIStore } from '../stores/aiStore';
 import { useAIHubStore } from '../stores/aiHubStore';
@@ -272,6 +273,16 @@ export default function AppNavigator({ showOnboarding, onOnboardingComplete, onO
               name="Git2Repo"
               component={Git2RepoScreen}
               options={{ title: 'Repository' }}
+            />
+            <Stack.Screen
+              name="ConflictResolver"
+              component={ConflictResolverScreen}
+              options={{ title: 'Resolve Conflicts' }}
+            />
+            <Stack.Screen
+              name="SyncSettings"
+              component={SyncSettingsScreen}
+              options={{ title: 'Sync Settings' }}
             />
             {__DEV__ && (
               <Stack.Screen
