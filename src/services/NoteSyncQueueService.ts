@@ -17,6 +17,7 @@ import { batchDeleteFiles, batchUpsertFiles } from './git/BatchGitOperations';
 import type { BatchDeleteFilesResult, BatchUpsertFilesResult } from './git/BatchGitOperations';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { NoteColor, NoteFormat } from '../models/Note';
+import { useConflictStore } from '../stores/conflictStore';
 
 const QUEUE_KEY = '@gitnotes:sync_queue_v1';
 const TOMBSTONE_KEY = '@gitnotes:delete_tombstones_v1';
@@ -118,8 +119,7 @@ function isBatchEligibleUpsert(m: QueuedMutation): m is BatchEligibleUpsert {
  */
 export interface DroppedMutationEvent {
   mutation: QueuedMutation;
-  /** 'durable' = non-retryable error; 'exhausted' = retry budget used up. */
-  reason: 'durable' | 'exhausted';
+  reason: 'durable' | 'exhausted' | 'conflict-existing' | 'conflict-detected';
   error?: string;
   status?: number;
 }
@@ -921,6 +921,15 @@ class NoteSyncQueueServiceClass {
         byAccount.set(key, arr);
       }
       for (const [accountKey, entries] of byAccount) {
+        const existingConflict = useConflictStore.getState().getConflict(repoPath, branch);
+        if (existingConflict) {
+          console.info(`[NoteSyncQueue] skipping push for ${repoPath}@${branch} — conflict already exists`);
+          for (const { item } of entries) {
+            droppedIds.add(item.id);
+            this.emitDroppedMutation({ mutation: item, reason: 'conflict-existing', error: undefined });
+          }
+          continue;
+        }
         const token = accountKey === '__default__'
           ? (await AuthService.getToken()) ?? undefined
           : (await AuthService.getTokenById(accountKey)) ?? undefined;
@@ -941,8 +950,16 @@ class NoteSyncQueueServiceClass {
             this.emitMutationSucceeded({ mutation: item });
           }
         } else {
-          console.warn(`[NoteSyncQueue] coalesced push failed for ${repoPath}@${branch}:`, flushResult.error);
-          for (const { item } of entries) await recordFailure(item, flushResult.error);
+          const isConflict = (flushResult.error ?? '').includes('conflict');
+          if (isConflict) {
+            for (const { item } of entries) {
+              droppedIds.add(item.id);
+              this.emitDroppedMutation({ mutation: item, reason: 'conflict-detected', error: flushResult.error });
+            }
+          } else {
+            console.warn(`[NoteSyncQueue] coalesced push failed for ${repoPath}@${branch}:`, flushResult.error);
+            for (const { item } of entries) await recordFailure(item, flushResult.error);
+          }
         }
       }
     }
