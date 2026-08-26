@@ -26,6 +26,8 @@ import ThoughtDumpScreen from '../screens/ThoughtDumpScreen';
 import PaywallScreen from '../screens/PaywallScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import { RootStackParamList } from './types';
+import { Git2ReposScreen } from '../features/git2/repositories/Git2ReposScreen';
+import { Git2RepoScreen } from '../features/git2/repositories/Git2RepoScreen';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAIStore } from '../stores/aiStore';
 import { useAIHubStore } from '../stores/aiHubStore';
@@ -260,6 +262,16 @@ export default function AppNavigator({ showOnboarding, onOnboardingComplete, onO
               name="Paywall"
               component={PaywallScreen}
               options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="Git2Repos"
+              component={Git2ReposScreen}
+              options={{ title: 'Repositories' }}
+            />
+            <Stack.Screen
+              name="Git2Repo"
+              component={Git2RepoScreen}
+              options={{ title: 'Repository' }}
             />
             {__DEV__ && (
               <Stack.Screen

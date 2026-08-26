@@ -21,6 +21,8 @@ type ProductionStackParamList = {
   ThoughtDump: { openVoiceOnMount?: boolean } | undefined;
   Paywall: undefined;
   Onboarding: undefined;
+  Git2Repos: undefined;
+  Git2Repo: { repoId: string };
 };
 
 type DevOnlyStackParamList = {
