@@ -45,10 +45,10 @@ const KERNEL = sharp.kernel.lanczos3;
  */
 const TARGETS = [
   { name: 'icon.png', size: 1024, fraction: 0.82 },
-  { name: 'adaptive-icon.png', size: 1024, fraction: 0.62 },
+  { name: 'adaptive-icon.png', size: 1024, fraction: 0.50 },
   { name: 'splash-icon.png', size: 1024, fraction: 0.96 },
   { name: 'favicon.png', size: 512, fraction: 0.85 },
-  { name: 'monochrome-icon.png', size: 1024, fraction: 0.62, monochrome: true },
+  { name: 'monochrome-icon.png', size: 1024, fraction: 0.50, monochrome: true },
 ];
 
 /** Render the SVG at a large size and return raw RGBA + alpha bounding box. */
