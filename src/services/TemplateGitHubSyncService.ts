@@ -3,17 +3,9 @@ import { parseRepoPath } from '../utils/gitPathParser';
 import { serializeTemplate, templateSlug } from './TemplateMarkdownService';
 import type { NoteTemplate } from './TemplateService';
 import { SyncEngineService } from './SyncEngineService';
-import { CommitService } from './git/CommitService';
+import { CloneSyncService } from './CloneSyncService';
 import { resolveDefaultFolder } from './git/defaultsPolicy';
 import { resolveDefaultRepo } from './git/defaultsPolicy';
-
-function resolveAuthor() {
-  const user = GitHubService.getUser();
-  return {
-    name: user?.name || user?.login || 'gitnotes',
-    email: user?.email || `${user?.login ?? 'gitnotes'}@users.noreply.github.com`,
-  };
-}
 
 export interface TemplateSyncResult {
   success: boolean;
@@ -50,16 +42,16 @@ export async function syncTemplateToGitHub(params: {
   // *that* repo, not the editing repo.
   const mode = await SyncEngineService.getMode(repoPath);
   if (mode === 'clone') {
-    const commitResult = await CommitService.commit({
-      repo: repoPath,
+    const saveResult = await CloneSyncService.save({
+      repoPath,
       branch,
       filePath: targetPath,
       content: body,
       message,
-      author: resolveAuthor(),
+      intent: 'upsert',
     });
-    if (commitResult.success) return { success: true, filePath: targetPath };
-    return { success: false, error: commitResult.error };
+    if (saveResult.success) return { success: true, filePath: targetPath };
+    return { success: false, error: saveResult.error };
   }
 
   try {
@@ -91,16 +83,15 @@ export async function deleteTemplateFromGitHub(params: {
   // Clone-mode delete path (#514).
   const mode = await SyncEngineService.getMode(repoPath);
   if (mode === 'clone') {
-    const commitResult = await CommitService.commit({
-      repo: repoPath,
+    const saveResult = await CloneSyncService.save({
+      repoPath,
       branch,
       filePath,
       message: `Delete template ${name}`,
-      author: resolveAuthor(),
-      delete: true,
+      intent: 'delete',
     });
-    if (commitResult.success) return { success: true, filePath };
-    return { success: false, error: commitResult.error };
+    if (saveResult.success) return { success: true, filePath };
+    return { success: false, error: saveResult.error };
   }
 
   let resolvedSha = sha;
