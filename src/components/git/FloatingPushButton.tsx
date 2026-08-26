@@ -295,60 +295,60 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
     HapticService.selection();
     if (isPushing || !activeRepoPath) return;
     setIsPushing(true);
-    try {
-      if (syncMode === 'api') {
-        const outcome = await NoteSyncQueueService.drain(
-          undefined,
-          'manual',
-          activeRepoPath,
-          activeBranch,
-        );
-        await pullFromSingleRepo(activeRepoPath);
-        if (outcome.failed > 0) {
-          Alert.alert(
-            'Sync finished with errors',
-            `${outcome.succeeded} pushed, ${outcome.failed} failed.`,
+      try {
+        if (syncMode === 'api') {
+          const outcome = await NoteSyncQueueService.drain(
+            undefined,
+            'manual',
+            activeRepoPath,
+            activeBranch,
           );
-        } else if (outcome.succeeded > 0) {
-          Alert.alert('Synced', `${outcome.succeeded} change(s) pushed to GitHub.`);
+          await pullFromSingleRepo(activeRepoPath);
+          if (outcome.failed > 0) {
+            Alert.alert(
+              'Sync finished with errors',
+              `${outcome.succeeded} pushed, ${outcome.failed} failed.`,
+            );
+          } else if (outcome.succeeded > 0) {
+            Alert.alert('Synced', `${outcome.succeeded} change(s) pushed to GitHub.`);
+          }
+          return;
         }
-        return;
-      }
 
-      const result = await CloneSyncService.pushPending(activeRepoPath, activeBranch);
-      if (result.conflicted) {
-        navigation.navigate('Conflicts', { repoPath: activeRepoPath, branch: activeBranch });
-      } else if (result.succeeded > 0) {
-        await pullFromSingleRepo(activeRepoPath);
-        useGitActivityStore.getState().incrementRevision();
-        if (result.failed > 0) {
-          Alert.alert('Pushed with errors', `${result.succeeded} pushed, ${result.failed} failed.`);
-        } else {
-          Alert.alert('Pushed', 'All commits have been pushed to GitHub.');
+        const result = await CloneSyncService.pushPending(activeRepoPath, activeBranch);
+        if (result.conflicted) {
+          navigation.navigate('Conflicts', { repoPath: activeRepoPath, branch: activeBranch });
+        } else if (result.succeeded > 0) {
+          await pullFromSingleRepo(activeRepoPath);
+          useGitActivityStore.getState().incrementRevision();
+          if (result.failed > 0) {
+            Alert.alert('Pushed with errors', `${result.succeeded} pushed, ${result.failed} failed.`);
+          } else {
+            Alert.alert('Pushed', 'All commits have been pushed to GitHub.');
+          }
         }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      if (message.includes('60s')) {
-        Alert.alert(
-          'Push timed out',
-          'Push timed out after 60s. Pull the latest changes and try again.',
-          [
-            { text: 'OK', style: 'cancel' },
-            {
-              text: 'Pull',
-              onPress: () => {
-                void pullFromSingleRepo(activeRepoPath);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        if (message.includes('60s')) {
+          Alert.alert(
+            'Push timed out',
+            'Push timed out after 60s. Pull the latest changes and try again.',
+            [
+              { text: 'OK', style: 'cancel' },
+              {
+                text: 'Pull',
+                onPress: () => {
+                  void pullFromSingleRepo(activeRepoPath);
+                },
               },
-            },
-          ],
-        );
+            ],
+          );
+        } else {
+          Alert.alert('Push failed', formatSyncError(undefined));
+        }
+      } finally {
+        setIsPushing(false);
       }
-      } else {
-        Alert.alert('Push failed', formatSyncError(undefined));
-      }
-    } finally {
-      setIsPushing(false);
-    }
   }, [affordances, isPushing, activeRepoPath, activeBranch, navigation, syncMode]);
 
   const animatedStyle = useAnimatedStyle(() => ({
