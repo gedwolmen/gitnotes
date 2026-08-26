@@ -63,7 +63,7 @@ The complete file inventory covers:
 - **Containers** (1 file): `containerStore.ts`
 - **Settings** (4 files): `Git2SettingsScreen.tsx`, `git2SettingsStore.ts`,
   `AuthorIdentityScreen.tsx`, `CommitTemplatesScreen.tsx`
-- **Auth Providers / Provider Core** (4 files): `index.ts`, `oauthStore.ts`, `restClient.ts`, `types.ts`, `git2Tools.ts`
+- **Auth Providers / Provider Core** (5 files): `index.ts`, `oauthStore.ts`, `restClient.ts`, `types.ts`, `git2Tools.ts`
 - **AI Provider** (2 files): `ai/index.ts`, `ai/providerTools.ts`
 - **GitHub Provider** (8 files): `github/client.ts`, `github/comments.ts`, `github/githubClient.ts`, `github/index.ts`, `github/issues.ts`, `github/pullRequests.ts`, `github/releases.ts`, `github/workflows.ts`
 - **GitLab Provider** (8 files): `gitlab/client.ts`, `gitlab/comments.ts`, `gitlab/gitlabClient.ts`, `gitlab/index.ts`, `gitlab/issues.ts`, `gitlab/mergeRequests.ts`, `gitlab/pipelines.ts`, `gitlab/releases.ts`
