@@ -366,6 +366,6 @@ describe('push shallow handling (#1196)', () => {
     const result = await LocalGitWriter.push({ repoPath: 'me/repo', branch: 'main' });
 
     expect(result.success).toBe(true);
-    expect(order).toEqual(['push']);
+    expect(order).toEqual(['fetch', 'push']);
   });
 });

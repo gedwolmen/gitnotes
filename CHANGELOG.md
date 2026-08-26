@@ -29,6 +29,10 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-08-26
 
+### Push pre-pulls origin into local before attempting the push
+
+**fix(git)** — `LocalGitWriter.push` now runs `GitFsService.pullWithFastForward` *before* the push attempt (it was previously only run on push-rejection as a retry). When origin has diverged from local, the conflict is detected and surfaced via `ConflictBanner` / Conflicts screen **before** the push has even been tried — instead of after the push has failed and forced a retry. The post-rejection pull fallback is kept for the rare case where origin moves during the in-flight push. Cost in the common path (local is ahead of origin): one extra `fetch` + resolveRef call; `git.fastForward` no-ops when local is already ahead.
+
 ### Push-timeout alert offers a Pull action
 
 **fix(ui)** — When `LocalGitWriter.push` times out after 60s, the alert now offers a real **Pull** button instead of telling the user to "Pull and try again" without a way to do so. Tapping it runs `pullFromSingleRepo(repoPath)` for the active repo. Applied to both the `FloatingPushButton` long-press flow and the `PushScreen.handlePushAll` flow.
