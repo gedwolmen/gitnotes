@@ -347,7 +347,19 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       if (message.includes('60s')) {
-        Alert.alert('Push timed out', 'Push timed out after 60s. Pull and try again.');
+        Alert.alert(
+          'Push timed out',
+          'Push timed out after 60s. Pull the latest changes and try again.',
+          [
+            { text: 'OK', style: 'cancel' },
+            {
+              text: 'Pull',
+              onPress: () => {
+                void pullFromSingleRepo(activeRepoPath);
+              },
+            },
+          ],
+        );
       } else {
         Alert.alert('Push failed', message);
       }
