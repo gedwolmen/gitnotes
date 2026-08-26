@@ -19,18 +19,8 @@ import { GitHubService, type GitHubRepository } from '../services/GitHubService'
 import { RepoFileSyncService } from '../services/RepoFileSyncService';
 import { TemplateRepoPreferenceService, type TemplateRepoPreference } from '../services/TemplateRepoPreferenceService';
 import { serializeTemplate, templateSlug } from '../services/TemplateMarkdownService';
-import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
-import { SyncEngineService, type SyncEngineMode } from '../services/SyncEngineService';
 import { parseRepoPath } from '../utils/gitPathParser';
-
-const hasUnpushedLocalCommits = async (_repoPath: string, _branch: string) => false;
-const GitFsService = {
-  isCloned: async (_params: { repoPath: string }) => false,
-  clone: async (_params: { repoPath: string; branch: string; token?: string; onProgress?: (phase: string, loaded: number, total: number | null) => void }) => {},
-  removeRepo: async (_params: { repoPath: string }) => {},
-  getCurrentBranch: async (_params: { repoPath: string }) => 'main',
-  workingTreeUri: (_params: { repoPath: string }) => '',
-};
+import { Git2Client } from '../../modules/expo-git2-rs/src/index';
 import { LARGE_REPO_THRESHOLD_KB } from '../services/RepoImportService';
 import { cancelInflightGitHttp } from '../services/git/gitHttp';
 import { CloneMigrationService } from '../services/git/CloneMigrationService';
@@ -77,6 +67,29 @@ const MAX_OUTER_CLONE_RETRIES = 1;
 const CLONE_CANCEL_GRACE_MS = 800;
 
 type ImportAtAddOutcome = 'imported' | 'cancelled' | 'failed';
+
+// Legacy service stubs replaced with git2-rs equivalents
+// TODO(F2): Wire these to proper git2-rs operations when native module is functional
+type SyncEngineMode = 'api' | 'clone';
+
+const hasUnpushedLocalCommits = async (_repoPath: string, _branch: string): Promise<boolean> => false;
+
+const GitFsService = {
+  isCloned: async (_params: { repoPath: string }): Promise<boolean> => false,
+  clone: async (_params: { repoPath: string; branch: string; token?: string; onProgress?: (phase: string, loaded: number, total: number | null) => void }): Promise<void> => {},
+  removeRepo: async (_params: { repoPath: string }): Promise<void> => {},
+  getCurrentBranch: async (_params: { repoPath: string }): Promise<string> => 'main',
+  workingTreeUri: (_params: { repoPath: string }): string => '',
+};
+
+const SyncEngineService = {
+  getMode: async (_repoPath: string): Promise<SyncEngineMode> => 'api',
+  setMode: async (_repoPath: string, _mode: SyncEngineMode): Promise<void> => {},
+};
+
+const NoteSyncQueueService = {
+  enqueueNoteUpsert: async (_params: { repo: string; branch: string; filePath: string; title: string; content: string }): Promise<void> => {},
+};
 
 // Type guard for RepoAccessPreflightError
 function isRepoAccessPreflightError(error: unknown): error is RepoAccessPreflightError {

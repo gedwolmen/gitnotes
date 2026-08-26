@@ -31,18 +31,19 @@ function detectFormat(filename: string): NoteFormat | null {
   return SUPPORTED_EXTENSIONS[ext] || null;
 }
 
-function encodeGitHubPath(path: string): string {
-  return path
-    .split('/')
-    .map((segment) => encodeURIComponent(segment))
-    .join('/');
-}
-
-function buildGitHubContentsApiUrl(owner: string, repo: string, path: string, branch?: string): string {
-  const encodedPath = encodeGitHubPath(path);
-  const refQuery = branch ? `?ref=${encodeURIComponent(branch)}` : '';
-  return `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}${refQuery}`;
-}
+// PDF content is fetched as raw base64 (not UTF-8 decoded) via GitHubService,
+ // then stored as a data: URI. When git2-rs read support is available, this
+ // will be replaced with native git cat-file from the local clone.
+ async function fetchPdfContent(owner: string, repo: string, path: string, branch?: string): Promise<string | null> {
+   try {
+     const base64 = await GitHubService.getFileBase64(owner, repo, path, branch);
+     if (!base64) return null;
+     return `data:application/pdf;base64,${base64}`;
+   } catch (error) {
+     console.warn('[RepoFileSyncService] Failed to fetch PDF:', path, error);
+     return null;
+   }
+ }
 
 class RepoFileSyncServiceClass {
   async syncRepoFiles(repoPath: string, branch?: string): Promise<SyncResult> {
@@ -88,7 +89,7 @@ class RepoFileSyncServiceClass {
           let content: string | null = null;
 
           if (format === 'pdf') {
-            content = buildGitHubContentsApiUrl(owner, repo, item.path, branch);
+            content = await fetchPdfContent(owner, repo, item.path, branch);
           } else {
             content = await GitHubService.getFileContent(owner, repo, item.path);
           }
