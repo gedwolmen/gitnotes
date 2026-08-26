@@ -1,0 +1,14 @@
+expo-git2-rs — Native Git Module for Expo/React Native
+=====================================================
+
+This module is part of GitNotēs, a GPL-3.0 derivative work of GitSync.
+
+Upstream: GitSync
+URL: https://github.com/ViscousPot/GitSync
+Commit: 9b3ef2e4d0f3f21d3e11755aa9bf6583ad808d7a
+License: GNU General Public License v3.0
+
+GitSync provides the Rust git2-rs core that this module adapts
+for Expo/React Native iOS and Android platforms.
+
+Modifications to GitSync source are marked with date and source path.
