@@ -150,12 +150,57 @@ The following source/asset paths were copied or derived from GitSync:
 | `src/features/git2/settings/AuthorIdentityScreen.tsx` | Author name/email config | Derived from GitSync author identity |
 | `src/features/git2/settings/CommitTemplatesScreen.tsx` | Commit message templates | Derived from GitSync templates |
 
-### Auth Providers
+### Provider Core
 | Path | Description | GitSync Origin |
 |------|-------------|----------------|
+| `src/features/git2/providers/index.ts` | Provider barrel exports | Derived from GitSync provider core |
 | `src/features/git2/providers/oauthStore.ts` | OAuth token state | Derived from GitSync auth providers |
 | `src/features/git2/providers/restClient.ts` | REST API client for GitHub | Derived from GitSync API layer |
 | `src/features/git2/providers/types.ts` | Provider type definitions | Derived from GitSync provider types |
+| `src/features/git2/providers/git2Tools.ts` | Git2 tool definitions | Derived from GitSync tool definitions |
+
+### Provider Clients
+
+#### AI Provider
+| Path | Description | GitSync Origin |
+|------|-------------|----------------|
+| `src/features/git2/providers/ai/index.ts` | AI provider barrel | Derived from GitSync AI provider |
+| `src/features/git2/providers/ai/providerTools.ts` | AI provider tools (commitmsg, review, summarize) | Derived from GitSync AI tooling |
+
+#### GitHub Provider
+| Path | Description | GitSync Origin |
+|------|-------------|----------------|
+| `src/features/git2/providers/github/client.ts` | GitHub API client wrapper | Derived from GitSync GitHub client |
+| `src/features/git2/providers/github/githubClient.ts` | GitHub REST API layer | Derived from GitSync lib/api/github_client.dart |
+| `src/features/git2/providers/github/comments.ts` | GitHub issue/PR comments | Derived from GitSync comments API |
+| `src/features/git2/providers/github/index.ts` | GitHub provider barrel | Derived from GitSync provider barrel |
+| `src/features/git2/providers/github/issues.ts` | GitHub issues API | Derived from GitSync issues API |
+| `src/features/git2/providers/github/pullRequests.ts` | GitHub pull requests API | Derived from GitSync PR API |
+| `src/features/git2/providers/github/releases.ts` | GitHub releases API | Derived from GitSync releases API |
+| `src/features/git2/providers/github/workflows.ts` | GitHub workflows API | Derived from GitSync workflows API |
+
+#### GitLab Provider
+| Path | Description | GitSync Origin |
+|------|-------------|----------------|
+| `src/features/git2/providers/gitlab/client.ts` | GitLab API client wrapper | Derived from GitSync GitLab client |
+| `src/features/git2/providers/gitlab/gitlabClient.ts` | GitLab REST API layer | Derived from GitSync lib/api/gitlab_client.dart |
+| `src/features/git2/providers/gitlab/comments.ts` | GitLab MR/issue comments | Derived from GitSync comments API |
+| `src/features/git2/providers/gitlab/index.ts` | GitLab provider barrel | Derived from GitSync provider barrel |
+| `src/features/git2/providers/gitlab/issues.ts` | GitLab issues API | Derived from GitSync issues API |
+| `src/features/git2/providers/gitlab/mergeRequests.ts` | GitLab merge requests API | Derived from GitSync MR API |
+| `src/features/git2/providers/gitlab/pipelines.ts` | GitLab CI pipelines API | Derived from GitSync pipelines API |
+| `src/features/git2/providers/gitlab/releases.ts` | GitLab releases API | Derived from GitSync releases API |
+
+#### Gitea Provider
+| Path | Description | GitSync Origin |
+|------|-------------|----------------|
+| `src/features/git2/providers/gitea/client.ts` | Gitea API client wrapper | Derived from GitSync Gitea client |
+| `src/features/git2/providers/gitea/giteaClient.ts` | Gitea REST API layer | Derived from GitSync lib/api/gitea_client.dart |
+| `src/features/git2/providers/gitea/index.ts` | Gitea provider barrel | Derived from GitSync provider barrel |
+| `src/features/git2/providers/gitea/issues.ts` | Gitea issues API | Derived from GitSync issues API |
+| `src/features/git2/providers/gitea/pullRequests.ts` | Gitea pull requests API | Derived from GitSync PR API |
+| `src/features/git2/providers/gitea/releases.ts` | Gitea releases API | Derived from GitSync releases API |
+| `src/features/git2/providers/gitea/workflows.ts` | Gitea workflows API | Derived from GitSync workflows API |
 
 ## Supporting Services
 
