@@ -31,6 +31,7 @@ import type {
 import { GitOperationError } from '../../../../modules/expo-git2-rs/src/errors';
 import { useAuthStore } from '../auth/authStore';
 import { useGit2SettingsStore } from '../settings/git2SettingsStore';
+import { useRepoStore } from '../repositories/repoStore';
 import type { GitRepository } from '../repositories/repoStore';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -539,8 +540,39 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     const online = await checkOnline();
     if (!online) return { repos: 0, changed: false };
 
-    // TODO: Import and use repoStore to iterate all repos
-    // For now, return placeholder — actual impl would pull all managed repos
-    return { repos: 0, changed: false };
+    const raw = await AsyncStorage.getItem(PENDING_RETRY_KEY);
+    if (!raw) return { repos: 0, changed: false };
+
+    let pending: { repoId: string; retryAt: number }[];
+    try {
+      pending = JSON.parse(raw);
+    } catch {
+      await AsyncStorage.removeItem(PENDING_RETRY_KEY);
+      return { repos: 0, changed: false };
+    }
+
+    const now = Date.now();
+    const due = pending.filter((p) => p.retryAt <= now);
+    if (due.length === 0) return { repos: 0, changed: false };
+
+    const remaining = pending.filter((p) => p.retryAt > now);
+    if (remaining.length === 0) {
+      await AsyncStorage.removeItem(PENDING_RETRY_KEY);
+    } else {
+      await AsyncStorage.setItem(PENDING_RETRY_KEY, JSON.stringify(remaining));
+    }
+
+    const repos = useRepoStore.getState().repositories;
+    let changed = false;
+    for (const { repoId } of due) {
+      const repo = repos.find((r) => r.id === repoId);
+      if (!repo) continue;
+      try {
+        await get().syncRepo(repo);
+        changed = true;
+      } catch { /* retry re-scheduled by syncRepo on failure */ }
+    }
+
+    return { repos: due.length, changed };
   },
 }));

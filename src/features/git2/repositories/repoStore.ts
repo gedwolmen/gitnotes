@@ -6,12 +6,9 @@
 
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-export interface CredentialRequest {
-  kind: 'userpass' | 'sshKey';
-  username: string;
-  token?: string;
-}
+import { Git2Client } from '../../../../modules/expo-git2-rs/src/Git2Client';
+import type { CredentialRequest } from '../../../../modules/expo-git2-rs/src/types';
+import { useAuthStore } from '../auth/authStore';
 
 export interface GitRepository {
   id: string;
@@ -85,8 +82,31 @@ export const useRepoStore = create<RepoState>((set, get) => ({
   },
 
   async cloneRepository(remoteUrl, localPath, cred) {
-    // TODO: Wire through Git2Client from expo-git2-rs (Todo 5 integration)
-    throw new Error('cloneRepository not yet wired — see Todo 5');
+    const effectiveCred: CredentialRequest | undefined = cred ?? await (async () => {
+      try {
+        const url = new URL(remoteUrl);
+        const stored = useAuthStore.getState().getCredentials(url.hostname);
+        if (!stored) return undefined;
+        if (stored.type === 'https_token') {
+          return { kind: 'userpass', username: stored.username, token: stored.token };
+        }
+        if (stored.type === 'ssh_key') {
+          return { kind: 'sshKey', username: stored.username };
+        }
+        if (stored.type === 'github_oauth' || stored.type === 'gitlab_oauth' || stored.type === 'gitea_oauth') {
+          return { kind: 'userpass', username: 'oauth', token: stored.accessToken };
+        }
+        return undefined;
+      } catch {
+        return undefined;
+      }
+    })();
+
+    await Git2Client.clone(remoteUrl, localPath, effectiveCred);
+
+    const repoName = remoteUrl.split('/').pop()?.replace(/\.git$/, '') ?? 'repo';
+    const repo = await this.addRepository('default-container', repoName, remoteUrl, localPath, 'main');
+    return repo;
   },
 
   async hydrate() {

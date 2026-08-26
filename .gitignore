@@ -59,8 +59,10 @@ dist/
 web-build/
 
 # Native folders (managed by expo prebuild)
-android/
-ios/
+modules/expo-git2-rs/android/
+modules/expo-git2-rs/ios/
+!modules/expo-git2-rs/rust/
+!modules/expo-git2-rs/ios/
 
 # Web build output
 dist_web/
