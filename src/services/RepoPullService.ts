@@ -1,7 +1,7 @@
 import { GitHubService } from './GitHubService';
 import { GitService } from './GitService';
 import { StorageService } from './StorageService';
-import { createNote, isNoteColor, NoteColor } from '../models/Note';
+import { createNote, deriveFolderPath, isNoteColor, NoteColor } from '../models/Note';
 import { createCanvas, updateCanvas, CanvasScene } from '../models/Canvas';
 import { createTodoItem, applyTodoUpdate, reorderTodos } from '../models/Todo';
 import { parseRepoPath } from '../utils/gitPathParser';
@@ -475,6 +475,7 @@ async function pullNotesFromRepo(
             repo: repoPath,
             branch,
             filePath: item.path,
+            folderPath: deriveFolderPath(item.path),
             format,
             tags,
             color,

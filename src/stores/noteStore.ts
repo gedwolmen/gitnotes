@@ -267,6 +267,7 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
       format: input.format,
       tags: input.tags,
       color: input.color,
+      folderPath: input.folderPath,
     });
     const updatedNote = await StorageService.updateNote(input);
     if (updatedNote) {

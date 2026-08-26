@@ -43,6 +43,7 @@ export interface NoteUpsertParams {
   tags?: string[];
   color?: NoteColor | null;
   knownSha?: string;
+  folderPath?: string;
 }
 
 export interface NoteDeleteParams {
@@ -937,6 +938,9 @@ class NoteSyncQueueServiceClass {
         filePath: result.filePath,
         ...(result.finalContent != null && result.finalContent !== item.params.content
           ? { content: result.finalContent }
+          : {}),
+        ...(item.params.folderPath !== undefined
+          ? { folderPath: item.params.folderPath }
           : {}),
       });
     } catch (error) {
