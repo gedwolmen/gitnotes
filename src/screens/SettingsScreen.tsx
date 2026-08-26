@@ -16,11 +16,13 @@ import { useForegroundSyncSettings } from '../hooks/useForegroundSyncSettings';
 import { useForegroundSyncHealth } from '../hooks/useForegroundSyncHealth';
 import type { RootStackParamList } from '../navigation/types';
 import { GitHubService, type GitHubRepository } from '../services/GitHubService';
-import { RepoFileSyncService } from '../services/RepoFileSyncService';
 import { TemplateRepoPreferenceService, type TemplateRepoPreference } from '../services/TemplateRepoPreferenceService';
 import { serializeTemplate, templateSlug } from '../services/TemplateMarkdownService';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { Git2Client } from '../../modules/expo-git2-rs/src/index';
+import { useSyncStore } from '../features/git2/sync/syncState';
+import { useRepoStore as useGit2RepoStore } from '../features/git2/repositories/repoStore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LARGE_REPO_THRESHOLD_KB } from '../services/RepoImportService';
 import { cancelInflightGitHttp } from '../services/git/gitHttp';
 import { CloneMigrationService } from '../services/git/CloneMigrationService';
@@ -68,27 +70,100 @@ const CLONE_CANCEL_GRACE_MS = 800;
 
 type ImportAtAddOutcome = 'imported' | 'cancelled' | 'failed';
 
-// Legacy service stubs replaced with git2-rs equivalents
-// TODO(F2): Wire these to proper git2-rs operations when native module is functional
 type SyncEngineMode = 'api' | 'clone';
+const SYNC_MODE_KEY = '@gitnotes:sync_engine_modes';
 
 const hasUnpushedLocalCommits = async (_repoPath: string, _branch: string): Promise<boolean> => false;
 
 const GitFsService = {
-  isCloned: async (_params: { repoPath: string }): Promise<boolean> => false,
-  clone: async (_params: { repoPath: string; branch: string; token?: string; onProgress?: (phase: string, loaded: number, total: number | null) => void }): Promise<void> => {},
-  removeRepo: async (_params: { repoPath: string }): Promise<void> => {},
-  getCurrentBranch: async (_params: { repoPath: string }): Promise<string> => 'main',
-  workingTreeUri: (_params: { repoPath: string }): string => '',
+  isCloned: async (params: { repoPath: string }): Promise<boolean> => {
+    try {
+      const repo = useGit2RepoStore.getState().repositories.find(
+        r => r.id === params.repoPath || r.remoteUrl.includes(params.repoPath),
+      );
+      if (!repo) return false;
+      await Git2Client.status(repo.localPath);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  clone: async (params: { repoPath: string; branch: string; token?: string; onProgress?: (phase: string, loaded: number, total: number | null) => void }): Promise<void> => {
+    const repo = useGit2RepoStore.getState().repositories.find(
+      r => r.id === params.repoPath || r.remoteUrl.includes(params.repoPath),
+    );
+    if (!repo) throw new Error(`Repository not found: ${params.repoPath}`);
+    const cred = params.token
+      ? { kind: 'userpass' as const, username: 'oauth', token: params.token }
+      : undefined;
+    await Git2Client.clone(repo.remoteUrl, repo.localPath, cred);
+    if (params.branch && params.branch !== repo.defaultBranch) {
+      await Git2Client.checkoutBranch(repo.localPath, params.branch);
+    }
+  },
+
+  removeRepo: async (params: { repoPath: string }): Promise<void> => {
+    const repo = useGit2RepoStore.getState().repositories.find(
+      r => r.id === params.repoPath || r.remoteUrl.includes(params.repoPath),
+    );
+    if (!repo) return;
+    await useGit2RepoStore.getState().removeRepository(repo.id);
+  },
+
+  getCurrentBranch: async (params: { repoPath: string }): Promise<string> => {
+    const repo = useGit2RepoStore.getState().repositories.find(
+      r => r.id === params.repoPath || r.remoteUrl.includes(params.repoPath),
+    );
+    if (!repo) return 'main';
+    try {
+      const result = await Git2Client.listBranches(repo.localPath);
+      const current = result.data.find(b => b.isCurrent);
+      return current?.name ?? repo.defaultBranch ?? 'main';
+    } catch {
+      return repo.defaultBranch ?? 'main';
+    }
+  },
+
+  workingTreeUri: (params: { repoPath: string }): string => {
+    const repo = useGit2RepoStore.getState().repositories.find(
+      r => r.id === params.repoPath || r.remoteUrl.includes(params.repoPath),
+    );
+    return repo?.localPath ?? '';
+  },
 };
 
 const SyncEngineService = {
-  getMode: async (_repoPath: string): Promise<SyncEngineMode> => 'api',
-  setMode: async (_repoPath: string, _mode: SyncEngineMode): Promise<void> => {},
+  getMode: async (repoPath: string): Promise<SyncEngineMode> => {
+    try {
+      const raw = await AsyncStorage.getItem(SYNC_MODE_KEY);
+      const modes: Record<string, SyncEngineMode> = raw ? JSON.parse(raw) : {};
+      return modes[repoPath] ?? 'clone';
+    } catch {
+      return 'clone';
+    }
+  },
+
+  setMode: async (repoPath: string, mode: SyncEngineMode): Promise<void> => {
+    try {
+      const raw = await AsyncStorage.getItem(SYNC_MODE_KEY);
+      const modes: Record<string, SyncEngineMode> = raw ? JSON.parse(raw) : {};
+      modes[repoPath] = mode;
+      await AsyncStorage.setItem(SYNC_MODE_KEY, JSON.stringify(modes));
+    } catch {
+      // Ignore storage errors
+    }
+  },
 };
 
 const NoteSyncQueueService = {
-  enqueueNoteUpsert: async (_params: { repo: string; branch: string; filePath: string; title: string; content: string }): Promise<void> => {},
+  enqueueNoteUpsert: async (params: { repo: string; branch: string; filePath: string; title: string; content: string }): Promise<void> => {
+    const repo = useGit2RepoStore.getState().repositories.find(
+      r => r.id === params.repo || r.remoteUrl.includes(params.repo),
+    );
+    if (!repo) return;
+    await Git2Client.stage(repo.localPath, params.filePath);
+  },
 };
 
 // Type guard for RepoAccessPreflightError
@@ -552,20 +627,19 @@ export default function SettingsScreen() {
       Alert.alert(t('settings.githubRequiredSyncTitle'), t('settings.githubRequiredSyncBody'));
       return;
     }
+    const git2Repo = useGit2RepoStore.getState().repositories.find(
+      r => r.localPath === repo.path || r.remoteUrl.includes(repo.path),
+    );
+    if (!git2Repo) {
+      Alert.alert(t('settings.cloneRequiredTitle'), t('settings.cloneRequiredBody'));
+      return;
+    }
     setSyncingRepo(repo.path);
     try {
-      const result = await RepoFileSyncService.syncRepoFiles(repo.path);
+      await useSyncStore.getState().syncRepo(git2Repo);
       HapticService.success();
-      if (result.created > 0) {
-        await refreshNotes();
-        Alert.alert(t('settings.syncCompleteImportedTitle'), t('settings.syncCompleteImportedBody', { count: result.created, name: repo.name }));
-      } else if (result.skipped > 0) {
-        Alert.alert(t('settings.syncCompleteImportedTitle'), t('settings.syncCompleteSkippedBody', { count: result.total }));
-      } else if (result.errors.length > 0) {
-        Alert.alert(t('settings.syncIssuesTitle'), t('settings.syncIssuesBody', { count: result.errors.length, details: result.errors.slice(0, 3).join('\n') }));
-      } else {
-        Alert.alert(t('settings.noFilesTitle'), t('settings.noFilesBody'));
-      }
+      await refreshNotes();
+      Alert.alert(t('settings.syncCompleteTitle'), t('settings.syncCompleteBody', { name: repo.name }));
     } catch (error) {
       HapticService.error();
       Alert.alert(t('settings.syncFailedTitle'), error instanceof Error ? error.message : t('settings.syncFailedBody'));
