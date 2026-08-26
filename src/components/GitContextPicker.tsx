@@ -155,6 +155,51 @@ export default function GitContextPicker({
     });
   }, [repo, repositories, onRepoChange]);
 
+  // Auto-fill branch when repo is set but branch is not.
+  // Priority: last selected branch for entityType > default branch (isCurrent: true).
+  const didAutoFillBranchRef = useRef(false);
+  useEffect(() => {
+    if (!repo || branch) {
+      didAutoFillBranchRef.current = false;
+      return;
+    }
+    if (didAutoFillBranchRef.current) return;
+    didAutoFillBranchRef.current = true;
+
+    const autoFill = async () => {
+      try {
+        const branchList = await GitService.getBranches(repo);
+        if (branchList.length === 0) return;
+
+        // Try last selected branch first
+        let lastBranch: string | undefined;
+        if (entityType) {
+          const lastSelection = await LastSelectionPreferenceService.get(entityType);
+          lastBranch = lastSelection.branch;
+        }
+
+        if (lastBranch && branchList.some((b) => b.name === lastBranch)) {
+          onBranchChange(lastBranch);
+          return;
+        }
+
+        // Fall back to default branch
+        const defaultBranch = branchList.find((b) => b.isCurrent);
+        if (defaultBranch) {
+          onBranchChange(defaultBranch.name);
+          return;
+        }
+
+        // Last resort: first branch
+        onBranchChange(branchList[0].name);
+      } catch {
+        // Silently fail - user can still manually select
+      }
+    };
+
+    void autoFill();
+  }, [repo, branch, entityType, onBranchChange]);
+
   const handleBranchPick = useCallback(
     (name: string) => {
       HapticService.selection();
