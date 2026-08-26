@@ -28,7 +28,7 @@ function useBlockingSyncVisible(): boolean {
         (op.status === 'queued' || op.status === 'running') &&
         op.kind === 'pull' &&
         op.repo === GIT_OP_ALL_REPOS &&
-        (op.source === 'save' || op.source === 'manual'),
+        op.source === 'save',
     ),
   );
 }
