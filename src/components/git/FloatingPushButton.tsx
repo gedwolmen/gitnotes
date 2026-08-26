@@ -24,10 +24,12 @@ import type { RootStackParamList } from '../../navigation/types';
 import { useRepoStore } from '../../stores/repoStore';
 import { useGitActivityStore } from '../../stores/gitActivityStore';
 import { LastUsedRepoService } from '../../services/LastUsedRepoService';
+import { SyncEngineService, type SyncEngineMode } from '../../services/SyncEngineService';
 import { UnpushedCommitsService } from '../../services/git/UnpushedCommitsService';
 import { LocalGitWriter } from '../../services/git/LocalGitWriter';
 import { AuthService } from '../../services/AuthService';
 import { pullFromSingleRepo } from '../../services/RepoPullService';
+import { NoteSyncQueueService } from '../../services/NoteSyncQueueService';
 import {
   FLOATING_AI_BUTTON_LONG_PRESS_MS,
   useFloatingAIButtonAffordances,
@@ -62,6 +64,7 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
   const [reduceMotionResolved, setReduceMotionResolved] = useState(false);
   const [activeRepoPath, setActiveRepoPath] = useState<string | null>(null);
   const [activeBranch, setActiveBranch] = useState<string>('main');
+  const [syncMode, setSyncMode] = useState<SyncEngineMode>('clone');
   const [unpushedCount, setUnpushedCount] = useState(0);
   const [isPushing, setIsPushing] = useState(false);
   const commitRevision = useGitActivityStore((s) => s.commitRevision);
@@ -94,6 +97,24 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
 
   useEffect(() => {
     if (!activeRepoPath) {
+      setSyncMode('clone');
+      return;
+    }
+    let isMounted = true;
+    SyncEngineService.getMode(activeRepoPath)
+      .then((mode) => {
+        if (isMounted) setSyncMode(mode);
+      })
+      .catch(() => {
+        if (isMounted) setSyncMode('clone');
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [activeRepoPath]);
+
+  useEffect(() => {
+    if (!activeRepoPath) {
       setUnpushedCount(0);
       return;
     }
@@ -101,10 +122,20 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
 
     const load = async () => {
       try {
-        const count = await UnpushedCommitsService.count({
-          repo: activeRepoPath,
-          branch: activeBranch,
-        });
+        let count = 0;
+        if (syncMode === 'clone') {
+          count = await UnpushedCommitsService.count({
+            repo: activeRepoPath,
+            branch: activeBranch,
+          });
+        } else {
+          const items = await NoteSyncQueueService.getAll();
+          count = items.filter(
+            (m) =>
+              m.params.repo === activeRepoPath &&
+              (m.params.branch ?? 'main') === activeBranch,
+          ).length;
+        }
         if (isMounted) setUnpushedCount(count);
       } catch {
         if (isMounted) setUnpushedCount(0);
@@ -112,12 +143,20 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
     };
 
     void load();
-    const interval = setInterval(() => void load(), 30_000);
+
+    if (syncMode === 'clone') {
+      const interval = setInterval(() => void load(), 30_000);
+      return () => {
+        isMounted = false;
+        clearInterval(interval);
+      };
+    }
+    const unsubscribe = NoteSyncQueueService.subscribe(load);
     return () => {
       isMounted = false;
-      clearInterval(interval);
+      unsubscribe();
     };
-  }, [activeRepoPath, activeBranch, commitRevision]);
+  }, [activeRepoPath, activeBranch, syncMode, commitRevision]);
 
   const defaultX = viewportWidth - BUTTON_SIZE - insets.right - EDGE_INSET;
   const safeBottom = viewportHeight - Math.max(tabBarHeight, insets.bottom + EDGE_INSET);
@@ -246,6 +285,25 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
     if (isPushing || !activeRepoPath) return;
     setIsPushing(true);
     try {
+      if (syncMode === 'api') {
+        const outcome = await NoteSyncQueueService.drain(
+          undefined,
+          'manual',
+          activeRepoPath,
+          activeBranch,
+        );
+        await pullFromSingleRepo(activeRepoPath);
+        if (outcome.failed > 0) {
+          Alert.alert(
+            'Sync finished with errors',
+            `${outcome.succeeded} pushed, ${outcome.failed} failed.`,
+          );
+        } else if (outcome.succeeded > 0) {
+          Alert.alert('Synced', `${outcome.succeeded} change(s) pushed to GitHub.`);
+        }
+        return;
+      }
+
       const token = (await AuthService.getToken()) ?? undefined;
       const pushPromise = LocalGitWriter.push({
         repoPath: activeRepoPath,
@@ -279,7 +337,7 @@ export function FloatingPushButton({ currentRouteName }: FloatingPushButtonProps
     } finally {
       setIsPushing(false);
     }
-  }, [affordances, isPushing, activeRepoPath, activeBranch, navigation]);
+  }, [affordances, isPushing, activeRepoPath, activeBranch, navigation, syncMode]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
