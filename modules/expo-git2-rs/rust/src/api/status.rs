@@ -15,9 +15,7 @@ pub fn status(repo_path: &str) -> Result<StatusResult, GitError> {
     let mut opts = StatusOptions::new();
     opts.include_untracked(true);
 
-    let statuses = repo
-        .statuses(Some(&mut opts))
-        .map_err(map_git_error)?;
+    let statuses = repo.statuses(Some(&mut opts)).map_err(map_git_error)?;
 
     let entries: Vec<StatusEntry> = statuses
         .iter()

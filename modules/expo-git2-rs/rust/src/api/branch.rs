@@ -48,9 +48,7 @@ pub fn create_branch(
         .revparse_single(commit_oid)
         .map_err(map_git_error)?
         .id();
-    let commit = repo
-        .find_commit(commit_oid_val)
-        .map_err(map_git_error)?;
+    let commit = repo.find_commit(commit_oid_val).map_err(map_git_error)?;
 
     repo.branch(branch_name, &commit, false)
         .map_err(map_git_error)?;
@@ -70,10 +68,7 @@ pub fn checkout_branch(repo_path: &str, branch_name: &str) -> Result<(), GitErro
         .find_branch(branch_name, BranchType::Local)
         .map_err(map_git_error)?;
 
-    let commit = branch
-        .get()
-        .peel_to_commit()
-        .map_err(map_git_error)?;
+    let commit = branch.get().peel_to_commit().map_err(map_git_error)?;
 
     let mut opts = git2::build::CheckoutBuilder::new();
     opts.force();

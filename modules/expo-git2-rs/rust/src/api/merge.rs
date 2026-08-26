@@ -20,9 +20,7 @@ pub fn merge_analysis(repo_path: &str, branch: &str) -> Result<MergeAnalysisResu
         .reference_to_annotated_commit(&branch_ref)
         .map_err(map_git_error)?;
 
-    let analysis = repo
-        .merge_analysis(&[&annotated])
-        .map_err(map_git_error)?;
+    let analysis = repo.merge_analysis(&[&annotated]).map_err(map_git_error)?;
 
     Ok(MergeAnalysisResult {
         analysis: format!("{:?}", analysis.0),
@@ -46,9 +44,7 @@ pub fn merge(
         .reference_to_annotated_commit(&branch_ref)
         .map_err(map_git_error)?;
 
-    let (analysis, _preference) = repo
-        .merge_analysis(&[&annotated])
-        .map_err(map_git_error)?;
+    let (analysis, _preference) = repo.merge_analysis(&[&annotated]).map_err(map_git_error)?;
 
     if analysis.is_up_to_date() {
         return Ok(MergeResult {

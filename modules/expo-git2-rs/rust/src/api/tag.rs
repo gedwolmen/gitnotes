@@ -47,9 +47,7 @@ pub fn create_tag(
         .revparse_single(target_oid)
         .map_err(map_git_error)?
         .id();
-    let target = repo
-        .find_commit(target_oid_val)
-        .map_err(map_git_error)?;
+    let target = repo.find_commit(target_oid_val).map_err(map_git_error)?;
 
     let sig = repo.signature().map_err(map_git_error)?;
 
