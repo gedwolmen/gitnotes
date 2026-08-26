@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { NoteSyncQueueService } from '../../services/NoteSyncQueueService';
 import type { DroppedMutationEvent } from '../../services/NoteSyncQueueService';
+import { ClonePendingQueue } from '../../services/git/ClonePendingQueue';
 
 type TranslateFn = ReturnType<typeof useTranslation>['t'];
 
@@ -53,6 +54,23 @@ export function SyncDropNotifier() {
       Alert.alert(tRef.current('sync.droppedTitle'), alertBody(tRef.current, event));
     });
     return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    if (typeof ClonePendingQueue?.onDroppedMutation !== 'function') return;
+    const unsubClone = ClonePendingQueue.onDroppedMutation((event) => {
+      if (alertedIdsRef.current.has(event.id)) return;
+      if (alertedIdsRef.current.size >= MAX_ALERTED_IDS) {
+        const oldest = alertedIdsRef.current.values().next().value;
+        if (oldest !== undefined) alertedIdsRef.current.delete(oldest);
+      }
+      alertedIdsRef.current.add(event.id);
+      Alert.alert(
+        tRef.current('sync.droppedTitle'),
+        `[Clone] ${event.filePath}: ${event.lastError ?? 'unknown error'} (${event.attempts} attempts)`,
+      );
+    });
+    return unsubClone;
   }, []);
 
   return null;

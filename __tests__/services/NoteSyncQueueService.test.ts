@@ -41,6 +41,17 @@ jest.mock('../../src/services/git/LocalGitWriter', () => ({
   LocalGitWriter: { push: jest.fn(async () => ({ success: true })) },
 }));
 
+jest.mock('../../src/services/CloneSyncService', () => ({
+  CloneSyncService: {
+    pushPending: jest.fn(async () => ({
+      succeeded: 1,
+      failed: 0,
+      conflicted: false,
+      queuedItems: 1,
+    })),
+  },
+}));
+
 jest.mock('../../src/services/git/BatchGitOperations', () => ({
   batchDeleteFiles: jest.fn(),
   batchUpsertFiles: jest.fn(),
@@ -55,6 +66,7 @@ import { NoteSyncQueueService, DroppedMutationEvent } from '../../src/services/N
 import { syncNoteToGitHub, deleteNoteFromGitHub } from '../../src/services/NoteGitHubSyncService';
 import { SyncEngineService } from '../../src/services/SyncEngineService';
 import { LocalGitWriter } from '../../src/services/git/LocalGitWriter';
+import { CloneSyncService } from '../../src/services/CloneSyncService';
 import { batchDeleteFiles, batchUpsertFiles } from '../../src/services/git/BatchGitOperations';
 import { resolveBranch } from '../../src/services/git/resolveBranch';
 import {
@@ -420,7 +432,12 @@ describe('NoteSyncQueueService', () => {
     describe('clone-mode coalesced push', () => {
       beforeEach(() => {
         (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
-        (LocalGitWriter.push as jest.Mock).mockResolvedValue({ success: true });
+        (CloneSyncService.pushPending as jest.Mock).mockResolvedValue({
+          succeeded: 3,
+          failed: 0,
+          conflicted: false,
+          queuedItems: 3,
+        });
       });
 
       afterEach(() => {
@@ -432,6 +449,9 @@ describe('NoteSyncQueueService', () => {
 
       test('runs syncNoteToGitHub with push:false and flushes once per group', async () => {
         (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: true });
+        (CloneSyncService.pushPending as jest.Mock).mockResolvedValue({
+          succeeded: 3, failed: 0, conflicted: false, queuedItems: 0,
+        });
 
         for (const f of ['a', 'b', 'c']) {
           await NoteSyncQueueService.enqueueNoteUpsert({
@@ -450,13 +470,9 @@ describe('NoteSyncQueueService', () => {
           expect(args.push).toBe(false);
         }
 
-        // One coalesced push at end of group
-        expect(LocalGitWriter.push).toHaveBeenCalledTimes(1);
-        expect(LocalGitWriter.push).toHaveBeenCalledWith({
-          repoPath: 'me/repo',
-          branch: 'main',
-          token: 'tok',
-        });
+        // One coalesced push via CloneSyncService at end of group
+        expect(CloneSyncService.pushPending).toHaveBeenCalledTimes(1);
+        expect(CloneSyncService.pushPending).toHaveBeenCalledWith('me/repo', 'main');
       });
 
       test('separate flush per (repo, branch) group', async () => {
@@ -474,16 +490,15 @@ describe('NoteSyncQueueService', () => {
 
         await NoteSyncQueueService.drain();
 
-        expect(LocalGitWriter.push).toHaveBeenCalledTimes(3);
-        const pushCalls = (LocalGitWriter.push as jest.Mock).mock.calls.map(([a]) => `${a.repoPath}@${a.branch}`);
+        expect(CloneSyncService.pushPending).toHaveBeenCalledTimes(3);
+        const pushCalls = (CloneSyncService.pushPending as jest.Mock).mock.calls.map(([rp, br]) => `${rp}@${br}`);
         expect(pushCalls.sort()).toEqual(['me/repo@dev', 'me/repo@main', 'other/repo@main']);
       });
 
       test('failed flush keeps items queued and bumps attempts', async () => {
         (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: true });
-        (LocalGitWriter.push as jest.Mock).mockResolvedValue({
-          success: false,
-          error: 'network down',
+        (CloneSyncService.pushPending as jest.Mock).mockResolvedValue({
+          succeeded: 0, failed: 2, conflicted: false, queuedItems: 0,
         });
 
         await NoteSyncQueueService.enqueueNoteUpsert({
@@ -502,7 +517,8 @@ describe('NoteSyncQueueService', () => {
         expect(items).toHaveLength(2);
         for (const m of items) {
           expect(m.attempts).toBe(1);
-          expect(m.lastError).toBe('network down');
+          // CloneSyncService returns aggregate counts, no per-item error string
+          expect(m.lastError).toBeUndefined();
         }
       });
 
@@ -517,7 +533,7 @@ describe('NoteSyncQueueService', () => {
         });
 
         await NoteSyncQueueService.drain();
-        expect(LocalGitWriter.push).not.toHaveBeenCalled();
+        expect(CloneSyncService.pushPending).not.toHaveBeenCalled();
       });
     });
 
@@ -537,7 +553,9 @@ describe('NoteSyncQueueService', () => {
 
       test('clone-mode delete defers push and flushes once with upsert siblings', async () => {
         (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
-        (LocalGitWriter.push as jest.Mock).mockResolvedValue({ success: true });
+        (CloneSyncService.pushPending as jest.Mock).mockResolvedValue({
+          succeeded: 2, failed: 0, conflicted: false, queuedItems: 0,
+        });
         (syncNoteToGitHub as jest.Mock).mockResolvedValue({ success: true });
         (deleteNoteFromGitHub as jest.Mock).mockResolvedValue({ success: true });
 
@@ -550,16 +568,16 @@ describe('NoteSyncQueueService', () => {
 
         await NoteSyncQueueService.drain();
 
-        // One coalesced push regardless of upsert + delete mix.
-        expect(LocalGitWriter.push).toHaveBeenCalledTimes(1);
-        // The deleteNoteFromGitHub call was made with push:false.
+        expect(CloneSyncService.pushPending).toHaveBeenCalledTimes(1);
         expect((deleteNoteFromGitHub as jest.Mock).mock.calls[0][0].push).toBe(false);
         (SyncEngineService.getMode as jest.Mock).mockResolvedValue('api');
       });
 
       test('clears a leftover clone-mode delete from the queue after a successful flush (issue #901)', async () => {
         (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
-        (LocalGitWriter.push as jest.Mock).mockResolvedValue({ success: true });
+        (CloneSyncService.pushPending as jest.Mock).mockResolvedValue({
+          succeeded: 1, failed: 0, conflicted: false, queuedItems: 0,
+        });
         (deleteNoteFromGitHub as jest.Mock).mockResolvedValue({ success: true });
 
         await NoteSyncQueueService.enqueueNoteDelete({
@@ -952,7 +970,9 @@ describe('NoteSyncQueueService', () => {
   describe('clone-mode resolved-branch push', () => {
     beforeEach(() => {
       (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
-      (LocalGitWriter.push as jest.Mock).mockResolvedValue({ success: true });
+      (CloneSyncService.pushPending as jest.Mock).mockResolvedValue({
+        succeeded: 2, failed: 0, conflicted: false, queuedItems: 0,
+      });
     });
 
     afterEach(() => {
@@ -981,12 +1001,8 @@ describe('NoteSyncQueueService', () => {
       expect((deleteNoteFromGitHub as jest.Mock).mock.calls[0][0].branch).toBe('master');
 
       // The single coalesced push targets the same resolved branch.
-      expect(LocalGitWriter.push).toHaveBeenCalledTimes(1);
-      expect(LocalGitWriter.push).toHaveBeenCalledWith({
-        repoPath: 'me/repo',
-        branch: 'master',
-        token: 'tok',
-      });
+      expect(CloneSyncService.pushPending).toHaveBeenCalledTimes(1);
+      expect(CloneSyncService.pushPending).toHaveBeenCalledWith('me/repo', 'master');
     });
   });
 
