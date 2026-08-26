@@ -1,3 +1,13 @@
+// NetInfo mock — CloneSyncService depends on it; default to online so
+// tryPushNowImpl attempts push in tests rather than queueing.
+jest.mock('@react-native-community/netinfo', () => ({
+  __esModule: true,
+  default: {
+    fetch: jest.fn(async () => ({ isConnected: true, isInternetReachable: true })),
+    addEventListener: jest.fn(() => () => {}),
+  },
+}));
+
 jest.mock('nativewind', () => ({
   cssInterop: () => {},
   rem: (v: number) => v,

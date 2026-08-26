@@ -2,8 +2,8 @@ import { GitHubService } from './GitHubService';
 import { Todo } from '../models/Todo';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { AuthService } from './AuthService';
+import { CloneSyncService } from './CloneSyncService';
 import { SyncEngineService } from './SyncEngineService';
-import { CommitService } from './git/CommitService';
 import { resolveDefaultFolder, resolveDefaultRepo } from './git/defaultsPolicy';
 import { GitFsService } from './git/GitFsService';
 import { resolveBranch } from './git/resolveBranch';
@@ -103,20 +103,19 @@ export async function syncTodoToGitHub(params: {
   const useUpdateVerb = fileExists ?? !!filePath;
   const message = useUpdateVerb ? `Update todo: ${text}` : `Create todo: ${text}`;
 
-  // Clone-mode write path (#514). Same on-disk shape as the API path so a
-  // mode flip later doesn't surface a no-op churn commit.
   if (mode === 'clone') {
-    const commitResult = await CommitService.commit({
-      repo: repoPath,
+    const saveResult = await CloneSyncService.save({
+      repoPath,
       branch: targetBranch,
       filePath: targetPath,
       content,
       message,
+      intent: 'upsert',
     });
-    if (commitResult.success) {
+    if (saveResult.success) {
       return { success: true, filePath: targetPath };
     }
-    return { success: false, error: commitResult.error };
+    return { success: false, error: saveResult.error };
   }
 
   try {
@@ -166,18 +165,17 @@ export async function deleteTodoFromGitHub(params: {
 
   const mode = await SyncEngineService.getMode(repoPath);
   if (mode === 'clone') {
-    const commitResult = await CommitService.commit({
-      repo: repoPath,
+    const saveResult = await CloneSyncService.save({
+      repoPath,
       branch: targetBranch,
       filePath,
-      content: '',
       message: `Delete todo: ${text || filePath}`,
-      delete: true,
+      intent: 'delete',
     });
-    if (commitResult.success) {
+    if (saveResult.success) {
       return { success: true, filePath };
     }
-    return { success: false, error: commitResult.error };
+    return { success: false, error: saveResult.error };
   }
 
   try {
