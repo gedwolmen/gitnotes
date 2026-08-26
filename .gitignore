@@ -101,3 +101,6 @@ appstore_screenshots/
 
 # Agent dogfood/QA output (screenshots, traces, videos)
 dogfood-output/
+
+# Rust build output (git2-rs)
+modules/expo-git2-rs/rust/target/
