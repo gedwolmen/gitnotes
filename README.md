@@ -17,7 +17,7 @@
 
 <p align="center">
   <a href="https://github.com/gedwolmen/gitnotes/actions/workflows/ci.yml"><img src="https://github.com/gedwolmen/gitnotes/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MPL--2.0-blue.svg" alt="MPL-2.0"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue.svg" alt="GPL-3.0"></a>
   <a href="https://docs.expo.dev/versions/latest/"><img src="https://img.shields.io/badge/Expo-SDK%2056-000.svg" alt="Expo SDK 56"></a>
   <img src="https://img.shields.io/badge/platform-iOS%20%7C%20Android-lightgrey.svg" alt="iOS | Android">
 </p>
@@ -30,7 +30,7 @@
 - **Versioned by default.** Edit, branch, diff, and rebase your notes the same way you do code.
 - **Works offline.** Edits queue locally and sync when you're back online.
 - **Open formats.** Markdown, Neorg, Org, JSON — pick what fits.
-- **Open source.** MPL-2.0; contributions and forks welcome.
+- **Open source.** GPL-3.0; source available at GitSync; contributions and forks welcome.
 
 ## Highlights
 
@@ -43,7 +43,7 @@
 
 ## Stack
 
-Expo SDK 56 · React Native 0.85 · TypeScript 6 · isomorphic-git · React Navigation v7 · TanStack Query · Zustand · Vercel AI SDK v6 · Reanimated · FlashList · NativeWind v5.
+Expo SDK 56 · React Native 0.85 · TypeScript 6 · git2-rs (Rust) · React Navigation v7 · TanStack Query · Zustand · Vercel AI SDK v6 · Reanimated · FlashList · NativeWind v5.
 
 ## Contributing
 
@@ -55,4 +55,4 @@ For bugs or feature requests, [open an issue](https://github.com/gedwolmen/gitno
 
 ## License
 
-[Mozilla Public License 2.0](LICENSE) — file-level copyleft. Combine with other licensed code freely; changes to MPL files stay open.
+[GNU General Public License v3.0](LICENSE) — GPL-3.0 derivative of [GitSync](https://github.com/ViscousPot/GitSync). See [NOTICE](NOTICE) for provenance details.

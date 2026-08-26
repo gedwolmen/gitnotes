@@ -26,6 +26,12 @@
 | [Clone-Perf Optimization](./clone-perf-optimization.md) | Five ordered patches closing the simulator freeze gap: `noCheckout` + batched full checkout, 3-concurrent-pull dedup, LFS-after-clone, UTF-8 fast path, depth-3 floor measurement flag |
 | [Git Core Hardening](./git-core-hardening.md) | git-core test-campaign fixes: binary decode integrity, case collisions, auth/preflight, API batch writes, pull/reconcile fixes (#876–#892) |
 
+### License & provenance
+
+| Page | Description |
+|------|-------------|
+| [GitSync GPL Provenance](./gitsync-gpl-provenance.md) | GPL-3.0 derivative attribution, upstream GitSync provenance, corresponding source, app-store release prohibition |
+
 ### Features
 
 | Page | Description |

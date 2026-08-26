@@ -1,0 +1,44 @@
+GitNotēs - GPL-3.0 Derivative Work Notice
+==========================================
+
+This product (GitNotēs) is a derivative of GitSync.
+
+GitSync
+--------
+URL: https://github.com/ViscousPot/GitSync
+Commit: 9b3ef2e4d0f3f21d3e11755aa9bf6583ad808d7a
+License: GNU General Public License v3.0
+
+GitSync provides: clone/fetch/pull/stage/commit/push, conflict resolution,
+authentication, offline retry, branches/remotes, issues/PRs, workflows,
+and AI-assisted Git tools.
+
+This Derivative Product
+-----------------------
+URL: https://github.com/gedwolmen/gitnotes
+License: GNU General Public License v3.0
+
+The following source/asset paths were copied or derived from GitSync:
+(to be completed as files are ported in subsequent todos)
+
+Modifications to upstream GitSync code are marked with:
+- Date of modification
+- Source file path in this product
+- Reference to the original GitSync path
+
+This product intentionally purges all legacy isomorphic-git data including:
+- All stored Git credentials and tokens
+- All cloned repository directories
+- All sync queues and operation registries
+- All unpushed commit records
+
+Corresponding Source
+------------------
+Pursuant to GNU GPL v3 section 1, the corresponding source for this
+derivative work is available from the GitSync repository at the pinned
+commit identified above.
+
+App-Store Release Prohibition
+-----------------------------
+NO APP-STORE RELEASE may be made without explicit owner legal clearance.
+This is a hard prerequisite. Source development may proceed without it.

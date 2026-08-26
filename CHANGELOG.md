@@ -8,6 +8,26 @@ All notable fixes and feature changes to GitNotēs are documented here.
 >
 > **History**: prior fixes (pre-2026-08) lived in single-PR wiki pages. Those pages were retired in [#1047](https://github.com/gedwolmen/gitnotes/pull/1047); their full diagnostic content is preserved in git history via `git log -p -- docs/wiki/<file>.md`.
 
+## 2026-08-26 — GPL-3.0 Relicensing
+
+### chore(license) — Convert repository from MPL-2.0 to GPL-3.0
+
+**What:** Converted GitNotēs from Mozilla Public License 2.0 to GNU General Public License v3.0 as a derivative work of GitSync.
+
+**Details:**
+- Replaced `LICENSE` with full GPL-3.0 license text
+- Updated `package.json` license field from `MPL-2.0` to `GPL-3.0`
+- Updated README.md license badge and description
+- Created `NOTICE` file with GitSync provenance and derivative work attribution
+- Created `docs/wiki/gitsync-gpl-provenance.md` documenting GPL obligations
+- This product is now a GPL-3.0 derivative of GitSync at commit `9b3ef2e4d0f3f21d3e11755aa9bf6583ad808d7a`
+- Deliberate purge of all legacy isomorphic-git data and sync infrastructure
+- **App-store release is blocked pending explicit owner legal clearance** — this is a hard prerequisite
+
+**Related:**
+- [GitSync](https://github.com/ViscousPot/GitSync) — GPL-3.0 Flutter/Rust Git client
+- See [NOTICE](NOTICE) and [docs/wiki/gitsync-gpl-provenance.md](docs/wiki/gitsync-gpl-provenance.md) for provenance details
+
 ## [Unreleased] — Write-through clone mode
 
 ### refactor(sync) — Clone mode is now write-through
