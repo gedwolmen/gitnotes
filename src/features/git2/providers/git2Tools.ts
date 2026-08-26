@@ -7,6 +7,8 @@
  * - Typed result envelopes
  *
  * Provider reads/writes stay separate from Git2Client file sync.
+ *
+ * GPL-3.0 derivative of GitSync.
  */
 
 import { GitHubClient } from './github';

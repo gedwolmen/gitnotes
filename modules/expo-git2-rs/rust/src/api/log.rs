@@ -7,18 +7,14 @@
 use crate::api::clone::map_git_error;
 use crate::error::GitError;
 use git2::{Repository, Sort};
-use serde::{Deserialize, Serialize};
 use std::path::Path;
 
-pub fn log(
-    repo_path: &str,
-    max_count: Option<usize>,
-) -> Result<Vec<LogEntry>, GitError> {
-    let repo = Repository::open(Path::new(repo_path))
-        .map_err(|e| map_git_error(e))?;
+#[allow(unused_must_use)]
+pub fn log(repo_path: &str, max_count: Option<usize>) -> Result<Vec<LogEntry>, GitError> {
+    let repo = Repository::open(Path::new(repo_path)).map_err(map_git_error)?;
 
-    let mut revwalk = repo.revwalk().map_err(|e| map_git_error(e))?;
-    revwalk.push_head().map_err(|e| map_git_error(e))?;
+    let mut revwalk = repo.revwalk().map_err(map_git_error)?;
+    revwalk.push_head().map_err(map_git_error)?;
     revwalk.set_sorting(Sort::TIME | Sort::TOPOLOGICAL);
 
     let limit = max_count.unwrap_or(100);
@@ -28,8 +24,8 @@ pub fn log(
         if i >= limit {
             break;
         }
-        let oid = oid_result.map_err(|e| map_git_error(e))?;
-        let commit = repo.find_commit(oid).map_err(|e| map_git_error(e))?;
+        let oid = oid_result.map_err(map_git_error)?;
+        let commit = repo.find_commit(oid).map_err(map_git_error)?;
 
         entries.push(LogEntry {
             oid: oid.to_string(),

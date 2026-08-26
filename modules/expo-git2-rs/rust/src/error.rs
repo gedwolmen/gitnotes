@@ -89,20 +89,17 @@ impl GitError {
             GitError::NothingToCommit => {
                 serde_json::json!({ "kind": "nothing_to_commit" }).to_string()
             }
-            GitError::Cancelled => {
-                serde_json::json!({ "kind": "cancelled" }).to_string()
-            }
+            GitError::Cancelled => serde_json::json!({ "kind": "cancelled" }).to_string(),
             GitError::LockBusy { repo_path } => {
                 serde_json::json!({ "kind": "lock_busy", "repo_path": repo_path }).to_string()
             }
             GitError::InvalidRemoteUrl { url } => {
                 serde_json::json!({ "kind": "invalid_remote_url", "url": url }).to_string()
             }
-            GitError::DetachedHead => {
-                serde_json::json!({ "kind": "detached_head" }).to_string()
-            }
+            GitError::DetachedHead => serde_json::json!({ "kind": "detached_head" }).to_string(),
             GitError::BranchAlreadyExists { branch_name } => {
-                serde_json::json!({ "kind": "branch_already_exists", "branch_name": branch_name }).to_string()
+                serde_json::json!({ "kind": "branch_already_exists", "branch_name": branch_name })
+                    .to_string()
             }
             GitError::RemoteRejected { reason } => {
                 serde_json::json!({ "kind": "remote_rejected", "reason": reason }).to_string()

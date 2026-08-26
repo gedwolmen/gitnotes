@@ -10,25 +10,20 @@ use git2::{DiffOptions, Repository};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
-pub fn diff_file(
-    repo_path: &str,
-    commit_oid: &str,
-    file_path: &str,
-) -> Result<String, GitError> {
-    let repo = Repository::open(Path::new(repo_path))
-        .map_err(|e| map_git_error(e))?;
+pub fn diff_file(repo_path: &str, commit_oid: &str, file_path: &str) -> Result<String, GitError> {
+    let repo = Repository::open(Path::new(repo_path)).map_err(map_git_error)?;
 
-    let oid = repo.revparse_single(commit_oid)
-        .map_err(|e| map_git_error(e))?
+    let oid = repo
+        .revparse_single(commit_oid)
+        .map_err(map_git_error)?
         .id();
-    let commit = repo.find_commit(oid)
-        .map_err(|e| map_git_error(e))?;
+    let commit = repo.find_commit(oid).map_err(map_git_error)?;
 
-    let tree = commit.tree().map_err(|e| map_git_error(e))?;
+    let tree = commit.tree().map_err(map_git_error)?;
 
     let parent_tree = if commit.parent_count() > 0 {
-        let parent = commit.parent(0).map_err(|e| map_git_error(e))?;
-        Some(parent.tree().map_err(|e| map_git_error(e))?)
+        let parent = commit.parent(0).map_err(map_git_error)?;
+        Some(parent.tree().map_err(map_git_error)?)
     } else {
         None
     };
@@ -38,7 +33,7 @@ pub fn diff_file(
 
     let diff = repo
         .diff_tree_to_tree(parent_tree.as_ref(), Some(&tree), Some(&mut opts))
-        .map_err(|e| map_git_error(e))?;
+        .map_err(map_git_error)?;
 
     let mut output = String::new();
     diff.print(git2::DiffFormat::Patch, |_delta, _hunk, line| {
@@ -53,35 +48,31 @@ pub fn diff_file(
         output.push_str(content);
         true
     })
-    .map_err(|e| map_git_error(e))?;
+    .map_err(map_git_error)?;
 
     Ok(output)
 }
 
-pub fn diff_commit(
-    repo_path: &str,
-    commit_oid: &str,
-) -> Result<Vec<DiffFileEntry>, GitError> {
-    let repo = Repository::open(Path::new(repo_path))
-        .map_err(|e| map_git_error(e))?;
+pub fn diff_commit(repo_path: &str, commit_oid: &str) -> Result<Vec<DiffFileEntry>, GitError> {
+    let repo = Repository::open(Path::new(repo_path)).map_err(map_git_error)?;
 
-    let oid = repo.revparse_single(commit_oid)
-        .map_err(|e| map_git_error(e))?
+    let oid = repo
+        .revparse_single(commit_oid)
+        .map_err(map_git_error)?
         .id();
-    let commit = repo.find_commit(oid)
-        .map_err(|e| map_git_error(e))?;
+    let commit = repo.find_commit(oid).map_err(map_git_error)?;
 
-    let tree = commit.tree().map_err(|e| map_git_error(e))?;
+    let tree = commit.tree().map_err(map_git_error)?;
     let parent_tree = if commit.parent_count() > 0 {
-        let parent = commit.parent(0).map_err(|e| map_git_error(e))?;
-        Some(parent.tree().map_err(|e| map_git_error(e))?)
+        let parent = commit.parent(0).map_err(map_git_error)?;
+        Some(parent.tree().map_err(map_git_error)?)
     } else {
         None
     };
 
     let diff = repo
         .diff_tree_to_tree(parent_tree.as_ref(), Some(&tree), None)
-        .map_err(|e| map_git_error(e))?;
+        .map_err(map_git_error)?;
 
     let mut files = Vec::new();
     diff.print(git2::DiffFormat::Patch, |delta, _hunk, line| {
@@ -90,13 +81,15 @@ pub fn diff_commit(
                 files.push(DiffFileEntry {
                     path: old_path.to_string_lossy().into_owned(),
                     status: format!("{:?}", delta.status()),
-                    content: std::str::from_utf8(line.content()).unwrap_or("").to_string(),
+                    content: std::str::from_utf8(line.content())
+                        .unwrap_or("")
+                        .to_string(),
                 });
             }
         }
         true
     })
-    .map_err(|e| map_git_error(e))?;
+    .map_err(map_git_error)?;
 
     Ok(files)
 }

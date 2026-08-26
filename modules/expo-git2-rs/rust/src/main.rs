@@ -5,6 +5,9 @@
  */
 
 fn main() {
-    println!("expo-git2-rs v{} — native module, not a CLI tool", env!("CARGO_PKG_VERSION"));
+    println!(
+        "expo-git2-rs v{} — native module, not a CLI tool",
+        env!("CARGO_PKG_VERSION")
+    );
     println!("Use via Expo native module FFI, not directly.");
 }

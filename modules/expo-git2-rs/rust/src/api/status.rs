@@ -7,18 +7,17 @@
 use crate::api::clone::map_git_error;
 use crate::error::GitError;
 use git2::{Repository, StatusOptions};
-use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 pub fn status(repo_path: &str) -> Result<StatusResult, GitError> {
-    let repo = Repository::open(Path::new(repo_path))
-        .map_err(|e| map_git_error(e))?;
+    let repo = Repository::open(Path::new(repo_path)).map_err(map_git_error)?;
 
     let mut opts = StatusOptions::new();
     opts.include_untracked(true);
 
-    let statuses = repo.statuses(Some(&mut opts))
-        .map_err(|e| map_git_error(e))?;
+    let statuses = repo
+        .statuses(Some(&mut opts))
+        .map_err(map_git_error)?;
 
     let entries: Vec<StatusEntry> = statuses
         .iter()

@@ -17,6 +17,6 @@ pub mod error;
 pub mod protocol;
 
 // Re-exports for FFI consumers
-pub use api::git_manager::{git_manager_version, git_manager_execute, git_manager_free};
+pub use api::git_manager::{git_manager_execute, git_manager_free, git_manager_version};
 pub use error::GitError;
-pub use protocol::{GitProgress, PROTOCOL_VERSION, CredRequest, CredKind};
+pub use protocol::{CredKind, CredRequest, GitProgress, PROTOCOL_VERSION};

@@ -41,7 +41,7 @@ export {
 } from './types';
 
 // Client
-export { Git2Client, type Git2ClientOptions, type ProgressCallback } from './Git2Client';
+export { Git2ClientImpl as Git2Client, type Git2ClientOptions, type ProgressCallback } from './Git2Client';
 
 // Errors
 export { NativeProtocolError, NativeInvocationError, GitOperationError } from './errors';

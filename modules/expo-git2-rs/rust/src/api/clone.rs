@@ -7,8 +7,7 @@
 
 use crate::error::GitError;
 use crate::protocol::{CredRequest, GitProgress};
-use git2::{FetchOptions, RemoteCallbacks, Repository};
-use serde::{Deserialize, Serialize};
+use git2::{FetchOptions, RemoteCallbacks};
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Mutex;
@@ -19,6 +18,7 @@ static REPO_LOCKS: std::sync::LazyLock<Mutex<HashMap<String, ()>>> =
 
 /// Acquire a serial lock for a repository path.
 /// Returns error if already locked.
+#[allow(dyn_drop)]
 pub fn acquire_lock(repo_path: &str) -> Result<Box<dyn Drop>, GitError> {
     let mut locks = REPO_LOCKS.lock().map_err(|_| GitError::InternalError {
         reason: "poisoned lock".to_string(),
@@ -63,17 +63,13 @@ pub fn clone_repository(
 
     let mut remote_callbacks = RemoteCallbacks::new();
     if let Some(ref cred) = creds {
-        remote_callbacks.credentials(move |_url, _username_from_url, _cred_types| {
-            match cred {
-                CredRequest::Userpass { username, token } => {
-                    git2::Cred::userpass_plaintext(username, token.as_deref().unwrap_or(""))
-                }
-                CredRequest::SshKey { username, .. } => {
-                    Err(git2::Error::from_str(
-                        "SSH authentication requires ssh-agent; key-based auth not yet implemented",
-                    ))
-                }
+        remote_callbacks.credentials(move |_url, _username_from_url, _cred_types| match cred {
+            CredRequest::Userpass { username, token } => {
+                git2::Cred::userpass_plaintext(username, token.as_deref().unwrap_or(""))
             }
+            CredRequest::SshKey { .. } => Err(git2::Error::from_str(
+                "SSH authentication requires ssh-agent; key-based auth not yet implemented",
+            )),
         });
     }
 
@@ -83,12 +79,10 @@ pub fn clone_repository(
     let mut builder = git2::build::RepoBuilder::new();
     builder.fetch_options(fetch_opts);
 
-    let repo = builder
-        .clone(url, path)
-        .map_err(|e| map_git_error(e))?;
+    let repo = builder.clone(url, path).map_err(map_git_error)?;
 
-    let head = repo.head().map_err(|e| map_git_error(e))?;
-    let head_oid = head.peel_to_commit().map_err(|e| map_git_error(e))?.id();
+    let head = repo.head().map_err(map_git_error)?;
+    let head_oid = head.peel_to_commit().map_err(map_git_error)?.id();
     let head_hex = head_oid.to_string();
 
     progress_sender(GitProgress::CloneComplete {
@@ -106,9 +100,13 @@ pub fn clone_repository(
 pub fn map_git_error(e: git2::Error) -> GitError {
     let s = e.message();
     if s.contains("authentication") || s.contains("credential") {
-        GitError::AuthenticationFailed { reason: s.to_string() }
+        GitError::AuthenticationFailed {
+            reason: s.to_string(),
+        }
     } else if s.contains("network") || s.contains("connection") || s.contains("timeout") {
-        GitError::NetworkError { reason: s.to_string() }
+        GitError::NetworkError {
+            reason: s.to_string(),
+        }
     } else if s.contains("conflict") || s.contains("merge") {
         GitError::MergeConflict {
             conflicts: vec![s.to_string()],

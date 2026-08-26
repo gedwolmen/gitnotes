@@ -14,20 +14,61 @@ pub const PROTOCOL_VERSION: &str = "1";
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "phase", rename_all = "camelCase")]
 pub enum GitProgress {
-    CloneReceiving { bytes: u64, total: Option<u64>, flavor: Option<String> },
-    CloneResolving { bytes: u64, total: u64 },
-    CloneCheckingOut { current: u32, total: u32 },
-    CloneComplete { path: String, head: String },
-    FetchConnecting { remote: String },
-    FetchReceivingRefs { remote: String, refs: Vec<String> },
-    FetchReceivingPack { bytes: u64, total: Option<u64> },
-    FetchComplete { remote: String, updated: Vec<String> },
-    PushCommunicating { remote: String },
-    PushUpdatingRef { ref_name: String, src: String, dst: String },
-    PushComplete { remote: String, updated: Vec<String> },
-    Checkout { current: u32, total: u32 },
-    MergeAnalysis { branch: String, analysis: String },
-    MergeConflicts { files: Vec<String> },
+    CloneReceiving {
+        bytes: u64,
+        total: Option<u64>,
+        flavor: Option<String>,
+    },
+    CloneResolving {
+        bytes: u64,
+        total: u64,
+    },
+    CloneCheckingOut {
+        current: u32,
+        total: u32,
+    },
+    CloneComplete {
+        path: String,
+        head: String,
+    },
+    FetchConnecting {
+        remote: String,
+    },
+    FetchReceivingRefs {
+        remote: String,
+        refs: Vec<String>,
+    },
+    FetchReceivingPack {
+        bytes: u64,
+        total: Option<u64>,
+    },
+    FetchComplete {
+        remote: String,
+        updated: Vec<String>,
+    },
+    PushCommunicating {
+        remote: String,
+    },
+    PushUpdatingRef {
+        ref_name: String,
+        src: String,
+        dst: String,
+    },
+    PushComplete {
+        remote: String,
+        updated: Vec<String>,
+    },
+    Checkout {
+        current: u32,
+        total: u32,
+    },
+    MergeAnalysis {
+        branch: String,
+        analysis: String,
+    },
+    MergeConflicts {
+        files: Vec<String>,
+    },
 }
 
 /// Credential kinds supported.
@@ -45,6 +86,12 @@ pub enum CredKind {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum CredRequest {
-    Userpass { username: String, token: Option<String> },
-    SshKey { username: String, public_key: Option<String> },
+    Userpass {
+        username: String,
+        token: Option<String>,
+    },
+    SshKey {
+        username: String,
+        public_key: Option<String>,
+    },
 }

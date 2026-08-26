@@ -12,10 +12,12 @@ use crate::error::GitError;
 use crate::protocol::{CredRequest, GitProgress};
 
 // Progress callback registry — per-call closure stored temporarily
+#[allow(clippy::type_complexity)]
 static PROGRESS_CALLBACK: std::sync::LazyLock<
     std::sync::Mutex<Option<Box<dyn Fn(GitProgress) + Send + Sync>>>,
 > = std::sync::LazyLock::new(|| std::sync::Mutex::new(None));
 
+#[allow(dead_code)]
 fn set_progress_callback<F>(cb: F)
 where
     F: Fn(GitProgress) + Send + Sync + 'static,
@@ -48,8 +50,9 @@ pub extern "C" fn git_manager_version() -> *mut std::os::raw::c_char {
 }
 
 /// Execute a JSON-encoded operation request.
+#[allow(clippy::missing_safety_doc)]
 #[no_mangle]
-pub extern "C" fn git_manager_execute(
+pub unsafe extern "C" fn git_manager_execute(
     req: *const std::os::raw::c_char,
 ) -> *mut std::os::raw::c_char {
     if req.is_null() {
@@ -308,32 +311,38 @@ struct ResolveConflictOp {
 // ─── Dispatch ───────────────────────────────────────────────────────────────
 
 fn execute_inner(req_str: &str) -> Result<String, GitError> {
-    let op: Op = serde_json::from_str(req_str)
-        .map_err(|e| GitError::InvalidOperation {
-            reason: format!("parse error: {}", e),
-        })?;
+    let op: Op = serde_json::from_str(req_str).map_err(|e| GitError::InvalidOperation {
+        reason: format!("parse error: {}", e),
+    })?;
 
     match op {
         Op::GetVersion => Ok(serde_json::json!({
             "ok": true,
             "version": format!("expo-git2-rs {}", env!("CARGO_PKG_VERSION")),
             "protocol": "1",
-        }).to_string()),
+        })
+        .to_string()),
 
         Op::Clone(op) => {
-            let result = clone::clone_repository(&op.url, &op.path, op.cred, &send_progress)?;
+            let result = clone::clone_repository(&op.url, &op.path, op.cred, send_progress)?;
             Ok(serde_json::json!({ "ok": true, "data": result }).to_string())
         }
         Op::Fetch(op) => {
-            let result = fetch::fetch(&op.path, &op.remote, op.cred, &send_progress)?;
+            let result = fetch::fetch(&op.path, &op.remote, op.cred, send_progress)?;
             Ok(serde_json::json!({ "ok": true, "data": result }).to_string())
         }
         Op::Push(op) => {
-            let result = push::push(&op.path, &op.remote, &op.refspec, op.cred, &send_progress)?;
+            let result = push::push(&op.path, &op.remote, &op.refspec, op.cred, send_progress)?;
             Ok(serde_json::json!({ "ok": true, "data": result }).to_string())
         }
         Op::Pull(op) => {
-            let result = pull::pull(&op.path, &op.remote, op.refspec.as_deref(), op.cred, &send_progress)?;
+            let result = pull::pull(
+                &op.path,
+                &op.remote,
+                op.refspec.as_deref(),
+                op.cred,
+                send_progress,
+            )?;
             Ok(serde_json::json!({ "ok": true, "data": result }).to_string())
         }
         Op::Stage(op) => {
@@ -381,7 +390,12 @@ fn execute_inner(req_str: &str) -> Result<String, GitError> {
             Ok(serde_json::json!({ "ok": true, "data": result }).to_string())
         }
         Op::CreateTag(op) => {
-            let result = tag::create_tag(&op.path, &op.tag_name, &op.target_oid, op.message.as_deref())?;
+            let result = tag::create_tag(
+                &op.path,
+                &op.tag_name,
+                &op.target_oid,
+                op.message.as_deref(),
+            )?;
             Ok(serde_json::json!({ "ok": true, "data": result }).to_string())
         }
         Op::DeleteTag(op) => {
@@ -430,12 +444,13 @@ fn execute_inner(req_str: &str) -> Result<String, GitError> {
 }
 
 /// Free a string allocated by this library.
+#[allow(clippy::missing_safety_doc)]
 #[no_mangle]
-pub extern "C" fn git_manager_free(ptr: *mut std::os::raw::c_char) {
+pub unsafe extern "C" fn git_manager_free(ptr: *mut std::os::raw::c_char) {
     if ptr.is_null() {
         return;
     }
     unsafe {
-        std::ffi::CString::from_raw(ptr);
+        let _ = std::ffi::CString::from_raw(ptr);
     }
 }

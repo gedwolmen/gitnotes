@@ -117,7 +117,7 @@ async function execute(req: GitOperationRequest): Promise<GitOperationResponse> 
   return validateResponse(raw);
 }
 
-export const Git2Client: Git2Client = {
+export const Git2ClientImpl: Git2Client = {
   async getVersion() {
     const resp = await execute({ op: 'getVersion' });
     if (resp.ok === false) throw mapError(resp.error);
@@ -220,3 +220,7 @@ export const Git2Client: Git2Client = {
     return undefined as void;
   },
 };
+
+// Re-export the const as Git2Client so consumers importing from this file
+// get the value, not just the type (avoids redeclaration conflict).
+export { Git2ClientImpl as Git2Client };
