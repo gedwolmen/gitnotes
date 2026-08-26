@@ -19,3 +19,14 @@ export class NativeInvocationError extends Error {
     this.name = 'NativeInvocationError';
   }
 }
+
+export class GitOperationError extends Error {
+  readonly kind = 'GitOperationError';
+  constructor(
+    message: string,
+    public readonly code: string,
+  ) {
+    super(message);
+    this.name = 'GitOperationError';
+  }
+}
