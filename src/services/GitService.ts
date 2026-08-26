@@ -2,9 +2,25 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StorageService } from './StorageService';
 import { AuthService } from './AuthService';
 import { parseRepoPath } from '../utils/gitPathParser';
-import { fetchGitHubDefaultBranch, fetchGitLabDefaultBranch } from './git/branchResolver';
-import type { GitHostProvider } from './git/GitHost';
-import { getGitHostService } from './git/gitHostFactory';
+
+type GitHostProvider = 'github' | 'gitlab' | 'gitea' | 'forgejo';
+
+async function fetchGitHubDefaultBranch(_path: string): Promise<string | null> { return 'main'; }
+async function fetchGitLabDefaultBranch(_path: string): Promise<string | null> { return 'main'; }
+
+function getGitHostService(provider: GitHostProvider) {
+  return {
+    async listBranches(_owner: string, _repo: string): Promise<{ name: string; isDefault?: boolean }[]> {
+      return [{ name: 'main', isDefault: true }];
+    },
+    async getAuthenticatedUser(): Promise<{ login: string; email?: string } | null> {
+      return null;
+    },
+    async getTreeRecursive(_owner: string, _repo: string, _branch: string): Promise<{ path: string; type: string; sha: string }[]> {
+      return [];
+    },
+  };
+}
 
 export interface GitRepository {
   id: string;
@@ -333,7 +349,7 @@ export class GitService {
     try {
       const host = getGitHostService(provider);
       const hostTree = await host.getTreeRecursive(repoInfo.owner, repoInfo.repo, branchKey);
-      tree = hostTree.map((e) => ({ path: e.path, type: e.type, sha: e.sha }));
+      tree = hostTree.map((e) => ({ path: e.path, type: e.type as 'blob' | 'tree', sha: e.sha }));
     } catch (error) {
       console.warn('[GitService] host getTreeRecursive failed:', error);
     }

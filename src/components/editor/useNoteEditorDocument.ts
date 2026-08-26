@@ -12,98 +12,16 @@ import { GitService } from '../../services/GitService';
 import { LastSelectionPreferenceService } from '../../services/LastSelectionPreferenceService';
 import { HapticService } from '../../utils/haptics';
 import { useUndo } from '../../utils/useUndo';
-import { NoteSyncQueueService } from '../../services/NoteSyncQueueService';
-import { classifyGitHubSyncError, isRetryableFailure, syncStatusForError } from '../../services/git/syncFailure';
 import { useNoteStore } from '../../stores/noteStore';
 import { githubActivity } from '../../stores/githubActivityStore';
-import { useGitOperationStore, gitOperationRegistry, GIT_OP_ALL_REPOS } from '../../stores/gitOperationStore';
-import type { GitOp } from '../../stores/gitOperationStore';
 import { canvasToLink } from '../../models/Canvas';
 import { getExtensionForFormat, extractCanvasJsonRefs, slugifyLocal } from './editorShared';
 import { useHardWrap, applyHardWrap } from '../../hooks/useHardWrap';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'NoteEditor'>;
 
-function showDurableSyncFailureAlert(kind: ReturnType<typeof classifyGitHubSyncError>['kind']): void {
-  switch (kind) {
-    case 'authentication':
-      Alert.alert('Authentication Required', 'Reconnect your GitHub account in Settings', [{ text: 'OK' }]);
-      return;
-    case 'permission':
-    case 'saml':
-      Alert.alert(
-        'Permission Required',
-        'This token cannot write to this repository. Check repository permissions in Settings.',
-        [{ text: 'OK' }],
-      );
-      return;
-    case 'conflict':
-      Alert.alert('Sync Conflict', 'This note was modified on GitHub. Pull to get the latest version.', [{ text: 'OK' }]);
-      return;
-    case 'not_found':
-      Alert.alert('Invalid Repository', 'The repository path is invalid. Please check your settings.', [{ text: 'OK' }]);
-      return;
-    default:
-      return;
-  }
-}
-
-type DurableSyncFailureKind = ReturnType<typeof classifyGitHubSyncError>['kind'];
-
-const DURABLE_DROP_KINDS: readonly DurableSyncFailureKind[] = [
-  'authentication',
-  'permission',
-  'saml',
-  'conflict',
-  'not_found',
-];
-
-function durableDropAlertKind(error: string | undefined): DurableSyncFailureKind {
-  const match = DURABLE_DROP_KINDS.find((kind) => kind === error);
-  return match ?? 'conflict';
-}
-
 function normalizeBranch(branch: string | undefined): string {
   return branch || 'main';
-}
-
-/**
- * Returns true when the given repo has an in-flight push or pull operation
- * scoped to it. Cycle ops (repo === '*') are excluded — they are covered by
- * the SyncBlockOverlay and must not also block the editor independently.
- */
-function hasRepoScopedSyncOp(
-  ops: Record<string, GitOp>,
-  repo: string | undefined,
-): boolean {
-  if (!repo) return false;
-  return Object.values(ops).some(
-    (op) =>
-      (op.status === 'queued' || op.status === 'running') &&
-      op.repo === repo &&
-      op.repo !== GIT_OP_ALL_REPOS &&
-      (op.kind === 'push' || op.kind === 'pull'),
-  );
-}
-
-function hasActiveDeleteLock(
-  ops: Record<string, GitOp>,
-  entityId: string | undefined,
-  repo: string | undefined,
-  branch: string | undefined,
-  path: string | undefined,
-): boolean {
-  return Object.values(ops).some(
-    (op) =>
-      op.kind === 'delete' &&
-      (op.status === 'queued' || op.status === 'running') &&
-      ((!!entityId && op.entityIds.includes(entityId)) ||
-        (!!repo &&
-          !!path &&
-          op.repo === repo &&
-          normalizeBranch(op.branch) === normalizeBranch(branch) &&
-          op.path === path)),
-  );
 }
 
 interface NoteEditorDocumentParams {
@@ -339,19 +257,9 @@ export function useNoteEditorDocument({
       return;
     }
 
-    if (hasRepoScopedSyncOp(useGitOperationStore.getState().ops, repo)) {
-      Alert.alert(t('common.error'), t('sync.repoBusy'));
-      return;
-    }
-
-    const syncBlockPath =
+        const syncBlockPath =
       existingFilePath ?? (folderPath ? `${folderPath}/${slugifyLocal(title.trim())}${getExtensionForFormat(noteFormat)}` : undefined);
-    if (hasActiveDeleteLock(useGitOperationStore.getState().ops, noteId, repo, branch, syncBlockPath)) {
-      Alert.alert(t('common.error'), t('sync.deleteInProgress'));
-      return;
-    }
-
-    const finalContent = applyHardWrap(content.trim(), hardWrapEnabled && noteFormat === 'markdown');
+        const finalContent = applyHardWrap(content.trim(), hardWrapEnabled && noteFormat === 'markdown');
     const contentAtSaveStart = contentRef.current;
     const titleAtSaveStart = titleRef.current;
 
@@ -411,18 +319,7 @@ export function useNoteEditorDocument({
         const syncPath =
           existingFilePath ??
           (folderPath ? `${folderPath}/${defaultSlug}` : `notes/${defaultSlug}`);
-        const upsertOpId = syncPath
-          ? gitOperationRegistry.begin({
-              kind: 'upsert',
-              repo,
-              branch,
-              path: syncPath,
-              entityIds: [savedNoteId],
-              status: 'running',
-              attempts: 0,
-            })
-          : null;
-        githubActivity.begin('Pushing note');
+                githubActivity.begin('Pushing note');
         try {
           const existingForColor = getNoteByIdRef.current(savedNoteId);
 
@@ -448,43 +345,12 @@ export function useNoteEditorDocument({
           }
         } catch (error) {
           console.warn('[useNoteEditorDocument] note sync threw:', error);
-          const existingForColor = getNoteByIdRef.current(savedNoteId);
-          const syncParams = {
-            repo,
-            branch,
-            filePath: syncPath,
-            title: title.trim(),
-            content: finalContent,
-            format: noteFormat,
-            accountId,
-            tags,
-            color: existingForColor?.color ?? null,
-          };
-          const thrownMessage = error instanceof Error ? error.message : String(error);
-          const failure = classifyGitHubSyncError(
-            error,
-            syncStatusForError(thrownMessage),
+          Alert.alert(
+            'Save Failed',
+            'Your note was saved locally but could not be synced. Please try again.',
+            [{ text: 'OK' }],
           );
-          if (!isRetryableFailure(failure)) {
-            showDurableSyncFailureAlert(failure.kind);
-          } else {
-            try {
-              await NoteSyncQueueService.enqueueNoteUpsert(syncParams, savedNoteId);
-              Alert.alert(
-                'Note Saved Locally',
-                'Your note was saved but could not be pushed to GitHub yet. It will sync automatically when connection is restored.',
-                [{ text: 'OK' }],
-              );
-            } catch {
-              Alert.alert(
-                'Save Failed',
-                'Your note was saved locally but could not be queued for sync. Please try again.',
-                [{ text: 'OK' }],
-              );
-            }
-          }
         } finally {
-          if (upsertOpId) gitOperationRegistry.succeed(upsertOpId);
           githubActivity.end();
         }
       }

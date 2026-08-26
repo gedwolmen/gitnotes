@@ -2,11 +2,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Note, NoteCreateInput, NoteUpdateInput, createNote, updateNote } from '../models/Note';
 import { Folder, FolderCreateInput, createFolder, updateFolder } from '../models/Folder';
 import { GitRepository } from './GitService';
-import type { GitHostProvider } from './git/GitHost';
 import { Todo, TodoCreateInput, TodoUpdateInput, createTodoItem, applyTodoUpdate } from '../models/Todo';
 import { Canvas, CanvasCreateInput, CanvasUpdateInput, createCanvas, updateCanvas } from '../models/Canvas';
 import { NOTE_INDEX_KEY, noteKey, getBootValue } from './StorageBootstrap';
 import type { NoteTemplate } from './TemplateService';
+
+type GitHostProvider = 'github' | 'gitlab' | 'gitea' | 'forgejo';
 
 const TODOS_STORAGE_KEY = '@gitnotes:todos';
 const CANVASES_STORAGE_KEY = '@gitnotes:canvases';

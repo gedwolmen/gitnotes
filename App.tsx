@@ -1,5 +1,4 @@
 import './global.css';
-import './src/polyfills';
 import './src/i18n';
 import 'react-native-gesture-handler';
 import { LogBox, Platform, Linking } from 'react-native';
@@ -24,7 +23,6 @@ import { AccountsProvider, rebindRevenueCatToActiveAccount } from './src/context
 import { HostAuthProvider } from './src/contexts/HostAuthContext';
 import { TodoProvider } from './src/contexts/TodoContext';
 import { CanvasProvider } from './src/contexts/CanvasContext';
-import { RepoProvider } from './src/contexts/RepoContext';
 import { BiometricLockProvider } from './src/contexts/BiometricLockContext';
 import { BiometricLockScreen } from './src/components/BiometricLockScreen';
 import { BacklinksProvider } from './src/contexts/BacklinksContext';
@@ -34,14 +32,9 @@ import { NotificationService } from './src/services/NotificationService';
 import * as Notifications from 'expo-notifications';
 import { useReminderStore, type ReminderNavigationFilter } from './src/stores/reminderStore';
 import { ReminderService } from './src/services/ReminderService';
-import { StartupSyncGate } from './src/components/StartupSyncGate';
-import { GitHubActivityIndicator } from './src/components/GitHubActivityIndicator';
-import { SyncBlockOverlay } from './src/components/ui/SyncBlockOverlay';
+import { legacyGitPurgeService } from './src/services/LegacyGitPurgeService';
 import { bootstrapStorage } from './src/services/StorageBootstrap';
-import { hydrate as hydrateGitOperationRegistry } from './src/stores/gitOperationStore';
 import { useRenderStyleStore } from './src/stores/renderStyleStore';
-import { startForegroundWatcher } from './src/services/ForegroundSyncService';
-import { loadForegroundSyncConfig } from './src/hooks/useForegroundSyncSettings';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { reconcileThoughtDumps } from './src/services/ai/thoughtDumpIndexing';
 import { LastSelectionPreferenceService } from './src/services/LastSelectionPreferenceService';
@@ -69,9 +62,8 @@ export default function App() {
 
   const checkOnboarding = useCallback(async () => {
     await bootstrapStorage();
-    // Restore durable git-operation locks (queued mutations + failed deletes)
-    // before StartupSyncGate drains/pulls and the UI reads lock state.
-    void hydrateGitOperationRegistry();
+    // Purge legacy isomorphic-git data at first launch of the git-free husk.
+    void legacyGitPurgeService.purgeIfNeeded().catch(() => {});
     void useRenderStyleStore.getState().hydrate();
     // Resolve Pro entitlement before surfacing restored data so the free-tier
     // repo/account caps can be enforced on data brought back by Android backup
@@ -124,14 +116,6 @@ export default function App() {
         }
       }
     });
-    // Foreground auto-pull (#563): subscribe AppState/NetInfo/interval after
-    // storage is hydrated so the first pull sees the persisted repo list.
-    try {
-      const cfg = await loadForegroundSyncConfig();
-      startForegroundWatcher(cfg);
-    } catch (error) {
-      console.warn('[App] foreground sync watcher start failed:', error);
-    }
 
     void reconcileThoughtDumps().catch(() => {});
     void LastSelectionPreferenceService.migrateFromLegacy();
@@ -165,33 +149,27 @@ export default function App() {
         <NativeWindThemeProvider>
         <AccountsProvider>
           <HostAuthProvider>
-            <RepoProvider>
-              <FolderProvider>
-                <NoteProvider>
-                  <BacklinksProvider>
-                    <TodoProvider>
-                      <CanvasProvider>
-                        <ViewModeProvider>
-                          <BiometricLockProvider>
-                            <StatusBar style="auto" />
-                            <StartupSyncGate>
-                              <AppNavigator
-              showOnboarding={showOnboarding}
-              onOnboardingComplete={handleOnboardingComplete}
-              onOnboardingSkip={handleOnboardingSkip}
-            />
-                            </StartupSyncGate>
-                            <GitHubActivityIndicator />
-                            <SyncBlockOverlay />
-                            <BiometricLockScreen />
-                          </BiometricLockProvider>
-                        </ViewModeProvider>
-                      </CanvasProvider>
-                    </TodoProvider>
-                  </BacklinksProvider>
-                </NoteProvider>
-              </FolderProvider>
-            </RepoProvider>
+            <FolderProvider>
+              <NoteProvider>
+                <BacklinksProvider>
+                  <TodoProvider>
+                    <CanvasProvider>
+                      <ViewModeProvider>
+                        <BiometricLockProvider>
+                          <StatusBar style="auto" />
+                          <AppNavigator
+                            showOnboarding={showOnboarding}
+                            onOnboardingComplete={handleOnboardingComplete}
+                            onOnboardingSkip={handleOnboardingSkip}
+                          />
+                          <BiometricLockScreen />
+                        </BiometricLockProvider>
+                      </ViewModeProvider>
+                    </CanvasProvider>
+                  </TodoProvider>
+                </BacklinksProvider>
+              </NoteProvider>
+            </FolderProvider>
           </HostAuthProvider>
         </AccountsProvider>
         </NativeWindThemeProvider>

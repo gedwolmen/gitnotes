@@ -1,20 +1,16 @@
-/**
- * Git host abstraction.
- *
- * GitNotes supports multiple git hosts (GitHub today, GitLab added as the
- * second). Each host has its own REST API for the operations the app
- * performs in API mode: branch listing, tree walks, file CRUD, and
- * authentication. This file defines a small, host-agnostic surface that
- * the rest of the app talks to.
- *
- * Adding a third host (Gitea, Bitbucket, …) is a matter of writing a
- * new `GitHostService` implementation and registering it in
- * `gitHostFactory.ts`.
- */
+// Stub for deleted GitHost module
 
 export type GitHostProvider = 'github' | 'gitlab' | 'gitea' | 'forgejo';
 
-/** Human-readable host label used in the UI. */
+export type GitHostItemState = 'open' | 'closed';
+
+export const GIT_HOST_API_BASES: Record<GitHostProvider, string> = {
+  github: 'https://api.github.com',
+  gitlab: 'https://gitlab.com/api/v4',
+  gitea: '',
+  forgejo: '',
+};
+
 export const GIT_HOST_LABELS: Record<GitHostProvider, string> = {
   github: 'GitHub',
   gitlab: 'GitLab',
@@ -22,204 +18,39 @@ export const GIT_HOST_LABELS: Record<GitHostProvider, string> = {
   forgejo: 'Forgejo',
 };
 
-/** Default API base URL per host. Self-hosted hosts override at runtime. */
-export const GIT_HOST_API_BASES: Record<GitHostProvider, string> = {
-  github: 'https://api.github.com',
-  gitlab: 'https://gitlab.com/api/v4',
-  gitea: 'https://gitea.com/api/v1',
-  forgejo: 'https://codeberg.org/api/v1',
-};
-
-export interface GitHostRepoRef {
-  /** Stable identifier, typically `<provider>:<owner>/<repo>`. */
-  id: string;
-  /** Host this repo lives on. */
-  provider: GitHostProvider;
-  /** Owner (user or org) slug. */
-  owner: string;
-  /** Project / repo slug. */
-  repo: string;
-  /** Default branch, when known. */
-  defaultBranch?: string;
-}
-
 export interface GitHostUser {
   id: number;
   login: string;
-  name?: string | null;
-  email?: string | null;
+  name: string | null;
+  email: string | null;
+  avatar_url?: string | null;
+  full_name?: string | null;
   avatarUrl?: string | null;
-}
-
-export interface GitHostTreeEntry {
-  path: string;
-  type: 'blob' | 'tree';
-  sha: string;
-  size?: number;
 }
 
 export interface GitHostContent {
   name: string;
   path: string;
-  type: 'file' | 'dir' | string;
+  type: 'file' | 'dir';
   size?: number;
   sha?: string;
-  downloadUrl?: string | null;
 }
-
-export interface GitHostBranch {
-  name: string;
-  isDefault?: boolean;
-}
-
-/** Normalized item state across hosts. GitLab's `merged` maps to `closed`. */
-export type GitHostItemState = 'open' | 'closed';
 
 export interface GitHostIssue {
-  id: string | number;
-  /** Public display number (iid for GitLab, number for GitHub/Gitea). */
+  id: number;
   number: number;
   title: string;
   state: GitHostItemState;
   webUrl: string;
-  /** Normalized label names (GitHub `{name,color}` labels flatten to name). */
-  labels: string[];
   author?: string;
-  createdAt: string;
-  updatedAt?: string;
 }
 
 export interface GitHostPullRequest {
-  id: string | number;
-  /** Public display number (iid for GitLab, number for GitHub/Gitea). */
+  id: number;
   number: number;
   title: string;
   state: GitHostItemState;
   webUrl: string;
-  headBranch: string;
-  baseBranch: string;
   author?: string;
   draft?: boolean;
-  createdAt: string;
-}
-
-/**
- * Provider-agnostic surface used by GitService and the sync stack.
- *
- * Implementations:
- * - `GitHubHostService` — wraps the existing `GitHubService`.
- * - `GitLabHostService` — talks to the GitLab REST API.
- */
-export interface GitHostService {
-  readonly provider: GitHostProvider;
-
-  /** Returns the authenticated user, or `null` when no token is set. */
-  getAuthenticatedUser(): Promise<GitHostUser | null>;
-
-  /** Returns the default branch for a repo, or `null` if unknown. */
-  getDefaultBranch(owner: string, repo: string): Promise<string | null>;
-
-  /** Lists the branches for a repo. */
-  listBranches(owner: string, repo: string): Promise<GitHostBranch[]>;
-
-  /** Recursive tree of the repo at `ref`. Returns [] on failure. */
-  getTreeRecursive(
-    owner: string,
-    repo: string,
-    ref: string,
-  ): Promise<GitHostTreeEntry[]>;
-
-  /** Lists the entries in a folder (root if `path` is empty). */
-  listContents(
-    owner: string,
-    repo: string,
-    path: string,
-    ref?: string,
-  ): Promise<GitHostContent[]>;
-
-  /** Reads the raw text content of a file. */
-  getFileText(
-    owner: string,
-    repo: string,
-    path: string,
-    ref?: string,
-  ): Promise<string | null>;
-
-  /** Lists pull requests (merge requests on GitLab). Returns [] on failure. */
-  listPullRequests(
-    owner: string,
-    repo: string,
-    state?: GitHostItemState,
-  ): Promise<GitHostPullRequest[]>;
-
-  /** Lists issues. Returns [] on failure. */
-  listIssues(
-    owner: string,
-    repo: string,
-    state?: GitHostItemState,
-  ): Promise<GitHostIssue[]>;
-}
-
-// ── Write operations ────────────────────────────────────────────────
-
-export interface GitHostShaResult {
-  kind: 'found' | 'not-found' | 'error';
-  sha?: string;
-  message?: string;
-}
-
-export interface GitHostWriteService {
-  getFileSha(
-    owner: string,
-    repo: string,
-    path: string,
-    ref?: string,
-  ): Promise<GitHostShaResult>;
-
-  getFileShaOrNull(
-    owner: string,
-    repo: string,
-    path: string,
-    ref?: string,
-  ): Promise<string | null>;
-
-  updateFile(
-    owner: string,
-    repo: string,
-    path: string,
-    content: string,
-    commitMessage: string,
-    branch: string,
-    knownSha?: string,
-  ): Promise<string>;
-
-  deleteFile(
-    owner: string,
-    repo: string,
-    path: string,
-    commitMessage: string,
-    sha: string,
-    branch: string,
-  ): Promise<void>;
-
-  uploadBinaryFile(
-    owner: string,
-    repo: string,
-    path: string,
-    base64Content: string,
-    commitMessage: string,
-    branch: string,
-  ): Promise<string>;
-
-  getRepoPrivacy(
-    owner: string,
-    repo: string,
-  ): Promise<boolean | null>;
-}
-
-export type GitHostFullService = GitHostService & GitHostWriteService;
-
-/** Helper to compose the stable id for a repo. */
-export function makeRepoId(provider: GitHostProvider, owner: string, repo: string): string {
-  return `${provider}:${owner}/${repo}`;
 }

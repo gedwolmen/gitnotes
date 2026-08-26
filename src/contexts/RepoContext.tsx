@@ -1,41 +1,48 @@
-import React, { useEffect, useMemo } from 'react';
-import { GitRepository } from '../services/GitService';
-import { useRepoStore, type AddRepositoryOptions } from '../stores/repoStore';
-import type { GitHostProvider } from '../services/git/GitHost';
+// Stub for deleted RepoContext module
 
-interface RepoContextType {
+import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import type { GitRepository } from '../services/GitService';
+
+interface RepoContextValue {
   repositories: GitRepository[];
-  isLoading: boolean;
-  addRepository: (
-    path: string,
-    nameOrOptions?: string | AddRepositoryOptions,
-    provider?: GitHostProvider,
-    options?: AddRepositoryOptions,
-  ) => Promise<GitRepository>;
-  removeRepository: (path: string) => Promise<void>;
   refreshRepos: () => Promise<void>;
+  addRepository: (path: string, name?: string, provider?: string, options?: unknown) => Promise<void>;
+  removeRepository: (path: string) => Promise<void>;
 }
 
-export function RepoProvider({ children }: { children: React.ReactNode }) {
-  const loadRepos = useRepoStore((s) => s.loadRepos);
-  const needsLoad = useRepoStore((s) => s.isLoading && s.repositories.length === 0);
+const RepoContext = createContext<RepoContextValue | undefined>(undefined);
 
-  useEffect(() => {
-    if (needsLoad) loadRepos();
-  }, [needsLoad, loadRepos]);
+export function RepoProvider({ children }: { children: ReactNode }) {
+  const [repositories, setRepositories] = useState<GitRepository[]>([]);
 
-  return <>{children}</>;
-}
+  const refreshRepos = useCallback(async () => {
+    // Stub - does nothing
+  }, []);
 
-export function useRepos(): RepoContextType {
-  const repositories = useRepoStore((s) => s.repositories);
-  const isLoading = useRepoStore((s) => s.isLoading);
-  const addRepository = useRepoStore((s) => s.addRepository);
-  const removeRepository = useRepoStore((s) => s.removeRepository);
-  const refreshRepos = useRepoStore((s) => s.refreshRepos);
+  const addRepository = useCallback(async (_path: string, _name?: string, _provider?: string, _options?: unknown) => {
+    // Stub - does nothing
+  }, []);
 
-  return useMemo(
-    () => ({ repositories, isLoading, addRepository, removeRepository, refreshRepos }),
-    [repositories, isLoading, addRepository, removeRepository, refreshRepos],
+  const removeRepository = useCallback(async (_path: string) => {
+    // Stub - does nothing
+  }, []);
+
+  return (
+    <RepoContext.Provider value={{ repositories, refreshRepos, addRepository, removeRepository }}>
+      {children}
+    </RepoContext.Provider>
   );
 }
+
+export const useRepos = (): RepoContextValue => {
+  const ctx = useContext(RepoContext);
+  if (!ctx) {
+    return { 
+      repositories: [], 
+      refreshRepos: async () => {},
+      addRepository: async () => {},
+      removeRepository: async () => {},
+    };
+  }
+  return ctx;
+};

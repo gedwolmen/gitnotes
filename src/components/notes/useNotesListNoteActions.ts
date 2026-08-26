@@ -6,7 +6,6 @@ import { Note, NoteColor } from '../../models/Note';
 import { parseRepoPath } from '../../utils/gitPathParser';
 import { HapticService } from '../../utils/haptics';
 import { ShareFormat, ShareService } from '../../services/ShareService';
-import { NoteSyncQueueService } from '../../services/NoteSyncQueueService';
 import { githubActivity } from '../../stores/githubActivityStore';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -79,23 +78,7 @@ export function useNotesListNoteActions({
           return;
         }
         HapticService.success();
-        if (updated.repo && updated.filePath && (updated.content ?? '').trim()) {
-          const syncParams = {
-            repo: updated.repo,
-            branch: updated.branch,
-            filePath: updated.filePath,
-            title: updated.title,
-            content: updated.content,
-            format: updated.format,
-            tags: updated.tags,
-            color,
-          };
-          try {
-            await NoteSyncQueueService.enqueueNoteUpsert(syncParams, updated.id);
-          } catch (error) {
-            console.warn('[useNotesListNoteActions] sync after color update failed:', error);
-          }
-        }
+
       } catch {
         HapticService.error();
         Alert.alert('Error', 'Failed to update note color');

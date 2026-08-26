@@ -238,7 +238,7 @@ export default function HomeScreen() {
         if (updated.repo && updated.filePath && (updated.content ?? '').trim()) {
           const syncParams = {
             repo: updated.repo,
-            branch: updated.branch,
+            branch: updated.branch ?? 'main',
             filePath: updated.filePath,
             title: updated.title,
             content: updated.content,

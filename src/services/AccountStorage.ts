@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import type { GitHostProvider } from './git/GitHost';
+
+type GitHostProvider = 'github' | 'gitlab' | 'gitea' | 'forgejo';
 
 const ACCOUNTS_KEY = '@gitnotes:accounts';
 const HOSTS_KEY = '@gitnotes:host_connections';

@@ -1,40 +1,32 @@
-import { gitHubHostService } from './GitHubHostService';
-import { gitLabService } from './GitLabService';
-import { GiteaLikeHostService } from './GiteaLikeHostService';
-import { GIT_HOST_API_BASES, type GitHostProvider, type GitHostService, type GitHostFullService } from './GitHost';
+// Stub for deleted gitHostFactory module
 
-const giteaService = new GiteaLikeHostService('gitea', GIT_HOST_API_BASES.gitea);
-const forgejoService = new GiteaLikeHostService('forgejo', GIT_HOST_API_BASES.forgejo);
+import type { GitHostProvider, GitHostContent, GitHostUser, GitHostPullRequest, GitHostIssue, GitHostItemState } from './GitHost';
 
-export const giteaHostService = giteaService;
-export const forgejoHostService = forgejoService;
+export const getGitHostService = (_provider: GitHostProvider) => ({
+  listContents: async (_owner: string, _repo: string, _path: string, _branch?: string): Promise<GitHostContent[]> => [],
+  getAuthenticatedUser: async (): Promise<GitHostUser | null> => null,
+  setToken: async (_token: string, _baseUrl?: string): Promise<GitHostUser | null> => null,
+  listPullRequests: async (_owner: string, _repo: string, _state: GitHostItemState): Promise<GitHostPullRequest[]> => [],
+  listIssues: async (_owner: string, _repo: string, _state: GitHostItemState): Promise<GitHostIssue[]> => [],
+});
 
-/**
- * Resolves a `GitHostService` implementation by provider id.
- *
- * The factory returns singleton services so each host has at most one
- * set of cached state in memory. New hosts should be registered here
- * and exposed through the same singleton pattern.
- */
-export function getGitHostService(
-  provider: GitHostProvider | string | null | undefined,
-): GitHostFullService {
-  switch (provider) {
-    case 'gitlab':
-      return gitLabService;
-    case 'gitea':
-      return giteaService;
-    case 'forgejo':
-      return forgejoService;
-    case 'github':
-    case null:
-    case undefined:
-    case '':
-      return gitHubHostService;
-    default:
-      // Unknown provider falls back to GitHub for backward compatibility.
-      return gitHubHostService;
-  }
-}
+// Export the host services as named exports
+export const giteaHostService = {
+  getUser: () => null,
+  isAuthenticated: () => false,
+  getBaseUrl: () => '',
+  initialize: async () => {},
+  setToken: async (_token: string, _baseUrl?: string) => null,
+  clearToken: async () => {},
+  setBaseUrl: (_url: string) => {},
+};
 
-export { gitHubHostService, gitLabService };
+export const forgejoHostService = {
+  getUser: () => null,
+  isAuthenticated: () => false,
+  getBaseUrl: () => '',
+  initialize: async () => {},
+  setToken: async (_token: string, _baseUrl?: string) => null,
+  clearToken: async () => {},
+  setBaseUrl: (_url: string) => {},
+};

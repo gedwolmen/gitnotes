@@ -19,7 +19,6 @@ import VideoViewerScreen from '../screens/VideoViewerScreen';
 import RenderStyleSettingsScreen from '../screens/RenderStyleSettingsScreen';
 import RenderStyleEditorScreen from '../screens/RenderStyleEditorScreen';
 import TemplateManagerScreen from '../screens/TemplateManagerScreen';
-import SyncStatusScreen from '../screens/SyncStatusScreen';
 import { FloatingAIButton } from '../components/ai/FloatingAIButton';
 import { ChatRepoPickerModal } from '../components/ai/ChatRepoPickerModal';
 import { AddReminderScreen } from '../components/settings/AddReminderScreen';
@@ -245,11 +244,6 @@ export default function AppNavigator({ showOnboarding, onOnboardingComplete, onO
             <Stack.Screen
               name="TemplateManager"
               component={TemplateManagerScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="SyncStatus"
-              component={SyncStatusScreen}
               options={{ headerShown: false }}
             />
             <Stack.Screen

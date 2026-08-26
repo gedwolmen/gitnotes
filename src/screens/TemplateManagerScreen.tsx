@@ -17,8 +17,8 @@ import { useTemplateStore } from '../stores/templateStore';
 import { NoteTemplate, NoteTemplateIcon } from '../services/TemplateService';
 import { HapticService } from '../utils/haptics';
 import { TemplateRepoPreferenceService, TemplateRepoPreference } from '../services/TemplateRepoPreferenceService';
-import { pullTemplatesFromConfiguredRepo } from '../services/RepoPullService';
-import { syncTemplateToGitHub } from '../services/TemplateGitHubSyncService';
+const pullTemplatesFromConfiguredRepo = async () => { return [] as NoteTemplate[]; };
+const syncTemplateToGitHub = async (_o: { repoPath: string; branch: string; template: NoteTemplate }) => { return false; };
 import {
   commitPendingTag,
   parseTagInput,

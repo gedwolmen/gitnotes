@@ -6,7 +6,6 @@ import { useTodoStore } from '../../stores/todoStore';
 import { useAIStore } from '../../stores/aiStore';
 import { initializeModel } from '../AIService';
 import { GITHUB_ITEM_STATES, GitHubItemState, GitHubService } from '../GitHubService';
-import { NoteSyncQueueService } from '../NoteSyncQueueService';
 
 export interface ProposedChange {
   type: string;
@@ -171,43 +170,7 @@ function buildExcerpt(content: string): string {
   return content.length > 100 ? `${content.slice(0, 100)}...` : content;
 }
 
-/**
- * Enqueue a note upsert so it is pushed to GitHub on the next queue drain.
- * Other app sessions pick it up via the foreground pull watcher (typically
- * within the configured interval).
- *
- * Omit filePath so syncNoteToGitHub derives `notes/${slug}${ext}` and
- * treats this as a brand-new file (#732). Pre-computing a bare
- * `${slug}${ext}` here both pointed the file at repo root and tripped the
- * updateFile "remote was deleted" guard, leaving the queue stuck with
- * "GitHub API returned no result". The store-side Note record gets its
- * filePath populated from the sync result on success (see
- * applyPostSyncStorageUpdate), so mirror the manual-note path in
- * useNoteEditorDocument.
- */
-async function enqueueNoteSync(
-  createInput: NoteCreateInput,
-  noteId: string,
-  repoPath: string,
-  branch: string,
-): Promise<void> {
-  try {
-    await NoteSyncQueueService.enqueueNoteUpsert(
-      {
-        repo: repoPath,
-        branch,
-        title: createInput.title,
-        content: createInput.content,
-        format: createInput.format,
-        tags: createInput.tags ?? [],
-        color: null,
-      },
-      noteId,
-    );
-  } catch (error) {
-    console.warn('[actionExecutor] enqueueNoteUpsert failed:', error);
-  }
-}
+
 
 export async function executeToolCall(
   toolName: string,
@@ -262,7 +225,7 @@ export async function executeToolCall(
         }
 
         if (repoPath) {
-          await enqueueNoteSync(input, created.id, repoPath, branch);
+          
         }
 
         // Return a slim summary; the previous full-Note dump filled the
@@ -312,7 +275,7 @@ export async function executeToolCall(
           return { success: false, requiresConfirmation: false, error: 'Failed to create questioner note.' };
         }
         if (repoPath) {
-          await enqueueNoteSync(input, created.id, repoPath, branch);
+          
         }
 
         return buildSuccessResult({
@@ -382,25 +345,7 @@ export async function executeToolCall(
           return { success: false, requiresConfirmation: false, error: 'Failed to save the grading.' };
         }
 
-        if (repoPath) {
-          try {
-            await NoteSyncQueueService.enqueueNoteUpsert(
-              {
-                repo: repoPath,
-                branch,
-                filePath: gradedNote.filePath,
-                title: gradedNote.title,
-                content: gradedNote.content,
-                format: gradedNote.format ?? 'markdown',
-                tags: gradedNote.tags,
-                color: null,
-              },
-              gradedNote.id,
-            );
-          } catch (error) {
-            console.warn('[actionExecutor] grade_questioner_answers sync enqueue failed:', error);
-          }
-        }
+
 
         return buildSuccessResult({
           noteId,
@@ -584,7 +529,7 @@ export async function executeToolCall(
           return { success: false, requiresConfirmation: false, error: 'Failed to create summary note.' };
         }
         if (repoPath) {
-          await enqueueNoteSync(input, created.id, repoPath, branch);
+          
         }
 
         return buildSuccessResult({
@@ -627,7 +572,7 @@ export async function executeToolCall(
           return { success: false, requiresConfirmation: false, error: 'Failed to create distilled note.' };
         }
         if (repoPath) {
-          await enqueueNoteSync(input, created.id, repoPath, branch);
+          
         }
 
         return buildSuccessResult({
@@ -681,24 +626,7 @@ export async function executeToolCall(
             content: self.content + linkBlock,
           });
 
-          if (repoPath && updated) {
-            try {
-              await NoteSyncQueueService.enqueueNoteUpsert(
-                {
-                  repo: repoPath,
-                  branch,
-                  title: updated.title,
-                  content: updated.content,
-                  format: updated.format ?? 'markdown',
-                  tags: updated.tags,
-                  color: null,
-                },
-                updated.id,
-              );
-            } catch (error) {
-              console.warn('[actionExecutor] link_notes sync enqueue failed:', error);
-            }
-          }
+
           linked += 1;
         }
 
@@ -737,7 +665,7 @@ export async function executeToolCall(
           return { success: false, requiresConfirmation: false, error: 'Failed to create daily brief.' };
         }
         if (repoPath) {
-          await enqueueNoteSync(input, created.id, repoPath, branch);
+          
         }
 
         return buildSuccessResult({
@@ -770,25 +698,7 @@ export async function executeToolCall(
           return { success: false, requiresConfirmation: false, error: 'Note not found.' };
         }
 
-        if (repoPath) {
-          try {
-            await NoteSyncQueueService.enqueueNoteUpsert(
-              {
-                repo: repoPath,
-                branch,
-                filePath: result.filePath,
-                title: result.title,
-                content: result.content,
-                format: result.format ?? 'markdown',
-                tags: result.tags,
-                color: null,
-              },
-              result.id,
-            );
-          } catch (error) {
-            console.warn('[actionExecutor] edit_note sync enqueue failed:', error);
-          }
-        }
+
 
         return buildSuccessResult({ noteId: result.id, title: result.title });
       }

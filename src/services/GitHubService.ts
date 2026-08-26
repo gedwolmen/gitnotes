@@ -1,7 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import http, { setAuthToken, clearAuthToken } from './http';
 import AuthService from './AuthService';
-import { extractHttpErrorDetails } from './git/syncFailure';
+
+function extractHttpErrorDetails(error: unknown): { status?: number; message?: string; headers?: Record<string, string> } {
+  if (error && typeof error === 'object' && 'status' in error) {
+    return { status: (error as { status: number }).status, message: String(error) };
+  }
+  return { message: String(error) };
+}
 
 const USER_KEY = '@gitnotes:github_user';
 

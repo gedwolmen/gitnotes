@@ -1,4 +1,22 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+// Stub constants for removed git services
+const GIT_HOST_API_BASES: Record<string, string> = {
+  github: 'https://api.github.com',
+  gitlab: 'https://gitlab.com/api/v4',
+  gitea: 'https://gitea.com/api/v1',
+  forgejo: 'https://forgejo.org/api/v1',
+};
+
+const GIT_HOST_LABELS: Record<string, string> = {
+  github: 'GitHub',
+  gitlab: 'GitLab',
+  gitea: 'Gitea',
+  forgejo: 'Forgejo',
+};
+
+type GitHostProvider = 'github' | 'gitlab' | 'gitea' | 'forgejo';
+
+
 import {
   View,
   Text,
@@ -13,7 +31,6 @@ import { useTranslation } from 'react-i18next';
 import { useTheme, useTokens } from '../contexts/ThemeContext';
 import { Modal } from './ui';
 import { useAccounts } from '../contexts/AccountsContext';
-import { GIT_HOST_API_BASES, GIT_HOST_LABELS, type GitHostProvider } from '../services/git/GitHost';
 
 type ThemeColors = {
   background: string;

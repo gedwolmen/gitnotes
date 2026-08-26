@@ -27,7 +27,7 @@ import { requireRepo } from '../utils/requireRepo';
 import { HapticService } from '../utils/haptics';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { useProGate } from '../hooks/useProGate';
-import { GitHubActivityIndicator } from '../components/GitHubActivityIndicator';
+import GitHubActivityIndicator from '../components/GitHubActivityIndicator';
 import { ViewMode, VIEW_MODE_ICONS } from '../utils/viewModes';
 import { formatJournalDate, isJournalEntry } from '../services/JournalService';
 import { NoteCard as NotesListCard } from '../components/notes/NoteCard';
@@ -286,7 +286,7 @@ export default function NotesListScreen() {
                 } else {
                   apiParams.push({
                     repo: note.repo,
-                    branch: note.branch,
+                    branch: note.branch ?? '',
                     filePath,
                     title: note.title,
                     accountId: note.accountId,

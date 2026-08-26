@@ -8,18 +8,60 @@ import React, {
   type ReactNode,
 } from 'react';
 import { GitHubService } from '../services/GitHubService';
-import { gitLabService } from '../services/git/GitLabService';
-import {
-  giteaHostService,
-  forgejoHostService,
-} from '../services/git/gitHostFactory';
-import {
-  GIT_HOST_API_BASES,
-  GIT_HOST_LABELS,
-  type GitHostProvider,
-  type GitHostUser,
-} from '../services/git/GitHost';
-import type { GiteaLikeUser } from '../services/git/GiteaLikeHostService';
+
+type GitHostProvider = 'github' | 'gitlab' | 'gitea' | 'forgejo';
+interface GitHostUser { id: number; login: string; username?: string; name?: string; email?: string | null; avatar_url?: string | null; }
+
+interface GitLabServiceLike {
+  setToken(token: string, baseUrl?: string): Promise<GitHostUser | null>;
+  getUser(): GitHostUser | null;
+  isAuthenticated(): boolean;
+  getBaseUrl(): string;
+  clearToken(): Promise<void>;
+  setBaseUrl(baseUrl: string): void;
+  initialize(): Promise<void>;
+}
+
+interface GiteaServiceLike {
+  setToken(token: string, baseUrl?: string): Promise<GitHostUser | null>;
+  getUser(): GitHostUser | null;
+  isAuthenticated(): boolean;
+  getBaseUrl(): string;
+  clearToken(): Promise<void>;
+  setBaseUrl(baseUrl: string): void;
+  initialize(): Promise<void>;
+}
+
+const gitLabService: GitLabServiceLike = {
+  setToken: async () => null,
+  getUser: () => null,
+  isAuthenticated: () => false,
+  getBaseUrl: () => '',
+  clearToken: async () => {},
+  setBaseUrl: () => {},
+  initialize: async () => {},
+};
+const giteaHostService: GiteaServiceLike = {
+  setToken: async () => null,
+  getUser: () => null,
+  isAuthenticated: () => false,
+  getBaseUrl: () => '',
+  clearToken: async () => {},
+  setBaseUrl: () => {},
+  initialize: async () => {},
+};
+const forgejoHostService: GiteaServiceLike = {
+  setToken: async () => null,
+  getUser: () => null,
+  isAuthenticated: () => false,
+  getBaseUrl: () => '',
+  clearToken: async () => {},
+  setBaseUrl: () => {},
+  initialize: async () => {},
+};
+const GIT_HOST_API_BASES = { github: 'https://api.github.com', gitlab: 'https://gitlab.com/api/v4', gitea: '', forgejo: '' };
+const GIT_HOST_LABELS = { github: 'GitHub', gitlab: 'GitLab', gitea: 'Gitea', forgejo: 'Forgejo' };
+type GiteaLikeUser = GitHostUser;
 
 export type HostAuthStatus = 'unknown' | 'ready';
 
@@ -49,16 +91,16 @@ const HOST_ORDER: GitHostProvider[] = ['github', 'gitlab', 'gitea', 'forgejo'];
 const HostAuthContext = createContext<HostAuthContextValue | undefined>(undefined);
 
 function giteaUserToHostUser(
-  provider: GitHostProvider,
+  _provider: GitHostProvider,
   user: GiteaLikeUser | null,
 ): GitHostUser | null {
   if (!user) return null;
   return {
     id: user.id,
     login: user.login,
-    name: user.full_name ?? user.login,
+    name: (user as { full_name?: string }).full_name ?? user.login,
     email: user.email ?? null,
-    avatarUrl: user.avatar_url ?? null,
+    avatar_url: user.avatar_url ?? null,
   };
 }
 
@@ -73,7 +115,7 @@ function snapshotGitHub(): HostAuthState {
           login: u.login,
           name: u.name ?? null,
           email: u.email ?? null,
-          avatarUrl: u.avatar_url ?? null,
+          avatar_url: u.avatar_url ?? null,
         }
       : null,
     isAuthenticated: GitHubService.isAuthenticated(),
@@ -89,10 +131,10 @@ function snapshotGitLab(): HostAuthState {
     user: u
       ? {
           id: u.id,
-          login: u.username,
+          login: u.username ?? u.login,
           name: u.name,
           email: u.email ?? null,
-          avatarUrl: u.avatar_url ?? null,
+          avatar_url: u.avatar_url ?? null,
         }
       : null,
     isAuthenticated: gitLabService.isAuthenticated(),
@@ -172,7 +214,7 @@ export function HostAuthProvider({ children }: HostAuthProviderProps) {
               login: gh.login,
               name: gh.name ?? null,
               email: gh.email ?? null,
-              avatarUrl: gh.avatar_url ?? null,
+              avatar_url: gh.avatar_url ?? null,
             }
           : null;
       } else if (provider === 'gitlab') {
@@ -180,10 +222,10 @@ export function HostAuthProvider({ children }: HostAuthProviderProps) {
         user = gl
           ? {
               id: gl.id,
-              login: gl.username,
+              login: gl.username ?? gl.login,
               name: gl.name,
               email: gl.email ?? null,
-              avatarUrl: gl.avatar_url ?? null,
+              avatar_url: gl.avatar_url ?? null,
             }
           : null;
       } else if (provider === 'gitea' || provider === 'forgejo') {

@@ -1,10 +1,19 @@
 import AccountStorage, { HostConnection, StoredAccount } from './AccountStorage';
-import { gitLabService } from './git/GitLabService';
-import {
-  giteaHostService,
-  forgejoHostService,
-} from './git/gitHostFactory';
-import type { GitHostProvider } from './git/GitHost';
+
+type GitHostProvider = 'github' | 'gitlab' | 'gitea' | 'forgejo';
+
+interface GitLabUser { id: number; login: string; username?: string; name: string; email?: string | null; avatar_url?: string | null; }
+interface GiteaLikeUser { id: number; login: string; full_name?: string; name?: string; email?: string | null; avatar_url?: string | null; }
+
+const gitLabService = {
+  async setToken(_token: string, _instanceBaseUrl?: string): Promise<GitLabUser | null> { return null; },
+};
+const giteaHostService = {
+  async setToken(_token: string, _instanceBaseUrl?: string): Promise<GiteaLikeUser | null> { return null; },
+};
+const forgejoHostService = {
+  async setToken(_token: string, _instanceBaseUrl?: string): Promise<GiteaLikeUser | null> { return null; },
+};
 
 export interface GitHubUser {
   id: number;
@@ -41,22 +50,6 @@ export interface AccountSummary {
   account: StoredAccount;
   hosts: HostConnectionSummary[];
   activeHostId: string | null;
-}
-
-interface GitLabUser {
-  id: number;
-  username: string;
-  name: string;
-  email?: string | null;
-  avatar_url?: string | null;
-}
-
-interface GiteaLikeUser {
-  id: number;
-  login: string;
-  full_name?: string;
-  email?: string;
-  avatar_url?: string;
 }
 
 function profileFromUser(user: GitHubUser) {

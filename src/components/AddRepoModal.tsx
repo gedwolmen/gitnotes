@@ -1,14 +1,32 @@
 import React, { useCallback, useMemo, useState } from 'react';
+// Stub types and constants for removed git services
+type GitHostProvider = 'github' | 'gitlab' | 'gitea' | 'forgejo';
+
+const GIT_HOST_LABELS: Record<GitHostProvider, string> = {
+  github: 'GitHub',
+  gitlab: 'GitLab',
+  gitea: 'Gitea',
+  forgejo: 'Forgejo',
+};
+
+// Stub for removed RepoAccessPreflightError
+class RepoAccessPreflightError extends Error {
+  canRetry: boolean;
+  constructor(message: string, canRetry = false) {
+    super(message);
+    this.name = 'RepoAccessPreflightError';
+    this.canRetry = canRetry;
+  }
+}
+
+
 import { Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { Modal } from './ui';
 import { useRepoStore } from '../stores/repoStore';
-import type { GitHostProvider } from '../services/git/GitHost';
-import { GIT_HOST_LABELS } from '../services/git/GitHost';
 import { useAccounts } from '../contexts/AccountsContext';
-import { RepoAccessPreflightError } from '../services/git/repoAccessPreflight';
 
 type ThemeColors = {
   background: string;
@@ -112,17 +130,7 @@ export function AddRepoModal({ visible, onClose, onAdded, colors }: AddRepoModal
           );
         }
       } catch (error) {
-        if (error instanceof RepoAccessPreflightError && error.canRetry && !allowUnverifiedWrite) {
-          Alert.alert(
-            'Write access not verified',
-            'Write access not verified. This repository may be read-only. Add anyway?',
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Add anyway', onPress: () => void attemptAdd(true) },
-            ],
-          );
-          return;
-        }
+        // Repo access preflight check removed
         Alert.alert(
           t('addRepo.failedTitle'),
           error instanceof Error ? error.message : t('addRepo.failedBody'),

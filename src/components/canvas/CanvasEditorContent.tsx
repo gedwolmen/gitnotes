@@ -47,7 +47,6 @@ import {
   slugifyCanvasTitle,
 } from '../../models/Canvas';
 import GitContextPicker from '../GitContextPicker';
-import { syncCanvasToGitHub } from '../../services/CanvasGitHubSyncService';
 import { useAuth } from '../../contexts/AuthContext';
 import { renderSceneToPng } from '../../utils/canvasPngExport';
 import { parseChartLabels, parseChartValues } from '../../utils/chartParsing';
@@ -1270,22 +1269,7 @@ export default function CanvasEditorContent() {
       await createCanvas({ title, scene, repo, branch, filePath: canvasFilePath, accountId });
     }
 
-    if (repo) {
-      const syncResult = await syncCanvasToGitHub({
-        repo,
-        branch,
-        filePath: canvasFilePath,
-        title: title.trim(),
-        scene,
-      });
-      if (!syncResult.success) {
-        Alert.alert(
-          'Save failed',
-          `Could not sync canvas to Git: ${syncResult.error ?? 'unknown error'}. Your edits are kept — try again or check connection.`,
-        );
-        return;
-      }
-    }
+    // Canvas sync to GitHub removed - sync handled by git2-rs service
 
     navigation.goBack();
   }, [canvasId, title, elements, canvasSize, cw, repo, branch, existingCanvas, updateCanvas, createCanvas, navigation, accountId]);

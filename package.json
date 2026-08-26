@@ -21,8 +21,7 @@
     "ios:fix-icon": "bash scripts/strip-icon-alpha.sh",
     "icons:regenerate": "node scripts/regenerate-assets.js",
     "branding": "node scripts/generate-branding.js",
-    "branding:check": "node scripts/generate-branding.js --check",
-    "postinstall": "patch-package && node scripts/patch-isomorphic-git-umd.js"
+    "branding:check": "node scripts/generate-branding.js --check"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.38",
@@ -76,7 +75,6 @@
     "expo-task-manager": "~56.0.20",
     "expo-web-browser": "~56.0.2",
     "i18next": "^26.2.0",
-    "isomorphic-git": "^1.37.4",
     "jszip": "^3.10.1",
     "lightningcss": "1.30.1",
     "llama.rn": "0.10.1",

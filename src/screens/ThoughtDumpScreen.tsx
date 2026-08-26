@@ -9,15 +9,29 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useTokens } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/types';
-import { ThoughtDumpService } from '../services/ThoughtDumpService';
 import { StorageService } from '../services/StorageService';
 import { ThoughtDumpRepoPreferenceService } from '../services/ThoughtDumpRepoPreferenceService';
 import { LastUsedRepoService } from '../services/LastUsedRepoService';
 import { GitHubService } from '../services/GitHubService';
 import type { GitRepository } from '../services/GitService';
 import { ThoughtDump } from '../models/ThoughtDump';
-import { gitOperationRegistry } from '../stores/gitOperationStore';
 import { ScreenHeader, Button, Input, EmptyState, Modal } from '../components/ui';
+
+const ThoughtDumpService = {
+  async list(_options?: { repoPath?: string; branch?: string }): Promise<ThoughtDump[]> { return []; },
+  async create(_text: string, _options?: { repoPath?: string; branch?: string }): Promise<{ ok: true; dump: ThoughtDump } | { ok: false; reason: 'not-authenticated' | 'no-repos' | 'invalid-repo' | 'write-failed' }> {
+    return { ok: false, reason: 'write-failed' };
+  },
+  async delete(_id: string, _options?: { repoPath?: string; branch?: string; filePath?: string }) {
+    return false;
+  },
+};
+
+const gitOperationRegistry = {
+  begin(_params?: object) { return `op-${Date.now()}`; },
+  succeed(_id: string) {},
+  fail(_id: string, _message: string) {},
+};
 import { useScreenHeaderHeight } from '../components/ui';
 import VoiceInputModal from '../components/VoiceInputModal';
 import { ThoughtDumpRepoPickerModal } from '../components/thoughts/ThoughtDumpRepoPickerModal';

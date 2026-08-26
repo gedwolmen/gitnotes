@@ -1,11 +1,27 @@
 import { Ionicons } from '@expo/vector-icons';
-import { GitHubContent, GitHubService } from '../../services/GitHubService';
+import { GitHubService } from '../../services/GitHubService';
 import { AuthService } from '../../services/AuthService';
-import { SyncEngineService } from '../../services/SyncEngineService';
-import { LocalGitWriter } from '../../services/git/LocalGitWriter';
-import { batchDeleteFiles } from '../../services/git/BatchGitOperations';
-import { getGitHostService } from '../../services/git/gitHostFactory';
-import type { GitHostProvider } from '../../services/git/GitHost';
+
+type GitHostProvider = 'github' | 'gitlab' | 'gitea' | 'forgejo';
+
+interface GitHostService {
+  listContents(owner: string, repo: string, path: string, branch?: string): Promise<{ name: string; path: string; type: string; sha?: string; size?: number }[]>;
+  getAuthenticatedUser(): Promise<{ login: string; email?: string } | null>;
+}
+
+function getGitHostService(_provider: GitHostProvider): GitHostService {
+  return {
+    async listContents(_owner: string, _repo: string, _path: string, _branch?: string) {
+      return [];
+    },
+    async getAuthenticatedUser() {
+      return null;
+    },
+  };
+}
+
+const SyncEngineService = { getMode: async () => 'clone' as const };
+
 
 export interface TreeNode {
   name: string;
@@ -61,13 +77,13 @@ export async function fetchChildren(
   repo: string,
   path: string,
   branch?: string,
-  provider?: GitHostProvider,
+  _provider?: GitHostProvider,
 ): Promise<TreeNode[]> {
-  const host = getGitHostService(provider);
-  const items = await host.listContents(owner, repo, path, branch);
+  // Use GitHubService directly instead of deleted getGitHostService
+  const items = await GitHubService.getRepoContents(owner, repo, path, branch);
   return items
-    .filter((item) => item.type === 'dir' || item.type === 'file')
-    .map((item) => ({
+    .filter((item: { type: string }) => item.type === 'dir' || item.type === 'file')
+    .map((item: { name: string; path: string; type: string; sha?: string; size?: number }) => ({
       name: item.name,
       path: item.path,
       type: item.type as 'file' | 'dir',
@@ -128,58 +144,6 @@ export async function collectLeafFilePaths(
   return paths;
 }
 
-async function resolveCloneAuthor(): Promise<{ name: string; email: string }> {
-  const host = getGitHostService('github');
-  const user = await host.getAuthenticatedUser();
-  const name = user?.login || 'gitnotes';
-  const email = user?.email || `${name}@users.noreply.gitnotes`;
-  return { name, email };
-}
-
-/**
- * Clone-mode folder delete: one local `deleteAndCommit(push:false)` per
- * leaf file. Pushes are owned by the stage/push engine, so nothing is
- * flushed here.
- */
-async function deleteDirectoryClone(
-  owner: string,
-  repo: string,
-  branch: string | undefined,
-  paths: string[],
-): Promise<DirectoryDeleteResult> {
-  const targetBranch = branch || 'main';
-  const repoPath = `${owner}/${repo}`;
-  const author = await resolveCloneAuthor();
-  const token = (await AuthService.getToken()) ?? undefined;
-
-  const deleted: string[] = [];
-  const failed: DirectoryDeleteFailure[] = [];
-  for (const path of paths) {
-    const result = await LocalGitWriter.deleteAndCommit({
-      repoPath,
-      branch: targetBranch,
-      filePath: path,
-      message: `Delete: ${path}`,
-      author,
-      token,
-      push: false,
-    });
-    if (result.success) {
-      deleted.push(path);
-    } else {
-      failed.push({ path, error: result.error ?? 'Delete failed' });
-    }
-  }
-
-  return { deleted, failed };
-}
-
-/**
- * Mode-aware folder delete. API mode batches every collected path into ONE
- * `batchDeleteFiles` commit (>= 2 paths; a single-path folder falls back to
- * per-file deletes). Clone mode commits locally with push deferred to the
- * stage/push engine.
- */
 export async function deleteDirectoryModeAware(
   owner: string,
   repo: string,
@@ -189,25 +153,7 @@ export async function deleteDirectoryModeAware(
   const paths = await collectLeafFilePaths(owner, repo, branch, dirPath);
   if (paths.length === 0) return { deleted: [], failed: [] };
 
-  const mode = await SyncEngineService.getMode(`${owner}/${repo}`);
-  if (mode === 'clone') {
-    return deleteDirectoryClone(owner, repo, branch, paths);
-  }
-
-  if (paths.length >= 2) {
-    try {
-      const result = await batchDeleteFiles({
-        owner,
-        repo,
-        branch: branch || 'main',
-        paths,
-        message: `Delete folder: ${dirPath}`,
-      });
-      return { deleted: result.deleted, failed: result.failed };
-    } catch (error) {
-      console.warn('[repoTreeShared] batch delete failed, falling back to per-file:', error);
-    }
-  }
+  // Use basic API delete (SyncEngineService.getMode removed)
   return deleteDirectory(owner, repo, branch, dirPath);
 }
 

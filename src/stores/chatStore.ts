@@ -1,7 +1,10 @@
 import { create } from 'zustand';
 import { ChatMessage, ChatThread, ChatThreadSummary } from '../models/Chat';
-import { formatSyncError } from '../services/git/formatSyncError';
 import { buildThreadSummary, deriveChatTitleFromText, isDefaultChatTitle } from '../utils/chatThreadSummary';
+
+function formatSyncError(error: unknown, _kind: string): string {
+  return error instanceof Error ? error.message : String(error);
+}
 
 export interface ChatStorageAdapter {
   loadThreadSummaries: (owner: string, repo: string, branch: string) => Promise<ChatThreadSummary[]>;

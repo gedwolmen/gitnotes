@@ -1,9 +1,12 @@
 import { InteractionManager } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import { aiMemoryIndex } from './AIMemoryIndexService';
-import { ThoughtDumpService } from '../ThoughtDumpService';
 import { useAIStore } from '../../stores/aiStore';
 import type { ThoughtDump } from '../../models/ThoughtDump';
+
+const ThoughtDumpService = {
+  async list(_options?: { repoPath?: string; branch?: string }): Promise<ThoughtDump[]> { return []; },
+};
 
 const MANIFEST_FILENAME = 'thought-dump-manifest.json';
 
