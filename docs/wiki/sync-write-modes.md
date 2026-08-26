@@ -1,42 +1,47 @@
 # Sync Write Modes
 
-> The sync contract: clone mode commits on save (commit-on-save); API mode pushes live on save (write-through). Blocking overlay; import-on-add semantics; retry surfaces.
+> The sync contract: clone mode commits + pushes immediately (write-through clone); API mode pushes live on save (write-through). Blocking overlay; import-on-add semantics; retry surfaces.
 
-## Clone mode: commit-on-save
+## Clone mode: write-through
 
-In clone mode (`SyncEngineService.getMode` returns `'clone'`, which is also the **[default](./sync-engine-modes.md)** — `DEFAULT_MODE = 'clone'`), every user git action (note save / create / delete / color change / todo toggle / canvas edit / thought-dump) **commits locally immediately on save** — nothing reaches GitHub at save time.
+In clone mode (`SyncEngineService.getMode` returns `'clone'`, the **[default](./sync-engine-modes.md)**), every user git action (note save / create / delete / color change / todo toggle / canvas edit / thought-dump) **commits locally and pushes immediately when online** — no staging, no push-later step.
 
-### How commit-on-save works
+### The write-through path
 
-1. Clone-mode sync entry points (`NoteGitHubSyncService`, `TodoGitHubSyncService`, `CanvasGitHubSyncService`, `TemplateGitHubSyncService`, `noteStore`) call [`CommitService.commit`](src/services/git/CommitService.ts) instead of the staging API.
-2. `CommitService.commit` produces a **local git commit with `push:false`** — no network call at save time.
+```
+user action (save/complete)
+  ↓
+CloneSyncService.save           ← writes file + git add + git commit
+  ↓
+tryPushNow (8s budget)         ← attempts immediate push to GitHub
+  ↓
+┌──────────┬──────────┬──────────┐
+│ success  │ offline  │ conflict │
+│   ✓      │  queue   │   409    │
+└──────────┴──────────┴──────────┘
+    ↓           ↓           ↓
+complete   ClonePendingQueue  ConflictResolverScreen
+           CloneSyncService.   (user resolves, then
+           pushPending drains   ClonePushTriggers retries)
+           on reconnect
+```
+
+1. **CloneSyncService.save** handles the commit:
    - Upsert: writes file to disk → `git.add` → `git.commit`
    - Delete: `git.remove` → `git.commit`
    - Rename: `git.remove(old)` → write(new) → `git.add(new)` → single `git.commit`
-3. The commit is atomic and self-contained — no separate staging layer.
+2. **tryPushNow** attempts the push with an 8-second budget:
+   - If online and fast-forward succeeds → done
+   - If offline or timeout → the commit queues in `ClonePendingQueue`
+   - If conflict (409/non-fast-forward) → `ConflictResolverScreen` surfaces
 
-### Tracking unpushed commits
+### Offline queue
 
-[`UnpushedCommitsService`](src/services/git/UnpushedCommitsService.ts) tracks commits between local `HEAD` and remote `origin/<branch>`:
+When offline, `CloneSyncService.save` writes the commit locally, then queues the push via `ClonePendingQueue`. When connectivity returns, **`CloneSyncService.pushPending`** drains the queue automatically. No manual push step needed.
 
-1. Resolve local OID (`refs/heads/<branch>`) and remote OID (`refs/remotes/origin/<branch>`) via `GitFsService.getCommitOid`
-2. Compute merge base (or use remote OID when merge base unavailable)
-3. Walk commits from merge-base to local HEAD via `git.log` (up to 20 commits)
-4. Returns per-commit summary: `subject`, `oid`, `author`, `timestamp`, `filesChangedCount`
+### Conflict resolution
 
-For changed files per commit, `UnpushedCommitsService.listFiles` diffs the commit tree against its parent tree.
-
-### Push triggers
-
-Nothing pushes automatically on save. Pushing happens **only on explicit trigger**:
-
-| Trigger | Code path | Behavior |
-|---------|-----------|----------|
-| Long-press floating button | `handleLongPress` in `FloatingPushButton` | Pushes all unpushed commits for the repo |
-| Push / Push-all on Push screen | `handlePush` / `handlePushAll` in `PushScreen` | Pushes selected or all unpushed commits |
-| OS background task | `BackgroundSyncService.applyPolicy` | Drains ≤ 10 files (policy cap) |
-
-See [Push UX](./push-ux.md) for the full ring, notification, and resume-on-foreground flow.
+A 409 conflict or non-fast-forward error triggers `ConflictResolverScreen` with editor-first UX. The user resolves the conflict locally, then `ClonePushTriggers` retries the push.
 
 ## API mode: live write-through
 
@@ -46,9 +51,7 @@ In API mode, saving is **immediately pushed to GitHub**. There is no stage-and-w
 
 ```
 save/complete trigger
-  ↓
-StagingService.stageUpsert (api branch)
-  ↓
+   ↓
 enqueueNoteUpsert → NoteSyncQueueService.drain(source:'save')
   ↓ acquireCycle(source:'save')          ← acquires GitSyncGate
   ↓
@@ -79,7 +82,7 @@ Critical errors — **409 conflict**, auth revoked (403/401), or repository dele
 
 When a durable drop fires, the local change is preserved (it remains in the queue's durable entries or in the local file system), but blind retry is skipped. **Rationale**: a 409 conflict almost certainly means the remote has edits the local user doesn't know about. Blindly retrying the conflicting push would re-fail the same 409 and risks #588-style overwrite of remote edits. Instead, the user is alerted with a clear message pointing them to the appropriate resolution path. See also [PR body deviation note](https://github.com/gedwolmen/gitnotes/pull/N).
 
-Code pointers: [`SyncEngineService.ts`](src/services/SyncEngineService.ts) (API-mode gate cycle + `SYNC_SAVE_WAIT_MS`), [`StagingService.ts`](src/services/StagingService.ts) (`stageUpsert` dispatch), [`NoteSyncQueueService.ts`](src/services/NoteSyncQueueService.ts) (backoff constants, durable failure recording), [`GitSyncGate.ts`](src/services/git/GitSyncGate.ts) (gate acquisition + drain).
+Code pointers: [`SyncEngineService.ts`](src/services/SyncEngineService.ts) (API-mode gate cycle + `SYNC_SAVE_WAIT_MS`), [`NoteSyncQueueService.ts`](src/services/NoteSyncQueueService.ts) (backoff constants, durable failure recording), [`GitSyncGate.ts`](src/services/git/GitSyncGate.ts) (gate acquisition + drain).
 
 ## Blocking UI (SyncBlockOverlay)
 
@@ -134,26 +137,19 @@ After a durable failure or a dropped queue mutation, the following surfaces exis
 
 ### [DEPRECATED] Clone mode: stage-then-push (archived)
 
-> **This section describes the pre-PushScreen architecture that has been removed.**
-> The `StagingService`, `stageStore`, `FloatingStageButton`, `StageScreen`, and `StagePushScheduler` have all been deleted.
+> **This section describes the pre-write-through architecture that has been removed.**
+> The old staging system has been deleted.
 > This description is kept for historical reference only.
 
-In the old architecture:
+In the old architecture (pre-write-through clone), user actions wrote to a local staging area first, then required a manual push step (floating button, dedicated Stage screen, idle timer, or background task).
 
-- `StagingService.stageUpsert` or `stageDelete` (clone branch path) delegated to [`LocalGitWriter.writeAndCommit`](src/services/git/localGitWriter.ts) with `push:false`, producing a local git commit without any network call.
-- The operation key was appended to the pending stage set in [`stageStore`](src/stores/stageStore.ts): `pendingSet` grew, `pendingCount` incremented.
-- The floating push button ([`FloatingStageButton`](src/components/FloatingStageButton.tsx)) picked up the count via `[stageStore.pendingCount]` selector in the app shell, so the badge always reflected current staged items for default-clone repos.
-- The **Stage screen** ([`StageScreen`](src/screens/StageScreen.tsx)) read from `stageStore/loadStaged()`, which iterated ALL repo paths (not just override-map keys) so that `@gitnotes:sync_engine_modes` entry-less repos appeared immediately.
-
-Push triggers were: long-press floating button (`StagePushScheduler.drainPushQueue`), push/push-all on Stage screen, 3-minute foreground idle timer, and OS background task (≤ 10 files).
-
-This was replaced by the commit-on-save + `UnpushedCommitsService` + `PushScreen` architecture.
+This was replaced by write-through clone: `CloneSyncService.save` commits and immediately pushes via `tryPushNow` (8s budget), with `ClonePendingQueue` handling offline queue and `ClonePushTriggers` automating subsequent pushes.
 
 ## Related issues
 
 | Issue | Description |
 |-------|-------------|
-| [#925](https://github.com/gedwolmen/gitnotes/issues/925) | Clone staging never surfaces push |
+| [#925](https://github.com/gedwolmen/gitnotes/issues/925) | Clone staging never surfaces push — resolved by write-through clone |
 | [#926](https://github.com/gedwolmen/gitnotes/issues/926) | No blocking sync UI |
 | [#927](https://github.com/gedwolmen/gitnotes/issues/927) | API mode is not write-through yet |
 | [#938](https://github.com/gedwolmen/gitnotes/issues/938) | Contents not imported on add |
