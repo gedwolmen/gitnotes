@@ -21,6 +21,13 @@ type ProductionStackParamList = {
   ThoughtDump: { openVoiceOnMount?: boolean } | undefined;
   Paywall: undefined;
   Onboarding: undefined;
+  ExploreDiff: { repoId: string; path: string };
+  ExploreCommit: { repoId: string; commitId: string };
+  ExploreConflict: { repoId: string };
+  ExploreFile: { repoId: string; path: string };
+  ExploreRepoInfo: { repoId: string };
+  ExploreIssues: { repoId: string };
+  ExplorePullRequests: { repoId: string };
 };
 
 type DevOnlyStackParamList = {

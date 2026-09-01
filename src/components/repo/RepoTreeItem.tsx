@@ -131,7 +131,7 @@ export function RepoTreeItem({ node, owner, repo, branch, provider, level, onFil
       return gitOperationRegistry.begin({
         kind,
         repo: repoPath,
-        branch,
+        branch: normalizeBranch(branch),
         path: node.path,
         entityIds: [],
         status: 'running',

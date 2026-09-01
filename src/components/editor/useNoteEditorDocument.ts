@@ -415,7 +415,7 @@ export function useNoteEditorDocument({
           ? gitOperationRegistry.begin({
               kind: 'upsert',
               repo,
-              branch,
+              branch: normalizeBranch(branch),
               path: syncPath,
               entityIds: [savedNoteId],
               status: 'running',

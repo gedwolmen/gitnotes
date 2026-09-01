@@ -3,6 +3,25 @@ import { StyleProp, TextInput, TextInputProps, TextStyle, View, ViewStyle } from
 import { Surface } from './Surface';
 import { useTokens } from '../../contexts/ThemeContext';
 
+export const InputField = forwardRef<TextInput, TextInputProps>((props, ref) => {
+  const { colors, type } = useTokens();
+  return (
+    <TextInput
+      ref={ref}
+      placeholderTextColor={colors.textSecondary}
+      style={[
+        {
+          flex: 1,
+          color: colors.text,
+          fontSize: type.md,
+          paddingVertical: 2,
+        },
+      ]}
+      {...props}
+    />
+  );
+});
+
 export interface InputProps extends Omit<TextInputProps, 'style'> {
   leading?: ReactNode;
   trailing?: ReactNode;
@@ -10,6 +29,7 @@ export interface InputProps extends Omit<TextInputProps, 'style'> {
   inputStyle?: StyleProp<TextStyle>;
   multilineMinHeight?: number;
   surfaceTestID?: string;
+  children?: ReactNode;
 }
 
 export const Input = forwardRef<TextInput, InputProps>(function Input(props, ref) {
@@ -24,6 +44,7 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(props, ref
     onBlur,
     placeholderTextColor,
     surfaceTestID,
+    children,
     ...textInputProps
   } = props;
   const { colors, spacing, type } = useTokens();
@@ -48,33 +69,32 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(props, ref
       className="flex-row items-center"
     >
       {leading && <View className="mr-2">{leading}</View>}
-      <TextInput
-        ref={ref}
-        multiline={multiline}
-        placeholderTextColor={placeholderTextColor ?? colors.textSecondary}
-        onFocus={(e) => {
-          setFocused(true);
-          onFocus?.(e);
-        }}
-        onBlur={(e) => {
-          setFocused(false);
-          onBlur?.(e);
-        }}
-        {...textInputProps}
-        style={[
-          {
-            flex: 1,
-            color: colors.text,
-            fontSize: type.md,
-            // Zero vertical padding leaves the single-line text/placeholder
-            // box at exactly the font line height on iOS, clipping glyph
-            // descenders (g/y/p — e.g. the "Add tags..." placeholder).
-            paddingVertical: 2,
-            textAlignVertical: multiline ? 'top' : 'center',
-          },
-          inputStyle,
-        ]}
-      />
+      {children ? children : (
+        <TextInput
+          ref={ref}
+          multiline={multiline}
+          placeholderTextColor={placeholderTextColor ?? colors.textSecondary}
+          onFocus={(e) => {
+            setFocused(true);
+            onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            setFocused(false);
+            onBlur?.(e);
+          }}
+          {...textInputProps}
+          style={[
+            {
+              flex: 1,
+              color: colors.text,
+              fontSize: type.md,
+              paddingVertical: 2,
+              textAlignVertical: multiline ? 'top' : 'center',
+            },
+            inputStyle,
+          ]}
+        />
+      )}
       {trailing && <View className="ml-2">{trailing}</View>}
     </Surface>
   );

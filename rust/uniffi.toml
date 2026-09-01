@@ -1,0 +1,14 @@
+# UniFFI bindings configuration for the gitnotes_git2 crate.
+# Namespace follows the crate name: `gitnotes_git2`.
+
+[bindings.swift]
+# High-level Swift module wrapping the generated bindings.
+module_name = "GitNotesGit2"
+# Low-level C module carrying the raw FFI declarations (header + modulemap).
+ffi_module_name = "GitNotesGit2FFI"
+generate_immutable_records = true
+
+[bindings.kotlin]
+package_name = "uniffi.gitnotes_git2"
+# Name of the shared library loaded on Android (libgitnotes_git2.so).
+cdylib_name = "gitnotes_git2"

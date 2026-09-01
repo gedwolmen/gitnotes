@@ -6,7 +6,9 @@ import { Surface } from './Surface';
 import { useTokens } from '../../contexts/ThemeContext';
 import { cn } from '../../lib/utils';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'outline';
+
+export { ButtonText } from './text';
 
 export interface ButtonProps {
   label?: string;
@@ -18,6 +20,8 @@ export interface ButtonProps {
   leadingIcon?: ReactNode;
   trailingIcon?: ReactNode;
   iconAlign?: 'inline' | 'edge';
+  size?: string;
+  className?: string;
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
   testID?: string;
@@ -36,6 +40,8 @@ export function Button(props: ButtonProps) {
     leadingIcon,
     trailingIcon,
     iconAlign = 'inline',
+    size,
+    className,
     style,
     textStyle,
     testID,
@@ -150,7 +156,8 @@ export function Button(props: ButtonProps) {
         ]}
         className={cn(
           'py-2 px-3 rounded-md items-center justify-center',
-          fullWidth && 'self-stretch'
+          fullWidth && 'self-stretch',
+          className
         )}
       >
         {useEdgeIcon ? (
@@ -165,7 +172,7 @@ export function Button(props: ButtonProps) {
   }
 
   return (
-    <Animated.View style={[{ opacity: disabled ? 0.5 : 1 }, animatedStyle]} className={cn(fullWidth && 'self-stretch')}>
+    <Animated.View style={[{ opacity: disabled ? 0.5 : 1 }, animatedStyle]} className={cn(fullWidth && 'self-stretch', className)}>
       <Pressable
         testID={testID}
         accessibilityRole="button"

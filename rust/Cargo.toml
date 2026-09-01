@@ -1,0 +1,32 @@
+[package]
+name = "gitnotes_git2"
+version = "0.1.0"
+edition = "2021"
+description = "Native Git engine for GitNotes (libgit2 via git2, vendored)"
+license = "MIT OR Apache-2.0"
+
+[lib]
+crate-type = ["rlib", "staticlib", "cdylib"]
+
+[features]
+# Pulls in the full bindgen CLI dependency tree; only needed when
+# (re)generating bindings, so plain builds/tests skip the bin target.
+uniffi-cli = ["uniffi/cli"]
+
+# Bindings generator entry point (single-crate pattern from the UniFFI docs):
+# `cargo run --features uniffi-cli --bin uniffi-bindgen -- generate ...`
+[[bin]]
+name = "uniffi-bindgen"
+path = "uniffi-bindgen.rs"
+required-features = ["uniffi-cli"]
+
+[dependencies]
+git2 = { version = "0.21", features = ["vendored-libgit2", "vendored-openssl", "https"] }
+ssh-key = { version = "0.6.7", features = ["crypto", "encryption"] }
+osshkeys = "0.7.0"
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
+base64 = "0.22"
+uuid = { version = "1", features = ["v4", "serde"] }
+fs2 = "0.4"
+uniffi = "0.32"

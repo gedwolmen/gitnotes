@@ -174,3 +174,12 @@ export function parseFrontmatter(text: string): FrontmatterResult {
     frontmatterEnd,
   };
 }
+
+export function serializeFrontmatter(frontmatter: Record<string, unknown>): string {
+  const lines: string[] = ['---'];
+  for (const [key, value] of Object.entries(frontmatter)) {
+    lines.push(`${key}: ${JSON.stringify(value)}`);
+  }
+  lines.push('---');
+  return lines.join('\n');
+}
