@@ -89,7 +89,7 @@ export class ThoughtDumpService {
     const dump = createThoughtDump(text);
     const content = serializeThoughtDump(dump);
 
-    const writeResult = await enqueueRepoWrite(repoInfo.owner, repoInfo.repo, branch, async () =>
+    await enqueueRepoWrite(repoInfo.owner, repoInfo.repo, branch, async () =>
       NoteSyncQueueService.enqueueNoteUpsert({
         repo: repoPath,
         branch,
@@ -98,11 +98,6 @@ export class ThoughtDumpService {
         content,
       }),
     );
-
-    if (!writeResult) {
-      console.warn('[ThoughtDumpService] create failed');
-      return { ok: false, reason: 'write-failed' };
-    }
 
     return { ok: true, dump };
   }

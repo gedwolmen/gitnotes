@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@/components/ui/text';
 import { Heading } from '@/components/ui/heading';
-import { Button, ButtonText } from '@/components/ui/button';
+import { Button, ButtonText } from '@/components/ui/Button';
 import {
   Tabs,
   TabsList,
@@ -36,7 +36,6 @@ import { ComingSoonSection } from '@/components/explore/ComingSoonSection';
 import { RepoInfoSection } from '@/components/explore/RepoInfoSection';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-type Route = RouteProp<RootStackParamList, 'Explore'>;
 
 /**
  * Explore workspace shell (todo 23): the Git-client surface hosting every
@@ -47,31 +46,26 @@ type Route = RouteProp<RootStackParamList, 'Explore'>;
  */
 export default function ExploreScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const route = useRoute<Route>();
-  const requestedId = route.params?.repoId;
-  const repos = useRepoStore((state) => state.repos);
-  const loaded = useRepoStore((state) => state.loaded);
-  const load = useRepoStore((state) => state.load);
+  const repos = useRepoStore((state) => state.repositories);
+  const isLoading = useRepoStore((state) => state.isLoading);
+  const loadRepos = useRepoStore((state) => state.loadRepos);
 
   const [section, setSection] = useState<ExploreSection>('files');
 
-  const repo: ManagedRepo | null = useMemo(() => {
-    if (requestedId) {
-      return repos.find((candidate) => candidate.id === requestedId) ?? null;
-    }
+  const repo = useMemo(() => {
     return repos[0] ?? null;
-  }, [repos, requestedId]);
+  }, [repos]);
 
   const { status, refresh: refreshStatus } = useGitRepoStatus(
     repo?.id ?? null,
-    repo?.localPath ?? null,
+    (repo as ManagedRepo)?.localPath ?? null,
   );
 
   useFocusEffect(
     useCallback(() => {
-      if (!loaded) void load();
+      if (isLoading) void loadRepos();
       void refreshStatus();
-    }, [loaded, load, refreshStatus]),
+    }, [isLoading, loadRepos, refreshStatus]),
   );
 
   const onChanged = useCallback(() => {
@@ -99,7 +93,7 @@ export default function ExploreScreen() {
             No repository to explore yet. Add a remote repository to clone it into your
             library, then open its workspace here.
           </Text>
-          <Button className="mt-4" onPress={() => navigation.navigate('AddRepo')} testID="explore.empty.add">
+          <Button className="mt-4" onPress={() => (navigation as any).navigate('AddRepo')} testID="explore.empty.add">
             <ButtonText>Add a repository</ButtonText>
           </Button>
         </View>
@@ -108,7 +102,8 @@ export default function ExploreScreen() {
   }
 
   const renderSection = () => {
-    const props = { repo, status, onChanged };
+    const repoTyped = repo as ManagedRepo;
+    const props = { repo: repoTyped, status, onChanged };
     switch (section) {
       case 'files':
         return <FilesSection key={repo.id} {...props} active />;
@@ -157,7 +152,7 @@ export default function ExploreScreen() {
             {repo.name}
           </Heading>
           <Text className="text-[11px] text-gray-500" numberOfLines={1} testID="explore.header.remote">
-            {repo.remoteUrl}
+            {(repo as ManagedRepo).remoteUrl}
           </Text>
         </View>
         {status?.currentBranch && (

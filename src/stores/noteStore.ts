@@ -560,26 +560,26 @@ function onDeleteMutationSucceeded(event: MutationSucceededEvent): void {
     void StorageService.deleteNote(note.id).catch(() => undefined);
     useNoteStore.setState((state) => ({ notes: state.notes.filter((n) => n.id !== note.id) }));
   }
-  succeedDeleteOps(mutation.params.repo, mutation.params.branch, mutation.params.filePath, mutation.params.localNoteId);
+  succeedDeleteOps(mutation.params.repo ?? '', mutation.params.branch, mutation.params.filePath ?? '', mutation.params.localNoteId);
 }
 
 function onDeleteMutationDropped(event: DroppedMutationEvent): void {
   const mutation = event.mutation;
   if (mutation.type !== 'note.delete') return;
   failDeleteOps(
-    mutation.params.repo,
+    mutation.params.repo ?? '',
     mutation.params.branch,
-    mutation.params.filePath,
+    mutation.params.filePath ?? '',
     mutation.params.localNoteId,
     event.error || 'Delete failed',
   );
   void recordDeleteFailure(
-    mutation.params.repo,
+    mutation.params.repo ?? '',
     mutation.params.branch,
-    mutation.params.filePath,
+    mutation.params.filePath ?? '',
     {
       error: event.error || 'Delete failed',
-      kind: event.reason,
+      kind: event.reason ?? 'unknown',
       at: Date.now(),
     },
   );

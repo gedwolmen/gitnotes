@@ -231,7 +231,7 @@ export function useNoteEditorDocument({
     }
 
     let cancelled = false;
-    GitService.getRepositoryFolders(repo, branch)
+    GitService.getRepositoryFolders(repo, normalizeBranch(branch))
       .then((entries) => {
         if (cancelled) return;
         setRepoFolders(
