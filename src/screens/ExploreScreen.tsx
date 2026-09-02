@@ -8,13 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@/components/ui/text';
 import { Heading } from '@/components/ui/heading';
 import { Button, ButtonText } from '@/components/ui/Button';
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsTriggerText,
-  TabsIndicator,
-} from '@/components/ui/tabs';
+import { SectionTabs } from '@/components/ui/SectionTabs';
 import FloatingGitButton from '@/components/git/FloatingGitButton';
 import { useGitRepoStatus } from '@/hooks/useGitRepoStatus';
 import { useRepoStore } from '@/stores/repoStore';
@@ -171,21 +165,13 @@ export default function ExploreScreen() {
         )}
       </View>
 
-      {/* Section navigator (gluestack tabs) */}
-      <Tabs
+      {/* Section navigator */}
+      <SectionTabs
+        tabs={EXPLORE_SECTIONS}
         value={section}
-        onValueChange={(value: string) => setSection(value as ExploreSection)}
-        className="border-b border-gray-200 pb-2"
-      >
-        <TabsList className="mx-4 mt-2" testID="explore.tabs">
-          {EXPLORE_SECTIONS.map((entry) => (
-            <TabsTrigger key={entry.id} value={entry.id} testID={`explore.tab.${entry.id}`}>
-              <TabsTriggerText>{entry.label}</TabsTriggerText>
-            </TabsTrigger>
-          ))}
-          <TabsIndicator />
-        </TabsList>
-      </Tabs>
+        onChange={(id) => setSection(id as ExploreSection)}
+        testID="explore.tabs"
+      />
 
       {/* Active section content */}
       <View className="flex-1" style={{ flex: 1 }} testID={`explore.section.${section}`}>
