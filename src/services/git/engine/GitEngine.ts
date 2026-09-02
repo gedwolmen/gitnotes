@@ -12,6 +12,7 @@
  */
 
 import { requireNativeModule, type EventSubscription } from 'expo-modules-core';
+import { AuthService } from '../../AuthService';
 
 // Null when native module is not available (e.g., not yet built, or running in Expo Go)
 let GitEngineModule: {
@@ -233,16 +234,19 @@ export async function generateSshKey(passphrase?: string | null): Promise<Genera
   return run(() => GitEngineModule!.generateSshKey(passphrase ?? null), { publicKey: '', privateKey: '' });
 }
 
-/**
- * Re-seed the engine's credential map from expo-secure-store before a remote
- * op, so a persisted credential survives app restarts without the app having
- * to call `setCredential` again.
- */
 async function ensureCredentialForOp(repoId: string | null | undefined): Promise<void> {
   if (!repoId || !GitEngineModule) return;
+
   const stored = await CredentialStore.get(repoId);
   if (stored) {
     await GitEngineModule!.setCredential(repoId, toNativeCredential(stored)).catch(() => undefined);
+    return;
+  }
+
+  const token = await AuthService.getToken();
+  if (token) {
+    const credential = { kind: 'token' as const, username: 'x-access-token', token };
+    await GitEngineModule!.setCredential(repoId, toNativeCredential(credential)).catch(() => undefined);
   }
 }
 
