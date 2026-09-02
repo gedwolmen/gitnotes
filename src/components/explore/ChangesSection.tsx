@@ -32,8 +32,8 @@ export function ChangesSection({ repo, active, onChanged }: SectionProps) {
     setError(null);
     try {
       const [statuses, diffs] = await Promise.all([
-        GitEngine.statuses(repo.path),
-        GitEngine.diffAll(repo.path),
+        GitEngine.statuses(repo.localPath),
+        GitEngine.diffAll(repo.localPath),
       ]);
       setData({
         statuses,
@@ -44,7 +44,7 @@ export function ChangesSection({ repo, active, onChanged }: SectionProps) {
     } finally {
       setLoading(false);
     }
-  }, [repo.path]);
+  }, [repo.localPath]);
 
   useEffect(() => {
     if (active) void load();
@@ -53,14 +53,14 @@ export function ChangesSection({ repo, active, onChanged }: SectionProps) {
   const stageFile = useCallback(
     async (path: string) => {
       try {
-        await GitEngine.stage(repo.path, [path]);
+        await GitEngine.stage(repo.localPath, [path]);
         onChanged();
         setVersion((value) => value + 1);
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : String(caught));
       }
     },
-    [repo.path, onChanged],
+    [repo.localPath, onChanged],
   );
 
   const renderItem = useCallback(

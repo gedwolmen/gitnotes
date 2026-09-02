@@ -58,9 +58,9 @@ export function CommitComposer({ repo, changedPaths, stagedCount, onCommitted }:
       setBusy(mode);
       try {
         if (mode === 'stageAll' && changedPaths.length > 0) {
-          await GitEngine.stage(repo.path, changedPaths);
+          await GitEngine.stage(repo.localPath, changedPaths);
         }
-        const commit = await GitEngine.commit(repo.path, message.trim(), {
+        const commit = await GitEngine.commit(repo.localPath, message.trim(), {
           name: authorName.trim(),
           email: authorEmail.trim(),
         });
@@ -73,7 +73,7 @@ export function CommitComposer({ repo, changedPaths, stagedCount, onCommitted }:
         setBusy(null);
       }
     },
-    [validate, changedPaths, repo.path, message, authorName, authorEmail, onCommitted],
+    [validate, changedPaths, repo.localPath, message, authorName, authorEmail, onCommitted],
   );
 
   const nothingToStageAll = changedPaths.length === 0;

@@ -44,7 +44,7 @@ export function FilesSection({ repo, active }: SectionProps) {
       let truncated = false;
 
       try {
-        const tree = walkWorkingTree(repo.path);
+        const tree = walkWorkingTree(repo.localPath);
         files = tree.files;
         truncated = tree.truncated;
       } catch {
@@ -58,7 +58,7 @@ export function FilesSection({ repo, active }: SectionProps) {
 
       let entries: FileStatus[] = [];
       try {
-        entries = await GitEngine.statuses(repo.path);
+        entries = await GitEngine.statuses(repo.localPath);
       } catch {
         entries = [];
       }
@@ -71,7 +71,7 @@ export function FilesSection({ repo, active }: SectionProps) {
     } finally {
       setLoading(false);
     }
-  }, [repo.path, repo.branch]);
+  }, [repo.localPath, repo.path, repo.branch]);
 
   useEffect(() => {
     if (active) void load();

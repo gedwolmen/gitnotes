@@ -24,13 +24,13 @@ export function CommitsSection({ repo, active }: SectionProps) {
     setLoading(true);
     setError(null);
     try {
-      setCommits(await GitEngine.log(repo.path, 100));
+      setCommits(await GitEngine.log(repo.localPath, 100));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
       setLoading(false);
     }
-  }, [repo.path]);
+  }, [repo.localPath]);
 
   useFocusEffect(
     useCallback(() => {

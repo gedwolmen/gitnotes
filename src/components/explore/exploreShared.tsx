@@ -7,6 +7,7 @@ export interface RepoLike {
   id: string;
   path: string;
   name: string;
+  localPath: string;
   branch?: string;
   provider?: GitHostProvider | string;
   hostId?: string;

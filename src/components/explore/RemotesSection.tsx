@@ -25,13 +25,13 @@ export function RemotesSection({ repo, active, onChanged }: SectionProps) {
     setLoading(true);
     setError(null);
     try {
-      setRemotes(await GitEngine.listRemotes(repo.path));
+      setRemotes(await GitEngine.listRemotes(repo.localPath));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
       setLoading(false);
     }
-  }, [repo.path]);
+  }, [repo.localPath]);
 
   useEffect(() => {
     if (active) void load();
@@ -41,7 +41,7 @@ export function RemotesSection({ repo, active, onChanged }: SectionProps) {
     if (!name.trim() || !url.trim()) return;
     setBusy(true);
     try {
-      await GitEngine.addRemote(repo.path, name.trim(), url.trim());
+      await GitEngine.addRemote(repo.localPath, name.trim(), url.trim());
       setName('');
       setUrl('');
       onChanged();
@@ -51,7 +51,7 @@ export function RemotesSection({ repo, active, onChanged }: SectionProps) {
     } finally {
       setBusy(false);
     }
-  }, [name, url, repo.path, onChanged]);
+  }, [name, url, repo.localPath, onChanged]);
 
   const remove = useCallback(
     (remoteName: string) => {
@@ -63,7 +63,7 @@ export function RemotesSection({ repo, active, onChanged }: SectionProps) {
           onPress: async () => {
             setBusy(true);
             try {
-              await GitEngine.removeRemote(repo.path, remoteName);
+              await GitEngine.removeRemote(repo.localPath, remoteName);
               onChanged();
               setVersion((value) => value + 1);
             } catch (caught) {
@@ -75,7 +75,7 @@ export function RemotesSection({ repo, active, onChanged }: SectionProps) {
         },
       ]);
     },
-    [repo.path, onChanged],
+    [repo.localPath, onChanged],
   );
 
   const saveUrl = useCallback(
@@ -84,7 +84,7 @@ export function RemotesSection({ repo, active, onChanged }: SectionProps) {
       if (!target) return;
       setBusy(true);
       try {
-        await GitEngine.setRemoteUrl(repo.path, remoteName, target);
+        await GitEngine.setRemoteUrl(repo.localPath, remoteName, target);
         setEditing(null);
         setEditUrl('');
         onChanged();
@@ -95,7 +95,7 @@ export function RemotesSection({ repo, active, onChanged }: SectionProps) {
         setBusy(false);
       }
     },
-    [editUrl, repo.path, onChanged],
+    [editUrl, repo.localPath, onChanged],
   );
 
   const renderItem = useCallback(

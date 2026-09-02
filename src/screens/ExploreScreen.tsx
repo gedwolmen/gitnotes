@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect, useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -12,6 +12,7 @@ import { SectionTabs } from '@/components/ui/SectionTabs';
 import FloatingGitButton from '@/components/git/FloatingGitButton';
 import { useGitRepoStatus } from '@/hooks/useGitRepoStatus';
 import { useRepoStore } from '@/stores/repoStore';
+import { GitFsService } from '@/services/git/GitFsService';
 import type { RepoLike } from '@/components/explore/exploreShared';
 import type { RootStackParamList } from '@/navigation/types';
 
@@ -47,7 +48,12 @@ export default function ExploreScreen() {
   const [section, setSection] = useState<ExploreSection>('files');
 
   const repo = useMemo(() => {
-    return repos[0] ?? null;
+    const r = repos[0] ?? null;
+    if (!r) return null;
+    return {
+      ...r,
+      localPath: GitFsService.workingTreeUri({ repoPath: r.path }),
+    } as RepoLike;
   }, [repos]);
 
   const { status, refresh: refreshStatus } = useGitRepoStatus(

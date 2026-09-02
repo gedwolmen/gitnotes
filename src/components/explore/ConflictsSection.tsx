@@ -30,14 +30,14 @@ export function ConflictsSection({ repo, active }: SectionProps) {
 
   const load = useCallback(async () => {
     try {
-      setEntries(await GitEngine.conflicts(repo.path));
+      setEntries(await GitEngine.conflicts(repo.localPath));
       setError(null);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
       setLoading(false);
     }
-  }, [repo.path]);
+  }, [repo.localPath]);
 
   useEffect(() => {
     if (!active || !focused) {

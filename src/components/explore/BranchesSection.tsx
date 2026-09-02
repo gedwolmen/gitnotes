@@ -26,13 +26,13 @@ export function BranchesSection({ repo, active, onChanged }: SectionProps) {
     setLoading(true);
     setError(null);
     try {
-      setBranches(await GitEngine.listBranches(repo.path));
+      setBranches(await GitEngine.listBranches(repo.localPath));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
       setLoading(false);
     }
-  }, [repo.path]);
+  }, [repo.localPath]);
 
   useEffect(() => {
     if (active) void load();
@@ -60,7 +60,7 @@ export function BranchesSection({ repo, active, onChanged }: SectionProps) {
     if (!name) return;
     setBusy('create');
     try {
-      await GitEngine.createBranch(repo.path, name);
+      await GitEngine.createBranch(repo.localPath, name);
       setNewName('');
       onChanged();
       setVersion((value) => value + 1);
@@ -69,13 +69,13 @@ export function BranchesSection({ repo, active, onChanged }: SectionProps) {
     } finally {
       setBusy(null);
     }
-  }, [newName, repo.path, onChanged]);
+  }, [newName, repo.localPath, onChanged]);
 
   const checkout = useCallback(
     async (name: string) => {
       setBusy(`checkout:${name}`);
       try {
-        await GitEngine.checkoutBranch(repo.path, name);
+        await GitEngine.checkoutBranch(repo.localPath, name);
         onChanged();
         setVersion((value) => value + 1);
       } catch (caught) {
@@ -84,7 +84,7 @@ export function BranchesSection({ repo, active, onChanged }: SectionProps) {
         setBusy(null);
       }
     },
-    [repo.path, onChanged],
+    [repo.localPath, onChanged],
   );
 
   const remove = useCallback(
@@ -97,7 +97,7 @@ export function BranchesSection({ repo, active, onChanged }: SectionProps) {
           onPress: async () => {
             setBusy(`delete:${name}`);
             try {
-              await GitEngine.deleteBranch(repo.path, name);
+              await GitEngine.deleteBranch(repo.localPath, name);
               onChanged();
               setVersion((value) => value + 1);
             } catch (caught) {
@@ -109,7 +109,7 @@ export function BranchesSection({ repo, active, onChanged }: SectionProps) {
         },
       ]);
     },
-    [repo.path, onChanged],
+    [repo.localPath, onChanged],
   );
 
   const saveRename = useCallback(
@@ -121,7 +121,7 @@ export function BranchesSection({ repo, active, onChanged }: SectionProps) {
       }
       setBusy(`rename:${name}`);
       try {
-        await GitEngine.renameBranch(repo.path, name, target);
+        await GitEngine.renameBranch(repo.localPath, name, target);
         setRenaming(null);
         setRenameValue('');
         onChanged();
@@ -132,7 +132,7 @@ export function BranchesSection({ repo, active, onChanged }: SectionProps) {
         setBusy(null);
       }
     },
-    [renameValue, repo.path, onChanged],
+    [renameValue, repo.localPath, onChanged],
   );
 
   const renderBranch = useCallback(

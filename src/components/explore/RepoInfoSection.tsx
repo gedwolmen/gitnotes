@@ -61,11 +61,11 @@ export function RepoInfoSection({ repo, status, active, onChanged }: SectionProp
 
   const load = useCallback(async () => {
     try {
-      setInfo(await GitEngine.repoInfo(repo.path));
+      setInfo(await GitEngine.repoInfo(repo.localPath));
     } catch {
       // header status already surfaces repo health; info panel stays empty
     }
-  }, [repo.path]);
+  }, [repo.localPath]);
 
   useEffect(() => {
     if (active) void load();
@@ -78,7 +78,7 @@ export function RepoInfoSection({ repo, status, active, onChanged }: SectionProp
     setSyncFailed(false);
     const aheadBefore = status?.ahead ?? 0;
     try {
-      const result = await GitEngine.pushWithIntegrate(repo.path, 'origin', repo.id);
+      const result = await GitEngine.pushWithIntegrate(repo.localPath, 'origin', repo.id);
       if (result.kind === 'Conflicts') {
         const paths = result.conflicts.join(', ');
         setSyncFailed(true);
@@ -104,7 +104,7 @@ export function RepoInfoSection({ repo, status, active, onChanged }: SectionProp
     setBusy('repair');
     setRepairResult(null);
     try {
-      const report = await GitEngine.repairRepo(repo.path);
+      const report = await GitEngine.repairRepo(repo.localPath);
       setRepairResult(describeRepair(report));
       onChanged();
       setVersion((value) => value + 1);
@@ -113,7 +113,7 @@ export function RepoInfoSection({ repo, status, active, onChanged }: SectionProp
     } finally {
       setBusy(null);
     }
-  }, [busy, repo.path, onChanged]);
+  }, [busy, repo.localPath, onChanged]);
 
   const removeNow = useCallback(async () => {
     setBusy('remove');
@@ -178,7 +178,7 @@ export function RepoInfoSection({ repo, status, active, onChanged }: SectionProp
           <InfoRow label="Commits" value={info ? String(info.totalCommits) : '—'} testID="explore.info.commits" />
           <InfoRow label="Working tree" value={info ? (info.isClean ? 'clean' : 'dirty') : '—'} />
           <InfoRow label="Last synced" value={relativeTime(lastSync)} testID="explore.info.lastsync" />
-          <InfoRow label="Local path" value={repo.path} />
+          <InfoRow label="Local path" value={repo.localPath} />
         </View>
       </View>
 
