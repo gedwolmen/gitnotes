@@ -9,6 +9,7 @@ import { Button, ButtonText } from '@/components/ui/Button';
 import { FlatList } from '@/components/ui/flat-list';
 import * as GitEngine from '@/services/git/engine/GitEngine';
 import type { FileStatus } from '@/services/git/engine/GitEngine';
+import { GitHubService } from '@/services/GitHubService';
 import type { RootStackParamList } from '@/navigation/types';
 import {
   buildFileTreeRows,
@@ -39,18 +40,33 @@ export function FilesSection({ repo, active }: SectionProps) {
     setLoading(true);
     setError(null);
     try {
-      const tree = walkWorkingTree(repo.path);
+      let files: string[] = [];
+      let truncated = false;
+
+      try {
+        const tree = walkWorkingTree(repo.path);
+        files = tree.files;
+        truncated = tree.truncated;
+      } catch {
+        const parts = repo.path.split('/');
+        const owner = parts[0];
+        const repoName = parts[1] ?? parts[0];
+        const branch = repo.branch ?? 'main';
+        const treeEntries = await GitHubService.getTreeRecursiveOrThrow(owner, repoName, branch);
+        files = treeEntries.map((e) => e.path);
+      }
+
       const entries = await GitEngine.statuses(repo.path);
       const statuses: Record<string, FileStatus> = {};
       for (const entry of entries) statuses[entry.path] = entry;
-      setData({ files: tree.files, truncated: tree.truncated, statuses });
+      setData({ files, truncated, statuses });
       setExpanded(changedFileAncestors(entries.map((entry) => entry.path)));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
       setLoading(false);
     }
-  }, [repo.path]);
+  }, [repo.path, repo.branch]);
 
   useEffect(() => {
     if (active) void load();
