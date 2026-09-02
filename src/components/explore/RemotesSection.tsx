@@ -8,6 +8,7 @@ import { FlatList } from '@/components/ui/flat-list';
 import { Input, InputField } from '@/components/ui/Input';
 import * as GitEngine from '@/services/git/engine/GitEngine';
 import type { RemoteInfo } from '@/services/git/engine/GitEngine';
+import { GitFsService } from '@/services/git/GitFsService';
 import type { SectionProps } from './exploreShared';
 
 export function RemotesSection({ repo, active, onChanged }: SectionProps) {
@@ -20,18 +21,26 @@ export function RemotesSection({ repo, active, onChanged }: SectionProps) {
   const [editing, setEditing] = useState<string | null>(null);
   const [editUrl, setEditUrl] = useState('');
   const [version, setVersion] = useState(0);
+  const [notCloned, setNotCloned] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setNotCloned(false);
     try {
+      const cloned = await GitFsService.isCloned({ repoPath: repo.path });
+      if (!cloned) {
+        setNotCloned(true);
+        setLoading(false);
+        return;
+      }
       setRemotes(await GitEngine.listRemotes(repo.localPath));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
       setLoading(false);
     }
-  }, [repo.localPath]);
+  }, [repo.localPath, repo.path]);
 
   useEffect(() => {
     if (active) void load();
@@ -179,6 +188,18 @@ export function RemotesSection({ repo, active, onChanged }: SectionProps) {
         <Button variant="outline" size="sm" className="mt-3" onPress={() => void load()}>
           <ButtonText>Retry</ButtonText>
         </Button>
+      </View>
+    );
+  }
+
+  if (notCloned) {
+    return (
+      <View className="items-center px-8 py-10">
+        <Ionicons name="folder-outline" size={36} color="#9ca3af" />
+        <Text className="mt-2 text-center text-sm font-semibold text-gray-700">Clone required</Text>
+        <Text className="mt-1 text-center text-xs text-gray-500">
+          This repository has not been cloned to this device yet.
+        </Text>
       </View>
     );
   }

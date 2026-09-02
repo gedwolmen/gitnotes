@@ -9,6 +9,7 @@ import { Button, ButtonText } from '@/components/ui/Button';
 import * as GitEngine from '@/services/git/engine/GitEngine';
 import type { PushIntegrateResult, RepoInfo, RepairReport } from '@/services/git/engine/GitEngine';
 import { RepoService } from '@/services/repos/RepoService';
+import { GitFsService } from '@/services/git/GitFsService';
 import { useRepoStore } from '@/stores/repoStore';
 import { relativeTime, type SectionProps } from './exploreShared';
 import type { RootStackParamList } from '@/navigation/types';
@@ -52,6 +53,7 @@ export function RepoInfoSection({ repo, status, active, onChanged }: SectionProp
   const [repairResult, setRepairResult] = useState<string | null>(null);
   const [lastSync, setLastSync] = useState<number | null>(repo.lastSyncedAt ?? null);
   const [version, setVersion] = useState(0);
+  const [notCloned, setNotCloned] = useState(false);
   const refreshStore = useRepoStore((state) => state.refreshRepos);
   const removeRepo = useRepoStore((state) => state.removeRepository);
 
@@ -61,11 +63,16 @@ export function RepoInfoSection({ repo, status, active, onChanged }: SectionProp
 
   const load = useCallback(async () => {
     try {
+      const cloned = await GitFsService.isCloned({ repoPath: repo.path });
+      if (!cloned) {
+        setNotCloned(true);
+        return;
+      }
       setInfo(await GitEngine.repoInfo(repo.localPath));
     } catch {
       // header status already surfaces repo health; info panel stays empty
     }
-  }, [repo.localPath]);
+  }, [repo.localPath, repo.path]);
 
   useEffect(() => {
     if (active) void load();
@@ -151,6 +158,18 @@ export function RepoInfoSection({ repo, status, active, onChanged }: SectionProp
       ],
     );
   }, [repo.name, removeNow]);
+
+  if (notCloned) {
+    return (
+      <View className="items-center px-8 py-10">
+        <Ionicons name="folder-outline" size={36} color="#9ca3af" />
+        <Text className="mt-2 text-center text-sm font-semibold text-gray-700">Clone required</Text>
+        <Text className="mt-1 text-center text-xs text-gray-500">
+          This repository has not been cloned to this device yet.
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View className="px-4 pt-4" testID="explore.info.root">

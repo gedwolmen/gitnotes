@@ -8,6 +8,7 @@ import { Text } from '@/components/ui/text';
 import { Button, ButtonText } from '@/components/ui/Button';
 import * as GitEngine from '@/services/git/engine/GitEngine';
 import type { ConflictEntry } from '@/services/git/engine/GitEngine';
+import { GitFsService } from '@/services/git/GitFsService';
 import type { RootStackParamList } from '@/navigation/types';
 import type { SectionProps } from './exploreShared';
 
@@ -26,10 +27,17 @@ export function ConflictsSection({ repo, active }: SectionProps) {
   const [entries, setEntries] = useState<ConflictEntry[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notCloned, setNotCloned] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
     try {
+      const cloned = await GitFsService.isCloned({ repoPath: repo.path });
+      if (!cloned) {
+        setNotCloned(true);
+        setLoading(false);
+        return;
+      }
       setEntries(await GitEngine.conflicts(repo.localPath));
       setError(null);
     } catch (caught) {
@@ -59,6 +67,18 @@ export function ConflictsSection({ repo, active }: SectionProps) {
       <View className="items-center px-8 py-10">
         <Ionicons name="warning-outline" size={36} color="#dc2626" />
         <Text className="mt-2 text-center text-sm text-red-600">{error}</Text>
+      </View>
+    );
+  }
+
+  if (notCloned) {
+    return (
+      <View className="items-center px-8 py-10">
+        <Ionicons name="folder-outline" size={36} color="#9ca3af" />
+        <Text className="mt-2 text-center text-sm font-semibold text-gray-700">Clone required</Text>
+        <Text className="mt-1 text-center text-xs text-gray-500">
+          This repository has not been cloned to this device yet.
+        </Text>
       </View>
     );
   }

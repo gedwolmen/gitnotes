@@ -11,6 +11,7 @@ import { DiffLineList, previewLines } from './DiffLineList';
 import { CommitComposer } from './CommitComposer';
 import * as GitEngine from '@/services/git/engine/GitEngine';
 import type { FileDiff, FileStatus } from '@/services/git/engine/GitEngine';
+import { GitFsService } from '@/services/git/GitFsService';
 import type { RootStackParamList } from '@/navigation/types';
 import type { SectionProps } from './exploreShared';
 
@@ -29,11 +30,19 @@ export function StagingSection({ repo, active, onChanged }: SectionProps) {
   const [busyPath, setBusyPath] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
+  const [notCloned, setNotCloned] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setNotCloned(false);
     try {
+      const cloned = await GitFsService.isCloned({ repoPath: repo.path });
+      if (!cloned) {
+        setNotCloned(true);
+        setLoading(false);
+        return;
+      }
       const statuses = await GitEngine.statuses(repo.localPath);
       const staged = statuses.filter((entry) => entry.staged);
       const changedPaths = statuses.map((entry) => entry.path);
@@ -58,7 +67,7 @@ export function StagingSection({ repo, active, onChanged }: SectionProps) {
     } finally {
       setLoading(false);
     }
-  }, [repo.localPath]);
+  }, [repo.localPath, repo.path]);
 
   useEffect(() => {
     if (active) void load();
@@ -151,6 +160,18 @@ export function StagingSection({ repo, active, onChanged }: SectionProps) {
         <Button variant="outline" size="sm" className="mt-3" onPress={() => void load()}>
           <ButtonText>Retry</ButtonText>
         </Button>
+      </View>
+    );
+  }
+
+  if (notCloned) {
+    return (
+      <View className="items-center px-8 py-10">
+        <Ionicons name="folder-outline" size={36} color="#9ca3af" />
+        <Text className="mt-2 text-center text-sm font-semibold text-gray-700">Clone required</Text>
+        <Text className="mt-1 text-center text-xs text-gray-500">
+          This repository has not been cloned to this device yet.
+        </Text>
       </View>
     );
   }
