@@ -109,17 +109,9 @@ async function getRepoReader(
     if (!cloned) {
       await GitFsService.cloneExclusive({ repoPath, branch, token });
     } else {
-      // Phase 5: fast-forward instead of bare fetch so local unpushed commits
-      // can't be silently shadowed by stale reconcile. When the local branch
-      // has diverged we now keep going against `origin/<branch>` instead of
-      // throwing (#629) — the user still sees the freshest remote state in
-      // their notes list while their unpushed local commits stay safely in
-      // the clone, and the conflict resolver / banner separately drives the
-      // merge UI.
       const result = await GitFsService.pullWithFastForward({ repoPath, branch, token });
       if (!result.ok) {
         if (result.reason === 'diverged') {
-          // Read against origin so the user keeps seeing remote changes.
           const remoteRefName = `refs/remotes/origin/${branch}`;
           return {
             mode,
@@ -129,39 +121,35 @@ async function getRepoReader(
           };
         }
         const errorMsg = result.error ?? '';
-const isMissingObject = /Could not find object|not foundobject|NotFoundError|Packfile trailer mismatch/i.test(errorMsg);
-                if (isMissingObject) {
-                  console.warn(`[RepoPullService] clone appears corrupted (${errorMsg}), re-cloning...`);
-                  // Check for local commits before removing - don't lose unpushed work
-                  const hasLocalCommits = await hasUnpushedCommits(repoPath, branch);
-                  if (hasLocalCommits) {
-                    throw new Error(
-                      `Clone corruption detected in ${repoPath}@${branch} with unpushed local commits. ` +
-                      `Please push your changes or reset before continuing.`,
-                    );
-                  }
-                  await GitFsService.removeRepo({ repoPath });
-                  await GitFsService.cloneExclusive({ repoPath, branch, token });
-                  return {
-                    mode,
-                    listTree: () => GitFsService.listTree({ repoPath, ref: branch }),
-                    readFile: (path: string) =>
-                      GitFsService.readFile({ repoPath, ref: branch, filepath: path }),
-                  };
-                }
-                // Diverged pulls are resolved above (conflict surface), so
-                // everything reaching here is transient — retry beats advice.
-                const detail = result.error ? ` — ${result.error}` : '';
-                throw new Error(
-                  `Local repo ${repoPath}@${branch} pull failed (${result.reason}${detail}). Will retry automatically.`,
-                );
+        const isMissingObject = /Could not find object|not foundobject|NotFoundError|Packfile trailer mismatch/i.test(errorMsg);
+        if (isMissingObject) {
+          console.warn(`[RepoPullService] clone appears corrupted (${errorMsg}), re-cloning...`);
+          const hasLocalCommits = await hasUnpushedCommits(repoPath, branch);
+          if (hasLocalCommits) {
+            throw new Error(
+              `Clone corruption detected in ${repoPath}@${branch} with unpushed local commits. ` +
+              `Please push your changes or reset before continuing.`,
+            );
+          }
+          await GitFsService.removeRepo({ repoPath });
+          await GitFsService.cloneExclusive({ repoPath, branch, token });
+          return {
+            mode,
+            listTree: () => GitFsService.listTree({ repoPath, ref: branch }),
+            readFile: (path: string) =>
+              GitFsService.readFile({ repoPath, ref: branch, filepath: path }),
+          };
+        }
+        const detail = result.error ? ` — ${result.error}` : '';
+        throw new Error(
+          `Local repo ${repoPath}@${branch} pull failed (${result.reason}${detail}). Will retry automatically.`,
+        );
       }
     }
     return {
       mode,
-      listTree: () => handleCorruptionErrors(() => GitFsService.listTree({ repoPath, ref: branch }), repoPath, branch, token),
-      readFile: (path: string) =>
-        handleCorruptionErrors(() => GitFsService.readFile({ repoPath, ref: branch, filepath: path }), repoPath, branch, token),
+      listTree: () => GitHubService.getTreeRecursiveOrThrow(owner, repo, branch),
+      readFile: (path: string) => GitHubService.getFileContent(owner, repo, path, branch),
     };
   }
   if (FEATURE_USE_MULTI_HOST_WRITE) {
