@@ -11,6 +11,7 @@ import { parseRepoPath } from '../utils/gitPathParser';
 import { fetchGitHubDefaultBranch, fetchGitLabDefaultBranch } from './git/branchResolver';
 import type { GitHostProvider } from './git/GitHost';
 import { getGitHostService } from './git/gitHostFactory';
+import { getActiveGitHost } from './git/activeHost';
 
 export interface GitRepository {
   id: string;
@@ -52,13 +53,17 @@ export class GitService {
   ): Promise<GitRepository> {
     try {
       const repoName = name || path.split('/').pop() || path;
+      // Use the active host's token so private repos authenticate consistently
+      // throughout the addRepository flow (preflight + branch resolution).
+      const activeHost = await getActiveGitHost();
+      const token = activeHost?.token ?? null;
       let branch: string | undefined;
       if (provider === 'gitlab') {
-        branch = (await fetchGitLabDefaultBranch(path)) ?? undefined;
+        branch = (await fetchGitLabDefaultBranch(path, token)) ?? undefined;
       } else if (provider === 'github') {
-        branch = (await fetchGitHubDefaultBranch(path)) ?? undefined;
+        branch = (await fetchGitHubDefaultBranch(path, token)) ?? undefined;
       } else {
-        branch = (await fetchGitHubDefaultBranch(path)) ?? undefined;
+        branch = (await fetchGitHubDefaultBranch(path, token)) ?? undefined;
       }
       const repo: GitRepository = {
         id: `${provider}:${Date.now()}`,
