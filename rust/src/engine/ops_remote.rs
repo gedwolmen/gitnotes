@@ -31,11 +31,9 @@ pub fn clone_repo(
     source: Option<&CredentialSource>,
     on_progress: impl FnMut(ProgressEvent) + 'static,
 ) -> Result<()> {
-    if dest.join(".git").exists() {
-        return Err(EngineError::Invalid(format!(
-            "destination {} already contains a repository",
-            dest.display()
-        )));
+    // Remove any pre-existing directory so clone starts clean.
+    if dest.exists() {
+        std::fs::remove_dir_all(dest)?;
     }
     if let Some(parent) = dest.parent() {
         std::fs::create_dir_all(parent)?;
