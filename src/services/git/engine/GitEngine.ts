@@ -13,43 +13,8 @@
 
 import { requireNativeModule, type EventSubscription } from 'expo-modules-core';
 
-// Stub for missing auth modules
-const CredentialStore = {
-  save: async (_repoId: string, _credential: Credential) => {},
-  get: async (_repoId: string) => null as Credential | null,
-  delete: async (_repoId: string) => {},
-};
-type Credential = { kind: string; username?: string; privateKey?: string; publicKey?: string | null; passphrase?: string | null; token?: string };
-
-// Stub types from ../../../../modules/GitEngine
-type Author = { name: string; email: string };
-type BranchInfo = { name: string; isCurrent: boolean; isRemote?: boolean; upstream?: string; ahead?: number; behind?: number };
-type CommitInfo = { id: string; message: string; author: Author; timestamp: number; shortId?: string; summary?: string; parentCount: number; authorTime: number; authorName?: string; authorEmail?: string };
-type ConflictBlobs = { ours: string; theirs: string; base: string };
-type ConflictEntry = { path: string; kind: string };
-type ConflictFile = { path: string; status: string };
-type DiffLine = { content: string; type: string; origin?: string; index: number; newLineno: number; oldLineno: number };
-type DiffLineOrigin = string;
-type FileDiff = { oldPath: string; newPath: string; hunks: unknown[]; path: string; added?: number; deleted?: number; isBinary?: boolean; lines: DiffLine[]; staged?: boolean };
-type FileStatus = { path: string; status: string; staged?: boolean };
-type FileStatusKind = string;
-type GeneratedKey = { publicKey: string; privateKey: string };
-type GitEngineError = { message: string; corruption?: boolean };
-type GitProgressEvent = { phase: string; loaded: number; total: number; kind?: string; received: number; percent: number };
-type GitProgressKind = string;
-type HunkSelection = { oldStart: number; oldLines: number; newStart: number; newLines: number };
-type NativeCredential = { kind: string; username?: string; privateKey?: string; publicKey?: string | null; passphrase?: string | null; password?: string };
-type PullKind = string;
-type PullResult = { ok: boolean; error?: string };
-type PushIntegrateKind = string;
-type PushIntegrateResult = { ok: boolean; error?: string; kind?: string; message: string; conflicts: { path: string }[]; pushed: number; integrate?: string; integrated?: string };
-type PushResult = { ok: boolean; error?: string };
-type RemoteInfo = { name: string; url: string; fetchSpecs: string[]; pushSpecs: string[] };
-type RepairReport = { corrupted: string[]; repaired: string[]; isHealthy: boolean; unrecoverable: string[]; conflicts: string[] };
-type RepoInfo = { path: string; branch: string; currentBranch: string; totalCommits: number; isClean: boolean };
-type RepoStatus = { branch: string; branches: BranchInfo[]; ahead: number; behind: number; currentBranch: string };
-
-const GitEngineModule = requireNativeModule<{
+// Null when native module is not available (e.g., not yet built, or running in Expo Go)
+let GitEngineModule: {
   version(): Promise<string>;
   engineName(): Promise<string>;
   isRepoLocked(path: string): Promise<boolean>;
@@ -95,7 +60,49 @@ const GitEngineModule = requireNativeModule<{
   repairRepo(path: string): Promise<RepairReport>;
   backupCorruptRepo(path: string): Promise<string>;
   addListener(eventName: string, listener: (...args: unknown[]) => void): EventSubscription;
-}>('GitEngine');
+} | null = null;
+
+try {
+  GitEngineModule = requireNativeModule<typeof GitEngineModule>('GitEngine');
+} catch (e) {
+  console.warn('[GitEngine] Native module not available, using stub implementation');
+}
+
+// Stub for missing auth modules
+const CredentialStore = {
+  save: async (_repoId: string, _credential: Credential) => {},
+  get: async (_repoId: string) => null as Credential | null,
+  delete: async (_repoId: string) => {},
+};
+type Credential = { kind: string; username?: string; privateKey?: string; publicKey?: string | null; passphrase?: string | null; token?: string };
+
+// Stub types from ../../../../modules/GitEngine
+type Author = { name: string; email: string };
+type BranchInfo = { name: string; isCurrent: boolean; isRemote?: boolean; upstream?: string; ahead?: number; behind?: number };
+type CommitInfo = { id: string; message: string; author: Author; timestamp: number; shortId?: string; summary?: string; parentCount: number; authorTime: number; authorName?: string; authorEmail?: string };
+type ConflictBlobs = { ours: string; theirs: string; base: string };
+type ConflictEntry = { path: string; kind: string };
+type ConflictFile = { path: string; status: string };
+type DiffLine = { content: string; type: string; origin?: string; index: number; newLineno: number; oldLineno: number };
+type DiffLineOrigin = string;
+type FileDiff = { oldPath: string; newPath: string; hunks: unknown[]; path: string; added?: number; deleted?: number; isBinary?: boolean; lines: DiffLine[]; staged?: boolean };
+type FileStatus = { path: string; status: string; staged?: boolean };
+type FileStatusKind = string;
+type GeneratedKey = { publicKey: string; privateKey: string };
+type GitEngineError = { message: string; corruption?: boolean };
+type GitProgressEvent = { phase: string; loaded: number; total: number; kind?: string; received: number; percent: number };
+type GitProgressKind = string;
+type HunkSelection = { oldStart: number; oldLines: number; newStart: number; newLines: number };
+type NativeCredential = { kind: string; username?: string; privateKey?: string; publicKey?: string | null; passphrase?: string | null; password?: string };
+type PullKind = string;
+type PullResult = { ok: boolean; error?: string };
+type PushIntegrateKind = string;
+type PushIntegrateResult = { ok: boolean; error?: string; kind?: string; message: string; conflicts: { path: string }[]; pushed: number; integrate?: string; integrated?: string };
+type PushResult = { ok: boolean; error?: string };
+type RemoteInfo = { name: string; url: string; fetchSpecs: string[]; pushSpecs: string[] };
+type RepairReport = { corrupted: string[]; repaired: string[]; isHealthy: boolean; unrecoverable: string[]; conflicts: string[] };
+type RepoInfo = { path: string; branch: string; currentBranch: string; totalCommits: number; isClean: boolean };
+type RepoStatus = { branch: string; branches: BranchInfo[]; ahead: number; behind: number; currentBranch: string };
 
 export type {
   Author,
@@ -136,7 +143,11 @@ function normalizeError(error: unknown): GitEngineError {
   return normalized;
 }
 
-async function run<T>(op: () => Promise<T>): Promise<T> {
+async function run<T>(op: () => Promise<T>, fallback: T): Promise<T> {
+  if (!GitEngineModule) {
+    console.warn('[GitEngine] Native module unavailable, returning fallback');
+    return fallback;
+  }
   try {
     return await op();
   } catch (error) {
@@ -145,11 +156,13 @@ async function run<T>(op: () => Promise<T>): Promise<T> {
 }
 
 export async function version(): Promise<string> {
-  return run(() => GitEngineModule.version());
+  if (!GitEngineModule) return '0.0.0-unavailable';
+  return run(() => GitEngineModule!.version(), '0.0.0-unavailable');
 }
 
 export async function engineName(): Promise<string> {
-  return run(() => GitEngineModule.engineName());
+  if (!GitEngineModule) return 'stub';
+  return run(() => GitEngineModule!.engineName(), 'stub');
 }
 
 /** Map an app-level `Credential` to the native credential shape. */
@@ -184,24 +197,28 @@ export function toNativeCredential(credential: Credential): NativeCredential {
  */
 export async function setCredential(repoId: string, credential: Credential): Promise<void> {
   await CredentialStore.save(repoId, credential);
-  await run(() => GitEngineModule.setCredential(repoId, toNativeCredential(credential)));
+  if (!GitEngineModule) return;
+  return run(() => GitEngineModule!.setCredential(repoId, toNativeCredential(credential)), undefined);
 }
 
 /** Remove the credential for `repoId` from the store and the engine map. */
 export async function clearCredential(repoId: string): Promise<void> {
   await CredentialStore.delete(repoId);
-  await run(() => GitEngineModule.clearCredential(repoId));
+  if (!GitEngineModule) return;
+  await run(() => GitEngineModule!.clearCredential(repoId), undefined);
 }
 
 /** Clear ONLY the engine's in-memory credential map (the secure-store copy
  * stays, so the next op re-seeds it). */
 export async function clearEngineCredential(repoId: string): Promise<void> {
-  await run(() => GitEngineModule.clearCredential(repoId));
+  if (!GitEngineModule) return;
+  await run(() => GitEngineModule!.clearCredential(repoId), undefined);
 }
 
 /** Read the credential currently registered for `repoId` (native map). */
 export async function getCredential(repoId: string): Promise<NativeCredential | null> {
-  return run(() => GitEngineModule.getCredential(repoId));
+  if (!GitEngineModule) return null;
+  return run(() => GitEngineModule!.getCredential(repoId), null);
 }
 
 /**
@@ -210,7 +227,10 @@ export async function getCredential(repoId: string): Promise<NativeCredential | 
  * to add to a provider plus the encrypted private key for storage.
  */
 export async function generateSshKey(passphrase?: string | null): Promise<GeneratedKey> {
-  return run(() => GitEngineModule.generateSshKey(passphrase ?? null));
+  if (!GitEngineModule) {
+    throw new Error('GitEngine native module unavailable: cannot generate SSH key');
+  }
+  return run(() => GitEngineModule!.generateSshKey(passphrase ?? null), { publicKey: '', privateKey: '' });
 }
 
 /**
@@ -219,10 +239,10 @@ export async function generateSshKey(passphrase?: string | null): Promise<Genera
  * to call `setCredential` again.
  */
 async function ensureCredentialForOp(repoId: string | null | undefined): Promise<void> {
-  if (!repoId) return;
+  if (!repoId || !GitEngineModule) return;
   const stored = await CredentialStore.get(repoId);
   if (stored) {
-    await GitEngineModule.setCredential(repoId, toNativeCredential(stored)).catch(() => undefined);
+    await GitEngineModule!.setCredential(repoId, toNativeCredential(stored)).catch(() => undefined);
   }
 }
 
@@ -230,56 +250,78 @@ async function ensureCredentialForOp(repoId: string | null | undefined): Promise
 export function addEngineProgressListener(
   listener: (event: GitProgressEvent) => void,
 ): EventSubscription {
+  if (!GitEngineModule) {
+    return { remove: () => {} } as EventSubscription;
+  }
   return GitEngineModule.addListener('onEngineProgress', listener as (...args: unknown[]) => void);
 }
 
 /** Whether another op currently holds the flock for `repoPath`. */
 export async function isBusy(repoPath: string): Promise<boolean> {
-  return run(() => GitEngineModule.isRepoLocked(repoPath));
+  if (!GitEngineModule) return false;
+  return run(() => GitEngineModule!.isRepoLocked(repoPath), false);
 }
 
 export async function clone(url: string, dest: string, repoId?: string | null): Promise<string> {
+  if (!GitEngineModule) {
+    throw new Error('GitEngine native module unavailable: cannot clone');
+  }
   await ensureCredentialForOp(repoId);
-  return run(() => GitEngineModule.clone(url, dest, repoId ?? null));
+  return run(() => GitEngineModule!.clone(url, dest, repoId ?? null), '');
 }
 
 /** Initialize a new repo (`bare = true` creates a push-ready local remote). */
 export async function initRepo(repoPath: string, bare: boolean): Promise<void> {
-  return run(() => GitEngineModule.initRepo(repoPath, bare));
+  if (!GitEngineModule) {
+    throw new Error('GitEngine native module unavailable: cannot init repo');
+  }
+  return run(() => GitEngineModule!.initRepo(repoPath, bare), undefined);
 }
 
 export async function removeRepo(repoPath: string): Promise<void> {
-  return run(() => GitEngineModule.removeRepo(repoPath));
+  if (!GitEngineModule) return;
+  return run(() => GitEngineModule!.removeRepo(repoPath), undefined);
 }
 
 export async function status(repoId: string, repoPath: string): Promise<RepoStatus> {
-  return run(() => GitEngineModule.repoStatus(repoId, repoPath));
+  if (!GitEngineModule) {
+    return { branch: '', branches: [], ahead: 0, behind: 0, currentBranch: '' };
+  }
+  return run(() => GitEngineModule!.repoStatus(repoId, repoPath), { branch: '', branches: [], ahead: 0, behind: 0, currentBranch: '' });
 }
 
 export const repoStatus = status;
 
 export async function statuses(repoPath: string): Promise<FileStatus[]> {
-  return run(() => GitEngineModule.listStatuses(repoPath));
+  if (!GitEngineModule) return [];
+  return run(() => GitEngineModule!.listStatuses(repoPath), []);
 }
 
 export async function diffAll(repoPath: string): Promise<FileDiff[]> {
-  return run(() => GitEngineModule.diffAll(repoPath));
+  if (!GitEngineModule) return [];
+  return run(() => GitEngineModule!.diffAll(repoPath), []);
 }
 
 export async function diffFile(repoPath: string, filePath: string): Promise<FileDiff> {
-  return run(() => GitEngineModule.diffFile(repoPath, filePath));
+  if (!GitEngineModule) {
+    throw new Error('GitEngine native module unavailable: cannot diff file');
+  }
+  return run(() => GitEngineModule!.diffFile(repoPath, filePath), { oldPath: '', newPath: '', hunks: [], path: '', lines: [] });
 }
 
 export async function stage(repoPath: string, paths: string[]): Promise<void> {
-  return run(() => GitEngineModule.stagePaths(repoPath, paths));
+  if (!GitEngineModule) return;
+  return run(() => GitEngineModule!.stagePaths(repoPath, paths), undefined);
 }
 
 export async function unstage(repoPath: string, paths: string[]): Promise<void> {
-  return run(() => GitEngineModule.unstagePaths(repoPath, paths));
+  if (!GitEngineModule) return;
+  return run(() => GitEngineModule!.unstagePaths(repoPath, paths), undefined);
 }
 
 export async function remove(repoPath: string, paths: string[], keepWorktree = false): Promise<void> {
-  return run(() => GitEngineModule.removePaths(repoPath, paths, keepWorktree));
+  if (!GitEngineModule) return;
+  return run(() => GitEngineModule!.removePaths(repoPath, paths, keepWorktree), undefined);
 }
 
 /** LINE-LEVEL PARTIAL STAGING: stage only the selected diff lines. */
@@ -288,21 +330,27 @@ export async function stageFileLines(
   filePath: string,
   hunks: HunkSelection[],
 ): Promise<void> {
-  return run(() => GitEngineModule.stageFileLines(repoPath, filePath, hunks));
+  if (!GitEngineModule) return;
+  return run(() => GitEngineModule!.stageFileLines(repoPath, filePath, hunks), undefined);
 }
 
 /** Create a commit from the staged index with `author` as identity. */
 export async function commit(repoPath: string, message: string, author: Author): Promise<CommitInfo> {
-  return run(() => GitEngineModule.commit(repoPath, message, author.name, author.email));
+  if (!GitEngineModule) {
+    throw new Error('GitEngine native module unavailable: cannot commit');
+  }
+  return run(() => GitEngineModule!.commit(repoPath, message, author.name, author.email), { id: '', message: '', author: { name: '', email: '' }, timestamp: 0, parentCount: 0, authorTime: 0 });
 }
 
 export async function log(repoPath: string, limit = 50): Promise<CommitInfo[]> {
-  return run(() => GitEngineModule.recentCommits(repoPath, limit));
+  if (!GitEngineModule) return [];
+  return run(() => GitEngineModule!.recentCommits(repoPath, limit), []);
 }
 
 /** Per-file diff of one commit against its first parent (`git show`-style). */
 export async function commitDiff(repoPath: string, commitId: string): Promise<FileDiff[]> {
-  return run(() => GitEngineModule.commitDiff(repoPath, commitId));
+  if (!GitEngineModule) return [];
+  return run(() => GitEngineModule!.commitDiff(repoPath, commitId), []);
 }
 
 /**
@@ -310,12 +358,18 @@ export async function commitDiff(repoPath: string, commitId: string): Promise<Fi
  * op while tracked files carry staged/unstaged changes (untracked survive).
  */
 export async function checkoutCommit(repoPath: string, commitId: string): Promise<void> {
-  return run(() => GitEngineModule.checkoutCommit(repoPath, commitId));
+  if (!GitEngineModule) {
+    throw new Error('GitEngine native module unavailable: cannot checkout commit');
+  }
+  return run(() => GitEngineModule!.checkoutCommit(repoPath, commitId), undefined);
 }
 
 /** Move HEAD to `commitId`, keeping the index + working tree (`git reset --soft`). */
 export async function resetSoft(repoPath: string, commitId: string): Promise<void> {
-  return run(() => GitEngineModule.resetSoft(repoPath, commitId));
+  if (!GitEngineModule) {
+    throw new Error('GitEngine native module unavailable: cannot reset soft');
+  }
+  return run(() => GitEngineModule!.resetSoft(repoPath, commitId), undefined);
 }
 
 /**
@@ -327,17 +381,23 @@ export async function revertCommit(
   commitId: string,
   author: Author,
 ): Promise<CommitInfo> {
+  if (!GitEngineModule) {
+    throw new Error('GitEngine native module unavailable: cannot revert commit');
+  }
   return run(() =>
-    GitEngineModule.revertCommit(repoPath, commitId, author.name, author.email),
+    GitEngineModule!.revertCommit(repoPath, commitId, author.name, author.email),
+    { id: '', message: '', author: { name: '', email: '' }, timestamp: 0, parentCount: 0, authorTime: 0 },
   );
 }
 
 export async function conflicts(repoPath: string): Promise<ConflictEntry[]> {
-  return run(() => GitEngineModule.getConflicts(repoPath));
+  if (!GitEngineModule) return [];
+  return run(() => GitEngineModule!.getConflicts(repoPath), []);
 }
 
 export async function resolveConflict(repoPath: string, filePath: string): Promise<void> {
-  return run(() => GitEngineModule.resolveConflict(repoPath, filePath));
+  if (!GitEngineModule) return;
+  return run(() => GitEngineModule!.resolveConflict(repoPath, filePath), undefined);
 }
 
 /**
@@ -346,7 +406,10 @@ export async function resolveConflict(repoPath: string, filePath: string): Promi
  * conflict content.
  */
 export async function getConflictBlobs(repoPath: string, filePath: string): Promise<ConflictBlobs> {
-  return run(() => GitEngineModule.getConflictBlobs(repoPath, filePath));
+  if (!GitEngineModule) {
+    throw new Error('GitEngine native module unavailable: cannot get conflict blobs');
+  }
+  return run(() => GitEngineModule!.getConflictBlobs(repoPath, filePath), { ours: '', theirs: '', base: '' });
 }
 
 /**
@@ -355,7 +418,8 @@ export async function getConflictBlobs(repoPath: string, filePath: string): Prom
  * the file staged and `conflicts()` no longer lists it.
  */
 export async function markConflictResolved(repoPath: string, filePath: string): Promise<void> {
-  return run(() => GitEngineModule.markConflictResolved(repoPath, filePath));
+  if (!GitEngineModule) return;
+  return run(() => GitEngineModule!.markConflictResolved(repoPath, filePath), undefined);
 }
 
 export async function fetch(
@@ -363,8 +427,11 @@ export async function fetch(
   remoteName = 'origin',
   repoId?: string | null,
 ): Promise<void> {
+  if (!GitEngineModule) {
+    throw new Error('GitEngine native module unavailable: cannot fetch');
+  }
   await ensureCredentialForOp(repoId);
-  return run(() => GitEngineModule.fetch(repoPath, remoteName, repoId ?? null));
+  return run(() => GitEngineModule!.fetch(repoPath, remoteName, repoId ?? null), undefined);
 }
 
 export async function pull(
@@ -372,8 +439,11 @@ export async function pull(
   remoteName = 'origin',
   repoId?: string | null,
 ): Promise<PullResult> {
+  if (!GitEngineModule) {
+    return { ok: false, error: 'GitEngine native module unavailable' };
+  }
   await ensureCredentialForOp(repoId);
-  return run(() => GitEngineModule.pull(repoPath, remoteName, repoId ?? null));
+  return run(() => GitEngineModule!.pull(repoPath, remoteName, repoId ?? null), { ok: false, error: 'unavailable' });
 }
 
 /**
@@ -386,8 +456,11 @@ export async function push(
   remoteName = 'origin',
   repoId?: string | null,
 ): Promise<PushResult> {
+  if (!GitEngineModule) {
+    return { ok: false, error: 'GitEngine native module unavailable' };
+  }
   await ensureCredentialForOp(repoId);
-  return run(() => GitEngineModule.push(repoPath, remoteName, repoId ?? null, false));
+  return run(() => GitEngineModule!.push(repoPath, remoteName, repoId ?? null, false), { ok: false, error: 'unavailable' });
 }
 
 /**
@@ -403,12 +476,19 @@ export async function pushWithIntegrate(
   remoteName = 'origin',
   repoId?: string | null,
 ): Promise<PushIntegrateResult> {
+  if (!GitEngineModule) {
+    return { ok: false, error: 'GitEngine native module unavailable', message: '', conflicts: [], pushed: 0 };
+  }
   await ensureCredentialForOp(repoId);
-  return run(() => GitEngineModule.pushWithIntegrate(repoPath, remoteName, repoId ?? null));
+  return run(
+    () => GitEngineModule!.pushWithIntegrate(repoPath, remoteName, repoId ?? null),
+    { ok: false, error: 'unavailable', message: '', conflicts: [], pushed: 0 },
+  );
 }
 
 export async function listBranches(repoPath: string, remoteName = 'origin'): Promise<BranchInfo[]> {
-  return run(() => GitEngineModule.listBranches(repoPath, remoteName));
+  if (!GitEngineModule) return [];
+  return run(() => GitEngineModule!.listBranches(repoPath, remoteName), []);
 }
 
 export async function createBranch(
@@ -416,7 +496,10 @@ export async function createBranch(
   name: string,
   source?: string,
 ): Promise<BranchInfo> {
-  return run(() => GitEngineModule.createBranch(repoPath, name, source ?? null));
+  if (!GitEngineModule) {
+    throw new Error('GitEngine native module unavailable: cannot create branch');
+  }
+  return run(() => GitEngineModule!.createBranch(repoPath, name, source ?? null), { name: '', isCurrent: false });
 }
 
 export async function checkoutBranch(
@@ -424,11 +507,15 @@ export async function checkoutBranch(
   name: string,
   remoteName = 'origin',
 ): Promise<void> {
-  return run(() => GitEngineModule.checkoutBranch(repoPath, name, remoteName));
+  if (!GitEngineModule) {
+    throw new Error('GitEngine native module unavailable: cannot checkout branch');
+  }
+  return run(() => GitEngineModule!.checkoutBranch(repoPath, name, remoteName), undefined);
 }
 
 export async function deleteBranch(repoPath: string, name: string): Promise<void> {
-  return run(() => GitEngineModule.deleteBranch(repoPath, name));
+  if (!GitEngineModule) return;
+  return run(() => GitEngineModule!.deleteBranch(repoPath, name), undefined);
 }
 
 export async function renameBranch(
@@ -436,32 +523,47 @@ export async function renameBranch(
   name: string,
   newName: string,
 ): Promise<BranchInfo> {
-  return run(() => GitEngineModule.renameBranch(repoPath, name, newName));
+  if (!GitEngineModule) {
+    throw new Error('GitEngine native module unavailable: cannot rename branch');
+  }
+  return run(() => GitEngineModule!.renameBranch(repoPath, name, newName), { name: '', isCurrent: false });
 }
 
 export async function listRemotes(repoPath: string): Promise<RemoteInfo[]> {
-  return run(() => GitEngineModule.listRemotes(repoPath));
+  if (!GitEngineModule) return [];
+  return run(() => GitEngineModule!.listRemotes(repoPath), []);
 }
 
 export async function addRemote(repoPath: string, name: string, url: string): Promise<void> {
-  return run(() => GitEngineModule.addRemote(repoPath, name, url));
+  if (!GitEngineModule) {
+    throw new Error('GitEngine native module unavailable: cannot add remote');
+  }
+  return run(() => GitEngineModule!.addRemote(repoPath, name, url), undefined);
 }
 
 export async function removeRemote(repoPath: string, name: string): Promise<void> {
-  return run(() => GitEngineModule.removeRemote(repoPath, name));
+  if (!GitEngineModule) return;
+  return run(() => GitEngineModule!.removeRemote(repoPath, name), undefined);
 }
 
 export async function setRemoteUrl(repoPath: string, name: string, url: string): Promise<void> {
-  return run(() => GitEngineModule.setRemoteUrl(repoPath, name, url));
+  if (!GitEngineModule) return;
+  return run(() => GitEngineModule!.setRemoteUrl(repoPath, name, url), undefined);
 }
 
 export async function repoInfo(repoPath: string): Promise<RepoInfo> {
-  return run(() => GitEngineModule.repoInfo(repoPath));
+  if (!GitEngineModule) {
+    throw new Error('GitEngine native module unavailable: cannot get repo info');
+  }
+  return run(() => GitEngineModule!.repoInfo(repoPath), { path: '', branch: '', currentBranch: '', totalCommits: 0, isClean: true });
 }
 
 /** Repair a corrupted repository. Never auto-runs. */
 export async function repairRepo(repoPath: string): Promise<RepairReport> {
-  return run(() => GitEngineModule.repairRepo(repoPath));
+  if (!GitEngineModule) {
+    throw new Error('GitEngine native module unavailable: cannot repair repo');
+  }
+  return run(() => GitEngineModule!.repairRepo(repoPath), { corrupted: [], repaired: [], isHealthy: false, unrecoverable: [], conflicts: [] });
 }
 
 const DATA_LOSS_CONFIRMATION =
@@ -485,7 +587,10 @@ export async function reclone(
     error.corruption = false;
     throw error;
   }
-  const backupPath = await run(() => GitEngineModule.backupCorruptRepo(repoPath));
-  await run(() => GitEngineModule.clone(url, repoPath));
+  if (!GitEngineModule) {
+    throw new Error('GitEngine native module unavailable: cannot reclone');
+  }
+  const backupPath = await run(() => GitEngineModule!.backupCorruptRepo(repoPath), '');
+  await run(() => GitEngineModule!.clone(url, repoPath), '');
   return backupPath;
 }

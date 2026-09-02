@@ -136,7 +136,7 @@ async function runImport(
     }
     return { ok: true, counts: await pullFromSingleRepo(repoPath, onProgress) };
   } catch (error) {
-    if (error instanceof CloneOutOfMemoryError) {
+    if (error instanceof (CloneOutOfMemoryError as any)) {
       return {
         ok: false,
         error: `${label}: out of memory while receiving packfile. Switch to API mode to sync without downloading history.`,

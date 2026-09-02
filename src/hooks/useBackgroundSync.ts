@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { startBackgroundSync, stopBackgroundSync } from '../services/BackgroundSyncService';
+import { BackgroundSyncService } from '../services/BackgroundSyncService';
 
 const SETTINGS_KEY = '@gitnotes:background_sync_enabled';
 
@@ -15,7 +15,7 @@ export function useBackgroundSync() {
       if (cancelled) return;
       setIsEnabled(enabled);
       if (enabled) {
-        await startBackgroundSync();
+        await BackgroundSyncService.start();
       }
     })();
     return () => {
@@ -28,9 +28,9 @@ export function useBackgroundSync() {
     setIsEnabled(next);
     await AsyncStorage.setItem(SETTINGS_KEY, String(next));
     if (next) {
-      await startBackgroundSync();
+      await BackgroundSyncService.start();
     } else {
-      await stopBackgroundSync();
+      await BackgroundSyncService.stop();
     }
   }, [isEnabled]);
 
