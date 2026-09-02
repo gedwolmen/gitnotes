@@ -8,7 +8,7 @@ import { useAIStore } from './aiStore';
 import { useNoteStore } from './noteStore';
 import { useCanvasStore } from './canvasStore';
 import { useTodoStore } from './todoStore';
-import type { GitHostProvider } from '../services/git/GitHost';
+import { GIT_HOST_LABELS, type GitHostProvider } from '../services/git/GitHost';
 import { getActiveGitHost } from '../services/git/activeHost';
 import {
   checkGitHubRepoAccess,
@@ -86,11 +86,27 @@ export const useRepoStore = create<RepoState & RepoActions>()((set, get) => ({
     }
     const repo = await GitService.addRepository(path, name, resolvedProvider, activeHost?.hostId);
 
-    GitFsService.cloneExclusive({
-      repoPath: repo.path,
-      branch: repo.branch ?? 'main',
-      token: activeHost?.token,
-    }).catch((err: unknown) => console.warn('[RepoStore] auto-clone failed:', err));
+    if (!activeHost) {
+      throw new Error(
+        `No connected ${GIT_HOST_LABELS[resolvedProvider] ?? 'host'} account. Add a ${GIT_HOST_LABELS[resolvedProvider] ?? 'host'} connection first.`,
+      );
+    }
+    if (!activeHost.token) {
+      throw new Error(
+        `No auth token for ${GIT_HOST_LABELS[resolvedProvider] ?? 'host'}. Re-connect your ${GIT_HOST_LABELS[resolvedProvider] ?? 'host'} account.`,
+      );
+    }
+
+    try {
+      await GitFsService.cloneExclusive({
+        repoPath: repo.path,
+        branch: repo.branch ?? 'main',
+        token: activeHost.token,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new Error(`Clone failed: ${msg}`);
+    }
 
     const updated = await StorageService.getSavedRepositories();
     set({ repositories: updated });
