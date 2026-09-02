@@ -21,10 +21,8 @@ import { TemplateRepoPreferenceService, type TemplateRepoPreference } from '../s
 import { serializeTemplate, templateSlug } from '../services/TemplateMarkdownService';
 import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import { hasUnpushedLocalCommits } from '../services/git/LocalGitWriter';
-import { SyncEngineService, type SyncEngineMode } from '../services/SyncEngineService';
+import { SyncEngineService } from '../services/SyncEngineService';
 import { GitFsService } from '../services/git/GitFsService';
-import { parseRepoPath } from '../utils/gitPathParser';
-import { LARGE_REPO_THRESHOLD_KB } from '../services/RepoImportService';
 import { cancelInflightGitHttp } from '../services/git/gitHttp';
 import { CloneMigrationService } from '../services/git/CloneMigrationService';
 import { LfsService } from '../services/git/lfs';
@@ -160,7 +158,6 @@ export default function SettingsScreen() {
   const [syncingRepo, setSyncingRepo] = useState<string | null>(null);
   const [templatesRepoPref, setTemplatesRepoPref] = useState<TemplateRepoPreference | null>(null);
   const [showTemplatesRepoPicker, setShowTemplatesRepoPicker] = useState(false);
-  const [syncModes, setSyncModes] = useState<Record<string, SyncEngineMode>>({});
   const [cloningRepo, setCloningRepo] = useState<string | null>(null);
   const [cloneProgress, setCloneProgress] = useState<CloneProgress | null>(null);
   const cloneAbortedRef = useRef(false);
@@ -175,20 +172,6 @@ export default function SettingsScreen() {
     TemplateRepoPreferenceService.get().then(setTemplatesRepoPref);
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const next: Record<string, SyncEngineMode> = {};
-      for (const repo of repositories) {
-        next[repo.path] = await SyncEngineService.getMode(repo.path);
-      }
-      if (!cancelled) setSyncModes(next);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [repositories]);
-
   const refreshLfsPending = useCallback(async (repoPaths: string[]) => {
     const next: Record<string, { count: number; bytes: number }> = {};
     for (const path of repoPaths) {
@@ -202,13 +185,12 @@ export default function SettingsScreen() {
   }, []);
 
   useEffect(() => {
-    const cloned = Object.entries(syncModes).filter(([, mode]) => mode === 'clone').map(([path]) => path);
-    if (cloned.length === 0) {
+    if (repositories.length === 0) {
       setLfsPending({});
       return;
     }
-    void refreshLfsPending(cloned);
-  }, [syncModes, refreshLfsPending]);
+    void refreshLfsPending(repositories.map((r) => r.path));
+  }, [repositories, refreshLfsPending]);
 
   const handlePasteToken = useCallback(async () => {
     try {
@@ -262,26 +244,6 @@ export default function SettingsScreen() {
     setCloningRepo(repo.path);
     cloneAbortedRef.current = false;
     setCloneProgress({ repoName: repo.name, phase: t('settings.clonePhasePreparing'), loaded: 0, total: null });
-    // Clone guard (#1037): a large repo OOMs Hermes natively during packfile
-    // download/indexing — `hermesvm: GCBase::oom` → SIGABRT, which JS cannot
-    // catch. Refuse clone-mode and keep API mode instead.
-    const parsed = parseRepoPath(repo.path);
-    if (parsed) {
-      const repoSizeKb = await GitHubService.getRepositorySize(parsed.owner, parsed.repo);
-      if (typeof repoSizeKb === 'number' && repoSizeKb > LARGE_REPO_THRESHOLD_KB) {
-        setCloningRepo(null);
-        setCloneProgress(null);
-        Alert.alert(
-          t('settings.largeRepoTitle'),
-          t('settings.largeRepoCloneBlockedBody', {
-            name: repo.name,
-            size: (repoSizeKb / 1024).toFixed(0),
-          }),
-          [{ text: t('common.ok') }],
-        );
-        return;
-      }
-    }
     const throttled = createThrottledEmitter((phase, loaded, total) => setCloneProgress({ repoName: repo.name, phase, loaded, total }));
     try {
       const token = (await AuthService.getToken()) ?? undefined;
@@ -303,8 +265,6 @@ export default function SettingsScreen() {
         await GitFsService.removeRepo({ repoPath: repo.path }).catch(() => undefined);
         return;
       }
-      await SyncEngineService.setMode(repo.path, 'clone');
-      setSyncModes((prev) => ({ ...prev, [repo.path]: 'clone' }));
       throttled.flush();
       setCloneProgress(null);
       void refreshLfsPending([repo.path]);
@@ -449,31 +409,6 @@ export default function SettingsScreen() {
     }
   }, [refreshLfsPending, t]);
 
-  const handleDisableCloneMode = useCallback((repo: GitRepository) => {
-    Alert.alert(t('settings.switchToApiTitle'), t('settings.switchToApiBody', { name: repo.name }), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('settings.switch'),
-        style: 'destructive',
-        onPress: async () => {
-          const branch = repo.branch ?? (await GitFsService.getCurrentBranch({ repoPath: repo.path }));
-          if (branch && (await hasUnpushedLocalCommits(repo.path, branch))) {
-            HapticService.error();
-            Alert.alert(
-              t('settings.unpushedCommitsTitle'),
-              t('settings.unpushedCommitsBody', { name: repo.name, branch }),
-            );
-            return;
-          }
-          await GitFsService.removeRepo({ repoPath: repo.path });
-          await SyncEngineService.setMode(repo.path, 'api');
-          setSyncModes((prev) => ({ ...prev, [repo.path]: 'api' }));
-          HapticService.success();
-        },
-      },
-    ]);
-  }, [t]);
-
   const handleSyncExistingTemplates = useCallback(async () => {
     if (!templatesRepoPref) return;
     const unsynced = useTemplateStore.getState().customTemplates.filter((template) => !template.filePath);
@@ -566,16 +501,12 @@ export default function SettingsScreen() {
     cloneAbortedRef.current = false;
     setCloneProgress({ repoName, phase: t('settings.clonePhasePreparing'), loaded: 0, total: null });
     const throttled = createThrottledEmitter((phase, loaded, total) => setCloneProgress({ repoName, phase, loaded, total }));
-    // Look up the size when the caller didn't supply one (manual add) so the
-    // large-repo guard in runImport can still refuse the clone (#1037).
-    const parsed = parseRepoPath(repoPath);
-    const resolvedSizeKb = repoSizeKb ?? (parsed ? await GitHubService.getRepositorySize(parsed.owner, parsed.repo) ?? undefined : undefined);
     const result = await importRepoAtAdd(repoPath, repoName, (phase, loaded, total) => {
       if (cloneAbortedRef.current) {
         throw new Error('CLONE_CANCELLED');
       }
       throttled.push(phase, loaded, total);
-    }, resolvedSizeKb);
+    });
     throttled.flush();
     setCloneProgress(null);
     if (cloneAbortedRef.current) {
@@ -589,24 +520,6 @@ export default function SettingsScreen() {
     }
     if (!result.ok) {
       HapticService.error();
-      if (result.largeRepo) {
-        Alert.alert(
-          t('settings.largeRepoTitle'),
-          result.error,
-          [
-            { text: t('common.cancel'), style: 'cancel' },
-            {
-              text: t('settings.useApi'),
-              onPress: async () => {
-                await SyncEngineService.setMode(repoPath, 'api');
-                setSyncModes((prev) => ({ ...prev, [repoPath]: 'api' }));
-                setShowRepoPickerModal(false);
-              },
-            },
-          ],
-        );
-        return 'failed';
-      }
       Alert.alert(
         t('settings.autoSyncFailedTitle'),
         result.error,
@@ -673,14 +586,6 @@ export default function SettingsScreen() {
           await addRepo(repo.full_name, repo.name);
         }
         HapticService.success();
-        // Large-repo default: add in API mode directly so no clone is ever
-        // attempted (native Hermes OOM on big packfiles — #1037). The repo
-        // picker's size is in KB; importRepoAfterAdd then runs the API path
-        // (pull only), never the clone path.
-        if (typeof repo.size === 'number' && repo.size > LARGE_REPO_THRESHOLD_KB) {
-          await SyncEngineService.setMode(repo.full_name, 'api');
-          setSyncModes((prev) => ({ ...prev, [repo.full_name]: 'api' }));
-        }
         await importRepoAfterAdd(repo.full_name, repo.name, repo.size);
       } catch (error) {
         if (error instanceof RepoAccessPreflightError && error.canRetry && !allowUnverifiedWrite) {
@@ -998,7 +903,6 @@ export default function SettingsScreen() {
         authState={authState}
         repositories={repositories}
         syncingRepo={syncingRepo}
-        syncModes={syncModes}
         cloningRepo={cloningRepo}
         templatesRepoPref={templatesRepoPref}
         isSyncingExistingTemplates={isSyncingExistingTemplates}
@@ -1036,8 +940,6 @@ export default function SettingsScreen() {
         onOpenRepoPicker={() => void openRepoPicker()}
         onSyncRepo={(repo) => void handleSyncRepo(repo)}
         onRemoveRepo={handleRemoveRepo}
-        onEnableCloneMode={(repo) => void handleEnableCloneMode(repo)}
-        onDisableCloneMode={handleDisableCloneMode}
         lfsPending={lfsPending}
         lfsDownloadingRepo={lfsDownloadingRepo}
         onDownloadLfsObjects={(repo) => void handleDownloadLfsObjects(repo)}

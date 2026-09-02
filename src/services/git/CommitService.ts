@@ -2,7 +2,6 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { parseRepoPath } from '../../utils/gitPathParser';
 import { makeGitFs as buildGitFs } from './gitFs';
 import { gitHttp } from './gitHttp';
-import { SyncEngineService } from '../SyncEngineService';
 import { LocalGitWriter, isCorruptionError } from './LocalGitWriter';
 import { getGitHostService } from './gitHostFactory';
 import type { GitHostUser } from './GitHost';
@@ -114,11 +113,6 @@ export class CommitService {
   static async commit(params: CommitParams): Promise<CommitResult> {
     const { repo, branch, filePath, content, message, delete: isDelete, prevFilePath } = params;
     const resolvedAuthor = params.author ?? (await resolveStageAuthor());
-
-    const mode = await SyncEngineService.getMode(repo);
-    if (mode === 'api') {
-      return { success: false, error: 'Use NoteSyncQueueService for api mode' };
-    }
 
     // Delete
     if (isDelete) {
