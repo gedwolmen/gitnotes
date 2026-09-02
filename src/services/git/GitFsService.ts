@@ -1,5 +1,6 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import { parseRepoPath } from '../../utils/gitPathParser';
+import { clone as nativeClone } from './engine/GitEngine';
 import { makeGitFs } from './gitFs';
 import { gitHttp } from './gitHttp';
 import { LfsService } from './lfs';
@@ -48,6 +49,8 @@ interface CloneOpts extends RepoLocator {
   token?: string;
   depth?: number;
   onProgress?: (phase: string, loaded: number, total: number | null) => void;
+  /** Passed to native engine for credential lookup. Omit to skip credential auth (public repos). */
+  repoId?: string;
 }
 
 interface FetchOpts extends RepoLocator {
@@ -257,41 +260,20 @@ export class GitFsService {
     const info = parseRepoPath(opts.repoPath);
     if (!info) throw new Error(`Invalid repo path: ${opts.repoPath}`);
 
-    const dir = repoDirVirtual(info.owner, info.repo);
     const fsRoot = clonesRoot();
     await FileSystem.makeDirectoryAsync?.(`${fsRoot}${info.owner}/`, { intermediates: true });
 
     await cleanCorruptedPackfiles(opts.repoPath);
 
-    // Retry clone once on packfile corruption. Memory pressure or partial
-    // downloads can leave the git library with a corrupt packfile; the
-    // streaming fix in gitHttp reduces the frequency dramatically but doesn't
-    // eliminate it entirely. One retry is sufficient for the vast majority of
-    // transient corruption; we cap at 1 to avoid retry storms (issue #790).
     const MAX_CLONE_RETRIES = 1;
     let lastError: unknown;
     for (let attempt = 0; attempt <= MAX_CLONE_RETRIES; attempt++) {
       try {
-        await git.clone({
-          fs: makeRepoFs(),
-          http: gitHttp,
-          dir,
-          url: authedRemote(info.owner, info.repo),
-          ref: opts.branch,
-          singleBranch: true,
-          depth: opts.depth ?? 1,
-          noCheckout: true,
-          onAuth: ensureToken(opts.token),
-          onProgress: opts.onProgress
-            ? (event: { phase: string; loaded: number; total: number | null }) => opts.onProgress!(event.phase, event.loaded, event.total ?? null)
-            : undefined,
-        });
-        await git.checkout({
-          fs: makeRepoFs(),
-          dir,
-          ref: opts.branch,
-          batchSize: 64,
-        });
+        await nativeClone(
+          authedRemote(info.owner, info.repo),
+          `${fsRoot}${info.owner}/${info.repo}`,
+          opts.repoId ?? null,
+        );
         lastError = undefined;
         break;
       } catch (cloneError) {
