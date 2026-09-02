@@ -597,7 +597,10 @@ export default function SettingsScreen() {
           Alert.alert(t('settings.repositoryAccessTitle'), error.message);
           return;
         }
-        Alert.alert(t('common.error'), t('settings.addRepoFailedBody'));
+        Alert.alert(
+          t('common.error'),
+          error instanceof Error ? error.message : String(error),
+        );
       } finally {
         setIsAddingRepoPath(null);
       }
@@ -635,7 +638,10 @@ export default function SettingsScreen() {
           Alert.alert(t('settings.repositoryAccessTitle'), error.message);
           return;
         }
-        Alert.alert(t('common.error'), t('settings.addRepoFailedBody'));
+        Alert.alert(
+          t('common.error'),
+          error instanceof Error ? error.message : String(error),
+        );
       } finally {
         setIsAddingRepoPath(null);
       }
