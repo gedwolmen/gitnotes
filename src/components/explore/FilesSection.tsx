@@ -56,7 +56,12 @@ export function FilesSection({ repo, active }: SectionProps) {
         files = treeEntries.map((e) => e.path);
       }
 
-      const entries = await GitEngine.statuses(repo.path);
+      let entries: FileStatus[] = [];
+      try {
+        entries = await GitEngine.statuses(repo.path);
+      } catch {
+        entries = [];
+      }
       const statuses: Record<string, FileStatus> = {};
       for (const entry of entries) statuses[entry.path] = entry;
       setData({ files, truncated, statuses });
