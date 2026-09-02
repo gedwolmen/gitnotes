@@ -3,9 +3,7 @@ import { GitRepository, GitService } from '../services/GitService';
 import { StorageService } from '../services/StorageService';
 import { TemplateRepoPreferenceService } from '../services/TemplateRepoPreferenceService';
 import { LastUsedRepoService } from '../services/LastUsedRepoService';
-import { SyncEngineService } from '../services/SyncEngineService';
 import { GitFsService } from '../services/git/GitFsService';
-import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import { useAIStore } from './aiStore';
 import { useNoteStore } from './noteStore';
 import { useCanvasStore } from './canvasStore';
@@ -87,6 +85,13 @@ export const useRepoStore = create<RepoState & RepoActions>()((set, get) => ({
       }
     }
     const repo = await GitService.addRepository(path, name, resolvedProvider, activeHost?.hostId);
+
+    GitFsService.cloneExclusive({
+      repoPath: repo.path,
+      branch: repo.branch ?? 'main',
+      token: activeHost?.token,
+    }).catch((err: unknown) => console.warn('[RepoStore] auto-clone failed:', err));
+
     const updated = await StorageService.getSavedRepositories();
     set({ repositories: updated });
     return repo;
@@ -106,18 +111,12 @@ export const useRepoStore = create<RepoState & RepoActions>()((set, get) => ({
       await LastUsedRepoService.clear();
     }
 
-    await SyncEngineService.clear(path);
-
-    if ((await SyncEngineService.getMode(path)) === 'clone') {
-      GitFsService.removeRepo({ repoPath: path }).catch(() => undefined);
-    }
+    GitFsService.removeRepo({ repoPath: path }).catch(() => undefined);
 
     const { chatRepoOwner, chatRepoName } = useAIStore.getState();
     if (chatRepoOwner && chatRepoName && `${chatRepoOwner}/${chatRepoName}` === path) {
       await useAIStore.getState().setChatRepo(null, null, 'main', null);
     }
-
-    await NoteSyncQueueService.purgeForRepo(path);
 
     set((state) => ({
       repositories: state.repositories.filter(

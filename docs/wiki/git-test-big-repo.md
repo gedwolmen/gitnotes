@@ -29,21 +29,6 @@ The local bare remote is a valid test setup — git-server semantics are identic
 
 **Read**: with local network, the git mechanics on a 429-file / 11MB working tree / 28-commit repo scale **linearly with payload**. No quadratic blowup. The 6-scenario suite completes in **~2.7 s total** — vs ~3.4 s per scenario on GitHub (network-bound).
 
-## API mode — 6 scenarios via Contents API (against `test-notes`)
-
-The big-payload API-mode tests use ~30–50 KB note bodies — representative of "long-form note" save sizes.
-
-| # | Scenario | Operation | Time | Cumulative |
-|---|---|---|---:|---:|
-| T1 | add-only (50 KB) | PUT | 1,767 ms | **1,767 ms** |
-| T2 | edit-only (50 KB) | PUT w/ sha | 2,106 ms | **2,106 ms** |
-| T3 | delete-only | DELETE | 740 ms | **740 ms** |
-| T4 | add+edit (2× 30 KB) | PUT add → PUT edit | 1,545 + 1,536 ms | **3,081 ms** |
-| T5 | edit+delete | PUT add → PUT edit → DELETE | 1,487 + 1,412 + 1,117 ms | **4,016 ms** |
-| T6 | add+edit+delete | PUT add → PUT edit → DELETE | 1,899 + 1,379 + 1,094 ms | **4,372 ms** |
-
-**Read**: API mode scales **linearly with payload** + REST round-trip count. 50 KB PUT ≈ 1.7–2.1 s; 30 KB PUT ≈ 1.5 s. Delete is payload-independent (~750–1.1 s, just the git commit side-effect on GitHub).
-
 ## Side-by-side: small vs big
 
 ### Clone mode (Mac native `git`, GitHub for small / local bare for big)
@@ -60,18 +45,6 @@ The big-payload API-mode tests use ~30–50 KB note bodies — representative of
 ¹ First push was fast because remote had no new commits to fetch+rebase; subsequent pushes include a 3-4 s fetch+rebase cycle from test-notes remote (which itself accumulated e2e commits during testing).
 
 **Interpretation**: the small-repo numbers on GitHub are **network-bound**, not git-mechanics-bound. The big-repo numbers on local bare prove the git pipeline handles 429 files / 11 MB / 28 commits in **300–700 ms per scenario**. The gap between small-on-GitHub and big-on-local is the network — not the file count.
-
-### API mode (against GitHub `test-notes` via Contents API)
-
-| # | Scenario | Small payload | Big payload (30-50 KB) | Δ |
-|---|---|---:|---:|---|
-| T1 | add | 1,563 ms | 1,767 ms | +13% |
-| T2 | edit | 1,067 ms | 2,106 ms | +97% |
-| T4 | add+edit | 2,341 ms | 3,081 ms | +32% |
-| T5 | edit+delete | ~1,500 ms | 4,016 ms | +168% |
-| T6 | add+edit+delete | ~3,000 ms | 4,372 ms | +46% |
-
-**Interpretation**: API mode cost grows with **payload size + round-trip count**, not with repo size. The repo size doesn't matter for the REST path — what matters is the file body length × number of mutations.
 
 ## Bulk operations on the big repo
 
@@ -95,11 +68,10 @@ Beyond the 12 scenarios:
 - **Tree walk** (`listTree`): O(files). 430 files in 66 ms.
 - **Blob read**: O(blob size). 645-byte note in 45 ms (including shell pipe).
 - **Commit + push (local bare)**: O(delta). Edit one line, push in 144 ms.
-- **API PUT/DELETE**: O(payload size × round-trips). 30-50 KB PUT ≈ 1.5-2.1 s.
+- **Clone push**: O(delta size). Single file edit + push in ~144 ms local.
 
 ## What scales linearly but visibly
 
-- **API combined scenarios**: each additional round-trip adds 0.7-1.5 s. T6 (3 round-trips × ~50 KB) ≈ 4.4 s — not surprising, that's 3 × GitHub server-side commit creation.
 - **Multiple sequential `commit + push` cycles in clone mode**: each adds ~250 ms (local bare). On GitHub this is ~3.5 s per push. The T5/T6 combined scenarios are bounded by the number of `git push` calls, not by file count.
 
 ## What would NOT scale well (not measured, would need simulator)
@@ -121,13 +93,13 @@ Created `stress-test` branch locally, made 50 commits, attempted `pull --rebase`
 
 ## Pass/fail summary
 
-| | Clone mode (big) | API mode (big) |
-|---|---|---|
-| 1. add-only | ✅ 479 ms | ✅ 1,767 ms |
-| 2. edit-only | ✅ 315 ms | ✅ 2,106 ms |
-| 3. delete-only | ✅ 360 ms | ✅ 740 ms |
-| 4. add+edit | ✅ 363 ms | ✅ 3,081 ms |
-| 5. edit+delete | ✅ 534 ms | ✅ 4,016 ms |
-| 6. add+edit+delete | ✅ 667 ms | ✅ 4,372 ms |
+| | Clone mode (big) |
+|---|---|
+| 1. add-only | ✅ 479 ms |
+| 2. edit-only | ✅ 315 ms |
+| 3. delete-only | ✅ 360 ms |
+| 4. add+edit | ✅ 363 ms |
+| 5. edit+delete | ✅ 534 ms |
+| 6. add+edit+delete | ✅ 667 ms |
 
-All 12 succeeded. The git mechanics scale linearly; the API mode scales linearly with payload + round-trip count. Neither shows quadratic blowup. The existing `perf/clone-speed` patches are the right strategy to keep the simulator path under the 10-min mark at this scale.
+All scenarios succeeded. The git mechanics scale linearly. The existing `perf/clone-speed` patches are the right strategy to keep the simulator path under the 10-min mark at this scale.

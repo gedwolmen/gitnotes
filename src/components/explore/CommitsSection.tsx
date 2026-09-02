@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, RefreshControl, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import { FlatList } from '@/components/ui/flat-list';
 import * as GitEngine from '@/services/git/engine/GitEngine';
 import type { CommitInfo } from '@/services/git/engine/GitEngine';
 import { GitFsService } from '@/services/git/GitFsService';
+import { Toast, ToastDescription, ToastTitle, useToast } from '@/components/ui/toast';
 import type { RootStackParamList } from '@/navigation/types';
 import { relativeTime, type SectionProps } from './exploreShared';
 
@@ -17,8 +18,10 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export function CommitsSection({ repo, active }: SectionProps) {
   const navigation = useNavigation<NavigationProp>();
+  const toast = useToast();
   const [commits, setCommits] = useState<CommitInfo[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [pushing, setPushing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notCloned, setNotCloned] = useState(false);
 
@@ -40,6 +43,64 @@ export function CommitsSection({ repo, active }: SectionProps) {
       setLoading(false);
     }
   }, [repo.localPath, repo.path]);
+
+  const handlePush = useCallback(async () => {
+    if (loading || pushing) return;
+    setPushing(true);
+    try {
+      const result = await GitEngine.pushWithIntegrate(repo.localPath, 'origin', repo.branch ?? 'main');
+      if (result.kind === 'Conflicts') {
+        const paths = result.conflicts.map((c: { path: string }) => c.path).join(', ');
+        Alert.alert(
+          'Merge Conflicts',
+          `The push diverged with conflicts in: ${paths || 'unknown files'}. Resolve them in the Conflicts section.`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Resolve',
+              onPress: () => navigation.navigate('ExploreConflict', { repoId: repo.id }),
+            },
+          ],
+        );
+      } else if (result.pushed) {
+        toast.show({
+          placement: 'top',
+          duration: 4200,
+          render: ({ id }: { id: string }) => (
+            <Toast action="success" nativeID={`commits-push-toast-${id}`}>
+              <ToastTitle>Pushed</ToastTitle>
+              <ToastDescription>{result.message}</ToastDescription>
+            </Toast>
+          ),
+        });
+        await load();
+      } else {
+        toast.show({
+          placement: 'top',
+          duration: 4200,
+          render: ({ id }: { id: string }) => (
+            <Toast action="error" nativeID={`commits-push-toast-${id}`}>
+              <ToastTitle>Push failed</ToastTitle>
+              <ToastDescription>{result.message}</ToastDescription>
+            </Toast>
+          ),
+        });
+      }
+    } catch (caught) {
+      toast.show({
+        placement: 'top',
+        duration: 4200,
+        render: ({ id }: { id: string }) => (
+          <Toast action="error" nativeID={`commits-push-toast-${id}`}>
+            <ToastTitle>Push failed</ToastTitle>
+            <ToastDescription>{caught instanceof Error ? caught.message : String(caught)}</ToastDescription>
+          </Toast>
+        ),
+      });
+    } finally {
+      setPushing(false);
+    }
+  }, [loading, pushing, repo.localPath, repo.branch, repo.id, navigation, toast]);
 
   useFocusEffect(
     useCallback(() => {
@@ -115,7 +176,21 @@ export function CommitsSection({ repo, active }: SectionProps) {
           <Text className="text-xs text-gray-500" testID="explore.commits.count">
             {commits ? `${commits.length} commit(s)` : 'Reading history…'}
           </Text>
-          {loading && <ActivityIndicator size="small" color="#7b8cde" />}
+          <View className="flex-row items-center gap-2">
+            {loading || pushing ? (
+              <ActivityIndicator size="small" color="#7b8cde" />
+            ) : (
+              <Pressable
+                onPress={() => void handlePush()}
+                disabled={pushing}
+                accessibilityRole="button"
+                accessibilityLabel="Push all commits"
+                className="rounded bg-blue-500 px-2 py-1"
+              >
+                <Text className="text-xs font-semibold text-white">Push</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
       }
       ListEmptyComponent={

@@ -2,11 +2,10 @@ import { GitHubService } from './GitHubService';
 import { StorageService } from './StorageService';
 import { ThoughtDump, createThoughtDump, serializeThoughtDump, parseThoughtDump } from '../models/ThoughtDump';
 import { parseRepoPath } from '../utils/gitPathParser';
-import { SyncEngineService } from './SyncEngineService';
+import { SyncEngineService, NoteSyncQueueService } from './syncStubs';
 import { resolveBranch } from './git/branchResolver';
 import { getGitHostService } from './git/gitHostFactory';
 import { FEATURE_USE_MULTI_HOST_WRITE } from './featureFlags';
-import { NoteSyncQueueService } from './NoteSyncQueueService';
 import type { GitHostProvider } from './git/GitHost';
 
 const THOUGHTS_DIR = 'thoughts/';

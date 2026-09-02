@@ -2,7 +2,7 @@ import * as BackgroundTask from 'expo-background-task';
 import * as TaskManager from 'expo-task-manager';
 import { GitHubService } from './GitHubService';
 import { StorageService } from './StorageService';
-import { NoteSyncQueueService } from './NoteSyncQueueService';
+import { NoteSyncQueueService } from './syncStubs';
 import { pullAllFromRepos } from './RepoPullService';
 import { GitSyncGate } from './git/GitSyncGate';
 import { NotificationService } from './NotificationService';

@@ -72,6 +72,19 @@ export function ChangesSection({ repo, active, onChanged }: SectionProps) {
     [repo.localPath, onChanged],
   );
 
+  const stageAll = useCallback(async () => {
+    if (!data?.statuses) return;
+    const unstaged = data.statuses.filter((s) => !s.staged);
+    if (unstaged.length === 0) return;
+    try {
+      await Promise.all(unstaged.map((s) => GitEngine.stage(repo.localPath, [s.path])));
+      onChanged();
+      setVersion((value) => value + 1);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    }
+  }, [data, repo.localPath, onChanged]);
+
   const renderItem = useCallback(
     ({ item }: { item: FileStatus }) => {
       const meta = STATUS_META[item.status];
@@ -157,7 +170,14 @@ export function ChangesSection({ repo, active, onChanged }: SectionProps) {
           <Text className="text-xs text-gray-500" testID="explore.changes.count">
             {data ? `${data.statuses.length} changed file(s)` : 'Reading status…'}
           </Text>
-          {loading && <ActivityIndicator size="small" color="#7b8cde" />}
+          <View className="flex-row items-center gap-2">
+            {data && data.statuses.some((s) => !s.staged) && (
+              <Button size="xs" variant="outline" onPress={() => void stageAll()}>
+                <ButtonText>Stage All</ButtonText>
+              </Button>
+            )}
+            {loading && <ActivityIndicator size="small" color="#7b8cde" />}
+          </View>
         </View>
       }
       ListEmptyComponent={

@@ -14,15 +14,15 @@
 | [Services](./services.md) | Service layer design and responsibilities |
 | [Development Guide](./development-guide.md) | Local setup, build, test, lint workflow |
 | [Testing Guide](./testing-guide.md) | Test patterns, mocking, CI configuration |
-| [E2E Sync Testing](./e2e-sync-testing.md) | E2E test harness: 6 scenarios × 2 modes, timing instrumentation, push-trigger verification |
+| [E2E Sync Testing](./e2e-sync-testing.md) | E2E test harness: clone mode scenarios, timing instrumentation, push-trigger verification |
 
 ### Architecture & sync engine
 
 | Page | Description |
 |------|-------------|
 | [Sync Engine](./sync-engine.md) | Git sync architecture, push model, error handling |
-| [Sync Engine Modes](./sync-engine-modes.md) | Per-repo clone vs API mode selection, defaults, switching, large-repo preflight |
-| [Sync Write Modes](./sync-write-modes.md) | Sync contract: clone commit-on-save + explicit push vs API write-through; blocking overlay; import-on-add |
+| [Sync Engine Modes](./sync-engine-modes.md) | Clone mode configuration, defaults, large-repo handling |
+| [Sync Write Modes](./sync-write-modes.md) | Sync contract: clone commit-on-save + push; blocking overlay; import-on-add |
 | [Clone-Perf Optimization](./clone-perf-optimization.md) | Five ordered patches closing the simulator freeze gap: `noCheckout` + batched full checkout, 3-concurrent-pull dedup, LFS-after-clone, UTF-8 fast path, depth-3 floor measurement flag |
 | [Git Core Hardening](./git-core-hardening.md) | git-core test-campaign fixes: binary decode integrity, case collisions, auth/preflight, API batch writes, pull/reconcile fixes (#876–#892) |
 
@@ -60,8 +60,8 @@
 
 | Page | Description |
 |------|-------------|
-| [Git Test E2E Report](./git-test-e2e-report.md) | Live round-trip timings against `test-notes` for all 12 scenarios (6 clone-mode + 6 API-mode) with per-action breakdown, syncTiming instrumentation seam, and Mac vs simulator scope |
-| [Git Test Big Repo](./git-test-big-repo.md) | Same 12-scenario matrix on a 429-file / 11MB / 28-commit synthetic repo (local bare remote) — linear scaling, no quadratic blowup; small-vs-big comparison table |
+| [Git Test E2E Report](./git-test-e2e-report.md) | Live round-trip timings against `test-notes` for clone mode scenarios with per-action breakdown, syncTiming instrumentation seam, and Mac vs simulator scope |
+| [Git Test Big Repo](./git-test-big-repo.md) | Clone mode scenarios on a 429-file / 11MB / 28-commit synthetic repo (local bare remote) — linear scaling, no quadratic blowup; small-vs-big comparison table |
 
 ## Quick Start
 

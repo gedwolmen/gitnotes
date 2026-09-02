@@ -5,7 +5,7 @@ import { GitHubService } from '../services/GitHubService';
 import { formatSyncError } from '../services/git/formatSyncError';
 import { deleteCanvasFromGitHub } from '../services/CanvasGitHubSyncService';
 import { gitOperationRegistry } from './gitOperationStore';
-import { SyncEngineService } from '../services/SyncEngineService';
+import { SyncEngineService } from '../services/syncStubs';
 import { CommitService } from '../services/git/CommitService';
 import { resolveDefaultFolder } from '../services/git/defaultsPolicy';
 

@@ -19,9 +19,8 @@ import { GitHubService, type GitHubRepository } from '../services/GitHubService'
 import { RepoFileSyncService } from '../services/RepoFileSyncService';
 import { TemplateRepoPreferenceService, type TemplateRepoPreference } from '../services/TemplateRepoPreferenceService';
 import { serializeTemplate, templateSlug } from '../services/TemplateMarkdownService';
-import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
+import { NoteSyncQueueService, SyncEngineService } from '../services/syncStubs';
 import { hasUnpushedLocalCommits } from '../services/git/LocalGitWriter';
-import { SyncEngineService } from '../services/SyncEngineService';
 import { GitFsService } from '../services/git/GitFsService';
 import { cancelInflightGitHttp } from '../services/git/gitHttp';
 import { CloneMigrationService } from '../services/git/CloneMigrationService';

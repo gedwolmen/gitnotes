@@ -65,6 +65,11 @@ interface FloatingGitButtonProps {
    * missing from the store.
    */
   repoId?: string | null;
+  /**
+   * Called when the button is quickly tapped (short press < TAP_MAX_MS).
+   * Use this to navigate to a tab (e.g. 'changes' or 'staging').
+   */
+  onQuickTap?: () => void;
 }
 
 /**
@@ -77,7 +82,7 @@ interface FloatingGitButtonProps {
  * toast (typed failure with Retry). Tap while haloed previews the unpushed
  * commits. Draggable; snaps to the nearest horizontal edge. No auto-push.
  */
-export default function FloatingGitButton({ repoId }: FloatingGitButtonProps) {
+export default function FloatingGitButton({ repoId, onQuickTap }: FloatingGitButtonProps) {
   const { colors } = useTheme();
   const toast = useToast();
   const navigation = useNavigation<NavigationProp>();
@@ -237,9 +242,9 @@ export default function FloatingGitButton({ repoId }: FloatingGitButtonProps) {
     if (holdTriggeredRef.current) return;
     const elapsed = pressStart > 0 ? Date.now() - pressStart : 0;
     if (elapsed > TAP_MAX_MS) return;
-    if (!hasUnpushed || busy) return;
-    setPreviewOpen(true);
-  }, [busy, hasUnpushed]);
+    if (busy) return;
+    onQuickTap?.();
+  }, [busy, onQuickTap]);
 
   const panGesture = useMemo(
     () =>

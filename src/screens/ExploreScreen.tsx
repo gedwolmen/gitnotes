@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState, AppStateStatus, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -13,6 +13,10 @@ import FloatingGitButton from '@/components/git/FloatingGitButton';
 import { useGitRepoStatus } from '@/hooks/useGitRepoStatus';
 import { useRepoStore } from '@/stores/repoStore';
 import { GitFsService } from '@/services/git/GitFsService';
+import * as GitEngine from '@/services/git/engine/GitEngine';
+import { GitSyncGate } from '@/services/git/GitSyncGate';
+import { AuthService } from '@/services/AuthService';
+import { pushWithForce } from '@/services/git/recovery';
 import type { RepoLike } from '@/components/explore/exploreShared';
 import type { RootStackParamList } from '@/navigation/types';
 
@@ -29,6 +33,8 @@ import { RemotesSection } from '@/components/explore/RemotesSection';
 import { ConflictsSection } from '@/components/explore/ConflictsSection';
 import { ComingSoonSection } from '@/components/explore/ComingSoonSection';
 import { RepoInfoSection } from '@/components/explore/RepoInfoSection';
+import { IssuesSection } from '@/components/explore/IssuesSection';
+import { PullRequestsSection } from '@/components/explore/PullRequestsSection';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -67,6 +73,47 @@ export default function ExploreScreen() {
       void refreshStatus();
     }, [isLoading, loadRepos, refreshStatus]),
   );
+
+  // Auto-push idle timer: if unpushed commits exist and last push was >3 min ago, push silently in background.
+  const lastPushTimeRef = useRef<number>(Date.now());
+  useEffect(() => {
+    if (!repo) return;
+
+    const tryAutoPush = async () => {
+      if (GitSyncGate.isCycleHeld()) return;
+      if (!status || status.ahead <= 0) return;
+      if (Date.now() - lastPushTimeRef.current <= 180_000) return;
+
+      const token = await AuthService.getToken();
+      if (!token) return;
+
+      try {
+        await pushWithForce({
+          repoPath: repo.path,
+          branch: status.currentBranch ?? 'main',
+          token,
+        });
+        lastPushTimeRef.current = Date.now();
+      } catch {
+        // Silently ignore push errors — will retry on next interval.
+      }
+    };
+
+    const interval = setInterval(tryAutoPush, 60_000);
+
+    const handleAppStateChange = (nextState: AppStateStatus) => {
+      if (nextState === 'active') {
+        lastPushTimeRef.current = Date.now();
+      }
+    };
+
+    const appStateSub = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      clearInterval(interval);
+      appStateSub.remove();
+    };
+  }, [repo, status]);
 
   const onChanged = useCallback(() => {
     void refreshStatus();
@@ -120,9 +167,9 @@ export default function ExploreScreen() {
       case 'conflicts':
         return <ConflictsSection key={repo.id} {...props} active />;
       case 'pulls':
-        return <ComingSoonSection title="Pull Requests" icon="git-pull-request-outline" todo={26} testID="explore.pulls.soon" />;
+        return <PullRequestsSection repo={repoTyped} status={status} active={section === 'pulls'} onChanged={onChanged} />;
       case 'issues':
-        return <ComingSoonSection title="Issues" icon="bug-outline" todo={26} testID="explore.issues.soon" />;
+        return <IssuesSection repo={repoTyped} status={status} active={section === 'issues'} onChanged={onChanged} />;
       case 'info':
         return (
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }}>
@@ -184,7 +231,18 @@ export default function ExploreScreen() {
         {renderSection()}
       </View>
 
-      <FloatingGitButton repoId={repo.id} />
+      <FloatingGitButton
+        repoId={repo.id}
+        onQuickTap={async () => {
+          const hasUnpushed = status && status.ahead > 0;
+          const changedPaths = await GitEngine.statuses(repo.localPath);
+          if (hasUnpushed || changedPaths.length > 0) {
+            setSection('changes');
+          } else {
+            setSection('staging');
+          }
+        }}
+      />
     </SafeAreaView>
   );
 }

@@ -62,9 +62,9 @@ Two upserts for the same `(repo, branch, filePath)` with different titles (a ren
 
 Fix: same-path upserts now collapse regardless of title — latest enqueue wins.
 
-### #888 — API-mode batch writes (HIGH perf)
+### #888 — Batch writes for sync operations (HIGH perf)
 
-API mode drained N upserts as N serial GET(sha)+PUT round trips (~16× slower than clone mode's single push). The batch machinery for deletes already existed in `BatchGitOperations`; upserts now use it too.
+The batch machinery for deletes already existed in `BatchGitOperations`; upserts now use it too.
 
 Fix: `batchUpsertFiles` builds ONE Git-Data commit per (repo, branch) group — parallel blob creation, `createTree` with `base_tree` (parents derived automatically), one commit, one ref update, retried on branch-moved, falling back to per-file writes on terminal failure. The queue wires it for ≥2 eligible upserts (eligible = no `knownSha` guard needed and no local-image URIs that require the per-item upload rewrite).
 
@@ -100,9 +100,9 @@ Clone-mode changes were committed locally but never pushed to GitHub, leaving th
 
 While a push or pull was in flight, users could continue editing, racing the sync operation and producing unpredictable merge state. Resolved by `ConflictResolverScreen` with editor-first UX: the user is blocked on a conflict screen when a divergence is detected (409 / non-fast-forward), preventing concurrent edits from racing the sync operation.
 
-### #927 — API mode not write-through (out-of-scope)
+### #927 — Write-through behavior (resolved)
 
-API mode changes were committed locally and pushed asynchronously instead of pushing to GitHub immediately on save. Documented as out-of-scope for the clone-mode decompose refactor; a separate effort will address API-mode write-through.
+Clone mode now commits locally and pushes immediately when online, delivering write-through behavior.
 
 ### #938 — contents not imported on add (tracked separately)
 
@@ -124,7 +124,7 @@ Fix: the row is gated on `localOid !== mergeBase && localOid !== remoteOid`, mir
 
 `fetchDirectoryFiles` listed only direct children, so `todos/nested/foo.json` / `canvases/nested/bar.json` were never pulled in either mode.
 
-Fix: todos/canvases now route through the same mode-aware reader as notes — recursive tree in API mode, local clone in clone mode — filtered by the `dirPath/` prefix, fetched with bounded concurrency.
+Fix: todos/canvases now route through the same local clone reader as notes — filtered by the `dirPath/` prefix, fetched with bounded concurrency.
 
 ### #886 — deleted remote canvases persisted locally (MEDIUM)
 

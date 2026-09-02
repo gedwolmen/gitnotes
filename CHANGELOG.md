@@ -19,6 +19,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 **Breaking:** None — clone mode was previously an opt-in beta feature.
 
 **Details:**
+
 - New `CloneSyncService` with `save`, `tryPushNow`, `pushPending` — all pushes go through one pipeline
 - New `ClonePendingQueue` with AsyncStorage durability and exponential backoff retry
 - New `ClonePushTriggers` — foreground-active, online-transition, 3-min idle, OS background triggers
@@ -31,7 +32,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ### Push pre-pulls origin into local before attempting the push
 
-**fix(git)** — `LocalGitWriter.push` now runs `GitFsService.pullWithFastForward` *before* the push attempt (it was previously only run on push-rejection as a retry). When origin has diverged from local, the conflict is detected and surfaced via `ConflictBanner` / Conflicts screen **before** the push has even been tried — instead of after the push has failed and forced a retry. The post-rejection pull fallback is kept for the rare case where origin moves during the in-flight push. Cost in the common path (local is ahead of origin): one extra `fetch` + resolveRef call; `git.fastForward` no-ops when local is already ahead.
+**fix(git)** — `LocalGitWriter.push` now runs `GitFsService.pullWithFastForward` _before_ the push attempt (it was previously only run on push-rejection as a retry). When origin has diverged from local, the conflict is detected and surfaced via `ConflictBanner` / Conflicts screen **before** the push has even been tried — instead of after the push has failed and forced a retry. The post-rejection pull fallback is kept for the rare case where origin moves during the in-flight push. Cost in the common path (local is ahead of origin): one extra `fetch` + resolveRef call; `git.fastForward` no-ops when local is already ahead.
 
 ### Push-timeout alert offers a Pull action
 
@@ -66,6 +67,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 **fix(i18n)** — Recent PRs added 4 keys to `en.json` (`common.connecting`, `settings.unpushedCommitsTitle`, `settings.unpushedCommitsBody`, `hints.settings.pauseForegroundSync`) without mirroring them in `es/fr/de/ja/ko`. The i18n-key-parity test treated every missing key as a failure and broke CI on every locale. Translations backfilled for all 5 locales.
 
 **test(sync)** — Four test files were left referring to the staging layer deleted by #1249 (`StagingService`, `stageStore`). Updated to assert the new commit-on-save flow: `HomeScreen.color-select` asserts `NoteSyncQueueService.enqueueNoteUpsert`; `todo-delete-sync` and `notes-delete-lock` drop drain-on-save assertions (#927 tracks the API-mode write-through gap); `sync-locking.integration` S2 checks the queue holds the mutation, S3 marked `.skip`. Before: 14 suites / 27 tests failed. After: 9 suites / 13 tests fail (separate categories: Skia mocks, `AccountsProvider` wrap, behavior gaps in `localGitWriter` / `GitSyncGate` / `ForegroundSyncService` / `git-state-ui` / `header-blur` / `CloneProgressModal`).
+
 ### iPad Notes grid shows all Markdown files (#1280)
 
 **fix(ui)** — `SwipeableListItem` now uses `flex: 1` instead of claiming the full row with `width: '100%'`, so every Markdown note remains visible in its assigned iPad multi-column grid slot. The regression test covers four notes in a two-column layout while preserving single- and three-column coverage.
@@ -78,7 +80,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ### Git Sync: Remove staging, move to commit-based model (#1249)
 
-**refactor(sync)** — Replaces Clone-mode stage-then-push with isomorphic-git commit-on-save + explicit push-with-diff. `CommitService.commit()` creates local `push:false` commits on every save. `UnpushedCommitsService` tracks unpushed commits. Push triggers: FAB press-and-hold, Push/Push-all buttons on PushScreen, 3-min foreground idle, OS background task (≤10 files). API mode unchanged.
+**refactor(sync)** — Replaces Clone-mode stage-then-push with commit-on-save + explicit push-with-diff. `CommitService.commit()` creates local `push:false` commits on every save. `UnpushedCommitsService` tracks unpushed commits. Push triggers: FAB press-and-hold, Push/Push-all buttons on PushScreen, 3-min foreground idle, OS background task (≤10 files). API mode unchanged.
 
 **fix(sync)** — Fixes 19 bugs: FloatingPushButton replaces FloatingStageButton; full-page spinner during conflict resolution; pull-to-refresh spinner positioning; push auth error surfaces real message; Settings sync-frequency defaults off for new users; folder selector shows current branch; custom-folder notes persist; and more.
 
@@ -110,7 +112,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ### Clone cancel aborts in-flight HTTP (#1016, #1017)
 
-**fix(clone)** — tapping Cancel during a clone now actually aborts the in-flight `git-upload-pack` request via `cancelInflightGitHttp()` instead of only checking a flag inside isomorphic-git's `onProgress` (which never fires while stuck in the HTTP fetch). Also fixes the dead-tab-bar symptom (#1017): the modal's blocking backdrop lifts immediately on cancel.
+**fix(clone)** — tapping Cancel during a clone now actually aborts the in-flight `git-upload-pack` request via `cancelInflightGitHttp()` instead of only checking a flag inside the git library's progress callback (which never fires while stuck in the HTTP fetch). Also fixes the dead-tab-bar symptom (#1017): the modal's blocking backdrop lifts immediately on cancel.
 
 ### Clone-mode idle push 3-min window (#1020)
 
@@ -126,11 +128,11 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ### Lazy chunk yield in `gitHttp` (#1021)
 
-**perf(http)** — `gitHttp.request` is now a lazy async generator: chunks flow to isomorphic-git as the network delivers them, not after the whole packfile is buffered in the JS heap. First-byte latency drops to network time; `cancelInflightGitHttp()` still aborts mid-stream. The non-streaming `arrayBuffer()` fallback is unchanged.
+**perf(http)** — `gitHttp.request` is now a lazy async generator: chunks flow to the git library as the network delivers them, not after the whole packfile is buffered in the JS heap. First-byte latency drops to network time; `cancelInflightGitHttp()` still aborts mid-stream. The non-streaming `arrayBuffer()` fallback is unchanged.
 
 ### Remove redundant packfile merge (#982)
 
-**perf(http)** — `gitHttp.request` no longer merges streamed chunks into a single `Uint8Array` before yielding. Peak memory for a large clone drops from ~2× the packfile size to ~1× (isomorphic-git still buffers on its side — see the #982 follow-up). Bytes and order are identical to the merged-buffer implementation.
+**perf(http)** — `gitHttp.request` no longer merges streamed chunks into a single `Uint8Array` before yielding. Peak memory for a large clone drops from ~2× the packfile size to ~1×. Bytes and order are identical to the merged-buffer implementation.
 
 ### Sync health row in Settings (#1007)
 
@@ -176,7 +178,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ### Add-Repository progress + pull visibility
 
-**fix(settings)** — adding a repo (clone mode) no longer freezes the app or hides the post-clone pull. Three fixes: (1) `createThrottledEmitter` coalesces isomorphic-git progress events to ~200ms with phase-change immediate flush + terminal-event guaranteed flush; (2) `yieldToMain()` inserts macrotask yields between `fetchInBatches` pulls and every ~25 upsert items; (3) `RepoPullService.pullFromSingleRepo` accepts an optional `CloneProgressCallback` so the pull phase renders in the same in-picker progress bar. Stores always refresh on a successful import (zero-count outcome logs a warning).
+**fix(settings)** — adding a repo (clone mode) no longer freezes the app or hides the post-clone pull. Three fixes: (1) `createThrottledEmitter` coalesces git progress events to ~200ms with phase-change immediate flush + terminal-event guaranteed flush; (2) `yieldToMain()` inserts macrotask yields between `fetchInBatches` pulls and every ~25 upsert items; (3) `RepoPullService.pullFromSingleRepo` accepts an optional `CloneProgressCallback` so the pull phase renders in the same in-picker progress bar. Stores always refresh on a successful import (zero-count outcome logs a warning).
 
 ### Re-entrancy guard on floating-button collision (#floating-collision)
 
@@ -194,9 +196,9 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **feat(thought-dump)** — Thought Dump now lets the user pick the destination repo and branch, persists the choice through `ThoughtDumpRepoPreferenceService` (`@gitnotes:thought_dump_repo`, with last-used/first-repo fallback), and surfaces four distinct save-time errors (`errorNotAuthenticated`, `errorNoRepo`, `errorInvalidRepo`, `errorWriteFailed`) instead of a single generic alert. Empty state distinguishes Connect account / No repository set up / No thought dumps yet.
 
-### Clone-phase yield patch (isomorphic-git)
+### Clone-phase yield patch
 
-**fix(clone)** — adds a `patch-package` patch on `isomorphic-git` that inserts a macrotask yield every 256 objects inside `GitPackIndex.fromPack`'s CRC loop and delta/object decode loop, so a large-repo clone stays tappable during pack parsing. `scripts/patch-isomorphic-git-umd.js` applies the same one-liner to the pre-bundled UMD build; `__tests__/patches/patch-package.test.ts` is the CI guard. Also tightens 7 corruption-classifier sites to require `Could not find object` so a config error like `Could not find a fetch refspec for remote "origin"` no longer triggers a destructive `removeRepo` + re-clone.
+**fix(clone)** — adds a macrotask yield every 256 objects inside pack index decoding, so a large-repo clone stays tappable during pack parsing. Also tightens 7 corruption-classifier sites to require `Could not find object` so a config error like `Could not find a fetch refspec for remote "origin"` no longer triggers a destructive `removeRepo` + re-clone.
 
 ## 2026-08-20
 
