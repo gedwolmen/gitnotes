@@ -50,22 +50,22 @@ export function RepoInfoSection({ repo, status, active, onChanged }: SectionProp
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [syncFailed, setSyncFailed] = useState(false);
   const [repairResult, setRepairResult] = useState<string | null>(null);
-  const [lastSync, setLastSync] = useState<number | null>(repo.lastSyncedAt);
+  const [lastSync, setLastSync] = useState<number | null>(repo.lastSyncedAt ?? null);
   const [version, setVersion] = useState(0);
   const refreshStore = useRepoStore((state) => state.refreshRepos);
   const removeRepo = useRepoStore((state) => state.removeRepository);
 
   useEffect(() => {
-    setLastSync(repo.lastSyncedAt);
+    setLastSync(repo.lastSyncedAt ?? null);
   }, [repo.lastSyncedAt]);
 
   const load = useCallback(async () => {
     try {
-      setInfo(await GitEngine.repoInfo(repo.localPath));
+      setInfo(await GitEngine.repoInfo(repo.path));
     } catch {
       // header status already surfaces repo health; info panel stays empty
     }
-  }, [repo.localPath]);
+  }, [repo.path]);
 
   useEffect(() => {
     if (active) void load();
@@ -78,7 +78,7 @@ export function RepoInfoSection({ repo, status, active, onChanged }: SectionProp
     setSyncFailed(false);
     const aheadBefore = status?.ahead ?? 0;
     try {
-      const result = await GitEngine.pushWithIntegrate(repo.localPath, 'origin', repo.id);
+      const result = await GitEngine.pushWithIntegrate(repo.path, 'origin', repo.id);
       if (result.kind === 'Conflicts') {
         const paths = result.conflicts.join(', ');
         setSyncFailed(true);
@@ -104,7 +104,7 @@ export function RepoInfoSection({ repo, status, active, onChanged }: SectionProp
     setBusy('repair');
     setRepairResult(null);
     try {
-      const report = await GitEngine.repairRepo(repo.localPath);
+      const report = await GitEngine.repairRepo(repo.path);
       setRepairResult(describeRepair(report));
       onChanged();
       setVersion((value) => value + 1);
@@ -113,7 +113,7 @@ export function RepoInfoSection({ repo, status, active, onChanged }: SectionProp
     } finally {
       setBusy(null);
     }
-  }, [busy, repo.localPath, onChanged]);
+  }, [busy, repo.path, onChanged]);
 
   const removeNow = useCallback(async () => {
     setBusy('remove');
@@ -164,7 +164,7 @@ export function RepoInfoSection({ repo, status, active, onChanged }: SectionProp
         </View>
         <View className="mt-1">
           <InfoRow label="Name" value={repo.name} />
-          <InfoRow label="Remote URL" value={repo.remoteUrl} testID="explore.info.remote" />
+          <InfoRow label="Remote URL" value={repo.remoteUrl ?? '(none)'} testID="explore.info.remote" />
           <InfoRow
             label="Branch"
             value={status?.currentBranch ?? info?.currentBranch ?? '(detached)'}
@@ -178,7 +178,7 @@ export function RepoInfoSection({ repo, status, active, onChanged }: SectionProp
           <InfoRow label="Commits" value={info ? String(info.totalCommits) : '—'} testID="explore.info.commits" />
           <InfoRow label="Working tree" value={info ? (info.isClean ? 'clean' : 'dirty') : '—'} />
           <InfoRow label="Last synced" value={relativeTime(lastSync)} testID="explore.info.lastsync" />
-          <InfoRow label="Local path" value={repo.localPath} />
+          <InfoRow label="Local path" value={repo.path} />
         </View>
       </View>
 

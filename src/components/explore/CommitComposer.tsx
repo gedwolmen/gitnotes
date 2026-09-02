@@ -9,12 +9,12 @@ import { Input, InputField } from '@/components/ui/Input';
 import { Textarea, TextareaInput } from '@/components/ui/textarea';
 import * as GitEngine from '@/services/git/engine/GitEngine';
 import { useActiveAccount } from '@/hooks/useAccounts';
-import type { ManagedRepo } from '@/services/repos/RepoService';
+import type { RepoLike } from './exploreShared';
 
 const MESSAGE_PLACEHOLDER = 'feat: what changed? (conventional commit)';
 
 interface CommitComposerProps {
-  repo: ManagedRepo;
+  repo: RepoLike;
   /** Every path with any working-tree change (staged + unstaged), for "Stage all". */
   changedPaths: string[];
   stagedCount: number;
@@ -58,9 +58,9 @@ export function CommitComposer({ repo, changedPaths, stagedCount, onCommitted }:
       setBusy(mode);
       try {
         if (mode === 'stageAll' && changedPaths.length > 0) {
-          await GitEngine.stage(repo.localPath, changedPaths);
+          await GitEngine.stage(repo.path, changedPaths);
         }
-        const commit = await GitEngine.commit(repo.localPath, message.trim(), {
+        const commit = await GitEngine.commit(repo.path, message.trim(), {
           name: authorName.trim(),
           email: authorEmail.trim(),
         });
@@ -73,7 +73,7 @@ export function CommitComposer({ repo, changedPaths, stagedCount, onCommitted }:
         setBusy(null);
       }
     },
-    [validate, changedPaths, repo.localPath, message, authorName, authorEmail, onCommitted],
+    [validate, changedPaths, repo.path, message, authorName, authorEmail, onCommitted],
   );
 
   const nothingToStageAll = changedPaths.length === 0;

@@ -1,7 +1,20 @@
 import { Directory, File } from 'expo-file-system';
 
 import type { FileStatusKind, RepoStatus } from '@/services/git/engine/GitEngine';
-import type { ManagedRepo } from '@/services/repos/RepoService';
+import type { GitHostProvider } from '@/services/git/GitHost';
+
+export interface RepoLike {
+  id: string;
+  path: string;
+  name: string;
+  branch?: string;
+  provider?: GitHostProvider | string;
+  hostId?: string;
+  full_name?: string;
+  lastSyncedAt?: number | null;
+  remoteUrl?: string;
+  accountId?: string;
+}
 
 /** Explore workspace sections (todo 23 shell). Order = tab row order. */
 export const EXPLORE_SECTIONS = [
@@ -20,7 +33,7 @@ export const EXPLORE_SECTIONS = [
 export type ExploreSection = (typeof EXPLORE_SECTIONS)[number]['id'];
 
 export interface SectionProps {
-  repo: ManagedRepo;
+  repo: RepoLike;
   status: RepoStatus | null;
   /** True while this section's tab is selected. */
   active: boolean;

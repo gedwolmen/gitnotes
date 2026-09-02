@@ -34,7 +34,7 @@ export function StagingSection({ repo, active, onChanged }: SectionProps) {
     setLoading(true);
     setError(null);
     try {
-      const statuses = await GitEngine.statuses(repo.localPath);
+      const statuses = await GitEngine.statuses(repo.path);
       const staged = statuses.filter((entry) => entry.staged);
       const changedPaths = statuses.map((entry) => entry.path);
       const diffResults = await Promise.all(
@@ -42,7 +42,7 @@ export function StagingSection({ repo, active, onChanged }: SectionProps) {
           .filter((entry) => entry.status !== 'Untracked')
           .map(async (entry) => {
             try {
-              return await GitEngine.diffFile(repo.localPath, entry.path);
+              return await GitEngine.diffFile(repo.path, entry.path);
             } catch {
               return null;
             }
@@ -58,7 +58,7 @@ export function StagingSection({ repo, active, onChanged }: SectionProps) {
     } finally {
       setLoading(false);
     }
-  }, [repo.localPath]);
+  }, [repo.path]);
 
   useEffect(() => {
     if (active) void load();
@@ -68,7 +68,7 @@ export function StagingSection({ repo, active, onChanged }: SectionProps) {
     async (path: string) => {
       setBusyPath(path);
       try {
-        await GitEngine.unstage(repo.localPath, [path]);
+        await GitEngine.unstage(repo.path, [path]);
         onChanged();
         setVersion((value) => value + 1);
       } catch (caught) {
@@ -77,7 +77,7 @@ export function StagingSection({ repo, active, onChanged }: SectionProps) {
         setBusyPath(null);
       }
     },
-    [repo.localPath, onChanged],
+    [repo.path, onChanged],
   );
 
   const unstageAll = useCallback(async () => {
@@ -85,7 +85,7 @@ export function StagingSection({ repo, active, onChanged }: SectionProps) {
     if (paths.length === 0) return;
     setBusyPath('*');
     try {
-      await GitEngine.unstage(repo.localPath, paths);
+      await GitEngine.unstage(repo.path, paths);
       onChanged();
       setVersion((value) => value + 1);
     } catch (caught) {
@@ -93,7 +93,7 @@ export function StagingSection({ repo, active, onChanged }: SectionProps) {
     } finally {
       setBusyPath(null);
     }
-  }, [data, repo.localPath, onChanged]);
+  }, [data, repo.path, onChanged]);
 
   const renderItem = useCallback(
     ({ item }: { item: FileStatus }) => {

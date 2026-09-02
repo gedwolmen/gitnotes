@@ -39,8 +39,8 @@ export function FilesSection({ repo, active }: SectionProps) {
     setLoading(true);
     setError(null);
     try {
-      const tree = walkWorkingTree(repo.localPath);
-      const entries = await GitEngine.statuses(repo.localPath);
+      const tree = walkWorkingTree(repo.path);
+      const entries = await GitEngine.statuses(repo.path);
       const statuses: Record<string, FileStatus> = {};
       for (const entry of entries) statuses[entry.path] = entry;
       setData({ files: tree.files, truncated: tree.truncated, statuses });
@@ -50,7 +50,7 @@ export function FilesSection({ repo, active }: SectionProps) {
     } finally {
       setLoading(false);
     }
-  }, [repo.localPath]);
+  }, [repo.path]);
 
   useEffect(() => {
     if (active) void load();

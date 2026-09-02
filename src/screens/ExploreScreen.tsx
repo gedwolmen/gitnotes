@@ -18,7 +18,7 @@ import {
 import FloatingGitButton from '@/components/git/FloatingGitButton';
 import { useGitRepoStatus } from '@/hooks/useGitRepoStatus';
 import { useRepoStore } from '@/stores/repoStore';
-import type { ManagedRepo } from '@/services/repos/RepoService';
+import type { RepoLike } from '@/components/explore/exploreShared';
 import type { RootStackParamList } from '@/navigation/types';
 
 import {
@@ -58,7 +58,7 @@ export default function ExploreScreen() {
 
   const { status, refresh: refreshStatus } = useGitRepoStatus(
     repo?.id ?? null,
-    (repo as ManagedRepo)?.localPath ?? null,
+    repo?.path ?? null,
   );
 
   useFocusEffect(
@@ -102,7 +102,7 @@ export default function ExploreScreen() {
   }
 
   const renderSection = () => {
-    const repoTyped = repo as ManagedRepo;
+    const repoTyped = repo as RepoLike;
     const props = { repo: repoTyped, status, onChanged };
     switch (section) {
       case 'files':
@@ -152,7 +152,7 @@ export default function ExploreScreen() {
             {repo.name}
           </Heading>
           <Text className="text-[11px] text-gray-500" numberOfLines={1} testID="explore.header.remote">
-            {(repo as ManagedRepo).remoteUrl}
+            {(repo as RepoLike).remoteUrl ?? repo.path}
           </Text>
         </View>
         {status?.currentBranch && (
