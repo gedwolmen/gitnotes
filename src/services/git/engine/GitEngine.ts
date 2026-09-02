@@ -205,14 +205,14 @@ export async function setCredential(repoId: string, credential: Credential): Pro
 export async function clearCredential(repoId: string): Promise<void> {
   await CredentialStore.delete(repoId);
   if (!GitEngineModule) return;
-  await run(() => GitEngineModule!.clearCredential(repoId), undefined);
+  await GitEngineModule!.clearCredential(repoId);
 }
 
 /** Clear ONLY the engine's in-memory credential map (the secure-store copy
  * stays, so the next op re-seeds it). */
 export async function clearEngineCredential(repoId: string): Promise<void> {
   if (!GitEngineModule) return;
-  await run(() => GitEngineModule!.clearCredential(repoId), undefined);
+  await GitEngineModule!.clearCredential(repoId);
 }
 
 /** Read the credential currently registered for `repoId` (native map). */
