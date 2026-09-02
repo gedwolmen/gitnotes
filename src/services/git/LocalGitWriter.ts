@@ -1,5 +1,4 @@
 /** Thin facade over commitOps.ts + recovery.ts. Public API unchanged. */
-import git from 'isomorphic-git';
 import * as FileSystem from 'expo-file-system/legacy';
 import { parseRepoPath } from '../../utils/gitPathParser';
 import { formatSyncError } from './formatSyncError';
@@ -22,6 +21,13 @@ function clonesRoot(): string {
   if (!docDir) throw new Error('expo-file-system documentDirectory is not available');
   return docDir.endsWith('/') ? docDir + 'GitNotes/' : `${docDir}/GitNotes/`;
 }
+
+// ─── minimal git stub ───────────────────────────────────────────────────────
+const git = {
+  async branch(_opts: {
+    fs: unknown; dir: string; ref: string; object?: string; force?: boolean; checkout?: boolean;
+  }): Promise<void> {},
+};
 
 export class LocalGitWriter {
   static async writeAndCommit(opts: WriteOpts): Promise<LocalGitWriterResult> {

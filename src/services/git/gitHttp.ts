@@ -1,4 +1,20 @@
-import type { GitHttpRequest, GitHttpResponse, HttpClient } from 'isomorphic-git';
+export type GitHttpRequest = {
+  url: string;
+  method?: string;
+  headers?: Record<string, string>;
+  body?: AsyncIterable<Uint8Array> | Iterable<Uint8Array> | Uint8Array | string | null;
+};
+export type GitHttpResponse = {
+  url: string;
+  method?: string;
+  headers: Record<string, string>;
+  statusCode: number;
+  statusMessage: string;
+  body: AsyncIterable<Uint8Array>;
+};
+export type HttpClient = {
+  request(req: GitHttpRequest): Promise<GitHttpResponse>;
+};
 
 // Large clone/fetch (git-upload-pack) downloads can legitimately take
 // minutes on big repos, so keep the long timeout there (#790). The push
@@ -30,10 +46,9 @@ async function* yieldOnce(bytes: Uint8Array): AsyncIterableIterator<Uint8Array> 
 
 /**
  * Lazily reads the response body from the reader, yielding each chunk as it
- * arrives instead of collecting the whole stream first. isomorphic-git still
- * buffers the packfile on its side (`Buffer.from(await collect(...))` in
- * 1.40.0), but we never hold a second full-size copy, and the consumer gets
- * the first chunk as soon as the network delivers it (#982, #1021).
+ * arrives instead of collecting the whole stream first. We never hold a second
+ * full-size copy, and the consumer gets the first chunk as soon as the network
+ * delivers it (#982, #1021).
  */
 async function* streamResponseBody(
   reader: ReadableStreamDefaultReader<Uint8Array>,
@@ -85,10 +100,10 @@ async function consumeBody(
 }
 
 /**
- * Custom HTTP client for isomorphic-git.
+ * Custom HTTP client for git operations.
  *
  * Auth: callers pass `onAuth` to `git.clone/fetch/push`; the
- * isomorphic-git manager invokes it on 401, builds the
+ * git manager invokes it on 401, builds the
  * `Authorization` header itself, and calls our `http.request` with
  * the header already set. `onAuth` is NOT a field on
  * `GitHttpRequest`, so this client never sees it. We only add a

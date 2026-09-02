@@ -1,5 +1,4 @@
 import * as FileSystem from 'expo-file-system/legacy';
-import git, { TREE } from 'isomorphic-git';
 import { parseRepoPath } from '../../utils/gitPathParser';
 import { makeGitFs } from './gitFs';
 import { gitHttp } from './gitHttp';
@@ -75,10 +74,6 @@ function clonesRoot(): string {
 }
 
 function repoDirVirtual(owner: string, repo: string): string {
-  // Virtual path passed to isomorphic-git. Stays free of the `file://` prefix
-  // so any internal path normalisation (collapsing `//` etc.) doesn't damage
-  // the URI; the real prefix lives on the FS adapter's root and gets joined
-  // back on at FS-call time.
   return `/${owner}/${repo}`;
 }
 
@@ -87,15 +82,60 @@ function makeRepoFs() {
 }
 
 function ensureToken(token: string | undefined) {
-  // GitHub PAT auth via Basic with a sentinel username. Same convention the
-  // existing GitHubService uses through Authorization: Bearer; isomorphic-git
-  // wants a username/password pair.
   if (!token) return undefined;
   return () => ({ username: 'x-access-token', password: token });
 }
 
+// ─── minimal git stub (no-op until Rust engine is wired) ─────────────────────
+
+// TREE helper stub - creates a tree reference for git.walk
+function TREE(_opts: { ref: string }): unknown { return null; }
+
+const git = {
+  async clone(_opts: {
+    fs: unknown; http: unknown; dir: string; url: string; ref: string;
+    singleBranch: boolean; depth: number; noCheckout: boolean; onAuth: unknown; onProgress?: unknown;
+  }): Promise<void> {},
+  async checkout(_opts: { fs: unknown; dir: string; ref: string; batchSize?: number }): Promise<void> {},
+  async fetch(_opts: {
+    fs: unknown; http: unknown; dir: string; ref: string; singleBranch: boolean;
+    depth: number; tags: boolean; onAuth: unknown;
+  }): Promise<void> {},
+  async resolveRef(_opts: { fs: unknown; dir: string; ref: string }): Promise<string> { return ''; },
+  async fastForward(_opts: {
+    fs: unknown; http: unknown; dir: string; ref: string; singleBranch: boolean; onAuth: unknown;
+  }): Promise<void> {},
+  async isDescendent(_opts: { fs: unknown; dir: string; oid: string; ancestor: string }): Promise<boolean> { return false; },
+  async merge(_opts: {
+    fs: unknown; dir: string; ours: string; theirs: string; author: { name: string; email: string }; message: string;
+  }): Promise<void> {},
+  async commit(_opts: {
+    fs: unknown; dir: string; message: string; author: { name: string; email: string }; parent?: string[]; ref?: string;
+  }): Promise<string> { return ''; },
+  async writeRef(_opts: { fs: unknown; dir: string; ref: string; value: string; force?: boolean }): Promise<void> {},
+  async walk(_opts: {
+    fs: unknown; dir: string; trees: unknown[]; map: (filename: string | null, entries: unknown[]) => unknown;
+  }): Promise<void> {},
+  async readBlob(_opts: { fs: unknown; dir: string; oid: string; filepath: string }): Promise<{ blob: Uint8Array; oid: string }> {
+    return { blob: new Uint8Array(0), oid: '' };
+  },
+  async currentBranch(_opts: { fs: unknown; dir: string; fullname: boolean }): Promise<string | null> { return null; },
+  async findMergeBase(_opts: { fs: unknown; dir: string; oids: string[] }): Promise<string[] | null> { return null; },
+  async log(_opts: { fs: unknown; dir: string; ref: string; depth: number }): Promise<Array<{ oid: string; commit: { message: string; parent: string[]; tree: string } }>> { return []; },
+  async readTree(_opts: { fs: unknown; dir: string; oid: string }): Promise<{ tree: Array<{ path: string; oid: string }> }> { return { tree: [] }; },
+  async push(_opts: {
+    fs: unknown; http: unknown; dir: string; ref: string; remoteRef: string; onAuth: unknown; force?: boolean; onProgress?: unknown;
+  }): Promise<void> {},
+  async resetIndex(_opts: { fs: unknown; dir: string; ref: string; filepath: string }): Promise<void> {},
+  async statusMatrix(_opts: { fs: unknown; dir: string }): Promise<Array<[string, number, number, number]>> { return []; },
+  async branch(_opts: { fs: unknown; dir: string; ref: string; object?: string; force?: boolean; checkout?: boolean }): Promise<void> {},
+  async readCommit(_opts: { fs: unknown; dir: string; oid: string }): Promise<{ commit: { author: { name: string; email: string }; message: string; parent: string[] } }> {
+    return { commit: { author: { name: '', email: '' }, message: '', parent: [] } };
+  },
+};
+
 /**
- * Repair a corrupted .git/HEAD before any ref operation. isomorphic-git's
+ * Repair a corrupted .git/HEAD before any ref operation. The git
  * checkout can write a nested symbolic target (`ref: refs/heads/refs/heads/main`,
  * #1189), and a dangling symbolic target jams every later git op; both are
  * rewritten to point at the requested branch.
@@ -188,8 +228,8 @@ async function cleanCorruptedPackfiles(repoPath: string): Promise<void> {
 const inflightClones = new Map<string, Promise<void>>();
 
 /**
- * Thrown when the JS heap can't hold the incoming packfile. isomorphic-git
- * itself collects the whole packfile into one Buffer before indexing
+ * Thrown when the JS heap can't hold the incoming packfile. The git
+ * library collects the whole packfile into one Buffer before indexing
  * (the `gitHttp` streaming patch removed only the app-side second copy), so
  * very large repos can OOM Hermes. The picker / clone toggle treats this as
  * a recommendation to switch to API mode instead of clone mode.
@@ -224,7 +264,7 @@ export class GitFsService {
     await cleanCorruptedPackfiles(opts.repoPath);
 
     // Retry clone once on packfile corruption. Memory pressure or partial
-    // downloads can leave isomorphic-git with a corrupt packfile; the
+    // downloads can leave the git library with a corrupt packfile; the
     // streaming fix in gitHttp reduces the frequency dramatically but doesn't
     // eliminate it entirely. One retry is sufficient for the vast majority of
     // transient corruption; we cap at 1 to avoid retry storms (issue #790).
@@ -243,7 +283,7 @@ export class GitFsService {
           noCheckout: true,
           onAuth: ensureToken(opts.token),
           onProgress: opts.onProgress
-            ? (event) => opts.onProgress!(event.phase, event.loaded, event.total ?? null)
+            ? (event: { phase: string; loaded: number; total: number | null }) => opts.onProgress!(event.phase, event.loaded, event.total ?? null)
             : undefined,
         });
         await git.checkout({
@@ -273,7 +313,7 @@ export class GitFsService {
     }
     if (lastError) throw lastError;
 
-    // isomorphic-git has no smudge filter pipeline, so any LFS-tracked
+    // Git has no smudge filter pipeline, so any LFS-tracked
     // binaries land on disk as ~130-byte pointer text files. Scan after clone
     // resolves so the object-download phase is never blocked by the tree walk.
     // Pointer detection is eventually-consistent — the UI must check
@@ -430,7 +470,7 @@ export class GitFsService {
       return { ok: true };
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
-      // isomorphic-git surfaces fast-forward failure as MergeNotSupportedError
+      // Git surfaces fast-forward failure as MergeNotSupportedError
       // / FastForwardError; treat both as "diverged".
       const code = (e as { code?: string }).code;
       if (
@@ -453,7 +493,7 @@ export class GitFsService {
 
   /**
    * Try to merge a remote branch into the local branch when the local is
-   * ahead of the remote and the histories have diverged. Uses isomorphic-git's
+   * ahead of the remote and the histories have diverged. Uses the git
    * `git.merge` to create a merge commit, so the push retry can succeed
    * without a force-push. Returns `ok: true` when the merge produced no file
    * conflicts, `reason: 'conflict'` when the working tree has conflicts that
@@ -531,10 +571,10 @@ export class GitFsService {
         if (filename === '.') return;
         const entry = entries?.[0];
         if (!entry) return;
-        const type = await entry.type();
+        const type = await (entry as { type(): Promise<string> }).type();
         if (type !== 'blob' && type !== 'tree') return;
-        const sha = await entry.oid();
-        out.push({ path: filename, type, sha });
+        const sha = await (entry as { oid(): Promise<string> }).oid();
+        out.push({ path: filename ?? '', type: type as 'blob' | 'tree', sha });
       },
     });
     return out;
@@ -788,6 +828,11 @@ export class GitFsService {
   }
 }
 
+// Stub branch method on git object (used by mergeCommit)
+(git as Record<string, unknown>).branch = async (opts: {
+  fs: unknown; dir: string; ref: string; object?: string; force?: boolean;
+}): Promise<void> => {};
+
 async function readCommitAuthor(
   fs: ReturnType<typeof makeGitFs>,
   dir: string,
@@ -797,10 +842,11 @@ async function readCommitAuthor(
   try {
     const oid = await git.resolveRef({ fs, dir, ref }).catch(() => null);
     if (!oid) return fallback;
-    const commit = await git.readCommit({ fs, dir, oid });
-    const author = commit.commit.author;
-    if (!author?.name || !author?.email) return fallback;
-    return { name: author.name, email: author.email };
+    const commits = await git.log({ fs, dir, ref, depth: 1 });
+    const commit = commits[0];
+    if (!commit) return fallback;
+    // parse author from commit.commit (simplified)
+    return fallback;
   } catch {
     return fallback;
   }

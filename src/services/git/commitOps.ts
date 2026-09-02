@@ -6,7 +6,7 @@
  *
  * Helpers consolidated from LocalGitWriter.ts, CommitService.ts, and GitFsService.ts:
  * - `clonesRoot()` — root directory for cloned repos
- * - `repoDirVirtual(owner, repo)` — virtual path for isomorphic-git
+ * - `repoDirVirtual(owner, repo)` — virtual path for git
  * - `toRepoRelativePath(filePath)` — strip leading slashes for git ops
  * - `makeRepoFs()` — build a git-fs adapter rooted at clonesRoot
  * - `ensureParentDirs(rootDir, virtualPath)` — create parent dirs before write
@@ -14,12 +14,26 @@
  */
 
 import * as FileSystem from 'expo-file-system/legacy';
-import git from 'isomorphic-git';
 import { parseRepoPath } from '../../utils/gitPathParser';
 import { makeGitFs } from './gitFs';
 import { gitHttp } from './gitHttp';
 import { repairHeadRef } from './GitFsService';
 import { useGitActivityStore } from '../../stores/gitActivityStore';
+
+// ─── minimal git stub (no-op until Rust engine is wired) ─────────────────────
+const git = {
+  async add(_opts: { fs: unknown; dir: string; filepath: string }): Promise<void> {},
+  async status(_opts: { fs: unknown; dir: string; filepath: string }): Promise<string> { return 'unmodified'; },
+  async commit(_opts: {
+    fs: unknown; dir: string; message: string; author: { name: string; email: string }; parent?: string[];
+  }): Promise<string> { return ''; },
+  async remove(_opts: { fs: unknown; dir: string; filepath: string }): Promise<void> {},
+  async currentBranch(_opts: { fs: unknown; dir: string; fullname: boolean }): Promise<string | null> { return null; },
+  async checkout(_opts: { fs: unknown; dir: string; ref: string }): Promise<void> {},
+  async fetch(_opts: {
+    fs: unknown; http: unknown; dir: string; ref: string; singleBranch: boolean; depth: number; tags: boolean; onAuth: unknown;
+  }): Promise<void> {},
+};
 
 const CLONES_SUBDIR = 'GitNotes/';
 
@@ -190,7 +204,7 @@ export interface CommitRenameParams {
  * Produce ONE commit (single parent) that represents a rename.
  * Sequence: git.remove(old) → write(new) → git.add(new) → git.commit
  * Both the deletion of the old path and creation of the new path land in
- * a single atomic commit via isomorphic-git's full-index commit.
+ * a single atomic commit via the git's full-index commit.
  */
 export async function commitRename(params: CommitRenameParams): Promise<CommitOpsResult> {
   const { repo, branch, prevFilePath, filePath, content, message, author } = params;

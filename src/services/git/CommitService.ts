@@ -1,5 +1,4 @@
 import * as FileSystem from 'expo-file-system/legacy';
-import git from 'isomorphic-git';
 import { parseRepoPath } from '../../utils/gitPathParser';
 import { makeGitFs as buildGitFs } from './gitFs';
 import { gitHttp } from './gitHttp';
@@ -9,6 +8,20 @@ import { getGitHostService } from './gitHostFactory';
 import type { GitHostUser } from './GitHost';
 import { repairHeadRef } from './GitFsService';
 import { useGitActivityStore } from '../../stores/gitActivityStore';
+
+// ─── minimal git stub (no-op until Rust engine is wired) ───────────────────
+const git = {
+  async remove(_opts: { fs: unknown; dir: string; filepath: string }): Promise<void> {},
+  async add(_opts: { fs: unknown; dir: string; filepath: string }): Promise<void> {},
+  async commit(_opts: {
+    fs: unknown; dir: string; message: string; author: { name: string; email: string }; parent?: string[];
+  }): Promise<string> { return ''; },
+  async currentBranch(_opts: { fs: unknown; dir: string; fullname: boolean }): Promise<string | null> { return null; },
+  async checkout(_opts: { fs: unknown; dir: string; ref: string }): Promise<void> {},
+  async fetch(_opts: {
+    fs: unknown; http: unknown; dir: string; ref: string; singleBranch: boolean; depth: number; tags: boolean; onAuth: unknown;
+  }): Promise<void> {},
+};
 
 const CLONES_SUBDIR = 'GitNotes/';
 
@@ -155,7 +168,7 @@ export class CommitService {
   /**
    * Produce a single commit that represents a rename: the old path is deleted
    * and the new path is created in one atomic commit via explicit index
-   * manipulation. isomorphic-git's commit consumes the full index, so both
+   * manipulation. The commit consumes the full index, so both
    * staged changes land in one commit.
    *
    * Sequence:

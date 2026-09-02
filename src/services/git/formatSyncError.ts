@@ -1,6 +1,6 @@
 /**
  * Shared sanitizer for raw sync errors surfaced to the user. Both the
- * isomorphic-git push path (LocalGitWriter) and the GitHub Contents-API
+ * git push path (LocalGitWriter) and the GitHub Contents-API
  * path (Note/Todo/Canvas/Template sync services) leak wall-of-text errors
  * with refs, ANSI codes, force-flag hints, etc. We map the common cases
  * to one-line user-facing strings and strip jargon from anything that
@@ -68,8 +68,8 @@ const MATCHERS: Matcher[] = [
     needles: ['packfile trailer mismatch', 'packfile may be corrupted'],
     message: 'Sync stalled. Pull to recover.',
   },
-  {
-    needles: ['internal error caused this command to fail', 'isomorphic-git'],
+    {
+    needles: ['internal error caused this command to fail'],
     message: 'Sync failed. Pull to retry.',
   },
   {
@@ -92,9 +92,9 @@ function fallbackFor(op?: SyncOp): string {
 }
 
 /**
- * Strips the noisy bits isomorphic-git / axios bake into raw error text
- * before we run substring matching. Order matters: ANSI first, then
- * structural (Error: prefix, ref names, "force: true" hint), then trim.
+ * Strips noisy bits from raw error text before we run substring matching.
+ * Order matters: ANSI first, then structural (Error: prefix, ref names,
+ * "force: true" hint), then trim.
  */
 function stripJargon(raw: string): string {
   let out = raw;

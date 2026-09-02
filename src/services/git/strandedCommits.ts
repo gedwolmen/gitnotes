@@ -1,7 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import git from 'isomorphic-git';
 import { parseRepoPath } from '../../utils/gitPathParser';
 import { makeGitFs } from './gitFs';
+
+// Stub git object - operations are no-ops until GitEngine is fully integrated
+const git = {
+  resolveRef: async (_opts: { fs: unknown; dir: string; ref: string }): Promise<string> => '',
+  log: async (_opts: { fs: unknown; dir: string; ref: string; depth: number }): Promise<Array<{ oid: string; commit: { message: string; parent: string[]; tree: string } }>> => [],
+};
 
 const CLONES_SUBDIR = 'GitNotes/';
 

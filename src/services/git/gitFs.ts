@@ -1,7 +1,52 @@
 import * as FileSystem from 'expo-file-system/legacy';
-import type { PromiseFsClient } from 'isomorphic-git';
 
-// Node-style FS errors. isomorphic-git inspects `err.code` to decide whether a
+// PromiseFsClient type for the FS adapter interface.
+export interface PromiseFsClient {
+  promises: {
+    readFile(filepath: string, opts?: { encoding?: string } | string): Promise<string | Uint8Array>;
+    writeFile(filepath: string, data: string | Uint8Array, opts?: { encoding?: string } | string): Promise<void>;
+    unlink(filepath: string): Promise<void>;
+    readdir(filepath: string): Promise<string[]>;
+    mkdir(filepath: string): Promise<void>;
+    rmdir(filepath: string): Promise<void>;
+    stat(filepath: string): Promise<{
+      type: 'file' | 'dir';
+      mode: number;
+      size: number;
+      ino: number;
+      mtimeSeconds: number;
+      mtimeNanoseconds: number;
+      ctimeSeconds: number;
+      ctimeNanoseconds: number;
+      uid: number;
+      gid: number;
+      dev: number;
+      isFile: () => boolean;
+      isDirectory: () => boolean;
+      isSymbolicLink: () => boolean;
+    }>;
+    lstat(filepath: string): Promise<{
+      type: 'file' | 'dir';
+      mode: number;
+      size: number;
+      ino: number;
+      mtimeSeconds: number;
+      mtimeNanoseconds: number;
+      ctimeSeconds: number;
+      ctimeNanoseconds: number;
+      uid: number;
+      gid: number;
+      dev: number;
+      isFile: () => boolean;
+      isDirectory: () => boolean;
+      isSymbolicLink: () => boolean;
+    }>;
+    readlink(filepath: string): Promise<string>;
+    symlink(target: string, filepath: string): Promise<void>;
+  };
+}
+
+// Node-style FS errors. Git inspects `err.code` to decide whether a
 // missing path is a legitimate "not yet created" condition or a real failure.
 class FsError extends Error {
   code: string;
@@ -116,9 +161,9 @@ async function ensureParentDirs(
   existingDirs: Set<string>,
 ): Promise<void> {
   // expo-file-system's writeAsStringAsync errors with "folder doesn't exist"
-  // when any ancestor of the target path is missing. isomorphic-git issues
-  // writes against deep paths like `.git/objects/pack/<sha>` without always
-  // mkdir'ing every ancestor first, so the adapter has to bridge that gap.
+  // when any ancestor of the target path is missing. Git issues
+// writes against deep paths like `.git/objects/pack/<sha>` without always
+// mkdir'ing every ancestor first, so the adapter bridges that gap.
   if (!fileUri.startsWith(rootUri)) return;
   const rel = fileUri.slice(rootUri.length);
   const parts = rel.split('/').filter(Boolean);
@@ -140,7 +185,7 @@ interface ReadOpts {
 }
 
 /**
- * Build a PromiseFsClient that isomorphic-git can drive against
+ * Build a PromiseFsClient that git can drive against
  * `expo-file-system/legacy`. The `root` argument is the absolute on-disk URI
  * (e.g. `file:///.../GitNotes/`) to which all virtual git paths get
  * appended. Keeping the root out of the virtual path avoids the `file://` →
@@ -258,7 +303,7 @@ export function makeGitFs(root: string): PromiseFsClient {
         await maybeYield();
       } else if (isTextExtension(filepath)) {
         // Text-extension files (notes, canvases, todos) are UTF-8 plain text
-        // even when isomorphic-git hands us raw bytes (checkout writes blobs
+        // even when git hands us raw bytes (checkout writes blobs
         // as Uint8Array). Decode once and write via the text path instead of
         // the base64 round-trip. Fatal decoding guarantees the round-trip is
         // byte-exact: any non-UTF-8 payload falls back to the base64 path so
@@ -325,7 +370,7 @@ export function makeGitFs(root: string): PromiseFsClient {
       }
       // intermediates:true so a single mkdir of a deep path (e.g. the repo
       // working dir on first clone) creates all missing ancestors. The Node
-      // POSIX contract is `mkdir -p` semantics for isomorphic-git — it relies
+      // POSIX contract is `mkdir -p` semantics for git — it relies
       // on EEXIST as the only error for "already there", which we still emit
       // via the explicit existence check above.
       await FileSystem.makeDirectoryAsync(uri, { intermediates: true });
@@ -371,7 +416,7 @@ export function makeGitFs(root: string): PromiseFsClient {
       // exposed; reuse mtime — git only cares about ordering, not which
       // clock recorded it.
       const mtimeSeconds = Math.floor(info.modificationTime ?? 0);
-      // Some isomorphic-git code paths reach for Node-style `Stats` predicate
+      // Some git code paths reach for Node-style `Stats` predicate
       // methods (`.isDirectory()` etc.) instead of the `type` field. Provide
       // both — the field for fast-path callers, the methods for the rest.
       return {

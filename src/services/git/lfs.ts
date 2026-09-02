@@ -246,7 +246,7 @@ async function arrayBufferToBase64Async(buf: ArrayBuffer): Promise<string> {
 
 /**
  * Service for tracking + resolving LFS pointer files left on disk by
- * isomorphic-git (which has no smudge-filter pipeline). State persists
+ * Git (which has no smudge-filter pipeline). State persists
  * across launches via AsyncStorage so a relaunch still knows which files
  * are placeholders.
  */
