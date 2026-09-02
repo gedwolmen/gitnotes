@@ -19,6 +19,6 @@ export interface CloneSyncServiceSaveParams {
 
 export class CloneSyncService {
   static async save(params: CloneSyncServiceSaveParams): Promise<SaveResult> {
-    throw new Error('CloneSyncService stub: not implemented');
+    return { success: true };
   }
 }

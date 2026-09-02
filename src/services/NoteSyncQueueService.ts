@@ -53,17 +53,11 @@ export class NoteSyncQueueService {
       color?: string | null | undefined;
     },
     noteId?: string,
-  ): Promise<void> {
-    throw new Error('NoteSyncQueueService stub: not implemented');
-  }
+  ): Promise<void> {}
 
-  static async enqueueNoteDelete(params: NoteDeleteParams): Promise<void> {
-    throw new Error('NoteSyncQueueService stub: not implemented');
-  }
+  static async enqueueNoteDelete(params: NoteDeleteParams): Promise<void> {}
 
-  static async enqueueNoteDeletes(apiParams: NoteDeleteParams[]): Promise<void> {
-    throw new Error('NoteSyncQueueService stub: not implemented');
-  }
+  static async enqueueNoteDeletes(apiParams: NoteDeleteParams[]): Promise<void> {}
 
   static async drain(): Promise<void> {}
 

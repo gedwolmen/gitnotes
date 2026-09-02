@@ -193,7 +193,7 @@ if (!cancelled) {
         const gh = await GitHubService.setToken(token);
 user = gh
           ? {
-              id: String(gh.id),
+              id: gh.id,
               login: gh.login,
               name: gh.name ?? null,
               avatarUrl: gh.avatar_url ?? null,
@@ -202,13 +202,15 @@ user = gh
       } else if (provider === 'gitlab') {
         gitLabService.setToken(token);
         const gl = await gitLabService.getUser();
-        user = {
-          id: String(gl.id),
-          login: gl.login,
-          name: gl.name,
-          email: gl.email,
-          avatarUrl: gl.avatarUrl ?? null,
-        };
+        user = gl
+          ? {
+              id: gl.id,
+              login: gl.username,
+              name: gl.name,
+              email: gl.email ?? null,
+              avatarUrl: gl.avatar_url ?? null,
+            }
+          : null;
       } else if (provider === 'gitea' || provider === 'forgejo') {
         const svc = provider === 'gitea' ? giteaHostService : forgejoHostService;
         svc.setToken(token);

@@ -11,7 +11,7 @@ export class SyncEngineService {
   }
 
   static async setMode(_repoPath: string, _mode: SyncEngineMode): Promise<void> {
-    throw new Error('SyncEngineService stub: not implemented');
+    // No-op stub: sync mode is managed by the native GitEngine
   }
 
   static async clear(_repoPath: string): Promise<void> {}

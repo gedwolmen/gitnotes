@@ -34,7 +34,7 @@ function failedSyncResult(error: unknown): NoteGitHubSyncResult {
   const message = formatSyncError(rawMessage);
   return status === undefined
     ? { success: false, error: message }
-    : { success: false, error: message, status };
+    : { success: false, error: message, status: typeof status === 'number' ? status : undefined };
 }
 
 function failedSyncOrConflict(error: unknown, status?: number): NoteGitHubSyncResult {
