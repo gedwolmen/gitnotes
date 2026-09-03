@@ -40,6 +40,7 @@ import { SyncBlockOverlay } from './src/components/ui/SyncBlockOverlay';
 import { bootstrapStorage } from './src/services/StorageBootstrap';
 import { hydrate as hydrateGitOperationRegistry } from './src/stores/gitOperationStore';
 import { useRenderStyleStore } from './src/stores/renderStyleStore';
+import { useFloatingGitButtonStore } from './src/stores/floatingGitButtonStore';
 import { startForegroundWatcher } from './src/services/ForegroundSyncService';
 import { loadForegroundSyncConfig } from './src/hooks/useForegroundSyncSettings';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -73,6 +74,9 @@ export default function App() {
     // before StartupSyncGate drains/pulls and the UI reads lock state.
     void hydrateGitOperationRegistry();
     void useRenderStyleStore.getState().hydrate();
+    // Restore the floating git button visibility preference before the
+    // navigator renders so the button never flashes for users who hid it.
+    void useFloatingGitButtonStore.getState().hydrate();
     // Resolve Pro entitlement before surfacing restored data so the free-tier
     // repo/account caps can be enforced on data brought back by Android backup
     // restore (#1233) — before the stores render it, not after.
