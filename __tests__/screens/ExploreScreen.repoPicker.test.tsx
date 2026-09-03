@@ -112,7 +112,9 @@ jest.mock('../../src/services/git/GitFsService', () => ({
 }));
 
 jest.mock('../../src/services/git/engine/GitEngine', () => ({
-  statuses: jest.fn(() => Promise.resolve<string[]>([])),
+  status: jest.fn(() => Promise.resolve({ ahead: 0, behind: 0, currentBranch: 'main', branch: 'main', branches: [] })),
+  statuses: jest.fn(() => Promise.resolve<Array<{ path: string; status: string; staged: boolean }>>([])),
+  conflicts: jest.fn(() => Promise.resolve<Array<{ path: string; kind: string }>>([])),
 }));
 
 jest.mock('../../src/services/git/GitSyncGate', () => ({

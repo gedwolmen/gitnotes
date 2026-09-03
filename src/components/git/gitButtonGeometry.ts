@@ -12,14 +12,20 @@ export const GIT_BUTTON_SIZE = 56;
 /** Clearance from the screen edges when the button rests on an edge. */
 export const GIT_BUTTON_EDGE_CLEARANCE = 16;
 
-/** Bottom clearance above the safe-area inset. */
-export const GIT_BUTTON_BOTTOM_CLEARANCE = 24;
+/** Bottom tab bar height in points — button must rest above it. */
+export const GIT_BUTTON_TAB_BAR_HEIGHT = 48;
+/** Bottom safe-area inset the tab bar sits above. */
+export const GIT_BUTTON_SAFE_AREA_BOTTOM = 34;
+export const GIT_BUTTON_BOTTOM_CLEARANCE =
+  GIT_BUTTON_TAB_BAR_HEIGHT + GIT_BUTTON_SAFE_AREA_BOTTOM + 14;
 
 /** Top bound so the button never hides under headers. */
 export const GIT_BUTTON_TOP_BOUND = 64;
 
-/** Press-and-hold duration (ms) required to trigger a push. */
-export const GIT_BUTTON_HOLD_MS = 800;
+/** Press-and-hold duration (ms) to fire "stage everything pending" across all repos. */
+export const GIT_BUTTON_STAGE_HOLD_MS = 100;
+/** Press-and-hold duration (ms) to fire "stage + commit + push everything" on all repos. */
+export const GIT_BUTTON_PUSH_HOLD_MS = 300;
 
 /** Hold-to-push progress ring. */
 export const HOLD_RING_STROKE_WIDTH = 4;

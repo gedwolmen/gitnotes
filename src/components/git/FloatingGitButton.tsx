@@ -15,39 +15,28 @@ import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import ConflictRouteBanner from './ConflictRouteBanner';
 import GitButtonHalo from './GitButtonHalo';
-import GitErrorBanner from './GitErrorBanner';
 import HoldToPushRing from './HoldToPushRing';
-import UnpushedCommitsModal from './UnpushedCommitsModal';
 import {
   GIT_BUTTON_BOTTOM_CLEARANCE,
   GIT_BUTTON_DRAG_MIN_DISTANCE,
   GIT_BUTTON_EDGE_CLEARANCE,
-  GIT_BUTTON_HOLD_MS,
+  GIT_BUTTON_PUSH_HOLD_MS,
   GIT_BUTTON_SIZE,
+  GIT_BUTTON_STAGE_HOLD_MS,
   GIT_BUTTON_TOP_BOUND,
-  HALO_COLOR,
   HALO_RING_SIZE,
   HOLD_RING_CANVAS_SIZE,
 } from './gitButtonGeometry';
-import { classifyPushError, rejectedPushFailure, type PushFailure } from './pushErrors';
-import * as GitEngine from '@/services/git/engine/GitEngine';
-import type { GitRepository } from '@/services/GitService';
-import type { ManagedRepo } from '@/services/repos/RepoService';
-import type { ConflictFile } from '@/services/git/engine/GitEngine';
-import { useGitBusy } from '@/hooks/useGitBusy';
-import { useGitRepoStatus } from '@/hooks/useGitRepoStatus';
-import { useRepoStore } from '@/stores/repoStore';
-import { Toast, ToastDescription, ToastTitle, useToast } from '@/components/ui/toast';
-import { Text } from '@/components/ui/text';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useRepoStore } from '@/stores/repoStore';
+import type { AggregatedGitState } from '@/hooks/useAllReposStatus';
 import type { RootStackParamList } from '@/navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-/** Tap shorter than this (ms) counts as a tap (preview); longer is a hold. */
-const TAP_MAX_MS = 280;
+/** Below this duration, a press is a tap (no hold). */
+const TAP_MAX_MS = 100;
 /** Container hosts halo + ring + button; sized for the largest decoration. */
 const CONTAINER_SIZE = Math.max(HOLD_RING_CANVAS_SIZE, HALO_RING_SIZE);
 const INNER_OFFSET = (CONTAINER_SIZE - GIT_BUTTON_SIZE) / 2;
@@ -60,59 +49,69 @@ function clamp(value: number, min: number, max: number) {
 
 interface FloatingGitButtonProps {
   /**
-   * Repo to bind to. `undefined` resolves the active repo (first in the
-   * store); `null` forces the button hidden. Hidden anyway when the repo is
-   * missing from the store.
+   * Aggregated per-repo state from `useAllReposStatus`. Drives the color
+   * (conflicts=red, changes=green, push=blue, clean=muted) and the badge
+   * count. If omitted, the button degrades to a plain tap target.
    */
-  repoId?: string | null;
-  /**
-   * Called when the button is quickly tapped (short press < TAP_MAX_MS).
-   * Use this to navigate to a tab (e.g. 'changes' or 'staging').
-   */
+  aggregatedState?: AggregatedGitState;
+  /** Short tap (<100ms). Use for smart navigation. */
   onQuickTap?: () => void;
+  /** Fired once when the press reaches 100ms. Should stage everything pending. */
+  onStageAll?: () => void | Promise<void>;
+  /** Fired once when the press reaches 300ms. Should commit + push everything. */
+  onStageCommitPushAll?: () => void | Promise<void>;
 }
 
 /**
- * Floating git button for repo-aware screens (todo 19).
+ * Floating git button for repo-aware screens.
  *
- * States: hidden (no active repo) → idle (subtle git icon) → blue halo
- * (unpushed commits, engine `ahead > 0`) → hold-to-push (ring fills over
- * GIT_BUTTON_HOLD_MS; completing the hold calls `GitEngine.push`) → busy
- * (greyed/disabled while any engine op holds the flock) → error banner +
- * toast (typed failure with Retry). Tap while haloed previews the unpushed
- * commits. Draggable; snaps to the nearest horizontal edge. No auto-push.
+ * Color reflects the aggregated state across all repos:
+ *   - red    → anyConflicts (button is warning-level, hold still works)
+ *   - green  → uncommitted or staged somewhere, no conflicts
+ *   - blue   → only ahead > 0, no changes
+ *   - muted  → everything clean
+ *
+ * Gestures (replaces the old single-stage 800ms hold):
+ *   - tap (<100ms)  → onQuickTap (parent navigates to the latest-changed repo's tab)
+ *   - hold 100ms    → onStageAll
+ *   - hold 300ms    → onStageCommitPushAll
+ *
+ * The progress ring fills over the full 300ms so the user can see the
+ * trigger coming. Draggable, edge-snapping; no auto-push.
  */
-export default function FloatingGitButton({ repoId, onQuickTap }: FloatingGitButtonProps) {
+export default function FloatingGitButton({
+  aggregatedState,
+  onQuickTap,
+  onStageAll,
+  onStageCommitPushAll,
+}: FloatingGitButtonProps) {
   const { colors } = useTheme();
-  const toast = useToast();
   const navigation = useNavigation<NavigationProp>();
   const repos = useRepoStore((state) => state.repositories);
 
-  const repo = useMemo(() => {
-    if (repoId === null) return null;
-    if (repoId) return repos.find((candidate: GitRepository) => candidate.id === repoId) ?? null;
-    return repos[0] ?? null;
-  }, [repoId, repos]);
+  const state: AggregatedGitState = aggregatedState ?? {
+    perRepo: new Map(),
+    totalUncommitted: 0,
+    totalStaged: 0,
+    totalAhead: 0,
+    anyConflicts: false,
+    anyBusy: false,
+    latestChangedRepoId: null,
+    mode: 'clean',
+    refresh: async () => undefined,
+  };
 
-  const repoPath = repo?.path ?? null;
-  const { ahead, refresh: refreshStatus } = useGitRepoStatus(repo?.id ?? null, repoPath);
-  const { busy: engineBusy } = useGitBusy(repoPath ?? '');
+  const repo = useMemo(() => repos[0] ?? null, [repos]);
 
-  const [pushing, setPushing] = useState(false);
   const [ringVisible, setRingVisible] = useState(false);
-  const [failure, setFailure] = useState<PushFailure | null>(null);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [pendingConflicts, setPendingConflicts] = useState<ConflictFile[] | null>(null);
-
-  const busy = engineBusy || pushing;
-  const hasUnpushed = ahead > 0;
-  const canPush = hasUnpushed && !busy;
+  const [stageFired, setStageFired] = useState(false);
+  const [pushFired, setPushFired] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   const ringProgress = useSharedValue(0);
-  const holdTriggeredRef = useRef(false);
   const pressStartRef = useRef(0);
-  const pushSeqRef = useRef(0);
-  const progressSubRef = useRef<{ remove: () => void } | null>(null);
+  const stageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const frame = useSafeAreaFrame();
   const insets = useSafeAreaInsets();
@@ -128,123 +127,80 @@ export default function FloatingGitButton({ repoId, onQuickTap }: FloatingGitBut
 
   useEffect(
     () => () => {
-      progressSubRef.current?.remove();
+      if (stageTimerRef.current) clearTimeout(stageTimerRef.current);
+      if (pushTimerRef.current) clearTimeout(pushTimerRef.current);
     },
     [],
   );
 
-  const showToast = useCallback(
-    (action: 'success' | 'error', title: string, description: string) => {
-      toast.show({
-        placement: 'top',
-        duration: 4200,
-        render: ({ id }: { id: string }) => (
-          <Toast action={action} nativeID={`gitbutton-toast-${id}`}>
-            <ToastTitle>{title}</ToastTitle>
-            <ToastDescription>{description}</ToastDescription>
-          </Toast>
-        ),
-      });
-    },
-    [toast],
-  );
-
-  const startPush = useCallback(async () => {
-    if (!repo) return;
-    const seq = ++pushSeqRef.current;
-    setPushing(true);
-    setRingVisible(true);
-    setFailure(null);
-    setPendingConflicts(null);
-
-    progressSubRef.current?.remove();
-    progressSubRef.current = GitEngine.addEngineProgressListener((event) => {
-      if (event.kind !== 'Push') return;
-      const fraction =
-        event.total > 0
-          ? Math.min(1, event.received / event.total)
-          : Math.min(1, Math.max(0, event.percent / 100));
-      // Push transfer progress only moves forward.
-      if (fraction > ringProgress.value) ringProgress.value = fraction;
-    });
-
-    try {
-      const result = await GitEngine.pushWithIntegrate(repo.path, 'origin', repo.id);
-      if (result.kind === 'Conflicts') {
-        setPendingConflicts(result.conflicts.map((c: { path: string }) => ({ path: c.path, status: 'conflict' })));
-        showToast('error', 'Merge conflicts', 'The push diverged; resolve the conflicts.');
-        await refreshStatus();
-      } else if (result.pushed) {
-        await refreshStatus();
-        showToast(
-          'success',
-          result.integrated ? 'Pushed with integration' : 'Pushed',
-          result.message,
-        );
-      } else {
-        const rejection = rejectedPushFailure(result.message);
-        setFailure(rejection);
-        showToast('error', rejection.label, rejection.message);
-      }
-    } catch (error) {
-      const classified = classifyPushError(error);
-      setFailure(classified);
-      showToast('error', classified.label, classified.message);
-    } finally {
-      progressSubRef.current?.remove();
-      progressSubRef.current = null;
-      if (pushSeqRef.current === seq) {
-        setPushing(false);
-        holdTriggeredRef.current = false;
-        ringProgress.value = withTiming(0, { duration: 250 });
-        setTimeout(() => {
-          if (pushSeqRef.current === seq) setRingVisible(false);
-        }, 280);
-      }
+  const clearTimers = useCallback(() => {
+    if (stageTimerRef.current) {
+      clearTimeout(stageTimerRef.current);
+      stageTimerRef.current = null;
     }
-  }, [repo, refreshStatus, ringProgress, showToast]);
+    if (pushTimerRef.current) {
+      clearTimeout(pushTimerRef.current);
+      pushTimerRef.current = null;
+    }
+  }, []);
 
-  const completeHold = useCallback(() => {
-    holdTriggeredRef.current = true;
+  const fireStage = useCallback(() => {
+    if (stageFired || pushFired) return;
+    setStageFired(true);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
+    void onStageAll?.();
+  }, [stageFired, pushFired, onStageAll]);
+
+  const firePush = useCallback(() => {
+    if (pushFired) return;
+    setPushFired(true);
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
-    void startPush();
-  }, [startPush]);
+    setBusy(true);
+    void Promise.resolve(onStageCommitPushAll?.()).finally(() => {
+      setBusy(false);
+    });
+  }, [pushFired, onStageCommitPushAll]);
 
   const startHold = useCallback(() => {
-    if (!canPush) return;
-    holdTriggeredRef.current = false;
+    setStageFired(false);
+    setPushFired(false);
     pressStartRef.current = Date.now();
-    setFailure(null);
     setRingVisible(true);
     ringProgress.value = 0;
     ringProgress.value = withTiming(
       1,
-      { duration: GIT_BUTTON_HOLD_MS, easing: Easing.linear },
+      { duration: GIT_BUTTON_PUSH_HOLD_MS, easing: Easing.linear },
       (finished) => {
-        if (finished) runOnJS(completeHold)();
+        if (finished) runOnJS(clearTimers)();
       },
     );
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
-  }, [canPush, completeHold, ringProgress]);
+    clearTimers();
+    stageTimerRef.current = setTimeout(() => runOnJS(fireStage)(), GIT_BUTTON_STAGE_HOLD_MS);
+    pushTimerRef.current = setTimeout(() => runOnJS(firePush)(), GIT_BUTTON_PUSH_HOLD_MS);
+  }, [ringProgress, fireStage, firePush, clearTimers]);
 
   const cancelHold = useCallback(() => {
-    if (holdTriggeredRef.current || pushing) return;
+    if (pushFired) return;
+    clearTimers();
     ringProgress.value = withTiming(0, { duration: 160, easing: Easing.out(Easing.cubic) });
-    const seq = pushSeqRef.current;
+    const seq = pressStartRef.current;
     setTimeout(() => {
-      if (pushSeqRef.current === seq && !holdTriggeredRef.current) setRingVisible(false);
+      if (pressStartRef.current === seq && !pushFired) setRingVisible(false);
     }, 180);
-  }, [pushing, ringProgress]);
+  }, [pushFired, ringProgress, clearTimers]);
 
   const handleTap = useCallback(() => {
-    const pressStart = pressStartRef.current;
+    if (pushFired || stageFired) {
+      setStageFired(false);
+      setPushFired(false);
+      return;
+    }
+    const elapsed = pressStartRef.current > 0 ? Date.now() - pressStartRef.current : 0;
     pressStartRef.current = 0;
-    if (holdTriggeredRef.current) return;
-    const elapsed = pressStart > 0 ? Date.now() - pressStart : 0;
     if (elapsed > TAP_MAX_MS) return;
-    if (busy) return;
     onQuickTap?.();
-  }, [busy, onQuickTap]);
+  }, [stageFired, pushFired, onQuickTap]);
 
   const panGesture = useMemo(
     () =>
@@ -273,110 +229,96 @@ export default function FloatingGitButton({ repoId, onQuickTap }: FloatingGitBut
 
   if (!repo) return null;
 
+  const { mode, totalUncommitted, totalStaged, totalAhead, anyConflicts } = state;
+  const actionCount = totalUncommitted + totalStaged + totalAhead;
+  const hasAny = actionCount > 0 || anyConflicts;
+
+  const palette = (() => {
+    if (anyConflicts) {
+      return { bg: colors.error, fg: '#ffffff', label: 'Conflicts — open the resolver' };
+    }
+    if (totalUncommitted > 0 || totalStaged > 0) {
+      return { bg: colors.success, fg: '#ffffff', label: `${actionCount} change${actionCount === 1 ? '' : 's'} pending — hold 100ms to stage, 300ms to commit + push` };
+    }
+    if (totalAhead > 0) {
+      return { bg: colors.primary, fg: '#ffffff', label: `${totalAhead} unpushed commit${totalAhead === 1 ? '' : 's'} — hold 300ms to commit + push` };
+    }
+    return { bg: colors.surface, fg: colors.textSecondary, label: 'Git: branch up to date — tap to preview' };
+  })();
+
   const accessibilityLabel = busy
     ? 'Git sync busy'
-    : hasUnpushed
-      ? `${ahead} unpushed commit${ahead === 1 ? '' : 's'}. Hold to push, tap to preview.`
-      : 'Git: branch up to date';
+    : palette.label;
 
   return (
-    <>
-      <GestureDetector gesture={panGesture}>
-        <Animated.View
-          testID="gitbutton.root"
-          style={[styles.container, { width: CONTAINER_SIZE, height: CONTAINER_SIZE }, containerStyle]}
-        >
-          <View style={styles.buttonFrame}>
-            <GitButtonHalo active={hasUnpushed && !busy} testID="gitbutton.halo" />
-            <HoldToPushRing
-              progress={ringProgress}
-              visible={ringVisible}
-              color={HALO_COLOR}
-              testID="gitbutton.ring"
-            />
-            <Pressable
-              testID="gitbutton.press"
-              onPressIn={startHold}
-              onPressOut={cancelHold}
-              onPress={handleTap}
-              disabled={busy}
-              accessibilityRole="button"
-              accessibilityLabel={accessibilityLabel}
-              accessibilityState={{ disabled: busy }}
-              className={`items-center justify-center rounded-full border-2 shadow-lg ${
-                busy
-                  ? 'border-border bg-muted'
-                  : hasUnpushed
-                    ? 'border-primary bg-primary'
-                    : 'border-border bg-popover'
-              }`}
-              style={({ pressed }) => [
-                { width: GIT_BUTTON_SIZE, height: GIT_BUTTON_SIZE },
-                { transform: [{ scale: pressed && canPush ? 0.94 : 1 }] },
-              ]}
-            >
-              {busy ? (
-                <ActivityIndicator
-                  size="small"
-                  color={colors.textSecondary}
-                  testID="gitbutton.spinner"
-                />
-              ) : (
-                <Ionicons
-                  name={hasUnpushed ? 'cloud-upload' : 'git-commit-outline'}
-                  size={24}
-                  color={hasUnpushed ? '#ffffff' : colors.textSecondary}
-                />
-              )}
-              {hasUnpushed && !busy && (
-                <View
-                  testID="gitbutton.badge"
-                  pointerEvents="none"
-                  className="absolute -right-1 -top-1 min-w-[20px] items-center justify-center rounded-full border-2 border-popover bg-blue-500 px-1 py-0.5"
-                >
-                  <Text className="text-[10px] font-bold leading-[12px] text-white">
-                    {ahead > 99 ? '99+' : ahead}
-                  </Text>
-                </View>
-              )}
-            </Pressable>
-          </View>
-        </Animated.View>
-      </GestureDetector>
-
-      {pendingConflicts && !pushing && (
-        <View style={[styles.bannerAnchor, { top: insets.top + 8 }]}>
-          <ConflictRouteBanner
-            fileCount={pendingConflicts.length}
-            onResolve={() => {
-              navigation.navigate('ExploreConflict', { repoId: repo.id });
-              setPendingConflicts(null);
-            }}
-            onDismiss={() => setPendingConflicts(null)}
+    <GestureDetector gesture={panGesture}>
+      <Animated.View
+        testID="gitbutton.root"
+        style={[styles.container, { width: CONTAINER_SIZE, height: CONTAINER_SIZE }, containerStyle]}
+      >
+        <View style={styles.buttonFrame}>
+          <GitButtonHalo active={hasAny && !busy} color={palette.bg} testID="gitbutton.halo" />
+          <HoldToPushRing
+            progress={ringProgress}
+            visible={ringVisible}
+            color={palette.bg}
+            testID="gitbutton.ring"
           />
+          <Pressable
+            testID="gitbutton.press"
+            onPressIn={startHold}
+            onPressOut={cancelHold}
+            onPress={handleTap}
+            disabled={busy}
+            accessibilityRole="button"
+            accessibilityLabel={accessibilityLabel}
+            accessibilityState={{ disabled: busy }}
+            accessibilityHint="Tap to jump to the latest changed repo. Hold 100ms to stage everything. Hold 300ms to commit and push."
+            style={({ pressed }) => [
+              { width: GIT_BUTTON_SIZE, height: GIT_BUTTON_SIZE, backgroundColor: palette.bg, borderColor: palette.bg },
+              { transform: [{ scale: pressed && !busy ? 0.94 : 1 }] },
+            ]}
+          >
+            {busy ? (
+              <ActivityIndicator size="small" color={palette.fg} testID="gitbutton.spinner" />
+            ) : (
+              <Ionicons
+                name={mode === 'conflicts' ? 'warning-outline' : 'git-pull-request-outline'}
+                size={26}
+                color={palette.fg}
+                testID="gitbutton.icon"
+              />
+            )}
+            {hasAny && !busy && (
+              <View
+                testID="gitbutton.badge"
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  right: -4,
+                  top: -4,
+                  minWidth: 20,
+                  paddingHorizontal: 4,
+                  paddingVertical: 1,
+                  borderRadius: 10,
+                  borderWidth: 2,
+                  borderColor: colors.background,
+                  backgroundColor: colors.surface,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text>{`${actionCount > 99 ? '99+' : actionCount}`}</Text>
+              </View>
+            )}
+          </Pressable>
         </View>
-      )}
-
-      {failure && !pushing && (
-        <View style={[styles.bannerAnchor, { top: insets.top + 8 }]}>
-          <GitErrorBanner
-            failure={failure}
-            retrying={pushing}
-            onRetry={() => void startPush()}
-            onDismiss={() => setFailure(null)}
-          />
-        </View>
-      )}
-
-      <UnpushedCommitsModal
-        repo={repo as any}
-        ahead={ahead}
-        open={previewOpen}
-        onClose={() => setPreviewOpen(false)}
-      />
-    </>
+      </Animated.View>
+    </GestureDetector>
   );
 }
+
+import { Text } from '@/components/ui/text';
 
 const styles = StyleSheet.create({
   container: {
@@ -392,12 +334,5 @@ const styles = StyleSheet.create({
     height: GIT_BUTTON_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  bannerAnchor: {
-    position: 'absolute',
-    left: GIT_BUTTON_EDGE_CLEARANCE,
-    right: GIT_BUTTON_EDGE_CLEARANCE,
-    alignItems: 'center',
-    zIndex: 31,
   },
 });

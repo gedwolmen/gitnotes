@@ -22,6 +22,7 @@ import { SectionTabs } from '@/components/ui/SectionTabs';
 import { Modal } from '@/components/ui/Modal';
 import FloatingGitButton from '@/components/git/FloatingGitButton';
 import { useGitRepoStatus } from '@/hooks/useGitRepoStatus';
+import { useAllReposStatus, type RepoGitState } from '@/hooks/useAllReposStatus';
 import { useRepoStore } from '@/stores/repoStore';
 import { GitFsService } from '@/services/git/GitFsService';
 import * as GitEngine from '@/services/git/engine/GitEngine';
@@ -29,6 +30,12 @@ import { GitSyncGate } from '@/services/git/GitSyncGate';
 import { AuthService } from '@/services/AuthService';
 import { pushWithForce } from '@/services/git/recovery';
 import { LastUsedRepoService } from '@/services/LastUsedRepoService';
+import {
+  commitAndPushAll,
+  stageAllPending,
+} from '@/services/git/multiRepoGitOps';
+import { useActiveAccount } from '@/hooks/useAccounts';
+import { Toast, ToastDescription, ToastTitle, useToast } from '@/components/ui/toast';
 import type { GitRepository } from '@/services/GitService';
 import type { RepoLike } from '@/components/explore/exploreShared';
 import type { RootStackParamList } from '@/navigation/types';
@@ -47,7 +54,7 @@ import { ConflictsSection } from '@/components/explore/ConflictsSection';
 import { RepoInfoSection } from '@/components/explore/RepoInfoSection';
 import { IssuesSection } from '@/components/explore/IssuesSection';
 import { PullRequestsSection } from '@/components/explore/PullRequestsSection';
-import { useTokens } from '@/contexts/ThemeContext';
+import { useTheme, useTokens } from '@/contexts/ThemeContext';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -60,11 +67,15 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
  */
 export default function ExploreScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const { isDark } = useTheme();
   const { colors } = useTokens();
   const insets = useSafeAreaInsets();
   const repos = useRepoStore((state) => state.repositories);
   const isLoading = useRepoStore((state) => state.isLoading);
   const loadRepos = useRepoStore((state) => state.loadRepos);
+  const aggregatedState = useAllReposStatus();
+  const { activeAccount } = useActiveAccount();
+  const toast = useToast();
 
   const [section, setSection] = useState<ExploreSection>('files');
   const [selectedRepoId, setSelectedRepoId] = useState<string | null>(null);
@@ -160,6 +171,90 @@ export default function ExploreScreen() {
     void refreshStatus();
   }, [refreshStatus]);
 
+  /** Decide which section best matches the latest-changed repo's state. */
+  const sectionForRepo = useCallback((entry: RepoGitState | undefined): ExploreSection => {
+    if (!entry) return 'files';
+    if (entry.conflicts) return 'conflicts';
+    if (entry.uncommitted > 0) return 'changes';
+    if (entry.staged > 0) return 'staging';
+    if (entry.ahead > 0) return 'commits';
+    return 'files';
+  }, []);
+
+  /**
+   * Tap on the floating git button: switch to the latest-changed repo and
+   * jump to the section that surfaces its current state (changes / staging /
+   * commits / conflicts). If everything is clean, this is a no-op.
+   */
+  const onQuickTap = useCallback(() => {
+    const targetRepoId = aggregatedState.latestChangedRepoId ?? repo?.id ?? null;
+    if (!targetRepoId) return;
+    if (targetRepoId !== repo?.id) {
+      setSelectedRepoId(targetRepoId);
+    }
+    const target = aggregatedState.perRepo.get(targetRepoId);
+    setSection(sectionForRepo(target));
+  }, [aggregatedState, repo?.id, sectionForRepo]);
+
+  const showToast = useCallback(
+    (action: 'success' | 'error', title: string, description?: string) => {
+      toast.show({
+        placement: 'top',
+        duration: 3000,
+        render: ({ id }: { id: string }) => (
+          <Toast action={action} nativeID={`gitbutton-op-toast-${id}`}>
+            <ToastTitle>{title}</ToastTitle>
+            {description ? <ToastDescription>{description}</ToastDescription> : null}
+          </Toast>
+        ),
+      });
+    },
+    [toast],
+  );
+
+  /** Hold 100ms: stage every changed file across all repos. */
+  const onStageAll = useCallback(async () => {
+    if (repos.length === 0) return;
+    const result = await stageAllPending(repos);
+    if (result.failures.length > 0) {
+      showToast(
+        'error',
+        'Stage failed',
+        `${result.failures.length} repo${result.failures.length === 1 ? '' : 's'}: ${result.failures.map((f) => f.repoName).join(', ')}`,
+      );
+    } else if (result.totalActed === 0) {
+      showToast('success', 'Nothing to stage', 'All repos are already clean.');
+    } else {
+      showToast('success', 'Staged', `${result.totalActed} file${result.totalActed === 1 ? '' : 's'} across ${result.outcomes.filter((o) => o.actedCount > 0).length} repo${result.outcomes.filter((o) => o.actedCount > 0).length === 1 ? '' : 's'}.`);
+    }
+    void refreshStatus();
+    void aggregatedState.refresh();
+  }, [repos, showToast, refreshStatus, aggregatedState]);
+
+  /** Hold 300ms: stage + commit + push across all repos. */
+  const onStageCommitPushAll = useCallback(async () => {
+    if (repos.length === 0) return;
+    const author = {
+      name: activeAccount?.name ?? 'GitNotes',
+      email: activeAccount?.email ?? 'gitnotes@local',
+    };
+    const message = `chore: sync ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`;
+    const result = await commitAndPushAll(repos, message, author);
+    if (result.failures.length > 0) {
+      showToast(
+        'error',
+        'Sync had failures',
+        result.failures.map((f) => `${f.repoName}: ${f.error ?? 'unknown'}`).slice(0, 2).join(' / '),
+      );
+    } else if (result.totalActed === 0) {
+      showToast('success', 'Nothing to commit', 'All repos are clean and up to date.');
+    } else {
+      showToast('success', 'Synced', `${result.totalActed} change${result.totalActed === 1 ? '' : 's'} pushed.`);
+    }
+    void refreshStatus();
+    void aggregatedState.refresh();
+  }, [repos, activeAccount, showToast, refreshStatus, aggregatedState]);
+
   if (!repo) {
     return (
       <SafeAreaView className="flex-1" style={{ flex: 1, backgroundColor: colors.background }} testID="explore.empty">
@@ -223,18 +318,18 @@ export default function ExploreScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1" style={{ flex: 1, backgroundColor: colors.background }} testID="explore.root">
+    <SafeAreaView edges={[]} className="flex-1" style={{ flex: 1, backgroundColor: colors.background }} testID="explore.root">
       <View className="flex-1" style={{ flex: 1 }} testID={`explore.section.${section}`}>
         {renderSection()}
       </View>
 
       <View pointerEvents="box-none" style={{ position: 'absolute', top: 0, left: 0, right: 0 }}>
-        <BlurView
-          intensity={60}
-          tint="dark"
-          style={{ overflow: 'hidden' }}
-        >
-          <View style={{ paddingTop: insets.top, backgroundColor: `${colors.background}E6` }}>
+          <BlurView
+            intensity={60}
+            tint={isDark ? 'dark' : 'light'}
+            style={{ overflow: 'hidden' }}
+          >
+            <View style={{ paddingTop: insets.top, backgroundColor: `${colors.background}B3` }}>
             <View className="flex-row items-center gap-2 px-4 py-2.5" testID="explore.header">
               <Pressable
                 onPress={() => navigation.goBack()}
@@ -305,10 +400,10 @@ export default function ExploreScreen() {
           </View>
         </BlurView>
 
-        <BlurView intensity={60} tint="dark" style={{ overflow: 'hidden' }}>
+        <BlurView intensity={60} tint={isDark ? 'dark' : 'light'} style={{ overflow: 'hidden' }}>
           <View
             style={{
-              backgroundColor: `${colors.background}E6`,
+              backgroundColor: `${colors.background}B3`,
               borderBottomWidth: StyleSheet.hairlineWidth,
               borderBottomColor: colors.border,
             }}
@@ -324,16 +419,10 @@ export default function ExploreScreen() {
       </View>
 
       <FloatingGitButton
-        repoId={repo.id}
-        onQuickTap={async () => {
-          const hasUnpushed = status && status.ahead > 0;
-          const changedPaths = await GitEngine.statuses(repo.localPath);
-          if (hasUnpushed || changedPaths.length > 0) {
-            setSection('changes');
-          } else {
-            setSection('staging');
-          }
-        }}
+        aggregatedState={aggregatedState}
+        onQuickTap={onQuickTap}
+        onStageAll={onStageAll}
+        onStageCommitPushAll={onStageCommitPushAll}
       />
 
       <Modal
@@ -371,6 +460,7 @@ export default function ExploreScreen() {
             style={{ maxHeight: 480 }}
             renderItem={({ item }) => {
               const isSelected = item.id === repo.id;
+              const entry = aggregatedState.perRepo.get(item.id);
               return (
                 <TouchableOpacity
                   onPress={() => handlePickRepo(item)}
@@ -408,6 +498,68 @@ export default function ExploreScreen() {
                     >
                       {item.path}
                     </Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    {entry?.conflicts && (
+                      <View
+                        testID={`explore.repo-picker.badge.conflicts-${item.id}`}
+                        style={{
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                          borderRadius: 6,
+                          backgroundColor: `${colors.error}22`,
+                        }}
+                      >
+                        <Text className="text-[10px] font-semibold" style={{ color: colors.error }}>
+                          conflict
+                        </Text>
+                      </View>
+                    )}
+                    {entry && entry.uncommitted > 0 && (
+                      <View
+                        testID={`explore.repo-picker.badge.changes-${item.id}`}
+                        style={{
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                          borderRadius: 6,
+                          backgroundColor: `${colors.success}22`,
+                        }}
+                      >
+                        <Text className="text-[10px] font-semibold" style={{ color: colors.success }}>
+                          {entry.uncommitted} change{entry.uncommitted === 1 ? '' : 's'}
+                        </Text>
+                      </View>
+                    )}
+                    {entry && entry.staged > 0 && (
+                      <View
+                        testID={`explore.repo-picker.badge.staged-${item.id}`}
+                        style={{
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                          borderRadius: 6,
+                          backgroundColor: `${colors.success}33`,
+                        }}
+                      >
+                        <Text className="text-[10px] font-semibold" style={{ color: colors.success }}>
+                          {entry.staged} staged
+                        </Text>
+                      </View>
+                    )}
+                    {entry && entry.ahead > 0 && (
+                      <View
+                        testID={`explore.repo-picker.badge.push-${item.id}`}
+                        style={{
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                          borderRadius: 6,
+                          backgroundColor: `${colors.primary}22`,
+                        }}
+                      >
+                        <Text className="text-[10px] font-semibold" style={{ color: colors.primary }}>
+                          {entry.ahead}↑
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 </TouchableOpacity>
               );
