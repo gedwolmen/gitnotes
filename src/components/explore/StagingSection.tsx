@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -9,6 +9,7 @@ import { Button, ButtonText } from '@/components/ui/Button';
 import { FlatList } from '@/components/ui/flat-list';
 import { DiffLineList, previewLines } from './DiffLineList';
 import { CommitComposer } from './CommitComposer';
+import { Modal } from '@/components/ui/Modal';
 import * as GitEngine from '@/services/git/engine/GitEngine';
 import type { FileDiff, FileStatus } from '@/services/git/engine/GitEngine';
 import { GitFsService } from '@/services/git/GitFsService';
@@ -33,6 +34,7 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0 }: 
   const [error, setError] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
   const [notCloned, setNotCloned] = useState(false);
+  const [commitOpen, setCommitOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -110,7 +112,7 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0 }: 
     ({ item }: { item: FileStatus }) => {
       const diff = data?.diffs[item.path];
       return (
-        <View className="mx-4 mb-3 rounded-lg p-3" style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }}>
+        <View className="mx-4 mb-3 rounded-sm p-3" style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }}>
           <Pressable
             onPress={() => navigation.navigate('ExploreDiff', { repoId: repo.id, path: item.path })}
             accessibilityRole="button"
@@ -151,7 +153,7 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0 }: 
         </View>
       );
     },
-    [data, navigation, repo.id, unstage, busyPath],
+    [colors, data, navigation, repo.id, unstage, busyPath],
   );
 
   if (error) {
@@ -196,6 +198,11 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0 }: 
             </Text>
             <View className="flex-row items-center gap-2">
               {loading && <ActivityIndicator size="small" color={colors.accent} />}
+              {(data?.changedPaths.length ?? 0) > 0 && (
+                <Button size="sm" variant="primary" onPress={() => setCommitOpen(true)} testID="explore.staging.commit-open">
+                  <ButtonText>Commit pending</ButtonText>
+                </Button>
+              )}
               {(data?.staged.length ?? 0) > 0 && (
                 <Button size="sm" variant="outline" disabled={busyPath !== null} onPress={() => void unstageAll()}>
                   <ButtonText>Unstage all</ButtonText>
@@ -216,15 +223,19 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0 }: 
         }
         testID="explore.staging.list"
       />
-      <CommitComposer
-        repo={repo}
-        changedPaths={data?.changedPaths ?? []}
-        stagedCount={data?.staged.length ?? 0}
-        onCommitted={() => {
-          onChanged();
-          setVersion((value) => value + 1);
-        }}
-      />
+      <Modal visible={commitOpen} bottomSheet onRequestClose={() => setCommitOpen(false)}>
+        <CommitComposer
+          embedded
+          repo={repo}
+          changedPaths={data?.changedPaths ?? []}
+          stagedCount={data?.staged.length ?? 0}
+          onCommitted={() => {
+            setCommitOpen(false);
+            onChanged();
+            setVersion((value) => value + 1);
+          }}
+        />
+      </Modal>
     </View>
   );
 }

@@ -8,7 +8,7 @@ import { Button, ButtonText } from '@/components/ui/Button';
 import { InputField } from '@/components/ui/Input';
 import { TextareaInput } from '@/components/ui/textarea';
 import * as GitEngine from '@/services/git/engine/GitEngine';
-import { useActiveAccount } from '@/hooks/useAccounts';
+import { useAccounts } from '@/contexts/AccountsContext';
 import type { RepoLike } from './exploreShared';
 import { useTokens } from '@/contexts/ThemeContext';
 
@@ -21,10 +21,12 @@ interface CommitComposerProps {
   stagedCount: number;
   /** Reload section data + refresh the shell header after a commit lands. */
   onCommitted: () => void;
+  embedded?: boolean;
 }
 
-export function CommitComposer({ repo, changedPaths, stagedCount, onCommitted }: CommitComposerProps) {
-  const { activeAccount } = useActiveAccount();
+export function CommitComposer({ repo, changedPaths, stagedCount, onCommitted, embedded = false }: CommitComposerProps) {
+  const { accounts, activeAccountId } = useAccounts();
+  const activeAccount = accounts.find((account) => account.id === activeAccountId) ?? null;
   const { colors } = useTokens();
   const [message, setMessage] = useState('');
   const [authorName, setAuthorName] = useState('');
@@ -82,7 +84,12 @@ export function CommitComposer({ repo, changedPaths, stagedCount, onCommitted }:
   const nothingStaged = stagedCount === 0;
 
   return (
-    <View style={{ borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.card, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12 }} testID="explore.commit-composer">
+    <View
+      style={embedded
+        ? { backgroundColor: 'transparent', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 20, minWidth: 0 }
+        : { borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 16, overflow: 'hidden', marginHorizontal: 16, marginVertical: 8, minWidth: 0 }}
+      testID="explore.commit-composer"
+    >
       <View className="flex-row items-center gap-2">
         <Ionicons name="git-commit-outline" size={14} color={colors.accent} />
         <Heading className="text-sm" style={{ color: colors.text }}>Commit</Heading>
@@ -94,8 +101,8 @@ export function CommitComposer({ repo, changedPaths, stagedCount, onCommitted }:
       </View>
 
       <View
-        className="mt-2 flex-row items-start rounded-md"
-        style={{ borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: 10, paddingVertical: 6, minHeight: 76 }}
+        className="mt-3 flex-row items-start rounded-md"
+        style={{ borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: 12, paddingVertical: 8, minHeight: 92 }}
         testID="explore.commit-composer.message"
       >
         <TextareaInput
@@ -106,13 +113,13 @@ export function CommitComposer({ repo, changedPaths, stagedCount, onCommitted }:
           autoCapitalize="none"
           autoCorrect={false}
           accessibilityLabel="Commit message"
-          style={{ minHeight: 64, paddingVertical: 0 }}
+          style={{ minHeight: 74, paddingVertical: 0 }}
           testID="explore.commit-composer.message.input"
         />
       </View>
 
-      <View className="mt-2 flex-row gap-2">
-        <View className="flex-1 flex-row items-center rounded-md" style={{ borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: 10, minHeight: 44 }}>
+      <View className="mt-3 gap-2">
+        <View className="flex-row items-center rounded-md" style={{ borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: 12, minHeight: 44 }}>
           <InputField
             value={authorName}
             onChangeText={(value) => {
@@ -124,7 +131,7 @@ export function CommitComposer({ repo, changedPaths, stagedCount, onCommitted }:
             testID="explore.commit-composer.author-name"
           />
         </View>
-        <View className="flex-1 flex-row items-center rounded-md" style={{ borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: 10, minHeight: 44 }}>
+        <View className="flex-row items-center rounded-md" style={{ borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: 12, minHeight: 44 }}>
           <InputField
             value={authorEmail}
             onChangeText={(value) => {
@@ -152,22 +159,24 @@ export function CommitComposer({ repo, changedPaths, stagedCount, onCommitted }:
         </Text>
       )}
 
-      <View className="mt-3 flex-row items-center gap-2">
+      <View className="mt-4 gap-2">
         <Button
+          fullWidth
           variant="primary"
           disabled={busy !== null || (nothingToStageAll && nothingStaged)}
           onPress={() => void runCommit('stageAll')}
-          style={{ flex: 1.2, minHeight: 44 }}
+          style={{ minHeight: 44 }}
           testID="explore.commit-composer.stage-all-commit"
         >
           {busy === 'stageAll' ? <ActivityIndicator size="small" color="#fff" /> : null}
           <ButtonText>Stage all + Commit</ButtonText>
         </Button>
         <Button
+          fullWidth
           variant="outline"
           disabled={busy !== null || nothingStaged}
           onPress={() => void runCommit('commit')}
-          style={{ flex: 1, minHeight: 44 }}
+          style={{ minHeight: 44 }}
           testID="explore.commit-composer.commit"
         >
           {busy === 'commit' ? <ActivityIndicator size="small" color={colors.text} /> : null}

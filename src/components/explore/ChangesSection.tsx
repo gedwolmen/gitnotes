@@ -93,7 +93,7 @@ export function ChangesSection({ repo, active, onChanged, chromeTopInset = 0 }: 
       const toneStyle = resolveStatusTone(colors, meta.tone);
       const diff = data?.diffs[item.path];
       return (
-        <View className="mx-4 mb-3 rounded-lg p-3" style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }}>
+        <View className="mx-4 mb-3 rounded-sm p-3" style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }}>
           <Pressable
             onPress={() => navigation.navigate('ExploreDiff', { repoId: repo.id, path: item.path })}
             accessibilityRole="button"
@@ -164,7 +164,7 @@ export function ChangesSection({ repo, active, onChanged, chromeTopInset = 0 }: 
       data={data?.statuses ?? []}
       keyExtractor={(item) => item.path}
       renderItem={renderItem}
-      contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 96, flexGrow: 1 }}
+       contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 96, flexGrow: 1 }}
       refreshControl={
         <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.accent} />
       }

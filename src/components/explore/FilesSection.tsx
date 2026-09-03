@@ -112,7 +112,7 @@ export function FilesSection({ repo, active, chromeTopInset = 0 }: SectionProps)
             onPress={() => toggleDir(item.path)}
             accessibilityRole="button"
             testID={`explore.files.dir.${item.path}`}
-            className="mx-4 mb-1 flex-row items-center rounded-lg px-3 py-2"
+            className="mx-4 mb-1 flex-row items-center rounded-sm px-3 py-2"
           style={{ marginLeft: 16 + item.depth * 16, backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }}
           >
             <Ionicons
@@ -140,7 +140,7 @@ export function FilesSection({ repo, active, chromeTopInset = 0 }: SectionProps)
           onPress={() => navigation.navigate('ExploreFile', { repoId: repo.id, path: item.path })}
           accessibilityRole="button"
           testID={`explore.file.${item.path}`}
-          className="mx-4 mb-1.5 flex-row items-center rounded-lg px-3 py-2"
+          className="mx-4 mb-1.5 flex-row items-center rounded-sm px-3 py-2"
           style={{ marginLeft: 16 + item.depth * 16, backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }}
         >
           <Ionicons
@@ -197,7 +197,7 @@ export function FilesSection({ repo, active, chromeTopInset = 0 }: SectionProps)
       data={rows}
       keyExtractor={(item) => `${item.kind}:${item.path}`}
       renderItem={renderItem}
-      contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 96, flexGrow: 1 }}
+        contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 96, flexGrow: 1 }}
       refreshControl={
         <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.accent} />
       }
