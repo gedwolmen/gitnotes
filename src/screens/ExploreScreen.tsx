@@ -1,5 +1,14 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState, AppStateStatus, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  AppState,
+  AppStateStatus,
+  FlatList,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -10,6 +19,7 @@ import { Text } from '@/components/ui/text';
 import { Heading } from '@/components/ui/heading';
 import { Button, ButtonText } from '@/components/ui/Button';
 import { SectionTabs } from '@/components/ui/SectionTabs';
+import { Modal } from '@/components/ui/Modal';
 import FloatingGitButton from '@/components/git/FloatingGitButton';
 import { useGitRepoStatus } from '@/hooks/useGitRepoStatus';
 import { useRepoStore } from '@/stores/repoStore';
@@ -18,6 +28,8 @@ import * as GitEngine from '@/services/git/engine/GitEngine';
 import { GitSyncGate } from '@/services/git/GitSyncGate';
 import { AuthService } from '@/services/AuthService';
 import { pushWithForce } from '@/services/git/recovery';
+import { LastUsedRepoService } from '@/services/LastUsedRepoService';
+import type { GitRepository } from '@/services/GitService';
 import type { RepoLike } from '@/components/explore/exploreShared';
 import type { RootStackParamList } from '@/navigation/types';
 
@@ -55,18 +67,40 @@ export default function ExploreScreen() {
   const loadRepos = useRepoStore((state) => state.loadRepos);
 
   const [section, setSection] = useState<ExploreSection>('files');
+  const [selectedRepoId, setSelectedRepoId] = useState<string | null>(null);
+  const [showRepoPicker, setShowRepoPicker] = useState(false);
 
   const chromeHeaderHeight = 60;
   const chromeTabsHeight = 40;
-  const chromeTotalHeight = insets.top + chromeHeaderHeight + chromeTabsHeight;
+  const chromeTotalHeight = Math.max(0, insets.top + chromeHeaderHeight + chromeTabsHeight - 12);
 
   const repo = useMemo(() => {
-    const r = repos[0] ?? null;
+    const lookupId = selectedRepoId ?? repos[0]?.id ?? null;
+    const found = lookupId ? repos.find((r) => r.id === lookupId) : undefined;
+    const r = found ?? repos[0] ?? null;
     if (!r) return null;
     return {
       ...r,
       localPath: GitFsService.workingTreeUri({ repoPath: r.path }),
     } as RepoLike;
+  }, [repos, selectedRepoId]);
+
+  const handlePickRepo = useCallback((picked: GitRepository) => {
+    setSelectedRepoId(picked.id);
+    setShowRepoPicker(false);
+    void LastUsedRepoService.set(picked.path);
+  }, []);
+
+  const hasHydratedLastUsedRef = useRef(false);
+  useEffect(() => {
+    if (hasHydratedLastUsedRef.current) return;
+    if (repos.length === 0) return;
+    hasHydratedLastUsedRef.current = true;
+    void LastUsedRepoService.get().then((lastPath) => {
+      if (!lastPath) return;
+      const match = repos.find((r) => r.path === lastPath);
+      if (match) setSelectedRepoId(match.id);
+    });
   }, [repos]);
 
   const { status, refresh: refreshStatus } = useGitRepoStatus(
@@ -139,7 +173,7 @@ export default function ExploreScreen() {
           >
             <Ionicons name="chevron-back" size={22} style={{ color: colors.text }} />
           </Pressable>
-          <Heading className="text-lg" style={{ color: colors.text }}>Explore</Heading>
+          <Heading className="text-lg" style={{ color: colors.text }}>Git</Heading>
         </View>
         <View className="flex-1 items-center justify-center px-8" style={{ flex: 1 }}>
           <Ionicons name="git-network-outline" size={48} color={colors.textSecondary} />
@@ -211,14 +245,48 @@ export default function ExploreScreen() {
               >
                 <Ionicons name="chevron-back" size={22} style={{ color: colors.text }} />
               </Pressable>
-              <View className="min-w-0 flex-1">
-                <Heading className="text-base font-semibold" style={{ color: colors.text }} numberOfLines={1}>
-                  {repo.name}
-                </Heading>
-                <Text className="text-[11px]" style={{ color: colors.textSecondary }} numberOfLines={1} testID="explore.header.remote">
-                  {(repo as RepoLike).remoteUrl ?? repo.path}
-                </Text>
-              </View>
+              {repos.length > 1 ? (
+                <TouchableOpacity
+                  className="min-w-0 flex-1"
+                  onPress={() => setShowRepoPicker(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Switch repository. Current: ${repo.name}`}
+                  testID="explore.header.repo-picker"
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                >
+                  <Heading
+                    className="text-base font-semibold"
+                    style={{ color: colors.text, flexShrink: 1 }}
+                    numberOfLines={1}
+                    testID="explore.header.repo-name"
+                  >
+                    {repo.name}
+                  </Heading>
+                  <Ionicons name="chevron-down" size={14} style={{ color: colors.textSecondary }} />
+                  <Text
+                    className="text-[11px]"
+                    style={{ color: colors.textSecondary, flexShrink: 1 }}
+                    numberOfLines={1}
+                    testID="explore.header.remote"
+                  >
+                    {(repo as RepoLike).remoteUrl ?? repo.path}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <View className="min-w-0 flex-1">
+                  <Heading
+                    className="text-base font-semibold"
+                    style={{ color: colors.text }}
+                    numberOfLines={1}
+                    testID="explore.header.repo-name"
+                  >
+                    {repo.name}
+                  </Heading>
+                  <Text className="text-[11px]" style={{ color: colors.textSecondary }} numberOfLines={1} testID="explore.header.remote">
+                    {(repo as RepoLike).remoteUrl ?? repo.path}
+                  </Text>
+                </View>
+              )}
               {status?.currentBranch && (
                 <View className="rounded px-2 py-0.5" style={{ backgroundColor: `${colors.success}26` }} testID="explore.header.branch">
                   <Text className="text-[11px] font-semibold" style={{ color: colors.success }}>
@@ -267,6 +335,86 @@ export default function ExploreScreen() {
           }
         }}
       />
+
+      <Modal
+        visible={showRepoPicker}
+        onRequestClose={() => setShowRepoPicker(false)}
+        bottomSheet
+      >
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            borderBottomColor: colors.border,
+          }}
+        >
+          <Heading className="text-base font-semibold" style={{ color: colors.text }}>Switch Repository</Heading>
+          <TouchableOpacity
+            onPress={() => setShowRepoPicker(false)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+            testID="explore.repo-picker.close"
+          >
+            <Ionicons name="close" size={22} style={{ color: colors.textSecondary }} />
+          </TouchableOpacity>
+        </View>
+        <View testID="explore.repo-picker.modal">
+          <FlatList
+            data={repos}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{ paddingBottom: 16 }}
+            style={{ maxHeight: 480 }}
+            renderItem={({ item }) => {
+              const isSelected = item.id === repo.id;
+              return (
+                <TouchableOpacity
+                  onPress={() => handlePickRepo(item)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Switch to ${item.name}`}
+                  testID={`explore.repo-picker.item-${item.id}`}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 12,
+                    paddingHorizontal: 16,
+                    paddingVertical: 14,
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: colors.border,
+                    backgroundColor: isSelected ? `${colors.success}1A` : 'transparent',
+                  }}
+                >
+                  <Ionicons
+                    name={isSelected ? 'checkmark-circle' : 'folder-outline'}
+                    size={20}
+                    style={{ color: isSelected ? colors.success : colors.primary }}
+                  />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text
+                      className="text-sm font-semibold"
+                      style={{ color: isSelected ? colors.success : colors.text }}
+                      numberOfLines={1}
+                    >
+                      {item.name}
+                    </Text>
+                    <Text
+                      className="text-xs"
+                      style={{ color: colors.textSecondary, marginTop: 2 }}
+                      numberOfLines={1}
+                    >
+                      {item.path}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            }}
+          />
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
