@@ -21,6 +21,7 @@ import RenderStyleEditorScreen from '../screens/RenderStyleEditorScreen';
 import TemplateManagerScreen from '../screens/TemplateManagerScreen';
 import SyncStatusScreen from '../screens/SyncStatusScreen';
 import { FloatingAIButton } from '../components/ai/FloatingAIButton';
+import AppFloatingGitButton from '../components/git/AppFloatingGitButton';
 import { ChatRepoPickerModal } from '../components/ai/ChatRepoPickerModal';
 import { AddReminderScreen } from '../components/settings/AddReminderScreen';
 import ThoughtDumpScreen from '../screens/ThoughtDumpScreen';
@@ -276,6 +277,7 @@ export default function AppNavigator({ showOnboarding, onOnboardingComplete, onO
             )}
           </Stack.Navigator>
           <FloatingAIButton currentRouteName={currentRouteName} />
+          <AppFloatingGitButton currentRouteName={currentRouteName} />
         </View>
       </NavigationContainer>
         <ChatRepoPickerModal

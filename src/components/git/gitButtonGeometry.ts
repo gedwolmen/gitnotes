@@ -30,12 +30,14 @@ export const GIT_BUTTON_COMMIT_HOLD_MS = 600;
 export const GIT_BUTTON_PUSH_HOLD_MS = 900;
 
 /** Hold-to-push progress ring. */
-export const HOLD_RING_STROKE_WIDTH = 4;
+export const HOLD_RING_STROKE_WIDTH = 6;
 /** Gap between the button edge and the ring's center line. */
-export const HOLD_RING_RADIUS_OFFSET = 5;
+export const HOLD_RING_RADIUS_OFFSET = 6;
 /** Diameter of the SVG canvas that hosts the ring (incl. stroke). */
 export const HOLD_RING_CANVAS_SIZE =
   GIT_BUTTON_SIZE + (HOLD_RING_RADIUS_OFFSET + HOLD_RING_STROKE_WIDTH / 2) * 2;
+/** Length of each 1/3 / 2/3 tick mark that breaks the ring into segments. */
+export const HOLD_RING_TICK_LENGTH = 10;
 
 /** Blue halo ring (unpushed commits). */
 export const HALO_RING_SIZE = GIT_BUTTON_SIZE + 24;

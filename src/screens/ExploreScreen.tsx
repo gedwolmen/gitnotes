@@ -20,9 +20,8 @@ import { Heading } from '@/components/ui/heading';
 import { Button, ButtonText } from '@/components/ui/Button';
 import { SectionTabs } from '@/components/ui/SectionTabs';
 import { Modal } from '@/components/ui/Modal';
-import FloatingGitButton from '@/components/git/FloatingGitButton';
 import { useGitRepoStatus } from '@/hooks/useGitRepoStatus';
-import { useAllReposStatus, type RepoGitState } from '@/hooks/useAllReposStatus';
+import { useAllReposStatus } from '@/hooks/useAllReposStatus';
 import { useRepoStore } from '@/stores/repoStore';
 import { GitFsService } from '@/services/git/GitFsService';
 import * as GitEngine from '@/services/git/engine/GitEngine';
@@ -30,13 +29,7 @@ import { GitSyncGate } from '@/services/git/GitSyncGate';
 import { AuthService } from '@/services/AuthService';
 import { pushWithForce } from '@/services/git/recovery';
 import { LastUsedRepoService } from '@/services/LastUsedRepoService';
-import {
-  commitAll,
-  pushAll,
-  stageAllPending,
-} from '@/services/git/multiRepoGitOps';
-import { useActiveAccount } from '@/hooks/useAccounts';
-import { Toast, ToastDescription, ToastTitle, useToast } from '@/components/ui/toast';
+import { useGitButtonActionStore } from '@/stores/gitButtonActionStore';
 import type { GitRepository } from '@/services/GitService';
 import type { RepoLike } from '@/components/explore/exploreShared';
 import type { RootStackParamList } from '@/navigation/types';
@@ -75,8 +68,6 @@ export default function ExploreScreen() {
   const isLoading = useRepoStore((state) => state.isLoading);
   const loadRepos = useRepoStore((state) => state.loadRepos);
   const aggregatedState = useAllReposStatus();
-  const { activeAccount } = useActiveAccount();
-  const toast = useToast();
 
   const [section, setSection] = useState<ExploreSection>('files');
   const [selectedRepoId, setSelectedRepoId] = useState<string | null>(null);
@@ -172,108 +163,26 @@ export default function ExploreScreen() {
     void refreshStatus();
   }, [refreshStatus]);
 
-  /** Decide which section best matches the latest-changed repo's state. */
-  const sectionForRepo = useCallback((entry: RepoGitState | undefined): ExploreSection => {
-    if (!entry) return 'files';
-    if (entry.conflicts) return 'conflicts';
-    if (entry.uncommitted > 0) return 'changes';
-    if (entry.staged > 0) return 'staging';
-    if (entry.ahead > 0) return 'commits';
-    return 'files';
-  }, []);
-
   /**
-   * Tap on the floating git button: switch to the latest-changed repo and
-   * jump to the section that surfaces its current state (changes / staging /
-   * commits / conflicts). If everything is clean, this is a no-op.
+   * The floating git button is rendered at the app level. When the user
+   * taps it from any screen, the app-level wrapper sets a pending action
+   * (target repo + section) and navigates here. On focus we apply it:
+   *   - swap the active repo if it changed
+   *   - jump the section tab to whatever surfaces the repo's current state
+   *     (changes / staging / commits / conflicts / files)
+   * Then clear the pending action so a normal re-focus doesn't re-apply it.
    */
-  const onQuickTap = useCallback(() => {
-    const targetRepoId = aggregatedState.latestChangedRepoId ?? repo?.id ?? null;
-    if (!targetRepoId) return;
-    if (targetRepoId !== repo?.id) {
-      setSelectedRepoId(targetRepoId);
-    }
-    const target = aggregatedState.perRepo.get(targetRepoId);
-    setSection(sectionForRepo(target));
-  }, [aggregatedState, repo?.id, sectionForRepo]);
-
-  const showToast = useCallback(
-    (action: 'success' | 'error', title: string, description?: string) => {
-      toast.show({
-        placement: 'top',
-        duration: 3000,
-        render: ({ id }: { id: string }) => (
-          <Toast action={action} nativeID={`gitbutton-op-toast-${id}`}>
-            <ToastTitle>{title}</ToastTitle>
-            {description ? <ToastDescription>{description}</ToastDescription> : null}
-          </Toast>
-        ),
-      });
-    },
-    [toast],
+  useFocusEffect(
+    useCallback(() => {
+      const pending = useGitButtonActionStore.getState().pending;
+      if (!pending) return;
+      if (pending.repoId !== repo?.id) {
+        setSelectedRepoId(pending.repoId);
+      }
+      setSection(pending.section);
+      useGitButtonActionStore.getState().clear();
+    }, [repo?.id]),
   );
-
-  /** Hold 1/3: stage every changed file across all repos. */
-  const onStageAll = useCallback(async () => {
-    if (repos.length === 0) return;
-    const result = await stageAllPending(repos);
-    if (result.failures.length > 0) {
-      showToast(
-        'error',
-        'Stage failed',
-        `${result.failures.length} repo${result.failures.length === 1 ? '' : 's'}: ${result.failures.map((f) => f.repoName).join(', ')}`,
-      );
-    } else if (result.totalActed === 0) {
-      showToast('success', 'Nothing to stage', 'All repos are already clean.');
-    } else {
-      showToast('success', 'Staged', `${result.totalActed} file${result.totalActed === 1 ? '' : 's'} across ${result.outcomes.filter((o) => o.actedCount > 0).length} repo${result.outcomes.filter((o) => o.actedCount > 0).length === 1 ? '' : 's'}.`);
-    }
-    void refreshStatus();
-    void aggregatedState.refresh();
-  }, [repos, showToast, refreshStatus, aggregatedState]);
-
-  /** Hold 2/3: commit every staged change across all repos. */
-  const onCommitAll = useCallback(async () => {
-    if (repos.length === 0) return;
-    const author = {
-      name: activeAccount?.name ?? 'GitNotes',
-      email: activeAccount?.email ?? 'gitnotes@local',
-    };
-    const message = `chore: sync ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`;
-    const result = await commitAll(repos, message, author);
-    if (result.failures.length > 0) {
-      showToast(
-        'error',
-        'Commit failed',
-        result.failures.map((f) => `${f.repoName}: ${f.error ?? 'unknown'}`).slice(0, 2).join(' / '),
-      );
-    } else if (result.totalActed === 0) {
-      showToast('success', 'Nothing to commit', 'No staged changes across any repo.');
-    } else {
-      showToast('success', 'Committed', `${result.totalActed} commit${result.totalActed === 1 ? '' : 's'} across ${result.outcomes.filter((o) => o.actedCount > 0).length} repo${result.outcomes.filter((o) => o.actedCount > 0).length === 1 ? '' : 's'}.`);
-    }
-    void refreshStatus();
-    void aggregatedState.refresh();
-  }, [repos, activeAccount, showToast, refreshStatus, aggregatedState]);
-
-  /** Hold 3/3: push every repo that has unpushed commits. */
-  const onPushAll = useCallback(async () => {
-    if (repos.length === 0) return;
-    const result = await pushAll(repos);
-    if (result.failures.length > 0) {
-      showToast(
-        'error',
-        'Push had failures',
-        result.failures.map((f) => `${f.repoName}: ${f.error ?? 'unknown'}`).slice(0, 2).join(' / '),
-      );
-    } else if (result.totalActed === 0) {
-      showToast('success', 'Nothing to push', 'All repos are up to date.');
-    } else {
-      showToast('success', 'Pushed', `${result.totalActed} commit${result.totalActed === 1 ? '' : 's'} across ${result.outcomes.filter((o) => o.actedCount > 0).length} repo${result.outcomes.filter((o) => o.actedCount > 0).length === 1 ? '' : 's'}.`);
-    }
-    void refreshStatus();
-    void aggregatedState.refresh();
-  }, [repos, showToast, refreshStatus, aggregatedState]);
 
   if (!repo) {
     return (
@@ -429,14 +338,6 @@ export default function ExploreScreen() {
             </View>
         </BlurView>
       </View>
-
-      <FloatingGitButton
-        aggregatedState={aggregatedState}
-        onQuickTap={onQuickTap}
-        onStageAll={onStageAll}
-        onCommitAll={onCommitAll}
-        onPushAll={onPushAll}
-      />
 
       <Modal
         visible={showRepoPicker}
