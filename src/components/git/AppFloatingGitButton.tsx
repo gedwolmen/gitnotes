@@ -1,4 +1,5 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import { useToast } from '@/components/ui/toast';
 import { Toast, ToastDescription, ToastTitle } from '@/components/ui/toast';
@@ -13,6 +14,8 @@ import {
 import { useGitButtonActionStore } from '@/stores/gitButtonActionStore';
 import FloatingGitButton from './FloatingGitButton';
 import type { RootStackParamList } from '@/navigation/types';
+
+const HINT_SEEN_KEY = '@gitnotes:gitbutton_hint_seen';
 
 interface AppFloatingGitButtonProps {
   /** Name of the current top-level route — used to hide the button on full-screen modals. */
@@ -55,6 +58,41 @@ export default function AppFloatingGitButton({ currentRouteName }: AppFloatingGi
   const aggregatedState = useAllReposStatus();
   const setPending = useGitButtonActionStore((s) => s.setPending);
   const toast = useToast();
+  const hintFiredRef = useRef(false);
+
+  const hasAnyAction =
+    aggregatedState.totalUncommitted + aggregatedState.totalStaged + aggregatedState.totalAhead > 0 ||
+    aggregatedState.anyConflicts;
+
+  /**
+   * First-use discoverability hint. When the user first encounters the
+   * button with something to do, show a long-duration toast that explains
+   * the 3-phase hold. Persists `seen` in AsyncStorage so it only fires once.
+   */
+  useEffect(() => {
+    if (hintFiredRef.current || !hasAnyAction) return;
+    hintFiredRef.current = true;
+    let cancelled = false;
+    void AsyncStorage.getItem(HINT_SEEN_KEY).then((seen) => {
+      if (cancelled || seen === 'true') return;
+      toast.show({
+        placement: 'top',
+        duration: 6000,
+        render: ({ id }: { id: string }) => (
+          <Toast action="success" nativeID={`gitbutton-hint-toast-${id}`}>
+            <ToastTitle>Tip: hold the git button</ToastTitle>
+            <ToastDescription>
+              1/3 to stage · 2/3 to commit · full to push all repos.
+            </ToastDescription>
+          </Toast>
+        ),
+      });
+      void AsyncStorage.setItem(HINT_SEEN_KEY, 'true').catch(() => undefined);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [hasAnyAction, toast]);
 
   if (currentRouteName && HIDDEN_ROUTES.has(currentRouteName)) return null;
 

@@ -4,7 +4,7 @@ import Animated, {
   useAnimatedProps,
   type SharedValue,
 } from 'react-native-reanimated';
-import { Circle, Line, Svg } from 'react-native-svg';
+import { Circle, Line, Svg, Text as SvgText } from 'react-native-svg';
 
 import {
   GIT_BUTTON_SIZE,
@@ -23,6 +23,19 @@ const RING_CENTER = HOLD_RING_CANVAS_SIZE / 2;
 /** Where the 1/3 and 2/3 tick marks sit on the circle (degrees from 12 o'clock). */
 const TICK_ANGLE_1_OF_3 = 120;
 const TICK_ANGLE_2_OF_3 = 240;
+
+/**
+ * Labels for each of the three hold segments. Rendered as SVG text at the
+ * midpoint of each segment so the user can see what each phase does while
+ * holding. `stage` sits in the 12 → 4 o'clock arc, `commit` in 4 → 8,
+ * `push` in 8 → 12.
+ */
+const SEGMENT_LABELS: { angle: number; text: string }[] = [
+  { angle: 60, text: 'stage' },
+  { angle: 180, text: 'commit' },
+  { angle: 300, text: 'push' },
+];
+const LABEL_RADIUS = RING_RADIUS + HOLD_RING_STROKE_WIDTH / 2 + 7;
 
 function pointOnCircle(degreesFromTop: number, radius: number) {
   const radians = ((degreesFromTop - 90) * Math.PI) / 180;
@@ -43,6 +56,8 @@ interface HoldToPushRingProps {
   trackColor?: string;
   /** Color of the 1/3 and 2/3 tick marks. */
   tickColor?: string;
+  /** Color of the per-segment action labels ('stage' / 'commit' / 'push'). */
+  textColor?: string;
   testID?: string;
 }
 
@@ -63,6 +78,7 @@ export default function HoldToPushRing({
   color = '#3b82f6',
   trackColor = 'rgba(255, 255, 255, 0.85)',
   tickColor = 'rgba(255, 255, 255, 0.9)',
+  textColor = 'rgba(255, 255, 255, 0.95)',
   testID,
 }: HoldToPushRingProps) {
   const arcProps = useAnimatedProps(() => {
@@ -117,6 +133,23 @@ export default function HoldToPushRing({
           strokeLinecap="round"
           opacity={0.9}
         />
+        {SEGMENT_LABELS.map((segment) => {
+          const labelPos = pointOnCircle(segment.angle, LABEL_RADIUS);
+          return (
+            <SvgText
+              key={segment.text}
+              x={labelPos.x}
+              y={labelPos.y + 3}
+              fill={textColor}
+              fontSize={8.5}
+              fontWeight="700"
+              textAnchor="middle"
+              letterSpacing={0.3}
+            >
+              {segment.text}
+            </SvgText>
+          );
+        })}
         <AnimatedCircle
           cx={RING_CENTER}
           cy={RING_CENTER}
