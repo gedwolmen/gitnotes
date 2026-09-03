@@ -28,6 +28,12 @@ All notable fixes and feature changes to GitNotēs are documented here.
 - Settings: Auto-push on idle (3 min) and Background-task push toggles
 - i18n: 6 locales updated with clone mode description
 
+## 2026-09-04
+
+### Deleting a repo-backed todo now stages the removal in clone mode
+
+**fix(sync)** — Clone-mode todo deletion now routes through the shared clone writer (`CloneSyncService.save` with `intent: 'delete'`, same path as template deletes, #514): the backing file is removed from the local clone and the removal is staged with `git rm` semantics, so the git Changes tab lists it as a staged "deleted" entry until committed, and the remote copy is purged once that commit is pushed. Previously the clone file was left untouched, so nothing appeared in the Changes tab and the next pull re-imported the todo (#489).
+
 ## 2026-08-26
 
 ### Push pre-pulls origin into local before attempting the push
