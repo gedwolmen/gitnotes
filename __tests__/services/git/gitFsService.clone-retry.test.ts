@@ -2,42 +2,14 @@
  * Tests for the single clone-retry on packfile corruption (issue #790).
  *
  * Mirrors the mock setup in gitFsService.test.ts but scopes to a single
- * behaviour: when `git.clone` throws a packfile-corruption message,
- * `GitFsService.clone` retries exactly once after cleanup; on non-corruption
- * errors, no retry is attempted.
+ * behaviour: when the native engine clone throws a packfile-corruption
+ * message, `GitFsService.clone` retries exactly once after cleanup; on
+ * non-corruption errors, no retry is attempted.
  */
 
-jest.mock('isomorphic-git', () => {
-  const mockIg = {
-    clone: jest.fn(async (..._args: unknown[]) => undefined),
-    checkout: jest.fn(async (..._args: unknown[]) => undefined),
-    fetch: jest.fn(async (..._args: unknown[]) => ({ defaultBranch: 'main' })),
-    fastForward: jest.fn(async (..._args: unknown[]) => undefined),
-    walk: jest.fn(async () => []),
-    resolveRef: jest.fn(async () => 'oid-deadbeef'),
-    readBlob: jest.fn(async () => ({ oid: 'oid', blob: new TextEncoder().encode('x') })),
-    readCommit: jest.fn(async () => ({
-      oid: 'oid-deadbeef',
-      commit: { message: 'x', parent: [], tree: 'abc' },
-    })),
-    TREE: jest.fn((o: { ref: string }) => ({ __tree: o.ref })),
-  };
-  (globalThis as { __mockIg?: typeof mockIg }).__mockIg = mockIg;
-  return {
-    __esModule: true,
-    default: {
-      clone: mockIg.clone,
-      checkout: mockIg.checkout,
-      fetch: mockIg.fetch,
-      fastForward: mockIg.fastForward,
-      walk: mockIg.walk,
-      resolveRef: mockIg.resolveRef,
-      readBlob: mockIg.readBlob,
-      readCommit: mockIg.readCommit,
-    },
-    TREE: mockIg.TREE,
-  };
-});
+jest.mock('../../../src/services/git/engine/GitEngine', () => ({
+  clone: jest.fn(async () => ''),
+}));
 
 const mockFsStore = new Map<string, { type: 'file' | 'dir'; content?: string }>();
 jest.mock('expo-file-system/legacy', () => ({
@@ -62,53 +34,49 @@ jest.mock('../../../src/services/git/lfs', () => ({
 jest.mock('../../../src/services/git/gitHttp', () => ({ gitHttp: { request: jest.fn() } }));
 
 import { GitFsService } from '../../../src/services/git/GitFsService';
+import { clone as nativeClone } from '../../../src/services/git/engine/GitEngine';
 
-function getMockIg() {
-  return (globalThis as { __mockIg?: {
-    clone: jest.Mock;
-  } }).__mockIg!;
-}
+const mockNativeClone = nativeClone as jest.Mock;
 
 describe('GitFsService.clone retry (issue #790)', () => {
   beforeEach(() => {
-    const { clone } = getMockIg();
     jest.clearAllMocks();
-    clone.mockReset();
+    mockNativeClone.mockReset();
     mockFsStore.clear();
   });
 
   test('Case A: succeeds on first attempt — no cleanup, no retry', async () => {
-    getMockIg().clone.mockResolvedValueOnce(undefined);
+    mockNativeClone.mockResolvedValueOnce('');
     await expect(
       GitFsService.clone({ repoPath: 'owner/repo', branch: 'main' }),
     ).resolves.toBeUndefined();
-    expect(getMockIg().clone).toHaveBeenCalledTimes(1);
+    expect(mockNativeClone).toHaveBeenCalledTimes(1);
   });
 
   test('Case B: retries once on Packfile trailer mismatch, succeeds on attempt 2', async () => {
-    getMockIg().clone
+    mockNativeClone
       .mockRejectedValueOnce(new Error('Packfile trailer mismatch: bad hash'))
-      .mockResolvedValueOnce(undefined);
+      .mockResolvedValueOnce('');
 
     await expect(
       GitFsService.clone({ repoPath: 'owner/repo', branch: 'main' }),
     ).resolves.toBeUndefined();
 
-    expect(getMockIg().clone).toHaveBeenCalledTimes(2);
+    expect(mockNativeClone).toHaveBeenCalledTimes(2);
   });
 
   test('Case C: throws non-packfile error immediately, no retry', async () => {
-    getMockIg().clone.mockRejectedValueOnce(new Error('ECONNREFUSED'));
+    mockNativeClone.mockRejectedValueOnce(new Error('ECONNREFUSED'));
 
     await expect(
       GitFsService.clone({ repoPath: 'owner/repo', branch: 'main' }),
     ).rejects.toThrow('ECONNREFUSED');
 
-    expect(getMockIg().clone).toHaveBeenCalledTimes(1);
+    expect(mockNativeClone).toHaveBeenCalledTimes(1);
   });
 
   test('Case D: both attempts corrupt — error propagates after cleanup', async () => {
-    getMockIg().clone
+    mockNativeClone
       .mockRejectedValueOnce(new Error('Packfile trailer mismatch'))
       .mockRejectedValueOnce(new Error('NotFoundError: could not find'));
 
@@ -116,18 +84,18 @@ describe('GitFsService.clone retry (issue #790)', () => {
       GitFsService.clone({ repoPath: 'owner/repo', branch: 'main' }),
     ).rejects.toThrow(/could not find/);
 
-    expect(getMockIg().clone).toHaveBeenCalledTimes(2);
+    expect(mockNativeClone).toHaveBeenCalledTimes(2);
   });
 
-  test('Case E: NotFoundError from git.clone triggers retry', async () => {
-    getMockIg().clone
+  test('Case E: NotFoundError from the engine clone triggers retry', async () => {
+    mockNativeClone
       .mockRejectedValueOnce(new Error('NotFoundError: missing object'))
-      .mockResolvedValueOnce(undefined);
+      .mockResolvedValueOnce('');
 
     await expect(
       GitFsService.clone({ repoPath: 'owner/repo', branch: 'main' }),
     ).resolves.toBeUndefined();
 
-    expect(getMockIg().clone).toHaveBeenCalledTimes(2);
+    expect(mockNativeClone).toHaveBeenCalledTimes(2);
   });
 });

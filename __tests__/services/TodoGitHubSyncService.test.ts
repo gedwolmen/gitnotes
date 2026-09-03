@@ -55,28 +55,25 @@ jest.mock('../../src/services/AuthService', () => ({
   },
 }));
 
-jest.mock('../../src/services/SyncEngineService', () => ({
+jest.mock('../../src/services/syncStubs', () => ({
   SyncEngineService: {
     getMode: jest.fn(async () => 'api'),
   },
-}));
-
-jest.mock('../../src/services/git/CommitService', () => ({
-  CommitService: {
-    commit: jest.fn(async () => ({ success: true, oid: 'abc123' })),
-  },
-}));
-
-jest.mock('../../src/services/CloneSyncService', () => ({
   CloneSyncService: {
     save: jest.fn(async () => ({ success: true })),
   },
+}));
+
+jest.mock('../../src/services/git/defaultsPolicy', () => ({
+  resolveDefaultFolder: jest.fn(() => 'todos/'),
+  resolveDefaultRepo: jest.fn(async () => 'owner/repo'),
 }));
 
 jest.mock('../../src/services/git/GitFsService', () => ({
   GitFsService: {
     isCloned: jest.fn(async () => false),
     readFile: jest.fn(async () => null),
+    workingTreeUri: jest.fn(({ repoPath }: { repoPath: string }) => `file:///doc/GitNotes/${repoPath}`),
     getCommitOid: jest.fn(async () => 'abc123'),
     pullWithFastForward: jest.fn(async () => ({ ok: true })),
     findMergeBase: jest.fn(async () => 'mergebase123'),
@@ -84,52 +81,13 @@ jest.mock('../../src/services/git/GitFsService', () => ({
   },
 }));
 
+jest.mock('../../src/services/git/engine/GitEngine', () => ({
+  remove: jest.fn(async () => {}),
+  stage: jest.fn(async () => {}),
+}));
+
 jest.mock('../../src/services/git/resolveBranch', () => ({
   resolveBranch: jest.fn(async (_repo: string, branch?: string) => branch ?? 'main'),
-}));
-
-jest.mock('../../src/services/git/LocalGitWriter', () => ({
-  LocalGitWriter: {
-    writeAndCommit: jest.fn(async () => ({ success: true })),
-    deleteAndCommit: jest.fn(async () => ({ success: true })),
-  },
-}));
-
-jest.mock('../../src/services/git/gitFs', () => ({
-  makeGitFs: jest.fn(() => ({
-    promises: { readFile: jest.fn(), writeFile: jest.fn(), unlink: jest.fn() },
-  })),
-}));
-
-jest.mock('../../src/services/git/gitHttp', () => ({ gitHttp: {} }));
-
-jest.mock('../../src/services/git/GitSyncGate', () => ({
-  GitSyncGate: {
-    acquireCycle: jest.fn(async () => jest.fn()),
-  },
-}));
-
-jest.mock('../../src/services/git/ClonePendingQueue', () => ({
-  ClonePendingQueue: {
-    enqueuePush: jest.fn(async () => {}),
-  },
-}));
-
-jest.mock('../../src/services/git/recovery', () => ({
-  pushWithRecovery: jest.fn(async () => ({ success: true })),
-  surfaceConflictsOnDiverged: jest.fn(async () => {}),
-}));
-
-jest.mock('../../src/services/RepoPullService', () => ({
-  pullFromSingleRepo: jest.fn(async () => {}),
-}));
-
-jest.mock('../../src/stores/gitActivityStore', () => ({
-  useGitActivityStore: {
-    getState: jest.fn(() => ({
-      incrementRevision: jest.fn(),
-    })),
-  },
 }));
 
 jest.mock('../../src/utils/gitPathParser', () => ({
@@ -143,10 +101,10 @@ jest.mock('../../src/utils/gitPathParser', () => ({
 
 import { syncTodoToGitHub, deleteTodoFromGitHub } from '../../src/services/TodoGitHubSyncService';
 import { GitHubService } from '../../src/services/GitHubService';
-import { SyncEngineService } from '../../src/services/SyncEngineService';
-import { CommitService } from '../../src/services/git/CommitService';
 import { GitFsService } from '../../src/services/git/GitFsService';
-import { CloneSyncService } from '../../src/services/CloneSyncService';
+import * as GitEngine from '../../src/services/git/engine/GitEngine';
+import { resolveBranch } from '../../src/services/git/resolveBranch';
+import { SyncEngineService, CloneSyncService } from '../../src/services/syncStubs';
 
 const mockTodo = {
   text: 'Buy groceries',
@@ -165,10 +123,12 @@ describe('TodoGitHubSyncService', () => {
       email: 'test@test.com',
     });
     (GitHubService.getFileShaOrNull as jest.Mock).mockResolvedValue(null);
+    (GitHubService.getFileSha as jest.Mock).mockResolvedValue({ kind: 'found', sha: 'existing-sha' });
+    (GitHubService.deleteFile as jest.Mock).mockResolvedValue(true);
     (GitFsService.isCloned as jest.Mock).mockResolvedValue(false);
     (GitFsService.readFile as jest.Mock).mockResolvedValue(null);
-    (CommitService.commit as jest.Mock).mockResolvedValue({ success: true, oid: 'abc123' });
     (CloneSyncService.save as jest.Mock).mockResolvedValue({ success: true });
+    (GitEngine.remove as jest.Mock).mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -200,7 +160,6 @@ describe('TodoGitHubSyncService', () => {
         expect(callArg.filePath).toBe('todos/buy-groceries.json');
         expect(callArg.intent).toBe('upsert');
         expect(callArg.message).toMatch(/^Create todo: Buy groceries/);
-        expect(CommitService.commit).not.toHaveBeenCalled();
       });
 
       test('uses Update verb when file already exists', async () => {
@@ -267,19 +226,19 @@ describe('TodoGitHubSyncService', () => {
 
         expect(result.success).toBe(true);
         expect(GitHubService.updateFile).toHaveBeenCalledTimes(1);
-        expect(CommitService.commit).not.toHaveBeenCalled();
         expect(CloneSyncService.save).not.toHaveBeenCalled();
       });
     });
   });
 
   describe('deleteTodoFromGitHub', () => {
-    describe('clone mode uses CloneSyncService.save', () => {
+    describe('clone mode with a local clone', () => {
       beforeEach(() => {
         (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
+        (GitFsService.isCloned as jest.Mock).mockResolvedValue(true);
       });
 
-      test('calls CloneSyncService.save with intent delete', async () => {
+      test('routes the deletion through CloneSyncService.save with delete intent', async () => {
         const result = await deleteTodoFromGitHub({
           repo: 'owner/repo',
           branch: 'main',
@@ -291,18 +250,48 @@ describe('TodoGitHubSyncService', () => {
         expect(result.filePath).toBe('todos/buy-groceries.json');
 
         expect(CloneSyncService.save).toHaveBeenCalledTimes(1);
-        const callArg = (CloneSyncService.save as jest.Mock).mock.calls[0][0];
-        expect(callArg.repoPath).toBe('owner/repo');
-        expect(callArg.branch).toBe('main');
-        expect(callArg.filePath).toBe('todos/buy-groceries.json');
-        expect(callArg.intent).toBe('delete');
-        expect(callArg.message).toBe('Delete todo: Buy groceries');
+        expect(CloneSyncService.save).toHaveBeenCalledWith({
+          repoPath: 'owner/repo',
+          branch: 'main',
+          filePath: 'todos/buy-groceries.json',
+          message: 'Delete todo: Buy groceries',
+          intent: 'delete',
+        });
+        expect(GitHubService.getFileSha).not.toHaveBeenCalled();
+        expect(GitHubService.deleteFile).not.toHaveBeenCalled();
       });
 
-      test('returns error when CloneSyncService.save fails', async () => {
-        (CloneSyncService.save as jest.Mock).mockResolvedValue({
+      test('passes the resolved branch to the clone writer', async () => {
+        const result = await deleteTodoFromGitHub({
+          repo: 'owner/repo',
+          filePath: 'todos/buy-groceries.json',
+          text: 'Buy groceries',
+        });
+
+        expect(result.success).toBe(true);
+        expect(resolveBranch).toHaveBeenCalledWith('owner/repo', undefined);
+        const callArg = (CloneSyncService.save as jest.Mock).mock.calls[0][0];
+        expect(callArg.branch).toBe('main');
+      });
+
+      test('hands filePath to the clone writer untouched', async () => {
+        const result = await deleteTodoFromGitHub({
+          repo: 'owner/repo',
+          branch: 'main',
+          filePath: '/todos/buy-groceries.json',
+          text: 'Buy groceries',
+        });
+
+        expect(result.success).toBe(true);
+        expect(CloneSyncService.save).toHaveBeenCalledWith(
+          expect.objectContaining({ filePath: '/todos/buy-groceries.json', intent: 'delete' }),
+        );
+      });
+
+      test('returns error when the clone writer fails', async () => {
+        (CloneSyncService.save as jest.Mock).mockResolvedValueOnce({
           success: false,
-          error: 'delete failed',
+          error: 'repo locked',
         });
 
         const result = await deleteTodoFromGitHub({
@@ -313,7 +302,42 @@ describe('TodoGitHubSyncService', () => {
         });
 
         expect(result.success).toBe(false);
-        expect(result.error).toBe('delete failed');
+        expect(result.error).toBe('repo locked');
+      });
+    });
+
+    describe('clone mode without a local clone', () => {
+      beforeEach(() => {
+        (SyncEngineService.getMode as jest.Mock).mockResolvedValue('clone');
+        (GitFsService.isCloned as jest.Mock).mockResolvedValue(false);
+      });
+
+      test('purges the remote file via the Contents API', async () => {
+        const result = await deleteTodoFromGitHub({
+          repo: 'owner/repo',
+          branch: 'main',
+          filePath: 'todos/buy-groceries.json',
+          text: 'Buy groceries',
+        });
+
+        expect(result.success).toBe(true);
+        expect(GitHubService.getFileSha).toHaveBeenCalledTimes(1);
+        expect(GitHubService.deleteFile).toHaveBeenCalledTimes(1);
+        expect(GitEngine.remove).not.toHaveBeenCalled();
+      });
+
+      test('fails when signed out with no local clone', async () => {
+        (GitHubService.isAuthenticated as jest.Mock).mockReturnValue(false);
+
+        const result = await deleteTodoFromGitHub({
+          repo: 'owner/repo',
+          branch: 'main',
+          filePath: 'todos/buy-groceries.json',
+          text: 'Buy groceries',
+        });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('GitHub not authenticated');
       });
     });
 
@@ -332,8 +356,8 @@ describe('TodoGitHubSyncService', () => {
 
         expect(result.success).toBe(true);
         expect(GitHubService.deleteFile).toHaveBeenCalledTimes(1);
-        expect(CommitService.commit).not.toHaveBeenCalled();
         expect(CloneSyncService.save).not.toHaveBeenCalled();
+        expect(GitEngine.remove).not.toHaveBeenCalled();
       });
 
       test('returns success when file not found on remote', async () => {

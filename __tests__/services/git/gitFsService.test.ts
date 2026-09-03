@@ -1,79 +1,47 @@
-// Mock isomorphic-git and expo-file-system/legacy so the service can be
-// exercised without touching the network or the device FS.
+// Clone runs through the mocked native GitEngine; the read path
+// (listTree / readFile / readBlobAtRef) runs against the real gitFs adapter
+// on top of the in-memory expo-file-system mock below — no network, no device.
 
-jest.mock('isomorphic-git', () => {
-  // Build the mocks inside the factory so jest.mock hoisting doesn't strand
-  // us with `undefined` const refs (the const declarations below the import
-  // would otherwise be evaluated AFTER the factory's first invocation).
-  const mocks = {
-    clone: jest.fn(async (..._args: any[]) => undefined),
-    checkout: jest.fn(async (..._args: any[]) => undefined),
-    fetch: jest.fn(async (..._args: any[]) => ({ defaultBranch: 'main' })),
-    fastForward: jest.fn(async (..._args: any[]) => undefined),
-    walk: jest.fn(async (..._args: any[]): Promise<any[]> => []),
-    resolveRef: jest.fn(async (..._args: any[]) => 'oid-deadbeef'),
-    readBlob: jest.fn(async (..._args: any[]) => ({
-      oid: 'oid',
-      blob: new TextEncoder().encode('hello body'),
-    })),
-    readCommit: jest.fn(async (..._args: any[]) => ({
-      oid: 'oid-deadbeef',
-      commit: { message: 'test commit', parent: [], tree: 'abc123' },
-    })),
-    TREE: jest.fn((opts: { ref: string }) => ({ __tree: opts.ref })),
-  };
-  (globalThis as any).__isomorphicGitMocks = mocks;
-  return {
-    __esModule: true,
-    default: {
-      clone: mocks.clone,
-      checkout: mocks.checkout,
-      fetch: mocks.fetch,
-      fastForward: mocks.fastForward,
-      walk: mocks.walk,
-      resolveRef: mocks.resolveRef,
-      readBlob: mocks.readBlob,
-      readCommit: mocks.readCommit,
-    },
-    TREE: mocks.TREE,
-  };
-});
-
-function getGitMocks() {
-  return (globalThis as any).__isomorphicGitMocks as {
-    clone: jest.Mock;
-    checkout: jest.Mock;
-    fetch: jest.Mock;
-    fastForward: jest.Mock;
-    walk: jest.Mock;
-    resolveRef: jest.Mock;
-    readBlob: jest.Mock;
-    readCommit: jest.Mock;
-    TREE: jest.Mock;
-  };
-}
+type FsEntry = { type: 'file' | 'dir'; content?: string };
 
 jest.mock('expo-file-system/legacy', () => {
   const fsStore = new Map<string, { type: 'file' | 'dir'; content?: string }>();
-  (globalThis as any).__gitFsServiceTestFsStore = fsStore;
+  (globalThis as Record<string, unknown>).__gitFsServiceTestFsStore = fsStore;
   return {
     __esModule: true,
     documentDirectory: 'file:///doc/',
     EncodingType: { Base64: 'base64', UTF8: 'utf8' },
     async getInfoAsync(uri: string) {
-      const e = fsStore.get(uri);
+      const e = fsStore.get(uri.replace(/\/$/, ''));
       return e ? { exists: true, uri, isDirectory: e.type === 'dir' } : { exists: false, uri };
     },
     async deleteAsync(uri: string) {
-      fsStore.delete(uri);
+      const key = uri.replace(/\/$/, '');
+      for (const existing of [...fsStore.keys()]) {
+        if (existing === key || existing.startsWith(`${key}/`)) fsStore.delete(existing);
+      }
     },
     async makeDirectoryAsync(uri: string) {
       fsStore.set(uri.replace(/\/$/, ''), { type: 'dir' });
     },
-    async readAsStringAsync(uri: string) {
+    async readDirectoryAsync(uri: string) {
+      const base = uri.replace(/\/$/, '');
+      const dir = fsStore.get(base);
+      if (!dir || dir.type !== 'dir') throw new Error(`ENOTDIR: ${uri}`);
+      const prefix = `${base}/`;
+      const names = new Set<string>();
+      for (const key of fsStore.keys()) {
+        if (key.startsWith(prefix)) names.add(key.slice(prefix.length).split('/')[0]);
+      }
+      return [...names];
+    },
+    async readAsStringAsync(uri: string, opts?: { encoding?: string } | string) {
       const e = fsStore.get(uri);
-      if (!e || e.type !== 'file') throw new Error('File not found');
-      return e.content ?? '';
+      if (!e || e.type !== 'file') throw new Error(`File not found: ${uri}`);
+      const content = e.content ?? '';
+      const encoding = typeof opts === 'string' ? opts : opts?.encoding;
+      if (encoding === 'base64') return Buffer.from(content, 'utf8').toString('base64');
+      return content;
     },
     async writeAsStringAsync(uri: string, data?: string) {
       const e = fsStore.get(uri);
@@ -83,134 +51,186 @@ jest.mock('expo-file-system/legacy', () => {
   };
 });
 
-function getFsStore(): Map<string, { type: 'file' | 'dir' }> {
-  return (globalThis as any).__gitFsServiceTestFsStore;
+jest.mock('../../../src/services/git/engine/GitEngine', () => ({
+  clone: jest.fn(async () => ''),
+}));
+
+jest.mock('../../../src/services/git/lfs', () => ({
+  LfsService: { scanRepo: jest.fn(async () => []), clearRepo: jest.fn(async () => undefined) },
+}));
+
+jest.mock('../../../src/services/git/gitHttp', () => ({ gitHttp: { request: jest.fn() } }));
+
+function getFsStore(): Map<string, FsEntry> {
+  return (globalThis as Record<string, unknown>).__gitFsServiceTestFsStore as Map<string, FsEntry>;
 }
 
-import { GitFsService } from '../../../src/services/git/GitFsService';
+import { CloneOutOfMemoryError, GitFsService } from '../../../src/services/git/GitFsService';
+import { clone as nativeClone } from '../../../src/services/git/engine/GitEngine';
 import { LfsService } from '../../../src/services/git/lfs';
+
+function seedWorktree(files: Record<string, string>, repo = 'me/repo'): string {
+  const base = `file:///doc/GitNotes/${repo}`;
+  const store = getFsStore();
+  store.set(base, { type: 'dir' });
+  store.set(`${base}/.git`, { type: 'dir' });
+  store.set(`${base}/.git/HEAD`, { type: 'file', content: 'ref: refs/heads/main' });
+  for (const [rel, content] of Object.entries(files)) {
+    const parts = rel.split('/');
+    let acc = base;
+    for (const part of parts.slice(0, -1)) {
+      acc = `${acc}/${part}`;
+      if (!store.has(acc)) store.set(acc, { type: 'dir' });
+    }
+    store.set(`${base}/${rel}`, { type: 'file', content });
+  }
+  return base;
+}
 
 beforeEach(() => {
   jest.clearAllMocks();
   getFsStore().clear();
+  GitFsService.__resetCloneDedupForTest();
 });
 
-describe('GitFsService', () => {
-  test('clone forwards owner/repo + shallow defaults to isomorphic-git', async () => {
-    await GitFsService.clone({ repoPath: 'me/repo', branch: 'main', token: 'tok' });
-
-    expect(getGitMocks().clone).toHaveBeenCalledTimes(1);
-    const args = getGitMocks().clone.mock.calls[0][0];
-    expect(args.url).toBe('https://github.com/me/repo.git');
-    expect(args.dir).toBe('/me/repo');
-    expect(args.ref).toBe('main');
-    expect(args.singleBranch).toBe(true);
-    expect(args.depth).toBe(1);
-    expect(typeof args.onAuth).toBe('function');
-    const auth = args.onAuth();
-    expect(auth).toEqual({ username: 'x-access-token', password: 'tok' });
+describe('GitFsService.clone', () => {
+  test('calls the native engine with the repo URL, on-disk dest, and repoId', async () => {
+    await GitFsService.clone({ repoPath: 'me/repo', branch: 'main', token: 'tok', repoId: 'repo-1' });
+    expect(nativeClone).toHaveBeenCalledWith(
+      'https://github.com/me/repo.git',
+      'file:///doc/GitNotes/me/repo',
+      'repo-1',
+    );
   });
 
-  test('clone passes through custom depth and skips onAuth when no token', async () => {
-    await GitFsService.clone({ repoPath: 'me/repo', branch: 'main', depth: 50 });
-    const args = getGitMocks().clone.mock.calls[0][0];
-    expect(args.depth).toBe(50);
-    expect(args.onAuth).toBeUndefined();
+  test('passes null repoId when omitted', async () => {
+    await GitFsService.clone({ repoPath: 'me/repo', branch: 'main' });
+    expect(nativeClone).toHaveBeenCalledWith(
+      'https://github.com/me/repo.git',
+      'file:///doc/GitNotes/me/repo',
+      null,
+    );
   });
 
-  test('clone rejects on invalid repoPath', async () => {
+  test('rejects on invalid repoPath without calling the engine', async () => {
     await expect(
       GitFsService.clone({ repoPath: 'not-a-repo', branch: 'main' }),
     ).rejects.toThrow(/Invalid repo path/);
-    expect(getGitMocks().clone).not.toHaveBeenCalled();
+    expect(nativeClone).not.toHaveBeenCalled();
   });
 
-  test('fetch forwards branch + token-derived auth and floors depth to >=3', async () => {
-    await GitFsService.fetch({ repoPath: 'me/repo', branch: 'feature/x', token: 'tok' });
-    expect(getGitMocks().fetch).toHaveBeenCalledTimes(1);
-    const args = getGitMocks().fetch.mock.calls[0][0];
-    expect(args.dir).toBe('/me/repo');
-    expect(args.ref).toBe('feature/x');
-    expect(args.depth).toBeGreaterThanOrEqual(3);
-    expect(args.tags).toBe(false);
-    expect(args.onAuth()).toEqual({ username: 'x-access-token', password: 'tok' });
+  test('wraps OOM-like clone failures as CloneOutOfMemoryError', async () => {
+    (nativeClone as jest.Mock).mockRejectedValueOnce(new RangeError('Array buffer allocation failed'));
+    await expect(
+      GitFsService.clone({ repoPath: 'me/repo', branch: 'main' }),
+    ).rejects.toThrow(CloneOutOfMemoryError);
   });
 
-  test('fetch honors an explicit larger depth', async () => {
-    await GitFsService.fetch({ repoPath: 'me/repo', branch: 'main', depth: 50 });
-    expect(getGitMocks().fetch.mock.calls[0][0].depth).toBe(50);
+  test('cleans up the partial clone directory when the engine fails', async () => {
+    (nativeClone as jest.Mock).mockRejectedValueOnce(new Error('network failure'));
+    await expect(
+      GitFsService.clone({ repoPath: 'me/repo', branch: 'main', token: 'tok' }),
+    ).rejects.toThrow('network failure');
+    expect(getFsStore().has('file:///doc/GitNotes/me/repo')).toBe(false);
   });
+});
 
-  test('fetch floors an explicit shallow depth up to the minimum', async () => {
-    await GitFsService.fetch({ repoPath: 'me/repo', branch: 'main', depth: 1 });
-    expect(getGitMocks().fetch.mock.calls[0][0].depth).toBe(3);
-  });
-
-  test('listTree maps walk entries into the tree-entry shape (matches GitHubService)', async () => {
-    getGitMocks().walk.mockImplementationOnce(async (opts: any) => {
-      const entries = [
-        { name: '.', type: 'tree', oid: 'root' },
-        { name: 'notes/foo.md', type: 'blob', oid: 'aa' },
-        { name: 'notes', type: 'tree', oid: 'bb' },
-      ];
-      const collected: any[] = [];
-      for (const e of entries) {
-        const got = await opts.map(e.name, [
-          {
-            type: async () => e.type,
-            oid: async () => e.oid,
-          },
-        ]);
-        if (got !== undefined) collected.push(got);
-      }
-      return collected;
+describe('GitFsService clone-mode reads (worktree-backed)', () => {
+  test('listTree returns a sorted recursive listing relative to the repo root', async () => {
+    seedWorktree({
+      'notes/foo.md': 'foo',
+      'notes/sub/bar.md': 'bar',
+      'README.md': 'readme',
     });
 
     const tree = await GitFsService.listTree({ repoPath: 'me/repo', ref: 'main' });
+
     expect(tree).toEqual([
-      { path: 'notes/foo.md', type: 'blob', sha: 'aa' },
-      { path: 'notes', type: 'tree', sha: 'bb' },
+      { path: 'README.md', type: 'blob', sha: '' },
+      { path: 'notes', type: 'tree', sha: '' },
+      { path: 'notes/foo.md', type: 'blob', sha: '' },
+      { path: 'notes/sub', type: 'tree', sha: '' },
+      { path: 'notes/sub/bar.md', type: 'blob', sha: '' },
     ]);
-    expect(getGitMocks().TREE).toHaveBeenCalledWith({ ref: 'main' });
   });
 
-  test('readFile resolves ref then reads blob and decodes utf-8', async () => {
-    const contents = await GitFsService.readFile({
-      repoPath: 'me/repo',
-      ref: 'main',
-      filepath: 'notes/x.md',
-    });
-    expect(getGitMocks().resolveRef).toHaveBeenCalledWith({
-      fs: expect.any(Object),
-      dir: '/me/repo',
-      ref: 'main',
-    });
-    expect(getGitMocks().readBlob).toHaveBeenCalledWith({
-      fs: expect.any(Object),
-      dir: '/me/repo',
-      oid: 'oid-deadbeef',
-      filepath: 'notes/x.md',
-    });
-    expect(contents).toBe('hello body');
+  test('listTree never surfaces .git internals', async () => {
+    seedWorktree({ 'notes/foo.md': 'foo' });
+    getFsStore().set('file:///doc/GitNotes/me/repo/.git/objects/pack', { type: 'dir' });
+    getFsStore().set('file:///doc/GitNotes/me/repo/.git/objects/pack/a.pack', { type: 'file', content: 'x' });
+
+    const tree = await GitFsService.listTree({ repoPath: 'me/repo', ref: 'main' });
+
+    expect(tree.some((e) => e.path.startsWith('.git'))).toBe(false);
   });
 
-  test('readFile returns null when isomorphic-git throws NotFoundError', async () => {
-    getGitMocks().readBlob.mockRejectedValueOnce(Object.assign(new Error('nope'), { code: 'NotFoundError' }));
-    const contents = await GitFsService.readFile({
-      repoPath: 'me/repo',
-      ref: 'main',
-      filepath: 'missing.md',
-    });
-    expect(contents).toBeNull();
+  test('listTree returns [] for a worktree with only .git', async () => {
+    seedWorktree({});
+    const tree = await GitFsService.listTree({ repoPath: 'me/repo', ref: 'main' });
+    expect(tree).toEqual([]);
   });
 
-  test('readFile rethrows non-not-found errors', async () => {
-    getGitMocks().readBlob.mockRejectedValueOnce(Object.assign(new Error('boom'), { code: 'Other' }));
+  test('listTree rejects when the repo is not cloned', async () => {
     await expect(
-      GitFsService.readFile({ repoPath: 'me/repo', ref: 'main', filepath: 'x.md' }),
-    ).rejects.toThrow(/boom/);
+      GitFsService.listTree({ repoPath: 'me/repo', ref: 'main' }),
+    ).rejects.toThrow();
   });
 
+  test('readFile returns the worktree file contents', async () => {
+    seedWorktree({ 'notes/x.md': 'hello body' });
+    const content = await GitFsService.readFile({
+      repoPath: 'me/repo',
+      ref: 'main',
+      filepath: 'notes/x.md',
+    });
+    expect(content).toBe('hello body');
+  });
+
+  test('readFile returns null for a missing file', async () => {
+    seedWorktree({ 'notes/x.md': 'hello body' });
+    const content = await GitFsService.readFile({
+      repoPath: 'me/repo',
+      ref: 'main',
+      filepath: 'notes/missing.md',
+    });
+    expect(content).toBeNull();
+  });
+
+  test('readFile returns null when the repo is not cloned', async () => {
+    const content = await GitFsService.readFile({
+      repoPath: 'me/repo',
+      ref: 'main',
+      filepath: 'notes/x.md',
+    });
+    expect(content).toBeNull();
+  });
+
+  test('readFile rejects an invalid repoPath', async () => {
+    await expect(
+      GitFsService.readFile({ repoPath: 'not-a-repo', ref: 'main', filepath: 'x.md' }),
+    ).rejects.toThrow(/Invalid repo path/);
+  });
+
+  test('readFile refuses worktree escapes', async () => {
+    seedWorktree({ 'notes/x.md': 'hello body' });
+    const content = await GitFsService.readFile({
+      repoPath: 'me/repo',
+      ref: 'main',
+      filepath: '../other-repo/secret.md',
+    });
+    expect(content).toBeNull();
+  });
+
+  test('readBlobAtRef returns decoded content and null when missing', async () => {
+    seedWorktree({ 'notes/x.md': 'hello body' });
+    const hit = await GitFsService.readBlobAtRef({ repoPath: 'me/repo', ref: 'main', filepath: 'notes/x.md' });
+    expect(hit?.content).toBe('hello body');
+    const miss = await GitFsService.readBlobAtRef({ repoPath: 'me/repo', ref: 'main', filepath: 'nope.md' });
+    expect(miss).toBeNull();
+  });
+});
+
+describe('GitFsService local repo state', () => {
   test('isCloned reflects the on-disk presence of <root>/.git/HEAD', async () => {
     expect(await GitFsService.isCloned({ repoPath: 'me/repo' })).toBe(false);
     getFsStore().set('file:///doc/GitNotes/me/repo/.git/HEAD', { type: 'file', content: 'ref: refs/heads/main' });
@@ -218,9 +238,10 @@ describe('GitFsService', () => {
   });
 
   test('removeRepo deletes the on-disk dir and is idempotent', async () => {
-    getFsStore().set('file:///doc/GitNotes/me/repo', { type: 'dir' });
+    seedWorktree({ 'notes/x.md': 'x' });
     await GitFsService.removeRepo({ repoPath: 'me/repo' });
     expect(getFsStore().has('file:///doc/GitNotes/me/repo')).toBe(false);
+    expect(getFsStore().has('file:///doc/GitNotes/me/repo/notes/x.md')).toBe(false);
     // Second call must not throw.
     await GitFsService.removeRepo({ repoPath: 'me/repo' });
   });
@@ -230,118 +251,10 @@ describe('GitFsService', () => {
       'file:///doc/GitNotes/me/repo',
     );
   });
+});
 
-  test('pullWithFastForward fetches then fast-forwards on success', async () => {
-    const result = await GitFsService.pullWithFastForward({
-      repoPath: 'me/repo',
-      branch: 'main',
-      token: 'tok',
-    });
-    expect(result.ok).toBe(true);
-    expect(getGitMocks().fetch).toHaveBeenCalled();
-    expect(getGitMocks().fastForward).toHaveBeenCalled();
-  });
-
-  test('pullWithFastForward fetches with depth >=3 when no explicit depth given', async () => {
-    await GitFsService.pullWithFastForward({
-      repoPath: 'me/repo',
-      branch: 'main',
-    });
-    expect(getGitMocks().fetch.mock.calls[0][0].depth).toBeGreaterThanOrEqual(3);
-  });
-
-  test('pullWithFastForward passes through an explicit larger depth', async () => {
-    await GitFsService.pullWithFastForward({
-      repoPath: 'me/repo',
-      branch: 'main',
-      depth: 50,
-    });
-    expect(getGitMocks().fetch.mock.calls[0][0].depth).toBe(50);
-  });
-
-  test('pullWithFastForward returns diverged when fast-forward fails', async () => {
-    getGitMocks().fastForward.mockRejectedValueOnce(
-      Object.assign(new Error('not fast-forwardable'), { code: 'FastForwardError' }),
-    );
-    const result = await GitFsService.pullWithFastForward({
-      repoPath: 'me/repo',
-      branch: 'main',
-    });
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.reason).toBe('diverged');
-    }
-  });
-
-  test('pullWithFastForward classifies network failure as network (#1191)', async () => {
-    getGitMocks().fetch.mockRejectedValueOnce(new Error('network request failed'));
-    const result = await GitFsService.pullWithFastForward({
-      repoPath: 'me/repo',
-      branch: 'main',
-    });
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.reason).toBe('network');
-    }
-  });
-
-  test('pullWithFastForward classifies timeouts as timeout (#1191)', async () => {
-    getGitMocks().fetch.mockRejectedValueOnce(Object.assign(new Error('request timed out'), { code: 'ETIMEDOUT' }));
-    const result = await GitFsService.pullWithFastForward({
-      repoPath: 'me/repo',
-      branch: 'main',
-    });
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.reason).toBe('timeout');
-    }
-  });
-
-  test('pullWithFastForward repairs a nested symbolic HEAD before pulling (#1192)', async () => {
-    const headUri = 'file:///doc/GitNotes/me/repo/.git/HEAD';
-    getFsStore().set(headUri, { type: 'file', content: 'ref: refs/heads/refs/heads/main\n' });
-
-    const result = await GitFsService.pullWithFastForward({ repoPath: 'me/repo', branch: 'main' });
-
-    expect(result.ok).toBe(true);
-    expect(getFsStore().get(headUri)?.content).toBe('ref: refs/heads/main\n');
-  });
-
-  test('clone failure cleans up partial clone by calling removeRepo', async () => {
-    getGitMocks().clone.mockRejectedValueOnce(new Error('network failure'));
-    getFsStore().set('file:///doc/GitNotes/me/', { type: 'dir' });
-    getFsStore().set('file:///doc/GitNotes/me/repo/.git/HEAD', { type: 'file', content: 'ref: refs/heads/main' });
-    await expect(
-      GitFsService.clone({ repoPath: 'me/repo', branch: 'main', token: 'tok' }),
-    ).rejects.toThrow('network failure');
-    expect(getFsStore().has('file:///doc/GitNotes/me/repo')).toBe(false);
-  });
-
-  test('fetch failure with packfile mismatch error cleans packfiles', async () => {
-    getGitMocks().fetch.mockRejectedValueOnce(new Error('Packfile trailer mismatch'));
-    getFsStore().set('file:///doc/GitNotes/me/', { type: 'dir' });
-    getFsStore().set('file:///doc/GitNotes/me/repo/.git/HEAD', { type: 'file', content: 'ref: refs/heads/main' });
-    getFsStore().set('file:///doc/GitNotes/me/repo/.git/objects/pack', { type: 'dir' });
-    await expect(
-      GitFsService.fetch({ repoPath: 'me/repo', branch: 'main', token: 'tok' }),
-    ).rejects.toThrow('Packfile trailer mismatch');
-  });
-
-  test('pullWithFastForward on divergence does NOT throw packfile cleanup error', async () => {
-    getGitMocks().fetch.mockRejectedValueOnce(
-      Object.assign(new Error('not fast-forward'), { code: 'FastForwardError' }),
-    );
-    const result = await GitFsService.pullWithFastForward({
-      repoPath: 'me/repo',
-      branch: 'main',
-    });
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.reason).toBe('diverged');
-    }
-  });
-
-  test('pullWithFastForward skips the LFS scan when the remote ref did not move (#1022)', async () => {
+describe('GitFsService.pullWithFastForward', () => {
+  test('resolves ok and skips the LFS scan when no new objects arrived', async () => {
     const scanSpy = jest.spyOn(LfsService, 'scanRepo');
     const result = await GitFsService.pullWithFastForward({
       repoPath: 'me/repo',
@@ -353,20 +266,14 @@ describe('GitFsService', () => {
     scanSpy.mockRestore();
   });
 
-  test('pullWithFastForward runs the LFS scan when the fetch moved the remote ref (#1022)', async () => {
-    let calls = 0;
-    getGitMocks().resolveRef.mockImplementation(async () => {
-      calls += 1;
-      return calls === 1 ? 'oid-before' : 'oid-after';
-    });
-    const scanSpy = jest.spyOn(LfsService, 'scanRepo');
-    const result = await GitFsService.pullWithFastForward({
-      repoPath: 'me/repo',
-      branch: 'main',
-      token: 'tok',
-    });
+  test('repairs a nested symbolic HEAD before pulling (#1192)', async () => {
+    const headUri = 'file:///doc/GitNotes/me/repo/.git/HEAD';
+    seedWorktree({});
+    getFsStore().set(headUri, { type: 'file', content: 'ref: refs/heads/refs/heads/main\n' });
+
+    const result = await GitFsService.pullWithFastForward({ repoPath: 'me/repo', branch: 'main' });
+
     expect(result.ok).toBe(true);
-    expect(scanSpy).toHaveBeenCalledTimes(1);
-    scanSpy.mockRestore();
+    expect(getFsStore().get(headUri)?.content).toBe('ref: refs/heads/main\n');
   });
 });
