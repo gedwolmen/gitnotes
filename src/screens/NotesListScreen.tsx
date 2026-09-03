@@ -12,9 +12,7 @@ import { useRepos } from '../contexts/RepoContext';
 import { RootStackParamList } from '../navigation/types';
 import { Note } from '../models/Note';
 import { GitHubService } from '../services/GitHubService';
-import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
-import type { NoteDeleteParams } from '../services/NoteSyncQueueService';
-import { SyncEngineService } from '../services/SyncEngineService';
+import { NoteSyncQueueService, SyncEngineService, type NoteDeleteParams } from '../services/syncStubs';
 import { useGitOperationStore } from '../stores/gitOperationStore';
 import { deriveDefaultNotePath } from '../stores/noteStore';
 import { GitSyncGate } from '../services/git/GitSyncGate';
@@ -261,41 +259,12 @@ export default function NotesListScreen() {
             setIsDeleting(true);
             try {
               const selectedNotes = notes.filter((note) => selectedIds.has(note.id));
-              const apiParams: NoteDeleteParams[] = [];
               let localFailure = false;
+              // Store owns the sync-mode split (clone → real local delete
+              // commit, API → enqueue), same path as single delete (#1030).
               for (const note of selectedNotes) {
-                if (!note.repo) {
-                  const removed = await deleteNote(note.id);
-                  if (!removed) localFailure = true;
-                  continue;
-                }
-                const filePath = note.filePath ?? deriveDefaultNotePath(note);
-                if (!filePath) {
-                  const removed = await deleteNote(note.id);
-                  if (!removed) localFailure = true;
-                  continue;
-                }
-                const mode = await SyncEngineService.getMode(note.repo);
-                if (mode === 'clone') {
-                  // Clone mode: commit the delete locally right now
-                  // (push:false) so the next pull can't resurrect the file.
-                  // The batch-queue path never drained in clone mode, so the
-                  // file stayed in the tree and the pull re-imported it (#1030).
-                  const removed = await deleteNote(note.id);
-                  if (!removed) localFailure = true;
-                } else {
-                  apiParams.push({
-                    repo: note.repo,
-                    branch: note.branch,
-                    filePath,
-                    title: note.title,
-                    accountId: note.accountId,
-                    localNoteId: note.id,
-                  });
-                }
-              }
-              if (apiParams.length > 0) {
-                await NoteSyncQueueService.enqueueNoteDeletes(apiParams);
+                const removed = await deleteNote(note.id);
+                if (!removed) localFailure = true;
               }
               if (localFailure) {
                 HapticService.warning();
@@ -311,7 +280,7 @@ export default function NotesListScreen() {
         },
       ],
     );
-  }, [selectedIds, notes, clearSelection, t]);
+  }, [selectedIds, notes, deleteNote, clearSelection, t]);
 
   useEffect(() => {
     if (authState.token) GitHubService.setToken(authState.token);
@@ -475,7 +444,7 @@ export default function NotesListScreen() {
         }}
       />
 
-      <View style={{ flex: 1, paddingTop: headerBlurHeight + 4 }}>
+      <View style={{ flex: 1 }}>
         <FlatList
           ref={listRef}
           data={displayNotes}
@@ -509,6 +478,7 @@ export default function NotesListScreen() {
           }}
           contentContainerStyle={{
             padding: 12,
+            paddingTop: headerBlurHeight + 16,
             paddingBottom: tabBarHeight + 16,
             flexGrow: 1,
           }}

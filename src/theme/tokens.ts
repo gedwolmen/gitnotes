@@ -10,6 +10,8 @@ export interface Palette {
   accent: string;
   accentMuted: string;
   error: string;
+  success: string;
+  warning: string;
   background: string;
   surfaceSecondary: string;
   primary: string;
@@ -31,6 +33,8 @@ export const NEUMORPHIC_LIGHT: Palette = {
   accent: '#7B8CDE',
   accentMuted: '#A8B3E5',
   error: '#E07A7A',
+  success: '#15803D',
+  warning: '#B45309',
   background: '#F2F2F2',
   surfaceSecondary: '#F5F5F5',
   primary: '#7B8CDE',
@@ -51,6 +55,8 @@ export const NEUMORPHIC_DARK: Palette = {
   accent: '#8B9BE8',
   accentMuted: '#5A6BB5',
   error: '#E07A7A',
+  success: '#4ADE80',
+  warning: '#FBBF24',
   background: '#0E0E0E',
   surfaceSecondary: '#141414',
   primary: '#8B9BE8',
@@ -69,6 +75,8 @@ export const FLAT_LIGHT: Palette = {
   accent: '#007AFF',
   accentMuted: '#5AC8FA',
   error: '#ff3b30',
+  success: '#34C759',
+  warning: '#FF9500',
   background: '#f2f2f7',
   surfaceSecondary: '#f2f2f7',
   primary: '#007AFF',
@@ -87,6 +95,8 @@ export const FLAT_DARK: Palette = {
   accent: '#0a84ff',
   accentMuted: '#64d2ff',
   error: '#ff453a',
+  success: '#30D158',
+  warning: '#FF9F0A',
   background: '#000000',
   surfaceSecondary: '#2c2c2e',
   primary: '#0a84ff',

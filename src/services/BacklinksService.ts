@@ -167,3 +167,7 @@ export function computeBacklinks(notes: Note[], currentNotePath: string): Backli
 
   return buildBacklinkIndex(notes).get(currentNote.id) ?? [];
 }
+
+export async function reindexDocumentBacklinks(_service: unknown, _document: unknown): Promise<void> {
+  // Stub: backlink reindexing is handled by DocumentIndex
+}

@@ -77,7 +77,6 @@ type SettingsContentProps = {
   authState: AuthState;
   repositories: GitRepository[];
   syncingRepo: string | null;
-  syncModes: Record<string, 'api' | 'clone'>;
   cloningRepo: string | null;
   templatesRepoPref: TemplateRepoPreference | null;
   isSyncingExistingTemplates: boolean;
@@ -109,8 +108,6 @@ onRemoveAccount: (id: string, login: string) => void;
   onOpenRepoPicker: () => void;
   onSyncRepo: (repo: GitRepository) => void;
   onRemoveRepo: (repo: GitRepository) => void;
-  onEnableCloneMode: (repo: GitRepository) => void;
-  onDisableCloneMode: (repo: GitRepository) => void;
   lfsPending: Record<string, { count: number; bytes: number }>;
   lfsDownloadingRepo: string | null;
   onDownloadLfsObjects: (repo: GitRepository) => void;
@@ -149,6 +146,8 @@ onRemoveAccount: (id: string, login: string) => void;
   onSetLockTimeout: (v: LockTimeout) => void;
   isBackgroundSyncEnabled: boolean;
   onToggleBackgroundSync: () => void;
+  floatingGitButtonVisible: boolean;
+  onToggleFloatingGitButton: () => void;
   syncFrequentlyEnabled: boolean;
   syncIntervalSeconds: SyncIntervalSeconds;
   onToggleSyncFrequently: (value: boolean) => void;
@@ -184,7 +183,6 @@ export function SettingsContent(props: SettingsContentProps) {
     accountSummaries,
     repositories,
     syncingRepo,
-    syncModes,
     cloningRepo,
     templatesRepoPref,
     isSyncingExistingTemplates,
@@ -202,8 +200,6 @@ export function SettingsContent(props: SettingsContentProps) {
     onOpenRepoPicker,
     onSyncRepo,
     onRemoveRepo,
-    onEnableCloneMode,
-    onDisableCloneMode,
     lfsPending,
     lfsDownloadingRepo,
     onDownloadLfsObjects,
@@ -242,6 +238,8 @@ export function SettingsContent(props: SettingsContentProps) {
     onSetLockTimeout,
     isBackgroundSyncEnabled,
     onToggleBackgroundSync,
+    floatingGitButtonVisible,
+    onToggleFloatingGitButton,
     syncFrequentlyEnabled,
     syncIntervalSeconds,
     onToggleSyncFrequently,
@@ -655,8 +653,6 @@ export function SettingsContent(props: SettingsContentProps) {
       {repositories.length > 0 ? (
         <Group title={t('settings.syncEngine')}>
           {repositories.map((repo) => {
-            const mode = syncModes[repo.path] ?? 'clone';
-            const isClone = mode === 'clone';
             const isCloning = cloningRepo === repo.path;
             const lfs = lfsPending[repo.path];
             const isDownloadingLfs = lfsDownloadingRepo === repo.path;
@@ -664,31 +660,19 @@ export function SettingsContent(props: SettingsContentProps) {
               <React.Fragment key={repo.id}>
                 <GroupRow
                   testID={`sync-engine-row-${repo.path}`}
-                  leading={<Ionicons name={isClone ? 'cloud-done-outline' : 'cloud-outline'} size={18} color={isClone ? colors.primary : colors.textSecondary} />}
+                  leading={<Ionicons name="cloud-done-outline" size={18} color={colors.primary} />}
                   trailing={
                     isCloning ? (
                       <ActivityIndicator size="small" color={colors.primary} />
-                    ) : isClone ? (
-                      <View testID="settings.button.disable-clone">
-                        <TouchableOpacity testID={`sync-engine-disable-${repo.path}`} onPress={() => onDisableCloneMode(repo)} style={{ padding: 4 }}>
-                          <Text style={[styles.settingLabel, { color: colors.error }]}>{t('settings.useApi')}</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ) : (
-                      <View testID="settings.button.enable-clone">
-                        <TouchableOpacity testID={`settings.toggle.sync-engine-enable-${repo.path.replace('/', '-')}`} onPress={() => onEnableCloneMode(repo)} style={{ padding: 4 }}>
-                          <Text style={[styles.settingLabel, { color: colors.primary }]}>{t('settings.clone')}</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )
+                    ) : undefined
                   }
                 >
                   <Text style={[styles.repoName, { color: colors.text }]} numberOfLines={1}>{repo.name}</Text>
                   <Text style={[styles.repoPath, { color: colors.textSecondary }]} numberOfLines={1}>
-                    {isClone ? t('settings.cloneModeDescription') : t('settings.apiModeDescription')}
+                    {t('settings.cloneModeDescription')}
                   </Text>
                 </GroupRow>
-                {isClone && lfs && lfs.count > 0 ? (
+                {lfs && lfs.count > 0 ? (
                   <GroupRow
                     testID={`lfs-pending-row-${repo.path}`}
                     leading={<Ionicons name="document-attach-outline" size={18} color={colors.accent} />}
@@ -780,6 +764,24 @@ export function SettingsContent(props: SettingsContentProps) {
       </Group>
 
       <Group title={t('common.sync')}>
+        <GroupRow
+          testID="settings.row.floating-git-button"
+          trailing={
+            <View className="flex-row items-center gap-2">
+              <Toggle
+                testID="settings.toggle.floating-git-button"
+                value={floatingGitButtonVisible}
+                onValueChange={onToggleFloatingGitButton}
+              />
+              <HintIcon hintKey="hints.settings.floatingGitButton" testID="hint.floating-git-button" />
+            </View>
+          }
+        >
+          <View className="flex-row items-center gap-2">
+            <Ionicons name="git-commit-outline" size={20} color={colors.text} />
+            <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.floatingGitButton')}</Text>
+          </View>
+        </GroupRow>
         <GroupRow
           trailing={
             <View className="flex-row items-center gap-2">
@@ -1077,7 +1079,10 @@ export function SettingsContent(props: SettingsContentProps) {
             onPress={isPro ? onOpenModelSelector : () => promptProUpgrade(t, onOpenPaywall)}
             trailing={
               isPro ? (
-                <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{selectedModelName}</Text>
+                <View className="flex-row items-center gap-1">
+                  <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{selectedModelName}</Text>
+                  <HintIcon hintKey="hints.settings.model" testID="hint.model" />
+                </View>
               ) : (
                 <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
               )

@@ -74,6 +74,7 @@
       "favicon": "./assets/generated/favicon.png"
     },
     "plugins": [
+      "./modules/GitEngine/plugin/withGitEngineRust",
       "expo-font",
       "expo-web-browser",
       "./plugins/withGitQuicWorkaround",

@@ -17,7 +17,7 @@ jest.mock('../../src/services/StorageService', () => ({
   },
 }));
 
-jest.mock('../../src/services/SyncEngineService', () => ({
+jest.mock('../../src/services/syncStubs', () => ({
   SyncEngineService: {
     getMode: jest.fn(async () => 'api'),
   },
@@ -58,7 +58,8 @@ jest.mock('../../src/services/featureFlags', () => ({
 import { ThoughtDumpService } from '../../src/services/ThoughtDumpService';
 import { GitHubService } from '../../src/services/GitHubService';
 import { StorageService } from '../../src/services/StorageService';
-import { SyncEngineService } from '../../src/services/SyncEngineService';
+import { SyncEngineService } from '../../src/services/syncStubs';
+import { LocalGitWriter } from '../../src/services/git/LocalGitWriter';
 import { parseThoughtDump, serializeThoughtDump, createThoughtDump } from '../../src/models/ThoughtDump';
 
 beforeEach(() => {
@@ -68,7 +69,7 @@ beforeEach(() => {
 });
 
 describe('ThoughtDumpService.create', () => {
-  it('stages the upsert for the new dump', async () => {
+  it('commits the new dump to git', async () => {
     const result = await ThoughtDumpService.create('my random thought', {
       repoPath: 'org/repo',
       branch: 'main',
@@ -82,6 +83,24 @@ describe('ThoughtDumpService.create', () => {
     expect(dump.id).toBeTruthy();
     expect(dump.createdAt).toBeTruthy();
     expect(GitHubService.updateFile).not.toHaveBeenCalled();
+    expect(LocalGitWriter.writeAndCommit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        repoPath: 'org/repo',
+        branch: 'main',
+        filePath: dump.filePath,
+        content: serializeThoughtDump(dump),
+        message: `Create thought dump: ${dump.filePath}`,
+      }),
+    );
+  });
+
+  it('returns write-failed when the commit fails', async () => {
+    (LocalGitWriter.writeAndCommit as jest.Mock).mockResolvedValueOnce({
+      success: false,
+      error: 'commit exploded',
+    });
+    const result = await ThoughtDumpService.create('test', { repoPath: 'org/repo' });
+    expect(result).toEqual({ ok: false, reason: 'write-failed', error: 'commit exploded' });
   });
 
   it('returns not-authenticated when unauthenticated', async () => {
@@ -147,7 +166,7 @@ describe('ThoughtDumpService.list', () => {
 });
 
 describe('ThoughtDumpService.delete', () => {
-  it('stages the delete', async () => {
+  it('commits the deletion to git', async () => {
     const result = await ThoughtDumpService.delete('some-id', {
       repoPath: 'org/repo',
       branch: 'main',
@@ -156,6 +175,26 @@ describe('ThoughtDumpService.delete', () => {
 
     expect(result).toBe(true);
     expect(GitHubService.deleteFile).not.toHaveBeenCalled();
+    expect(LocalGitWriter.deleteAndCommit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        repoPath: 'org/repo',
+        branch: 'main',
+        filePath: 'thoughts/20240101-120000-some-id.md',
+        message: 'Delete thought dump: thoughts/20240101-120000-some-id.md',
+      }),
+    );
+  });
+
+  it('returns false when the delete commit fails', async () => {
+    (LocalGitWriter.deleteAndCommit as jest.Mock).mockResolvedValueOnce({
+      success: false,
+      error: 'delete exploded',
+    });
+    const result = await ThoughtDumpService.delete('some-id', {
+      repoPath: 'org/repo',
+      filePath: 'thoughts/x.md',
+    });
+    expect(result).toBe(false);
   });
 
   it('returns false when not authenticated', async () => {

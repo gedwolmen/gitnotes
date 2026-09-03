@@ -17,7 +17,6 @@ import { syncNow } from '../services/git/manualSync';
 import { batchDeleteFiles } from '../services/git/BatchGitOperations';
 import { resolveBranch } from '../services/git/resolveBranch';
 import { formatSyncError } from '../services/git/formatSyncError';
-import { SyncEngineService } from '../services/SyncEngineService';
 import { StorageService } from '../services/StorageService';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { IconButton, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
@@ -311,26 +310,18 @@ export default function TodoListScreen() {
             const failedIds = new Set<string>();
             try {
               const selectedTodos = todos.filter((todo) => selectedIds.has(todo.id));
-              const batchable: Todo[] = [];
-              const perItem: Todo[] = [];
-              for (const todo of selectedTodos) {
-                if (!todo.repo || !todo.filePath) {
-                  perItem.push(todo);
-                  continue;
-                }
-                const mode = await SyncEngineService.getMode(todo.repo);
-                if (mode === 'api') batchable.push(todo);
-                else perItem.push(todo);
-              }
-              for (const todo of perItem) {
-                try {
-                  const ok = await deleteTodo(todo.id);
-                  if (!ok) failedIds.add(todo.id);
-                } catch {
-                  failedIds.add(todo.id);
+              if (selectedTodos.length >= 2) {
+                await runApiBatchDeletes(selectedTodos, failedIds);
+              } else {
+                for (const todo of selectedTodos) {
+                  try {
+                    const ok = await deleteTodo(todo.id);
+                    if (!ok) failedIds.add(todo.id);
+                  } catch {
+                    failedIds.add(todo.id);
+                  }
                 }
               }
-              await runApiBatchDeletes(batchable, failedIds);
               if (failedIds.size > 0) {
                 HapticService.warning();
               } else {

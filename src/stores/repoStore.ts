@@ -3,14 +3,12 @@ import { GitRepository, GitService } from '../services/GitService';
 import { StorageService } from '../services/StorageService';
 import { TemplateRepoPreferenceService } from '../services/TemplateRepoPreferenceService';
 import { LastUsedRepoService } from '../services/LastUsedRepoService';
-import { SyncEngineService } from '../services/SyncEngineService';
 import { GitFsService } from '../services/git/GitFsService';
-import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
 import { useAIStore } from './aiStore';
 import { useNoteStore } from './noteStore';
 import { useCanvasStore } from './canvasStore';
 import { useTodoStore } from './todoStore';
-import type { GitHostProvider } from '../services/git/GitHost';
+import { GIT_HOST_LABELS, type GitHostProvider } from '../services/git/GitHost';
 import { getActiveGitHost } from '../services/git/activeHost';
 import {
   checkGitHubRepoAccess,
@@ -87,6 +85,30 @@ export const useRepoStore = create<RepoState & RepoActions>()((set, get) => ({
       }
     }
     const repo = await GitService.addRepository(path, name, resolvedProvider, activeHost?.hostId);
+
+    if (!activeHost) {
+      throw new Error(
+        `No connected ${GIT_HOST_LABELS[resolvedProvider] ?? 'host'} account. Add a ${GIT_HOST_LABELS[resolvedProvider] ?? 'host'} connection first.`,
+      );
+    }
+    if (!activeHost.token) {
+      throw new Error(
+        `No auth token for ${GIT_HOST_LABELS[resolvedProvider] ?? 'host'}. Re-connect your ${GIT_HOST_LABELS[resolvedProvider] ?? 'host'} account.`,
+      );
+    }
+
+    try {
+      await GitFsService.cloneExclusive({
+        repoPath: repo.path,
+        branch: repo.branch ?? 'main',
+        token: activeHost.token,
+        repoId: repo?.id,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new Error(`Clone failed: ${msg}`);
+    }
+
     const updated = await StorageService.getSavedRepositories();
     set({ repositories: updated });
     return repo;
@@ -106,18 +128,12 @@ export const useRepoStore = create<RepoState & RepoActions>()((set, get) => ({
       await LastUsedRepoService.clear();
     }
 
-    await SyncEngineService.clear(path);
-
-    if ((await SyncEngineService.getMode(path)) === 'clone') {
-      GitFsService.removeRepo({ repoPath: path }).catch(() => undefined);
-    }
+    GitFsService.removeRepo({ repoPath: path }).catch(() => undefined);
 
     const { chatRepoOwner, chatRepoName } = useAIStore.getState();
     if (chatRepoOwner && chatRepoName && `${chatRepoOwner}/${chatRepoName}` === path) {
       await useAIStore.getState().setChatRepo(null, null, 'main', null);
     }
-
-    await NoteSyncQueueService.purgeForRepo(path);
 
     set((state) => ({
       repositories: state.repositories.filter(

@@ -4,7 +4,7 @@
 
 ## Overview
 
-GitNotēs is a React Native (Expo) note-taking app with **Git sync** (isomorphic-git), **AI assistance** (Vercel AI SDK), and **offline-first design** (AsyncStorage).
+GitNotēs is a React Native (Expo) note-taking app with **Git sync** (git2), **AI assistance** (Vercel AI SDK), and **offline-first design** (AsyncStorage).
 
 ## Tech Stack
 
@@ -15,7 +15,7 @@ GitNotēs is a React Native (Expo) note-taking app with **Git sync** (isomorphic
 | State | Zustand (stores), React Context |
 | Styling | NativeWind v5 (Tailwind) |
 | Navigation | React Navigation v7 |
-| Git | isomorphic-git |
+| Git | git2 |
 | AI | Vercel AI SDK v6 |
 | Storage | AsyncStorage, expo-secure-store |
 | i18n | i18next (6 languages) |
@@ -134,7 +134,7 @@ User types in editor
   → NoteEditorScreen state (local)
   → repoStore.saveNote() (AsyncStorage + dirty mark)
   → Stage-or-queue: clone mode → LocalGitWriter.writeAndCommit
-                   API mode   → NoteSyncQueueService.enqueue
+                   Clone mode → ClonePendingQueue.enqueue
   → StagePushScheduler drains on the 3-min idle window, on the
     Stage screen's Push / Push-all, on a long-press of the floating
     push button, or on the OS background task (≤ 10 files)
@@ -192,7 +192,7 @@ HomeScreen mounts
 
 1. **Write to AsyncStorage first** (fast, reliable)
 2. **Clone mode: commit-on-save via `CommitService`** — every save produces a local git commit with `push:false`; tracked by `UnpushedCommitsService`
-3. **API mode: queue via `NoteSyncQueueService`** — pushes immediately on save (write-through)
+3. **Clone mode: commit via `CommitService`** — commits locally, pushes on trigger
 4. **Explicit push** — user triggers push via `FloatingPushButton` (long-press) or `PushScreen` (Push / Push-all with diff review); no automatic staging drain
 5. **OS background task** — `BackgroundSyncService` drains ≤ 10 unpushed files when policy fires; pull-only on foreground idle
 6. **Pull on app focus** — `ForegroundSyncService.runPull` checks `NetInfo`, app state, and pull intervals

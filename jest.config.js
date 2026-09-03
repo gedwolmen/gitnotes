@@ -19,6 +19,7 @@ module.exports = {
     '^expo-secure-store$': '<rootDir>/__mocks__/expo-secure-store.ts',
     '^@shopify/react-native-skia$': '<rootDir>/__mocks__/react-native-skia.ts',
     '^@ai-sdk/anthropic$': '<rootDir>/__mocks__/ai-sdk-anthropic.ts',
+    '^@/(.*)$': '<rootDir>/src/$1',
   },
   setupFiles: ['<rootDir>/jest.setup.ts'],
   testPathIgnorePatterns: [

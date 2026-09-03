@@ -13,7 +13,8 @@
  * CJS interop) where module exports objects are mutable plain objects.
  */
 
-import type { GitHttpRequest, GitHttpResponse, PromiseFsClient } from 'isomorphic-git';
+import type { GitHttpRequest, GitHttpResponse } from './gitHttp';
+import type { PromiseFsClient } from './gitFs';
 
 import { gitHttp } from './gitHttp';
 import * as gitFsModule from './gitFs';

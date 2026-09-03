@@ -4,7 +4,7 @@
 
 ## Overview
 
-GitNotēs uses **isomorphic-git** for Git operations (clone, commit, push, pull) in React Native. Sync runs in background, offline-first, with conflict resolution.
+GitNotēs uses **git2** for Git operations (clone, commit, push, pull) in React Native. Sync runs in background, offline-first, with conflict resolution.
 
 ## Architecture
 
@@ -103,7 +103,7 @@ class SyncEngineService {
 }
 ```
 
-The actual mutation queue lives in `NoteSyncQueueService` (API mode) and `ClonePendingQueue` (clone mode — replaces the deprecated `StagingService` / `stageStore` / `StagePushScheduler` pattern). Pull orchestration lives in `ForegroundSyncService` and the OS background task.
+The mutation queue lives in `ClonePendingQueue` (replaces the deprecated `StagingService` / `stageStore` / `StagePushScheduler` pattern). Pull orchestration lives in `ForegroundSyncService` and the OS background task.
 
 ### Network status (hook, not service)
 
@@ -203,7 +203,7 @@ try {
 } catch (error) {
   const msg = formatSyncError(error);
   if (msg.kind === 'offline') {
-    // Clone mode keeps the commit staged; API mode retries via NoteSyncQueueService backoff
+    // Clone mode keeps the commit staged; retries via ClonePendingQueue backoff
     showToast('Offline — changes will sync when online');
   } else if (msg.kind === 'unauthorized') {
     // Token expired / revoked
@@ -222,7 +222,7 @@ try {
 ### Sync Queue Persistence
 
 ```typescript
-// NoteSyncQueueService — API mode
+// ClonePendingQueue — clone mode
 interface PendingMutation {
   id: string;
   type: 'create' | 'update' | 'delete';
@@ -304,25 +304,4 @@ References: `CloneSyncService.ts`, `ClonePushTriggers.ts`, `ClonePendingQueue.ts
 
 ## Testing
 
-```typescript
-jest.mock('isomorphic-git', () => ({
-  clone: jest.fn(() => Promise.resolve()),
-  commit: jest.fn(() => Promise.resolve('abc123')),
-  push: jest.fn(() => Promise.resolve()),
-  pull: jest.fn(() => Promise.resolve()),
-}));
-
-describe('GitService', () => {
-  it('commits changes', async () => {
-    const sha = await gitService.commit('test message', ['file.md']);
-    expect(sha).toBe('abc123');
-  });
-
-  it('queues changes when offline', async () => {
-    jest.mocked(NetworkService.getStatus).mockResolvedValue({ isConnected: false });
-    
-    await gitService.commit('test', ['file.md']);
-    const queue = await StorageService.get('syncQueue');
-    expect(queue).toHaveLength(1);
-  });
-});
+Tests mock the git2 module directly or use integration tests against a local bare repo.

@@ -6,7 +6,7 @@ import { useTodoStore } from '../../stores/todoStore';
 import { useAIStore } from '../../stores/aiStore';
 import { initializeModel } from '../AIService';
 import { GITHUB_ITEM_STATES, GitHubItemState, GitHubService } from '../GitHubService';
-import { NoteSyncQueueService } from '../NoteSyncQueueService';
+import { NoteSyncQueueService } from '../syncStubs';
 
 export interface ProposedChange {
   type: string;

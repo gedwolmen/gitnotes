@@ -20,7 +20,7 @@
 | `git clone --depth=1 https://...test-notes.git` | **1.7 s** | Network-bound; tiny packfile |
 | `git clone https://...test-notes.git` (full history) | **1.9 s** | 4,383 commits, 4 files, 2.8 MB |
 
-These are Mac-only native numbers. The simulator path (isomorphic-git + RN bridge + Hermes base64) was historically 10+ min, addressed by PR #974 (`perf/clone-speed`).
+These are Mac-only native numbers. The simulator path (git2 + RN bridge + Hermes base64) was historically 10+ min, addressed by PR #974 (`perf/clone-speed`).
 
 ## Clone mode — `git` CLI round-trip via add → commit → pull --rebase → push
 
@@ -39,32 +39,7 @@ The clone-mode flow as performed by the app is `LocalGitWriter.writeAndCommit (p
 
 **Read**: clone-mode round-trip is ~3.4–3.6 s per single push. Combinations scale linearly — a "delete" after a previous "edit" is a second full push cycle. This is exactly the regime the existing `perf/clone-speed` patches don't directly affect (those target simulator I/O); on Mac this is purely network-bound.
 
-## API mode — GitHub REST Contents API direct
-
-The API-mode flow as performed by the app is `CommitService.commitUpsert/Delete (api branch)` → `NoteSyncQueueService.enqueueNoteUpsert/Delete` → `writeThroughPush` → drain → PUT/DELETE → `pullFromSingleRepo`. We exercise the Contents API directly.
-
-| # | Scenario | Operation | Time | Cumulative |
-|---|---|---|---:|---:|
-| T1 | add-only | PUT `/contents/notes/...` | 1,563 ms | **1,563 ms** |
-| T2 | edit-only | PUT `/contents/notes/...` (with `sha`) | 1,067 ms | **1,067 ms** |
-| T3 | delete-only | DELETE `/contents/notes/...` | 751 ms | **751 ms** |
-| T4 | add+edit | PUT add → PUT edit (2 round-trips) | 1,218 + 1,123 ms | **2,341 ms** |
-| T5 | edit+delete | PUT edit2 → DELETE | 727 ms + DELETE² | — |
-| T6 | add+edit+delete | PUT add → PUT edit → DELETE (3 round-trips) | per-step³ | — |
-
-² T5 DELETE timing lost in an early batch (response body JSON parsing error). Confirmed manually in a retry: PUT edit2 = 727 ms, DELETE = ~750 ms.
-
-³ T6 broken into 3 atomic operations on the Contents API. The app's `BatchGitOperations.batchUpsertFiles` would chain `getBranchHead → getCommit → createBlob×N → createTree → createCommit → updateRef` for ≥ 2 mutations in one repo/branch — ~6 round-trips, batched into one logical operation. We didn't have a way to time the app's batch path without running the app itself.
-
-**Read**: API mode is faster per-action than clone-mode for the simple cases (1.5 s vs 3.5 s for add; 0.7 s vs 3.5 s for delete), because the REST path skips the git-pack negotiation + rebase. The cost is no offline queue: every save is live.
-
-## Combined-mode wall-clock comparison (Mac, network-bound)
-
-| | Clone mode | API mode |
-|---|---|---|
-| 1 mutation | ~3.5 s | ~1.0 s |
-| 2 mutations | ~6.9 s | ~2.3 s (or ~3.5 s batched) |
-| 3 mutations | ~7.1 s | ~3.0 s (or ~5.5 s batched) |
+## Clone mode performance summary
 | Offline-capable | ✅ (committed until push trigger) | ❌ (live write-through) |
 | Blocking UI during save | ❌ (local commit, no cycle) | ✅ (`SyncBlockOverlay` for `'save'` cycle) |
 | Failure mode | local commit, retry next push | immediate error, user-visible |
@@ -100,16 +75,16 @@ interface SyncTimingEntry {
 
 ## Pass/fail summary
 
-| Scenario | Clone mode | API mode |
-|---|---|---|
-| 1. add-only | ✅ 1,065 ms | ✅ 1,563 ms |
-| 2. edit-only | ✅ 3,537 ms | ✅ 1,067 ms |
-| 3. delete-only | ✅ 3,558 ms | ✅ 751 ms |
-| 4. add+edit | ✅ 3,541 ms | ✅ 2,341 ms |
-| 5. edit+delete | ✅ 6,926 ms | ✅ (~1,500 ms) |
-| 6. add+edit+delete | ✅ 7,065 ms | ✅ (~3,000 ms) |
+| Scenario | Clone mode |
+|---|---|
+| 1. add-only | ✅ 1,065 ms |
+| 2. edit-only | ✅ 3,537 ms |
+| 3. delete-only | ✅ 3,558 ms |
+| 4. add+edit | ✅ 3,541 ms |
+| 5. edit+delete | ✅ 6,926 ms |
+| 6. add+edit+delete | ✅ 7,065 ms |
 
-All 12 round-trips succeeded against the live `test-notes` remote. No conflict-resolution scenarios were exercised — both ends were a single client. Multi-client conflict resolution should be exercised in a future E2E pass.
+All round-trips succeeded against the live `test-notes` remote. No conflict-resolution scenarios were exercised — both ends were a single client. Multi-client conflict resolution should be exercised in a future E2E pass.
 
 ## What was NOT measured (and why)
 

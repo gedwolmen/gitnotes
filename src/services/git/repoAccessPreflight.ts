@@ -69,7 +69,6 @@ function classifyResponse(errorDetails: ReturnType<typeof extractHttpErrorDetail
     case 'saml':
     case 'permission':
       return failure('no_access', 'This GitHub repository is not accessible with the current account.');
-    case 'rate_limit':
     case 'server':
     case 'network':
     case 'unknown':

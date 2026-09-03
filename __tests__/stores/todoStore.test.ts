@@ -7,13 +7,6 @@ jest.mock('../../src/services/StorageService', () => ({
   },
 }));
 
-jest.mock('../../src/services/GitHubService', () => ({
-  GitHubService: {
-    getUser: jest.fn(),
-    isAuthenticated: jest.fn(),
-  },
-}));
-
 jest.mock('../../src/services/TodoGitHubSyncService', () => ({
   deleteTodoFromGitHub: jest.fn(),
 }));
@@ -24,7 +17,6 @@ jest.mock('../../src/services/git/formatSyncError', () => ({
 
 import { useTodoStore } from '../../src/stores/todoStore';
 import { StorageService } from '../../src/services/StorageService';
-import { GitHubService } from '../../src/services/GitHubService';
 import { deleteTodoFromGitHub } from '../../src/services/TodoGitHubSyncService';
 
 import type { Todo } from '../../src/models/Todo';
@@ -99,28 +91,32 @@ describe('useTodoStore', () => {
       expect(useTodoStore.getState().todos).toHaveLength(0);
     });
 
-    it('deletes repo-backed todos via GitHub sync before local delete', async () => {
+    it('deletes repo-backed todos via git sync before local delete', async () => {
       const repoTodo = makeTodo('1', { repo: 'me/repo', branch: 'main', filePath: 'todos/test.json', text: 'test' });
       useTodoStore.setState({ todos: [repoTodo] });
-      (GitHubService.isAuthenticated as jest.Mock).mockReturnValue(true);
       (deleteTodoFromGitHub as jest.Mock).mockResolvedValue({ success: true });
       (StorageService.deleteTodo as jest.Mock).mockResolvedValue(true);
 
       await useTodoStore.getState().deleteTodo('1');
 
-      expect(deleteTodoFromGitHub).toHaveBeenCalled();
+      expect(deleteTodoFromGitHub).toHaveBeenCalledWith(
+        expect.objectContaining({ repo: 'me/repo', filePath: 'todos/test.json' }),
+      );
       expect(StorageService.deleteTodo).toHaveBeenCalledWith('1');
+      expect(useTodoStore.getState().todos).toHaveLength(0);
     });
 
-    it('returns false without git sync for unauthenticated repo-backed delete', async () => {
-      const repoTodo = makeTodo('1', { repo: 'me/repo', branch: 'main', filePath: 'todos/test.json' });
+    it('keeps the todo and surfaces the error when git delete fails', async () => {
+      const repoTodo = makeTodo('1', { repo: 'me/repo', branch: 'main', filePath: 'todos/test.json', text: 'test' });
       useTodoStore.setState({ todos: [repoTodo] });
-      (GitHubService.isAuthenticated as jest.Mock).mockReturnValue(false);
+      (deleteTodoFromGitHub as jest.Mock).mockResolvedValue({ success: false, error: 'delete failed' });
 
       const result = await useTodoStore.getState().deleteTodo('1');
 
       expect(result).toBe(false);
-      expect(deleteTodoFromGitHub).not.toHaveBeenCalled();
+      expect(StorageService.deleteTodo).not.toHaveBeenCalled();
+      expect(useTodoStore.getState().todos).toHaveLength(1);
+      expect(useTodoStore.getState().error).toBe('delete failed');
     });
   });
 });

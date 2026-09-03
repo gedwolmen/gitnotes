@@ -1,6 +1,6 @@
 import { useGitOperationStore } from '../../stores/gitOperationStore';
 import { useNoteStore } from '../../stores/noteStore';
-import { NoteSyncQueueService } from '../NoteSyncQueueService';
+import { NoteSyncQueueService } from '../syncStubs';
 import { clearDeleteFailure } from './deleteFailures';
 
 /**

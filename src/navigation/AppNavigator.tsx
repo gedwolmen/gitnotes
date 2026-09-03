@@ -21,16 +21,19 @@ import RenderStyleEditorScreen from '../screens/RenderStyleEditorScreen';
 import TemplateManagerScreen from '../screens/TemplateManagerScreen';
 import SyncStatusScreen from '../screens/SyncStatusScreen';
 import { FloatingAIButton } from '../components/ai/FloatingAIButton';
+import AppFloatingGitButton from '../components/git/AppFloatingGitButton';
 import { ChatRepoPickerModal } from '../components/ai/ChatRepoPickerModal';
 import { AddReminderScreen } from '../components/settings/AddReminderScreen';
 import ThoughtDumpScreen from '../screens/ThoughtDumpScreen';
 import PaywallScreen from '../screens/PaywallScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
+import ExploreCommitScreen from '../screens/ExploreCommitScreen';
 import { RootStackParamList } from './types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAIStore } from '../stores/aiStore';
 import { useAIHubStore } from '../stores/aiHubStore';
 import { selectIsPro, useProStore } from '../stores/proStore';
+import { useFloatingGitButtonStore } from '../stores/floatingGitButtonStore';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -93,6 +96,13 @@ export default function AppNavigator({ showOnboarding, onOnboardingComplete, onO
   const isPro = useProStore(selectIsPro);
   const interstitialEligible = useProStore((s) => s.interstitialEligible);
   const markInterstitialShown = useProStore((s) => s.markInterstitialShown);
+  const floatingGitButtonVisible = useFloatingGitButtonStore((s) => s.visible);
+  const floatingGitButtonHydrated = useFloatingGitButtonStore((s) => s.hydrated);
+  const hydrateFloatingGitButton = useFloatingGitButtonStore((s) => s.hydrate);
+
+  useEffect(() => {
+    void hydrateFloatingGitButton();
+  }, [hydrateFloatingGitButton]);
 
   // Deferred interstitial: only consume the one-shot flag after confirming navigation is ready.
   // navigationReady state variable ensures re-check when onReady fires.
@@ -267,6 +277,11 @@ export default function AppNavigator({ showOnboarding, onOnboardingComplete, onO
               component={PaywallScreen}
               options={{ headerShown: false }}
             />
+            <Stack.Screen
+              name="ExploreCommit"
+              component={ExploreCommitScreen}
+              options={{ headerShown: false }}
+            />
             {__DEV__ && (
               <Stack.Screen
                 name="NeumorphicGallery"
@@ -276,6 +291,9 @@ export default function AppNavigator({ showOnboarding, onOnboardingComplete, onO
             )}
           </Stack.Navigator>
           <FloatingAIButton currentRouteName={currentRouteName} />
+          {floatingGitButtonHydrated && floatingGitButtonVisible ? (
+            <AppFloatingGitButton currentRouteName={currentRouteName} />
+          ) : null}
         </View>
       </NavigationContainer>
         <ChatRepoPickerModal

@@ -49,15 +49,14 @@ const HOST_ORDER: GitHostProvider[] = ['github', 'gitlab', 'gitea', 'forgejo'];
 const HostAuthContext = createContext<HostAuthContextValue | undefined>(undefined);
 
 function giteaUserToHostUser(
-  provider: GitHostProvider,
+  _provider: GitHostProvider,
   user: GiteaLikeUser | null,
 ): GitHostUser | null {
   if (!user) return null;
   return {
     id: user.id,
     login: user.login,
-    name: user.full_name ?? user.login,
-    email: user.email ?? null,
+    name: user.full_name ?? null,
     avatarUrl: user.avatar_url ?? null,
   };
 }
@@ -72,7 +71,6 @@ function snapshotGitHub(): HostAuthState {
           id: u.id,
           login: u.login,
           name: u.name ?? null,
-          email: u.email ?? null,
           avatarUrl: u.avatar_url ?? null,
         }
       : null,
@@ -81,8 +79,8 @@ function snapshotGitHub(): HostAuthState {
   };
 }
 
-function snapshotGitLab(): HostAuthState {
-  const u = gitLabService.getUser();
+async function snapshotGitLab(): Promise<HostAuthState> {
+  const u = await gitLabService.getUser();
   return {
     provider: 'gitlab',
     label: GIT_HOST_LABELS.gitlab,
@@ -91,7 +89,6 @@ function snapshotGitLab(): HostAuthState {
           id: u.id,
           login: u.username,
           name: u.name,
-          email: u.email ?? null,
           avatarUrl: u.avatar_url ?? null,
         }
       : null,
@@ -100,24 +97,26 @@ function snapshotGitLab(): HostAuthState {
   };
 }
 
-function snapshotGiteaLike(provider: 'gitea' | 'forgejo'): HostAuthState {
+async function snapshotGiteaLike(provider: 'gitea' | 'forgejo'): Promise<HostAuthState> {
   const svc = provider === 'gitea' ? giteaHostService : forgejoHostService;
+  const user = await svc.getUser();
   return {
     provider,
     label: GIT_HOST_LABELS[provider],
-    user: giteaUserToHostUser(provider, svc.getUser()),
+    user: giteaUserToHostUser(provider, user),
     isAuthenticated: svc.isAuthenticated(),
     baseUrl: svc.getBaseUrl(),
   };
 }
 
-function snapshotAll(): Record<GitHostProvider, HostAuthState> {
-  return {
-    github: snapshotGitHub(),
-    gitlab: snapshotGitLab(),
-    gitea: snapshotGiteaLike('gitea'),
-    forgejo: snapshotGiteaLike('forgejo'),
-  };
+async function snapshotAll(): Promise<Record<GitHostProvider, HostAuthState>> {
+  const [github, gitlab, gitea, forgejo] = await Promise.all([
+    snapshotGitHub(),
+    snapshotGitLab(),
+    snapshotGiteaLike('gitea'),
+    snapshotGiteaLike('forgejo'),
+  ]);
+  return { github, gitlab, gitea, forgejo };
 }
 
 interface HostAuthProviderProps {
@@ -126,12 +125,35 @@ interface HostAuthProviderProps {
 
 export function HostAuthProvider({ children }: HostAuthProviderProps) {
   const [hosts, setHosts] = useState<Record<GitHostProvider, HostAuthState>>(
-    () => snapshotAll(),
+    () => ({
+      github: snapshotGitHub(),
+      gitlab: {
+        provider: 'gitlab',
+        label: GIT_HOST_LABELS.gitlab,
+        user: null,
+        isAuthenticated: gitLabService.isAuthenticated(),
+        baseUrl: gitLabService.getBaseUrl(),
+      },
+      gitea: {
+        provider: 'gitea',
+        label: GIT_HOST_LABELS.gitea,
+        user: null,
+        isAuthenticated: giteaHostService.isAuthenticated(),
+        baseUrl: giteaHostService.getBaseUrl(),
+      },
+      forgejo: {
+        provider: 'forgejo',
+        label: GIT_HOST_LABELS.forgejo,
+        user: null,
+        isAuthenticated: forgejoHostService.isAuthenticated(),
+        baseUrl: forgejoHostService.getBaseUrl(),
+      },
+    }),
   );
   const [status, setStatus] = useState<HostAuthStatus>('unknown');
 
   const refresh = useCallback(async () => {
-    setHosts(snapshotAll());
+    setHosts(await snapshotAll());
   }, []);
 
   useEffect(() => {
@@ -148,7 +170,7 @@ export function HostAuthProvider({ children }: HostAuthProviderProps) {
         console.warn('[HostAuthContext] initialize failed:', err);
       }
       if (!cancelled) {
-        setHosts(snapshotAll());
+        setHosts(await snapshotAll());
         setStatus('ready');
       }
     })();
@@ -171,7 +193,6 @@ export function HostAuthProvider({ children }: HostAuthProviderProps) {
               id: gh.id,
               login: gh.login,
               name: gh.name ?? null,
-              email: gh.email ?? null,
               avatarUrl: gh.avatar_url ?? null,
             }
           : null;
@@ -182,7 +203,6 @@ export function HostAuthProvider({ children }: HostAuthProviderProps) {
               id: gl.id,
               login: gl.username,
               name: gl.name,
-              email: gl.email ?? null,
               avatarUrl: gl.avatar_url ?? null,
             }
           : null;

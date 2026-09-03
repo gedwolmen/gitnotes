@@ -54,15 +54,7 @@ exports[`Button snapshots primary in light + dark: primary-dark 1`] = `
       className="bg-surface rounded-md"
       style={
         [
-          {
-            "shadowColor": "#000000",
-            "shadowOffset": {
-              "height": 4,
-              "width": 4,
-            },
-            "shadowOpacity": 1,
-            "shadowRadius": 8,
-          },
+          {},
           [
             {
               "alignSelf": "stretch",
@@ -90,15 +82,7 @@ exports[`Button snapshots primary in light + dark: primary-dark 1`] = `
             {
               "borderRadius": 18,
             },
-            {
-              "shadowColor": "#1F1F1F",
-              "shadowOffset": {
-                "height": -4,
-                "width": -4,
-              },
-              "shadowOpacity": 1,
-              "shadowRadius": 8,
-            },
+            {},
           ]
         }
       />
@@ -183,15 +167,7 @@ exports[`Button snapshots primary in light + dark: primary-light 1`] = `
       className="bg-surface rounded-md"
       style={
         [
-          {
-            "shadowColor": "#BFBFBF",
-            "shadowOffset": {
-              "height": 4,
-              "width": 4,
-            },
-            "shadowOpacity": 1,
-            "shadowRadius": 8,
-          },
+          {},
           [
             {
               "alignSelf": "stretch",
@@ -219,15 +195,7 @@ exports[`Button snapshots primary in light + dark: primary-light 1`] = `
             {
               "borderRadius": 18,
             },
-            {
-              "shadowColor": "#FFFFFF",
-              "shadowOffset": {
-                "height": -4,
-                "width": -4,
-              },
-              "shadowOpacity": 1,
-              "shadowRadius": 8,
-            },
+            {},
           ]
         }
       />

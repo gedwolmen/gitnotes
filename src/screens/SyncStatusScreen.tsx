@@ -9,7 +9,7 @@ interface SyncStatusScreenProps {
   onAiFixRemaining?: () => void;
 }
 
-export default function SyncStatusScreen({}: SyncStatusScreenProps = {}) {
+export default function SyncStatusScreen(_props: SyncStatusScreenProps = {}) {
   const { colors } = useTheme();
   const safeBack = useSafeBack();
 

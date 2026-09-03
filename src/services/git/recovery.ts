@@ -13,13 +13,27 @@
  */
 
 import * as FileSystem from 'expo-file-system/legacy';
-import git from 'isomorphic-git';
 import { parseRepoPath } from '../../utils/gitPathParser';
 import { makeGitFs as buildGitFs } from './gitFs';
 import { gitHttp } from './gitHttp';
 import { GitFsService, repairHeadRef } from './GitFsService';
 
 const CLONES_SUBDIR = 'GitNotes/';
+
+// ─── minimal git stub (no-op until Rust engine is wired) ─────────────────────
+const git = {
+  async push(_opts: {
+    fs: unknown; http: unknown; dir: string; ref: string; remoteRef: string;
+    onAuth: unknown; force?: boolean; onProgress?: unknown;
+  }): Promise<void> {},
+  async currentBranch(_opts: { fs: unknown; dir: string; fullname: boolean }): Promise<string | null> { return null; },
+  async checkout(_opts: { fs: unknown; dir: string; ref: string }): Promise<void> {},
+  async fetch(_opts: {
+    fs: unknown; http: unknown; dir: string; ref: string; singleBranch: boolean;
+    tags: boolean; onAuth: unknown; depth?: number;
+  }): Promise<void> {},
+  async status(_opts: { fs: unknown; dir: string; filepath: string }): Promise<string> { return 'unmodified'; },
+};
 
 // ---------------------------------------------------------------------------
 // Error classification

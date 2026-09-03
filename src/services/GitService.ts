@@ -1,3 +1,9 @@
+/**
+ * GitService — provides a stable interface over Git host operations.
+ *
+ * Repository list lives in AsyncStorage via StorageService. Branch and tree
+ * data is fetched from the GitHub/GitLab REST API and cached in memory + AsyncStorage.
+ */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StorageService } from './StorageService';
 import { AuthService } from './AuthService';
@@ -5,16 +11,15 @@ import { parseRepoPath } from '../utils/gitPathParser';
 import { fetchGitHubDefaultBranch, fetchGitLabDefaultBranch } from './git/branchResolver';
 import type { GitHostProvider } from './git/GitHost';
 import { getGitHostService } from './git/gitHostFactory';
+import { getActiveGitHost } from './git/activeHost';
 
 export interface GitRepository {
   id: string;
-  name: string;
   path: string;
+  full_name?: string;
+  name: string;
   branch?: string;
-  commit?: string;
-  /** Which host this repository lives on. Defaults to 'github' for legacy entries. */
   provider?: GitHostProvider;
-  /** Host connection (token) this repo was added under. */
   hostId?: string;
 }
 
@@ -23,21 +28,12 @@ export interface GitBranch {
   isCurrent: boolean;
 }
 
-export interface GitCommit {
-  hash: string;
-  shortHash: string;
-  message: string;
-  author: string;
-  date: string;
-}
-
 export interface GitRepositoryFolder {
   name: string;
   path: string;
   parentPath: string | null;
 }
 
-const DEFAULT_REPOS_ROOT = process.env.GIT_REPOS_ROOT_DEFAULT || './repos';
 const GITHUB_API_BASE = 'https://api.github.com';
 const CACHE_PREFIX = '@gitnotes:github_cache_';
 
@@ -46,31 +42,9 @@ interface CacheEntry<T> {
   timestamp: number;
 }
 
-interface GitHubTreeEntry {
-  path: string;
-  type: 'tree' | 'blob' | string;
-}
-
-interface GitHubTreeResponse {
-  tree?: GitHubTreeEntry[];
-}
-
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 export class GitService {
-  static getReposRoot(): string {
-    return process.env.GIT_REPOS_ROOT || DEFAULT_REPOS_ROOT;
-  }
-
-  static async getRepositories(): Promise<GitRepository[]> {
-    try {
-      return await StorageService.getSavedRepositories();
-    } catch (error) {
-      console.error('[GitService] Failed to get repositories:', error);
-      throw error;
-    }
-  }
-
   static async addRepository(
     path: string,
     name?: string,
@@ -79,18 +53,17 @@ export class GitService {
   ): Promise<GitRepository> {
     try {
       const repoName = name || path.split('/').pop() || path;
-      // Capture the remote's actual default branch at add-time so clone +
-      // sync paths don't fall back to a hardcoded 'main' (#543). Best-effort:
-      // offline / 404 leaves `branch` undefined; the resolver re-tries lazily.
+      // Use the active host's token so private repos authenticate consistently
+      // throughout the addRepository flow (preflight + branch resolution).
+      const activeHost = await getActiveGitHost();
+      const token = activeHost?.token ?? null;
       let branch: string | undefined;
       if (provider === 'gitlab') {
-        branch = (await fetchGitLabDefaultBranch(path)) ?? undefined;
+        branch = (await fetchGitLabDefaultBranch(path, token)) ?? undefined;
       } else if (provider === 'github') {
-        branch = (await fetchGitHubDefaultBranch(path)) ?? undefined;
+        branch = (await fetchGitHubDefaultBranch(path, token)) ?? undefined;
       } else {
-        // Gitea / Forgejo reuse the GitHub resolver for now — both expose
-        // the same `/repos/:owner/:repo` default-branch shape.
-        branch = (await fetchGitHubDefaultBranch(path)) ?? undefined;
+        branch = (await fetchGitHubDefaultBranch(path, token)) ?? undefined;
       }
       const repo: GitRepository = {
         id: `${provider}:${Date.now()}`,
@@ -105,100 +78,9 @@ export class GitService {
       return repo;
     } catch (error) {
       console.error('[GitService] Failed to add repository:', error);
-      throw new Error(`Failed to add repository: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-
-  static async removeRepository(path: string): Promise<void> {
-    try {
-      await StorageService.removeRepository(path);
-    } catch (error) {
-      console.error('[GitService] Failed to remove repository:', error);
-      throw new Error(`Failed to remove repository: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-
-  private static memCache = new Map<string, CacheEntry<unknown>>();
-  private static readonly MEM_CACHE_MAX = 64;
-
-  private static memCacheGet<T>(key: string): T | null {
-    const entry = this.memCache.get(key) as CacheEntry<T> | undefined;
-    if (!entry) return null;
-    if (Date.now() - entry.timestamp > CACHE_DURATION) {
-      this.memCache.delete(key);
-      return null;
-    }
-    // LRU touch: re-insert moves the key to the end of the iteration order.
-    this.memCache.delete(key);
-    this.memCache.set(key, entry);
-    return entry.data;
-  }
-
-  private static memCacheSet<T>(key: string, data: T): void {
-    this.memCache.set(key, { data, timestamp: Date.now() });
-    while (this.memCache.size > this.MEM_CACHE_MAX) {
-      const oldest = this.memCache.keys().next().value;
-      if (oldest === undefined) break;
-      this.memCache.delete(oldest);
-    }
-  }
-
-  private static async getCachedData<T>(key: string): Promise<T | null> {
-    const memHit = this.memCacheGet<T>(key);
-    if (memHit !== null) return memHit;
-    try {
-      const cached = await AsyncStorage.getItem(CACHE_PREFIX + key);
-      if (!cached) return null;
-
-      const entry: CacheEntry<T> = JSON.parse(cached);
-      if (Date.now() - entry.timestamp > CACHE_DURATION) {
-        await AsyncStorage.removeItem(CACHE_PREFIX + key);
-        return null;
-      }
-      this.memCacheSet(key, entry.data);
-      return entry.data;
-    } catch (error) {
-      console.warn('[GitService] getCachedData failed:', error);
-      return null;
-    }
-  }
-
-  private static async setCachedData<T>(key: string, data: T): Promise<void> {
-    this.memCacheSet(key, data);
-    try {
-      const entry: CacheEntry<T> = {
-        data,
-        timestamp: Date.now(),
-      };
-      await AsyncStorage.setItem(CACHE_PREFIX + key, JSON.stringify(entry));
-    } catch (error) {
-      console.warn('[GitService] Failed to cache data:', error);
-    }
-  }
-
-  private static async fetchFromGitHub<T>(url: string, authToken?: string): Promise<T | null> {
-    try {
-      const headers: Record<string, string> = {
-        'Accept': 'application/vnd.github.v3+json',
-      };
-      if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
-      }
-      const response = await fetch(url, { headers });
-      
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          console.warn(`[GitService] GitHub API auth error: ${response.status} - missing or invalid token`);
-        } else if (response.status !== 404) {
-          console.warn(`[GitService] GitHub API error: ${response.status}`);
-        }
-        return null;
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.warn('[GitService] GitHub API fetch failed:', error);
-      return null;
+      throw new Error(
+        `Failed to add repository: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
@@ -209,7 +91,6 @@ export class GitService {
   ): Promise<GitBranch[]> {
     const cacheKey = `branches_${provider}_${repoPath.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
-    // Check cache first
     const cached = await this.getCachedData<GitBranch[]>(cacheKey);
     if (cached) return cached;
 
@@ -226,12 +107,9 @@ export class GitService {
           await this.setCachedData(cacheKey, result);
           return result;
         }
-        // Host returned empty - try authenticated GitHub API directly.
-        // For private repos, unauthenticated requests are rate-limited so they
-        // return empty. Try with token if available, or fetch one.
+
         const token = authToken ?? (provider === 'github' ? await AuthService.getToken() : null);
         if (provider === 'github' && !token) {
-          // No token yet, try to get one
           const fetchedToken = await AuthService.getToken();
           if (fetchedToken) {
             const branchesUrl = `${GITHUB_API_BASE}/repos/${repoInfo.owner}/${repoInfo.repo}/branches`;
@@ -269,44 +147,6 @@ export class GitService {
         }
       } catch (error) {
         console.warn('[GitService] host listBranches failed:', error);
-      }
-    }
-
-    // Return empty array on failure - no fake data fallback (#1212)
-    return [];
-  }
-
-  static async getCommits(
-    repoPath: string,
-    branch?: string,
-    limit = 50,
-    authToken?: string,
-  ): Promise<GitCommit[]> {
-    const branchKey = branch || 'main';
-    const cacheKey = `commits_${repoPath.replace(/[^a-zA-Z0-9]/g, '_')}_${branchKey}`;
-    
-    const cached = await this.getCachedData<GitCommit[]>(cacheKey);
-    if (cached) return cached;
-
-    const repoInfo = parseRepoPath(repoPath);
-    
-    if (repoInfo) {
-      const url = `${GITHUB_API_BASE}/repos/${repoInfo.owner}/${repoInfo.repo}/commits?sha=${branchKey}&per_page=${limit}`;
-      const commits = await this.fetchFromGitHub<Array<{
-        sha: string;
-        commit: { message: string; author: { name: string; date: string } };
-      }>>(url, authToken);
-      
-      if (commits) {
-        const result = commits.map((c) => ({
-          hash: c.sha,
-          shortHash: c.sha.substring(0, 7),
-          message: c.commit.message.split('\n')[0],
-          author: c.commit.author.name,
-          date: c.commit.author.date,
-        }));
-        await this.setCachedData(cacheKey, result);
-        return result;
       }
     }
 
@@ -361,6 +201,91 @@ export class GitService {
     return folders;
   }
 
+  // ── Private helpers ──────────────────────────────────────────────────
+
+  private static memCache = new Map<string, CacheEntry<unknown>>();
+  private static readonly MEM_CACHE_MAX = 64;
+
+  private static memCacheGet<T>(key: string): T | null {
+    const entry = this.memCache.get(key) as CacheEntry<T> | undefined;
+    if (!entry) return null;
+    if (Date.now() - entry.timestamp > CACHE_DURATION) {
+      this.memCache.delete(key);
+      return null;
+    }
+    this.memCache.delete(key);
+    this.memCache.set(key, entry);
+    return entry.data;
+  }
+
+  private static memCacheSet<T>(key: string, data: T): void {
+    this.memCache.set(key, { data, timestamp: Date.now() });
+    while (this.memCache.size > this.MEM_CACHE_MAX) {
+      const oldest = this.memCache.keys().next().value;
+      if (oldest === undefined) break;
+      this.memCache.delete(oldest);
+    }
+  }
+
+  private static async getCachedData<T>(key: string): Promise<T | null> {
+    const memHit = this.memCacheGet<T>(key);
+    if (memHit !== null) return memHit;
+    try {
+      const cached = await AsyncStorage.getItem(CACHE_PREFIX + key);
+      if (!cached) return null;
+
+      const entry: CacheEntry<T> = JSON.parse(cached);
+      if (Date.now() - entry.timestamp > CACHE_DURATION) {
+        await AsyncStorage.removeItem(CACHE_PREFIX + key);
+        return null;
+      }
+      this.memCacheSet(key, entry.data);
+      return entry.data;
+    } catch (error) {
+      console.warn('[GitService] getCachedData failed:', error);
+      return null;
+    }
+  }
+
+  private static async setCachedData<T>(key: string, data: T): Promise<void> {
+    this.memCacheSet(key, data);
+    try {
+      const entry: CacheEntry<T> = {
+        data,
+        timestamp: Date.now(),
+      };
+      await AsyncStorage.setItem(CACHE_PREFIX + key, JSON.stringify(entry));
+    } catch (error) {
+      console.warn('[GitService] Failed to cache data:', error);
+    }
+  }
+
+  private static async fetchFromGitHub<T>(url: string, authToken?: string): Promise<T | null> {
+    try {
+      const headers: Record<string, string> = {
+        Accept: 'application/vnd.github.v3+json',
+      };
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+      const response = await fetch(url, { headers });
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          console.warn(`[GitService] GitHub API auth error: ${response.status} - missing or invalid token`);
+        } else if (response.status !== 404) {
+          console.warn(`[GitService] GitHub API error: ${response.status}`);
+        }
+        return null;
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.warn('[GitService] GitHub API fetch failed:', error);
+      return null;
+    }
+  }
+
   static async clearCache(): Promise<void> {
     try {
       const keys = await AsyncStorage.getAllKeys();
@@ -372,9 +297,6 @@ export class GitService {
     }
   }
 
-  // Targeted invalidator used after a successful repo pull so the editor
-  // folder dropdown reflects the freshly fetched tree instead of a stale
-  // (TTL-bound) snapshot.
   static async invalidateRepoFoldersCache(
     repoPath: string,
     branch?: string,

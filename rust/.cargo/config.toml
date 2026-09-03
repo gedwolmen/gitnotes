@@ -1,0 +1,7 @@
+[target.aarch64-apple-ios]
+# Pass stub object to satisfy ___chkstk_darwin on iOS arm64
+# ___chkstk_darwin is a macOS x86_64 stack-check intrinsic that iOS arm64 doesn't have
+rustflags = ["-C", "link-arg=-Wl,-force_load"]
+
+[build]
+# Ensure we use the iOS SDK toolchain properly

@@ -2,11 +2,11 @@ import { GitHubService } from './GitHubService';
 import { StorageService } from './StorageService';
 import { ThoughtDump, createThoughtDump, serializeThoughtDump, parseThoughtDump } from '../models/ThoughtDump';
 import { parseRepoPath } from '../utils/gitPathParser';
-import { SyncEngineService } from './SyncEngineService';
+import { SyncEngineService } from './syncStubs';
 import { resolveBranch } from './git/branchResolver';
+import { CommitService } from './git/CommitService';
 import { getGitHostService } from './git/gitHostFactory';
 import { FEATURE_USE_MULTI_HOST_WRITE } from './featureFlags';
-import { NoteSyncQueueService } from './NoteSyncQueueService';
 import type { GitHostProvider } from './git/GitHost';
 
 const THOUGHTS_DIR = 'thoughts/';
@@ -89,19 +89,28 @@ export class ThoughtDumpService {
     const dump = createThoughtDump(text);
     const content = serializeThoughtDump(dump);
 
-    const writeResult = await enqueueRepoWrite(repoInfo.owner, repoInfo.repo, branch, async () =>
-      NoteSyncQueueService.enqueueNoteUpsert({
-        repo: repoPath,
-        branch,
-        filePath: dump.filePath,
-        title: 'Thought dump',
-        content,
-      }),
-    );
+    let commitResult: Awaited<ReturnType<typeof CommitService.commit>>;
+    try {
+      commitResult = await enqueueRepoWrite(repoInfo.owner, repoInfo.repo, branch, () =>
+        CommitService.commit({
+          repo: repoPath,
+          branch,
+          filePath: dump.filePath,
+          content,
+          message: `Create thought dump: ${dump.filePath}`,
+        }),
+      );
+    } catch (error) {
+      console.warn('[ThoughtDumpService] create commit failed:', error);
+      return {
+        ok: false,
+        reason: 'write-failed',
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
 
-    if (!writeResult) {
-      console.warn('[ThoughtDumpService] create failed');
-      return { ok: false, reason: 'write-failed' };
+    if (!commitResult.success) {
+      return { ok: false, reason: 'write-failed', error: commitResult.error };
     }
 
     return { ok: true, dump };
@@ -191,14 +200,19 @@ export class ThoughtDumpService {
 
     const result = await enqueueRepoWrite(repoInfo.owner, repoInfo.repo, branch, async () => {
       try {
-        await NoteSyncQueueService.enqueueNoteDelete({
+        const commitResult = await CommitService.commit({
           repo: repoPath,
           branch,
           filePath: options.filePath,
-          title: 'Thought dump',
+          message: `Delete thought dump: ${options.filePath}`,
+          delete: true,
         });
-        return true;
-      } catch {
+        if (!commitResult.success) {
+          console.warn('[ThoughtDumpService] delete commit failed:', commitResult.error);
+        }
+        return commitResult.success;
+      } catch (error) {
+        console.warn('[ThoughtDumpService] delete commit failed:', error);
         return false;
       }
     });

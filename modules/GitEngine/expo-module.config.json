@@ -1,0 +1,9 @@
+{
+  "platforms": ["ios", "android"],
+  "ios": {
+    "modules": ["GitEngineModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.gitengine.GitEngineModule"]
+  }
+}

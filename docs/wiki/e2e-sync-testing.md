@@ -58,7 +58,7 @@ On save, `CloneSyncService.save` commits locally then calls `tryPushNow`. If the
 
 These scenarios test the core CRUD sync paths against both API and clone modes. API-mode behaviour is unchanged from the original harness. Clone-mode scenarios now reference the write-through pipeline triggers from `ClonePushTriggers.ts`.
 
-| # | Scenario | API mode | Clone mode | Clone push trigger | Timing checkpoints |
+| # | Scenario | Clone mode | Clone push trigger | Timing checkpoints |
 |---|---|---|---|---|---|
 | 1 | add-only | PUT → file on GitHub immediately | local commit → tryPushNow fires | `online-transition` | T0→T1→T2→T3 |
 | 2 | edit-only | PUT w/ sha → updated immediately | committed edit → tryPushNow fires | `online-transition` | T0→T1→T2→T3 |
@@ -155,7 +155,7 @@ No "Keep mine" / "Keep theirs" buttons — text conflicts show Save only
 | 2 | Create a note (local commit) | Note exists in working tree |
 | 3 | Corrupt packfile | Overwrite bytes in `.git/objects/pack/pack-*.pack` with garbage |
 | 4 | Trigger push via `online-transition` | Push begins |
-| 5 | Assert git operation throws `CORRUPT` error | `isomorphic-git` pack read fails |
+| 5 | Assert git operation throws `CORRUPT` error | git2 pack read fails |
 | 6 | Assert re-clone initiated | `CloneSyncService.clone` called; local `.git` wiped and re-cloned from remote |
 | 7 | Assert replay from remote | After clone, note exists via `git show HEAD:<path>` |
 | 8 | Assert no data loss | Note content matches pre-corruption state (replay restored it) |
@@ -255,7 +255,7 @@ Overall: PASS / FAIL (reason)
 
 ## Sync Engine Mode Contract
 
-| Contract element | Clone mode (write-through) | API mode |
+| Contract element | Clone mode (write-through) |
 |---|---|---|
 | Save behaviour | local commit → `tryPushNow` (8s budget when online) | write-through to GitHub immediately |
 | Offline behaviour | `ClonePendingQueue.enqueue`; push on `online-transition` | not applicable (save fails or queues) |

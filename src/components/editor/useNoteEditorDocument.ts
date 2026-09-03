@@ -12,7 +12,7 @@ import { GitService } from '../../services/GitService';
 import { LastSelectionPreferenceService } from '../../services/LastSelectionPreferenceService';
 import { HapticService } from '../../utils/haptics';
 import { useUndo } from '../../utils/useUndo';
-import { NoteSyncQueueService } from '../../services/NoteSyncQueueService';
+import { NoteSyncQueueService } from '../../services/syncStubs';
 import { classifyGitHubSyncError, isRetryableFailure, syncStatusForError } from '../../services/git/syncFailure';
 import { useNoteStore } from '../../stores/noteStore';
 import { githubActivity } from '../../stores/githubActivityStore';
@@ -231,7 +231,7 @@ export function useNoteEditorDocument({
     }
 
     let cancelled = false;
-    GitService.getRepositoryFolders(repo, branch)
+    GitService.getRepositoryFolders(repo, normalizeBranch(branch))
       .then((entries) => {
         if (cancelled) return;
         setRepoFolders(
@@ -415,7 +415,7 @@ export function useNoteEditorDocument({
           ? gitOperationRegistry.begin({
               kind: 'upsert',
               repo,
-              branch,
+              branch: normalizeBranch(branch),
               path: syncPath,
               entityIds: [savedNoteId],
               status: 'running',

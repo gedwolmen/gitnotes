@@ -2,10 +2,7 @@ import { useMemo } from 'react';
 import { create } from 'zustand';
 import { Note, NoteCreateInput, NoteUpdateInput, sortNotesWithPinnedFirst, filterNotesBySearch } from '../models/Note';
 import { StorageService } from '../services/StorageService';
-import { NoteSyncQueueService } from '../services/NoteSyncQueueService';
-import type { MutationSucceededEvent, DroppedMutationEvent, NoteDeleteParams } from '../services/NoteSyncQueueService';
-import { SyncEngineService } from '../services/SyncEngineService';
-import { CloneSyncService, type SaveResult } from '../services/CloneSyncService';
+import { NoteSyncQueueService, SyncEngineService, CloneSyncService, type MutationSucceededEvent, type DroppedMutationEvent, type NoteDeleteParams, type SaveResult } from '../services/syncStubs';
 import { CommitService } from '../services/git/CommitService';
 import { resolveDefaultFolder, resolveDefaultRepo } from '../services/git/defaultsPolicy';
 import { recordDeleteFailure } from '../services/git/deleteFailures';
@@ -311,41 +308,39 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
             });
           const mode = await SyncEngineService.getMode(repoPath);
           if (mode === 'clone') {
-            // Clone-mode: route through CloneSyncService.save which handles
-            // pre-pull, commit, push attempt, and offline queue.
+            // Clone mode: real local delete commit via CommitService (same
+            // primitive as create/rename); push happens via the clone push
+            // triggers. The local commit keeps the next pull from
+            // resurrecting the file (#1030).
             const opId = beginDeleteOp();
-            const saveResult = await CloneSyncService.save({
-              repoPath,
-              branch: note.branch ?? 'main',
-              filePath,
-              content: undefined,
-              message: `Delete note: ${note.title ?? filePath}`,
-              intent: 'delete',
-            });
-            if (saveResult.success) {
-              const success = await StorageService.deleteNote(id);
-              if (success) {
-                set((state) => ({ notes: state.notes.filter((n) => n.id !== id) }));
-                gitOperationRegistry.succeed(opId);
-              } else {
-                gitOperationRegistry.fail(opId, 'Failed to delete note locally');
+            try {
+              const commitResult = await CommitService.commit({
+                repo: repoPath,
+                branch: note.branch ?? 'main',
+                filePath,
+                message: `Delete note: ${note.title ?? filePath}`,
+                delete: true,
+              });
+              if (!commitResult.success) {
+                gitOperationRegistry.fail(opId, commitResult.error ?? 'Failed to delete note');
+                set({ error: commitResult.error ?? 'Failed to delete note' });
+                return false;
               }
-              return success;
+            } catch (commitError) {
+              const commitErrorMessage =
+                commitError instanceof Error ? commitError.message : 'Failed to delete note';
+              gitOperationRegistry.fail(opId, commitErrorMessage);
+              set({ error: commitErrorMessage });
+              return false;
             }
-            if (saveResult.error === 'queued') {
-              const success = await StorageService.deleteNote(id);
-              if (success) {
-                set((state) => ({ notes: state.notes.filter((n) => n.id !== id) }));
-                gitOperationRegistry.succeed(opId);
-              } else {
-                gitOperationRegistry.fail(opId, 'Failed to delete note locally');
-              }
-              return success;
+            const success = await StorageService.deleteNote(id);
+            if (success) {
+              set((state) => ({ notes: state.notes.filter((n) => n.id !== id) }));
+              gitOperationRegistry.succeed(opId);
+            } else {
+              gitOperationRegistry.fail(opId, 'Failed to delete note locally');
             }
-            // 'conflict-detected' or other errors
-            gitOperationRegistry.fail(opId, saveResult.error ?? 'Failed to delete note');
-            set({ error: saveResult.error ?? 'Failed to delete note' });
-            return false;
+            return success;
           }
           // API mode: enqueue the delete, then remove locally immediately.
           try {
@@ -560,26 +555,26 @@ function onDeleteMutationSucceeded(event: MutationSucceededEvent): void {
     void StorageService.deleteNote(note.id).catch(() => undefined);
     useNoteStore.setState((state) => ({ notes: state.notes.filter((n) => n.id !== note.id) }));
   }
-  succeedDeleteOps(mutation.params.repo, mutation.params.branch, mutation.params.filePath, mutation.params.localNoteId);
+  succeedDeleteOps(mutation.params.repo ?? '', mutation.params.branch, mutation.params.filePath ?? '', mutation.params.localNoteId);
 }
 
 function onDeleteMutationDropped(event: DroppedMutationEvent): void {
   const mutation = event.mutation;
   if (mutation.type !== 'note.delete') return;
   failDeleteOps(
-    mutation.params.repo,
+    mutation.params.repo ?? '',
     mutation.params.branch,
-    mutation.params.filePath,
+    mutation.params.filePath ?? '',
     mutation.params.localNoteId,
     event.error || 'Delete failed',
   );
   void recordDeleteFailure(
-    mutation.params.repo,
+    mutation.params.repo ?? '',
     mutation.params.branch,
-    mutation.params.filePath,
+    mutation.params.filePath ?? '',
     {
       error: event.error || 'Delete failed',
-      kind: event.reason,
+      kind: event.reason ?? 'unknown',
       at: Date.now(),
     },
   );

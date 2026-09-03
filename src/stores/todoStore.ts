@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { Todo, TodoCreateInput, TodoUpdateInput, reorderTodos } from '../models/Todo';
 import { StorageService } from '../services/StorageService';
-import { GitHubService } from '../services/GitHubService';
 import { formatSyncError } from '../services/git/formatSyncError';
 import { deleteTodoFromGitHub } from '../services/TodoGitHubSyncService';
 import { gitOperationRegistry } from './gitOperationStore';
@@ -88,16 +87,12 @@ export const useTodoStore = create<TodoState & TodoActions>()((set, get) => ({
       }
 
       try {
-        // Repo-backed todos must purge the remote file first; otherwise the next
-        // pull re-imports the row (#489). The sync helper already treats a
-        // missing remote (sha null / 404) as success so a stale local row can
-        // still be cleaned up.
+        // Repo-backed todos must purge the backing file first; otherwise the
+        // next pull re-imports the row (#489). In clone mode this stages the
+        // worktree deletion (visible in the Changes tab until committed); the
+        // sync helper treats a missing remote (sha null / 404) as success so
+        // a stale local row can still be cleaned up.
         if (isRepoBacked) {
-          if (!GitHubService.isAuthenticated()) {
-            set({ error: 'Cannot delete repo-backed todo while signed out of GitHub' });
-            if (opId) gitOperationRegistry.fail(opId, 'Cannot delete repo-backed todo while signed out of GitHub');
-            return false;
-          }
           const deleteResult = await deleteTodoFromGitHub({
             repo: todoToDelete!.repo!,
             branch: todoToDelete!.branch,

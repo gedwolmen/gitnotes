@@ -71,16 +71,19 @@ export function __resetBranchCacheForTests(): void {
 
 const FETCH_TIMEOUT_MS = 30_000;
 
-export async function fetchGitHubDefaultBranch(repoPath: string): Promise<string | null> {
+export async function fetchGitHubDefaultBranch(
+  repoPath: string,
+  token?: string | null,
+): Promise<string | null> {
   const info = parseRepoPath(repoPath);
   if (!info) return null;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const token = await AuthService.getToken();
+    const resolvedToken = token !== undefined ? token : await AuthService.getToken();
     const headers: Record<string, string> = { Accept: 'application/vnd.github.v3+json' };
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
+    if (resolvedToken) {
+      headers.Authorization = `Bearer ${resolvedToken}`;
     }
     const response = await fetch(
       `${GITHUB_API_BASE}/repos/${info.owner}/${info.repo}`,
@@ -104,24 +107,31 @@ export async function fetchGitHubDefaultBranch(repoPath: string): Promise<string
  * "namespace/project" path. GitLab exposes the project directly via the
  * encoded path, so this works for gitlab.com and self-hosted instances.
  */
-export async function fetchGitLabDefaultBranch(repoPath: string): Promise<string | null> {
+export async function fetchGitLabDefaultBranch(
+  repoPath: string,
+  token?: string | null,
+): Promise<string | null> {
   const info = parseRepoPath(repoPath);
   if (!info) return null;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    let token: string | null = null;
-    try {
-      const host = await getActiveGitHost();
-      if (host && host.provider === 'gitlab') token = host.token;
-    } catch {
-      // fall through to unauthenticated request for public repos
-    }
+    const resolvedToken = token !== undefined
+      ? token
+      : (async () => {
+          try {
+            const host = await getActiveGitHost();
+            return host?.provider === 'gitlab' ? host.token : null;
+          } catch {
+            return null;
+          }
+        })();
+    const resolved = resolvedToken instanceof Promise ? await resolvedToken : resolvedToken;
     const storedBase = await AsyncStorage.getItem('@gitnotes:gitlab_base_url');
     const baseUrl = (storedBase || GITLAB_API_BASE).replace(/\/+$/, '');
     const headers: Record<string, string> = { Accept: 'application/json' };
-    if (token) {
-      headers['PRIVATE-TOKEN'] = token;
+    if (resolved) {
+      headers['PRIVATE-TOKEN'] = resolved;
     }
     const response = await fetch(
       `${baseUrl}/projects/${encodeURIComponent(`${info.owner}/${info.repo}`)}`,

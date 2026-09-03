@@ -3,7 +3,7 @@ import { NoteColor, NoteFormat } from '../models/Note';
 import * as FileSystem from 'expo-file-system/legacy';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { AuthService } from './AuthService';
-import { SyncEngineService } from './SyncEngineService';
+import { SyncEngineService, CloneSyncService } from './syncStubs';
 import { GitFsService } from './git/GitFsService';
 import { resolveBranch } from './git/resolveBranch';
 import { getGitHostService } from './git/gitHostFactory';
@@ -11,7 +11,6 @@ import { FEATURE_USE_MULTI_HOST_WRITE } from './featureFlags';
 import { classifyGitHubSyncError, extractHttpErrorDetails, syncStatusForError } from './git/syncFailure';
 import { formatSyncError } from './git/formatSyncError';
 import type { GitHostProvider } from './git/GitHost';
-import { CloneSyncService } from './CloneSyncService';
 
 async function resolveToken(accountId?: string): Promise<string | undefined> {
   if (!accountId) return undefined;
@@ -34,7 +33,7 @@ function failedSyncResult(error: unknown): NoteGitHubSyncResult {
   const message = formatSyncError(rawMessage);
   return status === undefined
     ? { success: false, error: message }
-    : { success: false, error: message, status };
+    : { success: false, error: message, status: typeof status === 'number' ? status : undefined };
 }
 
 function failedSyncOrConflict(error: unknown, status?: number): NoteGitHubSyncResult {

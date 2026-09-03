@@ -2,8 +2,7 @@ import { GitHubService } from './GitHubService';
 import { Todo } from '../models/Todo';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { AuthService } from './AuthService';
-import { CloneSyncService } from './CloneSyncService';
-import { SyncEngineService } from './SyncEngineService';
+import { CloneSyncService, SyncEngineService } from './syncStubs';
 import { resolveDefaultFolder, resolveDefaultRepo } from './git/defaultsPolicy';
 import { GitFsService } from './git/GitFsService';
 import { resolveBranch } from './git/resolveBranch';
@@ -149,22 +148,21 @@ export async function deleteTodoFromGitHub(params: {
   accountId?: string;
 }): Promise<TodoGitHubSyncResult> {
   const { repo: repoPath, branch, filePath, text, accountId } = params;
-  const tokenOverride = await resolveToken(accountId);
-
-  if (!tokenOverride && !GitHubService.isAuthenticated()) {
-    return { success: false, error: 'GitHub not authenticated' };
-  }
 
   const repoInfo = parseRepoPath(repoPath);
   if (!repoInfo) {
     return { success: false, error: `Invalid repo path: ${repoPath}` };
   }
 
-  const targetBranch = await resolveBranch(repoPath, branch);
-  const opts = tokenOverride ? { tokenOverride } : undefined;
-
   const mode = await SyncEngineService.getMode(repoPath);
-  if (mode === 'clone') {
+  if (mode === 'clone' && (await GitFsService.isCloned({ repoPath }))) {
+    // Clone-mode delete goes through the shared clone writer (#514 pattern):
+    // CloneSyncService.save's delete intent removes the worktree file and
+    // stages the removal (`git rm` semantics), so the Changes tab lists it
+    // as a staged "deleted" entry for the user to commit. Idempotent — a
+    // file the clone never tracked leaves nothing to stage. No credentials
+    // needed; the remote copy is purged when the staged deletion is pushed.
+    const targetBranch = await resolveBranch(repoPath, branch);
     const saveResult = await CloneSyncService.save({
       repoPath,
       branch: targetBranch,
@@ -177,6 +175,17 @@ export async function deleteTodoFromGitHub(params: {
     }
     return { success: false, error: saveResult.error };
   }
+
+  // API-mode repos — and clone repos with no local clone on this device —
+  // purge the file through the Contents API instead.
+  const tokenOverride = await resolveToken(accountId);
+
+  if (!tokenOverride && !GitHubService.isAuthenticated()) {
+    return { success: false, error: 'GitHub not authenticated' };
+  }
+
+  const targetBranch = await resolveBranch(repoPath, branch);
+  const opts = tokenOverride ? { tokenOverride } : undefined;
 
   try {
     // not-found = remote already gone, treat as success so the local

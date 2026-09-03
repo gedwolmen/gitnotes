@@ -1,778 +1,489 @@
-import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  TouchableOpacity,
+  AppState,
+  AppStateStatus,
   FlatList,
-  ActivityIndicator,
+  Pressable,
   ScrollView,
-  RefreshControl,
-  Linking,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+  type LayoutChangeEvent,
 } from 'react-native';
-import { useNavigation, useIsFocused } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { useTheme } from '../contexts/ThemeContext';
-import { useRepos } from '../contexts/RepoContext';
-import { GitService, GitRepository, GitBranch } from '../services/GitService';
-import { HapticService } from '../utils/haptics';
-import { parseRepoPath } from '../utils/gitPathParser';
-import { GitSyncGate } from '../services/git/GitSyncGate';
-import { useGitOperationStore, hasActivePull } from '../stores/gitOperationStore';
-import RepoFileTree, { TreeNode } from '../components/RepoFileTree';
-import { treeStyles } from '../components/repo/repoTreeStyles';
-import { RootStackParamList } from '../navigation/types';
-import { EmptyState, Button, Modal, ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
-import { SafeAreaView } from '../components/ui/SafeAreaView';
-import { OfflineBanner } from '../components/ui/OfflineBanner';
-import SearchBar from '../components/SearchBar';
-import { useTranslation } from 'react-i18next';
-import { useGitHostPullRequests, useGitHostIssues } from '../hooks/useGitHostQueries';
-import type { GitHostItemState, GitHostPullRequest, GitHostIssue, GitHostProvider } from '../services/git/GitHost';
+
+import { Text } from '@/components/ui/text';
+import { Heading } from '@/components/ui/heading';
+import { Button, ButtonText } from '@/components/ui/Button';
+import { SectionTabs } from '@/components/ui/SectionTabs';
+import { Modal } from '@/components/ui/Modal';
+import { useGitRepoStatus } from '@/hooks/useGitRepoStatus';
+import { useAllReposStatus } from '@/hooks/useAllReposStatus';
+import { useRepoStore } from '@/stores/repoStore';
+import { GitFsService } from '@/services/git/GitFsService';
+import * as GitEngine from '@/services/git/engine/GitEngine';
+import { GitSyncGate } from '@/services/git/GitSyncGate';
+import { AuthService } from '@/services/AuthService';
+import { pushWithForce } from '@/services/git/recovery';
+import { LastUsedRepoService } from '@/services/LastUsedRepoService';
+import { useGitButtonActionStore } from '@/stores/gitButtonActionStore';
+import type { GitRepository } from '@/services/GitService';
+import type { RepoLike } from '@/components/explore/exploreShared';
+import type { RootStackParamList } from '@/navigation/types';
+
+import {
+  EXPLORE_SECTIONS,
+  type ExploreSection,
+} from '@/components/explore/exploreShared';
+import { FilesSection } from '@/components/explore/FilesSection';
+import { ChangesSection } from '@/components/explore/ChangesSection';
+import { StagingSection } from '@/components/explore/StagingSection';
+import { CommitsSection } from '@/components/explore/CommitsSection';
+import { BranchesSection } from '@/components/explore/BranchesSection';
+import { RemotesSection } from '@/components/explore/RemotesSection';
+import { ConflictsSection } from '@/components/explore/ConflictsSection';
+import { RepoInfoSection } from '@/components/explore/RepoInfoSection';
+import { IssuesSection } from '@/components/explore/IssuesSection';
+import { PullRequestsSection } from '@/components/explore/PullRequestsSection';
+import { useTheme, useTokens } from '@/contexts/ThemeContext';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-const IMAGE_EXTS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'heic', 'heif', 'svg']);
-const VIDEO_EXTS = new Set(['mp4', 'mov', 'm4v', 'webm']);
-
-function classifyFile(name: string): 'pdf' | 'json' | 'image' | 'video' | 'text' {
-  const ext = name.toLowerCase().split('.').pop() ?? '';
-  if (ext === 'pdf') return 'pdf';
-  if (ext === 'json') return 'json';
-  if (IMAGE_EXTS.has(ext)) return 'image';
-  if (VIDEO_EXTS.has(ext)) return 'video';
-  return 'text';
-}
-
-type ExploreView = 'repoList' | 'repoDetail' | 'fileTree' | 'prList' | 'issueList';
-type StateFilter = Extract<GitHostItemState, 'open' | 'closed'>;
-
+/**
+ * Explore workspace shell (todo 23): the Git-client surface hosting every
+ * workspace section — Files, Changes, Staging, Commits, Branches, Remotes,
+ * Conflicts, Pull Requests, Issues, Repo Info — behind a gluestack tab row
+ * with a per-repo context header (name, branch, ahead/behind, remote).
+ * All data comes from the Rust git2 engine; PR/Issue REST lands in todo 26.
+ */
 export default function ExploreScreen() {
-  const { t } = useTranslation();
   const navigation = useNavigation<NavigationProp>();
-  const { colors, isDark } = useTheme();
-  const headerHeight = useScreenHeaderHeight();
-  const tabBarHeight = useTabBarHeight();
-  const { repositories: repos, refreshRepos } = useRepos();
-  const [view, setView] = useState<ExploreView>('repoList');
-  const [selectedRepo, setSelectedRepo] = useState<GitRepository | null>(null);
-  const [selectedBranch, setSelectedBranch] = useState<string | undefined>(undefined);
-  const [repoSearch, setRepoSearch] = useState('');
-  const [loadingRepos, setLoadingRepos] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const refreshingRef = useRef(false);
-  const isFocused = useIsFocused();
+  const { isDark } = useTheme();
+  const { colors } = useTokens();
+  const insets = useSafeAreaInsets();
+  const repos = useRepoStore((state) => state.repositories);
+  const isLoading = useRepoStore((state) => state.isLoading);
+  const loadRepos = useRepoStore((state) => state.loadRepos);
+  const aggregatedState = useAllReposStatus();
 
-  const [branchPickerVisible, setBranchPickerVisible] = useState(false);
-  const [branches, setBranches] = useState<GitBranch[]>([]);
-  const [branchLoading, setBranchLoading] = useState(false);
-  const [branchLoadFailed, setBranchLoadFailed] = useState(false);
+  const [section, setSection] = useState<ExploreSection>('files');
+  const [selectedRepoId, setSelectedRepoId] = useState<string | null>(null);
+  const [showRepoPicker, setShowRepoPicker] = useState(false);
 
-  const [prFilter, setPrFilter] = useState<StateFilter>('open');
-  const [issueFilter, setIssueFilter] = useState<StateFilter>('open');
+  const [chromeTotalHeight, setChromeTotalHeight] = useState(insets.top + 100);
 
-  const [bannerRegionHeight, setBannerRegionHeight] = useState(headerHeight);
-  const [toolsHeight, setToolsHeight] = useState(0);
+  const repo = useMemo(() => {
+    const lookupId = selectedRepoId ?? repos[0]?.id ?? null;
+    const found = lookupId ? repos.find((r) => r.id === lookupId) : undefined;
+    const r = found ?? repos[0] ?? null;
+    if (!r) return null;
+    return {
+      ...r,
+      localPath: GitFsService.workingTreeUri({ repoPath: r.path }),
+    } as RepoLike;
+  }, [repos, selectedRepoId]);
 
-  const ops = useGitOperationStore((s) => s.ops);
+  const handlePickRepo = useCallback((picked: GitRepository) => {
+    setSelectedRepoId(picked.id);
+    setShowRepoPicker(false);
+    void LastUsedRepoService.set(picked.path);
+  }, []);
 
-  // Reset refresh state when screen loses focus (tab switch, stack push, etc.)
+  const hasHydratedLastUsedRef = useRef(false);
   useEffect(() => {
-    if (!isFocused) {
-      refreshingRef.current = false;
-      setRefreshing(false);
-    }
-  }, [isFocused]);
+    if (hasHydratedLastUsedRef.current) return;
+    if (repos.length === 0) return;
+    hasHydratedLastUsedRef.current = true;
+    void LastUsedRepoService.get().then((lastPath) => {
+      if (!lastPath) return;
+      const match = repos.find((r) => r.path === lastPath);
+      if (match) setSelectedRepoId(match.id);
+    });
+  }, [repos]);
 
-  const filteredRepos = useMemo(() => {
-    if (!repoSearch.trim()) return repos;
-    const q = repoSearch.toLowerCase();
-    return repos.filter(
-      (r) =>
-        r.name.toLowerCase().includes(q) ||
-        r.path.toLowerCase().includes(q),
-    );
-  }, [repos, repoSearch]);
-
-  const repoInfo = useMemo(() => {
-    if (!selectedRepo) return null;
-    return parseRepoPath(selectedRepo.path);
-  }, [selectedRepo]);
-
-  const repoProvider: GitHostProvider = (selectedRepo?.provider as GitHostProvider) ?? 'github';
-  const repoOwner = repoInfo?.owner ?? '';
-  const repoName = repoInfo?.repo ?? '';
-
-  const prQuery = useGitHostPullRequests(repoProvider, repoOwner, repoName, prFilter);
-  const issueQuery = useGitHostIssues(repoProvider, repoOwner, repoName, issueFilter);
-
-  // Explore performs NO git pull — it only refreshes the repo list. When the
-  // gate reports the selected repo busy (push marker or cycle hold affecting
-  // it), the tree area shows its busy state and pull-to-refresh is disabled.
-  const repoPath = repoInfo ? `${repoInfo.owner}/${repoInfo.repo}` : null;
-  const gateBusy = GitSyncGate.isCycleHeld() || GitSyncGate.isPushActive();
-  const repoBusy = repoPath ? GitSyncGate.isPushActive(repoPath) || hasActivePull(ops, repoPath) : false;
-
-  useEffect(() => {
-    if (repos.length === 0) {
-      setLoadingRepos(true);
-      refreshRepos().finally(() => setLoadingRepos(false));
-    }
-  }, [repos.length, refreshRepos]);
-
-  const handleSelectRepo = useCallback((repo: GitRepository) => {
-    HapticService.light();
-    setSelectedRepo(repo);
-    setSelectedBranch(repo.branch);
-    setView('repoDetail');
-  }, []);
-
-  const handleOpenFileTree = useCallback(() => {
-    HapticService.medium();
-    setView('fileTree');
-  }, []);
-
-  const handleOpenPrList = useCallback(() => {
-    HapticService.medium();
-    setView('prList');
-  }, []);
-
-  const handleOpenIssueList = useCallback(() => {
-    HapticService.medium();
-    setView('issueList');
-  }, []);
-
-  const handleBack = useCallback(() => {
-    HapticService.light();
-    if (view === 'fileTree' || view === 'prList' || view === 'issueList') {
-      setView('repoDetail');
-    } else if (view === 'repoDetail') {
-      setSelectedRepo(null);
-      setView('repoList');
-    }
-  }, [view]);
-
-  const handleRefresh = useCallback(() => {
-    if (refreshingRef.current) return;
-    refreshingRef.current = true;
-    setRefreshing(true);
-
-    const safetyTimeout = setTimeout(() => {
-      refreshingRef.current = false;
-      setRefreshing(false);
-    }, 30000);
-
-    if (view === 'repoList') {
-      refreshRepos().finally(() => {
-        clearTimeout(safetyTimeout);
-        refreshingRef.current = false;
-        setRefreshing(false);
-      });
-    } else {
-      clearTimeout(safetyTimeout);
-      refreshingRef.current = false;
-      setRefreshing(false);
-    }
-  }, [view, refreshRepos]);
-
-  const openBranchPicker = useCallback(async () => {
-    if (!selectedRepo) return;
-    HapticService.light();
-    setBranchPickerVisible(true);
-    setBranchLoading(true);
-    setBranchLoadFailed(false);
-    setBranches([]);
-    try {
-      setBranches(await GitService.getBranches(selectedRepo.path, selectedRepo.provider));
-    } catch (error) {
-      console.warn('[Explore] Failed to load branches:', error);
-      setBranchLoadFailed(true);
-    } finally {
-      setBranchLoading(false);
-    }
-  }, [selectedRepo]);
-
-  const handleSelectBranch = useCallback((name: string) => {
-    HapticService.selection();
-    setSelectedBranch(name);
-    setBranchPickerVisible(false);
-  }, []);
-
-  const closeBranchPicker = useCallback(() => {
-    setBranchPickerVisible(false);
-  }, []);
-
-  const renderRepoItem = useCallback(
-    ({ item }: { item: GitRepository }) => (
-      <TouchableOpacity
-        testID="explore.button.select-repo"
-        className="flex-row items-center px-4 py-3"
-        style={{ borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border + '30' }}
-        onPress={() => handleSelectRepo(item)}
-        activeOpacity={0.7}
-      >
-        <Ionicons name="git-branch" size={20} color={colors.primary} style={{ marginRight: 12 }} />
-        <View className="flex-1 gap-0.5">
-          <Text className="text-base font-medium" style={{ color: colors.text }} numberOfLines={1}>
-            {item.name}
-          </Text>
-          <Text className="text-xs" style={{ color: colors.textSecondary }} numberOfLines={1}>
-            {item.path}
-          </Text>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-      </TouchableOpacity>
-    ),
-    [colors, handleSelectRepo],
+  const { status, refresh: refreshStatus } = useGitRepoStatus(
+    repo?.id ?? null,
+    repo?.path ?? null,
   );
 
-  if (view === 'repoList') {
+  useFocusEffect(
+    useCallback(() => {
+      if (isLoading) void loadRepos();
+      void refreshStatus();
+    }, [isLoading, loadRepos, refreshStatus]),
+  );
+
+  // Auto-push idle timer: if unpushed commits exist and last push was >3 min ago, push silently in background.
+  const lastPushTimeRef = useRef<number>(Date.now());
+  useEffect(() => {
+    if (!repo) return;
+
+    const tryAutoPush = async () => {
+      if (GitSyncGate.isCycleHeld()) return;
+      if (!status || status.ahead <= 0) return;
+      if (Date.now() - lastPushTimeRef.current <= 180_000) return;
+
+      const token = await AuthService.getToken();
+      if (!token) return;
+
+      try {
+        await pushWithForce({
+          repoPath: repo.path,
+          branch: status.currentBranch ?? 'main',
+          token,
+        });
+        lastPushTimeRef.current = Date.now();
+      } catch {
+        // Silently ignore push errors — will retry on next interval.
+      }
+    };
+
+    const interval = setInterval(tryAutoPush, 60_000);
+
+    const handleAppStateChange = (nextState: AppStateStatus) => {
+      if (nextState === 'active') {
+        lastPushTimeRef.current = Date.now();
+      }
+    };
+
+    const appStateSub = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      clearInterval(interval);
+      appStateSub.remove();
+    };
+  }, [repo, status]);
+
+  const onChanged = useCallback(() => {
+    void refreshStatus();
+  }, [refreshStatus]);
+
+  /**
+   * The floating git button is rendered at the app level. When the user
+   * taps it from any screen, the app-level wrapper sets a pending action
+   * (target repo + section) and navigates here. On focus we apply it:
+   *   - swap the active repo if it changed
+   *   - jump the section tab to whatever surfaces the repo's current state
+   *     (changes / staging / commits / conflicts / files)
+   * Then clear the pending action so a normal re-focus doesn't re-apply it.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      const pending = useGitButtonActionStore.getState().pending;
+      if (!pending) return;
+      if (pending.repoId !== repo?.id) {
+        setSelectedRepoId(pending.repoId);
+      }
+      setSection(pending.section);
+      useGitButtonActionStore.getState().clear();
+    }, [repo?.id]),
+  );
+
+  if (!repo) {
     return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['bottom']}>
-        <View
-          testID="explore.banner-region"
-          pointerEvents="box-none"
-          style={{ position: 'absolute', left: 0, right: 0, top: 0, paddingTop: headerHeight }}
-          onLayout={(event) => setBannerRegionHeight(event.nativeEvent.layout.height)}
-        >
-          <OfflineBanner />
-        </View>
-        {loadingRepos ? (
-          <View className="flex-1 items-center justify-center gap-3">
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text className="text-sm" style={{ color: colors.textSecondary }}>{t('explore.loadingRepos')}</Text>
-          </View>
-        ) : filteredRepos.length === 0 ? (
-          <EmptyState
-            icon="git-branch-outline"
-            title={repos.length === 0 ? t('explore.emptyTitleNoRepos') : t('explore.emptyTitleNoMatches')}
-            subtitle={repos.length === 0 ? t('explore.emptySubtitleNoRepos') : t('explore.emptySubtitleNoMatches')}
-          />
-        ) : (
-          <FlatList
-            data={filteredRepos}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={renderRepoItem}
-            contentContainerStyle={{ paddingTop: bannerRegionHeight + toolsHeight + 8, paddingBottom: tabBarHeight + 16 }}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} enabled={!gateBusy} />
-            }
-          />
-        )}
-        <BlurView
-          testID="explore.header-blur"
-          pointerEvents="box-none"
-          intensity={60}
-          tint={isDark ? 'dark' : 'light'}
-          className="absolute left-0 right-0 z-10"
-          style={{ top: bannerRegionHeight }}
-          onLayout={(event) => setToolsHeight(event.nativeEvent.layout.height)}
-        >
-          <View className="px-4 pt-2 pb-3">
-            <SearchBar
-              testID="explore.search-bar.repo-search"
-              value={repoSearch}
-              onChangeText={setRepoSearch}
-              placeholder={t('explore.searchRepos')}
-            />
-          </View>
-        </BlurView>
-        <ScreenHeader title={t('explore.title')} />
-      </SafeAreaView>
-    );
-  }
-
-  if (view === 'repoDetail' && selectedRepo) {
-    const parsed = parseRepoPath(selectedRepo.path);
-
-    return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['bottom']}>
-        <View style={{ paddingTop: headerHeight }}>
-          <OfflineBanner />
-        </View>
-
-        <View className="mx-4 mt-4 rounded-sm border p-4" style={{ backgroundColor: colors.surface, borderColor: colors.border + '30' }}>
-          <View className="flex-row items-center gap-3.5">
-            <View className="w-13 h-13 rounded-sm items-center justify-center" style={{ backgroundColor: colors.primary + '15', width: 52, height: 52, borderRadius: 14 }}>
-              <Ionicons name="git-branch" size={28} color={colors.primary} />
-            </View>
-            <View className="flex-1 gap-1">
-              <Text className="text-lg font-semibold" style={{ color: colors.text }} numberOfLines={1}>
-                {parsed ? `${parsed.owner}/${parsed.repo}` : selectedRepo.name}
-              </Text>
-              <Text className="text-xs" style={{ color: colors.textSecondary }} numberOfLines={1}>
-                {selectedRepo.path}
-              </Text>
-            </View>
-          </View>
-
-          {selectedRepo.branch && (
-            <View className="flex-row items-center gap-1.5 mt-3 pt-3 border-t" style={{ borderTopColor: 'rgba(150,150,150,0.2)' }}>
-              <Ionicons name="git-branch-outline" size={14} color={colors.textSecondary} />
-              <Text className="text-xs" style={{ color: colors.textSecondary }}>
-                {selectedRepo.branch}
-              </Text>
-            </View>
-          )}
-        </View>
-
-        <View className="px-4 mt-6 gap-3">
-          <View className="flex-row items-stretch gap-3 overflow-hidden">
-            <Pressable
-              testID="explore.button.open-file-tree"
-              onPress={handleOpenFileTree}
-              accessibilityRole="button"
-              accessibilityLabel={t('explore.browseFiles')}
-              style={({ pressed }) => [
-                {
-                  flex: 1,
-                  minWidth: 0,
-                  height: 130,
-                  borderRadius: 20,
-                  padding: 16,
-                  overflow: 'hidden',
-                  justifyContent: 'flex-end',
-                  backgroundColor: colors.primary,
-                  opacity: pressed ? 0.92 : 1,
-                  transform: [{ scale: pressed ? 0.985 : 1 }],
-                },
-              ]}
-            >
-              <View className="absolute top-4 left-4 w-9 h-9 rounded-full bg-white items-center justify-center">
-                <Ionicons name="folder-open-outline" size={18} color={colors.primary} />
-              </View>
-              <View className="absolute" style={{ top: -50, right: -50, opacity: 0.3 }}>
-                <Ionicons name="folder-open-outline" size={120} color="#FFFFFF" />
-              </View>
-              <View className="gap-1">
-                <Text className="text-xl font-bold text-white" style={{ letterSpacing: -0.3 }} numberOfLines={1}>
-                  {t('explore.browseFiles')}
-                </Text>
-                <Text className="text-xs font-medium text-white opacity-80" numberOfLines={1}>
-                  {t('explore.browseFilesSub')}
-                </Text>
-              </View>
-            </Pressable>
-
-            <Pressable
-              testID="explore.button.open-pr-list"
-              onPress={handleOpenPrList}
-              accessibilityRole="button"
-              accessibilityLabel={t('explore.pullRequests')}
-              style={({ pressed }) => [
-                {
-                  flex: 1,
-                  minWidth: 0,
-                  height: 130,
-                  borderRadius: 20,
-                  padding: 16,
-                  overflow: 'hidden',
-                  justifyContent: 'flex-end',
-                  backgroundColor: colors.primary,
-                  opacity: pressed ? 0.92 : 1,
-                  transform: [{ scale: pressed ? 0.985 : 1 }],
-                },
-              ]}
-            >
-              <View className="absolute top-4 left-4 w-9 h-9 rounded-full bg-white items-center justify-center">
-                <Ionicons name="git-pull-request-outline" size={18} color={colors.primary} />
-              </View>
-              <View className="absolute" style={{ top: -50, right: -50, opacity: 0.3 }}>
-                <Ionicons name="git-pull-request-outline" size={120} color="#FFFFFF" />
-              </View>
-              <View className="gap-1">
-                <Text className="text-xl font-bold text-white" style={{ letterSpacing: -0.3 }} numberOfLines={1}>
-                  {t('explore.pullRequests')}
-                </Text>
-                <Text className="text-xs font-medium text-white opacity-80" numberOfLines={1}>
-                  {t('explore.pullRequestsSub')}
-                </Text>
-              </View>
-            </Pressable>
-          </View>
-
+      <SafeAreaView className="flex-1" style={{ flex: 1, backgroundColor: colors.background }} testID="explore.empty">
+        <View className="flex-row items-center gap-2 px-4 py-3" style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}>
           <Pressable
-            testID="explore.button.open-issues-list"
-            onPress={handleOpenIssueList}
+            onPress={() => navigation.goBack()}
+            hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel={t('explore.issues')}
-            style={({ pressed }) => [
-              {
-                width: '100%',
-                minHeight: 130,
-                borderRadius: 20,
-                padding: 16,
-                justifyContent: 'space-between',
-                overflow: 'hidden',
-                backgroundColor: colors.accent,
-                opacity: pressed ? 0.92 : 1,
-                transform: [{ scale: pressed ? 0.985 : 1 }],
-              },
-            ]}
+            accessibilityLabel="Go back"
+            testID="explore.back"
           >
-            <View className="w-10 h-10 rounded-md items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
-              <Ionicons name="alert-circle-outline" size={22} color="#FFFFFF" />
-            </View>
-            <View style={{ gap: 6 }}>
-              <Text className="text-base font-bold" style={{ color: '#FFFFFF', letterSpacing: -0.2 }} numberOfLines={1}>
-                {t('explore.issues')}
-              </Text>
-              <Text className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.85)' }} numberOfLines={2}>
-                {t('explore.issuesSub')}
-              </Text>
-            </View>
+            <Ionicons name="chevron-back" size={22} style={{ color: colors.text }} />
           </Pressable>
+          <Heading className="text-lg" style={{ color: colors.text }}>Git</Heading>
         </View>
-        <ScreenHeader
-          title={selectedRepo.name}
-          onBack={handleBack}
-        />
+        <View className="flex-1 items-center justify-center px-8" style={{ flex: 1 }}>
+          <Ionicons name="git-network-outline" size={48} color={colors.textSecondary} />
+          <Text className="mt-3 text-center text-muted-foreground">
+            No repository to explore yet. Add a remote repository to clone it into your
+            library, then open its workspace here.
+          </Text>
+          <Button className="mt-4" onPress={() => (navigation as any).navigate('AddRepo')} testID="explore.empty.add">
+            <ButtonText>Add a repository</ButtonText>
+          </Button>
+        </View>
       </SafeAreaView>
     );
   }
 
-  if (view === 'fileTree' && repoInfo) {
-    const branch = selectedBranch ?? selectedRepo?.branch;
-    const branchLabel = branch ?? t('settings.branchDefault');
+  const renderSection = () => {
+    const repoTyped = repo as RepoLike;
+    const props = { repo: repoTyped, status, onChanged, chromeTopInset: chromeTotalHeight + 8 };
+    switch (section) {
+      case 'files':
+        return <FilesSection key={repo.id} {...props} active />;
+      case 'changes':
+        return <ChangesSection key={repo.id} {...props} active />;
+      case 'staging':
+        return <StagingSection key={repo.id} {...props} active />;
+      case 'commits':
+        return <CommitsSection key={repo.id} {...props} active />;
+      case 'branches':
+        return <BranchesSection key={repo.id} {...props} active />;
+      case 'remotes':
+        return <RemotesSection key={repo.id} {...props} active />;
+      case 'conflicts':
+        return <ConflictsSection key={repo.id} {...props} active />;
+      case 'pulls':
+        return <PullRequestsSection repo={repoTyped} status={status} active={section === 'pulls'} onChanged={onChanged} chromeTopInset={chromeTotalHeight + 8} />;
+      case 'issues':
+        return <IssuesSection repo={repoTyped} status={status} active={section === 'issues'} onChanged={onChanged} chromeTopInset={chromeTotalHeight + 8} />;
+      case 'info':
+        return (
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }}>
+            <RepoInfoSection key={repo.id} {...props} active />
+          </ScrollView>
+        );
+      default:
+        return null;
+    }
+  };
 
-    return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['bottom']}>
-        <View
-          testID="explore.file-tree.banner-region"
-          pointerEvents="box-none"
-          style={{ position: 'absolute', left: 0, right: 0, top: 0, paddingTop: headerHeight }}
-          onLayout={(event) => setBannerRegionHeight(event.nativeEvent.layout.height)}
-        >
-          <OfflineBanner />
-        </View>
+  return (
+    <SafeAreaView edges={[]} className="flex-1" style={{ flex: 1, backgroundColor: colors.background }} testID="explore.root">
+      <View className="flex-1" style={{ flex: 1 }} testID={`explore.section.${section}`}>
+        {renderSection()}
+      </View>
 
-        <ScrollView
-          className="flex-1"
-          style={{ backgroundColor: colors.background }}
-          contentContainerStyle={{ paddingTop: bannerRegionHeight, paddingBottom: 32, backgroundColor: colors.background }}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} enabled={!repoBusy} />
-          }
-        >
-          {repoBusy ? (
-            <View style={[treeStyles.center]}>
-              <ActivityIndicator size="large" color={colors.primary} />
+      <View
+        pointerEvents="box-none"
+        style={{ position: 'absolute', top: 0, left: 0, right: 0 }}
+        onLayout={(event: LayoutChangeEvent) => setChromeTotalHeight(event.nativeEvent.layout.height)}
+      >
+        <BlurView intensity={60} tint={isDark ? 'dark' : 'light'} style={{ overflow: 'hidden' }}>
+            <View style={{ paddingTop: insets.top }}>
+            <View className="flex-row items-center gap-2 px-4 py-2.5" testID="explore.header">
+              <Pressable
+                onPress={() => navigation.goBack()}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Go back"
+                testID="explore.back"
+              >
+                <Ionicons name="chevron-back" size={22} style={{ color: colors.text }} />
+              </Pressable>
+              {repos.length > 1 ? (
+                <TouchableOpacity
+                  className="min-w-0 flex-1"
+                  onPress={() => setShowRepoPicker(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Switch repository. Current: ${repo.name}`}
+                  testID="explore.header.repo-picker"
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                >
+                  <Heading
+                    className="text-base font-semibold"
+                    style={{ color: colors.text, flexShrink: 1 }}
+                    numberOfLines={1}
+                    testID="explore.header.repo-name"
+                  >
+                    {repo.name}
+                  </Heading>
+                  <Ionicons name="chevron-down" size={14} style={{ color: colors.textSecondary }} />
+                  <Text
+                    className="text-[11px]"
+                    style={{ color: colors.textSecondary, flexShrink: 1 }}
+                    numberOfLines={1}
+                    testID="explore.header.remote"
+                  >
+                    {(repo as RepoLike).remoteUrl ?? repo.path}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <View className="min-w-0 flex-1">
+                  <Heading
+                    className="text-base font-semibold"
+                    style={{ color: colors.text }}
+                    numberOfLines={1}
+                    testID="explore.header.repo-name"
+                  >
+                    {repo.name}
+                  </Heading>
+                  <Text className="text-[11px]" style={{ color: colors.textSecondary }} numberOfLines={1} testID="explore.header.remote">
+                    {(repo as RepoLike).remoteUrl ?? repo.path}
+                  </Text>
+                </View>
+              )}
+              {status?.currentBranch && (
+                <View className="rounded px-2 py-0.5" style={{ backgroundColor: `${colors.success}26` }} testID="explore.header.branch">
+                  <Text className="text-[11px] font-semibold" style={{ color: colors.success }}>
+                    {status.currentBranch}
+                  </Text>
+                </View>
+              )}
+              {status && (
+                <View className="rounded px-2 py-0.5" testID="explore.header.aheadbehind" style={{ backgroundColor: colors.surfaceSecondary }}>
+                  <Text className="text-[11px] font-semibold" style={{ color: colors.textSecondary }}>
+                    ↑{status.ahead} ↓{status.behind}
+                  </Text>
+                </View>
+              )}
             </View>
-          ) : (
-            <RepoFileTree
-              owner={repoInfo.owner}
-              repo={repoInfo.repo}
-              branch={branch}
-              provider={repoProvider}
-              onFilePress={(node: TreeNode) => {
-                const kind = classifyFile(node.name);
-                const params = {
-                  owner: repoInfo.owner,
-                  repo: repoInfo.repo,
-                  branch,
-                  path: node.path,
-                  title: node.name,
-                  size: node.size,
-                };
-                if (kind === 'pdf') {
-                  navigation.navigate('PdfViewer', params);
-                } else if (kind === 'image') {
-                  navigation.navigate('ImageViewer', params);
-                } else if (kind === 'video') {
-                  navigation.navigate('VideoViewer', params);
-                } else if (kind === 'json') {
-                  navigation.navigate('FileViewer', params);
-                } else {
-                  navigation.navigate('FileViewer', params);
-                }
-              }}
-            />
-          )}
-        </ScrollView>
-
-        <ScreenHeader
-          title={`${repoInfo.owner}/${repoInfo.repo}`}
-          onBack={handleBack}
-          actions={
-            <TouchableOpacity
-              testID="explore.button.branch-picker"
-              className="flex-row items-center gap-1.5 rounded-full px-3 py-1.5"
-              style={{ backgroundColor: colors.primary + '15' }}
-              onPress={openBranchPicker}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="git-branch-outline" size={14} color={colors.primary} />
-              <Text className="text-xs font-semibold" style={{ color: colors.primary }} numberOfLines={1}>
-                {branchLabel}
-              </Text>
-            </TouchableOpacity>
-          }
-        />
-
-        <Modal
-          visible={branchPickerVisible}
-          onRequestClose={closeBranchPicker}
-          bottomSheet
-          contentStyle={{ maxHeight: 420 }}
-        >
-          <View className="max-h-[420px]">
+            </View>
             <View
-              className="flex-row items-center justify-between px-4 py-3"
-              style={{ borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border + '40' }}
+              style={{
+                borderBottomWidth: StyleSheet.hairlineWidth,
+                borderBottomColor: colors.border,
+              }}
             >
-              <Text className="text-base font-semibold" style={{ color: colors.text }}>
-                {t('notesFilter.branch')}
-              </Text>
-              <TouchableOpacity
-                testID="explore.button.close-branch-picker"
-                onPress={closeBranchPicker}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Ionicons name="close" size={22} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-
-            {branchLoading ? (
-              <ActivityIndicator size="large" color={colors.primary} style={{ paddingVertical: 32 }} />
-            ) : branchLoadFailed || branches.length === 0 ? (
-              <View className="px-4 py-6 gap-1.5">
-                {branchLoadFailed && (
-                  <Text className="text-sm" style={{ color: colors.textSecondary }}>
-                    {t('errors.somethingWrong')}
-                  </Text>
-                )}
-                <Text className="text-sm font-medium" style={{ color: colors.text }}>{branchLabel}</Text>
-              </View>
-            ) : (
-              <FlatList
-                data={branches}
-                keyExtractor={(item) => item.name}
-                renderItem={({ item }) => {
-                  const isCurrent = item.name === branchLabel;
-                  return (
-                    <TouchableOpacity
-                      testID={`explore.branch.option.${item.name}`}
-                      className="flex-row items-center gap-3 px-4 py-3.5"
-                      style={{ borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border + '30' }}
-                      onPress={() => handleSelectBranch(item.name)}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons
-                        name={isCurrent ? 'checkmark-circle' : 'git-branch-outline'}
-                        size={18}
-                        color={isCurrent ? '#34C759' : colors.textSecondary}
-                      />
-                      <Text className="flex-1 text-sm" style={{ color: colors.text }} numberOfLines={1}>
-                        {item.name}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                }}
-              />
-            )}
-          </View>
-        </Modal>
-      </SafeAreaView>
-    );
-  }
-
-  if (view === 'prList' && selectedRepo && repoInfo) {
-    const prData = prQuery.data ?? [];
-    const prIsPermission = (prQuery.error as (Error & { status?: number }) | null)?.status === 403;
-    return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['bottom']}>
-        <View style={{ paddingTop: headerHeight }}>
-          <OfflineBanner />
-        </View>
-        <View className="flex-row px-4 py-3 gap-2" style={{ borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border + '30' }}>
-          {(['open', 'closed'] as StateFilter[]).map((s) => {
-            const active = prFilter === s;
-            return (
-              <TouchableOpacity
-                key={s}
-                testID={`explore.segmented.state-filter.${s}`}
-                onPress={() => setPrFilter(s)}
-                className="px-4 py-1.5 rounded-full"
-                style={{ backgroundColor: active ? colors.primary : colors.primary + '20' }}
-                activeOpacity={0.7}
-              >
-                <Text style={{ color: active ? '#fff' : colors.primary, fontSize: 13, fontWeight: '600' }}>
-                  {s === 'open' ? t('explore.filterOpen') : t('explore.filterClosed')}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-        {prQuery.isLoading ? (
-          <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" color={colors.primary} />
-          </View>
-        ) : prQuery.isError ? (
-          <View className="flex-1">
-            <EmptyState
-              icon={prIsPermission ? 'lock-closed-outline' : 'cloud-offline-outline'}
-              title={prIsPermission ? t('explore.permissionTitle') : t('explore.loadErrorTitle')}
-              subtitle={prIsPermission ? t('explore.permissionError') : t('explore.loadError')}
-              testID="explore.pr.error-state"
+            <SectionTabs
+              tabs={EXPLORE_SECTIONS}
+              value={section}
+              onChange={(id) => setSection(id as ExploreSection)}
+              testID="explore.tabs"
             />
-            <View className="px-6 pb-10 gap-2">
-              <Button
-                label={t('common.retry')}
-                variant="primary"
-                fullWidth
-                onPress={() => prQuery.refetch()}
-                leadingIcon={<Ionicons name="refresh" size={18} color="#fff" />}
-                testID="explore.pr.button.retry"
-              />
-              {prIsPermission ? (
-                <Button
-                  label={t('explore.openSettings')}
-                  variant="ghost"
-                  fullWidth
-                  onPress={() => navigation.navigate('MainTabs', { screen: 'SettingsTab' })}
-                  testID="explore.pr.button.open-settings"
-                />
-              ) : null}
             </View>
-          </View>
-        ) : prData.length === 0 ? (
-          <EmptyState icon="git-pull-request-outline" title={t('explore.noPullRequests')} />
-        ) : (
-          <FlatList<GitHostPullRequest>
-            data={prData}
-            keyExtractor={(item) => `${item.id}`}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                testID="explore.pr.row"
-                className="flex-row items-start px-4 py-3 gap-3"
-                style={{ borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border + '30' }}
-                onPress={() => Linking.openURL(item.webUrl)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="git-pull-request-outline" size={18} color={item.state === 'open' ? '#34C759' : colors.textSecondary} />
-                <View className="flex-1 gap-0.5">
-                  <Text style={{ color: colors.text, fontSize: 14, fontWeight: '500' }} numberOfLines={2}>
-                    #{item.number} {item.title}
-                  </Text>
-                  <View className="flex-row items-center gap-2 mt-0.5">
-                    {item.author && (
-                      <Text style={{ color: colors.textSecondary, fontSize: 12 }} numberOfLines={1}>{item.author}</Text>
+        </BlurView>
+      </View>
+
+      <Modal
+        visible={showRepoPicker}
+        onRequestClose={() => setShowRepoPicker(false)}
+        bottomSheet
+      >
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            borderBottomColor: colors.border,
+          }}
+        >
+          <Heading className="text-base font-semibold" style={{ color: colors.text }}>Switch Repository</Heading>
+          <TouchableOpacity
+            onPress={() => setShowRepoPicker(false)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+            testID="explore.repo-picker.close"
+          >
+            <Ionicons name="close" size={22} style={{ color: colors.textSecondary }} />
+          </TouchableOpacity>
+        </View>
+        <View testID="explore.repo-picker.modal">
+          <FlatList
+            data={repos}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{ paddingBottom: 16 }}
+            style={{ maxHeight: 480 }}
+            renderItem={({ item }) => {
+              const isSelected = item.id === repo.id;
+              const entry = aggregatedState.perRepo.get(item.id);
+              return (
+                <TouchableOpacity
+                  onPress={() => handlePickRepo(item)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Switch to ${item.name}`}
+                  testID={`explore.repo-picker.item-${item.id}`}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 12,
+                    paddingHorizontal: 16,
+                    paddingVertical: 14,
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: colors.border,
+                    backgroundColor: isSelected ? `${colors.success}1A` : 'transparent',
+                  }}
+                >
+                  <Ionicons
+                    name={isSelected ? 'checkmark-circle' : 'folder-outline'}
+                    size={20}
+                    style={{ color: isSelected ? colors.success : colors.primary }}
+                  />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text
+                      className="text-sm font-semibold"
+                      style={{ color: isSelected ? colors.success : colors.text }}
+                      numberOfLines={1}
+                    >
+                      {item.name}
+                    </Text>
+                    <Text
+                      className="text-xs"
+                      style={{ color: colors.textSecondary, marginTop: 2 }}
+                      numberOfLines={1}
+                    >
+                      {item.path}
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    {entry?.conflicts && (
+                      <View
+                        testID={`explore.repo-picker.badge.conflicts-${item.id}`}
+                        style={{
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                          borderRadius: 6,
+                          backgroundColor: `${colors.error}22`,
+                        }}
+                      >
+                        <Text className="text-[10px] font-semibold" style={{ color: colors.error }}>
+                          conflict
+                        </Text>
+                      </View>
                     )}
-                    {item.draft && (
-                      <View className="px-1.5 py-0.5 rounded" style={{ backgroundColor: colors.textSecondary + '30' }}>
-                        <Text style={{ color: colors.textSecondary, fontSize: 10, fontWeight: '600' }}>DRAFT</Text>
+                    {entry && entry.uncommitted > 0 && (
+                      <View
+                        testID={`explore.repo-picker.badge.changes-${item.id}`}
+                        style={{
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                          borderRadius: 6,
+                          backgroundColor: `${colors.success}22`,
+                        }}
+                      >
+                        <Text className="text-[10px] font-semibold" style={{ color: colors.success }}>
+                          {entry.uncommitted} change{entry.uncommitted === 1 ? '' : 's'}
+                        </Text>
+                      </View>
+                    )}
+                    {entry && entry.staged > 0 && (
+                      <View
+                        testID={`explore.repo-picker.badge.staged-${item.id}`}
+                        style={{
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                          borderRadius: 6,
+                          backgroundColor: `${colors.success}33`,
+                        }}
+                      >
+                        <Text className="text-[10px] font-semibold" style={{ color: colors.success }}>
+                          {entry.staged} staged
+                        </Text>
+                      </View>
+                    )}
+                    {entry && entry.ahead > 0 && (
+                      <View
+                        testID={`explore.repo-picker.badge.push-${item.id}`}
+                        style={{
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                          borderRadius: 6,
+                          backgroundColor: `${colors.primary}22`,
+                        }}
+                      >
+                        <Text className="text-[10px] font-semibold" style={{ color: colors.primary }}>
+                          {entry.ahead}↑
+                        </Text>
                       </View>
                     )}
                   </View>
-                </View>
-                <TouchableOpacity testID="explore.button.open-in-browser" onPress={() => Linking.openURL(item.webUrl)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Ionicons name="open-outline" size={18} color={colors.textSecondary} />
                 </TouchableOpacity>
-              </TouchableOpacity>
-            )}
+              );
+            }}
           />
-        )}
-        <ScreenHeader title={t('explore.pullRequests')} onBack={handleBack} />
-      </SafeAreaView>
-    );
-  }
-
-  if (view === 'issueList' && selectedRepo && repoInfo) {
-    const issueData = issueQuery.data ?? [];
-    const issueIsPermission = (issueQuery.error as (Error & { status?: number }) | null)?.status === 403;
-    return (
-      <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['bottom']}>
-        <View style={{ paddingTop: headerHeight }}>
-          <OfflineBanner />
         </View>
-        <View className="flex-row px-4 py-3 gap-2" style={{ borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border + '30' }}>
-          {(['open', 'closed'] as StateFilter[]).map((s) => {
-            const active = issueFilter === s;
-            return (
-              <TouchableOpacity
-                key={s}
-                testID={`explore.segmented.state-filter.${s}`}
-                onPress={() => setIssueFilter(s)}
-                className="px-4 py-1.5 rounded-full"
-                style={{ backgroundColor: active ? colors.primary : colors.primary + '20' }}
-                activeOpacity={0.7}
-              >
-                <Text style={{ color: active ? '#fff' : colors.primary, fontSize: 13, fontWeight: '600' }}>
-                  {s === 'open' ? t('explore.filterOpen') : t('explore.filterClosed')}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-        {issueQuery.isLoading ? (
-          <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" color={colors.primary} />
-          </View>
-        ) : issueQuery.isError ? (
-          <View className="flex-1">
-            <EmptyState
-              icon={issueIsPermission ? 'lock-closed-outline' : 'cloud-offline-outline'}
-              title={issueIsPermission ? t('explore.permissionTitle') : t('explore.loadErrorTitle')}
-              subtitle={issueIsPermission ? t('explore.permissionError') : t('explore.loadError')}
-              testID="explore.issue.error-state"
-            />
-            <View className="px-6 pb-10 gap-2">
-              <Button
-                label={t('common.retry')}
-                variant="primary"
-                fullWidth
-                onPress={() => issueQuery.refetch()}
-                leadingIcon={<Ionicons name="refresh" size={18} color="#fff" />}
-                testID="explore.issue.button.retry"
-              />
-              {issueIsPermission ? (
-                <Button
-                  label={t('explore.openSettings')}
-                  variant="ghost"
-                  fullWidth
-                  onPress={() => navigation.navigate('MainTabs', { screen: 'SettingsTab' })}
-                  testID="explore.issue.button.open-settings"
-                />
-              ) : null}
-            </View>
-          </View>
-        ) : issueData.length === 0 ? (
-          <EmptyState icon="alert-circle-outline" title={t('explore.noIssues')} />
-        ) : (
-          <FlatList<GitHostIssue>
-            data={issueData}
-            keyExtractor={(item) => `${item.id}`}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                testID="explore.issue.row"
-                className="flex-row items-start px-4 py-3 gap-3"
-                style={{ borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border + '30' }}
-                onPress={() => Linking.openURL(item.webUrl)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="alert-circle-outline" size={18} color={item.state === 'open' ? '#34C759' : colors.textSecondary} />
-                <View className="flex-1 gap-0.5">
-                  <Text style={{ color: colors.text, fontSize: 14, fontWeight: '500' }} numberOfLines={2}>
-                    #{item.number} {item.title}
-                  </Text>
-                  {item.author && (
-                    <Text style={{ color: colors.textSecondary, fontSize: 12 }} numberOfLines={1}>{item.author}</Text>
-                  )}
-                </View>
-                <TouchableOpacity testID="explore.button.open-in-browser" onPress={() => Linking.openURL(item.webUrl)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Ionicons name="open-outline" size={18} color={colors.textSecondary} />
-                </TouchableOpacity>
-              </TouchableOpacity>
-            )}
-          />
-        )}
-        <ScreenHeader title={t('explore.issues')} onBack={handleBack} />
-      </SafeAreaView>
-    );
-  }
-
-  return null;
+      </Modal>
+    </SafeAreaView>
+  );
 }

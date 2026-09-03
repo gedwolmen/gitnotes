@@ -1,27 +1,16 @@
 import { AuthService } from './AuthService';
 import { pullFromSingleRepo, type PullResult } from './RepoPullService';
 import { StorageService } from './StorageService';
-import { SyncEngineService } from './SyncEngineService';
 import { resolveBranch } from './git/branchResolver';
-import { GitFsService, CloneOutOfMemoryError } from './git/GitFsService';
+import { GitFsService } from './git/GitFsService';
 
 export type CloneProgressCallback = (phase: string, loaded: number, total: number | null) => void;
 
 export type ImportRepoResult =
   | { ok: true; counts: PullResult }
-  | { ok: false; error: string; retryable: boolean; largeRepo?: boolean };
+  | { ok: false; error: string; retryable: boolean };
 
 const EMPTY_REPO_COUNTS: PullResult = { repos: 1, notes: 0, canvases: 0, todos: 0, templates: 0 };
-
-/**
- * Repos above this GitHub-reported size (KB) trigger the large-repo
- * preflight in clone mode — we recommend API mode instead of cloning the
- * full history. The threshold is intentionally generous (200 MB) so the
- * vast majority of note-style repos still work in clone mode; the bump is
- * for the long tail of repos where the initial packfile can OOM the JS
- * heap even with the streaming + batched-checkout mitigations.
- */
-export const LARGE_REPO_THRESHOLD_KB = 100 * 1024;
 
 const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 const NON_RETRYABLE_STATUS = new Set([401, 403, 404, 410]);
@@ -63,32 +52,26 @@ const inflightImports = new Map<string, Promise<ImportRepoResult>>();
 
 /**
  * Deterministic content import for a repository right after it is added
- * (#938). Awaitable by the caller in both sync modes:
- *
- * - clone mode: resolve the branch with the SAME resolver pullFromSingleRepo
- *   uses (never hardcoded 'main'), clone via the deduped
- *   `GitFsService.cloneExclusive` (skipped when already cloned — idempotent
- *   re-add), then pull through `pullFromSingleRepo` against the local clone.
- * - api mode: `pullFromSingleRepo` directly (notes + canvases + todos +
- *   templates when configured).
+ * (#938). Clone mode: resolve the branch with the SAME resolver pullFromSingleRepo
+ * uses (never hardcoded 'main'), clone via the deduped
+ * `GitFsService.cloneExclusive` (skipped when already cloned — idempotent
+ * re-add), then pull through `pullFromSingleRepo` against the local clone.
  *
  * EMPTY repos succeed quietly: a fresh clone of an empty GitHub repo has no
  * refs, so `getCommitOid(refs/heads/<branch>)` is null and we return zero
- * counts WITHOUT pulling (a pull would throw on the ref-less clone). Api-mode
- * empty repos already resolve to zero counts via empty trees.
+ * counts WITHOUT pulling (a pull would throw on the ref-less clone).
  */
 export function importRepoAtAdd(
   repoPath?: string,
   repoName?: string,
   onProgress?: CloneProgressCallback,
-  repoSizeKb?: number,
 ): Promise<ImportRepoResult> {
   if (!repoPath) {
     return Promise.resolve({ ok: false, error: 'Missing repository path', retryable: false });
   }
   const inflight = inflightImports.get(repoPath);
   if (inflight) return inflight;
-  const promise = runImport(repoPath, repoName, onProgress, repoSizeKb).finally(() => {
+  const promise = runImport(repoPath, repoName, onProgress).finally(() => {
     inflightImports.delete(repoPath);
   });
   inflightImports.set(repoPath, promise);
@@ -99,51 +82,24 @@ async function runImport(
   repoPath: string,
   repoName: string | undefined,
   onProgress: CloneProgressCallback | undefined,
-  repoSizeKb: number | undefined,
 ): Promise<ImportRepoResult> {
   const label = repoName ?? repoPath;
   try {
-    const mode = await SyncEngineService.getMode(repoPath);
-    if (mode === 'clone') {
-      // Large-repo preflight: bail BEFORE attempting clone with a
-      // `largeRepo: true` flag so the caller can offer API mode instead.
-      // GitHub's `size` field is reported in KB; treat the threshold as
-      // a soft ceiling on what the JS heap can comfortably hold even
-      // with the streaming + noCheckout mitigations.
-      if (typeof repoSizeKb === 'number' && repoSizeKb > LARGE_REPO_THRESHOLD_KB) {
-        return {
-          ok: false,
-          error: `${label}: repository is ${(repoSizeKb / 1024).toFixed(0)} MB — too large for clone mode. Switch to API mode to sync without downloading history.`,
-          retryable: false,
-          largeRepo: true,
-        };
-      }
+    const repos = await StorageService.getSavedRepositories();
+    const repo = repos.find((entry) => entry.path === repoPath);
+    const branch = await resolveBranch(repoPath, repo?.branch);
+    const token = (await AuthService.getToken()) ?? undefined;
 
-      const repos = await StorageService.getSavedRepositories();
-      const repo = repos.find((entry) => entry.path === repoPath);
-      const branch = await resolveBranch(repoPath, repo?.branch);
-      const token = (await AuthService.getToken()) ?? undefined;
+    if (!(await GitFsService.isCloned({ repoPath }))) {
+      await GitFsService.cloneExclusive({ repoPath, branch, token, onProgress, repoId: repo?.id });
+    }
 
-      if (!(await GitFsService.isCloned({ repoPath }))) {
-        await GitFsService.cloneExclusive({ repoPath, branch, token, onProgress });
-      }
-
-      const headOid = await GitFsService.getCommitOid({ repoPath, ref: `refs/heads/${branch}` });
-      if (headOid === null) {
-        return { ok: true, counts: EMPTY_REPO_COUNTS };
-      }
-      return { ok: true, counts: await pullFromSingleRepo(repoPath, onProgress) };
+    const headOid = await GitFsService.getCommitOid({ repoPath, ref: `refs/heads/${branch}` });
+    if (headOid === null) {
+      return { ok: true, counts: EMPTY_REPO_COUNTS };
     }
     return { ok: true, counts: await pullFromSingleRepo(repoPath, onProgress) };
   } catch (error) {
-    if (error instanceof CloneOutOfMemoryError) {
-      return {
-        ok: false,
-        error: `${label}: out of memory while receiving packfile. Switch to API mode to sync without downloading history.`,
-        retryable: false,
-        largeRepo: true,
-      };
-    }
     const classified = classifyImportError(error);
     return { ok: false, error: `${label}: ${classified.message}`, retryable: classified.retryable };
   }

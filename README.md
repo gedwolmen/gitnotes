@@ -43,7 +43,7 @@
 
 ## Stack
 
-Expo SDK 56 · React Native 0.85 · TypeScript 6 · isomorphic-git · React Navigation v7 · TanStack Query · Zustand · Vercel AI SDK v6 · Reanimated · FlashList · NativeWind v5.
+Expo SDK 56 · React Native 0.85 · TypeScript 6 · React Navigation v7 · TanStack Query · Zustand · Vercel AI SDK v6 · Reanimated · FlashList · NativeWind v5.
 
 ## Contributing
 

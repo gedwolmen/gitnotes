@@ -30,7 +30,7 @@ type IoniconName = keyof typeof Ionicons.glyphMap;
 const TAB_ICONS: Record<string, { focused: IoniconName; outline: IoniconName; labelKey: string }> = {
   HomeTab: { focused: 'home', outline: 'home-outline', labelKey: 'tabs.home' },
   NotesTab: { focused: 'document-text', outline: 'document-text-outline', labelKey: 'tabs.notes' },
-  ExploreTab: { focused: 'compass', outline: 'compass-outline', labelKey: 'tabs.explore' },
+  ExploreTab: { focused: 'git-branch', outline: 'git-branch-outline', labelKey: 'tabs.explore' },
   TodosTab: { focused: 'checkbox', outline: 'checkbox-outline', labelKey: 'tabs.todos' },
   SettingsTab: { focused: 'settings', outline: 'settings-outline', labelKey: 'tabs.settings' },
 };
@@ -148,7 +148,7 @@ export default function TabNavigator() {
   const rootRouteName = useNavigationState((state) => state.routes[state.index]?.name);
   const isPaywallVisible = rootRouteName === 'Paywall';
 
-  return (
+return (
     <Tab.Navigator
       tabBar={
         isPaywallVisible
