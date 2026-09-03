@@ -2,7 +2,7 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { Button } from '../../src/components/ui/Button';
 import { TestThemeProvider } from './testThemeProvider';
-import { NEUMORPHIC_LIGHT } from '../../src/theme/tokens';
+import { NEUMORPHIC_LIGHT, TYPE } from '../../src/theme/tokens';
 
 describe('Button', () => {
   it('renders the label and fires onPress', () => {
@@ -117,6 +117,26 @@ describe('Button', () => {
     expect(flattened.backgroundColor).toBe('transparent');
     expect(flattened.borderWidth).toBe(1);
     expect(flattened.borderColor).toBe(NEUMORPHIC_LIGHT.border);
+  });
+
+  it('size="sm" renders a compact button: 36px min height, rounded-sm surface, smaller label', () => {
+    const { getByText, UNSAFE_getByType } = render(
+      <TestThemeProvider>
+        <Button size="sm" variant="primary" label="Push" />
+      </TestThemeProvider>,
+    );
+
+    const surface = UNSAFE_getByType(require('../../src/components/ui/Surface').Surface);
+    expect(surface.props.radius).toBe('sm');
+    const flattened = require('react-native').StyleSheet.flatten(surface.props.style);
+    expect(flattened.minHeight).toBe(36);
+
+    const label = getByText('Push');
+    expect(label.props.style).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ color: '#fff', fontSize: TYPE.sm }),
+      ]),
+    );
   });
 
   it('applies disabled state without firing onPress', () => {

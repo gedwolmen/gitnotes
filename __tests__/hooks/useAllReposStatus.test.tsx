@@ -4,6 +4,7 @@ import { act, render, waitFor } from '@testing-library/react-native';
 const mockRepos: { id: string; name: string; path: string }[] = [];
 const mockStatusByPath: Record<string, { ahead: number; behind: number; currentBranch: string }> = {};
 const mockStatusesByPath: Record<string, { path: string; status: string; staged: boolean }[]> = {};
+const mockNotCloned = new Set<string>();
 
 jest.mock('expo-file-system', () => {
   class FakeDirectory {
@@ -15,6 +16,13 @@ jest.mock('expo-file-system', () => {
   }
   return { Directory: FakeDirectory, File: FakeFile };
 });
+
+jest.mock('@/services/git/GitFsService', () => ({
+  GitFsService: {
+    workingTreeUri: ({ repoPath }: { repoPath: string }) => `/clones/${repoPath}`,
+    isCloned: jest.fn(async ({ repoPath }: { repoPath: string }) => !mockNotCloned.has(repoPath)),
+  },
+}));
 
 jest.mock('@/stores/repoStore', () => ({
   useRepoStore: (selector: (s: {
@@ -54,7 +62,9 @@ function Probe({ onValue }: { onValue: (s: ReturnType<typeof useAllReposStatus>)
 
 describe('useAllReposStatus (multi-repo state)', () => {
   beforeEach(() => {
+    jest.clearAllMocks();
     mockRepos.length = 0;
+    mockNotCloned.clear();
     for (const k of Object.keys(mockStatusByPath)) delete mockStatusByPath[k];
     for (const k of Object.keys(mockStatusesByPath)) delete mockStatusesByPath[k];
   });
@@ -62,13 +72,13 @@ describe('useAllReposStatus (multi-repo state)', () => {
   it('aggregates per-repo uncommitted/staged/ahead and finds the latest-changed repo', async () => {
     setRepo({ id: 'a', name: 'a', path: 'owner/a' });
     setRepo({ id: 'b', name: 'b', path: 'owner/b' });
-    setRepoStatus('owner/a', { ahead: 0, behind: 0, currentBranch: 'main' });
-    setRepoStatus('owner/b', { ahead: 3, behind: 0, currentBranch: 'main' });
-    setRepoFiles('owner/a', [
+    setRepoStatus('/clones/owner/a', { ahead: 0, behind: 0, currentBranch: 'main' });
+    setRepoStatus('/clones/owner/b', { ahead: 3, behind: 0, currentBranch: 'main' });
+    setRepoFiles('/clones/owner/a', [
       { path: 'a.md', status: 'Modified', staged: false },
       { path: 'b.md', status: 'Added', staged: true },
     ]);
-    setRepoFiles('owner/b', []);
+    setRepoFiles('/clones/owner/b', []);
 
     let captured: any = null;
     render(<Probe onValue={(s) => (captured = s)} />);
@@ -108,8 +118,8 @@ describe('useAllReposStatus (multi-repo state)', () => {
 
   it('mode is "changes" when there are uncommitted or staged but no ahead and no conflicts', async () => {
     setRepo({ id: 'a', name: 'a', path: 'owner/a' });
-    setRepoStatus('owner/a', { ahead: 0, behind: 0, currentBranch: 'main' });
-    setRepoFiles('owner/a', [
+    setRepoStatus('/clones/owner/a', { ahead: 0, behind: 0, currentBranch: 'main' });
+    setRepoFiles('/clones/owner/a', [
       { path: 'a.md', status: 'Modified', staged: false },
     ]);
 
@@ -121,8 +131,8 @@ describe('useAllReposStatus (multi-repo state)', () => {
 
   it('mode is "push" when only ahead > 0 and no changes / no conflicts', async () => {
     setRepo({ id: 'a', name: 'a', path: 'owner/a' });
-    setRepoStatus('owner/a', { ahead: 2, behind: 0, currentBranch: 'main' });
-    setRepoFiles('owner/a', []);
+    setRepoStatus('/clones/owner/a', { ahead: 2, behind: 0, currentBranch: 'main' });
+    setRepoFiles('/clones/owner/a', []);
 
     let captured: any = null;
     render(<Probe onValue={(s) => (captured = s)} />);
@@ -132,8 +142,8 @@ describe('useAllReposStatus (multi-repo state)', () => {
 
   it('mode is "clean" when every repo has no changes, no ahead, no conflicts', async () => {
     setRepo({ id: 'a', name: 'a', path: 'owner/a' });
-    setRepoStatus('owner/a', { ahead: 0, behind: 0, currentBranch: 'main' });
-    setRepoFiles('owner/a', []);
+    setRepoStatus('/clones/owner/a', { ahead: 0, behind: 0, currentBranch: 'main' });
+    setRepoFiles('/clones/owner/a', []);
 
     let captured: any = null;
     render(<Probe onValue={(s) => (captured = s)} />);
@@ -143,12 +153,43 @@ describe('useAllReposStatus (multi-repo state)', () => {
 
   it('latestChangedRepoId is null when no repo has uncommitted/staged/ahead/conflicts', async () => {
     setRepo({ id: 'a', name: 'a', path: 'owner/a' });
-    setRepoStatus('owner/a', { ahead: 0, behind: 0, currentBranch: 'main' });
-    setRepoFiles('owner/a', []);
+    setRepoStatus('/clones/owner/a', { ahead: 0, behind: 0, currentBranch: 'main' });
+    setRepoFiles('/clones/owner/a', []);
 
     let captured: any = null;
     render(<Probe onValue={(s) => (captured = s)} />);
     await waitFor(() => expect(captured).not.toBeNull());
     expect(captured.latestChangedRepoId).toBeNull();
+  });
+
+  it('probes the engine with the on-disk working tree path, not the canonical repo path', async () => {
+    const { status, statuses } = jest.requireMock('@/services/git/engine/GitEngine');
+    setRepo({ id: 'a', name: 'a', path: 'owner/a' });
+    setRepoStatus('/clones/owner/a', { ahead: 0, behind: 0, currentBranch: 'main' });
+    setRepoFiles('/clones/owner/a', [{ path: 'note.md', status: 'Modified', staged: false }]);
+
+    let captured: any = null;
+    render(<Probe onValue={(s) => (captured = s)} />);
+    await waitFor(() => expect(captured?.totalUncommitted).toBe(1));
+
+    expect(statuses).toHaveBeenCalledWith('/clones/owner/a');
+    expect(statuses).not.toHaveBeenCalledWith('owner/a');
+    expect(status).toHaveBeenCalledWith('a', '/clones/owner/a');
+  });
+
+  it('reports clean without probing the engine when the repo is not cloned', async () => {
+    const { status, statuses, conflicts } = jest.requireMock('@/services/git/engine/GitEngine');
+    setRepo({ id: 'a', name: 'a', path: 'owner/a' });
+    mockNotCloned.add('owner/a');
+
+    let captured: any = null;
+    render(<Probe onValue={(s) => (captured = s)} />);
+    await waitFor(() => expect(captured?.perRepo?.get('a')).toBeTruthy());
+
+    expect(captured.mode).toBe('clean');
+    expect(captured.totalUncommitted).toBe(0);
+    expect(statuses).not.toHaveBeenCalled();
+    expect(status).not.toHaveBeenCalled();
+    expect(conflicts).not.toHaveBeenCalled();
   });
 });
