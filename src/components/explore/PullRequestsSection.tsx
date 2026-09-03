@@ -64,7 +64,7 @@ export function PullRequestsSection({ repo, active, chromeTopInset = 0 }: Sectio
         <Pressable
           accessibilityRole="button"
           testID={`explore.pr.${item.number}`}
-          className="mx-4 mb-2 rounded-lg px-3 py-2.5"
+          className="mx-4 mb-2 rounded-sm px-3 py-2.5"
           style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }}
           onPress={() => HostService.openUrl(item.webUrl)}
         >
@@ -141,7 +141,7 @@ export function PullRequestsSection({ repo, active, chromeTopInset = 0 }: Sectio
       data={prs ?? []}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
-      contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 96, flexGrow: 1 }}
+       contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 96, flexGrow: 1 }}
       refreshControl={
         <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.accent} />
       }

@@ -95,7 +95,7 @@ export function ConflictsSection({ repo, active, chromeTopInset = 0 }: SectionPr
           <Text className="mt-2 text-sm" style={{ color: colors.textSecondary }}>Checking for conflicts…</Text>
         </View>
       ) : hasConflicts ? (
-        <View className="rounded-lg p-4" style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }} testID="explore.conflicts.card">
+        <View className="rounded-sm p-4" style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }} testID="explore.conflicts.card">
           <View className="flex-row items-center gap-2">
             <Ionicons name="warning-outline" size={20} color={colors.error} />
             <Text className="text-sm font-bold" style={{ color: colors.text }}>

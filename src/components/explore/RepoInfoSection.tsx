@@ -176,7 +176,7 @@ export function RepoInfoSection({ repo, status, active, onChanged, chromeTopInse
 
   return (
     <View className="px-4" style={{ paddingTop: chromeTopInset }} testID="explore.info.root">
-      <View className="rounded-lg p-3" style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }}>
+      <View className="rounded-sm p-3" style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }}>
         <View className="flex-row items-center gap-2 pb-2" style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}>
           <Ionicons name="information-circle-outline" size={16} color={colors.accent} />
           <Text className="text-sm font-bold" style={{ color: colors.text }}>Repository</Text>

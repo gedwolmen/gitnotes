@@ -25,7 +25,7 @@ export function ComingSoonSection({
   const { colors } = useTokens();
   return (
     <View className="px-4" style={{ paddingTop: chromeTopInset }}>
-      <View className="items-center rounded-lg px-6 py-10" style={{ borderColor: colors.border, borderWidth: 1, borderStyle: 'dashed', backgroundColor: colors.surface }} testID={testID}>
+      <View className="items-center rounded-sm px-6 py-10" style={{ borderColor: colors.border, borderWidth: 1, borderStyle: 'dashed', backgroundColor: colors.surface }} testID={testID}>
         <Ionicons name={icon} size={40} color={colors.textSecondary} />
         <Text className="mt-3 text-base font-bold" style={{ color: colors.text }}>{title}</Text>
         <View className="mt-1.5 rounded px-2 py-0.5" style={{ backgroundColor: `${colors.accent}26` }}>
