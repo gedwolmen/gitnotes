@@ -1,7 +1,7 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import { parseRepoPath } from '../../utils/gitPathParser';
 import { clone as nativeClone } from './engine/GitEngine';
-import { makeGitFs } from './gitFs';
+import { makeGitFs, type PromiseFsClient } from './gitFs';
 import { gitHttp } from './gitHttp';
 import { LfsService } from './lfs';
 
@@ -89,7 +89,93 @@ function ensureToken(token: string | undefined) {
   return () => ({ username: 'x-access-token', password: token });
 }
 
-// ─── minimal git stub (no-op until Rust engine is wired) ─────────────────────
+// ─── worktree-backed read path (clone mode) ────────────────────────────────
+//
+// Clone mode serves file listings and contents straight from the checked-out
+// worktree at `documentDirectory/GitNotes/<owner>/<repo>/` instead of walking
+// git objects: the native engine bridge exposes no tree/blob reads, and the
+// engine's clone/fetch flows keep the worktree current. `ref` therefore reads
+// as "current worktree state" on these ops — parity with the API transport's
+// shape, not a historical snapshot.
+
+/** Entry shape handed to the `git.walk` map callback (isomorphic-git-like). */
+interface WorktreeWalkerEntry {
+  type(): Promise<'blob' | 'tree'>;
+  oid(): Promise<string>;
+}
+
+function worktreeEntry(type: 'blob' | 'tree'): WorktreeWalkerEntry {
+  return {
+    async type() {
+      return type;
+    },
+    // A worktree walk lists without reading + hashing every file, so there is
+    // no object id to report; clone-mode consumers match on path/type only.
+    async oid() {
+      return '';
+    },
+  };
+}
+
+/**
+ * Recursively list the worktree at `dir`, invoking `map` with paths relative
+ * to the repo root (isomorphic-git walk contract). `.git` internals are never
+ * part of the repo tree and are skipped; entries are visited in sorted order
+ * for a deterministic listing.
+ */
+async function walkWorktree(
+  fs: PromiseFsClient,
+  dir: string,
+  map: (filename: string | null, entries: unknown[]) => unknown,
+): Promise<void> {
+  await map('.', [worktreeEntry('tree')]);
+  const listDir = async (relDir: string): Promise<void> => {
+    const dirPath = relDir === '' ? dir : `${dir}/${relDir}`;
+    const names = [...(await fs.promises.readdir(dirPath))].sort();
+    for (const name of names) {
+      if (name === '.git') continue;
+      const relPath = relDir === '' ? name : `${relDir}/${name}`;
+      const stat = await fs.promises.stat(`${dir}/${relPath}`);
+      if (stat.isDirectory()) {
+        await map(relPath, [worktreeEntry('tree')]);
+        await listDir(relPath);
+      } else if (stat.isFile()) {
+        await map(relPath, [worktreeEntry('blob')]);
+      }
+    }
+  };
+  await listDir('');
+}
+
+/** Normalize a repo-relative filepath and reject escapes from the worktree. */
+function normalizeWorktreeRelPath(filepath: string): string {
+  const segments = filepath.replace(/^\/+/, '').split('/').filter((s) => s.length > 0);
+  if (segments.length === 0 || segments.includes('..')) {
+    throw Object.assign(new Error(`Invalid worktree filepath: ${filepath}`), {
+      code: 'NotFoundError',
+    });
+  }
+  return segments.join('/');
+}
+
+/**
+ * Read a worktree file's raw bytes. A missing file surfaces the fs adapter's
+ * ENOENT, which `readFile` maps to its `null === missing` contract.
+ */
+async function readWorktreeFile(
+  fs: PromiseFsClient,
+  dir: string,
+  filepath: string,
+): Promise<Uint8Array> {
+  const rel = normalizeWorktreeRelPath(filepath);
+  const data = await fs.promises.readFile(`${dir}/${rel}`);
+  if (typeof data === 'string') return new TextEncoder().encode(data);
+  return data;
+}
+
+// ─── minimal git stub ───────────────────────────────────────────────────────
+// Write/history ops stay no-ops until the Rust engine bridge exposes them; the
+// read path (walk / readBlob) is real and worktree-backed (helpers above).
 
 // TREE helper stub - creates a tree reference for git.walk
 function TREE(_opts: { ref: string }): unknown { return null; }
@@ -116,11 +202,14 @@ const git = {
     fs: unknown; dir: string; message: string; author: { name: string; email: string }; parent?: string[]; ref?: string;
   }): Promise<string> { return ''; },
   async writeRef(_opts: { fs: unknown; dir: string; ref: string; value: string; force?: boolean }): Promise<void> {},
-  async walk(_opts: {
+  async walk(opts: {
     fs: unknown; dir: string; trees: unknown[]; map: (filename: string | null, entries: unknown[]) => unknown;
-  }): Promise<void> {},
-  async readBlob(_opts: { fs: unknown; dir: string; oid: string; filepath: string }): Promise<{ blob: Uint8Array; oid: string }> {
-    return { blob: new Uint8Array(0), oid: '' };
+  }): Promise<void> {
+    await walkWorktree(opts.fs as PromiseFsClient, opts.dir, opts.map);
+  },
+  async readBlob(opts: { fs: unknown; dir: string; oid: string; filepath: string }): Promise<{ blob: Uint8Array; oid: string }> {
+    const blob = await readWorktreeFile(opts.fs as PromiseFsClient, opts.dir, opts.filepath);
+    return { blob, oid: '' };
   },
   async currentBranch(_opts: { fs: unknown; dir: string; fullname: boolean }): Promise<string | null> { return null; },
   async findMergeBase(_opts: { fs: unknown; dir: string; oids: string[] }): Promise<string[] | null> { return null; },
@@ -534,9 +623,11 @@ export class GitFsService {
   }
 
   /**
-   * Recursive tree listing at the given ref. Output mirrors
+   * Recursive tree listing of the clone's checked-out worktree. Output mirrors
    * `GitHubService.getTreeRecursiveOrThrow` so the Phase 2 swap is a transport
-   * change, not a shape change.
+   * change, not a shape change — except `sha`, which a worktree listing cannot
+   * provide without hashing every file (clone-mode consumers match on
+   * path/type only). Throws when no clone exists on disk.
    */
   static async listTree(opts: ListOpts): Promise<GitTreeEntry[]> {
     const info = parseRepoPath(opts.repoPath);
@@ -563,8 +654,10 @@ export class GitFsService {
   }
 
   /**
-   * Read a single file's contents at a ref. Returns null when missing so
-   * callers can keep their existing `null === missing` shape.
+   * Read a single file from the clone's checked-out worktree. Returns null
+   * when missing so callers keep their existing `null === missing` shape.
+   * `ref` is accepted for transport parity with API mode; the worktree always
+   * reflects the checked-out branch state.
    */
   static async readFile(opts: ReadOpts): Promise<string | null> {
     const info = parseRepoPath(opts.repoPath);
