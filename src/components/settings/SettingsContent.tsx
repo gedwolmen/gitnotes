@@ -146,6 +146,8 @@ onRemoveAccount: (id: string, login: string) => void;
   onSetLockTimeout: (v: LockTimeout) => void;
   isBackgroundSyncEnabled: boolean;
   onToggleBackgroundSync: () => void;
+  floatingGitButtonVisible: boolean;
+  onToggleFloatingGitButton: () => void;
   syncFrequentlyEnabled: boolean;
   syncIntervalSeconds: SyncIntervalSeconds;
   onToggleSyncFrequently: (value: boolean) => void;
@@ -236,6 +238,8 @@ export function SettingsContent(props: SettingsContentProps) {
     onSetLockTimeout,
     isBackgroundSyncEnabled,
     onToggleBackgroundSync,
+    floatingGitButtonVisible,
+    onToggleFloatingGitButton,
     syncFrequentlyEnabled,
     syncIntervalSeconds,
     onToggleSyncFrequently,
@@ -761,6 +765,24 @@ export function SettingsContent(props: SettingsContentProps) {
 
       <Group title={t('common.sync')}>
         <GroupRow
+          testID="settings.row.floating-git-button"
+          trailing={
+            <View className="flex-row items-center gap-2">
+              <Toggle
+                testID="settings.toggle.floating-git-button"
+                value={floatingGitButtonVisible}
+                onValueChange={onToggleFloatingGitButton}
+              />
+              <HintIcon hintKey="hints.settings.floatingGitButton" testID="hint.floating-git-button" />
+            </View>
+          }
+        >
+          <View className="flex-row items-center gap-2">
+            <Ionicons name="git-commit-outline" size={20} color={colors.text} />
+            <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.floatingGitButton')}</Text>
+          </View>
+        </GroupRow>
+        <GroupRow
           trailing={
             <View className="flex-row items-center gap-2">
               <Toggle
@@ -1057,7 +1079,10 @@ export function SettingsContent(props: SettingsContentProps) {
             onPress={isPro ? onOpenModelSelector : () => promptProUpgrade(t, onOpenPaywall)}
             trailing={
               isPro ? (
-                <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{selectedModelName}</Text>
+                <View className="flex-row items-center gap-1">
+                  <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{selectedModelName}</Text>
+                  <HintIcon hintKey="hints.settings.model" testID="hint.model" />
+                </View>
               ) : (
                 <Ionicons name="lock-closed" size={18} color={colors.textSecondary} />
               )

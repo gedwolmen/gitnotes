@@ -49,6 +49,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { RepoAccessPreflightError } from '../services/git/repoAccessPreflight';
 import { useProStatus } from '../hooks/useProGate';
+import { useFloatingGitButtonStore } from '../stores/floatingGitButtonStore';
 import { useProStore } from '../stores/proStore';
 import { promptProUpgrade } from '../utils/proAlerts';
 import { FREE_TIER_MAX_REPOS, FREE_TIER_MAX_ACCOUNTS } from '../services/TierLimits';
@@ -106,6 +107,8 @@ export default function SettingsScreen() {
     setLockTimeout,
   } = useBiometricLock();
   const { isEnabled: isBackgroundSyncEnabled, toggle: toggleBackgroundSync } = useBackgroundSync();
+  const floatingGitButtonVisible = useFloatingGitButtonStore((s) => s.visible);
+  const toggleFloatingGitButton = useFloatingGitButtonStore((s) => s.toggle);
   const {
     syncFrequentlyEnabled,
     syncIntervalSeconds,
@@ -990,6 +993,8 @@ export default function SettingsScreen() {
         onSetLockTimeout={(v) => void setLockTimeout(v)}
         isBackgroundSyncEnabled={isBackgroundSyncEnabled}
         onToggleBackgroundSync={() => void toggleBackgroundSync()}
+        floatingGitButtonVisible={floatingGitButtonVisible}
+        onToggleFloatingGitButton={() => void toggleFloatingGitButton()}
         syncFrequentlyEnabled={syncFrequentlyEnabled}
         syncIntervalSeconds={syncIntervalSeconds}
         onToggleSyncFrequently={(value) => void setSyncFrequentlyEnabled(value)}
