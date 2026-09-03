@@ -61,7 +61,7 @@ export default function GitErrorBanner({
           disabled={retrying}
           testID="gitbutton.errorbanner.retry"
           accessibilityRole="button"
-          className={`rounded-lg px-3 py-1.5 ${retrying ? 'bg-muted' : 'bg-primary'}`}
+          className={`rounded-sm px-3 py-1.5 ${retrying ? 'bg-muted' : 'bg-primary'}`}
         >
           <Text className={`text-xs font-semibold ${retrying ? 'text-muted-foreground' : 'text-primary-foreground'}`}>
             {retrying ? 'Retrying…' : 'Retry push'}

@@ -4,9 +4,26 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 import * as Haptics from 'expo-haptics';
 import { Surface } from './Surface';
 import { useTokens, useTheme } from '../../contexts/ThemeContext';
+import type { Radius } from '../../theme/tokens';
 import { cn } from '../../lib/utils';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'outline';
+export type ButtonSize = 'xs' | 'sm' | 'md';
+
+interface ButtonSizeStyle {
+  minHeight: number;
+  contentClass: string;
+  ghostClass: string;
+  radius: Radius;
+}
+
+// Compact sizes follow the app button norm: rounded-sm (12px) or smaller,
+// tighter padding, smaller type. md keeps the original 44px touch target.
+const SIZE_STYLES: Record<ButtonSize, ButtonSizeStyle> = {
+  xs: { minHeight: 28, contentClass: 'py-1 px-3', ghostClass: 'py-1 px-2 rounded-sm', radius: 'sm' },
+  sm: { minHeight: 36, contentClass: 'py-2 px-4', ghostClass: 'py-1.5 px-2.5 rounded-sm', radius: 'sm' },
+  md: { minHeight: 44, contentClass: 'py-3 px-5', ghostClass: 'py-2 px-3 rounded-md', radius: 'md' },
+};
 
 export { ButtonText } from './text';
 
@@ -20,7 +37,7 @@ export interface ButtonProps {
   leadingIcon?: ReactNode;
   trailingIcon?: ReactNode;
   iconAlign?: 'inline' | 'edge';
-  size?: string;
+  size?: ButtonSize;
   className?: string;
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
@@ -52,6 +69,8 @@ export function Button(props: ButtonProps) {
   const { style: themeStyle } = useTheme();
   const [isPressed, setIsPressed] = useState(false);
   const scale = useSharedValue(1);
+  const sizeStyle = SIZE_STYLES[size ?? 'md'];
+  const fontSize = size === 'xs' ? type.xs : size === 'sm' ? type.sm : type.md;
 
   const handlePressIn = useCallback(() => {
     scale.value = withSpring(0.97, { mass: 0.4, damping: 14, stiffness: 220 });
@@ -74,7 +93,7 @@ export function Button(props: ButtonProps) {
   const labelNode = label !== undefined && (
     <Text
       style={[
-        { color: textColor, fontSize: type.md, fontWeight: variant === 'primary' ? '600' : '500' },
+        { color: textColor, fontSize, fontWeight: variant === 'primary' ? '600' : '500' },
         textStyle,
       ]}
     >
@@ -85,7 +104,7 @@ export function Button(props: ButtonProps) {
   const childrenNode = typeof children === 'string' ? (
     <Text
       style={[
-        { color: textColor, fontSize: type.md, fontWeight: variant === 'primary' ? '600' : '500' },
+        { color: textColor, fontSize, fontWeight: variant === 'primary' ? '600' : '500' },
         textStyle,
       ]}
     >
@@ -156,7 +175,8 @@ export function Button(props: ButtonProps) {
           style,
         ]}
         className={cn(
-          'py-2 px-3 rounded-md items-center justify-center',
+          sizeStyle.ghostClass,
+          'items-center justify-center',
           fullWidth && 'self-stretch',
           className
         )}
@@ -187,11 +207,11 @@ export function Button(props: ButtonProps) {
       >
         <Surface
           elevation={themeStyle === 'flat' || variant === 'primary' ? 'flat' : 'raised'}
-          radius="md"
+          radius={sizeStyle.radius}
           inset={isPressed}
           style={[
             {
-              minHeight: 44,
+              minHeight: sizeStyle.minHeight,
               alignSelf: 'stretch',
             },
             // variant="primary" carries a filled primary background; the
@@ -205,7 +225,7 @@ export function Button(props: ButtonProps) {
             style,
           ]}
         >
-          <View className="py-3 px-5 items-center justify-center self-stretch">
+          <View className={cn(sizeStyle.contentClass, 'items-center justify-center self-stretch')}>
             {useEdgeIcon ? (
               <>
                 {centeredContent}
