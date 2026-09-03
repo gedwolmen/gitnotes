@@ -82,8 +82,6 @@ jest.mock('@/components/ui/toast', () => ({
   ToastDescription: ({ children }: any) => children,
 }));
 
-jest.mock('@/components/git/GitButtonHalo', () => ({ __esModule: true, default: () => null }));
-jest.mock('@/components/git/HoldToPushRing', () => ({ __esModule: true, default: () => null }));
 jest.mock('@/components/git/ConflictRouteBanner', () => ({ __esModule: true, default: () => null }));
 jest.mock('@/components/git/GitErrorBanner', () => ({ __esModule: true, default: () => null }));
 jest.mock('@/components/git/UnpushedCommitsModal', () => ({ __esModule: true, default: () => null }));
@@ -106,7 +104,7 @@ describe('FloatingGitButton — multi-stage hold + color states', () => {
         onStageCommitPushAll={mockOnStageCommitPushAll}
       />,
     );
-    const btn = getByTestId('gitbutton.press');
+    const btn = getByTestId('gitbutton.surface');
     const flat = btn.props.style;
     const styleArr = Array.isArray(flat) ? flat : [flat];
     const sized = styleArr.find((s: any) => s && (s.width === 56 || s.height === 56));
@@ -125,7 +123,7 @@ describe('FloatingGitButton — multi-stage hold + color states', () => {
       />,
     );
     // The button should not use sparkles (that's the AI button).
-    const root = getByTestId('gitbutton.press');
+    const root = getByTestId('gitbutton.surface');
     // No name="sparkles" anywhere in the tree for the git button.
     expect(root.findAllByProps({ name: 'sparkles' })).toHaveLength(0);
   });
@@ -140,7 +138,7 @@ describe('FloatingGitButton — multi-stage hold + color states', () => {
         onStageCommitPushAll={mockOnStageCommitPushAll}
       />,
     );
-    const btn = getByTestId('gitbutton.press');
+    const btn = getByTestId('gitbutton.surface');
     fireEvent(btn, 'pressIn');
     act(() => {
       jest.advanceTimersByTime(50);
@@ -166,7 +164,7 @@ describe('FloatingGitButton — multi-stage hold + color states', () => {
         onStageCommitPushAll={mockOnStageCommitPushAll}
       />,
     );
-    const btn = getByTestId('gitbutton.press');
+    const btn = getByTestId('gitbutton.surface');
     fireEvent(btn, 'pressIn');
     act(() => {
       jest.advanceTimersByTime(110);
@@ -187,7 +185,7 @@ describe('FloatingGitButton — multi-stage hold + color states', () => {
         onStageCommitPushAll={mockOnStageCommitPushAll}
       />,
     );
-    const btn = getByTestId('gitbutton.press');
+    const btn = getByTestId('gitbutton.surface');
     fireEvent(btn, 'pressIn');
     act(() => {
       jest.advanceTimersByTime(310);
@@ -208,7 +206,7 @@ describe('FloatingGitButton — multi-stage hold + color states', () => {
         onStageCommitPushAll={mockOnStageCommitPushAll}
       />,
     );
-    const btn = getByTestId('gitbutton.press');
+    const btn = getByTestId('gitbutton.surface');
     fireEvent(btn, 'pressIn');
     act(() => {
       jest.advanceTimersByTime(150);
