@@ -284,7 +284,7 @@ export default function FloatingGitButton({
           <HoldToPushRing
             progress={ringProgress}
             visible={ringVisible}
-            color={palette.bg}
+            fillColor={palette.fg}
             testID="gitbutton.ring"
           />
           <Pressable
