@@ -1,7 +1,28 @@
 /**
  * Stub implementations for deleted sync services.
- * These services are no-ops as the sync architecture has evolved.
+ * These services are no-ops as the sync architecture has evolved —
+ * except CloneSyncService.save, which performs the real worktree write +
+ * staging that clone-mode saves depend on.
  */
+
+import * as FileSystem from 'expo-file-system/legacy';
+import { parseRepoPath } from '../utils/gitPathParser';
+import * as GitEngine from './git/engine/GitEngine';
+
+const CLONES_SUBDIR = 'GitNotes/';
+
+/** Root directory holding all cloned repos: `<documentDirectory>/GitNotes/`. */
+function clonesRoot(): string {
+  const docDir = FileSystem.documentDirectory;
+  if (!docDir) {
+    throw new Error('expo-file-system documentDirectory is not available in this environment');
+  }
+  return docDir.endsWith('/') ? docDir + CLONES_SUBDIR : `${docDir}/${CLONES_SUBDIR}`;
+}
+
+function toRepoRelativePath(filePath: string): string {
+  return filePath.replace(/^\/+/, '');
+}
 
 // SyncEngineService stubs
 export type SyncEngineMode = 'clone';
@@ -115,7 +136,37 @@ export interface CloneSyncServiceSaveParams {
 }
 
 export const CloneSyncService = {
-  async save(_params: CloneSyncServiceSaveParams): Promise<SaveResult> {
-    return { success: true };
+  async save(params: CloneSyncServiceSaveParams): Promise<SaveResult> {
+    const { repoPath, filePath, content, intent } = params;
+
+    const info = parseRepoPath(repoPath);
+    if (!info) {
+      return { success: false, error: `Invalid repo path: ${repoPath}` };
+    }
+
+    const relPath = toRepoRelativePath(filePath);
+    if (!relPath) {
+      return { success: false, error: 'Missing filePath' };
+    }
+
+    const repoDir = `${clonesRoot()}${info.owner}/${info.repo}`;
+    const fullPath = `${repoDir}/${relPath}`;
+
+    try {
+      if (intent === 'delete') {
+        await FileSystem.deleteAsync(fullPath, { idempotent: true });
+        await GitEngine.remove(repoDir, [relPath]);
+        return { success: true };
+      }
+
+      const lastSlash = relPath.lastIndexOf('/');
+      const dirPath = lastSlash === -1 ? repoDir : `${repoDir}/${relPath.slice(0, lastSlash)}`;
+      await FileSystem.makeDirectoryAsync(dirPath, { intermediates: true });
+      await FileSystem.writeAsStringAsync(fullPath, content ?? '');
+      await GitEngine.stage(repoDir, [relPath]);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
   },
 };

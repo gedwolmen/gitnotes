@@ -1,13 +1,49 @@
 import { create } from 'zustand';
-import { Canvas, CanvasCreateInput, CanvasUpdateInput, sortCanvasesByUpdated, slugifyCanvasTitle } from '../models/Canvas';
-import { StorageService } from '../services/StorageService';
-import { GitHubService } from '../services/GitHubService';
-import { formatSyncError } from '../services/git/formatSyncError';
-import { deleteCanvasFromGitHub } from '../services/CanvasGitHubSyncService';
-import { gitOperationRegistry } from './gitOperationStore';
-import { SyncEngineService } from '../services/syncStubs';
-import { CommitService } from '../services/git/CommitService';
-import { resolveDefaultFolder } from '../services/git/defaultsPolicy';
+import { Canvas, CanvasCreateInput, CanvasUpdateInput, sortCanvasesByUpdated } from '../models/Canvas';
+import { DocumentService } from '../services/documents/DocumentService';
+
+/**
+ * Canvas store on the document model.
+ *
+ * A canvas is a `canvas` document: its scene (CanvasScene) is serialized as the
+ * file body (`.json` under `documents/canvas/<slug>.json`). The document id is
+ * the canvas id. All CRUD routes through DocumentService (type='canvas').
+ */
+
+let serviceRef: DocumentService | null = null;
+function getService(): DocumentService {
+  serviceRef = serviceRef ?? new DocumentService();
+  return serviceRef;
+}
+
+function toCanvasFromDocument(doc: {
+  id: string;
+  title: string;
+  body: string;
+  tags: string[];
+  createdAt: number;
+  updatedAt: number;
+}): Canvas {
+  let scene: Canvas['scene'];
+  try {
+    const parsed: unknown = JSON.parse(doc.body);
+    if (parsed && typeof parsed === 'object' && Array.isArray((parsed as { elements?: unknown }).elements)) {
+      scene = parsed as Canvas['scene'];
+    } else {
+      scene = { version: 1, width: 800, height: 600, background: '#FFFFFF', elements: [] };
+    }
+  } catch {
+    scene = { version: 1, width: 800, height: 600, background: '#FFFFFF', elements: [] };
+  }
+  return {
+    id: doc.id,
+    title: doc.title,
+    scene,
+    tags: doc.tags,
+    createdAt: doc.createdAt,
+    updatedAt: doc.updatedAt,
+  };
+}
 
 interface CanvasState {
   canvases: Canvas[];
@@ -32,7 +68,14 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()((set, get) =
   loadCanvases: async () => {
     try {
       set({ isLoading: true, error: null });
-      const canvases = await StorageService.getAllCanvases();
+      const service = getService();
+      const metas = await service.list({ type: 'canvas' });
+      const canvases: Canvas[] = [];
+      for (const meta of metas) {
+        const doc = await service.read(meta.id);
+        if (doc === null) continue;
+        canvases.push(toCanvasFromDocument(doc));
+      }
       set({ canvases: sortCanvasesByUpdated(canvases), isLoading: false });
     } catch (err) {
       set({ error: 'Failed to load canvases', isLoading: false });
@@ -43,30 +86,16 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()((set, get) =
   createCanvas: async (input) => {
     try {
       set({ error: null });
-
-      const slug = input.title ? slugifyCanvasTitle(input.title) : `canvas-${Date.now()}`;
-      const filePath = `${resolveDefaultFolder('canvas')}${slug}.json`;
-
-      const mode = await SyncEngineService.getMode(input.repo ?? '');
-      if (mode === 'clone' && input.repo) {
-        const scene = input.scene ?? { elements: [], viewportX: 0, viewportY: 0, viewportWidth: 0, viewportHeight: 0 };
-        const content = JSON.stringify(scene, null, 2);
-        const commitResult = await CommitService.commit({
-          repo: input.repo,
-          branch: input.branch ?? 'main',
-          filePath,
-          content,
-          message: `Create canvas: ${input.title || filePath}`,
-        });
-        if (!commitResult.success) {
-          set({ error: commitResult.error ?? 'Failed to create canvas' });
-          return null;
-        }
-      }
-
-      const newCanvas = await StorageService.createCanvas(input);
-      set((state) => ({ canvases: sortCanvasesByUpdated([...state.canvases, newCanvas]) }));
-      return newCanvas;
+      const scene = input.scene ?? { version: 1, width: 800, height: 600, background: '#FFFFFF', elements: [] };
+      const doc = await getService().create({
+        type: 'canvas',
+        title: input.title || 'Untitled Canvas',
+        body: JSON.stringify(scene, null, 2),
+        tags: input.tags ?? [],
+      });
+      const canvas = toCanvasFromDocument(doc);
+      set((state) => ({ canvases: sortCanvasesByUpdated([...state.canvases, canvas]) }));
+      return canvas;
     } catch (err) {
       set({ error: 'Failed to create canvas' });
       console.error('Error creating canvas:', err);
@@ -77,14 +106,29 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()((set, get) =
   updateCanvas: async (input) => {
     try {
       set({ error: null });
-      const updated = await StorageService.updateCanvas(input);
-      if (updated) {
-        set((state) => ({
-          canvases: sortCanvasesByUpdated(
-            state.canvases.map((c) => (c.id === input.id ? updated : c))
-          ),
-        }));
+      const existing = get().canvases.find((c) => c.id === input.id);
+      if (!existing) {
+        set({ error: 'Canvas not found' });
+        return null;
       }
+      const scene = input.scene ?? existing.scene;
+      await getService().update(input.id, {
+        title: input.title !== undefined ? input.title : existing.title,
+        body: JSON.stringify(scene, null, 2),
+        tags: input.tags !== undefined ? input.tags : existing.tags,
+      });
+      const updated: Canvas = {
+        ...existing,
+        title: input.title !== undefined ? input.title : existing.title,
+        scene,
+        tags: input.tags !== undefined ? input.tags : existing.tags,
+        updatedAt: Date.now(),
+      };
+      set((state) => ({
+        canvases: sortCanvasesByUpdated(
+          state.canvases.map((c) => (c.id === input.id ? updated : c)),
+        ),
+      }));
       return updated;
     } catch (err) {
       set({ error: 'Failed to update canvas' });
@@ -96,55 +140,15 @@ export const useCanvasStore = create<CanvasState & CanvasActions>()((set, get) =
   deleteCanvas: async (id) => {
     try {
       set({ error: null });
-      const canvas = get().canvases.find((c) => c.id === id);
-
-      let opId: string | null = null;
-      if (canvas?.repo && canvas.filePath) {
-        opId = gitOperationRegistry.begin({
-          kind: 'delete',
-          repo: canvas.repo,
-          branch: canvas.branch,
-          path: canvas.filePath,
-          entityIds: [id],
-          status: 'running',
-          attempts: 0,
-        });
+      const service = getService();
+      const doc = await service.read(id);
+      if (!doc) {
+        set({ error: 'Canvas not found' });
+        return false;
       }
-
-      try {
-        // Repo-backed canvases must purge the remote file first; otherwise the
-        // next pull re-imports the row. The sync helper treats a missing remote
-        // (sha null / 404) as success.
-        if (canvas?.repo && canvas.filePath) {
-          if (!GitHubService.isAuthenticated()) {
-            set({ error: 'Sign in to GitHub to delete synced canvases' });
-            if (opId) gitOperationRegistry.fail(opId, 'Sign in to GitHub to delete synced canvases');
-            return false;
-          }
-          const staged = await deleteCanvasFromGitHub({
-            repo: canvas.repo,
-            branch: canvas.branch,
-            filePath: canvas.filePath,
-            title: canvas.title,
-          });
-          if (!staged.success) {
-            if (staged.error) console.warn('[CanvasStore] delete failed:', staged.error);
-            set({ error: formatSyncError(staged.error, 'delete') });
-            if (opId) gitOperationRegistry.fail(opId, staged.error ?? 'Delete failed');
-            return false;
-          }
-        }
-
-        const success = await StorageService.deleteCanvas(id);
-        if (success) {
-          if (opId) gitOperationRegistry.succeed(opId);
-          set((state) => ({ canvases: state.canvases.filter((c) => c.id !== id) }));
-        }
-        return success;
-      } catch (err) {
-        if (opId) gitOperationRegistry.fail(opId, err instanceof Error ? err.message : 'Delete failed');
-        throw err;
-      }
+      await service.purge(id);
+      set((state) => ({ canvases: state.canvases.filter((c) => c.id !== id) }));
+      return true;
     } catch (err) {
       set({ error: 'Failed to delete canvas' });
       console.error('Error deleting canvas:', err);
