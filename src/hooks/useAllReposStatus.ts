@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import * as GitEngine from '@/services/git/engine/GitEngine';
+import { GitFsService } from '@/services/git/GitFsService';
 import { useRepoStore } from '@/stores/repoStore';
 import type { GitRepository } from '@/services/GitService';
 
@@ -74,10 +75,34 @@ export function useAllReposStatus(pollMs: number = POLL_MS): AggregatedGitState 
     const results = await Promise.all(
       repositories.map(async (repo: GitRepository) => {
         const sampledAt = Date.now();
+        const blank: RepoGitState = {
+          repoId: repo.id,
+          repoPath: repo.path,
+          uncommitted: 0,
+          staged: 0,
+          ahead: 0,
+          behind: 0,
+          currentBranch: '',
+          conflicts: false,
+          loading: false,
+          sampledAt,
+        };
+
+        // The engine takes an on-disk working-tree path, not the canonical
+        // `owner/repo` — probing the canonical path opens no repo and reports clean.
+        let localPath: string;
+        try {
+          localPath = GitFsService.workingTreeUri({ repoPath: repo.path });
+        } catch {
+          return blank;
+        }
+        const cloned = await GitFsService.isCloned({ repoPath: repo.path }).catch(() => false);
+        if (!cloned) return blank;
+
         const [status, files, conflicts] = await Promise.all([
-          GitEngine.status(repo.id, repo.path).catch(() => null),
-          GitEngine.statuses(repo.path).catch(() => [] as Awaited<ReturnType<typeof GitEngine.statuses>>),
-          GitEngine.conflicts(repo.path).catch(() => [] as Awaited<ReturnType<typeof GitEngine.conflicts>>),
+          GitEngine.status(repo.id, localPath).catch(() => null),
+          GitEngine.statuses(localPath).catch(() => [] as Awaited<ReturnType<typeof GitEngine.statuses>>),
+          GitEngine.conflicts(localPath).catch(() => [] as Awaited<ReturnType<typeof GitEngine.conflicts>>),
         ]);
 
         let uncommitted = 0;

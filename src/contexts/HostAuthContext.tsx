@@ -49,15 +49,14 @@ const HOST_ORDER: GitHostProvider[] = ['github', 'gitlab', 'gitea', 'forgejo'];
 const HostAuthContext = createContext<HostAuthContextValue | undefined>(undefined);
 
 function giteaUserToHostUser(
-  provider: GitHostProvider,
+  _provider: GitHostProvider,
   user: GiteaLikeUser | null,
 ): GitHostUser | null {
   if (!user) return null;
   return {
     id: user.id,
     login: user.login,
-    name: user.full_name ?? user.login,
-    email: user.email ?? null,
+    name: user.full_name ?? null,
     avatarUrl: user.avatar_url ?? null,
   };
 }
@@ -72,7 +71,6 @@ function snapshotGitHub(): HostAuthState {
           id: u.id,
           login: u.login,
           name: u.name ?? null,
-          email: u.email ?? null,
           avatarUrl: u.avatar_url ?? null,
         }
       : null,
@@ -81,8 +79,8 @@ function snapshotGitHub(): HostAuthState {
   };
 }
 
-function snapshotGitLab(): HostAuthState {
-  const u = gitLabService.getUser();
+async function snapshotGitLab(): Promise<HostAuthState> {
+  const u = await gitLabService.getUser();
   return {
     provider: 'gitlab',
     label: GIT_HOST_LABELS.gitlab,
@@ -91,7 +89,6 @@ function snapshotGitLab(): HostAuthState {
           id: u.id,
           login: u.username,
           name: u.name,
-          email: u.email ?? null,
           avatarUrl: u.avatar_url ?? null,
         }
       : null,
@@ -172,7 +169,7 @@ export function HostAuthProvider({ children }: HostAuthProviderProps) {
       } catch (err) {
         console.warn('[HostAuthContext] initialize failed:', err);
       }
-if (!cancelled) {
+      if (!cancelled) {
         setHosts(await snapshotAll());
         setStatus('ready');
       }
@@ -191,7 +188,7 @@ if (!cancelled) {
       let user: GitHostUser | null = null;
       if (provider === 'github') {
         const gh = await GitHubService.setToken(token);
-user = gh
+        user = gh
           ? {
               id: gh.id,
               login: gh.login,
@@ -200,21 +197,18 @@ user = gh
             }
           : null;
       } else if (provider === 'gitlab') {
-        gitLabService.setToken(token);
-        const gl = await gitLabService.getUser();
+        const gl = await gitLabService.setToken(token, baseUrl);
         user = gl
           ? {
               id: gl.id,
               login: gl.username,
               name: gl.name,
-              email: gl.email ?? null,
               avatarUrl: gl.avatar_url ?? null,
             }
           : null;
       } else if (provider === 'gitea' || provider === 'forgejo') {
         const svc = provider === 'gitea' ? giteaHostService : forgejoHostService;
-        svc.setToken(token);
-        const gl = await svc.getUser();
+        const gl = await svc.setToken(token, baseUrl);
         user = giteaUserToHostUser(provider, gl);
       }
       await refresh();
@@ -241,7 +235,10 @@ user = gh
 
   const setBaseUrl = useCallback(
     async (provider: GitHostProvider, baseUrl: string): Promise<void> => {
-      if (provider === 'gitea') {
+      if (provider === 'gitlab') {
+        gitLabService.setBaseUrl(baseUrl);
+        await gitLabService.initialize();
+      } else if (provider === 'gitea') {
         giteaHostService.setBaseUrl(baseUrl);
         await giteaHostService.initialize();
       } else if (provider === 'forgejo') {

@@ -91,7 +91,7 @@ async function runImport(
     const token = (await AuthService.getToken()) ?? undefined;
 
     if (!(await GitFsService.isCloned({ repoPath }))) {
-      await GitFsService.cloneExclusive({ repoPath, branch, token, onProgress });
+      await GitFsService.cloneExclusive({ repoPath, branch, token, onProgress, repoId: repo?.id });
     }
 
     const headOid = await GitFsService.getCommitOid({ repoPath, ref: `refs/heads/${branch}` });

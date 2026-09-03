@@ -104,9 +104,11 @@ async function getRepoReader(
   const mode = await SyncEngineService.getMode(repoPath);
   if (mode === 'clone') {
     const token = (await AuthService.getToken()) ?? undefined;
+    const savedRepos = await StorageService.getSavedRepositories();
+    const repoId = savedRepos.find((r) => r.path === repoPath)?.id;
     const cloned = await GitFsService.isCloned({ repoPath });
     if (!cloned) {
-      await GitFsService.cloneExclusive({ repoPath, branch, token });
+      await GitFsService.cloneExclusive({ repoPath, branch, token, repoId });
     } else {
       const result = await GitFsService.pullWithFastForward({ repoPath, branch, token });
       if (!result.ok) {
@@ -131,7 +133,7 @@ async function getRepoReader(
             );
           }
           await GitFsService.removeRepo({ repoPath });
-          await GitFsService.cloneExclusive({ repoPath, branch, token });
+          await GitFsService.cloneExclusive({ repoPath, branch, token, repoId });
           return {
             mode,
             listTree: () => GitFsService.listTree({ repoPath, ref: branch }),
