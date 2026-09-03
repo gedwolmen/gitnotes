@@ -1388,6 +1388,46 @@ mod tests {
         fs::remove_dir_all(&dir).ok();
     }
 
+    /// Replica of the app's todo-delete flow for a COMMITTED file:
+    /// worktree file removed first (FileSystem.deleteAsync), then
+    /// `remove_paths` (git rm). The deletion must surface as a staged
+    /// "Deleted" entry so the Changes tab lists it.
+    #[test]
+    fn remove_paths_stages_deletion_of_committed_file() {
+        let dir = scratch_repo("rm-committed");
+        fs::create_dir_all(dir.join("todos")).unwrap();
+        commit_file(&dir, "todos/a.json", "{}", "add todo");
+
+        fs::remove_file(dir.join("todos/a.json")).unwrap();
+        remove_paths(&dir, &["todos/a.json".to_string()], false).unwrap();
+
+        let statuses = list_statuses(&dir).unwrap();
+        let entry = statuses.iter().find(|s| s.path == "todos/a.json");
+        assert!(entry.is_some(), "deletion must be visible in statuses");
+        let entry = entry.unwrap();
+        assert_eq!(entry.status, FileStatusKind::Deleted);
+        assert!(entry.staged);
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    /// Replica of the app's todo-delete flow for a file that was staged
+    /// (CloneSyncService.save upsert) but never committed: the delete
+    /// cancels the staged add, leaving no Changes-tab entry.
+    #[test]
+    fn remove_paths_after_uncommitted_stage_leaves_no_status() {
+        let dir = scratch_repo("rm-uncommitted");
+        fs::create_dir_all(dir.join("todos")).unwrap();
+        fs::write(dir.join("todos/a.json"), "{}").unwrap();
+        stage_paths(&dir, &["todos/a.json".to_string()]).unwrap();
+
+        fs::remove_file(dir.join("todos/a.json")).unwrap();
+        remove_paths(&dir, &["todos/a.json".to_string()], false).unwrap();
+
+        let statuses = list_statuses(&dir).unwrap();
+        assert!(statuses.iter().all(|s| s.path != "todos/a.json"));
+        fs::remove_dir_all(&dir).ok();
+    }
+
     #[test]
     fn checkout_commit_detaches_head_and_requires_clean_tree() {
         let dir = scratch_repo("checkout-commit");
