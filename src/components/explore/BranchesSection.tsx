@@ -150,7 +150,7 @@ export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0 }:
     (item: BranchInfo) => {
       if (renaming === item.name && !item.isRemote) {
         return (
-          <View className="mx-4 mb-2 rounded-lg px-3 py-2.5" style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }} testID={`explore.branch.rename.${item.name}`}>
+          <View className="mx-4 mb-2 rounded-sm px-3 py-2.5" style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }} testID={`explore.branch.rename.${item.name}`}>
             <Text className="text-[11px]" style={{ color: colors.textSecondary }}>Rename "{item.name}"</Text>
             <View className="mt-1.5 flex-row items-center gap-2">
               <View className="flex-1">
@@ -176,7 +176,7 @@ export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0 }:
         );
       }
       return (
-        <View className="mx-4 mb-2 rounded-lg px-3 py-2.5" style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }}>
+        <View className="mx-4 mb-2 rounded-sm px-3 py-2.5" style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }}>
           <View className="flex-row items-center gap-2">
             <Ionicons name="git-branch-outline" size={14} color={item.isRemote ? colors.textSecondary : colors.accent} />
             <Text className="min-w-0 flex-1 text-sm font-semibold" numberOfLines={1} style={{ color: colors.text }}>
@@ -297,7 +297,7 @@ export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0 }:
       data={rows}
       keyExtractor={(item) => item.key}
       renderItem={renderItem}
-      contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 96, flexGrow: 1 }}
+       contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 96, flexGrow: 1 }}
       refreshControl={
         <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.accent} />
       }

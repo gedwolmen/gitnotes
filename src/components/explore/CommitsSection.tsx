@@ -116,7 +116,7 @@ export function CommitsSection({ repo, active, chromeTopInset = 0 }: SectionProp
         onPress={() => navigation.navigate('ExploreCommit', { repoId: repo.id, commitId: item.id })}
         accessibilityRole="button"
         testID={`explore.commit.${item.shortId}`}
-        className="mx-4 mb-2 rounded-lg px-3 py-2.5"
+        className="mx-4 mb-2 rounded-sm px-3 py-2.5"
         style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }}
       >
         <View className="flex-row items-center gap-2">
@@ -170,7 +170,7 @@ export function CommitsSection({ repo, active, chromeTopInset = 0 }: SectionProp
       data={commits ?? []}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
-      contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 96, flexGrow: 1 }}
+       contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 96, flexGrow: 1 }}
       refreshControl={
         <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.accent} />
       }
@@ -183,16 +183,15 @@ export function CommitsSection({ repo, active, chromeTopInset = 0 }: SectionProp
             {loading || pushing ? (
               <ActivityIndicator size="small" color={colors.accent} />
             ) : (
-              <Pressable
+              <Button
+                size="sm"
+                variant="primary"
+                label="Push"
                 onPress={() => void handlePush()}
                 disabled={pushing}
-                accessibilityRole="button"
                 accessibilityLabel="Push all commits"
-                className="rounded px-2 py-1"
-                style={{ backgroundColor: colors.primary }}
-              >
-                <Text className="text-xs font-semibold" style={{ color: '#fff' }}>Push</Text>
-              </Pressable>
+                testID="explore.commits.push"
+              />
             )}
           </View>
         </View>

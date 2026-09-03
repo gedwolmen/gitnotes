@@ -113,7 +113,7 @@ export function RemotesSection({ repo, active, onChanged, chromeTopInset = 0 }: 
     ({ item }: { item: RemoteInfo }) => {
       if (editing === item.name) {
         return (
-          <View className="mx-4 mb-2 rounded-lg px-3 py-2.5" style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }} testID={`explore.remote.edit.${item.name}`}>
+          <View className="mx-4 mb-2 rounded-sm px-3 py-2.5" style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }} testID={`explore.remote.edit.${item.name}`}>
             <Text className="text-[11px]" style={{ color: colors.textSecondary }}>Set URL for "{item.name}"</Text>
             <Text className="mt-1 text-[10px] font-mono" style={{ color: colors.textSecondary }} numberOfLines={2}>
               current: {item.url ?? '(no URL)'}
@@ -142,7 +142,7 @@ export function RemotesSection({ repo, active, onChanged, chromeTopInset = 0 }: 
         );
       }
       return (
-        <View className="mx-4 mb-2 rounded-lg px-3 py-2.5" style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }}>
+        <View className="mx-4 mb-2 rounded-sm px-3 py-2.5" style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }}>
           <View className="flex-row items-center gap-2">
             <Ionicons name="cloud-outline" size={14} color={colors.accent} />
             <Text className="text-sm font-semibold" style={{ color: colors.text }}>{item.name}</Text>
@@ -211,7 +211,7 @@ export function RemotesSection({ repo, active, onChanged, chromeTopInset = 0 }: 
       data={remotes ?? []}
       keyExtractor={(item) => item.name}
       renderItem={renderItem}
-      contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 96, flexGrow: 1 }}
+       contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 96, flexGrow: 1 }}
       refreshControl={
         <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.accent} />
       }
