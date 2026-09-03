@@ -22,10 +22,12 @@ export const GIT_BUTTON_BOTTOM_CLEARANCE =
 /** Top bound so the button never hides under headers. */
 export const GIT_BUTTON_TOP_BOUND = 64;
 
-/** Press-and-hold duration (ms) to fire "stage everything pending" across all repos. */
-export const GIT_BUTTON_STAGE_HOLD_MS = 100;
-/** Press-and-hold duration (ms) to fire "stage + commit + push everything" on all repos. */
-export const GIT_BUTTON_PUSH_HOLD_MS = 300;
+/** First third of the hold — fires onStageAll. */
+export const GIT_BUTTON_STAGE_HOLD_MS = 300;
+/** Second third of the hold — fires onCommitAll. */
+export const GIT_BUTTON_COMMIT_HOLD_MS = 600;
+/** Final third of the hold — fires onPushAll. */
+export const GIT_BUTTON_PUSH_HOLD_MS = 900;
 
 /** Hold-to-push progress ring. */
 export const HOLD_RING_STROKE_WIDTH = 4;

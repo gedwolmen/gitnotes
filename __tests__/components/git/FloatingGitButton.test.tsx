@@ -3,7 +3,8 @@ import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 const mockOnQuickTap = jest.fn();
 const mockOnStageAll = jest.fn();
-const mockOnStageCommitPushAll = jest.fn();
+const mockOnCommitAll = jest.fn();
+const mockOnPushAll = jest.fn();
 const mockAggregatedState: any = null;
 
 jest.mock('expo-file-system', () => {
@@ -28,7 +29,10 @@ jest.mock('react-native-reanimated', () => {
     useAnimatedStyle: () => ({}),
     useSharedValue: (v: any) => ({ value: v }),
     withSpring: (v: any) => v,
-    withTiming: (v: any) => v,
+    withTiming: (v: any, cb: any) => {
+      if (typeof cb === 'function') cb({ finished: true });
+      return v;
+    },
   };
 });
 
@@ -85,25 +89,51 @@ jest.mock('@/components/ui/toast', () => ({
 jest.mock('@/components/git/ConflictRouteBanner', () => ({ __esModule: true, default: () => null }));
 jest.mock('@/components/git/GitErrorBanner', () => ({ __esModule: true, default: () => null }));
 jest.mock('@/components/git/UnpushedCommitsModal', () => ({ __esModule: true, default: () => null }));
+jest.mock('@/components/git/HoldToPushRing', () => {
+  const View = require('react-native').View;
+  return { __esModule: true, default: ({ visible, testID }: any) => visible ? <View testID={testID} /> : null };
+});
 
 import FloatingGitButton from '@/components/git/FloatingGitButton';
 
-describe('FloatingGitButton — multi-stage hold + color states', () => {
+function renderButton(overrides: any = {}) {
+  return render(
+    <FloatingGitButton
+      aggregatedState={overrides.aggregatedState ?? { mode: 'clean', perRepo: new Map(), totalUncommitted: 0, totalStaged: 0, totalAhead: 0, anyConflicts: false, anyBusy: false, latestChangedRepoId: null, refresh: jest.fn() }}
+      onQuickTap={mockOnQuickTap}
+      onStageAll={mockOnStageAll}
+      onCommitAll={mockOnCommitAll}
+      onPushAll={mockOnPushAll}
+    />,
+  );
+}
+
+function holdFor(btn: any, ms: number) {
+  fireEvent(btn, 'pressIn');
+  act(() => {
+    jest.advanceTimersByTime(ms);
+  });
+}
+
+function releaseAfter(btn: any, totalMs: number) {
+  holdFor(btn, totalMs);
+  fireEvent(btn, 'pressOut');
+  act(() => {
+    jest.advanceTimersByTime(0);
+  });
+  fireEvent.press(btn);
+}
+
+describe('FloatingGitButton — 3-phase hold + color states', () => {
   beforeEach(() => {
     mockOnQuickTap.mockClear();
     mockOnStageAll.mockClear();
-    mockOnStageCommitPushAll.mockClear();
+    mockOnCommitAll.mockClear();
+    mockOnPushAll.mockClear();
   });
 
   it('renders same size as AI button (56pt diameter)', () => {
-    const { getByTestId } = render(
-      <FloatingGitButton
-        aggregatedState={mockAggregatedState ?? { mode: 'clean', perRepo: new Map(), totalUncommitted: 0, totalStaged: 0, totalAhead: 0, anyConflicts: false, anyBusy: false, latestChangedRepoId: null, refresh: jest.fn() }}
-        onQuickTap={mockOnQuickTap}
-        onStageAll={mockOnStageAll}
-        onStageCommitPushAll={mockOnStageCommitPushAll}
-      />,
-    );
+    const { getByTestId } = renderButton();
     const btn = getByTestId('gitbutton.surface');
     const flat = btn.props.style;
     const styleArr = Array.isArray(flat) ? flat : [flat];
@@ -114,153 +144,130 @@ describe('FloatingGitButton — multi-stage hold + color states', () => {
   });
 
   it('uses a recognizable git icon (not cloud-upload / sparkles)', () => {
-    const { getByTestId } = render(
-      <FloatingGitButton
-        aggregatedState={{ mode: 'clean', perRepo: new Map(), totalUncommitted: 0, totalStaged: 0, totalAhead: 0, anyConflicts: false, anyBusy: false, latestChangedRepoId: null, refresh: jest.fn() }}
-        onQuickTap={mockOnQuickTap}
-        onStageAll={mockOnStageAll}
-        onStageCommitPushAll={mockOnStageCommitPushAll}
-      />,
-    );
-    // The button should not use sparkles (that's the AI button).
+    const { getByTestId } = renderButton();
     const root = getByTestId('gitbutton.surface');
-    // No name="sparkles" anywhere in the tree for the git button.
     expect(root.findAllByProps({ name: 'sparkles' })).toHaveLength(0);
+    expect(root.findAllByProps({ name: 'cloud-upload' })).toHaveLength(0);
   });
 
-  it('short tap (< 100ms) calls onQuickTap', () => {
+  it('renders the hold progress ring while a hold is in progress', () => {
     jest.useFakeTimers();
-    const { getByTestId } = render(
-      <FloatingGitButton
-        aggregatedState={{ mode: 'clean', perRepo: new Map(), totalUncommitted: 0, totalStaged: 0, totalAhead: 0, anyConflicts: false, anyBusy: false, latestChangedRepoId: null, refresh: jest.fn() }}
-        onQuickTap={mockOnQuickTap}
-        onStageAll={mockOnStageAll}
-        onStageCommitPushAll={mockOnStageCommitPushAll}
-      />,
-    );
-    const btn = getByTestId('gitbutton.surface');
+    const { getByTestId, queryByTestId } = renderButton();
+    expect(queryByTestId('gitbutton.ring')).toBeNull();
+    const btn = getByTestId('gitbutton.press');
     fireEvent(btn, 'pressIn');
     act(() => {
       jest.advanceTimersByTime(50);
     });
+    expect(getByTestId('gitbutton.ring')).toBeTruthy();
     fireEvent(btn, 'pressOut');
-    act(() => {
-      jest.advanceTimersByTime(0);
-    });
+    jest.useRealTimers();
+  });
+
+  it('short tap (< 1/3 of full hold) calls onQuickTap only', () => {
+    jest.useFakeTimers();
+    const { getByTestId } = renderButton();
+    const btn = getByTestId('gitbutton.press');
+    holdFor(btn, 50);
+    fireEvent(btn, 'pressOut');
+    act(() => { jest.advanceTimersByTime(0); });
     fireEvent.press(btn);
     expect(mockOnQuickTap).toHaveBeenCalledTimes(1);
     expect(mockOnStageAll).not.toHaveBeenCalled();
-    expect(mockOnStageCommitPushAll).not.toHaveBeenCalled();
+    expect(mockOnCommitAll).not.toHaveBeenCalled();
+    expect(mockOnPushAll).not.toHaveBeenCalled();
     jest.useRealTimers();
   });
 
-  it('100ms hold triggers onStageAll (not onStageCommitPushAll)', () => {
+  it('hold to 1/3 (~300ms) fires onStageAll only', () => {
     jest.useFakeTimers();
-    const { getByTestId } = render(
-      <FloatingGitButton
-        aggregatedState={{ mode: 'changes', perRepo: new Map(), totalUncommitted: 2, totalStaged: 0, totalAhead: 0, anyConflicts: false, anyBusy: false, latestChangedRepoId: 'r1', refresh: jest.fn() }}
-        onQuickTap={mockOnQuickTap}
-        onStageAll={mockOnStageAll}
-        onStageCommitPushAll={mockOnStageCommitPushAll}
-      />,
-    );
-    const btn = getByTestId('gitbutton.surface');
-    fireEvent(btn, 'pressIn');
-    act(() => {
-      jest.advanceTimersByTime(110);
-    });
+    const { getByTestId } = renderButton({ aggregatedState: { mode: 'changes', perRepo: new Map(), totalUncommitted: 2, totalStaged: 0, totalAhead: 0, anyConflicts: false, anyBusy: false, latestChangedRepoId: 'r1', refresh: jest.fn() } });
+    const btn = getByTestId('gitbutton.press');
+    holdFor(btn, 310);
     expect(mockOnStageAll).toHaveBeenCalledTimes(1);
-    expect(mockOnStageCommitPushAll).not.toHaveBeenCalled();
+    expect(mockOnCommitAll).not.toHaveBeenCalled();
+    expect(mockOnPushAll).not.toHaveBeenCalled();
     expect(mockOnQuickTap).not.toHaveBeenCalled();
     jest.useRealTimers();
   });
 
-  it('300ms hold triggers onStageCommitPushAll (and onStageAll already fired)', () => {
+  it('hold to 2/3 (~600ms) fires onStageAll + onCommitAll (not onPushAll)', () => {
     jest.useFakeTimers();
-    const { getByTestId } = render(
-      <FloatingGitButton
-        aggregatedState={{ mode: 'changes', perRepo: new Map(), totalUncommitted: 2, totalStaged: 0, totalAhead: 0, anyConflicts: false, anyBusy: false, latestChangedRepoId: 'r1', refresh: jest.fn() }}
-        onQuickTap={mockOnQuickTap}
-        onStageAll={mockOnStageAll}
-        onStageCommitPushAll={mockOnStageCommitPushAll}
-      />,
-    );
-    const btn = getByTestId('gitbutton.surface');
-    fireEvent(btn, 'pressIn');
-    act(() => {
-      jest.advanceTimersByTime(310);
-    });
+    const { getByTestId } = renderButton({ aggregatedState: { mode: 'changes', perRepo: new Map(), totalUncommitted: 2, totalStaged: 0, totalAhead: 0, anyConflicts: false, anyBusy: false, latestChangedRepoId: 'r1', refresh: jest.fn() } });
+    const btn = getByTestId('gitbutton.press');
+    holdFor(btn, 610);
     expect(mockOnStageAll).toHaveBeenCalledTimes(1);
-    expect(mockOnStageCommitPushAll).toHaveBeenCalledTimes(1);
-    expect(mockOnQuickTap).not.toHaveBeenCalled();
+    expect(mockOnCommitAll).toHaveBeenCalledTimes(1);
+    expect(mockOnPushAll).not.toHaveBeenCalled();
     jest.useRealTimers();
   });
 
-  it('releasing between 100ms and 300ms does NOT trigger onStageCommitPushAll', () => {
+  it('hold to 3/3 (~900ms) fires all three: onStageAll + onCommitAll + onPushAll', () => {
     jest.useFakeTimers();
-    const { getByTestId } = render(
-      <FloatingGitButton
-        aggregatedState={{ mode: 'changes', perRepo: new Map(), totalUncommitted: 2, totalStaged: 0, totalAhead: 0, anyConflicts: false, anyBusy: false, latestChangedRepoId: 'r1', refresh: jest.fn() }}
-        onQuickTap={mockOnQuickTap}
-        onStageAll={mockOnStageAll}
-        onStageCommitPushAll={mockOnStageCommitPushAll}
-      />,
-    );
-    const btn = getByTestId('gitbutton.surface');
-    fireEvent(btn, 'pressIn');
-    act(() => {
-      jest.advanceTimersByTime(150);
-    });
+    const { getByTestId } = renderButton({ aggregatedState: { mode: 'changes', perRepo: new Map(), totalUncommitted: 2, totalStaged: 0, totalAhead: 0, anyConflicts: false, anyBusy: false, latestChangedRepoId: 'r1', refresh: jest.fn() } });
+    const btn = getByTestId('gitbutton.press');
+    holdFor(btn, 910);
     expect(mockOnStageAll).toHaveBeenCalledTimes(1);
-    fireEvent(btn, 'pressOut');
-    act(() => {
-      jest.advanceTimersByTime(500);
-    });
-    expect(mockOnStageCommitPushAll).not.toHaveBeenCalled();
+    expect(mockOnCommitAll).toHaveBeenCalledTimes(1);
+    expect(mockOnPushAll).toHaveBeenCalledTimes(1);
     jest.useRealTimers();
   });
 
-  it('mode "conflicts" makes the button show red hue (color used in style)', () => {
-    const { getByTestId } = render(
-      <FloatingGitButton
-        aggregatedState={{ mode: 'conflicts', perRepo: new Map(), totalUncommitted: 0, totalStaged: 0, totalAhead: 0, anyConflicts: true, anyBusy: false, latestChangedRepoId: 'r1', refresh: jest.fn() }}
-        onQuickTap={mockOnQuickTap}
-        onStageAll={mockOnStageAll}
-        onStageCommitPushAll={mockOnStageCommitPushAll}
-      />,
-    );
-    // We don't render the bg via className in this branch, so look at the
-    // accessibility label, which exposes the state to AT.
+  it('releasing between 1/3 and 2/3 fires onStageAll only', () => {
+    jest.useFakeTimers();
+    const { getByTestId } = renderButton({ aggregatedState: { mode: 'changes', perRepo: new Map(), totalUncommitted: 2, totalStaged: 0, totalAhead: 0, anyConflicts: false, anyBusy: false, latestChangedRepoId: 'r1', refresh: jest.fn() } });
     const btn = getByTestId('gitbutton.press');
-    const label: string = btn.props.accessibilityLabel ?? '';
-    expect(label.toLowerCase()).toMatch(/conflict/);
+    releaseAfter(btn, 450);
+    expect(mockOnStageAll).toHaveBeenCalledTimes(1);
+    expect(mockOnCommitAll).not.toHaveBeenCalled();
+    expect(mockOnPushAll).not.toHaveBeenCalled();
+    jest.useRealTimers();
   });
 
-  it('mode "changes" makes the button show green accessibility cue', () => {
-    const { getByTestId } = render(
-      <FloatingGitButton
-        aggregatedState={{ mode: 'changes', perRepo: new Map(), totalUncommitted: 3, totalStaged: 0, totalAhead: 0, anyConflicts: false, anyBusy: false, latestChangedRepoId: 'r1', refresh: jest.fn() }}
-        onQuickTap={mockOnQuickTap}
-        onStageAll={mockOnStageAll}
-        onStageCommitPushAll={mockOnStageCommitPushAll}
-      />,
-    );
+  it('releasing between 2/3 and 3/3 fires onStageAll + onCommitAll only', () => {
+    jest.useFakeTimers();
+    const { getByTestId } = renderButton({ aggregatedState: { mode: 'changes', perRepo: new Map(), totalUncommitted: 2, totalStaged: 0, totalAhead: 0, anyConflicts: false, anyBusy: false, latestChangedRepoId: 'r1', refresh: jest.fn() } });
     const btn = getByTestId('gitbutton.press');
-    const label: string = btn.props.accessibilityLabel ?? '';
-    expect(label.toLowerCase()).toMatch(/change|uncommitted/);
+    releaseAfter(btn, 750);
+    expect(mockOnStageAll).toHaveBeenCalledTimes(1);
+    expect(mockOnCommitAll).toHaveBeenCalledTimes(1);
+    expect(mockOnPushAll).not.toHaveBeenCalled();
+    jest.useRealTimers();
   });
 
-  it('mode "push" makes the button show blue (push pending) accessibility cue', () => {
-    const { getByTestId } = render(
-      <FloatingGitButton
-        aggregatedState={{ mode: 'push', perRepo: new Map(), totalUncommitted: 0, totalStaged: 0, totalAhead: 2, anyConflicts: false, anyBusy: false, latestChangedRepoId: 'r1', refresh: jest.fn() }}
-        onQuickTap={mockOnQuickTap}
-        onStageAll={mockOnStageAll}
-        onStageCommitPushAll={mockOnStageCommitPushAll}
-      />,
-    );
-    const btn = getByTestId('gitbutton.press');
-    const label: string = btn.props.accessibilityLabel ?? '';
-    expect(label.toLowerCase()).toMatch(/unpushed|push/);
+  it('clean mode renders the button with a muted (gray) background', () => {
+    const { getByTestId } = renderButton({ aggregatedState: { mode: 'clean', perRepo: new Map(), totalUncommitted: 0, totalStaged: 0, totalAhead: 0, anyConflicts: false, anyBusy: false, latestChangedRepoId: null, refresh: jest.fn() } });
+    const surface = getByTestId('gitbutton.surface');
+    const flat = surface.props.style;
+    const styleArr = Array.isArray(flat) ? flat : [flat];
+    const bg = styleArr.find((s: any) => s && s.backgroundColor);
+    expect(bg?.backgroundColor).toBe('#f4f4f4');
+  });
+
+  it('conflicts mode renders the button with a red (error) background', () => {
+    const { getByTestId } = renderButton({ aggregatedState: { mode: 'conflicts', perRepo: new Map(), totalUncommitted: 0, totalStaged: 0, totalAhead: 0, anyConflicts: true, anyBusy: false, latestChangedRepoId: 'r1', refresh: jest.fn() } });
+    const surface = getByTestId('gitbutton.surface');
+    const flat = surface.props.style;
+    const styleArr = Array.isArray(flat) ? flat : [flat];
+    const bg = styleArr.find((s: any) => s && s.backgroundColor);
+    expect(bg?.backgroundColor).toBe('#dc2626');
+  });
+
+  it('changes mode renders the button with a green (success) background', () => {
+    const { getByTestId } = renderButton({ aggregatedState: { mode: 'changes', perRepo: new Map(), totalUncommitted: 3, totalStaged: 0, totalAhead: 0, anyConflicts: false, anyBusy: false, latestChangedRepoId: 'r1', refresh: jest.fn() } });
+    const surface = getByTestId('gitbutton.surface');
+    const flat = surface.props.style;
+    const styleArr = Array.isArray(flat) ? flat : [flat];
+    const bg = styleArr.find((s: any) => s && s.backgroundColor);
+    expect(bg?.backgroundColor).toBe('#10b981');
+  });
+
+  it('push mode renders the button with a blue (primary) background', () => {
+    const { getByTestId } = renderButton({ aggregatedState: { mode: 'push', perRepo: new Map(), totalUncommitted: 0, totalStaged: 0, totalAhead: 2, anyConflicts: false, anyBusy: false, latestChangedRepoId: 'r1', refresh: jest.fn() } });
+    const surface = getByTestId('gitbutton.surface');
+    const flat = surface.props.style;
+    const styleArr = Array.isArray(flat) ? flat : [flat];
+    const bg = styleArr.find((s: any) => s && s.backgroundColor);
+    expect(bg?.backgroundColor).toBe('#2563eb');
   });
 });

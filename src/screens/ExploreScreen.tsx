@@ -31,7 +31,8 @@ import { AuthService } from '@/services/AuthService';
 import { pushWithForce } from '@/services/git/recovery';
 import { LastUsedRepoService } from '@/services/LastUsedRepoService';
 import {
-  commitAndPushAll,
+  commitAll,
+  pushAll,
   stageAllPending,
 } from '@/services/git/multiRepoGitOps';
 import { useActiveAccount } from '@/hooks/useAccounts';
@@ -83,7 +84,7 @@ export default function ExploreScreen() {
 
   const chromeHeaderHeight = 60;
   const chromeTabsHeight = 40;
-  const chromeTotalHeight = Math.max(0, insets.top + chromeHeaderHeight + chromeTabsHeight - 12);
+  const chromeTotalHeight = insets.top + chromeHeaderHeight + chromeTabsHeight;
 
   const repo = useMemo(() => {
     const lookupId = selectedRepoId ?? repos[0]?.id ?? null;
@@ -212,7 +213,7 @@ export default function ExploreScreen() {
     [toast],
   );
 
-  /** Hold 100ms: stage every changed file across all repos. */
+  /** Hold 1/3: stage every changed file across all repos. */
   const onStageAll = useCallback(async () => {
     if (repos.length === 0) return;
     const result = await stageAllPending(repos);
@@ -231,29 +232,48 @@ export default function ExploreScreen() {
     void aggregatedState.refresh();
   }, [repos, showToast, refreshStatus, aggregatedState]);
 
-  /** Hold 300ms: stage + commit + push across all repos. */
-  const onStageCommitPushAll = useCallback(async () => {
+  /** Hold 2/3: commit every staged change across all repos. */
+  const onCommitAll = useCallback(async () => {
     if (repos.length === 0) return;
     const author = {
       name: activeAccount?.name ?? 'GitNotes',
       email: activeAccount?.email ?? 'gitnotes@local',
     };
     const message = `chore: sync ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`;
-    const result = await commitAndPushAll(repos, message, author);
+    const result = await commitAll(repos, message, author);
     if (result.failures.length > 0) {
       showToast(
         'error',
-        'Sync had failures',
+        'Commit failed',
         result.failures.map((f) => `${f.repoName}: ${f.error ?? 'unknown'}`).slice(0, 2).join(' / '),
       );
     } else if (result.totalActed === 0) {
-      showToast('success', 'Nothing to commit', 'All repos are clean and up to date.');
+      showToast('success', 'Nothing to commit', 'No staged changes across any repo.');
     } else {
-      showToast('success', 'Synced', `${result.totalActed} change${result.totalActed === 1 ? '' : 's'} pushed.`);
+      showToast('success', 'Committed', `${result.totalActed} commit${result.totalActed === 1 ? '' : 's'} across ${result.outcomes.filter((o) => o.actedCount > 0).length} repo${result.outcomes.filter((o) => o.actedCount > 0).length === 1 ? '' : 's'}.`);
     }
     void refreshStatus();
     void aggregatedState.refresh();
   }, [repos, activeAccount, showToast, refreshStatus, aggregatedState]);
+
+  /** Hold 3/3: push every repo that has unpushed commits. */
+  const onPushAll = useCallback(async () => {
+    if (repos.length === 0) return;
+    const result = await pushAll(repos);
+    if (result.failures.length > 0) {
+      showToast(
+        'error',
+        'Push had failures',
+        result.failures.map((f) => `${f.repoName}: ${f.error ?? 'unknown'}`).slice(0, 2).join(' / '),
+      );
+    } else if (result.totalActed === 0) {
+      showToast('success', 'Nothing to push', 'All repos are up to date.');
+    } else {
+      showToast('success', 'Pushed', `${result.totalActed} commit${result.totalActed === 1 ? '' : 's'} across ${result.outcomes.filter((o) => o.actedCount > 0).length} repo${result.outcomes.filter((o) => o.actedCount > 0).length === 1 ? '' : 's'}.`);
+    }
+    void refreshStatus();
+    void aggregatedState.refresh();
+  }, [repos, showToast, refreshStatus, aggregatedState]);
 
   if (!repo) {
     return (
@@ -324,12 +344,8 @@ export default function ExploreScreen() {
       </View>
 
       <View pointerEvents="box-none" style={{ position: 'absolute', top: 0, left: 0, right: 0 }}>
-          <BlurView
-            intensity={60}
-            tint={isDark ? 'dark' : 'light'}
-            style={{ overflow: 'hidden' }}
-          >
-            <View style={{ paddingTop: insets.top, backgroundColor: `${colors.background}B3` }}>
+        <BlurView intensity={60} tint={isDark ? 'dark' : 'light'} style={{ overflow: 'hidden' }}>
+            <View style={{ paddingTop: insets.top }}>
             <View className="flex-row items-center gap-2 px-4 py-2.5" testID="explore.header">
               <Pressable
                 onPress={() => navigation.goBack()}
@@ -397,24 +413,20 @@ export default function ExploreScreen() {
                 </View>
               )}
             </View>
-          </View>
-        </BlurView>
-
-        <BlurView intensity={60} tint={isDark ? 'dark' : 'light'} style={{ overflow: 'hidden' }}>
-          <View
-            style={{
-              backgroundColor: `${colors.background}B3`,
-              borderBottomWidth: StyleSheet.hairlineWidth,
-              borderBottomColor: colors.border,
-            }}
-          >
+            </View>
+            <View
+              style={{
+                borderBottomWidth: StyleSheet.hairlineWidth,
+                borderBottomColor: colors.border,
+              }}
+            >
             <SectionTabs
               tabs={EXPLORE_SECTIONS}
               value={section}
               onChange={(id) => setSection(id as ExploreSection)}
               testID="explore.tabs"
             />
-          </View>
+            </View>
         </BlurView>
       </View>
 
@@ -422,7 +434,8 @@ export default function ExploreScreen() {
         aggregatedState={aggregatedState}
         onQuickTap={onQuickTap}
         onStageAll={onStageAll}
-        onStageCommitPushAll={onStageCommitPushAll}
+        onCommitAll={onCommitAll}
+        onPushAll={onPushAll}
       />
 
       <Modal
