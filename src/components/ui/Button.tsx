@@ -3,7 +3,7 @@ import { Pressable, StyleProp, Text, TextStyle, View, ViewStyle } from 'react-na
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Surface } from './Surface';
-import { useTokens } from '../../contexts/ThemeContext';
+import { useTokens, useTheme } from '../../contexts/ThemeContext';
 import { cn } from '../../lib/utils';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'outline';
@@ -49,6 +49,7 @@ export function Button(props: ButtonProps) {
     children,
   } = props;
   const { colors, type } = useTokens();
+  const { style: themeStyle } = useTheme();
   const [isPressed, setIsPressed] = useState(false);
   const scale = useSharedValue(1);
 
@@ -185,7 +186,7 @@ export function Button(props: ButtonProps) {
         style={fullWidth ? { alignSelf: 'stretch' } : undefined}
       >
         <Surface
-          elevation="raised"
+          elevation={themeStyle === 'flat' || variant === 'primary' ? 'flat' : 'raised'}
           radius="md"
           inset={isPressed}
           style={[
@@ -196,7 +197,11 @@ export function Button(props: ButtonProps) {
             // variant="primary" carries a filled primary background; the
             // raised Surface alone renders a white card, which made primary
             // labels overridden to white invisible (white-on-white).
-            variant === 'primary' && { backgroundColor: colors.primary },
+            variant === 'primary'
+              ? { backgroundColor: colors.primary }
+              : variant === 'outline'
+                ? { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border }
+                : { backgroundColor: colors.surface },
             style,
           ]}
         >

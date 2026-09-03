@@ -1,15 +1,16 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@/components/ui/text';
 import { Heading } from '@/components/ui/heading';
 import { Button, ButtonText } from '@/components/ui/Button';
-import { Input, InputField } from '@/components/ui/Input';
-import { Textarea, TextareaInput } from '@/components/ui/textarea';
+import { InputField } from '@/components/ui/Input';
+import { TextareaInput } from '@/components/ui/textarea';
 import * as GitEngine from '@/services/git/engine/GitEngine';
 import { useActiveAccount } from '@/hooks/useAccounts';
 import type { RepoLike } from './exploreShared';
+import { useTokens } from '@/contexts/ThemeContext';
 
 const MESSAGE_PLACEHOLDER = 'feat: what changed? (conventional commit)';
 
@@ -24,6 +25,7 @@ interface CommitComposerProps {
 
 export function CommitComposer({ repo, changedPaths, stagedCount, onCommitted }: CommitComposerProps) {
   const { activeAccount } = useActiveAccount();
+  const { colors } = useTokens();
   const [message, setMessage] = useState('');
   const [authorName, setAuthorName] = useState('');
   const [authorEmail, setAuthorEmail] = useState('');
@@ -80,18 +82,22 @@ export function CommitComposer({ repo, changedPaths, stagedCount, onCommitted }:
   const nothingStaged = stagedCount === 0;
 
   return (
-    <View className="border-t border-gray-200 bg-gray-50 px-4 pb-4 pt-3" testID="explore.commit-composer">
+    <View style={{ borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.card, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12 }} testID="explore.commit-composer">
       <View className="flex-row items-center gap-2">
-        <Ionicons name="git-commit-outline" size={16} color="#4f46e5" />
-        <Heading className="text-base">Commit</Heading>
+        <Ionicons name="git-commit-outline" size={14} color={colors.accent} />
+        <Heading className="text-sm" style={{ color: colors.text }}>Commit</Heading>
         {stagedCount > 0 && (
-          <View className="rounded bg-indigo-100 px-1.5 py-0.5" testID="explore.commit-composer.staged-count">
-            <Text className="text-[10px] font-semibold text-indigo-700">{stagedCount} staged</Text>
+          <View className="rounded px-1.5 py-0.5" style={{ backgroundColor: `${colors.accent}26` }} testID="explore.commit-composer.staged-count">
+            <Text className="text-[10px] font-semibold" style={{ color: colors.accent }}>{stagedCount} staged</Text>
           </View>
         )}
       </View>
 
-      <Textarea className="mt-2 bg-white" testID="explore.commit-composer.message">
+      <View
+        className="mt-2 flex-row items-start rounded-md"
+        style={{ borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: 10, paddingVertical: 6, minHeight: 76 }}
+        testID="explore.commit-composer.message"
+      >
         <TextareaInput
           value={message}
           onChangeText={setMessage}
@@ -100,12 +106,13 @@ export function CommitComposer({ repo, changedPaths, stagedCount, onCommitted }:
           autoCapitalize="none"
           autoCorrect={false}
           accessibilityLabel="Commit message"
+          style={{ minHeight: 64, paddingVertical: 0 }}
           testID="explore.commit-composer.message.input"
         />
-      </Textarea>
+      </View>
 
       <View className="mt-2 flex-row gap-2">
-        <Input className="flex-1 bg-white">
+        <View className="flex-1 flex-row items-center rounded-md" style={{ borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: 10, minHeight: 44 }}>
           <InputField
             value={authorName}
             onChangeText={(value) => {
@@ -116,8 +123,8 @@ export function CommitComposer({ repo, changedPaths, stagedCount, onCommitted }:
             accessibilityLabel="Author name"
             testID="explore.commit-composer.author-name"
           />
-        </Input>
-        <Input className="flex-1 bg-white">
+        </View>
+        <View className="flex-1 flex-row items-center rounded-md" style={{ borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: 10, minHeight: 44 }}>
           <InputField
             value={authorEmail}
             onChangeText={(value) => {
@@ -131,40 +138,39 @@ export function CommitComposer({ repo, changedPaths, stagedCount, onCommitted }:
             accessibilityLabel="Author email"
             testID="explore.commit-composer.author-email"
           />
-        </Input>
+        </View>
       </View>
 
       {error && (
-        <Text className="mt-2 text-xs text-red-600" testID="explore.commit-composer.error">
+        <Text className="mt-2 text-xs" style={{ color: colors.error }} testID="explore.commit-composer.error">
           {error}
         </Text>
       )}
       {success && (
-        <Text className="mt-2 text-xs text-emerald-700" testID="explore.commit-composer.success">
+        <Text className="mt-2 text-xs" style={{ color: colors.accent }} testID="explore.commit-composer.success">
           {success}
         </Text>
       )}
 
-      <View className="mt-3 flex-row gap-2">
+      <View className="mt-3 flex-row items-center gap-2">
         <Button
-          className="flex-1"
-          size="sm"
+          variant="primary"
           disabled={busy !== null || (nothingToStageAll && nothingStaged)}
           onPress={() => void runCommit('stageAll')}
+          style={{ flex: 1.2, minHeight: 44 }}
           testID="explore.commit-composer.stage-all-commit"
         >
-          {busy === 'stageAll' ? <ActivityIndicator size="small" color="#ffffff" /> : null}
+          {busy === 'stageAll' ? <ActivityIndicator size="small" color="#fff" /> : null}
           <ButtonText>Stage all + Commit</ButtonText>
         </Button>
         <Button
-          className="flex-1"
           variant="outline"
-          size="sm"
           disabled={busy !== null || nothingStaged}
           onPress={() => void runCommit('commit')}
+          style={{ flex: 1, minHeight: 44 }}
           testID="explore.commit-composer.commit"
         >
-          {busy === 'commit' ? <ActivityIndicator size="small" color="#4f46e5" /> : null}
+          {busy === 'commit' ? <ActivityIndicator size="small" color={colors.text} /> : null}
           <ButtonText>Commit staged</ButtonText>
         </Button>
       </View>

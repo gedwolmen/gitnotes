@@ -102,7 +102,21 @@ describe('Button', () => {
 
     const surfaces = UNSAFE_getByType(require('../../src/components/ui/Surface').Surface);
     const flattened = require('react-native').StyleSheet.flatten(surfaces.props.style);
-    expect(flattened.backgroundColor).toBeUndefined();
+    expect(flattened.backgroundColor).toBe(NEUMORPHIC_LIGHT.surface);
+  });
+
+  it('outline variant uses a transparent fill and the theme border color', () => {
+    const { UNSAFE_getByType } = render(
+      <TestThemeProvider>
+        <Button label="Cancel" variant="outline" />
+      </TestThemeProvider>,
+    );
+
+    const surfaces = UNSAFE_getByType(require('../../src/components/ui/Surface').Surface);
+    const flattened = require('react-native').StyleSheet.flatten(surfaces.props.style);
+    expect(flattened.backgroundColor).toBe('transparent');
+    expect(flattened.borderWidth).toBe(1);
+    expect(flattened.borderColor).toBe(NEUMORPHIC_LIGHT.border);
   });
 
   it('applies disabled state without firing onPress', () => {

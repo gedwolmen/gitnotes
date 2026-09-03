@@ -13,14 +13,16 @@ import { GitFsService } from '@/services/git/GitFsService';
 import { useRepoStore } from '@/stores/repoStore';
 import { relativeTime, type SectionProps } from './exploreShared';
 import type { RootStackParamList } from '@/navigation/types';
+import { useTokens } from '@/contexts/ThemeContext';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 function InfoRow({ label, value, testID }: { label: string; value: string; testID?: string }) {
+  const { colors } = useTokens();
   return (
     <View className="flex-row items-start justify-between py-1.5" testID={testID}>
-      <Text className="w-28 text-xs font-semibold text-gray-500">{label}</Text>
-      <Text className="min-w-0 flex-1 text-right text-xs text-black" numberOfLines={2}>
+      <Text className="w-28 text-xs font-semibold" style={{ color: colors.textSecondary }}>{label}</Text>
+      <Text className="min-w-0 flex-1 text-right text-xs" style={{ color: colors.text }} numberOfLines={2}>
         {value}
       </Text>
     </View>
@@ -44,8 +46,9 @@ function describeRepair(report: RepairReport): string {
 
 /** Repo Info section (todo 25): metadata + Sync now (push-with-integrate),
  * Repair repo, and Remove repo. */
-export function RepoInfoSection({ repo, status, active, onChanged }: SectionProps) {
+export function RepoInfoSection({ repo, status, active, onChanged, chromeTopInset = 0 }: SectionProps) {
   const navigation = useNavigation<NavigationProp>();
+  const { colors } = useTokens();
   const [info, setInfo] = useState<RepoInfo | null>(null);
   const [busy, setBusy] = useState<'sync' | 'repair' | 'remove' | null>(null);
   const [syncResult, setSyncResult] = useState<string | null>(null);
@@ -162,9 +165,9 @@ export function RepoInfoSection({ repo, status, active, onChanged }: SectionProp
   if (notCloned) {
     return (
       <View className="items-center px-8 py-10">
-        <Ionicons name="folder-outline" size={36} color="#9ca3af" />
-        <Text className="mt-2 text-center text-sm font-semibold text-gray-700">Clone required</Text>
-        <Text className="mt-1 text-center text-xs text-gray-500">
+        <Ionicons name="folder-outline" size={36} color={colors.textSecondary} />
+        <Text className="mt-2 text-center text-sm font-semibold" style={{ color: colors.text }}>Clone required</Text>
+        <Text className="mt-1 text-center text-xs" style={{ color: colors.textSecondary }}>
           This repository has not been cloned to this device yet.
         </Text>
       </View>
@@ -172,13 +175,13 @@ export function RepoInfoSection({ repo, status, active, onChanged }: SectionProp
   }
 
   return (
-    <View className="px-4 pt-4" testID="explore.info.root">
-      <View className="rounded-lg border border-gray-200 bg-white p-3">
-        <View className="flex-row items-center gap-2 border-b border-gray-100 pb-2">
-          <Ionicons name="information-circle-outline" size={16} color="#4f46e5" />
-          <Text className="text-sm font-bold text-black">Repository</Text>
-          <View className="rounded bg-indigo-100 px-1.5 py-0.5">
-            <Text className="text-[10px] font-semibold text-indigo-700">{repo.provider}</Text>
+    <View className="px-4" style={{ paddingTop: chromeTopInset }} testID="explore.info.root">
+      <View className="rounded-lg p-3" style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }}>
+        <View className="flex-row items-center gap-2 pb-2" style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}>
+          <Ionicons name="information-circle-outline" size={16} color={colors.accent} />
+          <Text className="text-sm font-bold" style={{ color: colors.text }}>Repository</Text>
+          <View className="rounded px-1.5 py-0.5" style={{ backgroundColor: `${colors.accent}26` }}>
+            <Text className="text-[10px] font-semibold" style={{ color: colors.accent }}>{repo.provider}</Text>
           </View>
         </View>
         <View className="mt-1">
@@ -207,18 +210,19 @@ export function RepoInfoSection({ repo, status, active, onChanged }: SectionProp
         disabled={busy !== null}
         testID="explore.info.sync"
       >
-        {busy === 'sync' ? <ActivityIndicator size="small" color="#ffffff" /> : null}
+        {busy === 'sync' ? <ActivityIndicator size="small" color={colors.text} /> : null}
         <ButtonText>{busy === 'sync' ? 'Syncing…' : 'Sync now'}</ButtonText>
       </Button>
       {syncResult && (
         <Text
-          className={`mt-2 text-xs ${syncFailed ? 'text-red-600' : 'text-emerald-700'}`}
+          className="mt-2 text-xs"
+          style={{ color: syncFailed ? colors.error : colors.text }}
           testID="explore.info.sync-result"
         >
           {syncResult}
         </Text>
       )}
-      <Text className="mt-2 text-center text-[11px] text-gray-500">
+      <Text className="mt-2 text-center text-[11px]" style={{ color: colors.textSecondary }}>
         Sync pushes the current branch (integrating remote changes when needed). It never force-pushes.
       </Text>
 
@@ -229,11 +233,11 @@ export function RepoInfoSection({ repo, status, active, onChanged }: SectionProp
         disabled={busy !== null}
         testID="explore.info.repair"
       >
-        {busy === 'repair' ? <ActivityIndicator size="small" color="#4f46e5" /> : null}
+        {busy === 'repair' ? <ActivityIndicator size="small" color={colors.text} /> : null}
         <ButtonText>Repair repo</ButtonText>
       </Button>
       {repairResult && (
-        <Text className="mt-2 text-xs text-gray-600" testID="explore.info.repair-result">
+        <Text className="mt-2 text-xs" style={{ color: colors.textSecondary }} testID="explore.info.repair-result">
           {repairResult}
         </Text>
       )}
@@ -245,10 +249,10 @@ export function RepoInfoSection({ repo, status, active, onChanged }: SectionProp
         disabled={busy !== null}
         testID="explore.info.remove"
       >
-        {busy === 'remove' ? <ActivityIndicator size="small" color="#b91c1c" /> : null}
-        <ButtonText className="text-red-600">Remove repo…</ButtonText>
+        {busy === 'remove' ? <ActivityIndicator size="small" color={colors.error} /> : null}
+        <ButtonText style={{ color: colors.error }}>Remove repo…</ButtonText>
       </Button>
-      <Text className="mt-2 pb-24 text-center text-[11px] text-gray-500">
+      <Text className="mt-2 pb-24 text-center text-[11px]" style={{ color: colors.textSecondary }}>
         Repair rebuilds a damaged index and prunes corrupt objects. Remove deletes the local clone after two confirmations.
       </Text>
     </View>

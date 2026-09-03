@@ -14,6 +14,7 @@ import type { FileDiff, FileStatus } from '@/services/git/engine/GitEngine';
 import { GitFsService } from '@/services/git/GitFsService';
 import type { RootStackParamList } from '@/navigation/types';
 import type { SectionProps } from './exploreShared';
+import { useTokens } from '@/contexts/ThemeContext';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -23,8 +24,9 @@ interface StagingData {
   diffs: Record<string, FileDiff>;
 }
 
-export function StagingSection({ repo, active, onChanged }: SectionProps) {
+export function StagingSection({ repo, active, onChanged, chromeTopInset = 0 }: SectionProps) {
   const navigation = useNavigation<NavigationProp>();
+  const { colors } = useTokens();
   const [data, setData] = useState<StagingData | null>(null);
   const [loading, setLoading] = useState(false);
   const [busyPath, setBusyPath] = useState<string | null>(null);
@@ -108,23 +110,23 @@ export function StagingSection({ repo, active, onChanged }: SectionProps) {
     ({ item }: { item: FileStatus }) => {
       const diff = data?.diffs[item.path];
       return (
-        <View className="mx-4 mb-3 rounded-lg border border-gray-200 bg-white p-3">
+        <View className="mx-4 mb-3 rounded-lg p-3" style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }}>
           <Pressable
             onPress={() => navigation.navigate('ExploreDiff', { repoId: repo.id, path: item.path })}
             accessibilityRole="button"
             testID={`explore.staged.${item.path}`}
           >
             <View className="flex-row items-center gap-2">
-              <View className="rounded bg-indigo-100 px-1.5 py-0.5">
-                <Text className="text-[10px] font-semibold text-indigo-700">staged</Text>
+              <View className="rounded px-1.5 py-0.5" style={{ backgroundColor: `${colors.accent}26` }}>
+                <Text className="text-[10px] font-semibold" style={{ color: colors.accent }}>staged</Text>
               </View>
-              <Text className="min-w-0 flex-1 text-sm font-semibold text-black" numberOfLines={1}>
+              <Text className="min-w-0 flex-1 text-sm font-semibold" style={{ color: colors.text }} numberOfLines={1}>
                 {item.path}
               </Text>
               {diff && (
-                <Text className="text-[11px] font-mono text-gray-500">
-                  <Text className="text-emerald-600">+{diff.added}</Text>{' '}
-                  <Text className="text-red-500">−{diff.deleted}</Text>
+                <Text className="text-[11px] font-mono" style={{ color: colors.textSecondary }}>
+                  <Text style={{ color: colors.success }}>+{diff.added}</Text>{' '}
+                  <Text style={{ color: colors.error }}>−{diff.deleted}</Text>
                 </Text>
               )}
             </View>
@@ -142,7 +144,7 @@ export function StagingSection({ repo, active, onChanged }: SectionProps) {
               onPress={() => void unstage(item.path)}
               testID={`explore.unstage.${item.path}`}
             >
-              {busyPath === item.path ? <Text className="text-xs text-gray-500">…</Text> : null}
+              {busyPath === item.path ? <Text className="text-xs" style={{ color: colors.textSecondary }}>…</Text> : null}
               <ButtonText>Unstage</ButtonText>
             </Button>
           </View>
@@ -155,8 +157,8 @@ export function StagingSection({ repo, active, onChanged }: SectionProps) {
   if (error) {
     return (
       <View className="items-center px-8 py-10">
-        <Ionicons name="warning-outline" size={36} color="#dc2626" />
-        <Text className="mt-2 text-center text-sm text-red-600">{error}</Text>
+        <Ionicons name="warning-outline" size={36} color={colors.error} />
+        <Text className="mt-2 text-center text-sm" style={{ color: colors.error }}>{error}</Text>
         <Button variant="outline" size="sm" className="mt-3" onPress={() => void load()}>
           <ButtonText>Retry</ButtonText>
         </Button>
@@ -167,9 +169,9 @@ export function StagingSection({ repo, active, onChanged }: SectionProps) {
   if (notCloned) {
     return (
       <View className="items-center px-8 py-10">
-        <Ionicons name="folder-outline" size={36} color="#9ca3af" />
-        <Text className="mt-2 text-center text-sm font-semibold text-gray-700">Clone required</Text>
-        <Text className="mt-1 text-center text-xs text-gray-500">
+        <Ionicons name="folder-outline" size={36} color={colors.textSecondary} />
+        <Text className="mt-2 text-center text-sm font-semibold" style={{ color: colors.text }}>Clone required</Text>
+        <Text className="mt-1 text-center text-xs" style={{ color: colors.textSecondary }}>
           This repository has not been cloned to this device yet.
         </Text>
       </View>
@@ -179,20 +181,21 @@ export function StagingSection({ repo, active, onChanged }: SectionProps) {
   return (
     <View className="flex-1" style={{ flex: 1 }}>
       <FlatList
+        className="flex-1"
         data={data?.staged ?? []}
         keyExtractor={(item) => item.path}
         renderItem={renderItem}
-        contentContainerStyle={{ paddingTop: 10, paddingBottom: 16 }}
+        contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 16, flexGrow: 1 }}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor="#7b8cde" />
+          <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.accent} />
         }
         ListHeaderComponent={
           <View className="flex-row items-center justify-between px-4 pb-2">
-            <Text className="text-xs text-gray-500" testID="explore.staging.count">
+            <Text className="text-xs" style={{ color: colors.textSecondary }} testID="explore.staging.count">
               {data ? `${data.staged.length} staged file(s)` : 'Reading index…'}
             </Text>
             <View className="flex-row items-center gap-2">
-              {loading && <ActivityIndicator size="small" color="#7b8cde" />}
+              {loading && <ActivityIndicator size="small" color={colors.accent} />}
               {(data?.staged.length ?? 0) > 0 && (
                 <Button size="sm" variant="outline" disabled={busyPath !== null} onPress={() => void unstageAll()}>
                   <ButtonText>Unstage all</ButtonText>
@@ -203,9 +206,9 @@ export function StagingSection({ repo, active, onChanged }: SectionProps) {
         }
         ListEmptyComponent={
           !loading ? (
-            <View className="items-center px-8 py-10" testID="explore.staging.empty">
-              <Ionicons name="layers-outline" size={40} color="#9ca3af" />
-              <Text className="mt-2 text-center text-sm text-gray-500">
+            <View className="flex-1 items-center justify-center" style={{ minHeight: 240 }} testID="explore.staging.empty">
+              <Ionicons name="layers-outline" size={40} color={colors.textSecondary} />
+              <Text className="mt-2 text-center text-sm" style={{ color: colors.textSecondary }}>
                 Nothing staged. Stage changes from the Changes tab.
               </Text>
             </View>

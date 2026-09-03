@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState, AppStateStatus, Pressable, ScrollView, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppState, AppStateStatus, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 
 import { Text } from '@/components/ui/text';
 import { Heading } from '@/components/ui/heading';
@@ -31,10 +32,10 @@ import { CommitsSection } from '@/components/explore/CommitsSection';
 import { BranchesSection } from '@/components/explore/BranchesSection';
 import { RemotesSection } from '@/components/explore/RemotesSection';
 import { ConflictsSection } from '@/components/explore/ConflictsSection';
-import { ComingSoonSection } from '@/components/explore/ComingSoonSection';
 import { RepoInfoSection } from '@/components/explore/RepoInfoSection';
 import { IssuesSection } from '@/components/explore/IssuesSection';
 import { PullRequestsSection } from '@/components/explore/PullRequestsSection';
+import { useTokens } from '@/contexts/ThemeContext';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -47,11 +48,17 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
  */
 export default function ExploreScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const { colors } = useTokens();
+  const insets = useSafeAreaInsets();
   const repos = useRepoStore((state) => state.repositories);
   const isLoading = useRepoStore((state) => state.isLoading);
   const loadRepos = useRepoStore((state) => state.loadRepos);
 
   const [section, setSection] = useState<ExploreSection>('files');
+
+  const chromeHeaderHeight = 60;
+  const chromeTabsHeight = 40;
+  const chromeTotalHeight = insets.top + chromeHeaderHeight + chromeTabsHeight;
 
   const repo = useMemo(() => {
     const r = repos[0] ?? null;
@@ -121,8 +128,8 @@ export default function ExploreScreen() {
 
   if (!repo) {
     return (
-      <SafeAreaView className="flex-1 bg-white" style={{ flex: 1, backgroundColor: '#ffffff' }} testID="explore.empty">
-        <View className="flex-row items-center gap-2 border-b border-gray-200 px-4 py-3">
+      <SafeAreaView className="flex-1" style={{ flex: 1, backgroundColor: colors.background }} testID="explore.empty">
+        <View className="flex-row items-center gap-2 px-4 py-3" style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}>
           <Pressable
             onPress={() => navigation.goBack()}
             hitSlop={8}
@@ -130,12 +137,12 @@ export default function ExploreScreen() {
             accessibilityLabel="Go back"
             testID="explore.back"
           >
-            <Ionicons name="chevron-back" size={22} color="#374151" />
+            <Ionicons name="chevron-back" size={22} style={{ color: colors.text }} />
           </Pressable>
-          <Heading className="text-lg">Explore</Heading>
+          <Heading className="text-lg" style={{ color: colors.text }}>Explore</Heading>
         </View>
         <View className="flex-1 items-center justify-center px-8" style={{ flex: 1 }}>
-          <Ionicons name="git-network-outline" size={48} color="#9ca3af" />
+          <Ionicons name="git-network-outline" size={48} color={colors.textSecondary} />
           <Text className="mt-3 text-center text-muted-foreground">
             No repository to explore yet. Add a remote repository to clone it into your
             library, then open its workspace here.
@@ -150,7 +157,7 @@ export default function ExploreScreen() {
 
   const renderSection = () => {
     const repoTyped = repo as RepoLike;
-    const props = { repo: repoTyped, status, onChanged };
+    const props = { repo: repoTyped, status, onChanged, chromeTopInset: chromeTotalHeight };
     switch (section) {
       case 'files':
         return <FilesSection key={repo.id} {...props} active />;
@@ -167,9 +174,9 @@ export default function ExploreScreen() {
       case 'conflicts':
         return <ConflictsSection key={repo.id} {...props} active />;
       case 'pulls':
-        return <PullRequestsSection repo={repoTyped} status={status} active={section === 'pulls'} onChanged={onChanged} />;
+        return <PullRequestsSection repo={repoTyped} status={status} active={section === 'pulls'} onChanged={onChanged} chromeTopInset={chromeTotalHeight} />;
       case 'issues':
-        return <IssuesSection repo={repoTyped} status={status} active={section === 'issues'} onChanged={onChanged} />;
+        return <IssuesSection repo={repoTyped} status={status} active={section === 'issues'} onChanged={onChanged} chromeTopInset={chromeTotalHeight} />;
       case 'info':
         return (
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }}>
@@ -182,53 +189,70 @@ export default function ExploreScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white" style={{ flex: 1, backgroundColor: '#ffffff' }} testID="explore.root">
-      {/* Per-repo context header */}
-      <View className="flex-row items-center gap-2 border-b border-gray-200 px-4 py-2.5">
-        <Pressable
-          onPress={() => navigation.goBack()}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          testID="explore.back"
-        >
-          <Ionicons name="chevron-back" size={22} color="#374151" />
-        </Pressable>
-        <View className="min-w-0 flex-1">
-          <Heading className="text-lg" numberOfLines={1}>
-            {repo.name}
-          </Heading>
-          <Text className="text-[11px] text-gray-500" numberOfLines={1} testID="explore.header.remote">
-            {(repo as RepoLike).remoteUrl ?? repo.path}
-          </Text>
-        </View>
-        {status?.currentBranch && (
-          <View className="rounded bg-emerald-100 px-2 py-0.5" testID="explore.header.branch">
-            <Text className="text-[11px] font-semibold text-emerald-700">
-              {status.currentBranch}
-            </Text>
-          </View>
-        )}
-        {status && (
-          <View className="rounded bg-gray-100 px-2 py-0.5" testID="explore.header.aheadbehind">
-            <Text className="text-[11px] font-semibold text-gray-600">
-              ↑{status.ahead} ↓{status.behind}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {/* Section navigator */}
-      <SectionTabs
-        tabs={EXPLORE_SECTIONS}
-        value={section}
-        onChange={(id) => setSection(id as ExploreSection)}
-        testID="explore.tabs"
-      />
-
-      {/* Active section content */}
+    <SafeAreaView className="flex-1" style={{ flex: 1, backgroundColor: colors.background }} testID="explore.root">
       <View className="flex-1" style={{ flex: 1 }} testID={`explore.section.${section}`}>
         {renderSection()}
+      </View>
+
+      <View pointerEvents="box-none" style={{ position: 'absolute', top: 0, left: 0, right: 0 }}>
+        <BlurView
+          intensity={60}
+          tint="dark"
+          style={{ overflow: 'hidden' }}
+        >
+          <View style={{ paddingTop: insets.top, backgroundColor: `${colors.background}E6` }}>
+            <View className="flex-row items-center gap-2 px-4 py-2.5" testID="explore.header">
+              <Pressable
+                onPress={() => navigation.goBack()}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Go back"
+                testID="explore.back"
+              >
+                <Ionicons name="chevron-back" size={22} style={{ color: colors.text }} />
+              </Pressable>
+              <View className="min-w-0 flex-1">
+                <Heading className="text-base font-semibold" style={{ color: colors.text }} numberOfLines={1}>
+                  {repo.name}
+                </Heading>
+                <Text className="text-[11px]" style={{ color: colors.textSecondary }} numberOfLines={1} testID="explore.header.remote">
+                  {(repo as RepoLike).remoteUrl ?? repo.path}
+                </Text>
+              </View>
+              {status?.currentBranch && (
+                <View className="rounded px-2 py-0.5" style={{ backgroundColor: `${colors.success}26` }} testID="explore.header.branch">
+                  <Text className="text-[11px] font-semibold" style={{ color: colors.success }}>
+                    {status.currentBranch}
+                  </Text>
+                </View>
+              )}
+              {status && (
+                <View className="rounded px-2 py-0.5" testID="explore.header.aheadbehind" style={{ backgroundColor: colors.surfaceSecondary }}>
+                  <Text className="text-[11px] font-semibold" style={{ color: colors.textSecondary }}>
+                    ↑{status.ahead} ↓{status.behind}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </BlurView>
+
+        <BlurView intensity={60} tint="dark" style={{ overflow: 'hidden' }}>
+          <View
+            style={{
+              backgroundColor: `${colors.background}E6`,
+              borderBottomWidth: StyleSheet.hairlineWidth,
+              borderBottomColor: colors.border,
+            }}
+          >
+            <SectionTabs
+              tabs={EXPLORE_SECTIONS}
+              value={section}
+              onChange={(id) => setSection(id as ExploreSection)}
+              testID="explore.tabs"
+            />
+          </View>
+        </BlurView>
       </View>
 
       <FloatingGitButton

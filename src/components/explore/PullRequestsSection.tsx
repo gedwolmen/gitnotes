@@ -10,6 +10,7 @@ import { FlatList } from '@/components/ui/flat-list';
 import { HostService, type PullRequest, type PullRequestState } from '@/services/git/HostService';
 import type { RootStackParamList } from '@/navigation/types';
 import { type SectionProps } from './exploreShared';
+import { useTokens } from '@/contexts/ThemeContext';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -21,8 +22,9 @@ const STATE_FILTERS: StateFilter[] = ['open', 'closed'];
  * Pull Requests section of the Explore workspace (todo 26).
  * Loads PRs from the provider REST API using the account's stored credential.
  */
-export function PullRequestsSection({ repo, active }: SectionProps) {
+export function PullRequestsSection({ repo, active, chromeTopInset = 0 }: SectionProps) {
   const navigation = useNavigation<NavigationProp>();
+  const { colors } = useTokens();
   const [stateFilter, setStateFilter] = useState<StateFilter>('open');
   const [prs, setPrs] = useState<PullRequest[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -62,40 +64,41 @@ export function PullRequestsSection({ repo, active }: SectionProps) {
         <Pressable
           accessibilityRole="button"
           testID={`explore.pr.${item.number}`}
-          className="mx-4 mb-2 rounded-lg border border-gray-200 bg-white px-3 py-2.5"
+          className="mx-4 mb-2 rounded-lg px-3 py-2.5"
+          style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }}
           onPress={() => HostService.openUrl(item.webUrl)}
         >
           <View className="flex-row items-start gap-2">
             <Ionicons
               name="git-pull-request-outline"
               size={16}
-              color={isOpen ? '#22c55e' : '#9ca3af'}
+              color={isOpen ? colors.accent : colors.textSecondary}
             />
             <View className="flex-1 gap-0.5">
-              <Text className="text-sm font-semibold text-black" numberOfLines={2}>
+              <Text className="text-sm font-semibold" style={{ color: colors.text }} numberOfLines={2}>
                 #{item.number} {item.title}
               </Text>
               <View className="mt-0.5 flex-row items-center gap-2">
                 {item.author && (
-                  <Text className="text-[11px] text-gray-500" numberOfLines={1}>
+                  <Text className="text-[11px]" style={{ color: colors.textSecondary }} numberOfLines={1}>
                     {item.author}
                   </Text>
                 )}
                 {item.draft && (
-                  <View className="rounded bg-gray-200 px-1.5 py-0.5">
-                    <Text className="text-[10px] font-semibold text-gray-600">DRAFT</Text>
+                  <View className="rounded px-1.5 py-0.5" style={{ backgroundColor: colors.surfaceSecondary }}>
+                    <Text className="text-[10px] font-semibold" style={{ color: colors.textSecondary }}>DRAFT</Text>
                   </View>
                 )}
               </View>
             </View>
-            <Pressable
+<Pressable
               testID={`explore.pr.open-browser.${item.number}`}
               hitSlop={8}
               onPress={() => HostService.openUrl(item.webUrl)}
               accessibilityRole="button"
               accessibilityLabel="Open pull request in browser"
             >
-              <Ionicons name="open-outline" size={16} color="#9ca3af" />
+              <Ionicons name="open-outline" size={16} color={colors.textSecondary} />
             </Pressable>
           </View>
         </Pressable>
@@ -110,9 +113,9 @@ export function PullRequestsSection({ repo, active }: SectionProps) {
         <Ionicons
           name={isPermissionError ? 'lock-closed-outline' : 'cloud-offline-outline'}
           size={36}
-          color="#dc2626"
+          color={colors.error}
         />
-        <Text className="mt-2 text-center text-sm text-red-600">{error}</Text>
+        <Text className="mt-2 text-center text-sm" style={{ color: colors.text }}>{error}</Text>
         <View className="mt-3 flex-row gap-2">
           <Button variant="outline" size="sm" onPress={() => void load()}>
             <ButtonText>Retry</ButtonText>
@@ -134,12 +137,13 @@ export function PullRequestsSection({ repo, active }: SectionProps) {
 
   return (
     <FlatList<PullRequest>
+      className="flex-1"
       data={prs ?? []}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
-      contentContainerStyle={{ paddingTop: 10, paddingBottom: 96 }}
+      contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 96, flexGrow: 1 }}
       refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor="#7b8cde" />
+        <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.accent} />
       }
       ListHeaderComponent={
         <View>
@@ -154,13 +158,17 @@ export function PullRequestsSection({ repo, active }: SectionProps) {
                   onPress={() => setStateFilter(s)}
                   className="rounded-full px-4 py-1.5"
                   style={{
-                    backgroundColor: active ? '#7b8cde' : 'rgba(123,140,222,0.15)',
+                    backgroundColor: active
+                      ? colors.accent
+                      : `${colors.accent}26`,
                   }}
                   accessibilityRole="button"
                 >
                   <Text
                     className="text-[13px] font-semibold"
-                    style={{ color: active ? '#fff' : '#7b8cde' }}
+                    style={{
+                      color: active ? '#fff' : colors.accent,
+                    }}
                   >
                     {s === 'open' ? 'Open' : 'Closed'}
                   </Text>
@@ -169,22 +177,22 @@ export function PullRequestsSection({ repo, active }: SectionProps) {
             })}
           </View>
           <View className="mb-1 flex-row items-center justify-between px-4 pb-2">
-            <Text className="text-xs text-gray-500" testID="explore.prs.count">
+            <Text className="text-xs" style={{ color: colors.textSecondary }} testID="explore.prs.count">
               {loading && prs === null
                 ? 'Loading pull requests…'
                 : prs !== null
                   ? `${prs.length} pull request(s)`
                   : ''}
             </Text>
-            {loading && prs !== null && <ActivityIndicator size="small" color="#7b8cde" />}
+            {loading && prs !== null && <ActivityIndicator size="small" color={colors.accent} />}
           </View>
         </View>
       }
       ListEmptyComponent={
         !loading && prs !== null ? (
-          <View className="items-center px-8 py-10" testID="explore.prs.empty">
-            <Ionicons name="git-pull-request-outline" size={40} color="#9ca3af" />
-            <Text className="mt-2 text-center text-sm text-gray-500">No pull requests</Text>
+          <View className="flex-1 items-center justify-center" style={{ minHeight: 240 }} testID="explore.prs.empty">
+            <Ionicons name="git-pull-request-outline" size={40} color={colors.textSecondary} />
+            <Text className="mt-2 text-center text-sm" style={{ color: colors.textSecondary }}>No pull requests</Text>
           </View>
         ) : undefined
       }

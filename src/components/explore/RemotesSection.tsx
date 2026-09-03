@@ -10,8 +10,10 @@ import * as GitEngine from '@/services/git/engine/GitEngine';
 import type { RemoteInfo } from '@/services/git/engine/GitEngine';
 import { GitFsService } from '@/services/git/GitFsService';
 import type { SectionProps } from './exploreShared';
+import { useTokens } from '@/contexts/ThemeContext';
 
-export function RemotesSection({ repo, active, onChanged }: SectionProps) {
+export function RemotesSection({ repo, active, onChanged, chromeTopInset = 0 }: SectionProps) {
+  const { colors } = useTokens();
   const [remotes, setRemotes] = useState<RemoteInfo[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -111,14 +113,14 @@ export function RemotesSection({ repo, active, onChanged }: SectionProps) {
     ({ item }: { item: RemoteInfo }) => {
       if (editing === item.name) {
         return (
-          <View className="mx-4 mb-2 rounded-lg border border-indigo-300 bg-white px-3 py-2.5" testID={`explore.remote.edit.${item.name}`}>
-            <Text className="text-[11px] text-gray-500">Set URL for "{item.name}"</Text>
-            <Text className="mt-1 text-[10px] font-mono text-gray-400" numberOfLines={2}>
+          <View className="mx-4 mb-2 rounded-lg px-3 py-2.5" style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }} testID={`explore.remote.edit.${item.name}`}>
+            <Text className="text-[11px]" style={{ color: colors.textSecondary }}>Set URL for "{item.name}"</Text>
+            <Text className="mt-1 text-[10px] font-mono" style={{ color: colors.textSecondary }} numberOfLines={2}>
               current: {item.url ?? '(no URL)'}
             </Text>
             <View className="mt-1.5 flex-row items-center gap-2">
               <View className="flex-1">
-                <Input className="border-gray-300">
+                <Input>
                   <InputField
                     value={editUrl}
                     onChangeText={setEditUrl}
@@ -140,10 +142,10 @@ export function RemotesSection({ repo, active, onChanged }: SectionProps) {
         );
       }
       return (
-        <View className="mx-4 mb-2 rounded-lg border border-gray-200 bg-white px-3 py-2.5">
+        <View className="mx-4 mb-2 rounded-lg px-3 py-2.5" style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }}>
           <View className="flex-row items-center gap-2">
-            <Ionicons name="cloud-outline" size={14} color="#4f46e5" />
-            <Text className="text-sm font-semibold text-black">{item.name}</Text>
+            <Ionicons name="cloud-outline" size={14} color={colors.accent} />
+            <Text className="text-sm font-semibold" style={{ color: colors.text }}>{item.name}</Text>
             <View className="flex-1" />
             <Button
               size="sm"
@@ -161,16 +163,16 @@ export function RemotesSection({ repo, active, onChanged }: SectionProps) {
               <ButtonText>Remove</ButtonText>
             </Button>
           </View>
-          <Text className="mt-1 text-[11px] font-mono text-gray-500" numberOfLines={2} testID={`explore.remote.url.${item.name}`}>
+          <Text className="mt-1 text-[11px] font-mono" style={{ color: colors.textSecondary }} numberOfLines={2} testID={`explore.remote.url.${item.name}`}>
             {item.url ?? '(no URL)'}
           </Text>
           {(item.fetchSpecs?.length ?? 0) > 0 && (
-            <Text className="mt-1 text-[10px] font-mono text-gray-400" numberOfLines={1}>
+            <Text className="mt-1 text-[10px] font-mono" style={{ color: colors.textSecondary }} numberOfLines={1}>
               fetch {item.fetchSpecs?.join(' ') ?? ''}
             </Text>
           )}
           {(item.pushSpecs?.length ?? 0) > 0 && (
-            <Text className="mt-0.5 text-[10px] font-mono text-gray-400" numberOfLines={1}>
+            <Text className="mt-0.5 text-[10px] font-mono" style={{ color: colors.textSecondary }} numberOfLines={1}>
               push {item.pushSpecs?.join(' ') ?? ''}
             </Text>
           )}
@@ -183,8 +185,8 @@ export function RemotesSection({ repo, active, onChanged }: SectionProps) {
   if (error) {
     return (
       <View className="items-center px-8 py-10">
-        <Ionicons name="warning-outline" size={36} color="#dc2626" />
-        <Text className="mt-2 text-center text-sm text-red-600">{error}</Text>
+        <Ionicons name="warning-outline" size={36} color={colors.error} />
+        <Text className="mt-2 text-center text-sm" style={{ color: colors.error }}>{error}</Text>
         <Button variant="outline" size="sm" className="mt-3" onPress={() => void load()}>
           <ButtonText>Retry</ButtonText>
         </Button>
@@ -195,9 +197,9 @@ export function RemotesSection({ repo, active, onChanged }: SectionProps) {
   if (notCloned) {
     return (
       <View className="items-center px-8 py-10">
-        <Ionicons name="folder-outline" size={36} color="#9ca3af" />
-        <Text className="mt-2 text-center text-sm font-semibold text-gray-700">Clone required</Text>
-        <Text className="mt-1 text-center text-xs text-gray-500">
+        <Ionicons name="folder-outline" size={36} color={colors.textSecondary} />
+        <Text className="mt-2 text-center text-sm font-semibold" style={{ color: colors.text }}>Clone required</Text>
+        <Text className="mt-1 text-center text-xs" style={{ color: colors.textSecondary }}>
           This repository has not been cloned to this device yet.
         </Text>
       </View>
@@ -205,13 +207,13 @@ export function RemotesSection({ repo, active, onChanged }: SectionProps) {
   }
 
   return (
-    <FlatList
+    <FlatList className="flex-1"
       data={remotes ?? []}
       keyExtractor={(item) => item.name}
       renderItem={renderItem}
-      contentContainerStyle={{ paddingTop: 10, paddingBottom: 96 }}
+      contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 96, flexGrow: 1 }}
       refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor="#7b8cde" />
+        <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.accent} />
       }
       ListHeaderComponent={
         <View className="px-4 pb-3">
@@ -237,10 +239,10 @@ export function RemotesSection({ repo, active, onChanged }: SectionProps) {
           </Input>
           <View className="flex-row items-center justify-between">
             <Button size="sm" disabled={busy || !name.trim() || !url.trim()} onPress={() => void add()}>
-              {busy ? <ActivityIndicator size="small" color="#ffffff" /> : null}
+              {busy ? <ActivityIndicator size="small" color={colors.text} /> : null}
               <ButtonText>Add remote</ButtonText>
             </Button>
-            <Text className="text-xs text-gray-500" testID="explore.remotes.count">
+            <Text className="text-xs" style={{ color: colors.textSecondary }} testID="explore.remotes.count">
               {remotes ? `${remotes.length} remote(s)` : 'Reading remotes…'}
             </Text>
           </View>
@@ -248,7 +250,10 @@ export function RemotesSection({ repo, active, onChanged }: SectionProps) {
       }
       ListEmptyComponent={
         !loading ? (
-          <Text className="mt-8 text-center text-gray-500">No remotes configured.</Text>
+          <View className="flex-1 items-center justify-center" style={{ minHeight: 240 }}>
+            <Ionicons name="cloud-offline-outline" size={40} color={colors.textSecondary} />
+            <Text className="mt-2 text-center text-sm" style={{ color: colors.textSecondary }}>No remotes configured.</Text>
+          </View>
         ) : undefined
       }
       testID="explore.remotes.list"

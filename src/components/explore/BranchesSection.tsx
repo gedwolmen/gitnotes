@@ -8,12 +8,14 @@ import * as GitEngine from '@/services/git/engine/GitEngine';
 import type { BranchInfo } from '@/services/git/engine/GitEngine';
 import { GitFsService } from '@/services/git/GitFsService';
 import type { SectionProps } from './exploreShared';
+import { useTokens } from '@/contexts/ThemeContext';
 
 type BranchRow =
   | { kind: 'header'; key: string; title: string; count: number }
   | { kind: 'branch'; key: string; branch: BranchInfo };
 
-export function BranchesSection({ repo, active, onChanged }: SectionProps) {
+export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0 }: SectionProps) {
+  const { colors } = useTokens();
   const [branches, setBranches] = useState<BranchInfo[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -148,11 +150,11 @@ export function BranchesSection({ repo, active, onChanged }: SectionProps) {
     (item: BranchInfo) => {
       if (renaming === item.name && !item.isRemote) {
         return (
-          <View className="mx-4 mb-2 rounded-lg border border-indigo-300 bg-white px-3 py-2.5" testID={`explore.branch.rename.${item.name}`}>
-            <Text className="text-[11px] text-gray-500">Rename "{item.name}"</Text>
+          <View className="mx-4 mb-2 rounded-lg px-3 py-2.5" style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }} testID={`explore.branch.rename.${item.name}`}>
+            <Text className="text-[11px]" style={{ color: colors.textSecondary }}>Rename "{item.name}"</Text>
             <View className="mt-1.5 flex-row items-center gap-2">
               <View className="flex-1">
-                <Input className="border-gray-300">
+                <Input>
                   <InputField
                     value={renameValue}
                     onChangeText={setRenameValue}
@@ -174,27 +176,27 @@ export function BranchesSection({ repo, active, onChanged }: SectionProps) {
         );
       }
       return (
-        <View className="mx-4 mb-2 rounded-lg border border-gray-200 bg-white px-3 py-2.5">
+        <View className="mx-4 mb-2 rounded-lg px-3 py-2.5" style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }}>
           <View className="flex-row items-center gap-2">
-            <Ionicons name="git-branch-outline" size={14} color={item.isRemote ? '#6b7280' : '#4f46e5'} />
-            <Text className="min-w-0 flex-1 text-sm font-semibold text-black" numberOfLines={1}>
+            <Ionicons name="git-branch-outline" size={14} color={item.isRemote ? colors.textSecondary : colors.accent} />
+            <Text className="min-w-0 flex-1 text-sm font-semibold" numberOfLines={1} style={{ color: colors.text }}>
               {item.name}
             </Text>
             {item.isCurrent && (
-              <View className="rounded bg-emerald-100 px-1.5 py-0.5">
-                <Text className="text-[10px] font-semibold text-emerald-700" testID={`explore.branch.current.${item.name}`}>
+              <View className="rounded px-1.5 py-0.5" style={{ backgroundColor: `${colors.success}26` }}>
+                <Text className="text-[10px] font-semibold" style={{ color: colors.success }} testID={`explore.branch.current.${item.name}`}>
                   current
                 </Text>
               </View>
             )}
             {item.isRemote && (
-              <View className="rounded bg-gray-100 px-1.5 py-0.5">
-                <Text className="text-[10px] font-semibold text-gray-600">remote</Text>
+              <View className="rounded px-1.5 py-0.5" style={{ backgroundColor: colors.surfaceSecondary }}>
+                <Text className="text-[10px] font-semibold" style={{ color: colors.textSecondary }}>remote</Text>
               </View>
             )}
           </View>
           <View className="mt-1.5 flex-row items-center justify-between">
-            <Text className="text-[11px] text-gray-500">
+            <Text className="text-[11px]" style={{ color: colors.textSecondary }}>
               {item.upstream ? `upstream ${item.upstream} · ` : ''}
               {`ahead ${item.ahead} · behind ${item.behind}`}
             </Text>
@@ -257,8 +259,8 @@ export function BranchesSection({ repo, active, onChanged }: SectionProps) {
     ({ item }: { item: BranchRow }) =>
       item.kind === 'header' ? (
         <View className="flex-row items-center justify-between px-4 pb-1 pt-3">
-          <Text className="text-xs font-bold uppercase tracking-wide text-gray-400">{item.title}</Text>
-          <Text className="text-[11px] text-gray-400">{item.count}</Text>
+          <Text className="text-xs font-bold uppercase tracking-wide" style={{ color: colors.textSecondary }}>{item.title}</Text>
+          <Text className="text-[11px]" style={{ color: colors.textSecondary }}>{item.count}</Text>
         </View>
       ) : (
         renderBranch(item.branch)
@@ -269,8 +271,8 @@ export function BranchesSection({ repo, active, onChanged }: SectionProps) {
   if (error) {
     return (
       <View className="items-center px-8 py-10">
-        <Ionicons name="warning-outline" size={36} color="#dc2626" />
-        <Text className="mt-2 text-center text-sm text-red-600">{error}</Text>
+        <Ionicons name="warning-outline" size={36} color={colors.error} />
+        <Text className="mt-2 text-center text-sm" style={{ color: colors.error }}>{error}</Text>
         <Button variant="outline" size="sm" className="mt-3" onPress={() => void load()}>
           <ButtonText>Retry</ButtonText>
         </Button>
@@ -281,9 +283,9 @@ export function BranchesSection({ repo, active, onChanged }: SectionProps) {
   if (notCloned) {
     return (
       <View className="items-center px-8 py-10">
-        <Ionicons name="folder-outline" size={36} color="#9ca3af" />
-        <Text className="mt-2 text-center text-sm font-semibold text-gray-700">Clone required</Text>
-        <Text className="mt-1 text-center text-xs text-gray-500">
+        <Ionicons name="folder-outline" size={36} color={colors.textSecondary} />
+        <Text className="mt-2 text-center text-sm font-semibold" style={{ color: colors.text }}>Clone required</Text>
+        <Text className="mt-1 text-center text-xs" style={{ color: colors.textSecondary }}>
           This repository has not been cloned to this device yet.
         </Text>
       </View>
@@ -291,19 +293,19 @@ export function BranchesSection({ repo, active, onChanged }: SectionProps) {
   }
 
   return (
-    <FlatList
+    <FlatList className="flex-1"
       data={rows}
       keyExtractor={(item) => item.key}
       renderItem={renderItem}
-      contentContainerStyle={{ paddingTop: 10, paddingBottom: 96 }}
+      contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 96, flexGrow: 1 }}
       refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor="#7b8cde" />
+        <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.accent} />
       }
       ListHeaderComponent={
         <View className="px-4 pb-1">
           <View className="flex-row items-center gap-2">
             <View className="flex-1">
-              <Input className="border-gray-300">
+              <Input>
                 <InputField
                   value={newName}
                   onChangeText={setNewName}
@@ -315,18 +317,21 @@ export function BranchesSection({ repo, active, onChanged }: SectionProps) {
               </Input>
             </View>
             <Button size="sm" disabled={busy !== null || !newName.trim()} onPress={() => void create()}>
-              {busy === 'create' ? <ActivityIndicator size="small" color="#ffffff" /> : null}
+              {busy === 'create' ? <ActivityIndicator size="small" color={colors.text} /> : null}
               <ButtonText>Create</ButtonText>
             </Button>
           </View>
-          <Text className="mt-2 text-xs text-gray-500" testID="explore.branches.count">
+          <Text className="mt-2 text-xs" style={{ color: colors.textSecondary }} testID="explore.branches.count">
             {branches ? `${branches.length} branch(es)` : 'Reading branches…'}
           </Text>
         </View>
       }
       ListEmptyComponent={
         !loading ? (
-          <Text className="mt-8 text-center text-gray-500">No branches.</Text>
+          <View className="flex-1 items-center justify-center" style={{ minHeight: 240 }}>
+            <Ionicons name="git-branch-outline" size={40} color={colors.textSecondary} />
+            <Text className="mt-2 text-center text-sm" style={{ color: colors.textSecondary }}>No branches.</Text>
+          </View>
         ) : undefined
       }
       testID="explore.branches.list"

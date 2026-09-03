@@ -12,7 +12,8 @@ import * as GitEngine from '@/services/git/engine/GitEngine';
 import type { FileDiff, FileStatus } from '@/services/git/engine/GitEngine';
 import { GitFsService } from '@/services/git/GitFsService';
 import type { RootStackParamList } from '@/navigation/types';
-import { STATUS_META, type SectionProps } from './exploreShared';
+import { resolveStatusTone, STATUS_META, type SectionProps } from './exploreShared';
+import { useTokens } from '@/contexts/ThemeContext';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -21,8 +22,9 @@ interface ChangesData {
   diffs: Record<string, FileDiff>;
 }
 
-export function ChangesSection({ repo, active, onChanged }: SectionProps) {
+export function ChangesSection({ repo, active, onChanged, chromeTopInset = 0 }: SectionProps) {
   const navigation = useNavigation<NavigationProp>();
+  const { colors } = useTokens();
   const [data, setData] = useState<ChangesData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,25 +90,26 @@ export function ChangesSection({ repo, active, onChanged }: SectionProps) {
   const renderItem = useCallback(
     ({ item }: { item: FileStatus }) => {
       const meta = STATUS_META[item.status];
+      const toneStyle = resolveStatusTone(colors, meta.tone);
       const diff = data?.diffs[item.path];
       return (
-        <View className="mx-4 mb-3 rounded-lg border border-gray-200 bg-white p-3">
+        <View className="mx-4 mb-3 rounded-lg p-3" style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }}>
           <Pressable
             onPress={() => navigation.navigate('ExploreDiff', { repoId: repo.id, path: item.path })}
             accessibilityRole="button"
             testID={`explore.change.${item.path}`}
           >
             <View className="flex-row items-center gap-2">
-              <View className={`rounded px-1.5 py-0.5 ${meta.badgeClass}`}>
-                <Text className="text-[10px] font-semibold">{meta.label}</Text>
+              <View className="rounded px-1.5 py-0.5" style={{ backgroundColor: toneStyle.bg }}>
+                <Text className="text-[10px] font-semibold" style={{ color: toneStyle.fg }}>{meta.label}</Text>
               </View>
-              <Text className="min-w-0 flex-1 text-sm font-semibold text-black" numberOfLines={1}>
+              <Text className="min-w-0 flex-1 text-sm font-semibold" style={{ color: colors.text }} numberOfLines={1}>
                 {item.path}
               </Text>
               {diff && (
-                <Text className="text-[11px] font-mono text-gray-500">
-                  <Text className="text-emerald-600">+{diff.added}</Text>{' '}
-                  <Text className="text-red-500">−{diff.deleted}</Text>
+                <Text className="text-[11px] font-mono" style={{ color: colors.textSecondary }}>
+                  <Text style={{ color: colors.success }}>+{diff.added}</Text>{' '}
+                  <Text style={{ color: colors.error }}>−{diff.deleted}</Text>
                 </Text>
               )}
             </View>
@@ -116,7 +119,7 @@ export function ChangesSection({ repo, active, onChanged }: SectionProps) {
               </View>
             )}
             {diff?.isBinary && (
-              <Text className="mt-1 text-[11px] text-gray-500">binary file</Text>
+              <Text className="mt-1 text-[11px]" style={{ color: colors.textSecondary }}>binary file</Text>
             )}
           </Pressable>
           {!item.staged && (
@@ -135,8 +138,8 @@ export function ChangesSection({ repo, active, onChanged }: SectionProps) {
   if (error) {
     return (
       <View className="items-center px-8 py-10">
-        <Ionicons name="warning-outline" size={36} color="#dc2626" />
-        <Text className="mt-2 text-center text-sm text-red-600">{error}</Text>
+        <Ionicons name="warning-outline" size={36} color={colors.error} />
+        <Text className="mt-2 text-center text-sm" style={{ color: colors.error }}>{error}</Text>
         <Button variant="outline" size="sm" className="mt-3" onPress={() => void load()}>
           <ButtonText>Retry</ButtonText>
         </Button>
@@ -147,9 +150,9 @@ export function ChangesSection({ repo, active, onChanged }: SectionProps) {
   if (notCloned) {
     return (
       <View className="items-center px-8 py-10">
-        <Ionicons name="folder-outline" size={36} color="#9ca3af" />
-        <Text className="mt-2 text-center text-sm font-semibold text-gray-700">Clone required</Text>
-        <Text className="mt-1 text-center text-xs text-gray-500">
+        <Ionicons name="folder-outline" size={36} color={colors.textSecondary} />
+        <Text className="mt-2 text-center text-sm font-semibold" style={{ color: colors.text }}>Clone required</Text>
+        <Text className="mt-1 text-center text-xs" style={{ color: colors.textSecondary }}>
           This repository has not been cloned to this device yet.
         </Text>
       </View>
@@ -157,17 +160,17 @@ export function ChangesSection({ repo, active, onChanged }: SectionProps) {
   }
 
   return (
-    <FlatList
+    <FlatList className="flex-1"
       data={data?.statuses ?? []}
       keyExtractor={(item) => item.path}
       renderItem={renderItem}
-      contentContainerStyle={{ paddingTop: 10, paddingBottom: 96 }}
+      contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 96, flexGrow: 1 }}
       refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor="#7b8cde" />
+        <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.accent} />
       }
       ListHeaderComponent={
         <View className="flex-row items-center justify-between px-4 pb-2">
-          <Text className="text-xs text-gray-500" testID="explore.changes.count">
+          <Text className="text-xs" style={{ color: colors.textSecondary }} testID="explore.changes.count">
             {data ? `${data.statuses.length} changed file(s)` : 'Reading status…'}
           </Text>
           <View className="flex-row items-center gap-2">
@@ -176,20 +179,20 @@ export function ChangesSection({ repo, active, onChanged }: SectionProps) {
                 <ButtonText>Stage All</ButtonText>
               </Button>
             )}
-            {loading && <ActivityIndicator size="small" color="#7b8cde" />}
+            {loading && <ActivityIndicator size="small" color={colors.accent} />}
           </View>
         </View>
       }
-      ListEmptyComponent={
-        !loading ? (
-          <View className="items-center px-8 py-10" testID="explore.changes.empty">
-            <Ionicons name="checkmark-circle-outline" size={40} color="#22c55e" />
-            <Text className="mt-2 text-center text-sm text-gray-500">
-              Working tree clean — no changes.
-            </Text>
-          </View>
-        ) : undefined
-      }
+        ListEmptyComponent={
+          !loading ? (
+            <View className="flex-1 items-center justify-center" style={{ minHeight: 240 }} testID="explore.changes.empty">
+              <Ionicons name="checkmark-circle-outline" size={40} color={colors.accent} />
+              <Text className="mt-2 text-center text-sm" style={{ color: colors.textSecondary }}>
+                Working tree clean — no changes.
+              </Text>
+            </View>
+          ) : undefined
+        }
       testID="explore.changes.list"
     />
   );

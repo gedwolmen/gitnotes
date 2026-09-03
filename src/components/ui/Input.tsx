@@ -45,6 +45,7 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(props, ref
     placeholderTextColor,
     surfaceTestID,
     children,
+    className,
     ...textInputProps
   } = props;
   const { colors, spacing, type } = useTokens();
@@ -66,7 +67,7 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(props, ref
         },
         containerStyle,
       ]}
-      className="flex-row items-center"
+      className={className ? `${className} flex-row items-center` : 'flex-row items-center'}
     >
       {leading && <View className="mr-2">{leading}</View>}
       {children ? children : (

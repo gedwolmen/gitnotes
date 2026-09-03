@@ -13,12 +13,14 @@ import { GitFsService } from '@/services/git/GitFsService';
 import { Toast, ToastDescription, ToastTitle, useToast } from '@/components/ui/toast';
 import type { RootStackParamList } from '@/navigation/types';
 import { relativeTime, type SectionProps } from './exploreShared';
+import { useTokens } from '@/contexts/ThemeContext';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-export function CommitsSection({ repo, active }: SectionProps) {
+export function CommitsSection({ repo, active, chromeTopInset = 0 }: SectionProps) {
   const navigation = useNavigation<NavigationProp>();
   const toast = useToast();
+  const { colors } = useTokens();
   const [commits, setCommits] = useState<CommitInfo[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [pushing, setPushing] = useState(false);
@@ -114,23 +116,24 @@ export function CommitsSection({ repo, active }: SectionProps) {
         onPress={() => navigation.navigate('ExploreCommit', { repoId: repo.id, commitId: item.id })}
         accessibilityRole="button"
         testID={`explore.commit.${item.shortId}`}
-        className="mx-4 mb-2 rounded-lg border border-gray-200 bg-white px-3 py-2.5"
+        className="mx-4 mb-2 rounded-lg px-3 py-2.5"
+        style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }}
       >
         <View className="flex-row items-center gap-2">
-          <View className="rounded bg-gray-800 px-1.5 py-0.5">
-            <Text className="text-[10px] font-mono text-white">{item.shortId}</Text>
+          <View className="rounded px-1.5 py-0.5" style={{ backgroundColor: colors.elevated }}>
+            <Text className="text-[10px] font-mono" style={{ color: colors.text }}>{item.shortId}</Text>
           </View>
           {(item.parentCount ?? 0) > 1 && (
-            <View className="rounded bg-violet-100 px-1.5 py-0.5">
-              <Text className="text-[10px] font-semibold text-violet-700">merge</Text>
+            <View className="rounded px-1.5 py-0.5" style={{ backgroundColor: `${colors.accent}26` }}>
+              <Text className="text-[10px] font-semibold" style={{ color: colors.accent }}>merge</Text>
             </View>
           )}
-          <Text className="text-[11px] text-gray-500">{relativeTime((item.authorTime ?? 0) * 1000)}</Text>
+          <Text className="text-[11px]" style={{ color: colors.textSecondary }}>{relativeTime((item.authorTime ?? 0) * 1000)}</Text>
         </View>
-        <Text className="mt-1 text-sm font-semibold text-black" numberOfLines={2}>
+        <Text className="mt-1 text-sm font-semibold" style={{ color: colors.text }} numberOfLines={2}>
           {item.summary || '(no message)'}
         </Text>
-        <Text className="mt-0.5 text-[11px] text-gray-500" numberOfLines={1}>
+        <Text className="mt-0.5 text-[11px]" style={{ color: colors.textSecondary }} numberOfLines={1}>
           {item.authorName} &lt;{item.authorEmail}&gt;
         </Text>
       </Pressable>
@@ -141,8 +144,8 @@ export function CommitsSection({ repo, active }: SectionProps) {
   if (error) {
     return (
       <View className="items-center px-8 py-10">
-        <Ionicons name="warning-outline" size={36} color="#dc2626" />
-        <Text className="mt-2 text-center text-sm text-red-600">{error}</Text>
+        <Ionicons name="warning-outline" size={36} color={colors.error} />
+        <Text className="mt-2 text-center text-sm" style={{ color: colors.error }}>{error}</Text>
         <Button variant="outline" size="sm" className="mt-3" onPress={() => void load()}>
           <ButtonText>Retry</ButtonText>
         </Button>
@@ -153,9 +156,9 @@ export function CommitsSection({ repo, active }: SectionProps) {
   if (notCloned) {
     return (
       <View className="items-center px-8 py-10">
-        <Ionicons name="folder-outline" size={36} color="#9ca3af" />
-        <Text className="mt-2 text-center text-sm font-semibold text-gray-700">Clone required</Text>
-        <Text className="mt-1 text-center text-xs text-gray-500">
+        <Ionicons name="folder-outline" size={36} color={colors.textSecondary} />
+        <Text className="mt-2 text-center text-sm font-semibold" style={{ color: colors.text }}>Clone required</Text>
+        <Text className="mt-1 text-center text-xs" style={{ color: colors.textSecondary }}>
           This repository has not been cloned to this device yet.
         </Text>
       </View>
@@ -163,44 +166,45 @@ export function CommitsSection({ repo, active }: SectionProps) {
   }
 
   return (
-    <FlatList
+    <FlatList className="flex-1"
       data={commits ?? []}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
-      contentContainerStyle={{ paddingTop: 10, paddingBottom: 96 }}
+      contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 96, flexGrow: 1 }}
       refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor="#7b8cde" />
+        <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.accent} />
       }
       ListHeaderComponent={
         <View className="flex-row items-center justify-between px-4 pb-2">
-          <Text className="text-xs text-gray-500" testID="explore.commits.count">
+          <Text className="text-xs" style={{ color: colors.textSecondary }} testID="explore.commits.count">
             {commits ? `${commits.length} commit(s)` : 'Reading history…'}
           </Text>
           <View className="flex-row items-center gap-2">
             {loading || pushing ? (
-              <ActivityIndicator size="small" color="#7b8cde" />
+              <ActivityIndicator size="small" color={colors.accent} />
             ) : (
               <Pressable
                 onPress={() => void handlePush()}
                 disabled={pushing}
                 accessibilityRole="button"
                 accessibilityLabel="Push all commits"
-                className="rounded bg-blue-500 px-2 py-1"
+                className="rounded px-2 py-1"
+                style={{ backgroundColor: colors.primary }}
               >
-                <Text className="text-xs font-semibold text-white">Push</Text>
+                <Text className="text-xs font-semibold" style={{ color: '#fff' }}>Push</Text>
               </Pressable>
             )}
           </View>
         </View>
       }
-      ListEmptyComponent={
-        !loading ? (
-          <View className="items-center px-8 py-10" testID="explore.commits.empty">
-            <Ionicons name="time-outline" size={40} color="#9ca3af" />
-            <Text className="mt-2 text-center text-sm text-gray-500">No commits yet.</Text>
-          </View>
-        ) : undefined
-      }
+        ListEmptyComponent={
+          !loading ? (
+            <View className="flex-1 items-center justify-center" style={{ minHeight: 240 }} testID="explore.commits.empty">
+              <Ionicons name="time-outline" size={40} color={colors.textSecondary} />
+              <Text className="mt-2 text-center text-sm" style={{ color: colors.textSecondary }}>No commits yet.</Text>
+            </View>
+          ) : undefined
+        }
       testID="explore.commits.list"
     />
   );

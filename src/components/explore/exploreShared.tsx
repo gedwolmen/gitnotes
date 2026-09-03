@@ -2,6 +2,7 @@ import { Directory, File } from 'expo-file-system';
 
 import type { FileStatusKind, RepoStatus } from '@/services/git/engine/GitEngine';
 import type { GitHostProvider } from '@/services/git/GitHost';
+import type { Palette } from '@/theme/tokens';
 
 export interface RepoLike {
   id: string;
@@ -36,10 +37,9 @@ export type ExploreSection = (typeof EXPLORE_SECTIONS)[number]['id'];
 export interface SectionProps {
   repo: RepoLike;
   status: RepoStatus | null;
-  /** True while this section's tab is selected. */
   active: boolean;
-  /** Called after a mutating op so the shell header + other sections refresh. */
   onChanged: () => void;
+  chromeTopInset?: number;
 }
 
 export function relativeTime(timestamp: number | null): string {
@@ -85,23 +85,56 @@ export type StatusIcon =
   | 'swap-horizontal-outline'
   | 'warning-outline';
 
+/** Semantic tone for a status badge. Mapped to theme tokens at render time so
+ * the same tone reads correctly in light and dark mode (darker shade in light,
+ * lighter shade in dark — see `resolveStatusTone`). */
+export type StatusTone = 'neutral' | 'accent' | 'success' | 'warning' | 'danger';
+
 export interface StatusMeta {
   label: string;
-  badgeClass: string;
+  tone: StatusTone;
   icon: StatusIcon;
-  /** Icon tint matching the badge palette (Ionicons need a color value). */
-  iconColor: string;
+}
+
+/** Resolve a status tone to the { bg, fg } pair used by status badges. The bg
+ * is the tone's hex color rendered at low opacity (~16%) — it tints the
+ * surface below rather than overriding it, so it works on both light and dark
+ * cards. The fg is the saturated tone color (which has been pre-tuned per
+ * palette in tokens.ts to clear WCAG AA against the bg tint). */
+export function resolveStatusTone(colors: Palette, tone: StatusTone): { bg: string; fg: string } {
+  switch (tone) {
+    case 'success':
+      return { bg: hexWithAlpha(colors.success, 0.16), fg: colors.success };
+    case 'warning':
+      return { bg: hexWithAlpha(colors.warning, 0.18), fg: colors.warning };
+    case 'danger':
+      return { bg: hexWithAlpha(colors.error, 0.16), fg: colors.error };
+    case 'accent':
+      return { bg: hexWithAlpha(colors.accent, 0.18), fg: colors.accent };
+    case 'neutral':
+    default:
+      return { bg: hexWithAlpha(colors.textSecondary, 0.18), fg: colors.textSecondary };
+  }
+}
+
+function hexWithAlpha(hex: string, alpha: number): string {
+  const clean = hex.replace('#', '');
+  const full = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
 }
 
 export const STATUS_META: Record<FileStatusKind, StatusMeta> = {
-  Unmodified: { label: 'clean', badgeClass: 'bg-gray-100 text-gray-600', icon: 'document-outline', iconColor: '#6b7280' },
-  Untracked: { label: 'new', badgeClass: 'bg-sky-100 text-sky-700', icon: 'add-circle-outline', iconColor: '#0369a1' },
-  Added: { label: 'added', badgeClass: 'bg-emerald-100 text-emerald-700', icon: 'add-circle-outline', iconColor: '#047857' },
-  Modified: { label: 'modified', badgeClass: 'bg-amber-100 text-amber-700', icon: 'create-outline', iconColor: '#b45309' },
-  Deleted: { label: 'deleted', badgeClass: 'bg-red-100 text-red-700', icon: 'trash-outline', iconColor: '#b91c1c' },
-  Renamed: { label: 'renamed', badgeClass: 'bg-violet-100 text-violet-700', icon: 'swap-horizontal-outline', iconColor: '#6d28d9' },
-  TypeChange: { label: 'type', badgeClass: 'bg-violet-100 text-violet-700', icon: 'swap-horizontal-outline', iconColor: '#6d28d9' },
-  Conflicted: { label: 'conflict', badgeClass: 'bg-red-100 text-red-700', icon: 'warning-outline', iconColor: '#b91c1c' },
+  Unmodified: { label: 'clean', tone: 'neutral', icon: 'document-outline' },
+  Untracked: { label: 'new', tone: 'accent', icon: 'add-circle-outline' },
+  Added: { label: 'added', tone: 'success', icon: 'add-circle-outline' },
+  Modified: { label: 'modified', tone: 'warning', icon: 'create-outline' },
+  Deleted: { label: 'deleted', tone: 'danger', icon: 'trash-outline' },
+  Renamed: { label: 'renamed', tone: 'accent', icon: 'swap-horizontal-outline' },
+  TypeChange: { label: 'type', tone: 'accent', icon: 'swap-horizontal-outline' },
+  Conflicted: { label: 'conflict', tone: 'danger', icon: 'warning-outline' },
 };
 
 const SKIP_DIRECTORIES = new Set(['.git', 'node_modules', '.svn', '.hg']);

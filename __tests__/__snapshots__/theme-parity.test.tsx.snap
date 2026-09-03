@@ -55,15 +55,7 @@ exports[`NativeWind theme parity matches the pre-migration key-kit snapshots in 
         className="bg-surface rounded-md"
         style={
           [
-            {
-              "shadowColor": "#000000",
-              "shadowOffset": {
-                "height": 4,
-                "width": 4,
-              },
-              "shadowOpacity": 1,
-              "shadowRadius": 8,
-            },
+            {},
             [
               {
                 "alignSelf": "stretch",
@@ -91,15 +83,7 @@ exports[`NativeWind theme parity matches the pre-migration key-kit snapshots in 
               {
                 "borderRadius": 18,
               },
-              {
-                "shadowColor": "#1F1F1F",
-                "shadowOffset": {
-                  "height": -4,
-                  "width": -4,
-                },
-                "shadowOpacity": 1,
-                "shadowRadius": 8,
-              },
+              {},
             ]
           }
         />
@@ -310,15 +294,7 @@ exports[`NativeWind theme parity matches the pre-migration key-kit snapshots in 
         className="bg-surface rounded-md"
         style={
           [
-            {
-              "shadowColor": "#BFBFBF",
-              "shadowOffset": {
-                "height": 4,
-                "width": 4,
-              },
-              "shadowOpacity": 1,
-              "shadowRadius": 8,
-            },
+            {},
             [
               {
                 "alignSelf": "stretch",
@@ -346,15 +322,7 @@ exports[`NativeWind theme parity matches the pre-migration key-kit snapshots in 
               {
                 "borderRadius": 18,
               },
-              {
-                "shadowColor": "#FFFFFF",
-                "shadowOffset": {
-                  "height": -4,
-                  "width": -4,
-                },
-                "shadowOpacity": 1,
-                "shadowRadius": 8,
-              },
+              {},
             ]
           }
         />
@@ -528,10 +496,12 @@ exports[`NativeWind theme parity resolves exact light and dark runtime variables
   "--color-primary": "#8B9BE8",
   "--color-secondary": "#141414",
   "--color-shadow": "#000000",
+  "--color-success": "#4ADE80",
   "--color-surface": "#000000",
   "--color-surface-secondary": "#141414",
   "--color-text": "#F2F2F7",
   "--color-text-secondary": "#A8A8AE",
+  "--color-warning": "#FBBF24",
   "--radius-lg": "24px",
   "--radius-md": "18px",
   "--radius-pill": "999px",
@@ -572,10 +542,12 @@ exports[`NativeWind theme parity resolves exact light and dark runtime variables
   "--color-primary": "#7B8CDE",
   "--color-secondary": "#F5F5F5",
   "--color-shadow": "#BFBFBF",
+  "--color-success": "#15803D",
   "--color-surface": "#FFFFFF",
   "--color-surface-secondary": "#F5F5F5",
   "--color-text": "#1C1C1E",
   "--color-text-secondary": "#6E6E73",
+  "--color-warning": "#B45309",
   "--radius-lg": "24px",
   "--radius-md": "18px",
   "--radius-pill": "999px",

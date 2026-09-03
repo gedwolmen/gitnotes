@@ -16,11 +16,13 @@ import {
   buildFileTreeRows,
   changedFileAncestors,
   isBinaryPath,
+  resolveStatusTone,
   STATUS_META,
   walkWorkingTree,
   type FileTreeRow,
   type SectionProps,
 } from './exploreShared';
+import { useTokens } from '@/contexts/ThemeContext';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -30,8 +32,9 @@ interface FilesData {
   statuses: Record<string, FileStatus>;
 }
 
-export function FilesSection({ repo, active }: SectionProps) {
+export function FilesSection({ repo, active, chromeTopInset = 0 }: SectionProps) {
   const navigation = useNavigation<NavigationProp>();
+  const { colors } = useTokens();
   const [data, setData] = useState<FilesData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -109,52 +112,53 @@ export function FilesSection({ repo, active }: SectionProps) {
             onPress={() => toggleDir(item.path)}
             accessibilityRole="button"
             testID={`explore.files.dir.${item.path}`}
-            className="mx-4 mb-1 flex-row items-center rounded-lg border border-gray-200 bg-gray-50 px-3 py-2"
-            style={{ marginLeft: 16 + item.depth * 16 }}
+            className="mx-4 mb-1 flex-row items-center rounded-lg px-3 py-2"
+          style={{ marginLeft: 16 + item.depth * 16, backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }}
           >
             <Ionicons
               name={item.expanded ? 'folder-open-outline' : 'folder-outline'}
               size={16}
-              color="#6b7280"
+              color={colors.textSecondary}
             />
-            <Text className="ml-2 min-w-0 flex-1 text-sm font-semibold text-black" numberOfLines={1}>
+            <Text className="ml-2 min-w-0 flex-1 text-sm font-semibold" style={{ color: colors.text }} numberOfLines={1}>
               {item.name}
             </Text>
-            <Text className="mr-1 text-[11px] text-gray-500">{item.fileCount}</Text>
+            <Text className="mr-1 text-[11px]" style={{ color: colors.textSecondary }}>{item.fileCount}</Text>
             <Ionicons
               name={item.expanded ? 'chevron-down' : 'chevron-forward'}
               size={14}
-              color="#9ca3af"
+              color={colors.textSecondary}
             />
           </Pressable>
         );
       }
       const status = data?.statuses[item.path];
       const meta = status ? STATUS_META[status.status] : null;
+      const toneStyle = meta ? resolveStatusTone(colors, meta.tone) : null;
       return (
         <Pressable
           onPress={() => navigation.navigate('ExploreFile', { repoId: repo.id, path: item.path })}
           accessibilityRole="button"
           testID={`explore.file.${item.path}`}
-          className="mx-4 mb-1.5 flex-row items-center rounded-lg border border-gray-200 bg-white px-3 py-2"
-          style={{ marginLeft: 16 + item.depth * 16 }}
+          className="mx-4 mb-1.5 flex-row items-center rounded-lg px-3 py-2"
+          style={{ marginLeft: 16 + item.depth * 16, backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }}
         >
           <Ionicons
             name={meta?.icon ?? 'document-outline'}
             size={16}
-            color={meta?.iconColor ?? '#9ca3af'}
+            color={toneStyle?.fg ?? colors.textSecondary}
           />
-          <Text className="ml-2 min-w-0 flex-1 text-sm text-black" numberOfLines={1}>
+          <Text className="ml-2 min-w-0 flex-1 text-sm" style={{ color: colors.text }} numberOfLines={1}>
             {item.name}
           </Text>
           {isBinaryPath(item.path) && (
-            <View className="mr-1.5 rounded bg-gray-100 px-1.5 py-0.5">
-              <Text className="text-[10px] font-semibold text-gray-600">binary</Text>
+            <View className="mr-1.5 rounded px-1.5 py-0.5" style={{ backgroundColor: colors.surface }}>
+              <Text className="text-[10px] font-semibold" style={{ color: colors.textSecondary }}>binary</Text>
             </View>
           )}
-          {meta && (
-            <View className={`rounded px-1.5 py-0.5 ${meta.badgeClass}`}>
-              <Text className="text-[10px] font-semibold">{meta.label}</Text>
+          {meta && toneStyle && (
+            <View className="rounded px-1.5 py-0.5" style={{ backgroundColor: toneStyle.bg }}>
+              <Text className="text-[10px] font-semibold" style={{ color: toneStyle.fg }}>{meta.label}</Text>
             </View>
           )}
         </Pressable>
@@ -166,8 +170,8 @@ export function FilesSection({ repo, active }: SectionProps) {
   if (error) {
     return (
       <View className="items-center px-8 py-10">
-        <Ionicons name="warning-outline" size={36} color="#dc2626" />
-        <Text className="mt-2 text-center text-sm text-red-600">{error}</Text>
+        <Ionicons name="warning-outline" size={36} color={colors.error} />
+        <Text className="mt-2 text-center text-sm" style={{ color: colors.error }}>{error}</Text>
         <Button variant="outline" size="sm" className="mt-3" onPress={() => void load()}>
           <ButtonText>Retry</ButtonText>
         </Button>
@@ -178,9 +182,9 @@ export function FilesSection({ repo, active }: SectionProps) {
   if (notCloned) {
     return (
       <View className="items-center px-8 py-10">
-        <Ionicons name="folder-outline" size={36} color="#9ca3af" />
-        <Text className="mt-2 text-center text-sm font-semibold text-gray-700">Clone required</Text>
-        <Text className="mt-1 text-center text-xs text-gray-500">
+        <Ionicons name="folder-outline" size={36} color={colors.textSecondary} />
+        <Text className="mt-2 text-center text-sm font-semibold" style={{ color: colors.text }}>Clone required</Text>
+        <Text className="mt-1 text-center text-xs" style={{ color: colors.textSecondary }}>
           This repository has not been cloned to this device yet.
         </Text>
       </View>
@@ -189,24 +193,28 @@ export function FilesSection({ repo, active }: SectionProps) {
 
   return (
     <FlatList
+      className="flex-1"
       data={rows}
       keyExtractor={(item) => `${item.kind}:${item.path}`}
       renderItem={renderItem}
-      contentContainerStyle={{ paddingTop: 10, paddingBottom: 96 }}
+      contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 96, flexGrow: 1 }}
       refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor="#7b8cde" />
+        <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.accent} />
       }
       ListHeaderComponent={
         <View className="flex-row items-center justify-between px-4 pb-2">
-          <Text className="text-xs text-gray-500" testID="explore.files.count">
+          <Text className="text-xs" style={{ color: colors.textSecondary }} testID="explore.files.count">
             {data ? `${data.files.length} file(s)${data.truncated ? ' (truncated)' : ''}` : 'Reading working tree…'}
           </Text>
-          {loading && <ActivityIndicator size="small" color="#7b8cde" />}
+          {loading && <ActivityIndicator size="small" color={colors.accent} />}
         </View>
       }
       ListEmptyComponent={
         !loading ? (
-          <Text className="mt-8 text-center text-gray-500">Empty working tree.</Text>
+          <View className="flex-1 items-center justify-center" style={{ minHeight: 240 }}>
+            <Ionicons name="folder-open-outline" size={40} color={colors.textSecondary} />
+            <Text className="mt-2 text-center text-sm" style={{ color: colors.textSecondary }}>Empty working tree.</Text>
+          </View>
         ) : undefined
       }
       testID="explore.files.list"
