@@ -20,10 +20,10 @@ export interface RepoLike {
 
 /** Explore workspace sections (todo 23 shell). Order = tab row order. */
 export const EXPLORE_SECTIONS = [
-  { id: 'files', label: 'Files' },
   { id: 'changes', label: 'Changes' },
   { id: 'staging', label: 'Staging' },
   { id: 'commits', label: 'Commits' },
+  { id: 'files', label: 'Files' },
   { id: 'branches', label: 'Branches' },
   { id: 'remotes', label: 'Remotes' },
   { id: 'conflicts', label: 'Conflicts' },
