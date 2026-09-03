@@ -37,4 +37,12 @@ describe('HostService repository item loading', () => {
       message: 'GitHub API error: 403 (Resource not accessible)',
     });
   });
+
+  it('uses the repository path when full_name is not populated', async () => {
+    const listIssues = jest.fn().mockResolvedValue([]);
+    mockGetGitHostService.mockReturnValue({ listIssues });
+
+    await expect(HostService.listIssues({ provider: 'github', path: 'octocat/hello-world' })).resolves.toEqual({ data: [] });
+    expect(listIssues).toHaveBeenCalledWith('octocat', 'hello-world', 'open');
+  });
 });

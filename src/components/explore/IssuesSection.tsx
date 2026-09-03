@@ -124,7 +124,7 @@ export function IssuesSection({ repo, active, chromeTopInset = 0 }: SectionProps
 
   if (error) {
     return (
-      <View className="items-center px-8 py-10">
+      <View className="items-center px-8 py-10" style={{ paddingTop: chromeTopInset + 24 }}>
         <Ionicons
           name={isPermissionError ? 'lock-closed-outline' : 'cloud-offline-outline'}
           size={36}

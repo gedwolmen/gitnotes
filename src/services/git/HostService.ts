@@ -32,11 +32,12 @@ export type HostServiceResult<T> = { data: T } | { kind: 'permission' | 'error';
 interface RepositoryRef {
   provider?: string;
   full_name?: string;
+  path?: string;
   remoteUrl?: string;
 }
 
 function repositoryPath(repo: RepositoryRef): { owner: string; name: string } | null {
-  const fullName = repo.full_name?.trim();
+  const fullName = (repo.full_name ?? repo.path)?.trim();
   if (fullName) {
     const [owner, name] = fullName.split('/');
     if (owner && name && !name.includes('/')) return { owner, name };

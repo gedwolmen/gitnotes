@@ -8,6 +8,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   View,
+  type LayoutChangeEvent,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -73,9 +74,7 @@ export default function ExploreScreen() {
   const [selectedRepoId, setSelectedRepoId] = useState<string | null>(null);
   const [showRepoPicker, setShowRepoPicker] = useState(false);
 
-  const chromeHeaderHeight = 60;
-  const chromeTabsHeight = 40;
-  const chromeTotalHeight = insets.top + chromeHeaderHeight + chromeTabsHeight;
+  const [chromeTotalHeight, setChromeTotalHeight] = useState(insets.top + 100);
 
   const repo = useMemo(() => {
     const lookupId = selectedRepoId ?? repos[0]?.id ?? null;
@@ -215,7 +214,7 @@ export default function ExploreScreen() {
 
   const renderSection = () => {
     const repoTyped = repo as RepoLike;
-    const props = { repo: repoTyped, status, onChanged, chromeTopInset: chromeTotalHeight };
+    const props = { repo: repoTyped, status, onChanged, chromeTopInset: chromeTotalHeight + 8 };
     switch (section) {
       case 'files':
         return <FilesSection key={repo.id} {...props} active />;
@@ -232,9 +231,9 @@ export default function ExploreScreen() {
       case 'conflicts':
         return <ConflictsSection key={repo.id} {...props} active />;
       case 'pulls':
-        return <PullRequestsSection repo={repoTyped} status={status} active={section === 'pulls'} onChanged={onChanged} chromeTopInset={chromeTotalHeight} />;
+        return <PullRequestsSection repo={repoTyped} status={status} active={section === 'pulls'} onChanged={onChanged} chromeTopInset={chromeTotalHeight + 8} />;
       case 'issues':
-        return <IssuesSection repo={repoTyped} status={status} active={section === 'issues'} onChanged={onChanged} chromeTopInset={chromeTotalHeight} />;
+        return <IssuesSection repo={repoTyped} status={status} active={section === 'issues'} onChanged={onChanged} chromeTopInset={chromeTotalHeight + 8} />;
       case 'info':
         return (
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }}>
@@ -252,7 +251,11 @@ export default function ExploreScreen() {
         {renderSection()}
       </View>
 
-      <View pointerEvents="box-none" style={{ position: 'absolute', top: 0, left: 0, right: 0 }}>
+      <View
+        pointerEvents="box-none"
+        style={{ position: 'absolute', top: 0, left: 0, right: 0 }}
+        onLayout={(event: LayoutChangeEvent) => setChromeTotalHeight(event.nativeEvent.layout.height)}
+      >
         <BlurView intensity={60} tint={isDark ? 'dark' : 'light'} style={{ overflow: 'hidden' }}>
             <View style={{ paddingTop: insets.top }}>
             <View className="flex-row items-center gap-2 px-4 py-2.5" testID="explore.header">
