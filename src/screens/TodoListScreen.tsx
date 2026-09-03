@@ -310,13 +310,16 @@ export default function TodoListScreen() {
             const failedIds = new Set<string>();
             try {
               const selectedTodos = todos.filter((todo) => selectedIds.has(todo.id));
-              const perItem: Todo[] = selectedTodos;
-              for (const todo of perItem) {
-                try {
-                  const ok = await deleteTodo(todo.id);
-                  if (!ok) failedIds.add(todo.id);
-                } catch {
-                  failedIds.add(todo.id);
+              if (selectedTodos.length >= 2) {
+                await runApiBatchDeletes(selectedTodos, failedIds);
+              } else {
+                for (const todo of selectedTodos) {
+                  try {
+                    const ok = await deleteTodo(todo.id);
+                    if (!ok) failedIds.add(todo.id);
+                  } catch {
+                    failedIds.add(todo.id);
+                  }
                 }
               }
               if (failedIds.size > 0) {
