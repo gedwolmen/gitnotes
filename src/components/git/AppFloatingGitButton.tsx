@@ -95,6 +95,16 @@ export default function AppFloatingGitButton({ currentRouteName }: AppFloatingGi
   // changes while the component stays mounted, and an early return before a
   // hook would change the hook count between renders.
   const onQuickTap = useCallback(() => {
+    // Blue button (totalAhead > 0) always navigates to commits tab
+    if (aggregatedState.totalAhead > 0) {
+      const aheadRepoId = Array.from(aggregatedState.perRepo.entries()).find(([, entry]) => entry.ahead > 0)?.[0]
+        ?? aggregatedState.latestChangedRepoId
+        ?? repos[0]?.id;
+      if (!aheadRepoId) return;
+      setPending({ repoId: aheadRepoId, section: 'commits' });
+      navigation.navigate('MainTabs', { screen: 'ExploreTab' });
+      return;
+    }
     const targetRepoId = aggregatedState.latestChangedRepoId ?? repos[0]?.id ?? null;
     if (!targetRepoId) return;
     const section = targetSectionFor(aggregatedState.perRepo.get(targetRepoId));

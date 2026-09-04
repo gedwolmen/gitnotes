@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 import { Text } from '@/components/ui/text';
 import { Heading } from '@/components/ui/heading';
@@ -8,9 +9,11 @@ import { Button, ButtonText } from '@/components/ui/Button';
 import { InputField } from '@/components/ui/Input';
 import { TextareaInput } from '@/components/ui/textarea';
 import * as GitEngine from '@/services/git/engine/GitEngine';
+import type { FileStatus } from '@/services/git/engine/GitEngine';
 import { useAccounts } from '@/contexts/AccountsContext';
 import type { RepoLike } from './exploreShared';
 import { useTokens } from '@/contexts/ThemeContext';
+import { buildCommitMessageDraft } from './commitMessageDraft';
 
 const MESSAGE_PLACEHOLDER = 'feat: what changed? (conventional commit)';
 
@@ -18,16 +21,19 @@ interface CommitComposerProps {
   repo: RepoLike;
   /** Every path with any working-tree change (staged + unstaged), for "Stage all". */
   changedPaths: string[];
+  /** Every working-tree status entry, used to draft the commit message. */
+  statuses: FileStatus[];
   stagedCount: number;
   /** Reload section data + refresh the shell header after a commit lands. */
   onCommitted: () => void;
   embedded?: boolean;
 }
 
-export function CommitComposer({ repo, changedPaths, stagedCount, onCommitted, embedded = false }: CommitComposerProps) {
+export function CommitComposer({ repo, changedPaths, statuses, stagedCount, onCommitted, embedded = false }: CommitComposerProps) {
   const { accounts, activeAccountId } = useAccounts();
   const activeAccount = accounts.find((account) => account.id === activeAccountId) ?? null;
   const { colors } = useTokens();
+  const { t } = useTranslation();
   const [message, setMessage] = useState('');
   const [authorName, setAuthorName] = useState('');
   const [authorEmail, setAuthorEmail] = useState('');
@@ -35,12 +41,26 @@ export function CommitComposer({ repo, changedPaths, stagedCount, onCommitted, e
   const [busy, setBusy] = useState<'stageAll' | 'commit' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [draftDismissed, setDraftDismissed] = useState(false);
 
   useEffect(() => {
     if (!activeAccount || authorTouched) return;
     setAuthorName(activeAccount.name);
     setAuthorEmail(activeAccount.email ?? '');
   }, [activeAccount, authorTouched]);
+
+  useEffect(() => {
+    if (draftDismissed) return;
+    const draft = buildCommitMessageDraft(statuses);
+    if (draft.length === 0) return;
+    setMessage((prev) => (prev.trim().length === 0 ? draft : prev));
+  }, [statuses, draftDismissed]);
+
+  const clearMessage = useCallback(() => {
+    setMessage('');
+    setError(null);
+    setDraftDismissed(true);
+  }, []);
 
   const validate = useCallback((): string | null => {
     if (message.trim().length === 0) return 'Enter a commit message first.';
@@ -69,6 +89,7 @@ export function CommitComposer({ repo, changedPaths, stagedCount, onCommitted, e
           email: authorEmail.trim(),
         });
         setMessage('');
+        setDraftDismissed(false);
         setSuccess(`Committed ${commit.shortId} — ${commit.summary}`);
         onCommitted();
       } catch (caught) {
@@ -98,6 +119,19 @@ export function CommitComposer({ repo, changedPaths, stagedCount, onCommitted, e
             <Text className="text-[10px] font-semibold" style={{ color: colors.accent }}>{stagedCount} staged</Text>
           </View>
         )}
+          {message.length > 0 && (
+            <View className="ml-auto">
+              <Button
+                size="sm"
+                variant="ghost"
+                onPress={clearMessage}
+                accessibilityLabel={t('common.clear')}
+                testID="explore.commit-composer.clear"
+              >
+                {t('common.clear')}
+              </Button>
+            </View>
+          )}
       </View>
 
       <View
@@ -180,7 +214,7 @@ export function CommitComposer({ repo, changedPaths, stagedCount, onCommitted, e
           testID="explore.commit-composer.commit"
         >
           {busy === 'commit' ? <ActivityIndicator size="small" color={colors.text} /> : null}
-          <ButtonText>Commit staged</ButtonText>
+          Commit staged
         </Button>
       </View>
     </View>

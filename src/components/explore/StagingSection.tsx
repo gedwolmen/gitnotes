@@ -22,6 +22,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 interface StagingData {
   staged: FileStatus[];
   changedPaths: string[];
+  statuses: FileStatus[];
   diffs: Record<string, FileDiff>;
 }
 
@@ -65,7 +66,7 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0 }: 
       for (const diff of diffResults) {
         if (diff && diff.path) diffs[diff.path] = diff;
       }
-      setData({ staged, changedPaths, diffs });
+      setData({ staged, changedPaths, statuses, diffs });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
@@ -164,13 +165,13 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0 }: 
           <View className="mt-2 flex-row justify-end gap-2">
             <Button
               size="sm"
-              variant="ghost"
+              variant="danger"
               disabled={busyPath !== null}
               onPress={() => void discardFile(item.path)}
               testID={`explore.discard.${item.path}`}
             >
               {busyPath === item.path ? <Text className="text-xs" style={{ color: colors.textSecondary }}>…</Text> : null}
-              <ButtonText>Discard</ButtonText>
+              Discard
             </Button>
             <Button
               size="sm"
@@ -261,6 +262,7 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0 }: 
           embedded
           repo={repo}
           changedPaths={data?.changedPaths ?? []}
+          statuses={data?.statuses ?? []}
           stagedCount={data?.staged.length ?? 0}
           onCommitted={() => {
             setCommitOpen(false);
