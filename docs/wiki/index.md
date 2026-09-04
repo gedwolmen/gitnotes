@@ -1,119 +1,19 @@
 # GitNotēs Wiki
 
-> Project knowledge base for contributors and AI agents.
-
-> **Single-PR fixes and narrow bug-fix pages now live in [CHANGELOG.md](../../CHANGELOG.md)** at the repo root. The wiki is reserved for architecture, services, contributor guides, and feature deep-dives. When you fix a bug, add an entry to `CHANGELOG.md` (grouped by date descending) — only architecture-level changes get a new wiki page.
+> Project knowledge base for contributors.
 
 ## Pages
 
-### Contributor guides
-
 | Page | Description |
 |------|-------------|
-| [Architecture](./architecture.md) | Project structure, key modules, data flow |
-| [Services](./services.md) | Service layer design and responsibilities |
-| [Development Guide](./development-guide.md) | Local setup, build, test, lint workflow |
-| [Testing Guide](./testing-guide.md) | Test patterns, mocking, CI configuration |
-| [E2E Sync Testing](./e2e-sync-testing.md) | E2E test harness: clone mode scenarios, timing instrumentation, push-trigger verification |
-
-### Architecture & sync engine
-
-| Page | Description |
-|------|-------------|
-| [Sync Engine](./sync-engine.md) | Git sync architecture, push model, error handling |
-| [Sync Engine Modes](./sync-engine-modes.md) | Clone mode configuration, defaults, large-repo handling |
-| [Sync Write Modes](./sync-write-modes.md) | Sync contract: clone commit-on-save + push; blocking overlay; import-on-add |
-| [Clone-Perf Optimization](./clone-perf-optimization.md) | Five ordered patches closing the simulator freeze gap: `noCheckout` + batched full checkout, 3-concurrent-pull dedup, LFS-after-clone, UTF-8 fast path, depth-3 floor measurement flag |
-| [Git Core Hardening](./git-core-hardening.md) | git-core test-campaign fixes: binary decode integrity, case collisions, auth/preflight, API batch writes, pull/reconcile fixes (#876–#892) |
-
-### Features
-
-| Page | Description |
-|------|-------------|
-| [AI Integration](./ai-integration.md) | Vercel AI SDK, providers, token budgeting |
-| [AI Providers](./ai-providers.md) | Provider types, Anthropic defaults, adding providers |
-| [Pro Paywall & Monetization](./paywall-pro.md) | StoreKit 2 revenue model: 14-day trial / $3.99 mo / $39.99 lifetime, grandfathering, show-locked feature UX, gating map, impressions & analytics, restore flow, intro-eligibility policy, legal links, bento grid layout (#921), store setup checklist |
-| [Branding Asset Pipeline](./branding-pipeline.md) | one-master-SVG → generated icons/splash/favicon via sharp (`npm run branding`, #930) |
-| [Daily Quote Settings](./daily-quote-settings.md) | Dataset audit/expansion to 454 verified quotes with sources + two new settings: AI personalization toggle and source visibility toggle (#933, #934) |
-| [Quote Content Policy & Regression Gate](./quote-content-policy.md) | AGENTS.md Quote Content Policy enforced by `__tests__/data/philosopherQuotes.policy.test.ts`: schema/source/uniqueness/count/keyword-scan/tag-vocabulary checks with a documented secular allowlist (#933) |
-| [Explore Repo Hub](./explore-repo-hub.md) | Hub page for selected repo with Browse Files / Pull Requests / Issues / branch selector; multi-provider data layer (#937) |
-| [Filter Persistence](./filter-persistence.md) | Filter state architecture and AsyncStorage |
-| [Importers](./importers.md) | Removed Google Keep and Apple Notes importers, for later re-integration |
-| [Pro Dev Override](./pro-dev-override.md) | `__DEV__`-only iOS-simulator override that forces Pro gate for QA — NOT a payment bypass; RevenueCat unchanged; gate triple `__DEV__ && Platform.OS==='ios' && !Device.isDevice` |
-| [Token Removal Repo Cascade](./repo-removal-cascade.md) | removing a token also removes its synced repos, with a confirmation warning |
-| [Report Bugs & Feature Requests](./report-issue-links.md) | Settings About-row + onboarding footer link to `github.com/gedwolmen/gitnotes/issues`, i18n'd across all six locales |
-| [GitHub Auth Setup](./auth-setup.md) | Create a PAT that works with GitNotēs: fine-grained vs classic, required scopes per feature, troubleshooting token errors (#1190) |
-| [EAS Mapping File Auto-Upload](./eas-mapping-upload.md) | Configure EAS Build to auto-upload R8 mapping files to Google Play Console for deobfuscated crash traces (#1046) |
-
-### Theming, i18n, quality
-
-| Page | Description |
-|------|-------------|
-| [Theme & Styling](./theme-styling.md) | NativeWind v5, theme tokens, dark mode |
-| [i18n](./i18n.md) | Localization setup, adding languages, testing |
-| [v1.5.0 App Store Rejection](./v1.5.0-app-store-rejection.md) | 2.1.0 App Completeness SIGABRT on first launch — root cause: `useNavigation()` outside `NavigationContainer` in `useProGate.ts`; fix on `main` (`c5362e86`) then hardened by splitting `useProGate` into `useProGate()`/`useProStatus()` (#1004) |
-| [Code Quality Findings](./codeql-quality-findings.md) | GitHub "Security and quality" Standard findings: 46 dead-code removals across 28 files (`yarn ts:check` / `yarn jest` 2752 tests / `yarn eslint` / `yarn format:check` all green); 78 findings remain — mostly `'worklet'` directives and a CodeQL `__setProState` resolution false-positive — documented for manual dismissal |
-| [Code Audit — 2026-08-23](./code-audit-2026-08.md) | First-pass audit of `src/`: prioritized list of code-quality wins across `any`-type tightening, oversized-file decomposition, test-coverage gaps, and explicit stubs. **Reference doc, not a TODO board.** |
-| [Security & Dependabot Alerts](./security-dependabot.md) | GitHub security surface, `uuid` fix via yarn resolutions (#4), `image-size` alerts deferred (no patched release, build-time only) |
-
-### Test reports
-
-| Page | Description |
-|------|-------------|
-| [Git Test E2E Report](./git-test-e2e-report.md) | Live round-trip timings against `test-notes` for clone mode scenarios with per-action breakdown, syncTiming instrumentation seam, and Mac vs simulator scope |
-| [Git Test Big Repo](./git-test-big-repo.md) | Clone mode scenarios on a 429-file / 11MB / 28-commit synthetic repo (local bare remote) — linear scaling, no quadratic blowup; small-vs-big comparison table |
+| [Setup](./setup.md) | Prerequisites, install, run |
+| [Architecture](./architecture.md) | Stack, key modules, data flow |
+| [Development Guide](./development-guide.md) | Dev commands, troubleshooting |
 
 ## Quick Start
 
 ```bash
-# Install
 yarn install
-
-# Run
-yarn ios          # iOS
-yarn android      # Android
-yarn web          # Web
-
-# Test
-yarn ts:check         # Type check
-yarn jest             # Run tests
-yarn lint             # ESLint
-yarn format:check     # Prettier check
+yarn start
+yarn ios
 ```
-
-## Project Structure
-
-```
-src/
-├── components/       # Reusable UI components
-├── contexts/         # React contexts (Accounts, Auth, Canvas, Note, Repo, Theme, Todo, ...)
-├── data/             # Static data (philosopher quotes dataset)
-├── hooks/            # Custom React hooks
-├── i18n/             # Localization (en/es/fr/de/ja/ko)
-├── lib/              # Shared utilities (cn helper, etc.)
-├── models/           # TypeScript interfaces (Note, Todo, Canvas, AIProvider, ...)
-├── navigation/       # Navigation configuration
-├── screens/          # Screen components (Notes, Canvas, Chat, Settings, ...)
-├── services/         # Business logic (AI, Git, quotes, sync, paywall, ...)
-│   ├── ai/           # AI provider factory, model limits, anthropic defaults
-│   ├── canvas/       # Sparse-tile canvas persistence + vision helpers
-│   ├── conflict/     # 3-way merge + AI conflict resolver
-│   └── git/          # Clone/push/pull, staging, sync gate, host factory
-├── stores/           # Zustand stores
-├── theme/            # NativeWind theme configuration
-└── types/            # Shared type definitions (RenderStyle, SortTypes)
-```
-
-## Key Files
-
-| File | Purpose |
-|------|---------|
-| `AGENTS.md` | Rules for AI coding agents |
-| `CHANGELOG.md` | Single-PR fixes and narrow bug-fix entries, grouped by date descending |
-| `package.json` | Dependencies and scripts |
-| `tsconfig.json` | TypeScript configuration (strict mode, path aliases) |
-| `jest.config.js` | Jest configuration |
-| `babel.config.js` | Babel configuration (`babel-preset-expo` + `react-native-worklets/plugin`) |
-| `eslint.config.js` | Flat ESLint config (TS + React hooks + Prettier) |
-| `global.css` | NativeWind v4 `@theme` tokens (light + dark) |
-| `metro.config.js` | Metro bundler config |
