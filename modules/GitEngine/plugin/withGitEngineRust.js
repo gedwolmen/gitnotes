@@ -14,13 +14,13 @@ function withGitEngineRustPodfile(config) {
     let contents = podConfig.modResults.contents;
 
     const gitEnginePod = "pod 'GitEngine', :path => '../modules/GitEngine/ios-local'";
-    const useExpoModules = 'use_expo_modules!';
-    if (!contents.includes(gitEnginePod) && contents.includes(useExpoModules)) {
-      const nativeModulesLine = 'config = use_native_modules!';
-      const afterNativeModules = contents.indexOf(nativeModulesLine) !== -1
-        ? contents.indexOf(nativeModulesLine) + nativeModulesLine.length
-        : contents.indexOf(useExpoModules);
-      contents = contents.slice(0, afterNativeModules) + '\n  ' + gitEnginePod + '\n' + contents.slice(afterNativeModules);
+    if (!contents.includes(gitEnginePod)) {
+      const nativeModulesCall = 'config = use_native_modules!(config_command)';
+      const insertionPoint = contents.indexOf(nativeModulesCall);
+      if (insertionPoint !== -1) {
+        const afterCall = insertionPoint + nativeModulesCall.length;
+        contents = contents.slice(0, afterCall) + '\n  ' + gitEnginePod + '\n' + contents.slice(afterCall);
+      }
     }
 
     const marker = 'post_install do |installer|';
