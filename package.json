@@ -22,7 +22,9 @@
     "icons:regenerate": "node scripts/regenerate-assets.js",
     "branding": "node scripts/generate-branding.js",
     "branding:check": "node scripts/generate-branding.js --check",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "eas-build-pre-install": "bash scripts/eas/pre-install.sh",
+    "eas-build-post-install": "bash scripts/eas/post-install.sh"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.38",
