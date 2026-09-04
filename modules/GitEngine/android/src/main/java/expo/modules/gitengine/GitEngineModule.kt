@@ -102,9 +102,8 @@ class GitEngineModule : Module() {
         System.loadLibrary("gitnotes_git2")
         uniffiEnsureInitialized()
         null
-      } catch (error: UnsatisfiedLinkError) {
-        error
-      } catch (error: Exception) {
+      } catch (error: Throwable) {
+        // Throwable catches Error (e.g. ExceptionInInitializerError) and Exception
         error
       }
     }

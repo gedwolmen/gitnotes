@@ -122,6 +122,11 @@ generate_bindings() {
   # Rename the colliding field to `errorMessage` inside BridgeException.
   python3 "$SCRIPT_DIR/fix-kotlin-uniffi-message.py" \
     "$KOTLIN_GEN_DIR/uniffi/gitnotes_git2/gitnotes_git2.kt"
+  # UniFFI <= 0.32 returns u16 values sign-extended on Android ART, causing
+  # checksum comparisons to fail for values >= 0x8000 (mozilla/uniffi-rs#2939).
+  # Mask each comparison with & 0xFFFF to fix.
+  python3 "$SCRIPT_DIR/fix-kotlin-uniffi-checksum.py" \
+    "$KOTLIN_GEN_DIR/uniffi/gitnotes_git2/gitnotes_git2.kt"
 
   rm -rf "$tmp"
   log "bindings regenerated into $MODULE_DIR"
