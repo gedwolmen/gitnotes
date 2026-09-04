@@ -330,7 +330,9 @@ export async function remove(repoPath: string, paths: string[], keepWorktree = f
 }
 
 export async function discardFiles(repoPath: string, paths: string[]): Promise<void> {
-  if (!GitEngineModule) return;
+  if (!GitEngineModule) {
+    throw new Error('GitEngine native module unavailable: cannot discard changes');
+  }
   return run(() => GitEngineModule!.discardFiles(repoPath, paths), undefined);
 }
 

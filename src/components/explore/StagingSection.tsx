@@ -220,7 +220,7 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0 }: 
         data={data?.staged ?? []}
         keyExtractor={(item) => item.path}
         renderItem={renderItem}
-        contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 16, flexGrow: 1 }}
+        contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 16 }}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.accent} />
         }
@@ -246,7 +246,7 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0 }: 
         }
         ListEmptyComponent={
           !loading ? (
-            <View className="flex-1 items-center justify-center" style={{ minHeight: 240 }} testID="explore.staging.empty">
+            <View className="items-center justify-center py-16" testID="explore.staging.empty">
               <Ionicons name="layers-outline" size={40} color={colors.textSecondary} />
               <Text className="mt-2 text-center text-sm" style={{ color: colors.textSecondary }}>
                 Nothing staged. Stage changes from the Changes tab.
