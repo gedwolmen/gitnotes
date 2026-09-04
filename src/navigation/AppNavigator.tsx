@@ -28,6 +28,7 @@ import ThoughtDumpScreen from '../screens/ThoughtDumpScreen';
 import PaywallScreen from '../screens/PaywallScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import ExploreCommitScreen from '../screens/ExploreCommitScreen';
+import ExploreDiffScreen from '../screens/ExploreDiffScreen';
 import { RootStackParamList } from './types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAIStore } from '../stores/aiStore';
@@ -280,6 +281,11 @@ export default function AppNavigator({ showOnboarding, onOnboardingComplete, onO
             <Stack.Screen
               name="ExploreCommit"
               component={ExploreCommitScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="ExploreDiff"
+              component={ExploreDiffScreen}
               options={{ headerShown: false }}
             />
             {__DEV__ && (
