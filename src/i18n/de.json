@@ -372,7 +372,12 @@
     "dailyQuotePersonalization": {
       "label": "KI-Personalisierung",
       "description": "Zitate basierend auf deinen Notizen personalisieren"
-    }
+    },
+    "sshKeyTitle": "SSH-Schlüssel hinzufügen",
+    "sshKeyDescription": "Kopiere diesen Schlüssel und füge ihn zu deinem GitHub-Konto hinzu. Gehe zu Einstellungen → SSH-Schlüssel → Neuer Schlüssel.",
+    "openSshSettings": "Zu GitHub hinzufügen",
+    "sshGenerating": "SSH-Schlüssel wird generiert…",
+    "sshKeyError": "SSH-Schlüssel konnte nicht generiert werden."
   },
   "ai": {
     "availability": {

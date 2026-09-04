@@ -92,7 +92,7 @@ export const SSHKeyModal = memo(function SSHKeyModal({
               </TouchableOpacity>
             </View>
             <Button
-              label={t('settings.sshKeySaved')}
+              label={t('common.done')}
               onPress={onSave}
               variant="primary"
               fullWidth

@@ -372,7 +372,12 @@
     "dailyQuotePersonalization": {
       "label": "AIパーソナライズ",
       "description": "ノートに基づいて名言をパーソナライズ"
-    }
+    },
+    "sshKeyTitle": "SSH鍵を追加",
+    "sshKeyDescription": "この鍵をコピーしてGitHubアカウントに追加してください。設定 → SSH鍵 → 新しい鍵に移動します。",
+    "openSshSettings": "GitHubに追加",
+    "sshGenerating": "SSH鍵を生成中…",
+    "sshKeyError": "SSH鍵の生成に失敗しました。"
   },
   "ai": {
     "availability": {
