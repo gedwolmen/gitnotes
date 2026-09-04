@@ -51,6 +51,8 @@ interface CloneOpts extends RepoLocator {
   onProgress?: (phase: string, loaded: number, total: number | null) => void;
   /** Passed to native engine for credential lookup. Omit to skip credential auth (public repos). */
   repoId?: string;
+  /** Override the remote URL (e.g., SSH URL when SSH is enabled). Defaults to HTTPS. */
+  remoteUrlOverride?: string;
 }
 
 interface FetchOpts extends RepoLocator {
@@ -279,6 +281,38 @@ async function repairHeadRefInner(
   }
 }
 
+export interface RemoteUrlOptions {
+  useSsh: boolean;
+  provider: string;
+  instanceBaseUrl: string | null;
+}
+
+/**
+ * Constructs the git remote URL for a repository.
+ * SCP-style SSH URLs: git@github.com:owner/repo.git
+ * HTTPS URLs: https://github.com/owner/repo.git
+ */
+export function remoteUrlForHost(
+  owner: string,
+  repo: string,
+  opts: RemoteUrlOptions,
+): string {
+  const { useSsh, provider, instanceBaseUrl } = opts;
+  if (useSsh) {
+    if (provider === 'github') return `git@github.com:${owner}/${repo}.git`;
+    if (provider === 'gitlab') return `git@gitlab.com:${owner}/${repo}.git`;
+    if (instanceBaseUrl) {
+      const host = instanceBaseUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+      return `git@${host}:${owner}/${repo}.git`;
+    }
+    return `git@github.com:${owner}/${repo}.git`;
+  }
+  if (provider === 'github') return `https://github.com/${owner}/${repo}.git`;
+  if (provider === 'gitlab') return `https://gitlab.com/${owner}/${repo}.git`;
+  if (instanceBaseUrl) return `${instanceBaseUrl.replace(/\/$/, '')}/${owner}/${repo}.git`;
+  return `https://github.com/${owner}/${repo}.git`;
+}
+
 function authedRemote(owner: string, repo: string): string {
   return `https://github.com/${owner}/${repo}.git`;
 }
@@ -386,7 +420,7 @@ export class GitFsService {
     for (let attempt = 0; attempt <= MAX_CLONE_RETRIES; attempt++) {
       try {
         await nativeClone(
-          authedRemote(info.owner, info.repo),
+          opts.remoteUrlOverride ?? authedRemote(info.owner, info.repo),
           `${fsRoot}${info.owner}/${info.repo}`,
           opts.repoId ?? null,
         );

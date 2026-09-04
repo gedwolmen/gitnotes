@@ -1,8 +1,11 @@
 import { AuthService } from './AuthService';
+import { AccountStorage } from './AccountStorage';
+import { setCredential } from './git/engine/GitEngine';
 import { pullFromSingleRepo, type PullResult } from './RepoPullService';
 import { StorageService } from './StorageService';
 import { resolveBranch } from './git/branchResolver';
-import { GitFsService } from './git/GitFsService';
+import { parseRepoPath } from '../utils/gitPathParser';
+import { GitFsService, remoteUrlForHost } from './git/GitFsService';
 
 export type CloneProgressCallback = (phase: string, loaded: number, total: number | null) => void;
 
@@ -91,7 +94,34 @@ async function runImport(
     const token = (await AuthService.getToken()) ?? undefined;
 
     if (!(await GitFsService.isCloned({ repoPath }))) {
-      await GitFsService.cloneExclusive({ repoPath, branch, token, onProgress, repoId: repo?.id });
+      let remoteUrlOverride: string | undefined;
+      const hostConnection = await AccountStorage.getActiveHostConnection();
+      if (hostConnection) {
+        const useSsh = await AccountStorage.getHostUseSsh(hostConnection.id);
+        if (useSsh && repo?.id) {
+          const sshKeys = await AccountStorage.getSshKey(hostConnection.id);
+          if (sshKeys) {
+            await setCredential(repo.id, {
+              kind: 'SSH',
+              username: 'git',
+              privateKey: sshKeys.privateKey,
+              publicKey: sshKeys.publicKey,
+              passphrase: null,
+            });
+            const info = parseRepoPath(repoPath);
+            if (info) {
+              remoteUrlOverride = remoteUrlForHost(info.owner, info.repo, {
+                useSsh: true,
+                provider: hostConnection.provider,
+                instanceBaseUrl: hostConnection.instanceBaseUrl,
+              });
+            }
+          }
+        }
+      }
+      await GitFsService.cloneExclusive({
+        repoPath, branch, token, onProgress, repoId: repo?.id, remoteUrlOverride,
+      });
     }
 
     const headOid = await GitFsService.getCommitOid({ repoPath, ref: `refs/heads/${branch}` });

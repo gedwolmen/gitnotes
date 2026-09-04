@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, View } from 'react-native';
+import { Alert, Linking, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -40,6 +40,7 @@ import { ConnectHostModal } from '../components/ConnectHostModal';
 import { ScreenHeader, useScreenHeaderHeight, useTabBarHeight } from '../components/ui';
 import { SettingsContent } from '../components/settings/SettingsContent';
 import { SettingsModals } from '../components/settings/SettingsModals';
+import { SSHKeyModal } from '../components/settings/SettingsModals';
 import { CloneProgressModal, type CloneProgress } from '../components/settings/CloneProgressModal';
 import type { GitRepository } from '../services/GitService';
 import { reposAffectedByRemovedHosts, buildProviderAccountCount, type RemovedHostRef } from '../services/git/repoRemovalCascade';
@@ -47,6 +48,8 @@ import { useRepoStore } from '../stores/repoStore';
 import { importRepoAtAdd } from '../services/RepoImportService';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
+import { AccountStorage } from '../services/AccountStorage';
+import { generateSshKey, setCredential, clearCredential } from '../services/git/engine/GitEngine';
 import { RepoAccessPreflightError } from '../services/git/repoAccessPreflight';
 import { useProStatus } from '../hooks/useProGate';
 import { useFloatingGitButtonStore } from '../stores/floatingGitButtonStore';
@@ -169,6 +172,23 @@ export default function SettingsScreen() {
   const [isSyncingExistingTemplates, setIsSyncingExistingTemplates] = useState(false);
   const [lfsPending, setLfsPending] = useState<Record<string, { count: number; bytes: number }>>({});
   const [lfsDownloadingRepo, setLfsDownloadingRepo] = useState<string | null>(null);
+  const [showSSHModal, setShowSSHModal] = useState(false);
+  const [sshModalHostId, setSshModalHostId] = useState<string | null>(null);
+  const [sshKeyData, setSshKeyData] = useState<{ publicKey: string; privateKey: string } | null>(null);
+  const [sshGenerating, setSshGenerating] = useState(false);
+  const [hostUseSsh, setHostUseSsh] = useState<Record<string, boolean>>({});
+
+  const loadHostUseSsh = useCallback(async (hosts: Array<{ id: string }>) => {
+    const results: Record<string, boolean> = {};
+    await Promise.all(hosts.map(async (h) => { results[h.id] = await AccountStorage.getHostUseSsh(h.id); }));
+    setHostUseSsh(results);
+  }, []);
+
+  useEffect(() => {
+    if (accountSummaries.length === 0) return;
+    const allHosts = accountSummaries.flatMap((s) => s.hosts);
+    void loadHostUseSsh(allHosts);
+  }, [accountSummaries, loadHostUseSsh]);
 
   useEffect(() => {
     TemplateRepoPreferenceService.get().then(setTemplatesRepoPref);
@@ -853,6 +873,52 @@ export default function SettingsScreen() {
     );
   }, [accountSummaries, repositories, disconnectHost, t]);
 
+  const handleToggleSSH = useCallback(async (hostId: string) => {
+    const useSsh = await AccountStorage.getHostUseSsh(hostId);
+    if (!useSsh) {
+      setSshModalHostId(hostId);
+      setSshGenerating(true);
+      setShowSSHModal(true);
+      try {
+        const keys = await generateSshKey(null);
+        setSshKeyData(keys);
+      } catch (err) {
+        setSshKeyData(null);
+      } finally {
+        setSshGenerating(false);
+      }
+    } else {
+      await AccountStorage.setHostUseSsh(hostId, false);
+      await clearCredential(`ssh:${hostId}`);
+      await AccountStorage.deleteSshKey(hostId);
+      HapticService.success();
+    }
+  }, []);
+
+  const handleSaveSSHKey = useCallback(async () => {
+    if (!sshModalHostId || !sshKeyData) return;
+    await AccountStorage.setSshKey(sshModalHostId, sshKeyData);
+    await AccountStorage.setHostUseSsh(sshModalHostId, true);
+    setShowSSHModal(false);
+    setSshKeyData(null);
+    setSshModalHostId(null);
+    HapticService.success();
+  }, [sshModalHostId, sshKeyData]);
+
+  const handleCopySSHPublicKey = useCallback(async (publicKey: string) => {
+    try {
+      const { setStringAsync } = await import('expo-clipboard');
+      await setStringAsync(publicKey);
+      HapticService.success();
+    } catch (error) {
+      HapticService.error();
+    }
+  }, []);
+
+  const handleOpenSSHSettings = useCallback(() => {
+    Linking.openURL('https://github.com/settings/keys');
+  }, []);
+
   const handleResetOnboarding = useCallback(() => {
     HapticService.warning();
     Alert.alert(t('settings.resetOnboardingTitle'), t('settings.resetOnboardingBody'), [
@@ -1002,6 +1068,8 @@ export default function SettingsScreen() {
         syncPaused={syncPaused}
         onToggleSyncPaused={(value) => void setSyncPaused(value)}
         syncHealth={syncHealth}
+        onToggleSSH={handleToggleSSH}
+        hostUseSsh={hostUseSsh}
       />
       <SettingsModals
         colors={colors}
@@ -1056,6 +1124,16 @@ export default function SettingsScreen() {
       {!showRepoPickerModal ? (
         <CloneProgressModal progress={cloneProgress} onCancel={handleCancelClone} onRetry={handleRetryClone} />
       ) : null}
+      <SSHKeyModal
+        visible={showSSHModal}
+        generating={sshGenerating}
+        publicKey={sshKeyData?.publicKey ?? null}
+        onCopy={handleCopySSHPublicKey}
+        onOpenSettings={handleOpenSSHSettings}
+        onSave={handleSaveSSHKey}
+        onClose={() => { setShowSSHModal(false); setSshKeyData(null); setSshModalHostId(null); }}
+        colors={colors}
+      />
       <ConnectHostModal
         visible={showConnectHostModal}
         onClose={() => { setShowConnectHostModal(false); setConnectHostPreset(undefined); }}

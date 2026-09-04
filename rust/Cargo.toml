@@ -24,7 +24,7 @@ path = "uniffi-bindgen.rs"
 required-features = ["uniffi-cli"]
 
 [dependencies]
-git2 = { version = "0.21", features = ["vendored-libgit2", "vendored-openssl", "https"] }
+git2 = { version = "0.21", features = ["vendored-libgit2", "vendored-openssl", "https", "ssh"] }
 ssh-key = { version = "0.6.7", features = ["crypto", "encryption"] }
 osshkeys = "0.7.0"
 serde = { version = "1", features = ["derive"] }

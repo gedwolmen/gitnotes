@@ -32,7 +32,7 @@ const MATCHERS: Matcher[] = [
     message: 'Branch is locked on GitHub. Check branch protection rules.',
   },
   {
-    needles: ['Permission denied (publickey)', 'publickey', 'ssh auth', 'authentication failed', 'could not read from remote repository', 'SSH_AUTH'],
+    needles: ['Permission denied (publickey)', 'publickey', 'ssh auth', 'authentication failed', 'could not read from remote repository', 'SSH_AUTH', 'git@github.com: permission denied'],
     message: 'SSH key not recognized by GitHub. Please check that your SSH key is added to your account.',
   },
   {

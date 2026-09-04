@@ -256,6 +256,9 @@ export async function generateSshKey(passphrase?: string | null): Promise<Genera
 async function ensureCredentialForOp(repoId: string | null | undefined): Promise<void> {
   if (!repoId || !GitEngineModule) return;
 
+  const existing = await GitEngineModule!.getCredential(repoId);
+  if (existing) return;
+
   const stored = await CredentialStore.get(repoId);
   if (stored) {
     await GitEngineModule!.setCredential(repoId, toNativeCredential(stored)).catch(() => undefined);

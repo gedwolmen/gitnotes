@@ -19,7 +19,7 @@ export const RepoService = {
   listRepos: async (): Promise<ManagedRepo[]> => [],
   get: async (_id: string): Promise<ManagedRepo | null> => null,
   refreshLastSynced: async (_id: string): Promise<void> => {},
-  addRepo: async (path: string, name?: string, _provider?: string): Promise<ManagedRepo> => {
+  addRepo: async (path: string, name?: string, _provider?: string, remoteUrl?: string): Promise<ManagedRepo> => {
     const parts = path.split('/');
     const owner = parts[0] || '';
     const repoName = name || parts[1] || path;
@@ -29,7 +29,7 @@ export const RepoService = {
       owner,
       localPath: path,
       provider: _provider || 'github',
-      remoteUrl: `https://github.com/${path}.git`,
+      remoteUrl: remoteUrl ?? `https://github.com/${path}.git`,
       lastSyncedAt: null,
       accountId: '',
       path,
