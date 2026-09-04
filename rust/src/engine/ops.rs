@@ -182,16 +182,12 @@ pub fn discard_files(path: &Path, paths: &[String]) -> Result<()> {
         let repo = open_repo(path)?;
         let head = repo.head()?;
         let commit = head.peel_to_commit()?;
-        let tree = commit.tree()?;
         for p in paths {
-            let entry = tree.get_path(Path::new(p)).map_err(|e| EngineError::Git(e))?;
-            let blob = repo.find_blob(entry.id()).map_err(|e| EngineError::Git(e))?;
-            let worktree_path = path.join(p);
-            if let Some(parent) = worktree_path.parent() {
-                std::fs::create_dir_all(parent).map_err(|e| EngineError::Io(e))?;
-            }
-            std::fs::write(&worktree_path, blob.content())
-                .map_err(|e| EngineError::Io(e))?;
+            let mut checkout = git2::build::CheckoutBuilder::new();
+            checkout.force();
+            checkout.path(p);
+            repo.checkout_tree(commit.as_object(), Some(&mut checkout))
+                .map_err(EngineError::Git)?;
         }
         Ok(())
     })

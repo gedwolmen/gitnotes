@@ -239,6 +239,7 @@ export interface GitEngineModule {
   stagePaths(path: string, paths: string[]): Promise<void>;
   unstagePaths(path: string, paths: string[]): Promise<void>;
   removePaths(path: string, paths: string[], keepWorktree: boolean): Promise<void>;
+  discardFiles(path: string, paths: string[]): Promise<void>;
   stageFileLines(path: string, filePath: string, hunks: HunkSelection[]): Promise<void>;
   commit(path: string, message: string, authorName: string, authorEmail: string): Promise<CommitInfo>;
   recentCommits(path: string, limit: number): Promise<CommitInfo[]>;
