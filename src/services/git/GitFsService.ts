@@ -317,33 +317,6 @@ function authedRemote(owner: string, repo: string): string {
   return `https://github.com/${owner}/${repo}.git`;
 }
 
-export interface RemoteUrlOptions {
-  useSsh: boolean;
-  provider: string;
-  instanceBaseUrl: string | null;
-}
-
-export function remoteUrlForHost(
-  owner: string,
-  repo: string,
-  opts: RemoteUrlOptions,
-): string {
-  const { useSsh, provider, instanceBaseUrl } = opts;
-  if (useSsh) {
-    if (provider === 'github') return `git@github.com:${owner}/${repo}.git`;
-    if (provider === 'gitlab') return `git@gitlab.com:${owner}/${repo}.git`;
-    if (instanceBaseUrl) {
-      const host = instanceBaseUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
-      return `git@${host}:${owner}/${repo}.git`;
-    }
-    return `git@github.com:${owner}/${repo}.git`;
-  }
-  if (provider === 'github') return `https://github.com/${owner}/${repo}.git`;
-  if (provider === 'gitlab') return `https://gitlab.com/${owner}/${repo}.git`;
-  if (instanceBaseUrl) return `${instanceBaseUrl.replace(/\/$/, '')}/${owner}/${repo}.git`;
-  return `https://github.com/${owner}/${repo}.git`;
-}
-
 /**
  * Remove corrupted packfiles from a repo's .git/objects/pack directory.
  * When a fetch times out, partial packfile data may be left on disk, causing
