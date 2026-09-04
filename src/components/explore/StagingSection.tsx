@@ -118,7 +118,8 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0 }: 
     async (path: string) => {
       setBusyPath(path);
       try {
-        await GitEngine.remove(repo.localPath, [path], false);
+        await GitEngine.unstage(repo.localPath, [path]);
+        await GitEngine.discardFiles(repo.localPath, [path]);
         onChanged();
         setVersion((value) => value + 1);
       } catch (caught) {

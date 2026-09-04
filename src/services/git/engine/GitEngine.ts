@@ -33,6 +33,7 @@ let GitEngineModule: {
   stagePaths(path: string, paths: string[]): Promise<void>;
   unstagePaths(path: string, paths: string[]): Promise<void>;
   removePaths(path: string, paths: string[], keepWorktree: boolean): Promise<void>;
+  discardFiles(path: string, paths: string[]): Promise<void>;
   stageFileLines(path: string, filePath: string, hunks: HunkSelection[]): Promise<void>;
   commit(path: string, message: string, authorName: string, authorEmail: string): Promise<CommitInfo>;
   recentCommits(path: string, limit: number): Promise<CommitInfo[]>;
@@ -326,6 +327,11 @@ export async function unstage(repoPath: string, paths: string[]): Promise<void> 
 export async function remove(repoPath: string, paths: string[], keepWorktree = false): Promise<void> {
   if (!GitEngineModule) return;
   return run(() => GitEngineModule!.removePaths(repoPath, paths, keepWorktree), undefined);
+}
+
+export async function discardFiles(repoPath: string, paths: string[]): Promise<void> {
+  if (!GitEngineModule) return;
+  return run(() => GitEngineModule!.discardFiles(repoPath, paths), undefined);
 }
 
 /** LINE-LEVEL PARTIAL STAGING: stage only the selected diff lines. */

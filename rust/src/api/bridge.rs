@@ -207,7 +207,12 @@ pub fn unstage_paths(path: String, paths: Vec<String>) -> Result<(), BridgeError
     Ok(())
 }
 
-/// Remove the given paths from the index (+ worktree unless `keep_worktree`).
+#[uniffi::export]
+pub fn discard_files(path: String, paths: Vec<String>) -> Result<(), BridgeError> {
+    engine::ops::discard_files(std::path::Path::new(&path), &paths)?;
+    Ok(())
+}
+
 #[uniffi::export]
 pub fn remove_paths(
     path: String,
