@@ -1,4 +1,4 @@
-import { InteractionManager } from 'react-native';
+
 import * as FileSystem from 'expo-file-system/legacy';
 import { aiMemoryIndex } from './AIMemoryIndexService';
 import { ThoughtDumpService } from '../ThoughtDumpService';
@@ -57,11 +57,11 @@ async function ensureEmbedderResolved(): Promise<void> {
 }
 
 function runIdle(fn: () => Promise<void>): void {
-  InteractionManager.runAfterInteractions(() => {
+  setTimeout(() => {
     fn().catch((err) => {
       if (__DEV__) console.warn('[ThoughtDumpIndexing] idle task failed:', err);
     });
-  });
+  }, 0);
 }
 
 export function indexDump(dump: ThoughtDump): void {

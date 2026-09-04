@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Alert, View, Text, ActivityIndicator, RefreshControl, FlatList, TouchableOpacity, InteractionManager, LayoutChangeEvent } from 'react-native';
+import { Alert, View, Text, ActivityIndicator, RefreshControl, FlatList, TouchableOpacity, LayoutChangeEvent } from 'react-native';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -165,23 +165,21 @@ export default function NotesListScreen() {
   const consumePendingFilter = useReminderStore((s) => s.consumePendingFilter);
   useEffect(() => {
     if (!isFocused) return;
-    InteractionManager.runAfterInteractions(() => {
-      const pending = consumePendingFilter();
-      if (!pending) return;
-      handleClearFilters();
-      if (pending.kind === 'repo' && pending.repoPath) {
+    const pending = consumePendingFilter();
+    if (!pending) return;
+    handleClearFilters();
+    if (pending.kind === 'repo' && pending.repoPath) {
+      const repo = repositories.find((r) => r.path === pending.repoPath) ?? null;
+      if (repo) handleSelectRepo(repo);
+    } else if (pending.kind === 'folder') {
+      if (pending.repoPath) {
         const repo = repositories.find((r) => r.path === pending.repoPath) ?? null;
         if (repo) handleSelectRepo(repo);
-      } else if (pending.kind === 'folder') {
-        if (pending.repoPath) {
-          const repo = repositories.find((r) => r.path === pending.repoPath) ?? null;
-          if (repo) handleSelectRepo(repo);
-        }
-        if (pending.folderPath) handleSelectFolder(pending.folderPath);
-      } else if (pending.kind === 'tag' && pending.tag) {
-        handleToggleTag(pending.tag);
       }
-    });
+      if (pending.folderPath) handleSelectFolder(pending.folderPath);
+    } else if (pending.kind === 'tag' && pending.tag) {
+      handleToggleTag(pending.tag);
+    }
   }, [isFocused, consumePendingFilter, handleClearFilters, handleSelectRepo, handleSelectFolder, handleToggleTag, repositories]);
 
   const activeFilterChips: FilterChip[] = useMemo(() => {
