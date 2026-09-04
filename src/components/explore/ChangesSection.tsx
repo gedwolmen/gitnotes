@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -61,6 +61,12 @@ export function ChangesSection({ repo, active, onChanged, chromeTopInset = 0 }: 
     if (active) void load();
   }, [active, load, version]);
 
+  useFocusEffect(
+    useCallback(() => {
+      if (active) void load();
+    }, [active, load]),
+  );
+
   const stageFile = useCallback(
     async (path: string) => {
       try {
@@ -86,6 +92,19 @@ export function ChangesSection({ repo, active, onChanged, chromeTopInset = 0 }: 
       setError(caught instanceof Error ? caught.message : String(caught));
     }
   }, [data, repo.localPath, onChanged]);
+
+  const discardFile = useCallback(
+    async (path: string) => {
+      try {
+        await GitEngine.remove(repo.localPath, [path], true);
+        onChanged();
+        setVersion((value) => value + 1);
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : String(caught));
+      }
+    },
+    [repo.localPath, onChanged],
+  );
 
   const renderItem = useCallback(
     ({ item }: { item: FileStatus }) => {
@@ -123,7 +142,10 @@ export function ChangesSection({ repo, active, onChanged, chromeTopInset = 0 }: 
             )}
           </Pressable>
           {!item.staged && (
-            <View className="mt-2 flex-row justify-end">
+            <View className="mt-2 flex-row justify-end gap-2">
+              <Button size="sm" variant="ghost" onPress={() => void discardFile(item.path)}>
+                <ButtonText>Discard</ButtonText>
+              </Button>
               <Button size="sm" variant="outline" onPress={() => void stageFile(item.path)}>
                 <ButtonText>Stage</ButtonText>
               </Button>
@@ -132,7 +154,7 @@ export function ChangesSection({ repo, active, onChanged, chromeTopInset = 0 }: 
         </View>
       );
     },
-    [data, navigation, repo.id, stageFile],
+    [data, navigation, repo.id, stageFile, discardFile],
   );
 
   if (error) {

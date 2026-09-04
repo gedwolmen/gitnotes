@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -77,6 +77,12 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0 }: 
     if (active) void load();
   }, [active, load, version]);
 
+  useFocusEffect(
+    useCallback(() => {
+      if (active) void load();
+    }, [active, load]),
+  );
+
   const unstage = useCallback(
     async (path: string) => {
       setBusyPath(path);
@@ -108,6 +114,22 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0 }: 
     }
   }, [data, repo.localPath, onChanged]);
 
+  const discardFile = useCallback(
+    async (path: string) => {
+      setBusyPath(path);
+      try {
+        await GitEngine.remove(repo.localPath, [path], false);
+        onChanged();
+        setVersion((value) => value + 1);
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : String(caught));
+      } finally {
+        setBusyPath(null);
+      }
+    },
+    [repo.localPath, onChanged],
+  );
+
   const renderItem = useCallback(
     ({ item }: { item: FileStatus }) => {
       const diff = data?.diffs[item.path];
@@ -138,7 +160,17 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0 }: 
               </View>
             )}
           </Pressable>
-          <View className="mt-2 flex-row justify-end">
+          <View className="mt-2 flex-row justify-end gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={busyPath !== null}
+              onPress={() => void discardFile(item.path)}
+              testID={`explore.discard.${item.path}`}
+            >
+              {busyPath === item.path ? <Text className="text-xs" style={{ color: colors.textSecondary }}>…</Text> : null}
+              <ButtonText>Discard</ButtonText>
+            </Button>
             <Button
               size="sm"
               variant="outline"
@@ -153,7 +185,7 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0 }: 
         </View>
       );
     },
-    [colors, data, navigation, repo.id, unstage, busyPath],
+    [colors, data, navigation, repo.id, unstage, discardFile, busyPath],
   );
 
   if (error) {
