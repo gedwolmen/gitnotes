@@ -233,7 +233,7 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0 }: 
               {loading && <ActivityIndicator size="small" color={colors.accent} />}
               {(data?.changedPaths.length ?? 0) > 0 && (
                 <Button size="sm" variant="primary" onPress={() => setCommitOpen(true)} testID="explore.staging.commit-open">
-                  <ButtonText>Commit pending</ButtonText>
+                  Commit pending
                 </Button>
               )}
               {(data?.staged.length ?? 0) > 0 && (
