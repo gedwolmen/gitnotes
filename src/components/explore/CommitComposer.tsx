@@ -169,7 +169,7 @@ export function CommitComposer({ repo, changedPaths, stagedCount, onCommitted, e
           testID="explore.commit-composer.stage-all-commit"
         >
           {busy === 'stageAll' ? <ActivityIndicator size="small" color="#fff" /> : null}
-          <ButtonText>Stage all + Commit</ButtonText>
+          Stage all + Commit
         </Button>
         <Button
           fullWidth
