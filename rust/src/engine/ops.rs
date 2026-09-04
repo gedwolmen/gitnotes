@@ -175,6 +175,28 @@ pub fn remove_paths(path: &Path, paths: &[String], keep_worktree: bool) -> Resul
     })
 }
 
+/// Discard working tree changes for the given paths: restore them to HEAD state.
+/// This is `git checkout HEAD -- <paths>`.
+pub fn discard_files(path: &Path, paths: &[String]) -> Result<()> {
+    run_with_lock(path, || {
+        let repo = open_repo(path)?;
+        let head = repo.head()?;
+        let commit = head.peel_to_commit()?;
+        let tree = commit.tree()?;
+        for p in paths {
+            let entry = tree.get_path(Path::new(p)).map_err(|e| EngineError::Git(e))?;
+            let blob = repo.find_blob(entry.id()).map_err(|e| EngineError::Git(e))?;
+            let worktree_path = path.join(p);
+            if let Some(parent) = worktree_path.parent() {
+                std::fs::create_dir_all(parent).map_err(|e| EngineError::Io(e))?;
+            }
+            std::fs::write(&worktree_path, blob.content())
+                .map_err(|e| EngineError::Io(e))?;
+        }
+        Ok(())
+    })
+}
+
 /// LINE-LEVEL PARTIAL STAGING. Stages only the selected diff lines of
 /// `file_path`, leaving the rest unstaged. Ported from GitSync
 /// `stage_file_lines` (git_manager.rs:1718).

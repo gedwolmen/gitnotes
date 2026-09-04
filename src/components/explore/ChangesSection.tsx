@@ -96,7 +96,7 @@ export function ChangesSection({ repo, active, onChanged, chromeTopInset = 0 }: 
   const discardFile = useCallback(
     async (path: string) => {
       try {
-        await GitEngine.remove(repo.localPath, [path], true);
+        await GitEngine.discardFiles(repo.localPath, [path]);
         onChanged();
         setVersion((value) => value + 1);
       } catch (caught) {
