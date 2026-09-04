@@ -74,7 +74,7 @@ export default function ExploreScreen() {
   const [selectedRepoId, setSelectedRepoId] = useState<string | null>(null);
   const [showRepoPicker, setShowRepoPicker] = useState(false);
 
-  const [chromeTotalHeight, setChromeTotalHeight] = useState(insets.top + 100);
+  const [chromeTotalHeight, setChromeTotalHeight] = useState(insets.top + 60);
 
   const repo = useMemo(() => {
     const lookupId = selectedRepoId ?? repos[0]?.id ?? null;
