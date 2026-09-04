@@ -371,8 +371,13 @@
     },
     "dailyQuotePersonalization": {
       "label": "AI 개인화",
-      "description": "노트를 기반으로 명언 개인화"
-    }
+      "description": "노트에 따라 명언 개인화"
+    },
+    "sshKeyTitle": "SSH 키 추가",
+    "sshKeyDescription": "이 키를 복사하여 GitHub 계정에 추가하세요. 설정 → SSH 키 → 새 키로 이동합니다.",
+    "openSshSettings": "GitHub에 추가",
+    "sshGenerating": "SSH 키 생성 중…",
+    "sshKeyError": "SSH 키 생성에 실패했습니다."
   },
   "ai": {
     "availability": {

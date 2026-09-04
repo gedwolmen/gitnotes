@@ -370,9 +370,14 @@
       "description": "Mostrar el libro/obra de donde proviene la cita"
     },
     "dailyQuotePersonalization": {
-      "label": "Personalización IA",
+      "label": "Personalización con IA",
       "description": "Personalizar citas según tus notas"
-    }
+    },
+    "sshKeyTitle": "Añadir clave SSH",
+    "sshKeyDescription": "Copia esta clave y añádela a tu cuenta de GitHub. Ve a Ajustes → Claves SSH → Nueva clave.",
+    "openSshSettings": "Añadir a GitHub",
+    "sshGenerating": "Generando clave SSH…",
+    "sshKeyError": "Error al generar la clave SSH."
   },
   "ai": {
     "availability": {
