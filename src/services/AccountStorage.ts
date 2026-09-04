@@ -11,6 +11,12 @@ const PER_ID_TOKEN_PREFIX_WEB = '@gitnotes:account_token:';
 const PER_HOST_TOKEN_PREFIX_WEB = '@gitnotes:host_token:';
 const PER_ID_TOKEN_PREFIX_NATIVE = 'gitnotes_account_token_';
 const PER_HOST_TOKEN_PREFIX_NATIVE = 'gitnotes_host_token_';
+const PER_HOST_SSH_PRIVATE_PREFIX_NATIVE = 'gitnotes_ssh_private_';
+const PER_HOST_SSH_PUBLIC_PREFIX_NATIVE = 'gitnotes_ssh_public_';
+const PER_HOST_SSH_PRIVATE_PREFIX_WEB = '@gitnotes:ssh_private:';
+const PER_HOST_SSH_PUBLIC_PREFIX_WEB = '@gitnotes:ssh_public:';
+const USE_SSH_KEY_PREFIX_WEB = '@gitnotes:host_use_ssh:';
+const USE_SSH_KEY_PREFIX_NATIVE = 'gitnotes_host_use_ssh_';
 
 const LEGACY_TOKEN_KEY_WEB = '@gitnotes:github_token';
 const LEGACY_TOKEN_KEY_NATIVE = 'gitnotes_github_token';
@@ -115,6 +121,61 @@ async function writeHostToken(hostId: string, token: string): Promise<void> {
 
 async function deleteHostToken(hostId: string): Promise<void> {
   return deleteTokenById(hostTokenKeyFor(hostId));
+}
+
+async function readSshPrivateKey(hostId: string): Promise<string | null> {
+  if (Platform.OS === 'web') return AsyncStorage.getItem(PER_HOST_SSH_PRIVATE_PREFIX_WEB + hostId);
+  const key = PER_HOST_SSH_PRIVATE_PREFIX_NATIVE + hostId.replace(/[^A-Za-z0-9_]/g, '_');
+  try { return await SecureStore.getItemAsync(key); } catch { return null; }
+}
+
+async function readSshPublicKey(hostId: string): Promise<string | null> {
+  if (Platform.OS === 'web') return AsyncStorage.getItem(PER_HOST_SSH_PUBLIC_PREFIX_WEB + hostId);
+  const key = PER_HOST_SSH_PUBLIC_PREFIX_NATIVE + hostId.replace(/[^A-Za-z0-9_]/g, '_');
+  try { return await SecureStore.getItemAsync(key); } catch { return null; }
+}
+
+async function writeSshKey(hostId: string, keys: { privateKey: string; publicKey: string }): Promise<void> {
+  if (Platform.OS === 'web') {
+    await AsyncStorage.setItem(PER_HOST_SSH_PRIVATE_PREFIX_WEB + hostId, keys.privateKey);
+    await AsyncStorage.setItem(PER_HOST_SSH_PUBLIC_PREFIX_WEB + hostId, keys.publicKey);
+    return;
+  }
+  const privateKey = PER_HOST_SSH_PRIVATE_PREFIX_NATIVE + hostId.replace(/[^A-Za-z0-9_]/g, '_');
+  const publicKey = PER_HOST_SSH_PUBLIC_PREFIX_NATIVE + hostId.replace(/[^A-Za-z0-9_]/g, '_');
+  await SecureStore.setItemAsync(privateKey, keys.privateKey);
+  await SecureStore.setItemAsync(publicKey, keys.publicKey);
+}
+
+async function deleteSshKey(hostId: string): Promise<void> {
+  if (Platform.OS === 'web') {
+    await AsyncStorage.removeItem(PER_HOST_SSH_PRIVATE_PREFIX_WEB + hostId);
+    await AsyncStorage.removeItem(PER_HOST_SSH_PUBLIC_PREFIX_WEB + hostId);
+    return;
+  }
+  const privateKey = PER_HOST_SSH_PRIVATE_PREFIX_NATIVE + hostId.replace(/[^A-Za-z0-9_]/g, '_');
+  const publicKey = PER_HOST_SSH_PUBLIC_PREFIX_NATIVE + hostId.replace(/[^A-Za-z0-9_]/g, '_');
+  await SecureStore.deleteItemAsync(privateKey).catch(() => undefined);
+  await SecureStore.deleteItemAsync(publicKey).catch(() => undefined);
+}
+
+async function readHostUseSsh(hostId: string): Promise<boolean> {
+  if (Platform.OS === 'web') {
+    const val = await AsyncStorage.getItem(USE_SSH_KEY_PREFIX_WEB + hostId);
+    return val === 'true';
+  }
+  const key = USE_SSH_KEY_PREFIX_NATIVE + hostId.replace(/[^A-Za-z0-9_]/g, '_');
+  const val = await SecureStore.getItemAsync(key);
+  return val === 'true';
+}
+
+async function writeHostUseSsh(hostId: string, useSsh: boolean): Promise<void> {
+  if (Platform.OS === 'web') {
+    await AsyncStorage.setItem(USE_SSH_KEY_PREFIX_WEB + hostId, String(useSsh));
+    return;
+  }
+  const key = USE_SSH_KEY_PREFIX_NATIVE + hostId.replace(/[^A-Za-z0-9_]/g, '_');
+  await SecureStore.setItemAsync(key, String(useSsh));
 }
 
 async function readLegacyToken(): Promise<string | null> {
@@ -435,11 +496,36 @@ export class AccountStorage {
     return readHostToken(hostId);
   }
 
+  static async getSshKey(hostId: string): Promise<{ privateKey: string; publicKey: string } | null> {
+    const [privateKey, publicKey] = await Promise.all([readSshPrivateKey(hostId), readSshPublicKey(hostId)]);
+    if (privateKey && publicKey) return { privateKey, publicKey };
+    return null;
+  }
+
+  static async setSshKey(hostId: string, keys: { privateKey: string; publicKey: string }): Promise<void> {
+    await writeSshKey(hostId, keys);
+  }
+
+  static async deleteSshKey(hostId: string): Promise<void> {
+    await deleteSshKey(hostId);
+  }
+
+  static async getHostUseSsh(hostId: string): Promise<boolean> {
+    return readHostUseSsh(hostId);
+  }
+
+  static async setHostUseSsh(hostId: string, useSsh: boolean): Promise<void> {
+    await writeHostUseSsh(hostId, useSsh);
+  }
+
   static async removeHostConnection(hostId: string): Promise<void> {
     const hosts = await listHostConnections();
     const remaining = hosts.filter((h) => h.id !== hostId);
     await writeHostConnections(remaining);
     await deleteHostToken(hostId);
+    await deleteSshKey(hostId);
+    const useSshKey = USE_SSH_KEY_PREFIX_NATIVE + hostId.replace(/[^A-Za-z0-9_]/g, '_');
+    await SecureStore.deleteItemAsync(useSshKey).catch(() => undefined);
 
     const accounts = await this.listAccounts();
     let mutated = false;
