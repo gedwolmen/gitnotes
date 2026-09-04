@@ -12,3 +12,6 @@ generate_immutable_records = true
 package_name = "uniffi.gitnotes_git2"
 # Name of the shared library loaded on Android (libgitnotes_git2.so).
 cdylib_name = "gitnotes_git2"
+# Omit checksum validation — UniFFI 0.32.x has a known bug where u16 returns
+# are sign-extended on Android ART, causing checksum mismatches (mozilla/uniffi-rs#2939).
+omit_checksums = true
