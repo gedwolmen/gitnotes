@@ -51,6 +51,8 @@ interface CloneOpts extends RepoLocator {
   onProgress?: (phase: string, loaded: number, total: number | null) => void;
   /** Passed to native engine for credential lookup. Omit to skip credential auth (public repos). */
   repoId?: string;
+  /** Override the remote URL (e.g., SSH URL when SSH is enabled). Defaults to HTTPS. */
+  remoteUrlOverride?: string;
 }
 
 interface FetchOpts extends RepoLocator {
@@ -391,7 +393,7 @@ export class GitFsService {
     for (let attempt = 0; attempt <= MAX_CLONE_RETRIES; attempt++) {
       try {
         await nativeClone(
-          authedRemote(info.owner, info.repo),
+          opts.remoteUrlOverride ?? authedRemote(info.owner, info.repo),
           `${fsRoot}${info.owner}/${info.repo}`,
           opts.repoId ?? null,
         );
