@@ -29,12 +29,16 @@ yarn web          # Web
 
 ## Environment Variables
 
-Create `.env` (see `.env.example`):
+Copy `.env.example` to `.env` and fill in values as needed:
 
 ```bash
-OPENROUTER_API_KEY=sk-or-...
-ANTHROPIC_API_KEY=sk-ant-...
+cp .env.example .env
 ```
+
+Key variables:
+- `EXPO_PUBLIC_REVENUECAT_API_KEY_IOS` / `EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID` — RevenueCat SDK keys (required for Pro paywall)
+- `GITHUB_TEST_TOKEN` — PAT for E2E test suite (optional)
+- `FORCE_ENABLE_PRO_ON_SIMULATOR=false` — show paywalls even on iOS simulator in dev
 
 ## Troubleshooting
 
