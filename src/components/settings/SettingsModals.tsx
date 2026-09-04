@@ -61,9 +61,9 @@ export const SSHKeyModal = memo(function SSHKeyModal({
           </View>
         ) : publicKey ? (
           <>
-            <Text className="text-sm mb-3 mx-1" style={{ color: colors.textSecondary }}>{t('settings.sshKeyDescription')}</Text>
+            <Text className="text-sm mb-3 mx-2" style={{ color: colors.textSecondary }}>{t('settings.sshKeyDescription')}</Text>
             <View
-              className="rounded-lg p-4 mb-4"
+              className="rounded-lg p-4 mb-4 mx-2"
               style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}
             >
               <Text
@@ -73,7 +73,7 @@ export const SSHKeyModal = memo(function SSHKeyModal({
                 {publicKey}
               </Text>
             </View>
-            <View className="flex-row gap-2 mb-4 mx-1">
+            <View className="flex-row gap-2 mb-4 mx-2">
               <TouchableOpacity
                 className="flex-row items-center justify-center py-2.5 px-3 rounded-lg border flex-1 gap-1.5"
                 style={{ borderColor: colors.border }}
@@ -96,12 +96,12 @@ export const SSHKeyModal = memo(function SSHKeyModal({
               onPress={onSave}
               variant="primary"
               fullWidth
-              style={{ minHeight: 48 }}
+              style={{ minHeight: 48, marginHorizontal: 8 }}
               textStyle={{ color: '#fff', fontWeight: '600' }}
             />
           </>
         ) : (
-          <Text className="mx-1" style={{ color: colors.error, fontSize: 14 }}>{t('settings.sshKeyError')}</Text>
+          <Text className="mx-2" style={{ color: colors.error, fontSize: 14 }}>{t('settings.sshKeyError')}</Text>
         )}
       </ScrollView>
     </Modal>
