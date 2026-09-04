@@ -139,21 +139,23 @@ export default function ExploreDiffScreen() {
 
   if (!repo) {
     return (
-      <SafeAreaView className="flex-1 bg-white" style={{ flex: 1, backgroundColor: '#ffffff' }}>
+      <SafeAreaView className="flex-1" style={{ flex: 1, backgroundColor: colors.background }}>
         <View className="flex-1 items-center justify-center px-8" style={{ flex: 1 }}>
-          <Text className="text-muted-foreground">Repository not found.</Text>
+          <Text style={{ color: colors.textSecondary }}>Repository not found.</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  // Get status from FileStatus lookup if available
   const statusKey = diff?.staged ? 'staged' : 'modified';
   const meta = STATUS_META[statusKey as keyof typeof STATUS_META];
 
   return (
-    <SafeAreaView className="flex-1 bg-white" style={{ flex: 1, backgroundColor: '#ffffff' }} testID="explore-diff.root">
-      <View className="flex-row items-center gap-2 border-b border-gray-200 px-4 py-3">
+    <SafeAreaView className="flex-1" style={{ flex: 1, backgroundColor: colors.background }} testID="explore-diff.root">
+      <View
+        className="flex-row items-center gap-2 px-4 py-3"
+        style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}
+      >
         <Pressable
           onPress={() => navigation.goBack()}
           hitSlop={8}
@@ -161,13 +163,13 @@ export default function ExploreDiffScreen() {
           accessibilityLabel="Go back"
           testID="explore-diff.back"
         >
-          <Ionicons name="chevron-back" size={22} color="#374151" />
+          <Ionicons name="chevron-back" size={22} color={colors.text} />
         </Pressable>
         <View className="min-w-0 flex-1">
-          <Heading className="text-lg" numberOfLines={1}>
+          <Heading className="text-lg" style={{ color: colors.text }} numberOfLines={1}>
             {path}
           </Heading>
-          <Text className="text-xs text-gray-500" numberOfLines={1}>
+          <Text className="text-xs font-mono" style={{ color: colors.textSecondary }} numberOfLines={1}>
             {diff ? `+${diff.added} −${diff.deleted} vs HEAD` : 'working tree diff'}
           </Text>
         </View>
@@ -185,25 +187,25 @@ export default function ExploreDiffScreen() {
 
       {loading ? (
         <View className="flex-1 items-center justify-center gap-2" style={{ flex: 1 }}>
-          <ActivityIndicator size="small" color="#2563eb" />
-          <Text className="text-sm text-gray-500">Computing diff…</Text>
+          <ActivityIndicator size="small" color={colors.accent} />
+          <Text style={{ color: colors.textSecondary }}>Computing diff…</Text>
         </View>
       ) : error ? (
         <View className="flex-1 items-center justify-center px-8" style={{ flex: 1 }}>
-          <Ionicons name="warning-outline" size={40} color="#dc2626" />
-          <Text className="mt-2 text-center text-sm text-red-600">{error}</Text>
+          <Ionicons name="warning-outline" size={40} color={colors.error} />
+          <Text className="mt-2 text-center text-sm" style={{ color: colors.error }}>{error}</Text>
         </View>
       ) : diff?.isBinary ? (
         <View className="flex-1 items-center justify-center px-8" style={{ flex: 1 }}>
-          <Ionicons name="cube-outline" size={44} color="#9ca3af" />
-          <Text className="mt-2 text-center text-sm text-gray-500">
+          <Ionicons name="cube-outline" size={44} color={colors.textSecondary} />
+          <Text className="mt-2 text-center" style={{ color: colors.textSecondary }}>
             Binary file — no textual diff available.
           </Text>
         </View>
       ) : diff ? (
         <ScrollView className="flex-1" contentContainerStyle={{ padding: 12, paddingBottom: 24 }}>
           {diff.lines.length === 0 ? (
-            <Text className="text-center text-sm text-gray-500">No textual changes.</Text>
+            <Text className="text-center" style={{ color: colors.textSecondary }}>No textual changes.</Text>
           ) : (
             <DiffLineList
               lines={diff.lines}
@@ -222,24 +224,25 @@ export default function ExploreDiffScreen() {
       )}
 
       {diff && !diff.isBinary && diff.lines.length > 0 && (
-        <View className="border-t border-gray-200 px-4 pb-3 pt-2" testID="explore-diff.stage-bar">
+        <View className="px-4 pb-3 pt-2" style={{ borderTopWidth: 1, borderTopColor: colors.border }} testID="explore-diff.stage-bar">
           {notice && (
-            <Text className="mb-1.5 text-center text-xs text-emerald-700" testID="explore-diff.notice">
+            <Text className="mb-1.5 text-center" style={{ color: colors.success }} testID="explore-diff.notice">
               {notice}
             </Text>
           )}
-          <Text className="mb-1.5 text-center text-[11px] text-gray-500">
+          <Text className="mb-1.5 text-center text-[11px]" style={{ color: colors.textSecondary }}>
             Tap +/− lines to select them for partial staging.
           </Text>
           <View className="flex-row gap-2">
             {selected.size > 0 && (
-              <Button variant="outline" size="sm" className="flex-1" onPress={() => setSelected(new Set())}>
+              <Button variant="secondary" size="sm" className="flex-1" onPress={() => setSelected(new Set())}>
                 <ButtonText>Clear ({selected.size})</ButtonText>
               </Button>
             )}
             <Button
-              className="flex-1"
+              variant="primary"
               size="sm"
+              className="flex-1"
               disabled={selected.size === 0 || staging}
               onPress={() => void stageSelectedLines()}
               testID="explore-diff.stage-selected"
