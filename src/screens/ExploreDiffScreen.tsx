@@ -248,7 +248,7 @@ export default function ExploreDiffScreen() {
               testID="explore-diff.stage-selected"
             >
               {staging ? <ActivityIndicator size="small" color="#ffffff" /> : null}
-              <ButtonText>Stage selected</ButtonText>
+              Stage selected
             </Button>
           </View>
         </View>

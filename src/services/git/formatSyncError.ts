@@ -49,7 +49,7 @@ const MATCHERS: Matcher[] = [
   {
     // A non-rate-limit 403 means the token lacks access. Name the scopes so
     // the user knows exactly what to grant.
-    needles: ['403', 'not accessible', 'resource not accessible', 'permission denied', 'must have push access', 'integration'],
+    needles: ['403', 'not accessible', 'resource not accessible', 'must have push access', 'integration'],
     message: "Your token can't access this repo — use a fine-grained token with Contents: Read and write (and the repo selected) or a classic token with the repo scope.",
   },
   {
