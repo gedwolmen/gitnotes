@@ -717,6 +717,7 @@ name = "gitnotes_git2"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
+ "cc",
  "fs2",
  "git2",
  "osshkeys",

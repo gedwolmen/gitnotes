@@ -5,6 +5,9 @@ edition = "2021"
 description = "Native Git engine for GitNotes (libgit2 via git2, vendored)"
 license = "MIT OR Apache-2.0"
 
+[build-dependencies]
+cc = "1.0"
+
 [lib]
 crate-type = ["rlib", "staticlib", "cdylib"]
 
