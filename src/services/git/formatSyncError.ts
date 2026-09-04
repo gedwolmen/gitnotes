@@ -32,6 +32,10 @@ const MATCHERS: Matcher[] = [
     message: 'Branch is locked on GitHub. Check branch protection rules.',
   },
   {
+    needles: ['Permission denied (publickey)', 'publickey', 'ssh auth', 'authentication failed', 'could not read from remote repository', 'SSH_AUTH', 'git@github.com: permission denied'],
+    message: 'SSH key not recognized by GitHub. Please check that your SSH key is added to your account.',
+  },
+  {
     needles: ['bad credentials', '401', 'not authorized'],
     message:
       "GitHub rejected the token. Check you copied the full token (starts with ghp_ or github_pat_) — and that it wasn't expired or revoked.",
