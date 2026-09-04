@@ -159,7 +159,7 @@ export function ChangesSection({ repo, active, onChanged, chromeTopInset = 0 }: 
 
   if (error) {
     return (
-      <View className="items-center px-8 py-10">
+      <View className="absolute inset-0 items-center justify-center px-8 py-10 z-50" style={{ backgroundColor: colors.background + 'ee' }}>
         <Ionicons name="warning-outline" size={36} color={colors.error} />
         <Text className="mt-2 text-center text-sm" style={{ color: colors.error }}>{error}</Text>
         <Button variant="outline" size="sm" className="mt-3" onPress={() => void load()}>
