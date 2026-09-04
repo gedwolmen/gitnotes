@@ -191,13 +191,22 @@ export function FilesSection({ repo, active, chromeTopInset = 0 }: SectionProps)
     );
   }
 
+  const listContentContainerStyle = useMemo(
+    () => ({
+      paddingTop: data ? chromeTopInset : 0,
+      paddingBottom: 96,
+      flexGrow: 1,
+    }),
+    [data, chromeTopInset],
+  );
+
   return (
     <FlatList
       className="flex-1"
       data={rows}
       keyExtractor={(item) => `${item.kind}:${item.path}`}
       renderItem={renderItem}
-        contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 96, flexGrow: 1 }}
+      contentContainerStyle={listContentContainerStyle}
       refreshControl={
         <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.accent} />
       }
