@@ -13,7 +13,7 @@ public final class GitEngineModule: Module {
       return "git2 (via UniFFI)"
     }
 
-    Function("engineVersion") { () -> String in
+    Function("version") { () -> String in
       return "0.1.0"
     }
   }

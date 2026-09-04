@@ -24,7 +24,7 @@ function withGitEngineRustPodfile(config) {
     }
 
     const marker = 'post_install do |installer|';
-    const hook = `${marker}\n    # [gitnotes] Expose GitNotesGit2FFI (UniFFI) module to the aggregate Swift target.\n    gitnotes_root = File.expand_path('../..', installer.sandbox.root)\n    gitnotes_ffi = File.join(gitnotes_root, 'modules', 'GitEngine', 'ios', 'generated')\n    installer.aggregate_targets.each do |aggregate|\n      aggregate.xcconfigs.each do |config_name, xcconfig|\n        existing = xcconfig.attributes['SWIFT_INCLUDE_PATHS'] || ''\n        unless existing.include?(gitnotes_ffi)\n          xcconfig.attributes['SWIFT_INCLUDE_PATHS'] = "$(inherited) #{gitnotes_ffi} #{existing}".strip\n          xcconfig.save_as(aggregate.xcconfig_path(config_name))\n        end\n      end\n    end\n`;
+    const hook = `${marker}\n    # [gitnotes] Expose GitNotesGit2FFI (UniFFI) module to the aggregate Swift target.\n    gitnotes_root = File.expand_path('../..', installer.sandbox.root)\n    gitnotes_ffi = File.join(gitnotes_root, 'modules', 'GitEngine', 'ios-local', 'generated')\n    installer.aggregate_targets.each do |aggregate|\n      aggregate.xcconfigs.each do |config_name, xcconfig|\n        existing = xcconfig.attributes['SWIFT_INCLUDE_PATHS'] || ''\n        unless existing.include?(gitnotes_ffi)\n          xcconfig.attributes['SWIFT_INCLUDE_PATHS'] = "$(inherited) #{gitnotes_ffi} #{existing}".strip\n          xcconfig.save_as(aggregate.xcconfig_path(config_name))\n        end\n      end\n    end\n`;
     if (contents.includes(marker) && !contents.includes('gitnotes_ffi')) {
       contents = contents.replace(marker, hook);
     }
