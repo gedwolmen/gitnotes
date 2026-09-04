@@ -30,6 +30,10 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-09-04
 
+### GitEngine now ships an Android native module
+
+**fix(git-engine)** — The GitEngine Expo module gains a full Android implementation (`modules/GitEngine/android/`): a Kotlin module mirroring every method of the iOS Swift module (clone/status/diff/stage/commit/history/conflicts/fetch/pull/push/branches/remotes/repair), committed UniFFI Kotlin bindings, and Rust `libgitnotes_git2.so` artifacts for all four ABIs via `yarn build:rust --android`. On Android the JS facade now fails fast with an actionable error when the native module is missing, instead of surfacing cryptic per-op failures later.
+
 ### Deleting a repo-backed todo now stages the removal in clone mode
 
 **fix(sync)** — Clone-mode todo deletion now routes through the shared clone writer (`CloneSyncService.save` with `intent: 'delete'`, same path as template deletes, #514): the backing file is removed from the local clone and the removal is staged with `git rm` semantics, so the git Changes tab lists it as a staged "deleted" entry until committed, and the remote copy is purged once that commit is pushed. Previously the clone file was left untouched, so nothing appeared in the Changes tab and the next pull re-imported the todo (#489).

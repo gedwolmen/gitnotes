@@ -1,0 +1,52 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+def reactNativeArchitectures() {
+  def value = project.getProperties().get("reactNativeArchitectures")
+  return value ? value.split(",") : ["armeabi-v7a", "x86", "x86_64", "arm64-v8a"]
+}
+
+group = 'expo.modules.gitengine'
+version = '0.1.0'
+
+android {
+  namespace "expo.modules.gitengine"
+
+  compileSdkVersion expoModule.safeExtGet("compileSdkVersion", 35)
+
+  defaultConfig {
+    minSdkVersion expoModule.safeExtGet("minSdkVersion", 24)
+    targetSdkVersion expoModule.safeExtGet("targetSdkVersion", 35)
+    versionCode 1
+    versionName "0.1.0"
+
+    // Package only the Rust engine ABIs the app builds for.
+    ndk {
+      abiFilters(*reactNativeArchitectures())
+    }
+  }
+
+  packagingOptions {
+    jniLibs {
+      // The vendored Rust engine ships prebuilt; do not strip it.
+      keepDebugSymbols += ['**/libgitnotes_git2.so']
+      // Guard against duplicate .so entries when merging packaging sources.
+      pickFirsts += ['**/libgitnotes_git2.so']
+    }
+  }
+}
+
+dependencies {
+  // ExpoModulesCore is added by expo-module-gradle-plugin (compileOnly).
+
+  // Prebuilt Rust engine (libgitnotes_git2.so per ABI) produced by
+  // `scripts/build-rust.sh --android` into src/main/jniLibs/<abi>/.
+
+  // UniFFI Kotlin bindings (uniffi.gitnotes_git2) are generated into
+  // src/main/java/uniffi/gitnotes_git2/ by `scripts/build-rust.sh --bindings`
+  // and compile as part of this module's main source set. They call into the
+  // cdylib through JNA.
+  implementation "net.java.dev.jna:jna:5.17.0@aar"
+}

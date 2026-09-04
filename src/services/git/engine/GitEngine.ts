@@ -12,10 +12,12 @@
  */
 
 import { requireNativeModule, type EventSubscription } from 'expo-modules-core';
+import { Platform } from 'react-native';
 import { AuthService } from '../../AuthService';
 
-// Null when native module is not available (e.g., not yet built, or running in Expo Go)
-let GitEngineModule: {
+// Shape of the native module surface. Named (not `typeof GitEngineModule`) so the
+// generic below is the full interface, not the flow-narrowed `null` initializer type.
+type NativeGitEngineModule = {
   version(): Promise<string>;
   engineName(): Promise<string>;
   isRepoLocked(path: string): Promise<boolean>;
@@ -62,12 +64,28 @@ let GitEngineModule: {
   repairRepo(path: string): Promise<RepairReport>;
   backupCorruptRepo(path: string): Promise<string>;
   addListener(eventName: string, listener: (...args: unknown[]) => void): EventSubscription;
-} | null = null;
+};
+
+// Null when native module is not available (e.g., not yet built, or running in Expo Go)
+let GitEngineModule: NativeGitEngineModule | null = null;
 
 try {
-  GitEngineModule = requireNativeModule<typeof GitEngineModule>('GitEngine');
+  GitEngineModule = requireNativeModule<NativeGitEngineModule>('GitEngine');
 } catch (e) {
   console.warn('[GitEngine] Native module not available, using stub implementation');
+}
+
+// On Android the native module only exists once the Rust engine has been
+// built (`yarn build:rust --android`) and bundled. Fail fast with an
+// actionable error instead of letting a missing/incomplete native module
+// surface later as cryptic per-op failures.
+if (
+  Platform.OS === 'android' &&
+  (GitEngineModule === null || typeof GitEngineModule.version !== 'function')
+) {
+  throw new Error(
+    'GitEngine Android native module not available. Run `yarn build:rust --android` first.',
+  );
 }
 
 // Stub for missing auth modules
