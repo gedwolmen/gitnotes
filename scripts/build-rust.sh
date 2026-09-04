@@ -117,6 +117,11 @@ generate_bindings() {
   mkdir -p "$KOTLIN_GEN_DIR/uniffi/gitnotes_git2"
   cp "$tmp/kotlin/uniffi/gitnotes_git2/gitnotes_git2.kt" \
     "$KOTLIN_GEN_DIR/uniffi/gitnotes_git2/gitnotes_git2.kt"
+  # UniFFI <= 0.32 emits Kotlin that does not compile when an error variant
+  # has a field named `message` (mozilla/uniffi-rs#2938); BridgeError does.
+  # Rename the colliding field to `errorMessage` inside BridgeException.
+  python3 "$SCRIPT_DIR/fix-kotlin-uniffi-message.py" \
+    "$KOTLIN_GEN_DIR/uniffi/gitnotes_git2/gitnotes_git2.kt"
 
   rm -rf "$tmp"
   log "bindings regenerated into $MODULE_DIR"

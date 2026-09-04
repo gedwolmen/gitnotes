@@ -1,0 +1,8 @@
+<!--
+  GitEngine Expo module. The module namespace (expo.modules.gitengine) is
+  declared in build.gradle; AGP 8+ does not support the package attribute
+  here. No special permissions are needed — the engine operates on
+  app-sandbox paths passed in from JS.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+</manifest>
