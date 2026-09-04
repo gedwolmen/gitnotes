@@ -61,7 +61,7 @@ export const SSHKeyModal = memo(function SSHKeyModal({
           </View>
         ) : publicKey ? (
           <>
-            <Text className="text-sm mb-3 mx-2" style={{ color: colors.textSecondary }}>{t('settings.sshKeyDescription')}</Text>
+            <Text className="text-sm mt-4 mb-3 mx-2" style={{ color: colors.textSecondary }}>{t('settings.sshKeyDescription')}</Text>
             <View
               className="rounded-lg p-4 mb-4 mx-2"
               style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}
