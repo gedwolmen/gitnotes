@@ -155,6 +155,8 @@ onRemoveAccount: (id: string, login: string) => void;
   syncPaused: boolean;
   onToggleSyncPaused: (value: boolean) => void;
   syncHealth: ForegroundSyncHealth;
+  onToggleSSH: (hostId: string) => void;
+  hostUseSsh: Record<string, boolean>;
 };
 
 function formatLfsBytes(bytes: number): string {
@@ -247,6 +249,8 @@ export function SettingsContent(props: SettingsContentProps) {
     syncPaused,
     onToggleSyncPaused,
     syncHealth,
+    onToggleSSH,
+    hostUseSsh,
   } = props;
   // Tokens hook gives us spacing/radii/type so the styled disconnect
   // button matches the rest of the app without hardcoded values.
@@ -545,27 +549,37 @@ export function SettingsContent(props: SettingsContentProps) {
                             color with an unlink icon. Distinct from the
                             account row's neutral chrome so the destructive
                             intent is obvious without being alarming. */}
-                        <TouchableOpacity
-                          onPress={() => onDisconnectHost(host.id)}
-                          testID={`settings.button.disconnect-host.${host.id}`}
-                          accessibilityRole="button"
-                          accessibilityLabel={`${GIT_HOST_LABELS[host.provider]} ${t('accounts.disconnect')}`}
-                          activeOpacity={0.75}
-                          className="flex-row items-center gap-1.5 px-3 py-2 border"
-                          style={{ borderRadius: radii.md, borderColor: colors.error }}
-                        >
-                          <Ionicons name="unlink-outline" size={15} color={colors.error} />
-                          <Text
-                            style={{
-                              color: colors.error,
-                              fontSize: type.xs,
-                              fontWeight: '700',
-                              letterSpacing: 0.2,
-                            }}
+                        <View className="flex-row items-center gap-2">
+                          <View className="flex-row items-center gap-1.5">
+                            <Text style={{ fontSize: type.xs, color: colors.textSecondary }}>SSH</Text>
+                            <Toggle
+                              testID={`settings.toggle.ssh.${host.id}`}
+                              value={hostUseSsh[host.id] ?? false}
+                              onValueChange={() => onToggleSSH(host.id)}
+                            />
+                          </View>
+                          <TouchableOpacity
+                            onPress={() => onDisconnectHost(host.id)}
+                            testID={`settings.button.disconnect-host.${host.id}`}
+                            accessibilityRole="button"
+                            accessibilityLabel={`${GIT_HOST_LABELS[host.provider]} ${t('accounts.disconnect')}`}
+                            activeOpacity={0.75}
+                            className="flex-row items-center gap-1.5 px-3 py-2 border"
+                            style={{ borderRadius: radii.md, borderColor: colors.error }}
                           >
-                            {t('accounts.disconnect')}
-                          </Text>
-                        </TouchableOpacity>
+                            <Ionicons name="unlink-outline" size={15} color={colors.error} />
+                            <Text
+                              style={{
+                                color: colors.error,
+                                fontSize: type.xs,
+                                fontWeight: '700',
+                                letterSpacing: 0.2,
+                              }}
+                            >
+                              {t('accounts.disconnect')}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
                       </View>
                     );
                   })}

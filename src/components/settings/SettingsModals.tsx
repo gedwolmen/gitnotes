@@ -17,9 +17,96 @@ type ThemeColors = {
   text: string;
   textSecondary: string;
   border: string;
+  error: string;
 };
 
 type AuthState = { isAuthenticated: boolean };
+
+type SSHModalProps = {
+  visible: boolean;
+  generating: boolean;
+  publicKey: string | null;
+  onCopy: (key: string) => void;
+  onOpenSettings: () => void;
+  onSave: () => void;
+  onClose: () => void;
+  colors: ThemeColors;
+};
+
+export const SSHKeyModal = memo(function SSHKeyModal({
+  visible,
+  generating,
+  publicKey,
+  onCopy,
+  onOpenSettings,
+  onSave,
+  onClose,
+  colors,
+}: SSHModalProps) {
+  const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
+  return (
+    <Modal visible={visible} onRequestClose={onClose} bottomSheet contentStyle={{ padding: 0 }}>
+      <View className="flex-row justify-between items-center px-4 pt-4 pb-3 border-b" style={{ borderColor: colors.border }}>
+        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '600' }}>{t('settings.sshKeyTitle')}</Text>
+        <TouchableOpacity onPress={onClose}>
+          <Ionicons name="close" size={24} color={colors.textSecondary} />
+        </TouchableOpacity>
+      </View>
+      <ScrollView className="px-4 py-4" style={{ paddingBottom: 16 + insets.bottom }} keyboardShouldPersistTaps="handled">
+        {generating ? (
+          <View className="flex-row items-center gap-3 py-4">
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={{ color: colors.textSecondary, fontSize: 14 }}>{t('settings.sshGenerating')}</Text>
+          </View>
+        ) : publicKey ? (
+          <>
+            <Text className="text-sm mb-2" style={{ color: colors.textSecondary }}>{t('settings.sshKeyDescription')}</Text>
+            <View
+              className="rounded-lg p-3 mb-3"
+              style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}
+            >
+              <Text
+                style={{ color: colors.text, fontSize: 12, fontFamily: 'Menlo' }}
+                selectable
+              >
+                {publicKey}
+              </Text>
+            </View>
+            <View className="flex-row gap-2 mb-4">
+              <TouchableOpacity
+                className="flex-row items-center justify-center py-2.5 px-3 rounded-lg border flex-1 gap-1.5"
+                style={{ borderColor: colors.border }}
+                onPress={() => onCopy(publicKey)}
+              >
+                <Ionicons name="copy-outline" size={16} color={colors.primary} />
+                <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>{t('common.copy')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="flex-row items-center justify-center py-2.5 px-3 rounded-lg border flex-1 gap-1.5"
+                style={{ borderColor: colors.border }}
+                onPress={onOpenSettings}
+              >
+                <Ionicons name="open-outline" size={16} color={colors.primary} />
+                <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>{t('settings.openSshSettings')}</Text>
+              </TouchableOpacity>
+            </View>
+            <Button
+              label={t('settings.sshKeySaved')}
+              onPress={onSave}
+              variant="primary"
+              fullWidth
+              style={{ minHeight: 48 }}
+              textStyle={{ color: '#fff', fontWeight: '600' }}
+            />
+          </>
+        ) : (
+          <Text style={{ color: colors.error, fontSize: 14 }}>{t('settings.sshKeyError')}</Text>
+        )}
+      </ScrollView>
+    </Modal>
+  );
+});
 
 type SettingsModalsProps = {
   colors: ThemeColors;
