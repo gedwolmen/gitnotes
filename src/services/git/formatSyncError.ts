@@ -32,6 +32,10 @@ const MATCHERS: Matcher[] = [
     message: 'Branch is locked on GitHub. Check branch protection rules.',
   },
   {
+    needles: ['Permission denied (publickey)', 'publickey', 'ssh auth', 'authentication failed', 'could not read from remote repository', 'SSH_AUTH'],
+    message: 'SSH key not recognized by GitHub. Please check that your SSH key is added to your account.',
+  },
+  {
     needles: ['bad credentials', '401', 'not authorized'],
     message:
       "GitHub rejected the token. Check you copied the full token (starts with ghp_ or github_pat_) — and that it wasn't expired or revoked.",
@@ -45,7 +49,7 @@ const MATCHERS: Matcher[] = [
   {
     // A non-rate-limit 403 means the token lacks access. Name the scopes so
     // the user knows exactly what to grant.
-    needles: ['403', 'not accessible', 'resource not accessible', 'permission denied', 'must have push access', 'integration'],
+    needles: ['403', 'not accessible', 'resource not accessible', 'must have push access', 'integration'],
     message: "Your token can't access this repo — use a fine-grained token with Contents: Read and write (and the repo selected) or a classic token with the repo scope.",
   },
   {
