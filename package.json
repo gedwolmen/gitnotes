@@ -18,13 +18,13 @@
     "ts:check": "tsc --noEmit",
     "test": "jest",
     "prepare": "husky",
-
     "build:rust": "bash scripts/build-rust.sh",
     "build:rust:ios": "bash scripts/build-rust.sh --ios",
     "build:rust:android": "bash scripts/build-rust.sh --android",
     "build:rust:all": "bash scripts/build-rust.sh --all",
     "build:rust:bindings": "bash scripts/build-rust.sh --bindings",
-
+    "dev:ios": "expo run:ios",
+    "dev:android": "expo run:android",
     "ios:fix-icon": "bash scripts/strip-icon-alpha.sh",
     "icons:regenerate": "node scripts/regenerate-assets.js",
     "branding": "node scripts/generate-branding.js",
