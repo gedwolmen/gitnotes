@@ -186,7 +186,7 @@ export function ChangesSection({ repo, active, onChanged, chromeTopInset = 0 }: 
       data={data?.statuses ?? []}
       keyExtractor={(item) => item.path}
       renderItem={renderItem}
-       contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 96, flexGrow: 1 }}
+        contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 96 }}
       refreshControl={
         <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.accent} />
       }
@@ -207,7 +207,7 @@ export function ChangesSection({ repo, active, onChanged, chromeTopInset = 0 }: 
       }
         ListEmptyComponent={
           !loading ? (
-            <View className="flex-1 items-center justify-center" style={{ minHeight: 240 }} testID="explore.changes.empty">
+            <View className="items-center justify-center py-16" testID="explore.changes.empty">
               <Ionicons name="checkmark-circle-outline" size={40} color={colors.accent} />
               <Text className="mt-2 text-center text-sm" style={{ color: colors.textSecondary }}>
                 Working tree clean — no changes.
