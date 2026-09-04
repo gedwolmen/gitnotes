@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -124,7 +124,7 @@ export function PullRequestsSection({ repo, active, chromeTopInset = 0 }: Sectio
             <Button
               variant="ghost"
               size="sm"
-              onPress={() => navigation.navigate('Repos' as any)}
+              onPress={() => navigation.navigate('MainTabs', { screen: 'SettingsTab' })}
               testID="explore.pr.open-settings"
             >
               <ButtonText>Open settings</ButtonText>
@@ -135,13 +135,22 @@ export function PullRequestsSection({ repo, active, chromeTopInset = 0 }: Sectio
     );
   }
 
+  const listContentContainerStyle = useMemo(
+    () => ({
+      paddingTop: prs !== null ? chromeTopInset : 0,
+      paddingBottom: 96,
+      flexGrow: 1,
+    }),
+    [prs, chromeTopInset],
+  );
+
   return (
     <FlatList<PullRequest>
       className="flex-1"
       data={prs ?? []}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
-       contentContainerStyle={{ paddingTop: chromeTopInset, paddingBottom: 96, flexGrow: 1 }}
+      contentContainerStyle={listContentContainerStyle}
       refreshControl={
         <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.accent} />
       }
