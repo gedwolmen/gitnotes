@@ -236,7 +236,7 @@ export default function ExploreDiffScreen() {
           <View className="flex-row gap-2">
             {selected.size > 0 && (
               <Button variant="secondary" size="sm" className="flex-1" onPress={() => setSelected(new Set())}>
-                <ButtonText>Clear ({selected.size})</ButtonText>
+                <ButtonText>Clear</ButtonText>
               </Button>
             )}
             <Button
@@ -248,7 +248,7 @@ export default function ExploreDiffScreen() {
               testID="explore-diff.stage-selected"
             >
               {staging ? <ActivityIndicator size="small" color="#ffffff" /> : null}
-              <ButtonText>Stage selected lines{selected.size > 0 ? ` (${selected.size})` : ''}</ButtonText>
+              <ButtonText>Stage selected</ButtonText>
             </Button>
           </View>
         </View>
