@@ -65,6 +65,7 @@ export function getBootValue(key: StartupKey): string | null | undefined {
   if (!bootCache) return undefined;
   if (!bootCache.has(key)) return undefined;
   const value = bootCache.get(key);
+  if (value === null) return null;
   bootCache.delete(key);
   return value;
 }
