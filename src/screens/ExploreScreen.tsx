@@ -81,10 +81,14 @@ export default function ExploreScreen() {
     const found = lookupId ? repos.find((r) => r.id === lookupId) : undefined;
     const r = found ?? repos[0] ?? null;
     if (!r) return null;
-    return {
-      ...r,
-      localPath: GitFsService.workingTreeUri({ repoPath: r.path }),
-    } as RepoLike;
+    try {
+      return {
+        ...r,
+        localPath: GitFsService.workingTreeUri({ repoPath: r.path }),
+      } as RepoLike;
+    } catch {
+      return null;
+    }
   }, [repos, selectedRepoId]);
 
   const handlePickRepo = useCallback((picked: GitRepository) => {
