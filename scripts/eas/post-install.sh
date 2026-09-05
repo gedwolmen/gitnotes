@@ -11,7 +11,7 @@ export PATH="$CARGO_HOME/bin:$PATH"
 export RUST_PROFILE="${RUST_PROFILE:-release}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+ROOT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
 RUST_DIR="$ROOT_DIR/rust"
 MODULE_DIR="$ROOT_DIR/modules/GitEngine"
 IOS_LIB_DIR="$MODULE_DIR/ios/rust"
