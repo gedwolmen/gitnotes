@@ -71,8 +71,6 @@ else
   log "Skipping Android libs (ANDROID_NDK_HOME not set or not found)"
 fi
 
-log "Generating UniFFI Swift bindings..."
-# Generate Swift bindings from host cdylib
 HOST_TARGET=""
 if [ "$(uname -m)" = "arm64" ]; then
   HOST_TARGET="aarch64-apple-darwin"
@@ -80,27 +78,30 @@ else
   HOST_TARGET="x86_64-apple-darwin"
 fi
 
-(cd "$RUST_DIR" && cargo build --target "$HOST_TARGET" "${PROFILE_FLAGS[@]}")
-
-DYLIB="$RUST_DIR/target/$HOST_TARGET/$RUST_PROFILE/libgitnotes_git2.dylib"
-
-TMP_DIR=$(mktemp -d)
-(cd "$RUST_DIR" && cargo run --features uniffi-cli --bin uniffi-bindgen -- generate \
-  --library "$DYLIB" --language swift --out-dir "$TMP_DIR/swift")
-cp "$TMP_DIR/swift/GitNotesGit2.swift" "$SWIFT_GEN_DIR/"
-cp "$TMP_DIR/swift/GitNotesGit2FFI.h" "$SWIFT_GEN_DIR/GitNotesGit2FFI/"
-cp "$TMP_DIR/swift/GitNotesGit2FFI.modulemap" "$SWIFT_GEN_DIR/GitNotesGit2FFI/"
-
-if [ -n "${ANDROID_NDK_HOME:-}" ] && [ -d "${ANDROID_NDK_HOME:-}" ]; then
-  log "Generating UniFFI Kotlin bindings..."
-  (cd "$RUST_DIR" && cargo run --features uniffi-cli --bin uniffi-bindgen -- generate \
-    --library "$DYLIB" --language kotlin --out-dir "$TMP_DIR/kotlin" --no-format)
-  mkdir -p "$KOTLIN_GEN_DIR/uniffi/gitnotes_git2"
-  cp "$TMP_DIR/kotlin/uniffi/gitnotes_git2/gitnotes_git2.kt" "$KOTLIN_GEN_DIR/uniffi/gitnotes_git2/"
+if ! (cd "$RUST_DIR" && cargo build --target "$HOST_TARGET" "${PROFILE_FLAGS[@]}" 2>/dev/null); then
+  log "Skipping UniFFI binding generation (host target $HOST_TARGET not available)"
 else
-  log "Skipping Kotlin bindings (ANDROID_NDK_HOME not set or not found)"
-fi
+  log "Generating UniFFI Swift bindings..."
+  DYLIB="$RUST_DIR/target/$HOST_TARGET/$RUST_PROFILE/libgitnotes_git2.dylib"
 
-rm -rf "$TMP_DIR"
+  TMP_DIR=$(mktemp -d)
+  (cd "$RUST_DIR" && cargo run --features uniffi-cli --bin uniffi-bindgen -- generate \
+    --library "$DYLIB" --language swift --out-dir "$TMP_DIR/swift")
+  cp "$TMP_DIR/swift/GitNotesGit2.swift" "$SWIFT_GEN_DIR/"
+  cp "$TMP_DIR/swift/GitNotesGit2FFI.h" "$SWIFT_GEN_DIR/GitNotesGit2FFI/"
+  cp "$TMP_DIR/swift/GitNotesGit2FFI.modulemap" "$SWIFT_GEN_DIR/GitNotesGit2FFI/"
+
+  if [ -n "${ANDROID_NDK_HOME:-}" ] && [ -d "${ANDROID_NDK_HOME:-}" ]; then
+    log "Generating UniFFI Kotlin bindings..."
+    (cd "$RUST_DIR" && cargo run --features uniffi-cli --bin uniffi-bindgen -- generate \
+      --library "$DYLIB" --language kotlin --out-dir "$TMP_DIR/kotlin" --no-format)
+    mkdir -p "$KOTLIN_GEN_DIR/uniffi/gitnotes_git2"
+    cp "$TMP_DIR/kotlin/uniffi/gitnotes_git2/gitnotes_git2.kt" "$KOTLIN_GEN_DIR/uniffi/gitnotes_git2/"
+  else
+    log "Skipping Kotlin bindings (ANDROID_NDK_HOME not set or not found)"
+  fi
+
+  rm -rf "$TMP_DIR"
+fi
 
 log "All Rust artifacts built and bindings generated successfully."
