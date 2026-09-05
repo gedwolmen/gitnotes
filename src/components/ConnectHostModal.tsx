@@ -313,6 +313,7 @@ export function ConnectHostModal({
             autoCapitalize="none"
             autoCorrect={false}
             secureTextEntry={!tokenVisible}
+            showSoftInputOnFocus={false}
             testID="connect-host-token-input"
             style={{
               flex: 1,
