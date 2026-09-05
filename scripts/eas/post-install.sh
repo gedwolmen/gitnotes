@@ -48,24 +48,28 @@ log "Building aarch64-apple-ios (device)..."
 (cd "$RUST_DIR" && cargo build --target aarch64-apple-ios "${PROFILE_FLAGS[@]}")
 # Device artifact kept in place, Xcode will pick it up during build
 
-# Build Android libs
-log "Building Android libs for all ABIs..."
-ANDROID_TARGETS=(
-  "aarch64-linux-android:arm64-v8a"
-  "armv7-linux-androideabi:armeabi-v7a"
-  "x86_64-linux-android:x86_64"
-  "i686-linux-android:x86"
-)
+# Build Android libs (skip if NDK not available)
+if [ -n "${ANDROID_NDK_HOME:-}" ] && [ -d "${ANDROID_NDK_HOME:-}" ]; then
+  log "Building Android libs for all ABIs..."
+  ANDROID_TARGETS=(
+    "aarch64-linux-android:arm64-v8a"
+    "armv7-linux-androideabi:armeabi-v7a"
+    "x86_64-linux-android:x86_64"
+    "i686-linux-android:x86"
+  )
 
-for entry in "${ANDROID_TARGETS[@]}"; do
-  target="${entry%%:*}"
-  abi="${entry##*:}"
-  log "Building $target -> $abi"
-  mkdir -p "$JNI_DIR/$abi"
-  (cd "$RUST_DIR" && cargo ndk --target "$target" --platform 24 build "${PROFILE_FLAGS[@]}")
-  cp "$RUST_DIR/target/$target/$RUST_PROFILE/libgitnotes_git2.so" "$JNI_DIR/$abi/"
-  log "Copied $abi lib"
-done
+  for entry in "${ANDROID_TARGETS[@]}"; do
+    target="${entry%%:*}"
+    abi="${entry##*:}"
+    log "Building $target -> $abi"
+    mkdir -p "$JNI_DIR/$abi"
+    (cd "$RUST_DIR" && cargo ndk --target "$target" --platform 24 build "${PROFILE_FLAGS[@]}")
+    cp "$RUST_DIR/target/$target/$RUST_PROFILE/libgitnotes_git2.so" "$JNI_DIR/$abi/"
+    log "Copied $abi lib"
+  done
+else
+  log "Skipping Android libs (ANDROID_NDK_HOME not set or not found)"
+fi
 
 log "Generating UniFFI Swift bindings..."
 # Generate Swift bindings from host cdylib
@@ -87,11 +91,15 @@ cp "$TMP_DIR/swift/GitNotesGit2.swift" "$SWIFT_GEN_DIR/"
 cp "$TMP_DIR/swift/GitNotesGit2FFI.h" "$SWIFT_GEN_DIR/GitNotesGit2FFI/"
 cp "$TMP_DIR/swift/GitNotesGit2FFI.modulemap" "$SWIFT_GEN_DIR/GitNotesGit2FFI/"
 
-log "Generating UniFFI Kotlin bindings..."
-(cd "$RUST_DIR" && cargo run --features uniffi-cli --bin uniffi-bindgen -- generate \
-  --library "$DYLIB" --language kotlin --out-dir "$TMP_DIR/kotlin" --no-format)
-mkdir -p "$KOTLIN_GEN_DIR/uniffi/gitnotes_git2"
-cp "$TMP_DIR/kotlin/uniffi/gitnotes_git2/gitnotes_git2.kt" "$KOTLIN_GEN_DIR/uniffi/gitnotes_git2/"
+if [ -n "${ANDROID_NDK_HOME:-}" ] && [ -d "${ANDROID_NDK_HOME:-}" ]; then
+  log "Generating UniFFI Kotlin bindings..."
+  (cd "$RUST_DIR" && cargo run --features uniffi-cli --bin uniffi-bindgen -- generate \
+    --library "$DYLIB" --language kotlin --out-dir "$TMP_DIR/kotlin" --no-format)
+  mkdir -p "$KOTLIN_GEN_DIR/uniffi/gitnotes_git2"
+  cp "$TMP_DIR/kotlin/uniffi/gitnotes_git2/gitnotes_git2.kt" "$KOTLIN_GEN_DIR/uniffi/gitnotes_git2/"
+else
+  log "Skipping Kotlin bindings (ANDROID_NDK_HOME not set or not found)"
+fi
 
 rm -rf "$TMP_DIR"
 
