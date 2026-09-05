@@ -204,7 +204,7 @@ export default function ExploreScreen() {
             No repository to explore yet. Add a remote repository to clone it into your
             library, then open its workspace here.
           </Text>
-          <Button className="mt-4" onPress={() => (navigation as any).navigate('AddRepo')} testID="explore.empty.add">
+          <Button className="mt-4" onPress={() => navigation.navigate('MainTabs', { screen: 'SettingsTab' })} testID="explore.empty.add">
             <ButtonText>Add a repository</ButtonText>
           </Button>
         </View>
