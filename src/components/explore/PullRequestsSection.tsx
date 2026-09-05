@@ -137,15 +137,15 @@ export function PullRequestsSection({ repo, active, chromeTopInset = 0 }: Sectio
 
   const listContentContainerStyle = useMemo(
     () => ({
+      paddingTop: chromeTopInset,
       paddingBottom: 96,
       flexGrow: 1,
     }),
-    [],
+    [chromeTopInset],
   );
 
   return (
-    <View style={{ flex: 1, paddingTop: chromeTopInset }}>
-      <FlatList<PullRequest>
+    <FlatList<PullRequest>
         className="flex-1"
         data={prs ?? []}
         keyExtractor={(item) => item.id}
@@ -207,6 +207,5 @@ export function PullRequestsSection({ repo, active, chromeTopInset = 0 }: Sectio
       }
       testID="explore.prs.list"
     />
-    </View>
   );
 }
