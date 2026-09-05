@@ -366,7 +366,7 @@
     "syncFrequently": "Sync frequently",
     "syncFrequentlySub": "Recommended for multi-device",
     "pauseForegroundSync": "Pause foreground sync",
-    "pauseForegroundSyncSub": "Debug: stops automatic",
+    "pauseForegroundSyncSub": "Debug: stops automatic pulls",
     "syncInterval": "Sync interval",
     "backgroundSync": "Background Sync",
     "floatingGitButton": "Show floating git button",
