@@ -137,11 +137,11 @@ export function PullRequestsSection({ repo, active, chromeTopInset = 0 }: Sectio
 
   const listContentContainerStyle = useMemo(
     () => ({
-      paddingTop: prs !== null ? chromeTopInset : 0,
+      paddingTop: chromeTopInset,
       paddingBottom: 96,
       flexGrow: 1,
     }),
-    [prs, chromeTopInset],
+    [chromeTopInset],
   );
 
   return (
