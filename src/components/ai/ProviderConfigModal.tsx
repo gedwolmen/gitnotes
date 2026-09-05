@@ -368,6 +368,7 @@ export function ProviderConfigModal({ visible, onClose, provider }: ProviderConf
                         value={apiKey}
                         onChangeText={setApiKey}
                         secureTextEntry={!apiKeyVisible}
+                        showSoftInputOnFocus={false}
                         autoCapitalize="none"
                         autoCorrect={false}
                       />
