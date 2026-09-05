@@ -86,7 +86,7 @@ export default function App() {
       if (Platform.OS === 'android') {
         const build = Constants.expoConfig?.android?.versionCode;
         if (build !== undefined) {
-          void setAndroidFirstSeenBuild(String(build));
+          await setAndroidFirstSeenBuild(String(build));
         }
       }
       await useProStore.getState().initialize();
