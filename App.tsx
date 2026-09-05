@@ -83,12 +83,6 @@ export default function App() {
     // repo/account caps can be enforced on data brought back by Android backup
     // restore (#1233) — before the stores render it, not after.
     try {
-      if (Platform.OS === 'android') {
-        const build = Constants.expoConfig?.android?.versionCode;
-        if (build !== undefined) {
-          await setAndroidFirstSeenBuild(String(build));
-        }
-      }
       await useProStore.getState().initialize();
       await enforceTierLimits();
       await rebindRevenueCatToActiveAccount();
@@ -147,6 +141,21 @@ export default function App() {
 
     void reconcileThoughtDumps().catch(() => {});
     void LastSelectionPreferenceService.migrateFromLegacy();
+  }, []);
+
+  // Record the Android first-seen build unconditionally at startup — this must run
+  // on every app launch (not just first launch) because it writes to AsyncStorage
+  // only when the key is absent. Gating it inside checkOnboarding would skip it for
+  // returning users who have already completed onboarding, breaking Android
+  // grandfathering: resolveGrandfatherStatus would find no FIRST_SEEN_BUILD_KEY and
+  // incorrectly classify pre-paywall users as non-grandfathered (#1387).
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      const build = Constants.expoConfig?.android?.versionCode;
+      if (build !== undefined) {
+        void setAndroidFirstSeenBuild(String(build));
+      }
+    }
   }, []);
 
   useEffect(() => {
