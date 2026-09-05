@@ -171,7 +171,7 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0 }: 
               testID={`explore.discard.${item.path}`}
             >
               {busyPath === item.path ? <Text className="text-xs" style={{ color: colors.textSecondary }}>…</Text> : null}
-              Discard
+              <ButtonText>Discard</ButtonText>
             </Button>
             <Button
               size="sm"
