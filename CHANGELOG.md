@@ -8,6 +8,38 @@ All notable fixes and feature changes to GitNotēs are documented here.
 >
 > **History**: prior fixes (pre-2026-08) lived in single-PR wiki pages. Those pages were retired in [#1047](https://github.com/gedwolmen/gitnotes/pull/1047); their full diagnostic content is preserved in git history via `git log -p -- docs/wiki/<file>.md`.
 
+## 2026-09-06
+
+### fix(explore): guard Git tab against corrupted repo data on app update
+
+**What:** The Git tab (ExploreScreen) and its commit/diff screens crashed when opened after an app update if stored repo data was corrupted. Fresh installs were unaffected because no repos exist yet. The crash occurred because `GitFsService.workingTreeUri` → `parseRepoPath` returned `null` for corrupted paths, throwing an unhandled exception at render time.
+
+**fix(explore):** `ExploreScreen` useMemo now catches `workingTreeUri` failures and falls back to the empty state instead of crashing.
+
+**fix(explore):** `ExploreCommitScreen` and `ExploreDiffScreen` guard `workingTreeUri` calls at render time with try-catch, degrading gracefully to empty/error state for corrupted repos.
+
+**PRs:** #1389, #1390
+
+### fix(paywall): Android grandfathering now works correctly
+
+**What:** Android grandfathering was completely broken — `firstSeenAppVersion` referenced from `GrandfatherService` does not exist on RevenueCat's `CustomerInfo` type, so it was always `undefined` on Android. Pre-paywall Android users were shown the paywall incorrectly.
+
+**fix(paywall):** Store Android `versionCode` (`Constants.expoConfig.android.versionCode`) in AsyncStorage on first launch. The grandfathering check reads this stored value for the Android path instead of relying on a non-existent RevenueCat field.
+
+**fix(paywall):** Two race conditions fixed:
+1. `setAndroidFirstSeenBuild` was fire-and-forget (`void`), so `proStore.initialize()` ran the grandfather check before the build was written. Now properly `await`ed.
+2. `getBootValue` consumed null entries from the boot cache, causing the first-launch write to be skipped. Now preserves null entries so the write detection works correctly.
+
+**PRs:** #1387, #1388
+
+### fix(explore): Add repository button in Git tab now works
+
+**What:** The "Add a repository" button in the Git tab empty state called `navigate('AddRepo')` — a route that doesn't exist — so the button did nothing.
+
+**fix(explore):** Changed to `navigation.navigate('MainTabs', { screen: 'SettingsTab' })`, following the established navigation pattern used throughout the app.
+
+**PR:** #1386
+
 ## [Unreleased] — Write-through clone mode
 
 ### refactor(sync) — Clone mode is now write-through
