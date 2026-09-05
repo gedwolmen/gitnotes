@@ -48,6 +48,8 @@ import { reconcileThoughtDumps } from './src/services/ai/thoughtDumpIndexing';
 import { LastSelectionPreferenceService } from './src/services/LastSelectionPreferenceService';
 import { useProStore } from './src/stores/proStore';
 import { enforceTierLimits } from './src/services/TierLimits';
+import { setAndroidFirstSeenBuild } from './src/services/GrandfatherService';
+import Constants from 'expo-constants';
 import * as PushNotificationService from './src/services/PushNotificationService';
 import { hideDevMenuFloatingActionButton } from './src/utils/devMenuFab';
 
@@ -81,6 +83,12 @@ export default function App() {
     // repo/account caps can be enforced on data brought back by Android backup
     // restore (#1233) — before the stores render it, not after.
     try {
+      if (Platform.OS === 'android') {
+        const build = Constants.expoConfig?.android?.versionCode;
+        if (build !== undefined) {
+          void setAndroidFirstSeenBuild(String(build));
+        }
+      }
       await useProStore.getState().initialize();
       await enforceTierLimits();
       await rebindRevenueCatToActiveAccount();

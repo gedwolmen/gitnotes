@@ -5,8 +5,9 @@ export const PRO_PAYWALL_FIRST_BUILD = 9;
 
 export const GRANDFATHERED_KEY = '@gitnotes:pro_grandfathered';
 export const GRANDFATHER_CHECKED_KEY = '@gitnotes:grandfather_checked';
+export const FIRST_SEEN_BUILD_KEY = '@gitnotes:first_seen_build';
 
-export type GrandfatherReason = 'flag' | 'onboarding' | 'ios-build' | 'none' | 'checked';
+export type GrandfatherReason = 'flag' | 'onboarding' | 'ios-build' | 'android-build' | 'none' | 'checked';
 
 export interface GrandfatherResult {
   isGrandfathered: boolean;
@@ -15,7 +16,6 @@ export interface GrandfatherResult {
 
 export interface GrandfatherCustomerInfo {
   originalApplicationVersion?: string | null;
-  firstSeenAppVersion?: string | null;
 }
 
 async function getStoredValue(key: string): Promise<string | null> {
@@ -31,6 +31,17 @@ async function markGrandfathered(): Promise<void> {
   ]);
 }
 
+export async function getAndroidFirstSeenBuild(): Promise<string | null> {
+  return getStoredValue(FIRST_SEEN_BUILD_KEY);
+}
+
+export async function setAndroidFirstSeenBuild(build: string): Promise<void> {
+  const existing = await getStoredValue(FIRST_SEEN_BUILD_KEY);
+  if (existing === null) {
+    await AsyncStorage.setItem(FIRST_SEEN_BUILD_KEY, build);
+  }
+}
+
 export async function resolveGrandfatherStatus(
   customerInfo: GrandfatherCustomerInfo | null,
 ): Promise<GrandfatherResult> {
@@ -40,17 +51,27 @@ export async function resolveGrandfatherStatus(
   const checked = await getStoredValue(GRANDFATHER_CHECKED_KEY);
   if (checked === 'true') return { isGrandfathered: false, reason: 'checked' };
 
-  // ios-build path: originalApplicationVersion on iOS, firstSeenAppVersion on Android.
-  // Only treat as build number if it is a pure integer — marketing version strings
-  // like '1.0.0' must NOT grant free Pro (parseInt('1.0.0') = 1 < 9 would bypass).
-  const version =
-    customerInfo?.originalApplicationVersion ?? customerInfo?.firstSeenAppVersion;
-  if (version != null) {
-    const isPureBuildNumber = /^\d+$/.test(version);
-    const parsed = isPureBuildNumber ? Number.parseInt(version, 10) : NaN;
+  // iOS: originalApplicationVersion is CFBundleVersion at time of original purchase.
+  // Only treat as build number if it is a pure integer to avoid bypass
+  // (parseInt('1.0.0') = 1 < 9 would incorrectly grant Pro).
+  const iosVersion = customerInfo?.originalApplicationVersion;
+  if (iosVersion != null) {
+    const isPureBuildNumber = /^\d+$/.test(iosVersion);
+    const parsed = isPureBuildNumber ? Number.parseInt(iosVersion, 10) : NaN;
     if (Number.isFinite(parsed) && parsed < PRO_PAYWALL_FIRST_BUILD) {
       await markGrandfathered();
       return { isGrandfathered: true, reason: 'ios-build' };
+    }
+  }
+
+  // Android: check the locally stored first-seen build number.
+  const androidBuild = await getStoredValue(FIRST_SEEN_BUILD_KEY);
+  if (androidBuild != null) {
+    const isPureBuildNumber = /^\d+$/.test(androidBuild);
+    const parsed = isPureBuildNumber ? Number.parseInt(androidBuild, 10) : NaN;
+    if (Number.isFinite(parsed) && parsed < PRO_PAYWALL_FIRST_BUILD) {
+      await markGrandfathered();
+      return { isGrandfathered: true, reason: 'android-build' };
     }
   }
 
