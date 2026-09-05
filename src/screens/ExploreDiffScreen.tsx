@@ -31,7 +31,14 @@ export default function ExploreDiffScreen() {
   const repo = useRepoStore((state) =>
     state.repositories.find((candidate) => candidate.id === repoId),
   );
-  const localPath = repo ? GitFsService.workingTreeUri({ repoPath: repo.path }) : null;
+  let localPath: string | null = null;
+  if (repo) {
+    try {
+      localPath = GitFsService.workingTreeUri({ repoPath: repo.path });
+    } catch {
+      localPath = null;
+    }
+  }
 
   const [diff, setDiff] = useState<FileDiff | null>(null);
   const [loading, setLoading] = useState(true);

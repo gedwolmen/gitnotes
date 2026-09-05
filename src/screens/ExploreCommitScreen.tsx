@@ -42,9 +42,14 @@ export default function ExploreCommitScreen() {
     state.repositories.find((candidate) => candidate.id === repoId),
   );
   const { activeAccount } = useActiveAccount();
-  const localPath = storedRepo
-    ? GitFsService.workingTreeUri({ repoPath: storedRepo.path })
-    : null;
+  let localPath: string | null = null;
+  if (storedRepo) {
+    try {
+      localPath = GitFsService.workingTreeUri({ repoPath: storedRepo.path });
+    } catch {
+      localPath = null;
+    }
+  }
 
   const [commit, setCommit] = useState<CommitInfo | null>(null);
   const [diffs, setDiffs] = useState<FileDiff[] | null>(null);
