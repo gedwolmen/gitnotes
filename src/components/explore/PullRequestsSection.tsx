@@ -137,26 +137,26 @@ export function PullRequestsSection({ repo, active, chromeTopInset = 0 }: Sectio
 
   const listContentContainerStyle = useMemo(
     () => ({
-      paddingTop: chromeTopInset,
       paddingBottom: 96,
       flexGrow: 1,
     }),
-    [chromeTopInset],
+    [],
   );
 
   return (
-    <FlatList<PullRequest>
-      className="flex-1"
-      data={prs ?? []}
-      keyExtractor={(item) => item.id}
-      renderItem={renderItem}
-      contentContainerStyle={listContentContainerStyle}
-      refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.accent} />
-      }
-      ListHeaderComponent={
-        <View>
-          {/* State filter pills */}
+    <View style={{ flex: 1, paddingTop: chromeTopInset }}>
+      <FlatList<PullRequest>
+        className="flex-1"
+        data={prs ?? []}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        contentContainerStyle={listContentContainerStyle}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.accent} />
+        }
+        ListHeaderComponent={
+          <View>
+            {/* State filter pills */}
           <View className="mb-2 flex-row items-center justify-center gap-2 px-4">
             {STATE_FILTERS.map((s) => {
               const active = stateFilter === s;
@@ -207,5 +207,6 @@ export function PullRequestsSection({ repo, active, chromeTopInset = 0 }: Sectio
       }
       testID="explore.prs.list"
     />
+    </View>
   );
 }
