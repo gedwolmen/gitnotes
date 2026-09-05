@@ -152,73 +152,74 @@ export function IssuesSection({ repo, active, chromeTopInset = 0 }: SectionProps
 
   const listContentContainerStyle = useMemo(
     () => ({
-      paddingTop: chromeTopInset,
       paddingBottom: 96,
       flexGrow: 1,
     }),
-    [chromeTopInset],
+    [],
   );
 
   return (
-    <FlatList<GitHostIssue>
-      className="flex-1"
-      data={issues ?? []}
-      keyExtractor={(item) => item.id}
-      renderItem={renderItem}
-      contentContainerStyle={listContentContainerStyle}
-      refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.accent} />
-      }
-      ListHeaderComponent={
-        <View>
-          {/* State filter pills */}
-          <View className="mb-2 flex-row items-center justify-center gap-2 px-4">
-            {STATE_FILTERS.map((s) => {
-              const active = stateFilter === s;
-              return (
-                <Pressable
-                  key={s}
-                  testID={`explore.issue.filter.${s}`}
-                  onPress={() => setStateFilter(s)}
-                  className="rounded-full px-4 py-1.5"
-                  style={{
-                    backgroundColor: active
-                      ? colors.accent
-                      : `${colors.accent}26`,
-                  }}
-                  accessibilityRole="button"
-                >
-                  <Text
-                    className="text-[13px] font-semibold"
-                    style={{ color: active ? '#fff' : colors.accent }}
+    <View style={{ flex: 1, paddingTop: chromeTopInset }}>
+      <FlatList<GitHostIssue>
+        className="flex-1"
+        data={issues ?? []}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        contentContainerStyle={listContentContainerStyle}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.accent} />
+        }
+        ListHeaderComponent={
+          <View>
+            {/* State filter pills */}
+            <View className="mb-2 flex-row items-center justify-center gap-2 px-4">
+              {STATE_FILTERS.map((s) => {
+                const active = stateFilter === s;
+                return (
+                  <Pressable
+                    key={s}
+                    testID={`explore.issue.filter.${s}`}
+                    onPress={() => setStateFilter(s)}
+                    className="rounded-full px-4 py-1.5"
+                    style={{
+                      backgroundColor: active
+                        ? colors.accent
+                        : `${colors.accent}26`,
+                    }}
+                    accessibilityRole="button"
                   >
-                    {s === 'open' ? 'Open' : 'Closed'}
-                  </Text>
-                </Pressable>
-              );
-            })}
+                    <Text
+                      className="text-[13px] font-semibold"
+                      style={{ color: active ? '#fff' : colors.accent }}
+                    >
+                      {s === 'open' ? 'Open' : 'Closed'}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <View className="mb-1 flex-row items-center justify-between px-4 pb-2">
+              <Text className="text-xs" style={{ color: colors.textSecondary }} testID="explore.issues.count">
+                {loading && issues === null
+                  ? 'Loading issues…'
+                  : issues !== null
+                    ? `${issues.length} issue(s)`
+                    : ''}
+              </Text>
+              {loading && issues !== null && <ActivityIndicator size="small" color={colors.accent} />}
+            </View>
           </View>
-          <View className="mb-1 flex-row items-center justify-between px-4 pb-2">
-            <Text className="text-xs" style={{ color: colors.textSecondary }} testID="explore.issues.count">
-              {loading && issues === null
-                ? 'Loading issues…'
-                : issues !== null
-                  ? `${issues.length} issue(s)`
-                  : ''}
-            </Text>
-            {loading && issues !== null && <ActivityIndicator size="small" color={colors.accent} />}
-          </View>
-        </View>
-      }
-      ListEmptyComponent={
-        !loading && issues !== null ? (
-          <View className="flex-1 items-center justify-center" style={{ minHeight: 240 }} testID="explore.issues.empty">
-            <Ionicons name="alert-circle-outline" size={40} color={colors.textSecondary} />
-            <Text className="mt-2 text-center text-sm" style={{ color: colors.textSecondary }}>No issues</Text>
-          </View>
-        ) : undefined
-      }
-      testID="explore.issues.list"
-    />
+        }
+        ListEmptyComponent={
+          !loading && issues !== null ? (
+            <View className="flex-1 items-center justify-center" style={{ minHeight: 240 }} testID="explore.issues.empty">
+              <Ionicons name="alert-circle-outline" size={40} color={colors.textSecondary} />
+              <Text className="mt-2 text-center text-sm" style={{ color: colors.textSecondary }}>No issues</Text>
+            </View>
+          ) : undefined
+        }
+        testID="explore.issues.list"
+      />
+    </View>
   );
 }
