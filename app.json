@@ -2,7 +2,7 @@
   "expo": {
     "name": "GitNot\u0113s",
     "slug": "gitnotes",
-    "version": "1.5.3",
+    "version": "1.5.4",
     "orientation": "portrait",
     "icon": "./assets/generated/icon.png",
     "userInterfaceStyle": "automatic",
