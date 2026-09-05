@@ -32,6 +32,7 @@ export function PullRequestsSection({ repo, active, chromeTopInset = 0 }: Sectio
   const [isPermissionError, setIsPermissionError] = useState(false);
 
   const load = useCallback(async () => {
+    if (!repo?.accountId) return;
     setLoading(true);
     setError(null);
     setIsPermissionError(false);
