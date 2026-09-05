@@ -152,11 +152,11 @@ export function IssuesSection({ repo, active, chromeTopInset = 0 }: SectionProps
 
   const listContentContainerStyle = useMemo(
     () => ({
-      paddingTop: issues !== null ? chromeTopInset : 0,
+      paddingTop: chromeTopInset,
       paddingBottom: 96,
       flexGrow: 1,
     }),
-    [issues, chromeTopInset],
+    [chromeTopInset],
   );
 
   return (
