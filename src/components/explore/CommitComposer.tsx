@@ -127,9 +127,8 @@ export function CommitComposer({ repo, changedPaths, statuses, stagedCount, onCo
               onPress={clearMessage}
               accessibilityLabel={t('common.clear')}
               testID="explore.commit-composer.clear"
-            >
-              {t('common.clear')}
-            </Button>
+              label={t('common.clear')}
+            />
           </View>
         )}
       </View>
@@ -201,10 +200,9 @@ export function CommitComposer({ repo, changedPaths, statuses, stagedCount, onCo
           onPress={() => void runCommit('stageAll')}
           style={{ minHeight: 44 }}
           testID="explore.commit-composer.stage-all-commit"
-        >
-          {busy === 'stageAll' ? <ActivityIndicator size="small" color="#fff" /> : null}
-          Stage all + Commit
-        </Button>
+          label={busy === 'stageAll' ? undefined : 'Stage all + Commit'}
+          leadingIcon={busy === 'stageAll' ? <ActivityIndicator size="small" color="#fff" /> : undefined}
+        />
         <Button
           fullWidth
           variant="outline"
@@ -212,10 +210,9 @@ export function CommitComposer({ repo, changedPaths, statuses, stagedCount, onCo
           onPress={() => void runCommit('commit')}
           style={{ minHeight: 44 }}
           testID="explore.commit-composer.commit"
-        >
-          {busy === 'commit' ? <ActivityIndicator size="small" color={colors.text} /> : null}
-          Commit staged
-        </Button>
+          label={busy === 'commit' ? undefined : 'Commit staged'}
+          leadingIcon={busy === 'commit' ? <ActivityIndicator size="small" color={colors.text} /> : undefined}
+        />
       </View>
     </View>
   );
