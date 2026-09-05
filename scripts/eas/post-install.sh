@@ -33,20 +33,20 @@ fi
 
 log "Building Rust git2 engine for iOS..."
 
-# Ensure iOS directories exist
-mkdir -p "$IOS_LIB_DIR"
-mkdir -p "$SWIFT_GEN_DIR/GitNotesGit2FFI"
+if ! command -v xcrun &> /dev/null; then
+  log "Skipping iOS builds (xcrun not found)"
+else
+  mkdir -p "$IOS_LIB_DIR"
+  mkdir -p "$SWIFT_GEN_DIR/GitNotesGit2FFI"
 
-# Build iOS simulator (arm64)
-log "Building aarch64-apple-ios-sim..."
-(cd "$RUST_DIR" && cargo build --target aarch64-apple-ios-sim "${PROFILE_FLAGS[@]}")
-cp "$RUST_DIR/target/aarch64-apple-ios-sim/$RUST_PROFILE/libgitnotes_git2.a" "$IOS_LIB_DIR/libgitnotes_git2.a"
-log "iOS simulator staticlib copied"
+  log "Building aarch64-apple-ios-sim..."
+  (cd "$RUST_DIR" && cargo build --target aarch64-apple-ios-sim "${PROFILE_FLAGS[@]}")
+  cp "$RUST_DIR/target/aarch64-apple-ios-sim/$RUST_PROFILE/libgitnotes_git2.a" "$IOS_LIB_DIR/libgitnotes_git2.a"
+  log "iOS simulator staticlib copied"
 
-# Build iOS device
-log "Building aarch64-apple-ios (device)..."
-(cd "$RUST_DIR" && cargo build --target aarch64-apple-ios "${PROFILE_FLAGS[@]}")
-# Device artifact kept in place, Xcode will pick it up during build
+  log "Building aarch64-apple-ios (device)..."
+  (cd "$RUST_DIR" && cargo build --target aarch64-apple-ios "${PROFILE_FLAGS[@]}")
+fi
 
 # Build Android libs (skip if NDK not available)
 if [ -n "${ANDROID_NDK_HOME:-}" ] && [ -d "${ANDROID_NDK_HOME:-}" ]; then
