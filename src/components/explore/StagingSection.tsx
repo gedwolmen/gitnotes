@@ -169,20 +169,16 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0 }: 
               disabled={busyPath !== null}
               onPress={() => void discardFile(item.path)}
               testID={`explore.discard.${item.path}`}
-            >
-              {busyPath === item.path ? <Text className="text-xs" style={{ color: colors.textSecondary }}>…</Text> : null}
-              <ButtonText>Discard</ButtonText>
-            </Button>
+              label={busyPath === item.path ? '…' : 'Discard'}
+            />
             <Button
               size="sm"
               variant="outline"
               disabled={busyPath !== null}
               onPress={() => void unstage(item.path)}
               testID={`explore.unstage.${item.path}`}
-            >
-              {busyPath === item.path ? <Text className="text-xs" style={{ color: colors.textSecondary }}>…</Text> : null}
-              <ButtonText>Unstage</ButtonText>
-            </Button>
+              label={busyPath === item.path ? '…' : 'Unstage'}
+            />
           </View>
         </View>
       );

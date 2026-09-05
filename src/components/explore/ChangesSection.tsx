@@ -143,12 +143,8 @@ export function ChangesSection({ repo, active, onChanged, chromeTopInset = 0 }: 
           </Pressable>
           {!item.staged && (
             <View className="mt-2 flex-row justify-end gap-2">
-              <Button size="sm" variant="ghost" onPress={() => void discardFile(item.path)}>
-                <ButtonText>Discard</ButtonText>
-              </Button>
-              <Button size="sm" variant="outline" onPress={() => void stageFile(item.path)}>
-                <ButtonText>Stage</ButtonText>
-              </Button>
+              <Button size="sm" variant="ghost" onPress={() => void discardFile(item.path)} label="Discard" />
+              <Button size="sm" variant="outline" onPress={() => void stageFile(item.path)} label="Stage" />
             </View>
           )}
         </View>
