@@ -7,7 +7,7 @@ import { useTokens, useTheme } from '../../contexts/ThemeContext';
 import type { Radius } from '../../theme/tokens';
 import { cn } from '../../lib/utils';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'outline';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'outline' | 'danger';
 export type ButtonSize = 'xs' | 'sm' | 'md';
 
 interface ButtonSizeStyle {
@@ -87,13 +87,13 @@ export function Button(props: ButtonProps) {
     transform: [{ scale: scale.value }],
   }));
 
-  const textColor = variant === 'primary' ? '#fff' : colors.text;
+  const textColor = (variant === 'primary' || variant === 'danger') ? '#fff' : colors.text;
   const isGhost = variant === 'ghost';
 
   const labelNode = label !== undefined && (
     <Text
       style={[
-        { color: textColor, fontSize, fontWeight: variant === 'primary' ? '600' : '500' },
+        { color: textColor, fontSize, fontWeight: (variant === 'primary' || variant === 'danger') ? '600' : '500' },
         textStyle,
       ]}
     >
@@ -104,7 +104,7 @@ export function Button(props: ButtonProps) {
   const childrenNode = typeof children === 'string' ? (
     <Text
       style={[
-        { color: textColor, fontSize, fontWeight: variant === 'primary' ? '600' : '500' },
+        { color: textColor, fontSize, fontWeight: (variant === 'primary' || variant === 'danger') ? '600' : '500' },
         textStyle,
       ]}
     >
@@ -219,9 +219,11 @@ export function Button(props: ButtonProps) {
             // labels overridden to white invisible (white-on-white).
             variant === 'primary'
               ? { backgroundColor: colors.primary }
-              : variant === 'outline'
-                ? { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border }
-                : { backgroundColor: colors.surface },
+              : variant === 'danger'
+                ? { backgroundColor: '#ef4444' }
+                : variant === 'outline'
+                  ? { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border }
+                  : { backgroundColor: colors.surface },
             style,
           ]}
         >

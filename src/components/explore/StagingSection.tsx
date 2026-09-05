@@ -165,13 +165,13 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0 }: 
           <View className="mt-2 flex-row justify-end gap-2">
             <Button
               size="sm"
-              variant="ghost"
+              variant="danger"
               disabled={busyPath !== null}
               onPress={() => void discardFile(item.path)}
               testID={`explore.discard.${item.path}`}
             >
               {busyPath === item.path ? <Text className="text-xs" style={{ color: colors.textSecondary }}>…</Text> : null}
-              <ButtonText>Discard</ButtonText>
+              Discard
             </Button>
             <Button
               size="sm"

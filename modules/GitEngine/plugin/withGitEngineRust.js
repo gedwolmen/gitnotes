@@ -19,7 +19,8 @@ function withGitEngineRustPodfile(config) {
       const insertionPoint = contents.indexOf(nativeModulesCall);
       if (insertionPoint !== -1) {
         const afterCall = insertionPoint + nativeModulesCall.length;
-        contents = contents.slice(0, afterCall) + '\n  ' + gitEnginePod + '\n' + contents.slice(afterCall);
+        contents =
+          contents.slice(0, afterCall) + '\n  ' + gitEnginePod + '\n' + contents.slice(afterCall);
       }
     }
 

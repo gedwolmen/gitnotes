@@ -10,6 +10,7 @@ import { gitOperationRegistry, useGitOperationStore } from './gitOperationStore'
 import type { GitOp } from './gitOperationStore';
 import { slugifyLocal, getExtensionForFormat } from '../components/editor/editorShared';
 import { parseRepoPath } from '../utils/gitPathParser';
+import { applyNoteTagsToContent, applyNoteColorToContent } from '../services/NoteGitHubSyncService';
 
 function pathsEqual(a: { owner: string; repo: string } | null, b: { owner: string; repo: string }): boolean {
   return !!a && a.owner === b.owner && a.repo === b.repo;
@@ -230,11 +231,16 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
 
     if (mode === 'clone') {
       try {
+        const taggedContent = applyNoteColorToContent(
+          applyNoteTagsToContent(content ?? '', input.format, input.tags ?? []),
+          input.format,
+          input.color,
+        );
         const saveResult = await CloneSyncService.save({
           repoPath,
           branch,
           filePath,
-          content,
+          content: taggedContent,
           message: `Update note: ${input.title ?? filePath}`,
           intent: 'upsert',
         });

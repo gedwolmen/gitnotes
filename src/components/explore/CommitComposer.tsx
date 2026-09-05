@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Text } from '@/components/ui/text';
 import { Heading } from '@/components/ui/heading';
-import { Button, ButtonText } from '@/components/ui/Button';
+import { Button } from '@/components/ui/Button';
 import { InputField } from '@/components/ui/Input';
 import { TextareaInput } from '@/components/ui/textarea';
 import * as GitEngine from '@/services/git/engine/GitEngine';
@@ -128,7 +128,7 @@ export function CommitComposer({ repo, changedPaths, statuses, stagedCount, onCo
               accessibilityLabel={t('common.clear')}
               testID="explore.commit-composer.clear"
             >
-              <ButtonText>{t('common.clear')}</ButtonText>
+              {t('common.clear')}
             </Button>
           </View>
         )}
@@ -214,7 +214,7 @@ export function CommitComposer({ repo, changedPaths, statuses, stagedCount, onCo
           testID="explore.commit-composer.commit"
         >
           {busy === 'commit' ? <ActivityIndicator size="small" color={colors.text} /> : null}
-          <ButtonText>Commit staged</ButtonText>
+          Commit staged
         </Button>
       </View>
     </View>

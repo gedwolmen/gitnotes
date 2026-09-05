@@ -166,7 +166,7 @@ export function BranchesSection({ repo, active, onChanged, chromeTopInset = 0 }:
                 </Input>
               </View>
               <Button size="sm" disabled={busy !== null || !renameValue.trim()} onPress={() => void saveRename(item.name)}>
-                <ButtonText>Save</ButtonText>
+                Save
               </Button>
               <Button size="sm" variant="outline" disabled={busy !== null} onPress={() => setRenaming(null)}>
                 <ButtonText>Cancel</ButtonText>

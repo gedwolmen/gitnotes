@@ -144,7 +144,7 @@ export function ChangesSection({ repo, active, onChanged, chromeTopInset = 0 }: 
           {!item.staged && (
             <View className="mt-2 flex-row justify-end gap-2">
               <Button size="sm" variant="ghost" onPress={() => void discardFile(item.path)}>
-                <ButtonText>Discard</ButtonText>
+                Discard
               </Button>
               <Button size="sm" variant="outline" onPress={() => void stageFile(item.path)}>
                 <ButtonText>Stage</ButtonText>
