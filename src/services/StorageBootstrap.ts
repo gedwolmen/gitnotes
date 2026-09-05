@@ -25,6 +25,7 @@ const STARTUP_KEYS = [
   '@gitnotes:templates_repo',
   '@gitnotes:pro_grandfathered',
   '@gitnotes:grandfather_checked',
+  '@gitnotes:first_seen_build',
   '@gitnotes:trial_was_active',
   '@gitnotes:trial_expired_at',
 ] as const;
