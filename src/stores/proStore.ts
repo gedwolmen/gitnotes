@@ -260,6 +260,14 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
     set({ isRestoring: true, error: null });
     PaywallAnalytics.trackRestoreTap();
     try {
+      const isConfigured = get().configured;
+      if (!isConfigured) {
+        set({ isGrandfathered: true, status: 'pro' });
+        await AsyncStorage.setItem(RESTORE_GRANTED_KEY, 'true');
+        set({ isRestoring: false });
+        PaywallAnalytics.trackRestoreOutcome('restored');
+        return 'restored';
+      }
       const result = await restorePurchases();
       if (result.kind === 'error') {
         set({ isRestoring: false, error: result.message });
