@@ -27,6 +27,7 @@ All notable fixes and feature changes to GitNotēs are documented here.
 **fix(paywall):** Store Android `versionCode` (`Constants.expoConfig.android.versionCode`) in AsyncStorage on first launch. The grandfathering check reads this stored value for the Android path instead of relying on a non-existent RevenueCat field.
 
 **fix(paywall):** Two race conditions fixed:
+
 1. `setAndroidFirstSeenBuild` was fire-and-forget (`void`), so `proStore.initialize()` ran the grandfather check before the build was written. Now properly `await`ed.
 2. `getBootValue` consumed null entries from the boot cache, causing the first-launch write to be skipped. Now preserves null entries so the write detection works correctly.
 
