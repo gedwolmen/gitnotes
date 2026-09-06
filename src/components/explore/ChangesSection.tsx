@@ -30,6 +30,7 @@ export function ChangesSection({ repo, active, onChanged, chromeTopInset = 0 }: 
   const [error, setError] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
   const [notCloned, setNotCloned] = useState(false);
+  const [busyPath, setBusyPath] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -95,12 +96,15 @@ export function ChangesSection({ repo, active, onChanged, chromeTopInset = 0 }: 
 
   const discardFile = useCallback(
     async (path: string) => {
+      setBusyPath(path);
       try {
         await GitEngine.discardFiles(repo.localPath, [path]);
         onChanged();
         setVersion((value) => value + 1);
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : String(caught));
+      } finally {
+        setBusyPath(null);
       }
     },
     [repo.localPath, onChanged],
@@ -146,9 +150,10 @@ export function ChangesSection({ repo, active, onChanged, chromeTopInset = 0 }: 
               <Button
                 size="sm"
                 variant="danger"
+                disabled={busyPath !== null}
                 onPress={() => void discardFile(item.path)}
                 testID={`explore.discard.${item.path}`}
-                label="Discard"
+                label={busyPath === item.path ? '…' : 'Discard'}
               />
               <Button size="sm" variant="outline" onPress={() => void stageFile(item.path)} label="Stage" />
             </View>
@@ -156,7 +161,7 @@ export function ChangesSection({ repo, active, onChanged, chromeTopInset = 0 }: 
         </View>
       );
     },
-    [data, navigation, repo.id, stageFile, discardFile],
+    [data, navigation, repo.id, stageFile, discardFile, busyPath],
   );
 
   if (error) {
