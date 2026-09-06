@@ -48,7 +48,7 @@ interface AccountsContextValue {
     provider: GitHostProvider,
     token: string,
     instanceBaseUrl?: string | null,
-  ) => Promise<{ ok: boolean; reason?: 'invalid' | 'network' }>;
+  ) => Promise<{ ok: boolean; reason?: 'invalid' | 'missing_repo_scope' | 'missing_contents_permission' | 'saml' | 'no_repository_access' | 'network' }>;
 
   // ── Legacy aliases (kept so existing useAuth() callers keep compiling) ──
   setToken: (token: string) => Promise<boolean>;
@@ -356,7 +356,7 @@ export function AccountsProvider({ children }: { children: ReactNode }) {
       provider: GitHostProvider,
       token: string,
       instanceBaseUrl?: string | null,
-    ): Promise<{ ok: boolean; reason?: 'invalid' | 'network' }> => {
+    ): Promise<{ ok: boolean; reason?: 'invalid' | 'missing_repo_scope' | 'missing_contents_permission' | 'saml' | 'no_repository_access' | 'network' }> => {
       const result = await validateHostToken(provider, token, instanceBaseUrl ?? null);
       return result.ok ? { ok: true } : { ok: false, reason: result.reason };
     },

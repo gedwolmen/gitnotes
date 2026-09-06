@@ -715,10 +715,30 @@ export default function SettingsScreen() {
       // Paste-time diagnostics (#1190): distinguish a rejected token from a
       // network failure instead of one generic copy.
       const diag = await AuthService.validateToken(tokenInput.trim());
-      if (!diag.ok && diag.reason === 'invalid') {
-        setTokenError(t('settings.tokenTestInvalid'));
-      } else if (!diag.ok && diag.reason === 'network') {
-        setTokenError(t('settings.tokenTestNetwork'));
+      if (!diag.ok) {
+        switch (diag.reason) {
+          case 'invalid':
+            setTokenError(t('settings.tokenTestInvalid'));
+            break;
+          case 'missing_repo_scope':
+            setTokenError(t('settings.tokenMissingRepoScope'));
+            break;
+          case 'missing_contents_permission':
+            setTokenError(t('settings.tokenMissingContentsPermission'));
+            break;
+          case 'saml':
+            setTokenError(t('settings.tokenSamlError'));
+            break;
+          case 'no_repository_access':
+            setTokenError(t('settings.tokenNoRepoAccess'));
+            break;
+          case 'network':
+            setTokenError(t('settings.tokenTestNetwork'));
+            break;
+          default: {
+            setTokenError(t('settings.tokenInvalid'));
+          }
+        }
       } else {
         setTokenError(t('settings.tokenInvalid'));
       }
@@ -736,10 +756,31 @@ export default function SettingsScreen() {
       setTokenTestResult({ ok: true, text: t('settings.tokenTestOk', { login: diag.user.login }) });
     } else {
       HapticService.error();
-      setTokenTestResult({
-        ok: false,
-        text: diag.reason === 'invalid' ? t('settings.tokenTestInvalid') : t('settings.tokenTestNetwork'),
-      });
+      let errorText: string;
+      switch (diag.reason) {
+        case 'invalid':
+          errorText = t('settings.tokenTestInvalid');
+          break;
+        case 'missing_repo_scope':
+          errorText = t('settings.tokenMissingRepoScope');
+          break;
+        case 'missing_contents_permission':
+          errorText = t('settings.tokenMissingContentsPermission');
+          break;
+        case 'saml':
+          errorText = t('settings.tokenSamlError');
+          break;
+        case 'no_repository_access':
+          errorText = t('settings.tokenNoRepoAccess');
+          break;
+        case 'network':
+          errorText = t('settings.tokenTestNetwork');
+          break;
+        default: {
+          errorText = t('settings.tokenTestInvalid');
+        }
+      }
+      setTokenTestResult({ ok: false, text: errorText });
     }
     setIsTestingToken(false);
   }, [isTestingToken, tokenInput, t]);

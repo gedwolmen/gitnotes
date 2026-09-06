@@ -22,7 +22,12 @@ export interface AuthState {
 
 export type TokenValidity =
   | { ok: true; user: GitHubUser }
-  | { ok: false; reason: 'invalid' | 'network' };
+  | { ok: false; reason: 'invalid' }
+  | { ok: false; reason: 'missing_repo_scope' }
+  | { ok: false; reason: 'missing_contents_permission' }
+  | { ok: false; reason: 'saml' }
+  | { ok: false; reason: 'no_repository_access' }
+  | { ok: false; reason: 'network' };
 
 export interface HostConnectionSummary {
   id: string;
@@ -144,7 +149,7 @@ export async function validateHostToken(
   provider: GitHostProvider,
   token: string,
   instanceBaseUrl?: string | null,
-): Promise<{ ok: true; user: GitHubUser } | { ok: false; reason: 'invalid' | 'network' }> {
+): Promise<TokenValidity> {
   if (provider === 'github') {
     return validateGitHubToken(token);
   }
@@ -508,6 +513,30 @@ export class AuthService {
   }
 }
 
+const GITHUB_TOKEN_HEADER_NAMES = ['x-github-sso', 'x-accepted-github-permissions'] as const;
+function captureGitHubTokenHeaders(headers: Headers): Record<string, string> {
+  const captured: Record<string, string> = {};
+  for (const name of GITHUB_TOKEN_HEADER_NAMES) {
+    const value = headers.get(name);
+    if (value !== null) captured[name] = value;
+  }
+  return captured;
+}
+
+function parseAcceptedPermissions(headerValue: string | null): {
+  hasContents: boolean;
+  hasContentsWrite: boolean;
+  hasRepo: boolean;
+} {
+  if (!headerValue) return { hasContents: false, hasContentsWrite: false, hasRepo: false };
+  const lower = headerValue.toLowerCase();
+  return {
+    hasContents: lower.includes('contents'),
+    hasContentsWrite: /\bcontents\s*[:=]\s*write\b/i.test(headerValue),
+    hasRepo: lower.includes('repo'),
+  };
+}
+
 async function validateGitHubToken(
   token: string,
 ): Promise<TokenValidity> {
@@ -518,9 +547,27 @@ async function validateGitHubToken(
         Accept: 'application/vnd.github.v3+json',
       },
     });
-    if (response.status === 401 || response.status === 403) {
+
+    if (response.status === 401) {
       return { ok: false, reason: 'invalid' };
     }
+
+    if (response.status === 403) {
+      const captured = captureGitHubTokenHeaders(response.headers);
+      const ssoHeader = captured['x-github-sso'];
+      if (ssoHeader !== undefined) {
+        return { ok: false, reason: 'saml' };
+      }
+      const perms = parseAcceptedPermissions(captured['x-accepted-github-permissions'] ?? null);
+      if (!perms.hasContents && !perms.hasRepo) {
+        return { ok: false, reason: 'missing_repo_scope' };
+      }
+      if (perms.hasContents && !perms.hasContentsWrite) {
+        return { ok: false, reason: 'missing_contents_permission' };
+      }
+      return { ok: false, reason: 'no_repository_access' };
+    }
+
     if (!response.ok) {
       return { ok: false, reason: 'network' };
     }
