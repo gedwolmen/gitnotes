@@ -24,8 +24,8 @@
 | `GitFsService.ts` | Git filesystem operations — read/write files in working tree, list directory contents. |
 | `LocalGitWriter.ts` | Writes changes to the local working tree and stages them for commit. Coordinates with CloneSyncService. |
 | `GitSyncGate.ts` | Gate/keeper that prevents concurrent sync operations. Ensures push/pull don't race each other. |
-| `LfsService.ts` | Git LFS (Large File Storage) support — tracks LFS pointers, handles LFS file uploads/downloads. |
-| `GitHttp.ts` | Low-level HTTP transport for Git smart protocol over HTTP/HTTPS. |
+| `lfs.ts` | Git LFS (Large File Storage) support — tracks LFS pointers, handles LFS file uploads/downloads. |
+| `gitHttp.ts` | Low-level HTTP transport for Git smart protocol over HTTP/HTTPS. |
 
 ### Branch & Repo Management
 

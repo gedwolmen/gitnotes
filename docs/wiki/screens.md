@@ -56,7 +56,7 @@ GitNotēs uses the custom scheme `gitnotes://` for deep links.
 | Settings | `gitnotes://settings` | `gitnotes://settings` |
 | Thought dump | `gitnotes://thought-dump` | `gitnotes://thought-dump` |
 
-> **Note:** Deep linking to the tab bar screens (HomeTab, NotesTab, etc.) is not supported via custom scheme. Universal links (`https://gitnotes.app/...`) require associated domains entitlement configuration — see [Architecture](./architecture.md).
+> **Note:** Tab bar screens (Home, Notes, Explore, Todos, Settings) ARE reachable via `gitnotes://home`, `gitnotes://notes`, etc. Universal links (`https://gitnotes.app/...`) require associated domains entitlement configuration — see [Architecture](./architecture.md).
 
 ### Actual Route Param Types
 
@@ -324,5 +324,5 @@ The canonical route param types are in `src/navigation/types.ts`:
 
 ## See Also
 
-- [Navigation types](../navigation/types.ts) — TypeScript type definitions for route params
+- [Navigation types](../../navigation/types.ts) — TypeScript type definitions for route params
 - [Architecture](./architecture.md) — Context

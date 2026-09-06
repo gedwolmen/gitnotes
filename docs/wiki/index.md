@@ -42,5 +42,5 @@ If you are an AI agent modifying code in this repository, read the [Architecture
 ## See Also
 
 - [GitHub Wiki](https://github.com/gedwolmen/gitnotes/wiki)
-- [CHANGELOG.md](../CHANGELOG.md)
-- [AGENTS.md](../AGENTS.md)
+- [CHANGELOG.md](../../CHANGELOG.md)
+- [AGENTS.md](../../AGENTS.md)

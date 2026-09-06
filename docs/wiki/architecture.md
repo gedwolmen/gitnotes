@@ -122,7 +122,7 @@ gitnotes/
 │   │   ├── git/            # Git host services, commit ops, sync gate
 │   │   ├── canvas/         # Sparse tile canvas, AI vision
 │   │   ├── documents/      # Document service, working tree
-│   │   ├── gitEngine.ts    # Rust GitEngine TypeScript bindings
+│   │   ├── git/engine/GitEngine.ts  # Rust GitEngine TypeScript facade
 │   │   └── syncStubs.ts    # Sync service stubs (active implementation)
 │   ├── stores/             # Zustand stores (20 stores)
 │   ├── theme/              # NativeWind theme, color tokens

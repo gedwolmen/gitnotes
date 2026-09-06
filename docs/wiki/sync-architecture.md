@@ -2,7 +2,7 @@
 
 > Deep-dive on GitNotēs' two sync modes. See [Architecture](./architecture.md) for context and [Services](./services.md) for the underlying services.
 
-GitNotēs supports two synchronization modes, controlled per-repository via the `@gitnotes:sync_engine_modes` preference. The default mode is **`clone`**.
+GitNotēs supports two synchronization modes, controlled per-repository via the `@gitnotes:sync_engine_modes` preference. The default mode is **`clone`**. **API mode is currently a design intent** — the `SyncEngineService` stub always returns `'clone'`; API mode wiring exists in the architecture docs but is not yet live.
 
 ## Mode Overview
 
