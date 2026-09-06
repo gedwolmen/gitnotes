@@ -22,20 +22,23 @@ AppNavigator (Native Stack Navigator)
 ├── ChatScreen                   # Stack screen — chat/:threadId
 ├── SyncStatusScreen             # Stack screen
 ├── AddReminderScreen            # Stack screen
-├── TemplateManagerScreen         # Stack screen
+├── TemplateManagerScreen        # Stack screen
 ├── RenderStyleSettingsScreen    # Stack screen
 ├── RenderStyleEditorScreen      # Stack screen
 ├── GraphViewScreen              # Stack screen
-├── PaywallScreen               # Stack screen (interstitial or direct)
-├── ThoughtDumpScreen           # Stack screen — thought-dump
+├── PaywallScreen                # Stack screen (interstitial or direct)
+├── ThoughtDumpScreen            # Stack screen — thought-dump
 ├── ImageViewerScreen            # Stack screen
 ├── FileViewerScreen             # Stack screen
-├── PdfViewerScreen             # Stack screen
+├── PdfViewerScreen              # Stack screen
 ├── VideoViewerScreen            # Stack screen
 ├── ExploreCommitScreen          # Stack screen
-├── ExploreDiffScreen            # Stack screen
+├── ExploreDiffScreen           # Stack screen
 ├── ExploreFileScreen            # Stack screen
-└── NeumorphicGallery           # __dev__/neumorphic (dev only)
+├── ExploreRepoInfoScreen        # Stack screen
+├── ExploreIssuesScreen          # Stack screen
+├── ExplorePullRequestsScreen    # Stack screen
+└── NeumorphicGallery            # __dev__/neumorphic (dev only)
 ```
 
 ## Deep Linking
@@ -72,7 +75,7 @@ The canonical route param types are in `src/navigation/types.ts`:
 | `ExploreDiff` | `{ repoId: string; path: string }` |
 | `ExploreCommit` | `{ repoId: string; commitId: string }` |
 | `ExploreFile` | `{ repoId: string; path: string }` |
-| `ExploreConflict` | `{ repoId: string }` |
+| `ConflictResolve` | `{ repoId: string; path: string }` *(in types, no screen component — navigation target only)* |
 | `PdfViewer` | `{ owner: string; repo: string; branch?; path: string; title? }` |
 
 ## Screens
