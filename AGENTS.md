@@ -89,6 +89,8 @@ Editing the wiki: write the page in `docs/wiki/<name>.md` (this repo, source-con
 
 Wiki documentation is part of the definition of done for **architecture-level changes only**.
 
+**Wiki accuracy is a living concern.** If you find a wiki page that is wrong — a wrong file name, wrong function signature, wrong description, wrong import path, wrong deep link, wrong context provider nesting, or any factual inaccuracy — **fix it as part of your current work**. Do not leave the wrong information in place. Update the wiki page, open a PR, and let the CI sync workflow push the correction to the GitHub Wiki. This applies to every PR: fixing wiki inaccuracies is not optional or out-of-scope.
+
 ## Quote Content Policy
 
 All quotes in `src/data/philosopher_quotes.json` (the Daily Quote dataset) MUST:

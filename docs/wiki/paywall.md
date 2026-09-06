@@ -1,0 +1,248 @@
+# Paywall & Pro Tier
+
+> Complete guide to GitNotēs Pro — RevenueCat integration, StoreKit 2, entitlements, feature gates, and analytics. See [Architecture](./architecture.md) for context.
+
+## Pro Tier Features
+
+GitNotēs has two tiers: **Free** and **Pro**.
+
+| Feature | Free | Pro |
+|---------|------|-----|
+| Notes, todos, canvases | ✅ | ✅ |
+| GitHub sync | ✅ | ✅ |
+| Neumorphic "Fancy UI" | ❌ | ✅ |
+| Advanced AI (Claude 3.5, GPT-4o) | ❌ | ✅ |
+| Multi-host (GitLab, Gitea) | ❌ | ✅ |
+| Unlimited repos | 3 | Unlimited |
+| Canvas AI vision | Limited | ✅ |
+| Priority support | ❌ | ✅ |
+
+## RevenueCat Integration
+
+**Package:** `react-native-purchases` (v10.7.1) wrapping RevenueCat SDK
+
+**Entitlement ID:** `GitNotēs Pro`
+
+**File:** `src/services/RevenueCatService.ts`
+
+### Initialization
+
+```typescript
+// Called once on app start via proStore.initialize()
+configureRevenueCat()
+  .then(({ configured }) => {
+    if (configured) {
+      // RevenueCat is active — entitlements will be checked
+    } else {
+      // Placeholder API key — Pro features hidden
+    }
+  });
+```
+
+API keys are configured via environment variables:
+- `EXPO_PUBLIC_REVENUECAT_API_KEY_IOS` — iOS RevenueCat key
+- `EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID` — Android RevenueCat key
+
+### StoreKit 2
+
+On iOS, RevenueCat uses StoreKit 2 automatically:
+
+```typescript
+// RevenueCatService.ts:46
+await Purchases.configure({
+  apiKey,
+  storeKitVersion: STOREKIT_VERSION.STOREKIT_2, // Force StoreKit 2
+});
+```
+
+StoreKit 2 provides:
+- Faster purchase confirmation
+- Improved subscription status tracking
+- Better offline purchase handling
+
+### Package Types
+
+Three subscription packages are offered:
+
+```typescript
+interface Packages {
+  monthly: PurchasesPackage;    // $4.99/month
+  yearly?: PurchasesPackage;   // $29.99/year (optional)
+  lifetime?: PurchasesPackage;  // $79.99 one-time (optional)
+  offerings: PurchasesOfferings;
+}
+```
+
+Packages are loaded via `getPackages()` which queries RevenueCat's offerings endpoint and matches package identifiers.
+
+### Key RevenueCatService Exports
+
+| Function | Purpose |
+|---------|---------|
+| `configureRevenueCat()` | Initialize RevenueCat SDK |
+| `getPackages()` | Load available subscription packages |
+| `purchasePackage(pkg)` | Initiate purchase flow |
+| `restorePurchases()` | Restore purchases from App Store |
+| `getCustomerInfo()` | Fetch current entitlement status |
+| `logInAppUser(id)` | Bind RevenueCat identity to app user ID (cross-device sync) |
+| `logOutAppUser()` | Reset to anonymous identity |
+| `trackPaywallImpression(offering)` | Track paywall view event |
+
+---
+
+## Pro Store (`src/stores/proStore.ts`)
+
+The `proStore` is the central state manager for Pro tier.
+
+### ProState
+
+```typescript
+interface ProState {
+  status: 'loading' | 'pro' | 'free';
+  entitlementActive: boolean;     // True if user has active Pro entitlement
+  isGrandfathered: boolean;      // True if legacy paid user (pre-Entitlements)
+  trialActive: boolean;           // True if in trial period
+  trialEndsAt: number | null;   // Trial end timestamp
+  entitlementExpiresAt: number | null;
+  offeringsReady: boolean;
+  monthlyPackage: PurchasesPackage | null;
+  yearlyPackage: PurchasesPackage | null;
+  lifetimePackage: PurchasesPackage | null;
+  currentOffering: PurchasesOffering | null;
+  isPurchasing: boolean;
+  isRestoring: boolean;
+  error: string | null;
+  interstitialEligible: boolean;  // Show interstitial after trial ends
+  configured: boolean;               // RevenueCat SDK initialized
+}
+```
+
+### ProActions
+
+| Action | Purpose |
+|--------|---------|
+| `initialize()` | Boot RevenueCat, resolve entitlement, check grandfather status |
+| `refresh()` | Re-fetch customer info after purchase/restore |
+| `purchaseMonthly()` | Purchase monthly subscription |
+| `purchaseYearly()` | Purchase annual subscription |
+| `purchaseLifetime()` | Purchase one-time lifetime access |
+| `restore()` | Restore purchases — checks App Store for existing entitlement |
+| `loadOfferingsIfNeeded()` | Load subscription packages if not yet loaded |
+| `markInterstitialShown()` | Mark that the paywall interstitial was shown |
+| `bindAccount(appUserID)` | Bind RevenueCat account to GitNotēs account for cross-device Pro |
+| `unbindAccount()` | Remove account binding |
+
+### DEV_FORCE_PRO Override
+
+In development (`__DEV__`) on iOS Simulator only, Pro is forced open for QA testing without real IAP:
+
+```typescript
+export const DEV_FORCE_PRO =
+  __DEV__ &&
+  Platform.OS === 'ios' &&
+  isSimulator() &&
+  process.env.FORCE_ENABLE_PRO_ON_SIMULATOR !== 'false';
+```
+
+The gate quad: `__DEV__ && iOS && simulator && env !== 'false'`
+
+> **Note:** This does NOT bypass RevenueCat calls. The SDK still initializes and makes API calls — only the derived `isPro` gate is forced to `true`.
+
+---
+
+## Feature Gates
+
+### `useProGate()`
+
+**File:** `src/hooks/useProGate.ts`
+
+```typescript
+// Safe to call anywhere (does NOT use navigation)
+export function useProStatus() {
+  const isPro = useProStore(selectIsPro);
+  const status = useProStore(s => s.status);
+  return { isPro, status, loading: status === 'loading' };
+}
+
+// Opens paywall if non-Pro user tries to access Pro feature
+export function useProGate() {
+  const { isPro, status, loading } = useProStatus();
+  const openPaywall = useCallback(() => navigation.navigate('Paywall'), []);
+  return { isPro, status, loading, openPaywall };
+}
+```
+
+### `useProScreenGuard(screen: string)`
+
+**File:** `src/hooks/useProScreenGuard.ts`
+
+Redirects away from a Pro-only screen if the user is not Pro.
+
+---
+
+## Grandfather Service
+
+**File:** `src/services/GrandfatherService.ts`
+
+Legacy users who purchased before the Entitlements era are "grandfathered" into Pro permanently. `GrandfatherService.resolveGrandfatherStatus()` checks the original app version in `CustomerInfo.originalApplicationVersion` against a known threshold.
+
+---
+
+## Tier Limits
+
+**File:** `src/services/TierLimits.ts`
+
+Enforces feature limits per tier — repo count on free, canvas AI usage limits, etc.
+
+---
+
+## Paywall Analytics
+
+**File:** `src/services/PaywallAnalytics.ts`
+
+Tracks RevenueCat events:
+
+| Event | Trigger |
+|-------|---------|
+| `paywall_impression` | Paywall screen mounts |
+| `purchase_attempt` | User taps buy button |
+| `purchase_success` | Purchase completes |
+| `purchase_cancelled` | User cancels purchase |
+| `purchase_error` | Purchase fails |
+| `restore_tap` | User taps Restore |
+| `restore_success` | Restore finds entitlement |
+| `restore_nothing` | Restore finds no purchases |
+
+---
+
+## Paywall Screen
+
+**File:** `src/screens/PaywallScreen.tsx`
+
+Full-screen purchase UI:
+- Feature comparison table (Free vs Pro)
+- `PaywallPlanGrid` — plan cards (monthly/yearly/lifetime)
+- `PaywallFeatureGrid` — feature checklist
+- Restore purchases button
+- Close button (if presented as modal)
+
+---
+
+## Interstitial Paywall
+
+When a free user who previously had a trial reaches the end of their trial:
+
+1. `proStore.initialize()` detects that a trial was previously active but has now ended, and 3+ days have passed since expiration
+2. Sets `interstitialEligible = true` in `ProState`
+3. `AppNavigator` detects this flag and navigates to `PaywallScreen` automatically (one-shot)
+
+`markInterstitialShown()` is called after the interstitial is displayed — it sets `interstitialEligible = false` via `AsyncStorage` to prevent repeat showing.
+
+---
+
+## See Also
+
+- [Services](./services.md) — RevenueCatService, TierLimits, PaywallAnalytics
+- [Stores](./stores.md) — proStore
+- [Hooks](./hooks.md) — useProGate, useProScreenGuard
+- [Screens](./screens.md) — PaywallScreen
