@@ -12,7 +12,7 @@ import {
   purchasePackage as purchasePackageWith,
   restorePurchases,
 } from '../services/RevenueCatService';
-import { resolveGrandfatherStatus } from '../services/GrandfatherService';
+import { resolveGrandfatherStatus, RESTORE_GRANTED_KEY } from '../services/GrandfatherService';
 import * as PaywallAnalytics from '../services/PaywallAnalytics';
 
 let _isDevice: boolean | null = null;
@@ -283,6 +283,7 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
         return 'nothing';
       }
       await get().refresh();
+      await AsyncStorage.setItem(RESTORE_GRANTED_KEY, 'true');
       set({ isRestoring: false });
       PaywallAnalytics.trackRestoreOutcome('restored');
       return 'restored';

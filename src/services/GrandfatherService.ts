@@ -6,8 +6,9 @@ export const PRO_PAYWALL_FIRST_BUILD = 9;
 export const GRANDFATHERED_KEY = '@gitnotes:pro_grandfathered';
 export const GRANDFATHER_CHECKED_KEY = '@gitnotes:grandfather_checked';
 export const FIRST_SEEN_BUILD_KEY = '@gitnotes:first_seen_build';
+export const RESTORE_GRANTED_KEY = '@gitnotes:restore_granted';
 
-export type GrandfatherReason = 'flag' | 'onboarding' | 'ios-build' | 'android-build' | 'none' | 'checked';
+export type GrandfatherReason = 'flag' | 'onboarding' | 'ios-build' | 'android-build' | 'restore-granted' | 'none' | 'checked';
 
 export interface GrandfatherResult {
   isGrandfathered: boolean;
@@ -50,6 +51,11 @@ export async function resolveGrandfatherStatus(
 
   const checked = await getStoredValue(GRANDFATHER_CHECKED_KEY);
   if (checked === 'true') return { isGrandfathered: false, reason: 'checked' };
+
+  if (customerInfo === null) {
+    const restored = await getStoredValue(RESTORE_GRANTED_KEY);
+    if (restored === 'true') return { isGrandfathered: true, reason: 'restore-granted' };
+  }
 
   // iOS: originalApplicationVersion is CFBundleVersion at time of original purchase.
   // Only treat as build number if it is a pure integer to avoid bypass
