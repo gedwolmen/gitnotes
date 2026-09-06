@@ -26,7 +26,7 @@ interface StagingData {
   diffs: Record<string, FileDiff>;
 }
 
-export function StagingSection({ repo, active, onChanged, chromeTopInset = 0 }: SectionProps) {
+export function StagingSection({ repo, active, onChanged, chromeTopInset = 0, onNavigate }: SectionProps) {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTokens();
   const [data, setData] = useState<StagingData | null>(null);
@@ -264,6 +264,7 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0 }: 
             setCommitOpen(false);
             onChanged();
             setVersion((value) => value + 1);
+            onNavigate?.('commits');
           }}
         />
       </Modal>
