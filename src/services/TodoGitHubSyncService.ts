@@ -2,7 +2,7 @@ import { GitHubService } from './GitHubService';
 import { Todo } from '../models/Todo';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { AuthService } from './AuthService';
-import { CloneSyncService, SyncEngineService } from './syncStubs';
+import { CloneSyncService, SyncEngineService } from './cloneSyncServiceImpl';
 import { resolveDefaultFolder, resolveDefaultRepo } from './git/defaultsPolicy';
 import { GitFsService } from './git/GitFsService';
 import { resolveBranch } from './git/resolveBranch';

@@ -2,7 +2,7 @@ import { GitHubService } from './GitHubService';
 import { StorageService } from './StorageService';
 import { ThoughtDump, createThoughtDump, serializeThoughtDump, parseThoughtDump } from '../models/ThoughtDump';
 import { parseRepoPath } from '../utils/gitPathParser';
-import { SyncEngineService } from './syncStubs';
+import { SyncEngineService } from './cloneSyncServiceImpl';
 import { resolveBranch } from './git/branchResolver';
 import { CommitService } from './git/CommitService';
 import { getGitHostService } from './git/gitHostFactory';

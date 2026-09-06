@@ -3,7 +3,7 @@ import { NoteColor, NoteFormat } from '../models/Note';
 import * as FileSystem from 'expo-file-system/legacy';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { AuthService } from './AuthService';
-import { SyncEngineService, CloneSyncService } from './syncStubs';
+import { SyncEngineService, CloneSyncService } from './cloneSyncServiceImpl';
 import { GitFsService } from './git/GitFsService';
 import { resolveBranch } from './git/resolveBranch';
 import { getGitHostService } from './git/gitHostFactory';
@@ -381,72 +381,8 @@ export async function deleteNoteFromGitHub(params: {
       : { success: false, error: saveResult.error };
   }
 
-  if (FEATURE_USE_MULTI_HOST_WRITE) {
-    try {
-      const host = getGitHostService(params.provider);
-      const lookup = await host.getFileSha(repoInfo.owner, repoInfo.repo, filePath, targetBranch);
-      if (lookup.kind === 'not-found') {
-        return { success: true, filePath };
-      }
-      if (lookup.kind === 'error') {
-        return { success: false, error: lookup.message };
-      }
-      await host.deleteFile(
-        repoInfo.owner, repoInfo.repo, filePath,
-        `Delete note: ${title || filePath}`,
-        lookup.sha!, targetBranch,
-      );
-      return { success: true, filePath };
-    } catch (error) {
-      const details = extractHttpErrorDetails(error);
-      if (details.status === 404 || /404/.test(details.message ?? '')) {
-        return { success: true, filePath };
-      }
-      return failedSyncOrConflict(error);
-    }
-  }
-
-  try {
-    // Cache-first lookup (#565 phase C). When the editor saved this note
-    // a moment ago, the sha is already in memory and we skip the GET.
-    const lookup = await GitHubService.getFileShaCached(
-      repoInfo.owner,
-      repoInfo.repo,
-      filePath,
-      targetBranch,
-      opts,
-    );
-    if (lookup.kind === 'not-found') {
-      return { success: true, filePath };
-    }
-    if (lookup.kind === 'error') {
-      // Sha lookup itself failed (network blip, 5xx, …). Do NOT
-      // soft-succeed — letting the local row delete here would let the
-      // upstream copy come back on the next pull (#567 fix A).
-      return { success: false, error: lookup.message };
-    }
-
-    const result = await GitHubService.deleteFile(
-      repoInfo.owner,
-      repoInfo.repo,
-      filePath,
-      `Delete note: ${title || filePath}`,
-      lookup.sha,
-      targetBranch,
-      opts,
-    );
-
-    if (result) {
-      return { success: true, filePath };
-    }
-    return { success: false, error: 'GitHub API returned no result' };
-  } catch (error) {
-    const details = extractHttpErrorDetails(error);
-    if (details.status === 404 || /404/.test(details.message ?? '')) {
-      return { success: true, filePath };
-    }
-    return failedSyncOrConflict(error);
-  }
+  // API mode removed — SyncEngineService.getMode() always returns 'clone'
+  throw new Error('API mode is no longer supported. Please re-clone the repository in clone mode.');
 }
 
 export async function syncNoteToGitHub(params: {
@@ -518,23 +454,12 @@ export async function syncNoteToGitHub(params: {
   const mode = await SyncEngineService.getMode(repoPath);
   let fileExists: boolean | null;
   try {
-    if (mode === 'clone') {
-      const cloned = await GitFsService.isCloned({ repoPath });
-      if (cloned) {
-        const existing = await GitFsService.readFile({ repoPath, ref: targetBranch, filepath: targetPath });
-        fileExists = existing !== null;
-      } else {
-        fileExists = false;
-      }
+    const cloned = await GitFsService.isCloned({ repoPath });
+    if (cloned) {
+      const existing = await GitFsService.readFile({ repoPath, ref: targetBranch, filepath: targetPath });
+      fileExists = existing !== null;
     } else {
-      if (FEATURE_USE_MULTI_HOST_WRITE) {
-        const host = getGitHostService(params.provider);
-        const sha = await host.getFileShaOrNull(repoInfo.owner, repoInfo.repo, targetPath, targetBranch);
-        fileExists = sha !== null;
-      } else {
-        const sha = await GitHubService.getFileShaOrNull(repoInfo.owner, repoInfo.repo, targetPath, targetBranch, opts);
-        fileExists = sha !== null;
-      }
+      fileExists = false;
     }
   } catch (error) {
     const code = (error as Error & { code?: string }).code;
@@ -568,57 +493,6 @@ export async function syncNoteToGitHub(params: {
     return { success: false, error: saveResult.error };
   }
 
-  if (FEATURE_USE_MULTI_HOST_WRITE) {
-    try {
-      const host = getGitHostService(params.provider);
-      if (knownSha && filePath) {
-        const currentSha = await host.getFileShaOrNull(
-          repoInfo.owner, repoInfo.repo, targetPath, targetBranch,
-        );
-        if (currentSha && currentSha !== knownSha) {
-          return failedSyncOrConflict(
-            `Conflict: ${targetPath} was modified on GitHub since you last loaded it. Pull to get the latest version.`,
-            409,
-          );
-        }
-      }
-      await host.updateFile(
-        repoInfo.owner, repoInfo.repo, targetPath, finalContent, message, targetBranch, knownSha,
-      );
-      return { success: true, filePath: targetPath, finalContent };
-    } catch (error) {
-      return failedSyncOrConflict(error);
-    }
-  }
-
-  try {
-    if (knownSha && filePath) {
-      const currentSha = await GitHubService.getFileShaOrNull(
-        repoInfo.owner, repoInfo.repo, targetPath, targetBranch, opts,
-      );
-      if (currentSha && currentSha !== knownSha) {
-        return failedSyncOrConflict(
-          `Conflict: ${targetPath} was modified on GitHub since you last loaded it. Pull to get the latest version.`,
-          409,
-        );
-      }
-    }
-
-    const result = await GitHubService.updateFile(
-      repoInfo.owner,
-      repoInfo.repo,
-      targetPath,
-      finalContent,
-      message,
-      targetBranch,
-      { ...opts, expectExists: useUpdateVerb },
-    );
-
-    if (result) {
-      return { success: true, filePath: targetPath, finalContent };
-    }
-    return { success: false, error: 'GitHub API returned no result' };
-  } catch (error) {
-    return failedSyncOrConflict(error);
-  }
+  // API mode removed — SyncEngineService.getMode() always returns 'clone'
+  throw new Error('API mode is no longer supported. Please re-clone the repository in clone mode.');
 }

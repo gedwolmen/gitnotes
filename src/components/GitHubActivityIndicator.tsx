@@ -3,7 +3,7 @@ import { ActivityIndicator, Animated, Easing, StyleSheet, Text, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTokens } from '../contexts/ThemeContext';
 import { useGitHubActivityStore, SyncProgress } from '../stores/githubActivityStore';
-import { NoteSyncQueueService } from '../services/syncStubs';
+import { NoteSyncQueueService } from '../services/cloneSyncServiceImpl';
 
 function ProgressBar({ progress, color }: { progress: SyncProgress; color: string }) {
   const percentage = progress.total != null && progress.total > 0

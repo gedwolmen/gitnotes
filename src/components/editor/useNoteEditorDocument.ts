@@ -12,7 +12,7 @@ import { GitService } from '../../services/GitService';
 import { LastSelectionPreferenceService } from '../../services/LastSelectionPreferenceService';
 import { HapticService } from '../../utils/haptics';
 import { useUndo } from '../../utils/useUndo';
-import { NoteSyncQueueService } from '../../services/syncStubs';
+import { NoteSyncQueueService } from '../../services/cloneSyncServiceImpl';
 import { classifyGitHubSyncError, isRetryableFailure, syncStatusForError } from '../../services/git/syncFailure';
 import { useNoteStore } from '../../stores/noteStore';
 import { githubActivity } from '../../stores/githubActivityStore';

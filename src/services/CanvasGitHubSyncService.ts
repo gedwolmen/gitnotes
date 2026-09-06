@@ -2,7 +2,7 @@ import { GitHubService } from './GitHubService';
 import { CanvasScene, slugifyCanvasTitle } from '../models/Canvas';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { AuthService } from './AuthService';
-import { SyncEngineService, CloneSyncService } from './syncStubs';
+import { SyncEngineService, CloneSyncService } from './cloneSyncServiceImpl';
 import { resolveDefaultFolder, resolveDefaultRepo } from './git/defaultsPolicy';
 import { resolveBranch } from './git/resolveBranch';
 

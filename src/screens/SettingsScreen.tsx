@@ -19,7 +19,7 @@ import { GitHubService, type GitHubRepository } from '../services/GitHubService'
 import { RepoFileSyncService } from '../services/RepoFileSyncService';
 import { TemplateRepoPreferenceService, type TemplateRepoPreference } from '../services/TemplateRepoPreferenceService';
 import { serializeTemplate, templateSlug } from '../services/TemplateMarkdownService';
-import { NoteSyncQueueService, SyncEngineService } from '../services/syncStubs';
+import { NoteSyncQueueService, SyncEngineService } from '../services/cloneSyncServiceImpl';
 import { hasUnpushedLocalCommits } from '../services/git/LocalGitWriter';
 import { GitFsService } from '../services/git/GitFsService';
 import { cancelInflightGitHttp } from '../services/git/gitHttp';

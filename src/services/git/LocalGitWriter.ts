@@ -65,12 +65,12 @@ export class LocalGitWriter {
     if (!info) return { success: false, error: `Invalid repo path: ${opts.repoPath}` };
     const fsRoot = clonesRoot();
     const dir = `/${info.owner}/${info.repo}`;
-    const fs = makeGitFs(fsRoot);
+    const repoDir = `${fsRoot.replace(/\/$/, '')}${dir}`;
     try {
-      await ensureOnBranch(fs, dir, opts.branch);
+      await ensureOnBranch(repoDir, opts.branch);
       const remoteOid = await GitFsService.getCommitOid({ repoPath: opts.repoPath, ref: `refs/remotes/origin/${opts.branch}` });
       if (remoteOid === null) return { success: false, error: `No remote ref found for ${opts.branch}; cannot discard without an origin to reset to.` };
-      await git.branch({ fs, dir, ref: `refs/heads/${opts.branch}`, object: remoteOid, force: true, checkout: true });
+      await git.branch({ fs: null, dir: repoDir, ref: `refs/heads/${opts.branch}`, object: remoteOid, force: true, checkout: true });
       return { success: true };
     } catch (e) { return { success: false, error: e instanceof Error ? e.message : String(e) }; }
   }
