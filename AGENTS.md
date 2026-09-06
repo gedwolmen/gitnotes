@@ -19,7 +19,7 @@ If the wiki is wrong or missing, fix it first — then make your code change. Se
 
 **All agent work — fixes, features, refactors, even small edits — must happen inside a git worktree. Never edit files in the main worktree's working tree directly.**
 
-This repo regularly runs multiple agent sessions concurrently (different branches, different issues in flight). Editing the main worktree's working tree races every other session because they all serve from / commit against the same `main` working tree. The multiple times this session was blocked by "another session's uncommitted changes in main" made this rule non-negotiable.
+This repo runs **multiple concurrent agent sessions** on different branches and issues. The main worktree is a shared resource — all agents serve from it and commit against it. Editing it directly causes race conditions where one agent's uncommitted changes block or corrupt another's work. Use worktrees to isolate every session's changes.
 
 ### Workflow
 
