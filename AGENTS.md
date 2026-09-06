@@ -2,6 +2,19 @@
 
 > Rules for AI coding agents working in this repository.
 
+## Read the Wiki First
+
+**Before touching any code, read the relevant wiki page(s).** The wiki (`docs/wiki/`) is the canonical reference for every service, store, hook, model, screen, context, and architectural pattern. If you need to understand how something works, the wiki has the answer.
+
+- Changing a service? → read `docs/wiki/services.md`
+- Modifying state? → read `docs/wiki/stores.md`
+- Editing screens or navigation? → read `docs/wiki/screens.md`
+- Touching sync or Git logic? → read `docs/wiki/sync-architecture.md`
+- Working with notes? → read `docs/wiki/note-file-format.md`
+- Anything involving the native Git module? → read `docs/wiki/git-engine.md`
+
+If the wiki is wrong or missing, fix it first — then make your code change. See the wiki accuracy rule below.
+
 ## Worktrees (ALWAYS)
 
 **All agent work — fixes, features, refactors, even small edits — must happen inside a git worktree. Never edit files in the main worktree's working tree directly.**
@@ -87,7 +100,9 @@ There are two documentation surfaces, and they serve different purposes:
 
 Editing the wiki: write the page in `docs/wiki/<name>.md` (this repo, source-controlled), add it to `docs/wiki/index.md`, and open a PR. The CI sync workflow (`.github/workflows/sync-wiki.yml`) mirrors `docs/wiki/` → GitHub Wiki on every merge to `main`. Manual edits on `github.com/gedwolmen/gitnotes/wiki` will be overwritten on the next sync.
 
-Wiki documentation is part of the definition of done for **architecture-level changes only**.
+Wiki documentation is part of the definition of done for **architecture-level changes only**. For all other understanding (how a service works, what a store does, how screens are wired), use the wiki — it is the canonical reference. Do not rely on memory or partial context.
+
+**Wiki accuracy is a living concern.** If you find a wiki page that is wrong — a wrong file name, wrong function signature, wrong description, wrong import path, wrong deep link, wrong context provider nesting, or any factual inaccuracy — **fix it as part of your current work**. Do not leave the wrong information in place. Update the wiki page, open a PR, and let the CI sync workflow push the correction to the GitHub Wiki. This applies to every PR: fixing wiki inaccuracies is not optional or out-of-scope.
 
 ## Quote Content Policy
 

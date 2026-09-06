@@ -22,8 +22,8 @@
 ### Linting
 | Command | Description |
 |---------|-------------|
-| `yarn lint` | ESLint |
-| `yarn lint --fix` | Auto-fix |
+| `yarn eslint . --ext .ts,.tsx` | ESLint |
+| `yarn eslint . --ext .ts,.tsx --fix` | Auto-fix |
 | `yarn format` | Prettier write |
 | `yarn format:check` | Prettier check |
 
