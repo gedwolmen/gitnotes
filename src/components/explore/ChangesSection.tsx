@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@/components/ui/text';
 import { Button, ButtonText } from '@/components/ui/Button';
 import { FlatList } from '@/components/ui/flat-list';
-import * as FileSystem from 'expo-file-system';
+import { File } from 'expo-file-system';
 import { DiffLineList, previewLines } from './DiffLineList';
 import * as GitEngine from '@/services/git/engine/GitEngine';
 import type { FileDiff, FileStatus } from '@/services/git/engine/GitEngine';
@@ -101,7 +101,7 @@ export function ChangesSection({ repo, active, onChanged, chromeTopInset = 0, on
       setBusyPath(path);
       try {
         if (status === 'Untracked') {
-          await FileSystem.deleteAsync(`${repo.localPath}/${path}`, { idempotent: true });
+          await new File(`${repo.localPath}/${path}`).delete();
         } else {
           await GitEngine.discardFiles(repo.localPath, [path]);
         }
