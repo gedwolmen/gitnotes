@@ -103,10 +103,15 @@ export default function ConflictResolveScreen() {
       navigation.navigate('MainTabs', { screen: 'ExploreTab' });
     } catch (caught) {
       setResolving(false);
-      Alert.alert(
-        'Failed to resolve',
-        caught instanceof Error ? caught.message : String(caught),
-      );
+      const message = caught instanceof Error ? caught.message : String(caught);
+      if (message.includes('already-running')) {
+        navigation.navigate('MainTabs', { screen: 'ExploreTab' });
+      } else {
+        Alert.alert(
+          'Failed to resolve',
+          message,
+        );
+      }
     }
   };
 
@@ -196,7 +201,7 @@ export default function ConflictResolveScreen() {
             <Text className="text-xs font-semibold mb-2" style={{ color: colors.textSecondary }}>
               Choose a version or edit the combined file below, then tap Mark resolved.
             </Text>
-            <View className="flex-row flex-wrap gap-2 mb-4">
+            <View className="gap-2 mb-4">
               <Button
                 size="sm"
                 variant={selectedChoice === 'ours' ? 'primary' : 'outline'}
