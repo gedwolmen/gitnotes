@@ -105,15 +105,15 @@ export function ChangesSection({ repo, active, onChanged, chromeTopInset = 0, on
         } else {
           await GitEngine.discardFiles(repo.localPath, [path]);
         }
+        await load();
         onChanged();
-        setVersion((value) => value + 1);
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : String(caught));
       } finally {
         setBusyPath(null);
       }
     },
-    [repo.localPath, onChanged],
+    [repo.localPath, onChanged, load],
   );
 
   const renderItem = useCallback(

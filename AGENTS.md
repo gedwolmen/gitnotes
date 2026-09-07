@@ -68,6 +68,7 @@ yarn eslint . --ext .ts,.tsx  # Linting
 - Use TypeScript strict mode — no `any` without justification.
 - Keep functions short and focused (single responsibility).
 - Use the existing patterns in `src/services/` as reference.
+- **Never keep deprecated code.** When a library/module deprecates an API (e.g., `FileSystem.deleteAsync`), migrate to the replacement immediately. Do not leave deprecated calls in the codebase — fix them as part of the same change that introduces them.
 
 ## Git Discipline
 
