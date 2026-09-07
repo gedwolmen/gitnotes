@@ -29,6 +29,57 @@ import type { RootStackParamList } from '@/navigation/types';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'ConflictResolve'>;
 
+/** Strips git conflict markers (<<<<<<< / ======= / >>>>>>>) from content. */
+function stripConflictMarkers(content: string): string {
+  return content
+    .split('\n')
+    .filter((line) => !line.startsWith('<<<<<<< ') && !line.startsWith('=======') && !line.startsWith('>>>>>>> '))
+    .join('\n');
+}
+
+/** Renders a read-only content panel with a label. */
+function ContentPanel({
+  label,
+  content,
+  labelColor,
+}: {
+  label: string;
+  content: string;
+  labelColor: string;
+}) {
+  const { colors } = useTokens();
+  const lines = content.split('\n');
+
+  return (
+    <View className="flex-1" style={{ minHeight: 200 }}>
+      <View className="flex-row items-center justify-between mb-2 px-1">
+        <Text className="text-xs font-semibold" style={{ color: labelColor }}>
+          {label}
+        </Text>
+        <Text className="text-[10px]" style={{ color: colors.textSecondary }}>
+          {lines.length} lines
+        </Text>
+      </View>
+      <ScrollView
+        className="flex-1 rounded-lg p-3"
+        style={{ backgroundColor: colors.surfaceSecondary, borderColor: colors.border, borderWidth: 1 }}
+        nestedScrollEnabled
+      >
+        {lines.map((line, i) => (
+          <Text
+            key={i}
+            className="text-xs font-mono leading-5"
+            style={{ color: colors.text }}
+            numberOfLines={1}
+          >
+            {line || ' '}
+          </Text>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
 export default function ConflictResolveScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<Route>();
@@ -55,7 +106,7 @@ export default function ConflictResolveScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [resolving, setResolving] = useState(false);
-  const [content, setContent] = useState('');
+  const [mergedContent, setMergedContent] = useState('');
 
   useEffect(() => {
     if (!localPath) {
@@ -68,7 +119,7 @@ export default function ConflictResolveScreen() {
         const result = await GitEngine.getConflictBlobs(localPath, path);
         if (!cancelled) {
           setBlobs(result);
-          setContent(result.ours);
+          setMergedContent(stripConflictMarkers(result.ours));
         }
       } catch (caught) {
         if (!cancelled) setError(caught instanceof Error ? caught.message : String(caught));
@@ -85,9 +136,9 @@ export default function ConflictResolveScreen() {
     if (!fileUri || !localPath) return;
     setResolving(true);
     try {
-      await FileSystem.writeAsStringAsync(fileUri, content);
+      await FileSystem.writeAsStringAsync(fileUri, mergedContent);
       await GitEngine.markConflictResolved(localPath, path);
-      setPending({ repoId, section: 'commits' });
+      setPending({ repoId, section: 'staging' });
       navigation.navigate('MainTabs', { screen: 'ExploreTab' });
     } catch (caught) {
       setResolving(false);
@@ -100,14 +151,14 @@ export default function ConflictResolveScreen() {
 
   if (!storedRepo || !localPath || !fileUri) {
     return (
-      <SafeAreaView edges={['top']} className="flex-1" style={{ flex: 1, backgroundColor: colors.background }}>
+      <SafeAreaView edges={['top']} className="flex-1" style={{ backgroundColor: colors.background }}>
         <View className="flex-row items-center gap-2 px-4 py-3" style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}>
           <Pressable onPress={() => navigation.goBack()} hitSlop={8} accessibilityRole="button" accessibilityLabel="Go back">
             <Ionicons name="chevron-back" size={22} color={colors.text} />
           </Pressable>
           <Heading className="text-lg" style={{ color: colors.text }}>Resolve conflict</Heading>
         </View>
-        <View className="flex-1 items-center justify-center px-8" style={{ flex: 1 }}>
+        <View className="flex-1 items-center justify-center px-8">
           <Ionicons name="warning-outline" size={40} color={colors.error} />
           <Text className="mt-2 text-center text-sm" style={{ color: colors.textSecondary }}>
             Repository not found.
@@ -118,7 +169,7 @@ export default function ConflictResolveScreen() {
   }
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1" style={{ flex: 1, backgroundColor: colors.background }}>
+    <SafeAreaView edges={['top']} className="flex-1" style={{ backgroundColor: colors.background }}>
       <View
         className="flex-row items-center gap-2 px-4 py-3"
         style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}
@@ -141,12 +192,12 @@ export default function ConflictResolveScreen() {
       </View>
 
       {loading ? (
-        <View className="flex-1 items-center justify-center gap-2" style={{ flex: 1 }}>
+        <View className="flex-1 items-center justify-center gap-2">
           <ActivityIndicator size="small" color={colors.accent} />
           <Text className="text-sm" style={{ color: colors.textSecondary }}>Reading conflict content…</Text>
         </View>
       ) : error ? (
-        <View className="flex-1 items-center justify-center px-8" style={{ flex: 1 }}>
+        <View className="flex-1 items-center justify-center px-8">
           <Ionicons name="warning-outline" size={40} color={colors.error} />
           <Text className="mt-2 text-center text-sm" style={{ color: colors.error }}>{error}</Text>
         </View>
@@ -156,36 +207,61 @@ export default function ConflictResolveScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={0}
         >
-          <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            className="flex-1"
+            contentContainerStyle={{ padding: 16 }}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Ours / Theirs split panels */}
             <Text className="text-xs font-semibold mb-2" style={{ color: colors.textSecondary }}>
-              Edit the file content below, or pick a version:
+              Choose which version to keep — or edit the result below:
+            </Text>
+            <View className="flex-row gap-3 mb-4">
+              <ContentPanel
+                label="Ours (current branch)"
+                content={stripConflictMarkers(blobs?.ours ?? '')}
+                labelColor={colors.accent}
+              />
+              <ContentPanel
+                label="Theirs (incoming change)"
+                content={stripConflictMarkers(blobs?.theirs ?? '')}
+                labelColor={colors.warning}
+              />
+            </View>
+
+            {/* Merged / editable result */}
+            <Text className="text-xs font-semibold mb-2" style={{ color: colors.textSecondary }}>
+              Merged result — edit if needed:
             </Text>
             <View
-              className="rounded-lg mb-4 p-3"
+              className="rounded-lg mb-3 p-3"
               style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }}
             >
               <TextInput
                 testID="conflict-resolve.editor"
                 className="text-sm font-mono min-h-[200]"
-                style={{ color: colors.text, backgroundColor: colors.surfaceSecondary, borderRadius: 8, padding: 12 }}
+                style={{
+                  color: colors.text,
+                  backgroundColor: colors.surfaceSecondary,
+                  borderRadius: 8,
+                  padding: 12,
+                }}
                 multiline
-                value={content}
-                onChangeText={setContent}
+                value={mergedContent}
+                onChangeText={setMergedContent}
                 placeholder="Edit the resolved content here…"
                 placeholderTextColor={colors.textSecondary}
                 textAlignVertical="top"
               />
             </View>
 
-            <Text className="text-xs font-semibold mb-2" style={{ color: colors.textSecondary }}>
-              Or pick a version to fill the editor:
-            </Text>
+            {/* Fill buttons */}
             <View className="flex-row gap-2 mb-4">
               <Button
                 className="flex-1"
                 size="sm"
                 variant="outline"
-                onPress={() => setContent(blobs?.ours ?? '')}
+                onPress={() => setMergedContent(stripConflictMarkers(blobs?.ours ?? ''))}
                 testID="conflict-resolve.use.ours"
               >
                 <ButtonText style={{ color: colors.accent }}>Use Ours</ButtonText>
@@ -194,7 +270,7 @@ export default function ConflictResolveScreen() {
                 className="flex-1"
                 size="sm"
                 variant="outline"
-                onPress={() => setContent(blobs?.theirs ?? '')}
+                onPress={() => setMergedContent(stripConflictMarkers(blobs?.theirs ?? ''))}
                 testID="conflict-resolve.use.theirs"
               >
                 <ButtonText style={{ color: colors.warning }}>Use Theirs</ButtonText>
@@ -203,7 +279,7 @@ export default function ConflictResolveScreen() {
                 className="flex-1"
                 size="sm"
                 variant="outline"
-                onPress={() => setContent(blobs?.base ?? '')}
+                onPress={() => setMergedContent(stripConflictMarkers(blobs?.base ?? ''))}
                 testID="conflict-resolve.use.base"
               >
                 <ButtonText>Use Base</ButtonText>
@@ -211,7 +287,7 @@ export default function ConflictResolveScreen() {
             </View>
 
             <Button
-              className="mt-2"
+              className="mt-1"
               disabled={resolving}
               onPress={handleResolve}
               testID="conflict-resolve.save"
@@ -219,7 +295,7 @@ export default function ConflictResolveScreen() {
               {resolving ? (
                 <ActivityIndicator size="small" color={colors.accent} />
               ) : (
-                <ButtonText>Mark resolved &amp; go to push</ButtonText>
+                <ButtonText>Mark resolved &amp; go to staged</ButtonText>
               )}
             </Button>
           </ScrollView>
