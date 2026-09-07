@@ -32,6 +32,39 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+const FALLBACK_THEME: ThemeContextType = {
+  theme: 'light',
+  isDark: false,
+  style: 'flat',
+  setTheme: () => {},
+  setStyle: () => {},
+  colors: {
+    bg: '#ffffff',
+    surface: '#f5f5f5',
+    highlight: '#5b7cec',
+    shadow: '#000000',
+    text: '#000000',
+    textSecondary: '#666666',
+    accent: '#5b7cec',
+    accentMuted: '#8ba3f0',
+    error: '#dc3545',
+    success: '#28a745',
+    warning: '#ffc107',
+    background: '#ffffff',
+    surfaceSecondary: '#f0f0f0',
+    primary: '#5b7cec',
+    border: '#e0e0e0',
+    card: '#ffffff',
+    elevated: '#ffffff',
+  },
+  tokens: {
+    colors: {} as Palette,
+    radii: { sm: 12, md: 18, lg: 24, pill: 999 },
+    spacing: { 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32 },
+    type: { xs: 12, sm: 14, md: 16, lg: 18, xl: 22, '2xl': 28 },
+  },
+};
+
 const THEME_STORAGE_KEY = '@gitnotes:theme';
 const STYLE_STORAGE_KEY = '@gitnotes:style';
 
@@ -133,7 +166,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 export function useTheme(): ThemeContextType {
   const context = useContext(ThemeContext);
   if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider');
+    return FALLBACK_THEME;
   }
   return context;
 }
