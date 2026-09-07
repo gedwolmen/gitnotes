@@ -73,8 +73,8 @@ export function useFloatingGitButtonAffordances(
   const handlePressIn = useCallback(() => {
     holdCompletedRef.current = false;
     pressProgress.value = withSpring(1, PRESS_SPRING);
+    console.log('[DEBUG handlePressIn] starting hold animation, reduceMotionEnabledState =', reduceMotionEnabledState);
     if (!reduceMotionEnabledState) {
-      // Start filling the ring from 0→1.
       holdProgress.value = withTiming(1, { duration: HOLD_FILL_MS });
     }
   }, [reduceMotionEnabledState, pressProgress, holdProgress]);
