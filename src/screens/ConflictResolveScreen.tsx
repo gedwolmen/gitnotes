@@ -28,6 +28,12 @@ import type { RootStackParamList } from '@/navigation/types';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'ConflictResolve'>;
 
+function conflictMarkerContent(ours: string, theirs: string): string {
+  const oursContent = ours.endsWith('\n') ? ours : `${ours}\n`;
+  const theirsContent = theirs.endsWith('\n') ? theirs : `${theirs}\n`;
+  return `<<<<<<< ours\n${oursContent}=======\n${theirsContent}>>>>>>> theirs\n`;
+}
+
 export default function ConflictResolveScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<Route>();
@@ -56,7 +62,7 @@ export default function ConflictResolveScreen() {
   const [resolving, setResolving] = useState(false);
 
   useEffect(() => {
-    if (!fileUri || fileUri.trim() === '') {
+    if (!fileUri || fileUri.trim() === '' || !localPath) {
       setError('File not found on device. The repository may not be cloned.');
       setLoading(false);
       return;
@@ -64,9 +70,10 @@ export default function ConflictResolveScreen() {
     let cancelled = false;
     (async () => {
       try {
-        const content = await FileSystem.readAsStringAsync(fileUri);
+        const blobs = await GitEngine.getConflictBlobs(localPath, path);
+        const content = conflictMarkerContent(blobs.ours, blobs.theirs);
         if (!cancelled) {
-          if (!content || content.trim() === '') {
+          if (blobs.ours === '' && blobs.theirs === '') {
             setError('File is empty. The conflict may already be resolved.');
           } else {
             setRawContent(content);
@@ -84,7 +91,7 @@ export default function ConflictResolveScreen() {
     return () => {
       cancelled = true;
     };
-  }, [fileUri]);
+  }, [fileUri, localPath, path]);
 
   const handleResolve = async () => {
     if (!fileUri || !localPath) return;
