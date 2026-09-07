@@ -79,10 +79,9 @@ function withGitEngineRust(config) {
     for (const buildConfig of buildConfigs) {
       const settings = buildConfig.buildSettings;
       if (!settings) continue;
-      const existing = settings.OTHER_LDFLAGS || '$(inherited)';
-      if (!existing.includes('libgitnotes_git2.a')) {
-        settings.OTHER_LDFLAGS =
-          '$(inherited) $(SRCROOT)/../modules/GitEngine/ios-local/rust/libgitnotes_git2.a';
+      const ldFlags = settings.OTHER_LDFLAGS;
+      if (!ldFlags || !ldFlags.includes('libgitnotes_git2.a')) {
+        settings.OTHER_LDFLAGS = '$(inherited) $(SRCROOT)/../modules/GitEngine/ios-local/rust/libgitnotes_git2.a';
       }
     }
 
