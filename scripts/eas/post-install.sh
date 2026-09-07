@@ -38,18 +38,10 @@ else
   mkdir -p "$IOS_LIB_DIR"
   mkdir -p "$SWIFT_GEN_DIR/GitNotesGit2FFI"
 
-  log "Building aarch64-apple-ios-sim..."
-  (cd "$RUST_DIR" && cargo build --target aarch64-apple-ios-sim "${PROFILE_FLAGS[@]}")
-
   log "Building aarch64-apple-ios (device)..."
   (cd "$RUST_DIR" && cargo build --target aarch64-apple-ios "${PROFILE_FLAGS[@]}")
-
-  log "Creating universal staticlib..."
-  lipo -create \
-    "$RUST_DIR/target/aarch64-apple-ios-sim/$RUST_PROFILE/libgitnotes_git2.a" \
-    "$RUST_DIR/target/aarch64-apple-ios/$RUST_PROFILE/libgitnotes_git2.a" \
-    -output "$IOS_LIB_DIR/libgitnotes_git2.a"
-  log "iOS universal staticlib created"
+  cp "$RUST_DIR/target/aarch64-apple-ios/$RUST_PROFILE/libgitnotes_git2.a" "$IOS_LIB_DIR/libgitnotes_git2.a"
+  log "iOS device staticlib copied"
 fi
 
 if [ -n "${ANDROID_NDK_HOME:-}" ] && [ -d "${ANDROID_NDK_HOME:-}" ]; then
