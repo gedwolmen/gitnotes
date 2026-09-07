@@ -28,6 +28,8 @@ import ThoughtDumpScreen from '../screens/ThoughtDumpScreen';
 import PaywallScreen from '../screens/PaywallScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import ExploreCommitScreen from '../screens/ExploreCommitScreen';
+import ExploreConflictScreen from '../screens/ExploreConflictScreen';
+import ConflictResolveScreen from '../screens/ConflictResolveScreen';
 import ExploreDiffScreen from '../screens/ExploreDiffScreen';
 import ExploreFileScreen from '../screens/ExploreFileScreen';
 import { RootStackParamList } from './types';
@@ -292,6 +294,16 @@ export default function AppNavigator({ showOnboarding, onOnboardingComplete, onO
             <Stack.Screen
               name="ExploreFile"
               component={ExploreFileScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="ExploreConflict"
+              component={ExploreConflictScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="ConflictResolve"
+              component={ConflictResolveScreen}
               options={{ headerShown: false }}
             />
             {__DEV__ && (
