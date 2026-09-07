@@ -7,7 +7,6 @@ export const HOLD_RING_STROKE_WIDTH = 3.5;
 export const HOLD_RING_RADIUS_OFFSET = 6;
 const HOLD_RING_PADDING = 2;
 export const HOLD_RING_RADIUS = FLOATING_AI_BUTTON_SIZE / 2 + HOLD_RING_RADIUS_OFFSET;
-export const HOLD_RING_CIRCUMFERENCE = 2 * Math.PI * HOLD_RING_RADIUS;
 
 interface HoldProgressRingProps {
   readonly progress: SharedValue<number>;
@@ -59,8 +58,6 @@ export function HoldProgressRing({
     >
       {[0, 1, 2].map((i) => {
         const intervals = useDerivedValue(
-          // Inline worklet: segmentInterval logic must be inside the worklet callback,
-          // not a cross-context plain-function call.
           () => {
             'worklet';
             const SEGMENT_WIDTH = 1 / 3;

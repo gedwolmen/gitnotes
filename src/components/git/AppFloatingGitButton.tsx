@@ -73,7 +73,19 @@ export default function AppFloatingGitButton({ currentRouteName }: AppFloatingGi
 
   const handleReleaseSegment = useCallback(
     async (segment: ReleaseSegment) => {
-      if (repos.length === 0) return;
+      if (repos.length === 0) {
+        toast.show({
+          placement: 'top',
+          duration: 3000,
+          render: ({ id }: { id: string }) => (
+            <Toast action="error" nativeID={`gitbutton-norepos-${id}`}>
+              <ToastTitle>Cannot {segment}</ToastTitle>
+              <ToastDescription>No repositories connected. Add a repo in Settings.</ToastDescription>
+            </Toast>
+          ),
+        });
+        return;
+      }
       if (!author) {
         toast.show({
           placement: 'top',
