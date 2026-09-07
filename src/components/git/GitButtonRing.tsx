@@ -1,7 +1,10 @@
 import { StyleSheet } from 'react-native';
 import { Canvas, Path, Skia } from '@shopify/react-native-skia';
-import { type SharedValue } from 'react-native-reanimated';
-import { GIT_BUTTON_SIZE } from '../git/gitButtonGeometry';
+import {
+  useDerivedValue,
+  type SharedValue,
+} from 'react-native-reanimated';
+import { GIT_BUTTON_SIZE } from './gitButtonGeometry';
 
 export const GIT_RING_STROKE_WIDTH = 3.5;
 const GIT_RING_PADDING = 2;
@@ -13,17 +16,12 @@ interface GitButtonRingProps {
   readonly colors: [string, string, string];
 }
 
-function makeCirclePath(cx: number, cy: number, r: number): ReturnType<typeof Skia.Path.Make> {
-  return Skia.Path.Make().addCircle(cx, cy, r).close();
-}
+const cx = GIT_RING_RADIUS + GIT_RING_STROKE_WIDTH + GIT_RING_PADDING;
+const cy = cx;
+const basePath = Skia.Path.Make().addCircle(cx, cy, GIT_RING_RADIUS).close();
 
 export function GitButtonRing({ progress, colors }: GitButtonRingProps) {
-  const ringRadius = GIT_BUTTON_SIZE / 2 + GIT_RING_RADIUS_OFFSET;
-  const canvasSize = ringRadius * 2 + GIT_RING_STROKE_WIDTH * 2 + GIT_RING_PADDING * 2;
-  const cx = canvasSize / 2;
-  const cy = canvasSize / 2;
-
-  const basePath = makeCirclePath(cx, cy, ringRadius);
+  const canvasSize = GIT_RING_RADIUS * 2 + GIT_RING_STROKE_WIDTH * 2 + GIT_RING_PADDING * 2;
 
   return (
     <Canvas
@@ -41,6 +39,15 @@ export function GitButtonRing({ progress, colors }: GitButtonRingProps) {
       {[0, 1, 2].map((i) => {
         const segStart = i / 3;
         const segEnd = (i + 1) / 3;
+
+        const segEndVal = useDerivedValue(() => {
+          'worklet';
+          const p = progress.value;
+          if (p <= segStart) return segStart;
+          if (p >= segEnd) return segEnd;
+          return Math.max(segStart, p);
+        }, [i]);
+
         return (
           <Path
             key={i}
@@ -50,7 +57,7 @@ export function GitButtonRing({ progress, colors }: GitButtonRingProps) {
             strokeWidth={GIT_RING_STROKE_WIDTH}
             strokeCap="round"
             start={segStart}
-            end={segEnd}
+            end={segEndVal}
           />
         );
       })}
