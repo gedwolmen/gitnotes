@@ -30,7 +30,7 @@ export function ChatConfirmationCard({ pendingConfirmation, colors, spacing, typ
         {JSON.stringify(pendingConfirmation.details, null, 2)}
       </Text>
       <View className="flex-row gap-2">
-        <Button testID="chat-confirmation.button.apply" variant="primary" onPress={onApply} style={{ flex: 1 }}>{t('common.apply')}</Button>
+        <Button testID="chat-confirmation.button.apply" variant="primary" onPress={onApply} style={{ flex: 1 }} label={t('common.apply')} />
         <Button testID="chat-confirmation.button.cancel" variant="secondary" onPress={onCancel} style={{ flex: 1 }}>{t('common.cancel')}</Button>
       </View>
     </Surface>

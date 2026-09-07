@@ -229,9 +229,7 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0, on
             <View className="flex-row items-center gap-2">
               {loading && <ActivityIndicator size="small" color={colors.accent} />}
               {(data?.changedPaths.length ?? 0) > 0 && (
-                <Button size="sm" variant="primary" onPress={() => setCommitOpen(true)} testID="explore.staging.commit-open">
-                  Commit pending
-                </Button>
+                <Button size="sm" variant="primary" onPress={() => setCommitOpen(true)} testID="explore.staging.commit-open" label="Commit pending" />
               )}
               {(data?.staged.length ?? 0) > 0 && (
                 <Button size="sm" variant="outline" disabled={busyPath !== null} onPress={() => void unstageAll()}>
