@@ -150,16 +150,11 @@ export default function ConflictResolveScreen() {
           <ActivityIndicator size="small" color={colors.accent} />
           <Text className="text-sm" style={{ color: colors.textSecondary }}>Reading file…</Text>
         </View>
-      ) : error ? (
-        <View className="flex-1 items-center justify-center px-8">
-          <Ionicons name="warning-outline" size={40} color={colors.error} />
-          <Text className="mt-2 text-center text-sm" style={{ color: colors.error }}>{error}</Text>
-        </View>
-      ) : rawContent === '' ? (
+      ) : error || !rawContent ? (
         <View className="flex-1 items-center justify-center px-8">
           <Ionicons name="warning-outline" size={40} color={colors.error} />
           <Text className="mt-2 text-center text-sm" style={{ color: colors.error }}>
-            File is empty. The conflict may already be resolved.
+            {error || 'File not found or empty. The conflict may already be resolved.'}
           </Text>
         </View>
       ) : (
