@@ -1,7 +1,7 @@
 import { StorageService } from '../StorageService';
 import { GitHubService } from '../GitHubService';
 import { LocalGitWriter } from './LocalGitWriter';
-import { NoteSyncQueueService } from '../syncStubs';
+import { NoteSyncQueueService } from '../cloneSyncServiceImpl';
 import { TemplateRepoPreferenceService } from '../TemplateRepoPreferenceService';
 import { useTemplateStore } from '../../stores/templateStore';
 import { serializeTemplate, templateSlug } from '../TemplateMarkdownService';

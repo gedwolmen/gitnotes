@@ -12,7 +12,7 @@ import { useRepos } from '../contexts/RepoContext';
 import { RootStackParamList } from '../navigation/types';
 import { Note } from '../models/Note';
 import { GitHubService } from '../services/GitHubService';
-import { NoteSyncQueueService, SyncEngineService, type NoteDeleteParams } from '../services/syncStubs';
+import { NoteSyncQueueService, SyncEngineService, type NoteDeleteParams } from '../services/cloneSyncServiceImpl';
 import { useGitOperationStore } from '../stores/gitOperationStore';
 import { deriveDefaultNotePath } from '../stores/noteStore';
 import { GitSyncGate } from '../services/git/GitSyncGate';

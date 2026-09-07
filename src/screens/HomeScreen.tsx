@@ -31,7 +31,7 @@ import { buildPinnedFeed, buildRecentFeed, RecentItem } from '../utils/recentIte
 import { HomeNoteContextMenu } from '../components/home/HomeNoteContextMenu';
 import ColorPicker from '../components/ColorPicker';
 import { ShareFormat } from '../services/ShareService';
-import { NoteSyncQueueService } from '../services/syncStubs';
+import { NoteSyncQueueService } from '../services/cloneSyncServiceImpl';
 import { useTranslation } from 'react-i18next';
 import { DailyQuoteCard } from '../components/home/DailyQuoteCard';
 import { useDailyQuote } from '../hooks/useDailyQuote';

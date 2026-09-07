@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { create } from 'zustand';
 import { Note, NoteCreateInput, NoteUpdateInput, sortNotesWithPinnedFirst, filterNotesBySearch } from '../models/Note';
 import { StorageService } from '../services/StorageService';
-import { NoteSyncQueueService, SyncEngineService, CloneSyncService, type MutationSucceededEvent, type DroppedMutationEvent, type NoteDeleteParams, type SaveResult } from '../services/syncStubs';
+import { NoteSyncQueueService, SyncEngineService, CloneSyncService, type MutationSucceededEvent, type DroppedMutationEvent, type NoteDeleteParams, type SaveResult } from '../services/cloneSyncServiceImpl';
 import { CommitService } from '../services/git/CommitService';
 import { resolveDefaultFolder, resolveDefaultRepo } from '../services/git/defaultsPolicy';
 import { recordDeleteFailure } from '../services/git/deleteFailures';

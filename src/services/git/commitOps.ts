@@ -16,24 +16,9 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import { parseRepoPath } from '../../utils/gitPathParser';
 import { makeGitFs } from './gitFs';
-import { gitHttp } from './gitHttp';
 import { repairHeadRef } from './GitFsService';
 import { useGitActivityStore } from '../../stores/gitActivityStore';
-
-// ─── minimal git stub (no-op until Rust engine is wired) ─────────────────────
-const git = {
-  async add(_opts: { fs: unknown; dir: string; filepath: string }): Promise<void> {},
-  async status(_opts: { fs: unknown; dir: string; filepath: string }): Promise<string> { return 'unmodified'; },
-  async commit(_opts: {
-    fs: unknown; dir: string; message: string; author: { name: string; email: string }; parent?: string[];
-  }): Promise<string> { return ''; },
-  async remove(_opts: { fs: unknown; dir: string; filepath: string }): Promise<void> {},
-  async currentBranch(_opts: { fs: unknown; dir: string; fullname: boolean }): Promise<string | null> { return null; },
-  async checkout(_opts: { fs: unknown; dir: string; ref: string }): Promise<void> {},
-  async fetch(_opts: {
-    fs: unknown; http: unknown; dir: string; ref: string; singleBranch: boolean; depth: number; tags: boolean; onAuth: unknown;
-  }): Promise<void> {},
-};
+import * as GitEngine from './engine/GitEngine';
 
 const CLONES_SUBDIR = 'GitNotes/';
 
@@ -103,28 +88,24 @@ export async function commitWrite(params: CommitWriteParams): Promise<CommitOpsR
 
   try {
     const dir = repoDirVirtual(info.owner, info.repo);
-    const fs = makeRepoFs();
     const fsRoot = clonesRoot();
+    const repoDir = `${fsRoot.replace(/\/$/, '')}${dir}`;
 
-    await ensureOnBranch(fs, dir, branch);
+    await ensureOnBranch(repoDir, branch);
 
     const absVirtual = `${dir}/${relPath}`;
     const absUri = `${fsRoot}${absVirtual.replace(/^\//, '')}`;
     await ensureParentDirs(fsRoot, absVirtual);
     await FileSystem.writeAsStringAsync(absUri, content);
 
-    await git.add({ fs, dir, filepath: relPath });
+    await GitEngine.stage(repoDir, [relPath]);
 
-    const status = await git.status({ fs, dir, filepath: relPath });
-    if (status !== 'unmodified') {
-      const oid = await git.commit({
-        fs,
-        dir,
-        message,
-        author: { name: author.name, email: author.email },
-      });
+    const allStatuses = await GitEngine.statuses(repoDir);
+    const fileStatus = allStatuses.find(f => f.path === relPath);
+    if (!fileStatus || fileStatus.status !== 'Unmodified') {
+      const commitInfo = await GitEngine.commit(repoDir, message, { name: author.name, email: author.email });
       useGitActivityStore.getState().incrementRevision();
-      return { success: true, oid };
+      return { success: true, oid: commitInfo.id };
     }
 
     return { success: true };
@@ -157,16 +138,16 @@ export async function commitDelete(params: CommitDeleteParams): Promise<CommitOp
 
   try {
     const dir = repoDirVirtual(info.owner, info.repo);
-    const fs = makeRepoFs();
     const fsRoot = clonesRoot();
+    const repoDir = `${fsRoot.replace(/\/$/, '')}${dir}`;
 
-    await ensureOnBranch(fs, dir, branch);
+    await ensureOnBranch(repoDir, branch);
 
     const absUri = `${fsRoot}${info.owner}/${info.repo}/${relPath}`;
     await FileSystem.deleteAsync(absUri, { idempotent: true });
 
     try {
-      await git.remove({ fs, dir, filepath: relPath });
+      await GitEngine.remove(repoDir, [relPath]);
     } catch (removeError) {
       const code = (removeError as { code?: string }).code;
       if (code === 'NotFoundError' || code === 'ENOENT') {
@@ -176,14 +157,9 @@ export async function commitDelete(params: CommitDeleteParams): Promise<CommitOp
       throw removeError;
     }
 
-    const oid = await git.commit({
-      fs,
-      dir,
-      message,
-      author: { name: author.name, email: author.email },
-    });
+    const commitInfo = await GitEngine.commit(repoDir, message, { name: author.name, email: author.email });
     useGitActivityStore.getState().incrementRevision();
-    return { success: true, oid };
+    return { success: true, oid: commitInfo.id };
   } catch (e) {
     const raw = e instanceof Error ? e.message : String(e);
     return { success: false, error: raw };
@@ -202,7 +178,7 @@ export interface CommitRenameParams {
 
 /**
  * Produce ONE commit (single parent) that represents a rename.
- * Sequence: git.remove(old) → write(new) → git.add(new) → git.commit
+ * Sequence: remove(old) → write(new) → stage(new) → commit
  * Both the deletion of the old path and creation of the new path land in
  * a single atomic commit via the git's full-index commit.
  */
@@ -217,14 +193,14 @@ export async function commitRename(params: CommitRenameParams): Promise<CommitOp
 
   try {
     const dir = repoDirVirtual(info.owner, info.repo);
-    const fs = makeRepoFs();
     const fsRoot = clonesRoot();
+    const repoDir = `${fsRoot.replace(/\/$/, '')}${dir}`;
 
-    await ensureOnBranch(fs, dir, branch);
+    await ensureOnBranch(repoDir, branch);
 
     // 1. Stage deletion of the old file
     try {
-      await git.remove({ fs, dir, filepath: prevRelPath });
+      await GitEngine.remove(repoDir, [prevRelPath]);
     } catch (removeError) {
       const code = (removeError as { code?: string }).code;
       if (code === 'NotFoundError' || code === 'ENOENT') {
@@ -241,18 +217,13 @@ export async function commitRename(params: CommitRenameParams): Promise<CommitOp
     await FileSystem.writeAsStringAsync(newAbsUri, content);
 
     // 3. Stage the new file
-    await git.add({ fs, dir, filepath: newRelPath });
+    await GitEngine.stage(repoDir, [newRelPath]);
 
     // 4. Commit both staged changes in one commit
-    const oid = await git.commit({
-      fs,
-      dir,
-      message,
-      author: { name: author.name, email: author.email },
-    });
+    const commitInfo = await GitEngine.commit(repoDir, message, { name: author.name, email: author.email });
 
     useGitActivityStore.getState().incrementRevision();
-    return { success: true, oid };
+    return { success: true, oid: commitInfo.id };
   } catch (e) {
     const raw = e instanceof Error ? e.message : String(e);
     return { success: false, error: raw };
@@ -276,32 +247,25 @@ export interface EnsureOnBranchParams {
  * No-op if already on the requested branch.
  */
 export async function ensureOnBranch(
-  fs: ReturnType<typeof makeRepoFs>,
-  dir: string,
+  repoDir: string,
   branch: string,
 ): Promise<void> {
+  const fs = makeGitFs(clonesRoot());
+  const dir = `/${repoDir.replace(clonesRoot(), '').replace(/^\//, '')}`;
+
   await repairHeadRef(fs, dir, branch);
 
-  const current = await git.currentBranch({ fs, dir, fullname: false }).catch(() => null);
+  const repoInfo = await GitEngine.repoInfo(repoDir).catch(() => null);
+  const current = repoInfo?.currentBranch ?? null;
   if (current === branch) return;
 
-  const fullRef = `refs/heads/${branch}`;
   try {
-    await git.checkout({ fs, dir, ref: fullRef });
+    await GitEngine.checkoutBranch(repoDir, branch, 'origin');
     return;
   } catch {
     // local branch ref is missing — fetch then retry checkout below
   }
 
-  await git.fetch({
-    fs,
-    http: gitHttp,
-    dir,
-    ref: branch,
-    singleBranch: true,
-    depth: 1,
-    tags: false,
-    onAuth: () => ({ username: 'x-access-token', password: '' }),
-  });
-  await git.checkout({ fs, dir, ref: fullRef });
+  await GitEngine.fetch(repoDir, 'origin');
+  await GitEngine.checkoutBranch(repoDir, branch, 'origin');
 }

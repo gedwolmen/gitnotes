@@ -9,7 +9,7 @@ import { canPersistNoteTags } from '../utils/noteTagSupport';
 import { TemplateRepoPreferenceService } from './TemplateRepoPreferenceService';
 import { parseTemplateMarkdown } from './TemplateMarkdownService';
 import type { NoteTemplate } from './TemplateService';
-import { SyncEngineService, NoteSyncQueueService } from './syncStubs';
+import { SyncEngineService, NoteSyncQueueService } from './cloneSyncServiceImpl';
 import { GitFsService } from './git/GitFsService';
 import { resolveBranch } from './git/branchResolver';
 import { AuthService } from './AuthService';

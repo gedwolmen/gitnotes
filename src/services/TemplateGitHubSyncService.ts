@@ -2,7 +2,7 @@ import { GitHubService } from './GitHubService';
 import { parseRepoPath } from '../utils/gitPathParser';
 import { serializeTemplate, templateSlug } from './TemplateMarkdownService';
 import type { NoteTemplate } from './TemplateService';
-import { SyncEngineService, CloneSyncService } from './syncStubs';
+import { SyncEngineService, CloneSyncService } from './cloneSyncServiceImpl';
 import { resolveDefaultFolder } from './git/defaultsPolicy';
 import { resolveDefaultRepo } from './git/defaultsPolicy';
 

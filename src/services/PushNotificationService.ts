@@ -1,6 +1,6 @@
 import { AppState } from 'react-native';
 import { NotificationService } from './NotificationService';
-import { NoteSyncQueueService } from './syncStubs';
+import { NoteSyncQueueService } from './cloneSyncServiceImpl';
 import { useGitOperationStore, gitOperationRegistry } from '../stores/gitOperationStore';
 
 /** Dedup window for push-failure notifications: a stuck push that retries

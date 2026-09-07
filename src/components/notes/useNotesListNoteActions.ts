@@ -6,7 +6,7 @@ import { Note, NoteColor } from '../../models/Note';
 import { parseRepoPath } from '../../utils/gitPathParser';
 import { HapticService } from '../../utils/haptics';
 import { ShareFormat, ShareService } from '../../services/ShareService';
-import { NoteSyncQueueService } from '../../services/syncStubs';
+import { NoteSyncQueueService } from '../../services/cloneSyncServiceImpl';
 import { githubActivity } from '../../stores/githubActivityStore';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
