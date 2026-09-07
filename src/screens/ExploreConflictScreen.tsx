@@ -95,10 +95,17 @@ export default function ExploreConflictScreen() {
     >
       <View className="flex-row items-center justify-between">
         <View className="min-w-0 flex-1 mr-2">
-          <Text className="text-sm font-semibold" style={{ color: colors.text }} numberOfLines={2}>
-            {item.path}
-          </Text>
-          <View className="mt-1 flex-row items-center gap-1">
+          <View className="flex-row items-center gap-2 mb-1">
+            <View
+              className="w-2 h-2 rounded-sm"
+              style={{ backgroundColor: colors.error }}
+              testID={`explore-conflict.indicator.${item.path}`}
+            />
+            <Text className="text-sm font-semibold" style={{ color: colors.text }} numberOfLines={2}>
+              {item.path}
+            </Text>
+          </View>
+          <View className="flex-row items-center gap-1">
             <View
               className="rounded px-1.5 py-0.5"
               style={{ backgroundColor: `${colors.error}26` }}
