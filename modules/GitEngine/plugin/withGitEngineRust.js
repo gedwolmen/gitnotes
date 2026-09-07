@@ -73,6 +73,19 @@ function withGitEngineRust(config) {
       ...nativeTarget.buildPhases.filter((phase) => phase.value !== uuid),
     ];
 
+    const buildConfigs = (nativeTarget.buildConfigurationList.value || [])
+      .map((ref) => project.hash.project.objects.PBXBuildConfiguration[ref.value])
+      .filter(Boolean);
+    for (const buildConfig of buildConfigs) {
+      const settings = buildConfig.buildSettings;
+      if (!settings) continue;
+      const existing = settings.OTHER_LDFLAGS || '$(inherited)';
+      if (!existing.includes('libgitnotes_git2.a')) {
+        settings.OTHER_LDFLAGS =
+          '$(inherited) ' + '"$(SRCROOT)/../modules/GitEngine/ios-local/rust/libgitnotes_git2.a"';
+      }
+    }
+
     return modConfig;
   });
 }
