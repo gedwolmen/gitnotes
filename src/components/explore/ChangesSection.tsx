@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@/components/ui/text';
 import { Button, ButtonText } from '@/components/ui/Button';
 import { FlatList } from '@/components/ui/flat-list';
+import * as FileSystem from 'expo-file-system';
 import { DiffLineList, previewLines } from './DiffLineList';
 import * as GitEngine from '@/services/git/engine/GitEngine';
 import type { FileDiff, FileStatus } from '@/services/git/engine/GitEngine';
@@ -96,10 +97,14 @@ export function ChangesSection({ repo, active, onChanged, chromeTopInset = 0, on
   }, [data, repo.localPath, onChanged, onNavigate]);
 
   const discardFile = useCallback(
-    async (path: string) => {
+    async (path: string, status: string) => {
       setBusyPath(path);
       try {
-        await GitEngine.discardFiles(repo.localPath, [path]);
+        if (status === 'Untracked') {
+          await FileSystem.deleteAsync(`${repo.localPath}/${path}`, { idempotent: true });
+        } else {
+          await GitEngine.discardFiles(repo.localPath, [path]);
+        }
         onChanged();
         setVersion((value) => value + 1);
       } catch (caught) {
@@ -152,7 +157,7 @@ export function ChangesSection({ repo, active, onChanged, chromeTopInset = 0, on
                 size="sm"
                 variant="danger"
                 disabled={busyPath !== null}
-                onPress={() => void discardFile(item.path)}
+                onPress={() => void discardFile(item.path, item.status)}
                 testID={`explore.discard.${item.path}`}
                 label={busyPath === item.path ? '…' : 'Discard'}
               />
