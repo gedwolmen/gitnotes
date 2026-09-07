@@ -112,7 +112,12 @@ export default function ConflictResolveScreen() {
 
   if (!storedRepo || !localPath || !fileUri) {
     return (
-      <SafeAreaView edges={['top']} className="flex-1" style={{ backgroundColor: colors.background }}>
+      <SafeAreaView
+        edges={['top']}
+        className="flex-1"
+        testID="conflict-resolve.screen"
+        style={{ flex: 1, backgroundColor: colors.background }}
+      >
         <View className="flex-row items-center gap-2 px-4 py-3" style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}>
           <Pressable onPress={() => navigation.goBack()} hitSlop={8} accessibilityRole="button" accessibilityLabel="Go back">
             <Ionicons name="chevron-back" size={22} color={colors.text} />
@@ -130,7 +135,12 @@ export default function ConflictResolveScreen() {
   }
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1" style={{ backgroundColor: colors.background }}>
+    <SafeAreaView
+      edges={['top']}
+      className="flex-1"
+      testID="conflict-resolve.screen"
+      style={{ flex: 1, backgroundColor: colors.background }}
+    >
       <View
         className="flex-row items-center gap-2 px-4 py-3"
         style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}
@@ -153,12 +163,12 @@ export default function ConflictResolveScreen() {
       </View>
 
       {loading ? (
-        <View className="flex-1 items-center justify-center gap-2">
+        <View className="flex-1 items-center justify-center gap-2" style={{ flex: 1 }}>
           <ActivityIndicator size="small" color={colors.accent} />
           <Text className="text-sm" style={{ color: colors.textSecondary }}>Reading file…</Text>
         </View>
       ) : error || !rawContent ? (
-        <View className="flex-1 items-center justify-center px-8">
+        <View className="flex-1 items-center justify-center px-8" style={{ flex: 1 }}>
           <Ionicons name="warning-outline" size={40} color={colors.error} />
           <Text className="mt-2 text-center text-sm" style={{ color: colors.error }}>
             {error || 'File not found or empty. The conflict may already be resolved.'}
@@ -167,12 +177,14 @@ export default function ConflictResolveScreen() {
       ) : (
         <KeyboardAvoidingView
           className="flex-1"
+          style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={0}
         >
           <ScrollView
             className="flex-1"
-            contentContainerStyle={{ padding: 16 }}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ padding: 16, flexGrow: 1 }}
             keyboardShouldPersistTaps="handled"
           >
             <Text className="text-xs font-semibold mb-2" style={{ color: colors.textSecondary }}>
@@ -190,6 +202,7 @@ export default function ConflictResolveScreen() {
                   backgroundColor: colors.surface,
                   borderRadius: 8,
                   padding: 12,
+                  minHeight: 300,
                 }}
                 multiline
                 value={rawContent}
