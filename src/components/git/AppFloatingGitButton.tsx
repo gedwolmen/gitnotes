@@ -226,9 +226,15 @@ export default function AppFloatingGitButton() {
       return;
     }
     const targetRepoId = aggregatedState.latestChangedRepoId ?? repos[0]?.id ?? null;
-    if (!targetRepoId) return;
-    const section = targetSectionFor(aggregatedState.perRepo.get(targetRepoId));
-    if (!section) return;
+    const section =
+      aggregatedState.totalStaged > 0
+        ? 'staging'
+        : aggregatedState.totalUncommitted > 0
+          ? 'changes'
+          : aggregatedState.totalAhead > 0
+            ? 'commits'
+            : null;
+    if (!section || !targetRepoId) return;
     setPending({ repoId: targetRepoId, section });
     navigation.navigate('MainTabs', { screen: 'ExploreTab' });
   }, [aggregatedState, repos, setPending, navigation]);
