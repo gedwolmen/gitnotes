@@ -113,7 +113,9 @@ export default function AppFloatingGitButton({ currentRouteName }: AppFloatingGi
         return;
       }
 
+      console.log('[handleReleaseSegment] calling stageAllPending, repos =', repos.map(r => r.name));
       const stageResult = await stageAllPending(repos);
+      console.log('[handleReleaseSegment] stageAllPending result =', JSON.stringify(stageResult));
       if (segment === 'stage') {
         toast.show({
           placement: 'top',
