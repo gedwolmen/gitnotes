@@ -493,15 +493,8 @@ export async function push(
     return { ok: false, error: 'GitEngine native module unavailable' };
   }
   await ensureCredentialForOp(repoId);
-  const result = await run(
-    () => GitEngineModule!.push(repoPath, remoteName, repoId ?? null, false) as Promise<{ pushed: number; nonFastForward: boolean; message: string }>,
-    null,
-  );
-  if (result === null) {
-    return { ok: false, error: 'unavailable' };
-  }
-  // Derive ok from native result: push succeeds when at least one ref was pushed
-  return { ok: result.pushed > 0, error: result.message || undefined };
+  const native = await (GitEngineModule!.push(repoPath, remoteName, repoId ?? null, false) as unknown as { pushed: number; nonFastForward: boolean; message: string });
+  return { ok: native.pushed > 0, error: native.message || undefined };
 }
 
 /**
