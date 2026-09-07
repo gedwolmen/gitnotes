@@ -100,16 +100,18 @@ export default function ExploreConflictScreen() {
               {item.path}
             </Text>
           </View>
-          <View className="flex-row items-center gap-1">
-            <View
-              className="rounded px-1.5 py-0.5"
-              style={{ backgroundColor: colors.error }}
-            >
-              <Text className="text-[10px] font-semibold" style={{ color: '#fff' }}>
-                {item.kind}
-              </Text>
+          {item.kind ? (
+            <View className="flex-row items-center gap-1">
+              <View
+                className="rounded px-1.5 py-0.5"
+                style={{ backgroundColor: colors.error }}
+              >
+                <Text className="text-[10px] font-semibold" style={{ color: '#fff' }}>
+                  {item.kind}
+                </Text>
+              </View>
             </View>
-          </View>
+          ) : null}
         </View>
         <Button
           size="sm"

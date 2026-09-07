@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@/components/ui/text';
 import { Heading } from '@/components/ui/heading';
-import { Button, ButtonText } from '@/components/ui/Button';
+import { Button } from '@/components/ui/Button';
 import * as GitEngine from '@/services/git/engine/GitEngine';
 import type { ConflictBlobs } from '@/services/git/engine/GitEngine';
 import { GitFsService } from '@/services/git/GitFsService';
@@ -209,7 +209,7 @@ export default function ConflictResolveScreen() {
                 onPress={() => handleChoice('ours')}
                 testID="conflict-resolve.accept-ours"
               >
-                <ButtonText>Accept ours</ButtonText>
+                Accept ours
               </Button>
               <Button
                 size="sm"
@@ -218,7 +218,7 @@ export default function ConflictResolveScreen() {
                 onPress={() => handleChoice('theirs')}
                 testID="conflict-resolve.accept-theirs"
               >
-                <ButtonText>Accept theirs</ButtonText>
+                Accept theirs
               </Button>
               <Button
                 size="sm"
@@ -227,7 +227,7 @@ export default function ConflictResolveScreen() {
                 onPress={() => handleChoice('both')}
                 testID="conflict-resolve.accept-both"
               >
-                <ButtonText>Accept both</ButtonText>
+                Accept both
               </Button>
               <Button
                 size="sm"
@@ -236,7 +236,7 @@ export default function ConflictResolveScreen() {
                 onPress={() => handleChoice('edit')}
                 testID="conflict-resolve.full-edit"
               >
-                <ButtonText>Full edit</ButtonText>
+                Full edit
               </Button>
             </View>
             <View
@@ -265,14 +265,15 @@ export default function ConflictResolveScreen() {
             </View>
 
             <Button
+              variant="primary"
               disabled={resolving}
               onPress={handleResolve}
               testID="conflict-resolve.save"
             >
               {resolving ? (
-                <ActivityIndicator size="small" color={colors.accent} />
+                <ActivityIndicator size="small" color="#fff" />
               ) : (
-                <ButtonText>Mark resolved &amp; go to staged</ButtonText>
+                'Mark resolved & Push'
               )}
             </Button>
           </ScrollView>
