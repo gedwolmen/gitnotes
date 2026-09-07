@@ -81,6 +81,7 @@ export function useFloatingGitButtonAffordances(
 
   const handlePressOut = useCallback(() => {
     pressProgress.value = withSpring(0, PRESS_SPRING);
+    console.log('[DEBUG handlePressOut] holdProgress.value =', holdProgress.value, 'holdCompletedRef.current =', holdCompletedRef.current);
     if (holdCompletedRef.current) return;
 
     // Determine the highest segment reached at release time.
