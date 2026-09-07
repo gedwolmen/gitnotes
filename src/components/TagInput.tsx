@@ -82,7 +82,7 @@ export default function TagInput({
         autoCapitalize="none"
         autoCorrect={false}
         returnKeyType="done"
-        containerStyle={{ backgroundColor: colors.surface }}
+        containerStyle={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}
       />
 
       {showSuggestions && filteredSuggestions.length > 0 && (
