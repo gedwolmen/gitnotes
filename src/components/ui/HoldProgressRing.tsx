@@ -19,17 +19,6 @@ interface HoldProgressRingProps {
   readonly reduceMotionEnabled: boolean;
 }
 
-function segmentInterval(
-  progress: number,
-  segmentIndex: number,
-  circumference: number,
-): [number, number] {
-  const SEGMENT_WIDTH = 1 / 3;
-  const start = segmentIndex * SEGMENT_WIDTH;
-  const fillFraction = Math.max(0, Math.min(1, (progress - start) / SEGMENT_WIDTH));
-  return [fillFraction * circumference, circumference];
-}
-
 export function HoldProgressRing({
   progress,
   size,
@@ -70,7 +59,15 @@ export function HoldProgressRing({
     >
       {[0, 1, 2].map((i) => {
         const intervals = useDerivedValue(
-          () => segmentInterval(progress.value, i, ringCircumference),
+          // Inline worklet: segmentInterval logic must be inside the worklet callback,
+          // not a cross-context plain-function call.
+          () => {
+            'worklet';
+            const SEGMENT_WIDTH = 1 / 3;
+            const start = i * SEGMENT_WIDTH;
+            const fillFraction = Math.max(0, Math.min(1, (progress.value - start) / SEGMENT_WIDTH));
+            return [fillFraction * ringCircumference, ringCircumference] as [number, number];
+          },
           [i, ringCircumference],
         );
         const opacity = useDerivedValue(
