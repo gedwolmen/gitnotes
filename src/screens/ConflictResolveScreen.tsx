@@ -155,6 +155,13 @@ export default function ConflictResolveScreen() {
           <Ionicons name="warning-outline" size={40} color={colors.error} />
           <Text className="mt-2 text-center text-sm" style={{ color: colors.error }}>{error}</Text>
         </View>
+      ) : rawContent === '' ? (
+        <View className="flex-1 items-center justify-center px-8">
+          <Ionicons name="warning-outline" size={40} color={colors.error} />
+          <Text className="mt-2 text-center text-sm" style={{ color: colors.error }}>
+            File is empty. The conflict may already be resolved.
+          </Text>
+        </View>
       ) : (
         <KeyboardAvoidingView
           className="flex-1"
