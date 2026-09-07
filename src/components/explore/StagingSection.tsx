@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@/components/ui/text';
 import { Button, ButtonText } from '@/components/ui/Button';
 import { FlatList } from '@/components/ui/flat-list';
+import { File } from 'expo-file-system';
 import { DiffLineList, previewLines } from './DiffLineList';
 import { CommitComposer } from './CommitComposer';
 import { Modal } from '@/components/ui/Modal';
@@ -116,20 +117,24 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0, on
   }, [data, repo.localPath, onChanged]);
 
   const discardFile = useCallback(
-    async (path: string) => {
+    async (path: string, originalStatus: string) => {
       setBusyPath(path);
       try {
         await GitEngine.unstage(repo.localPath, [path]);
-        await GitEngine.discardFiles(repo.localPath, [path]);
+        if (originalStatus === 'Added') {
+          await new File(`${repo.localPath}/${path}`).delete();
+        } else {
+          await GitEngine.discardFiles(repo.localPath, [path]);
+        }
+        await load();
         onChanged();
-        setVersion((value) => value + 1);
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : String(caught));
       } finally {
         setBusyPath(null);
       }
     },
-    [repo.localPath, onChanged],
+    [repo.localPath, onChanged, load],
   );
 
   const renderItem = useCallback(
@@ -167,7 +172,7 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0, on
               size="sm"
               variant="danger"
               disabled={busyPath !== null}
-              onPress={() => void discardFile(item.path)}
+              onPress={() => void discardFile(item.path, item.status)}
               testID={`explore.discard.${item.path}`}
               label={busyPath === item.path ? '…' : 'Discard'}
             />
