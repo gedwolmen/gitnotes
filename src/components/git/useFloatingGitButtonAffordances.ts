@@ -49,9 +49,6 @@ export function useFloatingGitButtonAffordances(
   const [reduceMotionEnabledState, setReduceMotionEnabled] = useState(false);
   const [reduceMotionResolvedState, setReduceMotionResolved] = useState(false);
 
-  // Guard against handlePressOut firing after a completed hold (double-fire).
-  const holdCompletedRef = useRef(false);
-
   useEffect(() => {
     if (!reduceMotionResolved) return;
     if (reduceMotionEnabled) {
@@ -71,7 +68,6 @@ export function useFloatingGitButtonAffordances(
   }, [entranceProgress, pressProgress, holdProgress]);
 
   const handlePressIn = useCallback(() => {
-    holdCompletedRef.current = false;
     pressProgress.value = withSpring(1, PRESS_SPRING);
     console.log('[DEBUG handlePressIn] starting hold animation, reduceMotionEnabledState =', reduceMotionEnabledState);
     if (!reduceMotionEnabledState) {
@@ -81,10 +77,8 @@ export function useFloatingGitButtonAffordances(
 
   const handlePressOut = useCallback(() => {
     pressProgress.value = withSpring(0, PRESS_SPRING);
-    console.log('[DEBUG handlePressOut] holdProgress.value =', holdProgress.value, 'holdCompletedRef.current =', holdCompletedRef.current);
-    if (holdCompletedRef.current) return;
+    console.log('[DEBUG handlePressOut] holdProgress.value =', holdProgress.value);
 
-    // Determine the highest segment reached at release time.
     const fraction = holdProgress.value;
     let segment: ReleaseSegment | null = null;
     if (fraction >= 0.95) {
@@ -94,9 +88,7 @@ export function useFloatingGitButtonAffordances(
     } else if (fraction >= STAGE_FRACTION) {
       segment = 'stage';
     }
-    // Short tap (< 1/3): no segment — the tap handler navigates instead.
 
-    // Drain the ring.
     holdProgress.value = withTiming(0, { duration: HOLD_DRAIN_MS });
 
     if (segment && onReleaseSegment) {
@@ -105,9 +97,11 @@ export function useFloatingGitButtonAffordances(
   }, [pressProgress, holdProgress, onReleaseSegment]);
 
   const handleHoldComplete = useCallback(() => {
-    holdCompletedRef.current = true;
     holdProgress.value = withTiming(0, { duration: HOLD_DRAIN_MS });
-  }, [holdProgress]);
+    if (onReleaseSegment) {
+      onReleaseSegment('push');
+    }
+  }, [holdProgress, onReleaseSegment]);
 
   const cancelAffordances = useCallback(() => {
     for (const shared of [pressProgress, holdProgress]) {
