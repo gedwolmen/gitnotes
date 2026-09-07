@@ -8,6 +8,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 >
 > **History**: prior fixes (pre-2026-08) lived in single-PR wiki pages. Those pages were retired in [#1047](https://github.com/gedwolmen/gitnotes/pull/1047); their full diagnostic content is preserved in git history via `git log -p -- docs/wiki/<file>.md`.
 
+## 2026-09-08
+
+### fix(sync): add complete conflict resolution actions
+
+**What:** Conflict resolution now offers Accept ours, Accept theirs, Accept both, and Full edit. Saving writes the resolved content, stages and commits it, pushes immediately, then pulls and refreshes Notes, Canvases, and Todos. The conflict list no longer renders the stray red square indicator.
+
+**PR:** TBD
+
 ## 2026-09-06
 
 ### fix(explore): guard Git tab against corrupted repo data on app update
