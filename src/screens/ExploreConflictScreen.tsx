@@ -148,9 +148,9 @@ export default function ExploreConflictScreen() {
           {conflicts && conflicts.length > 0 && (
             <View
               className="mt-0.5 rounded px-1.5 py-0.5 self-start"
-              style={{ backgroundColor: `${colors.error}26` }}
+              style={{ backgroundColor: colors.error }}
             >
-              <Text className="text-[10px] font-semibold" style={{ color: colors.error }}>
+              <Text className="text-[10px] font-semibold" style={{ color: '#fff' }}>
                 {conflicts.length} file{conflicts.length !== 1 ? 's' : ''}
               </Text>
             </View>
