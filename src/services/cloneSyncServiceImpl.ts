@@ -155,7 +155,6 @@ export const CloneSyncService = {
     try {
       if (intent === 'delete') {
         await FileSystem.deleteAsync(fullPath, { idempotent: true });
-        await GitEngine.remove(repoDir, [relPath]);
         return { success: true };
       }
 
@@ -163,7 +162,6 @@ export const CloneSyncService = {
       const dirPath = lastSlash === -1 ? repoDir : `${repoDir}/${relPath.slice(0, lastSlash)}`;
       await FileSystem.makeDirectoryAsync(dirPath, { intermediates: true });
       await FileSystem.writeAsStringAsync(fullPath, content ?? '');
-      await GitEngine.stage(repoDir, [relPath]);
       return { success: true };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : String(error) };

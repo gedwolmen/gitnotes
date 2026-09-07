@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { create } from 'zustand';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Note, NoteCreateInput, NoteUpdateInput, sortNotesWithPinnedFirst, filterNotesBySearch } from '../models/Note';
 import { StorageService } from '../services/StorageService';
 import { NoteSyncQueueService, SyncEngineService, CloneSyncService, type MutationSucceededEvent, type DroppedMutationEvent, type NoteDeleteParams, type SaveResult } from '../services/cloneSyncServiceImpl';
@@ -44,6 +45,8 @@ interface NoteActions {
   getNoteById: (id: string) => Note | undefined;
   togglePin: (id: string) => Promise<boolean>;
   refreshNotes: () => Promise<void>;
+  /** Reload note content from git working tree and sync to AsyncStorage after discard. */
+  reloadNoteFromFile: (repo: string, filePath: string) => Promise<void>;
   clearError: () => void;
 }
 
@@ -460,6 +463,38 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
 
   refreshNotes: async () => {
     await get().loadNotes();
+  },
+
+  reloadNoteFromFile: async (repo: string, filePath: string) => {
+    const info = parseRepoPath(repo);
+    if (!info) return;
+    const relPath = filePath.replace(/^\/+/, '');
+    const repoDir = `${FileSystem.documentDirectory ?? ''}GitNotes/${info.owner}/${info.repo}`;
+    const fullPath = `${repoDir}/${relPath}`;
+    try {
+      const content = await FileSystem.readAsStringAsync(fullPath);
+      const pathSet = new Set([relPath]);
+      const matches = get().notes.filter((note) => {
+        if (!note.repo) return false;
+        const sameRepo =
+          note.repo === repo || (!!info && pathsEqual(parseRepoPath(note.repo), info));
+        if (!sameRepo) return false;
+        const notePath = note.filePath ?? deriveDefaultNotePath(note);
+        return !!notePath && pathSet.has(notePath);
+      });
+      for (const note of matches) {
+        const updated = await StorageService.updateNote({ id: note.id, content });
+        if (updated) {
+          set((state) => ({
+            notes: sortNotesWithPinnedFirst(
+              state.notes.map((n) => (n.id === updated.id ? updated : n)),
+            ),
+          }));
+        }
+      }
+    } catch {
+      // File may not exist or be readable —silently ignore
+    }
   },
 
   clearError: () => set({ error: null }),
