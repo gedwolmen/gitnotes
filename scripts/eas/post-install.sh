@@ -40,8 +40,22 @@ else
 
   log "Building aarch64-apple-ios (device)..."
   (cd "$RUST_DIR" && cargo build --target aarch64-apple-ios "${PROFILE_FLAGS[@]}")
+
+  log "Verifying staticlib..."
+  if [ ! -f "$RUST_DIR/target/aarch64-apple-ios/$RUST_PROFILE/libgitnotes_git2.a" ]; then
+    log "ERROR: Rust staticlib not found at $RUST_DIR/target/aarch64-apple-ios/$RUST_PROFILE/libgitnotes_git2.a"
+    exit 1
+  fi
+
   cp "$RUST_DIR/target/aarch64-apple-ios/$RUST_PROFILE/libgitnotes_git2.a" "$IOS_LIB_DIR/libgitnotes_git2.a"
-  log "iOS device staticlib copied"
+
+  if [ -f "$IOS_LIB_DIR/libgitnotes_git2.a" ]; then
+    log "iOS device staticlib copied successfully"
+    ls -la "$IOS_LIB_DIR/libgitnotes_git2.a"
+  else
+    log "ERROR: Failed to copy staticlib to $IOS_LIB_DIR"
+    exit 1
+  fi
 fi
 
 if [ -n "${ANDROID_NDK_HOME:-}" ] && [ -d "${ANDROID_NDK_HOME:-}" ]; then
