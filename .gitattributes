@@ -1,0 +1,1 @@
+modules/GitEngine/ios-local/rust/libgitnotes_git2.a filter=lfs diff=lfs merge=lfs -text
