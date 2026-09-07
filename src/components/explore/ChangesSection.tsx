@@ -22,7 +22,7 @@ interface ChangesData {
   diffs: Record<string, FileDiff>;
 }
 
-export function ChangesSection({ repo, active, onChanged, chromeTopInset = 0 }: SectionProps) {
+export function ChangesSection({ repo, active, onChanged, chromeTopInset = 0, onNavigate }: SectionProps) {
   const navigation = useNavigation<NavigationProp>();
   const { colors } = useTokens();
   const [data, setData] = useState<ChangesData | null>(null);
@@ -89,10 +89,11 @@ export function ChangesSection({ repo, active, onChanged, chromeTopInset = 0 }: 
       await Promise.all(unstaged.map((s) => GitEngine.stage(repo.localPath, [s.path])));
       onChanged();
       setVersion((value) => value + 1);
+      onNavigate?.('staging');
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     }
-  }, [data, repo.localPath, onChanged]);
+  }, [data, repo.localPath, onChanged, onNavigate]);
 
   const discardFile = useCallback(
     async (path: string) => {

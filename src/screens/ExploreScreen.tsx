@@ -218,7 +218,7 @@ export default function ExploreScreen() {
 
   const renderSection = () => {
     const repoTyped = repo as RepoLike;
-    const props = { repo: repoTyped, status, onChanged, chromeTopInset: chromeTotalHeight + 8 };
+    const props = { repo: repoTyped, status, onChanged, chromeTopInset: chromeTotalHeight + 8, onNavigate: setSection };
     switch (section) {
       case 'files':
         return <FilesSection key={repo.id} {...props} active />;
