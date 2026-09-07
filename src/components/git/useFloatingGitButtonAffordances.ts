@@ -12,7 +12,7 @@ const PRESS_SPRING = { mass: 0.6, damping: 16, stiffness: 480 } as const;
 const ENTRANCE_SPRING = { mass: 0.9, damping: 14, stiffness: 240 } as const;
 const HOLD_DRAIN_MS = 150;
 /** Time for the hold ring to fill from 0→1 (1/3 ≈ 333ms, 2/3 ≈ 667ms). */
-const HOLD_FILL_MS = 1000;
+const HOLD_FILL_MS = 3000;
 /** Threshold fractions for stage / commit / push segments. */
 const STAGE_FRACTION = 1 / 3;   // 0.333…
 const COMMIT_FRACTION = 2 / 3;   // 0.666…
