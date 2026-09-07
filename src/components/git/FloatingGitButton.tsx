@@ -19,7 +19,7 @@ import {
   type ReleaseSegment,
 } from './useFloatingGitButtonAffordances';
 import { useFloatingButtonCollision } from '../floatingButtonLayout';
-import { HoldProgressRing } from '../ui/HoldProgressRing';
+import { GitButtonRing } from './GitButtonRing';
 
 interface FloatingGitButtonProps {
   aggregatedState?: AggregatedGitState;
@@ -161,11 +161,9 @@ export default function FloatingGitButton({
             color={hueColor ?? undefined}
             testID="gitbutton.halo"
           />
-          <HoldProgressRing
+          <GitButtonRing
             progress={holdProgress}
-            size={GIT_BUTTON_SIZE}
             colors={[colors.success, '#f59e0b', colors.primary]}
-            reduceMotionEnabled={false}
           />
           <Pressable
             testID="gitbutton.press"

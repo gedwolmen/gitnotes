@@ -73,6 +73,7 @@ export default function AppFloatingGitButton({ currentRouteName }: AppFloatingGi
 
   const handleReleaseSegment = useCallback(
     async (segment: ReleaseSegment) => {
+      console.log('[handleReleaseSegment]', { segment, reposLen: repos.length, authorExists: !!author });
       toast.show({
         placement: 'top',
         duration: 4000,
