@@ -178,14 +178,14 @@ export default function ConflictResolveScreen() {
             </Text>
             <View
               className="rounded-lg mb-4 p-3"
-              style={{ backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }}
+              style={{ backgroundColor: colors.card, borderColor: colors.error, borderWidth: 2 }}
             >
               <TextInput
                 testID="conflict-resolve.editor"
                 className="text-sm font-mono min-h-[300]"
                 style={{
                   color: colors.text,
-                  backgroundColor: colors.surfaceSecondary,
+                  backgroundColor: colors.surface,
                   borderRadius: 8,
                   padding: 12,
                 }}
