@@ -57,7 +57,7 @@ function withGitEngineRust(config) {
       return modConfig;
     }
 
-    const shellScript = ['set -e', '"$SRCROOT/../scripts/build-rust.sh" --xcode', ''].join('\n');
+    const shellScript = ['set -e', '"$PROJECT_DIR/../scripts/build-rust.sh" --xcode', ''].join('\n');
 
     const { uuid } = project.addBuildPhase([], 'PBXShellScriptBuildPhase', PHASE_NAME, targetUuid, {
       inputPaths: [],
@@ -79,10 +79,10 @@ function withGitEngineRust(config) {
     for (const buildConfig of buildConfigs) {
       const settings = buildConfig.buildSettings;
       if (!settings) continue;
-      if (!settings.OTHER_LDFLAGS || !settings.OTHER_LDFLAGS.includes('libgitnotes_git2.a')) {
-        settings.OTHER_LDFLAGS =
-          '$(inherited) $(SRCROOT)/../modules/GitEngine/ios-local/rust/libgitnotes_git2.a';
-      }
+        if (!settings.OTHER_LDFLAGS || !settings.OTHER_LDFLAGS.includes('libgitnotes_git2.a')) {
+          settings.OTHER_LDFLAGS =
+            '$(inherited) $(PROJECT_DIR)/modules/GitEngine/ios-local/rust/libgitnotes_git2.a';
+        }
     }
 
     return modConfig;
