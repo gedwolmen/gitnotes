@@ -12,14 +12,19 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import * as FileSystem from 'expo-file-system/legacy';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@/components/ui/text';
 import { Heading } from '@/components/ui/heading';
 import { Button, ButtonText } from '@/components/ui/Button';
 import * as GitEngine from '@/services/git/engine/GitEngine';
+import type { ConflictBlobs } from '@/services/git/engine/GitEngine';
 import { GitFsService } from '@/services/git/GitFsService';
+import {
+  getConflictChoiceContent,
+  resolveConflictAndSync,
+  type ConflictChoice,
+} from '@/services/git/conflictResolution';
 import { useRepoStore } from '@/stores/repoStore';
 import { useGitButtonActionStore } from '@/stores/gitButtonActionStore';
 import { useTokens } from '@/contexts/ThemeContext';
@@ -27,12 +32,6 @@ import type { RootStackParamList } from '@/navigation/types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'ConflictResolve'>;
-
-function conflictMarkerContent(ours: string, theirs: string): string {
-  const oursContent = ours.endsWith('\n') ? ours : `${ours}\n`;
-  const theirsContent = theirs.endsWith('\n') ? theirs : `${theirs}\n`;
-  return `<<<<<<< ours\n${oursContent}=======\n${theirsContent}>>>>>>> theirs\n`;
-}
 
 export default function ConflictResolveScreen() {
   const navigation = useNavigation<NavigationProp>();
@@ -57,6 +56,8 @@ export default function ConflictResolveScreen() {
   }
 
   const [rawContent, setRawContent] = useState('');
+  const [blobs, setBlobs] = useState<ConflictBlobs | null>(null);
+  const [selectedChoice, setSelectedChoice] = useState<ConflictChoice>('edit');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [resolving, setResolving] = useState(false);
@@ -71,12 +72,12 @@ export default function ConflictResolveScreen() {
     (async () => {
       try {
         const blobs = await GitEngine.getConflictBlobs(localPath, path);
-        const content = conflictMarkerContent(blobs.ours, blobs.theirs);
         if (!cancelled) {
           if (blobs.ours === '' && blobs.theirs === '') {
             setError('File is empty. The conflict may already be resolved.');
           } else {
-            setRawContent(content);
+            setBlobs(blobs);
+            setRawContent(getConflictChoiceContent(blobs, 'edit'));
           }
         }
       } catch (caught) {
@@ -94,11 +95,10 @@ export default function ConflictResolveScreen() {
   }, [fileUri, localPath, path]);
 
   const handleResolve = async () => {
-    if (!fileUri || !localPath) return;
+    if (!storedRepo || !fileUri || !localPath) return;
     setResolving(true);
     try {
-      await FileSystem.writeAsStringAsync(fileUri, rawContent);
-      await GitEngine.markConflictResolved(localPath, path);
+      await resolveConflictAndSync(storedRepo, path, rawContent);
       setPending({ repoId, section: 'staging' });
       navigation.navigate('MainTabs', { screen: 'ExploreTab' });
     } catch (caught) {
@@ -108,6 +108,12 @@ export default function ConflictResolveScreen() {
         caught instanceof Error ? caught.message : String(caught),
       );
     }
+  };
+
+  const handleChoice = (choice: ConflictChoice) => {
+    if (!blobs || resolving) return;
+    setSelectedChoice(choice);
+    setRawContent(getConflictChoiceContent(blobs, choice));
   };
 
   if (!storedRepo || !localPath || !fileUri) {
@@ -188,8 +194,46 @@ export default function ConflictResolveScreen() {
             keyboardShouldPersistTaps="handled"
           >
             <Text className="text-xs font-semibold mb-2" style={{ color: colors.textSecondary }}>
-              Edit the file below — remove the conflict markers (&lt;&lt;&lt;&lt;&lt;&lt;&lt; / ======= / &gt;&gt;&gt;&gt;&gt;&gt;&gt;) and keep what you want, then tap Mark resolved.
+              Choose a version or edit the combined file below, then tap Mark resolved.
             </Text>
+            <View className="flex-row flex-wrap gap-2 mb-4">
+              <Button
+                size="sm"
+                variant={selectedChoice === 'ours' ? 'primary' : 'outline'}
+                disabled={resolving}
+                onPress={() => handleChoice('ours')}
+                testID="conflict-resolve.accept-ours"
+              >
+                <ButtonText>Accept ours</ButtonText>
+              </Button>
+              <Button
+                size="sm"
+                variant={selectedChoice === 'theirs' ? 'primary' : 'outline'}
+                disabled={resolving}
+                onPress={() => handleChoice('theirs')}
+                testID="conflict-resolve.accept-theirs"
+              >
+                <ButtonText>Accept theirs</ButtonText>
+              </Button>
+              <Button
+                size="sm"
+                variant={selectedChoice === 'both' ? 'primary' : 'outline'}
+                disabled={resolving}
+                onPress={() => handleChoice('both')}
+                testID="conflict-resolve.accept-both"
+              >
+                <ButtonText>Accept both</ButtonText>
+              </Button>
+              <Button
+                size="sm"
+                variant={selectedChoice === 'edit' ? 'primary' : 'outline'}
+                disabled={resolving}
+                onPress={() => handleChoice('edit')}
+                testID="conflict-resolve.full-edit"
+              >
+                <ButtonText>Full edit</ButtonText>
+              </Button>
+            </View>
             <View
               className="rounded-lg mb-4 p-3"
               style={{ backgroundColor: colors.card, borderColor: colors.error, borderWidth: 2 }}

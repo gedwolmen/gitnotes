@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
@@ -96,11 +96,6 @@ export default function ExploreConflictScreen() {
       <View className="flex-row items-center justify-between">
         <View className="min-w-0 flex-1 mr-2">
           <View className="flex-row items-center gap-2 mb-1">
-            <View
-              className="w-2 h-2 rounded-sm"
-              style={{ backgroundColor: colors.error }}
-              testID={`explore-conflict.indicator.${item.path}`}
-            />
             <Text className="text-sm font-semibold" style={{ color: colors.text }} numberOfLines={2}>
               {item.path}
             </Text>
