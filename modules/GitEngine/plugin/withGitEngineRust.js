@@ -25,7 +25,7 @@ function withGitEngineRustPodfile(config) {
     }
 
     const marker = 'post_install do |installer|';
-    const hook = `${marker}\n    # [gitnotes] Expose GitNotesGit2FFI (UniFFI) module to the aggregate Swift target.\n    gitnotes_root = File.expand_path('../..', installer.sandbox.root)\n    gitnotes_ffi = File.join(gitnotes_root, 'modules', 'GitEngine', 'ios-local', 'generated')\n    installer.aggregate_targets.each do |aggregate|\n      aggregate.xcconfigs.each do |config_name, xcconfig|\n        existing = xcconfig.attributes['SWIFT_INCLUDE_PATHS'] || ''\n        unless existing.include?(gitnotes_ffi)\n          xcconfig.attributes['SWIFT_INCLUDE_PATHS'] = "$(inherited) #{gitnotes_ffi} #{existing}".strip\n          xcconfig.save_as(aggregate.xcconfig_path(config_name))\n        end\n      end\n    end\n`;
+    const hook = `${marker}\n    # [gitnotes] Expose GitNotesGit2FFI (UniFFI) module to the aggregate Swift target.\n    gitnotes_root = File.expand_path('../..', installer.sandbox.root)\n    gitnotes_ffi = File.join(gitnotes_root, 'modules', 'GitEngine', 'ios-local', 'generated')\n    gitnotes_rust_lib = File.join(gitnotes_root, 'modules', 'GitEngine', 'ios-local', 'rust', 'libgitnotes_git2.a')\n    installer.aggregate_targets.each do |aggregate|\n      aggregate.xcconfigs.each do |config_name, xcconfig|\n        existing = xcconfig.attributes['SWIFT_INCLUDE_PATHS'] || ''\n        unless existing.include?(gitnotes_ffi)\n          xcconfig.attributes['SWIFT_INCLUDE_PATHS'] = "$(inherited) #{gitnotes_ffi} #{existing}".strip\n        end\n        existing_ldflags = xcconfig.attributes['OTHER_LDFLAGS'] || '$(inherited)'\n        unless existing_ldflags.include?('libgitnotes_git2.a')\n          xcconfig.attributes['OTHER_LDFLAGS'] = "#{existing_ldflags} #{gitnotes_rust_lib}".strip\n        end\n        xcconfig.save_as(aggregate.xcconfig_path(config_name))\n      end\n    end\n`;
     if (contents.includes(marker) && !contents.includes('gitnotes_ffi')) {
       contents = contents.replace(marker, hook);
     }
@@ -79,10 +79,8 @@ function withGitEngineRust(config) {
     for (const buildConfig of buildConfigs) {
       const settings = buildConfig.buildSettings;
       if (!settings) continue;
-      const existing = settings.OTHER_LDFLAGS || '$(inherited)';
-      if (!existing.includes('libgitnotes_git2.a')) {
-        settings.OTHER_LDFLAGS =
-          '$(inherited) $(SRCROOT)/../modules/GitEngine/ios-local/rust/libgitnotes_git2.a';
+      if (!settings.OTHER_LDFLAGS || !settings.OTHER_LDFLAGS.includes('libgitnotes_git2.a')) {
+        settings.OTHER_LDFLAGS = '$(inherited) $(SRCROOT)/../modules/GitEngine/ios-local/rust/libgitnotes_git2.a';
       }
     }
 
