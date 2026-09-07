@@ -46,7 +46,7 @@ export function useFloatingGitButtonAffordances(
   const pressProgress = useSharedValue(0);
   const holdProgress = useSharedValue(0);
 
-  const [reduceMotionEnabledState, setReduceMotionEnabled] = useState(true);
+  const [reduceMotionEnabledState, setReduceMotionEnabled] = useState(false);
   const [reduceMotionResolvedState, setReduceMotionResolved] = useState(false);
 
   // Guard against handlePressOut firing after a completed hold (double-fire).
