@@ -29,25 +29,7 @@ interface FloatingGitButtonProps {
   onReleaseSegment?: (segment: ReleaseSegment) => void;
   /** Nothing pending anywhere: gray the button out and ignore taps. */
   disabled?: boolean;
-  /** Name of the current top-level route — used to hide the button on full-screen modals. */
-  currentRouteName?: string;
 }
-
-const HIDDEN_ROUTES = new Set<string>([
-  'Paywall',
-  'Onboarding',
-  'NoteEditor',
-  'CanvasEditor',
-  'PdfViewer',
-  'FileViewer',
-  'ImageViewer',
-  'VideoViewer',
-  'ChatScreen',
-  'ChatThreadList',
-  'ConflictResolve',
-  'Stage',
-  'GraphView',
-]);
 
 /**
  * Floating git status button — purely informational (issue #1330):
@@ -65,7 +47,6 @@ export default function FloatingGitButton({
   onQuickTap,
   onReleaseSegment,
   disabled = false,
-  currentRouteName,
 }: FloatingGitButtonProps) {
   const { colors } = useTheme();
   const repos = useRepoStore((state) => state.repositories);
@@ -144,8 +125,6 @@ export default function FloatingGitButton({
       { scale: 1 - PRESS_SCALE_FACTOR * pressProgress.value },
     ],
   }));
-
-  if (currentRouteName && HIDDEN_ROUTES.has(currentRouteName)) return null;
 
   return (
     <Animated.View

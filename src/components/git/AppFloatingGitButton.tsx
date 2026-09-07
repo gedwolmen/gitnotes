@@ -8,33 +8,13 @@ import { useGitButtonActionStore } from '@/stores/gitButtonActionStore';
 import { stageAllPending, commitAll, pushAll } from '@/services/git/multiRepoGitOps';
 import type { Author } from '@/services/git/engine/GitEngine';
 import { useAccounts } from '@/contexts/AccountsContext';
+import { githubActivity } from '@/stores/githubActivityStore';
 import FloatingGitButton from './FloatingGitButton';
 import type { ReleaseSegment } from './useFloatingGitButtonAffordances';
 import type { RootStackParamList } from '@/navigation/types';
 import type { ExploreSection } from '@/components/explore/exploreShared';
 
 const HINT_SEEN_KEY = '@gitnotes:gitbutton_hint_seen';
-
-interface AppFloatingGitButtonProps {
-  /** Name of the current top-level route — used to hide the button on full-screen modals. */
-  currentRouteName?: string;
-}
-
-const HIDDEN_ROUTES = new Set<string>([
-  'Paywall',
-  'Onboarding',
-  'NoteEditor',
-  'CanvasEditor',
-  'PdfViewer',
-  'FileViewer',
-  'ImageViewer',
-  'VideoViewer',
-  'ChatScreen',
-  'ChatThreadList',
-  'ConflictResolve',
-  'Stage',
-  'GraphView',
-]);
 
 /**
  * App-level wrapper around `FloatingGitButton`. Owns:
@@ -49,7 +29,7 @@ const HIDDEN_ROUTES = new Set<string>([
  * Hides itself on full-screen modals and the paywall/onboarding so it never
  * floats over content that needs the full viewport.
  */
-export default function AppFloatingGitButton({ currentRouteName }: AppFloatingGitButtonProps) {
+export default function AppFloatingGitButton() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const repos = useRepoStore((s) => s.repositories);
   const aggregatedState = useAllReposStatus();
@@ -114,7 +94,9 @@ export default function AppFloatingGitButton({ currentRouteName }: AppFloatingGi
       }
 
       console.log('[handleReleaseSegment] calling stageAllPending, repos =', repos.map(r => r.name));
+      githubActivity.begin('Staging...');
       const stageResult = await stageAllPending(repos);
+      githubActivity.end();
       console.log('[handleReleaseSegment] stageAllPending result =', JSON.stringify(stageResult));
       if (segment === 'stage') {
         toast.show({
@@ -131,7 +113,9 @@ export default function AppFloatingGitButton({ currentRouteName }: AppFloatingGi
       }
 
       const message = `Sync: stage ${stageResult.totalActed} file(s)`;
+      githubActivity.begin('Committing...');
       await commitAll(repos, message, author);
+      githubActivity.end();
       if (segment === 'commit') {
         toast.show({
           placement: 'top',
@@ -146,7 +130,9 @@ export default function AppFloatingGitButton({ currentRouteName }: AppFloatingGi
         return;
       }
 
+      githubActivity.begin('Pushing...');
       const pushResult = await pushAll(repos);
+      githubActivity.end();
       const failedCount = pushResult.failures.length;
       if (failedCount === repos.length) {
         toast.show({
@@ -247,15 +233,12 @@ export default function AppFloatingGitButton({ currentRouteName }: AppFloatingGi
     navigation.navigate('MainTabs', { screen: 'ExploreTab' });
   }, [aggregatedState, repos, setPending, navigation]);
 
-  if (currentRouteName && HIDDEN_ROUTES.has(currentRouteName)) return null;
-
   return (
     <FloatingGitButton
       aggregatedState={aggregatedState}
       onQuickTap={onQuickTap}
       onReleaseSegment={handleReleaseSegment}
       disabled={isDisabled}
-      currentRouteName={currentRouteName}
     />
   );
 }
