@@ -16,6 +16,7 @@ import { GitFsService } from '@/services/git/GitFsService';
 import type { RootStackParamList } from '@/navigation/types';
 import type { SectionProps } from './exploreShared';
 import { useTokens } from '@/contexts/ThemeContext';
+import { useNoteStore } from '@/stores/noteStore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -121,15 +122,16 @@ export function StagingSection({ repo, active, onChanged, chromeTopInset = 0, on
       try {
         await GitEngine.unstage(repo.localPath, [path]);
         await GitEngine.discardFiles(repo.localPath, [path]);
+        await useNoteStore.getState().reloadNoteFromFile(repo.path, path);
         onChanged();
-        setVersion((value) => value + 1);
+        await load();
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : String(caught));
       } finally {
         setBusyPath(null);
       }
     },
-    [repo.localPath, onChanged],
+    [repo.localPath, repo.path, onChanged, load],
   );
 
   const renderItem = useCallback(
