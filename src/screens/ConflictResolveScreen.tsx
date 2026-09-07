@@ -57,6 +57,7 @@ export default function ConflictResolveScreen() {
 
   useEffect(() => {
     if (!fileUri) {
+      setError('File not found on device. The repository may not be cloned.');
       setLoading(false);
       return;
     }
@@ -64,7 +65,13 @@ export default function ConflictResolveScreen() {
     (async () => {
       try {
         const content = await FileSystem.readAsStringAsync(fileUri);
-        if (!cancelled) setRawContent(content);
+        if (!cancelled) {
+          if (content.trim() === '') {
+            setError('File is empty. The conflict may already be resolved.');
+          } else {
+            setRawContent(content);
+          }
+        }
       } catch (caught) {
         if (!cancelled) setError(caught instanceof Error ? caught.message : String(caught));
       } finally {
