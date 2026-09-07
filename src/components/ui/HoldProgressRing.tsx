@@ -12,7 +12,9 @@ export const HOLD_RING_CIRCUMFERENCE = 2 * Math.PI * HOLD_RING_RADIUS;
 interface HoldProgressRingProps {
   readonly progress: SharedValue<number>;
   readonly size: number;
+  /** Single color for backward compat with AI button; ignored when colors is set. */
   readonly color?: string;
+  /** Three colors for git button: [green=stage, yellow=commit, blue=push]. */
   readonly colors?: [string, string, string];
   readonly reduceMotionEnabled: boolean;
 }
@@ -25,6 +27,7 @@ export function HoldProgressRing({
   reduceMotionEnabled,
 }: HoldProgressRingProps) {
   const ringRadius = size / 2 + HOLD_RING_RADIUS_OFFSET;
+  const ringCircumference = 2 * Math.PI * ringRadius;
   const ringCanvasSize = ringRadius * 2 + HOLD_RING_STROKE_WIDTH * 2 + HOLD_RING_PADDING * 2;
   const ringCenter = ringCanvasSize / 2;
 
@@ -32,19 +35,14 @@ export function HoldProgressRing({
     return null;
   }
 
-  const ringColors: [string, string, string] = colors
-    ?? [
+  const isMultiColor = Boolean(colors);
+  const ringColors: [string, string, string] = isMultiColor
+    ? colors!
+    : [
         color ?? '#22c55e',
         color ?? '#22c55e',
         color ?? '#22c55e',
       ];
-
-  const BAND_OFFSET = 10;
-  const bandRadii = [
-    ringRadius,
-    ringRadius + BAND_OFFSET,
-    ringRadius + BAND_OFFSET * 2,
-  ];
 
   return (
     <Canvas
@@ -60,46 +58,27 @@ export function HoldProgressRing({
       ]}
     >
       {[0, 1, 2].map((i) => {
-        const segRadius = bandRadii[i];
-        const segCircumference = 2 * Math.PI * segRadius;
-
         const intervals = useDerivedValue(
           () => {
             'worklet';
             const SEGMENT_WIDTH = 1 / 3;
-            const segStart = i * SEGMENT_WIDTH;
-            const fillFraction = Math.max(
-              0,
-              Math.min(1, (progress.value - segStart) / SEGMENT_WIDTH),
-            );
-            return [
-              fillFraction * segCircumference,
-              segCircumference,
-            ] as [number, number];
+            const start = i * SEGMENT_WIDTH;
+            const fillFraction = Math.max(0, Math.min(1, (progress.value - start) / SEGMENT_WIDTH));
+            return [fillFraction * ringCircumference, ringCircumference] as [number, number];
           },
-          [i, segCircumference],
+          [i, ringCircumference],
         );
-
         const opacity = useDerivedValue(
-          () => {
-            'worklet';
-            const SEGMENT_WIDTH = 1 / 3;
-            const segStart = i * SEGMENT_WIDTH;
-            if (progress.value <= segStart) return 0;
-            if (progress.value >= segStart + SEGMENT_WIDTH) return 1;
-            return (progress.value - segStart) / SEGMENT_WIDTH;
-          },
+          () => (progress.value > i / 3 ? 1 : 0),
           [i],
         );
-
-        const rotation = -Math.PI / 2 + i * ((2 * Math.PI) / 3);
-
+        const rotation = -Math.PI / 2 + (i * 2 * Math.PI) / 3;
         return (
           <Circle
             key={i}
             cx={ringCenter}
             cy={ringCenter}
-            r={segRadius}
+            r={ringRadius}
             color={ringColors[i]}
             style="stroke"
             strokeWidth={HOLD_RING_STROKE_WIDTH}
