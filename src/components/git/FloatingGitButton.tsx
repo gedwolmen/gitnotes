@@ -144,7 +144,6 @@ export default function FloatingGitButton({
   }));
 
   if (currentRouteName && HIDDEN_ROUTES.has(currentRouteName)) return null;
-  if (repos.length === 0) return null;
 
   return (
     <Animated.View
