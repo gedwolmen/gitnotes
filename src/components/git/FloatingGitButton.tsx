@@ -13,13 +13,20 @@ import { useRepoStore } from '@/stores/repoStore';
 import type { AggregatedGitState } from '@/hooks/useAllReposStatus';
 import { useFloatingGitButtonPosition } from './useFloatingGitButtonPosition';
 import { useFloatingGitButtonPanGesture } from './useFloatingGitButtonPanGesture';
-import { useFloatingGitButtonAffordances, PRESS_SCALE_FACTOR } from './useFloatingGitButtonAffordances';
+import {
+  useFloatingGitButtonAffordances,
+  PRESS_SCALE_FACTOR,
+  type ReleaseSegment,
+} from './useFloatingGitButtonAffordances';
 import { useFloatingButtonCollision } from '../floatingButtonLayout';
+import { HoldProgressRing } from '../ui/HoldProgressRing';
 
 interface FloatingGitButtonProps {
   aggregatedState?: AggregatedGitState;
   /** Informational tap — jumps to the Explore section with pending work. */
   onQuickTap?: () => void;
+  /** Called once on release with the highest segment reached: stage (≥1/3), commit (≥2/3), push (=1). */
+  onReleaseSegment?: (segment: ReleaseSegment) => void;
   /** Nothing pending anywhere: gray the button out and ignore taps. */
   disabled?: boolean;
   /** Name of the current top-level route — used to hide the button on full-screen modals. */
@@ -56,6 +63,7 @@ const HIDDEN_ROUTES = new Set<string>([
 export default function FloatingGitButton({
   aggregatedState,
   onQuickTap,
+  onReleaseSegment,
   disabled = false,
   currentRouteName,
 }: FloatingGitButtonProps) {
@@ -80,18 +88,18 @@ export default function FloatingGitButton({
   const palette = (() => {
     if (disabled) return { bg: colors.surface, fg: colors.textSecondary };
     if (anyConflicts) return { bg: colors.error, fg: '#ffffff' };
-    if (totalUncommitted > 0 || totalStaged > 0) return { bg: colors.success, fg: '#ffffff' };
+    if (totalStaged > 0) return { bg: '#f59e0b', fg: '#ffffff' };
+    if (totalUncommitted > 0) return { bg: colors.success, fg: '#ffffff' };
     if (totalAhead > 0) return { bg: colors.primary, fg: '#ffffff' };
     return { bg: colors.surface, fg: colors.textSecondary };
   })();
 
-  // Status hue ring: red (conflicts) > blue (pending push) > green (pending
-  // changes). null when clean or disabled — no ring.
   const hueColor = (() => {
     if (disabled) return null;
     if (anyConflicts) return colors.error;
+    if (totalStaged > 0) return '#f59e0b';
+    if (totalUncommitted > 0) return colors.success;
     if (totalAhead > 0) return colors.primary;
-    if (totalUncommitted > 0 || totalStaged > 0) return colors.success;
     return null;
   })();
 
@@ -108,6 +116,7 @@ export default function FloatingGitButton({
     reduceMotionEnabled: false,
     reduceMotionResolved: true,
     menuOpen: false,
+    onReleaseSegment,
   });
 
   const panGesture = useFloatingGitButtonPanGesture(position, {
@@ -123,7 +132,7 @@ export default function FloatingGitButton({
   }, [disabled, onQuickTap]);
 
   const { translateX, translateY } = position;
-  const { entranceProgress, pressProgress } = affordances;
+  const { entranceProgress, pressProgress, holdProgress } = affordances;
 
   const containerStyle = useAnimatedStyle(() => ({
     opacity: entranceProgress.value,
@@ -152,6 +161,12 @@ export default function FloatingGitButton({
             active={hueColor !== null}
             color={hueColor ?? undefined}
             testID="gitbutton.halo"
+          />
+          <HoldProgressRing
+            progress={holdProgress}
+            size={GIT_BUTTON_SIZE}
+            colors={[colors.success, '#f59e0b', colors.primary]}
+            reduceMotionEnabled={false}
           />
           <Pressable
             testID="gitbutton.press"

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   cancelAnimation,
   useSharedValue,
@@ -11,11 +11,20 @@ export const PRESS_SCALE_FACTOR = 0.08;
 const PRESS_SPRING = { mass: 0.6, damping: 16, stiffness: 480 } as const;
 const ENTRANCE_SPRING = { mass: 0.9, damping: 14, stiffness: 240 } as const;
 const HOLD_DRAIN_MS = 150;
+/** Time for the hold ring to fill from 0→1 (1/3 ≈ 333ms, 2/3 ≈ 667ms). */
+const HOLD_FILL_MS = 1000;
+/** Threshold fractions for stage / commit / push segments. */
+const STAGE_FRACTION = 1 / 3;   // 0.333…
+const COMMIT_FRACTION = 2 / 3;   // 0.666…
+
+export type ReleaseSegment = 'stage' | 'commit' | 'push';
 
 export interface FloatingGitButtonAffordanceOptions {
   readonly reduceMotionEnabled: boolean;
   readonly reduceMotionResolved: boolean;
   readonly menuOpen: boolean;
+  /** Called once on release with the highest segment reached. */
+  readonly onReleaseSegment?: (segment: ReleaseSegment) => void;
 }
 
 export interface FloatingGitButtonAffordances {
@@ -31,7 +40,7 @@ export interface FloatingGitButtonAffordances {
 export function useFloatingGitButtonAffordances(
   options: FloatingGitButtonAffordanceOptions,
 ): FloatingGitButtonAffordances {
-  const { reduceMotionEnabled, reduceMotionResolved, menuOpen } = options;
+  const { reduceMotionEnabled, reduceMotionResolved, menuOpen, onReleaseSegment } = options;
 
   const entranceProgress = useSharedValue(0);
   const pressProgress = useSharedValue(0);
@@ -39,6 +48,9 @@ export function useFloatingGitButtonAffordances(
 
   const [reduceMotionEnabledState, setReduceMotionEnabled] = useState(true);
   const [reduceMotionResolvedState, setReduceMotionResolved] = useState(false);
+
+  // Guard against handlePressOut firing after a completed hold (double-fire).
+  const holdCompletedRef = useRef(false);
 
   useEffect(() => {
     if (!reduceMotionResolved) return;
@@ -59,17 +71,40 @@ export function useFloatingGitButtonAffordances(
   }, [entranceProgress, pressProgress, holdProgress]);
 
   const handlePressIn = useCallback(() => {
+    holdCompletedRef.current = false;
     pressProgress.value = withSpring(1, PRESS_SPRING);
     if (!reduceMotionEnabledState) {
-      holdProgress.value = withTiming(0, { duration: HOLD_DRAIN_MS });
+      // Start filling the ring from 0→1.
+      holdProgress.value = withTiming(1, { duration: HOLD_FILL_MS });
     }
   }, [reduceMotionEnabledState, pressProgress, holdProgress]);
 
   const handlePressOut = useCallback(() => {
     pressProgress.value = withSpring(0, PRESS_SPRING);
-  }, [pressProgress]);
+    if (holdCompletedRef.current) return;
+
+    // Determine the highest segment reached at release time.
+    const fraction = holdProgress.value;
+    let segment: ReleaseSegment | null = null;
+    if (fraction >= 0.95) {
+      segment = 'push';
+    } else if (fraction >= COMMIT_FRACTION) {
+      segment = 'commit';
+    } else if (fraction >= STAGE_FRACTION) {
+      segment = 'stage';
+    }
+    // Short tap (< 1/3): no segment — the tap handler navigates instead.
+
+    // Drain the ring.
+    holdProgress.value = withTiming(0, { duration: HOLD_DRAIN_MS });
+
+    if (segment && onReleaseSegment) {
+      onReleaseSegment(segment);
+    }
+  }, [pressProgress, holdProgress, onReleaseSegment]);
 
   const handleHoldComplete = useCallback(() => {
+    holdCompletedRef.current = true;
     holdProgress.value = withTiming(0, { duration: HOLD_DRAIN_MS });
   }, [holdProgress]);
 

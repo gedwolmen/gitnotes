@@ -1,11 +1,15 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import { useToast, Toast, ToastDescription, ToastTitle } from '@/components/ui/toast';
 import { useRepoStore } from '@/stores/repoStore';
 import { useAllReposStatus, type RepoGitState } from '@/hooks/useAllReposStatus';
 import { useGitButtonActionStore } from '@/stores/gitButtonActionStore';
+import { stageAllPending, commitAll, pushAll } from '@/services/git/multiRepoGitOps';
+import type { Author } from '@/services/git/engine/GitEngine';
+import { useAccounts } from '@/contexts/AccountsContext';
 import FloatingGitButton from './FloatingGitButton';
+import type { ReleaseSegment } from './useFloatingGitButtonAffordances';
 import type { RootStackParamList } from '@/navigation/types';
 import type { ExploreSection } from '@/components/explore/exploreShared';
 
@@ -33,15 +37,14 @@ const HIDDEN_ROUTES = new Set<string>([
 ]);
 
 /**
- * App-level wrapper around `FloatingGitButton` — purely informational
- * (issue #1330). Owns:
+ * App-level wrapper around `FloatingGitButton`. Owns:
  *   - the aggregated per-repo state from `useAllReposStatus`
  *   - the smart-navigate tap: queues a pending action (target repo +
  *     section) and jumps to ExploreTab. ExploreScreen reads the pending
  *     action on focus, applies repo + section, then clears it.
  *
- * The button performs no git operations itself and is disabled (grayed out)
- * when nothing is pending anywhere.
+ * Hold-to-release performs git stage/commit/push across all repos.
+ * Disabled (grayed out) when nothing is pending anywhere.
  *
  * Hides itself on full-screen modals and the paywall/onboarding so it never
  * floats over content that needs the full viewport.
@@ -53,6 +56,13 @@ export default function AppFloatingGitButton({ currentRouteName }: AppFloatingGi
   const setPending = useGitButtonActionStore((s) => s.setPending);
   const toast = useToast();
   const hintFiredRef = useRef(false);
+  const { accounts, activeAccountId } = useAccounts();
+
+  const author = useMemo<Author | null>(() => {
+    const account = accounts.find((a) => a.id === activeAccountId) ?? null;
+    if (!account) return null;
+    return { name: account.name, email: account.email ?? '' };
+  }, [accounts, activeAccountId]);
 
   const hasAnyAction =
     aggregatedState.totalUncommitted > 0 ||
@@ -60,6 +70,96 @@ export default function AppFloatingGitButton({ currentRouteName }: AppFloatingGi
     aggregatedState.totalAhead > 0 ||
     aggregatedState.anyConflicts;
   const isDisabled = !hasAnyAction;
+
+  const handleReleaseSegment = useCallback(
+    async (segment: ReleaseSegment) => {
+      if (repos.length === 0) return;
+      if (!author) {
+        toast.show({
+          placement: 'top',
+          duration: 3000,
+          render: ({ id }: { id: string }) => (
+            <Toast action="error" nativeID={`gitbutton-noauthor-${id}`}>
+              <ToastTitle>Cannot commit</ToastTitle>
+              <ToastDescription>No active account found. Add an account in Settings.</ToastDescription>
+            </Toast>
+          ),
+        });
+        return;
+      }
+
+      const stageResult = await stageAllPending(repos);
+      if (segment === 'stage') {
+        toast.show({
+          placement: 'top',
+          duration: 2000,
+          render: ({ id }: { id: string }) => (
+            <Toast action="success" nativeID={`gitbutton-stage-${id}`}>
+              <ToastTitle>Staged {stageResult.totalActed} file(s)</ToastTitle>
+            </Toast>
+          ),
+        });
+        void aggregatedState.refresh();
+        return;
+      }
+
+      const message = `Sync: stage ${stageResult.totalActed} file(s)`;
+      await commitAll(repos, message, author);
+      if (segment === 'commit') {
+        toast.show({
+          placement: 'top',
+          duration: 2000,
+          render: ({ id }: { id: string }) => (
+            <Toast action="success" nativeID={`gitbutton-commit-${id}`}>
+              <ToastTitle>Staged and committed</ToastTitle>
+            </Toast>
+          ),
+        });
+        void aggregatedState.refresh();
+        return;
+      }
+
+      const pushResult = await pushAll(repos);
+      const failedCount = pushResult.failures.length;
+      if (failedCount === repos.length) {
+        toast.show({
+          placement: 'top',
+          duration: 4000,
+          render: ({ id }: { id: string }) => (
+            <Toast action="error" nativeID={`gitbutton-push-error-${id}`}>
+              <ToastTitle>Push failed</ToastTitle>
+              <ToastDescription>
+                {pushResult.failures.map((f) => f.repoName).join(', ')}
+              </ToastDescription>
+            </Toast>
+          ),
+        });
+      } else {
+        const pushedCount = repos.length - failedCount;
+        toast.show({
+          placement: 'top',
+          duration: 3000,
+          render: ({ id }: { id: string }) => (
+            <Toast
+              action={failedCount > 0 ? 'error' : 'success'}
+              nativeID={`gitbutton-push-${id}`}
+            >
+              <ToastTitle>
+                {failedCount > 0
+                  ? `Pushed ${pushedCount} repos, ${failedCount} had conflicts`
+                  : `Pushed to ${pushedCount} repos`}
+              </ToastTitle>
+            </Toast>
+          ),
+        });
+        for (const failure of pushResult.failures) {
+          navigation.navigate('ExploreConflict', { repoId: failure.repoId });
+        }
+      }
+      void aggregatedState.refresh();
+    },
+    [repos, author, toast, aggregatedState, navigation],
+  );
 
   /**
    * First-use discoverability hint. When the user first encounters the
@@ -126,6 +226,7 @@ export default function AppFloatingGitButton({ currentRouteName }: AppFloatingGi
     <FloatingGitButton
       aggregatedState={aggregatedState}
       onQuickTap={onQuickTap}
+      onReleaseSegment={handleReleaseSegment}
       disabled={isDisabled}
       currentRouteName={currentRouteName}
     />
