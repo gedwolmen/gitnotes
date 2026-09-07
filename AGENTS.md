@@ -40,11 +40,13 @@ ln -sfn "$(pwd)/node_modules" .worktrees/<scope>-<slug>/node_modules
 
 ### Rules
 
+- **Never leave code in main.** The main working tree must always be clean — no uncommitted changes, no staged files, no dangling work. If your worktree branch is merged, remove the worktree immediately. A dirty main blocks other agents and causes race conditions.
 - **One worktree per branch.** Never branch from another worktree's branch — always branch from `main` (or the upstream you're targeting). After `git fetch origin` in the main repo, base new worktrees on the updated `origin/main`.
 - **Coordinate before touching shared files.** Before editing `conflictStore.ts`, `LocalGitWriter.ts`, or any file another agent's `git status` shows as modified in the main working tree, check `git worktree list` and `git status` in the other worktrees. If another session has uncommitted work on the same files, wait or scope your change to a different file.
 - **Metro serves from main.** The Expo dev-client connects to Metro on the main worktree's port (8081). If you need your branch code to be served by Metro (e.g. for sim surface verification), copy the changed files from your worktree into main's working tree temporarily and revert after verification — Metro cannot serve from a worktree (`.worktrees/` is in `metro.config.js`'s `resolver.blockList`).
 - **Do not commit secrets / tokens / Metro debug output** — review `git diff` before committing. This applies whether you are in a worktree or not.
 - **Clean up** with `git worktree remove <path>` when a branch is merged and the worktree is no longer needed. Branches are cheap to recreate.
+- **Main must stay clean.** After merging (squash-merge or rebase+merge), immediately remove the source worktree and verify `git status` in main shows nothing uncommitted or unstaged. A polluted main breaks Metro, blocks other agents, and corrupts shared state.
 
 ## Testing
 
