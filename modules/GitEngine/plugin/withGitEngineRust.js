@@ -80,7 +80,8 @@ function withGitEngineRust(config) {
       const settings = buildConfig.buildSettings;
       if (!settings) continue;
       if (!settings.OTHER_LDFLAGS || !settings.OTHER_LDFLAGS.includes('libgitnotes_git2.a')) {
-        settings.OTHER_LDFLAGS = '$(inherited) $(SRCROOT)/../modules/GitEngine/ios-local/rust/libgitnotes_git2.a';
+        settings.OTHER_LDFLAGS =
+          '$(inherited) $(SRCROOT)/../modules/GitEngine/ios-local/rust/libgitnotes_git2.a';
       }
     }
 

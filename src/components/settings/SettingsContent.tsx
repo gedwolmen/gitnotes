@@ -792,7 +792,7 @@ export function SettingsContent(props: SettingsContentProps) {
           }
         >
           <View className="flex-row items-center gap-2">
-            <Ionicons name="git-commit-outline" size={20} color={colors.text} />
+            <Ionicons name="git-pull-request-outline" size={20} color={colors.text} />
             <Text style={[styles.settingLabel, { color: colors.text }]}>{t('settings.floatingGitButton')}</Text>
           </View>
         </GroupRow>
