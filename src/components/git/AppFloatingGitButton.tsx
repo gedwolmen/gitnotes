@@ -16,27 +16,6 @@ import type { ExploreSection } from '@/components/explore/exploreShared';
 
 const HINT_SEEN_KEY = '@gitnotes:gitbutton_hint_seen';
 
-interface AppFloatingGitButtonProps {
-  /** Name of the current top-level route — used to hide the button on full-screen modals. */
-  currentRouteName?: string;
-}
-
-const HIDDEN_ROUTES = new Set<string>([
-  'Paywall',
-  'Onboarding',
-  'NoteEditor',
-  'CanvasEditor',
-  'PdfViewer',
-  'FileViewer',
-  'ImageViewer',
-  'VideoViewer',
-  'ChatScreen',
-  'ChatThreadList',
-  'ConflictResolve',
-  'Stage',
-  'GraphView',
-]);
-
 /**
  * App-level wrapper around `FloatingGitButton`. Owns:
  *   - the aggregated per-repo state from `useAllReposStatus`
@@ -50,7 +29,7 @@ const HIDDEN_ROUTES = new Set<string>([
  * Hides itself on full-screen modals and the paywall/onboarding so it never
  * floats over content that needs the full viewport.
  */
-export default function AppFloatingGitButton({ currentRouteName }: AppFloatingGitButtonProps) {
+export default function AppFloatingGitButton() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const repos = useRepoStore((s) => s.repositories);
   const aggregatedState = useAllReposStatus();
@@ -254,15 +233,12 @@ export default function AppFloatingGitButton({ currentRouteName }: AppFloatingGi
     navigation.navigate('MainTabs', { screen: 'ExploreTab' });
   }, [aggregatedState, repos, setPending, navigation]);
 
-  if (currentRouteName && HIDDEN_ROUTES.has(currentRouteName)) return null;
-
   return (
     <FloatingGitButton
       aggregatedState={aggregatedState}
       onQuickTap={onQuickTap}
       onReleaseSegment={handleReleaseSegment}
       disabled={isDisabled}
-      currentRouteName={currentRouteName}
     />
   );
 }

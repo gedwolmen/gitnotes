@@ -316,7 +316,7 @@ export default function AppNavigator({ showOnboarding, onOnboardingComplete, onO
           </Stack.Navigator>
           <FloatingAIButton currentRouteName={currentRouteName} />
           {floatingGitButtonHydrated && floatingGitButtonVisible ? (
-            <AppFloatingGitButton currentRouteName={currentRouteName} />
+            <AppFloatingGitButton />
           ) : null}
         </View>
       </NavigationContainer>
