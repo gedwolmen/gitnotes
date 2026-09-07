@@ -56,7 +56,7 @@ export default function ConflictResolveScreen() {
   const [resolving, setResolving] = useState(false);
 
   useEffect(() => {
-    if (!fileUri) {
+    if (!fileUri || fileUri.trim() === '') {
       setError('File not found on device. The repository may not be cloned.');
       setLoading(false);
       return;
@@ -66,14 +66,17 @@ export default function ConflictResolveScreen() {
       try {
         const content = await FileSystem.readAsStringAsync(fileUri);
         if (!cancelled) {
-          if (content.trim() === '') {
+          if (!content || content.trim() === '') {
             setError('File is empty. The conflict may already be resolved.');
           } else {
             setRawContent(content);
           }
         }
       } catch (caught) {
-        if (!cancelled) setError(caught instanceof Error ? caught.message : String(caught));
+        if (!cancelled) {
+          const msg = caught instanceof Error ? caught.message : String(caught);
+          setError(msg || 'Failed to read file. The conflict may already be resolved.');
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
