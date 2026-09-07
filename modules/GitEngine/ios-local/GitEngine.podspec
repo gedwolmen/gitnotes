@@ -11,8 +11,13 @@ Pod::Spec.new do |s|
   # Expo native module + UniFFI generated Swift FFI + FFI headers
   s.source_files = '*.swift', 'generated/*.swift', 'generated/GitNotesGit2FFI/**/*'
 
-  # Rust staticlib
+  # Rust staticlib - force_load ensures all symbols are extracted
   s.vendored_libraries = 'rust/*.a'
+
+  # Force load the vendored library to extract all symbols (needed for UniFFI FFI)
+  s.xcconfig = {
+    'OTHER_LDFLAGS' => '$(inherited) -force_load $(PODS_TARGET_SRCROOT)/rust/libgitnotes_git2.a'
+  }
 
   # System libraries needed by Rust git2
   s.libraries = 'iconv'
