@@ -14,9 +14,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
 RUST_DIR="$ROOT_DIR/rust"
 MODULE_DIR="$ROOT_DIR/modules/GitEngine"
-IOS_LIB_DIR="$MODULE_DIR/ios/rust"
+IOS_LIB_DIR="$MODULE_DIR/ios-local/rust"
 JNI_DIR="$MODULE_DIR/android/src/main/jniLibs"
-SWIFT_GEN_DIR="$MODULE_DIR/ios/generated"
+SWIFT_GEN_DIR="$MODULE_DIR/ios-local/generated"
 KOTLIN_GEN_DIR="$MODULE_DIR/android/src/main/java"
 
 PROFILE_FLAGS=()
@@ -26,7 +26,6 @@ fi
 
 log() { echo "[eas-post-install] $*"; }
 
-# Source cargo env if needed
 if [ -f "$HOME/.cargo/env" ]; then
   . "$HOME/.cargo/env"
 fi
@@ -41,14 +40,18 @@ else
 
   log "Building aarch64-apple-ios-sim..."
   (cd "$RUST_DIR" && cargo build --target aarch64-apple-ios-sim "${PROFILE_FLAGS[@]}")
-  cp "$RUST_DIR/target/aarch64-apple-ios-sim/$RUST_PROFILE/libgitnotes_git2.a" "$IOS_LIB_DIR/libgitnotes_git2.a"
-  log "iOS simulator staticlib copied"
 
   log "Building aarch64-apple-ios (device)..."
   (cd "$RUST_DIR" && cargo build --target aarch64-apple-ios "${PROFILE_FLAGS[@]}")
+
+  log "Creating universal staticlib..."
+  lipo -create \
+    "$RUST_DIR/target/aarch64-apple-ios-sim/$RUST_PROFILE/libgitnotes_git2.a" \
+    "$RUST_DIR/target/aarch64-apple-ios/$RUST_PROFILE/libgitnotes_git2.a" \
+    -output "$IOS_LIB_DIR/libgitnotes_git2.a"
+  log "iOS universal staticlib created"
 fi
 
-# Build Android libs (skip if NDK not available)
 if [ -n "${ANDROID_NDK_HOME:-}" ] && [ -d "${ANDROID_NDK_HOME:-}" ]; then
   log "Building Android libs for all ABIs..."
   ANDROID_TARGETS=(
