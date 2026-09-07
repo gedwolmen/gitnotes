@@ -19,7 +19,6 @@ import { Text } from '@/components/ui/text';
 import { Heading } from '@/components/ui/heading';
 import { Button, ButtonText } from '@/components/ui/Button';
 import * as GitEngine from '@/services/git/engine/GitEngine';
-import type { ConflictBlobs } from '@/services/git/engine/GitEngine';
 import { GitFsService } from '@/services/git/GitFsService';
 import { useRepoStore } from '@/stores/repoStore';
 import { useGitButtonActionStore } from '@/stores/gitButtonActionStore';
@@ -51,25 +50,21 @@ export default function ConflictResolveScreen() {
     }
   }
 
-  const [blobs, setBlobs] = useState<ConflictBlobs | null>(null);
+  const [rawContent, setRawContent] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [resolving, setResolving] = useState(false);
-  const [content, setContent] = useState('');
 
   useEffect(() => {
-    if (!localPath) {
+    if (!fileUri) {
       setLoading(false);
       return;
     }
     let cancelled = false;
     (async () => {
       try {
-        const result = await GitEngine.getConflictBlobs(localPath, path);
-        if (!cancelled) {
-          setBlobs(result);
-          setContent(result.ours);
-        }
+        const content = await FileSystem.readAsStringAsync(fileUri);
+        if (!cancelled) setRawContent(content);
       } catch (caught) {
         if (!cancelled) setError(caught instanceof Error ? caught.message : String(caught));
       } finally {
@@ -79,15 +74,15 @@ export default function ConflictResolveScreen() {
     return () => {
       cancelled = true;
     };
-  }, [localPath, path]);
+  }, [fileUri]);
 
   const handleResolve = async () => {
     if (!fileUri || !localPath) return;
     setResolving(true);
     try {
-      await FileSystem.writeAsStringAsync(fileUri, content);
+      await FileSystem.writeAsStringAsync(fileUri, rawContent);
       await GitEngine.markConflictResolved(localPath, path);
-      setPending({ repoId, section: 'commits' });
+      setPending({ repoId, section: 'staging' });
       navigation.navigate('MainTabs', { screen: 'ExploreTab' });
     } catch (caught) {
       setResolving(false);
@@ -100,14 +95,14 @@ export default function ConflictResolveScreen() {
 
   if (!storedRepo || !localPath || !fileUri) {
     return (
-      <SafeAreaView edges={['top']} className="flex-1" style={{ flex: 1, backgroundColor: colors.background }}>
+      <SafeAreaView edges={['top']} className="flex-1" style={{ backgroundColor: colors.background }}>
         <View className="flex-row items-center gap-2 px-4 py-3" style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}>
           <Pressable onPress={() => navigation.goBack()} hitSlop={8} accessibilityRole="button" accessibilityLabel="Go back">
             <Ionicons name="chevron-back" size={22} color={colors.text} />
           </Pressable>
           <Heading className="text-lg" style={{ color: colors.text }}>Resolve conflict</Heading>
         </View>
-        <View className="flex-1 items-center justify-center px-8" style={{ flex: 1 }}>
+        <View className="flex-1 items-center justify-center px-8">
           <Ionicons name="warning-outline" size={40} color={colors.error} />
           <Text className="mt-2 text-center text-sm" style={{ color: colors.textSecondary }}>
             Repository not found.
@@ -118,7 +113,7 @@ export default function ConflictResolveScreen() {
   }
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1" style={{ flex: 1, backgroundColor: colors.background }}>
+    <SafeAreaView edges={['top']} className="flex-1" style={{ backgroundColor: colors.background }}>
       <View
         className="flex-row items-center gap-2 px-4 py-3"
         style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}
@@ -141,12 +136,12 @@ export default function ConflictResolveScreen() {
       </View>
 
       {loading ? (
-        <View className="flex-1 items-center justify-center gap-2" style={{ flex: 1 }}>
+        <View className="flex-1 items-center justify-center gap-2">
           <ActivityIndicator size="small" color={colors.accent} />
-          <Text className="text-sm" style={{ color: colors.textSecondary }}>Reading conflict content…</Text>
+          <Text className="text-sm" style={{ color: colors.textSecondary }}>Reading file…</Text>
         </View>
       ) : error ? (
-        <View className="flex-1 items-center justify-center px-8" style={{ flex: 1 }}>
+        <View className="flex-1 items-center justify-center px-8">
           <Ionicons name="warning-outline" size={40} color={colors.error} />
           <Text className="mt-2 text-center text-sm" style={{ color: colors.error }}>{error}</Text>
         </View>
@@ -156,9 +151,13 @@ export default function ConflictResolveScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={0}
         >
-          <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            className="flex-1"
+            contentContainerStyle={{ padding: 16 }}
+            keyboardShouldPersistTaps="handled"
+          >
             <Text className="text-xs font-semibold mb-2" style={{ color: colors.textSecondary }}>
-              Edit the file content below, or pick a version:
+              Edit the file below — remove the conflict markers (&lt;&lt;&lt;&lt;&lt;&lt;&lt; / ======= / &gt;&gt;&gt;&gt;&gt;&gt;&gt;) and keep what you want, then tap Mark resolved.
             </Text>
             <View
               className="rounded-lg mb-4 p-3"
@@ -166,52 +165,25 @@ export default function ConflictResolveScreen() {
             >
               <TextInput
                 testID="conflict-resolve.editor"
-                className="text-sm font-mono min-h-[200]"
-                style={{ color: colors.text, backgroundColor: colors.surfaceSecondary, borderRadius: 8, padding: 12 }}
+                className="text-sm font-mono min-h-[300]"
+                style={{
+                  color: colors.text,
+                  backgroundColor: colors.surfaceSecondary,
+                  borderRadius: 8,
+                  padding: 12,
+                }}
                 multiline
-                value={content}
-                onChangeText={setContent}
-                placeholder="Edit the resolved content here…"
+                value={rawContent}
+                onChangeText={setRawContent}
+                placeholder="File content with conflict markers…"
                 placeholderTextColor={colors.textSecondary}
                 textAlignVertical="top"
+                autoCapitalize="none"
+                autoCorrect={false}
               />
             </View>
 
-            <Text className="text-xs font-semibold mb-2" style={{ color: colors.textSecondary }}>
-              Or pick a version to fill the editor:
-            </Text>
-            <View className="flex-row gap-2 mb-4">
-              <Button
-                className="flex-1"
-                size="sm"
-                variant="outline"
-                onPress={() => setContent(blobs?.ours ?? '')}
-                testID="conflict-resolve.use.ours"
-              >
-                <ButtonText style={{ color: colors.accent }}>Use Ours</ButtonText>
-              </Button>
-              <Button
-                className="flex-1"
-                size="sm"
-                variant="outline"
-                onPress={() => setContent(blobs?.theirs ?? '')}
-                testID="conflict-resolve.use.theirs"
-              >
-                <ButtonText style={{ color: colors.warning }}>Use Theirs</ButtonText>
-              </Button>
-              <Button
-                className="flex-1"
-                size="sm"
-                variant="outline"
-                onPress={() => setContent(blobs?.base ?? '')}
-                testID="conflict-resolve.use.base"
-              >
-                <ButtonText>Use Base</ButtonText>
-              </Button>
-            </View>
-
             <Button
-              className="mt-2"
               disabled={resolving}
               onPress={handleResolve}
               testID="conflict-resolve.save"
@@ -219,7 +191,7 @@ export default function ConflictResolveScreen() {
               {resolving ? (
                 <ActivityIndicator size="small" color={colors.accent} />
               ) : (
-                <ButtonText>Mark resolved &amp; go to push</ButtonText>
+                <ButtonText>Mark resolved &amp; go to staged</ButtonText>
               )}
             </Button>
           </ScrollView>
