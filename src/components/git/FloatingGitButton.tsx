@@ -119,20 +119,22 @@ export default function FloatingGitButton({
     onReleaseSegment,
   });
 
+  const { entranceProgress, pressProgress, holdProgress } = affordances;
+  const { translateX, translateY } = position;
+
+  const handleTap = useCallback(() => {
+    if (disabled) return;
+    const wasHoldRelease = holdProgress.value >= 1 / 3;
+    if (wasHoldRelease) return;
+    onQuickTap?.();
+  }, [disabled, onQuickTap, holdProgress]);
+
   const panGesture = useFloatingGitButtonPanGesture(position, {
     closeMenu: () => undefined,
     setHorizontalDirection: () => undefined,
     setVerticalDirection: () => undefined,
     cancelAffordances: affordances.cancelAffordances,
   });
-
-  const handleTap = useCallback(() => {
-    if (disabled) return;
-    onQuickTap?.();
-  }, [disabled, onQuickTap]);
-
-  const { translateX, translateY } = position;
-  const { entranceProgress, pressProgress, holdProgress } = affordances;
 
   const containerStyle = useAnimatedStyle(() => ({
     opacity: entranceProgress.value,
