@@ -93,6 +93,7 @@
       "expo-image",
       "expo-sharing",
       "expo-background-task",
+      "expo-sqlite",
       [
         "expo-splash-screen",
         {
