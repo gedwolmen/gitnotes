@@ -37,7 +37,7 @@
 - Notes, todos, journals, and Excalidraw-style canvases — all backed by Git
 - Folders, tags, colors, pins, wiki-links, backlinks, custom templates
 - Multi-provider sync (GitHub, GitLab, Gitea-like); per-repo API or full-clone sync modes
-- Optional Pro tier with Neumorphic "Fancy UI", advanced AI, multi-host paywall, and trial/lifetime via StoreKit 2 (RevenueCat) — see the [wiki: Pro Paywall](https://github.com/gedwolmen/gitnotes/wiki/paywall-pro)
+- Optional Pro tier with Neumorphic "Fancy UI", advanced AI, multi-host paywall, and trial/lifetime via StoreKit 2 (RevenueCat) — see the [wiki: Paywall & Pro Tier](https://github.com/gedwolmen/gitnotes/wiki/paywall)
 - Optional AI chat layer (Anthropic, OpenAI-compatible providers, Apple Intelligence, on-device Llama)
 - Biometric lock, multilingual UI (EN, ES, FR, DE, JA, KO), light / dark / system themes
 
