@@ -108,9 +108,9 @@ export default function ExploreConflictScreen() {
           <View className="flex-row items-center gap-1">
             <View
               className="rounded px-1.5 py-0.5"
-              style={{ backgroundColor: `${colors.error}26` }}
+              style={{ backgroundColor: colors.error }}
             >
-              <Text className="text-[10px] font-semibold" style={{ color: colors.error }}>
+              <Text className="text-[10px] font-semibold" style={{ color: '#fff' }}>
                 {item.kind}
               </Text>
             </View>
