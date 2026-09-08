@@ -18,11 +18,13 @@ export interface RepoLike {
   accountId?: string;
 }
 
+export type SectionTabColor = 'success' | 'warning' | 'primary' | 'accent';
+
 /** Explore workspace sections (todo 23 shell). Order = tab row order. */
 export const EXPLORE_SECTIONS = [
-  { id: 'changes', label: 'Changes' },
-  { id: 'staging', label: 'Staging' },
-  { id: 'commits', label: 'Commits' },
+  { id: 'changes', label: 'Changes', color: 'success' },
+  { id: 'staging', label: 'Staging', color: 'warning' },
+  { id: 'commits', label: 'Commits', color: 'primary' },
   { id: 'files', label: 'Files' },
   { id: 'branches', label: 'Branches' },
   { id: 'remotes', label: 'Remotes' },
