@@ -175,17 +175,21 @@ export default function ExploreScreen() {
    *     (changes / staging / commits / conflicts / files)
    * Then clear the pending action so a normal re-focus doesn't re-apply it.
    */
-  useFocusEffect(
-    useCallback(() => {
-      const pending = useGitButtonActionStore.getState().pending;
+  useEffect(() => {
+    let prevPending = useGitButtonActionStore.getState().pending;
+    const unsubscribe = useGitButtonActionStore.subscribe((state) => {
+      const pending = state.pending;
+      if (pending === prevPending) return;
+      prevPending = pending;
       if (!pending) return;
       if (pending.repoId !== repo?.id) {
         setSelectedRepoId(pending.repoId);
       }
       setSection(pending.section);
       useGitButtonActionStore.getState().clear();
-    }, [repo?.id]),
-  );
+    });
+    return unsubscribe;
+  }, [repo?.id]);
 
   if (!repo) {
     return (

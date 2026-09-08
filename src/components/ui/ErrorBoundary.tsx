@@ -1,6 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import { useTheme } from '../../contexts/ThemeContext';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 interface ErrorBoundaryProps {
   children?: ReactNode;
@@ -40,22 +39,42 @@ class ErrorBoundaryBase extends Component<ErrorBoundaryProps, ErrorBoundaryState
 }
 
 function DefaultFallback({ onRetry }: { onRetry: () => void }) {
-  const { colors } = useTheme();
-
   return (
-    <View className="items-center justify-center p-6 gap-3 min-h-[120px]">
-      <Text className="text-base font-semibold text-center" style={{ color: colors.text }}>
-        Something went wrong
-      </Text>
-      <Pressable
-        onPress={onRetry}
-        className="rounded-full px-4 py-2.5 bg-primary"
-      >
-        <Text className="text-sm font-semibold text-white">Retry</Text>
+    <View style={styles.container}>
+      <Text style={styles.text}>Something went wrong</Text>
+      <Pressable onPress={onRetry} style={styles.button}>
+        <Text style={styles.buttonText}>Retry</Text>
       </Pressable>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    gap: 12,
+    minHeight: 120,
+  },
+  text: {
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+    color: '#333',
+  },
+  button: {
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#5b7cec',
+  },
+  buttonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
+});
 
 export function ErrorBoundary(props: ErrorBoundaryProps) {
   return <ErrorBoundaryBase {...props} />;
