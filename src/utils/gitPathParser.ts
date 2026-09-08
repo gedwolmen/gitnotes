@@ -23,7 +23,7 @@ export function parseRepoPath(repoPath: string): { owner: string; repo: string }
 
   // ssh URL: ssh://git@github.com/owner/repo.git -> owner/repo.git
   cleaned = cleaned.replace(/^ssh:\/\//i, '');
-  cleaned = cleaned.replace(/^[^@\s]+@[^\/\s]+\/?/, '');
+  cleaned = cleaned.replace(/^[^@\s]+@[^/\s]+\/?/, '');
 
   // Drop the trailing `.git`.
   cleaned = cleaned.replace(/\.git$/, '');
