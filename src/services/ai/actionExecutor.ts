@@ -308,6 +308,13 @@ export async function executeToolCall(
         const sourceList = sourceNotes.length
           ? `## Sources\n\n${sourceNotes.map((id) => `- ${id}`).join('\n')}\n\n`
           : '';
+        if (repoPath && sourceNotes.length > 0) {
+          const noteStore = useNoteStore.getState();
+          const sources = sourceNotes.map((id) => noteStore.getNoteById(id)).filter((f): f is Note => f !== undefined);
+          if (sources.some((s) => s.repo !== repoPath)) {
+            return { success: false, requiresConfirmation: false, error: 'One or more source notes are not in the current repo context.' };
+          }
+        }
         const marker = `<!-- sl-item-id: chat-gen-${Date.now()} -->\n`;
 
         const input: NoteCreateInput = {
@@ -366,6 +373,9 @@ export async function executeToolCall(
             requiresConfirmation: false,
             error: "Note doesn't have the 'questioner' tag required for grading.",
           };
+        }
+        if (repoPath && note.repo !== repoPath) {
+          return { success: false, requiresConfirmation: false, error: `Note '${noteId}' not found.` };
         }
 
         if (mode === 'confirm') {
@@ -518,6 +528,9 @@ export async function executeToolCall(
         const priorityRank: Record<TodoPriority, number> = { high: 0, medium: 1, low: 2 };
 
         const filtered = useTodoStore.getState().todos.filter((todo) => {
+          if (repoPath && todo.repo !== repoPath) {
+            return false;
+          }
           if (status === 'pending' && todo.completed) {
             return false;
           }
@@ -588,6 +601,9 @@ export async function executeToolCall(
         if (sources.length === 0) {
           return { success: false, requiresConfirmation: false, error: 'None of the source notes exist.' };
         }
+        if (repoPath && sources.some((s) => s.repo !== repoPath)) {
+          return { success: false, requiresConfirmation: false, error: 'One or more source notes are not in the current repo context.' };
+        }
 
         const title = getOptionalStringArg(args, 'outputTitle') ?? `Summary (${sources.length} notes)`;
         const tags = Array.from(new Set([...outputTags, 'summary']));
@@ -647,6 +663,14 @@ export async function executeToolCall(
         const userTags = getOptionalStringArrayArg(args, 'outputTags') ?? [];
         const tags = Array.from(new Set([...userTags, 'distilled']));
         const marker = `<!-- distilled-from: ${sourceIds.join(',')} -->\n`;
+
+        if (repoPath) {
+          const noteStore = useNoteStore.getState();
+          const sources = sourceIds.map((id) => noteStore.getNoteById(id)).filter((f): f is Note => f !== undefined);
+          if (sources.some((s) => s.repo !== repoPath)) {
+            return { success: false, requiresConfirmation: false, error: 'One or more source notes are not in the current repo context.' };
+          }
+        }
 
         const input: NoteCreateInput = {
           title,
@@ -711,6 +735,9 @@ export async function executeToolCall(
           .filter((found): found is Note => found !== undefined);
         if (targets.length < 2) {
           return { success: false, requiresConfirmation: false, error: 'At least 2 of the given noteIds must exist' };
+        }
+        if (repoPath && targets.some((t) => t.repo !== repoPath)) {
+          return { success: false, requiresConfirmation: false, error: 'One or more notes are not in the current repo context.' };
         }
 
         if (mode === 'confirm') {
@@ -951,6 +978,7 @@ export async function executeToolCall(
           priority: getOptionalTodoPriorityArg(args, 'priority'),
           tags: getOptionalStringArrayArg(args, 'tags'),
           reminderBeforeMinutes: getOptionalNumberArg(args, 'reminderBeforeMinutes'),
+          ...(repoPath ? { repo: repoPath, branch } : {}),
         };
 
         if (mode === 'confirm') {
@@ -967,6 +995,14 @@ export async function executeToolCall(
 
       case 'edit_todo': {
         const todoId = getStringArg(args, 'todoId');
+        const existing = useTodoStore.getState().todos.find((t) => t.id === todoId);
+        if (!existing) {
+          return { success: false, requiresConfirmation: false, error: `Todo '${todoId}' not found.` };
+        }
+        if (repoPath && existing.repo !== repoPath) {
+          return { success: false, requiresConfirmation: false, error: `Todo '${todoId}' not found.` };
+        }
+
         const input: TodoUpdateInput = {
           id: todoId,
           text: getOptionalStringArg(args, 'text'),
@@ -991,6 +1027,13 @@ export async function executeToolCall(
 
       case 'delete_todo': {
         const todoId = getStringArg(args, 'todoId');
+        const existing = useTodoStore.getState().todos.find((t) => t.id === todoId);
+        if (!existing) {
+          return { success: false, requiresConfirmation: false, error: `Todo '${todoId}' not found.` };
+        }
+        if (repoPath && existing.repo !== repoPath) {
+          return { success: false, requiresConfirmation: false, error: `Todo '${todoId}' not found.` };
+        }
 
         if (mode === 'confirm') {
           return buildConfirmationResult({
@@ -1011,6 +1054,9 @@ export async function executeToolCall(
         const matches = useTodoStore
           .getState()
           .todos.filter((todo) => {
+            if (repoPath && todo.repo !== repoPath) {
+              return false;
+            }
             if (!includeCompleted && todo.completed) {
               return false;
             }
@@ -1034,6 +1080,9 @@ export async function executeToolCall(
         }
 
         const todos = useTodoStore.getState().todos.filter((todo) => {
+          if (repoPath && todo.repo !== repoPath) {
+            return false;
+          }
           if (filter === 'pending') {
             return !todo.completed;
           }
