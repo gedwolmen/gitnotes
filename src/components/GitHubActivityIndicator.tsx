@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTokens } from '../contexts/ThemeContext';
-import { useGitHubActivityStore, SyncProgress } from '../stores/githubActivityStore';
+import { useGitHubActivityStore, githubActivity, SyncProgress } from '../stores/githubActivityStore';
+import { useGitOperationStore, pendingRunningCount } from '../stores/gitOperationStore';
 import { NoteSyncQueueService } from '../services/cloneSyncServiceImpl';
 
 function ProgressBar({ progress, color }: { progress: SyncProgress; color: string }) {
@@ -74,8 +75,21 @@ export function GitHubActivityIndicator() {
       NoteSyncQueueService.pendingCount().then(setPendingCount);
     };
     refreshPending();
-    const unsubscribe = NoteSyncQueueService.subscribe(refreshPending);
-    return unsubscribe;
+    const unsubscribeQueue = NoteSyncQueueService.subscribe(refreshPending);
+
+    const unsubscribeOps = useGitOperationStore.subscribe((state) => {
+      const running = pendingRunningCount(state.ops);
+      if (running > 0) {
+        githubActivity.begin('Git operation');
+      } else {
+        githubActivity.end();
+      }
+    });
+
+    return () => {
+      unsubscribeQueue();
+      unsubscribeOps();
+    };
   }, []);
 
   useEffect(() => {
