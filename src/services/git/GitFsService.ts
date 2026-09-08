@@ -100,7 +100,6 @@ function ensureToken(token: string | undefined) {
 // as "current worktree state" on these ops — parity with the API transport's
 // shape, not a historical snapshot.
 
-/** Entry shape handed to the `git.walk` map callback (isomorphic-git-like). */
 interface WorktreeWalkerEntry {
   type(): Promise<'blob' | 'tree'>;
   oid(): Promise<string>;
@@ -121,9 +120,8 @@ function worktreeEntry(type: 'blob' | 'tree'): WorktreeWalkerEntry {
 
 /**
  * Recursively list the worktree at `dir`, invoking `map` with paths relative
- * to the repo root (isomorphic-git walk contract). `.git` internals are never
- * part of the repo tree and are skipped; entries are visited in sorted order
- * for a deterministic listing.
+ * to the repo root. `.git` internals are never part of the repo tree and
+ * are skipped; entries are visited in sorted order for a deterministic listing.
  */
 async function walkWorktree(
   fs: PromiseFsClient,
