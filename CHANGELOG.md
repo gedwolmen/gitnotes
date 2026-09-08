@@ -10,6 +10,20 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-09-08
 
+### fix(paywall): restore-granted cache bypass + silent failures
+
+**What:** Four bugs in `GrandfatherService` and `proStore` — a critical cache-order bug that denied Pro to restore-granted users, and three medium-severity silent failure modes.
+
+**fix(paywall):** `GrandfatherService.resolveGrandfatherStatus()`: moved `RESTORE_GRANTED_KEY` check before the `GRANDFATHER_CHECKED_KEY` cache check. Previously, a warm cache from a prior high-build check would short-circuit before the restore-granted path, permanently denying Pro to legitimate restore-granted users.
+
+**fix(paywall):** `loadOfferingsIfNeeded()`: now sets `error` state when `getPackages()` returns null (no active offering), instead of silently leaving packages null with no feedback.
+
+**fix(paywall):** `purchaseMonthly/Yearly/Lifetime()`: now clear `error` on the `cancelled` result path, preventing stale error messages from a prior failed attempt from persisting after a user dismisses the purchase sheet.
+
+**fix(paywall):** `onCustomerInfoUpdate()` callback: now `await`s `evaluateInterstitial()` instead of fire-and-forget, preventing interstitial state races on rapid entitlement updates.
+
+**PR:** TBD
+
 ### fix(paywall): sync Pro state on RevenueCat callbacks and account binds
 
 **What:** Five critical/high bugs in `proStore.ts` where the Pro/grandfathered state fell out of sync after RevenueCat operations — allowing free Pro via restore exploit, stale grandfather status, and ghost Pro after account unbind.

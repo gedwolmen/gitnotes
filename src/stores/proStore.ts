@@ -176,7 +176,7 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
             isGrandfathered: grandfather.isGrandfathered,
             status: DEV_FORCE_PRO ? 'pro' : (derived.entitlementActive || grandfather.isGrandfathered ? 'pro' : 'free'),
           }));
-          void evaluateInterstitial(derived.entitlementActive, set);
+          await evaluateInterstitial(derived.entitlementActive, set);
         });
       }
     } catch (error) {
@@ -227,6 +227,8 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
       await get().refresh();
     } else if (result.kind === 'error') {
       set({ error: result.message });
+    } else {
+      set({ error: null });
     }
   },
 
@@ -242,6 +244,8 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
       await get().refresh();
     } else if (result.kind === 'error') {
       set({ error: result.message });
+    } else {
+      set({ error: null });
     }
   },
 
@@ -257,6 +261,8 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
       await get().refresh();
     } else if (result.kind === 'error') {
       set({ error: result.message });
+    } else {
+      set({ error: null });
     }
   },
 
@@ -302,11 +308,15 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
     if (get().offeringsReady) return;
     try {
       const packages = await getPackages();
+      if (!packages) {
+        set({ offeringsReady: false, error: 'No offerings available from RevenueCat' });
+        return;
+      }
       set({
-        monthlyPackage: packages?.monthly ?? null,
-        yearlyPackage: packages?.yearly ?? null,
-        lifetimePackage: packages?.lifetime ?? null,
-        currentOffering: packages?.offerings?.current ?? null,
+        monthlyPackage: packages.monthly ?? null,
+        yearlyPackage: packages.yearly ?? null,
+        lifetimePackage: packages.lifetime ?? null,
+        currentOffering: packages.offerings?.current ?? null,
         offeringsReady: true,
         error: null,
       });
