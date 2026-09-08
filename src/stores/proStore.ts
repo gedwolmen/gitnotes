@@ -168,11 +168,13 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
       if (configured) {
         customerInfo = await getCustomerInfo();
         _customerInfoCleanup?.();
-        _customerInfoCleanup = onCustomerInfoUpdate((info) => {
+        _customerInfoCleanup = onCustomerInfoUpdate(async (info) => {
           const derived = deriveTrialInfo(info);
-          set((state) => ({
+          const grandfather = await resolveGrandfatherStatus(info);
+          set(() => ({
             ...derived,
-            status: DEV_FORCE_PRO ? 'pro' : (derived.entitlementActive || state.isGrandfathered ? 'pro' : 'free'),
+            isGrandfathered: grandfather.isGrandfathered,
+            status: DEV_FORCE_PRO ? 'pro' : (derived.entitlementActive || grandfather.isGrandfathered ? 'pro' : 'free'),
           }));
           void evaluateInterstitial(derived.entitlementActive, set);
         });
@@ -200,9 +202,11 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
     try {
       const customerInfo = await getCustomerInfo();
       const derived = deriveTrialInfo(customerInfo);
-      set((state) => ({
+      const grandfather = await resolveGrandfatherStatus(customerInfo);
+      set(() => ({
         ...derived,
-        status: DEV_FORCE_PRO ? 'pro' : (derived.entitlementActive || state.isGrandfathered ? 'pro' : 'free'),
+        isGrandfathered: grandfather.isGrandfathered,
+        status: DEV_FORCE_PRO ? 'pro' : (derived.entitlementActive || grandfather.isGrandfathered ? 'pro' : 'free'),
         error: null,
       }));
       await evaluateInterstitial(derived.entitlementActive, set);
@@ -260,14 +264,6 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
     set({ isRestoring: true, error: null });
     PaywallAnalytics.trackRestoreTap();
     try {
-      const isConfigured = get().configured;
-      if (!isConfigured) {
-        set({ isGrandfathered: true, status: 'pro' });
-        await AsyncStorage.setItem(RESTORE_GRANTED_KEY, 'true');
-        set({ isRestoring: false });
-        PaywallAnalytics.trackRestoreOutcome('restored');
-        return 'restored';
-      }
       const result = await restorePurchases();
       if (result.kind === 'error') {
         set({ isRestoring: false, error: result.message });
@@ -275,13 +271,10 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
         return 'error';
       }
       if (result.kind === 'cancelled') {
-        // User dismissed the Apple sign-in sheet — neutral, no state change.
         set({ isRestoring: false });
         PaywallAnalytics.trackRestoreOutcome('cancelled');
         return 'cancelled';
       }
-      // 'purchased' alone does not distinguish found vs not-found: derive it
-      // from the returned customerInfo entitlements.
       const proActive = Boolean(
         result.customerInfo?.entitlements?.active?.[PRO_ENTITLEMENT_ID]?.isActive,
       );
@@ -335,14 +328,24 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
     const customerInfo = await logInAppUser(appUserID);
     if (!customerInfo) return;
     const derived = deriveTrialInfo(customerInfo);
-    set((state) => ({
+    const grandfather = await resolveGrandfatherStatus(customerInfo);
+    set(() => ({
       ...derived,
-      status: DEV_FORCE_PRO ? 'pro' : (derived.entitlementActive || state.isGrandfathered ? 'pro' : 'free'),
+      isGrandfathered: grandfather.isGrandfathered,
+      status: DEV_FORCE_PRO ? 'pro' : (derived.entitlementActive || grandfather.isGrandfathered ? 'pro' : 'free'),
     }));
   },
 
   unbindAccount: async () => {
     if (!get().configured) return;
     await logOutAppUser();
+    set({
+      entitlementActive: false,
+      isGrandfathered: false,
+      trialActive: false,
+      trialEndsAt: null,
+      entitlementExpiresAt: null,
+      status: 'free',
+    });
   },
 }));
