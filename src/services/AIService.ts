@@ -267,7 +267,7 @@ async function* runGenerateTextFallback(
   // SDK's parser-error path logs via `console.error` before re-throwing
   // — surfaces as a RedBox even though we recover (#705).
   const originalConsoleError = console.error;
-  console.error = () => {};
+  console.error = () => {/* noop */};
   const result = await generateText({ model, system, messages: rest, tools, abortSignal })
     .finally(() => {
       console.error = originalConsoleError;
@@ -308,7 +308,7 @@ export async function* streamChatResponse(
         messages: rest,
         tools,
         abortSignal,
-        onError: () => {},
+        onError: () => {/* noop */},
       });
 
       for await (const part of result.fullStream as AsyncIterable<any>) {

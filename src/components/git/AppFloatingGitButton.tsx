@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import { useToast, Toast, ToastDescription, ToastTitle } from '@/components/ui/toast';
 import { useRepoStore } from '@/stores/repoStore';
-import { useAllReposStatus, type RepoGitState } from '@/hooks/useAllReposStatus';
+import { useAllReposStatus } from '@/hooks/useAllReposStatus';
 import { useGitButtonActionStore } from '@/stores/gitButtonActionStore';
 import { stageAllPending, commitAll, pushAll } from '@/services/git/multiRepoGitOps';
 import type { Author } from '@/services/git/engine/GitEngine';
@@ -12,7 +12,7 @@ import { githubActivity } from '@/stores/githubActivityStore';
 import FloatingGitButton from './FloatingGitButton';
 import type { ReleaseSegment } from './useFloatingGitButtonAffordances';
 import type { RootStackParamList } from '@/navigation/types';
-import type { ExploreSection } from '@/components/explore/exploreShared';
+
 
 const HINT_SEEN_KEY = '@gitnotes:gitbutton_hint_seen';
 
@@ -249,16 +249,4 @@ export default function AppFloatingGitButton() {
   );
 }
 
-/**
- * Section the tap should jump to, by urgency: conflicts > uncommitted
- * changes > staged > unpushed commits. Null when the entry is missing or
- * has nothing pending (button is disabled in that case).
- */
-function targetSectionFor(entry: RepoGitState | undefined): ExploreSection | null {
-  if (!entry) return null;
-  if (entry.conflicts) return 'conflicts' as const;
-  if (entry.uncommitted > 0) return 'changes' as const;
-  if (entry.staged > 0) return 'staging' as const;
-  if (entry.ahead > 0) return 'commits' as const;
-  return null;
-}
+

@@ -4,22 +4,7 @@ import { StorageService } from '../services/StorageService';
 import { NotificationService } from '../services/NotificationService';
 import { useTodoStore } from '../stores/todoStore';
 import { syncTodoToGitHub } from '../services/TodoGitHubSyncService';
-import { useGitActivityStore } from '../stores/gitActivityStore';
 
-/** Mirrors TodoGitHubSyncService.serializeTodo so synced todos keep the on-disk shape. */
-function serializeTodoForStage(todo: Partial<Todo>): string {
-  const data = {
-    text: todo.text ?? '',
-    completed: todo.completed ?? false,
-    priority: todo.priority,
-    notes: todo.notes,
-    tags: todo.tags ?? [],
-    dueDate: todo.dueDate,
-    createdAt: todo.createdAt,
-    updatedAt: todo.updatedAt,
-  };
-  return JSON.stringify(data, null, 2);
-}
 
 interface TodoContextValue {
   todos: Todo[];

@@ -18,7 +18,7 @@ export const RepoService = {
   list: async (): Promise<ManagedRepo[]> => [],
   listRepos: async (): Promise<ManagedRepo[]> => [],
   get: async (_id: string): Promise<ManagedRepo | null> => null,
-  refreshLastSynced: async (_id: string): Promise<void> => {},
+  refreshLastSynced: async (_id: string): Promise<void> => { /* noop */ },
   addRepo: async (path: string, name?: string, _provider?: string, remoteUrl?: string): Promise<ManagedRepo> => {
     const parts = path.split('/');
     const owner = parts[0] || '';
@@ -36,5 +36,5 @@ export const RepoService = {
     };
     return repo;
   },
-  removeRepo: async (_id: string): Promise<void> => {},
+  removeRepo: async (_id: string): Promise<void> => { /* noop */ },
 };

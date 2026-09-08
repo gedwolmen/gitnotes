@@ -98,5 +98,5 @@ export const HostService = {
       return errorResult(error);
     }
   },
-  openUrl: (_url: string) => {},
+  openUrl: (_url: string) => { /* noop */ },
 };

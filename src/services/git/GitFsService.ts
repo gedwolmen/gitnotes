@@ -184,24 +184,24 @@ const git = {
   async clone(_opts: {
     fs: unknown; http: unknown; dir: string; url: string; ref: string;
     singleBranch: boolean; depth: number; noCheckout: boolean; onAuth: unknown; onProgress?: unknown;
-  }): Promise<void> {},
-  async checkout(_opts: { fs: unknown; dir: string; ref: string; batchSize?: number }): Promise<void> {},
+  }): Promise<void> { /* noop */ },
+  async checkout(_opts: { fs: unknown; dir: string; ref: string; batchSize?: number }): Promise<void> { /* noop */ },
   async fetch(_opts: {
     fs: unknown; http: unknown; dir: string; ref: string; singleBranch: boolean;
     depth: number; tags: boolean; onAuth: unknown;
-  }): Promise<void> {},
+  }): Promise<void> { /* noop */ },
   async resolveRef(_opts: { fs: unknown; dir: string; ref: string }): Promise<string> { return ''; },
   async fastForward(_opts: {
     fs: unknown; http: unknown; dir: string; ref: string; singleBranch: boolean; onAuth: unknown;
-  }): Promise<void> {},
+  }): Promise<void> { /* noop */ },
   async isDescendent(_opts: { fs: unknown; dir: string; oid: string; ancestor: string }): Promise<boolean> { return false; },
   async merge(_opts: {
     fs: unknown; dir: string; ours: string; theirs: string; author: { name: string; email: string }; message: string;
-  }): Promise<void> {},
+  }): Promise<void> { /* noop */ },
   async commit(_opts: {
     fs: unknown; dir: string; message: string; author: { name: string; email: string }; parent?: string[]; ref?: string;
   }): Promise<string> { return ''; },
-  async writeRef(_opts: { fs: unknown; dir: string; ref: string; value: string; force?: boolean }): Promise<void> {},
+  async writeRef(_opts: { fs: unknown; dir: string; ref: string; value: string; force?: boolean }): Promise<void> { /* noop */ },
   async walk(opts: {
     fs: unknown; dir: string; trees: unknown[]; map: (filename: string | null, entries: unknown[]) => unknown;
   }): Promise<void> {
@@ -217,10 +217,10 @@ const git = {
   async readTree(_opts: { fs: unknown; dir: string; oid: string }): Promise<{ tree: Array<{ path: string; oid: string }> }> { return { tree: [] }; },
   async push(_opts: {
     fs: unknown; http: unknown; dir: string; ref: string; remoteRef: string; onAuth: unknown; force?: boolean; onProgress?: unknown;
-  }): Promise<void> {},
-  async resetIndex(_opts: { fs: unknown; dir: string; ref: string; filepath: string }): Promise<void> {},
+  }): Promise<void> { /* noop */ },
+  async resetIndex(_opts: { fs: unknown; dir: string; ref: string; filepath: string }): Promise<void> { /* noop */ },
   async statusMatrix(_opts: { fs: unknown; dir: string }): Promise<Array<[string, number, number, number]>> { return []; },
-  async branch(_opts: { fs: unknown; dir: string; ref: string; object?: string; force?: boolean; checkout?: boolean }): Promise<void> {},
+  async branch(_opts: { fs: unknown; dir: string; ref: string; object?: string; force?: boolean; checkout?: boolean }): Promise<void> { /* noop */ },
   async readCommit(_opts: { fs: unknown; dir: string; oid: string }): Promise<{ commit: { author: { name: string; email: string }; message: string; parent: string[] } }> {
     return { commit: { author: { name: '', email: '' }, message: '', parent: [] } };
   },
@@ -936,9 +936,9 @@ export class GitFsService {
 }
 
 // Stub branch method on git object (used by mergeCommit)
-(git as Record<string, unknown>).branch = async (opts: {
+(git as Record<string, unknown>).branch = async (_opts: {
   fs: unknown; dir: string; ref: string; object?: string; force?: boolean;
-}): Promise<void> => {};
+}): Promise<void> => { /* noop */ };
 
 async function readCommitAuthor(
   fs: ReturnType<typeof makeGitFs>,

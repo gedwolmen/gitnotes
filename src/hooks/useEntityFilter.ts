@@ -88,7 +88,9 @@ export function useEntityFilter<T extends FilterableItem>(
       selectedTags,
       selectedAccountId,
     };
-    AsyncStorage.setItem(persistenceKey, JSON.stringify(state)).catch(() => {});
+    AsyncStorage.setItem(persistenceKey, JSON.stringify(state)).catch(() => {
+      // noop
+    });
   }, [
     hydrated,
     persistenceKey,

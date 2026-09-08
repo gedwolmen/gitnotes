@@ -10,16 +10,16 @@ import { useGitActivityStore } from '../../stores/gitActivityStore';
 
 // ─── minimal git stub (no-op until Rust engine is wired) ───────────────────
 const git = {
-  async remove(_opts: { fs: unknown; dir: string; filepath: string }): Promise<void> {},
-  async add(_opts: { fs: unknown; dir: string; filepath: string }): Promise<void> {},
+  async remove(_opts: { fs: unknown; dir: string; filepath: string }): Promise<void> { /* noop */ },
+  async add(_opts: { fs: unknown; dir: string; filepath: string }): Promise<void> { /* noop */ },
   async commit(_opts: {
     fs: unknown; dir: string; message: string; author: { name: string; email: string }; parent?: string[];
   }): Promise<string> { return ''; },
   async currentBranch(_opts: { fs: unknown; dir: string; fullname: boolean }): Promise<string | null> { return null; },
-  async checkout(_opts: { fs: unknown; dir: string; ref: string }): Promise<void> {},
+  async checkout(_opts: { fs: unknown; dir: string; ref: string }): Promise<void> { /* noop */ },
   async fetch(_opts: {
     fs: unknown; http: unknown; dir: string; ref: string; singleBranch: boolean; depth: number; tags: boolean; onAuth: unknown;
-  }): Promise<void> {},
+  }): Promise<void> { /* noop */ },
 };
 
 const CLONES_SUBDIR = 'GitNotes/';
@@ -39,7 +39,6 @@ function repoDirVirtual(owner: string, repo: string): string {
 function toRepoRelativePath(filePath: string): string {
   return filePath.replace(/^\/+/, '');
 }
-
 function makeRepoFs() {
   return buildGitFs(clonesRoot());
 }

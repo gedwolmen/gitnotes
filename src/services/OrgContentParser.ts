@@ -394,7 +394,7 @@ export class OrgContentParser {
     const indentLevel = this.getIndentLevel(indentMatch[1], indentWidth);
     const content = indentMatch[2];
 
-    const match = content.match(/^[-+]\s+\[([ Xx\-])\]\s*(.*)$/);
+    const match = content.match(/^[-+]\s+\[([ Xx-])\]\s*(.*)$/);
     if (!match) {
       return null;
     }

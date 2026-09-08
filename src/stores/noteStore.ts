@@ -241,7 +241,7 @@ export const useNoteStore = create<NoteState & NoteActions>()((set, get) => ({
   },
 
   upsertNote: async (input) => {
-    const { repoPath, branch, filePath, content, id } = input;
+    const { repoPath, branch, filePath, content } = input;
     const mode = await SyncEngineService.getMode(repoPath);
 
     if (mode === 'clone') {

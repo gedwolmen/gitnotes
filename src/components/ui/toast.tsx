@@ -33,6 +33,8 @@ export interface UseToastReturn {
 
 export function useToast(): UseToastReturn {
   return {
-    show: () => {},
+    show: () => {
+      // noop
+    },
   };
 }

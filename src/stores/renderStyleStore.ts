@@ -121,7 +121,8 @@ export const useRenderStyleStore = create<RenderStyleState & RenderStyleActions>
 
   resetFormat: (format) => {
     set((state) => {
-      const { [format]: _removed, ...rest } = state.settings.formats;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { [format]: _unused, ...rest } = state.settings.formats;
       return { settings: { version: 1, formats: rest } };
     });
   },

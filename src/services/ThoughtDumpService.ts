@@ -25,7 +25,7 @@ async function enqueueRepoWrite<T>(
 ): Promise<T> {
   const key = getRepoWriteQueueKey(owner, repo, branch);
   const previous = repoWriteQueue.get(key) ?? Promise.resolve();
-  const next = previous.catch(() => {}).then(work);
+  const next = previous.catch(() => {/* noop */}).then(work);
   const tracked = next.then(() => undefined, () => undefined).finally(() => {
     if (repoWriteQueue.get(key) === tracked) {
       repoWriteQueue.delete(key);

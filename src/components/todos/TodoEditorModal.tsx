@@ -307,7 +307,9 @@ export function TodoEditorModal({
               entityType="todo"
               onRepoChange={onRepoChange}
               onBranchChange={onBranchChange}
-              onCommitChange={() => {}}
+              onCommitChange={() => {
+                // noop
+              }}
             />
           </View>
 

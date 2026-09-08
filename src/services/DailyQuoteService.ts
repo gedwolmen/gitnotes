@@ -109,7 +109,7 @@ class DailyQuoteServiceClass {
         if (error === NO_MODEL_SELECTED) return makeFallbackQuote('no_model');
       }
       if (aiQuote) {
-        await this.writeCache(aiQuote).catch(() => {});
+        await this.writeCache(aiQuote).catch(() => {/* noop */});
         return aiQuote;
       }
 
@@ -121,7 +121,7 @@ class DailyQuoteServiceClass {
   }
 
   async regenerate(journals: Note[], allNotes: Note[]): Promise<DailyQuote | null> {
-    await this.clearCache().catch(() => {});
+    await this.clearCache().catch(() => {/* noop */});
     return this.getDailyQuote(journals, allNotes);
   }
 
@@ -149,7 +149,7 @@ class DailyQuoteServiceClass {
     await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(quote));
   }
 
-  private async generateAIQuote(journals: Note[], allNotes: Note[]): Promise<DailyQuote | null> {
+  private   async generateAIQuote(journals: Note[], _allNotes: Note[]): Promise<DailyQuote | null> {
     const aiStore = useAIStore.getState();
     const selectedModel = aiStore.getSelectedModel();
     if (!selectedModel) throw NO_MODEL_SELECTED;

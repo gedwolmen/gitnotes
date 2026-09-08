@@ -70,11 +70,9 @@ interface Layout {
 }
 
 export function DraftLayerRenderer({
-  atlasWidth,
   atlasHeight,
   atlasOffsetX,
   atlasOffsetY,
-  applyCommand,
   pushUndo,
   applyCommands,
 }: DraftLayerProps) {

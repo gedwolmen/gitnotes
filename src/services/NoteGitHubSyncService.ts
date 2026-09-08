@@ -8,8 +8,6 @@ import { GitFsService } from './git/GitFsService';
 import { resolveBranch } from './git/resolveBranch';
 import { getGitHostService } from './git/gitHostFactory';
 import { FEATURE_USE_MULTI_HOST_WRITE } from './featureFlags';
-import { classifyGitHubSyncError, extractHttpErrorDetails, syncStatusForError } from './git/syncFailure';
-import { formatSyncError } from './git/formatSyncError';
 import type { GitHostProvider } from './git/GitHost';
 
 async function resolveToken(accountId?: string): Promise<string | undefined> {
@@ -24,24 +22,6 @@ export interface NoteGitHubSyncResult {
   finalContent?: string;
   error?: string;
   status?: number;
-}
-
-function failedSyncResult(error: unknown): NoteGitHubSyncResult {
-  const details = extractHttpErrorDetails(error);
-  const rawMessage = details.message || 'Unknown error';
-  const status = details.status ?? syncStatusForError(rawMessage);
-  const message = formatSyncError(rawMessage);
-  return status === undefined
-    ? { success: false, error: message }
-    : { success: false, error: message, status: typeof status === 'number' ? status : undefined };
-}
-
-function failedSyncOrConflict(error: unknown, status?: number): NoteGitHubSyncResult {
-  const classified = classifyGitHubSyncError(error, status);
-  if (classified.kind === 'conflict') {
-    return { success: false, error: 'conflict-detected', status: 409 };
-  }
-  return failedSyncResult(error);
 }
 
 export function canPersistNoteTags(format?: string): boolean {
@@ -365,7 +345,6 @@ export async function deleteNoteFromGitHub(params: {
   }
 
   const targetBranch = await resolveBranch(repoPath, branch);
-  const opts = tokenOverride ? { tokenOverride } : undefined;
 
   const mode = await SyncEngineService.getMode(repoPath);
   if (mode === 'clone') {
@@ -406,7 +385,7 @@ export async function syncNoteToGitHub(params: {
   push?: boolean;
   knownSha?: string;
 }): Promise<NoteGitHubSyncResult> {
-  const { repo: repoPath, branch, filePath, title, content, format, accountId, tags = [], color, push, knownSha } = params;
+  const { repo: repoPath, branch, filePath, title, content, format, accountId, tags = [], color, knownSha } = params;
   const tokenOverride = await resolveToken(accountId);
 
   const MAX_FILE_SIZE = 5 * 1024 * 1024;

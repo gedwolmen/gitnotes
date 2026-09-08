@@ -27,8 +27,7 @@ import {
 import { RepoTreeMoveDialog } from './RepoTreeMoveDialog';
 import { RepoTreeRenameDialog } from './RepoTreeRenameDialog';
 import { treeStyles } from './repoTreeStyles';
-import type { GitHostProvider } from '../../services/git/GitHost';
-import { getGitHostService } from '../../services/git/gitHostFactory';
+
 
 const DIVERGENCE_HINT =
   ' This usually means the branch has diverged from the remote — open the merge banner to resolve it.';

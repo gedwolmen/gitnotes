@@ -119,7 +119,7 @@ export default function TodoListScreen() {
 
   useEffect(() => {
     if (!filterCompletedHydrated) return;
-    AsyncStorage.setItem(FILTER_COMPLETED_PERSISTENCE_KEY, String(filterCompleted)).catch(() => {});
+    AsyncStorage.setItem(FILTER_COMPLETED_PERSISTENCE_KEY, String(filterCompleted)).catch(() => {/* noop */});
   }, [filterCompleted, filterCompletedHydrated]);
 
   useEffect(() => {

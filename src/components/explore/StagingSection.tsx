@@ -17,7 +17,7 @@ import { GitFsService } from '@/services/git/GitFsService';
 import type { RootStackParamList } from '@/navigation/types';
 import type { SectionProps } from './exploreShared';
 import { useTokens } from '@/contexts/ThemeContext';
-import { useNoteStore } from '@/stores/noteStore';
+
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 

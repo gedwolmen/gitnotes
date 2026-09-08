@@ -602,7 +602,7 @@ class GitHubServiceClass {
     owner: string,
     repo: string,
     ref: string,
-    parentPath = '',
+    _parentPath = '',
   ): Promise<{ path: string; type: 'blob' | 'tree'; sha: string; size?: number }[] | null> {
     const url = `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`;
     const data = await this.request(url);
