@@ -66,9 +66,9 @@ Three subscription packages are offered:
 
 ```typescript
 interface Packages {
-  monthly: PurchasesPackage;    // $4.99/month
+  monthly: PurchasesPackage;    // $3.99/month
   yearly?: PurchasesPackage;   // $29.99/year (optional)
-  lifetime?: PurchasesPackage;  // $79.99 one-time (optional)
+  lifetime?: PurchasesPackage;  // $39.99 one-time (optional)
   offerings: PurchasesOfferings;
 }
 ```
