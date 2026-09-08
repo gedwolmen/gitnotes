@@ -3,6 +3,9 @@ import { Note, NoteCreateInput, NoteFormat, NoteUpdateInput } from '../../models
 import { TodoCreateInput, TodoPriority, TodoUpdateInput } from '../../models/Todo';
 import { useNoteStore } from '../../stores/noteStore';
 import { useTodoStore } from '../../stores/todoStore';
+import { useReminderStore } from '../../stores/reminderStore';
+import { ReminderService } from '../ReminderService';
+import { formatReminderSchedule } from '../../models/Reminder';
 import { useAIStore } from '../../stores/aiStore';
 import { initializeModel } from '../AIService';
 import { GITHUB_ITEM_STATES, GitHubItemState, GitHubService } from '../GitHubService';
@@ -76,6 +79,17 @@ function getOptionalBooleanArg(args: Record<string, unknown>, key: string): bool
     return undefined;
   }
   if (typeof value !== 'boolean') {
+    throw new Error(`Invalid '${key}'`);
+  }
+  return value;
+}
+
+function getOptionalNumberArg(args: Record<string, unknown>, key: string): number | undefined {
+  const value = args[key];
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
     throw new Error(`Invalid '${key}'`);
   }
   return value;
@@ -844,6 +858,7 @@ export async function executeToolCall(
           dueDate: getOptionalDueDateArg(args, 'dueDate'),
           priority: getOptionalTodoPriorityArg(args, 'priority'),
           tags: getOptionalStringArrayArg(args, 'tags'),
+          reminderBeforeMinutes: getOptionalNumberArg(args, 'reminderBeforeMinutes'),
         };
 
         if (mode === 'confirm') {
@@ -866,6 +881,7 @@ export async function executeToolCall(
           completed: getOptionalBooleanArg(args, 'completed'),
           dueDate: getOptionalDueDateArg(args, 'dueDate'),
           priority: getOptionalTodoPriorityArg(args, 'priority'),
+          reminderBeforeMinutes: getOptionalNumberArg(args, 'reminderBeforeMinutes'),
         };
 
         if (mode === 'confirm') {
@@ -1074,6 +1090,106 @@ export async function executeToolCall(
           return { success: false, requiresConfirmation: false, error: 'Failed to post review.' };
         }
         return buildSuccessResult({ id: review.id, state: review.state, html_url: review.html_url });
+      }
+
+      case 'create_reminder': {
+        const entityType = getStringArg(args, 'entityType') as 'note' | 'folder' | 'repo' | 'tag';
+        const noteId = getOptionalStringArg(args, 'noteId');
+        const repoPath = getOptionalStringArg(args, 'repoPath');
+        const folderPath = getOptionalStringArg(args, 'folderPath');
+        const tag = getOptionalStringArg(args, 'tag');
+        const entityLabel = getStringArg(args, 'entityLabel');
+        const time = getStringArg(args, 'time');
+        const repeat = getOptionalStringArg(args, 'repeat') as 'daily' | 'weekly' | 'one-time' | undefined;
+        const daysOfWeek = getOptionalStringArrayArg(args, 'daysOfWeek') as ('monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday')[] | undefined;
+
+        if (mode === 'confirm') {
+          return buildConfirmationResult({
+            type: 'create_reminder',
+            description: `Create ${repeat ?? 'weekly'} reminder for ${entityLabel}`,
+            details: { entityType, entityLabel, time, repeat, daysOfWeek },
+          });
+        }
+
+        const created = await useReminderStore.getState().createItem({
+          entityType,
+          noteId,
+          repoPath,
+          folderPath,
+          tag,
+          entityLabel,
+          time,
+          repeat,
+          daysOfWeek,
+        });
+
+        if (!created) {
+          return { success: false, requiresConfirmation: false, error: 'Failed to create reminder.' };
+        }
+
+        await ReminderService.scheduleNotification(created);
+
+        return buildSuccessResult({
+          reminderId: created.id,
+          entityLabel: created.entityLabel,
+          schedule: formatReminderSchedule(created),
+        });
+      }
+
+      case 'list_reminders': {
+        const items = useReminderStore.getState().items;
+        return buildSuccessResult({
+          reminders: items.map((item) => ({
+            id: item.id,
+            entityLabel: item.entityLabel,
+            entityType: item.entityType,
+            schedule: formatReminderSchedule(item),
+            isEnabled: item.isEnabled,
+          })),
+          total: items.length,
+        });
+      }
+
+      case 'cancel_reminder': {
+        const reminderId = getOptionalStringArg(args, 'reminderId');
+        let targetId = reminderId;
+
+        if (!targetId) {
+          const entityType = getOptionalStringArg(args, 'entityType');
+          if (!entityType) {
+            return { success: false, requiresConfirmation: false, error: 'Must provide reminderId or entityType for content matching.' };
+          }
+
+          const items = useReminderStore.getState().items;
+          const match = items.find((item) => {
+            if (item.entityType !== entityType) return false;
+            switch (entityType) {
+              case 'note':
+                return item.noteId === getOptionalStringArg(args, 'noteId');
+              case 'folder':
+                return item.folderPath === getOptionalStringArg(args, 'folderPath') && item.repoPath === getOptionalStringArg(args, 'repoPath');
+              case 'repo':
+                return item.repoPath === getOptionalStringArg(args, 'repoPath');
+              case 'tag':
+                return item.tag === getOptionalStringArg(args, 'tag');
+              default:
+                return false;
+            }
+          });
+
+          if (!match) {
+            return { success: false, requiresConfirmation: false, error: `No reminder found for ${entityType}.` };
+          }
+          targetId = match.id;
+        }
+
+        const item = useReminderStore.getState().getItem(targetId!);
+        if (item) {
+          await ReminderService.cancelNotification(item);
+        }
+
+        await useReminderStore.getState().deleteItem(targetId!);
+        return buildSuccessResult({ reminderId: targetId, cancelled: true });
       }
 
       default:

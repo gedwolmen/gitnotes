@@ -62,6 +62,7 @@ export const createTodoParameters = z.object({
   dueDate: z.string().optional(),
   priority: z.enum(['low', 'medium', 'high']).optional(),
   tags: z.array(z.string()).optional(),
+  reminderBeforeMinutes: z.number().optional(),
 });
 
 export const create_todo = tool({
@@ -76,6 +77,7 @@ export const editTodoParameters = z.object({
   completed: z.boolean().optional(),
   dueDate: z.string().optional(),
   priority: z.enum(['low', 'medium', 'high']).optional(),
+  reminderBeforeMinutes: z.number().optional(),
 });
 
 export const edit_todo = tool({
@@ -224,6 +226,65 @@ export const generate_daily_brief = tool({
   execute: async (params) => params,
 });
 
+export const createReminderParameters = z.object({
+  entityType: z.enum(['note', 'folder', 'repo', 'tag']),
+  noteId: z.string().optional(),
+  repoPath: z.string().optional(),
+  folderPath: z.string().optional(),
+  tag: z.string().optional(),
+  entityLabel: z.string(),
+  time: z.string().regex(/^\d{1,2}:\d{2}$/, 'HH:MM in 24-hour format'),
+  repeat: z.enum(['daily', 'weekly', 'one-time']).optional().default('weekly'),
+  daysOfWeek: z
+    .array(z.enum(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']))
+    .optional(),
+});
+
+export const create_reminder = tool({
+  description: `Create a reminder to revisit a note, folder, repo, or tagged notes at a specific time.
+    - entityType selects what is being reminded: 'note', 'folder', 'repo', or 'tag'
+    - For notes: pass noteId + entityLabel (AI should infer noteId from the conversation context)
+    - For folders: pass repoPath + folderPath + entityLabel
+    - For repos: pass repoPath + entityLabel
+    - For tags: pass tag + entityLabel
+    - time is HH:MM in 24-hour format (e.g., "09:00", "14:30")
+    - repeat: 'daily' (every day), 'weekly' (on daysOfWeek), 'one-time' (once, then auto-disables)
+    - daysOfWeek is required when repeat='weekly'`,
+  inputSchema: createReminderParameters,
+  execute: async (params) => params,
+});
+
+export const listRemindersParameters = z.object({});
+
+export const list_reminders = tool({
+  description: `List all reminders. Returns a formatted summary: id, entityLabel, entityType, schedule description, and isEnabled.
+    Use this to find reminder IDs before calling cancel_reminder.`,
+  inputSchema: listRemindersParameters,
+  execute: async (params) => params,
+});
+
+export const cancelReminderParameters = z.object({
+  reminderId: z.string().optional(),
+  entityType: z.enum(['note', 'folder', 'repo', 'tag']).optional(),
+  noteId: z.string().optional(),
+  repoPath: z.string().optional(),
+  folderPath: z.string().optional(),
+  tag: z.string().optional(),
+});
+
+export const cancel_reminder = tool({
+  description: `Cancel (delete) a reminder.
+    - Prefer passing reminderId from a prior list_reminders call
+    - If reminderId is not available, pass entityType + the corresponding entity ID:
+      * For 'note': noteId
+      * For 'folder': repoPath + folderPath
+      * For 'repo': repoPath
+      * For 'tag': tag
+    - Returns success even if reminder was already cancelled or never existed (idempotent)`,
+  inputSchema: cancelReminderParameters,
+  execute: async (params) => params,
+});
+
 export const chatTools = {
   create_note,
   edit_note,
@@ -243,6 +304,9 @@ export const chatTools = {
   distill_thought_dump,
   link_notes,
   generate_daily_brief,
+  create_reminder,
+  list_reminders,
+  cancel_reminder,
 };
 
 export const listReposParameters = z.object({});
