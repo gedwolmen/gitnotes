@@ -7,6 +7,7 @@
 
 import * as FileSystem from 'expo-file-system/legacy';
 import { parseRepoPath } from '../utils/gitPathParser';
+import * as GitEngine from './git/engine/GitEngine';
 
 const CLONES_SUBDIR = 'GitNotes/';
 

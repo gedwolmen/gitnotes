@@ -40,10 +40,6 @@ function toRepoRelativePath(filePath: string): string {
   return filePath.replace(/^\/+/, '');
 }
 
-function makeRepoFs() {
-  return makeGitFs(clonesRoot());
-}
-
 async function ensureParentDirs(rootDir: string, virtualPath: string): Promise<void> {
   const parts = virtualPath.split('/').filter(Boolean);
   parts.pop();
