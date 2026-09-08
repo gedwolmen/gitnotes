@@ -10,6 +10,22 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 ## 2026-09-08
 
+### fix(paywall): sync Pro state on RevenueCat callbacks and account binds
+
+**What:** Five critical/high bugs in `proStore.ts` where the Pro/grandfathered state fell out of sync after RevenueCat operations — allowing free Pro via restore exploit, stale grandfather status, and ghost Pro after account unbind.
+
+**fix(paywall):** `restore()`: removed exploit path that granted free Pro when RevenueCat was not configured — no RevenueCat call means no free tier.
+
+**fix(paywall):** `onCustomerInfoUpdate()`: re-checks `resolveGrandfatherStatus()` on every subscriber callback so `isGrandfathered` stays current.
+
+**fix(paywall):** `refresh()`: re-checks `resolveGrandfatherStatus()` with fresh `customerInfo` so `isGrandfathered` reflects current entitlement state.
+
+**fix(paywall):** `bindAccount()`: re-checks `resolveGrandfatherStatus()` for the newly bound account so `isGrandfathered` reflects that user's entitlement.
+
+**fix(paywall):** `unbindAccount()`: resets `entitlementActive`, `isGrandfathered`, `trialActive`, `trialEndsAt`, `entitlementExpiresAt`, and `status: 'free'` after `logOutAppUser()`.
+
+**PR:** #1448
+
 ### fix(sync): add complete conflict resolution actions
 
 **What:** Conflict resolution now offers Accept ours, Accept theirs, Accept both, and Full edit. Saving writes the resolved content, stages and commits it, pushes immediately, then pulls and refreshes Notes, Canvases, and Todos. The conflict list no longer renders the stray red square indicator.
