@@ -62,6 +62,8 @@ export interface NoteCreateInput {
   format?: NoteFormat;
   attachments?: Attachment[];
   accountId?: string;
+  /** When true, skip the immediate clone-mode commit so the note goes through normal sync flow. */
+  isAiCreated?: boolean;
 }
 
 export interface NoteUpdateInput {

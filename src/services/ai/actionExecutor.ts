@@ -241,10 +241,7 @@ export async function executeToolCall(
           content: getStringArg(args, 'content'),
           tags: getOptionalStringArrayArg(args, 'tags'),
           format: getOptionalNoteFormatArg(args, 'format'),
-          // Attach chat-thread repo so the note shows up under the same
-          // repo in the notes list and gets pushed by the sync queue.
-          // Without this, AI-created notes were local-only and never
-          // synced to other sessions until a manual push.
+          isAiCreated: true,
           ...(repoPath ? { repo: repoPath, branch } : {}),
         };
 
@@ -296,6 +293,7 @@ export async function executeToolCall(
           content: `${marker}${sourceList}${content}`,
           tags,
           format: format ?? 'markdown',
+          isAiCreated: true,
           ...(repoPath ? { repo: repoPath, branch } : {}),
         };
 
@@ -568,6 +566,7 @@ export async function executeToolCall(
           content: `${marker}${sourceListMd}${content}`,
           tags,
           format: format ?? 'markdown',
+          isAiCreated: true,
           ...(repoPath ? { repo: repoPath, branch } : {}),
         };
 
@@ -611,6 +610,7 @@ export async function executeToolCall(
           content: `${marker}${content}`,
           tags,
           format: 'markdown',
+          isAiCreated: true,
           ...(repoPath ? { repo: repoPath, branch } : {}),
         };
 
@@ -721,6 +721,7 @@ export async function executeToolCall(
           content: `${marker}${content}`,
           tags,
           format: 'markdown',
+          isAiCreated: true,
           ...(repoPath ? { repo: repoPath, branch } : {}),
         };
 
