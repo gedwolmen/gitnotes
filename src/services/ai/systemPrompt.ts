@@ -53,5 +53,16 @@ Use these tools when the user asks about their repos, issues, PRs, or reviews. A
     `Current state: The user has ${context.noteCount} notes and ${context.todoCount} todos.`
   );
 
+  sections.push(
+    `=== Reminder Tools ===
+You have access to reminder tools:
+- create_reminder: Set a reminder to revisit a note, folder, repo, or tagged notes at a specific time (HH:MM, 24-hour). Supports daily, weekly, or one-time schedules.
+- list_reminders: View all reminders with their schedules and entity labels.
+- cancel_reminder: Remove a reminder by ID or by matching the entity it points to.
+
+PROACTIVE SUGGESTIONS: After creating study, review, or quiz content (notes with tags like 'study', 'review', 'quiz', 'flashcards', or 'questioner'), proactively suggest setting a reminder. Say something like: "I created a quiz on [topic]. Would you like me to set a weekly reminder to review it?" — NEVER auto-create without user confirmation.
+=== End Reminder Tools ===`
+  );
+
   return sections.join('\n\n');
 }
