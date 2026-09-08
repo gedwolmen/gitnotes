@@ -24,6 +24,7 @@ export interface ActionExecutorResult {
   error?: string;
   requiresConfirmation: boolean;
   proposedChanges?: ProposedChange;
+  warning?: string;
 }
 
 type ActionMode = 'auto' | 'confirm';
@@ -204,7 +205,7 @@ async function enqueueNoteSync(
   noteId: string,
   repoPath: string,
   branch: string,
-): Promise<void> {
+): Promise<boolean> {
   try {
     await NoteSyncQueueService.enqueueNoteUpsert(
       {
@@ -218,8 +219,9 @@ async function enqueueNoteSync(
       },
       noteId,
     );
-  } catch (error) {
-    console.warn('[actionExecutor] enqueueNoteUpsert failed:', error);
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -273,11 +275,17 @@ export async function executeToolCall(
         }
 
         if (repoPath) {
-          await enqueueNoteSync(input, created.id, repoPath, branch);
+          const synced = await enqueueNoteSync(input, created.id, repoPath, branch);
+          if (!synced) {
+            return {
+              success: true,
+              requiresConfirmation: false,
+              data: { noteId: created.id, title: created.title, format: created.format, repo: created.repo, synced: false },
+              warning: 'Note created locally but failed to sync to GitHub.',
+            };
+          }
         }
 
-        // Return a slim summary; the previous full-Note dump filled the
-        // chat with JSON, the bubble renders this as a tappable link.
         return buildSuccessResult({
           noteId: created.id,
           title: created.title,
@@ -300,6 +308,13 @@ export async function executeToolCall(
         const sourceList = sourceNotes.length
           ? `## Sources\n\n${sourceNotes.map((id) => `- ${id}`).join('\n')}\n\n`
           : '';
+        if (repoPath && sourceNotes.length > 0) {
+          const noteStore = useNoteStore.getState();
+          const sources = sourceNotes.map((id) => noteStore.getNoteById(id)).filter((f): f is Note => f !== undefined);
+          if (sources.some((s) => s.repo !== repoPath)) {
+            return { success: false, requiresConfirmation: false, error: 'One or more source notes are not in the current repo context.' };
+          }
+        }
         const marker = `<!-- sl-item-id: chat-gen-${Date.now()} -->\n`;
 
         const input: NoteCreateInput = {
@@ -324,7 +339,15 @@ export async function executeToolCall(
           return { success: false, requiresConfirmation: false, error: 'Failed to create questioner note.' };
         }
         if (repoPath) {
-          await enqueueNoteSync(input, created.id, repoPath, branch);
+          const synced = await enqueueNoteSync(input, created.id, repoPath, branch);
+          if (!synced) {
+            return {
+              success: true,
+              requiresConfirmation: false,
+              data: { noteId: created.id, title: created.title, format: created.format, repo: created.repo, synced: false, questionCount, tag: 'questioner' },
+              warning: 'Note created locally but failed to sync to GitHub.',
+            };
+          }
         }
 
         return buildSuccessResult({
@@ -350,6 +373,9 @@ export async function executeToolCall(
             requiresConfirmation: false,
             error: "Note doesn't have the 'questioner' tag required for grading.",
           };
+        }
+        if (repoPath && note.repo !== repoPath) {
+          return { success: false, requiresConfirmation: false, error: `Note '${noteId}' not found.` };
         }
 
         if (mode === 'confirm') {
@@ -394,6 +420,7 @@ export async function executeToolCall(
           return { success: false, requiresConfirmation: false, error: 'Failed to save the grading.' };
         }
 
+        let syncWarning: string | undefined;
         if (repoPath) {
           try {
             await NoteSyncQueueService.enqueueNoteUpsert(
@@ -409,16 +436,16 @@ export async function executeToolCall(
               },
               gradedNote.id,
             );
-          } catch (error) {
-            console.warn('[actionExecutor] grade_questioner_answers sync enqueue failed:', error);
+          } catch {
+            syncWarning = 'Grading saved locally but failed to sync to GitHub.';
           }
         }
 
-        return buildSuccessResult({
-          noteId,
-          graded: true,
-          gradingAppended: grading.trim().length,
-        });
+        const result = { noteId, graded: true, gradingAppended: grading.trim().length };
+        if (syncWarning) {
+          return { success: true, requiresConfirmation: false, data: result, warning: syncWarning };
+        }
+        return buildSuccessResult(result);
       }
 
       case 'find_notes': {
@@ -434,6 +461,10 @@ export async function executeToolCall(
           args.limit === undefined ? 20 : Math.max(1, Math.min(100, getNumberArg(args, 'limit')));
 
         const filtered = useNoteStore.getState().notes.filter((note) => {
+          // Scope search to chat repo context when set — prevents cross-repo data leakage
+          if (repoPath && note.repo !== repoPath) {
+            return false;
+          }
           if (
             query &&
             !(
@@ -497,6 +528,9 @@ export async function executeToolCall(
         const priorityRank: Record<TodoPriority, number> = { high: 0, medium: 1, low: 2 };
 
         const filtered = useTodoStore.getState().todos.filter((todo) => {
+          if (repoPath && todo.repo !== repoPath) {
+            return false;
+          }
           if (status === 'pending' && todo.completed) {
             return false;
           }
@@ -567,6 +601,9 @@ export async function executeToolCall(
         if (sources.length === 0) {
           return { success: false, requiresConfirmation: false, error: 'None of the source notes exist.' };
         }
+        if (repoPath && sources.some((s) => s.repo !== repoPath)) {
+          return { success: false, requiresConfirmation: false, error: 'One or more source notes are not in the current repo context.' };
+        }
 
         const title = getOptionalStringArg(args, 'outputTitle') ?? `Summary (${sources.length} notes)`;
         const tags = Array.from(new Set([...outputTags, 'summary']));
@@ -597,7 +634,15 @@ export async function executeToolCall(
           return { success: false, requiresConfirmation: false, error: 'Failed to create summary note.' };
         }
         if (repoPath) {
-          await enqueueNoteSync(input, created.id, repoPath, branch);
+          const synced = await enqueueNoteSync(input, created.id, repoPath, branch);
+          if (!synced) {
+            return {
+              success: true,
+              requiresConfirmation: false,
+              data: { noteId: created.id, title: created.title, sourceCount: sources.length, synced: false },
+              warning: 'Note created locally but failed to sync to GitHub.',
+            };
+          }
         }
 
         return buildSuccessResult({
@@ -618,6 +663,14 @@ export async function executeToolCall(
         const userTags = getOptionalStringArrayArg(args, 'outputTags') ?? [];
         const tags = Array.from(new Set([...userTags, 'distilled']));
         const marker = `<!-- distilled-from: ${sourceIds.join(',')} -->\n`;
+
+        if (repoPath) {
+          const noteStore = useNoteStore.getState();
+          const sources = sourceIds.map((id) => noteStore.getNoteById(id)).filter((f): f is Note => f !== undefined);
+          if (sources.some((s) => s.repo !== repoPath)) {
+            return { success: false, requiresConfirmation: false, error: 'One or more source notes are not in the current repo context.' };
+          }
+        }
 
         const input: NoteCreateInput = {
           title,
@@ -641,7 +694,15 @@ export async function executeToolCall(
           return { success: false, requiresConfirmation: false, error: 'Failed to create distilled note.' };
         }
         if (repoPath) {
-          await enqueueNoteSync(input, created.id, repoPath, branch);
+          const synced = await enqueueNoteSync(input, created.id, repoPath, branch);
+          if (!synced) {
+            return {
+              success: true,
+              requiresConfirmation: false,
+              data: { noteId: created.id, title: created.title, sourceIds, synced: false },
+              warning: 'Note created locally but failed to sync to GitHub.',
+            };
+          }
         }
 
         return buildSuccessResult({
@@ -675,6 +736,9 @@ export async function executeToolCall(
         if (targets.length < 2) {
           return { success: false, requiresConfirmation: false, error: 'At least 2 of the given noteIds must exist' };
         }
+        if (repoPath && targets.some((t) => t.repo !== repoPath)) {
+          return { success: false, requiresConfirmation: false, error: 'One or more notes are not in the current repo context.' };
+        }
 
         if (mode === 'confirm') {
           return buildConfirmationResult({
@@ -685,6 +749,7 @@ export async function executeToolCall(
         }
 
         let linked = 0;
+        const syncFailed: string[] = [];
         for (const self of targets) {
           const siblings = targets.filter((note) => note.id !== self.id);
           const linkBlock =
@@ -709,17 +774,26 @@ export async function executeToolCall(
                 },
                 updated.id,
               );
-            } catch (error) {
-              console.warn('[actionExecutor] link_notes sync enqueue failed:', error);
+            } catch {
+              syncFailed.push(updated.title);
             }
           }
           linked += 1;
         }
 
-        return buildSuccessResult({
+        const result = {
           linked,
           noteIds: targets.map((note) => note.id),
-        });
+        };
+        if (syncFailed.length > 0) {
+          return {
+            success: true,
+            requiresConfirmation: false,
+            data: result,
+            warning: `Linked ${linked} notes, but ${syncFailed.length} failed to sync: ${syncFailed.join(', ')}`,
+          };
+        }
+        return buildSuccessResult(result);
       }
 
       case 'generate_daily_brief': {
@@ -752,7 +826,15 @@ export async function executeToolCall(
           return { success: false, requiresConfirmation: false, error: 'Failed to create daily brief.' };
         }
         if (repoPath) {
-          await enqueueNoteSync(input, created.id, repoPath, branch);
+          const synced = await enqueueNoteSync(input, created.id, repoPath, branch);
+          if (!synced) {
+            return {
+              success: true,
+              requiresConfirmation: false,
+              data: { noteId: created.id, date: today, synced: false },
+              warning: 'Note created locally but failed to sync to GitHub.',
+            };
+          }
         }
 
         return buildSuccessResult({
@@ -764,6 +846,14 @@ export async function executeToolCall(
 
       case 'edit_note': {
         const noteId = getStringArg(args, 'noteId');
+        const existing = useNoteStore.getState().getNoteById(noteId);
+        if (!existing) {
+          return { success: false, requiresConfirmation: false, error: `Note '${noteId}' not found.` };
+        }
+        if (repoPath && existing.repo !== repoPath) {
+          return { success: false, requiresConfirmation: false, error: `Note '${noteId}' not found.` };
+        }
+
         const input: NoteUpdateInput = {
           id: noteId,
           title: getOptionalStringArg(args, 'title'),
@@ -800,8 +890,13 @@ export async function executeToolCall(
               },
               result.id,
             );
-          } catch (error) {
-            console.warn('[actionExecutor] edit_note sync enqueue failed:', error);
+          } catch {
+            return {
+              success: true,
+              requiresConfirmation: false,
+              data: { noteId: result.id, title: result.title },
+              warning: 'Note updated locally but failed to sync to GitHub.',
+            };
           }
         }
 
@@ -810,6 +905,15 @@ export async function executeToolCall(
 
       case 'delete_note': {
         const noteId = getStringArg(args, 'noteId');
+        const note = useNoteStore.getState().getNoteById(noteId);
+
+        if (!note) {
+          return { success: false, requiresConfirmation: false, error: `Note '${noteId}' not found.` };
+        }
+        // Scope to chat repo context when set — prevents deleting notes from other repos
+        if (repoPath && note.repo !== repoPath) {
+          return { success: false, requiresConfirmation: false, error: `Note '${noteId}' not found.` };
+        }
 
         if (mode === 'confirm') {
           return buildConfirmationResult({
@@ -821,6 +925,9 @@ export async function executeToolCall(
         }
 
         const result = await useNoteStore.getState().deleteNote(noteId);
+        if (!result) {
+          return { success: false, requiresConfirmation: false, error: `Failed to delete note '${noteId}'.` };
+        }
         return buildSuccessResult(result);
       }
 
@@ -829,6 +936,10 @@ export async function executeToolCall(
         const matches = useNoteStore
           .getState()
           .notes.filter((note) => {
+            // Scope search to chat repo context when set — prevents cross-repo data leakage
+            if (repoPath && note.repo !== repoPath) {
+              return false;
+            }
             if (!query) {
               return true;
             }
@@ -850,6 +961,13 @@ export async function executeToolCall(
       case 'get_note': {
         const noteId = getStringArg(args, 'noteId');
         const note = useNoteStore.getState().getNoteById(noteId);
+        if (!note) {
+          return { success: false, requiresConfirmation: false, error: `Note '${noteId}' not found.` };
+        }
+        // Scope to chat repo context when set — prevents cross-repo data leakage
+        if (repoPath && note.repo !== repoPath) {
+          return { success: false, requiresConfirmation: false, error: `Note '${noteId}' not found.` };
+        }
         return buildSuccessResult(note);
       }
 
@@ -860,6 +978,7 @@ export async function executeToolCall(
           priority: getOptionalTodoPriorityArg(args, 'priority'),
           tags: getOptionalStringArrayArg(args, 'tags'),
           reminderBeforeMinutes: getOptionalNumberArg(args, 'reminderBeforeMinutes'),
+          ...(repoPath ? { repo: repoPath, branch } : {}),
         };
 
         if (mode === 'confirm') {
@@ -876,6 +995,14 @@ export async function executeToolCall(
 
       case 'edit_todo': {
         const todoId = getStringArg(args, 'todoId');
+        const existing = useTodoStore.getState().todos.find((t) => t.id === todoId);
+        if (!existing) {
+          return { success: false, requiresConfirmation: false, error: `Todo '${todoId}' not found.` };
+        }
+        if (repoPath && existing.repo !== repoPath) {
+          return { success: false, requiresConfirmation: false, error: `Todo '${todoId}' not found.` };
+        }
+
         const input: TodoUpdateInput = {
           id: todoId,
           text: getOptionalStringArg(args, 'text'),
@@ -900,6 +1027,13 @@ export async function executeToolCall(
 
       case 'delete_todo': {
         const todoId = getStringArg(args, 'todoId');
+        const existing = useTodoStore.getState().todos.find((t) => t.id === todoId);
+        if (!existing) {
+          return { success: false, requiresConfirmation: false, error: `Todo '${todoId}' not found.` };
+        }
+        if (repoPath && existing.repo !== repoPath) {
+          return { success: false, requiresConfirmation: false, error: `Todo '${todoId}' not found.` };
+        }
 
         if (mode === 'confirm') {
           return buildConfirmationResult({
@@ -920,6 +1054,9 @@ export async function executeToolCall(
         const matches = useTodoStore
           .getState()
           .todos.filter((todo) => {
+            if (repoPath && todo.repo !== repoPath) {
+              return false;
+            }
             if (!includeCompleted && todo.completed) {
               return false;
             }
@@ -943,6 +1080,9 @@ export async function executeToolCall(
         }
 
         const todos = useTodoStore.getState().todos.filter((todo) => {
+          if (repoPath && todo.repo !== repoPath) {
+            return false;
+          }
           if (filter === 'pending') {
             return !todo.completed;
           }
