@@ -49,13 +49,13 @@ export async function resolveGrandfatherStatus(
   const flag = await getStoredValue(GRANDFATHERED_KEY);
   if (flag === 'true') return { isGrandfathered: true, reason: 'flag' };
 
+  // Check restore-granted BEFORE the cache: a warm GRANDFATHER_CHECKED_KEY
+  // must not block a legitimate restore-granted user from getting Pro.
+  const restored = await getStoredValue(RESTORE_GRANTED_KEY);
+  if (restored === 'true') return { isGrandfathered: true, reason: 'restore-granted' };
+
   const checked = await getStoredValue(GRANDFATHER_CHECKED_KEY);
   if (checked === 'true') return { isGrandfathered: false, reason: 'checked' };
-
-  if (customerInfo === null) {
-    const restored = await getStoredValue(RESTORE_GRANTED_KEY);
-    if (restored === 'true') return { isGrandfathered: true, reason: 'restore-granted' };
-  }
 
   // iOS: originalApplicationVersion is CFBundleVersion at time of original purchase.
   // Only treat as build number if it is a pure integer to avoid bypass
