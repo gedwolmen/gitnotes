@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react';
+import type { LayoutChangeEvent } from 'react-native';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import type { TextLayoutEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -139,6 +140,22 @@ export function BentoTile({ item, size, onPress, onLongPress, widthOverride, hid
   const isPinned = size === 'pinned';
   const isCanvas = item.kind === 'canvas';
   const [titleLines, setTitleLines] = useState(1);
+  const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
+  const [hasMeasured, setHasMeasured] = useState(false);
+
+  const handleLayout = useCallback((e: LayoutChangeEvent) => {
+    const w = e.nativeEvent.layout.width;
+    setMeasuredWidth(w);
+    setHasMeasured(true);
+  }, []);
+
+  // Hide badges until we've measured: on first render badges would flash-visible
+  // then disappear on narrow tiles. Once measured, hide if width < 170.
+  const hideBadges = hasMeasured && measuredWidth !== null && measuredWidth < 170;
+
+  // Pin size/inset is smaller on medium/small tiles to reduce overlap
+  const pinSize = isMedium || size === 'small' ? 18 : 22;
+  const pinRight = isMedium || size === 'small' ? 6 : 8;
   const handleTitleLayout = useCallback(
     (e: TextLayoutEvent) => {
       const lines = e.nativeEvent.lines.length;
@@ -168,6 +185,7 @@ export function BentoTile({ item, size, onPress, onLongPress, widthOverride, hid
         testID={`bento-tile.button.press-${testIDSlot}`}
         onPress={onPress}
         onLongPress={onLongPress}
+        onLayout={handleLayout}
         style={({ pressed }) => [
           styles.tile,
           {
@@ -221,6 +239,7 @@ export function BentoTile({ item, size, onPress, onLongPress, widthOverride, hid
         testID={`bento-tile.button.press-${testIDSlot}`}
         onPress={onPress}
         onLongPress={onLongPress}
+        onLayout={handleLayout}
         style={({ pressed }) => [
           styles.tile,
           {
@@ -241,14 +260,16 @@ export function BentoTile({ item, size, onPress, onLongPress, widthOverride, hid
         <View style={[styles.badge, { backgroundColor: accent + '1F' }]}>
           <Ionicons name={iconFor(item.kind)} size={ICON_SIZE[size]} color={accent} />
         </View>
-        {showPinGlyph ? (
-          <View style={[styles.pin, { backgroundColor: colors.background }]}>
+        {showPinGlyph && !hideBadges ? (
+          <View style={[styles.pin, { backgroundColor: colors.background, width: pinSize, height: pinSize, right: pinRight }]}>
             <Ionicons name="pin" size={11} color={accent} />
           </View>
         ) : null}
-        <View style={[styles.formatChip, { backgroundColor: accent + '20' }]}>
-          <Text style={[styles.formatChipText, { color: accent }]}>PDF</Text>
-        </View>
+        {!hideBadges ? (
+          <View style={[styles.formatChip, { backgroundColor: accent + '20' }]}>
+            <Text style={[styles.formatChipText, { color: accent }]}>PDF</Text>
+          </View>
+        ) : null}
         <View style={styles.body}>
           <Text style={[styles.title, { color: colors.text, fontSize: TITLE_SIZE[size], lineHeight: Math.round(TITLE_SIZE[size] * 1.3) }]} numberOfLines={isLarge ? 2 : 1}>
             {titleFor(item)}
@@ -283,6 +304,7 @@ export function BentoTile({ item, size, onPress, onLongPress, widthOverride, hid
       testID={`bento-tile.button.press-${testIDSlot}`}
       onPress={onPress}
       onLongPress={onLongPress}
+      onLayout={handleLayout}
       style={({ pressed }) => [
         styles.tile,
         {
@@ -303,12 +325,12 @@ export function BentoTile({ item, size, onPress, onLongPress, widthOverride, hid
       <View style={[styles.badge, { backgroundColor: accent + '1F' }]}>
         <Ionicons name={iconFor(item.kind)} size={ICON_SIZE[size]} color={accent} />
       </View>
-      {showPinGlyph ? (
-        <View style={[styles.pin, { backgroundColor: colors.background }]}>
+      {showPinGlyph && !hideBadges ? (
+        <View style={[styles.pin, { backgroundColor: colors.background, width: pinSize, height: pinSize, right: pinRight }]}>
           <Ionicons name="pin" size={11} color={accent} />
         </View>
       ) : null}
-      {formatChip ? (
+      {!hideBadges ? (
         <View style={[styles.formatChip, { backgroundColor: accent + '20' }]}>
           <Text style={[styles.formatChipText, { color: accent }]}>{formatChip}</Text>
         </View>
@@ -399,7 +421,7 @@ const styles = StyleSheet.create({
   },
   body: {
     flexShrink: 1,
-    minHeight: 0,
+    minHeight: 24,
     marginTop: 10,
   },
   title: {
