@@ -127,7 +127,7 @@ export const createQuestionerNoteParameters = z.object({
 
 export const create_questioner_note = tool({
   description:
-    "Create a quiz-style note with open questions on a topic for the user to answer. The result is automatically tagged 'questioner'; use grade_questioner_answers later to grade the user's answers.",
+    "Create a quiz-style note with open questions on a topic. Use when the user says things like 'make me a quiz', 'create a test', 'ask me questions about [topic]', 'generate a practice quiz', or 'I want to be tested on [topic]'. The result is automatically tagged 'questioner'; use grade_questioner_answers later to grade the user's answers.",
   inputSchema: createQuestionerNoteParameters,
   execute: async (params) => params,
 });
@@ -138,7 +138,7 @@ export const gradeQuestionerNoteParameters = z.object({
 
 export const grade_questioner_answers = tool({
   description:
-    "Grade a questioner note with the currently selected AI model — strips any previous grading section and appends a fresh '## Grading & Corrections' block. The note must carry the 'questioner' tag.",
+    "Grade or check a completed quiz. Use when the user says things like 'grade my answers', 'check my quiz', 'review my responses', 'how did I do', 'grade this test', or 'evaluate my answers to the quiz'. The note must carry the 'questioner' tag. If the user hasn't specified a note, first use find_notes with tag='questioner' to locate the most recent quiz.",
   inputSchema: gradeQuestionerNoteParameters,
   execute: async (params) => params,
 });
