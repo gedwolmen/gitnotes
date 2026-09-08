@@ -41,6 +41,7 @@ export interface SectionProps {
   onChanged: () => void;
   chromeTopInset?: number;
   onNavigate?: (section: ExploreSection) => void;
+  refreshStatus?: () => Promise<void>;
 }
 
 export function relativeTime(timestamp: number | null): string {
