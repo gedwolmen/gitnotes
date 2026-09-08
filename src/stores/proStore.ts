@@ -12,7 +12,6 @@ import {
   purchasePackage as purchasePackageWith,
   restorePurchases,
 } from '../services/RevenueCatService';
-import { resolveGrandfatherStatus, RESTORE_GRANTED_KEY } from '../services/GrandfatherService';
 import * as PaywallAnalytics from '../services/PaywallAnalytics';
 
 let _isDevice: boolean | null = null;
@@ -55,7 +54,6 @@ export type RestoreOutcome = 'restored' | 'nothing' | 'cancelled' | 'error';
 interface ProState {
   status: ProStatus;
   entitlementActive: boolean;
-  isGrandfathered: boolean;
   trialActive: boolean;
   trialEndsAt: number | null;
   entitlementExpiresAt: number | null;
@@ -85,7 +83,7 @@ interface ProActions {
 }
 
 export const selectIsPro = (state: ProState): boolean =>
-  DEV_FORCE_PRO || state.entitlementActive || state.isGrandfathered;
+  DEV_FORCE_PRO || state.entitlementActive;
 
 interface CustomerInfoLike {
   entitlements?: {
@@ -144,7 +142,6 @@ async function evaluateInterstitial(
 export const useProStore = create<ProState & ProActions>()((set, get) => ({
   status: 'loading',
   entitlementActive: false,
-  isGrandfathered: false,
   trialActive: false,
   trialEndsAt: null,
   entitlementExpiresAt: null,
@@ -170,11 +167,9 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
         _customerInfoCleanup?.();
         _customerInfoCleanup = onCustomerInfoUpdate(async (info) => {
           const derived = deriveTrialInfo(info);
-          const grandfather = await resolveGrandfatherStatus(info);
           set(() => ({
             ...derived,
-            isGrandfathered: grandfather.isGrandfathered,
-            status: DEV_FORCE_PRO ? 'pro' : (derived.entitlementActive || grandfather.isGrandfathered ? 'pro' : 'free'),
+            status: DEV_FORCE_PRO ? 'pro' : (derived.entitlementActive ? 'pro' : 'free'),
           }));
           await evaluateInterstitial(derived.entitlementActive, set);
         });
@@ -184,17 +179,15 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
     }
 
     try {
-      const grandfather = await resolveGrandfatherStatus(customerInfo);
       const derived = deriveTrialInfo(customerInfo);
       set({
         ...derived,
-        isGrandfathered: grandfather.isGrandfathered,
-        status: DEV_FORCE_PRO ? 'pro' : (derived.entitlementActive || grandfather.isGrandfathered ? 'pro' : 'free'),
+        status: DEV_FORCE_PRO ? 'pro' : (derived.entitlementActive ? 'pro' : 'free'),
         ...(rcError ? { error: rcError } : {}),
       });
       await evaluateInterstitial(derived.entitlementActive, set);
     } catch (error) {
-      set({ error: error instanceof Error ? error.message : 'Failed to resolve grandfather status' });
+      set({ error: error instanceof Error ? error.message : 'Failed to initialize Pro store' });
     }
   },
 
@@ -202,11 +195,9 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
     try {
       const customerInfo = await getCustomerInfo();
       const derived = deriveTrialInfo(customerInfo);
-      const grandfather = await resolveGrandfatherStatus(customerInfo);
       set(() => ({
         ...derived,
-        isGrandfathered: grandfather.isGrandfathered,
-        status: DEV_FORCE_PRO ? 'pro' : (derived.entitlementActive || grandfather.isGrandfathered ? 'pro' : 'free'),
+        status: DEV_FORCE_PRO ? 'pro' : (derived.entitlementActive ? 'pro' : 'free'),
         error: null,
       }));
       await evaluateInterstitial(derived.entitlementActive, set);
@@ -290,7 +281,6 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
         return 'nothing';
       }
       await get().refresh();
-      await AsyncStorage.setItem(RESTORE_GRANTED_KEY, 'true');
       set({ isRestoring: false });
       PaywallAnalytics.trackRestoreOutcome('restored');
       return 'restored';
@@ -338,11 +328,9 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
     const customerInfo = await logInAppUser(appUserID);
     if (!customerInfo) return;
     const derived = deriveTrialInfo(customerInfo);
-    const grandfather = await resolveGrandfatherStatus(customerInfo);
     set(() => ({
       ...derived,
-      isGrandfathered: grandfather.isGrandfathered,
-      status: DEV_FORCE_PRO ? 'pro' : (derived.entitlementActive || grandfather.isGrandfathered ? 'pro' : 'free'),
+      status: DEV_FORCE_PRO ? 'pro' : (derived.entitlementActive ? 'pro' : 'free'),
     }));
   },
 
@@ -351,7 +339,6 @@ export const useProStore = create<ProState & ProActions>()((set, get) => ({
     await logOutAppUser();
     set({
       entitlementActive: false,
-      isGrandfathered: false,
       trialActive: false,
       trialEndsAt: null,
       entitlementExpiresAt: null,

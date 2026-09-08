@@ -102,7 +102,6 @@
 **State:**
 - `status: 'loading' | 'pro' | 'free'`
 - `entitlementActive: boolean`
-- `isGrandfathered: boolean`
 - `trialActive: boolean`
 - `trialEndsAt: number | null`
 - `entitlementExpiresAt: number | null`
