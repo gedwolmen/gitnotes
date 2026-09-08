@@ -81,6 +81,12 @@ export async function resolveGrandfatherStatus(
     }
   }
 
-  await AsyncStorage.setItem(GRANDFATHER_CHECKED_KEY, 'true');
+  // Only cache a definitive negative result when we actually had customerInfo.
+  // If customerInfo was null, we couldn't check iOS grandfathering, so don't
+  // cache a false result — a future call with valid data needs to re-check.
+  const canCache = customerInfo !== null;
+  if (canCache) {
+    await AsyncStorage.setItem(GRANDFATHER_CHECKED_KEY, 'true');
+  }
   return { isGrandfathered: false, reason: 'none' };
 }
