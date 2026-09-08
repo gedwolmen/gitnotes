@@ -498,6 +498,23 @@ export async function push(
 }
 
 /**
+ * Force-push the current branch. Used exclusively by CloneSyncService save()
+ * to implement commit + instant force-push without any queue or conflict UI.
+ * Use with caution — local refs always overwrite remote.
+ */
+export async function pushForce(
+  repoPath: string,
+  remoteName = 'origin',
+  repoId?: string | null,
+): Promise<PushResult> {
+  if (!GitEngineModule) {
+    return { ok: false, error: 'GitEngine native module unavailable' };
+  }
+  await ensureCredentialForOp(repoId);
+  return run(() => GitEngineModule!.push(repoPath, remoteName, repoId ?? null, true), { ok: false, error: 'unavailable' });
+}
+
+/**
  * Push the current branch, transparently fetching + integrating when the
  * remote rejects a non-fast-forward push: local commits are rebased onto the
  * fetched remote tip (or merged when the rebase conflicts) and the push is

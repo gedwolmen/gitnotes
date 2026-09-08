@@ -17,23 +17,9 @@ import { parseRepoPath } from '../../utils/gitPathParser';
 import { makeGitFs as buildGitFs } from './gitFs';
 import { gitHttp } from './gitHttp';
 import { GitFsService, repairHeadRef } from './GitFsService';
+import * as GitEngine from './engine/GitEngine';
 
 const CLONES_SUBDIR = 'GitNotes/';
-
-// ─── minimal git stub (no-op until Rust engine is wired) ─────────────────────
-const git = {
-  async push(_opts: {
-    fs: unknown; http: unknown; dir: string; ref: string; remoteRef: string;
-    onAuth: unknown; force?: boolean; onProgress?: unknown;
-  }): Promise<void> {},
-  async currentBranch(_opts: { fs: unknown; dir: string; fullname: boolean }): Promise<string | null> { return null; },
-  async checkout(_opts: { fs: unknown; dir: string; ref: string }): Promise<void> {},
-  async fetch(_opts: {
-    fs: unknown; http: unknown; dir: string; ref: string; singleBranch: boolean;
-    tags: boolean; onAuth: unknown; depth?: number;
-  }): Promise<void> {},
-  async status(_opts: { fs: unknown; dir: string; filepath: string }): Promise<string> { return 'unmodified'; },
-};
 
 // ---------------------------------------------------------------------------
 // Error classification
@@ -132,63 +118,49 @@ function tokenAuth(token: string | undefined) {
   return () => ({ username: 'x-access-token', password: token });
 }
 
+function repoDirFs(repoPath: string): string {
+  const info = parseRepoPath(repoPath);
+  if (!info) return repoPath;
+  const root = clonesRoot();
+  return `${root.replace(/\/$/, '')}/${info.owner}/${info.repo}`;
+}
+
 async function ensureOnBranch(
-  fs: ReturnType<typeof makeRepoFs>,
-  dir: string,
+  repoPath: string,
   branch: string,
-  token: string | undefined,
 ): Promise<void> {
-  await repairHeadRef(fs, dir, branch);
+  const fsPath = repoDirFs(repoPath);
+  const fs = makeRepoFs();
+  await repairHeadRef(fs, fsPath, branch);
 
-  const current = await git.currentBranch({ fs, dir, fullname: false }).catch(() => null);
-  if (current === branch) return;
+  const repoStatus = await GitEngine.status(repoPath, fsPath).catch(() => null);
+  if (repoStatus?.currentBranch === branch) return;
 
-  const fullRef = `refs/heads/${branch}`;
   try {
-    await git.checkout({ fs, dir, ref: fullRef });
+    await GitEngine.checkoutBranch(fsPath, branch, 'origin');
     return;
   } catch {
     // local branch ref is missing - fetch then retry checkout below.
   }
 
-  await git.fetch({
-    fs,
-    http: gitHttp,
-    dir,
-    ref: branch,
-    singleBranch: true,
-    depth: 1,
-    tags: false,
-    onAuth: tokenAuth(token),
-  });
-  await git.checkout({ fs, dir, ref: fullRef });
+  await GitEngine.fetch(fsPath, 'origin', undefined);
+  await GitEngine.checkoutBranch(fsPath, branch, 'origin');
 }
 
 /**
  * Convert a shallow clone to a full clone by fetching the full history.
  * No-op when the clone is not shallow.
  */
-async function ensureCloneNotShallow(
-  fs: ReturnType<typeof makeRepoFs>,
-  dir: string,
-  branch: string,
-  token: string | undefined,
-): Promise<void> {
-  const shallowPath = `${dir}/.git/shallow`;
+async function ensureCloneNotShallow(repoPath: string): Promise<void> {
+  const fsPath = repoDirFs(repoPath);
+  const fs = makeRepoFs();
+  const shallowPath = `${fsPath}/.git/shallow`;
   try {
     await fs.promises.readFile(shallowPath, 'utf8');
   } catch {
     return;
   }
-  await git.fetch({
-    fs,
-    http: gitHttp,
-    dir,
-    ref: branch,
-    singleBranch: true,
-    tags: false,
-    onAuth: tokenAuth(token),
-  });
+  await GitEngine.fetch(fsPath, 'origin', undefined);
   await fs.promises.unlink(shallowPath).catch(() => undefined);
 }
 
@@ -246,17 +218,12 @@ export async function pushWithRecovery(
   const fs = makeRepoFs();
 
   try {
-    await ensureOnBranch(fs, dir, branch, token);
-    await ensureCloneNotShallow(fs, dir, branch, token);
-    await git.push({
-      fs,
-      http: gitHttp,
-      dir,
-      ref: branch,
-      remoteRef: branch,
-      onAuth: tokenAuth(token),
-      onProgress: onProgress ?? undefined,
-    });
+    await ensureOnBranch(repoPath, branch);
+    await ensureCloneNotShallow(repoPath);
+    const result = await GitEngine.pushWithIntegrate(repoDirFs(repoPath), 'origin', undefined);
+    if (!result.ok) {
+      throw new Error(result.error ?? 'Push failed');
+    }
     return { success: true };
   } catch (pushError) {
     const raw = pushError instanceof Error ? pushError.message : String(pushError);
@@ -270,15 +237,10 @@ export async function pushWithRecovery(
       await GitFsService.removeRepo({ repoPath });
       await GitFsService.clone({ repoPath, branch, token });
       try {
-        await git.push({
-          fs,
-          http: gitHttp,
-          dir,
-          ref: branch,
-          remoteRef: branch,
-          onAuth: tokenAuth(token),
-          onProgress: onProgress ?? undefined,
-        });
+        const result = await GitEngine.pushWithIntegrate(repoDirFs(repoPath), 'origin', undefined);
+        if (!result.ok) {
+          throw new Error(result.error ?? 'Push after clone recovery failed');
+        }
         return { success: true };
       } catch (retryError) {
         const retryRaw = retryError instanceof Error ? retryError.message : String(retryError);
@@ -303,15 +265,10 @@ export async function pushWithRecovery(
           await GitFsService.removeRepo({ repoPath });
           await GitFsService.clone({ repoPath, branch, token });
           try {
-            await git.push({
-              fs,
-              http: gitHttp,
-              dir,
-              ref: branch,
-              remoteRef: branch,
-              onAuth: tokenAuth(token),
-              onProgress: onProgress ?? undefined,
-            });
+            const result = await GitEngine.pushWithIntegrate(repoDirFs(repoPath), 'origin', undefined);
+            if (!result.ok) {
+              throw new Error(result.error ?? 'Push after clone recovery failed');
+            }
             return { success: true };
           } catch (retryError) {
             const retryRaw = retryError instanceof Error ? retryError.message : String(retryError);
@@ -328,15 +285,10 @@ export async function pushWithRecovery(
 
       // Retry push after successful pull
       try {
-        await git.push({
-          fs,
-          http: gitHttp,
-          dir,
-          ref: branch,
-          remoteRef: branch,
-          onAuth: tokenAuth(token),
-          onProgress: onProgress ?? undefined,
-        });
+        const result = await GitEngine.pushWithIntegrate(repoDirFs(repoPath), 'origin', undefined);
+        if (!result.ok) {
+          throw new Error(result.error ?? 'Push retry failed');
+        }
         return { success: true };
       } catch (retryError) {
         const retryRaw = retryError instanceof Error ? retryError.message : String(retryError);
@@ -382,18 +334,12 @@ export async function pushWithForce(
   const fs = makeRepoFs();
 
   try {
-    await ensureOnBranch(fs, dir, branch, token);
-    await ensureCloneNotShallow(fs, dir, branch, token);
-    await git.push({
-      fs,
-      http: gitHttp,
-      dir,
-      ref: branch,
-      remoteRef: branch,
-      force: true,
-      onAuth: tokenAuth(token),
-      onProgress: onProgress ?? undefined,
-    });
+    await ensureOnBranch(repoPath, branch);
+    await ensureCloneNotShallow(repoPath);
+    const result = await GitEngine.pushForce(repoDirFs(repoPath), 'origin', undefined);
+    if (!result.ok) {
+      throw new Error(result.error ?? 'Force push failed');
+    }
     return { success: true };
   } catch (pushError) {
     const raw = pushError instanceof Error ? pushError.message : String(pushError);
@@ -415,17 +361,16 @@ export async function repairCloneAfterCorruption(opts: {
   filePathForRecoveryCheck?: string;
 }): Promise<void> {
   const { repoPath, branch, token, filePathForRecoveryCheck } = opts;
-  const info = parseRepoPath(repoPath);
-  if (!info) throw new Error(`Invalid repo path: ${repoPath}`);
 
-  const dir = repoDirVirtual(info.owner, info.repo);
+  const fsPath = repoDirFs(repoPath);
   const fs = makeRepoFs();
 
   // Check for uncommitted working tree changes that would be lost
   if (filePathForRecoveryCheck !== undefined) {
     try {
-      const status = await git.status({ fs, dir, filepath: filePathForRecoveryCheck });
-      if (status !== 'unmodified') {
+      const statuses = await GitEngine.statuses(fsPath);
+      const fileStatus = statuses.find(s => s.path === filePathForRecoveryCheck);
+      if (fileStatus && fileStatus.status !== 'unmodified') {
         throw new Error(
           `Clone corruption detected with uncommitted changes to '${filePathForRecoveryCheck}' in ${repoPath}@${branch}. ` +
           `Please commit your changes before continuing.`,

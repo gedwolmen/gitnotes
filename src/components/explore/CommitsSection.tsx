@@ -17,7 +17,7 @@ import { useTokens } from '@/contexts/ThemeContext';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-export function CommitsSection({ repo, active, chromeTopInset = 0 }: SectionProps) {
+export function CommitsSection({ repo, active, chromeTopInset = 0, refreshStatus }: SectionProps) {
   const navigation = useNavigation<NavigationProp>();
   const toast = useToast();
   const { colors } = useTokens();
@@ -76,6 +76,7 @@ export function CommitsSection({ repo, active, chromeTopInset = 0 }: SectionProp
           ),
         });
         await load();
+        await refreshStatus?.();
       } else {
         toast.show({
           placement: 'top',
