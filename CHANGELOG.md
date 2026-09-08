@@ -26,6 +26,14 @@ All notable fixes and feature changes to GitNotēs are documented here.
 
 **PR:** #1448
 
+### fix(paywall): iOS grandfathering cache race condition
+
+**What:** `resolveGrandfatherStatus()` cached a negative grandfathering result even when `customerInfo` was `null` — meaning RevenueCat hadn't loaded yet. On the next launch, RevenueCat would return valid data, but the cached `GRANDFATHER_CHECKED_KEY` flag caused an immediate early return, permanently denying Pro to legitimate pre-paywall iOS users.
+
+**fix(paywall):** Only set `GRANDFATHER_CHECKED_KEY` when `customerInfo` was non-null, allowing future calls to re-check once RevenueCat has loaded.
+
+**PR:** #1447
+
 ### fix(sync): add complete conflict resolution actions
 
 **What:** Conflict resolution now offers Accept ours, Accept theirs, Accept both, and Full edit. Saving writes the resolved content, stages and commits it, pushes immediately, then pulls and refreshes Notes, Canvases, and Todos. The conflict list no longer renders the stray red square indicator.
