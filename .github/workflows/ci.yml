@@ -15,8 +15,6 @@ jobs:
     name: TypeScript + Jest
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    permissions:
-      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -31,10 +29,6 @@ jobs:
         run: |
           rm -rf node_modules
           yarn install
-
-      - name: Update lockfile if changed
-        run: |
-          git diff --quiet yarn.lock || (git config user.email "ci@github.com" && git config user.name "CI" && git add yarn.lock && git commit -m "ci: update stale yarn.lock" && git push)
 
       - name: TypeScript check
         run: yarn ts:check
