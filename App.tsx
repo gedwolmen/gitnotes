@@ -142,11 +142,8 @@ export default function App() {
     void LastSelectionPreferenceService.migrateFromLegacy();
   }, []);
 
-  // Record the Android first-seen build unconditionally at startup — this must run
-  // on every app launch (not just first launch) because it writes to AsyncStorage
-  // only when the key is absent. Gating it inside checkOnboarding would skip it for
-  // returning users who have already completed onboarding, breaking Android
-  // grandfathering: resolveGrandfatherStatus would find no FIRST_SEEN_BUILD_KEY and
+  // Run onboarding check on app launch. Gating it inside checkOnboarding would
+  // skip it for returning users who have already completed onboarding.
   useEffect(() => {
     checkOnboarding();
   }, [checkOnboarding]);
