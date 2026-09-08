@@ -180,14 +180,24 @@ pub fn remove_paths(path: &Path, paths: &[String], keep_worktree: bool) -> Resul
 pub fn discard_files(path: &Path, paths: &[String]) -> Result<()> {
     run_with_lock(path, || {
         let repo = open_repo(path)?;
+        let workdir = repo.workdir().ok_or_else(|| EngineError::Invalid("Not a working directory".into()))?;
         let head = repo.head()?;
         let commit = head.peel_to_commit()?;
+        let tree = commit.tree()?;
         for p in paths {
-            let mut checkout = git2::build::CheckoutBuilder::new();
-            checkout.force();
-            checkout.path(p);
-            repo.checkout_tree(commit.as_object(), Some(&mut checkout))
-                .map_err(EngineError::Git)?;
+            let target_path = workdir.join(p);
+            match tree.get_path(Path::new(p)) {
+                Ok(entry) => {
+                    let blob = repo.find_blob(entry.id())?;
+                    std::fs::write(&target_path, blob.content())?;
+                }
+                Err(e) if e.code() == git2::ErrorCode::NotFound => {
+                    if target_path.exists() {
+                        std::fs::remove_file(&target_path)?;
+                    }
+                }
+                Err(e) => return Err(EngineError::Git(e)),
+            }
         }
         Ok(())
     })
