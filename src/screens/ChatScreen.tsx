@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Text, View } from 'react-native';
-import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useRoute, type RouteProp } from '@react-navigation/native';
 
 import { ChatMessageBubble } from '../components/ai/ChatMessageBubble';
 import { ChatHintChips } from '../components/ai/ChatHintChips';
@@ -22,12 +21,10 @@ import { useTranslation } from 'react-i18next';
 import { useProScreenGuard } from '../hooks/useProScreenGuard';
 import { useSafeBack } from '../hooks/useSafeBack';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'ChatScreen'>;
 type ChatScreenRouteProp = RouteProp<RootStackParamList, 'ChatScreen'>;
 
 export default function ChatScreen() {
   const { t } = useTranslation();
-  const navigation = useNavigation<NavigationProp>();
   const safeBack = useSafeBack();
   const route = useRoute<ChatScreenRouteProp>();
   const { colors, spacing, type } = useTokens();

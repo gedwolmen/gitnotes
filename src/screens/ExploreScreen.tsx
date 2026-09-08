@@ -25,10 +25,10 @@ import { useGitRepoStatus } from '@/hooks/useGitRepoStatus';
 import { useAllReposStatus } from '@/hooks/useAllReposStatus';
 import { useRepoStore } from '@/stores/repoStore';
 import { GitFsService } from '@/services/git/GitFsService';
-import * as GitEngine from '@/services/git/engine/GitEngine';
 import { GitSyncGate } from '@/services/git/GitSyncGate';
-import { AuthService } from '@/services/AuthService';
 import { pushWithForce } from '@/services/git/recovery';
+import { AuthService } from '@/services/AuthService';
+
 import { LastUsedRepoService } from '@/services/LastUsedRepoService';
 import { useGitButtonActionStore } from '@/stores/gitButtonActionStore';
 import type { GitRepository } from '@/services/GitService';

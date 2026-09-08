@@ -27,17 +27,6 @@ interface GitHubRepoMeta {
   default_branch?: string;
 }
 
-interface GitHubTreeEntryRaw {
-  path: string;
-  type: 'tree' | 'blob' | string;
-  sha: string;
-  size?: number;
-}
-
-interface GitHubTreeResponse {
-  tree?: GitHubTreeEntryRaw[];
-}
-
 interface GitHubIssueWithAuthor extends GitHubIssue {
   user?: { login?: string } | null;
 }

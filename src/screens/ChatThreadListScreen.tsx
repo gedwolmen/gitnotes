@@ -234,7 +234,6 @@ export default function ChatThreadListScreen() {
             if (!chatRepoOwner || !chatRepoName || !chatRepoBranch) return;
             githubActivity.begin(t('chat.deletingMany'));
             try {
-              let deletedCount = 0;
               for (const threadId of ids) {
                 const deleted = await deleteThread({
                   owner: chatRepoOwner,
@@ -249,7 +248,6 @@ export default function ChatThreadListScreen() {
                   HapticService.error();
                   return;
                 }
-                deletedCount += 1;
               }
               HapticService.success();
               setSelectedIds(new Set());

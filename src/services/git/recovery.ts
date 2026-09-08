@@ -15,7 +15,6 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import { parseRepoPath } from '../../utils/gitPathParser';
 import { makeGitFs as buildGitFs } from './gitFs';
-import { gitHttp } from './gitHttp';
 import { GitFsService, repairHeadRef } from './GitFsService';
 import * as GitEngine from './engine/GitEngine';
 
@@ -107,15 +106,6 @@ function clonesRoot(): string {
 
 function makeRepoFs() {
   return buildGitFs(clonesRoot());
-}
-
-function repoDirVirtual(owner: string, repo: string): string {
-  return `/${owner}/${repo}`;
-}
-
-function tokenAuth(token: string | undefined) {
-  if (!token) return undefined;
-  return () => ({ username: 'x-access-token', password: token });
 }
 
 function repoDirFs(repoPath: string): string {
@@ -210,12 +200,9 @@ export interface PushWithRecoveryResult {
 export async function pushWithRecovery(
   opts: PushWithRecoveryOptions,
 ): Promise<PushWithRecoveryResult> {
-  const { repoPath, branch, token, onProgress } = opts;
+  const { repoPath, branch, token } = opts;
   const info = parseRepoPath(repoPath);
   if (!info) return { success: false, error: `Invalid repo path: ${repoPath}` };
-
-  const dir = repoDirVirtual(info.owner, info.repo);
-  const fs = makeRepoFs();
 
   try {
     await ensureOnBranch(repoPath, branch);
@@ -326,12 +313,9 @@ export interface PushWithForceResult {
 export async function pushWithForce(
   opts: PushWithForceOptions,
 ): Promise<PushWithForceResult> {
-  const { repoPath, branch, token, onProgress } = opts;
+  const { repoPath, branch } = opts;
   const info = parseRepoPath(repoPath);
   if (!info) return { success: false, error: `Invalid repo path: ${repoPath}` };
-
-  const dir = repoDirVirtual(info.owner, info.repo);
-  const fs = makeRepoFs();
 
   try {
     await ensureOnBranch(repoPath, branch);
@@ -363,7 +347,6 @@ export async function repairCloneAfterCorruption(opts: {
   const { repoPath, branch, token, filePathForRecoveryCheck } = opts;
 
   const fsPath = repoDirFs(repoPath);
-  const fs = makeRepoFs();
 
   // Check for uncommitted working tree changes that would be lost
   if (filePathForRecoveryCheck !== undefined) {

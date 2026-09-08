@@ -9,7 +9,6 @@ import { Text } from '@/components/ui/text';
 import GitButtonHalo from './GitButtonHalo';
 import { GIT_BUTTON_SIZE } from './gitButtonGeometry';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useRepoStore } from '@/stores/repoStore';
 import type { AggregatedGitState } from '@/hooks/useAllReposStatus';
 import { useFloatingGitButtonPosition } from './useFloatingGitButtonPosition';
 import { useFloatingGitButtonPanGesture } from './useFloatingGitButtonPanGesture';
@@ -49,7 +48,6 @@ export default function FloatingGitButton({
   disabled = false,
 }: FloatingGitButtonProps) {
   const { colors } = useTheme();
-  const repos = useRepoStore((state) => state.repositories);
 
   const state: AggregatedGitState = aggregatedState ?? {
     perRepo: new Map(),

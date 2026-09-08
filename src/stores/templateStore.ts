@@ -1,8 +1,6 @@
 import { create } from 'zustand';
 import { NoteTemplate, NOTE_TEMPLATES } from '../services/TemplateService';
 import { StorageService } from '../services/StorageService';
-import { TemplateRepoPreferenceService } from '../services/TemplateRepoPreferenceService';
-import { serializeTemplate, templateSlug } from '../services/TemplateMarkdownService';
 import { generateId } from '../utils/ids';
 
 interface TemplateState {

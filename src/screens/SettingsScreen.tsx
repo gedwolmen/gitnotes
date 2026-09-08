@@ -20,7 +20,7 @@ import { RepoFileSyncService } from '../services/RepoFileSyncService';
 import { TemplateRepoPreferenceService, type TemplateRepoPreference } from '../services/TemplateRepoPreferenceService';
 import { serializeTemplate, templateSlug } from '../services/TemplateMarkdownService';
 import { NoteSyncQueueService, SyncEngineService } from '../services/cloneSyncServiceImpl';
-import { hasUnpushedLocalCommits } from '../services/git/LocalGitWriter';
+
 import { GitFsService } from '../services/git/GitFsService';
 import { cancelInflightGitHttp } from '../services/git/gitHttp';
 import { CloneMigrationService } from '../services/git/CloneMigrationService';
@@ -49,7 +49,7 @@ import { importRepoAtAdd } from '../services/RepoImportService';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { AccountStorage } from '../services/AccountStorage';
-import { generateSshKey, setCredential, clearCredential } from '../services/git/engine/GitEngine';
+import { generateSshKey, clearCredential } from '../services/git/engine/GitEngine';
 import { RepoAccessPreflightError } from '../services/git/repoAccessPreflight';
 import { useProStatus } from '../hooks/useProGate';
 import { useFloatingGitButtonStore } from '../stores/floatingGitButtonStore';
@@ -307,8 +307,8 @@ export default function SettingsScreen() {
                 HapticService.success();
                 Alert.alert(t('settings.pushedEditsTitle'), t('settings.pushedEditsBody', { total, name: repo.name }));
               }
-            } catch (error) {
-              HapticService.error();
+    } catch (error) {
+      HapticService.error();
               Alert.alert(t('settings.migrationFailedTitle'), error instanceof Error ? error.message : String(error));
             }
           },
@@ -384,7 +384,7 @@ export default function SettingsScreen() {
       const repo = repositories.find((r) => r.path === cloningRepo);
       if (repo) {
         setCloneProgress(null);
-        handleEnableCloneMode(repo, true).catch(() => {});
+        handleEnableCloneMode(repo, true).catch(() => {/* noop */});
       }
     }
   }, [cloningRepo, repositories, handleEnableCloneMode]);
@@ -567,6 +567,7 @@ export default function SettingsScreen() {
           console.warn('[SettingsScreen] add-repo import pulled zero contents', { repoPath, counts: result.counts });
         }
       } catch {
+        /* noop - expected: logs already emitted by SyncEngineService */
       }
     }
     setShowRepoPickerModal(false);
@@ -901,7 +902,7 @@ export default function SettingsScreen() {
               await disconnectHost(hostId);
               await useRepoStore.getState().removeRepositoriesForHosts(removedHosts, providerAccountCount);
               HapticService.success();
-            } catch (err) {
+      } catch (err) {
               HapticService.error();
               Alert.alert(
                 t('accounts.disconnectFailedTitle'),
@@ -923,7 +924,7 @@ export default function SettingsScreen() {
       try {
         const keys = await generateSshKey(null);
         setSshKeyData(keys);
-      } catch (err) {
+      } catch {
         setSshKeyData(null);
       } finally {
         setSshGenerating(false);
@@ -951,7 +952,7 @@ export default function SettingsScreen() {
       const { setStringAsync } = await import('expo-clipboard');
       await setStringAsync(publicKey);
       HapticService.success();
-    } catch (error) {
+    } catch {
       HapticService.error();
     }
   }, []);

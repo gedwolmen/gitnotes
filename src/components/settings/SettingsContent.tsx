@@ -298,6 +298,7 @@ export function SettingsContent(props: SettingsContentProps) {
           await FileSystem.deleteAsync(manifestUri);
         }
       } catch {
+        // ignore cleanup errors
       }
       HapticService.success();
       Alert.alert(t('settings.resetAIMemorySuccess'));

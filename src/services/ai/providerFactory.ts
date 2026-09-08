@@ -11,7 +11,6 @@
  * 5. Write tests in `__tests__/ai/` covering build, availability, and limits
  */
 
-import type { LanguageModel } from 'ai';
 import type { AIModelConfig, AIProviderConfig, AIProviderType } from '../../models/AIProvider';
 import type { ModelContextLimit } from './modelLimits';
 import { isAnthropicBaseURL } from './anthropicDefaults';

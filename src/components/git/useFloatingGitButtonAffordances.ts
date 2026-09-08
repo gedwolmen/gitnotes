@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import {
   cancelAnimation,
   useSharedValue,
@@ -40,14 +40,13 @@ export interface FloatingGitButtonAffordances {
 export function useFloatingGitButtonAffordances(
   options: FloatingGitButtonAffordanceOptions,
 ): FloatingGitButtonAffordances {
-  const { reduceMotionEnabled, reduceMotionResolved, menuOpen, onReleaseSegment } = options;
+  const { reduceMotionEnabled, reduceMotionResolved, onReleaseSegment } = options;
 
   const entranceProgress = useSharedValue(0);
   const pressProgress = useSharedValue(0);
   const holdProgress = useSharedValue(0);
 
-  const [reduceMotionEnabledState, setReduceMotionEnabled] = useState(false);
-  const [reduceMotionResolvedState, setReduceMotionResolved] = useState(false);
+
 
   useEffect(() => {
     if (!reduceMotionResolved) return;
@@ -69,11 +68,11 @@ export function useFloatingGitButtonAffordances(
 
   const handlePressIn = useCallback(() => {
     pressProgress.value = withSpring(1, PRESS_SPRING);
-    console.log('[DEBUG handlePressIn] starting hold animation, reduceMotionEnabledState =', reduceMotionEnabledState);
-    if (!reduceMotionEnabledState) {
+    console.log('[DEBUG handlePressIn] starting hold animation, reduceMotionEnabled =', reduceMotionEnabled);
+    if (!reduceMotionEnabled) {
       holdProgress.value = withTiming(1, { duration: HOLD_FILL_MS });
     }
-  }, [reduceMotionEnabledState, pressProgress, holdProgress]);
+  }, [reduceMotionEnabled, pressProgress, holdProgress]);
 
   const handlePressOut = useCallback(() => {
     pressProgress.value = withSpring(0, PRESS_SPRING);

@@ -89,7 +89,9 @@ export function useEntityList<T>(config: UseEntityListConfig<T>): UseEntityListR
 
   useEffect(() => {
     if (!persistenceKey || !hydrated) return;
-    AsyncStorage.setItem(persistenceKey, JSON.stringify(filters)).catch(() => {});
+    AsyncStorage.setItem(persistenceKey, JSON.stringify(filters)).catch(() => {
+      // noop
+    });
   }, [filters, hydrated, persistenceKey]);
 
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();

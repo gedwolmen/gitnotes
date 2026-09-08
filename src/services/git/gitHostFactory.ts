@@ -1,7 +1,7 @@
 import { gitHubHostService } from './GitHubHostService';
 import { gitLabService } from './GitLabService';
 import { GiteaLikeHostService } from './GiteaLikeHostService';
-import { GIT_HOST_API_BASES, type GitHostProvider, type GitHostService, type GitHostFullService } from './GitHost';
+import { GIT_HOST_API_BASES, type GitHostProvider, type GitHostFullService } from './GitHost';
 
 const giteaService = new GiteaLikeHostService('gitea', GIT_HOST_API_BASES.gitea);
 const forgejoService = new GiteaLikeHostService('forgejo', GIT_HOST_API_BASES.forgejo);

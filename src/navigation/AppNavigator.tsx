@@ -119,10 +119,6 @@ export default function AppNavigator({ showOnboarding, onOnboardingComplete, onO
     navigationRef.navigate('Paywall');
   }, [interstitialEligible, isPro, markInterstitialShown, navigationRef, navigationReady]);
 
-  const handleOnReady = React.useCallback(() => {
-    setNavigationReady(true);
-  }, []);
-
   useEffect(() => {
     if (showOnboarding) return;
     if (navigationRef.isReady()) {

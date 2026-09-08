@@ -43,21 +43,6 @@ import { LastSelectionPreferenceService } from '../services/LastSelectionPrefere
 
 const FILTER_COMPLETED_PERSISTENCE_KEY = '@gitnotes:filters:todo-completed';
 
-/** Mirrors TodoGitHubSyncService.serializeTodo so staged todos keep the on-disk shape. */
-function serializeTodoForStage(todo: Partial<Todo>): string {
-  const data = {
-    text: todo.text ?? '',
-    completed: todo.completed ?? false,
-    priority: todo.priority,
-    notes: todo.notes,
-    tags: todo.tags ?? [],
-    dueDate: todo.dueDate,
-    createdAt: todo.createdAt,
-    updatedAt: todo.updatedAt,
-  };
-  return JSON.stringify(data, null, 2);
-}
-
 export default function TodoListScreen() {
   const { t } = useTranslation();
   const { colors, isDark } = useTheme();
@@ -139,7 +124,7 @@ export default function TodoListScreen() {
 
   useEffect(() => {
     if (!filterCompletedHydrated) return;
-    AsyncStorage.setItem(FILTER_COMPLETED_PERSISTENCE_KEY, String(filterCompleted)).catch(() => {});
+    AsyncStorage.setItem(FILTER_COMPLETED_PERSISTENCE_KEY, String(filterCompleted)).catch(() => {/* noop */});
   }, [filterCompleted, filterCompletedHydrated]);
 
   useEffect(() => {

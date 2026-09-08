@@ -788,7 +788,6 @@ export default function CanvasEditorContent() {
       const orig = resizeOriginalRef.current;
       const aspect = orig.w / orig.h;
       let newW: number;
-      let newH: number;
       const handle = resizeHandleRef.current;
 
       if (handle === 'br' || handle === 'tr') {
@@ -796,7 +795,7 @@ export default function CanvasEditorContent() {
       } else {
         newW = Math.max(40, orig.w - dx);
       }
-      newH = Math.max(40, newW / aspect);
+      const newH = Math.max(40, newW / aspect);
 
       const selectedId = selectedIds[0];
       setElements((prev) => prev.map((el) => {
@@ -1116,7 +1115,7 @@ export default function CanvasEditorContent() {
     saveHistory();
     setElements((prev) => prev.map((el) => {
       if (!selectedIds.includes(el.id)) return el;
-      const { animation: _removed, ...rest } = el as typeof el & { animation?: unknown };
+      const rest = (({ animation: _, ...restEl }) => restEl)(el as typeof el & { animation?: unknown });
       return rest as typeof el;
     }));
     setAnimModalVisible(false);

@@ -3,7 +3,6 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { parseRepoPath } from '../../utils/gitPathParser';
 import { formatSyncError } from './formatSyncError';
 import { GitFsService } from './GitFsService';
-import { makeGitFs } from './gitFs';
 import { commitWrite, commitDelete, ensureOnBranch } from './commitOps';
 import { pushWithRecovery, isCorruptionError, hasUnpushedLocalCommits, classifyPushError } from './recovery';
 
@@ -26,7 +25,7 @@ function clonesRoot(): string {
 const git = {
   async branch(_opts: {
     fs: unknown; dir: string; ref: string; object?: string; force?: boolean; checkout?: boolean;
-  }): Promise<void> {},
+  }): Promise<void> { /* noop */ },
 };
 
 export class LocalGitWriter {

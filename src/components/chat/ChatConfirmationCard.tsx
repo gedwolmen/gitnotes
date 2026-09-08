@@ -13,7 +13,7 @@ type Props = {
   onCancel: () => void;
 };
 
-export function ChatConfirmationCard({ pendingConfirmation, colors, spacing, type, onApply, onCancel }: Props) {
+export function ChatConfirmationCard({ pendingConfirmation, onApply, onCancel }: Props) {
   const { t } = useTranslation();
   if (!pendingConfirmation) return null;
 

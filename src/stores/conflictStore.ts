@@ -20,10 +20,10 @@ export const useConflictStore = create<ConflictState & ConflictActions>()(() => 
   isLoading: false,
   loadError: false,
 
-  loadConflicts: async () => {},
-  addConflict: () => {},
-  updateConflict: async () => {},
-  removeConflict: async () => {},
+  loadConflicts: async () => { /* noop */ },
+  addConflict: () => { /* noop */ },
+  updateConflict: async () => { /* noop */ },
+  removeConflict: async () => { /* noop */ },
   getConflict: () => undefined,
   totalUnresolvedFiles: () => 0,
 }));

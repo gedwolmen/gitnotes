@@ -48,20 +48,7 @@ function showDurableSyncFailureAlert(kind: ReturnType<typeof classifyGitHubSyncE
   }
 }
 
-type DurableSyncFailureKind = ReturnType<typeof classifyGitHubSyncError>['kind'];
 
-const DURABLE_DROP_KINDS: readonly DurableSyncFailureKind[] = [
-  'authentication',
-  'permission',
-  'saml',
-  'conflict',
-  'not_found',
-];
-
-function durableDropAlertKind(error: string | undefined): DurableSyncFailureKind {
-  const match = DURABLE_DROP_KINDS.find((kind) => kind === error);
-  return match ?? 'conflict';
-}
 
 function normalizeBranch(branch: string | undefined): string {
   return branch || 'main';

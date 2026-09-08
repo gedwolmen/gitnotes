@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { GitHubContent, GitHubService } from '../../services/GitHubService';
+import { GitHubService } from '../../services/GitHubService';
 import { AuthService } from '../../services/AuthService';
 import { SyncEngineService } from '../../services/cloneSyncServiceImpl';
 import { LocalGitWriter } from '../../services/git/LocalGitWriter';

@@ -17,10 +17,10 @@ interface Credential {
 const AccountService = {
   listAccounts: async () => [] as Account[],
   getActiveAccountId: async () => null as string | null,
-  setActiveAccountId: async (_id: string | null) => {},
-  updateAccount: async (_id: string, _patch: { name?: string; email?: string | null }) => {},
-  deleteAccount: async (_id: string) => {},
-  setCredential: async (_accountId: string, _credential: Credential) => {},
+  setActiveAccountId: async (_id: string | null) => { /* noop */ },
+  updateAccount: async (_id: string, _patch: { name?: string; email?: string | null }) => { /* noop */ },
+  deleteAccount: async (_id: string) => { /* noop */ },
+  setCredential: async (_accountId: string, _credential: Credential) => { /* noop */ },
 };
 
 interface AccountState {

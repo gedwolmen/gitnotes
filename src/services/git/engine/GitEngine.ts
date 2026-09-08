@@ -71,7 +71,8 @@ let GitEngineModule: NativeGitEngineModule | null = null;
 
 try {
   GitEngineModule = requireNativeModule<NativeGitEngineModule>('GitEngine');
-} catch (e) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+} catch (_e) {
   console.warn('[GitEngine] Native module not available, using stub implementation');
 }
 
@@ -90,9 +91,9 @@ if (
 
 // Stub for missing auth modules
 const CredentialStore = {
-  save: async (_repoId: string, _credential: Credential) => {},
+  save: async (_repoId: string, _credential: Credential) => {/* noop */},
   get: async (_repoId: string) => null as Credential | null,
-  delete: async (_repoId: string) => {},
+  delete: async (_repoId: string) => {/* noop */},
 };
 type Credential = { kind: string; username?: string; privateKey?: string; publicKey?: string | null; passphrase?: string | null; token?: string };
 
@@ -277,7 +278,7 @@ export function addEngineProgressListener(
   listener: (event: GitProgressEvent) => void,
 ): EventSubscription {
   if (!GitEngineModule) {
-    return { remove: () => {} } as EventSubscription;
+    return { remove: () => {/* noop */} } as EventSubscription;
   }
   return GitEngineModule.addListener('onEngineProgress', listener as (...args: unknown[]) => void);
 }

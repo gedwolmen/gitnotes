@@ -49,7 +49,7 @@ const GO_KEYWORDS = new Set(['func', 'package', 'import', 'return', 'if', 'else'
 
 const COMMON_NUMBER = /\b\d+(?:\.\d+)?\b/y;
 const COMMON_OPERATOR = /===|!==|==|!=|<=|>=|->|=>|\+\+|--|&&|\|\||[:=+\-*/%<>]/y;
-const COMMON_PUNCTUATION = /[(){}\[\],.;<>]/y;
+const COMMON_PUNCTUATION = /[(){},.;<>]/y;
 const COMMON_IDENTIFIER = /[A-Za-z_$][\w$-]*/y;
 const COMMON_WHITESPACE = /\s+/y;
 
@@ -98,7 +98,7 @@ function buildConfig(language: string): LanguageConfig | null {
         stringMatchers: [/'''[\s\S]*?'''/y, /"""[\s\S]*?"""/y, /'(?:\\.|[^'\\])*'/y, /"(?:\\.|[^"\\])*"/y],
         numberMatcher: COMMON_NUMBER,
         operatorMatcher: COMMON_OPERATOR,
-        punctuationMatcher: /[(){}\[\],.:]/y,
+        punctuationMatcher: /[(){},.:]/y,
         identifierMatcher: COMMON_IDENTIFIER,
       };
     case 'bash':
@@ -122,7 +122,7 @@ function buildConfig(language: string): LanguageConfig | null {
         stringMatchers: [/"(?:\\.|[^"\\])*"/y],
         numberMatcher: COMMON_NUMBER,
         operatorMatcher: COMMON_OPERATOR,
-        punctuationMatcher: /[{}\[\],:]/y,
+        punctuationMatcher: /[{},:]/y,
         identifierMatcher: COMMON_IDENTIFIER,
       };
     case 'yaml':
@@ -134,7 +134,7 @@ function buildConfig(language: string): LanguageConfig | null {
         stringMatchers: [/"(?:\\.|[^"\\])*"/y, /'(?:\\.|[^'\\])*'/y],
         numberMatcher: COMMON_NUMBER,
         operatorMatcher: /:/y,
-        punctuationMatcher: /[:\-\[\]{}.,]/y,
+        punctuationMatcher: /[:-{}.,-]/y,
         identifierMatcher: COMMON_IDENTIFIER,
       };
     case 'css':
@@ -156,7 +156,7 @@ function buildConfig(language: string): LanguageConfig | null {
         stringMatchers: [/"(?:\\.|[^"\\])*"/y, /'(?:\\.|[^'\\])*'/y],
         numberMatcher: COMMON_NUMBER,
         operatorMatcher: /[:=]/y,
-        punctuationMatcher: /[<>\/]/y,
+        punctuationMatcher: /[<>]/y,
         identifierMatcher: COMMON_IDENTIFIER,
       };
     case 'sql':

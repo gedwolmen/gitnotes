@@ -18,8 +18,8 @@ function stripLineDecorators(value: string): string {
     .replace(/^[-*+]\s+/, '')
     .replace(/^\d+[.)]\s+/, '')
     .replace(/^\[[ xX]\]\s+/, '')
-    .replace(/^["'`~*_\-–—•()\[\]{}:;,.!?/\\]+/, '')
-    .replace(/["'`~*_\-–—•()\[\]{}:;,.!?/\\]+$/, '')
+    .replace(/^["'`~*_\-–—•()[{}:;,.!?/\\]+/, '')
+    .replace(/["'`~*_\-–—•()[{}:;,.!?/\\]+$/, '')
     .trim();
 }
 

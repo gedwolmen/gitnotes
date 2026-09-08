@@ -7,7 +7,6 @@
 
 import * as FileSystem from 'expo-file-system/legacy';
 import { parseRepoPath } from '../utils/gitPathParser';
-import * as GitEngine from './git/engine/GitEngine';
 
 const CLONES_SUBDIR = 'GitNotes/';
 
@@ -31,8 +30,12 @@ export const SyncEngineService = {
   async getMode(_repoPath: string): Promise<SyncEngineMode> {
     return 'clone';
   },
-  async setMode(_repoPath: string, _mode: SyncEngineMode): Promise<void> {},
-  async clear(_repoPath: string): Promise<void> {},
+  async setMode(_repoPath: string, _mode: SyncEngineMode): Promise<void> {
+    // noop
+  },
+  async clear(_repoPath: string): Promise<void> {
+    // noop
+  },
 };
 
 // NoteSyncQueueService stubs
@@ -86,11 +89,19 @@ export const NoteSyncQueueService = {
       color?: string | null | undefined;
     },
     _noteId?: string,
-  ): Promise<void> {},
+  ): Promise<void> {
+    // noop
+  },
 
-  async enqueueNoteDelete(_params: NoteDeleteParams): Promise<void> {},
-  async enqueueNoteDeletes(_params: NoteDeleteParams[]): Promise<void> {},
-  async drain(): Promise<void> {},
+  async enqueueNoteDelete(_params: NoteDeleteParams): Promise<void> {
+    // noop
+  },
+  async enqueueNoteDeletes(_params: NoteDeleteParams[]): Promise<void> {
+    // noop
+  },
+  async drain(): Promise<void> {
+    // noop
+  },
   async getAll(): Promise<QueuedMutation[]> {
     return [];
   },
@@ -105,19 +116,27 @@ export const NoteSyncQueueService = {
     return 0;
   },
   subscribe(_callback: () => void): () => void {
-    return () => {};
+    return () => {
+      // noop
+    };
   },
   onDroppedMutation(
     _callback: (event: DroppedMutationEvent) => void,
   ): () => void {
-    return () => {};
+    return () => {
+      // noop
+    };
   },
   onMutationSucceeded(
     _callback: (event: MutationSucceededEvent) => void,
   ): () => void {
-    return () => {};
+    return () => {
+      // noop
+    };
   },
-  async purgeForRepo(_repoPath: string): Promise<void> {},
+  async purgeForRepo(_repoPath: string): Promise<void> {
+    // noop
+  },
 };
 
 // CloneSyncService stubs

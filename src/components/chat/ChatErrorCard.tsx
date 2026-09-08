@@ -14,7 +14,7 @@ type Props = {
   onDismiss: () => void;
 };
 
-export function ChatErrorCard({ message, colors, spacing, type, canRetry, isStreaming, onRetry, onDismiss }: Props) {
+export function ChatErrorCard({ message, canRetry, isStreaming, onRetry, onDismiss }: Props) {
   const { t } = useTranslation();
   if (!message) return null;
 

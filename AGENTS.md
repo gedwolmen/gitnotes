@@ -71,6 +71,12 @@ yarn eslint . --ext .ts,.tsx  # Linting
 - Keep functions short and focused (single responsibility).
 - Use the existing patterns in `src/services/` as reference.
 - **Never keep deprecated code.** When a library/module deprecates an API (e.g., `FileSystem.deleteAsync`), migrate to the replacement immediately. Do not leave deprecated calls in the codebase — fix them as part of the same change that introduces them.
+- **Zero tolerance for lint-blocking issues.** Before committing, verify `yarn eslint src --ext .ts,.tsx` reports **0 errors**. Agents must proactively eliminate these categories on every change:
+  - `@typescript-eslint/no-unused-vars` — remove unused imports, variables, and function parameters; prefix intentionally unused parameters with `_`
+  - `@typescript-eslint/no-empty-function` — replace empty function bodies with `/* noop */` comments (never leave `{}` or `async () => {}`)
+  - `prefer-const` — change `let` to `const` when the variable is never reassigned
+  - `no-useless-escape` — remove unnecessary escape characters in regex (`\[` → `[`, `\]` → `]`, `\-` → `-`, `\/` → `/`)
+  - `no-empty` — never leave empty block statements; add a comment or remove the block
 
 ## Git Discipline
 

@@ -12,9 +12,7 @@ import { useRepos } from '../contexts/RepoContext';
 import { RootStackParamList } from '../navigation/types';
 import { Note } from '../models/Note';
 import { GitHubService } from '../services/GitHubService';
-import { NoteSyncQueueService, SyncEngineService, type NoteDeleteParams } from '../services/cloneSyncServiceImpl';
 import { useGitOperationStore } from '../stores/gitOperationStore';
-import { deriveDefaultNotePath } from '../stores/noteStore';
 import { GitSyncGate } from '../services/git/GitSyncGate';
 import { syncNow } from '../services/git/manualSync';
 import ColorPicker from '../components/ColorPicker';
@@ -91,7 +89,7 @@ export default function NotesListScreen() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
   const isFocused = useIsFocused();
-  const { inflight } = useGitHubActivityStore();
+  useGitHubActivityStore();
 
   const viewScopedNotes = useMemo(
     () => (viewMode === 'journal' ? notes.filter(isJournalEntry) : notes),
@@ -133,7 +131,7 @@ export default function NotesListScreen() {
 
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 
-  const closeOpenSwipeable = useCallback(() => {}, []);
+  const closeOpenSwipeable = useCallback(() => {/* noop */}, []);
 
   const {
     filters,
