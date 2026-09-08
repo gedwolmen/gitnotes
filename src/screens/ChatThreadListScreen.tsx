@@ -9,6 +9,8 @@ import { useAIHubStore } from '../stores/aiHubStore';
 import { useAIStore } from '../stores/aiStore';
 import * as ChatStorageService from '../services/ChatStorageService';
 import { githubActivity } from '../stores/githubActivityStore';
+import { CommitService } from '../services/git/CommitService';
+import { resolveBranch } from '../services/git/resolveBranch';
 import { useTokens } from '../contexts/ThemeContext';
 import { RootStackParamList } from '../navigation/types';
 import { ChatThreadSummary } from '../models/Chat';
@@ -234,21 +236,26 @@ export default function ChatThreadListScreen() {
             if (!chatRepoOwner || !chatRepoName || !chatRepoBranch) return;
             githubActivity.begin(t('chat.deletingMany'));
             try {
+              const repoPath = `${chatRepoOwner}/${chatRepoName}`;
+              const branch = await resolveBranch(repoPath, chatRepoBranch);
               for (const threadId of ids) {
-                const deleted = await deleteThread({
-                  owner: chatRepoOwner,
-                  repo: chatRepoName,
-                  branch: chatRepoBranch,
-                  threadId,
+                const commitResult = await CommitService.commit({
+                  repo: repoPath,
+                  branch,
+                  filePath: `chat/${threadId}.json`,
+                  message: `Delete chat thread: ${threadId}`,
+                  delete: true,
                 });
-                if (!deleted) {
+                if (!commitResult.success) {
                   setSelectedIds(new Set());
-                  const fallbackMessage = t('chat.couldNotDeleteMany');
-                  Alert.alert(t('chat.deleteFailed'), useChatStore.getState().error ?? storeError ?? fallbackMessage);
+                  Alert.alert(t('chat.deleteFailed'), commitResult.error ?? t('chat.couldNotDeleteMany'));
                   HapticService.error();
                   return;
                 }
               }
+              useChatStore.setState((state) => ({
+                threads: state.threads.filter((t) => !ids.includes(t.id)),
+              }));
               HapticService.success();
               setSelectedIds(new Set());
             } catch (err: any) {
@@ -261,7 +268,7 @@ export default function ChatThreadListScreen() {
         },
       ],
     );
-  }, [chatRepoOwner, chatRepoName, chatRepoBranch, deleteThread, selectedIds, t, storeError]);
+  }, [chatRepoOwner, chatRepoName, chatRepoBranch, selectedIds, t]);
 
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 

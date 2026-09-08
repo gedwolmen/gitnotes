@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import * as GitEngine from '@/services/git/engine/GitEngine';
 import type { RepoStatus } from '@/services/git/engine/GitEngine';
+import { subscribeGitRefresh } from '@/hooks/useGitRefreshEvent';
 
 export interface UseGitRepoStatusResult {
   /** Latest engine status for the repo (null until the first poll resolves). */
@@ -53,15 +54,20 @@ export function useGitRepoStatus(
   useEffect(() => {
     mountedRef.current = true;
     void refresh();
+    const unsubscribe = subscribeGitRefresh(() => {
+      void refresh();
+    });
     if (!repoId || !repoPath) {
       return () => {
         mountedRef.current = false;
+        unsubscribe();
       };
     }
     const timer = setInterval(() => void refresh(), pollMs);
     return () => {
       mountedRef.current = false;
       clearInterval(timer);
+      unsubscribe();
     };
   }, [repoId, repoPath, pollMs, refresh]);
 

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import * as GitEngine from '@/services/git/engine/GitEngine';
 import { GitFsService } from '@/services/git/GitFsService';
 import { useRepoStore } from '@/stores/repoStore';
+import { emitGitRefresh } from '@/hooks/useGitRefreshEvent';
 import type { GitRepository } from '@/services/GitService';
 
 export type GitStateMode = 'conflicts' | 'changes' | 'push' | 'clean';
@@ -131,6 +132,8 @@ export function useAllReposStatus(pollMs: number = POLL_MS): AggregatedGitState 
     const next = new Map<string, RepoGitState>();
     for (const entry of results) next.set(entry.repoId, entry);
     setPerRepo(next);
+    // Notify other hooks (like useGitRepoStatus) to refresh
+    emitGitRefresh();
   }, [repositories]);
 
   useEffect(() => {
