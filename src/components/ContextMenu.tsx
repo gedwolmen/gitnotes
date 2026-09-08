@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { Modal } from './ui';
@@ -40,6 +40,7 @@ export default function ContextMenu({
   bottomSheet,
 }: ContextMenuProps) {
   const { colors } = useTheme();
+  const { width: viewportWidth } = useWindowDimensions();
   const groups: ContextMenuSection[] = sections ?? (items ? [{ items }] : []);
 
   return (
@@ -47,7 +48,7 @@ export default function ContextMenu({
       visible={visible}
       onRequestClose={onClose}
       bottomSheet={bottomSheet}
-      contentStyle={{ padding: 0, overflow: 'hidden', minWidth: 280 }}
+      contentStyle={{ padding: 0, overflow: 'hidden', minWidth: Math.min(280, viewportWidth * 0.85) }}
     >
       {(title || subtitle) ? (
         <View style={[styles.header, { borderBottomColor: colors.border }]}>

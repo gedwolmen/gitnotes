@@ -56,7 +56,8 @@ const styles = StyleSheet.create({
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    minWidth: 80,
+    minWidth: 0,
+    flexShrink: 1,
   },
   headerButtonText: {
     fontSize: 16,
@@ -68,7 +69,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   headerRight: {
-    minWidth: 80,
+    minWidth: 0,
+    flexShrink: 1,
     alignItems: 'flex-end',
   },
   saveButtonText: {

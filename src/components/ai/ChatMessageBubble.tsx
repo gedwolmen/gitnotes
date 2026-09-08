@@ -1,5 +1,5 @@
 import React, { Fragment, useEffect, useMemo, useState } from 'react';
-import { View, Text, Platform, Pressable, useColorScheme } from 'react-native';
+import { View, Text, Platform, Pressable, useColorScheme, useWindowDimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ChatMessage } from '../../models/Chat';
@@ -57,6 +57,7 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
   const { colors, spacing, type } = useTokens();
   const { isDark } = useTheme();
   const colorScheme = useColorScheme();
+  const { width: viewportWidth } = useWindowDimensions();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const [thoughtExpanded, setThoughtExpanded] = useState(false);
@@ -153,7 +154,7 @@ function ChatMessageBubbleImpl({ message, isStreaming, onLongPress }: ChatMessag
     alignSelf: isUser ? 'flex-end' : 'flex-start',
     maxWidth: '85%',
     marginVertical: spacing[1],
-    ...(!isUser && message.toolCallName ? { minWidth: 220 } : null),
+    ...(!isUser && message.toolCallName ? { minWidth: Math.min(220, viewportWidth * 0.5) } : null),
   };
 
   const surfaceBg = isDark ? '#2c2c2e' : '#f0f0f0';

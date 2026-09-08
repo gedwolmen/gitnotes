@@ -308,9 +308,11 @@ export default function HomeScreen() {
             <View className="absolute top-4 left-4 w-9 h-9 rounded-full bg-white items-center justify-center">
               <Ionicons name="document-text" size={18} color={colors.primary} />
             </View>
+            {isTablet && (
             <View className="absolute" style={{ top: -50, right: -50, opacity: 0.3 }}>
               <Ionicons name="document-text" size={120} color="#FFFFFF" />
             </View>
+            )}
             <View className="gap-1">
               <Text className="text-xl font-bold text-white" style={{ letterSpacing: -0.3 }}>{t('notes.newNote')}</Text>
               <Text className="text-xs font-medium text-white opacity-80">{t('home.bento.blankNote')}</Text>
@@ -327,9 +329,11 @@ export default function HomeScreen() {
             <View className="absolute top-4 left-4 w-9 h-9 rounded-full bg-white items-center justify-center">
               <Ionicons name="journal-outline" size={18} color={colors.primary} />
             </View>
+            {isTablet && (
             <View className="absolute" style={{ top: -50, right: -50, opacity: 0.3 }}>
               <Ionicons name="journal-outline" size={120} color="#FFFFFF" />
             </View>
+            )}
             <View className="gap-1">
               <Text className="text-xl font-bold text-white" style={{ letterSpacing: -0.3 }} numberOfLines={1}>
                 {hasTodaysJournal ? t('home.bento.todaysJournal') : t('home.bento.newJournal')}
