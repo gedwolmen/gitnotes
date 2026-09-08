@@ -100,7 +100,7 @@ The `proStore` is the central state manager for Pro tier.
 interface ProState {
   status: 'loading' | 'pro' | 'free';
   entitlementActive: boolean;     // True if user has active Pro entitlement
-  isGrandfathered: boolean;      // True if legacy paid user (pre-Entitlements)
+
   trialActive: boolean;           // True if in trial period
   trialEndsAt: number | null;   // Trial end timestamp
   entitlementExpiresAt: number | null;
@@ -121,7 +121,7 @@ interface ProState {
 
 | Action | Purpose |
 |--------|---------|
-| `initialize()` | Boot RevenueCat, resolve entitlement, check grandfather status |
+| `initialize()` | Boot RevenueCat, resolve entitlement |
 | `refresh()` | Re-fetch customer info after purchase/restore |
 | `purchaseMonthly()` | Purchase monthly subscription |
 | `purchaseYearly()` | Purchase annual subscription |
@@ -180,13 +180,7 @@ Redirects away from a Pro-only screen if the user is not Pro.
 
 ---
 
-## Grandfather Service
 
-**File:** `src/services/GrandfatherService.ts`
-
-Legacy users who purchased before the Entitlements era are "grandfathered" into Pro permanently. `GrandfatherService.resolveGrandfatherStatus()` checks the original app version in `CustomerInfo.originalApplicationVersion` against a known threshold.
-
----
 
 ## Tier Limits
 

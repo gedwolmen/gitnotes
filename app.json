@@ -89,7 +89,6 @@
       "@react-native/datetimepicker",
       "expo-secure-store",
       "./plugins/withKeychainAccessGroup",
-      "./plugins/withGrandfatherBackup",
       "expo-image",
       "expo-sharing",
       "expo-background-task",

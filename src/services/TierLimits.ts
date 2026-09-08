@@ -22,7 +22,7 @@ function isPro(): boolean {
  * `useProStore.initialize`) and BEFORE the stores surface restored data, so an
  * over-limit backup is truncated instead of displayed.
  *
- * No-op for Pro / grandfathered users. Truncation is persisted so it survives
+ * No-op for Pro users. Truncation is persisted so it survives
  * a reload.
  */
 export async function enforceTierLimits(): Promise<void> {

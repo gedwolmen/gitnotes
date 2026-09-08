@@ -48,7 +48,6 @@ import { reconcileThoughtDumps } from './src/services/ai/thoughtDumpIndexing';
 import { LastSelectionPreferenceService } from './src/services/LastSelectionPreferenceService';
 import { useProStore } from './src/stores/proStore';
 import { enforceTierLimits } from './src/services/TierLimits';
-import { setAndroidFirstSeenBuild } from './src/services/GrandfatherService';
 import Constants from 'expo-constants';
 import * as PushNotificationService from './src/services/PushNotificationService';
 import { hideDevMenuFloatingActionButton } from './src/utils/devMenuFab';
@@ -148,16 +147,6 @@ export default function App() {
   // only when the key is absent. Gating it inside checkOnboarding would skip it for
   // returning users who have already completed onboarding, breaking Android
   // grandfathering: resolveGrandfatherStatus would find no FIRST_SEEN_BUILD_KEY and
-  // incorrectly classify pre-paywall users as non-grandfathered (#1387).
-  useEffect(() => {
-    if (Platform.OS === 'android') {
-      const build = Constants.expoConfig?.android?.versionCode;
-      if (build !== undefined) {
-        void setAndroidFirstSeenBuild(String(build));
-      }
-    }
-  }, []);
-
   useEffect(() => {
     checkOnboarding();
   }, [checkOnboarding]);

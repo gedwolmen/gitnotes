@@ -435,7 +435,6 @@ jest.mock('react-native-purchases', () => {
 const mockProStoreState: Record<string, unknown> = {
   status: 'pro',
   entitlementActive: true,
-  isGrandfathered: false,
   trialActive: false,
   trialEndsAt: null,
   isPurchasing: false,
@@ -470,8 +469,8 @@ jest.mock('./src/stores/proStore', () => {
   });
   return {
     useProStore,
-    selectIsPro: (state: { entitlementActive?: boolean; isGrandfathered?: boolean }) =>
-      Boolean(state?.entitlementActive || state?.isGrandfathered),
+    selectIsPro: (state: { entitlementActive?: boolean }) =>
+      Boolean(state?.entitlementActive),
     __setProState: (partial: Record<string, unknown>) => Object.assign(mockProStoreState, partial),
   };
 });
