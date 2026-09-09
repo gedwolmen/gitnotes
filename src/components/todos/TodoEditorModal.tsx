@@ -22,7 +22,6 @@ interface TodoEditorModalProps {
   showTimePicker: boolean;
   showReminderPicker: boolean;
   todoRepo?: string;
-  todoBranch?: string;
   isDark: boolean;
   onClose: () => void;
   onChangeText: (value: string) => void;
@@ -37,7 +36,6 @@ interface TodoEditorModalProps {
   onToggleReminderPicker: () => void;
   onSelectReminderMinutes: (minutes: number) => void;
   onRepoChange: (repo: string | undefined) => void;
-  onBranchChange: (branch: string | undefined) => void;
   onSubmit: () => void;
 }
 
@@ -53,7 +51,6 @@ export function TodoEditorModal({
   showTimePicker,
   showReminderPicker,
   todoRepo,
-  todoBranch,
   isDark,
   onClose,
   onChangeText,
@@ -68,7 +65,6 @@ export function TodoEditorModal({
   onToggleReminderPicker,
   onSelectReminderMinutes,
   onRepoChange,
-  onBranchChange,
   onSubmit,
 }: TodoEditorModalProps) {
   const { colors } = useTheme();
@@ -302,14 +298,8 @@ export function TodoEditorModal({
           <View style={styles.gitContextContainer}>
             <GitContextPicker
               repo={todoRepo}
-              branch={todoBranch}
-              commit={undefined}
               entityType="todo"
               onRepoChange={onRepoChange}
-              onBranchChange={onBranchChange}
-              onCommitChange={() => {
-                // noop
-              }}
             />
           </View>
 

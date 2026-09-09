@@ -14,8 +14,6 @@ import { FORMAT_OPTIONS } from './editorShared';
 
 interface NoteEditorFormProps {
   repo?: string;
-  branch?: string;
-  commit?: string;
   title: string;
   folderPath?: string;
   noteFormat: NoteFormat;
@@ -24,8 +22,6 @@ interface NoteEditorFormProps {
   content: string;
   placeholder: string;
   onRepoChange: (repo: string | undefined) => void;
-  onBranchChange: (branch: string | undefined) => void;
-  onCommitChange: (commit: string | undefined) => void;
   onTitleChange: (value: string) => void;
   onOpenFolderDialog: () => void;
   onNoteFormatChange: (format: NoteFormat) => void;
@@ -36,8 +32,6 @@ interface NoteEditorFormProps {
 
 export function NoteEditorForm({
   repo,
-  branch,
-  commit,
   title,
   folderPath,
   noteFormat,
@@ -46,8 +40,6 @@ export function NoteEditorForm({
   content,
   placeholder,
   onRepoChange,
-  onBranchChange,
-  onCommitChange,
   onTitleChange,
   onOpenFolderDialog,
   onNoteFormatChange,
@@ -72,12 +64,8 @@ export function NoteEditorForm({
       <View testID="note-editor-form.picker.repo" style={styles.gitContextContainer}>
         <GitContextPicker
           repo={repo}
-          branch={branch}
-          commit={commit}
           entityType="note"
           onRepoChange={onRepoChange}
-          onBranchChange={onBranchChange}
-          onCommitChange={onCommitChange}
         />
       </View>
 

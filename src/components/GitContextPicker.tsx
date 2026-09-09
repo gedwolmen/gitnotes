@@ -9,41 +9,30 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { GitService } from '../services/GitService';
 import { LastUsedRepoService } from '../services/LastUsedRepoService';
 import { LastSelectionPreferenceService, SelectionEntityType } from '../services/LastSelectionPreferenceService';
 import { useRepos } from '../contexts/RepoContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { HapticService } from '../utils/haptics';
 import { Modal } from './ui';
-import { getActiveBranch } from '../services/git/activeBranchStore';
 
 interface GitContextPickerProps {
   repo?: string;
-  branch?: string;
-  commit?: string;
   entityType?: SelectionEntityType;
   onRepoChange: (repo: string | undefined) => void;
-  onBranchChange: (branch: string | undefined) => void;
-  onCommitChange: (commit: string | undefined) => void;
 }
 
 type SheetView = 'main' | 'repo';
 
 export default function GitContextPicker({
   repo,
-  branch,
   entityType,
   onRepoChange,
-  onBranchChange,
-  onCommitChange,
 }: GitContextPickerProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [view, setView] = useState<SheetView>('main');
   const { repositories } = useRepos();
   const [repoSearch, setRepoSearch] = useState('');
-  const [activeBranch, setActiveBranch] = useState<string | null>(null);
-  const [activeBranchStatus, setActiveBranchStatus] = useState<'idle' | 'loading' | 'stale' | 'error' | null>(null);
 
   const { colors } = useTheme();
 
@@ -79,22 +68,19 @@ export default function GitContextPicker({
 
   const handleClearContext = useCallback(() => {
     onRepoChange(undefined);
-    onBranchChange(undefined);
-    onCommitChange(undefined);
-  }, [onRepoChange, onBranchChange, onCommitChange]);
+  }, [onRepoChange]);
 
   const handleRepoPick = useCallback(
     (path: string) => {
       HapticService.selection();
       onRepoChange(path);
-      onCommitChange(undefined);
       void LastUsedRepoService.set(path);
       if (entityType) {
         void LastSelectionPreferenceService.set(entityType, { repo: path });
       }
       setView('main');
     },
-    [onRepoChange, onCommitChange, entityType],
+    [onRepoChange, entityType],
   );
 
   // Auto-fill the repo when opening this picker for a new note/canvas/etc.
@@ -124,31 +110,6 @@ export default function GitContextPicker({
     });
   }, [repo, repositories, onRepoChange]);
 
-  // Fetch active branch from activeBranchStore whenever repo changes.
-  useEffect(() => {
-    if (!repo) {
-      setActiveBranch(null);
-      setActiveBranchStatus(null);
-      return;
-    }
-    const repoId = repositories.find((r) => r.path === repo)?.id;
-    if (!repoId) {
-      setActiveBranch(null);
-      setActiveBranchStatus('error');
-      return;
-    }
-    setActiveBranchStatus('loading');
-    void getActiveBranch(repoId).then((state) => {
-      if (!state) {
-        setActiveBranch(null);
-        setActiveBranchStatus('error');
-        return;
-      }
-      setActiveBranch(state.activeBranch);
-      setActiveBranchStatus(state.status);
-    });
-  }, [repo, repositories]);
-
   const isListView = view !== 'main';
   const headerTitle =
     view === 'repo' ? 'Select Repository' : 'Git Context';
@@ -171,7 +132,7 @@ export default function GitContextPicker({
           numberOfLines={1}
         >
           {repo
-            ? `${repo.split('/').pop()}${activeBranch ? ` · ${activeBranch}` : ''}`
+            ? repo.split('/').pop()
             : repositories.length === 0
             ? 'None'
             : 'Select repository'}
@@ -230,29 +191,8 @@ export default function GitContextPicker({
                   </View>
                 </TouchableOpacity>
 
-                <View testID="note-editor-form.picker.branch">
-                  {repo && (
-                    <View style={styles.selector}>
-                    <Text style={[styles.selectorLabel, { color: colors.textSecondary }]}>Branch</Text>
-                    <View style={[styles.selectorValue, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                      {activeBranchStatus === 'loading' ? (
-                        <Text style={[styles.placeholderText, { color: colors.textSecondary }]}>Loading…</Text>
-                      ) : activeBranchStatus === 'error' ? (
-                        <Text style={[styles.placeholderText, { color: colors.error }]}>No active branch</Text>
-                      ) : activeBranchStatus === 'stale' ? (
-                        <Text style={[styles.placeholderText, { color: colors.warning }]}>{activeBranch} (stale)</Text>
-                      ) : !activeBranch ? (
-                        <Text style={[styles.valueText, { color: colors.text }]}>main</Text>
-                      ) : (
-                        <Text style={[styles.valueText, { color: colors.text }]}>{activeBranch}</Text>
-                      )}
-                    </View>
-                  </View>
-                  )}
-                </View>
-
                 <View testID="note-editor-form.picker.commit" />
-                {(repo || activeBranch) && (
+                {repo && (
                   <TouchableOpacity style={styles.clearButton} accessibilityRole="button" onPress={handleClearContext}>
                     <Ionicons name="trash-outline" size={16} color={colors.error} />
                     <Text style={[styles.clearButtonText, { color: colors.error }]}>Clear Git Context</Text>

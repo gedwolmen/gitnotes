@@ -10,7 +10,6 @@ import { NotesListFilters, NOTE_FORMAT_LABELS } from './notesShared';
 interface NotesActiveFiltersProps {
   filters: NotesListFilters;
   onClearFormat: () => void;
-  onClearBranch: () => void;
   onClearFolder: () => void;
   onClearAll: () => void;
 }
@@ -18,7 +17,6 @@ interface NotesActiveFiltersProps {
 export function NotesActiveFilters({
   filters,
   onClearFormat,
-  onClearBranch,
   onClearFolder,
   onClearAll,
 }: NotesActiveFiltersProps) {
