@@ -31,6 +31,7 @@ import { AuthService } from '@/services/AuthService';
 
 import { LastUsedRepoService } from '@/services/LastUsedRepoService';
 import { useGitButtonActionStore } from '@/stores/gitButtonActionStore';
+import { useGitContentRefreshSignal } from '@/hooks/useGitRefreshEvent';
 import type { GitRepository } from '@/services/GitService';
 import type { RepoLike } from '@/components/explore/exploreShared';
 import type { RootStackParamList } from '@/navigation/types';
@@ -69,6 +70,7 @@ export default function ExploreScreen() {
   const isLoading = useRepoStore((state) => state.isLoading);
   const loadRepos = useRepoStore((state) => state.loadRepos);
   const aggregatedState = useAllReposStatus();
+  const gitContentRefresh = useGitContentRefreshSignal();
 
   const [section, setSection] = useState<ExploreSection>('files');
   const [selectedRepoId, setSelectedRepoId] = useState<string | null>(null);
@@ -225,27 +227,27 @@ export default function ExploreScreen() {
     const props = { repo: repoTyped, status, onChanged, chromeTopInset: chromeTotalHeight + 8, onNavigate: setSection, refreshStatus };
     switch (section) {
       case 'files':
-        return <FilesSection key={repo.id} {...props} active />;
+        return <FilesSection key={`${repo.id}:${gitContentRefresh}`} {...props} active />;
       case 'changes':
-        return <ChangesSection key={repo.id} {...props} active />;
+        return <ChangesSection key={`${repo.id}:${gitContentRefresh}`} {...props} active />;
       case 'staging':
-        return <StagingSection key={repo.id} {...props} active />;
+        return <StagingSection key={`${repo.id}:${gitContentRefresh}`} {...props} active />;
       case 'commits':
-        return <CommitsSection key={repo.id} {...props} active />;
+        return <CommitsSection key={`${repo.id}:${gitContentRefresh}`} {...props} active />;
       case 'branches':
-        return <BranchesSection key={repo.id} {...props} active />;
+        return <BranchesSection key={`${repo.id}:${gitContentRefresh}`} {...props} active />;
       case 'remotes':
-        return <RemotesSection key={repo.id} {...props} active />;
+        return <RemotesSection key={`${repo.id}:${gitContentRefresh}`} {...props} active />;
       case 'conflicts':
-        return <ConflictsSection key={repo.id} {...props} active />;
+        return <ConflictsSection key={`${repo.id}:${gitContentRefresh}`} {...props} active />;
       case 'pulls':
-        return <PullRequestsSection repo={repoTyped} status={status} active={section === 'pulls'} onChanged={onChanged} chromeTopInset={chromeTotalHeight + 8} />;
+        return <PullRequestsSection key={`${repo.id}:${gitContentRefresh}`} repo={repoTyped} status={status} active={section === 'pulls'} onChanged={onChanged} chromeTopInset={chromeTotalHeight + 8} />;
       case 'issues':
-        return <IssuesSection repo={repoTyped} status={status} active={section === 'issues'} onChanged={onChanged} chromeTopInset={chromeTotalHeight + 8} />;
+        return <IssuesSection key={`${repo.id}:${gitContentRefresh}`} repo={repoTyped} status={status} active={section === 'issues'} onChanged={onChanged} chromeTopInset={chromeTotalHeight + 8} />;
       case 'info':
         return (
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }}>
-            <RepoInfoSection key={repo.id} {...props} active />
+            <RepoInfoSection key={`${repo.id}:${gitContentRefresh}`} {...props} active />
           </ScrollView>
         );
       default:
